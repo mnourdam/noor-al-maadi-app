@@ -9,38 +9,155 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WhoAmIRouteImport } from './routes/who-am-i'
+import { Route as PuzzlesRouteImport } from './routes/puzzles'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as OnThisDayRouteImport } from './routes/on-this-day'
+import { Route as JourneyRouteImport } from './routes/journey'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StoryIdRouteImport } from './routes/story.$id'
 
+const WhoAmIRoute = WhoAmIRouteImport.update({
+  id: '/who-am-i',
+  path: '/who-am-i',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PuzzlesRoute = PuzzlesRouteImport.update({
+  id: '/puzzles',
+  path: '/puzzles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnThisDayRoute = OnThisDayRouteImport.update({
+  id: '/on-this-day',
+  path: '/on-this-day',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JourneyRoute = JourneyRouteImport.update({
+  id: '/journey',
+  path: '/journey',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StoryIdRoute = StoryIdRouteImport.update({
+  id: '/story/$id',
+  path: '/story/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/journey': typeof JourneyRoute
+  '/on-this-day': typeof OnThisDayRoute
+  '/profile': typeof ProfileRoute
+  '/puzzles': typeof PuzzlesRoute
+  '/who-am-i': typeof WhoAmIRoute
+  '/story/$id': typeof StoryIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/journey': typeof JourneyRoute
+  '/on-this-day': typeof OnThisDayRoute
+  '/profile': typeof ProfileRoute
+  '/puzzles': typeof PuzzlesRoute
+  '/who-am-i': typeof WhoAmIRoute
+  '/story/$id': typeof StoryIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/journey': typeof JourneyRoute
+  '/on-this-day': typeof OnThisDayRoute
+  '/profile': typeof ProfileRoute
+  '/puzzles': typeof PuzzlesRoute
+  '/who-am-i': typeof WhoAmIRoute
+  '/story/$id': typeof StoryIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/journey'
+    | '/on-this-day'
+    | '/profile'
+    | '/puzzles'
+    | '/who-am-i'
+    | '/story/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/journey'
+    | '/on-this-day'
+    | '/profile'
+    | '/puzzles'
+    | '/who-am-i'
+    | '/story/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/journey'
+    | '/on-this-day'
+    | '/profile'
+    | '/puzzles'
+    | '/who-am-i'
+    | '/story/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  JourneyRoute: typeof JourneyRoute
+  OnThisDayRoute: typeof OnThisDayRoute
+  ProfileRoute: typeof ProfileRoute
+  PuzzlesRoute: typeof PuzzlesRoute
+  WhoAmIRoute: typeof WhoAmIRoute
+  StoryIdRoute: typeof StoryIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/who-am-i': {
+      id: '/who-am-i'
+      path: '/who-am-i'
+      fullPath: '/who-am-i'
+      preLoaderRoute: typeof WhoAmIRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/puzzles': {
+      id: '/puzzles'
+      path: '/puzzles'
+      fullPath: '/puzzles'
+      preLoaderRoute: typeof PuzzlesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/on-this-day': {
+      id: '/on-this-day'
+      path: '/on-this-day'
+      fullPath: '/on-this-day'
+      preLoaderRoute: typeof OnThisDayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/journey': {
+      id: '/journey'
+      path: '/journey'
+      fullPath: '/journey'
+      preLoaderRoute: typeof JourneyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +165,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/story/$id': {
+      id: '/story/$id'
+      path: '/story/$id'
+      fullPath: '/story/$id'
+      preLoaderRoute: typeof StoryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  JourneyRoute: JourneyRoute,
+  OnThisDayRoute: OnThisDayRoute,
+  ProfileRoute: ProfileRoute,
+  PuzzlesRoute: PuzzlesRoute,
+  WhoAmIRoute: WhoAmIRoute,
+  StoryIdRoute: StoryIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
