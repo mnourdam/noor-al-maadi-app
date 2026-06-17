@@ -110,7 +110,7 @@ function Index() {
 
 function QuickCard({ to, icon, title, desc }: { to: string; icon: React.ReactNode; title: string; desc: string }) {
   return (
-    <Link to={to} className="rounded-2xl border border-white/10 bg-surface p-4 transition hover:border-gold/40">
+    <Link to={to as "/"} className="rounded-2xl border border-white/10 bg-surface p-4 transition hover:border-gold/40">
       <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">{icon}</div>
       <p className="mt-3 text-sm font-bold">{title}</p>
       <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{desc}</p>
