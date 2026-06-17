@@ -284,3 +284,401 @@ export function dailyStory(): Story {
   const day = Math.floor(d.getTime() / 86400000);
   return STORIES[day % STORIES.length];
 }
+
+// ============================================================
+// GAMEPLAY SYSTEMS
+// ============================================================
+
+// 1) Historical Investigation — progressive clues + 4-option answer
+export interface Investigation {
+  id: string;
+  era: Era;
+  category: "person" | "battle" | "city" | "era";
+  categoryLabel: string;
+  clues: string[]; // revealed one by one; each costs hint points
+  options: string[];
+  answerIndex: number;
+  reward: number;
+  unlocks?: { character?: string; artifact?: string };
+}
+
+export const INVESTIGATIONS: Investigation[] = [
+  {
+    id: "inv-khalid", era: "rashidun", category: "person", categoryLabel: "شخصية",
+    clues: ["قائد عسكري لم يُهزم في معركة قط.", "أسلم بعد صلح الحديبية.", "لقّبه النبي ﷺ بسيف الله المسلول.", "قاد المسلمين يوم اليرموك ضد الروم."],
+    options: ["سعد بن أبي وقاص", "أبو عبيدة بن الجراح", "خالد بن الوليد", "عمرو بن العاص"],
+    answerIndex: 2, reward: 60, unlocks: { character: "khalid" },
+  },
+  {
+    id: "inv-yarmouk", era: "rashidun", category: "battle", categoryLabel: "معركة",
+    clues: ["وقعت قرب نهرٍ في بلاد الشام.", "استمرّت ستة أيام.", "هبّت في يومها الأخير ريحٌ على وجوه العدو.", "أنهت السيطرة البيزنطية على الشام."],
+    options: ["معركة بدر", "معركة اليرموك", "معركة القادسية", "معركة حِطّين"],
+    answerIndex: 1, reward: 50, unlocks: { artifact: "yarmouk-sword" },
+  },
+  {
+    id: "inv-cordoba", era: "andalus", category: "city", categoryLabel: "مدينة",
+    clues: ["كانت في القرن العاشر أكبر مدن العالم.", "ضمّت سبعين مكتبة وشوارع مرصوفة.", "فيها وُلد ابن رشد.", "عاصمة الخلافة الأموية في الغرب."],
+    options: ["إشبيلية", "غرناطة", "قرطبة", "طليطلة"],
+    answerIndex: 2, reward: 50, unlocks: { artifact: "cordoba-key" },
+  },
+  {
+    id: "inv-salahuddin", era: "ayyubid", category: "person", categoryLabel: "شخصية",
+    clues: ["كرديّ الأصل، سلطانٌ على مصر والشام.", "أسّس الدولة الأيوبية.", "هزم الصليبيين في حِطّين.", "حرّر القدس بعد ٨٨ سنة من الاحتلال."],
+    options: ["نور الدين زنكي", "صلاح الدين الأيوبي", "الظاهر بيبرس", "قطز"],
+    answerIndex: 1, reward: 70, unlocks: { character: "salahuddin", artifact: "hattin-banner" },
+  },
+  {
+    id: "inv-abbasid-era", era: "abbasid", category: "era", categoryLabel: "حقبة",
+    clues: ["دامت أكثر من خمسة قرون.", "عاصمتها مدينة السلام.", "فيها ازدهر بيت الحكمة.", "سقطت أمام المغول عام ١٢٥٨م."],
+    options: ["الأموية", "العباسية", "الفاطمية", "السلجوقية"],
+    answerIndex: 1, reward: 50,
+  },
+  {
+    id: "inv-ain-jalut", era: "mamluk", category: "battle", categoryLabel: "معركة",
+    clues: ["وقعت في فلسطين عام ١٢٦٠م.", "قادها سلطانٌ مملوكي.", "كسرت أسطورة جيشٍ لم يُهزم.", "كان كمين بيبرس مفتاحها."],
+    options: ["حِطّين", "عين جالوت", "وادي لكّة", "ملاذكرد"],
+    answerIndex: 1, reward: 60, unlocks: { artifact: "ain-jalut-arrow" },
+  },
+  {
+    id: "inv-fatih", era: "ottoman", category: "person", categoryLabel: "شخصية",
+    clues: ["سلطانٌ عثماني تولّى وهو في العشرين.", "نقل السفن فوق التلال.", "تحقّقت بشارة النبي ﷺ على يده.", "صلّى في آيا صوفيا فاتحًا."],
+    options: ["سليم الأول", "سليمان القانوني", "محمد الفاتح", "بايزيد الثاني"],
+    answerIndex: 2, reward: 70, unlocks: { character: "fatih", artifact: "fatih-cannon" },
+  },
+  {
+    id: "inv-baghdad", era: "abbasid", category: "city", categoryLabel: "مدينة",
+    clues: ["بُنيت دائرية الشكل.", "أسّسها أبو جعفر المنصور.", "فيها قام بيت الحكمة.", "أحرقها هولاكو عام ١٢٥٨م."],
+    options: ["دمشق", "سامراء", "بغداد", "البصرة"],
+    answerIndex: 2, reward: 50, unlocks: { artifact: "baghdad-manuscript" },
+  },
+];
+
+// 2) Timeline Challenge — order events chronologically
+export interface TimelineChallenge {
+  id: string;
+  title: string;
+  era?: Era;
+  events: { id: string; label: string; year: number }[]; // year used for sorting
+  reward: number;
+}
+
+export const TIMELINES: TimelineChallenge[] = [
+  {
+    id: "tl-rise", title: "ميلاد الإسلام وفتوحه", reward: 60,
+    events: [
+      { id: "e1", label: "بعثة النبي ﷺ", year: 610 },
+      { id: "e2", label: "الهجرة إلى المدينة", year: 622 },
+      { id: "e3", label: "غزوة بدر", year: 624 },
+      { id: "e4", label: "فتح مكة", year: 630 },
+      { id: "e5", label: "معركة اليرموك", year: 636 },
+    ],
+  },
+  {
+    id: "tl-states", title: "تعاقب الدول الإسلامية", reward: 70,
+    events: [
+      { id: "e1", label: "قيام الدولة الأموية", year: 661 },
+      { id: "e2", label: "قيام الدولة العباسية", year: 750 },
+      { id: "e3", label: "قيام الدولة الفاطمية", year: 909 },
+      { id: "e4", label: "قيام الدولة الأيوبية", year: 1171 },
+      { id: "e5", label: "قيام الدولة العثمانية", year: 1299 },
+    ],
+  },
+  {
+    id: "tl-battles", title: "معارك غيّرت التاريخ", reward: 70,
+    events: [
+      { id: "e1", label: "القادسية", year: 636 },
+      { id: "e2", label: "بلاط الشهداء", year: 732 },
+      { id: "e3", label: "ملاذكرد", year: 1071 },
+      { id: "e4", label: "حِطّين", year: 1187 },
+      { id: "e5", label: "عين جالوت", year: 1260 },
+    ],
+  },
+  {
+    id: "tl-andalus", title: "صعود وسقوط الأندلس", reward: 60,
+    events: [
+      { id: "e1", label: "فتح طارق للأندلس", year: 711 },
+      { id: "e2", label: "تأسيس إمارة قرطبة", year: 756 },
+      { id: "e3", label: "إعلان الخلافة الأموية", year: 929 },
+      { id: "e4", label: "سقوط طليطلة", year: 1085 },
+      { id: "e5", label: "سقوط غرناطة", year: 1492 },
+    ],
+  },
+  {
+    id: "tl-ottoman", title: "ذروة العثمانيين وأفولهم", reward: 70,
+    events: [
+      { id: "e1", label: "تأسيس الدولة العثمانية", year: 1299 },
+      { id: "e2", label: "فتح القسطنطينية", year: 1453 },
+      { id: "e3", label: "ذروة سليمان القانوني", year: 1566 },
+      { id: "e4", label: "حصار فيينا الثاني", year: 1683 },
+      { id: "e5", label: "إلغاء الخلافة", year: 1924 },
+    ],
+  },
+];
+
+// 3) Historical Decisions — branching scenes
+export interface Decision {
+  id: string;
+  era: Era;
+  scene: string;
+  setting: string;
+  choices: { label: string; outcome: string; historical: boolean }[];
+  historicalNote: string;
+  reward: number;
+}
+
+export const DECISIONS: Decision[] = [
+  {
+    id: "dec-hijra", era: "seerah", setting: "مكة · العام ١ هـ",
+    scene: "قريش تحاصر بيتك لاغتيالك الليلة. ما خطّتك؟",
+    choices: [
+      { label: "أواجههم وأقاتل", outcome: "كنت ستفقد رسالتك في معركةٍ خاسرة قبل أوانها.", historical: false },
+      { label: "أُنيم عليًّا في فراشي وأخرج سرًّا إلى ثور", outcome: "خطوة عبقرية أبقت الرسالة حيّة.", historical: true },
+      { label: "أستسلم وأطلب الهدنة", outcome: "قريش لم تكن لتُبقي على حياتك.", historical: false },
+    ],
+    historicalNote: "خرج النبي ﷺ ومعه أبو بكر إلى غار ثور، فمكثا ثلاث ليال ثم انطلقا إلى المدينة.",
+    reward: 40,
+  },
+  {
+    id: "dec-yarmouk", era: "rashidun", setting: "اليرموك · ١٥ هـ",
+    scene: "أنت خالد بن الوليد. جيش الروم يفوقك خمسة أضعاف. كيف تنظّم جيشك؟",
+    choices: [
+      { label: "صفّ واحد طويل للدفاع", outcome: "كنت ستُطوّق من الأجناب.", historical: false },
+      { label: "كراديس صغيرة سريعة الحركة", outcome: "خطّة كسرت ثقل الروم.", historical: true },
+      { label: "الانسحاب إلى الجبل", outcome: "كنت ستفقد سهل الشام كلّه.", historical: false },
+    ],
+    historicalNote: "قسّم خالد الجيش إلى ٣٦ كردوسًا، فأرهق الروم ستة أيام حتى انهاروا.",
+    reward: 50,
+  },
+  {
+    id: "dec-hattin", era: "ayyubid", setting: "الجليل · ١١٨٧م",
+    scene: "أنت صلاح الدين. الصليبيون يتقدّمون في حرّ تموز. ما خطوتك؟",
+    choices: [
+      { label: "أهاجمهم وهم مستريحون قرب الماء", outcome: "كنت ستخسر ميزتك الحاسمة.", historical: false },
+      { label: "أستدرجهم إلى سهل قاحل بلا ماء وأشعل العشب", outcome: "كمين انتهى بأكبر هزيمة صليبية.", historical: true },
+      { label: "أتفاوض على هدنة", outcome: "ضاعت فرصة تحرير القدس.", historical: false },
+    ],
+    historicalNote: "أحرق صلاح الدين الأعشاب حول الجيش الصليبي العطشان في حِطّين، فانهار بالكامل.",
+    reward: 60,
+  },
+  {
+    id: "dec-fatih", era: "ottoman", setting: "أمام أسوار القسطنطينية · ١٤٥٣م",
+    scene: "أنت محمد الثاني. السلسلة تمنع أسطولك من دخول القرن الذهبي.",
+    choices: [
+      { label: "أكسر السلسلة بالقوة", outcome: "خسائر فادحة بلا نتيجة.", historical: false },
+      { label: "أنقل السفن برّيًّا فوق التلال", outcome: "حركة أسطورية فاجأت المدينة من الخلف.", historical: true },
+      { label: "أرفع الحصار", outcome: "ضاعت بشارة النبي ﷺ.", historical: false },
+    ],
+    historicalNote: "نقل الفاتح ٧٠ سفينة برّيًّا في ليلة واحدة على ألواحٍ مدهونة بالشحم.",
+    reward: 60,
+  },
+  {
+    id: "dec-mansour", era: "abbasid", setting: "ضفاف دجلة · ١٤٥ هـ",
+    scene: "أنت الخليفة المنصور. تبحث عن مكانٍ لعاصمتك الجديدة.",
+    choices: [
+      { label: "أبنيها في الكوفة", outcome: "بقيت في ظلّ المدائن القديمة.", historical: false },
+      { label: "أبنيها مدوّرة على ضفاف دجلة", outcome: "ستصبح مدينة السلام وعاصمة العالم.", historical: true },
+      { label: "أبقيها في الأنبار", outcome: "ستبقى ثكنة لا حاضرة.", historical: false },
+    ],
+    historicalNote: "اختار المنصور موقع بغداد لتجارة دجلة، وبناها دائرية فريدة من نوعها.",
+    reward: 50,
+  },
+  {
+    id: "dec-qutuz", era: "mamluk", setting: "القاهرة · ١٢٦٠م",
+    scene: "وصل رسول هولاكو يطلب الاستسلام. ماذا تفعل يا قطز؟",
+    choices: [
+      { label: "أرسل الجزية وأكسب الوقت", outcome: "كان المغول سيقتحمون مصر تاليًا.", historical: false },
+      { label: "أقتل الرسل وأخرج للقاء المغول", outcome: "إعلان حربٍ غيّر مصير الأمة.", historical: true },
+      { label: "أتحصّن في القاهرة وأنتظر", outcome: "كانت ستُحاصر كما بغداد.", historical: false },
+    ],
+    historicalNote: "قتل قطز رسل المغول وخرج إلى عين جالوت، فكسر أسطورتهم لأول مرة.",
+    reward: 60,
+  },
+];
+
+// 4) Map Exploration
+export interface MapRegion {
+  id: string;
+  name: string;
+  era: Era;
+  // Approximate percent coordinates on an abstract map (0-100)
+  x: number; y: number;
+  capital: string;
+  blurb: string;
+  cost: number;
+  unlocksArtifact?: string;
+}
+
+export const MAP_REGIONS: MapRegion[] = [
+  { id: "hijaz", name: "الحجاز", era: "seerah", x: 62, y: 58, capital: "مكة والمدينة", blurb: "مهد الإسلام.", cost: 0, unlocksArtifact: "kaaba-kiswa" },
+  { id: "sham", name: "الشام", era: "rashidun", x: 58, y: 40, capital: "دمشق", blurb: "بوابة الفتوح الكبرى.", cost: 30 },
+  { id: "iraq", name: "العراق", era: "abbasid", x: 65, y: 42, capital: "بغداد", blurb: "عاصمة الحضارة العباسية.", cost: 40, unlocksArtifact: "baghdad-manuscript" },
+  { id: "egypt", name: "مصر", era: "ayyubid", x: 52, y: 50, capital: "القاهرة", blurb: "حامية الحرمين وقاهرة المغول.", cost: 40 },
+  { id: "andalus", name: "الأندلس", era: "andalus", x: 18, y: 36, capital: "قرطبة", blurb: "زهرة الغرب الإسلامي.", cost: 60, unlocksArtifact: "cordoba-key" },
+  { id: "anatolia", name: "الأناضول", era: "ottoman", x: 50, y: 28, capital: "إسطنبول", blurb: "عرش الخلافة العثمانية.", cost: 70, unlocksArtifact: "fatih-cannon" },
+  { id: "khorasan", name: "خراسان", era: "seljuk", x: 80, y: 36, capital: "نيسابور", blurb: "موطن السلاجقة والعلماء.", cost: 60 },
+  { id: "maghrib", name: "المغرب", era: "andalus", x: 30, y: 50, capital: "فاس", blurb: "جسر العبور إلى الأندلس.", cost: 50 },
+];
+
+// 5) Artifact Discovery
+export interface Artifact {
+  id: string;
+  name: string;
+  type: "manuscript" | "weapon" | "coin" | "landmark" | "relic";
+  typeLabel: string;
+  era: Era;
+  icon: string;
+  description: string;
+}
+
+export const ARTIFACTS: Artifact[] = [
+  { id: "kaaba-kiswa", name: "كسوة الكعبة", type: "relic", typeLabel: "أثر", era: "seerah", icon: "🕋", description: "قطعةٌ من كسوة الكعبة المشرّفة." },
+  { id: "yarmouk-sword", name: "سيف اليرموك", type: "weapon", typeLabel: "سلاح", era: "rashidun", icon: "⚔️", description: "سيفٌ من معركة اليرموك الفاصلة." },
+  { id: "rashidun-dinar", name: "دينار راشدي", type: "coin", typeLabel: "عملة", era: "rashidun", icon: "🪙", description: "أول الدنانير في الإسلام." },
+  { id: "umayyad-dinar", name: "دينار عبد الملك", type: "coin", typeLabel: "عملة", era: "umayyad", icon: "🪙", description: "أوّل دينارٍ إسلاميٍّ خالص." },
+  { id: "baghdad-manuscript", name: "مخطوطة بيت الحكمة", type: "manuscript", typeLabel: "مخطوط", era: "abbasid", icon: "📜", description: "ترجمة عربية لعلوم اليونان." },
+  { id: "khwarizmi-jabr", name: "كتاب الجبر", type: "manuscript", typeLabel: "مخطوط", era: "abbasid", icon: "📖", description: "كتاب الخوارزمي الذي أسّس علم الجبر." },
+  { id: "cordoba-key", name: "مفتاح قرطبة", type: "relic", typeLabel: "أثر", era: "andalus", icon: "🗝️", description: "مفتاحٌ نحاسي من قصر الزهراء." },
+  { id: "alhambra-tile", name: "بلاطة الحمراء", type: "landmark", typeLabel: "معلم", era: "andalus", icon: "🟦", description: "نقشٌ هندسي من قصر الحمراء." },
+  { id: "seljuk-helmet", name: "خوذة سلجوقية", type: "weapon", typeLabel: "سلاح", era: "seljuk", icon: "🪖", description: "خوذة فارسٍ سلجوقي من ملاذكرد." },
+  { id: "hattin-banner", name: "راية حِطّين", type: "relic", typeLabel: "أثر", era: "ayyubid", icon: "🚩", description: "رايةٌ رُفعت يوم تحرير القدس." },
+  { id: "ain-jalut-arrow", name: "سهم عين جالوت", type: "weapon", typeLabel: "سلاح", era: "mamluk", icon: "🏹", description: "سهمٌ من كمين بيبرس." },
+  { id: "mamluk-quran", name: "مصحف مملوكي", type: "manuscript", typeLabel: "مخطوط", era: "mamluk", icon: "📕", description: "مصحفٌ مذهّب من القاهرة." },
+  { id: "fatih-cannon", name: "مدفع الفاتح", type: "weapon", typeLabel: "سلاح", era: "ottoman", icon: "💣", description: "نسخة مصغّرة من مدفع أورپان." },
+  { id: "ottoman-tughra", name: "طُغراء عثمانية", type: "relic", typeLabel: "أثر", era: "ottoman", icon: "✒️", description: "توقيع السلطان الخطّي." },
+  { id: "aqsa-stone", name: "حجرٌ من الأقصى", type: "landmark", typeLabel: "معلم", era: "ayyubid", icon: "🕌", description: "حجرٌ من ترميمات الأيوبيين." },
+  { id: "nahda-pen", name: "قلم النهضة", type: "relic", typeLabel: "أثر", era: "modern", icon: "🖋️", description: "قلمٌ خطّ به روّاد النهضة." },
+];
+
+// 6) Character Collection — collectible cards
+export interface CharacterCard {
+  id: string;
+  name: string;
+  title: string;
+  era: Era;
+  rarity: "common" | "rare" | "legendary";
+  avatar: string; // emoji placeholder
+  bio: string;
+  power: string; // mythic-style stat caption
+}
+
+export const CHARACTERS: CharacterCard[] = [
+  { id: "khalid", name: "خالد بن الوليد", title: "سيف الله المسلول", era: "rashidun", rarity: "legendary", avatar: "🗡️", bio: "قائدٌ لم يُهزم في معركة، فاتح الشام والعراق.", power: "قيادة عسكرية ١٠٠" },
+  { id: "omar", name: "عمر بن الخطاب", title: "الفاروق", era: "rashidun", rarity: "legendary", avatar: "⚖️", bio: "أمير المؤمنين، فاتح بيت المقدس ومؤسّس الديوان.", power: "عدل وحكمة ١٠٠" },
+  { id: "muawiya", name: "معاوية بن أبي سفيان", title: "مؤسّس الأمويين", era: "umayyad", rarity: "rare", avatar: "👑", bio: "أنشأ أوّل أسطول إسلامي ونقل العاصمة إلى دمشق.", power: "سياسة ٩٢" },
+  { id: "tariq", name: "طارق بن زياد", title: "فاتح الأندلس", era: "umayyad", rarity: "rare", avatar: "🌊", bio: "أحرق السفن وفتح أبواب الأندلس.", power: "إقدام ٩٥" },
+  { id: "harun", name: "هارون الرشيد", title: "خليفة بغداد", era: "abbasid", rarity: "legendary", avatar: "🌙", bio: "في عهده بلغت بغداد ذروة مجدها.", power: "حضارة ٩٨" },
+  { id: "khwarizmi", name: "الخوارزمي", title: "أبو الجبر", era: "abbasid", rarity: "rare", avatar: "🔢", bio: "مؤسّس علم الجبر ومنه اشتُقّ اسم الخوارزميات.", power: "علم ٩٧" },
+  { id: "ibn-rushd", name: "ابن رشد", title: "شارح أرسطو", era: "andalus", rarity: "rare", avatar: "📚", bio: "فيلسوف قرطبة، عرفته أوروبا باسم Averroes.", power: "فلسفة ٩٥" },
+  { id: "abdurrahman", name: "عبد الرحمن الداخل", title: "صقر قريش", era: "andalus", rarity: "legendary", avatar: "🦅", bio: "أسّس الدولة الأموية في الأندلس بعد رحلة هرب أسطورية.", power: "إصرار ٩٦" },
+  { id: "alp-arslan", name: "ألب أرسلان", title: "بطل ملاذكرد", era: "seljuk", rarity: "rare", avatar: "🏹", bio: "أسر إمبراطور الروم وفتح باب الأناضول.", power: "بأس ٩٣" },
+  { id: "salahuddin", name: "صلاح الدين الأيوبي", title: "محرّر القدس", era: "ayyubid", rarity: "legendary", avatar: "🕌", bio: "هزم الصليبيين في حِطّين وأعاد الأذان للأقصى.", power: "نُبل ١٠٠" },
+  { id: "baybars", name: "الظاهر بيبرس", title: "أسد المماليك", era: "mamluk", rarity: "legendary", avatar: "🦁", bio: "كسر المغول والصليبيين معًا وأعاد الخلافة للقاهرة.", power: "قوة ٩٩" },
+  { id: "fatih", name: "محمد الفاتح", title: "فاتح القسطنطينية", era: "ottoman", rarity: "legendary", avatar: "🏰", bio: "تحقّقت على يديه بشارة النبي ﷺ.", power: "عبقرية ١٠٠" },
+];
+
+// 7) Era Campaigns — missions per era
+export type MissionType = "story" | "investigation" | "timeline" | "decision";
+export interface Mission {
+  id: string;
+  type: MissionType;
+  refId: string; // id within the corresponding collection
+  title: string;
+  reward: number;
+}
+export interface Campaign {
+  eraId: Era;
+  title: string;
+  intro: string;
+  missions: Mission[];
+  finalReward: { artifact?: string; character?: string; points: number };
+}
+
+export const CAMPAIGNS: Campaign[] = [
+  {
+    eraId: "seerah", title: "حملة السيرة النبوية", intro: "عش قصة الرسالة من المولد إلى الفتح.",
+    missions: [
+      { id: "s-m1", type: "story", refId: "hijra", title: "اقرأ: ليلة الهجرة", reward: 10 },
+      { id: "s-m2", type: "decision", refId: "dec-hijra", title: "قرار: ليلة الاغتيال", reward: 40 },
+      { id: "s-m3", type: "timeline", refId: "tl-rise", title: "رتّب: ميلاد الأمة", reward: 60 },
+    ],
+    finalReward: { artifact: "kaaba-kiswa", points: 50 },
+  },
+  {
+    eraId: "rashidun", title: "حملة الخلافة الراشدة", intro: "افتح الشام والعراق مع الصحابة.",
+    missions: [
+      { id: "r-m1", type: "story", refId: "yarmouk", title: "اقرأ: اليرموك", reward: 10 },
+      { id: "r-m2", type: "investigation", refId: "inv-yarmouk", title: "حقّق: المعركة المجهولة", reward: 50 },
+      { id: "r-m3", type: "investigation", refId: "inv-khalid", title: "حقّق: من هذا القائد؟", reward: 60 },
+      { id: "r-m4", type: "decision", refId: "dec-yarmouk", title: "قرار: تنظيم الكراديس", reward: 50 },
+    ],
+    finalReward: { character: "khalid", points: 80 },
+  },
+  {
+    eraId: "umayyad", title: "حملة الدولة الأموية", intro: "من دمشق إلى أطراف الأندلس.",
+    missions: [
+      { id: "u-m1", type: "timeline", refId: "tl-states", title: "رتّب: تعاقب الدول", reward: 70 },
+    ],
+    finalReward: { character: "tariq", points: 60 },
+  },
+  {
+    eraId: "abbasid", title: "حملة بغداد", intro: "مدينة السلام وعصر بيت الحكمة.",
+    missions: [
+      { id: "a-m1", type: "story", refId: "baghdad-house-of-wisdom", title: "اقرأ: بيت الحكمة", reward: 10 },
+      { id: "a-m2", type: "decision", refId: "dec-mansour", title: "قرار: أين تبني العاصمة؟", reward: 50 },
+      { id: "a-m3", type: "investigation", refId: "inv-baghdad", title: "حقّق: المدينة المدوّرة", reward: 50 },
+      { id: "a-m4", type: "investigation", refId: "inv-abbasid-era", title: "حقّق: ما هذه الحقبة؟", reward: 50 },
+    ],
+    finalReward: { character: "harun", artifact: "khwarizmi-jabr", points: 80 },
+  },
+  {
+    eraId: "andalus", title: "حملة الأندلس", intro: "زهرة الغرب من الفتح إلى السقوط.",
+    missions: [
+      { id: "n-m1", type: "story", refId: "cordoba", title: "اقرأ: قرطبة جوهرة العالم", reward: 10 },
+      { id: "n-m2", type: "investigation", refId: "inv-cordoba", title: "حقّق: المدينة المنوّرة بالغرب", reward: 50 },
+      { id: "n-m3", type: "timeline", refId: "tl-andalus", title: "رتّب: صعود وسقوط الأندلس", reward: 60 },
+    ],
+    finalReward: { character: "abdurrahman", points: 70 },
+  },
+  {
+    eraId: "seljuk", title: "حملة السلاجقة", intro: "حماة المشرق وفاتحو الأناضول.",
+    missions: [
+      { id: "k-m1", type: "timeline", refId: "tl-battles", title: "رتّب: معارك غيّرت التاريخ", reward: 70 },
+    ],
+    finalReward: { character: "alp-arslan", points: 60 },
+  },
+  {
+    eraId: "ayyubid", title: "حملة صلاح الدين", intro: "من دمشق إلى القدس.",
+    missions: [
+      { id: "y-m1", type: "story", refId: "hattin", title: "اقرأ: حِطّين", reward: 10 },
+      { id: "y-m2", type: "decision", refId: "dec-hattin", title: "قرار: استدراج الصليبيين", reward: 60 },
+      { id: "y-m3", type: "investigation", refId: "inv-salahuddin", title: "حقّق: من هذا السلطان؟", reward: 70 },
+    ],
+    finalReward: { character: "salahuddin", artifact: "aqsa-stone", points: 100 },
+  },
+  {
+    eraId: "mamluk", title: "حملة المماليك", intro: "كاسرو المغول وحماة الحرمين.",
+    missions: [
+      { id: "m-m1", type: "story", refId: "ain-jalut", title: "اقرأ: عين جالوت", reward: 10 },
+      { id: "m-m2", type: "decision", refId: "dec-qutuz", title: "قرار: ردّ على المغول", reward: 60 },
+      { id: "m-m3", type: "investigation", refId: "inv-ain-jalut", title: "حقّق: المعركة الفاصلة", reward: 60 },
+    ],
+    finalReward: { character: "baybars", points: 80 },
+  },
+  {
+    eraId: "ottoman", title: "حملة العثمانيين", intro: "ستة قرون من الخلافة.",
+    missions: [
+      { id: "o-m1", type: "story", refId: "constantinople", title: "اقرأ: فتح القسطنطينية", reward: 10 },
+      { id: "o-m2", type: "decision", refId: "dec-fatih", title: "قرار: نقل السفن", reward: 60 },
+      { id: "o-m3", type: "investigation", refId: "inv-fatih", title: "حقّق: من هذا السلطان؟", reward: 70 },
+      { id: "o-m4", type: "timeline", refId: "tl-ottoman", title: "رتّب: ذروة العثمانيين", reward: 70 },
+    ],
+    finalReward: { character: "fatih", artifact: "ottoman-tughra", points: 100 },
+  },
+  {
+    eraId: "modern", title: "حملة النهضة", intro: "يقظة الأمة في العصر الحديث.",
+    missions: [
+      { id: "z-m1", type: "story", refId: "nahda", title: "اقرأ: فجر النهضة", reward: 10 },
+    ],
+    finalReward: { artifact: "nahda-pen", points: 40 },
+  },
+];
