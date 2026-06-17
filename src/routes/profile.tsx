@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Flame, Star, BookOpen, Puzzle, HelpCircle, LogOut, Bookmark, Bell } from "lucide-react";
+import { Flame, Star, BookOpen, Search, GitBranch, LogOut, Bookmark, Bell, Swords, Library } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { BADGES, STORIES } from "@/lib/data";
+import { BADGES, STORIES, CAMPAIGNS } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { Link } from "@tanstack/react-router";
 
@@ -40,8 +40,14 @@ function ProfilePage() {
         </div>
 
         <div className="mt-6 grid grid-cols-3 gap-3">
-          <MiniStat icon={<Puzzle className="size-4 text-gold" />} value={profile.puzzlesSolved.length} label="ألغاز" />
-          <MiniStat icon={<HelpCircle className="size-4 text-gold" />} value={profile.whoSolved.length} label="شخصيات" />
+          <MiniStat icon={<Search className="size-4 text-gold" />} value={profile.investigationsCompleted.length} label="تحقيقات" />
+          <MiniStat icon={<GitBranch className="size-4 text-gold" />} value={profile.decisionsCompleted.length} label="قرارات" />
+          <MiniStat icon={<Swords className="size-4 text-gold" />} value={profile.campaignsCompleted.length} label="حملات" />
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <MiniStat icon={<Library className="size-4 text-gold" />} value={profile.artifactsFound.length} label="آثار" />
+          <MiniStat icon={<Star className="size-4 text-gold" />} value={profile.charactersUnlocked.length} label="شخصيات" />
           <MiniStat icon={<Bookmark className="size-4 text-gold" />} value={profile.savedStories.length} label="محفوظ" />
         </div>
 

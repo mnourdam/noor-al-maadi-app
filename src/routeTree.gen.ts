@@ -9,24 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WhoAmIRouteImport } from './routes/who-am-i'
-import { Route as PuzzlesRouteImport } from './routes/puzzles'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
-import { Route as JourneyRouteImport } from './routes/journey'
+import { Route as MapRouteImport } from './routes/map'
+import { Route as CollectionRouteImport } from './routes/collection'
+import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
 import { Route as StoryIdRouteImport } from './routes/story.$id'
+import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
+import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
+import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
+import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 
-const WhoAmIRoute = WhoAmIRouteImport.update({
-  id: '/who-am-i',
-  path: '/who-am-i',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PuzzlesRoute = PuzzlesRouteImport.update({
-  id: '/puzzles',
-  path: '/puzzles',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -37,9 +32,19 @@ const OnThisDayRoute = OnThisDayRouteImport.update({
   path: '/on-this-day',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JourneyRoute = JourneyRouteImport.update({
-  id: '/journey',
-  path: '/journey',
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CollectionRoute = CollectionRouteImport.update({
+  id: '/collection',
+  path: '/collection',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CampaignsRoute = CampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -47,96 +52,138 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CampaignsIndexRoute = CampaignsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CampaignsRoute,
+} as any)
 const StoryIdRoute = StoryIdRouteImport.update({
   id: '/story/$id',
   path: '/story/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlayTimelineRoute = PlayTimelineRouteImport.update({
+  id: '/play/timeline',
+  path: '/play/timeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayInvestigateRoute = PlayInvestigateRouteImport.update({
+  id: '/play/investigate',
+  path: '/play/investigate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayDecisionsRoute = PlayDecisionsRouteImport.update({
+  id: '/play/decisions',
+  path: '/play/decisions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CampaignsEraRoute = CampaignsEraRouteImport.update({
+  id: '/$era',
+  path: '/$era',
+  getParentRoute: () => CampaignsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/journey': typeof JourneyRoute
+  '/campaigns': typeof CampaignsRouteWithChildren
+  '/collection': typeof CollectionRoute
+  '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
-  '/puzzles': typeof PuzzlesRoute
-  '/who-am-i': typeof WhoAmIRoute
+  '/campaigns/$era': typeof CampaignsEraRoute
+  '/play/decisions': typeof PlayDecisionsRoute
+  '/play/investigate': typeof PlayInvestigateRoute
+  '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
+  '/campaigns/': typeof CampaignsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/journey': typeof JourneyRoute
+  '/collection': typeof CollectionRoute
+  '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
-  '/puzzles': typeof PuzzlesRoute
-  '/who-am-i': typeof WhoAmIRoute
+  '/campaigns/$era': typeof CampaignsEraRoute
+  '/play/decisions': typeof PlayDecisionsRoute
+  '/play/investigate': typeof PlayInvestigateRoute
+  '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
+  '/campaigns': typeof CampaignsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/journey': typeof JourneyRoute
+  '/campaigns': typeof CampaignsRouteWithChildren
+  '/collection': typeof CollectionRoute
+  '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
-  '/puzzles': typeof PuzzlesRoute
-  '/who-am-i': typeof WhoAmIRoute
+  '/campaigns/$era': typeof CampaignsEraRoute
+  '/play/decisions': typeof PlayDecisionsRoute
+  '/play/investigate': typeof PlayInvestigateRoute
+  '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
+  '/campaigns/': typeof CampaignsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/journey'
+    | '/campaigns'
+    | '/collection'
+    | '/map'
     | '/on-this-day'
     | '/profile'
-    | '/puzzles'
-    | '/who-am-i'
+    | '/campaigns/$era'
+    | '/play/decisions'
+    | '/play/investigate'
+    | '/play/timeline'
     | '/story/$id'
+    | '/campaigns/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/journey'
+    | '/collection'
+    | '/map'
     | '/on-this-day'
     | '/profile'
-    | '/puzzles'
-    | '/who-am-i'
+    | '/campaigns/$era'
+    | '/play/decisions'
+    | '/play/investigate'
+    | '/play/timeline'
     | '/story/$id'
+    | '/campaigns'
   id:
     | '__root__'
     | '/'
-    | '/journey'
+    | '/campaigns'
+    | '/collection'
+    | '/map'
     | '/on-this-day'
     | '/profile'
-    | '/puzzles'
-    | '/who-am-i'
+    | '/campaigns/$era'
+    | '/play/decisions'
+    | '/play/investigate'
+    | '/play/timeline'
     | '/story/$id'
+    | '/campaigns/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  JourneyRoute: typeof JourneyRoute
+  CampaignsRoute: typeof CampaignsRouteWithChildren
+  CollectionRoute: typeof CollectionRoute
+  MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
   ProfileRoute: typeof ProfileRoute
-  PuzzlesRoute: typeof PuzzlesRoute
-  WhoAmIRoute: typeof WhoAmIRoute
+  PlayDecisionsRoute: typeof PlayDecisionsRoute
+  PlayInvestigateRoute: typeof PlayInvestigateRoute
+  PlayTimelineRoute: typeof PlayTimelineRoute
   StoryIdRoute: typeof StoryIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/who-am-i': {
-      id: '/who-am-i'
-      path: '/who-am-i'
-      fullPath: '/who-am-i'
-      preLoaderRoute: typeof WhoAmIRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/puzzles': {
-      id: '/puzzles'
-      path: '/puzzles'
-      fullPath: '/puzzles'
-      preLoaderRoute: typeof PuzzlesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -151,11 +198,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnThisDayRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/journey': {
-      id: '/journey'
-      path: '/journey'
-      fullPath: '/journey'
-      preLoaderRoute: typeof JourneyRouteImport
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/collection': {
+      id: '/collection'
+      path: '/collection'
+      fullPath: '/collection'
+      preLoaderRoute: typeof CollectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campaigns': {
+      id: '/campaigns'
+      path: '/campaigns'
+      fullPath: '/campaigns'
+      preLoaderRoute: typeof CampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -165,6 +226,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/campaigns/': {
+      id: '/campaigns/'
+      path: '/'
+      fullPath: '/campaigns/'
+      preLoaderRoute: typeof CampaignsIndexRouteImport
+      parentRoute: typeof CampaignsRoute
+    }
     '/story/$id': {
       id: '/story/$id'
       path: '/story/$id'
@@ -172,16 +240,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StoryIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/play/timeline': {
+      id: '/play/timeline'
+      path: '/play/timeline'
+      fullPath: '/play/timeline'
+      preLoaderRoute: typeof PlayTimelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/investigate': {
+      id: '/play/investigate'
+      path: '/play/investigate'
+      fullPath: '/play/investigate'
+      preLoaderRoute: typeof PlayInvestigateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/decisions': {
+      id: '/play/decisions'
+      path: '/play/decisions'
+      fullPath: '/play/decisions'
+      preLoaderRoute: typeof PlayDecisionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campaigns/$era': {
+      id: '/campaigns/$era'
+      path: '/$era'
+      fullPath: '/campaigns/$era'
+      preLoaderRoute: typeof CampaignsEraRouteImport
+      parentRoute: typeof CampaignsRoute
+    }
   }
 }
 
+interface CampaignsRouteChildren {
+  CampaignsEraRoute: typeof CampaignsEraRoute
+  CampaignsIndexRoute: typeof CampaignsIndexRoute
+}
+
+const CampaignsRouteChildren: CampaignsRouteChildren = {
+  CampaignsEraRoute: CampaignsEraRoute,
+  CampaignsIndexRoute: CampaignsIndexRoute,
+}
+
+const CampaignsRouteWithChildren = CampaignsRoute._addFileChildren(
+  CampaignsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  JourneyRoute: JourneyRoute,
+  CampaignsRoute: CampaignsRouteWithChildren,
+  CollectionRoute: CollectionRoute,
+  MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
   ProfileRoute: ProfileRoute,
-  PuzzlesRoute: PuzzlesRoute,
-  WhoAmIRoute: WhoAmIRoute,
+  PlayDecisionsRoute: PlayDecisionsRoute,
+  PlayInvestigateRoute: PlayInvestigateRoute,
+  PlayTimelineRoute: PlayTimelineRoute,
   StoryIdRoute: StoryIdRoute,
 }
 export const routeTree = rootRouteImport

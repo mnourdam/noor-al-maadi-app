@@ -14,6 +14,15 @@ export interface ProfileState {
   whoSolved: string[];
   badges: string[];
   unlockedEras: string[];
+  // Gameplay
+  investigationsCompleted: string[];
+  timelinesCompleted: string[];
+  decisionsCompleted: string[];
+  missionsCompleted: string[];
+  campaignsCompleted: string[];
+  artifactsFound: string[];
+  charactersUnlocked: string[];
+  regionsUnlocked: string[];
 }
 
 const initial: ProfileState = {
@@ -28,6 +37,14 @@ const initial: ProfileState = {
   whoSolved: [],
   badges: [],
   unlockedEras: ["seerah", "rashidun"],
+  investigationsCompleted: [],
+  timelinesCompleted: [],
+  decisionsCompleted: [],
+  missionsCompleted: [],
+  campaignsCompleted: [],
+  artifactsFound: [],
+  charactersUnlocked: [],
+  regionsUnlocked: ["hijaz"],
 };
 
 interface Ctx {
@@ -42,6 +59,14 @@ interface Ctx {
   unlockEra: (id: string) => void;
   touchStreak: () => void;
   awardBadge: (id: string) => void;
+  completeInvestigation: (id: string, reward: number) => void;
+  completeTimeline: (id: string, reward: number) => void;
+  completeDecision: (id: string, reward: number) => void;
+  completeMission: (id: string, reward: number) => void;
+  completeCampaign: (id: string, reward: number) => void;
+  findArtifact: (id: string) => void;
+  unlockCharacter: (id: string) => void;
+  unlockRegion: (id: string, cost: number) => boolean;
 }
 
 const ProfileContext = createContext<Ctx | null>(null);
@@ -125,6 +150,56 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       return { ...p, streak, lastActiveDay: today, badges };
     }),
     awardBadge,
+    completeInvestigation: (id, reward) => update((p) => {
+      if (p.investigationsCompleted.includes(id)) return p;
+      return { ...p, investigationsCompleted: [...p.investigationsCompleted, id], points: p.points + reward };
+    }),
+    completeTimeline: (id, reward) => update((p) => {
+      if (p.timelinesCompleted.includes(id)) return p;
+      return { ...p, timelinesCompleted: [...p.timelinesCompleted, id], points: p.points + reward };
+    }),
+    completeDecision: (id, reward) => update((p) => {
+      if (p.decisionsCompleted.includes(id)) return p;
+      return { ...p, decisionsCompleted: [...p.decisionsCompleted, id], points: p.points + reward };
+    }),
+    completeMission: (id, reward) => update((p) => {
+      if (p.missionsCompleted.includes(id)) return p;
+      return { ...p, missionsCompleted: [...p.missionsCompleted, id], points: p.points + reward };
+    }),
+    completeCampaign: (id, reward) => update((p) => {
+      if (p.campaignsCompleted.includes(id)) return p;
+      const badges = [...p.badges];
+      const list = [...p.campaignsCompleted, id];
+      if (list.length >= 3 && !badges.includes("three_campaigns")) badges.push("three_campaigns");
+      if (list.length >= 10 && !badges.includes("all_campaigns")) badges.push("all_campaigns");
+      return { ...p, campaignsCompleted: list, points: p.points + reward, badges };
+    }),
+    findArtifact: (id) => update((p) => {
+      if (p.artifactsFound.includes(id)) return p;
+      const list = [...p.artifactsFound, id];
+      const badges = [...p.badges];
+      if (!badges.includes("first_artifact")) badges.push("first_artifact");
+      if (list.length >= 10 && !badges.includes("ten_artifacts")) badges.push("ten_artifacts");
+      return { ...p, artifactsFound: list, points: p.points + 15, badges };
+    }),
+    unlockCharacter: (id) => update((p) => {
+      if (p.charactersUnlocked.includes(id)) return p;
+      const list = [...p.charactersUnlocked, id];
+      const badges = [...p.badges];
+      if (!badges.includes("first_card")) badges.push("first_card");
+      if (list.length >= 6 && !badges.includes("six_cards")) badges.push("six_cards");
+      return { ...p, charactersUnlocked: list, points: p.points + 20, badges };
+    }),
+    unlockRegion: (id, cost) => {
+      let ok = false;
+      update((p) => {
+        if (p.regionsUnlocked.includes(id)) { ok = true; return p; }
+        if (p.points < cost) return p;
+        ok = true;
+        return { ...p, regionsUnlocked: [...p.regionsUnlocked, id], points: p.points - cost };
+      });
+      return ok;
+    },
   }), [profile, update, awardBadge]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;

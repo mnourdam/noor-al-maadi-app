@@ -1,13 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { BookOpen, Puzzle, HelpCircle, Calendar, Map, User } from "lucide-react";
+import { Compass, Swords, Map, Library, User } from "lucide-react";
 import type { ReactNode } from "react";
 
 const tabs = [
-  { to: "/", label: "الرئيسية", icon: BookOpen },
-  { to: "/puzzles", label: "ألغاز", icon: Puzzle },
-  { to: "/who-am-i", label: "من أنا؟", icon: HelpCircle },
-  { to: "/on-this-day", label: "هذا اليوم", icon: Calendar },
-  { to: "/journey", label: "الرحلة", icon: Map },
+  { to: "/", label: "المغامرة", icon: Compass },
+  { to: "/campaigns", label: "الحملات", icon: Swords },
+  { to: "/map", label: "الخارطة", icon: Map },
+  { to: "/collection", label: "مجموعتي", icon: Library },
   { to: "/profile", label: "حسابي", icon: User },
 ] as const;
 
@@ -18,7 +17,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col pb-24">
       <div className="flex-1">{children}</div>
       <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-3 pb-3">
-        <div className="glass shadow-elegant grid grid-cols-6 items-center gap-1 rounded-2xl border border-white/10 p-1.5">
+        <div className="glass shadow-elegant grid grid-cols-5 items-center gap-1 rounded-2xl border border-white/10 p-1.5">
           {tabs.map(({ to, label, icon: Icon }) => {
             const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
             return (
