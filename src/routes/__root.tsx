@@ -82,10 +82,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "تطبيق عربي متميّز لتعلّم التاريخ العربي والإسلامي عبر قصص قصيرة وألغاز واختبارات وإشعارات في مثل هذا اليوم." },
       { name: "author", content: "حكايا" },
       { property: "og:title", content: "حكايا — رحلة في التاريخ العربي والإسلامي" },
-      { property: "og:description", content: "قصص، ألغاز، شخصيات، وخارطة الحقب الإسلامية في تطبيق واحد." },
+      { property: "og:description", content: "تطبيق عربي متميّز لتعلّم التاريخ العربي والإسلامي عبر قصص قصيرة وألغاز واختبارات وإشعارات في مثل هذا اليوم." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "حكايا — رحلة في التاريخ العربي والإسلامي" },
+      { name: "twitter:description", content: "تطبيق عربي متميّز لتعلّم التاريخ العربي والإسلامي عبر قصص قصيرة وألغاز واختبارات وإشعارات في مثل هذا اليوم." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5a399f30-045b-4b94-a116-29ff70877594/id-preview-190a165f--8e8e44d1-9880-47bf-a75a-660a1d033d8d.lovable.app-1781738902556.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5a399f30-045b-4b94-a116-29ff70877594/id-preview-190a165f--8e8e44d1-9880-47bf-a75a-660a1d033d8d.lovable.app-1781738902556.png" },
     ],
     links: [
       {
