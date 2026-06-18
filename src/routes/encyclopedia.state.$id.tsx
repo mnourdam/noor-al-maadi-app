@@ -114,7 +114,7 @@ function StatePage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-display text-[13px] font-bold line-clamp-1">{c.title}</p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">{c.summary}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">{c.intro}</p>
                   </div>
                 </Link>
               ))}
