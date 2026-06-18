@@ -1,4 +1,8 @@
 import type { Era } from "@/lib/data";
+import type { PackEntity } from "@/lib/packs/types";
+import { allPackEntities } from "@/lib/packs/registry";
+import { getCity } from "@/lib/cities";
+import { CHARACTERS, getBattleProfile } from "@/lib/data";
 
 /**
  * The Great Timeline dataset.
@@ -180,3 +184,103 @@ export const TONE_CLASSES: Record<string, { bg: string; border: string; text: st
   ruby:    { bg: "bg-red-600/25",     border: "border-red-500/50",    text: "text-red-100",     dot: "bg-red-500" },
   sand:    { bg: "bg-stone-400/25",   border: "border-stone-300/50",  text: "text-stone-100",   dot: "bg-stone-300" },
 };
+
+// ============================================================
+// Pack-entity → timeline projection
+// ------------------------------------------------------------
+// Every encyclopedia entity that carries a `timelinePosition` (or period)
+// is automatically projected onto the Great Timeline. The href is the
+// canonical encyclopedia / legacy route resolved by the same rules as
+// EncyclopediaCard, so taps on the timeline always lead to a real page.
+// ============================================================
+
+function entityToneFor(e: PackEntity): TimelineBand["tone"] {
+  const era = e.bridges?.era;
+  if (era === "ayyubid") return "amber";
+  if (era === "umayyad") return "sky";
+  if (era === "abbasid") return "violet";
+  if (era === "andalus") return "rose";
+  if (era === "ottoman") return "emerald";
+  if (era === "mamluk")  return "gold";
+  if (era === "seljuk")  return "indigo";
+  if (era === "rashidun")return "emerald";
+  if (era === "seerah")  return "gold";
+  return "sand";
+}
+
+function entityHrefForTimeline(e: PackEntity): string {
+  const b = e.bridges;
+  if (e.type === "city" && b?.cityId && getCity(b.cityId)) return `/city/${b.cityId}`;
+  if (e.type === "battle" && b?.battleId && getBattleProfile(b.battleId)) return `/battle/${b.battleId}`;
+  if (e.type === "figure" && b?.characterId && CHARACTERS.some((c) => c.id === b.characterId)) return `/figure/${b.characterId}`;
+  if (e.type === "state" && b?.era) return `/encyclopedia/state/${b.era}`;
+  return `/encyclopedia/entity/${e.id}`;
+}
+
+function entityGlyph(e: PackEntity): string {
+  if (e.image?.glyph) return e.image.glyph;
+  if (e.type === "battle") return "⚔️";
+  if (e.type === "city")   return "🏛️";
+  if (e.type === "landmark") return "🏰";
+  if (e.type === "artifact") return "📜";
+  return "✦";
+}
+
+/** Pack entities projected as additional timeline bands (states + lifespans). */
+export function packBands(): TimelineBand[] {
+  const out: TimelineBand[] = [];
+  for (const e of allPackEntities()) {
+    const { startYear, endYear } = e.period;
+    if (!startYear || !endYear || endYear <= startYear) continue;
+    if (e.type === "state") {
+      out.push({
+        id: `pk-${e.id}`, lane: "caliphate", label: e.title,
+        start: startYear, end: endYear,
+        era: e.bridges?.era as Era | undefined,
+        href: entityHrefForTimeline(e), tone: entityToneFor(e),
+      });
+    } else if (e.type === "figure") {
+      out.push({
+        id: `pk-${e.id}`, lane: "figure", label: e.title,
+        start: startYear, end: endYear,
+        era: e.bridges?.era as Era | undefined,
+        href: entityHrefForTimeline(e), tone: entityToneFor(e),
+      });
+    }
+  }
+  return out;
+}
+
+/** Pack entities projected as additional timeline points (battles, events, books, landmarks). */
+export function packPoints(): TimelinePoint[] {
+  const out: TimelinePoint[] = [];
+  for (const e of allPackEntities()) {
+    const year = e.timelinePosition;
+    if (!year) continue;
+    let lane: TimelinePoint["lane"] | null = null;
+    if (e.type === "battle") lane = "battle";
+    else if (e.type === "event") lane = "event";
+    else if (e.type === "city" || e.type === "landmark") lane = "event";
+    else if (e.type === "artifact") lane = "book";
+    if (!lane) continue;
+    out.push({
+      id: `pk-${e.id}`, lane, year, label: e.title,
+      hint: e.description, era: e.bridges?.era as Era | undefined,
+      href: entityHrefForTimeline(e),
+      tone: entityToneFor(e), glyph: entityGlyph(e),
+    });
+  }
+  return out;
+}
+
+/** Combined static + pack bands/points, de-duplicated by lane + label + start year. */
+export function allBands(): TimelineBand[] {
+  const seen = new Set(BANDS.map((b) => `${b.lane}|${b.label}|${b.start}`));
+  const extra = packBands().filter((b) => !seen.has(`${b.lane}|${b.label}|${b.start}`));
+  return [...BANDS, ...extra];
+}
+export function allPoints(): TimelinePoint[] {
+  const seen = new Set(POINTS.map((p) => `${p.lane}|${p.label}|${p.year}`));
+  const extra = packPoints().filter((p) => !seen.has(`${p.lane}|${p.label}|${p.year}`));
+  return [...POINTS, ...extra];
+}

@@ -225,20 +225,24 @@ export interface OnThisDay {
   era: Era;
   title: string;
   detail: string;
+  /** Optional pack entity id (e.g. "ayyubid.battle.hattin") to deep-link from the home discovery & on-this-day pages. */
+  relatedEntityId?: string;
+  /** Optional human-readable source note shown beneath the entry. */
+  source?: string;
 }
 
 export const ON_THIS_DAY: OnThisDay[] = [
-  { id: "d1", monthDay: "01-15", year: "٧٥٦م", era: "andalus", title: "تأسيس إمارة الأندلس الأموية", detail: "دخل عبد الرحمن الداخل قرطبة وأسّس الدولة الأموية في الأندلس." },
-  { id: "d2", monthDay: "02-10", year: "٦٥٦هـ/١٢٥٨م", era: "abbasid", title: "سقوط بغداد على يد هولاكو", detail: "اقتحم المغول بغداد وأنهَوا الخلافة العباسية، وأُلقيت كتب بيت الحكمة في دجلة." },
-  { id: "d3", monthDay: "03-12", year: "٦٢٤م", era: "seerah", title: "غزوة بدر الكبرى", detail: "أول معركة فاصلة في تاريخ الإسلام، انتصر فيها ٣١٣ مسلمًا على ١٠٠٠ مشرك." },
-  { id: "d4", monthDay: "04-06", year: "١٤٥٣م", era: "ottoman", title: "بداية حصار القسطنطينية", detail: "بدأ السلطان محمد الفاتح حصار المدينة الذي استمر ٥٣ يومًا حتى فتحها." },
-  { id: "d5", monthDay: "04-26", year: "٧١١م", era: "andalus", title: "معركة وادي لكّة", detail: "هزم طارق بن زياد القوط بقيادة لذريق، ففُتحت الأندلس." },
-  { id: "d6", monthDay: "05-29", year: "١٤٥٣م", era: "ottoman", title: "فتح القسطنطينية", detail: "دخل محمد الفاتح المدينة وصلّى في آيا صوفيا، فتحقّقت بشارة النبي ﷺ." },
-  { id: "d7", monthDay: "06-08", year: "٦٣٢م", era: "seerah", title: "وفاة النبي ﷺ", detail: "انتقل النبي محمد ﷺ إلى الرفيق الأعلى في المدينة المنورة." },
-  { id: "d8", monthDay: "07-04", year: "١١٨٧م", era: "ayyubid", title: "معركة حِطّين", detail: "هزم صلاح الدين الصليبيين هزيمةً ساحقة، فُتح الطريق لتحرير القدس." },
-  { id: "d9", monthDay: "08-10", year: "٦٣٦م", era: "rashidun", title: "بداية معركة اليرموك", detail: "ستة أيامٍ من القتال انتهت بهزيمة الروم وفتح الشام." },
-  { id: "d10", monthDay: "09-03", year: "١٢٦٠م", era: "mamluk", title: "معركة عين جالوت", detail: "هزم قطز وبيبرس المغول لأول مرة، فحُفظت مصر والشام." },
-  { id: "d11", monthDay: "10-02", year: "١١٨٧م", era: "ayyubid", title: "تحرير القدس", detail: "دخل صلاح الدين القدس صلحًا، وأُعيد الأذان إلى المسجد الأقصى." },
+  { id: "d1", monthDay: "01-15", year: "٧٥٦م", era: "andalus", title: "تأسيس إمارة الأندلس الأموية", detail: "دخل عبد الرحمن الداخل قرطبة وأسّس الدولة الأموية في الأندلس.", source: "ابن الأثير · الكامل في التاريخ" },
+  { id: "d2", monthDay: "02-10", year: "٦٥٦هـ/١٢٥٨م", era: "abbasid", title: "سقوط بغداد على يد هولاكو", detail: "اقتحم المغول بغداد وأنهَوا الخلافة العباسية، وأُلقيت كتب بيت الحكمة في دجلة.", source: "ابن كثير · البداية والنهاية" },
+  { id: "d3", monthDay: "03-12", year: "٦٢٤م", era: "seerah", title: "غزوة بدر الكبرى", detail: "أول معركة فاصلة في تاريخ الإسلام، انتصر فيها ٣١٣ مسلمًا على ١٠٠٠ مشرك.", source: "السيرة النبوية لابن هشام" },
+  { id: "d4", monthDay: "04-06", year: "١٤٥٣م", era: "ottoman", title: "بداية حصار القسطنطينية", detail: "بدأ السلطان محمد الفاتح حصار المدينة الذي استمر ٥٣ يومًا حتى فتحها.", source: "تاج التواريخ · سعد الدين" },
+  { id: "d5", monthDay: "04-26", year: "٧١١م", era: "andalus", title: "معركة وادي لكّة", detail: "هزم طارق بن زياد القوط بقيادة لذريق، ففُتحت الأندلس.", source: "نفح الطيب · المقري" },
+  { id: "d6", monthDay: "05-29", year: "١٤٥٣م", era: "ottoman", title: "فتح القسطنطينية", detail: "دخل محمد الفاتح المدينة وصلّى في آيا صوفيا، فتحقّقت بشارة النبي ﷺ.", source: "كرتسولاس · مؤرخ بيزنطي" },
+  { id: "d7", monthDay: "06-08", year: "٦٣٢م", era: "seerah", title: "وفاة النبي ﷺ", detail: "انتقل النبي محمد ﷺ إلى الرفيق الأعلى في المدينة المنورة.", source: "صحيح البخاري" },
+  { id: "d8", monthDay: "07-04", year: "١١٨٧م", era: "ayyubid", title: "معركة حِطّين", detail: "هزم صلاح الدين الصليبيين هزيمةً ساحقة، فُتح الطريق لتحرير القدس.", relatedEntityId: "ayyubid.battle.hattin", source: "النوادر السلطانية · ابن شداد" },
+  { id: "d9", monthDay: "08-10", year: "٦٣٦م", era: "rashidun", title: "بداية معركة اليرموك", detail: "ستة أيامٍ من القتال انتهت بهزيمة الروم وفتح الشام.", source: "فتوح البلدان · البلاذري" },
+  { id: "d10", monthDay: "09-03", year: "١٢٦٠م", era: "mamluk", title: "معركة عين جالوت", detail: "هزم قطز وبيبرس المغول لأول مرة، فحُفظت مصر والشام.", source: "السلوك · المقريزي" },
+  { id: "d11", monthDay: "10-02", year: "١١٨٧م", era: "ayyubid", title: "تحرير القدس", detail: "دخل صلاح الدين القدس صلحًا، وأُعيد الأذان إلى المسجد الأقصى.", relatedEntityId: "ayyubid.event.liberate-jerusalem", source: "ابن شداد · النوادر السلطانية" },
   { id: "d12", monthDay: "11-16", year: "٦٣٦م", era: "rashidun", title: "معركة القادسية", detail: "هزم سعد بن أبي وقاص جيش الفرس بقيادة رستم." },
   { id: "d13", monthDay: "12-18", year: "١٢٧١م", era: "mamluk", title: "فتح بيبرس قلعة الحصن", detail: "حصن الصليبيين الأمنع في الشام سقط بيد المماليك." },
   { id: "d14", monthDay: "01-27", year: "٧٣٢م", era: "umayyad", title: "معركة بلاط الشهداء", detail: "استشهد عبد الرحمن الغافقي في معركةٍ غيّرت مصير أوروبا." },
@@ -276,7 +280,17 @@ export function todayOnThisDay(): OnThisDay {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   const key = `${mm}-${dd}`;
-  return ON_THIS_DAY.find((e) => e.monthDay === key) ?? ON_THIS_DAY[(d.getDate() - 1) % ON_THIS_DAY.length];
+  const exact = ON_THIS_DAY.find((e) => e.monthDay === key);
+  if (exact) return exact;
+  // Nearest upcoming entry by month/day (wrap-around end of year).
+  const todayIdx = d.getMonth() * 31 + d.getDate();
+  const withDelta = ON_THIS_DAY.map((e) => {
+    const [em, ed] = e.monthDay.split("-").map(Number);
+    const idx = (em - 1) * 31 + ed;
+    const delta = (idx - todayIdx + 372) % 372;
+    return { e, delta };
+  }).sort((a, b) => a.delta - b.delta);
+  return withDelta[0]?.e ?? ON_THIS_DAY[0];
 }
 
 export function dailyStory(): Story {
@@ -1068,15 +1082,47 @@ export interface Season {
   goalPoints: number;
   endsAt: string; // ISO date label
   reward: { points: number; artifact?: string; title?: string };
+  /** 1..12 — Gregorian month this season runs. */
+  month?: number;
+  /** Short theme tag used in UI. */
+  theme?: string;
+  /** Optional badge id awarded on completion. */
+  badge?: string;
 }
-export const CURRENT_SEASON: Season = {
-  id: "season_jerusalem",
-  name: "موسم القدس",
-  tagline: "اجمع ٧٥٠ نقطة هذا الموسم لتنال لقب «من حُماة الأقصى».",
-  goalPoints: 750,
-  endsAt: "نهاية الشهر",
-  reward: { points: 250, artifact: "aqsa-stone", title: "من حُماة الأقصى" },
-};
+
+/**
+ * 12 monthly season definitions. The active season is picked automatically
+ * from the current Gregorian month — past seasons appear archived and future
+ * seasons appear locked in the seasons archive.
+ */
+export const SEASONS: Season[] = [
+  { id: "season_seerah",     month: 1,  name: "موسم السيرة النبوية", tagline: "عش شهرًا في نور النبوّة وأخلاق صاحب الرسالة ﷺ.", theme: "نور النبوّة",      goalPoints: 600, endsAt: "نهاية يناير",   reward: { points: 200, title: "صاحب الرسالة" },     badge: "season_seerah" },
+  { id: "season_rashidun",   month: 2,  name: "موسم الراشدين",        tagline: "ارفع رايتك مع الخلفاء الأربعة من خلال مهمّات هذا الشهر.", theme: "عدلٌ وفتوح",      goalPoints: 650, endsAt: "نهاية فبراير",  reward: { points: 220, title: "ابن الفاروق" },       badge: "season_rashidun" },
+  { id: "season_andalus",    month: 3,  name: "موسم الأندلس",         tagline: "من جبل طارق إلى قرطبة، اجمع نقاطك في موسم الأندلس.", theme: "زهرة الغرب",      goalPoints: 700, endsAt: "نهاية مارس",    reward: { points: 240, title: "فارس قرطبة" },        badge: "season_andalus" },
+  { id: "season_baghdad",    month: 4,  name: "موسم بغداد",           tagline: "ادخل بيت الحكمة وكن من علماء العصر الذهبي.", theme: "بيت الحكمة",      goalPoints: 720, endsAt: "نهاية أبريل",   reward: { points: 240, artifact: "khwarizmi-jabr", title: "عالم العصر الذهبي" }, badge: "season_baghdad" },
+  { id: "season_constantinople", month: 5, name: "موسم الفتح",         tagline: "قف على أسوار القسطنطينية مع محمد الفاتح.", theme: "أسوار القسطنطينية", goalPoints: 750, endsAt: "نهاية مايو",  reward: { points: 260, title: "من جند الفاتح" },      badge: "season_constantinople" },
+  { id: "season_seerah_late",month: 6,  name: "موسم المدينة",         tagline: "اقتفِ أثر الأنصار في دار الهجرة.", theme: "دارُ الهجرة",     goalPoints: 700, endsAt: "نهاية يونيو",   reward: { points: 240, title: "أنصاريٌّ صادق" },     badge: "season_madina" },
+  { id: "season_jerusalem",  month: 7,  name: "موسم القدس",           tagline: "اجمع ٧٥٠ نقطة هذا الموسم لتنال لقب «من حُماة الأقصى».", theme: "عودة الأذان",     goalPoints: 750, endsAt: "نهاية يوليو",  reward: { points: 250, artifact: "aqsa-stone", title: "من حُماة الأقصى" }, badge: "season_jerusalem" },
+  { id: "season_yarmouk",    month: 8,  name: "موسم اليرموك",         tagline: "كن من فرسان خالد في كسرة الروم.", theme: "كاسرو الروم",     goalPoints: 700, endsAt: "نهاية أغسطس",   reward: { points: 240, title: "من فرسان خالد" },     badge: "season_yarmouk" },
+  { id: "season_ain_jalut",  month: 9,  name: "موسم عين جالوت",       tagline: "احفظ مصر والشام مع قطز وبيبرس.", theme: "كاسرو المغول",   goalPoints: 750, endsAt: "نهاية سبتمبر",  reward: { points: 260, title: "من جند قطز" },         badge: "season_ain_jalut" },
+  { id: "season_andalus_fall",month:10, name: "موسم الأندلس الأخيرة", tagline: "احفظ ذاكرة غرناطة قبل سقوط الراية.", theme: "ذاكرة لا تموت",   goalPoints: 700, endsAt: "نهاية أكتوبر",  reward: { points: 240, title: "حافظ الأندلس" },       badge: "season_andalus_fall" },
+  { id: "season_seljuk",     month: 11, name: "موسم السلاجقة",        tagline: "ادخل الأناضول من بوابة ملاذكرد.", theme: "بوابة الأناضول",  goalPoints: 720, endsAt: "نهاية نوفمبر",  reward: { points: 250, title: "من فرسان ألب أرسلان" }, badge: "season_seljuk" },
+  { id: "season_baghdad_fall",month: 12,name: "موسم بغداد الحزينة",   tagline: "احمل قبسًا من ضوء بيت الحكمة قبل دجلة.", theme: "ذكرى السقوط",     goalPoints: 700, endsAt: "نهاية ديسمبر",  reward: { points: 240, title: "حافظ بيت الحكمة" },   badge: "season_baghdad_fall" },
+];
+
+export function currentSeason(d: Date = new Date()): Season {
+  const m = d.getMonth() + 1;
+  return SEASONS.find((s) => s.month === m) ?? SEASONS[0];
+}
+
+export function seasonStatus(s: Season, d: Date = new Date()): "active" | "archived" | "locked" {
+  const m = d.getMonth() + 1;
+  if (!s.month || s.month === m) return "active";
+  return s.month < m ? "archived" : "locked";
+}
+
+/** Back-compat: the active season for the current month. */
+export const CURRENT_SEASON: Season = currentSeason();
 
 // ============================================================
 // COMING-SOON TEASERS — make the world feel infinite
@@ -1138,6 +1184,25 @@ export function overallCampaignPercent(missionsCompleted: string[]) {
   const totalMissions = CAMPAIGNS.reduce((s, c) => s + c.missions.length, 0);
   const done = CAMPAIGNS.reduce((s, c) => s + c.missions.filter((m) => missionsCompleted.includes(m.id)).length, 0);
   return Math.round((done / totalMissions) * 100);
+}
+
+/**
+ * Returns the campaign the Adventure hero should feature right now.
+ *  - Prefer the flagship campaign if it isn't fully complete.
+ *  - Otherwise pick the first campaign with remaining missions, in ERAS order.
+ *  - Returns `null` if every campaign is finished — caller should show a
+ *    "قريبًا" upcoming card instead of repeating a finished campaign.
+ */
+export function nextActiveCampaign(missionsCompleted: string[]): Campaign | null {
+  const isDone = (c: Campaign) =>
+    c.missions.length > 0 && c.missions.every((m) => missionsCompleted.includes(m.id));
+  const flagship = CAMPAIGNS.find((c) => c.flagship);
+  if (flagship && !isDone(flagship)) return flagship;
+  const order = ERAS.map((e) => e.id);
+  const sorted = [...CAMPAIGNS].sort(
+    (a, b) => order.indexOf(a.eraId) - order.indexOf(b.eraId),
+  );
+  return sorted.find((c) => !isDone(c)) ?? null;
 }
 
 // ============================================================

@@ -10,6 +10,9 @@ import { useProfile } from "@/lib/profile";
 import { RelatedHistory } from "@/components/RelatedHistory";
 import { citiesInRegion } from "@/lib/cities";
 import { Building2 } from "lucide-react";
+import { packEntitiesForBridge, allPackEntities } from "@/lib/packs/registry";
+import { entityHref } from "@/components/EncyclopediaCard";
+import type { PackEntity } from "@/lib/packs/types";
 
 export const Route = createFileRoute("/map")({
   head: () => ({ meta: [{ title: "خارطة العالم الإسلامي" }] }),
@@ -72,6 +75,9 @@ function MapPage() {
 
         {/* Knowledge graph for the selected region */}
         <RelatedHistory entity={{ kind: "region", id: region.id }} title={`شبكة ${region.name} التاريخية`} />
+
+        {/* Encyclopedia entities tied to this region (cities, landmarks, battles, events) */}
+        <RegionEncyclopediaRail regionId={region.id} />
 
         {/* Quick rail of regions */}
         <h3 className="font-display mt-7 mb-3 text-base font-bold">الأقاليم المعروفة</h3>
@@ -429,6 +435,65 @@ function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string
     <div className="rounded-2xl border border-white/10 bg-surface-2 p-2">
       <div className="flex items-center justify-center gap-1 text-gold">{icon}<span className="font-display text-sm font-bold">{value}</span></div>
       <p className="mt-0.5 text-[9px] text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+// ============================================================
+// Region encyclopedia rail — auto-aggregates pack entities tied
+// to this region either directly (bridges.regionId) or via a
+// city in the region (bridges.cityId → region match).
+// ============================================================
+function RegionEncyclopediaRail({ regionId }: { regionId: string }) {
+  const direct = packEntitiesForBridge("regionId", regionId);
+  const regionCityIds = new Set(citiesInRegion(regionId).map((c) => c.id));
+  const viaCity = allPackEntities().filter((e) => {
+    const c = e.bridges?.cityId;
+    return c && regionCityIds.has(c);
+  });
+  const seen = new Set<string>();
+  const all: PackEntity[] = [];
+  for (const e of [...direct, ...viaCity]) {
+    if (seen.has(e.id)) continue;
+    seen.add(e.id); all.push(e);
+  }
+  if (all.length === 0) return null;
+
+  const TYPE_LABEL: Record<string, string> = {
+    state: "دولة", figure: "شخصية", city: "مدينة", battle: "معركة",
+    event: "حدث", landmark: "معلم", artifact: "أثر", achievement: "إنجاز",
+  };
+  const ORDER = ["city","landmark","battle","event","figure","state","artifact","achievement"];
+  const sorted = [...all].sort(
+    (a, b) => ORDER.indexOf(a.type) - ORDER.indexOf(b.type) || a.timelinePosition - b.timelinePosition,
+  );
+
+  return (
+    <div className="mt-6">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="text-[10px] tracking-[0.25em] text-gold">من الموسوعة</span>
+        <div className="h-px flex-1 bg-gradient-to-l from-gold/30 to-transparent" />
+      </div>
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2">
+        {sorted.map((e) => (
+          <Link
+            key={e.id}
+            to={entityHref(e) as "/"}
+            className="shrink-0 w-44 rounded-2xl border border-white/10 bg-surface-2 p-3 text-right transition hover:border-gold/40"
+          >
+            <div className="flex items-center justify-between">
+              <span className="grid size-9 place-items-center rounded-xl bg-black/40 text-lg">
+                {e.image?.glyph ?? "✦"}
+              </span>
+              <span className="rounded-full bg-black/30 px-2 py-0.5 text-[9px] text-gold/80">
+                {TYPE_LABEL[e.type] ?? e.type}
+              </span>
+            </div>
+            <p className="font-display mt-2 text-[12px] font-bold line-clamp-1">{e.title}</p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">{e.description}</p>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
