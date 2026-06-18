@@ -7,6 +7,7 @@ import {
   getCharacterProfile,
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
+import { RelatedHistory } from "@/components/RelatedHistory";
 
 export const Route = createFileRoute("/figure/$id")({
   head: () => ({ meta: [{ title: "الشخصية · بطلٌ من التاريخ" }] }),
@@ -365,6 +366,9 @@ function FigurePage() {
               </div>
             </section>
           ) : null}
+
+          {/* KNOWLEDGE GRAPH */}
+          <RelatedHistory entity={{ kind: "character", id }} />
         </div>
       </div>
     </AppShell>
