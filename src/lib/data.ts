@@ -958,3 +958,83 @@ export function overallCampaignPercent(missionsCompleted: string[]) {
   const done = CAMPAIGNS.reduce((s, c) => s + c.missions.filter((m) => missionsCompleted.includes(m.id)).length, 0);
   return Math.round((done / totalMissions) * 100);
 }
+
+// ============================================================
+// FLAGSHIP CINEMATIC LORE — chapter intros + atmosphere for the
+// Salah ad-Din campaign. Keyed by mission id so the experience
+// can grow per chapter without touching mission objects.
+// ============================================================
+export interface ChapterLore {
+  era: string;       // e.g. "صفر ٥٤١ هـ"
+  setting: string;   // e.g. "حلب · بلاد الشام"
+  hook: string;      // 1-line cinematic line
+  quote?: string;    // optional historical quote
+  quoteBy?: string;
+  reward?: string;   // narrative description of what this chapter grants
+}
+
+export const CHAPTER_LORE: Record<string, ChapterLore> = {
+  "y-m1": {
+    era: "منتصف القرن ٦ هـ",
+    setting: "حلب · بلاد الشام",
+    hook: "قبل أن يولد المحرّر، كان لا بُدّ من أن يولد المعلّم.",
+    quote: "لا أستحي من اللهِ أن يراني أضحك والمسلمون محاصرون.",
+    quoteBy: "نور الدين زنكي",
+    reward: "تفتح صفحة «شيخ المجاهدين» في الأرشيف.",
+  },
+  "y-m2": {
+    era: "٥٦٤ هـ",
+    setting: "القاهرة · قصر الفاطميين",
+    hook: "فتىً كرديّ يدخل بلاطًا لا يعرفه… ويخرج منه سلطانًا.",
+    quote: "إنما هي ساعةٌ ثم نموت.",
+    quoteBy: "صلاح الدين الأيوبي",
+    reward: "تفتح فصل تأسيس الدولة الأيوبية.",
+  },
+  "y-m3": {
+    era: "ملامح القائد",
+    setting: "أرشيف السلاطين",
+    hook: "ثلاثة أدلّة فقط… أتعرف القائد قبل أن تذكره الكتب؟",
+    reward: "تكشف عن بطاقة السلطان وتفتح راية حِطّين.",
+  },
+  "y-m4": {
+    era: "ربيع الثاني ٥٨٣ هـ",
+    setting: "سفوح الجليل · ليلًا",
+    hook: "الجيوش متقابلة. الماء بعيد. والقرار قرارك.",
+    quote: "إن الحرب خدعة.",
+    quoteBy: "حديث نبوي",
+    reward: "يفتح طريق الكمين نحو حِطّين.",
+  },
+  "y-m5": {
+    era: "٢٥ ربيع الآخر ٥٨٣ هـ",
+    setting: "قرون حطّين · شمال طبريّة",
+    hook: "ستّ ساعات في حرّ تموز كسرت قرنًا من الاحتلال.",
+    quote: "ما النصرُ إلا من عند الله.",
+    quoteBy: "صلاح الدين بعد حِطّين",
+    reward: "تفتح صفحة النصر في الأرشيف.",
+  },
+  "y-m6": {
+    era: "٢٧ رجب ٥٨٣ هـ",
+    setting: "القدس · باب الرحمة",
+    hook: "ثمانية وثمانون عامًا من الصمت… انكسرت بأذانٍ واحد.",
+    quote: "اللّهم تقبّل، فإنّ المسلمين قد أعادوا بيتك.",
+    quoteBy: "محيي الدين بن الزكي · أول خطبة",
+    reward: "يفتح «حجرٌ من الأقصى» في خزانة الآثار.",
+  },
+  "y-m7": {
+    era: "قرنان من المواجهة",
+    setting: "خارطة المشرق",
+    hook: "رتّب فصول الحرب الطويلة كما جرت تحت سماء الشام.",
+    reward: "يفتح مخطوطة «الحروب الصليبية».",
+  },
+  "y-m8": {
+    era: "٥٨٩ هـ – ما بعد",
+    setting: "دمشق · القلعة",
+    hook: "لم يُخلّف ذهبًا، لكنّه ترك أمّةً تعرف كيف تُحرّر.",
+    quote: "إيّاك والدماء، فإنّها لا تنام.",
+    quoteBy: "وصيّة صلاح الدين لولده",
+    reward: "تختم الحملة وتنال المكافأة الكبرى.",
+  },
+};
+
+// Flagship campaign hero artwork map
+export const CAMPAIGN_HERO: Record<string, { src: string; alt: string }> = {};
