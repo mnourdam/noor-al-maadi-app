@@ -691,3 +691,270 @@ export const CAMPAIGNS: Campaign[] = [
     finalReward: { artifact: "nahda-pen", points: 40 },
   },
 ];
+// ============================================================
+// FLAGSHIP STORIES — extra chapters for the Salah ad-Din campaign
+// ============================================================
+STORIES.push(
+  {
+    id: "nuruddin", title: "نور الدين زنكي: شيخ المجاهدين", era: "ayyubid", readMinutes: 5,
+    excerpt: "الأمير الذي وحّد الشام وزرع بذرة تحرير القدس قبل أن يقطفها صلاح الدين.",
+    body: [
+      "في زمنٍ تفرّقت فيه إمارات الشام بين الحكّام، نهض الأمير محمود بن زنكي، الملقّب بنور الدين، ليجمع الكلمة من حلب إلى دمشق.",
+      "كان عابدًا زاهدًا، يلبس الخشن ويأكل من كسب يده، حتى قال عنه ابن الأثير: «لم أرَ في سير المتقدّمين بعد الخلفاء الراشدين أحسن من سيرته».",
+      "أعدّ نور الدين منبر القدس على يد نجّاري حلب، وأقسم أن يضعه في المسجد الأقصى يوم التحرير.",
+      "أرسل قائده أسد الدين شيركوه إلى مصر لردّ الفاطميين والصليبيين، وكان مع شيركوه ابن أخيه: فتى كرديّ اسمه يوسف… هو صلاح الدين.",
+      "توفي نور الدين قبل أن يرى القدس محرّرة، لكن منبره ظلّ ينتظر… حتى جاء تلميذه.",
+    ],
+  },
+  {
+    id: "salah-rise", title: "صعود صلاح الدين: من وزيرٍ إلى سلطان", era: "ayyubid", readMinutes: 5,
+    excerpt: "كيف تحوّل فتى كرديّ من خادمٍ في بلاط الفاطميين إلى سلطان مصر والشام.",
+    body: [
+      "دخل صلاح الدين مصر مع عمّه شيركوه ضمن جيش نور الدين، فعُيّن وزيرًا للخليفة الفاطمي العاضد سنة ٥٦٤هـ.",
+      "كان شابًّا في الثلاثين، لا يطمع في مُلك، لكنّه أمسك بزمام الأمور بحكمة، ووحّد الجيش، وأعاد الخطبة للخليفة العباسي.",
+      "أنهى الدولة الفاطمية بلا قطرة دم، وأسّس الدولة الأيوبية، وبدأ يهيّئ مصر لتكون قاعدة لتحرير القدس.",
+      "بنى قلعة الجبل في القاهرة، وأصلح أسوارها، ووحّد جيوش مصر والشام بعد وفاة نور الدين تحت رايةٍ واحدة.",
+      "وحين اكتملت الأدوات، التفت بصره إلى الغرب: نحو الصليبيين الذين احتلّوا القدس منذ ٨٨ سنة.",
+    ],
+  },
+  {
+    id: "jerusalem-liberation", title: "عودة الأذان إلى الأقصى", era: "ayyubid", readMinutes: 6,
+    excerpt: "في يوم الجمعة ٢٧ رجب ٥٨٣هـ، عاد الأذان إلى القدس بعد ٨٨ عامًا من الصمت.",
+    body: [
+      "بعد حِطّين، انهارت الممالك الصليبية واحدة تلو الأخرى: عكا، نابلس، يافا، بيروت… وأخيرًا اتّجه صلاح الدين إلى القدس.",
+      "حاصرها أيامًا، فطلب أهلها الأمان، فأعطاهم ما لم يعطِه الصليبيون لأهل القدس حين دخلوها قبل قرن: لا قتل، لا سبي، فديةٌ يسيرة، ومن لم يستطع تركه السلطان حرًّا.",
+      "دخل صلاح الدين القدس في رجب ٥٨٣هـ، فأعاد الصليب المعلّق على قبة الصخرة إلى موضعه الأول، وغسل المسجد بماء الورد.",
+      "نُصب منبر نور الدين الذي حُمل من حلب، وارتقى الخطيب محيي الدين بن الزكي ليلقي خطبة الجمعة الأولى بعد ٨٨ عامًا.",
+      "بكى الناس بكاءً لم تشهد له المدينة مثيلًا، ورُفع الأذان من المآذن، فاهتزّ التاريخ.",
+    ],
+  },
+  {
+    id: "salah-legacy", title: "ميراث صلاح الدين", era: "ayyubid", readMinutes: 4,
+    excerpt: "ماذا ترك صلاح الدين بعده غير سيفه ومنبره؟ أخلاقٌ صارت أسطورة عند الصديق والعدوّ.",
+    body: [
+      "عاش صلاح الدين بعد تحرير القدس ست سنواتٍ فقط، صرفها في صدّ الحملة الصليبية الثالثة بقيادة ريتشارد قلب الأسد.",
+      "حين توفّي عام ٥٨٩هـ، لم يُخلّف ذهبًا ولا فضة. لم يُجد أهله ثمن كفنه.",
+      "أوصى ولده الظاهر بالعدل، وكتب إليه: «إيّاك والدماء، فإنها لا تنام».",
+      "تركَ دولة أيوبية امتدّت من اليمن إلى الموصل، ودولة أخلاقٍ بقيت في كتب أعدائه قبل أصدقائه: قال عنه دانتي في «الكوميديا الإلهية» إنه في برزخ النبلاء.",
+      "وبقي اسمه — كلما ضاعت القدس — رمزًا للأمل بأن المحرّر سيأتي.",
+    ],
+  },
+);
+
+// Extra flagship timeline
+TIMELINES.push({
+  id: "tl-crusades", title: "حروب الفرنجة من البداية إلى التحرير", reward: 80,
+  events: [
+    { id: "e1", label: "إعلان البابا أوربان الحرب", year: 1095 },
+    { id: "e2", label: "سقوط القدس بيد الصليبيين", year: 1099 },
+    { id: "e3", label: "وحدة الشام تحت نور الدين", year: 1154 },
+    { id: "e4", label: "تأسيس الدولة الأيوبية", year: 1171 },
+    { id: "e5", label: "معركة حِطّين", year: 1187 },
+    { id: "e6", label: "تحرير القدس", year: 1187 },
+  ],
+});
+
+// ============================================================
+// LEVELS · RANKS · TITLES
+// ============================================================
+export interface LevelInfo { level: number; min: number; title: string; rank: string }
+export const LEVELS: LevelInfo[] = [
+  { level: 1, min: 0,    title: "رحّالة مبتدئ",  rank: "برونزي" },
+  { level: 2, min: 120,  title: "مستكشف",        rank: "برونزي" },
+  { level: 3, min: 280,  title: "راوي حكايا",    rank: "فضّي"   },
+  { level: 4, min: 500,  title: "مؤرّخ",          rank: "فضّي"   },
+  { level: 5, min: 800,  title: "عالم تاريخ",     rank: "ذهبي"   },
+  { level: 6, min: 1200, title: "شيخ المؤرّخين", rank: "ذهبي"   },
+  { level: 7, min: 1700, title: "حكيم الأمّة",   rank: "بلاتيني" },
+  { level: 8, min: 2400, title: "إمام التاريخ",   rank: "بلاتيني" },
+  { level: 9, min: 3200, title: "سيّد الحكايا",   rank: "أسطوري" },
+  { level: 10, min: 4500, title: "أسطورة التاريخ", rank: "أسطوري" },
+];
+
+export function levelFor(points: number) {
+  let current = LEVELS[0];
+  let next: LevelInfo | null = LEVELS[1] ?? null;
+  for (let i = 0; i < LEVELS.length; i++) {
+    if (points >= LEVELS[i].min) {
+      current = LEVELS[i];
+      next = LEVELS[i + 1] ?? null;
+    }
+  }
+  const progress = next ? Math.min(1, (points - current.min) / (next.min - current.min)) : 1;
+  return { ...current, next, progress, toNext: next ? Math.max(0, next.min - points) : 0 };
+}
+
+// ============================================================
+// ACHIEVEMENTS — long-term goals (rendered with derived state)
+// ============================================================
+export interface AchievementDef {
+  id: string;
+  name: string;
+  desc: string;
+  icon: string;
+  goal: number;
+  secret?: boolean;
+}
+export const ACHIEVEMENTS: AchievementDef[] = [
+  { id: "ach_read_5",     name: "قارئ التاريخ",        desc: "أنهِ قراءة ٥ قصص.",            icon: "📖", goal: 5 },
+  { id: "ach_read_15",    name: "راوي الأمّة",         desc: "أنهِ قراءة ١٥ قصة.",           icon: "📚", goal: 15 },
+  { id: "ach_inv_5",      name: "محقّق ماهر",          desc: "حلّ ٥ قضايا تحقيق.",           icon: "🔍", goal: 5 },
+  { id: "ach_decisions_5",name: "صانع القرار",         desc: "اتّخذ ٥ قراراتٍ تاريخية.",      icon: "🧭", goal: 5 },
+  { id: "ach_timeline_5", name: "حافظ التواريخ",        desc: "رتّب ٥ خطوطٍ زمنية.",          icon: "🗓️", goal: 5 },
+  { id: "ach_artifact_10",name: "جامع الآثار",          desc: "اكتشف ١٠ آثار.",               icon: "🏺", goal: 10 },
+  { id: "ach_artifact_all",name: "أمين المتحف",         desc: "اجمع كل الآثار.",              icon: "🗿", goal: 16 },
+  { id: "ach_char_6",     name: "كاتب السير",           desc: "افتح ٦ شخصيات.",              icon: "🎴", goal: 6 },
+  { id: "ach_region_5",   name: "فاتح الأقاليم",        desc: "افتح ٥ مناطق على الخارطة.",    icon: "🗺️", goal: 5 },
+  { id: "ach_streak_7",   name: "أسبوعٌ من النور",       desc: "حافظ على ٧ أيام متتالية.",     icon: "🔥", goal: 7 },
+  { id: "ach_streak_30",  name: "شهرٌ من الإصرار",       desc: "حافظ على ٣٠ يومًا متتالية.",   icon: "🌙", goal: 30 },
+  { id: "ach_campaign_3", name: "قائد الحملات",          desc: "أتمم ٣ حملات تاريخية.",        icon: "⚔️", goal: 3 },
+  { id: "ach_flagship",   name: "محرّر القدس",           desc: "أتمم حملة صلاح الدين الكبرى.", icon: "🕌", goal: 1 },
+  { id: "ach_level_5",    name: "عالم التاريخ",         desc: "ابلغ المستوى الخامس.",         icon: "⭐", goal: 5 },
+  { id: "ach_explore_50", name: "نصف العالم",           desc: "أكمل ٥٠٪ من خارطة العالم.",    icon: "🧭", goal: 50 },
+  { id: "ach_secret_dawn",name: "ساعة الفجر",            desc: "سرٌّ من أسرار التاريخ…",        icon: "🌅", goal: 1, secret: true },
+];
+
+export interface AchievementProgress { id: string; current: number; earned: boolean }
+export function evaluateAchievements(p: {
+  storiesRead: string[]; investigationsCompleted: string[]; decisionsCompleted: string[];
+  timelinesCompleted: string[]; artifactsFound: string[]; charactersUnlocked: string[];
+  regionsUnlocked: string[]; streak: number; campaignsCompleted: string[]; points: number;
+}): AchievementProgress[] {
+  const lvl = levelFor(p.points).level;
+  const explorePct = Math.round((p.regionsUnlocked.length / MAP_REGIONS.length) * 100);
+  const flagshipDone = p.campaignsCompleted.includes("ayyubid") ? 1 : 0;
+  const map: Record<string, number> = {
+    ach_read_5: p.storiesRead.length,
+    ach_read_15: p.storiesRead.length,
+    ach_inv_5: p.investigationsCompleted.length,
+    ach_decisions_5: p.decisionsCompleted.length,
+    ach_timeline_5: p.timelinesCompleted.length,
+    ach_artifact_10: p.artifactsFound.length,
+    ach_artifact_all: p.artifactsFound.length,
+    ach_char_6: p.charactersUnlocked.length,
+    ach_region_5: p.regionsUnlocked.length,
+    ach_streak_7: p.streak,
+    ach_streak_30: p.streak,
+    ach_campaign_3: p.campaignsCompleted.length,
+    ach_flagship: flagshipDone,
+    ach_level_5: lvl,
+    ach_explore_50: explorePct,
+    ach_secret_dawn: 0,
+  };
+  return ACHIEVEMENTS.map((a) => {
+    const cur = map[a.id] ?? 0;
+    return { id: a.id, current: Math.min(cur, a.goal), earned: cur >= a.goal };
+  });
+}
+
+// ============================================================
+// DAILY MISSIONS — rotate deterministically by date
+// ============================================================
+export interface DailyMission {
+  id: string;
+  title: string;
+  desc: string;
+  reward: number;
+  icon: "story" | "puzzle" | "investigate" | "timeline" | "decision" | "map" | "collect";
+  link: { to: string };
+}
+const DAILY_POOL: DailyMission[] = [
+  { id: "d_story",    title: "قصة اليوم",        desc: "اقرأ قصة اليوم حتى نهايتها.",  reward: 25, icon: "story",      link: { to: "/" } },
+  { id: "d_invest",   title: "قضية تحقيق",       desc: "حلّ قضيةً تاريخية واحدة.",       reward: 35, icon: "investigate",link: { to: "/play/investigate" } },
+  { id: "d_decide",   title: "قرار تاريخي",      desc: "اتّخذ قرارًا في مشهدٍ تاريخي.",  reward: 30, icon: "decision",   link: { to: "/play/decisions" } },
+  { id: "d_timeline", title: "ترتيب الأحداث",    desc: "رتّب خطًّا زمنيًّا واحدًا.",       reward: 30, icon: "timeline",   link: { to: "/play/timeline" } },
+  { id: "d_explore",  title: "استكشاف الخارطة",  desc: "افتح منطقة جديدة على الخارطة.", reward: 40, icon: "map",        link: { to: "/map" } },
+  { id: "d_collect",  title: "زيارة المجموعة",   desc: "اطّلع على مجموعتك من الآثار.",   reward: 15, icon: "collect",    link: { to: "/collection" } },
+];
+
+export function todayKey(d: Date = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function dailyMissionsForDate(d: Date = new Date()): DailyMission[] {
+  const dayIndex = Math.floor(d.getTime() / 86400000);
+  const start = dayIndex % DAILY_POOL.length;
+  return [0, 1, 2].map((i) => DAILY_POOL[(start + i) % DAILY_POOL.length]);
+}
+
+// ============================================================
+// SEASONAL CHALLENGE — long-term goal across ~30 days
+// ============================================================
+export interface Season {
+  id: string;
+  name: string;
+  tagline: string;
+  goalPoints: number;
+  endsAt: string; // ISO date label
+  reward: { points: number; artifact?: string; title?: string };
+}
+export const CURRENT_SEASON: Season = {
+  id: "season_jerusalem",
+  name: "موسم القدس",
+  tagline: "اجمع ٧٥٠ نقطة هذا الموسم لتنال لقب «من حُماة الأقصى».",
+  goalPoints: 750,
+  endsAt: "نهاية الشهر",
+  reward: { points: 250, artifact: "aqsa-stone", title: "من حُماة الأقصى" },
+};
+
+// ============================================================
+// COMING-SOON TEASERS — make the world feel infinite
+// ============================================================
+export interface UpcomingCampaign { id: string; era: Era | "future"; name: string; teaser: string; eta: string }
+export const UPCOMING_CAMPAIGNS: UpcomingCampaign[] = [
+  { id: "u-cordoba",   era: "andalus",  name: "حملة قرطبة الذهبية", teaser: "عش عصر الخلافة في الأندلس وأسرار قصر الزهراء.", eta: "قريبًا" },
+  { id: "u-baybars",   era: "mamluk",   name: "حملة الظاهر بيبرس",  teaser: "من مملوكٍ في القاهرة إلى سلطانٍ كسر المغول والصليبيين.", eta: "قريبًا" },
+  { id: "u-fatih",     era: "ottoman",  name: "حملة الفاتح الكبرى", teaser: "خمسة فصول من فجر الدولة العثمانية إلى أسوار القسطنطينية.", eta: "قريبًا" },
+  { id: "u-nahda",     era: "modern",   name: "حملة النهضة العربية", teaser: "روّاد اليقظة من الطهطاوي إلى محمد عبده.", eta: "قريبًا" },
+  { id: "u-science",   era: "abbasid",  name: "حملة بيت الحكمة",     teaser: "العلوم التي صنعت حضارةً ونقلتها أوروبا قرونًا.", eta: "قريبًا" },
+  { id: "u-mystery",   era: "future",   name: "؟؟؟",                  teaser: "حملة سرّية تُكشف عند بلوغك المستوى العاشر.", eta: "مخفية" },
+];
+
+export interface UpcomingRegion { id: string; name: string; teaser: string; era: Era }
+export const UPCOMING_REGIONS: UpcomingRegion[] = [
+  { id: "u-yemen",   name: "اليمن",        teaser: "موطن الأنصار الأوائل.", era: "seerah" },
+  { id: "u-sind",    name: "السند",        teaser: "أقصى مشرق الفتوحات الأموية.", era: "umayyad" },
+  { id: "u-sicily",  name: "صقلية",        teaser: "الجزيرة التي حكمها المسلمون قرنين.", era: "andalus" },
+  { id: "u-bukhara", name: "بخارى",        teaser: "مدينة البخاري ومركز خراسان العلمي.", era: "abbasid" },
+  { id: "u-mali",    name: "إمبراطورية مالي", teaser: "مملكة منسى موسى وأغنى رجلٍ في التاريخ.", era: "mamluk" },
+];
+
+export interface MysteryCharacter { id: string; era: Era; hint: string }
+export const MYSTERY_CHARACTERS: MysteryCharacter[] = [
+  { id: "myst1", era: "andalus",  hint: "فيلسوفٌ كتب قصة «حيّ بن يقظان» قبل ديكارت بقرون." },
+  { id: "myst2", era: "abbasid",  hint: "طبيبٌ ألّف «الحاوي» وكان أوّل من ميّز بين الجدري والحصبة." },
+  { id: "myst3", era: "ottoman",  hint: "معماريّ بنى ٣٠٠ مسجد، أعظمها السليمانية." },
+  { id: "myst4", era: "ayyubid",  hint: "فقيهٌ كرديّ كان قاضي قضاة صلاح الدين." },
+];
+
+// ============================================================
+// SETTINGS — placeholders for future ambient audio (no autoplay)
+// ============================================================
+export interface AmbienceTrack { id: string; name: string; mood: string; era?: Era }
+export const AMBIENCE_TRACKS: AmbienceTrack[] = [
+  { id: "amb_desert",   name: "صحراء الحجاز",   mood: "هدوء وعمق",       era: "seerah" },
+  { id: "amb_baghdad",  name: "ليل بغداد",      mood: "نهضة وحضارة",     era: "abbasid" },
+  { id: "amb_andalus",  name: "نسيم الأندلس",   mood: "شجن وجمال",       era: "andalus" },
+  { id: "amb_jerusalem",name: "أسوار القدس",    mood: "جلال وعزّ",       era: "ayyubid" },
+  { id: "amb_istanbul", name: "ميناء إسطنبول",  mood: "مهابة وفتوح",     era: "ottoman" },
+];
+
+// ============================================================
+// HELPERS
+// ============================================================
+export function explorationPercent(regionsUnlocked: string[]) {
+  return Math.round((regionsUnlocked.length / MAP_REGIONS.length) * 100);
+}
+
+export function campaignProgress(eraId: Era, missionsCompleted: string[]) {
+  const c = CAMPAIGNS.find((x) => x.eraId === eraId);
+  if (!c) return { done: 0, total: 0, pct: 0 };
+  const done = c.missions.filter((m) => missionsCompleted.includes(m.id)).length;
+  return { done, total: c.missions.length, pct: Math.round((done / c.missions.length) * 100) };
+}
+
+export function overallCampaignPercent(missionsCompleted: string[]) {
+  const totalMissions = CAMPAIGNS.reduce((s, c) => s + c.missions.length, 0);
+  const done = CAMPAIGNS.reduce((s, c) => s + c.missions.filter((m) => missionsCompleted.includes(m.id)).length, 0);
+  return Math.round((done / totalMissions) * 100);
+}
