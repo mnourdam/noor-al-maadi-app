@@ -647,13 +647,21 @@ export const CAMPAIGNS: Campaign[] = [
     finalReward: { character: "alp-arslan", points: 60 },
   },
   {
-    eraId: "ayyubid", title: "حملة صلاح الدين", intro: "من دمشق إلى القدس.",
+  {
+    eraId: "ayyubid", title: "حملة صلاح الدين الكبرى",
+    intro: "ثماني فصول من رحلة محرّر القدس: من نور الدين زنكي إلى تحرير بيت المقدس.",
+    flagship: true,
     missions: [
-      { id: "y-m1", type: "story", refId: "hattin", title: "اقرأ: حِطّين", reward: 10 },
-      { id: "y-m2", type: "decision", refId: "dec-hattin", title: "قرار: استدراج الصليبيين", reward: 60 },
-      { id: "y-m3", type: "investigation", refId: "inv-salahuddin", title: "حقّق: من هذا السلطان؟", reward: 70 },
+      { id: "y-m1", type: "story", refId: "nuruddin", title: "اقرأ: نور الدين والوحدة", reward: 10, chapter: "الفصل الأول · شيخ المجاهدين" },
+      { id: "y-m2", type: "story", refId: "salah-rise", title: "اقرأ: صعود صلاح الدين", reward: 10, chapter: "الفصل الثاني · من وزيرٍ إلى سلطان" },
+      { id: "y-m3", type: "investigation", refId: "inv-salahuddin", title: "حقّق: من هذا السلطان؟", reward: 70, chapter: "الفصل الثالث · ملامح القائد" },
+      { id: "y-m4", type: "decision", refId: "dec-hattin", title: "قرار: استدراج الصليبيين", reward: 60, chapter: "الفصل الرابع · ليلة الكمين" },
+      { id: "y-m5", type: "story", refId: "hattin", title: "اقرأ: حِطّين", reward: 10, chapter: "الفصل الخامس · يوم النصر" },
+      { id: "y-m6", type: "story", refId: "jerusalem-liberation", title: "اقرأ: تحرير القدس", reward: 10, chapter: "الفصل السادس · عودة الأذان" },
+      { id: "y-m7", type: "timeline", refId: "tl-crusades", title: "رتّب: حروب الفرنجة", reward: 70, chapter: "الفصل السابع · مسيرة قرنين" },
+      { id: "y-m8", type: "story", refId: "salah-legacy", title: "اقرأ: ما بعد صلاح الدين", reward: 10, chapter: "الفصل الثامن · ميراث الفاتح" },
     ],
-    finalReward: { character: "salahuddin", artifact: "aqsa-stone", points: 100 },
+    finalReward: { character: "salahuddin", artifact: "aqsa-stone", points: 200 },
   },
   {
     eraId: "mamluk", title: "حملة المماليك", intro: "كاسرو المغول وحماة الحرمين.",
