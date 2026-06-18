@@ -307,7 +307,7 @@ function CollectionPage() {
                 return (
                   <Card key={c.id} unlocked={open} rarity={r} icon={c.avatar}
                     title={c.name} subtitle={c.title} footer={c.power}
-                    mystery="أكمل حملة لاكتشاف هويّته"
+                    mystery={fogHint(c.id)}
                     onClick={() => {
                       if (open) navigate({ to: "/figure/$id", params: { id: c.id } });
                     }} />
@@ -328,6 +328,7 @@ function CollectionPage() {
                 return (
                   <Card key={a.id} unlocked={open} rarity={r} icon={a.icon}
                     title={a.name} subtitle={`${a.typeLabel} · ${ERAS.find(e => e.id === a.era)?.name}`}
+                    mystery={fogHint(a.id)}
                     onClick={() => open && setReveal({
                       rarity: r, icon: a.icon, title: a.name,
                       subtitle: `${a.typeLabel} · ${ERAS.find(e => e.id === a.era)?.name}`,
@@ -349,12 +350,8 @@ function CollectionPage() {
                 return (
                   <Card key={b.id} unlocked={open} rarity={b.rarity} icon={b.icon}
                     title={b.name} subtitle={`${b.year} · ${b.location}`} footer={`النصر: ${b.victor}`}
-                    mystery="اقرأ قصّتها لتكشفها"
-                    onClick={() => open && setReveal({
-                      rarity: b.rarity, icon: b.icon, title: b.name,
-                      subtitle: `${b.year} · ${b.location}`,
-                      lines: [b.summary, `قائد النصر: ${b.victor}`],
-                    })} />
+                    mystery={fogHint(b.id)}
+                    onClick={() => { if (open) navigate({ to: "/battle/$id", params: { id: b.id } }); }} />
                 );
               })}
             </div>
@@ -405,7 +402,7 @@ function CollectionPage() {
                 return (
                   <Card key={l.id} unlocked={open} rarity={l.rarity} icon={l.icon}
                     title={l.name} subtitle={l.place} footer={ERAS.find(e => e.id === l.era)?.name}
-                    mystery="افتح المنطقة على الخارطة"
+                    mystery={fogHint(l.id)}
                     onClick={() => open && setReveal({
                       rarity: l.rarity, icon: l.icon, title: l.name,
                       subtitle: `${l.place} · ${ERAS.find(e => e.id === l.era)?.name}`,
