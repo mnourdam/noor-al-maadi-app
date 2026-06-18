@@ -6,7 +6,8 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
-  CAMPAIGNS, ERAS, ARTIFACTS, CHARACTERS, CHAPTER_LORE, type Mission,
+  CAMPAIGNS, ERAS, ARTIFACTS, CHARACTERS, CHAPTER_LORE,
+  FLAGSHIP_CHAPTERS, type Mission,
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
@@ -147,11 +148,7 @@ function CampaignPage() {
           <div className="gold-divider mt-2 mb-5" />
 
           {flagship ? (
-            <ChapterJourney
-              groups={groups}
-              missionsCompleted={profile.missionsCompleted}
-              missions={campaign.missions}
-            />
+            <FlagshipChapterJourney missionsCompleted={profile.missionsCompleted} />
           ) : (
             <SimpleMissionList groups={groups} missionsCompleted={profile.missionsCompleted} missions={campaign.missions} />
           )}
@@ -379,6 +376,90 @@ function ChapterJourney(props: {
     </div>
   );
 }
+
+// ============================================================
+// FLAGSHIP CHAPTER JOURNEY — one card per chapter, links to player
+// ============================================================
+function FlagshipChapterJourney(props: { missionsCompleted: string[] }) {
+  return (
+    <div className="relative pr-6">
+      <div className="chapter-rail absolute right-2 top-0 bottom-0" aria-hidden />
+      <div className="space-y-5">
+        {FLAGSHIP_CHAPTERS.map((ch, i) => {
+          const completed = props.missionsCompleted.includes(ch.missionId);
+          const prev = FLAGSHIP_CHAPTERS[i - 1];
+          const locked = !!prev && !props.missionsCompleted.includes(prev.missionId) && !completed;
+          return (
+            <div key={ch.id} className="animate-reveal">
+              <div className="-mr-[3px] flex items-start gap-3">
+                <div className={`chapter-seal shrink-0 ${completed ? "ring-2 ring-gold" : ""} ${locked ? "opacity-40 grayscale" : ""}`}>
+                  {completed ? <Check className="size-5" /> : <span className="text-lg">{ch.index.toLocaleString("ar-EG")}</span>}
+                </div>
+                <div className="flex-1 pt-1">
+                  <p className="text-[10px] tracking-widest text-gold/70">{ch.era}</p>
+                  <h4 className={`font-display text-base font-bold ${locked ? "text-muted-foreground" : "text-foreground"}`}>
+                    الفصل {ch.index.toLocaleString("ar-EG")} · {ch.title}
+                  </h4>
+                  <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <MapPin className="size-3 text-gold/70" /> {ch.setting}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mr-[34px] mt-3">
+                {locked ? (
+                  <div className="rounded-2xl border border-white/10 bg-surface/40 p-4 text-center">
+                    <Lock className="mx-auto size-4 text-muted-foreground" />
+                    <p className="mt-1.5 text-[11px] text-muted-foreground">يُفتح هذا الفصل عند إتمام ما قبله.</p>
+                  </div>
+                ) : (
+                  <div className="parchment-dark relative overflow-hidden rounded-2xl border border-gold/30 p-4">
+                    <div className="absolute inset-0 arabesque-bg" aria-hidden />
+                    <div className="relative">
+                      <p className="font-display text-[13px] leading-relaxed text-foreground/95">{ch.hook}</p>
+                      {ch.quote && (
+                        <blockquote className="mt-3 rounded-xl border-r-2 border-gold/60 bg-background/30 px-3 py-2">
+                          <Quote className="mb-1 size-3 text-gold/70" />
+                          <p className="font-display text-[12px] italic text-foreground/90">«{ch.quote}»</p>
+                          {ch.quoteBy && <p className="mt-1 text-[10px] text-gold/80">— {ch.quoteBy}</p>}
+                        </blockquote>
+                      )}
+
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {ch.stages.map((s, si) => (
+                          <span key={si} className="rounded-full border border-gold/25 bg-background/40 px-2 py-0.5 text-[10px] text-gold/90">
+                            {STAGE_LABEL[s.kind]}
+                          </span>
+                        ))}
+                      </div>
+
+                      <Link
+                        to="/play/chapter"
+                        search={{ id: ch.id }}
+                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-2.5 text-xs font-bold text-primary-foreground shadow-gold"
+                      >
+                        <Sparkles className="size-3.5" />
+                        {completed ? "إعادة لعب الفصل" : "ابدأ الفصل"}
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const STAGE_LABEL: Record<string, string> = {
+  scene: "مشهد",
+  investigation: "تحقيق",
+  decision: "قرار",
+  timeline: "ترتيب",
+  discovery: "اكتشاف",
+};
 
 function ChapterBlock(props: {
   index: number;
