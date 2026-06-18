@@ -16,8 +16,8 @@ import salahuddinHero from "@/assets/salahuddin-hero.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "حكايا — عالم تاريخي متكامل" },
-      { name: "description", content: "ادخل عالمًا واسعًا من القصص والحملات والآثار والمعارك في التاريخ العربي والإسلامي." },
+      { title: "إرث — رحلة عبر التاريخ الإسلامي" },
+      { name: "description", content: "ادخل عالمًا تفاعليًا واسعًا من الشخصيات والدول والمعارك والمدن والأحداث في التاريخ الإسلامي." },
     ],
   }),
   component: Index,

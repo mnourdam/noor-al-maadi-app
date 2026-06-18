@@ -942,13 +942,13 @@ export interface LevelInfo { level: number; min: number; title: string; rank: st
 export const LEVELS: LevelInfo[] = [
   { level: 1, min: 0,    title: "رحّالة مبتدئ",  rank: "برونزي" },
   { level: 2, min: 120,  title: "مستكشف",        rank: "برونزي" },
-  { level: 3, min: 280,  title: "راوي حكايا",    rank: "فضّي"   },
+  { level: 3, min: 280,  title: "راوي إرث",    rank: "فضّي"   },
   { level: 4, min: 500,  title: "مؤرّخ",          rank: "فضّي"   },
   { level: 5, min: 800,  title: "عالم تاريخ",     rank: "ذهبي"   },
   { level: 6, min: 1200, title: "شيخ المؤرّخين", rank: "ذهبي"   },
   { level: 7, min: 1700, title: "حكيم الأمّة",   rank: "بلاتيني" },
   { level: 8, min: 2400, title: "إمام التاريخ",   rank: "بلاتيني" },
-  { level: 9, min: 3200, title: "سيّد الحكايا",   rank: "أسطوري" },
+  { level: 9, min: 3200, title: "سيّد إرث",   rank: "أسطوري" },
   { level: 10, min: 4500, title: "أسطورة التاريخ", rank: "أسطوري" },
 ];
 
