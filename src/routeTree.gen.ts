@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as StoryIdRouteImport } from './routes/story.$id'
 import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
 import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
@@ -24,6 +25,11 @@ const OnThisDayRoute = OnThisDayRouteImport.update({
 const CampaignsRoute = CampaignsRouteImport.update({
   id: '/campaigns',
   path: '/campaigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StoryIdRoute = StoryIdRouteImport.update({
@@ -48,6 +54,7 @@ const PlayDecisionsRoute = PlayDecisionsRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/campaigns': typeof CampaignsRoute
   '/on-this-day': typeof OnThisDayRoute
   '/play/decisions': typeof PlayDecisionsRoute
@@ -56,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/story/$id': typeof StoryIdRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/campaigns': typeof CampaignsRoute
   '/on-this-day': typeof OnThisDayRoute
   '/play/decisions': typeof PlayDecisionsRoute
@@ -65,6 +73,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/campaigns': typeof CampaignsRoute
   '/on-this-day': typeof OnThisDayRoute
   '/play/decisions': typeof PlayDecisionsRoute
@@ -75,6 +84,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/campaigns'
     | '/on-this-day'
     | '/play/decisions'
@@ -83,6 +93,7 @@ export interface FileRouteTypes {
     | '/story/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/campaigns'
     | '/on-this-day'
     | '/play/decisions'
@@ -91,6 +102,7 @@ export interface FileRouteTypes {
     | '/story/$id'
   id:
     | '__root__'
+    | '/'
     | '/campaigns'
     | '/on-this-day'
     | '/play/decisions'
@@ -100,6 +112,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   CampaignsRoute: typeof CampaignsRoute
   OnThisDayRoute: typeof OnThisDayRoute
   PlayDecisionsRoute: typeof PlayDecisionsRoute
@@ -122,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/campaigns'
       fullPath: '/campaigns'
       preLoaderRoute: typeof CampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/story/$id': {
@@ -156,6 +176,7 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   CampaignsRoute: CampaignsRoute,
   OnThisDayRoute: OnThisDayRoute,
   PlayDecisionsRoute: PlayDecisionsRoute,
