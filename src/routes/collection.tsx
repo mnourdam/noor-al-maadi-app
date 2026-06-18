@@ -1,121 +1,451 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Library, Lock, MapPin } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS } from "@/lib/data";
+import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, type Era } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/collection")({
-  head: () => ({ meta: [{ title: "متحف المجموعة" }] }),
+  head: () => ({ meta: [{ title: "المتحف · أرشيفك التاريخي" }] }),
   component: CollectionPage,
 });
 
-type Tab = "artifacts" | "characters" | "regions";
+type Rarity = "common" | "rare" | "epic" | "legendary";
+type SectionId = "figures" | "artifacts" | "battles" | "manuscripts" | "landmarks" | "dynasties";
 
-const RARITY_STYLE: Record<string, string> = {
-  legendary: "border-gold/60 bg-gradient-to-br from-gold/20 via-gold/5 to-transparent",
-  rare: "border-sky-400/40 bg-sky-400/5",
-  common: "border-white/10 bg-surface",
+const RARITY_META: Record<Rarity, { label: string; ring: string; chip: string; glow: string }> = {
+  common:    { label: "عادي",    ring: "ring-white/10",       chip: "bg-white/10 text-white/70",                        glow: "" },
+  rare:      { label: "نادر",    ring: "ring-sky-400/40",     chip: "bg-sky-400/15 text-sky-200",                       glow: "shadow-[0_0_24px_-8px_oklch(0.78_0.14_240/35%)]" },
+  epic:      { label: "ملحمي",   ring: "ring-fuchsia-400/45", chip: "bg-fuchsia-400/15 text-fuchsia-200",               glow: "shadow-[0_0_28px_-8px_oklch(0.7_0.2_320/40%)]" },
+  legendary: { label: "أسطوري",  ring: "ring-gold/60",        chip: "bg-gradient-gold text-primary-foreground",         glow: "shadow-gold" },
 };
-const RARITY_LABEL: Record<string, string> = { legendary: "أسطوري", rare: "نادر", common: "عادي" };
 
-function CollectionPage() {
+// ───── Artifact rarity overrides (legendary/epic/rare/common)
+const ARTIFACT_RARITY: Record<string, Rarity> = {
+  "kaaba-kiswa": "legendary",
+  "hattin-banner": "legendary",
+  "salah-letter": "legendary",
+  "nuruddin-minbar": "legendary",
+  "aqsa-stone": "legendary",
+  "khwarizmi-jabr": "epic",
+  "baghdad-manuscript": "epic",
+  "fatih-cannon": "epic",
+  "ain-jalut-arrow": "epic",
+  "hattin-map": "epic",
+  "mamluk-quran": "rare",
+  "cordoba-key": "rare",
+  "alhambra-tile": "rare",
+  "ottoman-tughra": "rare",
+  "doc-jerusalem-khutba": "rare",
+  "doc-crusades": "rare",
+};
+const aRarity = (id: string): Rarity => ARTIFACT_RARITY[id] ?? "common";
+const cRarity = (c: { rarity: string }): Rarity => (c.rarity as Rarity) ?? "common";
+
+// ───── Battles — curated, era + storyId for unlock check
+interface Battle { id: string; name: string; era: Era; year: string; location: string; victor: string; summary: string; storyId?: string; rarity: Rarity; icon: string }
+const BATTLES: Battle[] = [
+  { id: "b-badr",      name: "بدر الكبرى",        era: "seerah",   year: "٢ هـ",     location: "بدر · الحجاز",       victor: "المسلمون",      summary: "أوّل معركةٍ فاصلة، نصرٌ سماوي على عددٍ قليل.", rarity: "legendary", icon: "🌟" },
+  { id: "b-yarmouk",   name: "اليرموك",           era: "rashidun", year: "١٥ هـ",    location: "نهر اليرموك · الشام", victor: "خالد بن الوليد", summary: "ستّة أيامٍ كسرت ظهر الروم وفتحت الشام.",       storyId: "yarmouk",     rarity: "legendary", icon: "⚔️" },
+  { id: "b-qadisiyyah", name: "القادسية",         era: "rashidun", year: "١٥ هـ",    location: "قرب الكوفة · العراق", victor: "سعد بن أبي وقّاص", summary: "أربعة أيامٍ أنهت إمبراطورية الساسانيين.",     storyId: "qadisiyyah",  rarity: "epic",      icon: "🏹" },
+  { id: "b-manzikert", name: "ملاذكرد",           era: "seljuk",   year: "٤٦٣ هـ",   location: "ملاذكرد · الأناضول",  victor: "ألب أرسلان",     summary: "أُسر إمبراطور الروم وفُتحت أبواب الأناضول.",  rarity: "epic",      icon: "🛡️" },
+  { id: "b-hattin",    name: "حِطّين",            era: "ayyubid",  year: "٥٨٣ هـ",   location: "سهل حِطّين · فلسطين", victor: "صلاح الدين",     summary: "نهاية الصليبيين وعودة الأذان للأقصى.",        storyId: "hattin",      rarity: "legendary", icon: "🕌" },
+  { id: "b-ain-jalut", name: "عين جالوت",         era: "mamluk",   year: "٦٥٨ هـ",   location: "فلسطين",             victor: "قطز وبيبرس",    summary: "أوّل هزيمةٍ كبرى للمغول في التاريخ.",         storyId: "ain-jalut",   rarity: "legendary", icon: "🦁" },
+  { id: "b-constantinople", name: "فتح القسطنطينية", era: "ottoman", year: "٨٥٧ هـ", location: "القسطنطينية",         victor: "محمد الفاتح",    summary: "بشارة النبي ﷺ تتحقّق بعد ثمانية قرون.",       storyId: "constantinople", rarity: "legendary", icon: "🏰" },
+];
+
+// ───── Landmarks — derived from map regions + curated
+interface Landmark { id: string; name: string; era: Era; place: string; summary: string; regionId?: string; rarity: Rarity; icon: string }
+const LANDMARKS: Landmark[] = [
+  { id: "l-kaaba",     name: "الكعبة المشرّفة", era: "seerah",   place: "مكة المكرّمة",  summary: "قبلة المسلمين وبيت الله العتيق.",       regionId: "hijaz", rarity: "legendary", icon: "🕋" },
+  { id: "l-aqsa",      name: "المسجد الأقصى",   era: "ayyubid",  place: "القدس",         summary: "أولى القبلتين وثالث الحرمين.",          rarity: "legendary", icon: "🕌" },
+  { id: "l-umayyad",   name: "الجامع الأموي",   era: "umayyad",  place: "دمشق",          summary: "تحفة الأمويين ودرّة الشام.",            regionId: "sham", rarity: "epic", icon: "🏛️" },
+  { id: "l-bait-hikma", name: "بيت الحكمة",     era: "abbasid",  place: "بغداد",         summary: "أعظم مركزٍ علميٍّ في زمنه.",            regionId: "iraq", rarity: "epic", icon: "📚" },
+  { id: "l-zahra",     name: "مدينة الزهراء",   era: "andalus",  place: "قرطبة",         summary: "مدينة المرايا التي بناها الناصر.",      regionId: "andalus", rarity: "epic", icon: "🌹" },
+  { id: "l-alhambra",  name: "قصر الحمراء",     era: "andalus",  place: "غرناطة",        summary: "آخر ما تبقّى من جمال الأندلس.",         regionId: "andalus", rarity: "legendary", icon: "🏯" },
+  { id: "l-ayasofya",  name: "آيا صوفيا",       era: "ottoman",  place: "إسطنبول",       summary: "صلّى فيها الفاتح أول جمعة.",            regionId: "anatolia", rarity: "legendary", icon: "🕍" },
+  { id: "l-samarkand", name: "ساحة ريغستان",    era: "abbasid",  place: "سمرقند",        summary: "قلب طريق الحرير ومدارس تيمور.",         regionId: "transoxiana", rarity: "rare", icon: "🏛️" },
+];
+
+// ───── Profile-derived unlock helpers
+function useUnlocks() {
   const { profile } = useProfile();
-  const [tab, setTab] = useState<Tab>("artifacts");
-
-  const arts = ARTIFACTS.length;
-  const chars = CHARACTERS.length;
-  const regs = MAP_REGIONS.length;
-
-  return (
-    <AppShell>
-      <Screen title="متحفي" subtitle="أرشيفك التاريخي الخاص">
-        <div className="mb-4 grid grid-cols-3 gap-2">
-          <Tile label="آثار" value={`${profile.artifactsFound.length}/${arts}`} active={tab === "artifacts"} onClick={() => setTab("artifacts")} />
-          <Tile label="شخصيات" value={`${profile.charactersUnlocked.length}/${chars}`} active={tab === "characters"} onClick={() => setTab("characters")} />
-          <Tile label="مناطق" value={`${profile.regionsUnlocked.length}/${regs}`} active={tab === "regions"} onClick={() => setTab("regions")} />
-        </div>
-
-        {tab === "artifacts" && (
-          <div className="grid grid-cols-2 gap-3">
-            {ARTIFACTS.map((a) => {
-              const found = profile.artifactsFound.includes(a.id);
-              return (
-                <div key={a.id} className={`rounded-2xl border p-4 ${found ? "border-gold/30 bg-gold/5" : "border-white/10 bg-surface/60 opacity-70"}`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-3xl">{found ? a.icon : "❔"}</span>
-                    {!found && <Lock className="size-3.5 text-muted-foreground" />}
-                  </div>
-                  <p className="font-display mt-2 text-sm font-bold">{found ? a.name : "أثرٌ مجهول"}</p>
-                  <p className="mt-1 text-[10px] text-gold">{a.typeLabel} · {ERAS.find((e) => e.id === a.era)?.name}</p>
-                  {found && <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{a.description}</p>}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {tab === "characters" && (
-          <div className="space-y-3">
-            {CHARACTERS.map((c) => {
-              const open = profile.charactersUnlocked.includes(c.id);
-              return (
-                <div key={c.id} className={`flex items-start gap-3 rounded-2xl border p-4 ${open ? RARITY_STYLE[c.rarity] : "border-white/10 bg-surface/60 opacity-70"}`}>
-                  <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-gold/15 text-2xl">{open ? c.avatar : "❔"}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="font-display text-sm font-bold">{open ? c.name : "شخصية مجهولة"}</p>
-                      <span className="text-[10px] text-gold">{RARITY_LABEL[c.rarity]}</span>
-                    </div>
-                    <p className="mt-0.5 text-[11px] text-gold/80">{open ? c.title : "—"}</p>
-                    {open && <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{c.bio}</p>}
-                    {open && <p className="mt-1 text-[10px] text-gold">{c.power}</p>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {tab === "regions" && (
-          <div className="space-y-3">
-            {MAP_REGIONS.map((r) => {
-              const open = profile.regionsUnlocked.includes(r.id);
-              return (
-                <div key={r.id} className={`flex items-start gap-3 rounded-2xl border p-4 ${open ? "border-gold/30 bg-gold/5" : "border-white/10 bg-surface/60 opacity-70"}`}>
-                  <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${open ? "bg-gradient-gold text-primary-foreground" : "bg-gold/15 text-gold"}`}>
-                    {open ? <MapPin className="size-5" /> : <Lock className="size-4" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] text-gold">{ERAS.find((e) => e.id === r.era)?.name}</p>
-                    <p className="font-display mt-0.5 text-sm font-bold">{r.name}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{open ? r.blurb : "اكتشف هذه المنطقة على الخارطة."}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {profile.artifactsFound.length + profile.charactersUnlocked.length === 0 && tab !== "regions" && (
-          <div className="mt-6 rounded-2xl border border-dashed border-white/15 p-6 text-center text-xs text-muted-foreground">
-            <Library className="mx-auto mb-2 size-6 text-gold" />
-            ابدأ الحملات لتفتح أوّل قطع متحفك.
-          </div>
-        )}
-      </Screen>
-    </AppShell>
-  );
+  return useMemo(() => {
+    const eraHasProgress = (era: Era) => {
+      const hasArt = ARTIFACTS.some(a => a.era === era && profile.artifactsFound.includes(a.id));
+      const hasChar = CHARACTERS.some(c => c.era === era && profile.charactersUnlocked.includes(c.id));
+      const hasStory = STORIES.some(s => s.era === era && profile.storiesRead.includes(s.id));
+      return hasArt || hasChar || hasStory || profile.unlockedEras.includes(era);
+    };
+    const eraProgress = (era: Era) => {
+      const arts = ARTIFACTS.filter(a => a.era === era);
+      const chars = CHARACTERS.filter(c => c.era === era);
+      const sts = STORIES.filter(s => s.era === era);
+      const total = arts.length + chars.length + sts.length;
+      const done =
+        arts.filter(a => profile.artifactsFound.includes(a.id)).length +
+        chars.filter(c => profile.charactersUnlocked.includes(c.id)).length +
+        sts.filter(s => profile.storiesRead.includes(s.id)).length;
+      return { done, total };
+    };
+    return { profile, eraHasProgress, eraProgress };
+  }, [profile]);
 }
 
-function Tile({ label, value, active, onClick }: { label: string; value: string; active: boolean; onClick: () => void }) {
+// ───── Reusable card
+function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, mystery }: {
+  unlocked: boolean; rarity: Rarity; icon: string; title: string; subtitle: string; footer?: string;
+  onClick: () => void; mystery?: string;
+}) {
+  const meta = RARITY_META[rarity];
   return (
     <button
       onClick={onClick}
-      className={`rounded-2xl border p-3 text-center transition ${active ? "border-gold/50 bg-gold/10" : "border-white/10 bg-surface"}`}
+      className={`group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-surface text-right transition-all duration-300 hover:-translate-y-0.5
+        ${unlocked ? `ring-1 ${meta.ring} ${meta.glow}` : "opacity-70"}`}
     >
-      <p className="font-display text-sm font-bold text-gold">{value}</p>
-      <p className="mt-0.5 text-[10px] text-muted-foreground">{label}</p>
+      {/* rarity wash */}
+      {unlocked && (
+        <div className={`pointer-events-none absolute inset-0 opacity-60
+          ${rarity === "legendary" ? "bg-gradient-to-br from-gold/15 via-gold/0 to-transparent" :
+            rarity === "epic"      ? "bg-gradient-to-br from-fuchsia-400/15 via-fuchsia-400/0 to-transparent" :
+            rarity === "rare"      ? "bg-gradient-to-br from-sky-400/15 via-sky-400/0 to-transparent" :
+                                     "bg-gradient-to-br from-white/5 to-transparent"}`} />
+      )}
+      {/* sheen */}
+      {unlocked && rarity !== "common" && (
+        <div className="pointer-events-none absolute -inset-x-10 -top-12 h-24 rotate-12 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+      )}
+      <div className="relative p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className={`grid size-12 place-items-center rounded-xl text-2xl
+            ${unlocked ? "bg-black/30 ring-1 ring-white/10" : "bg-black/40"}`}>
+            {unlocked ? icon : <Lock className="size-4 text-muted-foreground" />}
+          </div>
+          <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide ${meta.chip}`}>
+            {meta.label}
+          </span>
+        </div>
+        <p className="font-display mt-2 line-clamp-1 text-sm font-bold">
+          {unlocked ? title : "؟؟؟"}
+        </p>
+        <p className="mt-0.5 line-clamp-1 text-[10px] text-gold/80">{subtitle}</p>
+        {footer && (
+          <p className="mt-1 line-clamp-1 text-[10px] text-muted-foreground">
+            {unlocked ? footer : mystery ?? "اكمل المهام لاكتشافه"}
+          </p>
+        )}
+      </div>
     </button>
+  );
+}
+
+// ───── Reveal dialog
+interface RevealItem { rarity: Rarity; icon: string; title: string; subtitle: string; lines: string[]; }
+function RevealDialog({ item, onClose }: { item: RevealItem | null; onClose: () => void }) {
+  const open = !!item;
+  const meta = item ? RARITY_META[item.rarity] : RARITY_META.common;
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-sm overflow-hidden border-white/10 bg-surface p-0 [&>button]:text-gold">
+        {item && (
+          <div className="relative">
+            <div className={`relative overflow-hidden p-6 text-center
+              ${item.rarity === "legendary" ? "bg-gradient-to-b from-gold/25 via-gold/5 to-transparent" :
+                item.rarity === "epic"      ? "bg-gradient-to-b from-fuchsia-400/20 via-fuchsia-400/5 to-transparent" :
+                item.rarity === "rare"      ? "bg-gradient-to-b from-sky-400/20 via-sky-400/5 to-transparent" :
+                                              "bg-gradient-to-b from-white/10 to-transparent"}`}>
+              <div className="pointer-events-none absolute inset-0 opacity-50" style={{
+                backgroundImage: "radial-gradient(circle at 20% 30%, oklch(0.82 0.14 82 / 0.25), transparent 40%), radial-gradient(circle at 80% 70%, oklch(0.82 0.14 82 / 0.15), transparent 45%)",
+              }} />
+              <div className="reward-burst relative mx-auto grid size-24 place-items-center rounded-2xl bg-black/40 text-5xl ring-1 ring-white/10 animate-gold-pulse">
+                {item.icon}
+              </div>
+              <span className={`mt-3 inline-block rounded-full px-3 py-1 text-[10px] font-bold tracking-wider ${meta.chip}`}>
+                <Sparkles className="me-1 inline size-3" />
+                {meta.label} · اكتُشف
+              </span>
+              <DialogTitle className="font-display shimmer-text mt-2 text-2xl font-extrabold">
+                {item.title}
+              </DialogTitle>
+              <p className="mt-1 text-xs text-gold/90">{item.subtitle}</p>
+            </div>
+            <div className="space-y-2 p-5 text-[12.5px] leading-7 text-foreground/85">
+              {item.lines.map((l, i) => <p key={i}>{l}</p>)}
+            </div>
+            <div className="px-5 pb-5">
+              <button onClick={onClose} className="bg-gradient-gold shadow-gold w-full rounded-xl py-2.5 text-sm font-bold text-primary-foreground">
+                أضف إلى أرشيفي
+              </button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ───── Section header with completion bar
+function SectionBar({ icon: Icon, title, done, total, accent }: { icon: any; title: string; done: number; total: number; accent: string }) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <div className="mb-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon className="size-4 text-gold" />
+          <h2 className="font-display text-sm font-bold">{title}</h2>
+        </div>
+        <span className="text-[10px] text-muted-foreground">{done}/{total} · {pct}%</span>
+      </div>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/5">
+        <div className={`h-full rounded-full ${accent}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+const SECTIONS: { id: SectionId; label: string; icon: any }[] = [
+  { id: "figures",     label: "شخصيات",   icon: Users },
+  { id: "artifacts",   label: "آثار",     icon: Crown },
+  { id: "battles",     label: "معارك",    icon: Swords },
+  { id: "manuscripts", label: "مخطوطات",  icon: BookOpen },
+  { id: "landmarks",   label: "معالم",    icon: Landmark },
+  { id: "dynasties",   label: "دول",      icon: Scroll },
+];
+
+function CollectionPage() {
+  const { profile, eraHasProgress, eraProgress } = useUnlocks();
+  const [section, setSection] = useState<SectionId>("figures");
+  const [reveal, setReveal] = useState<RevealItem | null>(null);
+
+  // counts per section
+  const artifactsOnly = ARTIFACTS.filter(a => a.type !== "manuscript");
+  const manuscripts   = ARTIFACTS.filter(a => a.type === "manuscript");
+  const counts: Record<SectionId, { done: number; total: number }> = {
+    figures:     { done: profile.charactersUnlocked.length, total: CHARACTERS.length },
+    artifacts:   { done: artifactsOnly.filter(a => profile.artifactsFound.includes(a.id)).length, total: artifactsOnly.length },
+    battles:     { done: BATTLES.filter(b => !b.storyId || profile.storiesRead.includes(b.storyId)).length, total: BATTLES.length },
+    manuscripts: { done: manuscripts.filter(a => profile.artifactsFound.includes(a.id)).length, total: manuscripts.length },
+    landmarks:   { done: LANDMARKS.filter(l => !l.regionId || profile.regionsUnlocked.includes(l.regionId)).length, total: LANDMARKS.length },
+    dynasties:   { done: ERAS.filter(e => eraHasProgress(e.id)).length, total: ERAS.length },
+  };
+
+  const totalDone = Object.values(counts).reduce((s, c) => s + c.done, 0);
+  const totalAll  = Object.values(counts).reduce((s, c) => s + c.total, 0);
+  const prestige  = totalAll ? Math.round((totalDone / totalAll) * 100) : 0;
+
+  return (
+    <AppShell>
+      <Screen title="المتحف">
+        {/* Prestige header */}
+        <div className="relative mb-4 overflow-hidden rounded-2xl border border-gold/20 bg-gradient-to-br from-gold/15 via-gold/5 to-transparent p-4">
+          <div className="pointer-events-none absolute inset-0 opacity-30" style={{
+            backgroundImage: "radial-gradient(circle at 15% 20%, oklch(0.82 0.14 82 / 0.4), transparent 35%), radial-gradient(circle at 85% 80%, oklch(0.82 0.14 82 / 0.25), transparent 40%)",
+          }} />
+          <div className="relative flex items-center justify-between">
+            <div>
+              <p className="text-[10px] tracking-[0.2em] text-gold/80">أرشيفك التاريخي</p>
+              <h1 className="font-display shimmer-text mt-1 text-2xl font-extrabold">إرثٌ يكبر معك</h1>
+              <p className="mt-1 text-[11px] text-muted-foreground">كلّ قطعةٍ مكتشفة تُضيف فصلًا لمتحفك الخاص.</p>
+            </div>
+            <div className="text-center">
+              <p className="font-display text-3xl font-extrabold text-gold">{prestige}%</p>
+              <p className="text-[10px] text-muted-foreground">{totalDone}/{totalAll}</p>
+            </div>
+          </div>
+          <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-black/30">
+            <div className="bg-gradient-gold h-full rounded-full" style={{ width: `${prestige}%` }} />
+          </div>
+        </div>
+
+        {/* Section pills */}
+        <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          {SECTIONS.map(s => {
+            const active = section === s.id;
+            const Icon = s.icon;
+            const c = counts[s.id];
+            return (
+              <button key={s.id} onClick={() => setSection(s.id)}
+                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all
+                  ${active ? "border-gold/50 bg-gold/15 text-gold shadow-gold" : "border-white/10 bg-surface text-muted-foreground"}`}>
+                <Icon className="size-3.5" />
+                <span className="font-medium">{s.label}</span>
+                <span className="text-[10px] opacity-70">{c.done}/{c.total}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Figures */}
+        {section === "figures" && (
+          <>
+            <SectionBar icon={Users} title="شخصيات تاريخية" done={counts.figures.done} total={counts.figures.total} accent="bg-gradient-gold" />
+            <div className="grid grid-cols-2 gap-3">
+              {CHARACTERS.map(c => {
+                const open = profile.charactersUnlocked.includes(c.id);
+                const r = cRarity(c);
+                return (
+                  <Card key={c.id} unlocked={open} rarity={r} icon={c.avatar}
+                    title={c.name} subtitle={c.title} footer={c.power}
+                    mystery="أكمل حملة لاكتشاف هويّته"
+                    onClick={() => open && setReveal({
+                      rarity: r, icon: c.avatar, title: c.name, subtitle: `${c.title} · ${ERAS.find(e => e.id === c.era)?.name}`,
+                      lines: [c.bio, `القوة المميّزة: ${c.power}`],
+                    })} />
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Artifacts */}
+        {section === "artifacts" && (
+          <>
+            <SectionBar icon={Crown} title="آثار وكنوز" done={counts.artifacts.done} total={counts.artifacts.total} accent="bg-gradient-gold" />
+            <div className="grid grid-cols-2 gap-3">
+              {artifactsOnly.map(a => {
+                const open = profile.artifactsFound.includes(a.id);
+                const r = aRarity(a.id);
+                return (
+                  <Card key={a.id} unlocked={open} rarity={r} icon={a.icon}
+                    title={a.name} subtitle={`${a.typeLabel} · ${ERAS.find(e => e.id === a.era)?.name}`}
+                    onClick={() => open && setReveal({
+                      rarity: r, icon: a.icon, title: a.name,
+                      subtitle: `${a.typeLabel} · ${ERAS.find(e => e.id === a.era)?.name}`,
+                      lines: [a.description],
+                    })} />
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Battles */}
+        {section === "battles" && (
+          <>
+            <SectionBar icon={Swords} title="معارك فاصلة" done={counts.battles.done} total={counts.battles.total} accent="bg-gradient-to-r from-rose-500 to-gold" />
+            <div className="grid grid-cols-2 gap-3">
+              {BATTLES.map(b => {
+                const open = !b.storyId || profile.storiesRead.includes(b.storyId);
+                return (
+                  <Card key={b.id} unlocked={open} rarity={b.rarity} icon={b.icon}
+                    title={b.name} subtitle={`${b.year} · ${b.location}`} footer={`النصر: ${b.victor}`}
+                    mystery="اقرأ قصّتها لتكشفها"
+                    onClick={() => open && setReveal({
+                      rarity: b.rarity, icon: b.icon, title: b.name,
+                      subtitle: `${b.year} · ${b.location}`,
+                      lines: [b.summary, `قائد النصر: ${b.victor}`],
+                    })} />
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Manuscripts */}
+        {section === "manuscripts" && (
+          <>
+            <SectionBar icon={BookOpen} title="كتب ومخطوطات" done={counts.manuscripts.done} total={counts.manuscripts.total} accent="bg-gradient-to-r from-amber-500 to-gold" />
+            <div className="space-y-2.5">
+              {manuscripts.map(m => {
+                const open = profile.artifactsFound.includes(m.id);
+                const r = aRarity(m.id);
+                const meta = RARITY_META[r];
+                return (
+                  <button key={m.id} onClick={() => open && setReveal({
+                    rarity: r, icon: m.icon, title: m.name,
+                    subtitle: `${m.typeLabel} · ${ERAS.find(e => e.id === m.era)?.name}`,
+                    lines: [m.description],
+                  })}
+                    className={`flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 text-right transition-all ${open ? `ring-1 ${meta.ring}` : "opacity-70"}`}>
+                    <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-black/30 text-2xl ring-1 ring-white/10">
+                      {open ? m.icon : <Lock className="size-4 text-muted-foreground" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-display truncate text-sm font-bold">{open ? m.name : "مخطوطٌ مجهول"}</p>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${meta.chip}`}>{meta.label}</span>
+                      </div>
+                      <p className="text-[10px] text-gold/80">{m.typeLabel} · {ERAS.find(e => e.id === m.era)?.name}</p>
+                      <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{open ? m.description : "اكتشفه خلال رحلتك"}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Landmarks */}
+        {section === "landmarks" && (
+          <>
+            <SectionBar icon={Landmark} title="معالم خالدة" done={counts.landmarks.done} total={counts.landmarks.total} accent="bg-gradient-to-r from-teal-500 to-gold" />
+            <div className="grid grid-cols-2 gap-3">
+              {LANDMARKS.map(l => {
+                const open = !l.regionId || profile.regionsUnlocked.includes(l.regionId);
+                return (
+                  <Card key={l.id} unlocked={open} rarity={l.rarity} icon={l.icon}
+                    title={l.name} subtitle={l.place} footer={ERAS.find(e => e.id === l.era)?.name}
+                    mystery="افتح المنطقة على الخارطة"
+                    onClick={() => open && setReveal({
+                      rarity: l.rarity, icon: l.icon, title: l.name,
+                      subtitle: `${l.place} · ${ERAS.find(e => e.id === l.era)?.name}`,
+                      lines: [l.summary],
+                    })} />
+                );
+              })}
+            </div>
+            <Link to="/map" className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-gold/30 bg-gold/5 py-2 text-xs text-gold">
+              <MapPin className="size-3.5" /> اكتشف المعالم على الخارطة
+            </Link>
+          </>
+        )}
+
+        {/* Dynasties */}
+        {section === "dynasties" && (
+          <>
+            <SectionBar icon={Scroll} title="دول وحضارات" done={counts.dynasties.done} total={counts.dynasties.total} accent="bg-gradient-gold" />
+            <div className="space-y-2.5">
+              {ERAS.map(e => {
+                const open = eraHasProgress(e.id);
+                const { done, total } = eraProgress(e.id);
+                const pct = total ? Math.round((done / total) * 100) : 0;
+                const r: Rarity = pct >= 80 ? "legendary" : pct >= 40 ? "epic" : pct > 0 ? "rare" : "common";
+                const meta = RARITY_META[r];
+                return (
+                  <button key={e.id} onClick={() => open && setReveal({
+                    rarity: r, icon: "📜", title: e.name,
+                    subtitle: `${e.years} · ${e.tagline}`,
+                    lines: [`اكتشفت ${done} من ${total} عنصرًا من هذه الحقبة (${pct}%).`, "تابع رحلتك لتكشف باقي إرثها."],
+                  })}
+                    className={`relative w-full overflow-hidden rounded-2xl border border-white/10 bg-surface p-3 text-right transition-all ${open ? `ring-1 ${meta.ring}` : "opacity-70"}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-display text-sm font-bold">{e.name}</p>
+                        <p className="text-[10px] text-gold/80">{e.years}</p>
+                      </div>
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${meta.chip}`}>{meta.label}</span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{e.tagline}</p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/30">
+                      <div className="bg-gradient-gold h-full rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="mt-1 text-[10px] text-muted-foreground">{done}/{total} مكتشف · {pct}%</p>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {totalDone === 0 && (
+          <div className="mt-6 rounded-2xl border border-dashed border-white/15 p-6 text-center text-xs text-muted-foreground">
+            متحفك في انتظارك. ابدأ بحملة <Link to="/campaigns" className="text-gold underline-offset-4 hover:underline">صلاح الدين</Link> لتكشف أوّل قطعة.
+          </div>
+        )}
+      </Screen>
+      <RevealDialog item={reveal} onClose={() => setReveal(null)} />
+    </AppShell>
   );
 }
