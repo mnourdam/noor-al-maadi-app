@@ -496,6 +496,13 @@ export const DECISIONS: Decision[] = [
 ];
 
 // 4) Map Exploration
+export interface RegionLandmark {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  icon: string;
+}
 export interface MapRegion {
   id: string;
   name: string;
@@ -506,17 +513,191 @@ export interface MapRegion {
   blurb: string;
   cost: number;
   unlocksArtifact?: string;
+  // === Illustrated world-map extensions ===
+  theme?: string;            // visual identity tagline
+  glyph?: string;            // emoji icon for the region
+  polygon?: string;          // SVG path d in a 100x60 viewBox
+  labelX?: number;           // label position (SVG coords)
+  labelY?: number;
+  landmarks?: RegionLandmark[];
+  characterIds?: string[];
+  storyIds?: string[];
+  campaignEra?: Era;         // which campaign opens from this region
+  silhouette?: string;       // simple SVG hint shown under fog when locked
 }
 
 export const MAP_REGIONS: MapRegion[] = [
-  { id: "hijaz", name: "الحجاز", era: "seerah", x: 62, y: 58, capital: "مكة والمدينة", blurb: "مهد الإسلام.", cost: 0, unlocksArtifact: "kaaba-kiswa" },
-  { id: "sham", name: "الشام", era: "rashidun", x: 58, y: 40, capital: "دمشق", blurb: "بوابة الفتوح الكبرى.", cost: 30 },
-  { id: "iraq", name: "العراق", era: "abbasid", x: 65, y: 42, capital: "بغداد", blurb: "عاصمة الحضارة العباسية.", cost: 40, unlocksArtifact: "baghdad-manuscript" },
-  { id: "egypt", name: "مصر", era: "ayyubid", x: 52, y: 50, capital: "القاهرة", blurb: "حامية الحرمين وقاهرة المغول.", cost: 40 },
-  { id: "andalus", name: "الأندلس", era: "andalus", x: 18, y: 36, capital: "قرطبة", blurb: "زهرة الغرب الإسلامي.", cost: 60, unlocksArtifact: "cordoba-key" },
-  { id: "anatolia", name: "الأناضول", era: "ottoman", x: 50, y: 28, capital: "إسطنبول", blurb: "عرش الخلافة العثمانية.", cost: 70, unlocksArtifact: "fatih-cannon" },
-  { id: "khorasan", name: "خراسان", era: "seljuk", x: 80, y: 36, capital: "نيسابور", blurb: "موطن السلاجقة والعلماء.", cost: 60 },
-  { id: "maghrib", name: "المغرب", era: "andalus", x: 30, y: 50, capital: "فاس", blurb: "جسر العبور إلى الأندلس.", cost: 50 },
+  {
+    id: "hijaz", name: "الحجاز", era: "seerah", x: 62, y: 46,
+    capital: "مكة والمدينة", blurb: "صحراءٌ ولدت فيها الرسالة وانطلقت منها القوافل إلى أطراف الأرض.",
+    cost: 0, unlocksArtifact: "kaaba-kiswa",
+    theme: "صحراء، قوافل، الحرمان الشريفان",
+    glyph: "🕋",
+    polygon: "M54,32 L70,30 L72,42 L66,52 L58,50 L54,42 Z",
+    labelX: 62, labelY: 42,
+    landmarks: [
+      { id: "mecca",  name: "مكّة المكرّمة", x: 62, y: 46, icon: "🕋" },
+      { id: "medina", name: "المدينة المنوّرة", x: 60, y: 40, icon: "🕌" },
+      { id: "taif",   name: "الطائف",        x: 64, y: 44, icon: "🌿" },
+    ],
+    characterIds: ["omar"],
+    storyIds: ["hijra"],
+    campaignEra: "seerah",
+  },
+  {
+    id: "sham", name: "الشام", era: "rashidun", x: 54, y: 26,
+    capital: "دمشق", blurb: "أرض الفتوح وبوابة القدس، حيث رُفعت رايات الخلافة الأموية.",
+    cost: 30,
+    theme: "قِلاع، أسوار قدسيّة، أسواق دمشق",
+    glyph: "🛡️",
+    polygon: "M50,22 L60,21 L62,30 L54,33 L49,28 Z",
+    labelX: 55, labelY: 27,
+    landmarks: [
+      { id: "damascus",  name: "دمشق",     x: 54, y: 25, icon: "🕌" },
+      { id: "jerusalem", name: "القدس",    x: 52, y: 30, icon: "🕍" },
+      { id: "aleppo",    name: "حلب",      x: 56, y: 22, icon: "🏯" },
+    ],
+    characterIds: ["salahuddin", "muawiya"],
+    storyIds: ["hattin", "yarmouk"],
+    campaignEra: "ayyubid",
+  },
+  {
+    id: "iraq", name: "العراق", era: "abbasid", x: 65, y: 28,
+    capital: "بغداد", blurb: "عاصمة العقل في العالم القديم، حيث تُرجمت كتب الأمم وأُسّس علم الجبر.",
+    cost: 40, unlocksArtifact: "baghdad-manuscript",
+    theme: "بيت الحكمة، مدينة مدوّرة، نهرَا الحضارة",
+    glyph: "📜",
+    polygon: "M60,22 L70,21 L71,30 L62,31 L60,27 Z",
+    labelX: 65, labelY: 26,
+    landmarks: [
+      { id: "baghdad",  name: "بغداد",   x: 65, y: 26, icon: "🌙" },
+      { id: "basra",    name: "البصرة",  x: 68, y: 30, icon: "⚓" },
+      { id: "kufa",     name: "الكوفة",  x: 63, y: 28, icon: "✒️" },
+    ],
+    characterIds: ["harun", "khwarizmi"],
+    storyIds: ["baghdad-house-of-wisdom"],
+    campaignEra: "abbasid",
+  },
+  {
+    id: "egypt", name: "مصر", era: "ayyubid", x: 46, y: 36,
+    capital: "القاهرة", blurb: "أرض النيل وقاهرة المعزّ، حصن الأمة في وجه الصليبيين والمغول.",
+    cost: 40,
+    theme: "النيل، القلاع، قاهرة المعزّ",
+    glyph: "🏯",
+    polygon: "M40,32 L52,31 L54,40 L46,46 L40,42 Z",
+    labelX: 47, labelY: 37,
+    landmarks: [
+      { id: "cairo",       name: "القاهرة",   x: 47, y: 36, icon: "🕌" },
+      { id: "alexandria",  name: "الإسكندرية", x: 45, y: 32, icon: "🗼" },
+      { id: "fustat",      name: "الفسطاط",   x: 47, y: 38, icon: "🏛️" },
+    ],
+    characterIds: ["baybars"],
+    storyIds: ["ain-jalut"],
+    campaignEra: "mamluk",
+  },
+  {
+    id: "andalus", name: "الأندلس", era: "andalus", x: 11, y: 22,
+    capital: "قرطبة", blurb: "قصورٌ وحدائق وقناطر، حيث أُضيئت شوارع قرطبة وأوروبا غارقة في الظلام.",
+    cost: 60, unlocksArtifact: "cordoba-key",
+    theme: "قصور، حدائق، عمارة موحّدة",
+    glyph: "🏛️",
+    polygon: "M3,16 L18,14 L22,22 L19,30 L8,31 L2,24 Z",
+    labelX: 11, labelY: 23,
+    landmarks: [
+      { id: "cordoba",  name: "قرطبة",   x: 9,  y: 22, icon: "🕌" },
+      { id: "granada",  name: "غرناطة",  x: 13, y: 27, icon: "🏰" },
+      { id: "seville",  name: "إشبيلية", x: 7,  y: 26, icon: "🗼" },
+      { id: "toledo",   name: "طُليطلة", x: 12, y: 18, icon: "📚" },
+    ],
+    characterIds: ["abdurrahman", "ibn-rushd"],
+    storyIds: ["cordoba"],
+    campaignEra: "andalus",
+  },
+  {
+    id: "anatolia", name: "الأناضول", era: "ottoman", x: 52, y: 16,
+    capital: "إسطنبول", blurb: "قِلاعٌ وجبالٌ، وهنا تحقّقت بشارة فتح القسطنطينية على يد محمد الفاتح.",
+    cost: 70, unlocksArtifact: "fatih-cannon",
+    theme: "قِلاع، مضائق، مساجد عثمانية",
+    glyph: "🏰",
+    polygon: "M42,10 L62,8 L66,18 L60,22 L46,21 L40,15 Z",
+    labelX: 53, labelY: 16,
+    landmarks: [
+      { id: "constantinople", name: "القسطنطينية", x: 46, y: 13, icon: "🕌" },
+      { id: "konya",          name: "قونية",       x: 56, y: 18, icon: "🌹" },
+      { id: "manzikert",      name: "ملاذكرد",     x: 62, y: 16, icon: "🏹" },
+    ],
+    characterIds: ["fatih", "alp-arslan"],
+    storyIds: [],
+    campaignEra: "ottoman",
+  },
+  {
+    id: "maghrib", name: "المغرب", era: "andalus", x: 18, y: 36,
+    capital: "فاس", blurb: "جسر العبور إلى الأندلس، وموطن المرابطين والموحّدين وأسواق فاس.",
+    cost: 50,
+    theme: "صحراء، قوافل ذهب، مدن طينيّة",
+    glyph: "🐪",
+    polygon: "M4,30 L28,30 L32,38 L26,44 L8,44 L3,38 Z",
+    labelX: 17, labelY: 37,
+    landmarks: [
+      { id: "fez",        name: "فاس",        x: 15, y: 34, icon: "🕌" },
+      { id: "marrakech",  name: "مراكش",      x: 12, y: 40, icon: "🌴" },
+      { id: "kairouan",   name: "القيروان",   x: 26, y: 33, icon: "🌙" },
+    ],
+    characterIds: ["tariq"],
+    storyIds: [],
+    campaignEra: "umayyad",
+  },
+  {
+    id: "khorasan", name: "خراسان وفارس", era: "seljuk", x: 78, y: 24,
+    capital: "نيسابور", blurb: "موطن السلاجقة والعلماء، ومنها انطلقت موجات الفتح والعلم نحو الشرق.",
+    cost: 60,
+    theme: "جبالٌ، مدارس، شعرٌ وحكمة",
+    glyph: "🏹",
+    polygon: "M71,20 L86,19 L88,30 L74,32 L70,26 Z",
+    labelX: 79, labelY: 25,
+    landmarks: [
+      { id: "nishapur",  name: "نيسابور", x: 76, y: 24, icon: "📖" },
+      { id: "isfahan",   name: "أصفهان",  x: 73, y: 28, icon: "🕌" },
+      { id: "merv",      name: "مَرو",     x: 82, y: 22, icon: "🌌" },
+    ],
+    characterIds: ["alp-arslan"],
+    storyIds: [],
+    campaignEra: "seljuk",
+  },
+  {
+    id: "transoxiana", name: "ما وراء النهر", era: "abbasid", x: 86, y: 14,
+    capital: "سمرقند", blurb: "أرض البخاري وابن سينا، حيث التقت طرق الحرير بقباب سمرقند الفيروزية.",
+    cost: 80,
+    theme: "طريق الحرير، قباب فيروزيّة، علماء",
+    glyph: "🌌",
+    polygon: "M76,6 L96,5 L98,16 L82,18 L75,12 Z",
+    labelX: 87, labelY: 11,
+    landmarks: [
+      { id: "samarkand", name: "سمرقند",  x: 87, y: 12, icon: "🕌" },
+      { id: "bukhara",   name: "بخارى",   x: 83, y: 15, icon: "📚" },
+      { id: "balkh",     name: "بَلْخ",    x: 92, y: 16, icon: "🏔️" },
+    ],
+    characterIds: [],
+    storyIds: [],
+    campaignEra: "abbasid",
+  },
+  {
+    id: "hind", name: "الهند والسند", era: "umayyad", x: 92, y: 32,
+    capital: "دلهي", blurb: "أقصى مشرق الفتوحات، حيث أُسّست سلطنات إسلامية كبرى تركت إرثًا معماريًّا فذًّا.",
+    cost: 90,
+    theme: "أنهار، فيلة، عمارة هندية إسلامية",
+    glyph: "🐘",
+    polygon: "M86,24 L100,22 L100,42 L92,46 L86,38 Z",
+    labelX: 93, labelY: 32,
+    landmarks: [
+      { id: "delhi",   name: "دلهي",   x: 92, y: 28, icon: "🏯" },
+      { id: "lahore",  name: "لاهور",  x: 90, y: 32, icon: "🌹" },
+      { id: "multan",  name: "مُلتان",  x: 88, y: 36, icon: "📿" },
+    ],
+    characterIds: [],
+    storyIds: [],
+    campaignEra: "umayyad",
+  },
 ];
 
 // 5) Artifact Discovery
