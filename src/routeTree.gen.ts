@@ -13,6 +13,7 @@ import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
+import { Route as EncyclopediaRouteImport } from './routes/encyclopedia'
 import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AboutRouteImport } from './routes/about'
@@ -28,6 +29,9 @@ import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
 import { Route as PlayCampaignIdRouteImport } from './routes/play.campaign.$id'
+import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
+import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
+import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
 import { Route as PlayCampaignIdIndexRouteImport } from './routes/play.campaign.$id.index'
 import { Route as PlayCampaignIdChapterChapterRouteImport } from './routes/play.campaign.$id.chapter.$chapter'
 
@@ -49,6 +53,11 @@ const OnThisDayRoute = OnThisDayRouteImport.update({
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EncyclopediaRoute = EncyclopediaRouteImport.update({
+  id: '/encyclopedia',
+  path: '/encyclopedia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CollectionRoute = CollectionRouteImport.update({
@@ -126,6 +135,21 @@ const PlayCampaignIdRoute = PlayCampaignIdRouteImport.update({
   path: '/play/campaign/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EncyclopediaTypeTypeRoute = EncyclopediaTypeTypeRouteImport.update({
+  id: '/type/$type',
+  path: '/type/$type',
+  getParentRoute: () => EncyclopediaRoute,
+} as any)
+const EncyclopediaStateIdRoute = EncyclopediaStateIdRouteImport.update({
+  id: '/state/$id',
+  path: '/state/$id',
+  getParentRoute: () => EncyclopediaRoute,
+} as any)
+const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
+  id: '/entity/$id',
+  path: '/entity/$id',
+  getParentRoute: () => EncyclopediaRoute,
+} as any)
 const PlayCampaignIdIndexRoute = PlayCampaignIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -143,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
+  '/encyclopedia': typeof EncyclopediaRouteWithChildren
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -157,6 +182,9 @@ export interface FileRoutesByFullPath {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/campaigns/': typeof CampaignsIndexRoute
+  '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
+  '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
+  '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdRouteWithChildren
   '/play/campaign/$id/': typeof PlayCampaignIdIndexRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
@@ -165,6 +193,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/collection': typeof CollectionRoute
+  '/encyclopedia': typeof EncyclopediaRouteWithChildren
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -179,6 +208,9 @@ export interface FileRoutesByTo {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/campaigns': typeof CampaignsIndexRoute
+  '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
+  '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
+  '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdIndexRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
 }
@@ -188,6 +220,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
+  '/encyclopedia': typeof EncyclopediaRouteWithChildren
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -202,6 +235,9 @@ export interface FileRoutesById {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/campaigns/': typeof CampaignsIndexRoute
+  '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
+  '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
+  '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdRouteWithChildren
   '/play/campaign/$id/': typeof PlayCampaignIdIndexRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
@@ -213,6 +249,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/campaigns'
     | '/collection'
+    | '/encyclopedia'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -227,6 +264,9 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/campaigns/'
+    | '/encyclopedia/entity/$id'
+    | '/encyclopedia/state/$id'
+    | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
     | '/play/campaign/$id/'
     | '/play/campaign/$id/chapter/$chapter'
@@ -235,6 +275,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/collection'
+    | '/encyclopedia'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -249,6 +290,9 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/campaigns'
+    | '/encyclopedia/entity/$id'
+    | '/encyclopedia/state/$id'
+    | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
     | '/play/campaign/$id/chapter/$chapter'
   id:
@@ -257,6 +301,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/campaigns'
     | '/collection'
+    | '/encyclopedia'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -271,6 +316,9 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/campaigns/'
+    | '/encyclopedia/entity/$id'
+    | '/encyclopedia/state/$id'
+    | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
     | '/play/campaign/$id/'
     | '/play/campaign/$id/chapter/$chapter'
@@ -281,6 +329,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
   CollectionRoute: typeof CollectionRoute
+  EncyclopediaRoute: typeof EncyclopediaRouteWithChildren
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
   ProfileRoute: typeof ProfileRoute
@@ -324,6 +373,13 @@ declare module '@tanstack/react-router' {
       path: '/map'
       fullPath: '/map'
       preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/encyclopedia': {
+      id: '/encyclopedia'
+      path: '/encyclopedia'
+      fullPath: '/encyclopedia'
+      preLoaderRoute: typeof EncyclopediaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/collection': {
@@ -431,6 +487,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayCampaignIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/encyclopedia/type/$type': {
+      id: '/encyclopedia/type/$type'
+      path: '/type/$type'
+      fullPath: '/encyclopedia/type/$type'
+      preLoaderRoute: typeof EncyclopediaTypeTypeRouteImport
+      parentRoute: typeof EncyclopediaRoute
+    }
+    '/encyclopedia/state/$id': {
+      id: '/encyclopedia/state/$id'
+      path: '/state/$id'
+      fullPath: '/encyclopedia/state/$id'
+      preLoaderRoute: typeof EncyclopediaStateIdRouteImport
+      parentRoute: typeof EncyclopediaRoute
+    }
+    '/encyclopedia/entity/$id': {
+      id: '/encyclopedia/entity/$id'
+      path: '/entity/$id'
+      fullPath: '/encyclopedia/entity/$id'
+      preLoaderRoute: typeof EncyclopediaEntityIdRouteImport
+      parentRoute: typeof EncyclopediaRoute
+    }
     '/play/campaign/$id/': {
       id: '/play/campaign/$id/'
       path: '/'
@@ -462,6 +539,22 @@ const CampaignsRouteWithChildren = CampaignsRoute._addFileChildren(
   CampaignsRouteChildren,
 )
 
+interface EncyclopediaRouteChildren {
+  EncyclopediaEntityIdRoute: typeof EncyclopediaEntityIdRoute
+  EncyclopediaStateIdRoute: typeof EncyclopediaStateIdRoute
+  EncyclopediaTypeTypeRoute: typeof EncyclopediaTypeTypeRoute
+}
+
+const EncyclopediaRouteChildren: EncyclopediaRouteChildren = {
+  EncyclopediaEntityIdRoute: EncyclopediaEntityIdRoute,
+  EncyclopediaStateIdRoute: EncyclopediaStateIdRoute,
+  EncyclopediaTypeTypeRoute: EncyclopediaTypeTypeRoute,
+}
+
+const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
+  EncyclopediaRouteChildren,
+)
+
 interface PlayCampaignIdRouteChildren {
   PlayCampaignIdIndexRoute: typeof PlayCampaignIdIndexRoute
   PlayCampaignIdChapterChapterRoute: typeof PlayCampaignIdChapterChapterRoute
@@ -481,6 +574,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
   CollectionRoute: CollectionRoute,
+  EncyclopediaRoute: EncyclopediaRouteWithChildren,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
   ProfileRoute: ProfileRoute,
