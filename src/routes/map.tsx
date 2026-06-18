@@ -13,6 +13,10 @@ import { Building2 } from "lucide-react";
 import { packEntitiesForBridge, allPackEntities } from "@/lib/packs/registry";
 import { entityHref } from "@/components/EncyclopediaCard";
 import type { PackEntity } from "@/lib/packs/types";
+import {
+  pinsForEra, overlayForEra, atlasCoverage, atlasEras,
+  STATE_OVERLAYS, type AtlasPin, type AtlasPinKind,
+} from "@/lib/atlas";
 
 export const Route = createFileRoute("/map")({
   head: () => ({ meta: [{ title: "خارطة العالم الإسلامي" }] }),
@@ -35,8 +39,20 @@ const ROUTES: { from: string; to: string }[] = [
 function MapPage() {
   const { profile, unlockRegion, findArtifact } = useProfile();
   const [selectedId, setSelectedId] = useState<string>("hijaz");
+  const [eraFilter, setEraFilter] = useState<string | null>(null);
+  const [devOpen, setDevOpen] = useState(false);
   const explorePct = explorationPercent(profile.regionsUnlocked);
   const region = MAP_REGIONS.find((r) => r.id === selectedId) ?? MAP_REGIONS[0];
+
+  const pins = useMemo(() => pinsForEra(eraFilter), [eraFilter]);
+  const overlay = useMemo(() => overlayForEra(eraFilter), [eraFilter]);
+  const eras = useMemo(() => atlasEras(), []);
+  const coverage = useMemo(() => atlasCoverage(), []);
+  const ERA_NAME: Record<string, string> = {
+    umayyad: "الأموية", abbasid: "العباسية", ayyubid: "الأيوبية",
+    rashidun: "الراشدة", seerah: "السيرة", andalus: "الأندلس",
+    seljuk: "السلاجقة", mamluk: "المماليك", ottoman: "العثمانية", modern: "الحديث",
+  };
 
   const handleUnlock = (r: MapRegion) => {
     const ok = unlockRegion(r.id, r.cost);
@@ -63,11 +79,60 @@ function MapPage() {
           </div>
         </div>
 
+        {/* Era filter — affects pins + overlays */}
+        <div className="mb-3 -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1">
+          <button
+            onClick={() => setEraFilter(null)}
+            className={`shrink-0 rounded-full border px-3 py-1 text-[11px] transition ${
+              eraFilter === null
+                ? "border-gold bg-gradient-gold text-primary-foreground shadow-gold"
+                : "border-white/15 bg-surface text-muted-foreground"
+            }`}
+          >كل العصور</button>
+          {eras.map(e => {
+            const active = eraFilter === e;
+            return (
+              <button key={e} onClick={() => setEraFilter(active ? null : e)}
+                className={`shrink-0 rounded-full border px-3 py-1 text-[11px] transition ${
+                  active
+                    ? "border-gold bg-gradient-gold text-primary-foreground shadow-gold"
+                    : "border-white/15 bg-surface text-muted-foreground"
+                }`}
+              >{ERA_NAME[e] ?? e}</button>
+            );
+          })}
+          <button
+            onClick={() => setDevOpen(v => !v)}
+            aria-label="dev"
+            className="ms-auto shrink-0 rounded-full border border-white/10 bg-surface px-2 py-1 text-[10px] text-muted-foreground"
+            title="إحصاءات الأطلس"
+          >ⓘ</button>
+        </div>
+
+        {devOpen && (
+          <div className="mb-3 rounded-2xl border border-white/10 bg-surface/80 p-3 text-[11px]">
+            <p className="font-display mb-1 text-xs text-gold">إحصاءات الأطلس (مطوّر)</p>
+            <p className="text-muted-foreground">
+              قابل للوضع على الخارطة: {coverage.capableTotal} ·
+              مغطّى: {coverage.covered} · التغطية:{" "}
+              <span className="text-gold">{coverage.percent}%</span>
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              مدن {coverage.byKind.city} · معارك {coverage.byKind.battle} ·
+              أحداث {coverage.byKind.event} · معالم {coverage.byKind.landmark} ·
+              دول {coverage.byKind.state}
+            </p>
+          </div>
+        )}
+
         {/* Illustrated parchment map */}
         <WorldMapCanvas
           unlocked={profile.regionsUnlocked}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          pins={pins}
+          overlay={overlay}
+          eraFilter={eraFilter}
         />
 
         {/* Region detail */}
@@ -130,12 +195,25 @@ function MapPage() {
 // SVG WORLD MAP
 // ============================================================
 function WorldMapCanvas({
-  unlocked, selectedId, onSelect,
-}: { unlocked: string[]; selectedId: string; onSelect: (id: string) => void }) {
+  unlocked, selectedId, onSelect, pins, overlay, eraFilter,
+}: {
+  unlocked: string[]; selectedId: string; onSelect: (id: string) => void;
+  pins: AtlasPin[]; overlay: import("@/lib/atlas").StateOverlay | undefined;
+  eraFilter: string | null;
+}) {
   const regionsById = useMemo(
     () => Object.fromEntries(MAP_REGIONS.map((r) => [r.id, r])) as Record<string, MapRegion>,
     [],
   );
+
+  const KIND_STYLE: Record<AtlasPinKind, { fill: string; stroke: string; r: number; glyph?: string }> = {
+    capital:  { fill: "oklch(0.85 0.15 80)",  stroke: "oklch(0.32 0.1 40)", r: 0.95, glyph: "★" },
+    city:     { fill: "oklch(0.95 0.04 80)",  stroke: "oklch(0.32 0.1 40)", r: 0.7 },
+    state:    { fill: "oklch(0.78 0.18 60)",  stroke: "oklch(0.3 0.12 40)", r: 1.1, glyph: "❖" },
+    battle:   { fill: "oklch(0.55 0.2 30)",   stroke: "oklch(0.25 0.1 30)", r: 0.7 },
+    event:    { fill: "oklch(0.7 0.16 300)",  stroke: "oklch(0.3 0.12 300)", r: 0.6 },
+    landmark: { fill: "oklch(0.78 0.13 180)", stroke: "oklch(0.3 0.08 200)", r: 0.7 },
+  };
 
   return (
     <div className="relative overflow-hidden rounded-3xl border-2 border-amber-900/30 map-parchment map-vignette shadow-elegant" dir="ltr">
@@ -175,6 +253,21 @@ function WorldMapCanvas({
 
         {/* Sea hatch background */}
         <rect width="100" height="60" fill="url(#seaHatch)" opacity="0.4" />
+
+        {/* State influence overlay (historical, not modern borders) */}
+        {overlay && (
+          <g style={{ pointerEvents: "none" }}>
+            {overlay.regions.map(rid => {
+              const r = regionsById[rid];
+              if (!r?.polygon) return null;
+              return (
+                <path key={`ovl-${rid}`} d={r.polygon}
+                  fill={overlay.fill} stroke={overlay.stroke} strokeWidth="0.35"
+                  strokeDasharray="0.7 0.5" filter="url(#rough)" />
+              );
+            })}
+          </g>
+        )}
 
         {/* Mediterranean / great seas curves */}
         <g className="ink-stroke-light" fill="none" strokeWidth="0.25">
@@ -264,7 +357,33 @@ function WorldMapCanvas({
           <path d="M0,0 L2.5,-3 L2.5,0 Z" fill="oklch(0.95 0.04 80)" stroke="oklch(0.3 0.08 40)" strokeWidth="0.1" />
           <line x1="2.5" y1="-3" x2="2.5" y2="0.5" stroke="oklch(0.3 0.08 40)" strokeWidth="0.15" />
         </g>
+
+        {/* Entity pins from all content packs */}
+        <g>
+          {pins.map(pin => {
+            const s = KIND_STYLE[pin.kind];
+            return (
+              <a key={pin.id} href={entityHref(pin.entity)} className="atlas-pin cursor-pointer">
+                <title>{pin.entity.title}</title>
+                <circle cx={pin.x} cy={pin.y} r={s.r + 0.5} fill={s.fill} opacity="0.25" />
+                <circle cx={pin.x} cy={pin.y} r={s.r} fill={s.fill}
+                  stroke={s.stroke} strokeWidth="0.12" />
+                {s.glyph && (
+                  <text x={pin.x} y={pin.y + 0.45} textAnchor="middle"
+                    fontSize="1.1" fill="oklch(0.2 0.05 40)" fontWeight="800"
+                    style={{ pointerEvents: "none" }}>{s.glyph}</text>
+                )}
+              </a>
+            );
+          })}
+        </g>
       </svg>
+      {/* Era badge in corner when filtered */}
+      {eraFilter && (
+        <div className="absolute right-3 bottom-3 z-10 rounded-full border border-gold/40 bg-amber-50/80 px-3 py-1 text-[10px] font-bold text-amber-950 shadow-sm" dir="rtl">
+          مرشَّح حسب العصر · {STATE_OVERLAYS.find(o => o.era === eraFilter)?.label ?? eraFilter}
+        </div>
+      )}
     </div>
   );
 }
