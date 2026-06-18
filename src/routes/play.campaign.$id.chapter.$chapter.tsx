@@ -10,6 +10,8 @@ import {
   getEngineCampaign, chapterCompletionKey, isChapterUnlocked,
 } from "@/lib/campaign-engine";
 import type { ChapterUnlock } from "@/lib/campaign-engine";
+import { ChapterQuiz } from "@/components/ChapterQuiz";
+import { isQuizPassed } from "@/lib/quiz-engine";
 
 export const Route = createFileRoute("/play/campaign/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
@@ -45,6 +47,13 @@ function ChapterPlayer() {
   const next = campaign.chapters.find(c => c.index === chapter.index + 1);
 
   const [acknowledged, setAcknowledged] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
+
+  const quiz = chapter.quiz;
+  const quizRequired = !!(quiz && quiz.required);
+  const quizPassed = quiz
+    ? isQuizPassed(profile.missionsCompleted, campaign.id, chapter.id, quiz)
+    : true;
 
   const finishChapter = () => {
     completeMission(key, chapter.xp);
@@ -54,6 +63,12 @@ function ChapterPlayer() {
       u.artifacts?.forEach(a => findArtifact(a));
       u.states?.forEach(s => unlockEra(s));
     }
+  };
+
+  const tryFinish = () => {
+    if (quizRequired && !quizPassed) { setQuizOpen(true); return; }
+    finishChapter();
+    if (next) navigate({ to: "/play/campaign/$id/chapter/$chapter", params: { id: campaign.id, chapter: next.id } });
   };
 
   if (!unlocked) {
@@ -209,6 +224,16 @@ function ChapterPlayer() {
                   </Link>
                 )}
               </div>
+            ) : quiz && quizOpen && !quizPassed ? (
+              <ChapterQuiz
+                campaignId={campaign.id}
+                chapterId={chapter.id}
+                quiz={quiz}
+                onPassed={() => {
+                  finishChapter();
+                  if (next) navigate({ to: "/play/campaign/$id/chapter/$chapter", params: { id: campaign.id, chapter: next.id } });
+                }}
+              />
             ) : chapter.readingGate ? (
               <div className="rounded-2xl border border-white/10 bg-surface/60 p-4">
                 <label className="flex items-start gap-3 text-[12px] text-foreground/90">
@@ -223,23 +248,21 @@ function ChapterPlayer() {
                   </span>
                 </label>
                 <button
-                  onClick={() => { if (acknowledged) { finishChapter();
-                    if (next) navigate({ to: "/play/campaign/$id/chapter/$chapter", params: { id: campaign.id, chapter: next.id } });
-                  } }}
+                  onClick={() => { if (acknowledged) tryFinish(); }}
                   disabled={!acknowledged}
                   className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground disabled:opacity-40"
                 >
-                  <Sparkles className="size-4" /> أنهيتُ القراءة وأختم الفصل
+                  <Sparkles className="size-4" />
+                  {quizRequired && !quizPassed ? "أنهيتُ القراءة — ابدأ الاختبار" : "أنهيتُ القراءة وأختم الفصل"}
                 </button>
               </div>
             ) : (
               <button
-                onClick={() => { finishChapter();
-                  if (next) navigate({ to: "/play/campaign/$id/chapter/$chapter", params: { id: campaign.id, chapter: next.id } });
-                }}
+                onClick={tryFinish}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground"
               >
-                <BookOpen className="size-4" /> أكمل الفصل
+                <BookOpen className="size-4" />
+                {quizRequired && !quizPassed ? "ابدأ اختبار الفصل" : "أكمل الفصل"}
               </button>
             )}
           </div>
