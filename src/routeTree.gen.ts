@@ -27,6 +27,7 @@ import { Route as FigureIdRouteImport } from './routes/figure.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
+import { Route as PlayCampaignIdRouteImport } from './routes/play.campaign.$id'
 import { Route as PlayCampaignIdIndexRouteImport } from './routes/play.campaign.$id.index'
 import { Route as PlayCampaignIdChapterChapterRouteImport } from './routes/play.campaign.$id.chapter.$chapter'
 
@@ -120,16 +121,21 @@ const BattleIdRoute = BattleIdRouteImport.update({
   path: '/battle/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayCampaignIdIndexRoute = PlayCampaignIdIndexRouteImport.update({
-  id: '/play/campaign/$id/',
-  path: '/play/campaign/$id/',
+const PlayCampaignIdRoute = PlayCampaignIdRouteImport.update({
+  id: '/play/campaign/$id',
+  path: '/play/campaign/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PlayCampaignIdIndexRoute = PlayCampaignIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PlayCampaignIdRoute,
 } as any)
 const PlayCampaignIdChapterChapterRoute =
   PlayCampaignIdChapterChapterRouteImport.update({
-    id: '/play/campaign/$id/chapter/$chapter',
-    path: '/play/campaign/$id/chapter/$chapter',
-    getParentRoute: () => rootRouteImport,
+    id: '/chapter/$chapter',
+    path: '/chapter/$chapter',
+    getParentRoute: () => PlayCampaignIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/campaigns/': typeof CampaignsIndexRoute
+  '/play/campaign/$id': typeof PlayCampaignIdRouteWithChildren
   '/play/campaign/$id/': typeof PlayCampaignIdIndexRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
 }
@@ -195,6 +202,7 @@ export interface FileRoutesById {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/campaigns/': typeof CampaignsIndexRoute
+  '/play/campaign/$id': typeof PlayCampaignIdRouteWithChildren
   '/play/campaign/$id/': typeof PlayCampaignIdIndexRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
 }
@@ -219,6 +227,7 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/campaigns/'
+    | '/play/campaign/$id'
     | '/play/campaign/$id/'
     | '/play/campaign/$id/chapter/$chapter'
   fileRoutesByTo: FileRoutesByTo
@@ -262,6 +271,7 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/campaigns/'
+    | '/play/campaign/$id'
     | '/play/campaign/$id/'
     | '/play/campaign/$id/chapter/$chapter'
   fileRoutesById: FileRoutesById
@@ -283,8 +293,7 @@ export interface RootRouteChildren {
   PlayInvestigateRoute: typeof PlayInvestigateRoute
   PlayTimelineRoute: typeof PlayTimelineRoute
   StoryIdRoute: typeof StoryIdRoute
-  PlayCampaignIdIndexRoute: typeof PlayCampaignIdIndexRoute
-  PlayCampaignIdChapterChapterRoute: typeof PlayCampaignIdChapterChapterRoute
+  PlayCampaignIdRoute: typeof PlayCampaignIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -415,19 +424,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BattleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/play/campaign/$id': {
+      id: '/play/campaign/$id'
+      path: '/play/campaign/$id'
+      fullPath: '/play/campaign/$id'
+      preLoaderRoute: typeof PlayCampaignIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/play/campaign/$id/': {
       id: '/play/campaign/$id/'
-      path: '/play/campaign/$id'
+      path: '/'
       fullPath: '/play/campaign/$id/'
       preLoaderRoute: typeof PlayCampaignIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PlayCampaignIdRoute
     }
     '/play/campaign/$id/chapter/$chapter': {
       id: '/play/campaign/$id/chapter/$chapter'
-      path: '/play/campaign/$id/chapter/$chapter'
+      path: '/chapter/$chapter'
       fullPath: '/play/campaign/$id/chapter/$chapter'
       preLoaderRoute: typeof PlayCampaignIdChapterChapterRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PlayCampaignIdRoute
     }
   }
 }
@@ -444,6 +460,20 @@ const CampaignsRouteChildren: CampaignsRouteChildren = {
 
 const CampaignsRouteWithChildren = CampaignsRoute._addFileChildren(
   CampaignsRouteChildren,
+)
+
+interface PlayCampaignIdRouteChildren {
+  PlayCampaignIdIndexRoute: typeof PlayCampaignIdIndexRoute
+  PlayCampaignIdChapterChapterRoute: typeof PlayCampaignIdChapterChapterRoute
+}
+
+const PlayCampaignIdRouteChildren: PlayCampaignIdRouteChildren = {
+  PlayCampaignIdIndexRoute: PlayCampaignIdIndexRoute,
+  PlayCampaignIdChapterChapterRoute: PlayCampaignIdChapterChapterRoute,
+}
+
+const PlayCampaignIdRouteWithChildren = PlayCampaignIdRoute._addFileChildren(
+  PlayCampaignIdRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -463,8 +493,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayInvestigateRoute: PlayInvestigateRoute,
   PlayTimelineRoute: PlayTimelineRoute,
   StoryIdRoute: StoryIdRoute,
-  PlayCampaignIdIndexRoute: PlayCampaignIdIndexRoute,
-  PlayCampaignIdChapterChapterRoute: PlayCampaignIdChapterChapterRoute,
+  PlayCampaignIdRoute: PlayCampaignIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
