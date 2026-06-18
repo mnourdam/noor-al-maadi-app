@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { User, Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles } from "lucide-react";
+import { User, Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
   ACHIEVEMENTS, evaluateAchievements, levelFor, CURRENT_SEASON,
@@ -163,6 +164,20 @@ function ProfilePage() {
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-surface py-3 text-xs text-muted-foreground"
           ><LogOut className="size-4" /> تسجيل الخروج وإعادة التهيئة</button>
         )}
+
+        <Link
+          to="/about"
+          className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-gold/25 bg-surface p-3"
+        >
+          <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold">
+            <Info className="size-4" />
+          </div>
+          <div className="min-w-0 flex-1 text-right">
+            <p className="font-display text-sm font-bold">حول إرث</p>
+            <p className="text-[11px] text-muted-foreground">عن المشروع والإصدار والميزات</p>
+          </div>
+          <ChevronLeft className="size-4 text-muted-foreground" />
+        </Link>
       </Screen>
     </AppShell>
   );
