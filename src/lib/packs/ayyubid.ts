@@ -1349,7 +1349,7 @@ const entities: PackEntity[] = [
       { kind: "xp", refId: "xp-400", label: "٤٠٠ نقطة خبرة" },
       { kind: "badge", refId: "badge-crusades-expert", label: "وسام خبير الحملات" },
     ],
-    image: { alt: "وسام الحملات", frame: "🛡️", glyph: "🛡️", tone: "from-rose-800/40 to-slate-900" },
+    image: { alt: "وسام الحملات", glyph: "🛡️", tone: "from-rose-800/40 to-slate-900" },
     timelinePosition: 1192,
     rarity: "epic",
     meta: { unlockRules: ["إكمال كل معارك الصراع الصليبي"] },
