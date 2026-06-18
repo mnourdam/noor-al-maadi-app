@@ -4,8 +4,13 @@ import {
   type Era, type CharacterCard, type BattleProfile, type MapRegion,
   type Artifact, type Story, type Campaign,
 } from "./data";
+import {
+  CITIES, citiesForCharacter, citiesForBattle, citiesForArtifact,
+  citiesForStory, citiesForEra, citiesInRegion, getCity,
+  type CityProfile,
+} from "./cities";
 
-export type EntityKind = "character" | "battle" | "region" | "story" | "artifact" | "campaign";
+export type EntityKind = "character" | "battle" | "region" | "story" | "artifact" | "campaign" | "city";
 
 export type EntityRef =
   | { kind: "character"; id: string }
@@ -13,7 +18,8 @@ export type EntityRef =
   | { kind: "region"; id: string }
   | { kind: "story"; id: string }
   | { kind: "artifact"; id: string }
-  | { kind: "campaign"; era: Era };
+  | { kind: "campaign"; era: Era }
+  | { kind: "city"; id: string };
 
 export interface RelatedGraph {
   characters: CharacterCard[];
@@ -22,11 +28,12 @@ export interface RelatedGraph {
   artifacts: Artifact[];
   stories: Story[];
   campaigns: Campaign[];
+  cities: CityProfile[];
   eras: Era[];
 }
 
 const empty = (): RelatedGraph => ({
-  characters: [], battles: [], regions: [], artifacts: [], stories: [], campaigns: [], eras: [],
+  characters: [], battles: [], regions: [], artifacts: [], stories: [], campaigns: [], cities: [], eras: [],
 });
 
 function uniq<T>(arr: T[], keyOf: (x: T) => string): T[] {
@@ -57,6 +64,7 @@ function fromCharacter(id: string): RelatedGraph {
   }
   g.battles.push(...Object.values(BATTLE_PROFILES).filter(b => b.relatedCharacterIds.includes(id)));
   g.regions.push(...MAP_REGIONS.filter(r => r.characterIds?.includes(id)));
+  g.cities.push(...citiesForCharacter(id));
   return g;
 }
 
@@ -68,6 +76,7 @@ function fromBattle(id: string): RelatedGraph {
   g.regions.push(...MAP_REGIONS.filter(r => b.relatedRegionIds.includes(r.id)));
   g.artifacts.push(...ARTIFACTS.filter(a => b.relatedArtifactIds.includes(a.id)));
   if (b.storyId) { const s = STORIES.find(s => s.id === b.storyId); if (s) g.stories.push(s); }
+  g.cities.push(...citiesForBattle(id));
   return g;
 }
 
@@ -83,6 +92,7 @@ function fromRegion(id: string): RelatedGraph {
     if (prof.regionIds.includes(id)) { const c = CHARACTERS.find(c => c.id === cid); if (c) g.characters.push(c); }
   }
   g.battles.push(...Object.values(BATTLE_PROFILES).filter(b => b.relatedRegionIds.includes(id)));
+  g.cities.push(...citiesInRegion(id));
   return g;
 }
 
@@ -98,6 +108,7 @@ function fromStory(id: string): RelatedGraph {
   }
   g.regions.push(...MAP_REGIONS.filter(r => r.storyIds?.includes(id)));
   g.stories.push(...STORIES.filter(x => x.era === s.era && x.id !== id));
+  g.cities.push(...citiesForStory(id));
   return g;
 }
 
@@ -110,6 +121,7 @@ function fromArtifact(id: string): RelatedGraph {
     if (prof.artifactIds.includes(id)) { const c = CHARACTERS.find(c => c.id === cid); if (c) g.characters.push(c); }
   }
   g.battles.push(...Object.values(BATTLE_PROFILES).filter(b => b.relatedArtifactIds.includes(id)));
+  g.cities.push(...citiesForArtifact(id));
   return g;
 }
 
@@ -121,6 +133,22 @@ function fromCampaign(era: Era): RelatedGraph {
   g.regions.push(...MAP_REGIONS.filter(r => r.era === era || r.campaignEra === era));
   g.artifacts.push(...ARTIFACTS.filter(a => a.era === era));
   g.stories.push(...STORIES.filter(s => s.era === era));
+  g.cities.push(...citiesForEra(era));
+  return g;
+}
+
+function fromCity(id: string): RelatedGraph {
+  const g = empty();
+  const c = getCity(id); if (!c) return g;
+  g.eras.push(...c.eras, ...c.campaignEras);
+  g.characters.push(...CHARACTERS.filter(x => c.characterIds.includes(x.id)));
+  g.battles.push(...Object.values(BATTLE_PROFILES).filter(b => c.battleIds.includes(b.id)));
+  g.artifacts.push(...ARTIFACTS.filter(a => c.artifactIds.includes(a.id)));
+  g.stories.push(...STORIES.filter(s => c.storyIds.includes(s.id)));
+  const region = MAP_REGIONS.find(r => r.id === c.regionId);
+  if (region) g.regions.push(region);
+  // sister cities in same region / overlapping eras
+  g.cities.push(...CITIES.filter(other => other.id !== id && (other.regionId === c.regionId || other.eras.some(e => c.eras.includes(e)))));
   return g;
 }
 
@@ -131,6 +159,7 @@ export function buildRelations(ref: EntityRef): RelatedGraph {
     ref.kind === "region"    ? fromRegion(ref.id) :
     ref.kind === "story"     ? fromStory(ref.id) :
     ref.kind === "artifact"  ? fromArtifact(ref.id) :
+    ref.kind === "city"      ? fromCity(ref.id) :
     fromCampaign(ref.era);
 
   const eras = Array.from(new Set(g.eras));
@@ -140,6 +169,7 @@ export function buildRelations(ref: EntityRef): RelatedGraph {
   g.regions = uniq(g.regions, r => r.id).filter(r => !(ref.kind === "region" && r.id === ref.id));
   g.artifacts = uniq(g.artifacts, a => a.id).filter(a => !(ref.kind === "artifact" && a.id === ref.id));
   g.stories = uniq(g.stories, s => s.id).filter(s => !(ref.kind === "story" && s.id === ref.id));
+  g.cities = uniq(g.cities, c => c.id).filter(c => !(ref.kind === "city" && c.id === ref.id));
   g.eras = eras;
   return g;
 }
@@ -165,6 +195,7 @@ export function recommend(ref: EntityRef, limit = 6): Recommendation[] {
   for (const r of first.regions) bump(`r:${r.id}`, { kind: "region", id: r.id, label: r.name, sublabel: r.capital, icon: r.glyph ?? "📍" }, 1);
   for (const a of first.artifacts) bump(`a:${a.id}`, { kind: "artifact", id: a.id, label: a.name, sublabel: a.typeLabel, icon: a.icon }, 1);
   for (const s of first.stories) bump(`s:${s.id}`, { kind: "story", id: s.id, label: s.title, sublabel: `${s.readMinutes} د قراءة`, icon: "📜" }, 1);
+  for (const ct of first.cities) bump(`ct:${ct.id}`, { kind: "city", id: ct.id, label: ct.name, sublabel: ct.honorific ?? ct.tagline, icon: ct.glyph }, 1.5);
 
   const hop = (e: EntityRef) => {
     const g = buildRelations(e);
@@ -173,6 +204,7 @@ export function recommend(ref: EntityRef, limit = 6): Recommendation[] {
     for (const r of g.regions) bump(`r:${r.id}`, { kind: "region", id: r.id, label: r.name, sublabel: r.capital, icon: r.glyph ?? "📍" }, 0.5);
     for (const a of g.artifacts) bump(`a:${a.id}`, { kind: "artifact", id: a.id, label: a.name, sublabel: a.typeLabel, icon: a.icon }, 0.5);
     for (const s of g.stories) bump(`s:${s.id}`, { kind: "story", id: s.id, label: s.title, sublabel: `${s.readMinutes} د قراءة`, icon: "📜" }, 0.5);
+    for (const ct of g.cities) bump(`ct:${ct.id}`, { kind: "city", id: ct.id, label: ct.name, sublabel: ct.honorific ?? ct.tagline, icon: ct.glyph }, 0.75);
   };
   for (const c of first.characters.slice(0, 4)) hop({ kind: "character", id: c.id });
   for (const b of first.battles.slice(0, 3)) hop({ kind: "battle", id: b.id });
