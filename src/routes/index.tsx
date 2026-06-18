@@ -226,6 +226,19 @@ function Index() {
           </div>
           <ChevronLeft className="size-5 text-gold" />
         </Link>
+
+        <Link
+          to="/timeline"
+          className="group relative mt-3 flex items-center justify-between overflow-hidden rounded-2xl border border-gold/30 parchment-dark p-4 transition hover:border-gold/60"
+        >
+          <div className="arabesque-layer" />
+          <div className="relative">
+            <p className="text-[10px] tracking-[0.2em] text-gold/80">الخط الزمني الكبير</p>
+            <p className="font-display mt-1 text-sm font-bold">من بعثة النبي ﷺ إلى ١٤٠٠ سنة من التاريخ</p>
+            <p className="mt-1 text-[10px] text-white/55">خلافات · معارك · أعلام · كتبٌ غيّرت العالم</p>
+          </div>
+          <Hourglass className="relative size-5 text-gold transition group-hover:rotate-12" />
+        </Link>
       </section>
 
       {/* ============ SEASON whisper ============ */}
