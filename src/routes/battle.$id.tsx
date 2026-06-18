@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, MapPin, Crown, Swords, Flag, Scroll, Sparkles, Users, Landmark, BookOpen, Compass } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { getBattleProfile, ERAS, CHARACTERS, MAP_REGIONS, ARTIFACTS, fogHint } from "@/lib/data";
+import { getBattleProfile, ERAS, CHARACTERS, MAP_REGIONS, ARTIFACTS, fogHint, type BattleProfile } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/battle/$id")({
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/battle/$id")({
 });
 
 function BattlePage() {
-  const { battle } = Route.useLoaderData();
+  const battle = Route.useLoaderData().battle as BattleProfile;
   const { profile } = useProfile();
   const navigate = useNavigate();
   const era = ERAS.find(e => e.id === battle.era);
