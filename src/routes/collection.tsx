@@ -367,6 +367,7 @@ function CollectionPage() {
                 const open = profile.artifactsFound.includes(m.id);
                 const r = aRarity(m.id);
                 const meta = RARITY_META[r];
+                const fog = fogHint(m.id);
                 return (
                   <button key={m.id} onClick={() => open && setReveal({
                     rarity: r, icon: m.icon, title: m.name,
@@ -374,16 +375,21 @@ function CollectionPage() {
                     lines: [m.description],
                   })}
                     className={`flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 text-right transition-all ${open ? `ring-1 ${meta.ring}` : "opacity-70"}`}>
-                    <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-black/30 text-2xl ring-1 ring-white/10">
-                      {open ? m.icon : <Lock className="size-4 text-muted-foreground" />}
+                    <div className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
+                      {open ? m.icon : (
+                        <>
+                          <span className="select-none text-2xl opacity-20 blur-[3px] grayscale">{m.icon}</span>
+                          <Lock className="absolute size-3.5 text-gold/70" />
+                        </>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-display truncate text-sm font-bold">{open ? m.name : "مخطوطٌ مجهول"}</p>
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${meta.chip}`}>{meta.label}</span>
+                        <p className={`font-display truncate text-sm font-bold ${open ? "" : "italic text-gold/85"}`}>{open ? m.name : fog.title}</p>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${open ? meta.chip : "bg-black/40 text-gold/70 ring-1 ring-gold/20"}`}>{open ? meta.label : "في الضباب"}</span>
                       </div>
-                      <p className="text-[10px] text-gold/80">{m.typeLabel} · {ERAS.find(e => e.id === m.era)?.name}</p>
-                      <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{open ? m.description : "اكتشفه خلال رحلتك"}</p>
+                      <p className="text-[10px] text-gold/80">{open ? `${m.typeLabel} · ${ERAS.find(e => e.id === m.era)?.name}` : "مخطوطٌ مجهول"}</p>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{open ? m.description : fog.clue}</p>
                     </div>
                   </button>
                 );
