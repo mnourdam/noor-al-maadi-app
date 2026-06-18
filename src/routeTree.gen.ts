@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
+import { Route as MapRouteImport } from './routes/map'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StoryIdRouteImport } from './routes/story.$id'
@@ -20,6 +21,11 @@ import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
 const OnThisDayRoute = OnThisDayRouteImport.update({
   id: '/on-this-day',
   path: '/on-this-day',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CampaignsRoute = CampaignsRouteImport.update({
@@ -56,6 +62,7 @@ const PlayDecisionsRoute = PlayDecisionsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/campaigns': typeof CampaignsRoute
+  '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/campaigns': typeof CampaignsRoute
+  '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/campaigns': typeof CampaignsRoute
+  '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/campaigns'
+    | '/map'
     | '/on-this-day'
     | '/play/decisions'
     | '/play/investigate'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/campaigns'
+    | '/map'
     | '/on-this-day'
     | '/play/decisions'
     | '/play/investigate'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/campaigns'
+    | '/map'
     | '/on-this-day'
     | '/play/decisions'
     | '/play/investigate'
@@ -114,6 +126,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CampaignsRoute: typeof CampaignsRoute
+  MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
   PlayDecisionsRoute: typeof PlayDecisionsRoute
   PlayInvestigateRoute: typeof PlayInvestigateRoute
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/on-this-day'
       fullPath: '/on-this-day'
       preLoaderRoute: typeof OnThisDayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/campaigns': {
@@ -178,6 +198,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CampaignsRoute: CampaignsRoute,
+  MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
   PlayDecisionsRoute: PlayDecisionsRoute,
   PlayInvestigateRoute: PlayInvestigateRoute,
