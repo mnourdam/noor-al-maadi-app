@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as HistoryCalendarRouteImport } from './routes/history-calendar'
@@ -53,6 +52,11 @@ const SeasonsRoute = SeasonsRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SeasonsRoute = SeasonsRouteImport.update({
+  id: '/seasons',
+  path: '/seasons',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnThisDayRoute = OnThisDayRouteImport.update({
