@@ -13,6 +13,16 @@ export const Route = createFileRoute("/campaigns/")({
 function CampaignsHub() {
   const { profile } = useProfile();
   const engineCampaigns = listEngineCampaigns();
+  // Campaigns superseded by an engine campaign (by matching pack/era id)
+  // are hidden from the legacy lists so users always enter via the new
+  // chapter player — fixes the "Salah al-Din card doesn't open" issue
+  // caused by the duplicate legacy flagship card pointing at /campaigns/$era.
+  const supersededEras = new Set(
+    engineCampaigns
+      .map((c) => c.packId)
+      .filter((p): p is string => Boolean(p)),
+  );
+  const legacyCampaigns = CAMPAIGNS.filter((c) => !supersededEras.has(c.eraId));
 
   return (
     <AppShell>
@@ -53,7 +63,7 @@ function CampaignsHub() {
         )}
 
         {/* Flagship */}
-        {CAMPAIGNS.filter((c) => c.flagship).map((c) => {
+        {legacyCampaigns.filter((c) => c.flagship).map((c) => {
           const era = ERAS.find((e) => e.id === c.eraId);
           const done = c.missions.filter((m) => profile.missionsCompleted.includes(m.id)).length;
           const pct = Math.round((done / c.missions.length) * 100);
@@ -86,7 +96,7 @@ function CampaignsHub() {
 
         <h3 className="font-display mb-3 text-sm font-bold text-muted-foreground">حملات العصور</h3>
         <div className="space-y-3">
-          {CAMPAIGNS.filter((c) => !c.flagship).map((c) => {
+          {legacyCampaigns.filter((c) => !c.flagship).map((c) => {
             const era = ERAS.find((e) => e.id === c.eraId);
             const unlocked = profile.unlockedEras.includes(c.eraId);
             const done = c.missions.filter((m) => profile.missionsCompleted.includes(m.id)).length;
