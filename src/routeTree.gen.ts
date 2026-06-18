@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
@@ -25,6 +26,11 @@ import { Route as FigureIdRouteImport } from './routes/figure.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
 
+const TimelineRoute = TimelineRouteImport.update({
+  id: '/timeline',
+  path: '/timeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
+  '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/figure/$id': typeof FigureIdRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
+  '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/figure/$id': typeof FigureIdRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
+  '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/figure/$id': typeof FigureIdRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/on-this-day'
     | '/profile'
+    | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/figure/$id'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/on-this-day'
     | '/profile'
+    | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/figure/$id'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/on-this-day'
     | '/profile'
+    | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/figure/$id'
@@ -212,6 +224,7 @@ export interface RootRouteChildren {
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
   ProfileRoute: typeof ProfileRoute
+  TimelineRoute: typeof TimelineRoute
   BattleIdRoute: typeof BattleIdRoute
   FigureIdRoute: typeof FigureIdRoute
   PlayChapterRoute: typeof PlayChapterRoute
@@ -223,6 +236,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/timeline': {
+      id: '/timeline'
+      path: '/timeline'
+      fullPath: '/timeline'
+      preLoaderRoute: typeof TimelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -352,6 +372,7 @@ const rootRouteChildren: RootRouteChildren = {
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
   ProfileRoute: ProfileRoute,
+  TimelineRoute: TimelineRoute,
   BattleIdRoute: BattleIdRoute,
   FigureIdRoute: FigureIdRoute,
   PlayChapterRoute: PlayChapterRoute,
