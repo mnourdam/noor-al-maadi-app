@@ -14,6 +14,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as EncyclopediaRouteImport } from './routes/encyclopedia'
+import { Route as ContentAuditRouteImport } from './routes/content-audit'
 import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AboutRouteImport } from './routes/about'
@@ -59,6 +60,11 @@ const MapRoute = MapRouteImport.update({
 const EncyclopediaRoute = EncyclopediaRouteImport.update({
   id: '/encyclopedia',
   path: '/encyclopedia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContentAuditRoute = ContentAuditRouteImport.update({
+  id: '/content-audit',
+  path: '/content-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CollectionRoute = CollectionRouteImport.update({
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
+  '/content-audit': typeof ContentAuditRoute
   '/encyclopedia': typeof EncyclopediaRouteWithChildren
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/collection': typeof CollectionRoute
+  '/content-audit': typeof ContentAuditRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -227,6 +235,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
+  '/content-audit': typeof ContentAuditRoute
   '/encyclopedia': typeof EncyclopediaRouteWithChildren
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
@@ -257,6 +266,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/campaigns'
     | '/collection'
+    | '/content-audit'
     | '/encyclopedia'
     | '/map'
     | '/on-this-day'
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/collection'
+    | '/content-audit'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/campaigns'
     | '/collection'
+    | '/content-audit'
     | '/encyclopedia'
     | '/map'
     | '/on-this-day'
@@ -339,6 +351,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
   CollectionRoute: typeof CollectionRoute
+  ContentAuditRoute: typeof ContentAuditRoute
   EncyclopediaRoute: typeof EncyclopediaRouteWithChildren
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
@@ -390,6 +403,13 @@ declare module '@tanstack/react-router' {
       path: '/encyclopedia'
       fullPath: '/encyclopedia'
       preLoaderRoute: typeof EncyclopediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/content-audit': {
+      id: '/content-audit'
+      path: '/content-audit'
+      fullPath: '/content-audit'
+      preLoaderRoute: typeof ContentAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/collection': {
@@ -593,6 +613,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
   CollectionRoute: CollectionRoute,
+  ContentAuditRoute: ContentAuditRoute,
   EncyclopediaRoute: EncyclopediaRouteWithChildren,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
