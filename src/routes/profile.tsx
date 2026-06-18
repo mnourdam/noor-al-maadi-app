@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { User, Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft } from "lucide-react";
+import { User, Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
@@ -175,6 +175,21 @@ function ProfilePage() {
           <div className="min-w-0 flex-1 text-right">
             <p className="font-display text-sm font-bold">حول إرث</p>
             <p className="text-[11px] text-muted-foreground">عن المشروع والإصدار والميزات</p>
+          </div>
+          <ChevronLeft className="size-4 text-muted-foreground" />
+        </Link>
+
+        <h3 className="font-display mt-6 mb-2 text-[11px] text-muted-foreground">أدوات المطوّر</h3>
+        <Link
+          to="/content-audit"
+          className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3"
+        >
+          <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold">
+            <Wrench className="size-4" />
+          </div>
+          <div className="min-w-0 flex-1 text-right">
+            <p className="font-display text-sm font-bold">تدقيق المحتوى</p>
+            <p className="text-[11px] text-muted-foreground">إحصاءات الحِزَم، التغطية، والثغرات</p>
           </div>
           <ChevronLeft className="size-4 text-muted-foreground" />
         </Link>
