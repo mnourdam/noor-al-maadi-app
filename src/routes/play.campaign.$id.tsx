@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
 import {
   ArrowRight, Lock, Check, Crown, Trophy, Sparkles, Scroll,
@@ -10,6 +10,7 @@ import {
   getEngineCampaign, campaignProgressFor, isChapterUnlocked,
   campaignCompletionKey,
 } from "@/lib/campaign-engine";
+import { isQuizPassed, campaignScholarKey } from "@/lib/quiz-engine";
 
 export const Route = createFileRoute("/play/campaign/$id")({
   head: () => ({ meta: [{ title: "حملة تاريخية — إرث" }] }),
@@ -38,12 +39,28 @@ function CampaignOverview() {
 
   const {
     profile, addPoints, awardBadge, findArtifact, unlockCharacter,
-    completeCampaign,
+    completeCampaign, completeMission,
   } = useProfile();
   const progress = campaignProgressFor(campaign, profile);
   const allDone = progress.completedChapters === progress.totalChapters;
   const claimed = progress.completed;
   const [revealOpen, setRevealOpen] = useState(false);
+
+  const allQuizzesPassed = useMemo(
+    () => campaign.chapters.every(ch =>
+      !ch.quiz || isQuizPassed(profile.missionsCompleted, campaign.id, ch.id, ch.quiz),
+    ),
+    [profile.missionsCompleted, campaign],
+  );
+  const scholarKey = campaignScholarKey(campaign.id);
+  const scholarAwarded = profile.missionsCompleted.includes(scholarKey);
+
+  useEffect(() => {
+    if (!allDone || !allQuizzesPassed || scholarAwarded) return;
+    const r = campaign.finalReward;
+    completeMission(scholarKey, r.scholarXp ?? 0);
+    if (r.scholarBadgeId) awardBadge(r.scholarBadgeId);
+  }, [allDone, allQuizzesPassed, scholarAwarded, campaign, scholarKey, awardBadge, completeMission]);
 
   const onClaim = () => {
     const r = campaign.finalReward;

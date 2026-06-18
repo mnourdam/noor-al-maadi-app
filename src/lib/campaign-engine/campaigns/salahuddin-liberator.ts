@@ -56,6 +56,17 @@ export const SALAHUDDIN_LIBERATOR_CAMPAIGN: CampaignDefinition = {
       unlocks: { characters: ["salahuddin"] },
       readingGate: true,
       xp: 100,
+      quiz: {
+        id: "q1", required: true, title: "اختبار الفصل الأول",
+        questions: [{
+          id: "q1-1",
+          question: "أين وُلد صلاح الدين الأيوبي؟",
+          choices: ["دمشق", "القاهرة", "تكريت", "القدس"],
+          correctIndex: 2,
+          explanation: "وُلد صلاح الدين في تكريت سنة ١١٣٧م.",
+          xp: 20,
+        }],
+      },
     },
     {
       id: "c2",
@@ -85,6 +96,17 @@ export const SALAHUDDIN_LIBERATOR_CAMPAIGN: CampaignDefinition = {
       ],
       unlocks: { characters: ["nuruddin"] },
       xp: 100,
+      quiz: {
+        id: "q2", required: true, title: "اختبار الفصل الثاني",
+        questions: [{
+          id: "q2-1",
+          question: "أيُّ حاكمٍ كان له الدورُ الأكبر في تربية صلاح الدين؟",
+          choices: ["هارون الرشيد", "نور الدين زنكي", "بيبرس", "محمد الفاتح"],
+          correctIndex: 1,
+          explanation: "صاغ نور الدين زنكي شخصيةَ صلاح الدين القيادية ورؤيته في توحيد الأمة.",
+          xp: 20,
+        }],
+      },
     },
     {
       id: "c3",
@@ -114,6 +136,17 @@ export const SALAHUDDIN_LIBERATOR_CAMPAIGN: CampaignDefinition = {
       ],
       unlocks: { states: ["ayyubid-state"], cities: ["cairo"] },
       xp: 150,
+      quiz: {
+        id: "q3", required: true, title: "اختبار الفصل الثالث",
+        questions: [{
+          id: "q3-1",
+          question: "أيُّ دولةٍ انتهت قبل قيام الدولة الأيوبية؟",
+          choices: ["الدولة العباسية", "الدولة الأموية", "الدولة الفاطمية", "الدولة العثمانية"],
+          correctIndex: 2,
+          explanation: "قامت الدولة الأيوبية على أنقاض الدولة الفاطمية في مصر.",
+          xp: 30,
+        }],
+      },
     },
     {
       id: "c4",
@@ -142,6 +175,17 @@ export const SALAHUDDIN_LIBERATOR_CAMPAIGN: CampaignDefinition = {
       ],
       unlocks: { cities: ["damascus"] },
       xp: 150,
+      quiz: {
+        id: "q4", required: true, title: "اختبار الفصل الرابع",
+        questions: [{
+          id: "q4-1",
+          question: "أيُّ إقليمين وُحِّدا تحت راية صلاح الدين؟",
+          choices: ["مصر والشام", "العراق وفارس", "الأندلس والمغرب", "الأناضول والشام"],
+          correctIndex: 0,
+          explanation: "وحّد صلاح الدين مصر والشام في كتلةٍ واحدةٍ تواجه الصليبيين.",
+          xp: 30,
+        }],
+      },
     },
     {
       id: "c5",
@@ -172,6 +216,17 @@ export const SALAHUDDIN_LIBERATOR_CAMPAIGN: CampaignDefinition = {
       ],
       unlocks: { battles: ["hattin"] },
       xp: 200,
+      quiz: {
+        id: "q5", required: true, title: "اختبار الفصل الخامس",
+        questions: [{
+          id: "q5-1",
+          question: "أيُّ معركةٍ مهّدت لتحرير القدس؟",
+          choices: ["اليرموك", "حطين", "أرسوف", "عين جالوت"],
+          correctIndex: 1,
+          explanation: "كسرت معركة حطين شوكة الصليبيين ومهّدت لفتح القدس.",
+          xp: 40,
+        }],
+      },
     },
     {
       id: "c6",
@@ -206,6 +261,17 @@ export const SALAHUDDIN_LIBERATOR_CAMPAIGN: CampaignDefinition = {
       },
       readingGate: true,
       xp: 300,
+      quiz: {
+        id: "q6", required: true, title: "اختبار الفصل السادس",
+        questions: [{
+          id: "q6-1",
+          question: "في أيِّ سنةٍ ميلاديةٍ حُرِّرت القدسُ على يد صلاح الدين؟",
+          choices: ["١٠٧١", "١١٨٧", "١٢٥٨", "١٤٥٣"],
+          correctIndex: 1,
+          explanation: "حُرِّرت القدس سنة ١١٨٧م في رجب ٥٨٣هـ.",
+          xp: 50,
+        }],
+      },
     },
     {
       id: "c7",
@@ -234,6 +300,17 @@ export const SALAHUDDIN_LIBERATOR_CAMPAIGN: CampaignDefinition = {
       ],
       unlocks: { battles: ["arsuf"] },
       xp: 200,
+      quiz: {
+        id: "q7", required: true, title: "اختبار الفصل السابع",
+        questions: [{
+          id: "q7-1",
+          question: "مَن قاد الحملة الصليبية الثالثة في مواجهة صلاح الدين؟",
+          choices: ["لويس التاسع", "ريتشارد قلب الأسد", "فريدريك الثاني", "شارل مارتل"],
+          correctIndex: 1,
+          explanation: "قاد ريتشارد قلب الأسد ملكُ الإنجليز الحملةَ الصليبية الثالثة.",
+          xp: 40,
+        }],
+      },
     },
   ],
   finalReward: {
@@ -243,5 +320,7 @@ export const SALAHUDDIN_LIBERATOR_CAMPAIGN: CampaignDefinition = {
     characterIds: ["salahuddin"],
     xp: 500,
     legendary: true,
+    scholarBadgeId: "historical-scholar",
+    scholarXp: 100,
   },
 };
