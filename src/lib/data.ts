@@ -647,7 +647,6 @@ export const CAMPAIGNS: Campaign[] = [
     finalReward: { character: "alp-arslan", points: 60 },
   },
   {
-  {
     eraId: "ayyubid", title: "حملة صلاح الدين الكبرى",
     intro: "ثماني فصول من رحلة محرّر القدس: من نور الدين زنكي إلى تحرير بيت المقدس.",
     flagship: true,
