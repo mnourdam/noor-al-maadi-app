@@ -1,5 +1,6 @@
 import type { ContentPack, PackEntity, PackEntityType } from "./types";
 import { AYYUBID_PACK } from "./ayyubid";
+import { UMAYYAD_PACK } from "./umayyad";
 
 // ============================================================
 // Content Pack registry
@@ -11,6 +12,7 @@ import { AYYUBID_PACK } from "./ayyubid";
 
 export const CONTENT_PACKS: ContentPack[] = [
   AYYUBID_PACK,
+  UMAYYAD_PACK,
 ].sort((a, b) => a.order - b.order);
 
 // --- index by entity id (with collision detection) ---
