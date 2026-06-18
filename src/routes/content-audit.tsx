@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { buildAuditReport } from "@/lib/content-audit";
@@ -230,15 +230,14 @@ function Row({ k, v }: { k: string; v: string }) {
 function EntityRow({ entity }: { entity: PackEntity }) {
   return (
     <li>
-      <Link
-        to={entityHref(entity) as never}
-        params={{ id: entity.id } as never}
+      <a
+        href={entityHref(entity)}
         className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-white/5"
       >
         <span className="text-base">{entity.image?.glyph ?? "·"}</span>
         <span className="flex-1 truncate text-[12px] text-foreground">{entity.title}</span>
         <span className="text-[9px] text-muted-foreground">{entity.type}</span>
-      </Link>
+      </a>
     </li>
   );
 }
