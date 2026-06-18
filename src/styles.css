@@ -257,7 +257,7 @@
   }
 
   .arabesque-bg {
-    background-image: url("/src/assets/arabesque-pattern.png");
+    background-image: url("/arabesque-pattern.png");
     background-size: 280px 280px;
     background-repeat: repeat;
     opacity: 0.08;
