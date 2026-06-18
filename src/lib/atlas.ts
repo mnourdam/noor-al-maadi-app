@@ -1,5 +1,5 @@
 import { MAP_REGIONS, type MapRegion } from "./data";
-import { allPackEntities } from "./packs/registry";
+import { allPackEntities, getPackForEntity } from "./packs/registry";
 import type { PackEntity, PackEntityType } from "./packs/types";
 
 // ============================================================
@@ -77,7 +77,8 @@ function pinKindFor(e: PackEntity): AtlasPinKind {
 export function placeEntity(e: PackEntity): AtlasPin | null {
   if (!ATLAS_TYPES.has(e.type)) return null;
 
-  const era = e.bridges?.era;
+  // Era: explicit bridge, else inherit from owning pack.
+  const era = e.bridges?.era ?? getPackForEntity(e.id)?.era;
 
   // 1) explicit cityId bridge
   if (e.bridges?.cityId) {
@@ -112,6 +113,17 @@ export function placeEntity(e: PackEntity): AtlasPin | null {
     if (r) {
       const p = place(r.labelX ?? r.x, r.labelY ?? r.y, e.id);
       return { id: e.id, entity: e, kind: pinKindFor(e), x: p.x, y: p.y, era, source: "era" };
+    }
+  }
+
+  // 5) Related entity fallback — borrow coords from a related placeable entity.
+  for (const rid of e.relatedEntities) {
+    const related = allPackEntities().find(x => x.id === rid);
+    if (!related || related.id === e.id) continue;
+    const sub = placeEntity(related);
+    if (sub) {
+      const p = place(sub.x, sub.y, e.id);
+      return { id: e.id, entity: e, kind: pinKindFor(e), x: p.x, y: p.y, era, source: "region" };
     }
   }
 
