@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { ArrowRight, Bookmark, BookmarkCheck, Clock, Check, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { STORIES, ERAS, CAMPAIGNS } from "@/lib/data";
+import { STORIES, ERAS, CAMPAIGNS, CHAPTER_LORE } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 
 const searchSchema = z.object({ mission: z.string().optional() });
@@ -40,6 +40,7 @@ function StoryPage() {
   const era = ERAS.find((e) => e.id === story.era);
   const alreadyRead = profile.storiesRead.includes(story.id);
   const missionInfo = mission ? CAMPAIGNS.flatMap((c) => c.missions).find((m) => m.id === mission) : null;
+  const lore = mission ? CHAPTER_LORE[mission] : undefined;
 
   const onFinish = () => {
     finishStory(story.id, mission);
@@ -75,6 +76,24 @@ function StoryPage() {
           </p>
           <div className="ornament-divider mt-5" />
         </div>
+
+        {lore && (
+          <div className="parchment-dark relative mt-5 overflow-hidden rounded-2xl border border-gold/30 p-4 animate-curtain">
+            <div className="absolute inset-0 arabesque-bg" aria-hidden />
+            <div className="relative">
+              <div className="flex items-center justify-between text-[10px] tracking-widest text-gold/80">
+                <span>{lore.era}</span>
+                <span>{lore.setting}</span>
+              </div>
+              <p className="font-display mt-2 text-[13px] leading-relaxed text-foreground/95">{lore.hook}</p>
+              {lore.quote && (
+                <blockquote className="mt-3 border-r-2 border-gold/60 bg-background/30 px-3 py-2 text-[12px] italic text-foreground/90">
+                  «{lore.quote}»{lore.quoteBy && <span className="mt-1 block text-[10px] not-italic text-gold/80">— {lore.quoteBy}</span>}
+                </blockquote>
+              )}
+            </div>
+          </div>
+        )}
 
         <article className="mt-6 space-y-4 text-[15px] leading-loose text-foreground/90">
           {story.body.map((p, i) => (
