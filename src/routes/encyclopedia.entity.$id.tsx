@@ -7,6 +7,8 @@ import {
   type EncyclopediaSection,
 } from "@/lib/encyclopedia";
 import { ERAS } from "@/lib/data";
+import { CHARACTERS, getBattleProfile } from "@/lib/data";
+import { getCity } from "@/lib/cities";
 import { RelatedHistory } from "@/components/RelatedHistory";
 import type { EntityRef } from "@/lib/knowledge-graph";
 
@@ -65,6 +67,11 @@ function EntityPage() {
   const isScholar = e.type === "figure" && (e.meta as { kind?: string } | undefined)?.kind === "scholar";
   const typeLabel = isScholar ? "عالم" : (TYPE_LABEL[e.type] ?? e.type);
   const legacyRef = legacyEntityRef(e.bridges);
+  const legacyExists =
+    legacyRef?.kind === "city"      ? !!getCity(legacyRef.id) :
+    legacyRef?.kind === "battle"    ? !!getBattleProfile(legacyRef.id) :
+    legacyRef?.kind === "character" ? CHARACTERS.some(c => c.id === legacyRef.id) :
+    !!legacyRef;
 
   return (
     <AppShell>
@@ -104,19 +111,19 @@ function EntityPage() {
             >
               <Clock className="size-3" /> {e.timelinePosition} م · الخط الزمني
             </Link>
-            {legacyRef && legacyRef.kind === "city" && (
+            {legacyRef && legacyExists && legacyRef.kind === "city" && (
               <Link to="/city/$id" params={{ id: legacyRef.id }}
                     className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-white/80 hover:border-gold/40 hover:text-gold">
                 <ExternalLink className="size-3" /> صفحة المدينة الكاملة
               </Link>
             )}
-            {legacyRef && legacyRef.kind === "battle" && (
+            {legacyRef && legacyExists && legacyRef.kind === "battle" && (
               <Link to="/battle/$id" params={{ id: legacyRef.id }}
                     className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-white/80 hover:border-gold/40 hover:text-gold">
                 <ExternalLink className="size-3" /> صفحة المعركة الكاملة
               </Link>
             )}
-            {legacyRef && legacyRef.kind === "character" && (
+            {legacyRef && legacyExists && legacyRef.kind === "character" && (
               <Link to="/figure/$id" params={{ id: legacyRef.id }}
                     className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-white/80 hover:border-gold/40 hover:text-gold">
                 <ExternalLink className="size-3" /> صفحة الشخصية الكاملة
@@ -160,7 +167,7 @@ function EntityPage() {
         })}
 
         {/* Legacy knowledge graph when this entity bridges to in-app data */}
-        {legacyRef && (
+        {legacyRef && legacyExists && (
           <RelatedHistory entity={legacyRef} title="شبكة التاريخ المرتبط" />
         )}
 
