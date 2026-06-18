@@ -195,12 +195,25 @@ function MapPage() {
 // SVG WORLD MAP
 // ============================================================
 function WorldMapCanvas({
-  unlocked, selectedId, onSelect,
-}: { unlocked: string[]; selectedId: string; onSelect: (id: string) => void }) {
+  unlocked, selectedId, onSelect, pins, overlay, eraFilter,
+}: {
+  unlocked: string[]; selectedId: string; onSelect: (id: string) => void;
+  pins: AtlasPin[]; overlay: import("@/lib/atlas").StateOverlay | undefined;
+  eraFilter: string | null;
+}) {
   const regionsById = useMemo(
     () => Object.fromEntries(MAP_REGIONS.map((r) => [r.id, r])) as Record<string, MapRegion>,
     [],
   );
+
+  const KIND_STYLE: Record<AtlasPinKind, { fill: string; stroke: string; r: number; glyph?: string }> = {
+    capital:  { fill: "oklch(0.85 0.15 80)",  stroke: "oklch(0.32 0.1 40)", r: 0.95, glyph: "★" },
+    city:     { fill: "oklch(0.95 0.04 80)",  stroke: "oklch(0.32 0.1 40)", r: 0.7 },
+    state:    { fill: "oklch(0.78 0.18 60)",  stroke: "oklch(0.3 0.12 40)", r: 1.1, glyph: "❖" },
+    battle:   { fill: "oklch(0.55 0.2 30)",   stroke: "oklch(0.25 0.1 30)", r: 0.7 },
+    event:    { fill: "oklch(0.7 0.16 300)",  stroke: "oklch(0.3 0.12 300)", r: 0.6 },
+    landmark: { fill: "oklch(0.78 0.13 180)", stroke: "oklch(0.3 0.08 200)", r: 0.7 },
+  };
 
   return (
     <div className="relative overflow-hidden rounded-3xl border-2 border-amber-900/30 map-parchment map-vignette shadow-elegant" dir="ltr">
@@ -240,6 +253,21 @@ function WorldMapCanvas({
 
         {/* Sea hatch background */}
         <rect width="100" height="60" fill="url(#seaHatch)" opacity="0.4" />
+
+        {/* State influence overlay (historical, not modern borders) */}
+        {overlay && (
+          <g style={{ pointerEvents: "none" }}>
+            {overlay.regions.map(rid => {
+              const r = regionsById[rid];
+              if (!r?.polygon) return null;
+              return (
+                <path key={`ovl-${rid}`} d={r.polygon}
+                  fill={overlay.fill} stroke={overlay.stroke} strokeWidth="0.35"
+                  strokeDasharray="0.7 0.5" filter="url(#rough)" />
+              );
+            })}
+          </g>
+        )}
 
         {/* Mediterranean / great seas curves */}
         <g className="ink-stroke-light" fill="none" strokeWidth="0.25">
@@ -329,7 +357,33 @@ function WorldMapCanvas({
           <path d="M0,0 L2.5,-3 L2.5,0 Z" fill="oklch(0.95 0.04 80)" stroke="oklch(0.3 0.08 40)" strokeWidth="0.1" />
           <line x1="2.5" y1="-3" x2="2.5" y2="0.5" stroke="oklch(0.3 0.08 40)" strokeWidth="0.15" />
         </g>
+
+        {/* Entity pins from all content packs */}
+        <g>
+          {pins.map(pin => {
+            const s = KIND_STYLE[pin.kind];
+            return (
+              <a key={pin.id} href={entityHref(pin.entity)} className="atlas-pin cursor-pointer">
+                <title>{pin.entity.title}</title>
+                <circle cx={pin.x} cy={pin.y} r={s.r + 0.5} fill={s.fill} opacity="0.25" />
+                <circle cx={pin.x} cy={pin.y} r={s.r} fill={s.fill}
+                  stroke={s.stroke} strokeWidth="0.12" />
+                {s.glyph && (
+                  <text x={pin.x} y={pin.y + 0.45} textAnchor="middle"
+                    fontSize="1.1" fill="oklch(0.2 0.05 40)" fontWeight="800"
+                    style={{ pointerEvents: "none" }}>{s.glyph}</text>
+                )}
+              </a>
+            );
+          })}
+        </g>
       </svg>
+      {/* Era badge in corner when filtered */}
+      {eraFilter && (
+        <div className="absolute right-3 bottom-3 z-10 rounded-full border border-gold/40 bg-amber-50/80 px-3 py-1 text-[10px] font-bold text-amber-950 shadow-sm" dir="rtl">
+          مرشَّح حسب العصر · {STATE_OVERLAYS.find(o => o.era === eraFilter)?.label ?? eraFilter}
+        </div>
+      )}
     </div>
   );
 }
