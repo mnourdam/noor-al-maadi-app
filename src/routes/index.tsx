@@ -11,6 +11,11 @@ import {
   UPCOMING_REGIONS, MYSTERY_CHARACTERS, FLAGSHIP_CHAPTERS, todayKey,
   nextActiveCampaign,
 } from "@/lib/data";
+import {
+  todayEvents as calendarToday, gregorianLabel, hijriLabel,
+  CALENDAR_TYPE_LABELS, CALENDAR_TYPE_GLYPHS, primaryHref,
+  IMPORTANCE_LABEL,
+} from "@/lib/historical-calendar";
 import { useProfile } from "@/lib/profile";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
 
@@ -194,6 +199,9 @@ function Index() {
           <DiscoveryCard d={discovery} />
         </section>
       )}
+
+      {/* ============ HISTORICAL CALENDAR — TODAY ============ */}
+      {mounted && <OnThisDayCalendarCard />}
 
       {/* ============ DAILY MISSIONS (compact ribbon) ============ */}
       {mounted && dailies.length > 0 && (() => {
