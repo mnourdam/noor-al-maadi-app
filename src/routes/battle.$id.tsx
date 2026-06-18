@@ -3,6 +3,7 @@ import { ArrowLeft, MapPin, Crown, Swords, Flag, Scroll, Sparkles, Users, Landma
 import { AppShell, Screen } from "@/components/AppShell";
 import { getBattleProfile, ERAS, CHARACTERS, MAP_REGIONS, ARTIFACTS, fogHint, type BattleProfile } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
+import { RelatedHistory } from "@/components/RelatedHistory";
 
 export const Route = createFileRoute("/battle/$id")({
   head: ({ params }) => {
@@ -280,6 +281,9 @@ function BattlePage() {
             </Link>
           )}
         </div>
+
+        {/* KNOWLEDGE GRAPH */}
+        <RelatedHistory entity={{ kind: "battle", id: battle.id }} />
       </Screen>
     </AppShell>
   );

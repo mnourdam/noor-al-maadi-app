@@ -5,6 +5,7 @@ import { ArrowRight, Bookmark, BookmarkCheck, Clock, Check, Sparkles } from "luc
 import { AppShell } from "@/components/AppShell";
 import { STORIES, ERAS, CAMPAIGNS, CHAPTER_LORE } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
+import { RelatedHistory } from "@/components/RelatedHistory";
 
 const searchSchema = z.object({ mission: z.string().optional() });
 
@@ -142,6 +143,9 @@ function StoryPage() {
             المكافآت تُمنح فقط بعد إنهاء القراءة كاملةً.
           </p>
         </div>
+
+        {/* KNOWLEDGE GRAPH */}
+        <RelatedHistory entity={{ kind: "story", id: story.id }} />
       </div>
     </AppShell>
   );

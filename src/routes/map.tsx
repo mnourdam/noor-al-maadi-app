@@ -7,6 +7,7 @@ import {
   UPCOMING_REGIONS, explorationPercent, type MapRegion,
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
+import { RelatedHistory } from "@/components/RelatedHistory";
 
 export const Route = createFileRoute("/map")({
   head: () => ({ meta: [{ title: "خارطة العالم الإسلامي" }] }),
@@ -66,6 +67,9 @@ function MapPage() {
 
         {/* Region detail */}
         <RegionPanel region={region} unlocked={profile.regionsUnlocked.includes(region.id)} points={profile.points} onUnlock={handleUnlock} />
+
+        {/* Knowledge graph for the selected region */}
+        <RelatedHistory entity={{ kind: "region", id: region.id }} title={`شبكة ${region.name} التاريخية`} />
 
         {/* Quick rail of regions */}
         <h3 className="font-display mt-7 mb-3 text-base font-bold">الأقاليم المعروفة</h3>
