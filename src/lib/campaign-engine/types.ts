@@ -9,6 +9,9 @@
 
 export type Difficulty = "easy" | "medium" | "hard" | "legendary";
 
+import type { Quiz } from "../quiz-engine";
+export type { Quiz, QuizQuestion } from "../quiz-engine";
+
 /** Pointer to any entity living in the existing app (legacy data or pack). */
 export interface EntityLink {
   kind:
@@ -64,6 +67,8 @@ export interface ChapterDefinition {
   readingGate?: boolean;         // if true, requires explicit "I finished reading"
   unlocks?: ChapterUnlock;
   xp: number;
+  /** Optional knowledge quiz; if `required`, must be passed to finish. */
+  quiz?: Quiz;
 }
 
 export interface CampaignReward {
@@ -73,6 +78,9 @@ export interface CampaignReward {
   characterIds?: string[];       // unlocked characters
   xp: number;
   legendary?: boolean;
+  /** Awarded automatically once every chapter quiz is fully correct. */
+  scholarBadgeId?: string;
+  scholarXp?: number;
 }
 
 export interface CampaignDefinition {
