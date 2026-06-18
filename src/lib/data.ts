@@ -584,6 +584,7 @@ export interface Mission {
   refId: string; // id within the corresponding collection
   title: string;
   reward: number;
+  chapter?: string;
 }
 export interface Campaign {
   eraId: Era;
@@ -591,6 +592,7 @@ export interface Campaign {
   intro: string;
   missions: Mission[];
   finalReward: { artifact?: string; character?: string; points: number };
+  flagship?: boolean;
 }
 
 export const CAMPAIGNS: Campaign[] = [
