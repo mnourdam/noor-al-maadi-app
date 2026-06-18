@@ -116,11 +116,10 @@ export function placeEntity(e: PackEntity): AtlasPin | null {
     }
   }
 
-  // 5) Related entity fallback — borrow coords from a related placeable entity.
+  // 5) Related-entity fallback — borrow coords from a related placeable
+  //    entity (single hop, no recursion to avoid cycles).
   for (const rid of e.relatedEntities) {
-    const related = allPackEntities().find(x => x.id === rid);
-    if (!related || related.id === e.id) continue;
-    const sub = placeEntity(related);
+    const sub = resolveSimpleCoords(rid);
     if (sub) {
       const p = place(sub.x, sub.y, e.id);
       return { id: e.id, entity: e, kind: pinKindFor(e), x: p.x, y: p.y, era, source: "region" };
@@ -128,6 +127,38 @@ export function placeEntity(e: PackEntity): AtlasPin | null {
   }
 
   return null;
+}
+
+/** Non-recursive coord lookup for a related entity id (cityId/regionId/era). */
+function resolveSimpleCoords(id: string): { x: number; y: number } | null {
+  // Direct landmark / city id
+  const c = lookupCity(id);
+  if (c) return { x: c.x, y: c.y };
+  // Otherwise resolve via the pack entity's own bridges
+  const related = ENTITY_BY_ID().get(id);
+  if (!related) return null;
+  if (related.bridges?.cityId) {
+    const cc = lookupCity(related.bridges.cityId);
+    if (cc) return { x: cc.x, y: cc.y };
+  }
+  if (related.bridges?.regionId) {
+    const r = REGION_BY_ID[related.bridges.regionId];
+    if (r) return { x: r.labelX ?? r.x, y: r.labelY ?? r.y };
+  }
+  const era = related.bridges?.era ?? getPackForEntity(related.id)?.era;
+  if (era) {
+    const r = MAP_REGIONS.find(rr => rr.era === era);
+    if (r) return { x: r.labelX ?? r.x, y: r.labelY ?? r.y };
+  }
+  return null;
+}
+
+let _entityById: Map<string, PackEntity> | null = null;
+function ENTITY_BY_ID(): Map<string, PackEntity> {
+  if (!_entityById) {
+    _entityById = new Map(allPackEntities().map(e => [e.id, e]));
+  }
+  return _entityById;
 }
 
 /** All entity pins across every content pack. */
