@@ -34,6 +34,7 @@ export const KNOWN_ERAS: { id: string; label: string }[] = [
   { id: "abbasid", label: "الدولة العباسية" },
   { id: "ayyubid", label: "الدولة الأيوبية" },
   { id: "mamluk", label: "الدولة المملوكية" },
+  { id: "andalusia", label: "الأندلس الإسلامية" },
 ];
 
 function isScholar(e: PackEntity): boolean {

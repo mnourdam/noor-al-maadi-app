@@ -3,6 +3,7 @@ import { AYYUBID_PACK } from "./ayyubid";
 import { UMAYYAD_PACK } from "./umayyad";
 import { ABBASID_PACK } from "./abbasid";
 import { MAMLUK_PACK } from "./mamluk";
+import { ANDALUSIA_PACK } from "./andalusia";
 
 // ============================================================
 // Content Pack registry
@@ -17,6 +18,7 @@ export const CONTENT_PACKS: ContentPack[] = [
   UMAYYAD_PACK,
   ABBASID_PACK,
   MAMLUK_PACK,
+  ANDALUSIA_PACK,
 ].sort((a, b) => a.order - b.order);
 
 // --- index by entity id (with collision detection) ---
