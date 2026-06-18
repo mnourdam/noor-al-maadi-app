@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as CollectionRouteImport } from './routes/collection'
@@ -21,6 +22,11 @@ import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
 import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnThisDayRoute = OnThisDayRouteImport.update({
   id: '/on-this-day',
   path: '/on-this-day',
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/collection': typeof CollectionRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/profile': typeof ProfileRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/collection': typeof CollectionRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/profile': typeof ProfileRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/collection': typeof CollectionRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/profile': typeof ProfileRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/collection'
     | '/map'
     | '/on-this-day'
+    | '/profile'
     | '/campaigns/$era'
     | '/play/decisions'
     | '/play/investigate'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/collection'
     | '/map'
     | '/on-this-day'
+    | '/profile'
     | '/campaigns/$era'
     | '/play/decisions'
     | '/play/investigate'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/collection'
     | '/map'
     | '/on-this-day'
+    | '/profile'
     | '/campaigns/$era'
     | '/play/decisions'
     | '/play/investigate'
@@ -163,6 +175,7 @@ export interface RootRouteChildren {
   CollectionRoute: typeof CollectionRoute
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
+  ProfileRoute: typeof ProfileRoute
   PlayDecisionsRoute: typeof PlayDecisionsRoute
   PlayInvestigateRoute: typeof PlayInvestigateRoute
   PlayTimelineRoute: typeof PlayTimelineRoute
@@ -171,6 +184,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/on-this-day': {
       id: '/on-this-day'
       path: '/on-this-day'
@@ -271,6 +291,7 @@ const rootRouteChildren: RootRouteChildren = {
   CollectionRoute: CollectionRoute,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
+  ProfileRoute: ProfileRoute,
   PlayDecisionsRoute: PlayDecisionsRoute,
   PlayInvestigateRoute: PlayInvestigateRoute,
   PlayTimelineRoute: PlayTimelineRoute,
