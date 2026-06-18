@@ -18,6 +18,7 @@ import { Route as StoryIdRouteImport } from './routes/story.$id'
 import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
 import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
 import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
+import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 
 const OnThisDayRoute = OnThisDayRouteImport.update({
   id: '/on-this-day',
@@ -64,12 +65,18 @@ const PlayDecisionsRoute = PlayDecisionsRouteImport.update({
   path: '/play/decisions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CampaignsEraRoute = CampaignsEraRouteImport.update({
+  id: '/$era',
+  path: '/$era',
+  getParentRoute: () => CampaignsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/campaigns/$era': typeof CampaignsEraRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/campaigns/$era': typeof CampaignsEraRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/campaigns': typeof CampaignsRouteWithChildren
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/campaigns/$era': typeof CampaignsEraRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/map'
     | '/on-this-day'
+    | '/campaigns/$era'
     | '/play/decisions'
     | '/play/investigate'
     | '/play/timeline'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/'
     | '/map'
     | '/on-this-day'
+    | '/campaigns/$era'
     | '/play/decisions'
     | '/play/investigate'
     | '/play/timeline'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/map'
     | '/on-this-day'
+    | '/campaigns/$era'
     | '/play/decisions'
     | '/play/investigate'
     | '/play/timeline'
@@ -209,14 +221,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayDecisionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/campaigns/$era': {
+      id: '/campaigns/$era'
+      path: '/$era'
+      fullPath: '/campaigns/$era'
+      preLoaderRoute: typeof CampaignsEraRouteImport
+      parentRoute: typeof CampaignsRoute
+    }
   }
 }
 
 interface CampaignsRouteChildren {
+  CampaignsEraRoute: typeof CampaignsEraRoute
   CampaignsIndexRoute: typeof CampaignsIndexRoute
 }
 
 const CampaignsRouteChildren: CampaignsRouteChildren = {
+  CampaignsEraRoute: CampaignsEraRoute,
   CampaignsIndexRoute: CampaignsIndexRoute,
 }
 
