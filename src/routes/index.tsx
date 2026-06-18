@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Flame, Star, Sparkles, Search, ListOrdered, GitBranch, Map as MapIcon,
   ChevronLeft, Crown, Lock, Compass, Eye, Play, Hourglass, Check,
+  Calendar,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
