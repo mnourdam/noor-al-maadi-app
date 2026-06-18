@@ -1038,3 +1038,350 @@ export const CHAPTER_LORE: Record<string, ChapterLore> = {
 
 // Flagship campaign hero artwork map
 export const CAMPAIGN_HERO: Record<string, { src: string; alt: string }> = {};
+
+// ============================================================
+// FLAGSHIP CAMPAIGN — multi-stage chapter player data
+// Each chapter ties to an existing mission id (y-m1..y-m8) so
+// completing the chapter marks that mission as done.
+// ============================================================
+
+// New collectibles introduced by the flagship chapter player
+ARTIFACTS.push(
+  { id: "nuruddin-minbar", name: "منبر نور الدين", type: "relic",      typeLabel: "أثر",   era: "ayyubid", icon: "🕋", description: "منبرٌ صنعه نجّارو حلب لينُصب في الأقصى يوم التحرير." },
+  { id: "hattin-map",      name: "خارطة حِطّين",   type: "manuscript", typeLabel: "خارطة", era: "ayyubid", icon: "🗺️", description: "خارطةٌ تُظهر طريق الكمين وموقع المعركة." },
+  { id: "salah-letter",    name: "وصية صلاح الدين", type: "manuscript", typeLabel: "وثيقة", era: "ayyubid", icon: "📜", description: "وصيّته لولده الظاهر: «إيّاك والدماء…»." },
+  { id: "doc-crusades",    name: "مخطوطة الحروب الصليبية", type: "manuscript", typeLabel: "مخطوط", era: "ayyubid", icon: "📚", description: "موجزٌ من قرنين من الحروب بين الفرنجة والمسلمين." },
+  { id: "doc-jerusalem-khutba", name: "خطبة الجمعة الأولى", type: "manuscript", typeLabel: "وثيقة", era: "ayyubid", icon: "📖", description: "مقتطف من خطبة محيي الدين بن الزكي عند تحرير القدس." },
+);
+
+CHARACTERS.push(
+  { id: "nuruddin", name: "نور الدين زنكي", title: "شيخ المجاهدين", era: "ayyubid", rarity: "rare", avatar: "🌙", bio: "وحّد الشام وزرع بذرة تحرير القدس قبل صلاح الدين.", power: "تقوى ٩٦" },
+);
+
+export type FlagshipStage =
+  | { kind: "scene"; title: string; body: string[] }
+  | { kind: "investigation"; title: string; question: string; clues: string[]; options: string[]; answerIndex: number; explanation: string }
+  | { kind: "decision"; title: string; setting: string; scene: string; choices: { label: string; outcome: string; correct: boolean }[]; note: string }
+  | { kind: "timeline"; title: string; instruction: string; events: { id: string; label: string; year: number }[] }
+  | { kind: "discovery"; subtype: "artifact" | "character" | "document"; refId?: string; title: string; subtitle: string; icon: string; body?: string };
+
+export interface FlagshipChapter {
+  id: string;
+  index: number;
+  missionId: string;
+  title: string;
+  era: string;
+  setting: string;
+  hook: string;
+  quote?: string;
+  quoteBy?: string;
+  stages: FlagshipStage[];
+  finaleTitle: string;
+  finaleLine: string;
+  rewards: { points: number; artifactIds?: string[]; characterIds?: string[] };
+}
+
+export const FLAGSHIP_CHAPTERS: FlagshipChapter[] = [
+  {
+    id: "ch1", index: 1, missionId: "y-m1",
+    title: "شيخ المجاهدين",
+    era: "منتصف القرن السادس الهجري",
+    setting: "حلب · بلاد الشام",
+    hook: "قبل أن يولد المحرّر، كان لا بُدّ من أن يولد المعلّم.",
+    quote: "لا أستحي من اللهِ أن يراني أضحك والمسلمون محاصرون.",
+    quoteBy: "نور الدين زنكي",
+    stages: [
+      { kind: "scene", title: "مشهد · بلاد ممزّقة",
+        body: [
+          "تفرّقت إمارات الشام بين الحكّام، والقدس بيد الفرنجة منذ ٥٠ عامًا.",
+          "نهض في حلب أميرٌ زاهد اسمه محمود بن زنكي، يُلقّب بنور الدين. جمع الكلمة من حلب إلى دمشق، وبنى المدارس والمستشفيات، ووحّد الجبهة.",
+        ],
+      },
+      { kind: "decision", title: "قرار · كيف ندخل دمشق؟",
+        setting: "حلب · ٥٤٩ هـ",
+        scene: "دمشق منقسمة وأمراؤها ضعفاء. كيف تضمّها إلى وحدة الشام؟",
+        choices: [
+          { label: "بالسيف وفرض الأمر", outcome: "كنت ستُفرّق المسلمين قبل وحدتهم.", correct: false },
+          { label: "بالعدل والخطبة وكسب القلوب", outcome: "هكذا فعل نور الدين، فدخلها أهلها يهتفون باسمه.", correct: true },
+          { label: "أتركها وأتجه للقدس مباشرة", outcome: "كانت ستُضرب من خلف.", correct: false },
+        ],
+        note: "دخل نور الدين دمشق سنة ٥٤٩ هـ صلحًا، فاكتملت وحدة الشام تحت رايةٍ واحدة.",
+      },
+      { kind: "discovery", subtype: "artifact", refId: "nuruddin-minbar",
+        title: "اكتشاف · منبر الأقصى",
+        subtitle: "أمر نور الدين نجّاري حلب أن يصنعوا منبرًا، وأقسم أن يضعه في الأقصى يوم التحرير.",
+        icon: "🕋",
+        body: "بقي المنبر في حلب ٢٢ عامًا، حتى حمله صلاح الدين إلى القدس بعد التحرير.",
+      },
+    ],
+    finaleTitle: "اكتمل الفصل الأول",
+    finaleLine: "زُرعت البذرة. ينتظر المنبر يدًا تحمله إلى الأقصى…",
+    rewards: { points: 40, artifactIds: ["nuruddin-minbar"], characterIds: ["nuruddin"] },
+  },
+  {
+    id: "ch2", index: 2, missionId: "y-m2",
+    title: "صعود صلاح الدين",
+    era: "٥٦٤ هـ",
+    setting: "القاهرة · قصر الفاطميين",
+    hook: "فتىً كرديّ يدخل بلاطًا لا يعرفه… ويخرج منه سلطانًا.",
+    stages: [
+      { kind: "scene", title: "مشهد · إلى مصر",
+        body: [
+          "أرسل نور الدين قائده شيركوه إلى مصر لردّ الصليبيين. ومعه ابن أخيه: فتى في الثلاثين اسمه يوسف بن أيوب.",
+          "مات شيركوه فجأة، فاختار الخليفة الفاطمي العاضد ابن أخيه ليكون وزيرًا. كان أصغر المرشّحين وأقلّهم طموحًا، لكنّه كان أحكمهم.",
+        ],
+      },
+      { kind: "investigation", title: "تحقيق · من هذا الوزير؟",
+        question: "ادرس الأدلة، ثم اختر هويّة هذا الوزير.",
+        clues: [
+          "كرديّ الأصل من تكريت.",
+          "دخل مصر مع عمّه ضمن جيش نور الدين.",
+          "عيّنه الفاطميون وزيرًا وهو شاب.",
+          "أنهى الخلافة الفاطمية بلا قطرة دم.",
+        ],
+        options: ["شيركوه", "صلاح الدين", "الكامل", "نور الدين"],
+        answerIndex: 1,
+        explanation: "هو يوسف بن أيوب الملقّب بصلاح الدين، أنهى الخلافة الفاطمية سنة ٥٦٧ هـ وأسّس الدولة الأيوبية.",
+      },
+      { kind: "decision", title: "قرار · كيف تنهي الفاطميين؟",
+        setting: "القاهرة · ٥٦٧ هـ",
+        scene: "الخليفة العاضد في فراش الموت، والدولة بلا قيادة. ما خطوتك؟",
+        choices: [
+          { label: "أعتقل أمراءهم وأفرض السنّة بالقوة", outcome: "كنت ستُشعل ثورة داخلية وأنت تستعد لمواجهة الصليبيين.", correct: false },
+          { label: "أعيد الخطبة للخليفة العباسي بهدوء، وأحفظ هيبة البيت الفاطمي", outcome: "هكذا فعل صلاح الدين، فانتقلت الدولة بسلام.", correct: true },
+          { label: "أحتفظ بالخلافة الفاطمية اسميًّا", outcome: "كانت ستبقى الانقسامات تُعيق التحرير.", correct: false },
+        ],
+        note: "أمر صلاح الدين بالخطبة باسم الخليفة العباسي، فانطوت صفحة قرنين من الخلافة الفاطمية بلا دم.",
+      },
+    ],
+    finaleTitle: "اكتمل الفصل الثاني",
+    finaleLine: "وُلدت الدولة الأيوبية. مصر والشام تحت رايةٍ واحدة، والقدس على بُعد عامٍ من القرار.",
+    rewards: { points: 45 },
+  },
+  {
+    id: "ch3", index: 3, missionId: "y-m3",
+    title: "ملامح القائد",
+    era: "أرشيف السلاطين",
+    setting: "وثائق المؤرّخين",
+    hook: "ثلاثة أدلّة فقط… أتعرف القائد قبل أن تذكره الكتب؟",
+    stages: [
+      { kind: "scene", title: "مشهد · صورة لم تكتمل",
+        body: [
+          "كتب عنه ابن شدّاد وأبو شامة وابن الأثير. كتب عنه أعداؤه قبل أصدقائه. لكن من هو حقًّا؟",
+          "أمامك أدلّة من شهادات معاصريه. اقرأ بتأنٍّ ثم اختر.",
+        ],
+      },
+      { kind: "investigation", title: "تحقيق · من هذا السلطان؟",
+        question: "من القائد الذي تصفه هذه الشهادات؟",
+        clues: [
+          "وحّد جيوش مصر والشام تحت راية واحدة.",
+          "أعاد الأذان إلى الأقصى بعد ٨٨ عامًا.",
+          "حين توفّي لم يُخلّف ثمن كفنه.",
+          "قال عنه دانتي إنه في برزخ النبلاء.",
+        ],
+        options: ["نور الدين زنكي", "صلاح الدين الأيوبي", "الظاهر بيبرس", "الكامل الأيوبي"],
+        answerIndex: 1,
+        explanation: "صلاح الدين يوسف بن أيوب، عرفه المسلمون والمسيحيون معًا بنُبله قبل سيفه.",
+      },
+      { kind: "discovery", subtype: "character", refId: "salahuddin",
+        title: "كشف · بطاقة السلطان",
+        subtitle: "اكتملت ملامح القائد. أُضيفت بطاقته الأسطورية إلى مجموعتك.",
+        icon: "🕌",
+        body: "صلاح الدين الأيوبي · محرّر القدس · ندرة أسطورية.",
+      },
+    ],
+    finaleTitle: "اكتمل الفصل الثالث",
+    finaleLine: "عرفتَ القائد. حان وقت معرفة قراراته.",
+    rewards: { points: 55, characterIds: ["salahuddin"] },
+  },
+  {
+    id: "ch4", index: 4, missionId: "y-m4",
+    title: "ليلة الكمين",
+    era: "ربيع الآخر ٥٨٣ هـ",
+    setting: "سفوح الجليل · ليلًا",
+    hook: "الجيوش متقابلة. الماء بعيد. والقرار قرارك.",
+    quote: "إنّ الحرب خدعة.",
+    quoteBy: "حديث نبوي",
+    stages: [
+      { kind: "scene", title: "مشهد · ليلٌ بلا نوم",
+        body: [
+          "ريموند الثالث، حاكم طبريّة، نصح الصليبيين بالبقاء قرب الماء. لكن الملك غاي دي لوزنيان أبى، وأمر بالتقدّم في حرّ تموز نحو طبريّة.",
+          "أمامك جيش يضمّ ٢٠ ألف فارس صليبي. ما خطّتك؟",
+        ],
+      },
+      { kind: "decision", title: "قرار · أين نلتقي بهم؟",
+        setting: "وادي طبريّة",
+        scene: "تستطيع مهاجمتهم وهم قرب الماء، أو استدراجهم إلى سهلٍ قاحل.",
+        choices: [
+          { label: "أهاجمهم قرب الماء وأُنهي الأمر سريعًا", outcome: "كنت ستفقد ميزتك الحاسمة وتدخل معركة متكافئة.", correct: false },
+          { label: "أستدرجهم بعيدًا عن الماء وأشعل العشب اليابس", outcome: "كمينٌ غيّر مسار التاريخ.", correct: true },
+          { label: "أتفاوض على هدنة", outcome: "ضاعت فرصة تحرير القدس.", correct: false },
+        ],
+        note: "قاد صلاح الدين الصليبيين إلى سهل حِطّين القاحل في حرّ تموز، وأشعل الأعشاب حولهم. بدأت المعركة وهم عطشى.",
+      },
+      { kind: "discovery", subtype: "artifact", refId: "hattin-map",
+        title: "اكتشاف · خارطة الكمين",
+        subtitle: "أُضيفت خارطة حِطّين إلى أرشيفك.",
+        icon: "🗺️",
+        body: "تُظهر طريق الجيش الصليبي من صفّوريّة إلى قرون حطّين، وموقع البحيرة الذي حال صلاح الدين دون وصولهم إليه.",
+      },
+    ],
+    finaleTitle: "اكتمل الفصل الرابع",
+    finaleLine: "نُصب الكمين. يبقى أن يطلع فجر حِطّين.",
+    rewards: { points: 45, artifactIds: ["hattin-map"] },
+  },
+  {
+    id: "ch5", index: 5, missionId: "y-m5",
+    title: "يوم النصر",
+    era: "٢٥ ربيع الآخر ٥٨٣ هـ",
+    setting: "قرون حطّين",
+    hook: "ستّ ساعات في حرّ تموز كسرت قرنًا من الاحتلال.",
+    quote: "ما النصرُ إلا من عند الله.",
+    quoteBy: "صلاح الدين بعد حِطّين",
+    stages: [
+      { kind: "scene", title: "مشهد · صباح المعركة",
+        body: [
+          "أصبح الصليبيون بلا ماء، يحترقون تحت الشمس وريح الدخان. حاولوا الفرار نحو البحيرة، فوجدوها مغلقة.",
+          "انكسر جناحهم الأيمن، ثم الأيسر، ثم القلب. أُسر الملك غاي ومعه أسطورة فرسانهم.",
+        ],
+      },
+      { kind: "timeline", title: "ترتيب · أحداث الكمين",
+        instruction: "رتّب أحداث يوم حِطّين بالترتيب الذي وقعت به.",
+        events: [
+          { id: "e1", label: "تقدّم الجيش الصليبي من صفّوريّة", year: 1 },
+          { id: "e2", label: "صلاح الدين يحرق العشب اليابس", year: 2 },
+          { id: "e3", label: "محاولة الوصول إلى البحيرة", year: 3 },
+          { id: "e4", label: "انكسار جناح الصليبيين الأيمن", year: 4 },
+          { id: "e5", label: "أسر الملك غاي دي لوزنيان", year: 5 },
+        ],
+      },
+      { kind: "discovery", subtype: "artifact", refId: "hattin-banner",
+        title: "اكتشاف · راية حِطّين",
+        subtitle: "رُفعت فوق المعسكر يوم المعركة.",
+        icon: "🚩",
+        body: "كانت رايةً صفراء بهلال، حُفظت بعدها في خزانة سلاطين الأيوبيين.",
+      },
+    ],
+    finaleTitle: "اكتمل الفصل الخامس",
+    finaleLine: "انكسرت ممالك الفرنجة. القدس بلا حام.",
+    rewards: { points: 60, artifactIds: ["hattin-banner"] },
+  },
+  {
+    id: "ch6", index: 6, missionId: "y-m6",
+    title: "عودة الأذان",
+    era: "٢٧ رجب ٥٨٣ هـ",
+    setting: "أسوار القدس",
+    hook: "ثمانية وثمانون عامًا من الصمت… انكسرت بأذانٍ واحد.",
+    quote: "اللّهم تقبّل، فإنّ المسلمين قد أعادوا بيتك.",
+    quoteBy: "محيي الدين بن الزكي · أول خطبة",
+    stages: [
+      { kind: "scene", title: "مشهد · حصار المدينة المقدّسة",
+        body: [
+          "بعد حِطّين، سقطت عكا ونابلس ويافا وبيروت. ثم اقترب صلاح الدين من القدس.",
+          "خرج إليه باليان من إبيلين يفاوضه. هدّد أن يهدم الصخرة ويُحرق كل مسلمٍ في المدينة إن لم يُمنحوا الأمان.",
+        ],
+      },
+      { kind: "decision", title: "قرار · كيف نعامل أهل القدس؟",
+        setting: "خيمة السلطان · ٢١ رجب",
+        scene: "أمامك خيارات. الصليبيون قتلوا أهل القدس قبل ٨٨ عامًا حتى ركبت الخيول في الدماء.",
+        choices: [
+          { label: "أنتقم لما فعلوه قبل ٨٨ عامًا", outcome: "كنت ستفقد المعنى الكبير الذي قاتلت من أجله.", correct: false },
+          { label: "أمنحهم الأمان بفديةٍ يسيرة، ومن لم يستطع تركته حرًّا", outcome: "هكذا فعل صلاح الدين، فحفظ مجده عند العدو والصديق.", correct: true },
+          { label: "أطردهم بلا شيء", outcome: "كنت ستضع بذرة حروبٍ جديدة.", correct: false },
+        ],
+        note: "دخل صلاح الدين القدس صلحًا، ودفعت الفدية، ومن عجز عفا عنه. أعاد المنبر الذي صنعه نور الدين إلى مكانه.",
+      },
+      { kind: "discovery", subtype: "document", refId: "doc-jerusalem-khutba",
+        title: "اكتشاف · خطبة الجمعة الأولى",
+        subtitle: "بعد ٨٨ عامًا، يرتقي محيي الدين بن الزكي منبر نور الدين.",
+        icon: "📖",
+        body: "«الحمدُ لله الذي أعزّ الإسلام بنصره، وأذلّ الشرك بقهره… ردّ هذه المدينة إلى حوزة الإسلام بعد أن خرجت من أيدي الكفر».",
+      },
+    ],
+    finaleTitle: "اكتمل الفصل السادس",
+    finaleLine: "عاد الأذان إلى الأقصى. التاريخ يتنفّس من جديد.",
+    rewards: { points: 70, artifactIds: ["doc-jerusalem-khutba"] },
+  },
+  {
+    id: "ch7", index: 7, missionId: "y-m7",
+    title: "مسيرة قرنين",
+    era: "قرنان من المواجهة",
+    setting: "أرشيف الفرنجة",
+    hook: "رتّب فصول الحرب الطويلة كما جرت تحت سماء الشام.",
+    stages: [
+      { kind: "scene", title: "مشهد · من خطبةٍ في كليرمونت إلى أذانٍ في القدس",
+        body: [
+          "بدأت القصة سنة ١٠٩٥م بخطبةٍ للبابا أوربان الثاني في كليرمونت. وانتهت سنة ١١٨٧م بأذانٍ في الأقصى.",
+          "بينهما قرنان من القلاع والمعارك والوحدات والانكسارات.",
+        ],
+      },
+      { kind: "timeline", title: "ترتيب · من البداية إلى التحرير",
+        instruction: "رتّب أحداث الحروب الصليبية بحسب تواريخها.",
+        events: [
+          { id: "e1", label: "خطبة البابا أوربان", year: 1095 },
+          { id: "e2", label: "سقوط القدس بيد الصليبيين", year: 1099 },
+          { id: "e3", label: "وحدة الشام تحت نور الدين", year: 1154 },
+          { id: "e4", label: "تأسيس الدولة الأيوبية", year: 1171 },
+          { id: "e5", label: "معركة حِطّين", year: 1187 },
+          { id: "e6", label: "تحرير القدس", year: 1187 },
+        ],
+      },
+      { kind: "discovery", subtype: "document", refId: "doc-crusades",
+        title: "اكتشاف · مخطوطة الحروب الصليبية",
+        subtitle: "موجزٌ كامل من قرنين من المواجهة، أُضيف إلى مكتبتك.",
+        icon: "📚",
+      },
+    ],
+    finaleTitle: "اكتمل الفصل السابع",
+    finaleLine: "اكتمل خطّ الزمن. يبقى أن يُكتب الفصل الأخير.",
+    rewards: { points: 60, artifactIds: ["doc-crusades"] },
+  },
+  {
+    id: "ch8", index: 8, missionId: "y-m8",
+    title: "ميراث الفاتح",
+    era: "صفر ٥٨٩ هـ",
+    setting: "دمشق · القلعة",
+    hook: "لم يُخلّف ذهبًا، لكنّه ترك أمّةً تعرف كيف تُحرّر.",
+    quote: "إيّاك والدماء، فإنّها لا تنام.",
+    quoteBy: "وصيّة صلاح الدين لولده الظاهر",
+    stages: [
+      { kind: "scene", title: "مشهد · آخر سنوات السلطان",
+        body: [
+          "عاش بعد التحرير ست سنواتٍ فقط، صرفها في صدّ الحملة الصليبية الثالثة بقيادة ريتشارد قلب الأسد.",
+          "حين توفّي لم يكن في خزانته ما يكفي ثمن كفنه. لم يُخلّف ذهبًا ولا ضياعًا.",
+        ],
+      },
+      { kind: "investigation", title: "تحقيق · شهادة عدوّه",
+        question: "أيُّ كاتبٍ غربي وضع صلاح الدين في مرتبة النبلاء في مؤلَّفه الشهير؟",
+        clues: [
+          "كاتبٌ إيطالي من القرن ١٤م.",
+          "ذكر صلاح الدين في عملٍ شعريٍّ خالد.",
+          "وضعه في «برزخ النبلاء» إلى جانب فلاسفة اليونان.",
+          "اشتُهر بـ«الكوميديا الإلهية».",
+        ],
+        options: ["شكسبير", "دانتي", "غوته", "بترارك"],
+        answerIndex: 1,
+        explanation: "دانتي أليغييري في «الكوميديا الإلهية» جعل صلاح الدين في برزخ النبلاء، اعترافًا بشهامته عند أعدائه.",
+      },
+      { kind: "discovery", subtype: "document", refId: "salah-letter",
+        title: "اكتشاف · وصية السلطان",
+        subtitle: "خمس وصايا تركها لولده الظاهر.",
+        icon: "📜",
+        body: "«إيّاك والدماء، فإنّها لا تنام. واتّقِ الله، فإنّ تقواه أمانٌ من كلّ خوف. واحفظ قلوب الناس، فإنّك لن تَدوم لهم إلا بالعدل…»",
+      },
+      { kind: "discovery", subtype: "artifact", refId: "aqsa-stone",
+        title: "اكتشاف · حجرٌ من الأقصى",
+        subtitle: "آخر هدية من الحملة قبل ختامها.",
+        icon: "🕌",
+        body: "حجرٌ من ترميمات الأيوبيين لقبّة الصخرة، يحمل رمز اكتمال الرحلة.",
+      },
+    ],
+    finaleTitle: "اكتمل الفصل الثامن",
+    finaleLine: "اكتملت الحملة. عُد إلى صفحة الحملة لاستلام المكافأة الكبرى.",
+    rewards: { points: 80, artifactIds: ["salah-letter", "aqsa-stone"] },
+  },
+];
+
+export function getFlagshipChapter(id: string) {
+  return FLAGSHIP_CHAPTERS.find((c) => c.id === id);
+}
