@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
+import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
@@ -28,6 +29,11 @@ const OnThisDayRoute = OnThisDayRouteImport.update({
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CollectionRoute = CollectionRouteImport.update({
+  id: '/collection',
+  path: '/collection',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CampaignsRoute = CampaignsRouteImport.update({
@@ -74,6 +80,7 @@ const CampaignsEraRoute = CampaignsEraRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/campaigns': typeof CampaignsRouteWithChildren
+  '/collection': typeof CollectionRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -85,6 +92,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/collection': typeof CollectionRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/campaigns': typeof CampaignsRouteWithChildren
+  '/collection': typeof CollectionRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/campaigns'
+    | '/collection'
     | '/map'
     | '/on-this-day'
     | '/campaigns/$era'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/collection'
     | '/map'
     | '/on-this-day'
     | '/campaigns/$era'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/campaigns'
+    | '/collection'
     | '/map'
     | '/on-this-day'
     | '/campaigns/$era'
@@ -148,6 +160,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
+  CollectionRoute: typeof CollectionRoute
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
   PlayDecisionsRoute: typeof PlayDecisionsRoute
@@ -170,6 +183,13 @@ declare module '@tanstack/react-router' {
       path: '/map'
       fullPath: '/map'
       preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/collection': {
+      id: '/collection'
+      path: '/collection'
+      fullPath: '/collection'
+      preLoaderRoute: typeof CollectionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/campaigns': {
@@ -248,6 +268,7 @@ const CampaignsRouteWithChildren = CampaignsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
+  CollectionRoute: CollectionRoute,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
   PlayDecisionsRoute: PlayDecisionsRoute,
