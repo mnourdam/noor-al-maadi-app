@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Compass, Lock, Network, Sparkles, Users, Swords, MapPin, BookOpen, Scroll, Crown } from "lucide-react";
+import { Compass, Lock, Network, Sparkles, Users, Swords, MapPin, BookOpen, Scroll, Crown, Building2 } from "lucide-react";
 import {
   buildRelations, recommend, eraName,
   type EntityRef, type Recommendation, type EntityKind,
@@ -22,6 +22,7 @@ function isUnlocked(kind: EntityKind, id: string, p: ReturnType<typeof useProfil
     case "story":     return p.storiesRead.includes(id);
     case "battle":    return true;     // battle pages are always viewable
     case "campaign":  return true;
+    case "city":      return true;     // city pages render fog inline
   }
 }
 
@@ -33,6 +34,7 @@ function kindMeta(kind: EntityKind) {
     case "story":     return { icon: Scroll, label: "قصّة" };
     case "artifact":  return { icon: Crown, label: "أثر" };
     case "campaign":  return { icon: BookOpen, label: "حملة" };
+    case "city":      return { icon: Building2, label: "مدينة" };
   }
 }
 
@@ -76,6 +78,8 @@ function NodeLink({ rec, locked }: { rec: Recommendation; locked: boolean }) {
       return <Link to="/collection">{inner}</Link>;
     case "campaign":
       return <Link to="/campaigns/$era" params={{ era: rec.id as any }}>{inner}</Link>;
+    case "city":
+      return <Link to="/city/$id" params={{ id: rec.id }}>{inner}</Link>;
   }
 }
 
@@ -91,6 +95,7 @@ export function RelatedHistory({ entity, title = "شبكة التاريخ الم
     for (const r of graph.regions.slice(0, 4))    arr.push({ kind: "region",    id: r.id, label: r.name, sublabel: r.capital,  icon: r.glyph ?? "📍", score: 0 });
     for (const a of graph.artifacts.slice(0, 4))  arr.push({ kind: "artifact",  id: a.id, label: a.name, sublabel: a.typeLabel, icon: a.icon, score: 0 });
     for (const s of graph.stories.slice(0, 3))    arr.push({ kind: "story",     id: s.id, label: s.title, sublabel: `${s.readMinutes} د قراءة`, icon: "📜", score: 0 });
+    for (const ct of graph.cities.slice(0, 4))    arr.push({ kind: "city",      id: ct.id, label: ct.name, sublabel: ct.honorific ?? ct.tagline, icon: ct.glyph, score: 0 });
     return arr;
   }, [graph]);
 
