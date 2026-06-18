@@ -13,6 +13,10 @@ import { Building2 } from "lucide-react";
 import { packEntitiesForBridge, allPackEntities } from "@/lib/packs/registry";
 import { entityHref } from "@/components/EncyclopediaCard";
 import type { PackEntity } from "@/lib/packs/types";
+import {
+  pinsForEra, overlayForEra, atlasCoverage, atlasEras,
+  STATE_OVERLAYS, type AtlasPin, type AtlasPinKind,
+} from "@/lib/atlas";
 
 export const Route = createFileRoute("/map")({
   head: () => ({ meta: [{ title: "خارطة العالم الإسلامي" }] }),
@@ -35,8 +39,20 @@ const ROUTES: { from: string; to: string }[] = [
 function MapPage() {
   const { profile, unlockRegion, findArtifact } = useProfile();
   const [selectedId, setSelectedId] = useState<string>("hijaz");
+  const [eraFilter, setEraFilter] = useState<string | null>(null);
+  const [devOpen, setDevOpen] = useState(false);
   const explorePct = explorationPercent(profile.regionsUnlocked);
   const region = MAP_REGIONS.find((r) => r.id === selectedId) ?? MAP_REGIONS[0];
+
+  const pins = useMemo(() => pinsForEra(eraFilter), [eraFilter]);
+  const overlay = useMemo(() => overlayForEra(eraFilter), [eraFilter]);
+  const eras = useMemo(() => atlasEras(), []);
+  const coverage = useMemo(() => atlasCoverage(), []);
+  const ERA_NAME: Record<string, string> = {
+    umayyad: "الأموية", abbasid: "العباسية", ayyubid: "الأيوبية",
+    rashidun: "الراشدة", seerah: "السيرة", andalus: "الأندلس",
+    seljuk: "السلاجقة", mamluk: "المماليك", ottoman: "العثمانية", modern: "الحديث",
+  };
 
   const handleUnlock = (r: MapRegion) => {
     const ok = unlockRegion(r.id, r.cost);
@@ -63,11 +79,60 @@ function MapPage() {
           </div>
         </div>
 
+        {/* Era filter — affects pins + overlays */}
+        <div className="mb-3 -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1">
+          <button
+            onClick={() => setEraFilter(null)}
+            className={`shrink-0 rounded-full border px-3 py-1 text-[11px] transition ${
+              eraFilter === null
+                ? "border-gold bg-gradient-gold text-primary-foreground shadow-gold"
+                : "border-white/15 bg-surface text-muted-foreground"
+            }`}
+          >كل العصور</button>
+          {eras.map(e => {
+            const active = eraFilter === e;
+            return (
+              <button key={e} onClick={() => setEraFilter(active ? null : e)}
+                className={`shrink-0 rounded-full border px-3 py-1 text-[11px] transition ${
+                  active
+                    ? "border-gold bg-gradient-gold text-primary-foreground shadow-gold"
+                    : "border-white/15 bg-surface text-muted-foreground"
+                }`}
+              >{ERA_NAME[e] ?? e}</button>
+            );
+          })}
+          <button
+            onClick={() => setDevOpen(v => !v)}
+            aria-label="dev"
+            className="ms-auto shrink-0 rounded-full border border-white/10 bg-surface px-2 py-1 text-[10px] text-muted-foreground"
+            title="إحصاءات الأطلس"
+          >ⓘ</button>
+        </div>
+
+        {devOpen && (
+          <div className="mb-3 rounded-2xl border border-white/10 bg-surface/80 p-3 text-[11px]">
+            <p className="font-display mb-1 text-xs text-gold">إحصاءات الأطلس (مطوّر)</p>
+            <p className="text-muted-foreground">
+              قابل للوضع على الخارطة: {coverage.capableTotal} ·
+              مغطّى: {coverage.covered} · التغطية:{" "}
+              <span className="text-gold">{coverage.percent}%</span>
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              مدن {coverage.byKind.city} · معارك {coverage.byKind.battle} ·
+              أحداث {coverage.byKind.event} · معالم {coverage.byKind.landmark} ·
+              دول {coverage.byKind.state}
+            </p>
+          </div>
+        )}
+
         {/* Illustrated parchment map */}
         <WorldMapCanvas
           unlocked={profile.regionsUnlocked}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          pins={pins}
+          overlay={overlay}
+          eraFilter={eraFilter}
         />
 
         {/* Region detail */}
