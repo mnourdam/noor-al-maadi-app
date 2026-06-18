@@ -69,7 +69,7 @@ function SeasonCard({
 }) {
   const pct = Math.min(100, Math.round((seasonPoints / season.goalPoints) * 100));
   const ready = isActiveSeason && seasonPoints >= season.goalPoints && !claimed;
-  const monthLabel = MONTH_NAMES_AR[season.month - 1];
+  const monthLabel = season.month ? MONTH_NAMES_AR[season.month - 1] : "—";
 
   const tone =
     status === "active"   ? "border-gold/50 bg-surface shadow-elegant"
