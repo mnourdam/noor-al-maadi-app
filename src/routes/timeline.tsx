@@ -3,7 +3,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { ChevronLeft, ZoomIn, ZoomOut, Crown, Swords, BookOpen, Sparkles, Users, Compass, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
-  BANDS, POINTS, CENTURIES, ERA_BACKDROPS,
+  allBands, allPoints, CENTURIES, ERA_BACKDROPS,
   TIMELINE_START, TIMELINE_END, LANE_META, TONE_CLASSES,
   type TimelineLane, type TimelinePoint, type TimelineBand,
 } from "@/lib/timeline";
@@ -91,9 +91,13 @@ function TimelinePage() {
 
   const x = (year: number) => (year - TIMELINE_START) * pxPerYear + 120;
 
+  // Combined static + pack-derived data so every encyclopedia entity with a
+  // timelinePosition / period appears on the Great Timeline automatically.
+  const BANDS_ALL  = useMemo(() => allBands(), []);
+  const POINTS_ALL = useMemo(() => allPoints(), []);
   // Pack stacked rows for caliphate & figure lanes.
-  const caliphateBands = useMemo(() => BANDS.filter((b) => b.lane === "caliphate"), []);
-  const figureBands    = useMemo(() => BANDS.filter((b) => b.lane === "figure"), []);
+  const caliphateBands = useMemo(() => BANDS_ALL.filter((b) => b.lane === "caliphate"), [BANDS_ALL]);
+  const figureBands    = useMemo(() => BANDS_ALL.filter((b) => b.lane === "figure"), [BANDS_ALL]);
   const caliphateRows  = useMemo(() => packRows(caliphateBands, 3), [caliphateBands]);
   const figureRows     = useMemo(() => packRows(figureBands, 4), [figureBands]);
 
@@ -289,7 +293,7 @@ function TimelinePage() {
 
                     {/* === Point lanes (battle, book, event) === */}
                     {(id === "battle" || id === "book" || id === "event") &&
-                      POINTS.filter((p) => p.lane === id).map((p) => {
+                      POINTS_ALL.filter((p) => p.lane === id).map((p) => {
                         const tone = TONE_CLASSES[p.tone ?? "gold"];
                         const left = x(p.year);
                         return (

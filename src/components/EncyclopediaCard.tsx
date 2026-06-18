@@ -7,6 +7,24 @@ import { CHARACTERS, getBattleProfile } from "@/lib/data";
 const CARD_CLASS =
   "group block rounded-2xl border border-white/10 bg-surface p-3 text-right transition hover:border-gold/40 hover:bg-surface-2";
 
+/**
+ * Resolve the best in-app URL for a pack entity.
+ * Reuses the same routing rules as <EntityLink/> so the timeline, atlas, and
+ * encyclopedia all agree on where a card should go.
+ */
+export function entityHref(entity: PackEntity): string {
+  const b = entity.bridges;
+  if (entity.type === "city" && b?.cityId && getCity(b.cityId))
+    return `/city/${b.cityId}`;
+  if (entity.type === "battle" && b?.battleId && getBattleProfile(b.battleId))
+    return `/battle/${b.battleId}`;
+  if (entity.type === "figure" && b?.characterId && CHARACTERS.some(c => c.id === b.characterId))
+    return `/figure/${b.characterId}`;
+  if (entity.type === "state" && b?.era)
+    return `/encyclopedia/state/${b.era}`;
+  return `/encyclopedia/entity/${entity.id}`;
+}
+
 /** Pick the right in-app target for a pack entity and render a typed <Link>. */
 function EntityLink({ entity, children }: { entity: PackEntity; children: ReactNode }) {
   const b = entity.bridges;

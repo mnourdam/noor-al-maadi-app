@@ -2,13 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Flame, Star, Sparkles, Search, ListOrdered, GitBranch, Map as MapIcon,
-  ChevronLeft, Crown, Lock, Compass, Eye, Play, Hourglass,
+  ChevronLeft, Crown, Lock, Compass, Eye, Play, Hourglass, Check,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   dailyStory, todayOnThisDay, ERAS, CAMPAIGNS, ARTIFACTS, CHARACTERS,
-  levelFor, dailyMissionsForDate, CURRENT_SEASON, UPCOMING_CAMPAIGNS,
+  levelFor, dailyMissionsForDate, currentSeason, UPCOMING_CAMPAIGNS,
   UPCOMING_REGIONS, MYSTERY_CHARACTERS, FLAGSHIP_CHAPTERS, todayKey,
+  nextActiveCampaign,
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
@@ -29,23 +30,28 @@ function Index() {
   useEffect(() => { setMounted(true); touchStreak(); }, [touchStreak]);
 
   const lvl = levelFor(profile.points);
-  const flagship = CAMPAIGNS.find((c) => c.flagship)!;
-  const flagshipEra = ERAS.find((e) => e.id === flagship.eraId)!;
-  const flagshipDone = flagship.missions.filter((m) => profile.missionsCompleted.includes(m.id)).length;
-  const flagshipPct = Math.round((flagshipDone / flagship.missions.length) * 100);
-
-  // Find the next unfinished flagship chapter — this is the "Continue Journey" target.
-  const nextChapter =
-    FLAGSHIP_CHAPTERS.find((c) => !profile.missionsCompleted.includes(c.missionId)) ?? FLAGSHIP_CHAPTERS[FLAGSHIP_CHAPTERS.length - 1];
-  const isCampaignDone = profile.missionsCompleted.includes(FLAGSHIP_CHAPTERS[FLAGSHIP_CHAPTERS.length - 1].missionId);
-  const hasStarted = flagshipDone > 0;
+  // ===== Dynamic hero campaign =====
+  // Show the active campaign (flagship first if not yet completed; otherwise
+  // the next campaign with remaining missions). When everything is done the
+  // hero falls back to a "قريبًا" card built from UPCOMING_CAMPAIGNS.
+  const active = nextActiveCampaign(profile.missionsCompleted);
+  const activeEra = active ? ERAS.find((e) => e.id === active.eraId) : undefined;
+  const activeDone = active ? active.missions.filter((m) => profile.missionsCompleted.includes(m.id)).length : 0;
+  const activePct  = active ? Math.round((activeDone / active.missions.length) * 100) : 0;
+  const activeHasStarted = activeDone > 0;
+  const isFlagship = active?.flagship === true;
+  // For the flagship Ayyubid campaign, the "continue" target is the next FLAGSHIP_CHAPTERS entry.
+  const nextChapter = isFlagship
+    ? (FLAGSHIP_CHAPTERS.find((c) => !profile.missionsCompleted.includes(c.missionId))
+        ?? FLAGSHIP_CHAPTERS[FLAGSHIP_CHAPTERS.length - 1])
+    : null;
 
   const dailies = useMemo(() => (mounted ? dailyMissionsForDate() : []), [mounted]);
   const claimedToday = profile.dailyClaimed.day === todayKey() ? profile.dailyClaimed.ids : [];
-  const dailyTodo = dailies.filter((d) => !claimedToday.includes(d.id));
 
   const discovery = mounted ? rotatingDiscovery() : null;
-  const seasonPct = Math.min(100, Math.round((profile.seasonPoints / CURRENT_SEASON.goalPoints) * 100));
+  const season = currentSeason();
+  const seasonPct = Math.min(100, Math.round((profile.seasonPoints / season.goalPoints) * 100));
 
   return (
     <AppShell>
@@ -55,7 +61,7 @@ function Index() {
         <div className="relative h-[78vh] min-h-[560px] w-full overflow-hidden">
           <img
             src={salahuddinHero}
-            alt={flagship.title}
+            alt={active?.title ?? "إرث"}
             className="animate-ken-burns absolute inset-0 size-full object-cover"
           />
           <div className="ink-overlay absolute inset-0" />
@@ -75,9 +81,9 @@ function Index() {
 
           {/* Status bar (compact) */}
           <div className="relative z-10 flex items-start justify-between px-5 pt-8">
-            <div className="animate-curtain">
-              <p className="text-[11px] tracking-[0.2em] text-gold/80">مرحبًا بك، {profile.name}</p>
-              <p className="font-display mt-1 text-[11px] text-white/60">
+            <div className="animate-curtain rounded-2xl bg-gradient-to-l from-black/55 via-black/35 to-transparent px-3 py-2 ring-1 ring-white/10 backdrop-blur-sm">
+              <p className="text-[11px] tracking-[0.2em] text-gold drop-shadow-[0_1px_4px_oklch(0_0_0/0.6)]">مرحبًا بك، {profile.name}</p>
+              <p className="font-display mt-1 text-[11px] text-white/80">
                 المستوى {lvl.level} · {lvl.title}
               </p>
             </div>
@@ -96,59 +102,87 @@ function Index() {
 
           {/* Hero copy */}
           <div className="absolute inset-x-0 bottom-0 z-10 px-6 pb-10">
-            <div className="animate-curtain max-w-xl">
-              <div className="flex items-center gap-2 text-[11px] text-gold">
-                <Crown className="size-3.5" />
-                <span className="tracking-[0.25em]">الحملة الكبرى · {flagshipEra.name}</span>
-              </div>
-              <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white drop-shadow-[0_4px_18px_oklch(0_0_0/0.6)]">
-                {flagship.title}
-              </h1>
-              <p className="mt-3 text-sm text-white/75">
-                {hasStarted
-                  ? <>الفصل {nextChapter.index} · <span className="text-gold">{nextChapter.title}</span></>
-                  : "ابدأ ملحمتك الأولى من حلب إلى أسوار القدس."}
-              </p>
-              <p className="mt-2 line-clamp-2 text-[13px] italic text-white/55">
-                «{nextChapter.hook}»
-              </p>
-
-              {/* progress band */}
-              <div className="mt-5 flex items-center gap-3">
-                <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
-                  <div className="h-full bg-gradient-gold transition-all" style={{ width: `${flagshipPct}%` }} />
+            {active && activeEra ? (
+              <div className="animate-curtain max-w-xl">
+                <div className="flex items-center gap-2 text-[11px] text-gold">
+                  <Crown className="size-3.5" />
+                  <span className="tracking-[0.25em]">
+                    {isFlagship ? "الحملة الكبرى" : "حملة نشِطة"} · {activeEra.name}
+                  </span>
                 </div>
-                <span className="text-[11px] text-white/70">
-                  {flagshipDone}/{flagship.missions.length} فصل
-                </span>
-              </div>
-
-              {/* CTA */}
-              <div className="mt-6 flex items-center gap-3">
-                {isCampaignDone ? (
-                  <Link
-                    to="/campaigns/$era" params={{ era: flagship.eraId }}
-                    className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
-                  >
-                    أرشيف الحملة <ChevronLeft className="size-4" />
-                  </Link>
-                ) : (
-                  <Link
-                    to="/play/chapter" search={{ id: nextChapter.id }}
-                    className="shadow-gold animate-gold-pulse inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
-                  >
-                    <Play className="size-4 fill-current" />
-                    {hasStarted ? "تابع الرحلة" : "ابدأ الرحلة"}
-                  </Link>
+                <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white drop-shadow-[0_4px_18px_oklch(0_0_0/0.6)]">
+                  {active.title}
+                </h1>
+                <p className="mt-3 text-sm text-white/75">
+                  {isFlagship && nextChapter ? (
+                    <>الفصل {nextChapter.index} · <span className="text-gold">{nextChapter.title}</span></>
+                  ) : (
+                    activeHasStarted ? "تابع رحلتك في هذه الحملة." : active.intro
+                  )}
+                </p>
+                {isFlagship && nextChapter?.hook && (
+                  <p className="mt-2 line-clamp-2 text-[13px] italic text-white/55">«{nextChapter.hook}»</p>
                 )}
-                <Link
-                  to="/campaigns/$era" params={{ era: flagship.eraId }}
-                  className="glass inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-3 text-xs text-white/80"
-                >
-                  كل الفصول
-                </Link>
+
+                {/* progress band */}
+                <div className="mt-5 flex items-center gap-3">
+                  <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
+                    <div className="h-full bg-gradient-gold transition-all" style={{ width: `${activePct}%` }} />
+                  </div>
+                  <span className="text-[11px] text-white/70">
+                    {activeDone}/{active.missions.length} فصل
+                  </span>
+                </div>
+
+                {/* CTA */}
+                <div className="mt-6 flex items-center gap-3">
+                  {isFlagship && nextChapter ? (
+                    <Link
+                      to="/play/chapter" search={{ id: nextChapter.id }}
+                      className="shadow-gold animate-gold-pulse inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
+                    >
+                      <Play className="size-4 fill-current" />
+                      {activeHasStarted ? "تابع الرحلة" : "ابدأ الرحلة"}
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/campaigns/$era" params={{ era: active.eraId }}
+                      className="shadow-gold animate-gold-pulse inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
+                    >
+                      <Play className="size-4 fill-current" />
+                      {activeHasStarted ? "تابع الحملة" : "ابدأ الحملة"}
+                    </Link>
+                  )}
+                  <Link
+                    to="/campaigns/$era" params={{ era: active.eraId }}
+                    className="glass inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-3 text-xs text-white/80"
+                  >
+                    كل الفصول
+                  </Link>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="animate-curtain max-w-xl">
+                <div className="flex items-center gap-2 text-[11px] text-gold">
+                  <Lock className="size-3.5" />
+                  <span className="tracking-[0.25em]">قريبًا · حملة جديدة</span>
+                </div>
+                <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white drop-shadow-[0_4px_18px_oklch(0_0_0/0.6)]">
+                  {UPCOMING_CAMPAIGNS[0]?.name ?? "حملة قادمة"}
+                </h1>
+                <p className="mt-3 line-clamp-3 text-sm text-white/75">
+                  {UPCOMING_CAMPAIGNS[0]?.teaser ?? "لقد أتممت كل الحملات الحالية. ترقّب الحملات القادمة قريبًا."}
+                </p>
+                <div className="mt-6">
+                  <Link
+                    to="/campaigns"
+                    className="glass inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-xs text-gold"
+                  >
+                    استعرض كل الحملات <ChevronLeft className="size-4" />
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -162,24 +196,50 @@ function Index() {
       )}
 
       {/* ============ DAILY MISSIONS (compact ribbon) ============ */}
-      {mounted && dailyTodo.length > 0 && (
-        <section className="mt-10 px-5">
-          <SectionHeader icon={<Sparkles className="size-3.5" />} eyebrow="مهام اليوم" title={`${dailyTodo.length} مهام بانتظارك`} />
-          <div className="-mr-5 flex gap-3 overflow-x-auto pr-5 pb-2">
-            {dailyTodo.map((d) => (
-              <Link
-                key={d.id} to={d.link.to as "/"}
-                className="group relative w-60 shrink-0 overflow-hidden rounded-2xl border border-gold/20 bg-surface p-4 transition hover:border-gold/50"
-              >
-                <span className="text-[10px] tracking-[0.2em] text-gold/80">+{d.reward} نقطة</span>
-                <p className="font-display mt-2 text-sm font-bold">{d.title}</p>
-                <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{d.desc}</p>
-                <span className="absolute -left-6 -bottom-6 size-20 rounded-full bg-gold/10 blur-2xl transition group-hover:bg-gold/30" />
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {mounted && dailies.length > 0 && (() => {
+        const remaining = dailies.filter((d) => !claimedToday.includes(d.id)).length;
+        return (
+          <section className="mt-10 px-5">
+            <SectionHeader
+              icon={<Sparkles className="size-3.5" />}
+              eyebrow="مهام اليوم"
+              title={remaining > 0 ? `${remaining} مهام بانتظارك` : "أنجزت مهام اليوم"}
+            />
+            <div className="-mr-5 flex gap-3 overflow-x-auto pr-5 pb-2">
+              {dailies.map((d) => {
+                const done = claimedToday.includes(d.id);
+                return (
+                  <Link
+                    key={d.id} to={d.link.to as "/"}
+                    aria-label={done ? `${d.title} — مكتمل` : d.title}
+                    className={`group relative w-60 shrink-0 overflow-hidden rounded-2xl border p-4 transition ${
+                      done
+                        ? "border-gold/40 bg-gold/[0.06]"
+                        : "border-gold/20 bg-surface hover:border-gold/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] tracking-[0.2em] text-gold/80">
+                        {done ? `+${d.reward} نقطة · مُستلَمة` : `+${d.reward} نقطة`}
+                      </span>
+                      {done && (
+                        <span className="grid size-6 place-items-center rounded-full bg-gradient-gold text-primary-foreground shadow-gold">
+                          <Check className="size-3.5" strokeWidth={3} />
+                        </span>
+                      )}
+                    </div>
+                    <p className={`font-display mt-2 text-sm font-bold ${done ? "text-white/80" : ""}`}>
+                      {d.title}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{d.desc}</p>
+                    <span className="absolute -left-6 -bottom-6 size-20 rounded-full bg-gold/10 blur-2xl transition group-hover:bg-gold/30" />
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ============ LIVING WORLD ============ */}
       <section className="mt-12 px-5">
@@ -246,14 +306,14 @@ function Index() {
         <div className="relative overflow-hidden rounded-3xl border border-gold/25 parchment-dark p-6">
           <div className="arabesque-layer" />
           <div className="relative">
-            <p className="text-[10px] tracking-[0.3em] text-gold">موسم محدود · {CURRENT_SEASON.endsAt}</p>
-            <p className="font-display mt-2 text-xl font-bold shimmer-text">{CURRENT_SEASON.name}</p>
-            <p className="mt-2 max-w-md text-[12px] text-white/65">{CURRENT_SEASON.tagline}</p>
+            <p className="text-[10px] tracking-[0.3em] text-gold">موسم محدود · {season.endsAt}</p>
+            <p className="font-display mt-2 text-xl font-bold shimmer-text">{season.name}</p>
+            <p className="mt-2 max-w-md text-[12px] text-white/65">{season.tagline}</p>
             <div className="mt-4 flex items-center gap-3">
               <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/10">
                 <div className="h-full bg-gradient-gold transition-all" style={{ width: `${seasonPct}%` }} />
               </div>
-              <span className="text-[10px] text-white/60">{Math.min(profile.seasonPoints, CURRENT_SEASON.goalPoints)}/{CURRENT_SEASON.goalPoints}</span>
+              <span className="text-[10px] text-white/60">{Math.min(profile.seasonPoints, season.goalPoints)}/{season.goalPoints}</span>
             </div>
           </div>
         </div>
