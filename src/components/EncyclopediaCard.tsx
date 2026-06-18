@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import type { PackEntity } from "@/lib/packs/types";
 import type { ReactNode } from "react";
+import { getCity } from "@/lib/cities";
+import { CHARACTERS, getBattleProfile } from "@/lib/data";
 
 const CARD_CLASS =
   "group block rounded-2xl border border-white/10 bg-surface p-3 text-right transition hover:border-gold/40 hover:bg-surface-2";
@@ -8,11 +10,11 @@ const CARD_CLASS =
 /** Pick the right in-app target for a pack entity and render a typed <Link>. */
 function EntityLink({ entity, children }: { entity: PackEntity; children: ReactNode }) {
   const b = entity.bridges;
-  if (entity.type === "city" && b?.cityId)
+  if (entity.type === "city" && b?.cityId && getCity(b.cityId))
     return <Link to="/city/$id" params={{ id: b.cityId }} className={CARD_CLASS}>{children}</Link>;
-  if (entity.type === "battle" && b?.battleId)
+  if (entity.type === "battle" && b?.battleId && getBattleProfile(b.battleId))
     return <Link to="/battle/$id" params={{ id: b.battleId }} className={CARD_CLASS}>{children}</Link>;
-  if (entity.type === "figure" && b?.characterId)
+  if (entity.type === "figure" && b?.characterId && CHARACTERS.some(c => c.id === b.characterId))
     return <Link to="/figure/$id" params={{ id: b.characterId }} className={CARD_CLASS}>{children}</Link>;
   if (entity.type === "state" && b?.era)
     return <Link to="/encyclopedia/state/$id" params={{ id: b.era }} className={CARD_CLASS}>{children}</Link>;
