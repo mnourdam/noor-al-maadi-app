@@ -69,8 +69,18 @@ function ProfilePage() {
 
         {/* Season */}
         <div className="mt-5 rounded-2xl border border-gold/25 bg-surface p-4">
-          <p className="text-[10px] text-gold">🏆 {CURRENT_SEASON.name}</p>
-          <p className="font-display mt-1 text-sm font-bold">{CURRENT_SEASON.tagline}</p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] text-gold">🏆 {CURRENT_SEASON.name}</p>
+              <p className="font-display mt-1 text-sm font-bold">{CURRENT_SEASON.tagline}</p>
+            </div>
+            <Link
+              to="/seasons"
+              className="shrink-0 rounded-full border border-gold/30 px-2.5 py-1 text-[10px] text-gold hover:bg-gold/10"
+            >
+              كل المواسم
+            </Link>
+          </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
             <div className="h-full bg-gradient-gold" style={{ width: `${seasonPct}%` }} />
           </div>
