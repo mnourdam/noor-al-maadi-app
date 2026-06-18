@@ -9,6 +9,7 @@ import { useProfile } from "@/lib/profile";
 import {
   getEngineCampaign, chapterCompletionKey, isChapterUnlocked,
 } from "@/lib/campaign-engine";
+import type { ChapterUnlock } from "@/lib/campaign-engine";
 
 export const Route = createFileRoute("/play/campaign/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
@@ -248,7 +249,7 @@ function ChapterPlayer() {
   );
 }
 
-function hasUnlocks(u: NonNullable<ReturnType<() => import("@/lib/campaign-engine").ChapterUnlock>>): boolean {
+function hasUnlocks(u: ChapterUnlock): boolean {
   return !!(
     u.characters?.length || u.artifacts?.length || u.cities?.length ||
     u.regions?.length || u.battles?.length || u.events?.length || u.states?.length
