@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Flame, Star, Sparkles, Search, ListOrdered, GitBranch, Map as MapIcon,
-  ChevronLeft, BookOpen, Crown, Lock, Compass, ScrollText, Feather, Eye, Play,
+  ChevronLeft, Crown, Lock, Compass, Eye, Play,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { profile, touchStreak, claimDaily } = useProfile();
+  const { profile, touchStreak } = useProfile();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); touchStreak(); }, [touchStreak]);
 
@@ -170,7 +170,6 @@ function Index() {
               <Link
                 key={d.id} to={d.link.to as "/"}
                 className="group relative w-60 shrink-0 overflow-hidden rounded-2xl border border-gold/20 bg-surface p-4 transition hover:border-gold/50"
-                onClick={() => setTimeout(() => claimDaily(d.id, 0), 0)}
               >
                 <span className="text-[10px] tracking-[0.2em] text-gold/80">+{d.reward} نقطة</span>
                 <p className="font-display mt-2 text-sm font-bold">{d.title}</p>
