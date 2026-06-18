@@ -13,6 +13,7 @@ import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
+import { Route as HistoryCalendarRouteImport } from './routes/history-calendar'
 import { Route as EncyclopediaRouteImport } from './routes/encyclopedia'
 import { Route as ContentAuditRouteImport } from './routes/content-audit'
 import { Route as CollectionRouteImport } from './routes/collection'
@@ -55,6 +56,11 @@ const OnThisDayRoute = OnThisDayRouteImport.update({
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryCalendarRoute = HistoryCalendarRouteImport.update({
+  id: '/history-calendar',
+  path: '/history-calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EncyclopediaRoute = EncyclopediaRouteImport.update({
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
   '/encyclopedia': typeof EncyclopediaRouteWithChildren
+  '/history-calendar': typeof HistoryCalendarRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -208,6 +215,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
+  '/history-calendar': typeof HistoryCalendarRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -237,6 +245,7 @@ export interface FileRoutesById {
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
   '/encyclopedia': typeof EncyclopediaRouteWithChildren
+  '/history-calendar': typeof HistoryCalendarRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -268,6 +277,7 @@ export interface FileRouteTypes {
     | '/collection'
     | '/content-audit'
     | '/encyclopedia'
+    | '/history-calendar'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/collection'
     | '/content-audit'
+    | '/history-calendar'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -323,6 +334,7 @@ export interface FileRouteTypes {
     | '/collection'
     | '/content-audit'
     | '/encyclopedia'
+    | '/history-calendar'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -353,6 +365,7 @@ export interface RootRouteChildren {
   CollectionRoute: typeof CollectionRoute
   ContentAuditRoute: typeof ContentAuditRoute
   EncyclopediaRoute: typeof EncyclopediaRouteWithChildren
+  HistoryCalendarRoute: typeof HistoryCalendarRoute
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
   ProfileRoute: typeof ProfileRoute
@@ -396,6 +409,13 @@ declare module '@tanstack/react-router' {
       path: '/map'
       fullPath: '/map'
       preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history-calendar': {
+      id: '/history-calendar'
+      path: '/history-calendar'
+      fullPath: '/history-calendar'
+      preLoaderRoute: typeof HistoryCalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/encyclopedia': {
@@ -615,6 +635,7 @@ const rootRouteChildren: RootRouteChildren = {
   CollectionRoute: CollectionRoute,
   ContentAuditRoute: ContentAuditRoute,
   EncyclopediaRoute: EncyclopediaRouteWithChildren,
+  HistoryCalendarRoute: HistoryCalendarRoute,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
   ProfileRoute: ProfileRoute,

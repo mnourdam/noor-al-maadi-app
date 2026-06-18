@@ -11,6 +11,11 @@ import {
   UPCOMING_REGIONS, MYSTERY_CHARACTERS, FLAGSHIP_CHAPTERS, todayKey,
   nextActiveCampaign,
 } from "@/lib/data";
+import {
+  todayEvents as calendarToday, gregorianLabel, hijriLabel,
+  CALENDAR_TYPE_LABELS, CALENDAR_TYPE_GLYPHS, primaryHref,
+  IMPORTANCE_LABEL,
+} from "@/lib/historical-calendar";
 import { useProfile } from "@/lib/profile";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
 
@@ -195,6 +200,9 @@ function Index() {
         </section>
       )}
 
+      {/* ============ HISTORICAL CALENDAR — TODAY ============ */}
+      {mounted && <OnThisDayCalendarCard />}
+
       {/* ============ DAILY MISSIONS (compact ribbon) ============ */}
       {mounted && dailies.length > 0 && (() => {
         const remaining = dailies.filter((d) => !claimedToday.includes(d.id)).length;
@@ -361,6 +369,8 @@ function ModeChip({ to, icon, label }: { to: string; icon: React.ReactNode; labe
 }
 
 // ----- Daily Discovery rotation -----
+
+// (component defined above)
 type DiscoveryItem =
   | { kind: "character"; id: string; title: string; eyebrow: string; body: string; icon: string; era: string; to: string }
   | { kind: "artifact";  id: string; title: string; eyebrow: string; body: string; icon: string; era: string; to: string }
@@ -419,4 +429,51 @@ function DiscoveryCard({ d }: { d: DiscoveryItem }) {
     return <Link to="/story/$id" params={{ id: d.id }}>{content}</Link>;
   }
   return <Link to={d.to as "/"}>{content}</Link>;
+}
+// ----- Historical calendar: Today card -----
+function OnThisDayCalendarCard() {
+  const events = calendarToday();
+  if (events.length === 0) return null;
+  const main = events[0];
+  const href = primaryHref(main) ?? "/history-calendar";
+  const hijri = hijriLabel(main);
+  return (
+    <section className="mt-10 px-5">
+      <SectionHeader
+        icon={<Calendar className="size-3.5" />}
+        eyebrow="التقويم التاريخي"
+        title="حدث في مثل هذا اليوم"
+      />
+      <Link
+        to={href as "/"}
+        className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/30 bg-surface p-5 transition hover:border-gold/60"
+      >
+        <div className="absolute -left-10 -top-10 size-32 rounded-full bg-gold/15 blur-3xl" />
+        <div className="relative">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[10px] tracking-[0.25em] text-gold">
+              {gregorianLabel(main)} · {main.year}
+            </p>
+            <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
+              {IMPORTANCE_LABEL[main.importance]}
+            </span>
+          </div>
+          {hijri && <p className="mt-0.5 text-[10px] text-white/50">الموافق {hijri}</p>}
+          <h3 className="font-display mt-1 text-lg font-bold leading-snug">{main.title}</h3>
+          <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{main.description}</p>
+          <div className="mt-3 flex items-center justify-between text-[11px]">
+            <span className="rounded-full border border-white/10 px-2 py-0.5 text-white/70">
+              {CALENDAR_TYPE_GLYPHS[main.type]} {CALENDAR_TYPE_LABELS[main.type]}
+            </span>
+            <span className="flex items-center gap-1 text-gold">اقرأ المزيد <ChevronLeft className="size-3" /></span>
+          </div>
+          {events.length > 1 && (
+            <p className="mt-3 text-[10px] text-white/55">
+              +{events.length - 1} أحداث أخرى في نفس اليوم
+            </p>
+          )}
+        </div>
+      </Link>
+    </section>
+  );
 }
