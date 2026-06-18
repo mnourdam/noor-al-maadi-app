@@ -312,10 +312,16 @@ function Index() {
 
       {/* ============ SEASON whisper ============ */}
       <section className="mt-12 px-5">
-        <div className="relative overflow-hidden rounded-3xl border border-gold/25 parchment-dark p-6">
+        <Link
+          to="/seasons"
+          className="group relative block overflow-hidden rounded-3xl border border-gold/25 parchment-dark p-6 transition hover:border-gold/50"
+        >
           <div className="arabesque-layer" />
           <div className="relative">
-            <p className="text-[10px] tracking-[0.3em] text-gold">موسم محدود · {season.endsAt}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] tracking-[0.3em] text-gold">موسم محدود · {season.endsAt}</p>
+              <span className="text-[10px] text-gold/70 group-hover:text-gold">الأرشيف ←</span>
+            </div>
             <p className="font-display mt-2 text-xl font-bold shimmer-text">{season.name}</p>
             <p className="mt-2 max-w-md text-[12px] text-white/65">{season.tagline}</p>
             <div className="mt-4 flex items-center gap-3">
@@ -325,7 +331,7 @@ function Index() {
               <span className="text-[10px] text-white/60">{Math.min(profile.seasonPoints, season.goalPoints)}/{season.goalPoints}</span>
             </div>
           </div>
-        </div>
+        </Link>
       </section>
 
       {/* ============ Quiet modes rail ============ */}
