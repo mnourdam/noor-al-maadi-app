@@ -13,6 +13,7 @@ import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
+import { Route as EncyclopediaRouteImport } from './routes/encyclopedia'
 import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AboutRouteImport } from './routes/about'
@@ -49,6 +50,11 @@ const OnThisDayRoute = OnThisDayRouteImport.update({
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EncyclopediaRoute = EncyclopediaRouteImport.update({
+  id: '/encyclopedia',
+  path: '/encyclopedia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CollectionRoute = CollectionRouteImport.update({
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
+  '/encyclopedia': typeof EncyclopediaRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/collection': typeof CollectionRoute
+  '/encyclopedia': typeof EncyclopediaRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
+  '/encyclopedia': typeof EncyclopediaRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/campaigns'
     | '/collection'
+    | '/encyclopedia'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/collection'
+    | '/encyclopedia'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/campaigns'
     | '/collection'
+    | '/encyclopedia'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -281,6 +293,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
   CollectionRoute: typeof CollectionRoute
+  EncyclopediaRoute: typeof EncyclopediaRoute
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
   ProfileRoute: typeof ProfileRoute
@@ -324,6 +337,13 @@ declare module '@tanstack/react-router' {
       path: '/map'
       fullPath: '/map'
       preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/encyclopedia': {
+      id: '/encyclopedia'
+      path: '/encyclopedia'
+      fullPath: '/encyclopedia'
+      preLoaderRoute: typeof EncyclopediaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/collection': {
@@ -481,6 +501,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
   CollectionRoute: CollectionRoute,
+  EncyclopediaRoute: EncyclopediaRoute,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
   ProfileRoute: ProfileRoute,
