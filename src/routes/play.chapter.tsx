@@ -102,7 +102,7 @@ function ChapterPlayer() {
             />
           ) : (
             <StageRenderer
-              key={stage.id ?? `${chapter.id}-${stageIdx}`}
+              key={`${chapter.id}-${stageIdx}`}
               stage={stage}
               onCompleteStage={() => {
                 // Discovery stages grant their refId here too (immediate)
