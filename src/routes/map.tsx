@@ -17,6 +17,7 @@ import {
   pinsForEra, overlayForEra, atlasCoverage, atlasEras,
   STATE_OVERLAYS, type AtlasPin, type AtlasPinKind,
 } from "@/lib/atlas";
+import { AtlasViewport } from "@/components/AtlasViewport";
 
 export const Route = createFileRoute("/map")({
   head: () => ({ meta: [{ title: "خارطة العالم الإسلامي" }] }),
@@ -125,14 +126,14 @@ function MapPage() {
           </div>
         )}
 
-        {/* Illustrated parchment map */}
-        <WorldMapCanvas
-          unlocked={profile.regionsUnlocked}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
+        {/* Illustrated parchment map (zoom / pan / pinch / fullscreen) */}
+        <AtlasViewport
           pins={pins}
           overlay={overlay}
           eraFilter={eraFilter}
+          regionsUnlocked={profile.regionsUnlocked}
+          selectedRegionId={selectedId}
+          onSelectRegion={setSelectedId}
         />
 
         {/* Region detail */}
