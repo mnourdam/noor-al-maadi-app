@@ -30,6 +30,7 @@ export const SECTION_GLYPHS: Record<EncyclopediaSection, string> = {
 
 /** Era ids known to the packs (matches bridges.era and data.ts ERAS). */
 export const KNOWN_ERAS: { id: string; label: string }[] = [
+  { id: "rashidun", label: "الخلافة الراشدة" },
   { id: "umayyad", label: "الدولة الأموية" },
   { id: "abbasid", label: "الدولة العباسية" },
   { id: "ayyubid", label: "الدولة الأيوبية" },
