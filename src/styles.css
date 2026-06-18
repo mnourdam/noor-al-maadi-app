@@ -67,6 +67,32 @@
   --font-body: var(--font-body);
 }
 
+/* ============================================================
+   Portrait orientation lock — visual fallback for browsers that
+   ignore Screen Orientation API / manifest "orientation".
+   When a small device rotates to landscape, hide the app and
+   show a polite "rotate back" overlay (RTL Arabic).
+   ============================================================ */
+@media (orientation: landscape) and (max-device-width: 900px) {
+  body > #root, body > div[id^="__"] { visibility: hidden; }
+  body::before {
+    content: "أدر جهازك إلى الوضع العمودي · Irth يعمل في الوضع العمودي فقط";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    font-family: "Cairo", system-ui, sans-serif;
+    font-weight: 700;
+    color: #f5d68a;
+    background: #0b1424;
+    direction: rtl;
+  }
+}
+
 :root {
   /* Premium dark navy + warm gold Arabic identity */
   --radius: 1rem;

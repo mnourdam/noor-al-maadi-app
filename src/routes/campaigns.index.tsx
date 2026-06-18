@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Swords, Lock, Crown, Check, ArrowLeft } from "lucide-react";
+import { Swords, Lock, Crown, Check, ArrowLeft, Sparkles } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { CAMPAIGNS, ERAS, UPCOMING_CAMPAIGNS } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
+import { listEngineCampaigns, campaignProgressFor } from "@/lib/campaign-engine";
 
 export const Route = createFileRoute("/campaigns/")({
   head: () => ({ meta: [{ title: "الحملات التاريخية" }] }),
@@ -11,10 +12,46 @@ export const Route = createFileRoute("/campaigns/")({
 
 function CampaignsHub() {
   const { profile } = useProfile();
+  const engineCampaigns = listEngineCampaigns();
 
   return (
     <AppShell>
       <Screen title="الحملات" subtitle="رحلاتٌ مصمَّمة تأخذك عبر العصور">
+        {/* === Campaign Engine (data-driven) === */}
+        {engineCampaigns.length > 0 && (
+          <div className="mb-6 space-y-4">
+            {engineCampaigns.map((c) => {
+              const p = campaignProgressFor(c, profile);
+              return (
+                <Link
+                  key={c.id}
+                  to="/play/campaign/$id"
+                  params={{ id: c.id }}
+                  className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-tl from-amber-900/40 via-surface to-stone-900/40 p-6"
+                >
+                  <div className="particle-field" />
+                  <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
+                  <div className="relative">
+                    <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold">
+                      <Sparkles className="size-3.5" /> حملة تفاعلية · {c.chapters.length.toLocaleString("ar-EG")} فصول
+                    </div>
+                    <h2 className="font-display mt-2 text-2xl font-bold shimmer-text">{c.title}</h2>
+                    {c.subtitle && <p className="mt-1 text-sm text-gold/80">{c.subtitle}</p>}
+                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{c.intro}</p>
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full bg-gradient-gold transition-all" style={{ width: `${p.percent}%` }} />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{p.completedChapters}/{p.totalChapters} فصلًا · {p.percent}٪</span>
+                      <span className="flex items-center gap-1 text-gold">ابدأ الرحلة <ArrowLeft className="size-3.5" /></span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
         {/* Flagship */}
         {CAMPAIGNS.filter((c) => c.flagship).map((c) => {
           const era = ERAS.find((e) => e.id === c.eraId);

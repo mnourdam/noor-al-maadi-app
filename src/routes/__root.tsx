@@ -135,6 +135,16 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    // Lock orientation to portrait on supported platforms (Android / Capacitor / installed PWA).
+    // Browsers that don't allow this silently reject — that's fine.
+    type LockableOrientation = ScreenOrientation & {
+      lock?: (orientation: "portrait" | "landscape" | "any") => Promise<void>;
+    };
+    const so = (typeof screen !== "undefined" ? (screen.orientation as LockableOrientation | undefined) : undefined);
+    so?.lock?.("portrait").catch(() => {});
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ProfileProvider>
