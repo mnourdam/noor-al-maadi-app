@@ -1,6 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { todayKey, dailyMissionsForDate } from "./data";
 
-const STORAGE_KEY = "hakaya.profile.v1";
+const STORAGE_KEY = "hakaya.profile.v2";
+
+export interface AppSettings {
+  ambienceEnabled: boolean;
+  ambienceVolume: number; // 0..1
+  reduceMotion: boolean;
+  notifications: boolean;
+}
 
 export interface ProfileState {
   name: string;
@@ -8,13 +16,13 @@ export interface ProfileState {
   points: number;
   streak: number;
   lastActiveDay: string | null;
-  storiesRead: string[];
+  storiesOpened: string[];
+  storiesRead: string[]; // FINISHED stories (after explicit confirm)
   savedStories: string[];
   puzzlesSolved: string[];
   whoSolved: string[];
   badges: string[];
   unlockedEras: string[];
-  // Gameplay
   investigationsCompleted: string[];
   timelinesCompleted: string[];
   decisionsCompleted: string[];
@@ -23,6 +31,11 @@ export interface ProfileState {
   artifactsFound: string[];
   charactersUnlocked: string[];
   regionsUnlocked: string[];
+  dailyClaimed: { day: string; ids: string[] };
+  seasonPoints: number;
+  seasonClaimed: boolean;
+  titlesEarned: string[];
+  settings: AppSettings;
 }
 
 const initial: ProfileState = {
@@ -31,12 +44,13 @@ const initial: ProfileState = {
   points: 0,
   streak: 0,
   lastActiveDay: null,
+  storiesOpened: [],
   storiesRead: [],
   savedStories: [],
   puzzlesSolved: [],
   whoSolved: [],
   badges: [],
-  unlockedEras: ["seerah", "rashidun"],
+  unlockedEras: ["seerah", "rashidun", "ayyubid"],
   investigationsCompleted: [],
   timelinesCompleted: [],
   decisionsCompleted: [],
@@ -45,6 +59,11 @@ const initial: ProfileState = {
   artifactsFound: [],
   charactersUnlocked: [],
   regionsUnlocked: ["hijaz"],
+  dailyClaimed: { day: "", ids: [] },
+  seasonPoints: 0,
+  seasonClaimed: false,
+  titlesEarned: [],
+  settings: { ambienceEnabled: false, ambienceVolume: 0.4, reduceMotion: false, notifications: true },
 };
 
 interface Ctx {
@@ -52,7 +71,8 @@ interface Ctx {
   login: (name: string) => void;
   logout: () => void;
   addPoints: (n: number) => void;
-  markStoryRead: (id: string) => void;
+  openStory: (id: string) => void;
+  finishStory: (id: string, missionId?: string) => void;
   toggleSavedStory: (id: string) => void;
   markPuzzleSolved: (id: string) => void;
   markWhoSolved: (id: string) => void;
@@ -67,13 +87,16 @@ interface Ctx {
   findArtifact: (id: string) => void;
   unlockCharacter: (id: string) => void;
   unlockRegion: (id: string, cost: number) => boolean;
+  claimDaily: (id: string, reward: number) => boolean;
+  claimSeason: (reward: number, title?: string) => boolean;
+  updateSettings: (patch: Partial<AppSettings>) => void;
+  todayDailyIds: () => string[];
 }
 
 const ProfileContext = createContext<Ctx | null>(null);
 
-function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+function addPointsTo(p: ProfileState, n: number): ProfileState {
+  return { ...p, points: p.points + n, seasonPoints: p.seasonPoints + Math.max(0, n) };
 }
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
@@ -83,7 +106,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setProfile({ ...initial, ...JSON.parse(raw) });
+      if (raw) setProfile({ ...initial, ...JSON.parse(raw), settings: { ...initial.settings, ...(JSON.parse(raw).settings ?? {}) } });
     } catch {}
     setHydrated(true);
   }, []);
@@ -103,14 +126,25 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     profile,
     login: (name) => update((p) => ({ ...p, name: name.trim() || "صديق التاريخ", loggedIn: true })),
     logout: () => setProfile(initial),
-    addPoints: (n) => update((p) => ({ ...p, points: p.points + n })),
-    markStoryRead: (id) => update((p) => {
-      const read = p.storiesRead.includes(id) ? p.storiesRead : [...p.storiesRead, id];
-      const points = p.storiesRead.includes(id) ? p.points : p.points + 10;
+    addPoints: (n) => update((p) => addPointsTo(p, n)),
+    openStory: (id) => update((p) => p.storiesOpened.includes(id) ? p : { ...p, storiesOpened: [...p.storiesOpened, id] }),
+    finishStory: (id, missionId) => update((p) => {
+      if (p.storiesRead.includes(id)) {
+        // Already finished — still allow mission completion if first time for that mission
+        if (missionId && !p.missionsCompleted.includes(missionId)) {
+          return addPointsTo({ ...p, missionsCompleted: [...p.missionsCompleted, missionId] }, 10);
+        }
+        return p;
+      }
+      const read = [...p.storiesRead, id];
       const badges = [...p.badges];
       if (!badges.includes("first_story") && read.length >= 1) badges.push("first_story");
       if (!badges.includes("five_stories") && read.length >= 5) badges.push("five_stories");
-      return { ...p, storiesRead: read, points, badges };
+      let np = addPointsTo({ ...p, storiesRead: read, badges }, 25);
+      if (missionId && !np.missionsCompleted.includes(missionId)) {
+        np = { ...np, missionsCompleted: [...np.missionsCompleted, missionId] };
+      }
+      return np;
     }),
     toggleSavedStory: (id) => update((p) => ({
       ...p,
@@ -118,78 +152,38 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     })),
     markPuzzleSolved: (id) => update((p) => {
       if (p.puzzlesSolved.includes(id)) return p;
-      const solved = [...p.puzzlesSolved, id];
-      const badges = [...p.badges];
-      if (!badges.includes("first_puzzle")) badges.push("first_puzzle");
-      if (!badges.includes("ten_puzzles") && solved.length >= 10) badges.push("ten_puzzles");
-      return { ...p, puzzlesSolved: solved, points: p.points + 15, badges };
+      return addPointsTo({ ...p, puzzlesSolved: [...p.puzzlesSolved, id] }, 15);
     }),
     markWhoSolved: (id) => update((p) => {
       if (p.whoSolved.includes(id)) return p;
-      const solved = [...p.whoSolved, id];
-      const badges = [...p.badges];
-      if (!badges.includes("who_am_i") && solved.length >= 5) badges.push("who_am_i");
-      return { ...p, whoSolved: solved, points: p.points + 20, badges };
+      return addPointsTo({ ...p, whoSolved: [...p.whoSolved, id] }, 20);
     }),
-    unlockEra: (id) => update((p) => {
-      if (p.unlockedEras.includes(id)) return p;
-      const eras = [...p.unlockedEras, id];
-      const badges = [...p.badges];
-      if (eras.length >= 10 && !badges.includes("all_eras")) badges.push("all_eras");
-      return { ...p, unlockedEras: eras, badges };
-    }),
+    unlockEra: (id) => update((p) => p.unlockedEras.includes(id) ? p : { ...p, unlockedEras: [...p.unlockedEras, id] }),
     touchStreak: () => update((p) => {
       const today = todayKey();
       if (p.lastActiveDay === today) return p;
       const y = new Date(); y.setDate(y.getDate() - 1);
-      const yesterday = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
+      const yesterday = todayKey(y);
       const streak = p.lastActiveDay === yesterday ? p.streak + 1 : 1;
-      const badges = [...p.badges];
-      if (streak >= 3 && !badges.includes("streak_3")) badges.push("streak_3");
-      if (streak >= 7 && !badges.includes("streak_7")) badges.push("streak_7");
-      return { ...p, streak, lastActiveDay: today, badges };
+      return { ...p, streak, lastActiveDay: today };
     }),
     awardBadge,
-    completeInvestigation: (id, reward) => update((p) => {
-      if (p.investigationsCompleted.includes(id)) return p;
-      return { ...p, investigationsCompleted: [...p.investigationsCompleted, id], points: p.points + reward };
-    }),
-    completeTimeline: (id, reward) => update((p) => {
-      if (p.timelinesCompleted.includes(id)) return p;
-      return { ...p, timelinesCompleted: [...p.timelinesCompleted, id], points: p.points + reward };
-    }),
-    completeDecision: (id, reward) => update((p) => {
-      if (p.decisionsCompleted.includes(id)) return p;
-      return { ...p, decisionsCompleted: [...p.decisionsCompleted, id], points: p.points + reward };
-    }),
-    completeMission: (id, reward) => update((p) => {
-      if (p.missionsCompleted.includes(id)) return p;
-      return { ...p, missionsCompleted: [...p.missionsCompleted, id], points: p.points + reward };
-    }),
+    completeInvestigation: (id, reward) => update((p) => p.investigationsCompleted.includes(id) ? p
+      : addPointsTo({ ...p, investigationsCompleted: [...p.investigationsCompleted, id] }, reward)),
+    completeTimeline: (id, reward) => update((p) => p.timelinesCompleted.includes(id) ? p
+      : addPointsTo({ ...p, timelinesCompleted: [...p.timelinesCompleted, id] }, reward)),
+    completeDecision: (id, reward) => update((p) => p.decisionsCompleted.includes(id) ? p
+      : addPointsTo({ ...p, decisionsCompleted: [...p.decisionsCompleted, id] }, reward)),
+    completeMission: (id, reward) => update((p) => p.missionsCompleted.includes(id) ? p
+      : addPointsTo({ ...p, missionsCompleted: [...p.missionsCompleted, id] }, reward)),
     completeCampaign: (id, reward) => update((p) => {
       if (p.campaignsCompleted.includes(id)) return p;
-      const badges = [...p.badges];
-      const list = [...p.campaignsCompleted, id];
-      if (list.length >= 3 && !badges.includes("three_campaigns")) badges.push("three_campaigns");
-      if (list.length >= 10 && !badges.includes("all_campaigns")) badges.push("all_campaigns");
-      return { ...p, campaignsCompleted: list, points: p.points + reward, badges };
+      return addPointsTo({ ...p, campaignsCompleted: [...p.campaignsCompleted, id] }, reward);
     }),
-    findArtifact: (id) => update((p) => {
-      if (p.artifactsFound.includes(id)) return p;
-      const list = [...p.artifactsFound, id];
-      const badges = [...p.badges];
-      if (!badges.includes("first_artifact")) badges.push("first_artifact");
-      if (list.length >= 10 && !badges.includes("ten_artifacts")) badges.push("ten_artifacts");
-      return { ...p, artifactsFound: list, points: p.points + 15, badges };
-    }),
-    unlockCharacter: (id) => update((p) => {
-      if (p.charactersUnlocked.includes(id)) return p;
-      const list = [...p.charactersUnlocked, id];
-      const badges = [...p.badges];
-      if (!badges.includes("first_card")) badges.push("first_card");
-      if (list.length >= 6 && !badges.includes("six_cards")) badges.push("six_cards");
-      return { ...p, charactersUnlocked: list, points: p.points + 20, badges };
-    }),
+    findArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p
+      : addPointsTo({ ...p, artifactsFound: [...p.artifactsFound, id] }, 15)),
+    unlockCharacter: (id) => update((p) => p.charactersUnlocked.includes(id) ? p
+      : addPointsTo({ ...p, charactersUnlocked: [...p.charactersUnlocked, id] }, 20)),
     unlockRegion: (id, cost) => {
       let ok = false;
       update((p) => {
@@ -200,6 +194,33 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       });
       return ok;
     },
+    claimDaily: (id, reward) => {
+      let ok = false;
+      update((p) => {
+        const today = todayKey();
+        const dc = p.dailyClaimed.day === today ? p.dailyClaimed : { day: today, ids: [] };
+        if (dc.ids.includes(id)) return p;
+        ok = true;
+        const next = addPointsTo({ ...p, dailyClaimed: { day: today, ids: [...dc.ids, id] } }, reward);
+        return next;
+      });
+      return ok;
+    },
+    claimSeason: (reward, title) => {
+      let ok = false;
+      update((p) => {
+        if (p.seasonClaimed) return p;
+        ok = true;
+        return addPointsTo({
+          ...p,
+          seasonClaimed: true,
+          titlesEarned: title && !p.titlesEarned.includes(title) ? [...p.titlesEarned, title] : p.titlesEarned,
+        }, reward);
+      });
+      return ok;
+    },
+    updateSettings: (patch) => update((p) => ({ ...p, settings: { ...p.settings, ...patch } })),
+    todayDailyIds: () => dailyMissionsForDate().map((m) => m.id),
   }), [profile, update, awardBadge]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;

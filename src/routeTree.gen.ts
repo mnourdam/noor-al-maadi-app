@@ -9,24 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
-import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
 import { Route as StoryIdRouteImport } from './routes/story.$id'
 import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
 import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
 import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
-import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OnThisDayRoute = OnThisDayRouteImport.update({
   id: '/on-this-day',
   path: '/on-this-day',
@@ -35,11 +26,6 @@ const OnThisDayRoute = OnThisDayRouteImport.update({
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CollectionRoute = CollectionRouteImport.update({
-  id: '/collection',
-  path: '/collection',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CampaignsRoute = CampaignsRouteImport.update({
@@ -51,11 +37,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const CampaignsIndexRoute = CampaignsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CampaignsRoute,
 } as any)
 const StoryIdRoute = StoryIdRouteImport.update({
   id: '/story/$id',
@@ -77,105 +58,76 @@ const PlayDecisionsRoute = PlayDecisionsRouteImport.update({
   path: '/play/decisions',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CampaignsEraRoute = CampaignsEraRouteImport.update({
-  id: '/$era',
-  path: '/$era',
-  getParentRoute: () => CampaignsRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/campaigns': typeof CampaignsRouteWithChildren
-  '/collection': typeof CollectionRoute
+  '/campaigns': typeof CampaignsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
-  '/profile': typeof ProfileRoute
-  '/campaigns/$era': typeof CampaignsEraRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
-  '/campaigns/': typeof CampaignsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/collection': typeof CollectionRoute
+  '/campaigns': typeof CampaignsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
-  '/profile': typeof ProfileRoute
-  '/campaigns/$era': typeof CampaignsEraRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
-  '/campaigns': typeof CampaignsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/campaigns': typeof CampaignsRouteWithChildren
-  '/collection': typeof CollectionRoute
+  '/campaigns': typeof CampaignsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
-  '/profile': typeof ProfileRoute
-  '/campaigns/$era': typeof CampaignsEraRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
-  '/campaigns/': typeof CampaignsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/campaigns'
-    | '/collection'
     | '/map'
     | '/on-this-day'
-    | '/profile'
-    | '/campaigns/$era'
     | '/play/decisions'
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
-    | '/campaigns/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/collection'
+    | '/campaigns'
     | '/map'
     | '/on-this-day'
-    | '/profile'
-    | '/campaigns/$era'
     | '/play/decisions'
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
-    | '/campaigns'
   id:
     | '__root__'
     | '/'
     | '/campaigns'
-    | '/collection'
     | '/map'
     | '/on-this-day'
-    | '/profile'
-    | '/campaigns/$era'
     | '/play/decisions'
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
-    | '/campaigns/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CampaignsRoute: typeof CampaignsRouteWithChildren
-  CollectionRoute: typeof CollectionRoute
+  CampaignsRoute: typeof CampaignsRoute
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
-  ProfileRoute: typeof ProfileRoute
   PlayDecisionsRoute: typeof PlayDecisionsRoute
   PlayInvestigateRoute: typeof PlayInvestigateRoute
   PlayTimelineRoute: typeof PlayTimelineRoute
@@ -184,13 +136,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/on-this-day': {
       id: '/on-this-day'
       path: '/on-this-day'
@@ -203,13 +148,6 @@ declare module '@tanstack/react-router' {
       path: '/map'
       fullPath: '/map'
       preLoaderRoute: typeof MapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/collection': {
-      id: '/collection'
-      path: '/collection'
-      fullPath: '/collection'
-      preLoaderRoute: typeof CollectionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/campaigns': {
@@ -225,13 +163,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/campaigns/': {
-      id: '/campaigns/'
-      path: '/'
-      fullPath: '/campaigns/'
-      preLoaderRoute: typeof CampaignsIndexRouteImport
-      parentRoute: typeof CampaignsRoute
     }
     '/story/$id': {
       id: '/story/$id'
@@ -261,37 +192,14 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayDecisionsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/campaigns/$era': {
-      id: '/campaigns/$era'
-      path: '/$era'
-      fullPath: '/campaigns/$era'
-      preLoaderRoute: typeof CampaignsEraRouteImport
-      parentRoute: typeof CampaignsRoute
-    }
   }
 }
 
-interface CampaignsRouteChildren {
-  CampaignsEraRoute: typeof CampaignsEraRoute
-  CampaignsIndexRoute: typeof CampaignsIndexRoute
-}
-
-const CampaignsRouteChildren: CampaignsRouteChildren = {
-  CampaignsEraRoute: CampaignsEraRoute,
-  CampaignsIndexRoute: CampaignsIndexRoute,
-}
-
-const CampaignsRouteWithChildren = CampaignsRoute._addFileChildren(
-  CampaignsRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CampaignsRoute: CampaignsRouteWithChildren,
-  CollectionRoute: CollectionRoute,
+  CampaignsRoute: CampaignsRoute,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
-  ProfileRoute: ProfileRoute,
   PlayDecisionsRoute: PlayDecisionsRoute,
   PlayInvestigateRoute: PlayInvestigateRoute,
   PlayTimelineRoute: PlayTimelineRoute,
@@ -300,13 +208,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
