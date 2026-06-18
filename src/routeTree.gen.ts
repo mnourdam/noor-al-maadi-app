@@ -22,6 +22,7 @@ import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
 import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
 import { Route as PlayChapterRouteImport } from './routes/play.chapter'
 import { Route as FigureIdRouteImport } from './routes/figure.$id'
+import { Route as BattleIdRouteImport } from './routes/battle.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
 
@@ -90,6 +91,11 @@ const FigureIdRoute = FigureIdRouteImport.update({
   path: '/figure/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BattleIdRoute = BattleIdRouteImport.update({
+  id: '/battle/$id',
+  path: '/battle/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CampaignsEraRoute = CampaignsEraRouteImport.update({
   id: '/$era',
   path: '/$era',
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/figure/$id': typeof FigureIdRoute
+  '/battle/$id': typeof BattleIdRoute
   '/play/chapter': typeof PlayChapterRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/figure/$id': typeof FigureIdRoute
+  '/battle/$id': typeof BattleIdRoute
   '/play/chapter': typeof PlayChapterRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/figure/$id': typeof FigureIdRoute
+  '/battle/$id': typeof BattleIdRoute
   '/play/chapter': typeof PlayChapterRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/battle/$id'
     | '/campaigns/$era'
     | '/figure/$id'
+    | '/battle/$id'
     | '/play/chapter'
     | '/play/decisions'
     | '/play/investigate'
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/battle/$id'
     | '/campaigns/$era'
     | '/figure/$id'
+    | '/battle/$id'
     | '/play/chapter'
     | '/play/decisions'
     | '/play/investigate'
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/battle/$id'
     | '/campaigns/$era'
     | '/figure/$id'
+    | '/battle/$id'
     | '/play/chapter'
     | '/play/decisions'
     | '/play/investigate'
@@ -214,6 +226,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   BattleIdRoute: typeof BattleIdRoute
   FigureIdRoute: typeof FigureIdRoute
+  BattleIdRoute: typeof BattleIdRoute
   PlayChapterRoute: typeof PlayChapterRoute
   PlayDecisionsRoute: typeof PlayDecisionsRoute
   PlayInvestigateRoute: typeof PlayInvestigateRoute
@@ -314,6 +327,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FigureIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/battle/$id': {
+      id: '/battle/$id'
+      path: '/battle/$id'
+      fullPath: '/battle/$id'
+      preLoaderRoute: typeof BattleIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/campaigns/$era': {
       id: '/campaigns/$era'
       path: '/$era'
@@ -354,6 +374,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   BattleIdRoute: BattleIdRoute,
   FigureIdRoute: FigureIdRoute,
+  BattleIdRoute: BattleIdRoute,
   PlayChapterRoute: PlayChapterRoute,
   PlayDecisionsRoute: PlayDecisionsRoute,
   PlayInvestigateRoute: PlayInvestigateRoute,
