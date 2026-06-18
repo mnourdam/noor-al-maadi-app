@@ -369,6 +369,8 @@ function ModeChip({ to, icon, label }: { to: string; icon: React.ReactNode; labe
 }
 
 // ----- Daily Discovery rotation -----
+
+// (component defined above)
 type DiscoveryItem =
   | { kind: "character"; id: string; title: string; eyebrow: string; body: string; icon: string; era: string; to: string }
   | { kind: "artifact";  id: string; title: string; eyebrow: string; body: string; icon: string; era: string; to: string }
