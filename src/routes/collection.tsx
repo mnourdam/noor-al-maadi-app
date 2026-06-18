@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, type Era } from "@/lib/data";
+import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, fogHint, type Era } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
@@ -96,7 +96,7 @@ function useUnlocks() {
 // ───── Reusable card
 function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, mystery }: {
   unlocked: boolean; rarity: Rarity; icon: string; title: string; subtitle: string; footer?: string;
-  onClick: () => void; mystery?: string;
+  onClick: () => void; mystery?: { title: string; clue: string };
 }) {
   const meta = RARITY_META[rarity];
   return (
@@ -113,29 +113,47 @@ function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, myster
             rarity === "rare"      ? "bg-gradient-to-br from-sky-400/15 via-sky-400/0 to-transparent" :
                                      "bg-gradient-to-br from-white/5 to-transparent"}`} />
       )}
+      {/* fog wash for locked */}
+      {!unlocked && (
+        <>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,oklch(0.85_0.02_80/0.08),transparent_60%),radial-gradient(circle_at_70%_80%,oklch(0.82_0.05_240/0.07),transparent_60%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/40" />
+        </>
+      )}
       {/* sheen */}
       {unlocked && rarity !== "common" && (
         <div className="pointer-events-none absolute -inset-x-10 -top-12 h-24 rotate-12 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
       )}
       <div className="relative p-3">
         <div className="flex items-start justify-between gap-2">
-          <div className={`grid size-12 place-items-center rounded-xl text-2xl
-            ${unlocked ? "bg-black/30 ring-1 ring-white/10" : "bg-black/40"}`}>
-            {unlocked ? icon : <Lock className="size-4 text-muted-foreground" />}
+          <div className={`relative grid size-12 place-items-center overflow-hidden rounded-xl text-2xl
+            ${unlocked ? "bg-black/30 ring-1 ring-white/10" : "bg-black/50 ring-1 ring-white/5"}`}>
+            {unlocked ? icon : (
+              <>
+                <span className="select-none text-2xl opacity-20 blur-[3px] grayscale">{icon}</span>
+                <Lock className="absolute size-3.5 text-gold/70" />
+              </>
+            )}
           </div>
-          <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide ${meta.chip}`}>
-            {meta.label}
-          </span>
+          {unlocked ? (
+            <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide ${meta.chip}`}>
+              {meta.label}
+            </span>
+          ) : (
+            <span className="rounded-full bg-black/40 px-2 py-0.5 text-[9px] font-bold tracking-wide text-gold/70 ring-1 ring-gold/20">
+              في الضباب
+            </span>
+          )}
         </div>
-        <p className="font-display mt-2 line-clamp-1 text-sm font-bold">
-          {unlocked ? title : "؟؟؟"}
+        <p className={`font-display mt-2 line-clamp-1 text-sm font-bold ${unlocked ? "" : "italic text-gold/85"}`}>
+          {unlocked ? title : (mystery?.title ?? "أثرٌ في الضباب")}
         </p>
-        <p className="mt-0.5 line-clamp-1 text-[10px] text-gold/80">{subtitle}</p>
-        {footer && (
-          <p className="mt-1 line-clamp-1 text-[10px] text-muted-foreground">
-            {unlocked ? footer : mystery ?? "اكمل المهام لاكتشافه"}
-          </p>
-        )}
+        <p className="mt-0.5 line-clamp-1 text-[10px] text-gold/80">
+          {unlocked ? subtitle : "مجهولٌ بعد"}
+        </p>
+        <p className="mt-1 line-clamp-2 min-h-[28px] text-[10px] leading-snug text-muted-foreground">
+          {unlocked ? (footer ?? "") : (mystery?.clue ?? "اكمل رحلتك لتكشف هذا اللغز")}
+        </p>
       </div>
     </button>
   );
@@ -289,7 +307,7 @@ function CollectionPage() {
                 return (
                   <Card key={c.id} unlocked={open} rarity={r} icon={c.avatar}
                     title={c.name} subtitle={c.title} footer={c.power}
-                    mystery="أكمل حملة لاكتشاف هويّته"
+                    mystery={fogHint(c.id)}
                     onClick={() => {
                       if (open) navigate({ to: "/figure/$id", params: { id: c.id } });
                     }} />
@@ -310,6 +328,7 @@ function CollectionPage() {
                 return (
                   <Card key={a.id} unlocked={open} rarity={r} icon={a.icon}
                     title={a.name} subtitle={`${a.typeLabel} · ${ERAS.find(e => e.id === a.era)?.name}`}
+                    mystery={fogHint(a.id)}
                     onClick={() => open && setReveal({
                       rarity: r, icon: a.icon, title: a.name,
                       subtitle: `${a.typeLabel} · ${ERAS.find(e => e.id === a.era)?.name}`,
@@ -331,12 +350,8 @@ function CollectionPage() {
                 return (
                   <Card key={b.id} unlocked={open} rarity={b.rarity} icon={b.icon}
                     title={b.name} subtitle={`${b.year} · ${b.location}`} footer={`النصر: ${b.victor}`}
-                    mystery="اقرأ قصّتها لتكشفها"
-                    onClick={() => open && setReveal({
-                      rarity: b.rarity, icon: b.icon, title: b.name,
-                      subtitle: `${b.year} · ${b.location}`,
-                      lines: [b.summary, `قائد النصر: ${b.victor}`],
-                    })} />
+                    mystery={fogHint(b.id)}
+                    onClick={() => { if (open) navigate({ to: "/battle/$id", params: { id: b.id } }); }} />
                 );
               })}
             </div>
@@ -352,6 +367,7 @@ function CollectionPage() {
                 const open = profile.artifactsFound.includes(m.id);
                 const r = aRarity(m.id);
                 const meta = RARITY_META[r];
+                const fog = fogHint(m.id);
                 return (
                   <button key={m.id} onClick={() => open && setReveal({
                     rarity: r, icon: m.icon, title: m.name,
@@ -359,16 +375,21 @@ function CollectionPage() {
                     lines: [m.description],
                   })}
                     className={`flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 text-right transition-all ${open ? `ring-1 ${meta.ring}` : "opacity-70"}`}>
-                    <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-black/30 text-2xl ring-1 ring-white/10">
-                      {open ? m.icon : <Lock className="size-4 text-muted-foreground" />}
+                    <div className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
+                      {open ? m.icon : (
+                        <>
+                          <span className="select-none text-2xl opacity-20 blur-[3px] grayscale">{m.icon}</span>
+                          <Lock className="absolute size-3.5 text-gold/70" />
+                        </>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-display truncate text-sm font-bold">{open ? m.name : "مخطوطٌ مجهول"}</p>
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${meta.chip}`}>{meta.label}</span>
+                        <p className={`font-display truncate text-sm font-bold ${open ? "" : "italic text-gold/85"}`}>{open ? m.name : fog.title}</p>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${open ? meta.chip : "bg-black/40 text-gold/70 ring-1 ring-gold/20"}`}>{open ? meta.label : "في الضباب"}</span>
                       </div>
-                      <p className="text-[10px] text-gold/80">{m.typeLabel} · {ERAS.find(e => e.id === m.era)?.name}</p>
-                      <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{open ? m.description : "اكتشفه خلال رحلتك"}</p>
+                      <p className="text-[10px] text-gold/80">{open ? `${m.typeLabel} · ${ERAS.find(e => e.id === m.era)?.name}` : "مخطوطٌ مجهول"}</p>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{open ? m.description : fog.clue}</p>
                     </div>
                   </button>
                 );
@@ -387,7 +408,7 @@ function CollectionPage() {
                 return (
                   <Card key={l.id} unlocked={open} rarity={l.rarity} icon={l.icon}
                     title={l.name} subtitle={l.place} footer={ERAS.find(e => e.id === l.era)?.name}
-                    mystery="افتح المنطقة على الخارطة"
+                    mystery={fogHint(l.id)}
                     onClick={() => open && setReveal({
                       rarity: l.rarity, icon: l.icon, title: l.name,
                       subtitle: `${l.place} · ${ERAS.find(e => e.id === l.era)?.name}`,
