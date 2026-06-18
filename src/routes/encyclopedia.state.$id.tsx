@@ -6,7 +6,7 @@ import {
   SECTION_LABELS, SECTION_GLYPHS, stateEntities, stateEntityForEra, sortChrono,
   KNOWN_ERAS, type EncyclopediaSection,
 } from "@/lib/encyclopedia";
-import { CAMPAIGN_REGISTRY } from "@/lib/campaign-engine/registry";
+import { ENGINE_CAMPAIGNS } from "@/lib/campaign-engine/registry";
 import { ERAS, type Era } from "@/lib/data";
 
 const SECTION_ORDER: EncyclopediaSection[] = [
@@ -47,7 +47,7 @@ function StatePage() {
   const era = ERAS.find((e) => e.id === id);
   const state = stateEntityForEra(id);
   const groups = stateEntities(id);
-  const campaigns = CAMPAIGN_REGISTRY.filter((c) => (c as { packId?: string }).packId === id || c.eraId === id);
+  const campaigns = ENGINE_CAMPAIGNS.filter((c) => c.packId === id);
 
   const totalEntities = SECTION_ORDER.reduce((s, k) => s + groups[k].length, 0);
 
