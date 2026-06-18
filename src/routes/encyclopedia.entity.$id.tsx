@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ChevronRight, Clock, ExternalLink } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { EncyclopediaCard, entityHref } from "@/components/EncyclopediaCard";
+import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import {
   SECTION_LABELS, SECTION_GLYPHS, neighboursGrouped, getPackEntity,
   type EncyclopediaSection,
@@ -104,12 +104,6 @@ function EntityPage() {
             >
               <Clock className="size-3" /> {e.timelinePosition} م · الخط الزمني
             </Link>
-            <Link
-              {...entityHref(e)}
-              className="hidden"
-              aria-hidden
-              tabIndex={-1}
-            >self</Link>
             {legacyRef && legacyRef.kind === "city" && (
               <Link to="/city/$id" params={{ id: legacyRef.id }}
                     className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-white/80 hover:border-gold/40 hover:text-gold">
