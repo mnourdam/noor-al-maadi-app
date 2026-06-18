@@ -54,11 +54,6 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SeasonsRoute = SeasonsRouteImport.update({
-  id: '/seasons',
-  path: '/seasons',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OnThisDayRoute = OnThisDayRouteImport.update({
   id: '/on-this-day',
   path: '/on-this-day',
