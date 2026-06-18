@@ -37,6 +37,7 @@ export const KNOWN_ERAS: { id: string; label: string }[] = [
   { id: "mamluk", label: "الدولة المملوكية" },
   { id: "andalusia", label: "الأندلس الإسلامية" },
   { id: "ottoman", label: "الدولة العثمانية" },
+  { id: "seljuk", label: "الدولة السلجوقية" },
 ];
 
 function isScholar(e: PackEntity): boolean {
