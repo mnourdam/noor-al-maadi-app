@@ -12,7 +12,7 @@ import {
 } from "@/lib/campaign-engine";
 import { isQuizPassed, campaignScholarKey } from "@/lib/quiz-engine";
 
-export const Route = createFileRoute("/play/campaign/$id")({
+export const Route = createFileRoute("/play/campaign/$id/")({
   head: () => ({ meta: [{ title: "حملة تاريخية — إرث" }] }),
   component: CampaignOverview,
   notFoundComponent: () => (
