@@ -370,3 +370,64 @@
     user-select: none;
   }
 }
+
+@layer utilities {
+  /* === Illustrated world map === */
+  .map-parchment {
+    background-color: oklch(0.86 0.06 78);
+    background-image:
+      radial-gradient(ellipse at 18% 12%, oklch(0.72 0.09 55 / 0.45), transparent 55%),
+      radial-gradient(ellipse at 82% 88%, oklch(0.62 0.1 45 / 0.55), transparent 60%),
+      radial-gradient(ellipse at 50% 50%, oklch(0.94 0.05 80 / 0.25), transparent 65%),
+      repeating-linear-gradient(38deg, oklch(0.78 0.06 60 / 0.07) 0 2px, transparent 2px 7px),
+      repeating-linear-gradient(-52deg, oklch(0.78 0.06 60 / 0.05) 0 1px, transparent 1px 9px);
+    color: oklch(0.22 0.05 50);
+    box-shadow:
+      inset 0 0 80px oklch(0.35 0.09 40 / 0.45),
+      inset 0 0 0 1px oklch(0.55 0.09 50 / 0.35);
+  }
+  .map-vignette::after {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at center, transparent 55%, oklch(0.25 0.07 40 / 0.55) 100%);
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  @keyframes fog-drift {
+    0%   { transform: translate3d(-3%, 0, 0); opacity: .55; }
+    50%  { transform: translate3d(3%, -1%, 0); opacity: .75; }
+    100% { transform: translate3d(-3%, 0, 0); opacity: .55; }
+  }
+  .fog-layer {
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 30% 40%, oklch(0.95 0.02 80 / 0.6), transparent 55%),
+      radial-gradient(ellipse at 70% 60%, oklch(0.9 0.02 80 / 0.55), transparent 60%);
+    filter: blur(2px);
+    animation: fog-drift 14s ease-in-out infinite;
+    mix-blend-mode: screen;
+  }
+
+  @keyframes route-dash {
+    to { stroke-dashoffset: -40; }
+  }
+  .route-dash { animation: route-dash 8s linear infinite; }
+
+  @keyframes sail-drift {
+    0%   { transform: translate(0, 0) rotate(-4deg); }
+    50%  { transform: translate(2px, -2px) rotate(4deg); }
+    100% { transform: translate(0, 0) rotate(-4deg); }
+  }
+  .sail-drift { animation: sail-drift 5s ease-in-out infinite; transform-origin: center; }
+
+  @keyframes landmark-pulse {
+    0%, 100% { transform: scale(1); opacity: .9; }
+    50%      { transform: scale(1.18); opacity: 1; }
+  }
+  .landmark-pulse { animation: landmark-pulse 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+
+  .ink-stroke { stroke: oklch(0.28 0.08 40 / 0.7); }
+  .ink-stroke-light { stroke: oklch(0.32 0.07 45 / 0.45); }
+}
