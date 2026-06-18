@@ -33,7 +33,7 @@ const DIFFICULTY_LABEL: Record<string, string> = {
 };
 
 function CampaignOverview() {
-  const { id } = useParams({ from: "/play/campaign/$id" });
+  const { id } = useParams({ from: "/play/campaign/$id/" });
   const campaign = getEngineCampaign(id);
   if (!campaign) throw notFound();
 
