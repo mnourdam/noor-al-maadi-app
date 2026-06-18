@@ -9,6 +9,7 @@ import {
   citiesForStory, citiesForEra, citiesInRegion, getCity,
   type CityProfile,
 } from "./cities";
+import { packEntitiesForBridge, neighborsOf } from "./packs";
 
 export type EntityKind = "character" | "battle" | "region" | "story" | "artifact" | "campaign" | "city";
 
@@ -161,6 +162,33 @@ export function buildRelations(ref: EntityRef): RelatedGraph {
     ref.kind === "artifact"  ? fromArtifact(ref.id) :
     ref.kind === "city"      ? fromCity(ref.id) :
     fromCampaign(ref.era);
+
+  // ---- Content-pack augmentation -----------------------------------------
+  // Pull pack entities that bridge to this ref's legacy id, then surface
+  // their neighbours back into the legacy graph so Related History stays in
+  // sync as future packs add new entities.
+  const bridgeKey =
+    ref.kind === "character" ? "characterId" :
+    ref.kind === "battle"    ? "battleId"    :
+    ref.kind === "region"    ? "regionId"    :
+    ref.kind === "story"     ? "storyId"     :
+    ref.kind === "artifact"  ? "artifactId"  :
+    ref.kind === "city"      ? "cityId"      :
+    "era";
+  const bridgeId = ref.kind === "campaign" ? ref.era : (ref as { id: string }).id;
+  const seedEntities = packEntitiesForBridge(bridgeKey as never, bridgeId);
+  const packNeighbours = seedEntities.flatMap(e => [e, ...neighborsOf(e.id)]);
+  for (const pe of packNeighbours) {
+    const b = pe.bridges; if (!b) continue;
+    if (b.characterId) { const c = CHARACTERS.find(x => x.id === b.characterId); if (c) g.characters.push(c); }
+    if (b.battleId)    { const bp = BATTLE_PROFILES[b.battleId]; if (bp) g.battles.push(bp); }
+    if (b.regionId)    { const r = MAP_REGIONS.find(x => x.id === b.regionId); if (r) g.regions.push(r); }
+    if (b.cityId)      { const ct = getCity(b.cityId); if (ct) g.cities.push(ct); }
+    if (b.artifactId)  { const a = ARTIFACTS.find(x => x.id === b.artifactId); if (a) g.artifacts.push(a); }
+    if (b.storyId)     { const s = STORIES.find(x => x.id === b.storyId); if (s) g.stories.push(s); }
+    if (b.era)         { g.eras.push(b.era as Era); }
+  }
+  // ------------------------------------------------------------------------
 
   const eras = Array.from(new Set(g.eras));
   g.campaigns = CAMPAIGNS.filter(c => eras.includes(c.eraId));
