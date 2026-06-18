@@ -31,6 +31,7 @@ import { Route as BattleIdRouteImport } from './routes/battle.$id'
 import { Route as PlayCampaignIdRouteImport } from './routes/play.campaign.$id'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
+import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
 import { Route as PlayCampaignIdIndexRouteImport } from './routes/play.campaign.$id.index'
 import { Route as PlayCampaignIdChapterChapterRouteImport } from './routes/play.campaign.$id.chapter.$chapter'
 
@@ -144,6 +145,11 @@ const EncyclopediaStateIdRoute = EncyclopediaStateIdRouteImport.update({
   path: '/state/$id',
   getParentRoute: () => EncyclopediaRoute,
 } as any)
+const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
+  id: '/entity/$id',
+  path: '/entity/$id',
+  getParentRoute: () => EncyclopediaRoute,
+} as any)
 const PlayCampaignIdIndexRoute = PlayCampaignIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/campaigns/': typeof CampaignsIndexRoute
+  '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdRouteWithChildren
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/campaigns': typeof CampaignsIndexRoute
+  '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdIndexRoute
@@ -227,6 +235,7 @@ export interface FileRoutesById {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/campaigns/': typeof CampaignsIndexRoute
+  '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdRouteWithChildren
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/campaigns/'
+    | '/encyclopedia/entity/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/campaigns'
+    | '/encyclopedia/entity/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
@@ -305,6 +316,7 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/campaigns/'
+    | '/encyclopedia/entity/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
@@ -489,6 +501,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EncyclopediaStateIdRouteImport
       parentRoute: typeof EncyclopediaRoute
     }
+    '/encyclopedia/entity/$id': {
+      id: '/encyclopedia/entity/$id'
+      path: '/entity/$id'
+      fullPath: '/encyclopedia/entity/$id'
+      preLoaderRoute: typeof EncyclopediaEntityIdRouteImport
+      parentRoute: typeof EncyclopediaRoute
+    }
     '/play/campaign/$id/': {
       id: '/play/campaign/$id/'
       path: '/'
@@ -521,11 +540,13 @@ const CampaignsRouteWithChildren = CampaignsRoute._addFileChildren(
 )
 
 interface EncyclopediaRouteChildren {
+  EncyclopediaEntityIdRoute: typeof EncyclopediaEntityIdRoute
   EncyclopediaStateIdRoute: typeof EncyclopediaStateIdRoute
   EncyclopediaTypeTypeRoute: typeof EncyclopediaTypeTypeRoute
 }
 
 const EncyclopediaRouteChildren: EncyclopediaRouteChildren = {
+  EncyclopediaEntityIdRoute: EncyclopediaEntityIdRoute,
   EncyclopediaStateIdRoute: EncyclopediaStateIdRoute,
   EncyclopediaTypeTypeRoute: EncyclopediaTypeTypeRoute,
 }
