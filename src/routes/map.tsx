@@ -8,6 +8,8 @@ import {
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { RelatedHistory } from "@/components/RelatedHistory";
+import { citiesInRegion } from "@/lib/cities";
+import { Building2 } from "lucide-react";
 
 export const Route = createFileRoute("/map")({
   head: () => ({ meta: [{ title: "خارطة العالم الإسلامي" }] }),
@@ -326,6 +328,39 @@ function RegionPanel({
                 <span key={l.id} className="rounded-full border border-gold/30 bg-surface-2 px-2.5 py-1 text-[11px]">
                   {l.icon} {l.name}
                 </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Great cities of this region */}
+        {citiesInRegion(region.id).length > 0 && (
+          <div className="mt-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Building2 className="size-3.5 text-gold" />
+              <p className="text-[10px] text-gold">مدن هذا الإقليم</p>
+              <div className="h-px flex-1 bg-gradient-to-l from-gold/30 to-transparent" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {citiesInRegion(region.id).map((c) => (
+                <Link
+                  key={c.id}
+                  to="/city/$id"
+                  params={{ id: c.id }}
+                  className={`flex items-center gap-2 rounded-2xl border border-white/10 bg-surface-2 p-2.5 hover:border-gold/40 ${unlocked ? "" : "opacity-80"}`}
+                >
+                  <span className="grid size-9 place-items-center rounded-xl bg-black/40 text-xl">
+                    {unlocked ? c.glyph : "🌫️"}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-display text-[12px] font-bold line-clamp-1">
+                      {unlocked ? c.name : (c.honorific ?? "مدينةٌ خفيّة")}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-1">
+                      {unlocked ? (c.civilization?.name ?? c.tagline) : c.fogClue}
+                    </p>
+                  </div>
+                </Link>
               ))}
             </div>
           </div>
