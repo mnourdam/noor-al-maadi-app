@@ -17,7 +17,6 @@ import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
 import { Route as StoryIdRouteImport } from './routes/story.$id'
-import { Route as FigureIdRouteImport } from './routes/figure.$id'
 import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
 import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
 import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
@@ -65,11 +64,6 @@ const StoryIdRoute = StoryIdRouteImport.update({
   path: '/story/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FigureIdRoute = FigureIdRouteImport.update({
-  id: '/figure/$id',
-  path: '/figure/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PlayTimelineRoute = PlayTimelineRouteImport.update({
   id: '/play/timeline',
   path: '/play/timeline',
@@ -115,7 +109,6 @@ export interface FileRoutesByFullPath {
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
-  '/figure/$id': typeof FigureIdRoute
   '/campaigns/': typeof CampaignsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -131,7 +124,6 @@ export interface FileRoutesByTo {
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
-  '/figure/$id': typeof FigureIdRoute
   '/campaigns': typeof CampaignsIndexRoute
 }
 export interface FileRoutesById {
@@ -149,7 +141,6 @@ export interface FileRoutesById {
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
-  '/figure/$id': typeof FigureIdRoute
   '/campaigns/': typeof CampaignsIndexRoute
 }
 export interface FileRouteTypes {
@@ -168,7 +159,6 @@ export interface FileRouteTypes {
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
-    | '/figure/$id'
     | '/campaigns/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -184,7 +174,6 @@ export interface FileRouteTypes {
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
-    | '/figure/$id'
     | '/campaigns'
   id:
     | '__root__'
@@ -201,7 +190,6 @@ export interface FileRouteTypes {
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
-    | '/figure/$id'
     | '/campaigns/'
   fileRoutesById: FileRoutesById
 }
@@ -218,7 +206,6 @@ export interface RootRouteChildren {
   PlayInvestigateRoute: typeof PlayInvestigateRoute
   PlayTimelineRoute: typeof PlayTimelineRoute
   StoryIdRoute: typeof StoryIdRoute
-  FigureIdRoute: typeof FigureIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -277,13 +264,6 @@ declare module '@tanstack/react-router' {
       path: '/story/$id'
       fullPath: '/story/$id'
       preLoaderRoute: typeof StoryIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/figure/$id': {
-      id: '/figure/$id'
-      path: '/figure/$id'
-      fullPath: '/figure/$id'
-      preLoaderRoute: typeof FigureIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/play/timeline': {
@@ -358,7 +338,6 @@ const rootRouteChildren: RootRouteChildren = {
   PlayInvestigateRoute: PlayInvestigateRoute,
   PlayTimelineRoute: PlayTimelineRoute,
   StoryIdRoute: StoryIdRoute,
-  FigureIdRoute: FigureIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
