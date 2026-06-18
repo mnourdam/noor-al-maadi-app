@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
@@ -218,6 +218,7 @@ function CollectionPage() {
   const { profile, eraHasProgress, eraProgress } = useUnlocks();
   const [section, setSection] = useState<SectionId>("figures");
   const [reveal, setReveal] = useState<RevealItem | null>(null);
+  const navigate = useNavigate();
 
   // counts per section
   const artifactsOnly = ARTIFACTS.filter(a => a.type !== "manuscript");
@@ -289,10 +290,9 @@ function CollectionPage() {
                   <Card key={c.id} unlocked={open} rarity={r} icon={c.avatar}
                     title={c.name} subtitle={c.title} footer={c.power}
                     mystery="أكمل حملة لاكتشاف هويّته"
-                    onClick={() => open && setReveal({
-                      rarity: r, icon: c.avatar, title: c.name, subtitle: `${c.title} · ${ERAS.find(e => e.id === c.era)?.name}`,
-                      lines: [c.bio, `القوة المميّزة: ${c.power}`],
-                    })} />
+                    onClick={() => {
+                      if (open) navigate({ to: "/figure/$id", params: { id: c.id } });
+                    }} />
                 );
               })}
             </div>
