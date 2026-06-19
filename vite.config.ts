@@ -15,8 +15,6 @@ export default defineConfig({
     // Required so Capacitor can package the app as a static Android bundle
     // (`npx cap sync android` expects `dist/client/index.html`).
     spa: { enabled: true },
-    // Render the SPA shell at "/" so `dist/client/index.html` exists after build.
-    pages: [{ path: "/", prerender: { enabled: true } }],
   },
   vite: {
     build: {
