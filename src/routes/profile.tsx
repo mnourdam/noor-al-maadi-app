@@ -9,6 +9,7 @@ import {
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
+import { AccountSection } from "@/components/AccountSection";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
@@ -146,6 +147,9 @@ function ProfilePage() {
             })}
           </div>
         </div>
+
+        {/* Historical Identity Card */}
+        <div className="mt-5"><AccountSection /></div>
 
         {/* Historical Identity Card */}
         <div className="mt-5 relative overflow-hidden rounded-3xl border border-gold/30 parchment-dark p-5 shadow-elegant">
