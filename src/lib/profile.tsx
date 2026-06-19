@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { todayKey, dailyMissionsForDate } from "./data";
+import { HEART_MAX, getEffectiveHearts, ACTIVITY_COOLDOWN_MS, activityKey, STREAK_MILESTONES, type HeartActivity, type StreakMilestone } from "./hearts";
 
 const STORAGE_KEY = "hakaya.profile.v2";
 
@@ -39,6 +40,13 @@ export interface ProfileState {
   bio?: string;
   favoriteStateId?: string;
   favoriteFigureId?: string;
+  // Engagement v1
+  hearts: number;
+  heartsAt: number; // ms epoch of last hearts commit
+  dinars: number;
+  activityCooldowns: Record<string, number>; // key -> ms epoch expiry
+  streakMilestonesClaimed: number[];
+  hintsPurchased: Record<string, number>; // e.g. "inv:<id>" -> count revealed
 }
 
 const initial: ProfileState = {
@@ -70,6 +78,12 @@ const initial: ProfileState = {
   bio: "",
   favoriteStateId: "",
   favoriteFigureId: "",
+  hearts: HEART_MAX,
+  heartsAt: Date.now(),
+  dinars: 50,
+  activityCooldowns: {},
+  streakMilestonesClaimed: [],
+  hintsPurchased: {},
 };
 
 interface Ctx {
@@ -99,12 +113,33 @@ interface Ctx {
   todayDailyIds: () => string[];
   setBio: (bio: string) => void;
   setFavorites: (patch: { favoriteStateId?: string; favoriteFigureId?: string }) => void;
+  // Engagement v1
+  loseHeart: () => number;          // returns new effective hearts
+  hasHearts: () => boolean;
+  recoverHeartFromActivity: (a: HeartActivity) => { ok: boolean; reason?: "full" | "cooldown" };
+  spendDinarsForHeart: () => boolean;
+  addDinars: (n: number) => void;
+  spendDinars: (n: number) => boolean;
+  buyHint: (scopeKey: string, hintIndex: number, cost: number) => boolean;
+  hintsRevealed: (scopeKey: string) => number;
+  claimStreakMilestone: (days: number) => boolean;
+  availableStreakMilestones: () => StreakMilestone[];
 }
 
 const ProfileContext = createContext<Ctx | null>(null);
 
 function addPointsTo(p: ProfileState, n: number): ProfileState {
   return { ...p, points: p.points + n, seasonPoints: p.seasonPoints + Math.max(0, n) };
+}
+
+function addDinarsTo(p: ProfileState, n: number): ProfileState {
+  return { ...p, dinars: Math.max(0, (p.dinars ?? 0) + n) };
+}
+
+/** Dinar award proportional to XP reward for an activity (floor reward/4, min 1). */
+function dinarsForReward(xp: number): number {
+  if (xp <= 0) return 0;
+  return Math.max(1, Math.floor(xp / 4));
 }
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
@@ -177,16 +212,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }),
     awardBadge,
     completeInvestigation: (id, reward) => update((p) => p.investigationsCompleted.includes(id) ? p
-      : addPointsTo({ ...p, investigationsCompleted: [...p.investigationsCompleted, id] }, reward)),
+      : addDinarsTo(addPointsTo({ ...p, investigationsCompleted: [...p.investigationsCompleted, id] }, reward), dinarsForReward(reward))),
     completeTimeline: (id, reward) => update((p) => p.timelinesCompleted.includes(id) ? p
-      : addPointsTo({ ...p, timelinesCompleted: [...p.timelinesCompleted, id] }, reward)),
+      : addDinarsTo(addPointsTo({ ...p, timelinesCompleted: [...p.timelinesCompleted, id] }, reward), dinarsForReward(reward))),
     completeDecision: (id, reward) => update((p) => p.decisionsCompleted.includes(id) ? p
-      : addPointsTo({ ...p, decisionsCompleted: [...p.decisionsCompleted, id] }, reward)),
+      : addDinarsTo(addPointsTo({ ...p, decisionsCompleted: [...p.decisionsCompleted, id] }, reward), dinarsForReward(reward))),
     completeMission: (id, reward) => update((p) => p.missionsCompleted.includes(id) ? p
-      : addPointsTo({ ...p, missionsCompleted: [...p.missionsCompleted, id] }, reward)),
+      : addDinarsTo(addPointsTo({ ...p, missionsCompleted: [...p.missionsCompleted, id] }, reward), dinarsForReward(reward))),
     completeCampaign: (id, reward) => update((p) => {
       if (p.campaignsCompleted.includes(id)) return p;
-      return addPointsTo({ ...p, campaignsCompleted: [...p.campaignsCompleted, id] }, reward);
+      return addDinarsTo(addPointsTo({ ...p, campaignsCompleted: [...p.campaignsCompleted, id] }, reward), dinarsForReward(reward));
     }),
     findArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p
       : addPointsTo({ ...p, artifactsFound: [...p.artifactsFound, id] }, 15)),
@@ -209,7 +244,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const dc = p.dailyClaimed.day === today ? p.dailyClaimed : { day: today, ids: [] };
         if (dc.ids.includes(id)) return p;
         ok = true;
-        const next = addPointsTo({ ...p, dailyClaimed: { day: today, ids: [...dc.ids, id] } }, reward);
+        const next = addDinarsTo(addPointsTo({ ...p, dailyClaimed: { day: today, ids: [...dc.ids, id] } }, reward), dinarsForReward(reward));
         return next;
       });
       return ok;
@@ -231,6 +266,102 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     todayDailyIds: () => dailyMissionsForDate().map((m) => m.id),
     setBio: (bio) => update((p) => ({ ...p, bio })),
     setFavorites: (patch) => update((p) => ({ ...p, ...patch })),
+
+    // ============= Engagement v1 =============
+    loseHeart: () => {
+      let result = HEART_MAX;
+      update((p) => {
+        const now = Date.now();
+        const eff = getEffectiveHearts(p, now);
+        const next = Math.max(0, eff - 1);
+        result = next;
+        return { ...p, hearts: next, heartsAt: now };
+      });
+      return result;
+    },
+    hasHearts: () => getEffectiveHearts(profile) > 0,
+    recoverHeartFromActivity: (a) => {
+      let outcome: { ok: boolean; reason?: "full" | "cooldown" } = { ok: false };
+      update((p) => {
+        const now = Date.now();
+        const eff = getEffectiveHearts(p, now);
+        if (eff >= HEART_MAX) { outcome = { ok: false, reason: "full" }; return p; }
+        const k = activityKey(a);
+        const exp = p.activityCooldowns?.[k] ?? 0;
+        if (exp > now) { outcome = { ok: false, reason: "cooldown" }; return p; }
+        outcome = { ok: true };
+        return {
+          ...p,
+          hearts: eff + 1,
+          heartsAt: now,
+          activityCooldowns: { ...(p.activityCooldowns ?? {}), [k]: now + ACTIVITY_COOLDOWN_MS },
+        };
+      });
+      return outcome;
+    },
+    spendDinarsForHeart: () => {
+      const COST = 20;
+      let ok = false;
+      update((p) => {
+        const now = Date.now();
+        const eff = getEffectiveHearts(p, now);
+        if (eff >= HEART_MAX) return p;
+        if ((p.dinars ?? 0) < COST) return p;
+        ok = true;
+        return { ...p, hearts: eff + 1, heartsAt: now, dinars: p.dinars - COST };
+      });
+      return ok;
+    },
+    addDinars: (n) => update((p) => addDinarsTo(p, n)),
+    spendDinars: (n) => {
+      let ok = false;
+      update((p) => {
+        if ((p.dinars ?? 0) < n) return p;
+        ok = true;
+        return { ...p, dinars: p.dinars - n };
+      });
+      return ok;
+    },
+    buyHint: (scopeKey, hintIndex, cost) => {
+      let ok = false;
+      update((p) => {
+        const already = p.hintsPurchased?.[scopeKey] ?? 0;
+        if (hintIndex < already) { ok = true; return p; } // already revealed
+        if (hintIndex !== already) return p;              // must buy in order
+        if ((p.dinars ?? 0) < cost) return p;
+        ok = true;
+        return {
+          ...p,
+          dinars: p.dinars - cost,
+          hintsPurchased: { ...(p.hintsPurchased ?? {}), [scopeKey]: already + 1 },
+        };
+      });
+      return ok;
+    },
+    hintsRevealed: (scopeKey) => profile.hintsPurchased?.[scopeKey] ?? 0,
+    claimStreakMilestone: (days) => {
+      let ok = false;
+      update((p) => {
+        const m = STREAK_MILESTONES.find((x) => x.days === days);
+        if (!m) return p;
+        if (p.streak < days) return p;
+        if ((p.streakMilestonesClaimed ?? []).includes(days)) return p;
+        ok = true;
+        let np: ProfileState = {
+          ...p,
+          streakMilestonesClaimed: [...(p.streakMilestonesClaimed ?? []), days],
+        };
+        if (m.xp) np = addPointsTo(np, m.xp);
+        if (m.dinars) np = addDinarsTo(np, m.dinars);
+        if (m.badge && !np.badges.includes(m.badge)) np = { ...np, badges: [...np.badges, m.badge] };
+        if (m.artifact && !np.artifactsFound.includes(m.artifact)) np = { ...np, artifactsFound: [...np.artifactsFound, m.artifact] };
+        if (m.title && !np.titlesEarned.includes(m.title)) np = { ...np, titlesEarned: [...np.titlesEarned, m.title] };
+        return np;
+      });
+      return ok;
+    },
+    availableStreakMilestones: () =>
+      STREAK_MILESTONES.filter((m) => profile.streak >= m.days && !(profile.streakMilestonesClaimed ?? []).includes(m.days)),
   }), [profile, update, awardBadge]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;

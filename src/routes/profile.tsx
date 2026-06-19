@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { User, Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin } from "lucide-react";
+import { User, Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin, Coins, Search, Gift } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
@@ -8,6 +8,7 @@ import {
   AMBIENCE_TRACKS, ERAS, CHARACTERS, ARTIFACTS,
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
+import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { profile, login, logout, updateSettings, claimSeason, setBio, setFavorites } = useProfile();
+  const { profile, login, logout, updateSettings, claimSeason, setBio, setFavorites, claimStreakMilestone, spendDinarsForHeart } = useProfile();
   const [name, setName] = useState("");
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(profile.bio ?? "");
@@ -42,6 +43,10 @@ function ProfilePage() {
   const favState = ERAS.find((e) => e.id === profile.favoriteStateId);
   const favFigure = CHARACTERS.find((c) => c.id === profile.favoriteFigureId);
 
+  const now = Date.now();
+  const effHearts = getEffectiveHearts(profile, now);
+  const minsToHeart = Math.max(1, Math.ceil(msUntilNextHeart(profile, now) / 60_000));
+
   return (
     <AppShell>
       <Screen title="حسابي" subtitle="تاريخك معنا">
@@ -62,8 +67,83 @@ function ProfilePage() {
           </div>
           <div className="relative mt-4 grid grid-cols-3 gap-2 text-center">
             <Stat icon={<Star className="size-3.5" />} label="نقاط" value={profile.points} />
+            <Stat icon={<Coins className="size-3.5" />} label="دنانير" value={profile.dinars} />
             <Stat icon={<Flame className="size-3.5" />} label="سلسلة" value={profile.streak} />
+          </div>
+          <div className="relative mt-2 grid grid-cols-2 gap-2 text-center">
+            <div className="rounded-xl border border-white/10 bg-background/40 p-2">
+              <div className="flex items-center justify-center gap-0.5 text-red-400">
+                {Array.from({ length: HEART_MAX }).map((_, i) => (
+                  <Heart key={i} className={`size-3.5 ${i < effHearts ? "fill-red-500 text-red-500" : "text-white/20"}`} />
+                ))}
+              </div>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">
+                قلوب · {effHearts < HEART_MAX ? `قلب جديد بعد ${minsToHeart}د` : "ممتلئة"}
+              </p>
+            </div>
             <Stat icon={<Crown className="size-3.5" />} label="حملات" value={profile.campaignsCompleted.length} />
+          </div>
+          {effHearts < HEART_MAX && (
+            <button
+              onClick={() => spendDinarsForHeart()}
+              disabled={profile.dinars < 20}
+              className="relative mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-gold/30 bg-gold/5 py-2 text-[11px] text-gold disabled:opacity-40"
+            >
+              <Heart className="size-3.5" /> استرجع قلبًا مقابل <Coins className="size-3" /> 20
+            </button>
+          )}
+        </div>
+
+        {/* Investigations CTA */}
+        <Link to="/investigations" className="mt-4 flex items-center gap-3 rounded-2xl border border-gold/25 bg-surface p-4">
+          <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
+            <Search className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1 text-right">
+            <p className="font-display text-sm font-bold">التحقيقات التاريخية</p>
+            <p className="text-[11px] text-muted-foreground">قرائن، تلميحات، ومكافآت بالدنانير</p>
+          </div>
+          <ChevronLeft className="size-4 text-muted-foreground" />
+        </Link>
+
+        {/* Streak milestones */}
+        <div className="mt-5 rounded-2xl border border-gold/25 bg-surface p-4">
+          <div className="flex items-center justify-between">
+            <p className="font-display text-sm font-bold inline-flex items-center gap-2">
+              <Flame className="size-4 text-orange-400" /> سلسلتك اليومية
+            </p>
+            <span className="text-[11px] text-muted-foreground">{profile.streak.toLocaleString("ar-EG")} يوم</span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {STREAK_MILESTONES.map((m) => {
+              const claimed = (profile.streakMilestonesClaimed ?? []).includes(m.days);
+              const ready = profile.streak >= m.days && !claimed;
+              return (
+                <div key={m.days} className={`flex items-center gap-3 rounded-xl border p-3 ${claimed ? "border-gold/30 bg-gold/5" : ready ? "border-gold/50 bg-gold/10" : "border-white/10 bg-background/40"}`}>
+                  <div className="grid size-9 place-items-center rounded-lg bg-gold/15 text-gold">
+                    <Gift className="size-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-[12px] font-bold">{m.days} يوم · {m.label}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {m.xp ? `+${m.xp} نقطة · ` : ""}{m.dinars ? `+${m.dinars} دينار` : ""}
+                      {m.badge ? " · شارة" : ""}{m.artifact ? " · أثر" : ""}{m.title ? " · لقب" : ""}
+                    </p>
+                  </div>
+                  {claimed ? (
+                    <span className="text-[10px] text-gold">✓ مُستلَم</span>
+                  ) : (
+                    <button
+                      onClick={() => claimStreakMilestone(m.days)}
+                      disabled={!ready}
+                      className="rounded-full bg-gradient-gold px-3 py-1 text-[10px] font-bold text-primary-foreground disabled:opacity-40"
+                    >
+                      {ready ? "استلم" : "مقفل"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -14,6 +14,7 @@ import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
+import { Route as InvestigationsRouteImport } from './routes/investigations'
 import { Route as HistoryCalendarRouteImport } from './routes/history-calendar'
 import { Route as EncyclopediaRouteImport } from './routes/encyclopedia'
 import { Route as ContentAuditRouteImport } from './routes/content-audit'
@@ -28,6 +29,7 @@ import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
 import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
 import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
 import { Route as PlayChapterRouteImport } from './routes/play.chapter'
+import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
 import { Route as FigureIdRouteImport } from './routes/figure.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
@@ -62,6 +64,11 @@ const OnThisDayRoute = OnThisDayRouteImport.update({
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestigationsRoute = InvestigationsRouteImport.update({
+  id: '/investigations',
+  path: '/investigations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryCalendarRoute = HistoryCalendarRouteImport.update({
@@ -134,6 +141,11 @@ const PlayChapterRoute = PlayChapterRouteImport.update({
   path: '/play/chapter',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvestigationIdRoute = InvestigationIdRouteImport.update({
+  id: '/investigation/$id',
+  path: '/investigation/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FigureIdRoute = FigureIdRouteImport.update({
   id: '/figure/$id',
   path: '/figure/$id',
@@ -194,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/content-audit': typeof ContentAuditRoute
   '/encyclopedia': typeof EncyclopediaRouteWithChildren
   '/history-calendar': typeof HistoryCalendarRoute
+  '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -203,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
   '/figure/$id': typeof FigureIdRoute
+  '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -223,6 +237,7 @@ export interface FileRoutesByTo {
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
   '/history-calendar': typeof HistoryCalendarRoute
+  '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -232,6 +247,7 @@ export interface FileRoutesByTo {
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
   '/figure/$id': typeof FigureIdRoute
+  '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -254,6 +270,7 @@ export interface FileRoutesById {
   '/content-audit': typeof ContentAuditRoute
   '/encyclopedia': typeof EncyclopediaRouteWithChildren
   '/history-calendar': typeof HistoryCalendarRoute
+  '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
@@ -263,6 +280,7 @@ export interface FileRoutesById {
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
   '/figure/$id': typeof FigureIdRoute
+  '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
   '/play/decisions': typeof PlayDecisionsRoute
   '/play/investigate': typeof PlayInvestigateRoute
@@ -287,6 +305,7 @@ export interface FileRouteTypes {
     | '/content-audit'
     | '/encyclopedia'
     | '/history-calendar'
+    | '/investigations'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -296,6 +315,7 @@ export interface FileRouteTypes {
     | '/campaigns/$era'
     | '/city/$id'
     | '/figure/$id'
+    | '/investigation/$id'
     | '/play/chapter'
     | '/play/decisions'
     | '/play/investigate'
@@ -316,6 +336,7 @@ export interface FileRouteTypes {
     | '/collection'
     | '/content-audit'
     | '/history-calendar'
+    | '/investigations'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -325,6 +346,7 @@ export interface FileRouteTypes {
     | '/campaigns/$era'
     | '/city/$id'
     | '/figure/$id'
+    | '/investigation/$id'
     | '/play/chapter'
     | '/play/decisions'
     | '/play/investigate'
@@ -346,6 +368,7 @@ export interface FileRouteTypes {
     | '/content-audit'
     | '/encyclopedia'
     | '/history-calendar'
+    | '/investigations'
     | '/map'
     | '/on-this-day'
     | '/profile'
@@ -355,6 +378,7 @@ export interface FileRouteTypes {
     | '/campaigns/$era'
     | '/city/$id'
     | '/figure/$id'
+    | '/investigation/$id'
     | '/play/chapter'
     | '/play/decisions'
     | '/play/investigate'
@@ -378,6 +402,7 @@ export interface RootRouteChildren {
   ContentAuditRoute: typeof ContentAuditRoute
   EncyclopediaRoute: typeof EncyclopediaRouteWithChildren
   HistoryCalendarRoute: typeof HistoryCalendarRoute
+  InvestigationsRoute: typeof InvestigationsRoute
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
   ProfileRoute: typeof ProfileRoute
@@ -386,6 +411,7 @@ export interface RootRouteChildren {
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
   FigureIdRoute: typeof FigureIdRoute
+  InvestigationIdRoute: typeof InvestigationIdRoute
   PlayChapterRoute: typeof PlayChapterRoute
   PlayDecisionsRoute: typeof PlayDecisionsRoute
   PlayInvestigateRoute: typeof PlayInvestigateRoute
@@ -429,6 +455,13 @@ declare module '@tanstack/react-router' {
       path: '/map'
       fullPath: '/map'
       preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investigations': {
+      id: '/investigations'
+      path: '/investigations'
+      fullPath: '/investigations'
+      preLoaderRoute: typeof InvestigationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history-calendar': {
@@ -527,6 +560,13 @@ declare module '@tanstack/react-router' {
       path: '/play/chapter'
       fullPath: '/play/chapter'
       preLoaderRoute: typeof PlayChapterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investigation/$id': {
+      id: '/investigation/$id'
+      path: '/investigation/$id'
+      fullPath: '/investigation/$id'
+      preLoaderRoute: typeof InvestigationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/figure/$id': {
@@ -656,6 +696,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContentAuditRoute: ContentAuditRoute,
   EncyclopediaRoute: EncyclopediaRouteWithChildren,
   HistoryCalendarRoute: HistoryCalendarRoute,
+  InvestigationsRoute: InvestigationsRoute,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
   ProfileRoute: ProfileRoute,
@@ -664,6 +705,7 @@ const rootRouteChildren: RootRouteChildren = {
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
   FigureIdRoute: FigureIdRoute,
+  InvestigationIdRoute: InvestigationIdRoute,
   PlayChapterRoute: PlayChapterRoute,
   PlayDecisionsRoute: PlayDecisionsRoute,
   PlayInvestigateRoute: PlayInvestigateRoute,

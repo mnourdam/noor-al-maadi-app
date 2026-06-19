@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Compass, Swords, Map, Library, User, BookOpen } from "lucide-react";
 import type { ReactNode } from "react";
+import { HUD } from "./HUD";
 
 const tabs = [
   { to: "/", label: "المغامرة", icon: Compass },
@@ -16,6 +17,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col pb-24">
+      <HUD />
       <div className="flex-1">{children}</div>
       <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-3 pb-3">
         <div className="glass shadow-elegant grid grid-cols-6 items-center gap-1 rounded-2xl border border-white/10 p-1.5">
