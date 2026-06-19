@@ -61,9 +61,16 @@ function ProfilePage() {
         <div className="relative overflow-hidden rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
           <div className="particle-field" />
           <div className="relative flex items-center gap-4">
-            <div className="grid size-16 place-items-center rounded-2xl bg-gradient-gold text-primary-foreground">
-              <User className="size-7" />
-            </div>
+            <button
+              onClick={() => setPickingAvatar(true)}
+              className="relative shrink-0"
+              aria-label="تغيير الصورة"
+            >
+              <Avatar avatarId={profile.avatarId ?? DEFAULT_AVATAR_ID} size="lg" />
+              <span className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full border border-gold/40 bg-background text-gold">
+                <Pencil className="size-3" />
+              </span>
+            </button>
             <div className="min-w-0 flex-1">
               <p className="font-display truncate text-lg font-bold">{profile.name}</p>
               <p className="text-[11px] text-gold">المستوى {lvl.level} · {lvl.title}</p>
