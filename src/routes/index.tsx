@@ -19,6 +19,8 @@ import {
 } from "@/lib/historical-calendar";
 import { useProfile } from "@/lib/profile";
 import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS } from "@/lib/notifications";
+import { useAccount } from "@/lib/account";
+import { OnboardingTour } from "@/components/OnboardingTour";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
 
 export const Route = createFileRoute("/")({
@@ -33,6 +35,8 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { profile, touchStreak } = useProfile();
+  const { account, user } = useAccount();
+  const displayName = account?.username ?? (user ? profile.name : profile.name);
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -102,7 +106,7 @@ function Index() {
           {/* Status bar (compact) */}
           <div className="relative z-10 flex items-start justify-between px-5 pt-8">
             <div className="animate-curtain rounded-2xl bg-gradient-to-l from-black/55 via-black/35 to-transparent px-3 py-2 ring-1 ring-white/10 backdrop-blur-sm">
-              <p className="text-[11px] tracking-[0.2em] text-gold drop-shadow-[0_1px_4px_oklch(0_0_0/0.6)]">مرحبًا بك، {profile.name}</p>
+              <p className="text-[11px] tracking-[0.2em] text-gold drop-shadow-[0_1px_4px_oklch(0_0_0/0.6)]">مرحبًا بك، {displayName}</p>
               <p className="font-display mt-1 text-[11px] text-white/80">
                 المستوى {lvl.level} · {lvl.title}
               </p>
@@ -111,11 +115,6 @@ function Index() {
               <div className="flex items-center gap-1 text-gold">
                 <Flame className="size-3.5" />
                 <span className="text-xs font-bold">{profile.streak}</span>
-              </div>
-              <div className="h-3 w-px bg-white/20" />
-              <div className="flex items-center gap-1 text-gold">
-                <Star className="size-3.5" />
-                <span className="text-xs font-bold">{profile.points}</span>
               </div>
             </div>
           </div>
@@ -162,7 +161,7 @@ function Index() {
                       className="shadow-gold animate-gold-pulse inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
                     >
                       <Play className="size-4 fill-current" />
-                      {activeHasStarted ? "تابع الرحلة" : "ابدأ الرحلة"}
+                      {activeHasStarted ? "تابع حملتك الحالية" : "ابدأ الرحلة"}
                     </Link>
                   ) : (
                     <Link
@@ -170,7 +169,7 @@ function Index() {
                       className="shadow-gold animate-gold-pulse inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
                     >
                       <Play className="size-4 fill-current" />
-                      {activeHasStarted ? "تابع الحملة" : "ابدأ الحملة"}
+                      {activeHasStarted ? "تابع حملتك الحالية" : "ابدأ الحملة"}
                     </Link>
                   )}
                   <Link
@@ -210,6 +209,37 @@ function Index() {
       {/* ============ DAILY MISSIONS ============ */}
       {/* ============ TODAY IN HISTORY ============ */}
       {mounted && <OnThisDayCalendarCard />}
+
+      {/* ============ EXPLORE HISTORY ============ */}
+      <section className="mt-10 px-5">
+        <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشف التاريخ" title="ابدأ من هنا" />
+        <div className="grid grid-cols-3 gap-2">
+          <ExploreTile to="/encyclopedia" icon={<Search className="size-4" />} title="الموسوعة" subtitle="ابحث وتعلّم" />
+          <ExploreTile to="/map" icon={<MapIcon className="size-4" />} title="الأطلس الإسلامي" subtitle="خارطة تاريخية" />
+          <ExploreTile to="/timeline" icon={<Hourglass className="size-4" />} title="الخط الزمني العظيم" subtitle="١٤٠٠ سنة" />
+        </div>
+
+        {/* Timeline feature card */}
+        <Link
+          to="/timeline"
+          className="group relative mt-4 block overflow-hidden rounded-3xl border border-gold/30 parchment-dark p-5 transition hover:border-gold/60"
+        >
+          <div className="arabesque-layer" />
+          <div className="relative flex items-center gap-4">
+            <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold/15 text-gold">
+              <Hourglass className="size-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] tracking-[0.25em] text-gold">جديد · موصى به</p>
+              <p className="font-display mt-1 text-base font-bold shimmer-text">الخط الزمني العظيم</p>
+              <p className="mt-1 line-clamp-2 text-[12px] text-white/70">
+                استعرض أكثر من ألف عام من التاريخ الإسلامي والعربي عبر الخط الزمني العظيم.
+              </p>
+            </div>
+            <ChevronLeft className="size-5 shrink-0 text-gold/60 transition group-hover:text-gold" />
+          </div>
+        </Link>
+      </section>
 
       {/* ============ ACTIVE SEASON ============ */}
       <section className="mt-12 px-5">
@@ -254,6 +284,7 @@ function Index() {
           <ModeChip to="/map" icon={<MapIcon className="size-4" />} label="الخارطة" />
         </div>
       </section>
+      <OnboardingTour />
     </AppShell>
   );
 }
