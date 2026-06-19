@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Heart, Coins, Flame } from "lucide-react";
+import { Heart, Coins, Flame, Bell } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart } from "@/lib/hearts";
+import { unreadCount } from "@/lib/notifications";
 
 /**
  * Compact top-of-screen HUD: hearts, dinars, streak.
@@ -10,10 +12,20 @@ import { HEART_MAX, getEffectiveHearts, msUntilNextHeart } from "@/lib/hearts";
 export function HUD() {
   const { profile } = useProfile();
   const [, force] = useState(0);
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
     const id = setInterval(() => force((n) => n + 1), 30_000);
-    return () => clearInterval(id);
+    const recount = () => setUnread(unreadCount());
+    recount();
+    window.addEventListener("irth:notifications:updated", recount);
+    const focus = () => recount();
+    window.addEventListener("focus", focus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("irth:notifications:updated", recount);
+      window.removeEventListener("focus", focus);
+    };
   }, []);
 
   const now = Date.now();
@@ -43,6 +55,14 @@ export function HUD() {
           <span className="inline-flex items-center gap-1 text-orange-400">
             <Flame className="size-3.5" /> {profile.streak.toLocaleString("ar-EG")}
           </span>
+          <Link to="/notifications" className="relative inline-flex items-center text-muted-foreground hover:text-gold" aria-label="الإشعارات">
+            <Bell className="size-4" />
+            {unread > 0 && (
+              <span className="absolute -top-1 -left-1 grid min-w-[14px] h-[14px] place-items-center rounded-full bg-gradient-gold px-1 text-[9px] font-bold text-primary-foreground">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </Link>
         </div>
       </div>
     </div>
