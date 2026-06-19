@@ -9,6 +9,7 @@ import { RASHIDUN_PACK } from "./rashidun";
 import { SELJUK_PACK } from "./seljuk";
 import { ZENGID_PACK } from "./zengid";
 import { MURABITUN_PACK } from "./murabitun";
+import { MUWAHHIDUN_PACK } from "./muwahhidun";
 
 // ============================================================
 // Content Pack registry
@@ -29,6 +30,7 @@ export const CONTENT_PACKS: ContentPack[] = [
   SELJUK_PACK,
   ZENGID_PACK,
   MURABITUN_PACK,
+  MUWAHHIDUN_PACK,
 ].sort((a, b) => a.order - b.order);
 
 // --- index by entity id (with collision detection) ---

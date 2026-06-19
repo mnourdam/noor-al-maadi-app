@@ -40,6 +40,7 @@ export const KNOWN_ERAS: { id: string; label: string }[] = [
   { id: "seljuk", label: "الدولة السلجوقية" },
   { id: "zengid", label: "الدولة الزنكية" },
   { id: "murabitun", label: "دولة المرابطين" },
+  { id: "muwahhidun", label: "دولة الموحدين" },
 ];
 
 function isScholar(e: PackEntity): boolean {
