@@ -320,6 +320,15 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
   );
 }
 
+function IdRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-background/40 px-2.5 py-1.5">
+      <span className="inline-flex items-center gap-1.5 text-[10px] text-gold/80">{icon}{label}</span>
+      <span className="truncate text-[11px] font-display font-bold">{value}</span>
+    </div>
+  );
+}
+
 function SettingToggle({ icon, label, desc, value, onChange }: { icon: React.ReactNode; label: string; desc: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
