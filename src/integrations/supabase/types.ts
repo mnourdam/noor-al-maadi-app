@@ -229,18 +229,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      advance_referral_stage: {
-        Args: {
-          p_campaigns: number
-          p_level: number
-          p_stage: number
-          p_streak: number
-        }
-        Returns: Json
-      }
+      advance_referral_stage: { Args: { p_stage: number }; Returns: Json }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       gen_referral_code: { Args: never; Returns: string }
       get_my_email: { Args: never; Returns: string }
+      sync_my_public_stats: { Args: { p_stats: Json }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
