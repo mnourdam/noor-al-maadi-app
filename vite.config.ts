@@ -16,13 +16,4 @@ export default defineConfig({
     // (`npx cap sync android` expects `dist/client/index.html`).
     spa: { enabled: true },
   },
-  vite: {
-    build: {
-      // Match Capacitor's expected webDir layout: dist/client/index.html.
-      // Inside the Lovable sandbox nitro overrides this with the Cloudflare
-      // output layout, so this only affects local/self-hosted builds.
-      outDir: "dist/client",
-      emptyOutDir: true,
-    },
-  },
 });
