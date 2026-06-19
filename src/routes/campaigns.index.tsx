@@ -4,6 +4,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { CAMPAIGNS, ERAS, UPCOMING_CAMPAIGNS, ARTIFACTS, CHARACTERS } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { listEngineCampaigns, campaignProgressFor } from "@/lib/campaign-engine";
+import { displayBadgeName } from "@/lib/display-names";
 
 const artifactName = (id?: string) => (id ? ARTIFACTS.find((a) => a.id === id)?.name ?? id : undefined);
 const characterName = (id?: string) => (id ? CHARACTERS.find((c) => c.id === id)?.name ?? id : undefined);
@@ -94,7 +95,7 @@ function CampaignsHub() {
                       <span className="text-muted-foreground inline-flex items-center gap-1"><BookOpen className="size-3" /> {p.completedChapters}/{p.totalChapters} فصلًا</span>
                       <span className="flex items-center gap-1 text-gold">{complete ? "اعرض" : p.completedChapters > 0 ? "تابع" : "ابدأ"} <ArrowLeft className="size-3.5" /></span>
                     </div>
-                    <RewardRow main={mainReward} badge={c.finalReward.badgeId} xp={c.finalReward.xp} />
+                    <RewardRow main={mainReward} badge={c.finalReward.badgeName ?? displayBadgeName(c.finalReward.badgeId)} xp={c.finalReward.xp} />
                   </div>
                 </Link>
               );

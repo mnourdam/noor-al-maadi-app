@@ -5,6 +5,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, fogHint, type Era } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { displayBadgeName } from "@/lib/display-names";
 
 export const Route = createFileRoute("/collection")({
   head: () => ({ meta: [{ title: "المتحف · أرشيفك التاريخي" }] }),
@@ -492,7 +493,7 @@ function RecentUnlocks() {
   if (lastTitle) recents.push({ key: `t-${lastTitle}`, icon: "👑", kind: "لقب", title: lastTitle, subtitle: "مُنح حديثًا" });
 
   const lastBadge = [...profile.badges].slice(-1)[0];
-  if (lastBadge) recents.push({ key: `b-${lastBadge}`, icon: "🏅", kind: "شارة", title: lastBadge, subtitle: "إنجاز جديد" });
+  if (lastBadge) recents.push({ key: `b-${lastBadge}`, icon: "🏅", kind: "شارة", title: displayBadgeName(lastBadge), subtitle: "إنجاز جديد" });
 
   // Build a small recency timeline from the tail of all unlock arrays.
   const timeline = [
