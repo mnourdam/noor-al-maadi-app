@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Cloud, CloudOff, LogIn, LogOut, RefreshCw, ShieldCheck, UserPlus, CheckCircle2, Shield, FileText, Lock } from "lucide-react";
+import { Cloud, CloudOff, LogIn, LogOut, RefreshCw, ShieldCheck, UserPlus, Shield, FileText, Lock } from "lucide-react";
 import { useAccount } from "@/lib/account";
 
 function timeAgo(ts: number | null): string {
@@ -14,7 +14,7 @@ function timeAgo(ts: number | null): string {
 }
 
 export function AccountSection() {
-  const { user, account, syncing, lastSyncAt, syncNow, signOut, conflict, resolveConflict } = useAccount();
+  const { user, account, syncing, lastSyncAt, syncNow, signOut } = useAccount();
   const isGuest = !user;
 
   return (
@@ -86,33 +86,6 @@ export function AccountSection() {
         </Link>
       </div>
 
-      {conflict && (
-        <div className="fixed inset-0 z-[200] grid place-items-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-gold/40 bg-surface p-5 shadow-elegant">
-            <h3 className="mb-1 text-base font-bold">استعادة التقدم</h3>
-            <p className="mb-4 text-xs text-muted-foreground">
-              لديك تقدم محلي على هذا الجهاز وتقدم محفوظ في السحابة. أيهما تريد الاحتفاظ به؟
-            </p>
-            <div className="space-y-2">
-              <ConflictRow
-                title="التقدم المحلي"
-                points={conflict.localSnapshot.points}
-                streak={conflict.localSnapshot.streak}
-                campaigns={conflict.localSnapshot.campaignsCompleted.length}
-                onChoose={() => void resolveConflict("local")}
-              />
-              <ConflictRow
-                title="التقدم السحابي"
-                points={conflict.cloudSnapshot.points}
-                streak={conflict.cloudSnapshot.streak}
-                campaigns={conflict.cloudSnapshot.campaignsCompleted.length}
-                onChoose={() => void resolveConflict("cloud")}
-                highlight
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 }
@@ -123,24 +96,5 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="text-[11px] text-muted-foreground">{label}</span>
       <span className="truncate text-sm">{value}</span>
     </div>
-  );
-}
-
-function ConflictRow({ title, points, streak, campaigns, onChoose, highlight }: {
-  title: string; points: number; streak: number; campaigns: number; onChoose: () => void; highlight?: boolean;
-}) {
-  return (
-    <button
-      onClick={onChoose}
-      className={`w-full rounded-xl border p-3 text-right transition ${highlight ? "border-gold/60 bg-gold/10" : "border-white/10 bg-background/40 hover:bg-background/60"}`}
-    >
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-sm font-bold">{title}</span>
-        {highlight && <CheckCircle2 className="size-4 text-gold" />}
-      </div>
-      <div className="text-[11px] text-muted-foreground">
-        {points} XP · سلسلة {streak} · حملات {campaigns}
-      </div>
-    </button>
   );
 }
