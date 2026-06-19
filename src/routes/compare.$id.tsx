@@ -6,6 +6,8 @@ import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import { fetchPublicProfileById, derivePublicStats, type PublicProfile } from "@/lib/social";
 import { evaluateAchievements } from "@/lib/data";
+import { Avatar } from "@/components/Avatar";
+import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 
 export const Route = createFileRoute("/compare/$id")({
   head: () => ({ meta: [{ title: "مقارنة" }] }),
@@ -26,6 +28,7 @@ function ComparePage() {
       username: account?.username ?? profile.name,
       ...s,
       achievements: evaluateAchievements(profile).filter((a) => a.earned).length,
+      avatarId: profile.avatarId ?? DEFAULT_AVATAR_ID,
     };
   }, [profile, account]);
 
@@ -58,8 +61,8 @@ function ComparePage() {
         {other && (
           <div className="rounded-3xl border border-gold/25 bg-surface p-4 shadow-elegant">
             <div className="grid grid-cols-2 gap-3 border-b border-white/10 pb-3 text-center">
-              <Head username={me.username} title={me.title ?? ""} />
-              <Head username={other.username} title={other.title ?? ""} />
+              <Head username={me.username} title={me.title ?? ""} avatarId={me.avatarId} />
+              <Head username={other.username} title={other.title ?? ""} avatarId={other.avatar_id} />
             </div>
             <div className="mt-3 space-y-1">
               {rows.map((r) => <CompareRow key={r.label} {...r} />)}
@@ -71,10 +74,10 @@ function ComparePage() {
   );
 }
 
-function Head({ username, title }: { username: string; title: string }) {
+function Head({ username, title, avatarId }: { username: string; title: string; avatarId?: string | null }) {
   return (
     <div>
-      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-gradient-gold text-base font-bold text-primary-foreground shadow-gold">{username[0]}</div>
+      <div className="mx-auto"><Avatar avatarId={avatarId} size="md" fallbackChar={username[0]} /></div>
       <div className="mt-1 truncate text-sm font-bold">{username}</div>
       <div className="truncate text-[11px] text-gold">{title}</div>
     </div>
