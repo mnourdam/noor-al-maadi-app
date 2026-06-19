@@ -15,7 +15,7 @@ import { entityHref } from "@/components/EncyclopediaCard";
 import type { PackEntity } from "@/lib/packs/types";
 import {
   pinsForEra, overlayForEra, atlasCoverage, atlasEras,
-  STATE_OVERLAYS, type AtlasPin, type AtlasPinKind,
+  STATE_OVERLAYS, regionAtlasStats, type AtlasPin, type AtlasPinKind,
 } from "@/lib/atlas";
 import { AtlasViewport } from "@/components/AtlasViewport";
 
@@ -49,6 +49,10 @@ function MapPage() {
   const overlay = useMemo(() => overlayForEra(eraFilter), [eraFilter]);
   const eras = useMemo(() => atlasEras(), []);
   const coverage = useMemo(() => atlasCoverage(), []);
+  const atlasStats = useMemo(
+    () => regionAtlasStats(region.id, profile.regionsUnlocked, eraFilter),
+    [region.id, profile.regionsUnlocked, eraFilter],
+  );
   const ERA_NAME: Record<string, string> = {
     umayyad: "الأموية", abbasid: "العباسية", ayyubid: "الأيوبية",
     rashidun: "الراشدة", seerah: "السيرة", andalus: "الأندلس",
@@ -137,7 +141,13 @@ function MapPage() {
         />
 
         {/* Region detail */}
-        <RegionPanel region={region} unlocked={profile.regionsUnlocked.includes(region.id)} points={profile.points} onUnlock={handleUnlock} />
+        <RegionPanel
+          region={region}
+          unlocked={profile.regionsUnlocked.includes(region.id)}
+          points={profile.points}
+          onUnlock={handleUnlock}
+          atlasStats={atlasStats}
+        />
 
         {/* Knowledge graph for the selected region */}
         <RelatedHistory entity={{ kind: "region", id: region.id }} title={`شبكة ${region.name} التاريخية`} />
