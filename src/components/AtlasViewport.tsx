@@ -16,20 +16,20 @@ import type { AtlasPin, AtlasPinKind, StateOverlay } from "@/lib/atlas";
 const VB_W = 100;
 const VB_H = 60;
 const MIN_SCALE = 1;
-const MAX_SCALE = 8;
+const MAX_SCALE = 20;
 const ONBOARD_KEY = "irth.atlas.onboarded.v1";
 
 const VISIBLE_AT: Record<AtlasPinKind, (s: number) => boolean> = {
   state:    () => true,
   capital:  (s) => s >= 2.5,
   city:     (s) => s >= 3,
-  battle:   (s) => s >= 4.5,
-  event:    (s) => s >= 4.5,
-  landmark: (s) => s >= 6.5,
+  battle:   (s) => s >= 6,
+  event:    (s) => s >= 6,
+  landmark: (s) => s >= 10,
 };
 
 const LABEL_FROM: Record<AtlasPinKind, number> = {
-  state: 1, capital: 2.5, city: 3.5, battle: 5, event: 5, landmark: 6.5,
+  state: 1, capital: 2.5, city: 4, battle: 7, event: 7, landmark: 10,
 };
 
 const ROUTES: { from: string; to: string }[] = [
@@ -233,12 +233,54 @@ export function AtlasViewport({
 
   const tier =
     scale < 2.5 ? { n: 1, label: "العالم والدول" } :
-    scale < 4.5 ? { n: 2, label: "العواصم والمدن" } :
-    scale < 6.5 ? { n: 3, label: "المعارك والأحداث" } :
-                  { n: 4, label: "المعالم والمكتبات" };
+    scale < 6   ? { n: 2, label: "العواصم والمدن" } :
+    scale < 10  ? { n: 3, label: "المعارك والأحداث" } :
+    scale < 15  ? { n: 4, label: "المعالم والمكتبات" } :
+    scale < 18  ? { n: 5, label: "تجمّعات تاريخية كثيفة" } :
+                  { n: 6, label: "وضع الاستكشاف العميق" };
+
+  // ---- Progressive declustering ----
+  // Group visible pins that fall within an overlap radius (in viewBox units).
+  // Group radius shrinks as zoom increases, so pins gradually spread apart.
+  const declustered = useMemo(() => {
+    // overlap radius in viewBox units — shrinks with zoom so items separate when zooming in
+    const radius = Math.max(0.35, 4.5 / scale);
+    type Group = { ax: number; ay: number; items: AtlasPin[] };
+    const groups: Group[] = [];
+    for (const p of visiblePins) {
+      let g = groups.find((gr) => Math.hypot(gr.ax - p.x, gr.ay - p.y) < radius);
+      if (!g) { g = { ax: p.x, ay: p.y, items: [] }; groups.push(g); }
+      g.items.push(p);
+    }
+    const out: { pin: AtlasPin; ox: number; oy: number }[] = [];
+    for (const g of groups) {
+      if (g.items.length === 1) {
+        out.push({ pin: g.items[0], ox: 0, oy: 0 });
+      } else {
+        const r = radius * 0.9;
+        const n = g.items.length;
+        g.items.forEach((p, i) => {
+          const a = (i / n) * Math.PI * 2;
+          out.push({ pin: p, ox: Math.cos(a) * r, oy: Math.sin(a) * r });
+        });
+      }
+    }
+    return out;
+  }, [visiblePins, scale]);
+
+  // ---- Center camera on selected discovery ----
+  useEffect(() => {
+    if (!preview) return;
+    const targetScale = Math.max(scale, 6);
+    const nx = preview.x - (VB_W / targetScale) / 2;
+    const ny = preview.y - (VB_H / targetScale) / 2;
+    const c = clampPan(nx, ny, targetScale);
+    setScale(targetScale); setTx(c.x); setTy(c.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preview?.id]);
 
   const containerCls = fullscreen
-    ? "fixed inset-0 z-50 flex flex-col bg-[oklch(0.16_0.04_240)]"
+    ? "fixed inset-0 z-[60] flex flex-col bg-[oklch(0.16_0.04_240)]"
     : "relative overflow-hidden rounded-3xl border-2 border-amber-900/30 map-parchment map-vignette shadow-elegant";
 
   const svgHeight = fullscreen ? "h-full" : "h-[460px]";
@@ -362,25 +404,40 @@ export function AtlasViewport({
 
           {/* Pins (tier-filtered, no clusters) */}
           <g>
-            {visiblePins.map((pin) => {
+            {declustered.map(({ pin, ox, oy }) => {
               const showLabel = scale >= LABEL_FROM[pin.kind];
-              const baseSize = pin.kind === "state" ? 3.0 : pin.kind === "capital" ? 2.7 : 2.4;
+              const isSelected = preview?.id === pin.id;
+              const focusBoost = isSelected ? 1.2 : 1;
+              const baseSize = (pin.kind === "state" ? 3.0 : pin.kind === "capital" ? 2.7 : 2.4) * focusBoost;
               return (
                 <g key={pin.id}
-                  transform={`translate(${pin.x} ${pin.y}) scale(${markerScale})`}
-                  className="cursor-pointer atlas-pin"
+                  transform={`translate(${pin.x + ox} ${pin.y + oy}) scale(${markerScale})`}
+                  className={`cursor-pointer atlas-pin ${isSelected ? "atlas-pin-selected" : ""}`}
                   onClick={(e) => { e.stopPropagation(); setPreview(pin); }}
                 >
                   <title>{pin.entity.title}</title>
                   {/* Generous transparent hit target for mobile */}
                   <circle r={5} fill="transparent" />
+                  {isSelected && (
+                    <>
+                      <circle r={baseSize * 1.9} fill="oklch(0.88 0.16 82 / 0.35)">
+                        <animate attributeName="r"
+                          values={`${baseSize * 1.5};${baseSize * 2.2};${baseSize * 1.5}`}
+                          dur="1.6s" repeatCount="indefinite" />
+                        <animate attributeName="opacity"
+                          values="0.55;0.15;0.55" dur="1.6s" repeatCount="indefinite" />
+                      </circle>
+                      <circle r={baseSize * 1.35} fill="none"
+                        stroke="oklch(0.88 0.16 82)" strokeWidth={0.35} opacity={0.9} />
+                    </>
+                  )}
                   <MarkerGlyph kind={pin.kind} size={baseSize} />
                   {showLabel && (
                     <text
                       x={0}
                       y={baseSize * 1.95}
                       textAnchor="middle"
-                      fontSize={1.7}
+                      fontSize={isSelected ? 1.95 : 1.7}
                       fontWeight="800"
                       stroke="oklch(0.97 0.03 80 / 0.95)"
                       strokeWidth={0.55}
@@ -427,7 +484,7 @@ export function AtlasViewport({
           )}
         </div>
 
-        {preview && <DiscoveryCard pin={preview} onClose={() => setPreview(null)} />}
+        {preview && <DiscoveryCard pin={preview} onClose={() => setPreview(null)} fullscreen={fullscreen} />}
 
         {showOnboard && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm" dir="rtl">
@@ -471,11 +528,20 @@ function CtrlBtn({ children, label, onClick }: { children: React.ReactNode; labe
   );
 }
 
-function DiscoveryCard({ pin, onClose }: { pin: AtlasPin; onClose: () => void }) {
+function DiscoveryCard({ pin, onClose, fullscreen }: { pin: AtlasPin; onClose: () => void; fullscreen: boolean }) {
   const e = pin.entity;
   const tone = KIND_COLOR[pin.kind];
+  // Sit above bottom nav (~5rem) + iOS home indicator safe-area + 16px margin.
+  // In non-fullscreen the card lives inside the viewport so 8px is enough.
+  const bottomStyle = fullscreen
+    ? { bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.5rem)" }
+    : { bottom: "0.5rem" };
   return (
-    <div className="pointer-events-auto absolute inset-x-2 bottom-2 z-20 animate-reveal" dir="rtl">
+    <div
+      className="pointer-events-auto absolute inset-x-2 z-30 animate-reveal"
+      style={bottomStyle}
+      dir="rtl"
+    >
       <div className="overflow-hidden rounded-2xl border border-gold/35 bg-surface/95 shadow-elegant backdrop-blur">
         <div
           className="relative h-24 w-full"
