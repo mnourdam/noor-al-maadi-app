@@ -132,6 +132,30 @@ export async function listFriendships(userId: string): Promise<FriendEntry[]> {
     .filter(Boolean) as FriendEntry[];
 }
 
+/**
+ * Look up the friendship row between the current user and another user, if any.
+ * Returns the row plus the perspective ("incoming" = other sent to me,
+ * "outgoing" = I sent to other, "accepted" = friends, null = none).
+ */
+export async function getFriendshipWith(
+  meId: string,
+  otherId: string,
+): Promise<{ row: FriendshipRow; direction: FriendEntry["direction"] } | null> {
+  if (meId === otherId) return null;
+  const [a, b] = orderPair(meId, otherId);
+  const { data } = await db
+    .from("friendships")
+    .select("*")
+    .eq("user_a", a)
+    .eq("user_b", b)
+    .maybeSingle();
+  const row = (data as FriendshipRow | null) ?? null;
+  if (!row) return null;
+  const direction: FriendEntry["direction"] =
+    row.status === "accepted" ? "accepted" : row.requester === meId ? "outgoing" : "incoming";
+  return { row, direction };
+}
+
 export async function sendFriendRequest(meId: string, otherId: string): Promise<{ ok: boolean; error?: string }> {
   if (meId === otherId) return { ok: false, error: "لا يمكنك إضافة نفسك" };
   const [a, b] = orderPair(meId, otherId);
