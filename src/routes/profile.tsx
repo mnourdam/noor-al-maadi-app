@@ -355,10 +355,10 @@ function ProfilePage() {
           />
           <SettingToggle
             icon={<BellRing className="size-4" />}
-            label="إشعارات في مثل هذا اليوم"
-            desc="تذكير يومي بحدثٍ تاريخي"
-            value={profile.settings.notifications}
-            onChange={(v) => updateSettings({ notifications: v })}
+            label="تفعيل الإشعارات"
+            desc="مفتاح رئيسي لكل أنواع الإشعارات"
+            value={prefs.master}
+            onChange={async (v) => { if (v) await ensurePermission(); setNotificationPrefs({ master: v }); updateSettings({ notifications: v }); }}
           />
           <SettingToggle
             icon={<Sparkles className="size-4" />}
@@ -367,6 +367,46 @@ function ProfilePage() {
             value={profile.settings.reduceMotion}
             onChange={(v) => updateSettings({ reduceMotion: v })}
           />
+        </div>
+
+        {/* Notification preferences */}
+        <div className="mt-5 rounded-2xl border border-gold/25 bg-surface p-4">
+          <p className="font-display mb-1 inline-flex items-center gap-2 text-sm font-bold">
+            <Bell className="size-4 text-gold" /> تفضيلات الإشعارات
+          </p>
+          <p className="mb-3 text-[11px] text-muted-foreground">
+            تحكّم بنوع التنبيهات التي تصلك. تتطلّب «تفعيل الإشعارات» أعلاه.
+          </p>
+          <div className="space-y-2 opacity-100">
+            <SettingToggle
+              icon={<Calendar className="size-4" />}
+              label="حدث في مثل هذا اليوم"
+              desc="تذكير يومي بحدثٍ تاريخي"
+              value={prefs.daily && prefs.master}
+              onChange={(v) => setNotificationPrefs({ daily: v })}
+            />
+            <SettingToggle
+              icon={<Compass className="size-4" />}
+              label="تنبيهات العودة"
+              desc="فضول تاريخي إن غبت يومًا كاملاً"
+              value={prefs.reengagement && prefs.master}
+              onChange={(v) => setNotificationPrefs({ reengagement: v })}
+            />
+            <SettingToggle
+              icon={<Crown className="size-4" />}
+              label="إشعارات الحملات"
+              desc="عند فتح حملة جديدة أو سرّية"
+              value={prefs.campaign && prefs.master}
+              onChange={(v) => setNotificationPrefs({ campaign: v })}
+            />
+            <SettingToggle
+              icon={<Sparkles className="size-4" />}
+              label="إشعارات المواسم"
+              desc="بدء موسم جديد أو مكافأة جاهزة"
+              value={prefs.season && prefs.master}
+              onChange={(v) => setNotificationPrefs({ season: v })}
+            />
+          </div>
         </div>
 
         {profile.settings.ambienceEnabled && (
