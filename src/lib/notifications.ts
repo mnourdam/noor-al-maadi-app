@@ -1,0 +1,234 @@
+/**
+ * Notifications — Quality of Life v1
+ *
+ * Lightweight, web-only notification infrastructure:
+ *
+ *  - Browser push (window.Notification): used opportunistically while the
+ *    tab is open. On mobile PWA installs that grant the permission the OS
+ *    will display them too. Service-worker scheduled push and native push
+ *    are out of scope for v1.
+ *  - In-app inbox: a rolling list of recent notifications (stored in
+ *    localStorage so guests benefit too). Surfaced by the bell in AppShell
+ *    and the notifications page.
+ *  - Scheduling: the home / shell calls `runDailyNotifications()` on app
+ *    open. It checks last-fire timestamps and emits the daily history,
+ *    re-engagement and seasonal notifications when due.
+ *
+ * Categories follow the spec:
+ *   daily       — "حدث في مثل هذا اليوم"
+ *   reengagement— "هل تعلم …" curiosity hooks after 24h inactivity
+ *   season      — seasonal start / claimable reward
+ *   campaign    — new / hidden campaign unlocked
+ */
+
+export type NotificationCategory = "daily" | "reengagement" | "season" | "campaign";
+
+export interface NotificationPrefs {
+  master: boolean;
+  daily: boolean;
+  reengagement: boolean;
+  season: boolean;
+  campaign: boolean;
+}
+
+export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  master: true,
+  daily: true,
+  reengagement: true,
+  season: true,
+  campaign: true,
+};
+
+export interface InAppNotification {
+  id: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  href?: string;
+  at: number;
+  read?: boolean;
+}
+
+const INBOX_KEY = "irth.notifications.inbox.v1";
+const FIRED_KEY = "irth.notifications.fired.v1";
+const LAST_OPEN_KEY = "irth.lastOpenedAt";
+const MAX_INBOX = 50;
+
+// ============== Inbox storage ==============
+
+function read<T>(k: string, fallback: T): T {
+  if (typeof localStorage === "undefined") return fallback;
+  try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
+}
+function write<T>(k: string, v: T) {
+  if (typeof localStorage === "undefined") return;
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore quota */ }
+}
+
+export function getInbox(): InAppNotification[] {
+  return read<InAppNotification[]>(INBOX_KEY, []);
+}
+export function unreadCount(): number {
+  return getInbox().filter((n) => !n.read).length;
+}
+export function markAllRead(): void {
+  write(INBOX_KEY, getInbox().map((n) => ({ ...n, read: true })));
+}
+export function clearInbox(): void { write(INBOX_KEY, []); }
+
+function pushInbox(n: InAppNotification): void {
+  const list = [n, ...getInbox().filter((x) => x.id !== n.id)].slice(0, MAX_INBOX);
+  write(INBOX_KEY, list);
+  window.dispatchEvent(new CustomEvent("irth:notifications:updated"));
+}
+
+// ============== Permission + delivery ==============
+
+export async function ensurePermission(): Promise<NotificationPermission> {
+  if (typeof window === "undefined" || !("Notification" in window)) return "denied";
+  if (Notification.permission === "default") {
+    try { return await Notification.requestPermission(); } catch { return "denied"; }
+  }
+  return Notification.permission;
+}
+
+function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InAppNotification {
+  const final: InAppNotification = {
+    id: n.id ?? `${n.category}:${Date.now()}`,
+    category: n.category,
+    title: n.title,
+    body: n.body,
+    href: n.href,
+    at: Date.now(),
+    read: false,
+  };
+  pushInbox(final);
+  if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+    try { new Notification(final.title, { body: final.body, tag: final.category, icon: "/favicon.ico" }); } catch { /* ignore */ }
+  }
+  return final;
+}
+
+// ============== Scheduling guards (fire-once-per-day-ish) ==============
+
+interface Fired { [k: string]: string }
+function getFired(): Fired { return read<Fired>(FIRED_KEY, {}); }
+function setFired(map: Fired): void { write(FIRED_KEY, map); }
+function todayKey(): string { return new Date().toISOString().slice(0, 10); }
+
+function shouldFireDailyish(key: string): boolean {
+  const fired = getFired();
+  return fired[key] !== todayKey();
+}
+function markFired(key: string): void {
+  const fired = getFired();
+  fired[key] = todayKey();
+  setFired(fired);
+}
+
+// ============== Last-open tracking ==============
+
+export function touchLastOpened(): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(LAST_OPEN_KEY, String(Date.now()));
+}
+export function lastOpenedAt(): number {
+  if (typeof localStorage === "undefined") return Date.now();
+  const v = Number(localStorage.getItem(LAST_OPEN_KEY) ?? 0);
+  return v || Date.now();
+}
+
+// ============== Curiosity hooks for re-engagement ==============
+
+const REENGAGE_HOOKS: { title: string; body: string; href: string }[] = [
+  { title: "هل تعلم من أسقط بغداد؟", body: "اكتشف قصة سقوط الخلافة العباسية في الموسوعة.", href: "/encyclopedia" },
+  { title: "من القائد الذي هزم المغول؟", body: "تعرّف على قطز وعين جالوت في حملاتنا.", href: "/campaigns" },
+  { title: "ماذا كان داخل بيت الحكمة؟", body: "زر الخارطة وادخل بغداد العباسية.", href: "/map" },
+  { title: "كم استمرت الأندلس؟", body: "تابع الخط الزمني للأندلس من الفتح إلى السقوط.", href: "/timeline" },
+  { title: "أين دُفن صلاح الدين؟", body: "تجوّل في دمشق الأيوبية واكتشف أثره.", href: "/encyclopedia" },
+];
+
+// ============== Public scheduler ==============
+
+export interface SchedulerContext {
+  prefs: NotificationPrefs;
+  today?: { title: string; teaser: string; href: string } | null;
+  season?: { name: string; tagline: string; ready: boolean } | null;
+}
+
+/**
+ * Call on every app open. Emits at most one notification per category per
+ * day, based on stored "fired" markers. Pure-side-effect — safe in effects.
+ */
+export function runDailyNotifications(ctx: SchedulerContext): InAppNotification[] {
+  const out: InAppNotification[] = [];
+  if (!ctx.prefs.master) return out;
+
+  // 1) Daily history
+  if (ctx.prefs.daily && ctx.today && shouldFireDailyish("daily")) {
+    out.push(deliver({
+      category: "daily",
+      title: "حدث في مثل هذا اليوم",
+      body: `${ctx.today.title}${ctx.today.teaser ? " — " + ctx.today.teaser : ""}`,
+      href: ctx.today.href,
+    }));
+    markFired("daily");
+  }
+
+  // 2) Re-engagement (24h gap)
+  if (ctx.prefs.reengagement) {
+    const last = lastOpenedAt();
+    const gap = Date.now() - last;
+    if (gap >= 24 * 3600_000 && shouldFireDailyish("reengage")) {
+      const hook = REENGAGE_HOOKS[Math.floor(Math.random() * REENGAGE_HOOKS.length)];
+      out.push(deliver({ category: "reengagement", ...hook }));
+      markFired("reengage");
+    }
+  }
+
+  // 3) Season — reward claimable
+  if (ctx.prefs.season && ctx.season?.ready) {
+    const key = `season:ready:${ctx.season.name}`;
+    if (shouldFireDailyish(key)) {
+      out.push(deliver({
+        category: "season",
+        title: "مكافأة الموسم جاهزة",
+        body: `${ctx.season.name} — استلمها الآن.`,
+        href: "/seasons",
+      }));
+      markFired(key);
+    }
+  }
+
+  // Update last-opened *after* scheduling so the gap calc above is correct
+  touchLastOpened();
+  return out;
+}
+
+/** Fire a campaign-unlocked notification (call when a new/hidden campaign becomes available). */
+export function notifyCampaignUnlocked(prefs: NotificationPrefs, campaign: { id: string; title: string; hidden?: boolean }): void {
+  if (!prefs.master || !prefs.campaign) return;
+  const key = `campaign:${campaign.id}`;
+  if (!shouldFireDailyish(key)) return;
+  deliver({
+    category: "campaign",
+    title: campaign.hidden ? "حملة سرّية فُتحت" : "حملة جديدة متاحة",
+    body: campaign.title,
+    href: "/campaigns",
+  });
+  markFired(key);
+}
+
+/** Fire a season-change notification. */
+export function notifySeasonChanged(prefs: NotificationPrefs, season: { id: string; name: string }): void {
+  if (!prefs.master || !prefs.season) return;
+  const key = `season:start:${season.id}`;
+  if (!shouldFireDailyish(key)) return;
+  deliver({
+    category: "season",
+    title: "موسم جديد بدأ",
+    body: season.name,
+    href: "/seasons",
+  });
+  markFired(key);
+}
