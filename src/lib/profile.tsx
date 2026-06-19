@@ -127,6 +127,9 @@ interface Ctx {
   // Cloud-save integration
   replaceProfile: (next: ProfileState) => void;
   resetProfile: () => void;
+  // Social v1
+  grantTitle: (title: string) => void;
+  grantArtifact: (id: string) => void;
 }
 
 const ProfileContext = createContext<Ctx | null>(null);
@@ -373,6 +376,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       settings: { ...initial.settings, ...(next.settings ?? {}) },
     }),
     resetProfile: () => setProfile(initial),
+    grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
+    grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
   }), [profile, update, awardBadge]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;

@@ -89,15 +89,18 @@ export async function pushSave(userId: string, profile: ProfileState): Promise<b
   return true;
 }
 
-export async function signUpWithEmail(args: { email: string; password: string; username: string }) {
-  const { email, password, username } = args;
+export async function signUpWithEmail(args: { email: string; password: string; username: string; referralCode?: string }) {
+  const { email, password, username, referralCode } = args;
   const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
   return supabase.auth.signUp({
     email,
     password,
     options: {
       emailRedirectTo: redirectTo,
-      data: { username: username.trim() },
+      data: {
+        username: username.trim(),
+        ...(referralCode ? { referral_code: referralCode.trim().toUpperCase() } : {}),
+      },
     },
   });
 }

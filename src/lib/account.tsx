@@ -13,6 +13,7 @@ import {
   type AccountProfile,
 } from "./cloud-save";
 import { useProfile, type ProfileState } from "./profile";
+import { pushPublicStats, claimSignupReferral, REFERRAL_REWARDS } from "./social";
 
 export type ConflictChoice = "local" | "cloud";
 
@@ -28,7 +29,7 @@ interface AccountCtx {
   syncing: boolean;
   lastSyncAt: number | null;
   conflict: PendingConflict | null;
-  signUp: (args: { email: string; password: string; username: string }) => Promise<{ ok: boolean; error?: string }>;
+  signUp: (args: { email: string; password: string; username: string; referralCode?: string }) => Promise<{ ok: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   syncNow: () => Promise<boolean>;
@@ -41,7 +42,7 @@ const Ctx = createContext<AccountCtx | null>(null);
 const PUSH_DEBOUNCE_MS = 1500;
 
 export function AccountProvider({ children }: { children: ReactNode }) {
-  const { profile, replaceProfile } = useProfile();
+  const { profile, replaceProfile, addDinars, awardBadge } = useProfile();
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<AccountProfile | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -94,6 +95,19 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         setAccount(acc);
         void touchLastActive(user.id);
 
+        // One-time signup referral rewards (idempotent server-side).
+        try {
+          const claim = await claimSignupReferral();
+          if (claim.ok) {
+            const flagKey = `irth.refclaim.${user.id}`;
+            if (!localStorage.getItem(flagKey)) {
+              addDinars(REFERRAL_REWARDS.newPlayer.dinars);
+              awardBadge(REFERRAL_REWARDS.newPlayer.badge);
+              localStorage.setItem(flagKey, "1");
+            }
+          }
+        } catch { /* ignore */ }
+
         const localSnap = profileRef.current;
         if (!save) {
           // No cloud save yet — push current local progress as the seed.
@@ -127,6 +141,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setSyncing(true);
       pushSave(user.id, profileRef.current)
         .then((ok) => { if (ok) setLastSyncAt(Date.now()); })
+        .then(() => pushPublicStats(user.id, profileRef.current))
         .finally(() => setSyncing(false));
     }, PUSH_DEBOUNCE_MS);
     return () => {
@@ -134,11 +149,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     };
   }, [profile, user]);
 
-  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username }) => {
+  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, referralCode }) => {
     const u = username.trim();
     if (u.length < 3) return { ok: false, error: "اسم المستخدم قصير جداً" };
     if (password.length < 6) return { ok: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" };
-    const { data, error } = await signUpWithEmail({ email, password, username: u });
+    const { data, error } = await signUpWithEmail({ email, password, username: u, referralCode });
     if (error) return { ok: false, error: error.message };
     if (!data.session) {
       return { ok: true, error: "تحقق من بريدك لتأكيد الحساب." };

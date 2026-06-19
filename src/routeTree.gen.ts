@@ -10,12 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TimelineRouteImport } from './routes/timeline'
+import { Route as ShareCardRouteImport } from './routes/share-card'
 import { Route as SeasonsRouteImport } from './routes/seasons'
+import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as InvestigationsRouteImport } from './routes/investigations'
 import { Route as HistoryCalendarRouteImport } from './routes/history-calendar'
+import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as EncyclopediaRouteImport } from './routes/encyclopedia'
 import { Route as ContentAuditRouteImport } from './routes/content-audit'
 import { Route as CollectionRouteImport } from './routes/collection'
@@ -25,6 +28,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EncyclopediaIndexRouteImport } from './routes/encyclopedia.index'
 import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
+import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as StoryIdRouteImport } from './routes/story.$id'
 import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
 import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
@@ -32,6 +36,7 @@ import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
 import { Route as PlayChapterRouteImport } from './routes/play.chapter'
 import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
 import { Route as FigureIdRouteImport } from './routes/figure.$id'
+import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
@@ -47,9 +52,19 @@ const TimelineRoute = TimelineRouteImport.update({
   path: '/timeline',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareCardRoute = ShareCardRouteImport.update({
+  id: '/share-card',
+  path: '/share-card',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SeasonsRoute = SeasonsRouteImport.update({
   id: '/seasons',
   path: '/seasons',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralsRoute = ReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -75,6 +90,11 @@ const InvestigationsRoute = InvestigationsRouteImport.update({
 const HistoryCalendarRoute = HistoryCalendarRouteImport.update({
   id: '/history-calendar',
   path: '/history-calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FriendsRoute = FriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EncyclopediaRoute = EncyclopediaRouteImport.update({
@@ -122,6 +142,11 @@ const CampaignsIndexRoute = CampaignsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CampaignsRoute,
 } as any)
+const UUsernameRoute = UUsernameRouteImport.update({
+  id: '/u/$username',
+  path: '/u/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StoryIdRoute = StoryIdRouteImport.update({
   id: '/story/$id',
   path: '/story/$id',
@@ -155,6 +180,11 @@ const InvestigationIdRoute = InvestigationIdRouteImport.update({
 const FigureIdRoute = FigureIdRouteImport.update({
   id: '/figure/$id',
   path: '/figure/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareIdRoute = CompareIdRouteImport.update({
+  id: '/compare/$id',
+  path: '/compare/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CityIdRoute = CityIdRouteImport.update({
@@ -212,16 +242,20 @@ export interface FileRoutesByFullPath {
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
   '/encyclopedia': typeof EncyclopediaRouteWithChildren
+  '/friends': typeof FriendsRoute
   '/history-calendar': typeof HistoryCalendarRoute
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
+  '/share-card': typeof ShareCardRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
+  '/compare/$id': typeof CompareIdRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -229,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
+  '/u/$username': typeof UUsernameRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -244,16 +279,20 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
+  '/friends': typeof FriendsRoute
   '/history-calendar': typeof HistoryCalendarRoute
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
+  '/share-card': typeof ShareCardRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
+  '/compare/$id': typeof CompareIdRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -261,6 +300,7 @@ export interface FileRoutesByTo {
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
+  '/u/$username': typeof UUsernameRoute
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -278,16 +318,20 @@ export interface FileRoutesById {
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
   '/encyclopedia': typeof EncyclopediaRouteWithChildren
+  '/friends': typeof FriendsRoute
   '/history-calendar': typeof HistoryCalendarRoute
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
+  '/share-card': typeof ShareCardRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
+  '/compare/$id': typeof CompareIdRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -295,6 +339,7 @@ export interface FileRoutesById {
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
+  '/u/$username': typeof UUsernameRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -314,16 +359,20 @@ export interface FileRouteTypes {
     | '/collection'
     | '/content-audit'
     | '/encyclopedia'
+    | '/friends'
     | '/history-calendar'
     | '/investigations'
     | '/map'
     | '/on-this-day'
     | '/profile'
+    | '/referrals'
     | '/seasons'
+    | '/share-card'
     | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
+    | '/compare/$id'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -331,6 +380,7 @@ export interface FileRouteTypes {
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
+    | '/u/$username'
     | '/campaigns/'
     | '/encyclopedia/'
     | '/encyclopedia/entity/$id'
@@ -346,16 +396,20 @@ export interface FileRouteTypes {
     | '/auth'
     | '/collection'
     | '/content-audit'
+    | '/friends'
     | '/history-calendar'
     | '/investigations'
     | '/map'
     | '/on-this-day'
     | '/profile'
+    | '/referrals'
     | '/seasons'
+    | '/share-card'
     | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
+    | '/compare/$id'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -363,6 +417,7 @@ export interface FileRouteTypes {
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
+    | '/u/$username'
     | '/campaigns'
     | '/encyclopedia'
     | '/encyclopedia/entity/$id'
@@ -379,16 +434,20 @@ export interface FileRouteTypes {
     | '/collection'
     | '/content-audit'
     | '/encyclopedia'
+    | '/friends'
     | '/history-calendar'
     | '/investigations'
     | '/map'
     | '/on-this-day'
     | '/profile'
+    | '/referrals'
     | '/seasons'
+    | '/share-card'
     | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
+    | '/compare/$id'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -396,6 +455,7 @@ export interface FileRouteTypes {
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
+    | '/u/$username'
     | '/campaigns/'
     | '/encyclopedia/'
     | '/encyclopedia/entity/$id'
@@ -414,15 +474,19 @@ export interface RootRouteChildren {
   CollectionRoute: typeof CollectionRoute
   ContentAuditRoute: typeof ContentAuditRoute
   EncyclopediaRoute: typeof EncyclopediaRouteWithChildren
+  FriendsRoute: typeof FriendsRoute
   HistoryCalendarRoute: typeof HistoryCalendarRoute
   InvestigationsRoute: typeof InvestigationsRoute
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
   ProfileRoute: typeof ProfileRoute
+  ReferralsRoute: typeof ReferralsRoute
   SeasonsRoute: typeof SeasonsRoute
+  ShareCardRoute: typeof ShareCardRoute
   TimelineRoute: typeof TimelineRoute
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
+  CompareIdRoute: typeof CompareIdRoute
   FigureIdRoute: typeof FigureIdRoute
   InvestigationIdRoute: typeof InvestigationIdRoute
   PlayChapterRoute: typeof PlayChapterRoute
@@ -430,6 +494,7 @@ export interface RootRouteChildren {
   PlayInvestigateRoute: typeof PlayInvestigateRoute
   PlayTimelineRoute: typeof PlayTimelineRoute
   StoryIdRoute: typeof StoryIdRoute
+  UUsernameRoute: typeof UUsernameRoute
   PlayCampaignIdRoute: typeof PlayCampaignIdRouteWithChildren
 }
 
@@ -442,11 +507,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TimelineRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share-card': {
+      id: '/share-card'
+      path: '/share-card'
+      fullPath: '/share-card'
+      preLoaderRoute: typeof ShareCardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/seasons': {
       id: '/seasons'
       path: '/seasons'
       fullPath: '/seasons'
       preLoaderRoute: typeof SeasonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referrals': {
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -482,6 +561,13 @@ declare module '@tanstack/react-router' {
       path: '/history-calendar'
       fullPath: '/history-calendar'
       preLoaderRoute: typeof HistoryCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/friends': {
+      id: '/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof FriendsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/encyclopedia': {
@@ -547,6 +633,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CampaignsIndexRouteImport
       parentRoute: typeof CampaignsRoute
     }
+    '/u/$username': {
+      id: '/u/$username'
+      path: '/u/$username'
+      fullPath: '/u/$username'
+      preLoaderRoute: typeof UUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/story/$id': {
       id: '/story/$id'
       path: '/story/$id'
@@ -594,6 +687,13 @@ declare module '@tanstack/react-router' {
       path: '/figure/$id'
       fullPath: '/figure/$id'
       preLoaderRoute: typeof FigureIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/$id': {
+      id: '/compare/$id'
+      path: '/compare/$id'
+      fullPath: '/compare/$id'
+      preLoaderRoute: typeof CompareIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/city/$id': {
@@ -716,15 +816,19 @@ const rootRouteChildren: RootRouteChildren = {
   CollectionRoute: CollectionRoute,
   ContentAuditRoute: ContentAuditRoute,
   EncyclopediaRoute: EncyclopediaRouteWithChildren,
+  FriendsRoute: FriendsRoute,
   HistoryCalendarRoute: HistoryCalendarRoute,
   InvestigationsRoute: InvestigationsRoute,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
   ProfileRoute: ProfileRoute,
+  ReferralsRoute: ReferralsRoute,
   SeasonsRoute: SeasonsRoute,
+  ShareCardRoute: ShareCardRoute,
   TimelineRoute: TimelineRoute,
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
+  CompareIdRoute: CompareIdRoute,
   FigureIdRoute: FigureIdRoute,
   InvestigationIdRoute: InvestigationIdRoute,
   PlayChapterRoute: PlayChapterRoute,
@@ -732,6 +836,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayInvestigateRoute: PlayInvestigateRoute,
   PlayTimelineRoute: PlayTimelineRoute,
   StoryIdRoute: StoryIdRoute,
+  UUsernameRoute: UUsernameRoute,
   PlayCampaignIdRoute: PlayCampaignIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
