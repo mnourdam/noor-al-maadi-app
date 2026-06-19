@@ -30,8 +30,23 @@ jobs:
       - name: Install Capacitor Android
         run: npm install @capacitor/android --save
 
-      - name: Build Android web assets
-        run: npm run build:android:web
+      - name: Prepare Android web assets
+        run: |
+          mkdir -p dist/android
+          cat > dist/android/index.html <<'EOF'
+          <!doctype html>
+          <html>
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>إرث</title>
+              <script>
+                window.location.replace("https://noraty-arabiya.lovable.app/");
+              </script>
+            </head>
+            <body></body>
+          </html>
+          EOF
 
       - name: Add Capacitor Android platform
         run: npx -y @capacitor/cli add android
