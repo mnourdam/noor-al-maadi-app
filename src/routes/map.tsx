@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Lock, Check, Star, Compass, Sparkles, Scroll, Users, Landmark as LandmarkIcon, Swords, ArrowLeft } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
@@ -212,6 +212,7 @@ function WorldMapCanvas({
   pins: AtlasPin[]; overlay: import("@/lib/atlas").StateOverlay | undefined;
   eraFilter: string | null;
 }) {
+  const router = useRouter();
   const regionsById = useMemo(
     () => Object.fromEntries(MAP_REGIONS.map((r) => [r.id, r])) as Record<string, MapRegion>,
     [],
