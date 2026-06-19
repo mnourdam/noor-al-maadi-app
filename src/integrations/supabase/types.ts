@@ -14,7 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cloud_saves: {
+        Row: {
+          client_updated_at: string | null
+          created_at: string
+          data: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_updated_at?: string | null
+          created_at?: string
+          data: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_updated_at?: string | null
+          created_at?: string
+          data?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          join_date: string
+          last_active: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          join_date?: string
+          last_active?: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          join_date?: string
+          last_active?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
