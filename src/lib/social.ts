@@ -83,7 +83,8 @@ export function derivePublicStats(p: ProfileState) {
 
 export async function pushPublicStats(userId: string, p: ProfileState): Promise<void> {
   const stats = derivePublicStats(p);
-  await db.from("profiles").update(stats).eq("id", userId);
+  // Route through SECURITY DEFINER RPC; direct UPDATE on economy columns is revoked.
+  await db.rpc("sync_my_public_stats", { p_stats: stats as never });
 }
 
 // =========== Friendships ===========
@@ -190,13 +191,9 @@ export async function claimSignupReferral(): Promise<{ ok: boolean; referrer_id?
 }
 
 export async function advanceReferralStage(stage: 2 | 3 | 4, p: ProfileState): Promise<{ ok: boolean }> {
-  const lvl = levelFor(p.points).level;
-  const { data } = await db.rpc("advance_referral_stage", {
-    p_stage: stage,
-    p_level: lvl,
-    p_campaigns: p.campaignsCompleted.length,
-    p_streak: p.streak,
-  });
+  // Sync server-side stats first so the RPC can verify eligibility against profiles.*
+  try { await pushPublicStats((await db.auth.getUser()).data.user?.id ?? "", p); } catch { /* ignore */ }
+  const { data } = await db.rpc("advance_referral_stage", { p_stage: stage });
   return { ok: !!data?.ok };
 }
 
