@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   fetchAccountProfile,
   fetchCloudSave,
-  hasLocalProgress,
   pushSave,
   signInWithEmail,
   signOut as cloudSignOut,
@@ -15,26 +14,16 @@ import {
 import { useProfile, type ProfileState } from "./profile";
 import { pushPublicStats, claimSignupReferral, REFERRAL_REWARDS } from "./social";
 
-export type ConflictChoice = "local" | "cloud";
-
-interface PendingConflict {
-  localSnapshot: ProfileState;
-  cloudSnapshot: ProfileState;
-}
-
 interface AccountCtx {
   user: User | null;
   account: AccountProfile | null;
   loadingSession: boolean;
   syncing: boolean;
   lastSyncAt: number | null;
-  conflict: PendingConflict | null;
   signUp: (args: { email: string; password: string; username: string; referralCode?: string }) => Promise<{ ok: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   syncNow: () => Promise<boolean>;
-  resolveConflict: (choice: ConflictChoice) => Promise<void>;
-  dismissConflict: () => void;
 }
 
 const Ctx = createContext<AccountCtx | null>(null);
