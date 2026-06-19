@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { todayKey, dailyMissionsForDate } from "./data";
 import { HEART_MAX, getEffectiveHearts, ACTIVITY_COOLDOWN_MS, activityKey, STREAK_MILESTONES, type HeartActivity, type StreakMilestone } from "./hearts";
+import { DEFAULT_AVATAR_ID } from "./avatars";
+import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notifications";
 
 const STORAGE_KEY = "hakaya.profile.v2";
 
@@ -9,6 +11,7 @@ export interface AppSettings {
   ambienceVolume: number; // 0..1
   reduceMotion: boolean;
   notifications: boolean;
+  notificationPrefs?: NotificationPrefs;
 }
 
 export interface ProfileState {
@@ -40,6 +43,7 @@ export interface ProfileState {
   bio?: string;
   favoriteStateId?: string;
   favoriteFigureId?: string;
+  avatarId?: string;
   // Engagement v1
   hearts: number;
   heartsAt: number; // ms epoch of last hearts commit
