@@ -36,6 +36,9 @@ export interface ProfileState {
   seasonClaimed: boolean;
   titlesEarned: string[];
   settings: AppSettings;
+  bio?: string;
+  favoriteStateId?: string;
+  favoriteFigureId?: string;
 }
 
 const initial: ProfileState = {
@@ -64,6 +67,9 @@ const initial: ProfileState = {
   seasonClaimed: false,
   titlesEarned: [],
   settings: { ambienceEnabled: false, ambienceVolume: 0.4, reduceMotion: false, notifications: true },
+  bio: "",
+  favoriteStateId: "",
+  favoriteFigureId: "",
 };
 
 interface Ctx {
@@ -91,6 +97,8 @@ interface Ctx {
   claimSeason: (reward: number, title?: string) => boolean;
   updateSettings: (patch: Partial<AppSettings>) => void;
   todayDailyIds: () => string[];
+  setBio: (bio: string) => void;
+  setFavorites: (patch: { favoriteStateId?: string; favoriteFigureId?: string }) => void;
 }
 
 const ProfileContext = createContext<Ctx | null>(null);
@@ -221,6 +229,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     },
     updateSettings: (patch) => update((p) => ({ ...p, settings: { ...p.settings, ...patch } })),
     todayDailyIds: () => dailyMissionsForDate().map((m) => m.id),
+    setBio: (bio) => update((p) => ({ ...p, bio })),
+    setFavorites: (patch) => update((p) => ({ ...p, ...patch })),
   }), [profile, update, awardBadge]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;
