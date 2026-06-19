@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { User, Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin, Coins, Search, Gift } from "lucide-react";
+import { Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin, Coins, Search, Gift, Bell } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
@@ -10,6 +10,10 @@ import {
 import { useProfile } from "@/lib/profile";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
 import { AccountSection } from "@/components/AccountSection";
+import { Avatar } from "@/components/Avatar";
+import { AvatarPicker } from "@/components/AvatarPicker";
+import { DEFAULT_NOTIFICATION_PREFS, ensurePermission } from "@/lib/notifications";
+import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
@@ -17,10 +21,12 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { profile, login, logout, updateSettings, claimSeason, setBio, setFavorites, claimStreakMilestone, spendDinarsForHeart } = useProfile();
+  const { profile, login, logout, updateSettings, claimSeason, setBio, setFavorites, claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs } = useProfile();
   const [name, setName] = useState("");
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(profile.bio ?? "");
+  const [pickingAvatar, setPickingAvatar] = useState(false);
+  const prefs = profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS;
 
   const lvl = levelFor(profile.points);
   const achievements = evaluateAchievements(profile);
@@ -55,9 +61,16 @@ function ProfilePage() {
         <div className="relative overflow-hidden rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
           <div className="particle-field" />
           <div className="relative flex items-center gap-4">
-            <div className="grid size-16 place-items-center rounded-2xl bg-gradient-gold text-primary-foreground">
-              <User className="size-7" />
-            </div>
+            <button
+              onClick={() => setPickingAvatar(true)}
+              className="relative shrink-0"
+              aria-label="تغيير الصورة"
+            >
+              <Avatar avatarId={profile.avatarId ?? DEFAULT_AVATAR_ID} size="lg" />
+              <span className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full border border-gold/40 bg-background text-gold">
+                <Pencil className="size-3" />
+              </span>
+            </button>
             <div className="min-w-0 flex-1">
               <p className="font-display truncate text-lg font-bold">{profile.name}</p>
               <p className="text-[11px] text-gold">المستوى {lvl.level} · {lvl.title}</p>
@@ -342,10 +355,10 @@ function ProfilePage() {
           />
           <SettingToggle
             icon={<BellRing className="size-4" />}
-            label="إشعارات في مثل هذا اليوم"
-            desc="تذكير يومي بحدثٍ تاريخي"
-            value={profile.settings.notifications}
-            onChange={(v) => updateSettings({ notifications: v })}
+            label="تفعيل الإشعارات"
+            desc="مفتاح رئيسي لكل أنواع الإشعارات"
+            value={prefs.master}
+            onChange={async (v) => { if (v) await ensurePermission(); setNotificationPrefs({ master: v }); updateSettings({ notifications: v }); }}
           />
           <SettingToggle
             icon={<Sparkles className="size-4" />}
@@ -354,6 +367,46 @@ function ProfilePage() {
             value={profile.settings.reduceMotion}
             onChange={(v) => updateSettings({ reduceMotion: v })}
           />
+        </div>
+
+        {/* Notification preferences */}
+        <div className="mt-5 rounded-2xl border border-gold/25 bg-surface p-4">
+          <p className="font-display mb-1 inline-flex items-center gap-2 text-sm font-bold">
+            <Bell className="size-4 text-gold" /> تفضيلات الإشعارات
+          </p>
+          <p className="mb-3 text-[11px] text-muted-foreground">
+            تحكّم بنوع التنبيهات التي تصلك. تتطلّب «تفعيل الإشعارات» أعلاه.
+          </p>
+          <div className="space-y-2 opacity-100">
+            <SettingToggle
+              icon={<Calendar className="size-4" />}
+              label="حدث في مثل هذا اليوم"
+              desc="تذكير يومي بحدثٍ تاريخي"
+              value={prefs.daily && prefs.master}
+              onChange={(v) => setNotificationPrefs({ daily: v })}
+            />
+            <SettingToggle
+              icon={<Compass className="size-4" />}
+              label="تنبيهات العودة"
+              desc="فضول تاريخي إن غبت يومًا كاملاً"
+              value={prefs.reengagement && prefs.master}
+              onChange={(v) => setNotificationPrefs({ reengagement: v })}
+            />
+            <SettingToggle
+              icon={<Crown className="size-4" />}
+              label="إشعارات الحملات"
+              desc="عند فتح حملة جديدة أو سرّية"
+              value={prefs.campaign && prefs.master}
+              onChange={(v) => setNotificationPrefs({ campaign: v })}
+            />
+            <SettingToggle
+              icon={<Sparkles className="size-4" />}
+              label="إشعارات المواسم"
+              desc="بدء موسم جديد أو مكافأة جاهزة"
+              value={prefs.season && prefs.master}
+              onChange={(v) => setNotificationPrefs({ season: v })}
+            />
+          </div>
         </div>
 
         {profile.settings.ambienceEnabled && (
@@ -403,6 +456,13 @@ function ProfilePage() {
           <ChevronLeft className="size-4 text-muted-foreground" />
         </Link>
       </Screen>
+      {pickingAvatar && (
+        <AvatarPicker
+          currentId={profile.avatarId ?? DEFAULT_AVATAR_ID}
+          onPick={(id) => setAvatar(id)}
+          onClose={() => setPickingAvatar(false)}
+        />
+      )}
     </AppShell>
   );
 }

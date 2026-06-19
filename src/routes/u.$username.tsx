@@ -4,6 +4,7 @@ import { Crown, Flame, Star, Trophy, Coins, MapPin, IdCard, ChevronLeft, UserPlu
 import { AppShell, Screen } from "@/components/AppShell";
 import { fetchPublicProfileByUsername, sendFriendRequest, type PublicProfile } from "@/lib/social";
 import { useAccount } from "@/lib/account";
+import { Avatar } from "@/components/Avatar";
 
 export const Route = createFileRoute("/u/$username")({
   head: () => ({ meta: [{ title: "صفحة عامة" }] }),
@@ -35,9 +36,7 @@ function PublicProfilePage() {
           <>
             <div className="rounded-3xl border border-gold/30 bg-surface p-5 shadow-elegant">
               <div className="flex items-center gap-3">
-                <div className="flex size-16 items-center justify-center rounded-full bg-gradient-gold text-xl font-bold text-primary-foreground shadow-gold">
-                  {p.username[0]}
-                </div>
+                <Avatar avatarId={p.avatar_id} size="lg" fallbackChar={p.username[0]} />
                 <div className="min-w-0 flex-1">
                   <div className="text-lg font-bold">{p.username}</div>
                   <div className="text-xs text-gold">{p.title ?? "مستكشف التاريخ"}</div>

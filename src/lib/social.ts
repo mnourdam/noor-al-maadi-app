@@ -20,13 +20,14 @@ export interface PublicProfile {
   discovery_pct: number;
   favorite_state_id: string | null;
   favorite_figure_id: string | null;
+  avatar_id: string | null;
   referral_code: string | null;
   last_active: string;
   join_date: string;
 }
 
 const PUBLIC_COLS =
-  "id, username, bio, title, level, xp, dinars, streak, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, referral_code, last_active, join_date";
+  "id, username, bio, title, level, xp, dinars, streak, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id, referral_code, last_active, join_date";
 
 // =========== Public profile reads ===========
 export async function fetchPublicProfileById(id: string): Promise<PublicProfile | null> {
@@ -78,6 +79,7 @@ export function derivePublicStats(p: ProfileState) {
     discovery_pct: discovery,
     favorite_state_id: p.favoriteStateId || null,
     favorite_figure_id: p.favoriteFigureId || null,
+    avatar_id: p.avatarId || null,
   };
 }
 

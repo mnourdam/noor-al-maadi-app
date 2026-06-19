@@ -1,0 +1,35 @@
+
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_id text DEFAULT 'kaaba';
+
+-- Extend column-level read grants to include avatar_id (cosmetic, public).
+GRANT SELECT (avatar_id) ON public.profiles TO authenticated, anon;
+GRANT UPDATE (avatar_id) ON public.profiles TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.sync_my_public_stats(p_stats jsonb)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  uid uuid := auth.uid();
+BEGIN
+  IF uid IS NULL THEN RAISE EXCEPTION 'unauthenticated'; END IF;
+
+  UPDATE public.profiles SET
+    bio                 = COALESCE(LEFT(NULLIF(p_stats->>'bio',''), 500), bio),
+    title               = COALESCE(LEFT(NULLIF(p_stats->>'title',''), 100), title),
+    level               = LEAST(GREATEST(COALESCE((p_stats->>'level')::int, level), 0), 999),
+    xp                  = LEAST(GREATEST(COALESCE((p_stats->>'xp')::int, xp), 0), 100000000),
+    dinars              = LEAST(GREATEST(COALESCE((p_stats->>'dinars')::int, dinars), 0), 100000000),
+    streak              = LEAST(GREATEST(COALESCE((p_stats->>'streak')::int, streak), 0), 100000),
+    campaigns_completed = LEAST(GREATEST(COALESCE((p_stats->>'campaigns_completed')::int, campaigns_completed), 0), 100000),
+    artifacts_collected = LEAST(GREATEST(COALESCE((p_stats->>'artifacts_collected')::int, artifacts_collected), 0), 100000),
+    discovery_pct       = LEAST(GREATEST(COALESCE((p_stats->>'discovery_pct')::int, discovery_pct), 0), 100),
+    favorite_state_id   = COALESCE(NULLIF(p_stats->>'favorite_state_id',''),  favorite_state_id),
+    favorite_figure_id  = COALESCE(NULLIF(p_stats->>'favorite_figure_id',''), favorite_figure_id),
+    avatar_id           = COALESCE(NULLIF(LEFT(p_stats->>'avatar_id', 64),''), avatar_id),
+    last_active         = now()
+  WHERE id = uid;
+END;
+$function$;

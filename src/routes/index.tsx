@@ -1,15 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Flame, Star, Sparkles, Search, ListOrdered, GitBranch, Map as MapIcon,
-  ChevronLeft, Crown, Lock, Compass, Eye, Play, Hourglass, Check,
+  ChevronLeft, Crown, Lock, Compass, Eye, Play, Hourglass,
   Calendar,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   dailyStory, todayOnThisDay, ERAS, CAMPAIGNS, ARTIFACTS, CHARACTERS,
-  levelFor, dailyMissionsForDate, currentSeason, UPCOMING_CAMPAIGNS,
-  UPCOMING_REGIONS, MYSTERY_CHARACTERS, FLAGSHIP_CHAPTERS, todayKey,
+  levelFor, currentSeason, UPCOMING_CAMPAIGNS,
+  UPCOMING_REGIONS, MYSTERY_CHARACTERS, FLAGSHIP_CHAPTERS,
   nextActiveCampaign,
 } from "@/lib/data";
 import {
@@ -18,6 +18,7 @@ import {
   IMPORTANCE_LABEL,
 } from "@/lib/historical-calendar";
 import { useProfile } from "@/lib/profile";
+import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS } from "@/lib/notifications";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
 
 export const Route = createFileRoute("/")({
@@ -33,7 +34,23 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { profile, touchStreak } = useProfile();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); touchStreak(); }, [touchStreak]);
+  useEffect(() => {
+    setMounted(true);
+    touchStreak();
+    // Fire the daily / re-engagement / season notifications when due.
+    const today = todayOnThisDay();
+    const season = currentSeason();
+    runDailyNotifications({
+      prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
+      today: { title: today.title, teaser: today.detail, href: "/on-this-day" },
+      season: {
+        name: season.name,
+        tagline: season.tagline,
+        ready: profile.seasonPoints >= season.goalPoints && !profile.seasonClaimed,
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [touchStreak]);
 
   const lvl = levelFor(profile.points);
   // ===== Dynamic hero campaign =====
@@ -51,9 +68,6 @@ function Index() {
     ? (FLAGSHIP_CHAPTERS.find((c) => !profile.missionsCompleted.includes(c.missionId))
         ?? FLAGSHIP_CHAPTERS[FLAGSHIP_CHAPTERS.length - 1])
     : null;
-
-  const dailies = useMemo(() => (mounted ? dailyMissionsForDate() : []), [mounted]);
-  const claimedToday = profile.dailyClaimed.day === todayKey() ? profile.dailyClaimed.ids : [];
 
   const discovery = mounted ? rotatingDiscovery() : null;
   const season = currentSeason();
@@ -194,51 +208,6 @@ function Index() {
       </section>
 
       {/* ============ DAILY MISSIONS ============ */}
-      {mounted && dailies.length > 0 && (() => {
-        const remaining = dailies.filter((d) => !claimedToday.includes(d.id)).length;
-        return (
-          <section className="mt-10 px-5">
-            <SectionHeader
-              icon={<Sparkles className="size-3.5" />}
-              eyebrow="مهام اليوم"
-              title={remaining > 0 ? `${remaining} مهام بانتظارك` : "أنجزت مهام اليوم"}
-            />
-            <div className="-mr-5 flex gap-3 overflow-x-auto pr-5 pb-2">
-              {dailies.map((d) => {
-                const done = claimedToday.includes(d.id);
-                return (
-                  <Link
-                    key={d.id} to={d.link.to as "/"}
-                    aria-label={done ? `${d.title} — مكتمل` : d.title}
-                    className={`group relative w-60 shrink-0 overflow-hidden rounded-2xl border p-4 transition ${
-                      done
-                        ? "border-gold/40 bg-gold/[0.06]"
-                        : "border-gold/20 bg-surface hover:border-gold/50"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] tracking-[0.2em] text-gold/80">
-                        {done ? `+${d.reward} نقطة · مُستلَمة` : `+${d.reward} نقطة`}
-                      </span>
-                      {done && (
-                        <span className="grid size-6 place-items-center rounded-full bg-gradient-gold text-primary-foreground shadow-gold">
-                          <Check className="size-3.5" strokeWidth={3} />
-                        </span>
-                      )}
-                    </div>
-                    <p className={`font-display mt-2 text-sm font-bold ${done ? "text-white/80" : ""}`}>
-                      {d.title}
-                    </p>
-                    <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{d.desc}</p>
-                    <span className="absolute -left-6 -bottom-6 size-20 rounded-full bg-gold/10 blur-2xl transition group-hover:bg-gold/30" />
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })()}
-
       {/* ============ TODAY IN HISTORY ============ */}
       {mounted && <OnThisDayCalendarCard />}
 

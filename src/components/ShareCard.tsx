@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Share2, Download, MessageCircle, Send } from "lucide-react";
 import type { ProfileState } from "@/lib/profile";
 import { derivePublicStats } from "@/lib/social";
+import { getAvatar } from "@/lib/avatars";
 
 /**
  * بطاقة الهوية التاريخية — Shareable Card
@@ -19,10 +20,10 @@ export function ShareCard({ profile, username, referralCode }: {
   useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
-    drawCard(c, { username, ...stats, referralCode: referralCode ?? "" });
+    drawCard(c, { username, ...stats, avatarGlyph: getAvatar(profile.avatarId).glyph, referralCode: referralCode ?? "" });
     setDataUrl(c.toDataURL("image/png"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username, profile.points, profile.streak, profile.dinars, profile.campaignsCompleted.length, profile.artifactsFound.length, referralCode]);
+  }, [username, profile.points, profile.streak, profile.dinars, profile.campaignsCompleted.length, profile.artifactsFound.length, profile.avatarId, referralCode]);
 
   const shareText = `بطاقتي التاريخية في إرث — المستوى ${stats.level} • ${stats.xp} XP\nانضم إلى رحلتك التاريخية في إرث`;
   const shareUrl = typeof window !== "undefined"
@@ -92,7 +93,7 @@ function drawCard(
   s: {
     username: string; title: string | null; level: number; xp: number;
     campaigns_completed: number; artifacts_collected: number; discovery_pct: number;
-    streak: number; favorite_state_id: string | null; referralCode: string;
+    streak: number; favorite_state_id: string | null; referralCode: string; avatarGlyph: string;
   },
 ) {
   const ctx = c.getContext("2d");
@@ -134,6 +135,12 @@ function drawCard(
   ctx.fillStyle = "#fff";
   ctx.font = "bold 56px system-ui";
   ctx.fillText(s.username, W / 2, 260);
+
+  // Avatar glyph above the username area
+  ctx.font = "120px system-ui, 'Segoe UI Emoji', 'Apple Color Emoji'";
+  ctx.fillStyle = "#d4af37";
+  ctx.textAlign = "center";
+  ctx.fillText(s.avatarGlyph, W / 2, 200);
 
   // Title
   ctx.fillStyle = "#d4af37";

@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { todayKey, dailyMissionsForDate } from "./data";
 import { HEART_MAX, getEffectiveHearts, ACTIVITY_COOLDOWN_MS, activityKey, STREAK_MILESTONES, type HeartActivity, type StreakMilestone } from "./hearts";
+import { DEFAULT_AVATAR_ID } from "./avatars";
+import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notifications";
 
 const STORAGE_KEY = "hakaya.profile.v2";
 
@@ -9,6 +11,7 @@ export interface AppSettings {
   ambienceVolume: number; // 0..1
   reduceMotion: boolean;
   notifications: boolean;
+  notificationPrefs?: NotificationPrefs;
 }
 
 export interface ProfileState {
@@ -40,6 +43,7 @@ export interface ProfileState {
   bio?: string;
   favoriteStateId?: string;
   favoriteFigureId?: string;
+  avatarId?: string;
   // Engagement v1
   hearts: number;
   heartsAt: number; // ms epoch of last hearts commit
@@ -78,6 +82,7 @@ const initial: ProfileState = {
   bio: "",
   favoriteStateId: "",
   favoriteFigureId: "",
+  avatarId: DEFAULT_AVATAR_ID,
   hearts: HEART_MAX,
   heartsAt: Date.now(),
   dinars: 50,
@@ -113,6 +118,8 @@ interface Ctx {
   todayDailyIds: () => string[];
   setBio: (bio: string) => void;
   setFavorites: (patch: { favoriteStateId?: string; favoriteFigureId?: string }) => void;
+  setAvatar: (id: string) => void;
+  setNotificationPrefs: (patch: Partial<NotificationPrefs>) => void;
   // Engagement v1
   loseHeart: () => number;          // returns new effective hearts
   hasHearts: () => boolean;
@@ -272,6 +279,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     todayDailyIds: () => dailyMissionsForDate().map((m) => m.id),
     setBio: (bio) => update((p) => ({ ...p, bio })),
     setFavorites: (patch) => update((p) => ({ ...p, ...patch })),
+    setAvatar: (id) => update((p) => ({ ...p, avatarId: id })),
+    setNotificationPrefs: (patch) => update((p) => ({
+      ...p,
+      settings: {
+        ...p.settings,
+        notificationPrefs: { ...DEFAULT_NOTIFICATION_PREFS, ...(p.settings.notificationPrefs ?? {}), ...patch },
+      },
+    })),
 
     // ============= Engagement v1 =============
     loseHeart: () => {

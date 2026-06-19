@@ -93,6 +93,7 @@ export type Database = {
       profiles: {
         Row: {
           artifacts_collected: number
+          avatar_id: string | null
           bio: string | null
           campaigns_completed: number
           created_at: string
@@ -115,6 +116,7 @@ export type Database = {
         }
         Insert: {
           artifacts_collected?: number
+          avatar_id?: string | null
           bio?: string | null
           campaigns_completed?: number
           created_at?: string
@@ -137,6 +139,7 @@ export type Database = {
         }
         Update: {
           artifacts_collected?: number
+          avatar_id?: string | null
           bio?: string | null
           campaigns_completed?: number
           created_at?: string
