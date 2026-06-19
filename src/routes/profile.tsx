@@ -151,6 +151,18 @@ function ProfilePage() {
         {/* Historical Identity Card */}
         <div className="mt-5"><AccountSection /></div>
 
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <Link to="/friends" className="flex flex-col items-center gap-1 rounded-2xl border border-gold/25 bg-surface p-3 text-xs">
+            <span className="text-base">👥</span> الأصدقاء
+          </Link>
+          <Link to="/referrals" className="flex flex-col items-center gap-1 rounded-2xl border border-gold/25 bg-surface p-3 text-xs">
+            <span className="text-base">🎁</span> حَمَلة الإرث
+          </Link>
+          <Link to="/share-card" className="flex flex-col items-center gap-1 rounded-2xl border border-gold/25 bg-surface p-3 text-xs">
+            <span className="text-base">🪪</span> مشاركة البطاقة
+          </Link>
+        </div>
+
         {/* Historical Identity Card */}
         <div className="mt-5 relative overflow-hidden rounded-3xl border border-gold/30 parchment-dark p-5 shadow-elegant">
           <div className="arabesque-layer" />
