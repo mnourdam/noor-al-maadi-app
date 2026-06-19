@@ -4,6 +4,7 @@ import type {
 import { chapterCompletionKey, campaignCompletionKey } from "./types";
 import type { ProfileState } from "../profile";
 import { SALAHUDDIN_LIBERATOR_CAMPAIGN } from "./campaigns/salahuddin-liberator";
+import { UMAR_FARUQ_CAMPAIGN } from "./campaigns/umar-faruq";
 
 // ============================================================
 // Campaign Engine — Registry
@@ -16,6 +17,7 @@ import { SALAHUDDIN_LIBERATOR_CAMPAIGN } from "./campaigns/salahuddin-liberator"
 
 export const ENGINE_CAMPAIGNS: CampaignDefinition[] = [
   SALAHUDDIN_LIBERATOR_CAMPAIGN,
+  UMAR_FARUQ_CAMPAIGN,
 ].sort((a, b) => a.order - b.order);
 
 const BY_ID = new Map<string, CampaignDefinition>(
