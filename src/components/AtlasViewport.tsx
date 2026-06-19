@@ -233,12 +233,54 @@ export function AtlasViewport({
 
   const tier =
     scale < 2.5 ? { n: 1, label: "العالم والدول" } :
-    scale < 4.5 ? { n: 2, label: "العواصم والمدن" } :
-    scale < 6.5 ? { n: 3, label: "المعارك والأحداث" } :
-                  { n: 4, label: "المعالم والمكتبات" };
+    scale < 6   ? { n: 2, label: "العواصم والمدن" } :
+    scale < 10  ? { n: 3, label: "المعارك والأحداث" } :
+    scale < 15  ? { n: 4, label: "المعالم والمكتبات" } :
+    scale < 18  ? { n: 5, label: "تجمّعات تاريخية كثيفة" } :
+                  { n: 6, label: "وضع الاستكشاف العميق" };
+
+  // ---- Progressive declustering ----
+  // Group visible pins that fall within an overlap radius (in viewBox units).
+  // Group radius shrinks as zoom increases, so pins gradually spread apart.
+  const declustered = useMemo(() => {
+    // overlap radius in viewBox units — shrinks with zoom so items separate when zooming in
+    const radius = Math.max(0.35, 4.5 / scale);
+    type Group = { ax: number; ay: number; items: AtlasPin[] };
+    const groups: Group[] = [];
+    for (const p of visiblePins) {
+      let g = groups.find((gr) => Math.hypot(gr.ax - p.x, gr.ay - p.y) < radius);
+      if (!g) { g = { ax: p.x, ay: p.y, items: [] }; groups.push(g); }
+      g.items.push(p);
+    }
+    const out: { pin: AtlasPin; ox: number; oy: number }[] = [];
+    for (const g of groups) {
+      if (g.items.length === 1) {
+        out.push({ pin: g.items[0], ox: 0, oy: 0 });
+      } else {
+        const r = radius * 0.9;
+        const n = g.items.length;
+        g.items.forEach((p, i) => {
+          const a = (i / n) * Math.PI * 2;
+          out.push({ pin: p, ox: Math.cos(a) * r, oy: Math.sin(a) * r });
+        });
+      }
+    }
+    return out;
+  }, [visiblePins, scale]);
+
+  // ---- Center camera on selected discovery ----
+  useEffect(() => {
+    if (!preview) return;
+    const targetScale = Math.max(scale, 6);
+    const nx = preview.x - (VB_W / targetScale) / 2;
+    const ny = preview.y - (VB_H / targetScale) / 2;
+    const c = clampPan(nx, ny, targetScale);
+    setScale(targetScale); setTx(c.x); setTy(c.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preview?.id]);
 
   const containerCls = fullscreen
-    ? "fixed inset-0 z-50 flex flex-col bg-[oklch(0.16_0.04_240)]"
+    ? "fixed inset-0 z-[60] flex flex-col bg-[oklch(0.16_0.04_240)]"
     : "relative overflow-hidden rounded-3xl border-2 border-amber-900/30 map-parchment map-vignette shadow-elegant";
 
   const svgHeight = fullscreen ? "h-full" : "h-[460px]";
