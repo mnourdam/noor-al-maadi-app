@@ -193,18 +193,7 @@ function Index() {
         </div>
       </section>
 
-      {/* ============ DAILY DISCOVERY ============ */}
-      {discovery && (
-        <section className="mt-10 px-5">
-          <SectionHeader icon={<Eye className="size-3.5" />} eyebrow="اكتشاف اليوم" title="من خزائن التاريخ" />
-          <DiscoveryCard d={discovery} />
-        </section>
-      )}
-
-      {/* ============ HISTORICAL CALENDAR — TODAY ============ */}
-      {mounted && <OnThisDayCalendarCard />}
-
-      {/* ============ DAILY MISSIONS (compact ribbon) ============ */}
+      {/* ============ DAILY MISSIONS ============ */}
       {mounted && dailies.length > 0 && (() => {
         const remaining = dailies.filter((d) => !claimedToday.includes(d.id)).length;
         return (
@@ -250,67 +239,10 @@ function Index() {
         );
       })()}
 
-      {/* ============ LIVING WORLD ============ */}
-      <section className="mt-12 px-5">
-        <SectionHeader
-          icon={<Compass className="size-3.5" />}
-          eyebrow="ما وراء الأفق"
-          title="عوالم تنتظر اكتشافها"
-        />
-        <div className="-mr-5 flex gap-3 overflow-x-auto pr-5 pb-3">
-          {UPCOMING_CAMPAIGNS.slice(0, 6).map((u) => (
-            <div
-              key={u.id}
-              className="relative w-64 shrink-0 overflow-hidden rounded-2xl border border-dashed border-white/15 bg-surface/40 p-5"
-            >
-              <div className="absolute -right-8 -top-8 size-24 rounded-full bg-gold/5 blur-2xl" />
-              <div className="flex items-center gap-1 text-[10px] tracking-[0.2em] text-gold/70">
-                <Lock className="size-3" /> {u.eta}
-              </div>
-              <p className="font-display mt-3 text-base font-bold leading-snug">{u.name}</p>
-              <p className="mt-2 line-clamp-3 text-[11px] text-muted-foreground">{u.teaser}</p>
-            </div>
-          ))}
-        </div>
+      {/* ============ TODAY IN HISTORY ============ */}
+      {mounted && <OnThisDayCalendarCard />}
 
-        {/* Hidden discoveries */}
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          {MYSTERY_CHARACTERS.slice(0, 2).map((m) => (
-            <div key={m.id} className="relative overflow-hidden rounded-2xl border border-white/10 bg-surface p-4">
-              <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] text-gold/70">
-                <Lock className="size-3" /> شخصية مخفية
-              </div>
-              <p className="mt-2 line-clamp-3 font-display text-[12px] italic text-white/70">«{m.hint}»</p>
-            </div>
-          ))}
-        </div>
-
-        <Link
-          to="/map"
-          className="glass mt-4 flex items-center justify-between rounded-2xl border border-white/10 p-4 transition hover:border-gold/40"
-        >
-          <div>
-            <p className="text-[10px] tracking-[0.2em] text-gold/80">خارطة العالم الإسلامي</p>
-            <p className="font-display mt-1 text-sm font-bold">من الحجاز إلى الأندلس · {UPCOMING_REGIONS.length}+ مناطق قادمة</p>
-          </div>
-          <ChevronLeft className="size-5 text-gold" />
-        </Link>
-
-        <Link
-          to="/timeline"
-          className="group relative mt-3 flex items-center justify-between overflow-hidden rounded-2xl border border-gold/30 parchment-dark p-4 transition hover:border-gold/60"
-        >
-          <div className="arabesque-layer" />
-          <div className="relative">
-            <p className="text-[10px] tracking-[0.2em] text-gold/80">الخط الزمني الكبير</p>
-            <p className="font-display mt-1 text-sm font-bold">من بعثة النبي ﷺ إلى ١٤٠٠ سنة من التاريخ</p>
-            <p className="mt-1 text-[10px] text-white/55">خلافات · معارك · أعلام · كتبٌ غيّرت العالم</p>
-          </div>
-          <Hourglass className="relative size-5 text-gold transition group-hover:rotate-12" />
-        </Link>
-      </section>
-
-      {/* ============ SEASON whisper ============ */}
+      {/* ============ ACTIVE SEASON ============ */}
       <section className="mt-12 px-5">
         <Link
           to="/seasons"
@@ -334,9 +266,18 @@ function Index() {
         </Link>
       </section>
 
-      {/* ============ Quiet modes rail ============ */}
+      {/* ============ EXPLORE MORE ============ */}
       <section className="mt-10 mb-6 px-5">
-        <div className="gold-divider mb-6" />
+        <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشف المزيد" title="عوالم تنتظر" />
+        <div className="grid grid-cols-2 gap-2.5">
+          <ExploreTile to="/campaigns" icon={<Crown className="size-4" />} title="كل الحملات" subtitle={`${UPCOMING_CAMPAIGNS.length}+ قادمة`} />
+          <ExploreTile to="/seasons" icon={<Sparkles className="size-4" />} title="المواسم" subtitle="مكافآت محدودة" />
+          <ExploreTile to="/timeline" icon={<Hourglass className="size-4" />} title="الخط الزمني" subtitle="١٤٠٠ سنة" />
+          <ExploreTile to="/map" icon={<MapIcon className="size-4" />} title="الخارطة" subtitle={`${UPCOMING_REGIONS.length}+ مناطق`} />
+          <ExploreTile to="/on-this-day" icon={<Eye className="size-3.5" />} title="في مثل هذا اليوم" subtitle="أحداث اليوم" />
+          <ExploreTile to="/collection" icon={<Star className="size-3.5" />} title="المتحف" subtitle="أرشيفك" />
+        </div>
+        <div className="gold-divider my-6" />
         <div className="grid grid-cols-4 gap-2">
           <ModeChip to="/play/investigate" icon={<Search className="size-4" />} label="تحقيق" />
           <ModeChip to="/play/timeline" icon={<ListOrdered className="size-4" />} label="ترتيب" />
@@ -371,6 +312,22 @@ function ModeChip({ to, icon, label }: { to: string; icon: React.ReactNode; labe
     >
       <span className="grid size-9 place-items-center rounded-full bg-gold/10 text-gold transition group-hover:bg-gold/20">{icon}</span>
       <span className="text-[11px] text-muted-foreground">{label}</span>
+    </Link>
+  );
+}
+
+function ExploreTile({ to, icon, title, subtitle }: { to: string; icon: React.ReactNode; title: string; subtitle: string }) {
+  return (
+    <Link
+      to={to as "/"}
+      className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface/70 p-3 transition hover:border-gold/40"
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold transition group-hover:bg-gold/25">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="font-display truncate text-[13px] font-bold">{title}</p>
+        <p className="truncate text-[10px] text-muted-foreground">{subtitle}</p>
+      </div>
+      <ChevronLeft className="size-4 shrink-0 text-gold/60 transition group-hover:text-gold" />
     </Link>
   );
 }

@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { User, Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench } from "lucide-react";
+import { useMemo, useState } from "react";
+import { User, Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
   ACHIEVEMENTS, evaluateAchievements, levelFor, CURRENT_SEASON,
-  AMBIENCE_TRACKS,
+  AMBIENCE_TRACKS, ERAS, CHARACTERS, ARTIFACTS,
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 
@@ -15,13 +15,32 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { profile, login, logout, updateSettings, claimSeason } = useProfile();
+  const { profile, login, logout, updateSettings, claimSeason, setBio, setFavorites } = useProfile();
   const [name, setName] = useState("");
+  const [editingBio, setEditingBio] = useState(false);
+  const [bioDraft, setBioDraft] = useState(profile.bio ?? "");
 
   const lvl = levelFor(profile.points);
   const achievements = evaluateAchievements(profile);
   const seasonPct = Math.min(100, Math.round((profile.seasonPoints / CURRENT_SEASON.goalPoints) * 100));
   const seasonReady = profile.seasonPoints >= CURRENT_SEASON.goalPoints && !profile.seasonClaimed;
+
+  const discoveryPct = useMemo(() => {
+    const total = CHARACTERS.length + ARTIFACTS.length;
+    const done = profile.charactersUnlocked.length + profile.artifactsFound.length;
+    return total ? Math.round((done / total) * 100) : 0;
+  }, [profile.charactersUnlocked.length, profile.artifactsFound.length]);
+
+  const joinDate = useMemo(() => {
+    // Approximate the join date using the active streak: lastActiveDay - streak days.
+    if (!profile.lastActiveDay) return null;
+    const d = new Date(profile.lastActiveDay);
+    d.setDate(d.getDate() - Math.max(0, profile.streak - 1));
+    return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
+  }, [profile.lastActiveDay, profile.streak]);
+
+  const favState = ERAS.find((e) => e.id === profile.favoriteStateId);
+  const favFigure = CHARACTERS.find((c) => c.id === profile.favoriteFigureId);
 
   return (
     <AppShell>
@@ -45,6 +64,90 @@ function ProfilePage() {
             <Stat icon={<Star className="size-3.5" />} label="نقاط" value={profile.points} />
             <Stat icon={<Flame className="size-3.5" />} label="سلسلة" value={profile.streak} />
             <Stat icon={<Crown className="size-3.5" />} label="حملات" value={profile.campaignsCompleted.length} />
+          </div>
+        </div>
+
+        {/* Historical Identity Card */}
+        <div className="mt-5 relative overflow-hidden rounded-3xl border border-gold/30 parchment-dark p-5 shadow-elegant">
+          <div className="arabesque-layer" />
+          <div className="relative">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-[10px] tracking-[0.25em] text-gold">
+                <IdCard className="size-3.5" /> بطاقة الهوية التاريخية
+              </div>
+              <span className="rounded-full border border-gold/40 bg-black/30 px-2 py-0.5 text-[10px] text-gold">إرث · {profile.name}</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+              <IdRow icon={<Crown className="size-3" />} label="اللقب" value={lvl.title} />
+              <IdRow icon={<Star className="size-3" />} label="المستوى" value={`${lvl.level}`} />
+              <IdRow icon={<Calendar className="size-3" />} label="تاريخ الانضمام" value={joinDate ?? "—"} />
+              <IdRow icon={<Flame className="size-3" />} label="السلسلة" value={`${profile.streak} يومًا`} />
+              <IdRow icon={<Sparkles className="size-3" />} label="مجموع النقاط" value={`${profile.points}`} />
+              <IdRow icon={<Compass className="size-3" />} label="نسبة الاكتشاف" value={`${discoveryPct}٪`} />
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              <label className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-background/40 px-3 py-2">
+                <span className="inline-flex items-center gap-2 text-[11px] text-gold/80"><MapPin className="size-3" /> الدولة المفضّلة</span>
+                <select
+                  value={profile.favoriteStateId ?? ""}
+                  onChange={(e) => setFavorites({ favoriteStateId: e.target.value })}
+                  className="min-w-0 flex-1 bg-transparent text-right text-xs outline-none"
+                >
+                  <option value="">— اختر —</option>
+                  {ERAS.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                </select>
+              </label>
+              <label className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-background/40 px-3 py-2">
+                <span className="inline-flex items-center gap-2 text-[11px] text-gold/80"><Heart className="size-3" /> الشخصية المفضّلة</span>
+                <select
+                  value={profile.favoriteFigureId ?? ""}
+                  onChange={(e) => setFavorites({ favoriteFigureId: e.target.value })}
+                  className="min-w-0 flex-1 bg-transparent text-right text-xs outline-none"
+                >
+                  <option value="">— اختر —</option>
+                  {CHARACTERS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+            </div>
+
+            {(favState || favFigure) && (
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                {favState && <>دولتك: <span className="text-gold">{favState.name}</span> · </>}
+                {favFigure && <>شخصيتك: <span className="text-gold">{favFigure.name}</span></>}
+              </p>
+            )}
+
+            {/* Bio */}
+            <div className="mt-3 rounded-xl border border-gold/20 bg-background/40 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] tracking-[0.2em] text-gold">نبذة عني</p>
+                {!editingBio ? (
+                  <button
+                    onClick={() => { setBioDraft(profile.bio ?? ""); setEditingBio(true); }}
+                    className="inline-flex items-center gap-1 rounded-full border border-gold/30 px-2 py-0.5 text-[10px] text-gold hover:bg-gold/10"
+                  ><Pencil className="size-3" /> تعديل</button>
+                ) : (
+                  <button
+                    onClick={() => { setBio(bioDraft.trim()); setEditingBio(false); }}
+                    className="inline-flex items-center gap-1 rounded-full bg-gradient-gold px-2 py-0.5 text-[10px] font-bold text-primary-foreground"
+                  ><Check className="size-3" /> حفظ</button>
+                )}
+              </div>
+              {editingBio ? (
+                <textarea
+                  value={bioDraft}
+                  onChange={(e) => setBioDraft(e.target.value.slice(0, 240))}
+                  rows={3}
+                  placeholder="مثال: مهتم بتاريخ الشام والحروب الصليبية."
+                  className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-background px-3 py-2 text-[12px] leading-6 outline-none focus:border-gold/40"
+                />
+              ) : (
+                <p className="mt-2 text-[12px] leading-6 text-foreground/85">
+                  {profile.bio?.trim() ? profile.bio : <span className="italic text-muted-foreground">لم تكتب نبذةً بعد. اضغط «تعديل» لتعريف نفسك.</span>}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -213,6 +316,15 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
     <div className="rounded-xl border border-white/10 bg-background/40 p-2">
       <div className="flex items-center justify-center gap-1 text-gold">{icon}<span className="font-display text-sm font-bold">{value}</span></div>
       <p className="mt-0.5 text-[10px] text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function IdRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-background/40 px-2.5 py-1.5">
+      <span className="inline-flex items-center gap-1.5 text-[10px] text-gold/80">{icon}{label}</span>
+      <span className="truncate text-[11px] font-display font-bold">{value}</span>
     </div>
   );
 }
