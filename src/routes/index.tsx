@@ -194,51 +194,6 @@ function Index() {
       </section>
 
       {/* ============ DAILY MISSIONS ============ */}
-      {mounted && dailies.length > 0 && (() => {
-        const remaining = dailies.filter((d) => !claimedToday.includes(d.id)).length;
-        return (
-          <section className="mt-10 px-5">
-            <SectionHeader
-              icon={<Sparkles className="size-3.5" />}
-              eyebrow="مهام اليوم"
-              title={remaining > 0 ? `${remaining} مهام بانتظارك` : "أنجزت مهام اليوم"}
-            />
-            <div className="-mr-5 flex gap-3 overflow-x-auto pr-5 pb-2">
-              {dailies.map((d) => {
-                const done = claimedToday.includes(d.id);
-                return (
-                  <Link
-                    key={d.id} to={d.link.to as "/"}
-                    aria-label={done ? `${d.title} — مكتمل` : d.title}
-                    className={`group relative w-60 shrink-0 overflow-hidden rounded-2xl border p-4 transition ${
-                      done
-                        ? "border-gold/40 bg-gold/[0.06]"
-                        : "border-gold/20 bg-surface hover:border-gold/50"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] tracking-[0.2em] text-gold/80">
-                        {done ? `+${d.reward} نقطة · مُستلَمة` : `+${d.reward} نقطة`}
-                      </span>
-                      {done && (
-                        <span className="grid size-6 place-items-center rounded-full bg-gradient-gold text-primary-foreground shadow-gold">
-                          <Check className="size-3.5" strokeWidth={3} />
-                        </span>
-                      )}
-                    </div>
-                    <p className={`font-display mt-2 text-sm font-bold ${done ? "text-white/80" : ""}`}>
-                      {d.title}
-                    </p>
-                    <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{d.desc}</p>
-                    <span className="absolute -left-6 -bottom-6 size-20 rounded-full bg-gold/10 blur-2xl transition group-hover:bg-gold/30" />
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })()}
-
       {/* ============ TODAY IN HISTORY ============ */}
       {mounted && <OnThisDayCalendarCard />}
 
