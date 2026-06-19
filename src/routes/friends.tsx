@@ -7,6 +7,7 @@ import {
   acceptFriend, listFriendships, removeFriend, searchPlayers, sendFriendRequest,
   type FriendEntry, type PublicProfile,
 } from "@/lib/social";
+import { Avatar } from "@/components/Avatar";
 
 export const Route = createFileRoute("/friends")({
   head: () => ({ meta: [{ title: "الأصدقاء" }] }),
@@ -140,9 +141,7 @@ function Section({ title, icon, children }: { title: string; icon?: React.ReactN
 function Row({ other, right }: { other: PublicProfile; right: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3">
-      <div className="flex size-10 items-center justify-center rounded-full bg-gradient-gold text-sm font-bold text-primary-foreground shadow-gold">
-        {other.username?.[0] ?? "?"}
-      </div>
+      <Avatar avatarId={other.avatar_id} size="sm" fallbackChar={other.username?.[0] ?? "?"} />
       <Link to="/u/$username" params={{ username: other.username }} className="min-w-0 flex-1">
         <div className="truncate text-sm font-bold">{other.username}</div>
         <div className="truncate text-[11px] text-muted-foreground">
