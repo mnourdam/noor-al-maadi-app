@@ -31,7 +31,7 @@ jobs:
         run: npm run build:android:web
 
       - name: Sync Capacitor Android project
-        run: npm run sync:android
+        run: npx -y @capacitor/cli sync android
 
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug
