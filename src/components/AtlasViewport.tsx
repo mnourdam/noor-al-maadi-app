@@ -404,25 +404,40 @@ export function AtlasViewport({
 
           {/* Pins (tier-filtered, no clusters) */}
           <g>
-            {visiblePins.map((pin) => {
+            {declustered.map(({ pin, ox, oy }) => {
               const showLabel = scale >= LABEL_FROM[pin.kind];
-              const baseSize = pin.kind === "state" ? 3.0 : pin.kind === "capital" ? 2.7 : 2.4;
+              const isSelected = preview?.id === pin.id;
+              const focusBoost = isSelected ? 1.2 : 1;
+              const baseSize = (pin.kind === "state" ? 3.0 : pin.kind === "capital" ? 2.7 : 2.4) * focusBoost;
               return (
                 <g key={pin.id}
-                  transform={`translate(${pin.x} ${pin.y}) scale(${markerScale})`}
-                  className="cursor-pointer atlas-pin"
+                  transform={`translate(${pin.x + ox} ${pin.y + oy}) scale(${markerScale})`}
+                  className={`cursor-pointer atlas-pin ${isSelected ? "atlas-pin-selected" : ""}`}
                   onClick={(e) => { e.stopPropagation(); setPreview(pin); }}
                 >
                   <title>{pin.entity.title}</title>
                   {/* Generous transparent hit target for mobile */}
                   <circle r={5} fill="transparent" />
+                  {isSelected && (
+                    <>
+                      <circle r={baseSize * 1.9} fill="oklch(0.88 0.16 82 / 0.35)">
+                        <animate attributeName="r"
+                          values={`${baseSize * 1.5};${baseSize * 2.2};${baseSize * 1.5}`}
+                          dur="1.6s" repeatCount="indefinite" />
+                        <animate attributeName="opacity"
+                          values="0.55;0.15;0.55" dur="1.6s" repeatCount="indefinite" />
+                      </circle>
+                      <circle r={baseSize * 1.35} fill="none"
+                        stroke="oklch(0.88 0.16 82)" strokeWidth={0.35} opacity={0.9} />
+                    </>
+                  )}
                   <MarkerGlyph kind={pin.kind} size={baseSize} />
                   {showLabel && (
                     <text
                       x={0}
                       y={baseSize * 1.95}
                       textAnchor="middle"
-                      fontSize={1.7}
+                      fontSize={isSelected ? 1.95 : 1.7}
                       fontWeight="800"
                       stroke="oklch(0.97 0.03 80 / 0.95)"
                       strokeWidth={0.55}
