@@ -484,7 +484,7 @@ export function AtlasViewport({
           )}
         </div>
 
-        {preview && <DiscoveryCard pin={preview} onClose={() => setPreview(null)} />}
+        {preview && <DiscoveryCard pin={preview} onClose={() => setPreview(null)} fullscreen={fullscreen} />}
 
         {showOnboard && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm" dir="rtl">
@@ -528,11 +528,20 @@ function CtrlBtn({ children, label, onClick }: { children: React.ReactNode; labe
   );
 }
 
-function DiscoveryCard({ pin, onClose }: { pin: AtlasPin; onClose: () => void }) {
+function DiscoveryCard({ pin, onClose, fullscreen }: { pin: AtlasPin; onClose: () => void; fullscreen: boolean }) {
   const e = pin.entity;
   const tone = KIND_COLOR[pin.kind];
+  // Sit above bottom nav (~5rem) + iOS home indicator safe-area + 16px margin.
+  // In non-fullscreen the card lives inside the viewport so 8px is enough.
+  const bottomStyle = fullscreen
+    ? { bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.5rem)" }
+    : { bottom: "0.5rem" };
   return (
-    <div className="pointer-events-auto absolute inset-x-2 bottom-2 z-20 animate-reveal" dir="rtl">
+    <div
+      className="pointer-events-auto absolute inset-x-2 z-30 animate-reveal"
+      style={bottomStyle}
+      dir="rtl"
+    >
       <div className="overflow-hidden rounded-2xl border border-gold/35 bg-surface/95 shadow-elegant backdrop-blur">
         <div
           className="relative h-24 w-full"
