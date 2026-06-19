@@ -100,99 +100,144 @@ function drawCard(
   if (!ctx) return;
   const W = c.width, H = c.height;
 
-  // Background: dark navy gradient
+  // ===== Background =====
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, "#0b1228");
   bg.addColorStop(1, "#060a18");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Gold border
+  // Outer gold frame
   ctx.strokeStyle = "#d4af37";
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 4;
   roundRect(ctx, 24, 24, W - 48, H - 48, 36);
   ctx.stroke();
 
-  // Decorative gold glow
-  const glow = ctx.createRadialGradient(W / 2, 220, 20, W / 2, 220, 320);
-  glow.addColorStop(0, "rgba(212,175,55,0.35)");
-  glow.addColorStop(1, "rgba(212,175,55,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
+  // Inner thin frame
+  ctx.strokeStyle = "rgba(212,175,55,0.35)";
+  ctx.lineWidth = 1;
+  roundRect(ctx, 40, 40, W - 80, H - 80, 28);
+  ctx.stroke();
 
   ctx.direction = "rtl";
-  ctx.textAlign = "center";
 
-  // Brand
+  // ===== Header / brand =====
+  ctx.textAlign = "left";
   ctx.fillStyle = "#d4af37";
-  ctx.font = "bold 38px system-ui";
-  ctx.fillText("إرث", W / 2, 110);
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.font = "20px system-ui";
-  ctx.fillText("بطاقة الهوية التاريخية", W / 2, 150);
+  ctx.font = "bold 34px system-ui";
+  ctx.fillText("إرث", 70, 100);
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = "18px system-ui";
+  ctx.fillText("Irth · بطاقة الهوية التاريخية", 70, 128);
 
-  // Username
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 56px system-ui";
-  ctx.fillText(s.username, W / 2, 260);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "rgba(212,175,55,0.85)";
+  ctx.font = "16px system-ui";
+  ctx.fillText("irth-app.lovable.app", W - 70, 110);
 
-  // Avatar glyph above the username area
-  ctx.font = "120px system-ui, 'Segoe UI Emoji', 'Apple Color Emoji'";
-  ctx.fillStyle = "#d4af37";
-  ctx.textAlign = "center";
-  ctx.fillText(s.avatarGlyph, W / 2, 200);
+  // ===== Avatar disc =====
+  const cx = W / 2;
+  const ay = 280;
+  // gold glow
+  const glow = ctx.createRadialGradient(cx, ay, 10, cx, ay, 170);
+  glow.addColorStop(0, "rgba(212,175,55,0.45)");
+  glow.addColorStop(1, "rgba(212,175,55,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, ay - 170, W, 340);
 
-  // Title
-  ctx.fillStyle = "#d4af37";
-  ctx.font = "28px system-ui";
-  ctx.fillText(s.title ?? "مستكشف التاريخ", W / 2, 310);
-
-  // Level badge
   ctx.beginPath();
-  ctx.arc(W / 2, 430, 80, 0, Math.PI * 2);
-  const lg = ctx.createLinearGradient(W / 2 - 80, 350, W / 2 + 80, 510);
+  ctx.arc(cx, ay, 105, 0, Math.PI * 2);
+  const ag = ctx.createLinearGradient(cx - 100, ay - 100, cx + 100, ay + 100);
+  ag.addColorStop(0, "#1a223d");
+  ag.addColorStop(1, "#0b1228");
+  ctx.fillStyle = ag;
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#d4af37";
+  ctx.stroke();
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "110px system-ui, 'Segoe UI Emoji', 'Apple Color Emoji'";
+  ctx.fillStyle = "#d4af37";
+  ctx.fillText(s.avatarGlyph, cx, ay + 8);
+  ctx.textBaseline = "alphabetic";
+
+  // ===== Username + title =====
+  ctx.fillStyle = "#fff";
+  ctx.font = "bold 48px system-ui";
+  ctx.fillText(truncate(ctx, s.username, W - 160), cx, ay + 175);
+
+  ctx.fillStyle = "#d4af37";
+  ctx.font = "22px system-ui";
+  ctx.fillText(truncate(ctx, s.title ?? "مستكشف التاريخ", W - 200), cx, ay + 215);
+
+  // ===== Level pill =====
+  const pillW = 220, pillH = 56;
+  const px = cx - pillW / 2;
+  const py = ay + 250;
+  roundRect(ctx, px, py, pillW, pillH, pillH / 2);
+  const lg = ctx.createLinearGradient(px, py, px + pillW, py);
   lg.addColorStop(0, "#d4af37");
   lg.addColorStop(1, "#a07c1c");
   ctx.fillStyle = lg;
   ctx.fill();
   ctx.fillStyle = "#0b1228";
-  ctx.font = "bold 56px system-ui";
-  ctx.fillText(String(s.level), W / 2, 450);
-  ctx.fillStyle = "rgba(255,255,255,0.8)";
-  ctx.font = "20px system-ui";
-  ctx.fillText("المستوى", W / 2, 540);
+  ctx.font = "bold 26px system-ui";
+  ctx.fillText(`المستوى ${s.level}`, cx, py + 38);
 
-  // Stats grid
-  const rows: [string, string][] = [
-    ["نقاط الخبرة", s.xp.toString()],
-    ["الحملات المكتملة", s.campaigns_completed.toString()],
-    ["الآثار المجموعة", s.artifacts_collected.toString()],
+  // ===== Stats grid (2 columns × 4 rows) =====
+  const stats: [string, string][] = [
+    ["نقاط الخبرة", s.xp.toLocaleString("ar-EG")],
+    ["السلسلة اليومية", `🔥 ${s.streak.toLocaleString("ar-EG")}`],
+    ["الحملات المكتملة", s.campaigns_completed.toLocaleString("ar-EG")],
+    ["الآثار المجموعة", s.artifacts_collected.toLocaleString("ar-EG")],
     ["اكتشاف الموسوعة", `${s.discovery_pct}%`],
-    ["السلسلة اليومية", `🔥 ${s.streak}`],
     ["الدولة المفضلة", s.favorite_state_id || "—"],
   ];
-  let y = 620;
-  ctx.font = "22px system-ui";
-  for (const [label, value] of rows) {
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.textAlign = "right";
-    ctx.fillText(label, W - 70, y);
+  const gx = 70;
+  const gw = W - 140;
+  const colW = (gw - 16) / 2;
+  const rowH = 90;
+  const gy = ay + 340;
+  for (let i = 0; i < stats.length; i++) {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const rx = gx + col * (colW + 16);
+    const ry = gy + row * (rowH + 12);
+    roundRect(ctx, rx, ry, colW, rowH, 18);
+    ctx.fillStyle = "rgba(255,255,255,0.04)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(212,175,55,0.25)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.font = "18px system-ui";
+    ctx.fillText(stats[i][0], rx + colW / 2, ry + 32);
     ctx.fillStyle = "#fff";
-    ctx.textAlign = "left";
-    ctx.fillText(value, 70, y);
-    y += 50;
+    ctx.font = "bold 30px system-ui";
+    ctx.fillText(truncate(ctx, stats[i][1], colW - 24), rx + colW / 2, ry + 68);
   }
 
-  // Footer CTA
+  // ===== Footer =====
   ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.font = "bold 24px system-ui";
-  ctx.fillText("انضم إلى رحلتك التاريخية في إرث", W / 2, H - 110);
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  ctx.font = "bold 22px system-ui";
+  ctx.fillText("انضم إلى رحلتك التاريخية في إرث", cx, H - 110);
   if (s.referralCode) {
     ctx.fillStyle = "#d4af37";
-    ctx.font = "bold 28px system-ui";
-    ctx.fillText(s.referralCode, W / 2, H - 70);
+    ctx.font = "bold 26px system-ui";
+    ctx.fillText(`رمز الدعوة · ${s.referralCode}`, cx, H - 72);
   }
+}
+
+function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(t + "…").width > maxWidth) t = t.slice(0, -1);
+  return t + "…";
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
