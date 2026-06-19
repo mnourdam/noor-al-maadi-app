@@ -473,3 +473,85 @@ function CollectionPage() {
     </AppShell>
   );
 }
+
+// ───── Recent unlocks ribbon
+function RecentUnlocks() {
+  const { profile } = useProfile();
+  type Recent = { key: string; icon: string; kind: string; title: string; subtitle: string };
+  const recents: Recent[] = [];
+
+  const lastChar = [...profile.charactersUnlocked].slice(-1)[0];
+  const c = lastChar ? CHARACTERS.find((x) => x.id === lastChar) : undefined;
+  if (c) recents.push({ key: `c-${c.id}`, icon: c.avatar, kind: "شخصية", title: c.name, subtitle: c.title });
+
+  const lastArtifact = [...profile.artifactsFound].slice(-1)[0];
+  const a = lastArtifact ? ARTIFACTS.find((x) => x.id === lastArtifact) : undefined;
+  if (a) recents.push({ key: `a-${a.id}`, icon: a.icon, kind: "أثر", title: a.name, subtitle: a.typeLabel });
+
+  const lastTitle = [...profile.titlesEarned].slice(-1)[0];
+  if (lastTitle) recents.push({ key: `t-${lastTitle}`, icon: "👑", kind: "لقب", title: lastTitle, subtitle: "مُنح حديثًا" });
+
+  const lastBadge = [...profile.badges].slice(-1)[0];
+  if (lastBadge) recents.push({ key: `b-${lastBadge}`, icon: "🏅", kind: "شارة", title: lastBadge, subtitle: "إنجاز جديد" });
+
+  // Build a small recency timeline from the tail of all unlock arrays.
+  const timeline = [
+    ...profile.charactersUnlocked.slice(-3).reverse().map((id) => {
+      const ch = CHARACTERS.find((x) => x.id === id);
+      return ch ? { id: `tc-${id}`, icon: ch.avatar, label: ch.name, kind: "شخصية" } : null;
+    }),
+    ...profile.artifactsFound.slice(-3).reverse().map((id) => {
+      const ar = ARTIFACTS.find((x) => x.id === id);
+      return ar ? { id: `ta-${id}`, icon: ar.icon, label: ar.name, kind: "أثر" } : null;
+    }),
+  ].filter(Boolean).slice(0, 6) as { id: string; icon: string; label: string; kind: string }[];
+
+  return (
+    <div className="mb-5 rounded-2xl border border-gold/20 bg-surface/70 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-[10px] tracking-[0.25em] text-gold">
+          <Sparkles className="size-3.5" /> آخر المقتنيات
+        </div>
+        {timeline.length > 0 && (
+          <span className="text-[10px] text-muted-foreground">{timeline.length} اكتشاف حديث</span>
+        )}
+      </div>
+      {recents.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-white/15 bg-background/30 p-4 text-center text-[11px] text-muted-foreground">
+          لا توجد مقتنيات بعد — ابدأ حملةً ليبدأ متحفك في النمو.
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            {recents.map((r) => (
+              <div key={r.key} className="flex items-center gap-2 rounded-xl border border-gold/20 bg-gradient-to-bl from-gold/10 via-surface to-transparent p-2.5">
+                <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-black/40 text-lg ring-1 ring-gold/30">{r.icon}</div>
+                <div className="min-w-0">
+                  <p className="text-[9px] tracking-widest text-gold/80">{r.kind}</p>
+                  <p className="truncate font-display text-[12px] font-bold">{r.title}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{r.subtitle}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          {timeline.length > 0 && (
+            <div className="mt-3 border-t border-white/10 pt-3">
+              <p className="mb-2 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Clock className="size-3" /> أحدث الاكتشافات
+              </p>
+              <ol className="relative space-y-1.5 pe-3">
+                {timeline.map((t) => (
+                  <li key={t.id} className="flex items-center gap-2 text-[11px]">
+                    <span className="grid size-6 place-items-center rounded-full bg-gold/15 text-[12px]">{t.icon}</span>
+                    <span className="truncate font-display text-foreground">{t.label}</span>
+                    <span className="text-[10px] text-muted-foreground">· {t.kind}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
