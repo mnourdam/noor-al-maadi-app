@@ -18,6 +18,7 @@ import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as InvestigationsRouteImport } from './routes/investigations'
 import { Route as HistoryCalendarRouteImport } from './routes/history-calendar'
@@ -93,6 +94,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const OnThisDayRoute = OnThisDayRouteImport.update({
   id: '/on-this-day',
   path: '/on-this-day',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapRoute = MapRouteImport.update({
@@ -264,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/history-calendar': typeof HistoryCalendarRoute
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
+  '/notifications': typeof NotificationsRoute
   '/on-this-day': typeof OnThisDayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -304,6 +311,7 @@ export interface FileRoutesByTo {
   '/history-calendar': typeof HistoryCalendarRoute
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
+  '/notifications': typeof NotificationsRoute
   '/on-this-day': typeof OnThisDayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -346,6 +354,7 @@ export interface FileRoutesById {
   '/history-calendar': typeof HistoryCalendarRoute
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
+  '/notifications': typeof NotificationsRoute
   '/on-this-day': typeof OnThisDayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -390,6 +399,7 @@ export interface FileRouteTypes {
     | '/history-calendar'
     | '/investigations'
     | '/map'
+    | '/notifications'
     | '/on-this-day'
     | '/privacy'
     | '/profile'
@@ -430,6 +440,7 @@ export interface FileRouteTypes {
     | '/history-calendar'
     | '/investigations'
     | '/map'
+    | '/notifications'
     | '/on-this-day'
     | '/privacy'
     | '/profile'
@@ -471,6 +482,7 @@ export interface FileRouteTypes {
     | '/history-calendar'
     | '/investigations'
     | '/map'
+    | '/notifications'
     | '/on-this-day'
     | '/privacy'
     | '/profile'
@@ -514,6 +526,7 @@ export interface RootRouteChildren {
   HistoryCalendarRoute: typeof HistoryCalendarRoute
   InvestigationsRoute: typeof InvestigationsRoute
   MapRoute: typeof MapRoute
+  NotificationsRoute: typeof NotificationsRoute
   OnThisDayRoute: typeof OnThisDayRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -600,6 +613,13 @@ declare module '@tanstack/react-router' {
       path: '/on-this-day'
       fullPath: '/on-this-day'
       preLoaderRoute: typeof OnThisDayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/map': {
@@ -880,6 +900,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryCalendarRoute: HistoryCalendarRoute,
   InvestigationsRoute: InvestigationsRoute,
   MapRoute: MapRoute,
+  NotificationsRoute: NotificationsRoute,
   OnThisDayRoute: OnThisDayRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
