@@ -308,10 +308,10 @@ function ModeChip({ to, icon, label }: { to: string; icon: React.ReactNode; labe
   return (
     <Link
       to={to as "/"}
-      className="group flex flex-col items-center gap-1.5 rounded-xl border border-white/5 bg-surface/60 px-2 py-3 text-center transition hover:border-gold/40"
+      className="group flex min-h-[78px] flex-col items-center justify-center gap-1.5 rounded-xl border border-white/5 bg-surface/60 px-2 py-3 text-center transition hover:border-gold/40"
     >
       <span className="grid size-9 place-items-center rounded-full bg-gold/10 text-gold transition group-hover:bg-gold/20">{icon}</span>
-      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span className="break-words text-[11px] leading-tight text-muted-foreground">{label}</span>
     </Link>
   );
 }
@@ -320,14 +320,13 @@ function ExploreTile({ to, icon, title, subtitle }: { to: string; icon: React.Re
   return (
     <Link
       to={to as "/"}
-      className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface/70 p-3 transition hover:border-gold/40"
+      className="group flex min-h-[68px] items-center gap-2.5 rounded-2xl border border-white/10 bg-surface/70 p-3 transition hover:border-gold/40"
     >
       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold transition group-hover:bg-gold/25">{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="font-display truncate text-[13px] font-bold">{title}</p>
-        <p className="truncate text-[10px] text-muted-foreground">{subtitle}</p>
+        <p className="font-display line-clamp-2 break-words text-[13px] font-bold leading-tight">{title}</p>
+        <p className="line-clamp-2 break-words text-[10px] leading-tight text-muted-foreground">{subtitle}</p>
       </div>
-      <ChevronLeft className="size-4 shrink-0 text-gold/60 transition group-hover:text-gold" />
     </Link>
   );
 }
