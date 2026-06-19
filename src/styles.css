@@ -96,8 +96,8 @@
 :root {
   /* Premium dark navy + warm gold Arabic identity */
   --radius: 1rem;
-  --font-display: "Amiri", "Cairo", ui-serif, serif;
-  --font-body: "Cairo", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "IBM Plex Sans Arabic", "Cairo", "Amiri", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", "Cairo", "Tajawal", ui-sans-serif, system-ui, sans-serif;
 
   --background: oklch(0.18 0.04 260);
   --foreground: oklch(0.97 0.012 85);

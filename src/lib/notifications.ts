@@ -21,7 +21,7 @@
  *   campaign    — new / hidden campaign unlocked
  */
 
-export type NotificationCategory = "daily" | "reengagement" | "season" | "campaign";
+export type NotificationCategory = "daily" | "reengagement" | "season" | "campaign" | "friend";
 
 export interface NotificationPrefs {
   master: boolean;
@@ -29,6 +29,7 @@ export interface NotificationPrefs {
   reengagement: boolean;
   season: boolean;
   campaign: boolean;
+  friend?: boolean;
 }
 
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
@@ -37,6 +38,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   reengagement: true,
   season: true,
   campaign: true,
+  friend: true,
 };
 
 export interface InAppNotification {
@@ -107,6 +109,13 @@ function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InA
     try { new Notification(final.title, { body: final.body, tag: final.category, icon: "/favicon.ico" }); } catch { /* ignore */ }
   }
   return final;
+}
+
+/** Public deliver — used by ad-hoc notifications (friend requests, etc.). */
+export function deliverNotification(
+  n: Omit<InAppNotification, "at" | "id"> & { id?: string },
+): InAppNotification {
+  return deliver(n);
 }
 
 // ============== Scheduling guards (fire-once-per-day-ish) ==============

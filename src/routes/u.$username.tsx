@@ -1,8 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Crown, Flame, Star, Trophy, Coins, MapPin, IdCard, ChevronLeft, UserPlus, BarChart3 } from "lucide-react";
+import { Crown, Flame, Star, Trophy, Coins, MapPin, IdCard, ChevronLeft, UserPlus, BarChart3, Check, X, Users, Hourglass } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { fetchPublicProfileByUsername, sendFriendRequest, type PublicProfile } from "@/lib/social";
+import {
+  fetchPublicProfileByUsername, sendFriendRequest, getFriendshipWith,
+  acceptFriend, removeFriend,
+  type PublicProfile, type FriendshipRow,
+} from "@/lib/social";
 import { useAccount } from "@/lib/account";
 import { Avatar } from "@/components/Avatar";
 import { displayEntityName, displayCharacterName } from "@/lib/display-names";
@@ -18,10 +22,48 @@ function PublicProfilePage() {
   const [p, setP] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
+  const [friendship, setFriendship] = useState<
+    { row: FriendshipRow; direction: "incoming" | "outgoing" | "accepted" } | null
+  >(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     fetchPublicProfileByUsername(username).then((r) => { setP(r); setLoading(false); });
   }, [username]);
+
+  useEffect(() => {
+    if (!user || !p) { setFriendship(null); return; }
+    if (user.id === p.id) { setFriendship(null); return; }
+    getFriendshipWith(user.id, p.id).then(setFriendship);
+  }, [user, p]);
+
+  async function refreshFriendship() {
+    if (!user || !p) return;
+    setFriendship(await getFriendshipWith(user.id, p.id));
+  }
+
+  async function onAdd() {
+    if (!user || !p) return;
+    setBusy(true);
+    const r = await sendFriendRequest(user.id, p.id);
+    setMsg(r.ok ? "أُرسل الطلب" : r.error ?? "تعذر الإرسال");
+    await refreshFriendship();
+    setBusy(false);
+  }
+  async function onAccept() {
+    if (!friendship) return;
+    setBusy(true);
+    await acceptFriend(friendship.row.id);
+    await refreshFriendship();
+    setBusy(false);
+  }
+  async function onReject() {
+    if (!friendship) return;
+    setBusy(true);
+    await removeFriend(friendship.row.id);
+    await refreshFriendship();
+    setBusy(false);
+  }
 
   return (
     <AppShell>
@@ -78,15 +120,46 @@ function PublicProfilePage() {
 
             {user && user.id !== p.id && (
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  onClick={async () => {
-                    const r = await sendFriendRequest(user.id, p.id);
-                    setMsg(r.ok ? "أُرسل الطلب" : r.error ?? "تعذر الإرسال");
-                  }}
-                  className="flex items-center justify-center gap-1 rounded-xl bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-gold"
-                >
-                  <UserPlus className="size-4" /> إضافة صديق
-                </button>
+                {friendship?.direction === "accepted" ? (
+                  <button
+                    disabled
+                    className="flex items-center justify-center gap-1 rounded-xl border border-emerald-400/40 bg-emerald-500/10 py-2.5 text-sm font-bold text-emerald-200"
+                  >
+                    <Users className="size-4" /> صديقك في الرحلة
+                  </button>
+                ) : friendship?.direction === "outgoing" ? (
+                  <button
+                    disabled
+                    className="flex items-center justify-center gap-1 rounded-xl border border-white/15 bg-surface-2 py-2.5 text-sm font-bold text-muted-foreground"
+                  >
+                    <Hourglass className="size-4" /> بانتظار القبول
+                  </button>
+                ) : friendship?.direction === "incoming" ? (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      disabled={busy}
+                      onClick={onAccept}
+                      className="flex items-center justify-center gap-1 rounded-xl bg-emerald-600/80 py-2.5 text-xs font-bold text-white"
+                    >
+                      <Check className="size-4" /> قبول
+                    </button>
+                    <button
+                      disabled={busy}
+                      onClick={onReject}
+                      className="flex items-center justify-center gap-1 rounded-xl bg-rose-600/80 py-2.5 text-xs font-bold text-white"
+                    >
+                      <X className="size-4" /> رفض
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    disabled={busy}
+                    onClick={onAdd}
+                    className="flex items-center justify-center gap-1 rounded-xl bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-gold"
+                  >
+                    <UserPlus className="size-4" /> إضافة صديق
+                  </button>
+                )}
                 <Link to="/compare/$id" params={{ id: p.id }} className="flex items-center justify-center gap-1 rounded-xl border border-gold/30 py-2.5 text-sm">
                   <BarChart3 className="size-4" /> مقارنة
                 </Link>
