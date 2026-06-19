@@ -2,17 +2,18 @@ import { useEffect } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 
 /**
- * Minimal, safe back-button behavior:
+ * Safe back-button behavior across web + Capacitor APK.
  *
- *  - On a main bottom tab (/campaigns, /encyclopedia, /map, /collection,
- *    /profile), pressing back returns to "/" (Adventure home).
- *  - On "/" (home), pressing back asks: "هل تريد الخروج من إرث؟"
- *    On Capacitor (APK/PWA) confirming triggers App.exitApp(); on the web
- *    preview we cannot force a tab to close, so we stay on home.
- *  - On every other route (campaign chapters, encyclopedia entities, public
- *    profiles, investigations, auth, settings, about/privacy/terms/security,
- *    etc.) we do NOT install any listener — the browser/router handles back
- *    naturally.
+ *  - On "/" (Adventure home): confirm "هل تريد الخروج من إرث؟".
+ *      • Capacitor → App.exitApp() on confirm.
+ *      • Web preview → never force-exit; stay on home.
+ *  - On any other main bottom tab → navigate to "/" (Adventure home).
+ *  - On any other route → previous logical screen (router.history.back if
+ *      available, otherwise navigate to "/").
+ *
+ *  On Capacitor we hook the native `App.backButton` event because the
+ *  native back press doesn't always fire `popstate` — without this the
+ *  WebView can exit the app from deep routes.
  */
 
 const MAIN_TABS = new Set([
@@ -26,19 +27,67 @@ const MAIN_TABS = new Set([
 
 const SENTINEL_STATE = { irth_back_sentinel: true } as const;
 
+type CapacitorApp = {
+  exitApp?: () => void;
+  addListener?: (
+    event: "backButton",
+    cb: (data: { canGoBack: boolean }) => void,
+  ) => Promise<{ remove: () => void }> | { remove: () => void };
+};
+
+function getCapacitor(): { isNative: boolean; App?: CapacitorApp } {
+  if (typeof window === "undefined") return { isNative: false };
+  const cap = (window as unknown as {
+    Capacitor?: {
+      isNativePlatform?: () => boolean;
+      Plugins?: { App?: CapacitorApp };
+    };
+  }).Capacitor;
+  return { isNative: !!cap?.isNativePlatform?.(), App: cap?.Plugins?.App };
+}
+
+function confirmExit(): boolean {
+  return window.confirm("هل تريد الخروج من إرث؟");
+}
+
 export function BackNavigationGuard() {
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
+  // ---- Capacitor native back button (APK) -------------------------------
+  useEffect(() => {
+    const { isNative, App } = getCapacitor();
+    if (!isNative || !App?.addListener) return;
+    let remove: (() => void) | undefined;
+
+    const handler = ({ canGoBack }: { canGoBack: boolean }) => {
+      const current = window.location.pathname || "/";
+      if (current === "/" || current === "") {
+        if (confirmExit()) App.exitApp?.();
+        return;
+      }
+      if (MAIN_TABS.has(current)) {
+        router.navigate({ to: "/" });
+        return;
+      }
+      if (canGoBack) {
+        router.history.back();
+        return;
+      }
+      router.navigate({ to: "/" });
+    };
+
+    const sub = App.addListener("backButton", handler);
+    Promise.resolve(sub).then((s) => { remove = s.remove; });
+    return () => { remove?.(); };
+  }, [router]);
+
+  // ---- Web / PWA popstate sentinel on main tabs only --------------------
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (getCapacitor().isNative) return; // handled by backButton listener
+    if (!MAIN_TABS.has(pathname)) return; // detail routes use native back
 
-    // Only intercept on main bottom-tab routes. Every other route keeps
-    // normal browser/router back behavior.
-    if (!MAIN_TABS.has(pathname)) return;
-
-    // Push a sentinel state so the next back press fires popstate against us
-    // instead of leaving the app.
     try {
       const st = history.state as { irth_back_sentinel?: boolean } | null;
       if (!st || !st.irth_back_sentinel) {
@@ -48,36 +97,15 @@ export function BackNavigationGuard() {
 
     function onPop() {
       const current = window.location.pathname;
-
-      // Home: ask to exit. On Capacitor, confirming exits the native app.
-      // In web preview we cannot force-close a tab, so we re-arm and stay.
       if (current === "/" || current === "") {
-        const ok = window.confirm("هل تريد الخروج من إرث؟");
-        if (ok) {
-          const cap = (window as unknown as {
-            Capacitor?: {
-              isNativePlatform?: () => boolean;
-              Plugins?: { App?: { exitApp?: () => void } };
-            };
-          }).Capacitor;
-          if (cap?.isNativePlatform?.() && cap.Plugins?.App?.exitApp) {
-            try { cap.Plugins.App.exitApp(); return; } catch { /* fallthrough */ }
-          }
-          // Web preview: cannot exit, stay on home.
-        }
+        confirmExit(); // web cannot force-exit; stay on home
         try { history.pushState(SENTINEL_STATE, ""); } catch { /* ignore */ }
         return;
       }
-
-      // Other main tab: go home.
       if (MAIN_TABS.has(current)) {
         router.navigate({ to: "/" });
         try { history.pushState(SENTINEL_STATE, ""); } catch { /* ignore */ }
-        return;
       }
-
-      // Defensive: not a main tab (shouldn't reach here since we gated the
-      // effect on pathname). Do nothing and let the browser proceed.
     }
 
     window.addEventListener("popstate", onPop);
