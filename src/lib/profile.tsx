@@ -376,6 +376,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       settings: { ...initial.settings, ...(next.settings ?? {}) },
     }),
     resetProfile: () => setProfile(initial),
+    grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
+    grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
   }), [profile, update, awardBadge]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;
