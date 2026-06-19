@@ -11,9 +11,5 @@ export default defineConfig({
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
-    // SPA mode: emit a static index.html shell that hydrates client-side.
-    // Required so Capacitor can package the app as a static Android bundle
-    // (`npx cap sync android` expects `dist/client/index.html`).
-    spa: { enabled: true },
   },
 });
