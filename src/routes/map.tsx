@@ -15,7 +15,7 @@ import { entityHref } from "@/components/EncyclopediaCard";
 import type { PackEntity } from "@/lib/packs/types";
 import {
   pinsForEra, overlayForEra, atlasCoverage, atlasEras,
-  STATE_OVERLAYS, type AtlasPin, type AtlasPinKind,
+  STATE_OVERLAYS, regionAtlasStats, type AtlasPin, type AtlasPinKind,
 } from "@/lib/atlas";
 import { AtlasViewport } from "@/components/AtlasViewport";
 
@@ -49,6 +49,10 @@ function MapPage() {
   const overlay = useMemo(() => overlayForEra(eraFilter), [eraFilter]);
   const eras = useMemo(() => atlasEras(), []);
   const coverage = useMemo(() => atlasCoverage(), []);
+  const atlasStats = useMemo(
+    () => regionAtlasStats(region.id, profile.regionsUnlocked, eraFilter),
+    [region.id, profile.regionsUnlocked, eraFilter],
+  );
   const ERA_NAME: Record<string, string> = {
     umayyad: "الأموية", abbasid: "العباسية", ayyubid: "الأيوبية",
     rashidun: "الراشدة", seerah: "السيرة", andalus: "الأندلس",
@@ -137,7 +141,13 @@ function MapPage() {
         />
 
         {/* Region detail */}
-        <RegionPanel region={region} unlocked={profile.regionsUnlocked.includes(region.id)} points={profile.points} onUnlock={handleUnlock} />
+        <RegionPanel
+          region={region}
+          unlocked={profile.regionsUnlocked.includes(region.id)}
+          points={profile.points}
+          onUnlock={handleUnlock}
+          atlasStats={atlasStats}
+        />
 
         {/* Knowledge graph for the selected region */}
         <RelatedHistory entity={{ kind: "region", id: region.id }} title={`شبكة ${region.name} التاريخية`} />
@@ -393,8 +403,12 @@ function WorldMapCanvas({
 // REGION DETAIL PANEL
 // ============================================================
 function RegionPanel({
-  region, unlocked, points, onUnlock,
-}: { region: MapRegion; unlocked: boolean; points: number; onUnlock: (r: MapRegion) => void }) {
+  region, unlocked, points, onUnlock, atlasStats,
+}: {
+  region: MapRegion; unlocked: boolean; points: number;
+  onUnlock: (r: MapRegion) => void;
+  atlasStats: import("@/lib/atlas").RegionAtlasStats;
+}) {
   const era = ERAS.find((e) => e.id === region.era);
   const artifact = region.unlocksArtifact ? ARTIFACTS.find((a) => a.id === region.unlocksArtifact) : null;
   const chars = (region.characterIds ?? []).map((id) => CHARACTERS.find((c) => c.id === id)).filter(Boolean) as typeof CHARACTERS;
@@ -425,6 +439,24 @@ function RegionPanel({
         </div>
 
         <p className="mt-3 text-sm leading-7 text-foreground/90">{region.blurb}</p>
+
+        {/* Atlas discovery stats (live counts from all content packs) */}
+        <div className="mt-4 rounded-2xl border border-gold/25 bg-surface-2/70 p-3" dir="rtl">
+          <div className="flex items-center justify-between text-[10px] text-gold">
+            <span>اكتشاف الإقليم على الأطلس</span>
+            <span>{atlasStats.discoveredPercent}٪ مكتشف</span>
+          </div>
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full bg-gradient-gold transition-all" style={{ width: `${atlasStats.discoveredPercent}%` }} />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+            <StatChip emoji="★" label="عواصم" value={atlasStats.capitals} />
+            <StatChip emoji="🏙" label="مدن" value={atlasStats.cities} />
+            <StatChip emoji="⚔" label="معارك" value={atlasStats.battles} />
+            <StatChip emoji="📜" label="أحداث" value={atlasStats.events} />
+            <StatChip emoji="🕌" label="معالم" value={atlasStats.landmarks} />
+          </div>
+        </div>
 
         {/* Completion */}
         <div className="mt-4">
@@ -556,6 +588,16 @@ function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string
       <div className="flex items-center justify-center gap-1 text-gold">{icon}<span className="font-display text-sm font-bold">{value}</span></div>
       <p className="mt-0.5 text-[9px] text-muted-foreground">{label}</p>
     </div>
+  );
+}
+
+function StatChip({ emoji, label, value }: { emoji: string; label: string; value: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/30 px-2 py-0.5">
+      <span>{emoji}</span>
+      <span className="font-bold text-gold">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
+    </span>
   );
 }
 

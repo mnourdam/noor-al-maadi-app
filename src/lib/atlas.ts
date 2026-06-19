@@ -256,3 +256,63 @@ export function atlasEras(): string[] {
   for (const p of allAtlasPins()) if (p.era) set.add(p.era);
   return Array.from(set);
 }
+
+// ============================================================
+// Region assignment + per-region statistics (for the Atlas UI).
+// ============================================================
+
+/** Best-effort region assignment for a pin (explicit bridge, else nearest centroid). */
+export function regionForPin(p: AtlasPin): string | undefined {
+  const b = p.entity.bridges;
+  if (b?.regionId && REGION_BY_ID[b.regionId]) return b.regionId;
+  if (b?.cityId) {
+    const c = CITY_COORDS.get(b.cityId) ?? CITY_COORDS.get(b.cityId.split(".").pop() ?? "");
+    if (c) return c.regionId;
+  }
+  let best: { id: string; d: number } | undefined;
+  for (const r of MAP_REGIONS) {
+    const rx = r.labelX ?? r.x;
+    const ry = r.labelY ?? r.y;
+    const d = (rx - p.x) ** 2 + (ry - p.y) ** 2;
+    if (!best || d < best.d) best = { id: r.id, d };
+  }
+  return best?.id;
+}
+
+export interface RegionAtlasStats {
+  capitals: number;
+  cities: number;
+  battles: number;
+  events: number;
+  landmarks: number;
+  states: number;
+  total: number;
+  /** Crude discovered ratio: unlocked region ⇒ 100%, else 0%. */
+  discoveredPercent: number;
+}
+
+export function regionAtlasStats(
+  regionId: string,
+  unlockedRegions: string[],
+  eraFilter: string | null = null,
+): RegionAtlasStats {
+  const s: RegionAtlasStats = {
+    capitals: 0, cities: 0, battles: 0, events: 0,
+    landmarks: 0, states: 0, total: 0, discoveredPercent: 0,
+  };
+  const pool = pinsForEra(eraFilter);
+  for (const p of pool) {
+    if (regionForPin(p) !== regionId) continue;
+    s.total++;
+    switch (p.kind) {
+      case "capital":  s.capitals++; break;
+      case "city":     s.cities++; break;
+      case "battle":   s.battles++; break;
+      case "event":    s.events++; break;
+      case "landmark": s.landmarks++; break;
+      case "state":    s.states++; break;
+    }
+  }
+  s.discoveredPercent = unlockedRegions.includes(regionId) ? 100 : 0;
+  return s;
+}
