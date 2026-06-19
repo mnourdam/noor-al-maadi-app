@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, Trash2, ChevronLeft, Calendar, Crown, Compass, Sparkles, MailOpen } from "lucide-react";
+import { Bell, Trash2, ChevronLeft, Calendar, Crown, Compass, Sparkles, MailOpen, UserPlus } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
   clearInbox, getInbox, markAllRead, type InAppNotification,
@@ -16,6 +16,7 @@ const CAT_ICON = {
   reengagement: Compass,
   season: Sparkles,
   campaign: Crown,
+  friend: UserPlus,
 } as const;
 
 const CAT_LABEL = {
@@ -23,6 +24,7 @@ const CAT_LABEL = {
   reengagement: "تذكير",
   season: "الموسم",
   campaign: "الحملات",
+  friend: "الأصدقاء",
 } as const;
 
 function NotificationsPage() {
