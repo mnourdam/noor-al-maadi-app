@@ -74,7 +74,9 @@ export interface ChapterDefinition {
 export interface CampaignReward {
   title?: string;                // honor title (lifetime)
   artifactId?: string;           // grand-prize artifact id
+  artifactName?: string;         // display label for the grand-prize artifact
   badgeId?: string;              // badge awarded
+  badgeName?: string;            // display label for the badge
   characterIds?: string[];       // unlocked characters
   xp: number;
   legendary?: boolean;

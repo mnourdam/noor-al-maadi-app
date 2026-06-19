@@ -316,7 +316,9 @@ export const SALAHUDDIN_LIBERATOR_CAMPAIGN: CampaignDefinition = {
   finalReward: {
     title: "محرر القدس",
     artifactId: "salahuddin-sword",
+    artifactName: "سيف صلاح الدين",
     badgeId: "legendary-liberator",
+    badgeName: "شارة أسطورية",
     characterIds: ["salahuddin"],
     xp: 500,
     legendary: true,

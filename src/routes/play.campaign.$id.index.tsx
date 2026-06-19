@@ -128,8 +128,8 @@ function CampaignOverview() {
             </p>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <RewardCard locked={!claimed} icon="🏷️" title="لقب" name={campaign.finalReward.title ?? ""} />
-              <RewardCard locked={!claimed} icon="🗡️" title="أثرٌ نادر" name={campaign.finalReward.artifactId ? "سيف صلاح الدين" : ""} />
-              <RewardCard locked={!claimed} icon="🏅" title="شارة" name="شارة أسطورية" />
+              <RewardCard locked={!claimed} icon="🗡️" title="أثرٌ نادر" name={campaign.finalReward.artifactId ? (campaign.finalReward.artifactName ?? "أثر أسطوري") : ""} />
+              <RewardCard locked={!claimed} icon="🏅" title="شارة" name={campaign.finalReward.badgeName ?? "شارة أسطورية"} />
               <RewardCard locked={!claimed} icon="✨" title="نقاط" name={`+${campaign.finalReward.xp}`} />
             </div>
           </div>
@@ -261,8 +261,8 @@ function CampaignOverview() {
           chapters={campaign.chapters.map(c => c.title)}
           unlocked={[
             campaign.finalReward.title ? `لقب · ${campaign.finalReward.title}` : null,
-            campaign.finalReward.artifactId ? `أثر · سيف صلاح الدين` : null,
-            "شارة أسطورية",
+            campaign.finalReward.artifactId ? `أثر · ${campaign.finalReward.artifactName ?? "أسطوري"}` : null,
+            campaign.finalReward.badgeName ?? "شارة أسطورية",
           ].filter(Boolean) as string[]}
         />
       )}
