@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Lock, Check, Star, Compass, Sparkles, Scroll, Users, Landmark as LandmarkIcon, Swords, ArrowLeft } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
@@ -212,6 +212,7 @@ function WorldMapCanvas({
   pins: AtlasPin[]; overlay: import("@/lib/atlas").StateOverlay | undefined;
   eraFilter: string | null;
 }) {
+  const router = useRouter();
   const regionsById = useMemo(
     () => Object.fromEntries(MAP_REGIONS.map((r) => [r.id, r])) as Record<string, MapRegion>,
     [],
@@ -373,8 +374,17 @@ function WorldMapCanvas({
         <g>
           {pins.map(pin => {
             const s = KIND_STYLE[pin.kind];
+            const href = entityHref(pin.entity);
             return (
-              <a key={pin.id} href={entityHref(pin.entity)} className="atlas-pin cursor-pointer">
+              <g
+                key={pin.id}
+                className="atlas-pin cursor-pointer"
+                onClick={(ev) => {
+                  ev.preventDefault();
+                  // Client-side navigation — avoids https://localhost/* in Capacitor.
+                  router.navigate({ to: href as unknown as "/" });
+                }}
+              >
                 <title>{pin.entity.title}</title>
                 <circle cx={pin.x} cy={pin.y} r={s.r + 0.5} fill={s.fill} opacity="0.25" />
                 <circle cx={pin.x} cy={pin.y} r={s.r} fill={s.fill}
@@ -384,7 +394,7 @@ function WorldMapCanvas({
                     fontSize="1.1" fill="oklch(0.2 0.05 40)" fontWeight="800"
                     style={{ pointerEvents: "none" }}>{s.glyph}</text>
                 )}
-              </a>
+              </g>
             );
           })}
         </g>

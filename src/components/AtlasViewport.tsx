@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type PointerEvent as RPointerEvent } from "react";
 import { Maximize2, Minimize2, Plus, Minus, RotateCcw, X, ExternalLink, Compass } from "lucide-react";
+import { useRouter } from "@tanstack/react-router";
 import { MAP_REGIONS, type MapRegion } from "@/lib/data";
 import { entityHref } from "@/components/EncyclopediaCard";
 import type { AtlasPin, AtlasPinKind, StateOverlay } from "@/lib/atlas";
@@ -566,12 +567,26 @@ function DiscoveryCard({ pin, onClose, fullscreen }: { pin: AtlasPin; onClose: (
             <p className="mt-1 text-[11px] text-gold/90">{e.period.label}</p>
           )}
           <p className="mt-1.5 text-[12px] leading-6 text-foreground/85 line-clamp-2">{e.description}</p>
-          <a href={entityHref(e)}
-            className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-gold py-2 text-[12px] font-bold text-primary-foreground shadow-gold">
-            <ExternalLink className="size-3.5" /> افتح في الموسوعة
-          </a>
+          <OpenEntityButton href={entityHref(e)} />
         </div>
       </div>
     </div>
+  );
+}
+
+function OpenEntityButton({ href }: { href: string }) {
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      onClick={(ev) => {
+        ev.preventDefault();
+        // Use the client router so Capacitor never resolves https://localhost/...
+        router.navigate({ to: href as unknown as "/" });
+      }}
+      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-gold py-2 text-[12px] font-bold text-primary-foreground shadow-gold"
+    >
+      <ExternalLink className="size-3.5" /> افتح في الموسوعة
+    </button>
   );
 }
