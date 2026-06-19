@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as SeasonsRouteImport } from './routes/seasons'
+import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
@@ -53,6 +54,11 @@ const TimelineRoute = TimelineRouteImport.update({
 const SeasonsRoute = SeasonsRouteImport.update({
   id: '/seasons',
   path: '/seasons',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralsRoute = ReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
@@ -308,6 +316,7 @@ export interface FileRoutesById {
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
@@ -347,6 +356,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/on-this-day'
     | '/profile'
+    | '/referrals'
     | '/seasons'
     | '/timeline'
     | '/battle/$id'
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/on-this-day'
     | '/profile'
+    | '/referrals'
     | '/seasons'
     | '/timeline'
     | '/battle/$id'
@@ -418,6 +429,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/on-this-day'
     | '/profile'
+    | '/referrals'
     | '/seasons'
     | '/timeline'
     | '/battle/$id'
@@ -456,6 +468,7 @@ export interface RootRouteChildren {
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
   ProfileRoute: typeof ProfileRoute
+  ReferralsRoute: typeof ReferralsRoute
   SeasonsRoute: typeof SeasonsRoute
   TimelineRoute: typeof TimelineRoute
   BattleIdRoute: typeof BattleIdRoute
@@ -486,6 +499,13 @@ declare module '@tanstack/react-router' {
       path: '/seasons'
       fullPath: '/seasons'
       preLoaderRoute: typeof SeasonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referrals': {
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -782,6 +802,7 @@ const rootRouteChildren: RootRouteChildren = {
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
   ProfileRoute: ProfileRoute,
+  ReferralsRoute: ReferralsRoute,
   SeasonsRoute: SeasonsRoute,
   TimelineRoute: TimelineRoute,
   BattleIdRoute: BattleIdRoute,
