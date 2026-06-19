@@ -279,6 +279,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     todayDailyIds: () => dailyMissionsForDate().map((m) => m.id),
     setBio: (bio) => update((p) => ({ ...p, bio })),
     setFavorites: (patch) => update((p) => ({ ...p, ...patch })),
+    setAvatar: (id) => update((p) => ({ ...p, avatarId: id })),
+    setNotificationPrefs: (patch) => update((p) => ({
+      ...p,
+      settings: {
+        ...p.settings,
+        notificationPrefs: { ...DEFAULT_NOTIFICATION_PREFS, ...(p.settings.notificationPrefs ?? {}), ...patch },
+      },
+    })),
 
     // ============= Engagement v1 =============
     loseHeart: () => {
