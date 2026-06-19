@@ -14,6 +14,7 @@ import { Route as ShareCardRouteImport } from './routes/share-card'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as InvestigationsRouteImport } from './routes/investigations'
@@ -70,6 +71,11 @@ const ReferralsRoute = ReferralsRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnThisDayRoute = OnThisDayRouteImport.update({
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
@@ -284,6 +291,7 @@ export interface FileRoutesByTo {
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
@@ -323,6 +331,7 @@ export interface FileRoutesById {
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
@@ -364,6 +373,7 @@ export interface FileRouteTypes {
     | '/investigations'
     | '/map'
     | '/on-this-day'
+    | '/privacy'
     | '/profile'
     | '/referrals'
     | '/seasons'
@@ -401,6 +411,7 @@ export interface FileRouteTypes {
     | '/investigations'
     | '/map'
     | '/on-this-day'
+    | '/privacy'
     | '/profile'
     | '/referrals'
     | '/seasons'
@@ -439,6 +450,7 @@ export interface FileRouteTypes {
     | '/investigations'
     | '/map'
     | '/on-this-day'
+    | '/privacy'
     | '/profile'
     | '/referrals'
     | '/seasons'
@@ -479,6 +491,7 @@ export interface RootRouteChildren {
   InvestigationsRoute: typeof InvestigationsRoute
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   ReferralsRoute: typeof ReferralsRoute
   SeasonsRoute: typeof SeasonsRoute
@@ -533,6 +546,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/on-this-day': {
@@ -821,6 +841,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvestigationsRoute: InvestigationsRoute,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
+  PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   ReferralsRoute: ReferralsRoute,
   SeasonsRoute: SeasonsRoute,
