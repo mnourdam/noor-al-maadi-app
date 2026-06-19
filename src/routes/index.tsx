@@ -1,15 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Flame, Star, Sparkles, Search, ListOrdered, GitBranch, Map as MapIcon,
-  ChevronLeft, Crown, Lock, Compass, Eye, Play, Hourglass, Check,
+  ChevronLeft, Crown, Lock, Compass, Eye, Play, Hourglass,
   Calendar,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   dailyStory, todayOnThisDay, ERAS, CAMPAIGNS, ARTIFACTS, CHARACTERS,
-  levelFor, dailyMissionsForDate, currentSeason, UPCOMING_CAMPAIGNS,
-  UPCOMING_REGIONS, MYSTERY_CHARACTERS, FLAGSHIP_CHAPTERS, todayKey,
+  levelFor, currentSeason, UPCOMING_CAMPAIGNS,
+  UPCOMING_REGIONS, MYSTERY_CHARACTERS, FLAGSHIP_CHAPTERS,
   nextActiveCampaign,
 } from "@/lib/data";
 import {
@@ -18,6 +18,7 @@ import {
   IMPORTANCE_LABEL,
 } from "@/lib/historical-calendar";
 import { useProfile } from "@/lib/profile";
+import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS } from "@/lib/notifications";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
 
 export const Route = createFileRoute("/")({
@@ -33,7 +34,23 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { profile, touchStreak } = useProfile();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); touchStreak(); }, [touchStreak]);
+  useEffect(() => {
+    setMounted(true);
+    touchStreak();
+    // Fire the daily / re-engagement / season notifications when due.
+    const today = todayOnThisDay();
+    const season = currentSeason();
+    runDailyNotifications({
+      prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
+      today: { title: today.title, teaser: today.detail, href: "/on-this-day" },
+      season: {
+        name: season.name,
+        tagline: season.tagline,
+        ready: profile.seasonPoints >= season.goalPoints && !profile.seasonClaimed,
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [touchStreak]);
 
   const lvl = levelFor(profile.points);
   // ===== Dynamic hero campaign =====
@@ -51,9 +68,6 @@ function Index() {
     ? (FLAGSHIP_CHAPTERS.find((c) => !profile.missionsCompleted.includes(c.missionId))
         ?? FLAGSHIP_CHAPTERS[FLAGSHIP_CHAPTERS.length - 1])
     : null;
-
-  const dailies = useMemo(() => (mounted ? dailyMissionsForDate() : []), [mounted]);
-  const claimedToday = profile.dailyClaimed.day === todayKey() ? profile.dailyClaimed.ids : [];
 
   const discovery = mounted ? rotatingDiscovery() : null;
   const season = currentSeason();
