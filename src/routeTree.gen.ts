@@ -26,6 +26,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EncyclopediaIndexRouteImport } from './routes/encyclopedia.index'
 import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
+import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as StoryIdRouteImport } from './routes/story.$id'
 import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
 import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
@@ -127,6 +128,11 @@ const CampaignsIndexRoute = CampaignsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CampaignsRoute,
+} as any)
+const UUsernameRoute = UUsernameRouteImport.update({
+  id: '/u/$username',
+  path: '/u/$username',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const StoryIdRoute = StoryIdRouteImport.update({
   id: '/story/$id',
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
+  '/u/$username': typeof UUsernameRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -269,6 +276,7 @@ export interface FileRoutesByTo {
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
+  '/u/$username': typeof UUsernameRoute
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -304,6 +312,7 @@ export interface FileRoutesById {
   '/play/investigate': typeof PlayInvestigateRoute
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
+  '/u/$username': typeof UUsernameRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -341,6 +350,7 @@ export interface FileRouteTypes {
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
+    | '/u/$username'
     | '/campaigns/'
     | '/encyclopedia/'
     | '/encyclopedia/entity/$id'
@@ -374,6 +384,7 @@ export interface FileRouteTypes {
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
+    | '/u/$username'
     | '/campaigns'
     | '/encyclopedia'
     | '/encyclopedia/entity/$id'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/play/investigate'
     | '/play/timeline'
     | '/story/$id'
+    | '/u/$username'
     | '/campaigns/'
     | '/encyclopedia/'
     | '/encyclopedia/entity/$id'
@@ -443,6 +455,7 @@ export interface RootRouteChildren {
   PlayInvestigateRoute: typeof PlayInvestigateRoute
   PlayTimelineRoute: typeof PlayTimelineRoute
   StoryIdRoute: typeof StoryIdRoute
+  UUsernameRoute: typeof UUsernameRoute
   PlayCampaignIdRoute: typeof PlayCampaignIdRouteWithChildren
 }
 
@@ -566,6 +579,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/campaigns/'
       preLoaderRoute: typeof CampaignsIndexRouteImport
       parentRoute: typeof CampaignsRoute
+    }
+    '/u/$username': {
+      id: '/u/$username'
+      path: '/u/$username'
+      fullPath: '/u/$username'
+      preLoaderRoute: typeof UUsernameRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/story/$id': {
       id: '/story/$id'
@@ -753,6 +773,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayInvestigateRoute: PlayInvestigateRoute,
   PlayTimelineRoute: PlayTimelineRoute,
   StoryIdRoute: StoryIdRoute,
+  UUsernameRoute: UUsernameRoute,
   PlayCampaignIdRoute: PlayCampaignIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
