@@ -22,6 +22,7 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
   const {
     profile, completeMission, awardBadge,
     unlockCharacter, findArtifact, unlockEra,
+    loseHeart, hasHearts,
   } = useProfile();
 
   const firstUnanswered = useMemo(
@@ -43,6 +44,7 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
 
   const submit = () => {
     if (picked == null) return;
+    if (!hasHearts()) return;
     setRevealed(true);
     if (picked === q.correctIndex) {
       completeMission(quizQuestionKey(campaignId, chapterId, quiz.id, q.id), q.xp);
@@ -50,6 +52,8 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
       q.unlock?.characters?.forEach(unlockCharacter);
       q.unlock?.artifacts?.forEach(findArtifact);
       q.unlock?.states?.forEach(unlockEra);
+    } else {
+      loseHeart();
     }
   };
 
@@ -85,6 +89,11 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
 
   return (
     <div className="rounded-2xl border border-gold/30 bg-gradient-to-b from-amber-900/15 via-surface to-stone-900/20 p-5">
+      {!hasHearts() && !revealed && (
+        <div className="mb-3 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-[11px] text-red-100">
+          نفدت قلوبك. انتظر استرداد قلب أو استخدم نشاطًا تعليميًا لاستعادته قبل المتابعة.
+        </div>
+      )}
       <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold/80">
         <HelpCircle className="size-3.5" />
         {quiz.title ?? "اختبار الفصل"} · سؤال {(index + 1).toLocaleString("ar-EG")}/{quiz.questions.length.toLocaleString("ar-EG")}
