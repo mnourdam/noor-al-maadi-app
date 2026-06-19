@@ -29,7 +29,7 @@ interface AccountCtx {
   syncing: boolean;
   lastSyncAt: number | null;
   conflict: PendingConflict | null;
-  signUp: (args: { email: string; password: string; username: string }) => Promise<{ ok: boolean; error?: string }>;
+  signUp: (args: { email: string; password: string; username: string; referralCode?: string }) => Promise<{ ok: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   syncNow: () => Promise<boolean>;
@@ -149,11 +149,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     };
   }, [profile, user]);
 
-  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username }) => {
+  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, referralCode }) => {
     const u = username.trim();
     if (u.length < 3) return { ok: false, error: "اسم المستخدم قصير جداً" };
     if (password.length < 6) return { ok: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" };
-    const { data, error } = await signUpWithEmail({ email, password, username: u });
+    const { data, error } = await signUpWithEmail({ email, password, username: u, referralCode });
     if (error) return { ok: false, error: error.message };
     if (!data.session) {
       return { ok: true, error: "تحقق من بريدك لتأكيد الحساب." };

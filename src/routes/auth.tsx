@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Mail, Lock, UserRound, ChevronLeft } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Mail, Lock, UserRound, ChevronLeft, Gift } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ ref: typeof s.ref === "string" ? s.ref : undefined }),
   component: AuthPage,
 });
 
@@ -14,14 +15,18 @@ type Mode = "signin" | "signup";
 
 function AuthPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const { signIn, signUp, user } = useAccount();
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(search.ref ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [referralCode, setReferralCode] = useState(search.ref ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => { if (search.ref) setReferralCode(search.ref); }, [search.ref]);
 
   // Already signed in → kick to profile.
   if (user) {
@@ -35,7 +40,7 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const r = await signUp({ email, password, username });
+        const r = await signUp({ email, password, username, referralCode: referralCode || undefined });
         if (!r.ok) { setError(r.error ?? "تعذر إنشاء الحساب"); return; }
         if (r.error) { setInfo(r.error); return; } // verify email message
         navigate({ to: "/profile" });
@@ -110,6 +115,17 @@ function AuthPage() {
                 placeholder="6 أحرف على الأقل"
               />
             </Field>
+            {mode === "signup" && (
+              <Field icon={<Gift className="size-4" />} label="رمز الإحالة (اختياري)">
+                <input
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  maxLength={20}
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  placeholder="IRTH-XXXXXX"
+                />
+              </Field>
+            )}
 
             {error && <p className="text-xs text-rose-300">{error}</p>}
             {info && <p className="text-xs text-emerald-300">{info}</p>}
