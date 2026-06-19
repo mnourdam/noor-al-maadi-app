@@ -16,20 +16,20 @@ import type { AtlasPin, AtlasPinKind, StateOverlay } from "@/lib/atlas";
 const VB_W = 100;
 const VB_H = 60;
 const MIN_SCALE = 1;
-const MAX_SCALE = 8;
+const MAX_SCALE = 20;
 const ONBOARD_KEY = "irth.atlas.onboarded.v1";
 
 const VISIBLE_AT: Record<AtlasPinKind, (s: number) => boolean> = {
   state:    () => true,
   capital:  (s) => s >= 2.5,
   city:     (s) => s >= 3,
-  battle:   (s) => s >= 4.5,
-  event:    (s) => s >= 4.5,
-  landmark: (s) => s >= 6.5,
+  battle:   (s) => s >= 6,
+  event:    (s) => s >= 6,
+  landmark: (s) => s >= 10,
 };
 
 const LABEL_FROM: Record<AtlasPinKind, number> = {
-  state: 1, capital: 2.5, city: 3.5, battle: 5, event: 5, landmark: 6.5,
+  state: 1, capital: 2.5, city: 4, battle: 7, event: 7, landmark: 10,
 };
 
 const ROUTES: { from: string; to: string }[] = [
