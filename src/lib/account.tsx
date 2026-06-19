@@ -37,7 +37,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [loadingSession, setLoadingSession] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
-  const [conflict, setConflict] = useState<PendingConflict | null>(null);
 
   // Block auto-push while we're resolving a conflict or initial hydration.
   const autoPushEnabled = useRef(false);
@@ -59,7 +58,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (event === "SIGNED_OUT") {
         autoPushEnabled.current = false;
         setAccount(null);
-        setConflict(null);
         setLastSyncAt(null);
       }
     });
@@ -103,11 +101,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           await pushSave(user.id, localSnap);
           autoPushEnabled.current = true;
           setLastSyncAt(Date.now());
-        } else if (hasLocalProgress(localSnap)) {
-          // Both exist → ask the user which to keep.
-          setConflict({ localSnapshot: localSnap, cloudSnapshot: save.data });
         } else {
-          // Local is empty/fresh — restore cloud automatically.
+          // Cloud is authoritative — silently restore the latest cloud save.
+          // Manual sync is still available from the account settings.
           replaceProfile(save.data);
           autoPushEnabled.current = true;
           setLastSyncAt(Date.now());
@@ -174,39 +170,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  const resolveConflict = useCallback<AccountCtx["resolveConflict"]>(async (choice) => {
-    if (!user || !conflict) return;
-    setSyncing(true);
-    try {
-      if (choice === "local") {
-        await pushSave(user.id, conflict.localSnapshot);
-      } else {
-        replaceProfile(conflict.cloudSnapshot);
-      }
-      autoPushEnabled.current = true;
-      setLastSyncAt(Date.now());
-      setConflict(null);
-    } finally {
-      setSyncing(false);
-    }
-  }, [user, conflict, replaceProfile]);
-
-  const dismissConflict = useCallback(() => setConflict(null), []);
-
   const value = useMemo<AccountCtx>(() => ({
     user,
     account,
     loadingSession,
     syncing,
     lastSyncAt,
-    conflict,
     signUp,
     signIn,
     signOut: signOutFn,
     syncNow,
-    resolveConflict,
-    dismissConflict,
-  }), [user, account, loadingSession, syncing, lastSyncAt, conflict, signUp, signIn, signOutFn, syncNow, resolveConflict, dismissConflict]);
+  }), [user, account, loadingSession, syncing, lastSyncAt, signUp, signIn, signOutFn, syncNow]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
