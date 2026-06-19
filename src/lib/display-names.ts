@@ -65,7 +65,7 @@ export function displayArtifactName(id?: string | null): string {
   const direct = ARTIFACTS.find((a) => a.id === id);
   if (direct) return direct.name;
   const pack = getPackEntity(id);
-  if (pack?.name) return pack.name;
+  if (pack?.title) return pack.title;
   return REWARD_ARTIFACT_NAMES[id] ?? "أثر نادر";
 }
 
@@ -75,14 +75,14 @@ export function displayCharacterName(id?: string | null): string {
   const direct = CHARACTERS.find((c) => c.id === id);
   if (direct) return direct.name;
   const pack = getPackEntity(id);
-  return pack?.name ?? "شخصية تاريخية";
+  return pack?.title ?? "شخصية تاريخية";
 }
 
 /** Resolve a pack entity ID (e.g. `mamluk.state.mamluk`) to an Arabic name. */
 export function displayEntityName(id?: string | null): string {
   if (!id) return "";
   const pack = getPackEntity(id);
-  if (pack?.name) return pack.name;
+  if (pack?.title) return pack.title;
   // Try era prefix fallback (e.g. `mamluk.state.mamluk` → "الدولة المملوكية").
   const eraId = id.split(".")[0];
   const era = ERAS.find((e) => e.id === eraId);
@@ -93,7 +93,7 @@ export function displayEntityName(id?: string | null): string {
 export function displayName(id?: string | null): string {
   if (!id) return "";
   const pack = getPackEntity(id);
-  if (pack?.name) return pack.name;
+  if (pack?.title) return pack.title;
   const art = ARTIFACTS.find((a) => a.id === id);
   if (art) return art.name;
   const ch = CHARACTERS.find((c) => c.id === id);
