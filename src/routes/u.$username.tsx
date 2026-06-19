@@ -5,6 +5,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { fetchPublicProfileByUsername, sendFriendRequest, type PublicProfile } from "@/lib/social";
 import { useAccount } from "@/lib/account";
 import { Avatar } from "@/components/Avatar";
+import { displayEntityName, displayCharacterName } from "@/lib/display-names";
 
 export const Route = createFileRoute("/u/$username")({
   head: () => ({ meta: [{ title: "صفحة عامة" }] }),
@@ -63,9 +64,15 @@ function PublicProfilePage() {
                 </div>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
-                <div className="flex items-center gap-1 rounded-xl border border-white/10 p-2"><MapPin className="size-3.5 text-gold" /> {p.favorite_state_id || "—"}</div>
-                <div className="rounded-xl border border-white/10 p-2">آخر نشاط: {new Date(p.last_active).toLocaleDateString("ar")}</div>
+              <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-muted-foreground sm:grid-cols-2">
+                <div className="flex min-w-0 items-center gap-1 rounded-xl border border-white/10 p-2">
+                  <MapPin className="size-3.5 shrink-0 text-gold" />
+                  <span className="truncate">{p.favorite_state_id ? displayEntityName(p.favorite_state_id) : "—"}</span>
+                  {p.favorite_figure_id && (
+                    <span className="truncate text-gold/70">· {displayCharacterName(p.favorite_figure_id)}</span>
+                  )}
+                </div>
+                <div className="truncate rounded-xl border border-white/10 p-2">آخر نشاط: {new Date(p.last_active).toLocaleDateString("ar")}</div>
               </div>
             </div>
 
