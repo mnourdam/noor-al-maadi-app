@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ProfileProvider } from "../lib/profile";
+import { AccountProvider } from "../lib/account";
 
 function NotFoundComponent() {
   return (
@@ -148,7 +149,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <ProfileProvider>
-        <Outlet />
+        <AccountProvider>
+          <Outlet />
+        </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
   );

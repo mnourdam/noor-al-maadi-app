@@ -124,6 +124,9 @@ interface Ctx {
   hintsRevealed: (scopeKey: string) => number;
   claimStreakMilestone: (days: number) => boolean;
   availableStreakMilestones: () => StreakMilestone[];
+  // Cloud-save integration
+  replaceProfile: (next: ProfileState) => void;
+  resetProfile: () => void;
 }
 
 const ProfileContext = createContext<Ctx | null>(null);
@@ -362,6 +365,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     },
     availableStreakMilestones: () =>
       STREAK_MILESTONES.filter((m) => profile.streak >= m.days && !(profile.streakMilestonesClaimed ?? []).includes(m.days)),
+
+    // ============= Cloud Save bridge =============
+    replaceProfile: (next) => setProfile({
+      ...initial,
+      ...next,
+      settings: { ...initial.settings, ...(next.settings ?? {}) },
+    }),
+    resetProfile: () => setProfile(initial),
   }), [profile, update, awardBadge]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;
