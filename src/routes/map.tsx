@@ -403,8 +403,12 @@ function WorldMapCanvas({
 // REGION DETAIL PANEL
 // ============================================================
 function RegionPanel({
-  region, unlocked, points, onUnlock,
-}: { region: MapRegion; unlocked: boolean; points: number; onUnlock: (r: MapRegion) => void }) {
+  region, unlocked, points, onUnlock, atlasStats,
+}: {
+  region: MapRegion; unlocked: boolean; points: number;
+  onUnlock: (r: MapRegion) => void;
+  atlasStats: import("@/lib/atlas").RegionAtlasStats;
+}) {
   const era = ERAS.find((e) => e.id === region.era);
   const artifact = region.unlocksArtifact ? ARTIFACTS.find((a) => a.id === region.unlocksArtifact) : null;
   const chars = (region.characterIds ?? []).map((id) => CHARACTERS.find((c) => c.id === id)).filter(Boolean) as typeof CHARACTERS;
@@ -435,6 +439,24 @@ function RegionPanel({
         </div>
 
         <p className="mt-3 text-sm leading-7 text-foreground/90">{region.blurb}</p>
+
+        {/* Atlas discovery stats (live counts from all content packs) */}
+        <div className="mt-4 rounded-2xl border border-gold/25 bg-surface-2/70 p-3" dir="rtl">
+          <div className="flex items-center justify-between text-[10px] text-gold">
+            <span>اكتشاف الإقليم على الأطلس</span>
+            <span>{atlasStats.discoveredPercent}٪ مكتشف</span>
+          </div>
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full bg-gradient-gold transition-all" style={{ width: `${atlasStats.discoveredPercent}%` }} />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+            <StatChip emoji="★" label="عواصم" value={atlasStats.capitals} />
+            <StatChip emoji="🏙" label="مدن" value={atlasStats.cities} />
+            <StatChip emoji="⚔" label="معارك" value={atlasStats.battles} />
+            <StatChip emoji="📜" label="أحداث" value={atlasStats.events} />
+            <StatChip emoji="🕌" label="معالم" value={atlasStats.landmarks} />
+          </div>
+        </div>
 
         {/* Completion */}
         <div className="mt-4">
