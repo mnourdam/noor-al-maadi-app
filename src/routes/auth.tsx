@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Mail, Lock, UserRound, ChevronLeft, Gift } from "lucide-react";
+import { Mail, Lock, UserRound, ChevronLeft, Gift, Eye, EyeOff } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
@@ -25,13 +25,28 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [showPwd, setShowPwd] = useState(false);
 
   useEffect(() => { if (search.ref) setReferralCode(search.ref); }, [search.ref]);
 
-  // Already signed in → kick to profile.
-  if (user) {
-    setTimeout(() => navigate({ to: "/profile" }), 0);
-  }
+  // Email verification redirect — Supabase appends `#access_token=...&type=signup`
+  // and the client auto-detects the session. We just surface a friendly toast
+  // and let the auth listener handle the navigation below.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash || "";
+    if (hash.includes("type=signup") || hash.includes("type=recovery") || hash.includes("type=magiclink")) {
+      setInfo("تم تأكيد البريد الإلكتروني بنجاح. جارٍ تسجيل الدخول…");
+      // Clean the URL so a refresh doesn't keep showing the message.
+      try { window.history.replaceState({}, "", window.location.pathname + window.location.search); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Already signed in → kick to profile (covers both manual login and the
+  // post-verification auto sign-in).
+  useEffect(() => {
+    if (user) navigate({ to: "/profile" });
+  }, [user, navigate]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -106,7 +121,7 @@ function AuthPage() {
             </Field>
             <Field icon={<Lock className="size-4" />} label="كلمة المرور">
               <input
-                type="password"
+                type={showPwd ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -114,6 +129,14 @@ function AuthPage() {
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 placeholder="6 أحرف على الأقل"
               />
+              <button
+                type="button"
+                onClick={() => setShowPwd((s) => !s)}
+                aria-label={showPwd ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                className="text-muted-foreground hover:text-gold"
+              >
+                {showPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
             </Field>
             {mode === "signup" && (
               <Field icon={<Gift className="size-4" />} label="رمز الإحالة (اختياري)">
