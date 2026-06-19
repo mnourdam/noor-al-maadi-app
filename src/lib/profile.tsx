@@ -127,6 +127,9 @@ interface Ctx {
   // Cloud-save integration
   replaceProfile: (next: ProfileState) => void;
   resetProfile: () => void;
+  // Social v1
+  grantTitle: (title: string) => void;
+  grantArtifact: (id: string) => void;
 }
 
 const ProfileContext = createContext<Ctx | null>(null);
