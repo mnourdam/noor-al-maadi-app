@@ -38,42 +38,208 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      friendships: {
         Row: {
           created_at: string
-          email: string | null
           id: string
-          join_date: string
-          last_active: string
+          requester: string
+          status: string
           updated_at: string
-          username: string
+          user_a: string
+          user_b: string
         }
         Insert: {
           created_at?: string
-          email?: string | null
-          id: string
-          join_date?: string
-          last_active?: string
+          id?: string
+          requester: string
+          status?: string
           updated_at?: string
-          username: string
+          user_a: string
+          user_b: string
         }
         Update: {
           created_at?: string
+          id?: string
+          requester?: string
+          status?: string
+          updated_at?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_requester_fkey"
+            columns: ["requester"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_user_a_fkey"
+            columns: ["user_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_user_b_fkey"
+            columns: ["user_b"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          artifacts_collected: number
+          bio: string | null
+          campaigns_completed: number
+          created_at: string
+          dinars: number
+          discovery_pct: number
+          email: string | null
+          favorite_figure_id: string | null
+          favorite_state_id: string | null
+          id: string
+          join_date: string
+          last_active: string
+          level: number
+          referral_code: string | null
+          referred_by: string | null
+          streak: number
+          title: string | null
+          updated_at: string
+          username: string
+          xp: number
+        }
+        Insert: {
+          artifacts_collected?: number
+          bio?: string | null
+          campaigns_completed?: number
+          created_at?: string
+          dinars?: number
+          discovery_pct?: number
           email?: string | null
+          favorite_figure_id?: string | null
+          favorite_state_id?: string | null
+          id: string
+          join_date?: string
+          last_active?: string
+          level?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          streak?: number
+          title?: string | null
+          updated_at?: string
+          username: string
+          xp?: number
+        }
+        Update: {
+          artifacts_collected?: number
+          bio?: string | null
+          campaigns_completed?: number
+          created_at?: string
+          dinars?: number
+          discovery_pct?: number
+          email?: string | null
+          favorite_figure_id?: string | null
+          favorite_state_id?: string | null
           id?: string
           join_date?: string
           last_active?: string
+          level?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          streak?: number
+          title?: string | null
           updated_at?: string
           username?: string
+          xp?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          referred_id: string
+          referrer_id: string
+          stage: number
+          stage1_at: string | null
+          stage2_at: string | null
+          stage3_at: string | null
+          stage4_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          referred_id: string
+          referrer_id: string
+          stage?: number
+          stage1_at?: string | null
+          stage2_at?: string | null
+          stage3_at?: string | null
+          stage4_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          referred_id?: string
+          referrer_id?: string
+          stage?: number
+          stage1_at?: string | null
+          stage2_at?: string | null
+          stage3_at?: string | null
+          stage4_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      advance_referral_stage: {
+        Args: {
+          p_campaigns: number
+          p_level: number
+          p_stage: number
+          p_streak: number
+        }
+        Returns: Json
+      }
+      claim_signup_referral_rewards: { Args: never; Returns: Json }
+      gen_referral_code: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
