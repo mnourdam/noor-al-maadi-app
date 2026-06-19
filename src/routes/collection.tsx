@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles } from "lucide-react";
+import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles, Clock, Trophy } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, fogHint, type Era } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
