@@ -82,10 +82,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         setAccount(acc);
         void touchLastActive(user.id);
 
-        // Account identity → local profile.name. Avoid showing "ضيف" once
-        // the player is authenticated.
-        if (acc?.username) login(acc.username);
-
         // One-time signup referral rewards (idempotent server-side).
         try {
           const claim = await claimSignupReferral();
@@ -112,6 +108,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           autoPushEnabled.current = true;
           setLastSyncAt(Date.now());
         }
+
+        // Identity → never show "ضيف" once authenticated.
+        if (acc?.username) login(acc.username);
       } finally {
         if (!cancelled) setSyncing(false);
       }
