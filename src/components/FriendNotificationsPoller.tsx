@@ -55,7 +55,7 @@ export function FriendNotificationsPoller() {
             // First sync after sign-in: don't spam with backlog notifications.
             if (initRef.current) {
               deliverNotification({
-                category: "campaign", // reuse channel; visually neutral
+                category: "friend",
                 title: "طلب صداقة جديد",
                 body: `وصلك طلب صداقة جديد من @${f.other.username}`,
                 href: "/friends",
@@ -66,7 +66,7 @@ export function FriendNotificationsPoller() {
             nextAccepted.add(f.row.id);
             if (initRef.current && f.row.requester === user!.id) {
               deliverNotification({
-                category: "campaign",
+                category: "friend",
                 title: "قُبل طلب الصداقة",
                 body: `قبل @${f.other.username} طلب صداقتك`,
                 href: "/friends",
