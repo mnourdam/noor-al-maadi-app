@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TimelineRouteImport } from './routes/timeline'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ShareCardRouteImport } from './routes/share-card'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ReferralsRouteImport } from './routes/referrals'
@@ -51,6 +52,11 @@ import { Route as PlayCampaignIdChapterChapterRouteImport } from './routes/play.
 const TimelineRoute = TimelineRouteImport.update({
   id: '/timeline',
   path: '/timeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShareCardRoute = ShareCardRouteImport.update({
@@ -258,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
   '/share-card': typeof ShareCardRoute
+  '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByTo {
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
   '/share-card': typeof ShareCardRoute
+  '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -336,6 +344,7 @@ export interface FileRoutesById {
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
   '/share-card': typeof ShareCardRoute
+  '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -378,6 +387,7 @@ export interface FileRouteTypes {
     | '/referrals'
     | '/seasons'
     | '/share-card'
+    | '/terms'
     | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -416,6 +426,7 @@ export interface FileRouteTypes {
     | '/referrals'
     | '/seasons'
     | '/share-card'
+    | '/terms'
     | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -455,6 +466,7 @@ export interface FileRouteTypes {
     | '/referrals'
     | '/seasons'
     | '/share-card'
+    | '/terms'
     | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -496,6 +508,7 @@ export interface RootRouteChildren {
   ReferralsRoute: typeof ReferralsRoute
   SeasonsRoute: typeof SeasonsRoute
   ShareCardRoute: typeof ShareCardRoute
+  TermsRoute: typeof TermsRoute
   TimelineRoute: typeof TimelineRoute
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
@@ -518,6 +531,13 @@ declare module '@tanstack/react-router' {
       path: '/timeline'
       fullPath: '/timeline'
       preLoaderRoute: typeof TimelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/share-card': {
@@ -846,6 +866,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReferralsRoute: ReferralsRoute,
   SeasonsRoute: SeasonsRoute,
   ShareCardRoute: ShareCardRoute,
+  TermsRoute: TermsRoute,
   TimelineRoute: TimelineRoute,
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
