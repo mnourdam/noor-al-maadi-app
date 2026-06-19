@@ -591,6 +591,16 @@ function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
+function StatChip({ emoji, label, value }: { emoji: string; label: string; value: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/30 px-2 py-0.5">
+      <span>{emoji}</span>
+      <span className="font-bold text-gold">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
+    </span>
+  );
+}
+
 // ============================================================
 // Region encyclopedia rail — auto-aggregates pack entities tied
 // to this region either directly (bridges.regionId) or via a
