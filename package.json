@@ -11,8 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "build:android:web": "vite build --config vite.android.config.ts",
-    "sync:android": "npm run build:android:web && cap sync android",
-    "open:android": "cap open android",
+    "sync:android": "npm run build:android:web && npx cap sync android",
+    "open:android": "npx cap open android",
     "apk:debug": "npm run sync:android && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
