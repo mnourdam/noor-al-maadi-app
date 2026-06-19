@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Cloud, CloudOff, LogIn, LogOut, RefreshCw, ShieldCheck, UserPlus, CheckCircle2 } from "lucide-react";
+import { Cloud, CloudOff, LogIn, LogOut, RefreshCw, ShieldCheck, UserPlus, CheckCircle2, Shield, FileText, Lock } from "lucide-react";
 import { useAccount } from "@/lib/account";
 
 function timeAgo(ts: number | null): string {
@@ -72,6 +72,18 @@ export function AccountSection() {
             </button>
           </>
         )}
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/5 pt-3">
+        <Link to="/privacy" className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 py-2 text-[11px] text-muted-foreground hover:text-foreground">
+          <Shield className="size-3.5 text-gold" /> الخصوصية
+        </Link>
+        <Link to="/terms" className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 py-2 text-[11px] text-muted-foreground hover:text-foreground">
+          <FileText className="size-3.5 text-gold" /> الشروط
+        </Link>
+        <Link to="/security" className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 py-2 text-[11px] text-muted-foreground hover:text-foreground">
+          <Lock className="size-3.5 text-gold" /> الأمان
+        </Link>
       </div>
 
       {conflict && (

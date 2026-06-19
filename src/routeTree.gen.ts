@@ -10,10 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TimelineRouteImport } from './routes/timeline'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ShareCardRouteImport } from './routes/share-card'
+import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as InvestigationsRouteImport } from './routes/investigations'
@@ -52,9 +55,19 @@ const TimelineRoute = TimelineRouteImport.update({
   path: '/timeline',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShareCardRoute = ShareCardRouteImport.update({
   id: '/share-card',
   path: '/share-card',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SeasonsRoute = SeasonsRouteImport.update({
@@ -70,6 +83,11 @@ const ReferralsRoute = ReferralsRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnThisDayRoute = OnThisDayRouteImport.update({
@@ -247,10 +265,13 @@ export interface FileRoutesByFullPath {
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
+  '/security': typeof SecurityRoute
   '/share-card': typeof ShareCardRoute
+  '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -284,10 +305,13 @@ export interface FileRoutesByTo {
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
+  '/security': typeof SecurityRoute
   '/share-card': typeof ShareCardRoute
+  '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -323,10 +347,13 @@ export interface FileRoutesById {
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/on-this-day': typeof OnThisDayRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
+  '/security': typeof SecurityRoute
   '/share-card': typeof ShareCardRoute
+  '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -364,10 +391,13 @@ export interface FileRouteTypes {
     | '/investigations'
     | '/map'
     | '/on-this-day'
+    | '/privacy'
     | '/profile'
     | '/referrals'
     | '/seasons'
+    | '/security'
     | '/share-card'
+    | '/terms'
     | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -401,10 +431,13 @@ export interface FileRouteTypes {
     | '/investigations'
     | '/map'
     | '/on-this-day'
+    | '/privacy'
     | '/profile'
     | '/referrals'
     | '/seasons'
+    | '/security'
     | '/share-card'
+    | '/terms'
     | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -439,10 +472,13 @@ export interface FileRouteTypes {
     | '/investigations'
     | '/map'
     | '/on-this-day'
+    | '/privacy'
     | '/profile'
     | '/referrals'
     | '/seasons'
+    | '/security'
     | '/share-card'
+    | '/terms'
     | '/timeline'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -479,10 +515,13 @@ export interface RootRouteChildren {
   InvestigationsRoute: typeof InvestigationsRoute
   MapRoute: typeof MapRoute
   OnThisDayRoute: typeof OnThisDayRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   ReferralsRoute: typeof ReferralsRoute
   SeasonsRoute: typeof SeasonsRoute
+  SecurityRoute: typeof SecurityRoute
   ShareCardRoute: typeof ShareCardRoute
+  TermsRoute: typeof TermsRoute
   TimelineRoute: typeof TimelineRoute
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
@@ -507,11 +546,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TimelineRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/share-card': {
       id: '/share-card'
       path: '/share-card'
       fullPath: '/share-card'
       preLoaderRoute: typeof ShareCardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/seasons': {
@@ -533,6 +586,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/on-this-day': {
@@ -821,10 +881,13 @@ const rootRouteChildren: RootRouteChildren = {
   InvestigationsRoute: InvestigationsRoute,
   MapRoute: MapRoute,
   OnThisDayRoute: OnThisDayRoute,
+  PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   ReferralsRoute: ReferralsRoute,
   SeasonsRoute: SeasonsRoute,
+  SecurityRoute: SecurityRoute,
   ShareCardRoute: ShareCardRoute,
+  TermsRoute: TermsRoute,
   TimelineRoute: TimelineRoute,
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,

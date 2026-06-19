@@ -48,14 +48,18 @@ export async function getCurrentUser() {
 export async function fetchAccountProfile(userId: string): Promise<AccountProfile | null> {
   const { data, error } = await db
     .from("profiles")
-    .select("id, username, email, join_date, last_active")
+    .select("id, username, join_date, last_active")
     .eq("id", userId)
     .maybeSingle();
   if (error) {
     console.error("[cloud-save] fetchAccountProfile", error);
     return null;
   }
-  return (data as AccountProfile) ?? null;
+  if (!data) return null;
+  // Email lives in profiles but is column-restricted from authenticated reads.
+  // Fetch it via the security-definer RPC that only returns the caller's own email.
+  const { data: emailVal } = await db.rpc("get_my_email");
+  return { ...(data as Omit<AccountProfile, "email">), email: (emailVal as string | null) ?? null };
 }
 
 export async function touchLastActive(userId: string): Promise<void> {
