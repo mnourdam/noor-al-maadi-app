@@ -22,6 +22,20 @@ import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS } from "@/lib/notific
 import { useAccount } from "@/lib/account";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
+import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
+import heroDesertCaravan from "@/assets/hero-desert-caravan.jpg";
+import heroManuscriptLamp from "@/assets/hero-manuscript-lamp.jpg";
+import heroBattlefield from "@/assets/hero-battlefield.jpg";
+import heroFortress from "@/assets/hero-fortress.jpg";
+
+const HERO_BACKGROUNDS = [
+  salahuddinHero,
+  heroCitySunrise,
+  heroDesertCaravan,
+  heroManuscriptLamp,
+  heroBattlefield,
+  heroFortress,
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -57,6 +71,15 @@ function Index() {
   }, [touchStreak]);
 
   const lvl = levelFor(profile.points);
+  // Cinematic hero background slider — rotates every 5s with crossfade + ken-burns.
+  const [bgIndex, setBgIndex] = useState(0);
+  useEffect(() => {
+    const id = setInterval(
+      () => setBgIndex((i) => (i + 1) % HERO_BACKGROUNDS.length),
+      5000,
+    );
+    return () => clearInterval(id);
+  }, []);
   // ===== Dynamic hero campaign =====
   // Show the active campaign (flagship first if not yet completed; otherwise
   // the next campaign with remaining missions). When everything is done the
@@ -83,11 +106,18 @@ function Index() {
       <section className="relative -mt-2 overflow-hidden">
         {/* Artwork */}
         <div className="relative h-[78vh] min-h-[560px] w-full overflow-hidden">
-          <img
-            src={salahuddinHero}
-            alt={active?.title ?? "إرث"}
-            className="animate-ken-burns absolute inset-0 size-full object-cover"
-          />
+          {HERO_BACKGROUNDS.map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              alt={active?.title ?? "إرث"}
+              loading={i === 0 ? "eager" : "lazy"}
+              decoding="async"
+              className={`animate-ken-burns absolute inset-0 size-full object-cover transition-opacity duration-[1500ms] ease-in-out ${
+                i === bgIndex ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          ))}
           <div className="ink-overlay absolute inset-0" />
           <div className="arabesque-layer" />
           {/* embers */}
@@ -213,10 +243,9 @@ function Index() {
       {/* ============ EXPLORE HISTORY ============ */}
       <section className="mt-10 px-5">
         <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشف التاريخ" title="ابدأ من هنا" />
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <ExploreTile to="/encyclopedia" icon={<Search className="size-4" />} title="الموسوعة" subtitle="ابحث وتعلّم" />
           <ExploreTile to="/map" icon={<MapIcon className="size-4" />} title="الأطلس الإسلامي" subtitle="خارطة تاريخية" />
-          <ExploreTile to="/timeline" icon={<Hourglass className="size-4" />} title="الخط الزمني العظيم" subtitle="١٤٠٠ سنة" />
         </div>
 
         {/* Timeline feature card */}
