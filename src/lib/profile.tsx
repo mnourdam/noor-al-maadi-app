@@ -82,6 +82,7 @@ const initial: ProfileState = {
   bio: "",
   favoriteStateId: "",
   favoriteFigureId: "",
+  avatarId: DEFAULT_AVATAR_ID,
   hearts: HEART_MAX,
   heartsAt: Date.now(),
   dinars: 50,
