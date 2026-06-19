@@ -278,6 +278,9 @@ function CollectionPage() {
           </div>
         </div>
 
+        {/* Recent unlocks — "آخر المقتنيات" */}
+        <RecentUnlocks />
+
         {/* Section pills */}
         <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
           {SECTIONS.map(s => {
