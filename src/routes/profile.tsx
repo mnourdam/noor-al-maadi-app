@@ -456,6 +456,13 @@ function ProfilePage() {
           <ChevronLeft className="size-4 text-muted-foreground" />
         </Link>
       </Screen>
+      {pickingAvatar && (
+        <AvatarPicker
+          currentId={profile.avatarId ?? DEFAULT_AVATAR_ID}
+          onPick={(id) => setAvatar(id)}
+          onClose={() => setPickingAvatar(false)}
+        />
+      )}
     </AppShell>
   );
 }
