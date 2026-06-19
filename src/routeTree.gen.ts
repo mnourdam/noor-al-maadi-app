@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ShareCardRouteImport } from './routes/share-card'
+import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -62,6 +63,11 @@ const TermsRoute = TermsRouteImport.update({
 const ShareCardRoute = ShareCardRouteImport.update({
   id: '/share-card',
   path: '/share-card',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SeasonsRoute = SeasonsRouteImport.update({
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
+  '/security': typeof SecurityRoute
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
@@ -302,6 +309,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
+  '/security': typeof SecurityRoute
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
@@ -343,6 +351,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
   '/seasons': typeof SeasonsRoute
+  '/security': typeof SecurityRoute
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
@@ -386,6 +395,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/referrals'
     | '/seasons'
+    | '/security'
     | '/share-card'
     | '/terms'
     | '/timeline'
@@ -425,6 +435,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/referrals'
     | '/seasons'
+    | '/security'
     | '/share-card'
     | '/terms'
     | '/timeline'
@@ -465,6 +476,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/referrals'
     | '/seasons'
+    | '/security'
     | '/share-card'
     | '/terms'
     | '/timeline'
@@ -507,6 +519,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ReferralsRoute: typeof ReferralsRoute
   SeasonsRoute: typeof SeasonsRoute
+  SecurityRoute: typeof SecurityRoute
   ShareCardRoute: typeof ShareCardRoute
   TermsRoute: typeof TermsRoute
   TimelineRoute: typeof TimelineRoute
@@ -545,6 +558,13 @@ declare module '@tanstack/react-router' {
       path: '/share-card'
       fullPath: '/share-card'
       preLoaderRoute: typeof ShareCardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/seasons': {
@@ -865,6 +885,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ReferralsRoute: ReferralsRoute,
   SeasonsRoute: SeasonsRoute,
+  SecurityRoute: SecurityRoute,
   ShareCardRoute: ShareCardRoute,
   TermsRoute: TermsRoute,
   TimelineRoute: TimelineRoute,
