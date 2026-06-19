@@ -118,6 +118,8 @@ interface Ctx {
   todayDailyIds: () => string[];
   setBio: (bio: string) => void;
   setFavorites: (patch: { favoriteStateId?: string; favoriteFigureId?: string }) => void;
+  setAvatar: (id: string) => void;
+  setNotificationPrefs: (patch: Partial<NotificationPrefs>) => void;
   // Engagement v1
   loseHeart: () => number;          // returns new effective hearts
   hasHearts: () => boolean;
