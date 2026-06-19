@@ -240,6 +240,7 @@ export type Database = {
       }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       gen_referral_code: { Args: never; Returns: string }
+      get_my_email: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
