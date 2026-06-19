@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Map, Swords, Users, Landmark, ScrollText, Compass, GitBranch, Library } from "lucide-react";
+import { ChevronRight, Map, Swords, Users, Landmark, ScrollText, Compass, GitBranch, Library, Shield, FileText, Lock, ExternalLink } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import irthIcon from "@/assets/irth-icon.png.asset.json";
 
@@ -54,6 +54,23 @@ function AboutPage() {
           </p>
         </div>
 
+        {/* Producer */}
+        <div className="mt-5 rounded-2xl border border-gold/25 bg-gradient-gold/10 p-4 text-sm leading-7">
+          <p className="font-display text-sm font-bold text-gold">إرث من إنتاج فريق دسر</p>
+          <p className="mt-2 text-foreground/85">
+            إرث مشروع معرفي تفاعلي من إنتاج فريق دسر، يهدف إلى تقديم التاريخ الإسلامي والعربي بطريقة حديثة تجمع بين الموسوعة، الخرائط، الحملات، التحديات، والرحلة التعليمية الممتعة.
+          </p>
+          <a
+            href="https://www.dosur1444.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-gold underline-offset-4 hover:underline"
+          >
+            www.dosur1444.com
+            <ExternalLink className="size-3.5" />
+          </a>
+        </div>
+
         {/* Features */}
         <div className="mt-5">
           <p className="mb-2 text-[11px] text-gold">الميزات الحالية</p>
@@ -66,6 +83,25 @@ function AboutPage() {
                 <p className="font-display text-[12px] font-bold text-foreground">{label}</p>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Trust links */}
+        <div className="mt-5">
+          <p className="mb-2 text-[11px] text-gold">الثقة والخصوصية</p>
+          <div className="grid grid-cols-3 gap-2">
+            <Link to="/privacy" className="flex flex-col items-center gap-1 rounded-2xl border border-white/10 bg-surface p-3 text-center">
+              <Shield className="size-4 text-gold" />
+              <span className="text-[11px]">الخصوصية</span>
+            </Link>
+            <Link to="/terms" className="flex flex-col items-center gap-1 rounded-2xl border border-white/10 bg-surface p-3 text-center">
+              <FileText className="size-4 text-gold" />
+              <span className="text-[11px]">الشروط</span>
+            </Link>
+            <Link to="/security" className="flex flex-col items-center gap-1 rounded-2xl border border-white/10 bg-surface p-3 text-center">
+              <Lock className="size-4 text-gold" />
+              <span className="text-[11px]">الأمان</span>
+            </Link>
           </div>
         </div>
 
