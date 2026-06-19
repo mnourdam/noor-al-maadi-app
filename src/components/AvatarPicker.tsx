@@ -33,9 +33,9 @@ export function AvatarPicker({
   );
 
   return (
-    <div className="fixed inset-0 z-[200] grid place-items-end sm:place-items-center bg-black/70 p-2 sm:p-4">
-      <div className="w-full max-w-md rounded-3xl border border-gold/30 bg-surface shadow-elegant">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4">
+      <div className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-3xl border border-gold/30 bg-surface shadow-elegant sm:max-h-[85vh] sm:rounded-3xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
             <p className="font-display text-sm font-bold">اختر صورتك التاريخية</p>
             <p className="text-[10px] text-muted-foreground">{getAvatar(currentId).name}</p>
@@ -43,7 +43,7 @@ export function AvatarPicker({
           <button onClick={onClose} className="rounded-full border border-white/10 p-1.5 text-muted-foreground"><X className="size-4" /></button>
         </div>
 
-        <div className="flex gap-1.5 overflow-x-auto border-b border-white/5 px-4 py-2 text-[10px]">
+        <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-white/5 px-4 py-2 text-[10px]">
           {(["all", ...Object.keys(CAT_LABEL)] as Array<HistoricalAvatar["category"] | "all">).map((c) => (
             <button
               key={c}
@@ -57,8 +57,8 @@ export function AvatarPicker({
           ))}
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto p-3">
-          <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-3">
+          <div className="grid grid-cols-4 gap-2 xs:grid-cols-5 sm:grid-cols-5">
             {list.map((a) => {
               const active = a.id === currentId;
               return (

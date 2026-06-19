@@ -31,7 +31,7 @@ const Ctx = createContext<AccountCtx | null>(null);
 const PUSH_DEBOUNCE_MS = 1500;
 
 export function AccountProvider({ children }: { children: ReactNode }) {
-  const { profile, replaceProfile, addDinars, awardBadge } = useProfile();
+  const { profile, replaceProfile, addDinars, awardBadge, login } = useProfile();
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<AccountProfile | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -108,6 +108,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           autoPushEnabled.current = true;
           setLastSyncAt(Date.now());
         }
+
+        // Identity → never show "ضيف" once authenticated.
+        if (acc?.username) login(acc.username);
       } finally {
         if (!cancelled) setSyncing(false);
       }

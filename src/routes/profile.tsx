@@ -14,6 +14,7 @@ import { Avatar } from "@/components/Avatar";
 import { AvatarPicker } from "@/components/AvatarPicker";
 import { DEFAULT_NOTIFICATION_PREFS, ensurePermission } from "@/lib/notifications";
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
+import { useAccount } from "@/lib/account";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
@@ -21,8 +22,9 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { profile, login, logout, updateSettings, claimSeason, setBio, setFavorites, claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs } = useProfile();
-  const [name, setName] = useState("");
+  const { profile, logout, updateSettings, claimSeason, setBio, setFavorites, claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs } = useProfile();
+  const { account, user } = useAccount();
+  const displayName = account?.username ?? (user ? profile.name : profile.name) ?? "ضيف";
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(profile.bio ?? "");
   const [pickingAvatar, setPickingAvatar] = useState(false);
@@ -72,7 +74,7 @@ function ProfilePage() {
               </span>
             </button>
             <div className="min-w-0 flex-1">
-              <p className="font-display truncate text-lg font-bold">{profile.name}</p>
+              <p className="font-display truncate text-lg font-bold">{displayName}</p>
               <p className="text-[11px] text-gold">المستوى {lvl.level} · {lvl.title}</p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
                 <div className="h-full bg-gradient-gold" style={{ width: `${Math.round(lvl.progress * 100)}%` }} />
@@ -184,7 +186,7 @@ function ProfilePage() {
               <div className="flex items-center gap-2 text-[10px] tracking-[0.25em] text-gold">
                 <IdCard className="size-3.5" /> بطاقة الهوية التاريخية
               </div>
-              <span className="rounded-full border border-gold/40 bg-black/30 px-2 py-0.5 text-[10px] text-gold">إرث · {profile.name}</span>
+              <span className="rounded-full border border-gold/40 bg-black/30 px-2 py-0.5 text-[10px] text-gold">إرث · {displayName}</span>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
               <IdRow icon={<Crown className="size-3" />} label="اللقب" value={lvl.title} />
@@ -260,24 +262,6 @@ function ProfilePage() {
           </div>
         </div>
 
-        {/* Login */}
-        {!profile.loggedIn && (
-          <div className="mt-4 rounded-2xl border border-white/10 bg-surface p-4">
-            <p className="text-xs text-muted-foreground">سجّل اسمك ليُحفظ تقدّمك على هذا الجهاز.</p>
-            <div className="mt-3 flex gap-2">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="اسمك"
-                className="flex-1 rounded-xl border border-white/10 bg-background px-3 py-2 text-sm outline-none focus:border-gold/40"
-              />
-              <button
-                onClick={() => login(name)}
-                className="rounded-xl bg-gradient-gold px-4 py-2 text-xs font-bold text-primary-foreground"
-              >ادخل</button>
-            </div>
-          </div>
-        )}
 
         {/* Season */}
         <div className="mt-5 rounded-2xl border border-gold/25 bg-surface p-4">

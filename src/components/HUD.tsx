@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Heart, Coins, Flame, Bell } from "lucide-react";
+import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart } from "@/lib/hearts";
@@ -51,6 +51,9 @@ export function HUD() {
         <div className="flex items-center gap-3 text-[11px]">
           <span className="inline-flex items-center gap-1 text-gold">
             <Coins className="size-3.5" /> {profile.dinars.toLocaleString("ar-EG")}
+          </span>
+          <span className="inline-flex items-center gap-1 text-amber-200">
+            <Star className="size-3.5" /> {profile.points.toLocaleString("ar-EG")}
           </span>
           <span className="inline-flex items-center gap-1 text-orange-400">
             <Flame className="size-3.5" /> {profile.streak.toLocaleString("ar-EG")}
