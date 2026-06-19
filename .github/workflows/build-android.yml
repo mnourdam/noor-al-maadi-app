@@ -30,8 +30,14 @@ jobs:
       - name: Build Android web assets
         run: npm run build:android:web
 
+      - name: Add Capacitor Android platform
+        run: npx -y @capacitor/cli add android
+
       - name: Sync Capacitor Android project
         run: npx -y @capacitor/cli sync android
+
+      - name: Make Gradle executable
+        run: chmod +x android/gradlew
 
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug
