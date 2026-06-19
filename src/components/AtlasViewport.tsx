@@ -306,6 +306,15 @@ export function AtlasViewport({
 
   return (
     <div ref={wrapperRef} className={containerCls} dir="ltr">
+      {/* Helper banner — explains map interaction in Arabic */}
+      {!fullscreen && (
+        <div
+          className="border-b border-amber-900/30 bg-amber-50/70 px-3 py-1.5 text-center text-[11px] font-medium text-amber-950"
+          dir="rtl"
+        >
+          كبّر الخريطة وحرّكها لاكتشاف المدن والمعارك والمعالم.
+        </div>
+      )}
       {/* Title cartouche */}
       {!fullscreen && (
         <div className="absolute right-3 top-3 z-10 rounded-xl border border-amber-900/40 bg-amber-50/70 px-3 py-1.5 text-[10px] font-bold text-amber-950 shadow-sm" dir="rtl">
@@ -455,6 +464,7 @@ export function AtlasViewport({
                     zoomAt(scale * 1.9, cl.x, cl.y);
                   }}
                 >
+                  <title>اضغط للتكبير واستكشاف العناصر ({count})</title>
                   <circle r={r + 0.5} fill="oklch(0.85 0.15 80)" opacity="0.35" />
                   <circle r={r} fill="oklch(0.82 0.14 82)" stroke="oklch(0.3 0.1 40)" strokeWidth="0.15" />
                   <text y={0.45} textAnchor="middle"
