@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ArrowRight, MapPin, Swords, Crown, Sparkles, Quote, Users, Scroll, Star, Lock } from "lucide-react";
+import { ArrowRight, MapPin, Swords, Crown, Sparkles, Quote, Users, Scroll, Star, Lock, Database } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   CHARACTERS, ERAS, ARTIFACTS, MAP_REGIONS, CAMPAIGNS, STORIES,
@@ -8,6 +8,8 @@ import {
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { RelatedHistory } from "@/components/RelatedHistory";
+import { useEncyclopediaDisplay } from "@/lib/encyclopedia-source";
+
 
 export const Route = createFileRoute("/figure/$id")({
   head: () => ({ meta: [{ title: "الشخصية · بطلٌ من التاريخ" }] }),
