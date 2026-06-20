@@ -84,6 +84,8 @@ function AdminHub() {
             desc="إدارة حملات إرث التاريخية." />
           <AdminCard to="/admin/encyclopedia" icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
             desc="إدارة مدخلات الموسوعة (شخصيات، مدن، معارك...)." />
+          <AdminCard to="/admin/investigations" icon={<Search className="h-5 w-5" />} title="إدارة التحقيقات"
+            desc="تحقيقات تاريخية قابلة للعب من Supabase." />
           <AdminCard to="/admin/migration" icon={<Database className="h-5 w-5" />} title="ترحيل المحتوى القديم"
             desc="نسخ data.ts / cities.ts / packs إلى Supabase دون حذف." />
         </section>
