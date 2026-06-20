@@ -169,6 +169,25 @@ function AdminEncyclopediaPage() {
           </div>
         )}
 
+        {duplicateSlugs.length > 0 && (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+            <div className="font-bold">
+              يوجد أكثر من نوع بنفس المعرّف — تحقق من الربط
+            </div>
+            <ul className="mt-1 space-y-0.5 text-xs text-amber-200/90">
+              {duplicateSlugs.slice(0, 10).map(d => (
+                <li key={d.slug}>
+                  <span className="font-mono">{d.slug}</span>{" "}
+                  <span className="text-amber-300/80">({d.types.join(" / ")})</span>
+                </li>
+              ))}
+              {duplicateSlugs.length > 10 && (
+                <li className="text-amber-300/70">…و{duplicateSlugs.length - 10} غيرها</li>
+              )}
+            </ul>
+          </div>
+        )}
+
         {rows === null && !err && (
           <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center text-sm text-slate-400">جارٍ التحميل…</div>
         )}
@@ -180,6 +199,10 @@ function AdminEncyclopediaPage() {
               {rows.length === 0 ? "لا توجد مدخلات موسوعة بعد" : "لا توجد نتائج مطابقة"}
             </p>
             {rows.length === 0 && (
+              <p className="mt-1 text-sm text-slate-400">أضف مدخلًا يدويًا أو استورد JSON.</p>
+            )}
+          </div>
+        )}
               <p className="mt-1 text-sm text-slate-400">أضف مدخلًا يدويًا أو استورد JSON.</p>
             )}
           </div>
