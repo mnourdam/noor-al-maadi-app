@@ -9,6 +9,7 @@ import { displayBadgeName } from "@/lib/display-names";
 import {
   getImportedRegistryItemsByType,
   getMissingRegistryUnlockIds,
+  getUnlockedRegistryIds,
   registryItemIcon,
   registryItemImageUrl,
   registryItemRarity,
@@ -17,6 +18,7 @@ import { pullAllFromCloud } from "@/lib/cloudSync";
 import { audioManager } from "@/lib/audioManager";
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
 import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
+import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
 
 
 export const Route = createFileRoute("/collection")({
