@@ -84,6 +84,12 @@ function ImportedChapterPlayer() {
   const effectiveHearts = useMemo(() => getEffectiveHearts(profile), [profile, progressTick]);
   const heartsDepleted = effectiveHearts <= 0;
 
+  // Auto-surface the out-of-hearts modal the first time we mount with 0 hearts.
+  useEffect(() => {
+    if (heartsDepleted) setOutOfHeartsOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heartsDepleted]);
+
   // Current activity = first activity that is either un-completed
   // OR completed-and-not-yet-acknowledged.
   const currentIdx = useMemo(() => {
