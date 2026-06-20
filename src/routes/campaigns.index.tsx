@@ -1,16 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Crown, ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Swords } from "lucide-react";
+import { Crown, ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { ARTIFACTS, CHARACTERS } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { listEngineCampaigns, campaignProgressFor } from "@/lib/campaign-engine";
-import { displayBadgeName } from "@/lib/display-names";
+import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { listPublishedCampaigns } from "@/lib/campaignStorage";
+import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
 
 const artifactName = (id?: string) => (id ? ARTIFACTS.find((a) => a.id === id)?.name ?? id : undefined);
 const characterName = (id?: string) => (id ? CHARACTERS.find((c) => c.id === id)?.name ?? id : undefined);
+
 
 function RewardRow({ main, badge, xp }: { main?: string; badge?: string; xp?: number }) {
   return (
