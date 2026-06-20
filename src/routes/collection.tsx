@@ -853,14 +853,11 @@ function EncyclopediaUnlockCard({
   const label = TYPE_LABEL[unlock.type ?? ""] ?? "عنصر";
 
   const onOpen = () => {
-    // Route to the legacy detail page when the type maps; otherwise the
-    // generic encyclopedia entity page. IDs are always bare slugs.
+    // Encyclopedia-resolved unlocks always go to the generic entity page,
+    // which supports Supabase-only entities (legacy figure/city/battle
+    // routes 404 when the slug isn't in the hardcoded list).
     if (!unlock.slug) return;
-    if (unlock.type === "figure")        navigate({ to: "/figure/$id",  params: { id: unlock.slug } });
-    else if (unlock.type === "city")     navigate({ to: "/city/$id",    params: { id: unlock.slug } });
-    else if (unlock.type === "battle")   navigate({ to: "/battle/$id",  params: { id: unlock.slug } });
-    else if (unlock.type === "state")    navigate({ to: "/encyclopedia/state/$id", params: { id: unlock.slug } });
-    else                                 navigate({ to: "/encyclopedia/entity/$id", params: { id: unlock.slug } });
+    navigate({ to: "/encyclopedia/entity/$id", params: { id: unlock.slug } });
   };
 
   return (
