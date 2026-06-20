@@ -173,27 +173,23 @@ function ImportedChapterPlayer() {
       completed: nextCh?.completed ?? false,
     });
     if (newlyCampaign && (nextProgress.unlockedRegistryIds?.length ?? 0) > 0) {
-      // Persist BOTH the raw "type:slug" id (for backwards compat) and the
-      // bare slug + canonical type so the museum can match either shape.
+      // Normalize unlocks: store bare slug + canonical entity_type only.
+      // Skip rows we cannot parse cleanly so we never persist raw colon IDs.
+      const seen = new Set<string>();
       const items = nextProgress.unlockedRegistryIds.flatMap((rid) => {
         const parsed = parseUnlockId(rid);
-        const rows = [{
-          itemId: rid,
-          itemType: parsed.type ?? "registry",
+        if (!parsed.slug) return [];
+        const itemType = parsed.type ?? "registry";
+        if (seen.has(parsed.slug)) return [];
+        seen.add(parsed.slug);
+        return [{
+          itemId: parsed.slug,
+          itemType,
           sourceCampaignId: campaign!.id,
           sourceChapterId: chapter!.id,
         }];
-        if (parsed.slug && parsed.type) {
-          rows.push({
-            itemId: `${parsed.type}:${parsed.slug}`,
-            itemType: parsed.type,
-            sourceCampaignId: campaign!.id,
-            sourceChapterId: chapter!.id,
-          });
-        }
-        return rows;
       });
-      void addCollectionItems(items);
+      if (items.length) void addCollectionItems(items);
     }
 
     if (newlyCampaign) {
