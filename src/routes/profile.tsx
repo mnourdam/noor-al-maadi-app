@@ -7,8 +7,9 @@ import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
   ACHIEVEMENTS, evaluateAchievements, levelFor, CURRENT_SEASON,
-  AMBIENCE_TRACKS, ERAS, CHARACTERS, ARTIFACTS,
+  ERAS, CHARACTERS, ARTIFACTS,
 } from "@/lib/data";
+
 import { useProfile } from "@/lib/profile";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
 import { AccountSection } from "@/components/AccountSection";
