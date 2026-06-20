@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Landmark, Upload, RefreshCw, Eye, EyeOff, Trash2, Plus, Save, X,
-  CheckCircle2, AlertTriangle,
+  CheckCircle2, AlertTriangle, FileJson,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
@@ -52,6 +52,7 @@ function AdminEncyclopediaPage() {
   const [filter, setFilter] = useState<EntityType | "all">("all");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Entity | "new" | null>(null);
+  const [jsonUpdating, setJsonUpdating] = useState<Entity | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
   const notify = (kind: Toast["kind"], msg: string) => {
@@ -201,6 +202,7 @@ function AdminEncyclopediaPage() {
                     <td className="px-3 py-2">
                       <div className="flex justify-end gap-1.5">
                         <IconBtn onClick={() => setEditing(e)} icon={Save} label="تحرير" />
+                        <IconBtn onClick={() => setJsonUpdating(e)} icon={FileJson} label="تحديث من JSON" />
                         <IconBtn onClick={() => toggleEnabled(e)} icon={e.enabled ? EyeOff : Eye}
                           label={e.enabled ? "تعطيل" : "تفعيل"} />
                         <IconBtn onClick={() => remove(e)} icon={Trash2} label="حذف" danger />
@@ -219,6 +221,15 @@ function AdminEncyclopediaPage() {
           value={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
           onSaved={(msg) => { notify("ok", msg); setEditing(null); refresh(); }}
+          onError={(msg) => notify("err", msg)}
+        />
+      )}
+
+      {jsonUpdating && (
+        <JsonUpdater
+          entity={jsonUpdating}
+          onClose={() => setJsonUpdating(null)}
+          onSaved={(msg) => { notify("ok", msg); setJsonUpdating(null); refresh(); }}
           onError={(msg) => notify("err", msg)}
         />
       )}
@@ -393,4 +404,91 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function formatDate(iso: string) {
   try { return new Date(iso).toLocaleDateString("ar-EG", { year: "numeric", month: "short", day: "numeric" }); }
   catch { return iso; }
+}
+
+// ---------- Update existing entity from pasted single-entity JSON ----------
+function JsonUpdater({ entity, onClose, onSaved, onError }: {
+  entity: Entity;
+  onClose: () => void;
+  onSaved: (msg: string) => void;
+  onError: (msg: string) => void;
+}) {
+  const seed = {
+    entity_type: entity.entity_type,
+    slug: entity.slug,
+    title: entity.title,
+    subtitle: entity.subtitle ?? "",
+    summary: entity.summary ?? "",
+    body: entity.body ?? {},
+    metadata: entity.metadata ?? {},
+    enabled: entity.enabled,
+  };
+  const [raw, setRaw] = useState(JSON.stringify(seed, null, 2));
+  const [busy, setBusy] = useState(false);
+
+  const apply = async () => {
+    let obj: any;
+    try { obj = JSON.parse(raw); }
+    catch (e: any) { return onError(`JSON غير صالح: ${e.message}`); }
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+      return onError("يجب أن يكون كائنًا واحدًا (Object).");
+    }
+    // Only allow-listed fields are updated. id / created_at / entity_type / slug
+    // are never overwritten via this flow.
+    const patch: Record<string, any> = {};
+    if (typeof obj.title === "string" && obj.title.trim()) patch.title = obj.title.trim();
+    if ("subtitle" in obj) patch.subtitle = typeof obj.subtitle === "string" && obj.subtitle.trim() ? obj.subtitle.trim() : null;
+    if ("summary" in obj) patch.summary = typeof obj.summary === "string" && obj.summary.trim() ? obj.summary.trim() : null;
+    if ("body" in obj) {
+      if (obj.body && typeof obj.body === "object") patch.body = obj.body;
+      else return onError("body يجب أن يكون كائن JSON.");
+    }
+    if ("metadata" in obj) {
+      if (obj.metadata && typeof obj.metadata === "object") patch.metadata = obj.metadata;
+      else return onError("metadata يجب أن يكون كائن JSON.");
+    }
+    if ("enabled" in obj) patch.enabled = obj.enabled !== false;
+    if (Object.keys(patch).length === 0) return onError("لا توجد حقول قابلة للتحديث.");
+
+    setBusy(true);
+    const { error } = await supabase
+      .from("encyclopedia_entities" as any)
+      .update(patch)
+      .eq("id", entity.id);
+    setBusy(false);
+    if (error) return onError(error.message);
+    onSaved("تم تحديث المدخل من JSON.");
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div dir="rtl" onClick={e => e.stopPropagation()}
+        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-amber-500/30 bg-slate-950 p-6 text-slate-100 shadow-2xl">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-amber-100">تحديث من JSON: {entity.title}</h2>
+          <button onClick={onClose} className="rounded-lg border border-slate-700 p-1.5 text-slate-400 hover:text-amber-300">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mb-3 text-xs text-slate-400">
+          ألصق كائن JSON واحدًا. يتم تحديث: <span className="text-amber-200">title, subtitle, summary, body, metadata, enabled</span> فقط.
+          الحقول <span className="text-slate-300">id, created_at, entity_type, slug</span> لا تتغيّر.
+        </p>
+        <textarea
+          dir="ltr"
+          value={raw}
+          onChange={e => setRaw(e.target.value)}
+          rows={18}
+          className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-slate-200"
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm">إلغاء</button>
+          <button onClick={apply} disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-1.5 text-sm font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50">
+            <Save className="h-4 w-4" /> {busy ? "جارٍ التحديث…" : "تحديث"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
