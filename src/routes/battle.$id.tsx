@@ -43,6 +43,12 @@ function BattlePage() {
   const { profile } = useProfile();
   const navigate = useNavigate();
   const era = ERAS.find(e => e.id === battle.era);
+  const display = useEncyclopediaDisplay("battle", battle.id, {
+    title: battle.name,
+    subtitle: battle.subtitle,
+    summary: (battle as unknown as { description?: string }).description ?? null,
+  });
+
 
   const relatedChars = battle.relatedCharacterIds.map(id => CHARACTERS.find(c => c.id === id)).filter(Boolean) as typeof CHARACTERS;
   const relatedRegions = battle.relatedRegionIds.map(id => MAP_REGIONS.find(r => r.id === id)).filter(Boolean);
