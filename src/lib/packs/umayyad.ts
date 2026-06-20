@@ -45,7 +45,7 @@ const FIGURE_IDS = [
     "والي إفريقية وقائد فتح الأندلس مع طارق بن زياد، أحد أعمدة التوسع الأموي في المغرب.",
     ["umayyad.event.conquer-andalus","umayyad.city.qairawan","umayyad.figure.tariq"]],
   ["tariq",         "طارق بن زياد",       "Tariq ibn Ziyad",    711, 720,
-    "القائد البربري المسلم، عبر المضيق الذي حمل اسمه وحقّق نصر وادي لكّة سنة ٧١١م، فاتحًا أبواب الأندلس.",
+    "القائد البربري المسلم، عبر المضيق الذي حمل اسمه وحقّق نصر وادي لكّة سنة 711م، فاتحًا أبواب الأندلس.",
     ["umayyad.battle.guadalete","umayyad.event.conquer-andalus","umayyad.city.cordoba","umayyad.artifact.tariq-sword"]],
   ["muhammad-bin-qasim","محمد بن القاسم الثقفي","Muhammad ibn al-Qasim", 711, 715,
     "الفاتح الشاب لبلاد السند في عهد الوليد، فتح المُلتان والديبل وأرسى الإسلام في وادي السند.",
@@ -61,7 +61,7 @@ const FIGURE_IDS = [
 const CITY_IDS = [
   ["damascus","دمشق","Damascus","عاصمة الدولة الأموية ومركز الخلافة الإسلامية في المشرق، احتضنت المسجد الأموي ودواوين الدولة.",661,750,
     ["umayyad.figure.muawiya","umayyad.figure.abd-al-malik","umayyad.landmark.umayyad-mosque","umayyad.landmark.damascus-walls"]],
-  ["qairawan","القيروان","Qairawan","المدينة التي أسّسها عقبة بن نافع سنة ٦٧٠م لتكون قاعدة الفتح في المغرب، وقلب علوم المالكية لاحقًا.",670,750,
+  ["qairawan","القيروان","Qairawan","المدينة التي أسّسها عقبة بن نافع سنة 670م لتكون قاعدة الفتح في المغرب، وقلب علوم المالكية لاحقًا.",670,750,
     ["umayyad.figure.uqba","umayyad.event.conquer-ifriqiya","umayyad.landmark.qairawan-city"]],
   ["cordoba","قرطبة","Cordoba","عاصمة الأندلس الإسلامية في عهد الولاة الأمويين، وعاصمة الدولة الأموية الأندلسية لاحقًا.",711,750,
     ["umayyad.figure.tariq","umayyad.event.conquer-andalus","umayyad.landmark.cordoba-mosque"]],
@@ -86,7 +86,7 @@ const BATTLE_IDS = [
     "حملة طارق بن زياد وموسى بن نصير التي أسقطت مملكة القوط الغربيين في إيبيريا.",
     ["umayyad.figure.tariq","umayyad.figure.musa-bin-nusayr","umayyad.battle.guadalete","umayyad.city.cordoba"]],
   ["guadalete","معركة وادي لكة","Battle of Guadalete",711,711,
-    "المعركة الفاصلة سنة ٧١١م التي سحق فيها طارق بن زياد جيش لذريق ملك القوط، فانهارت دولة القوط في أيام.",
+    "المعركة الفاصلة سنة 711م التي سحق فيها طارق بن زياد جيش لذريق ملك القوط، فانهارت دولة القوط في أيام.",
     ["umayyad.figure.tariq","umayyad.event.conquer-andalus"]],
   ["tours","معركة بلاط الشهداء","Battle of Tours",732,732,
     "معركة بين والي الأندلس عبد الرحمن الغافقي وفرنجة شارل مارتل في فرنسا، أوقفت توسّع المسلمين شمالًا.",
@@ -166,7 +166,7 @@ const EVENT_IDS = [
 ] as const;
 
 const LANDMARK_IDS = [
-  ["umayyad-mosque","المسجد الأموي","Umayyad Mosque","تحفةٌ معمارية بدمشق بناها الوليد بن عبد الملك سنة ٧٠٦م، أحد أبرز معالم الحضارة الإسلامية.",
+  ["umayyad-mosque","المسجد الأموي","Umayyad Mosque","تحفةٌ معمارية بدمشق بناها الوليد بن عبد الملك سنة 706م، أحد أبرز معالم الحضارة الإسلامية.",
     706,715,["umayyad.figure.al-walid-i","umayyad.city.damascus","umayyad.event.build-umayyad-mosque"]],
   ["dome-of-rock","قبة الصخرة","Dome of the Rock","أوّل تحفة معمارية إسلامية، شيّدها عبد الملك بن مروان فوق الصخرة المشرّفة في القدس.",
     688,692,["umayyad.figure.abd-al-malik","umayyad.event.build-dome-of-rock"]],
@@ -185,7 +185,7 @@ const LANDMARK_IDS = [
 ] as const;
 
 const ARTIFACT_IDS = [
-  ["dinar-umayyad","الدينار الأموي","Umayyad Gold Dinar","عملةٌ ذهبية سكّها عبد الملك بن مروان سنة ٧٧هـ، أوّل دينارٍ إسلاميّ خالص.",
+  ["dinar-umayyad","الدينار الأموي","Umayyad Gold Dinar","عملةٌ ذهبية سكّها عبد الملك بن مروان سنة 77هـ، أوّل دينارٍ إسلاميّ خالص.",
     696,750,"💰","epic",["umayyad.event.islamic-coinage","umayyad.figure.abd-al-malik"]],
   ["dirham-umayyad","الدرهم الأموي","Umayyad Silver Dirham","عملةٌ فضّيةٌ أمويّةٌ بإصلاح عبد الملك، تحمل النصوص القرآنية بدلًا من الصور.",
     696,750,"🪙","epic",["umayyad.event.islamic-coinage","umayyad.figure.abd-al-malik"]],
@@ -242,8 +242,8 @@ const entities: PackEntity[] = [
     latin: "Umayyad State",
     type: "state",
     description:
-      "أوّل دولة وراثيّة في الإسلام، أسّسها معاوية بن أبي سفيان سنة ٦٦١م، عاصمتها دمشق، اتّسعت من الأندلس غربًا إلى السند والصين شرقًا، وانتهت بثورة العباسيين سنة ٧٥٠م.",
-    period: { label: "٦٦١ – ٧٥٠ م", startYear: 661, endYear: 750 },
+      "أوّل دولة وراثيّة في الإسلام، أسّسها معاوية بن أبي سفيان سنة 661م، عاصمتها دمشق، اتّسعت من الأندلس غربًا إلى السند والصين شرقًا، وانتهت بثورة العباسيين سنة 750م.",
+    period: { label: "661 – 750 م", startYear: 661, endYear: 750 },
     relatedEntities: [
       "umayyad.figure.muawiya","umayyad.figure.abd-al-malik","umayyad.figure.al-walid-i",
       "umayyad.figure.umar-bin-abd-al-aziz","umayyad.figure.marwan-ii",
@@ -351,7 +351,7 @@ const entities: PackEntity[] = [
   ...ACHIEVEMENT_IDS.map(([slug, title, latin, description, related]) => E({
     id: `umayyad.achievement.${slug}`,
     title, latin, type: "achievement", description,
-    period: { label: "٦٦١ – ٧٥٠ م", startYear: 661, endYear: 750 },
+    period: { label: "661 – 750 م", startYear: 661, endYear: 750 },
     relatedEntities: ["umayyad.state.umayyad", ...related],
     unlockables: [{ kind: "title", refId: `umayyad.achievement.${slug}`, label: title }],
     image: { alt: title, glyph: "🏅", tone: "from-gold/40 to-slate-900" },
@@ -379,11 +379,11 @@ export const UMAYYAD_PACK: ContentPack = {
   id: "pack-002-umayyad",
   order: 2,
   title: "الدولة الأموية",
-  subtitle: "المجموعة ٢ · من دمشق إلى أطراف الأرض",
+  subtitle: "المجموعة 2 · من دمشق إلى أطراف الأرض",
   summary:
     "حزمة محتوى تاريخية شاملة عن الدولة الأموية: التأسيس، الفتوحات، الإصلاحات، والسقوط.",
   era: "umayyad",
-  period: { label: "٦٦١ – ٧٥٠ م", startYear: 661, endYear: 750 },
+  period: { label: "661 – 750 م", startYear: 661, endYear: 750 },
   cover: { alt: "غلاف الدولة الأموية", glyph: "🏳️", tone: "from-stone-600/40 to-slate-900" },
   entities,
 };

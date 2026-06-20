@@ -80,7 +80,7 @@ function NotificationsPage() {
                         <span className="shrink-0 text-[10px] text-muted-foreground">{CAT_LABEL[n.category]}</span>
                       </div>
                       <p className="mt-1 line-clamp-2 text-[12px] text-muted-foreground">{n.body}</p>
-                      <p className="mt-1 text-[10px] text-gold/70">{new Date(n.at).toLocaleString("ar-EG")}</p>
+                      <p className="mt-1 text-[10px] text-gold/70">{new Date(n.at).toLocaleString("en-US")}</p>
                     </div>
                   </Link>
                 </li>

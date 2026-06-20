@@ -184,7 +184,7 @@ function ImportedChapterPlayer() {
                   ) : null}
                 </div>
                 <p className="mt-3 text-center text-[11px] text-muted-foreground">
-                  النشاط {(currentIdx + 1).toLocaleString("ar-EG")} من {chapter.activities.length.toLocaleString("ar-EG")}
+                  النشاط {(currentIdx + 1).toLocaleString("en-US")} من {chapter.activities.length.toLocaleString("en-US")}
                 </p>
               </div>
             )}

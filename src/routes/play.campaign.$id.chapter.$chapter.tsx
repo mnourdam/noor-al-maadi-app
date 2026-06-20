@@ -108,7 +108,7 @@ function ChapterPlayer() {
               <div className="absolute -left-10 -top-10 size-40 rounded-full bg-gold/15 blur-3xl" />
               <div className="relative">
                 <p className="text-[10px] tracking-widest text-gold/80">
-                  الفصل {chapter.index.toLocaleString("ar-EG")} · +{chapter.xp} نقطة
+                  الفصل {chapter.index.toLocaleString("en-US")} · +{chapter.xp} نقطة
                 </p>
                 <h1 className="font-display mt-2 text-2xl font-bold leading-snug shimmer-text">
                   {chapter.title}

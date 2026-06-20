@@ -16,10 +16,10 @@ const FIGURE_IDS = [
     "زعيم جدالة الذي رحل إلى المشرق وعاد بابن ياسين فقيهًا لقومه، شريك التأسيس الأوّل للحركة المرابطية.",
     ["murabitun.event.movement-founded","murabitun.figure.ibn-yasin","murabitun.event.unify-sahara"]],
   ["abu-bakr-umar","أبو بكر بن عمر اللمتوني","Abu Bakr ibn Umar",1010,1087,
-    "أوّل أمراء المرابطين بعد ابن ياسين، فاتح المغرب الأقصى ومؤسس مدينة مراكش سنة ٤٥٤هـ، ثم تفرّغ لجهاد الصحراء وترك الأمر ليوسف بن تاشفين.",
+    "أوّل أمراء المرابطين بعد ابن ياسين، فاتح المغرب الأقصى ومؤسس مدينة مراكش سنة 454هـ، ثم تفرّغ لجهاد الصحراء وترك الأمر ليوسف بن تاشفين.",
     ["murabitun.city.marrakesh","murabitun.event.found-marrakesh","murabitun.event.unify-sahara","murabitun.battle.awdaghust","murabitun.figure.yusuf-tashfin","murabitun.figure.ibn-yasin"]],
   ["yusuf-tashfin","يوسف بن تاشفين","Yusuf ibn Tashfin",1009,1106,
-    "أمير المسلمين، أعظم سلاطين المرابطين، وحّد المغرب والأندلس وانتصر في الزلاقة سنة ٤٧٩هـ، أنقذ الإسلام في الأندلس وضمّ ملوك الطوائف.",
+    "أمير المسلمين، أعظم سلاطين المرابطين، وحّد المغرب والأندلس وانتصر في الزلاقة سنة 479هـ، أنقذ الإسلام في الأندلس وضمّ ملوك الطوائف.",
     ["murabitun.battle.zallaqa","murabitun.event.cross-andalus","murabitun.event.absorb-taifas","murabitun.event.peak","murabitun.figure.abu-bakr-umar","murabitun.figure.ali-yusuf","murabitun.figure.mutamid","murabitun.figure.alfonso-vi","murabitun.city.marrakesh","murabitun.city.cordoba","murabitun.artifact.sword-yusuf","murabitun.artifact.yusuf-seal","murabitun.artifact.zallaqa-medal"]],
   ["ali-yusuf","علي بن يوسف بن تاشفين","Ali ibn Yusuf",1084,1143,
     "ثاني سلاطين المرابطين الكبار، ابن يوسف بن تاشفين، وسّع البناء في مراكش وفاس وقرطبة، شهد عصره أوج الدولة ثم بداية ظهور الموحدين.",
@@ -31,7 +31,7 @@ const FIGURE_IDS = [
     "ملك إشبيلية وآخر ملوك الطوائف الكبار، استنجد بيوسف بن تاشفين في الزلاقة، ثم ضمّه المرابطون ونفوه إلى أغمات حيث مات أسيرًا.",
     ["murabitun.battle.zallaqa","murabitun.event.absorb-taifas","murabitun.event.cross-andalus","murabitun.city.seville","murabitun.city.aghmat","murabitun.figure.yusuf-tashfin"]],
   ["alfonso-vi","ألفونسو السادس","Alfonso VI of León-Castile",1040,1109,
-    "ملك قشتالة وليون، فاتح طليطلة سنة ٤٧٨هـ، هزمه يوسف بن تاشفين في الزلاقة، حدّ توسعه عاد بعدها قرنًا كاملاً.",
+    "ملك قشتالة وليون، فاتح طليطلة سنة 478هـ، هزمه يوسف بن تاشفين في الزلاقة، حدّ توسعه عاد بعدها قرنًا كاملاً.",
     ["murabitun.battle.zallaqa","murabitun.figure.yusuf-tashfin","murabitun.figure.mutamid","murabitun.event.cross-andalus"]],
   ["alfonso-vii","ألفونسو السابع","Alfonso VII of León-Castile",1105,1157,
     "إمبراطور قشتالة في زمن علي بن يوسف، حقق انتصارات على المرابطين في وادي الحجارة وأقليش الثاني، عاصر بداية الضعف.",
@@ -63,10 +63,10 @@ const SCHOLAR_IDS = [
 // ---------- CITIES ----------
 const CITY_IDS = [
   ["marrakesh","مراكش","Marrakesh",
-    "عاصمة دولة المرابطين، أسّسها أبو بكر بن عمر سنة ٤٥٤هـ ووسّعها يوسف بن تاشفين، حاضرة المغرب الأقصى وقلب الدولة المرابطية ثم الموحدية.",
+    "عاصمة دولة المرابطين، أسّسها أبو بكر بن عمر سنة 454هـ ووسّعها يوسف بن تاشفين، حاضرة المغرب الأقصى وقلب الدولة المرابطية ثم الموحدية.",
     1062,1147,["murabitun.event.found-marrakesh","murabitun.figure.abu-bakr-umar","murabitun.figure.yusuf-tashfin","murabitun.figure.ali-yusuf","murabitun.landmark.kutubiyya-old","murabitun.landmark.marrakesh-walls","murabitun.landmark.almoravid-kasbah"]],
   ["fes","فاس","Fes",
-    "حاضرة المغرب الأقصى الأقدم، استولى عليها يوسف بن تاشفين سنة ٤٦٢هـ، فيها مسجد القرويين الذي وسّعه علي بن يوسف.",
+    "حاضرة المغرب الأقصى الأقدم، استولى عليها يوسف بن تاشفين سنة 462هـ، فيها مسجد القرويين الذي وسّعه علي بن يوسف.",
     1069,1147,["murabitun.figure.yusuf-tashfin","murabitun.figure.ali-yusuf","murabitun.landmark.qarawiyyin","murabitun.landmark.fes-walls","murabitun.figure.abu-imran-fasi"]],
   ["ceuta","سبتة","Ceuta",
     "ميناء المغرب على المضيق، مفتاح العبور إلى الأندلس، انطلق منها يوسف بن تاشفين إلى الزلاقة، وفيها قضى القاضي عياض.",
@@ -90,7 +90,7 @@ const CITY_IDS = [
     "العاصمة الأولى للمرابطين قبل بناء مراكش، فيها قصر الأمارة، وإليها نُفي المعتمد بن عباد فمات بها أسيرًا.",
     1058,1062,["murabitun.figure.abu-bakr-umar","murabitun.figure.ibn-yasin","murabitun.figure.mutamid","murabitun.landmark.aghmat-palace","murabitun.artifact.aghmat-manuscript"]],
   ["sijilmasa","سجلماسة","Sijilmasa",
-    "حاضرة الجنوب المغربي ومدخل الصحراء وتجارة الذهب، فتحها أبو بكر بن عمر سنة ٤٤٦هـ، عقدة طرق القوافل المرابطية.",
+    "حاضرة الجنوب المغربي ومدخل الصحراء وتجارة الذهب، فتحها أبو بكر بن عمر سنة 446هـ، عقدة طرق القوافل المرابطية.",
     1055,1147,["murabitun.figure.abu-bakr-umar","murabitun.battle.sijilmasa-conquest","murabitun.event.unify-sahara","murabitun.artifact.trade-register"]],
 ] as const;
 
@@ -131,7 +131,7 @@ const EVENT_IDS = [
     "وحّد المرابطون قبائل صنهاجة لمتونة وجدالة ومسوفة في كيان واحد، سيطروا على تجارة الذهب من غانة إلى سجلماسة.",
     ["murabitun.figure.abu-bakr-umar","murabitun.figure.ibn-yasin","murabitun.battle.sijilmasa-conquest","murabitun.battle.awdaghust","murabitun.city.sijilmasa","murabitun.event.movement-founded"]],
   ["found-marrakesh","تأسيس مراكش","Founding of Marrakesh",1062,1062,
-    "أسّس أبو بكر بن عمر مدينة مراكش سنة ٤٥٤هـ كمعسكرٍ مرابطي، صارت لاحقًا عاصمة الدولة وحاضرة المغرب الكبرى.",
+    "أسّس أبو بكر بن عمر مدينة مراكش سنة 454هـ كمعسكرٍ مرابطي، صارت لاحقًا عاصمة الدولة وحاضرة المغرب الكبرى.",
     ["murabitun.figure.abu-bakr-umar","murabitun.figure.yusuf-tashfin","murabitun.city.marrakesh","murabitun.landmark.marrakesh-walls","murabitun.landmark.almoravid-kasbah"]],
   ["cross-andalus","عبور يوسف بن تاشفين إلى الأندلس","Yusuf ibn Tashfin's Crossing to al-Andalus",1086,1086,
     "استنجد ملوك الطوائف بعد سقوط طليطلة بيوسف بن تاشفين، فعبر من سبتة بجيشه الكبير وحقق نصر الزلاقة، أنقذ الإسلام في الأندلس.",
@@ -152,7 +152,7 @@ const EVENT_IDS = [
     "نهض ابن تومرت ثم تلميذه عبد المؤمن بن علي بدعوة الموحدين في جبال الأطلس، حاصروا مراكش وانتهت دولة المرابطين بسقوط عاصمتهم.",
     ["murabitun.figure.tashfin-ali","murabitun.event.weakness-begins","murabitun.event.fall","murabitun.city.marrakesh"]],
   ["fall","سقوط الدولة المرابطية","Fall of the Almoravid State",1147,1147,
-    "سقطت مراكش بيد عبد المؤمن بن علي سنة ٥٤١هـ فانتهت دولة المرابطين بعد قرنٍ كامل، وحلّ محلّها الموحدون في المغرب والأندلس.",
+    "سقطت مراكش بيد عبد المؤمن بن علي سنة 541هـ فانتهت دولة المرابطين بعد قرنٍ كامل، وحلّ محلّها الموحدون في المغرب والأندلس.",
     ["murabitun.event.almohad-rise","murabitun.figure.tashfin-ali","murabitun.figure.ali-yusuf","murabitun.city.marrakesh"]],
 ] as const;
 
@@ -168,7 +168,7 @@ const LANDMARK_IDS = [
     "قصبة الأمراء في مراكش، فيها قصور الحكم والديوان وبيت المال، شاهدة على العمارة العسكرية المرابطية البسيطة.",
     1070,1147,["murabitun.city.marrakesh","murabitun.figure.yusuf-tashfin","murabitun.figure.ali-yusuf"]],
   ["qarawiyyin","مسجد القرويين","Qarawiyyin Mosque",
-    "أعظم جوامع فاس ومن أقدم جامعات العالم، وسّعه علي بن يوسف توسعةً كبيرة سنة ٥٢٨هـ، تحفة العمارة المرابطية الأندلسية في المغرب.",
+    "أعظم جوامع فاس ومن أقدم جامعات العالم، وسّعه علي بن يوسف توسعةً كبيرة سنة 528هـ، تحفة العمارة المرابطية الأندلسية في المغرب.",
     1135,1147,["murabitun.city.fes","murabitun.figure.ali-yusuf","murabitun.event.peak","murabitun.event.expansion"]],
   ["fes-walls","أسوار فاس","Walls of Fes",
     "أسوار فاس التي عزّزها المرابطون بعد ضمّ المدينة، حصون حمت حاضرة المغرب في القرنين الخامس والسادس الهجريين.",
@@ -199,7 +199,7 @@ const ARTIFACT_IDS = [
     "ختم أمير المسلمين على مراسيمه إلى الأندلس وقادة جيوشه، يحمل لقبه الذي منحه له الخليفة العباسي.",
     1086,1106,"🪧","epic",["murabitun.figure.yusuf-tashfin","murabitun.event.cross-andalus","murabitun.artifact.unification-decree"]],
   ["zallaqa-manuscript","مخطوطة الزلاقة","Manuscript of al-Zallaqa",
-    "وثيقة تروي تفاصيل المعركة الفاصلة بين يوسف بن تاشفين وألفونسو السادس، شاهدة على إنقاذ الأندلس سنة ٤٧٩هـ.",
+    "وثيقة تروي تفاصيل المعركة الفاصلة بين يوسف بن تاشفين وألفونسو السادس، شاهدة على إنقاذ الأندلس سنة 479هـ.",
     1086,1150,"📜","legendary",["murabitun.battle.zallaqa","murabitun.figure.yusuf-tashfin","murabitun.figure.alfonso-vi","murabitun.event.cross-andalus"]],
   ["almoravid-map","خريطة الدولة المرابطية","Map of the Almoravid State",
     "خريطة تبيّن امتداد المرابطين من السنغال إلى سرقسطة في ذروة عهد علي بن يوسف، أوسع امتدادٍ غربي للإسلام.",
@@ -255,8 +255,8 @@ const entities: PackEntity[] = [
     latin: "Almoravid State",
     type: "state",
     description:
-      "دولة المرابطين، حركة فقهية مالكية قامت بين قبائل صنهاجة الملثمين في الصحراء الكبرى سنة ٤٣٢هـ/١٠٤٠م على يد عبد الله بن ياسين ويحيى بن إبراهيم، أسّس أبو بكر بن عمر مراكش، وبلغت الدولة ذروتها على يد يوسف بن تاشفين الذي عبر إلى الأندلس وانتصر في الزلاقة سنة ٤٧٩هـ/١٠٨٦م وضمّ ملوك الطوائف. حكمت المغرب والأندلس قرنًا، وسقطت بدخول الموحدين مراكش سنة ٥٤١هـ/١١٤٧م.",
-    period: { label: "٤٣٢ – ٥٤١ هـ / ١٠٤٠ – ١١٤٧ م", startYear: 1040, endYear: 1147 },
+      "دولة المرابطين، حركة فقهية مالكية قامت بين قبائل صنهاجة الملثمين في الصحراء الكبرى سنة 432هـ/1040م على يد عبد الله بن ياسين ويحيى بن إبراهيم، أسّس أبو بكر بن عمر مراكش، وبلغت الدولة ذروتها على يد يوسف بن تاشفين الذي عبر إلى الأندلس وانتصر في الزلاقة سنة 479هـ/1086م وضمّ ملوك الطوائف. حكمت المغرب والأندلس قرنًا، وسقطت بدخول الموحدين مراكش سنة 541هـ/1147م.",
+    period: { label: "432 – 541 هـ / 1040 – 1147 م", startYear: 1040, endYear: 1147 },
     relatedEntities: [
       "murabitun.figure.ibn-yasin","murabitun.figure.yahya-ibn-ibrahim","murabitun.figure.abu-bakr-umar",
       "murabitun.figure.yusuf-tashfin","murabitun.figure.ali-yusuf","murabitun.figure.tashfin-ali",
@@ -387,7 +387,7 @@ const entities: PackEntity[] = [
   ...ACHIEVEMENT_IDS.map(([slug, title, latin, description, related]) => E({
     id: `murabitun.achievement.${slug}`,
     title, latin, type: "achievement", description,
-    period: { label: "١٠٤٠ – ١١٤٧ م", startYear: 1040, endYear: 1147 },
+    period: { label: "1040 – 1147 م", startYear: 1040, endYear: 1147 },
     relatedEntities: ["murabitun.state.murabitun", ...related],
     unlockables: [{ kind: "title", refId: `murabitun.achievement.${slug}`, label: title }],
     image: { alt: title, glyph: "🏅", tone: "from-amber-600/40 to-stone-900" },
@@ -415,11 +415,11 @@ export const MURABITUN_PACK: ContentPack = {
   id: "pack-010-murabitun",
   order: 26, // ~ contemporary to Seljuks (25), before Zengids (27)
   title: "دولة المرابطين",
-  subtitle: "المجموعة ١٠ · أمراء صنهاجة الملثمين ومنقذو الأندلس",
+  subtitle: "المجموعة 10 · أمراء صنهاجة الملثمين ومنقذو الأندلس",
   summary:
     "حزمة محتوى تاريخية شاملة عن دولة المرابطين من حركة عبد الله بن ياسين في الصحراء إلى تأسيس مراكش وعبور يوسف بن تاشفين إلى الأندلس وانتصار الزلاقة وضمّ ملوك الطوائف، حتى ظهور الموحدين وسقوط الدولة.",
   era: "murabitun",
-  period: { label: "٤٣٢ – ٥٤١ هـ / ١٠٤٠ – ١١٤٧ م", startYear: 1040, endYear: 1147 },
+  period: { label: "432 – 541 هـ / 1040 – 1147 م", startYear: 1040, endYear: 1147 },
   cover: { alt: "غلاف دولة المرابطين", glyph: "🏜️", tone: "from-amber-900/40 to-stone-900" },
   entities,
 };

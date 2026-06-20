@@ -300,7 +300,7 @@ function Index() {
         <div className="grid grid-cols-2 gap-2.5">
           <ExploreTile to="/campaigns" icon={<Crown className="size-4" />} title="كل الحملات" subtitle={`${UPCOMING_CAMPAIGNS.length}+ قادمة`} />
           <ExploreTile to="/seasons" icon={<Sparkles className="size-4" />} title="المواسم" subtitle="مكافآت محدودة" />
-          <ExploreTile to="/timeline" icon={<Hourglass className="size-4" />} title="الخط الزمني" subtitle="١٤٠٠ سنة" />
+          <ExploreTile to="/timeline" icon={<Hourglass className="size-4" />} title="الخط الزمني" subtitle="1400 سنة" />
           <ExploreTile to="/map" icon={<MapIcon className="size-4" />} title="الخارطة" subtitle={`${UPCOMING_REGIONS.length}+ مناطق`} />
           <ExploreTile to="/on-this-day" icon={<Eye className="size-3.5" />} title="في مثل هذا اليوم" subtitle="أحداث اليوم" />
           <ExploreTile to="/collection" icon={<Star className="size-3.5" />} title="المتحف" subtitle="أرشيفك" />

@@ -393,12 +393,12 @@ function FlagshipChapterJourney(props: { missionsCompleted: string[] }) {
             <div key={ch.id} className="animate-reveal">
               <div className="-mr-[3px] flex items-start gap-3">
                 <div className={`chapter-seal shrink-0 ${completed ? "ring-2 ring-gold" : ""} ${locked ? "opacity-40 grayscale" : ""}`}>
-                  {completed ? <Check className="size-5" /> : <span className="text-lg">{ch.index.toLocaleString("ar-EG")}</span>}
+                  {completed ? <Check className="size-5" /> : <span className="text-lg">{ch.index.toLocaleString("en-US")}</span>}
                 </div>
                 <div className="flex-1 pt-1">
                   <p className="text-[10px] tracking-widest text-gold/70">{ch.era}</p>
                   <h4 className={`font-display text-base font-bold ${locked ? "text-muted-foreground" : "text-foreground"}`}>
-                    الفصل {ch.index.toLocaleString("ar-EG")} · {ch.title}
+                    الفصل {ch.index.toLocaleString("en-US")} · {ch.title}
                   </h4>
                   <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
                     <MapPin className="size-3 text-gold/70" /> {ch.setting}
@@ -643,7 +643,7 @@ function CampaignFinaleModal(props: {
           <p className="text-[10px] tracking-[0.3em] text-gold">حملة العَلَم</p>
           <h2 className="font-display mt-1 text-2xl font-bold shimmer-text">عاد الأذان إلى الأقصى</h2>
           <p className="mt-2 text-xs text-muted-foreground animate-ink">
-            في رجب ٥٨٣ هـ، اكتمل ما بدأه نور الدين. ها أنت قد ختمت الرحلة.
+            في رجب 583 هـ، اكتمل ما بدأه نور الدين. ها أنت قد ختمت الرحلة.
           </p>
           <div className="gold-divider mt-4 mb-4" />
           <div className="grid grid-cols-2 gap-3 text-right">
@@ -688,5 +688,5 @@ function CampaignFinaleModal(props: {
 }
 
 function toArabicDigit(n: number) {
-  return n.toLocaleString("ar-EG");
+  return n.toLocaleString("en-US");
 }

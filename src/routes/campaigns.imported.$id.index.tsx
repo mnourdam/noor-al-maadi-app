@@ -114,7 +114,7 @@ function ImportedCampaignOverview() {
                   <span className="rounded-full bg-white/5 px-2 py-1">⏱ {campaign.estimatedDuration}</span>
                 )}
                 <span className="rounded-full bg-white/5 px-2 py-1">
-                  📜 {chapters.length.toLocaleString("ar-EG")} فصول
+                  📜 {chapters.length.toLocaleString("en-US")} فصول
                 </span>
                 {campaign.tags?.slice(0, 3).map(t => (
                   <span key={t} className="rounded-full bg-white/5 px-2 py-1">#{t}</span>
@@ -179,11 +179,11 @@ function ImportedCampaignOverview() {
                         : unlocked ? "border-gold/40 bg-gold/10 text-gold"
                         : "border-white/10 bg-black/30 text-muted-foreground"
                       }`}>
-                        {done ? <Check className="size-4" /> : <span className="text-sm">{(i + 1).toLocaleString("ar-EG")}</span>}
+                        {done ? <Check className="size-4" /> : <span className="text-sm">{(i + 1).toLocaleString("en-US")}</span>}
                       </div>
                       <div className="flex-1 pt-1">
                         <p className="text-[10px] tracking-widest text-gold/70">
-                          الفصل {(i + 1).toLocaleString("ar-EG")}
+                          الفصل {(i + 1).toLocaleString("en-US")}
                           {ch.rewards?.xp ? ` · +${ch.rewards.xp} نقطة` : ""}
                         </p>
                         <h4 className={`font-display text-base font-bold ${!unlocked ? "text-muted-foreground" : ""}`}>
@@ -219,7 +219,7 @@ function ImportedCampaignOverview() {
                               {done ? "أعد القراءة" : "ابدأ الفصل"}
                             </span>
                             <span className="text-muted-foreground">
-                              {ch.activities.length.toLocaleString("ar-EG")} نشاط
+                              {ch.activities.length.toLocaleString("en-US")} نشاط
                             </span>
                           </div>
                         </Link>

@@ -121,7 +121,7 @@ function StoryPage() {
             <div className="animate-reveal rounded-3xl border border-gold/40 bg-gradient-to-br from-gold/20 via-gold/10 to-transparent p-6 text-center shadow-gold">
               <div className="reward-burst mx-auto grid size-14 place-items-center rounded-full bg-gradient-gold text-2xl">📜</div>
               <p className="font-display mt-3 text-xl font-bold text-gold">أحسنت! أنهيتَ القصة</p>
-              <p className="mt-1 text-xs text-muted-foreground">+٢٥ نقطة · أُضيفت إلى أرشيفك التاريخي</p>
+              <p className="mt-1 text-xs text-muted-foreground">+25 نقطة · أُضيفت إلى أرشيفك التاريخي</p>
               {mission && <p className="mt-2 text-xs text-gold">✓ تمّت مهمة الحملة</p>}
               <Link to="/" className="mt-4 inline-block rounded-2xl border border-gold/40 px-4 py-2 text-xs text-gold">
                 تابع المغامرة

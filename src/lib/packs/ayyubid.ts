@@ -19,8 +19,8 @@ const entities: PackEntity[] = [
     latin: "Ayyubid State",
     type: "state",
     description:
-      "دولةٌ سُنّيّة أسّسها صلاح الدين الأيوبي عام ١١٧١م بعد إنهاء الدولة الفاطمية في مصر، فامتدّ سلطانها على مصر والشام والحجاز واليمن، وبلغت ذروتها بتحرير القدس عام ١١٨٧م، وانتهت رسميًّا عام ١٢٥٠م على يد المماليك.",
-    period: { label: "١١٧١ – ١٢٥٠ م", startYear: 1171, endYear: 1250 },
+      "دولةٌ سُنّيّة أسّسها صلاح الدين الأيوبي عام 1171م بعد إنهاء الدولة الفاطمية في مصر، فامتدّ سلطانها على مصر والشام والحجاز واليمن، وبلغت ذروتها بتحرير القدس عام 1187م، وانتهت رسميًّا عام 1250م على يد المماليك.",
+    period: { label: "1171 – 1250 م", startYear: 1171, endYear: 1250 },
     relatedEntities: [
       "ayyubid.figure.salahuddin",
       "ayyubid.figure.nuruddin",
@@ -59,8 +59,8 @@ const entities: PackEntity[] = [
     latin: "Salah ad-Din al-Ayyubi",
     type: "figure",
     description:
-      "السلطان الناصر صلاح الدين يوسف بن أيوب، مؤسس الدولة الأيوبية ومحرّر القدس بعد ٨٨ عامًا من الاحتلال الصليبي، أنموذج القائد الفارس في التاريخ الإسلامي.",
-    period: { label: "١١٣٧ – ١١٩٣ م", startYear: 1137, endYear: 1193 },
+      "السلطان الناصر صلاح الدين يوسف بن أيوب، مؤسس الدولة الأيوبية ومحرّر القدس بعد 88 عامًا من الاحتلال الصليبي، أنموذج القائد الفارس في التاريخ الإسلامي.",
+    period: { label: "1137 – 1193 م", startYear: 1137, endYear: 1193 },
     relatedEntities: [
       "ayyubid.state.ayyubid",
       "ayyubid.city.jerusalem",
@@ -93,7 +93,7 @@ const entities: PackEntity[] = [
     type: "figure",
     description:
       "الملك العادل نور الدين محمود بن زنكي، موحّد الشام في مواجهة الصليبيين، ومُعدّ الأرض السياسية والعسكرية التي قام عليها مشروع صلاح الدين.",
-    period: { label: "١١١٨ – ١١٧٤ م", startYear: 1118, endYear: 1174 },
+    period: { label: "1118 – 1174 م", startYear: 1118, endYear: 1174 },
     relatedEntities: [
       "ayyubid.city.damascus",
       "ayyubid.city.aleppo",
@@ -118,7 +118,7 @@ const entities: PackEntity[] = [
     type: "figure",
     description:
       "السلطان سيف الدين أبو بكر بن أيوب، شقيق صلاح الدين وأحد أعمدة الدولة الأيوبية، تولّى السلطنة وأعاد توحيد البيت الأيوبي بعد وفاة أخيه.",
-    period: { label: "١١٤٥ – ١٢١٨ م", startYear: 1145, endYear: 1218 },
+    period: { label: "1145 – 1218 م", startYear: 1145, endYear: 1218 },
     relatedEntities: [
       "ayyubid.state.ayyubid",
       "ayyubid.figure.salahuddin",
@@ -140,7 +140,7 @@ const entities: PackEntity[] = [
     type: "figure",
     description:
       "السلطان ناصر الدين محمد بن العادل، السلطان الأيوبي الذي ردّ الحملة الصليبية الخامسة عن مصر عند المنصورة، وعقد معاهدة يافا الشهيرة مع فردريك الثاني.",
-    period: { label: "١١٧٧ – ١٢٣٨ م", startYear: 1177, endYear: 1238 },
+    period: { label: "1177 – 1238 م", startYear: 1177, endYear: 1238 },
     relatedEntities: [
       "ayyubid.state.ayyubid",
       "ayyubid.figure.al-adil",
@@ -161,7 +161,7 @@ const entities: PackEntity[] = [
     type: "figure",
     description:
       "والد صلاح الدين، أمير تكريت ثم بعلبك ودمشق في خدمة الزنكيين، مؤسس البيت الأيوبي ورجل السياسة الذي مهّد لابنه طريق السلطان.",
-    period: { label: "ت ١١٧٣ م", startYear: 1100, endYear: 1173 },
+    period: { label: "ت 1173 م", startYear: 1100, endYear: 1173 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.figure.shirkuh","ayyubid.city.tikrit","ayyubid.city.damascus","ayyubid.event.move-to-damascus"],
     unlockables: [],
     image: { alt: "نجم الدين أيوب", glyph: "🪶", tone: "from-amber-700/30 to-slate-900" },
@@ -177,7 +177,7 @@ const entities: PackEntity[] = [
     type: "figure",
     description:
       "عمّ صلاح الدين وقائد جيش نور الدين في حملات مصر الثلاث، فاتح القاهرة ووزير الفاطميين قُبيل نهايتهم.",
-    period: { label: "ت ١١٦٩ م", startYear: 1110, endYear: 1169 },
+    period: { label: "ت 1169 م", startYear: 1110, endYear: 1169 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.figure.nuruddin","ayyubid.city.cairo","ayyubid.event.egypt-campaigns","ayyubid.event.end-fatimid"],
     unlockables: [],
     image: { alt: "أسد الدين شيركوه", glyph: "🦁", tone: "from-stone-700/40 to-slate-900" },
@@ -193,7 +193,7 @@ const entities: PackEntity[] = [
     type: "figure",
     description:
       "ملك دمشق الأيوبي، عُرف بهدم أسوار القدس خشية استعادتها بيد الصليبيين، وكان عالمًا فقيهًا وفارسًا مقدامًا.",
-    period: { label: "١١٨٠ – ١٢٢٧ م", startYear: 1180, endYear: 1227 },
+    period: { label: "1180 – 1227 م", startYear: 1180, endYear: 1227 },
     relatedEntities: ["ayyubid.city.damascus","ayyubid.city.jerusalem","ayyubid.figure.al-adil","ayyubid.landmark.walls-jerusalem"],
     unlockables: [],
     image: { alt: "المعظم عيسى", glyph: "🏛️", tone: "from-amber-700/30 to-slate-900" },
@@ -209,7 +209,7 @@ const entities: PackEntity[] = [
     type: "figure",
     description:
       "السلطان الأيوبي في الجزيرة الفراتية ودمشق، موحّد جبهة الأيوبيين شرقًا في وجه الخوارزميين والصليبيين.",
-    period: { label: "١١٧٨ – ١٢٣٧ م", startYear: 1178, endYear: 1237 },
+    period: { label: "1178 – 1237 م", startYear: 1178, endYear: 1237 },
     relatedEntities: ["ayyubid.figure.al-kamil","ayyubid.figure.al-adil","ayyubid.city.damascus","ayyubid.city.aleppo"],
     unlockables: [],
     image: { alt: "الأشرف موسى", glyph: "⚜️", tone: "from-amber-700/30 to-slate-900" },
@@ -225,7 +225,7 @@ const entities: PackEntity[] = [
     type: "figure",
     description:
       "السلطان نجم الدين أيوب بن الكامل، آخر سلاطين الأيوبيين الأقوياء، استقدم المماليك البحرية وصدّ الحملة الصليبية السابعة عند المنصورة.",
-    period: { label: "١٢٠٥ – ١٢٤٩ م", startYear: 1205, endYear: 1249 },
+    period: { label: "1205 – 1249 م", startYear: 1205, endYear: 1249 },
     relatedEntities: ["ayyubid.figure.al-kamil","ayyubid.figure.turanshah","ayyubid.figure.shajar-al-durr","ayyubid.battle.mansurah","ayyubid.event.rise-as-salih"],
     unlockables: [],
     image: { alt: "الصالح أيوب", glyph: "🗝️", tone: "from-slate-700/40 to-slate-900" },
@@ -241,7 +241,7 @@ const entities: PackEntity[] = [
     type: "figure",
     description:
       "السلطان المعظم توران شاه بن الصالح أيوب، انتصر على لويس التاسع في المنصورة ثم اغتيل على يد المماليك لتنتهي معه الأسرة الأيوبية في مصر.",
-    period: { label: "ت ١٢٥٠ م", startYear: 1228, endYear: 1250 },
+    period: { label: "ت 1250 م", startYear: 1228, endYear: 1250 },
     relatedEntities: ["ayyubid.figure.as-salih-ayyub","ayyubid.figure.shajar-al-durr","ayyubid.battle.mansurah","ayyubid.event.end-ayyubid"],
     unlockables: [],
     image: { alt: "توران شاه", glyph: "🏹", tone: "from-rose-800/40 to-slate-900" },
@@ -257,7 +257,7 @@ const entities: PackEntity[] = [
     type: "figure",
     description:
       "زوجة الصالح أيوب، أخفت موت زوجها لتدير المعركة ضد الصليبيين، ثم تولّت السلطنة لتكون أوّل سلطانة في تاريخ مصر الإسلامي.",
-    period: { label: "ت ١٢٥٧ م", startYear: 1220, endYear: 1257 },
+    period: { label: "ت 1257 م", startYear: 1220, endYear: 1257 },
     relatedEntities: ["ayyubid.figure.as-salih-ayyub","ayyubid.figure.turanshah","ayyubid.battle.mansurah","ayyubid.event.shajar-rule","ayyubid.event.end-ayyubid"],
     unlockables: [],
     image: { alt: "شجر الدر", glyph: "💎", tone: "from-fuchsia-800/30 to-slate-900" },
@@ -272,8 +272,8 @@ const entities: PackEntity[] = [
     latin: "Richard the Lionheart",
     type: "figure",
     description:
-      "ملك إنجلترا وقائد الحملة الصليبية الثالثة، خصم صلاح الدين في معارك أرسوف ويافا، وشريكه في صلح الرملة عام ١١٩٢م.",
-    period: { label: "١١٥٧ – ١١٩٩ م", startYear: 1157, endYear: 1199 },
+      "ملك إنجلترا وقائد الحملة الصليبية الثالثة، خصم صلاح الدين في معارك أرسوف ويافا، وشريكه في صلح الرملة عام 1192م.",
+    period: { label: "1157 – 1199 م", startYear: 1157, endYear: 1199 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.battle.arsuf","ayyubid.battle.jaffa","ayyubid.battle.acre-siege","ayyubid.event.third-crusade","ayyubid.event.ramla-treaty"],
     unlockables: [],
     image: { alt: "ريتشارد قلب الأسد", glyph: "🦁", tone: "from-rose-900/40 to-slate-900" },
@@ -288,7 +288,7 @@ const entities: PackEntity[] = [
     latin: "Jerusalem",
     type: "city",
     description:
-      "أولى القبلتين وثالث الحرمين، حرّرها عمر بن الخطاب صلحًا ثم استعادها صلاح الدين سنة ٥٨٣هـ بعد معركة حطين.",
+      "أولى القبلتين وثالث الحرمين، حرّرها عمر بن الخطاب صلحًا ثم استعادها صلاح الدين سنة 583هـ بعد معركة حطين.",
     period: { label: "حاضرة منذ القدم", startYear: 638, endYear: 2025 },
     relatedEntities: [
       "ayyubid.landmark.al-aqsa",
@@ -333,7 +333,7 @@ const entities: PackEntity[] = [
     type: "city",
     description:
       "قاهرة المعزّ، عاصمة الفاطميين ثم الأيوبيين، ومنارة العلم بجامع الأزهر، حصّنها صلاح الدين بقلعته الشهيرة على المقطّم.",
-    period: { label: "تأسست ٩٦٩م", startYear: 969, endYear: 2025 },
+    period: { label: "تأسست 969م", startYear: 969, endYear: 2025 },
     relatedEntities: [
       "ayyubid.landmark.al-azhar",
       "ayyubid.landmark.citadel-salahuddin",
@@ -376,7 +376,7 @@ const entities: PackEntity[] = [
     type: "city",
     description:
       "قلعةٌ صليبية حصينة شرق الأردن سيطر منها أرناط على طرق الحج، فحاصرها صلاح الدين مرّتين قبل أن تسقط في يد الأيوبيين بعد حطين.",
-    period: { label: "حاضرة منذ القرن ١٢ م", startYear: 1142, endYear: 2025 },
+    period: { label: "حاضرة منذ القرن 12 م", startYear: 1142, endYear: 2025 },
     relatedEntities: ["ayyubid.landmark.castle-karak","ayyubid.battle.karak-siege","ayyubid.figure.salahuddin","ayyubid.state.ayyubid"],
     unlockables: [],
     image: { alt: "قلعة الكرك", glyph: "🏰", tone: "from-stone-700/40 to-slate-900" },
@@ -392,7 +392,7 @@ const entities: PackEntity[] = [
     latin: "Acre",
     type: "city",
     description:
-      "ميناءُ الشام الكبير على المتوسط، حرّرها صلاح الدين بعد حطين ثم استعادها الصليبيون عام ١١٩١م بعد حصارٍ مرير.",
+      "ميناءُ الشام الكبير على المتوسط، حرّرها صلاح الدين بعد حطين ثم استعادها الصليبيون عام 1191م بعد حصارٍ مرير.",
     period: { label: "حاضرة منذ القدم", startYear: 1104, endYear: 2025 },
     relatedEntities: ["ayyubid.battle.acre-siege","ayyubid.landmark.castle-acre","ayyubid.figure.salahuddin","ayyubid.event.third-crusade","ayyubid.state.ayyubid"],
     unlockables: [],
@@ -460,7 +460,7 @@ const entities: PackEntity[] = [
     latin: "Tikrit",
     type: "city",
     description:
-      "بلدةٌ على نهر دجلة شمالي بغداد، حكمها نجم الدين أيوب وشيركوه، وفيها وُلد صلاح الدين سنة ١١٣٧م.",
+      "بلدةٌ على نهر دجلة شمالي بغداد، حكمها نجم الدين أيوب وشيركوه، وفيها وُلد صلاح الدين سنة 1137م.",
     period: { label: "حاضرة منذ القدم", startYear: 1130, endYear: 2025 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.figure.najmuddin-ayyub","ayyubid.figure.shirkuh","ayyubid.event.salahuddin-birth"],
     unlockables: [],
@@ -478,7 +478,7 @@ const entities: PackEntity[] = [
     type: "battle",
     description:
       "معركةٌ فاصلة في الجليل أوقع فيها صلاح الدين بجيش مملكة بيت المقدس الصليبية بكاملها، فانفتح بها طريق تحرير القدس.",
-    period: { label: "٤ يوليو ١١٨٧ م", startYear: 1187, endYear: 1187 },
+    period: { label: "4 يوليو 1187 م", startYear: 1187, endYear: 1187 },
     relatedEntities: [
       "ayyubid.figure.salahuddin",
       "ayyubid.city.jerusalem",
@@ -508,7 +508,7 @@ const entities: PackEntity[] = [
     type: "battle",
     description:
       "اشتباكٌ كبير على الساحل الفلسطيني بين صلاح الدين وريتشارد قلب الأسد ضمن الحملة الصليبية الثالثة، أعاد تشكيل موازين الصراع دون أن يقلب ميزان السلطة.",
-    period: { label: "٧ سبتمبر ١١٩١ م", startYear: 1191, endYear: 1191 },
+    period: { label: "7 سبتمبر 1191 م", startYear: 1191, endYear: 1191 },
     relatedEntities: [
       "ayyubid.figure.salahuddin",
       "ayyubid.state.ayyubid",
@@ -530,7 +530,7 @@ const entities: PackEntity[] = [
     type: "battle",
     description:
       "اشتباكٌ مبكر بين صلاح الدين ومملكة بيت المقدس قرب الرملة، أظهر صعوبة مواجهة الفرسان الصليبيين في السهل الساحلي.",
-    period: { label: "١١٧٧ م", startYear: 1177, endYear: 1177 },
+    period: { label: "1177 م", startYear: 1177, endYear: 1177 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.city.ascalon","ayyubid.state.ayyubid"],
     unlockables: [],
     image: { alt: "سهل الرملة", glyph: "⚔️", tone: "from-rose-800/30 to-slate-900" },
@@ -545,8 +545,8 @@ const entities: PackEntity[] = [
     title: "حصار عكا",
     type: "battle",
     description:
-      "حصارٌ صليبيٌّ طويل لعكا (١١٨٩–١١٩١م) شاركت فيه أساطيل أوروبا، انتهى بسقوط المدينة في يد الصليبيين رغم محاولات صلاح الدين فك الحصار.",
-    period: { label: "١١٨٩ – ١١٩١ م", startYear: 1189, endYear: 1191 },
+      "حصارٌ صليبيٌّ طويل لعكا (1189–1191م) شاركت فيه أساطيل أوروبا، انتهى بسقوط المدينة في يد الصليبيين رغم محاولات صلاح الدين فك الحصار.",
+    period: { label: "1189 – 1191 م", startYear: 1189, endYear: 1191 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.figure.richard-lionheart","ayyubid.city.acre","ayyubid.event.third-crusade","ayyubid.state.ayyubid"],
     unlockables: [],
     image: { alt: "حصار عكا", glyph: "🏹", tone: "from-sky-900/40 to-slate-900" },
@@ -562,7 +562,7 @@ const entities: PackEntity[] = [
     type: "battle",
     description:
       "معركة ميدانية بين صلاح الدين وريتشارد قلب الأسد عند يافا، مهّدت لصلح الرملة وأنهت فعليًا الحملة الصليبية الثالثة.",
-    period: { label: "٥ أغسطس ١١٩٢ م", startYear: 1192, endYear: 1192 },
+    period: { label: "5 أغسطس 1192 م", startYear: 1192, endYear: 1192 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.figure.richard-lionheart","ayyubid.event.ramla-treaty","ayyubid.event.third-crusade"],
     unlockables: [],
     image: { alt: "ساحل يافا", glyph: "⚔️", tone: "from-rose-800/40 to-slate-900" },
@@ -577,8 +577,8 @@ const entities: PackEntity[] = [
     title: "حصار الكرك",
     type: "battle",
     description:
-      "حصارُ صلاح الدين لقلعة الكرك مرتين (١١٨٣ و ١١٨٤م) لتأديب أرناط بعد اعتداءاته على قوافل الحجاج.",
-    period: { label: "١١٨٣ – ١١٨٤ م", startYear: 1183, endYear: 1184 },
+      "حصارُ صلاح الدين لقلعة الكرك مرتين (1183 و 1184م) لتأديب أرناط بعد اعتداءاته على قوافل الحجاج.",
+    period: { label: "1183 – 1184 م", startYear: 1183, endYear: 1184 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.city.karak","ayyubid.landmark.castle-karak","ayyubid.state.ayyubid"],
     unlockables: [],
     image: { alt: "حصار الكرك", glyph: "🛡️", tone: "from-stone-800/40 to-slate-900" },
@@ -593,8 +593,8 @@ const entities: PackEntity[] = [
     title: "حملة دمياط",
     type: "battle",
     description:
-      "الحملة الصليبية الخامسة على مصر (١٢١٧–١٢٢١م)، احتلّ فيها الصليبيون دمياط قبل أن يهزمهم الملك الكامل ويستردّها.",
-    period: { label: "١٢١٧ – ١٢٢١ م", startYear: 1217, endYear: 1221 },
+      "الحملة الصليبية الخامسة على مصر (1217–1221م)، احتلّ فيها الصليبيون دمياط قبل أن يهزمهم الملك الكامل ويستردّها.",
+    period: { label: "1217 – 1221 م", startYear: 1217, endYear: 1221 },
     relatedEntities: ["ayyubid.figure.al-kamil","ayyubid.city.damietta","ayyubid.state.ayyubid"],
     unlockables: [],
     image: { alt: "ثغر دمياط", glyph: "⚓", tone: "from-sky-900/40 to-slate-900" },
@@ -610,7 +610,7 @@ const entities: PackEntity[] = [
     type: "battle",
     description:
       "هزيمةٌ كبرى للويس التاسع وحملته الصليبية السابعة على مصر، انتصر فيها الصالح أيوب وتوران شاه والمماليك البحرية.",
-    period: { label: "فبراير ١٢٥٠ م", startYear: 1250, endYear: 1250 },
+    period: { label: "فبراير 1250 م", startYear: 1250, endYear: 1250 },
     relatedEntities: ["ayyubid.figure.as-salih-ayyub","ayyubid.figure.turanshah","ayyubid.figure.shajar-al-durr","ayyubid.city.damietta","ayyubid.event.end-ayyubid"],
     unlockables: [],
     image: { alt: "ميدان المنصورة", glyph: "🗡️", tone: "from-emerald-800/40 to-slate-900" },
@@ -625,8 +625,8 @@ const entities: PackEntity[] = [
     title: "معركة غزة",
     type: "battle",
     description:
-      "معركةٌ في جنوب فلسطين بين الأيوبيين وحلفائهم الخوارزميين من جهة والصليبيين من جهة أخرى، أعادت السيطرة الإسلامية على القدس عام ١٢٤٤م.",
-    period: { label: "١٧ أكتوبر ١٢٤٤ م", startYear: 1244, endYear: 1244 },
+      "معركةٌ في جنوب فلسطين بين الأيوبيين وحلفائهم الخوارزميين من جهة والصليبيين من جهة أخرى، أعادت السيطرة الإسلامية على القدس عام 1244م.",
+    period: { label: "17 أكتوبر 1244 م", startYear: 1244, endYear: 1244 },
     relatedEntities: ["ayyubid.figure.as-salih-ayyub","ayyubid.city.jerusalem","ayyubid.state.ayyubid"],
     unlockables: [],
     image: { alt: "ميدان غزة", glyph: "⚔️", tone: "from-rose-800/40 to-slate-900" },
@@ -642,7 +642,7 @@ const entities: PackEntity[] = [
     type: "battle",
     description:
       "مواجهةٌ في تلال بيت نوبا قرب القدس بين جيش صلاح الدين والصليبيين بقيادة ريتشارد، أوقفت زحفهم نحو المدينة المقدسة.",
-    period: { label: "١١٩٢ م", startYear: 1192, endYear: 1192 },
+    period: { label: "1192 م", startYear: 1192, endYear: 1192 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.figure.richard-lionheart","ayyubid.city.jerusalem","ayyubid.event.third-crusade"],
     unlockables: [],
     image: { alt: "تلال بيت نوبا", glyph: "🛡️", tone: "from-emerald-800/30 to-slate-900" },
@@ -658,8 +658,8 @@ const entities: PackEntity[] = [
     title: "إنهاء الدولة الفاطمية",
     type: "event",
     description:
-      "أعلن صلاح الدين الخطبة للخليفة العباسي في القاهرة عام ١١٧١م، فطُويت صفحة الدولة الفاطمية وقامت الدولة الأيوبية السنّيّة على أنقاضها.",
-    period: { label: "١١٧١ م", startYear: 1171, endYear: 1171 },
+      "أعلن صلاح الدين الخطبة للخليفة العباسي في القاهرة عام 1171م، فطُويت صفحة الدولة الفاطمية وقامت الدولة الأيوبية السنّيّة على أنقاضها.",
+    period: { label: "1171 م", startYear: 1171, endYear: 1171 },
     relatedEntities: [
       "ayyubid.state.ayyubid",
       "ayyubid.figure.salahuddin",
@@ -677,8 +677,8 @@ const entities: PackEntity[] = [
     title: "تحرير القدس",
     type: "event",
     description:
-      "في رجب ٥٨٣هـ / أكتوبر ١١٨٧م دخل صلاح الدين القدس صلحًا، فأُعيد الأذان إلى المسجد الأقصى بعد ٨٨ عامًا من الاحتلال الصليبي.",
-    period: { label: "٢ أكتوبر ١١٨٧ م", startYear: 1187, endYear: 1187 },
+      "في رجب 583هـ / أكتوبر 1187م دخل صلاح الدين القدس صلحًا، فأُعيد الأذان إلى المسجد الأقصى بعد 88 عامًا من الاحتلال الصليبي.",
+    period: { label: "2 أكتوبر 1187 م", startYear: 1187, endYear: 1187 },
     relatedEntities: [
       "ayyubid.figure.salahuddin",
       "ayyubid.battle.hattin",
@@ -702,8 +702,8 @@ const entities: PackEntity[] = [
     title: "مولد صلاح الدين",
     type: "event",
     description:
-      "وُلد صلاح الدين يوسف بن أيوب في قلعة تكريت سنة ٥٣٢هـ / ١١٣٧م في ليلة رحيل أسرته منها.",
-    period: { label: "١١٣٧ م", startYear: 1137, endYear: 1137 },
+      "وُلد صلاح الدين يوسف بن أيوب في قلعة تكريت سنة 532هـ / 1137م في ليلة رحيل أسرته منها.",
+    period: { label: "1137 م", startYear: 1137, endYear: 1137 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.figure.najmuddin-ayyub","ayyubid.city.tikrit"],
     unlockables: [],
     image: { alt: "مولد صلاح الدين", glyph: "🌙", tone: "from-amber-700/30 to-slate-900" },
@@ -718,7 +718,7 @@ const entities: PackEntity[] = [
     type: "event",
     description:
       "انتقلت أسرة أيوب من تكريت إلى الموصل ثم بعلبك فدمشق في خدمة الزنكيين، فنشأ صلاح الدين في كنف نور الدين.",
-    period: { label: "نحو ١١٤٠ م", startYear: 1140, endYear: 1154 },
+    period: { label: "نحو 1140 م", startYear: 1140, endYear: 1154 },
     relatedEntities: ["ayyubid.figure.najmuddin-ayyub","ayyubid.figure.salahuddin","ayyubid.figure.nuruddin","ayyubid.city.damascus"],
     unlockables: [],
     image: { alt: "رحلة الأسرة", glyph: "🐪", tone: "from-amber-700/30 to-slate-900" },
@@ -733,7 +733,7 @@ const entities: PackEntity[] = [
     type: "event",
     description:
       "خدم صلاح الدين وأبوه وعمّه في بلاط نور الدين زنكي بدمشق، فتدرّب على فنون الحرب والسياسة في معسكر الجهاد.",
-    period: { label: "١١٥٤ – ١١٦٣ م", startYear: 1154, endYear: 1163 },
+    period: { label: "1154 – 1163 م", startYear: 1154, endYear: 1163 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.figure.nuruddin","ayyubid.figure.najmuddin-ayyub","ayyubid.city.damascus"],
     unlockables: [],
     image: { alt: "بلاط نور الدين", glyph: "📜", tone: "from-emerald-800/30 to-slate-900" },
@@ -748,7 +748,7 @@ const entities: PackEntity[] = [
     type: "event",
     description:
       "الحملات الثلاث التي قادها أسد الدين شيركوه ومعه صلاح الدين بأمر نور الدين، وانتهت بدخول القاهرة وتولّي شيركوه الوزارة.",
-    period: { label: "١١٦٤ – ١١٦٩ م", startYear: 1164, endYear: 1169 },
+    period: { label: "1164 – 1169 م", startYear: 1164, endYear: 1169 },
     relatedEntities: ["ayyubid.figure.shirkuh","ayyubid.figure.salahuddin","ayyubid.figure.nuruddin","ayyubid.city.cairo","ayyubid.city.alexandria","ayyubid.event.end-fatimid"],
     unlockables: [],
     image: { alt: "حملة شيركوه", glyph: "🐫", tone: "from-amber-800/30 to-slate-900" },
@@ -762,8 +762,8 @@ const entities: PackEntity[] = [
     title: "تأسيس الدولة الأيوبية",
     type: "event",
     description:
-      "أعلن صلاح الدين قيام الدولة الأيوبية في مصر عام ١١٧١م، فبدأت مرحلة جديدة من توحيد الجبهة الإسلامية ضد الصليبيين.",
-    period: { label: "١١٧١ م", startYear: 1171, endYear: 1171 },
+      "أعلن صلاح الدين قيام الدولة الأيوبية في مصر عام 1171م، فبدأت مرحلة جديدة من توحيد الجبهة الإسلامية ضد الصليبيين.",
+    period: { label: "1171 م", startYear: 1171, endYear: 1171 },
     relatedEntities: ["ayyubid.state.ayyubid","ayyubid.figure.salahuddin","ayyubid.event.end-fatimid","ayyubid.city.cairo"],
     unlockables: [],
     image: { alt: "تأسيس الدولة", glyph: "🏛️", tone: "from-amber-700/40 to-slate-900" },
@@ -778,7 +778,7 @@ const entities: PackEntity[] = [
     type: "event",
     description:
       "بعد وفاة نور الدين ضمّ صلاح الدين دمشق وحلب والجزيرة إلى مصر، فاكتمل المشروع الأيوبي قبل المواجهة الكبرى مع الصليبيين.",
-    period: { label: "١١٧٤ – ١١٨٣ م", startYear: 1174, endYear: 1183 },
+    period: { label: "1174 – 1183 م", startYear: 1174, endYear: 1183 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.city.damascus","ayyubid.city.aleppo","ayyubid.city.cairo","ayyubid.state.ayyubid"],
     unlockables: [],
     image: { alt: "توحيد الجبهة", glyph: "🤝", tone: "from-emerald-700/30 to-slate-900" },
@@ -793,7 +793,7 @@ const entities: PackEntity[] = [
     type: "event",
     description:
       "حملةُ ملوك أوروبا الثلاثة (ريتشارد، فيليب، فردريك) لاستعادة القدس بعد حطين، انتهت بصلح الرملة دون تحقيق هدفها الأكبر.",
-    period: { label: "١١٨٩ – ١١٩٢ م", startYear: 1189, endYear: 1192 },
+    period: { label: "1189 – 1192 م", startYear: 1189, endYear: 1192 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.figure.richard-lionheart","ayyubid.battle.arsuf","ayyubid.battle.acre-siege","ayyubid.battle.jaffa","ayyubid.battle.bait-nuba","ayyubid.event.ramla-treaty"],
     unlockables: [],
     image: { alt: "الحملة الثالثة", glyph: "✝️", tone: "from-rose-900/40 to-slate-900" },
@@ -807,8 +807,8 @@ const entities: PackEntity[] = [
     title: "صلح الرملة",
     type: "event",
     description:
-      "معاهدة هدنة بين صلاح الدين وريتشارد قلب الأسد سنة ١١٩٢م، أبقت القدس بيد المسلمين مع سماح للحجاج المسيحيين بزيارتها.",
-    period: { label: "سبتمبر ١١٩٢ م", startYear: 1192, endYear: 1192 },
+      "معاهدة هدنة بين صلاح الدين وريتشارد قلب الأسد سنة 1192م، أبقت القدس بيد المسلمين مع سماح للحجاج المسيحيين بزيارتها.",
+    period: { label: "سبتمبر 1192 م", startYear: 1192, endYear: 1192 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.figure.richard-lionheart","ayyubid.event.third-crusade","ayyubid.city.jerusalem","ayyubid.city.ascalon"],
     unlockables: [
       { kind: "artifact", refId: "ayyubid.artifact.ramla-manuscript", label: "مخطوطة صلح الرملة" },
@@ -824,8 +824,8 @@ const entities: PackEntity[] = [
     title: "وفاة صلاح الدين",
     type: "event",
     description:
-      "تُوفّي صلاح الدين في دمشق في ٢٧ صفر ٥٨٩هـ / ٤ مارس ١١٩٣م، ودُفن بجوار الجامع الأموي، فطُويت معه صفحةُ القائد المحرر.",
-    period: { label: "٤ مارس ١١٩٣ م", startYear: 1193, endYear: 1193 },
+      "تُوفّي صلاح الدين في دمشق في 27 صفر 589هـ / 4 مارس 1193م، ودُفن بجوار الجامع الأموي، فطُويت معه صفحةُ القائد المحرر.",
+    period: { label: "4 مارس 1193 م", startYear: 1193, endYear: 1193 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.city.damascus","ayyubid.landmark.umayyad-mosque","ayyubid.figure.al-adil"],
     unlockables: [],
     image: { alt: "وفاة السلطان", glyph: "🕯️", tone: "from-slate-700/40 to-slate-900" },
@@ -839,8 +839,8 @@ const entities: PackEntity[] = [
     title: "صعود الصالح أيوب",
     type: "event",
     description:
-      "تولّى الصالح نجم الدين أيوب سلطنة مصر سنة ١٢٤٠م، فأعاد للأسرة الأيوبية هيبتها بتجنيد المماليك البحرية.",
-    period: { label: "١٢٤٠ م", startYear: 1240, endYear: 1240 },
+      "تولّى الصالح نجم الدين أيوب سلطنة مصر سنة 1240م، فأعاد للأسرة الأيوبية هيبتها بتجنيد المماليك البحرية.",
+    period: { label: "1240 م", startYear: 1240, endYear: 1240 },
     relatedEntities: ["ayyubid.figure.as-salih-ayyub","ayyubid.figure.shajar-al-durr","ayyubid.city.cairo","ayyubid.state.ayyubid"],
     unlockables: [],
     image: { alt: "صعود الصالح أيوب", glyph: "🗝️", tone: "from-amber-700/30 to-slate-900" },
@@ -854,8 +854,8 @@ const entities: PackEntity[] = [
     title: "تولي شجر الدر",
     type: "event",
     description:
-      "بعد مقتل توران شاه بايع المماليك شجر الدر سلطانةً على مصر سنة ١٢٥٠م، فكانت أوّل امرأة تحكم في مصر الإسلامية.",
-    period: { label: "١٢٥٠ م", startYear: 1250, endYear: 1250 },
+      "بعد مقتل توران شاه بايع المماليك شجر الدر سلطانةً على مصر سنة 1250م، فكانت أوّل امرأة تحكم في مصر الإسلامية.",
+    period: { label: "1250 م", startYear: 1250, endYear: 1250 },
     relatedEntities: ["ayyubid.figure.shajar-al-durr","ayyubid.figure.turanshah","ayyubid.battle.mansurah","ayyubid.event.end-ayyubid"],
     unlockables: [],
     image: { alt: "بيعة شجر الدر", glyph: "💎", tone: "from-fuchsia-800/30 to-slate-900" },
@@ -869,8 +869,8 @@ const entities: PackEntity[] = [
     title: "نهاية الدولة الأيوبية",
     type: "event",
     description:
-      "بمقتل توران شاه وتولّي شجر الدر آلت السلطة إلى المماليك سنة ١٢٥٠م، فطُويت صفحة الدولة الأيوبية في مصر بعد قرنٍ من قيامها.",
-    period: { label: "١٢٥٠ م", startYear: 1250, endYear: 1250 },
+      "بمقتل توران شاه وتولّي شجر الدر آلت السلطة إلى المماليك سنة 1250م، فطُويت صفحة الدولة الأيوبية في مصر بعد قرنٍ من قيامها.",
+    period: { label: "1250 م", startYear: 1250, endYear: 1250 },
     relatedEntities: ["ayyubid.state.ayyubid","ayyubid.figure.turanshah","ayyubid.figure.shajar-al-durr","ayyubid.event.shajar-rule"],
     unlockables: [],
     image: { alt: "نهاية الأيوبيين", glyph: "📕", tone: "from-slate-700/40 to-slate-900" },
@@ -905,7 +905,7 @@ const entities: PackEntity[] = [
     type: "landmark",
     description:
       "قلعةٌ شامخة على جبل المقطّم بناها صلاح الدين لتكون مقرّ الحكم وحصنًا منيعًا للقاهرة في وجه الحملات الصليبية.",
-    period: { label: "بدأ بناؤها ١١٧٦ م", startYear: 1176, endYear: 2025 },
+    period: { label: "بدأ بناؤها 1176 م", startYear: 1176, endYear: 2025 },
     relatedEntities: [
       "ayyubid.city.cairo",
       "ayyubid.figure.salahuddin",
@@ -924,7 +924,7 @@ const entities: PackEntity[] = [
     type: "landmark",
     description:
       "أيقونة القدس المعمارية، بناها عبد الملك بن مروان فوق صخرة المسرى، ورمّمها صلاح الدين بعد التحرير.",
-    period: { label: "بُنيت ٦٩١ م", startYear: 691, endYear: 2025 },
+    period: { label: "بُنيت 691 م", startYear: 691, endYear: 2025 },
     relatedEntities: ["ayyubid.city.jerusalem","ayyubid.landmark.al-aqsa","ayyubid.event.liberate-jerusalem"],
     unlockables: [],
     image: { alt: "قبة الصخرة", glyph: "🕌", tone: "from-amber-600/40 to-slate-900" },
@@ -939,7 +939,7 @@ const entities: PackEntity[] = [
     type: "landmark",
     description:
       "جامع دمشق الكبير، رمز الخلافة الأموية وقلب دمشق الروحي، يضمّ ضريح صلاح الدين في فنائه الشمالي.",
-    period: { label: "بُني ٧١٥ م", startYear: 715, endYear: 2025 },
+    period: { label: "بُني 715 م", startYear: 715, endYear: 2025 },
     relatedEntities: ["ayyubid.city.damascus","ayyubid.figure.salahuddin","ayyubid.event.salahuddin-death"],
     unlockables: [],
     image: { alt: "صحن المسجد الأموي", glyph: "🕌", tone: "from-emerald-700/40 to-slate-900" },
@@ -954,7 +954,7 @@ const entities: PackEntity[] = [
     type: "landmark",
     description:
       "قلعةُ دمشق الحصينة، مقرّ حكم نور الدين ثم الأيوبيين، وأحد أقوى حصون الشام في وجه الحملات الصليبية.",
-    period: { label: "وُسِّعت في القرن ١٢ م", startYear: 1076, endYear: 2025 },
+    period: { label: "وُسِّعت في القرن 12 م", startYear: 1076, endYear: 2025 },
     relatedEntities: ["ayyubid.city.damascus","ayyubid.figure.nuruddin","ayyubid.figure.al-adil"],
     unlockables: [],
     image: { alt: "قلعة دمشق", glyph: "🏯", tone: "from-stone-700/40 to-slate-900" },
@@ -969,7 +969,7 @@ const entities: PackEntity[] = [
     type: "landmark",
     description:
       "قلعةٌ شامخة فوق تلٍّ في قلب حلب، أعاد الأيوبيون بناءها وجعلوها رمزًا لقوة الدولة في شمال الشام.",
-    period: { label: "وُسِّعت ١٢١٣ م", startYear: 1213, endYear: 2025 },
+    period: { label: "وُسِّعت 1213 م", startYear: 1213, endYear: 2025 },
     relatedEntities: ["ayyubid.city.aleppo","ayyubid.figure.nuruddin","ayyubid.state.ayyubid"],
     unlockables: [],
     image: { alt: "قلعة حلب", glyph: "🏰", tone: "from-stone-700/40 to-slate-900" },
@@ -984,7 +984,7 @@ const entities: PackEntity[] = [
     type: "landmark",
     description:
       "قلعةٌ صليبية حصينة في جنوب الأردن، حاصرها صلاح الدين مرتين وضمّها الأيوبيون بعد حطين.",
-    period: { label: "بُنيت ١١٤٢ م", startYear: 1142, endYear: 2025 },
+    period: { label: "بُنيت 1142 م", startYear: 1142, endYear: 2025 },
     relatedEntities: ["ayyubid.city.karak","ayyubid.battle.karak-siege","ayyubid.figure.salahuddin"],
     unlockables: [],
     image: { alt: "قلعة الكرك", glyph: "🏰", tone: "from-stone-700/40 to-slate-900" },
@@ -999,7 +999,7 @@ const entities: PackEntity[] = [
     type: "landmark",
     description:
       "مدرسةٌ أوقفها صلاح الدين بالقرب من المسجد الأقصى لتعليم الفقه الشافعي، رمز إحياء التعليم السنّي في القدس.",
-    period: { label: "أُسّست ١١٩٢ م", startYear: 1192, endYear: 2025 },
+    period: { label: "أُسّست 1192 م", startYear: 1192, endYear: 2025 },
     relatedEntities: ["ayyubid.city.jerusalem","ayyubid.figure.salahuddin","ayyubid.event.liberate-jerusalem"],
     unlockables: [],
     image: { alt: "المدرسة الصلاحية", glyph: "📚", tone: "from-amber-700/30 to-slate-900" },
@@ -1014,7 +1014,7 @@ const entities: PackEntity[] = [
     type: "landmark",
     description:
       "أسوار المدينة المقدسة التي رمّمها صلاح الدين بعد التحرير، ثم هدمها المعظم عيسى خشية عودة الصليبيين إليها.",
-    period: { label: "رُمِّمت ١١٩٢ م", startYear: 1192, endYear: 1219 },
+    period: { label: "رُمِّمت 1192 م", startYear: 1192, endYear: 1219 },
     relatedEntities: ["ayyubid.city.jerusalem","ayyubid.figure.salahuddin","ayyubid.figure.al-muazzam-isa"],
     unlockables: [],
     image: { alt: "أسوار القدس", glyph: "🧱", tone: "from-stone-700/40 to-slate-900" },
@@ -1029,7 +1029,7 @@ const entities: PackEntity[] = [
     type: "landmark",
     description:
       "قلعةُ المدينة الساحلية وثكنتها العسكرية، شاهدةٌ على حصار عكا الكبير في الحملة الصليبية الثالثة.",
-    period: { label: "وُسِّعت في القرن ١٢ م", startYear: 1150, endYear: 2025 },
+    period: { label: "وُسِّعت في القرن 12 م", startYear: 1150, endYear: 2025 },
     relatedEntities: ["ayyubid.city.acre","ayyubid.battle.acre-siege","ayyubid.event.third-crusade"],
     unlockables: [],
     image: { alt: "قلعة عكا", glyph: "🏰", tone: "from-sky-800/30 to-slate-900" },
@@ -1045,7 +1045,7 @@ const entities: PackEntity[] = [
     type: "artifact",
     description:
       "سيفٌ أسطوريّ يُنسب إلى السلطان صلاح الدين، رمزٌ للنخوة والفروسية في الذاكرة الإسلامية.",
-    period: { label: "القرن ١٢ م", startYear: 1180, endYear: 1193 },
+    period: { label: "القرن 12 م", startYear: 1180, endYear: 1193 },
     relatedEntities: [
       "ayyubid.figure.salahuddin",
       "ayyubid.battle.hattin",
@@ -1066,7 +1066,7 @@ const entities: PackEntity[] = [
     type: "artifact",
     description:
       "مخطوطةٌ تُخلِّد دخول صلاح الدين القدس وعودة الأذان إلى الأقصى، تُعرض في خزانة المتحف.",
-    period: { label: "القرن ١٢ م", startYear: 1187, endYear: 1187 },
+    period: { label: "القرن 12 م", startYear: 1187, endYear: 1187 },
     relatedEntities: [
       "ayyubid.event.liberate-jerusalem",
       "ayyubid.city.jerusalem",
@@ -1083,7 +1083,7 @@ const entities: PackEntity[] = [
     title: "درع صلاح الدين",
     type: "artifact",
     description: "درعٌ زرديّ يُنسب إلى السلطان صلاح الدين، رمزٌ لفروسيته في معارك الجهاد.",
-    period: { label: "القرن ١٢ م", startYear: 1180, endYear: 1193 },
+    period: { label: "القرن 12 م", startYear: 1180, endYear: 1193 },
     relatedEntities: ["ayyubid.figure.salahuddin","ayyubid.battle.hattin"],
     unlockables: [],
     image: { alt: "درع الزرد", glyph: "🛡️", tone: "from-stone-700/40 to-slate-900" },
@@ -1097,7 +1097,7 @@ const entities: PackEntity[] = [
     title: "خوذة أيوبيّة",
     type: "artifact",
     description: "خوذةٌ حديدية بطراز الفارس الأيوبي، تحمل نقوشًا قرآنية على الحافة.",
-    period: { label: "القرن ١٢ م", startYear: 1170, endYear: 1200 },
+    period: { label: "القرن 12 م", startYear: 1170, endYear: 1200 },
     relatedEntities: ["ayyubid.state.ayyubid","ayyubid.battle.hattin","ayyubid.battle.arsuf"],
     unlockables: [],
     image: { alt: "خوذة أيوبية", glyph: "⛑️", tone: "from-stone-700/40 to-slate-900" },
@@ -1111,7 +1111,7 @@ const entities: PackEntity[] = [
     title: "راية الدولة الأيوبية",
     type: "artifact",
     description: "رايةٌ صفراء تحمل النسر الأيوبي، رفعها صلاح الدين فوق القدس بعد التحرير.",
-    period: { label: "القرن ١٢ م", startYear: 1171, endYear: 1250 },
+    period: { label: "القرن 12 م", startYear: 1171, endYear: 1250 },
     relatedEntities: ["ayyubid.state.ayyubid","ayyubid.figure.salahuddin","ayyubid.event.liberate-jerusalem"],
     unlockables: [],
     image: { alt: "راية النسر الأيوبي", glyph: "🚩", tone: "from-amber-700/40 to-slate-900" },
@@ -1125,7 +1125,7 @@ const entities: PackEntity[] = [
     title: "ختم الدولة الأيوبية",
     type: "artifact",
     description: "ختمٌ سلطاني نُقش عليه اسم صلاح الدين وألقابه، يُختم به الرسائل والمعاهدات.",
-    period: { label: "القرن ١٢ م", startYear: 1171, endYear: 1193 },
+    period: { label: "القرن 12 م", startYear: 1171, endYear: 1193 },
     relatedEntities: ["ayyubid.state.ayyubid","ayyubid.figure.salahuddin","ayyubid.event.ramla-treaty"],
     unlockables: [],
     image: { alt: "ختم سلطاني", glyph: "🔖", tone: "from-amber-700/30 to-slate-900" },
@@ -1139,7 +1139,7 @@ const entities: PackEntity[] = [
     title: "دينار أيوبي",
     type: "artifact",
     description: "دينارٌ ذهبيّ ضربه صلاح الدين في القاهرة، عليه شهادة التوحيد واسم الخليفة العباسي.",
-    period: { label: "القرن ١٢ م", startYear: 1175, endYear: 1193 },
+    period: { label: "القرن 12 م", startYear: 1175, endYear: 1193 },
     relatedEntities: ["ayyubid.state.ayyubid","ayyubid.city.cairo","ayyubid.figure.salahuddin"],
     unlockables: [],
     image: { alt: "دينار ذهبي", glyph: "🪙", tone: "from-amber-600/40 to-slate-900" },
@@ -1153,7 +1153,7 @@ const entities: PackEntity[] = [
     title: "مخطوطة تحرير القدس",
     type: "artifact",
     description: "وثيقةٌ تروي تفاصيل دخول صلاح الدين القدس وعفوه عن أهلها، نسخها فقهاء دمشق.",
-    period: { label: "القرن ١٢ م", startYear: 1187, endYear: 1187 },
+    period: { label: "القرن 12 م", startYear: 1187, endYear: 1187 },
     relatedEntities: ["ayyubid.event.liberate-jerusalem","ayyubid.figure.salahuddin","ayyubid.city.jerusalem"],
     unlockables: [],
     image: { alt: "مخطوطة التحرير", glyph: "📜", tone: "from-amber-700/40 to-slate-900" },
@@ -1167,7 +1167,7 @@ const entities: PackEntity[] = [
     title: "مخطوطة صلح الرملة",
     type: "artifact",
     description: "وثيقة معاهدة الرملة بين صلاح الدين وريتشارد قلب الأسد، تُحدّد ترتيبات الهدنة وزيارة الحجاج.",
-    period: { label: "١١٩٢ م", startYear: 1192, endYear: 1192 },
+    period: { label: "1192 م", startYear: 1192, endYear: 1192 },
     relatedEntities: ["ayyubid.event.ramla-treaty","ayyubid.figure.salahuddin","ayyubid.figure.richard-lionheart"],
     unlockables: [],
     image: { alt: "وثيقة الصلح", glyph: "📃", tone: "from-emerald-700/30 to-slate-900" },
@@ -1181,7 +1181,7 @@ const entities: PackEntity[] = [
     title: "رسالة نور الدين",
     type: "artifact",
     description: "رسالةٌ من نور الدين زنكي إلى أسد الدين شيركوه بشأن الحملة على مصر، شاهدٌ نادر على لحظة التأسيس.",
-    period: { label: "نحو ١١٦٤ م", startYear: 1164, endYear: 1169 },
+    period: { label: "نحو 1164 م", startYear: 1164, endYear: 1169 },
     relatedEntities: ["ayyubid.figure.nuruddin","ayyubid.figure.shirkuh","ayyubid.event.egypt-campaigns"],
     unlockables: [],
     image: { alt: "رسالة قديمة", glyph: "✉️", tone: "from-emerald-700/30 to-slate-900" },
@@ -1195,7 +1195,7 @@ const entities: PackEntity[] = [
     title: "قوس أيوبي",
     type: "artifact",
     description: "قوسٌ مركّب من خشب التوت والقرن، اعتمده الفرسان الأيوبيون في معاركهم على الفرسان الصليبيين.",
-    period: { label: "القرن ١٢ م", startYear: 1170, endYear: 1200 },
+    period: { label: "القرن 12 م", startYear: 1170, endYear: 1200 },
     relatedEntities: ["ayyubid.state.ayyubid","ayyubid.battle.arsuf","ayyubid.battle.hattin"],
     unlockables: [],
     image: { alt: "قوس مركّب", glyph: "🏹", tone: "from-amber-800/30 to-slate-900" },
@@ -1209,7 +1209,7 @@ const entities: PackEntity[] = [
     title: "رمح أيوبي",
     type: "artifact",
     description: "رمحٌ طويل بسنانٍ مثلّث، سلاح فرسان الخيل الأيوبيين في المواجهات المفتوحة.",
-    period: { label: "القرن ١٢ م", startYear: 1170, endYear: 1200 },
+    period: { label: "القرن 12 م", startYear: 1170, endYear: 1200 },
     relatedEntities: ["ayyubid.state.ayyubid","ayyubid.battle.hattin"],
     unlockables: [],
     image: { alt: "رمح فارس", glyph: "🛡️", tone: "from-stone-700/40 to-slate-900" },
@@ -1237,7 +1237,7 @@ const entities: PackEntity[] = [
     title: "مفتاح القدس الرمزي",
     type: "artifact",
     description: "مفتاحٌ نُقش عليه اسم صلاح الدين، يرمز إلى تسلّم القدس صلحًا من الصليبيين.",
-    period: { label: "١١٨٧ م", startYear: 1187, endYear: 1187 },
+    period: { label: "1187 م", startYear: 1187, endYear: 1187 },
     relatedEntities: ["ayyubid.event.liberate-jerusalem","ayyubid.city.jerusalem","ayyubid.figure.salahuddin"],
     unlockables: [],
     image: { alt: "مفتاح القدس", glyph: "🗝️", tone: "from-amber-600/40 to-slate-900" },
@@ -1251,7 +1251,7 @@ const entities: PackEntity[] = [
     title: "مرسوم إنهاء الدولة الفاطمية",
     type: "artifact",
     description: "مرسومٌ سلطاني يُعلن إعادة الخطبة للعباسيين في القاهرة، وثيقةٌ نادرة على تحوّل المذهب الرسمي لمصر.",
-    period: { label: "١١٧١ م", startYear: 1171, endYear: 1171 },
+    period: { label: "1171 م", startYear: 1171, endYear: 1171 },
     relatedEntities: ["ayyubid.event.end-fatimid","ayyubid.city.cairo","ayyubid.figure.salahuddin"],
     unlockables: [],
     image: { alt: "مرسوم سلطاني", glyph: "📜", tone: "from-amber-700/30 to-slate-900" },
@@ -1289,7 +1289,7 @@ const entities: PackEntity[] = [
       "ayyubid.battle.hattin",
     ],
     unlockables: [
-      { kind: "xp", refId: "xp-500", label: "٥٠٠ نقطة خبرة" },
+      { kind: "xp", refId: "xp-500", label: "500 نقطة خبرة" },
       { kind: "frame", refId: "frame-liberator", label: "إطار شخصي خاص" },
       { kind: "badge", refId: "badge-legendary-liberator", label: "وسام أسطوري" },
     ],
@@ -1312,7 +1312,7 @@ const entities: PackEntity[] = [
     period: { label: "إنجاز", startYear: 1171, endYear: 1250 },
     relatedEntities: ["ayyubid.state.ayyubid","ayyubid.artifact.ayyubid-banner","ayyubid.artifact.ayyubid-dinar","ayyubid.artifact.ayyubid-seal"],
     unlockables: [
-      { kind: "xp", refId: "xp-300", label: "٣٠٠ نقطة خبرة" },
+      { kind: "xp", refId: "xp-300", label: "300 نقطة خبرة" },
       { kind: "badge", refId: "badge-ayyubid-collector", label: "وسام الجامع الأيوبي" },
     ],
     image: { alt: "وسام الجامع", glyph: "🏺", tone: "from-amber-700/40 to-slate-900" },
@@ -1329,7 +1329,7 @@ const entities: PackEntity[] = [
     period: { label: "إنجاز", startYear: 1171, endYear: 1250 },
     relatedEntities: ["ayyubid.state.ayyubid","ayyubid.event.found-ayyubid","ayyubid.event.liberate-jerusalem","ayyubid.event.end-ayyubid"],
     unlockables: [
-      { kind: "xp", refId: "xp-400", label: "٤٠٠ نقطة خبرة" },
+      { kind: "xp", refId: "xp-400", label: "400 نقطة خبرة" },
       { kind: "title", refId: "title-ayyubid-historian", label: "لقب مؤرخ الأيوبيين" },
     ],
     image: { alt: "وسام المؤرخ", glyph: "📚", tone: "from-emerald-700/40 to-slate-900" },
@@ -1346,7 +1346,7 @@ const entities: PackEntity[] = [
     period: { label: "إنجاز", startYear: 1187, endYear: 1250 },
     relatedEntities: ["ayyubid.battle.hattin","ayyubid.battle.arsuf","ayyubid.battle.jaffa","ayyubid.battle.acre-siege","ayyubid.battle.mansurah","ayyubid.event.third-crusade"],
     unlockables: [
-      { kind: "xp", refId: "xp-400", label: "٤٠٠ نقطة خبرة" },
+      { kind: "xp", refId: "xp-400", label: "400 نقطة خبرة" },
       { kind: "badge", refId: "badge-crusades-expert", label: "وسام خبير الحملات" },
     ],
     image: { alt: "وسام الحملات", glyph: "🛡️", tone: "from-rose-800/40 to-slate-900" },
@@ -1363,7 +1363,7 @@ const entities: PackEntity[] = [
     period: { label: "إنجاز", startYear: 1187, endYear: 1187 },
     relatedEntities: ["ayyubid.battle.hattin","ayyubid.figure.salahuddin","ayyubid.artifact.hattin-map"],
     unlockables: [
-      { kind: "xp", refId: "xp-250", label: "٢٥٠ نقطة خبرة" },
+      { kind: "xp", refId: "xp-250", label: "250 نقطة خبرة" },
       { kind: "title", refId: "title-hattin-master", label: "لقب سيد حطين" },
     ],
     image: { alt: "وسام حطين", glyph: "⚔️", tone: "from-amber-700/40 to-slate-900" },
@@ -1378,7 +1378,7 @@ const entities: PackEntity[] = [
     title: "حملة نور الدين زنكي",
     type: "event",
     description: "حملةٌ قادمة تستعرض مشروع نور الدين في توحيد الشام وتمهيد الطريق لصلاح الدين. (قريبًا)",
-    period: { label: "١١٤٦ – ١١٧٤ م", startYear: 1146, endYear: 1174 },
+    period: { label: "1146 – 1174 م", startYear: 1146, endYear: 1174 },
     relatedEntities: ["ayyubid.figure.nuruddin","ayyubid.city.damascus","ayyubid.city.aleppo"],
     unlockables: [],
     image: { alt: "حملة نور الدين", glyph: "🕌", tone: "from-emerald-800/40 to-slate-900" },
@@ -1392,7 +1392,7 @@ const entities: PackEntity[] = [
     title: "سقوط الدولة الفاطمية",
     type: "event",
     description: "حملةٌ قادمة تستعرض نهاية الخلافة الفاطمية في مصر وتحوّل البلاد إلى السنّة. (قريبًا)",
-    period: { label: "١١٦٤ – ١١٧١ م", startYear: 1164, endYear: 1171 },
+    period: { label: "1164 – 1171 م", startYear: 1164, endYear: 1171 },
     relatedEntities: ["ayyubid.figure.shirkuh","ayyubid.figure.salahuddin","ayyubid.city.cairo","ayyubid.event.end-fatimid"],
     unlockables: [],
     image: { alt: "سقوط الفاطميين", glyph: "📕", tone: "from-rose-800/40 to-slate-900" },
@@ -1406,7 +1406,7 @@ const entities: PackEntity[] = [
     title: "الحملة الصليبية الثالثة",
     type: "event",
     description: "حملةٌ قادمة تروي المواجهة الكبرى بين صلاح الدين وريتشارد قلب الأسد. (قريبًا)",
-    period: { label: "١١٨٩ – ١١٩٢ م", startYear: 1189, endYear: 1192 },
+    period: { label: "1189 – 1192 م", startYear: 1189, endYear: 1192 },
     relatedEntities: ["ayyubid.event.third-crusade","ayyubid.figure.richard-lionheart","ayyubid.battle.arsuf","ayyubid.battle.jaffa"],
     unlockables: [],
     image: { alt: "الحملة الثالثة", glyph: "✝️", tone: "from-rose-900/40 to-slate-900" },
@@ -1420,7 +1420,7 @@ const entities: PackEntity[] = [
     title: "شجر الدر ونهاية الأيوبيين",
     type: "event",
     description: "حملةٌ قادمة تروي صعود شجر الدر، انتصار المنصورة، وانتقال السلطة إلى المماليك. (قريبًا)",
-    period: { label: "١٢٤٩ – ١٢٥٠ م", startYear: 1249, endYear: 1250 },
+    period: { label: "1249 – 1250 م", startYear: 1249, endYear: 1250 },
     relatedEntities: ["ayyubid.figure.shajar-al-durr","ayyubid.figure.turanshah","ayyubid.battle.mansurah","ayyubid.event.end-ayyubid"],
     unlockables: [],
     image: { alt: "نهاية الأيوبيين", glyph: "💎", tone: "from-fuchsia-800/40 to-slate-900" },
@@ -1434,11 +1434,11 @@ export const AYYUBID_PACK: ContentPack = {
   id: "pack-001-ayyubid",
   order: 1,
   title: "الدولة الأيوبية",
-  subtitle: "المجموعة ١ · صلاح الدين وتحرير القدس",
+  subtitle: "المجموعة 1 · صلاح الدين وتحرير القدس",
   summary:
     "أوّل حزمة محتوى تاريخية في إرث: دولةٌ سنّية أعادت الجهاد إلى الشام ومصر وحرّرت القدس.",
   era: "ayyubid",
-  period: { label: "١١٧١ – ١٢٥٠ م", startYear: 1171, endYear: 1250 },
+  period: { label: "1171 – 1250 م", startYear: 1171, endYear: 1250 },
   cover: { alt: "غلاف الدولة الأيوبية", glyph: "🦅", tone: "from-amber-700/40 to-slate-900" },
   entities,
 };

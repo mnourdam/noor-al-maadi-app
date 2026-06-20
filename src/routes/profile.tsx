@@ -128,7 +128,7 @@ function ProfilePage() {
             <p className="font-display text-sm font-bold inline-flex items-center gap-2">
               <Flame className="size-4 text-orange-400" /> سلسلتك اليومية
             </p>
-            <span className="text-[11px] text-muted-foreground">{profile.streak.toLocaleString("ar-EG")} يوم</span>
+            <span className="text-[11px] text-muted-foreground">{profile.streak.toLocaleString("en-US")} يوم</span>
           </div>
           <div className="mt-3 space-y-2">
             {STREAK_MILESTONES.map((m) => {
