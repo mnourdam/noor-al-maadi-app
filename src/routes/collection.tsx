@@ -16,6 +16,8 @@ import {
 import { pullAllFromCloud } from "@/lib/cloudSync";
 import { audioManager } from "@/lib/audioManager";
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
+import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
+
 
 export const Route = createFileRoute("/collection")({
   head: () => ({ meta: [{ title: "المتحف · أرشيفك التاريخي" }] }),
