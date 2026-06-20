@@ -18,6 +18,7 @@ import { pullCampaignsFromCloud } from "@/lib/cloudSync";
 import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
+import { UnlockList } from "@/components/imported-campaign/UnlockList";
 
 export const Route = createFileRoute("/campaigns/imported/$id/")({
   head: () => ({ meta: [{ title: "حملة مستوردة — إرث" }] }),
@@ -131,7 +132,7 @@ function ImportedCampaignOverview() {
         </div>
 
         <div className="px-5">
-          {/* REWARDS PREVIEW (final) */}
+          {/* REWARDS PREVIEW (final) — unlock IDs resolved to Arabic titles. */}
           {finalRewards && (finalRewards.xp || finalRewards.coins || finalRewards.unlocks?.length || finalRewards.badgeId || finalRewards.artifactId) && (
             <div className="mt-6 rounded-3xl border border-gold/25 bg-gradient-to-br from-amber-900/20 via-surface to-stone-900/20 p-5">
               <div className="flex items-center gap-2">
@@ -143,11 +144,12 @@ function ImportedCampaignOverview() {
                 {finalRewards.coins ? <Pill label={`+${finalRewards.coins} دينار`} /> : null}
                 {finalRewards.badgeId ? <Pill label={`🏅 ${finalRewards.badgeId}`} /> : null}
                 {finalRewards.artifactId ? <Pill label={`🗡️ ${finalRewards.artifactId}`} /> : null}
-                {(finalRewards.unlocks ?? []).map(u => <Pill key={u} label={`🔓 ${u}`} />)}
               </div>
-              <p className="mt-3 text-[11px] text-muted-foreground">
-                ستتاح عناصر السجل في المتحف لاحقًا حين يتم ربط نظام الفتح بالملف الشخصي.
-              </p>
+              {(finalRewards.unlocks?.length ?? 0) > 0 && (
+                <div className="mt-3">
+                  <UnlockList ids={finalRewards.unlocks ?? []} variant="card" />
+                </div>
+              )}
             </div>
           )}
 

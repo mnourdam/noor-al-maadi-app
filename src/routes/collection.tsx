@@ -9,6 +9,7 @@ import { displayBadgeName } from "@/lib/display-names";
 import {
   getImportedRegistryItemsByType,
   getMissingRegistryUnlockIds,
+  getUnlockedRegistryIds,
   registryItemIcon,
   registryItemImageUrl,
   registryItemRarity,
@@ -17,6 +18,7 @@ import { pullAllFromCloud } from "@/lib/cloudSync";
 import { audioManager } from "@/lib/audioManager";
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
 import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
+import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
 
 
 export const Route = createFileRoute("/collection")({
@@ -310,42 +312,78 @@ function CollectionPage() {
   const importedDynasties    = useMemo(() => getImportedRegistryItemsByType("dynasty"), [refreshTick]);
   const importedBadges       = useMemo(() => getImportedRegistryItemsByType("badge"), [refreshTick]);
   const importedAchievements = useMemo(() => getImportedRegistryItemsByType("achievement"), [refreshTick]);
-  const missingUnlockIds     = useMemo(() => getMissingRegistryUnlockIds(), [refreshTick]);
+  const rawMissingUnlockIds  = useMemo(() => getMissingRegistryUnlockIds(), [refreshTick]);
+
+  // Resolve any "missing" unlocks against the Supabase encyclopedia so campaign
+  // rewards like "figure:prophet-muhammad" show up with proper Arabic names
+  // instead of triggering the "بلا تعريف" warning.
+  const allUnlockIds = useMemo(() => getUnlockedRegistryIds(), [refreshTick]);
+  const { resolved: encyclopediaUnlocks } = useResolvedUnlocks(allUnlockIds);
+  const encyclopediaByType = useMemo(() => {
+    const m = new Map<string, typeof encyclopediaUnlocks>();
+    for (const r of encyclopediaUnlocks) {
+      if (!r.found || !r.type) continue;
+      const arr = m.get(r.type) ?? [];
+      arr.push(r);
+      m.set(r.type, arr);
+    }
+    return m;
+  }, [encyclopediaUnlocks]);
+  const encyclopediaResolvedRaws = useMemo(
+    () => new Set(encyclopediaUnlocks.filter(r => r.found).map(r => r.raw)),
+    [encyclopediaUnlocks],
+  );
+  const missingUnlockIds = useMemo(
+    () => rawMissingUnlockIds.filter(id => !encyclopediaResolvedRaws.has(id)),
+    [rawMissingUnlockIds, encyclopediaResolvedRaws],
+  );
 
   useEffect(() => {
     if (missingUnlockIds.length > 0) {
-      // eslint-disable-next-line no-console
       console.warn("[museum] unlock IDs without registry items:", missingUnlockIds);
     }
   }, [missingUnlockIds]);
 
   const importedUnlockedCount = (arr: Array<{ unlocked: boolean }>) => arr.filter(i => i.unlocked).length;
+  const encCount = (t: string) => (encyclopediaByType.get(t) ?? []).length;
+  const encFigures   = encyclopediaByType.get("figure")   ?? [];
+  const encArtifacts = encyclopediaByType.get("artifact") ?? [];
+  const encBattles   = encyclopediaByType.get("battle")   ?? [];
+  const encLandmarks = [
+    ...(encyclopediaByType.get("landmark") ?? []),
+    ...(encyclopediaByType.get("city") ?? []),
+  ];
+  const encDynasties = [
+    ...(encyclopediaByType.get("state") ?? []),
+    ...(encyclopediaByType.get("event") ?? []),
+  ];
 
   const counts: Record<SectionId, { done: number; total: number }> = {
     figures:      {
-      done:  profile.charactersUnlocked.length + importedUnlockedCount(importedFigures),
-      total: CHARACTERS.length + importedFigures.length,
+      done:  profile.charactersUnlocked.length + importedUnlockedCount(importedFigures) + encFigures.length,
+      total: CHARACTERS.length + importedFigures.length + encFigures.length,
     },
     artifacts:    {
-      done:  artifactsOnly.filter(a => profile.artifactsFound.includes(a.id)).length + importedUnlockedCount(importedArtifacts),
-      total: artifactsOnly.length + importedArtifacts.length,
+      done:  artifactsOnly.filter(a => profile.artifactsFound.includes(a.id)).length + importedUnlockedCount(importedArtifacts) + encArtifacts.length,
+      total: artifactsOnly.length + importedArtifacts.length + encArtifacts.length,
     },
     battles:      {
-      done:  BATTLES.filter(b => !b.storyId || profile.storiesRead.includes(b.storyId)).length + importedUnlockedCount(importedBattles),
-      total: BATTLES.length + importedBattles.length,
+      done:  BATTLES.filter(b => !b.storyId || profile.storiesRead.includes(b.storyId)).length + importedUnlockedCount(importedBattles) + encBattles.length,
+      total: BATTLES.length + importedBattles.length + encBattles.length,
     },
     manuscripts:  { done: manuscripts.filter(a => profile.artifactsFound.includes(a.id)).length, total: manuscripts.length },
     landmarks:    {
-      done:  LANDMARKS.filter(l => !l.regionId || profile.regionsUnlocked.includes(l.regionId)).length + importedUnlockedCount(importedLandmarks),
-      total: LANDMARKS.length + importedLandmarks.length,
+      done:  LANDMARKS.filter(l => !l.regionId || profile.regionsUnlocked.includes(l.regionId)).length + importedUnlockedCount(importedLandmarks) + encLandmarks.length,
+      total: LANDMARKS.length + importedLandmarks.length + encLandmarks.length,
     },
     dynasties:    {
-      done:  ERAS.filter(e => eraHasProgress(e.id)).length + importedUnlockedCount(importedDynasties),
-      total: ERAS.length + importedDynasties.length,
+      done:  ERAS.filter(e => eraHasProgress(e.id)).length + importedUnlockedCount(importedDynasties) + encDynasties.length,
+      total: ERAS.length + importedDynasties.length + encDynasties.length,
     },
     badges:       { done: importedUnlockedCount(importedBadges),       total: importedBadges.length },
     achievements: { done: importedUnlockedCount(importedAchievements), total: importedAchievements.length },
   };
+  void encCount;
 
   // Hide badges/achievements pills entirely when there are no imported items there.
   const visibleSections = SECTIONS.filter(s => {
@@ -436,6 +474,9 @@ function CollectionPage() {
               {importedFigures.map(item => (
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
+              {encFigures.map(r => (
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+              ))}
             </div>
           </>
         )}
@@ -462,6 +503,9 @@ function CollectionPage() {
               {importedArtifacts.map(item => (
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
+              {encArtifacts.map(r => (
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+              ))}
             </div>
           </>
         )}
@@ -482,6 +526,9 @@ function CollectionPage() {
               })}
               {importedBattles.map(item => (
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
+              {encBattles.map(r => (
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
               ))}
             </div>
           </>
@@ -548,6 +595,9 @@ function CollectionPage() {
               {importedLandmarks.map(item => (
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
+              {encLandmarks.map(r => (
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+              ))}
             </div>
             <Link to="/map" className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-gold/30 bg-gold/5 py-2 text-xs text-gold">
               <MapPin className="size-3.5" /> اكتشف المعالم على الخارطة
@@ -589,10 +639,13 @@ function CollectionPage() {
                 );
               })}
             </div>
-            {importedDynasties.length > 0 && (
+            {(importedDynasties.length > 0 || encDynasties.length > 0) && (
               <div className="mt-3 grid grid-cols-2 gap-3">
                 {importedDynasties.map(item => (
                   <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+                ))}
+                {encDynasties.map(r => (
+                  <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
                 ))}
               </div>
             )}
@@ -780,3 +833,53 @@ function ImportedCard({
   );
 }
 
+// ───── Encyclopedia-resolved unlock card (campaign rewards → encyclopedia_entities)
+function EncyclopediaUnlockCard({
+  unlock,
+  navigate,
+}: {
+  unlock: { raw: string; type: string | null; slug: string | null; title: string | null };
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  const TYPE_GLYPH: Record<string, string> = {
+    figure: "👤", artifact: "🏺", city: "🏛️", landmark: "🏛️",
+    battle: "⚔️", state: "🏳️", event: "📜",
+  };
+  const TYPE_LABEL: Record<string, string> = {
+    figure: "شخصية", artifact: "أثر", city: "مدينة", landmark: "معلم",
+    battle: "معركة", state: "دولة", event: "حدث",
+  };
+  const glyph = TYPE_GLYPH[unlock.type ?? ""] ?? "✨";
+  const label = TYPE_LABEL[unlock.type ?? ""] ?? "عنصر";
+
+  const onOpen = () => {
+    // Route to the legacy detail page when the type maps; otherwise the
+    // generic encyclopedia entity page.
+    if (!unlock.slug) return;
+    if (unlock.type === "figure")        navigate({ to: "/figure/$id",  params: { id: unlock.slug } });
+    else if (unlock.type === "city")     navigate({ to: "/city/$id",    params: { id: unlock.slug } });
+    else if (unlock.type === "battle")   navigate({ to: "/battle/$id",  params: { id: unlock.slug } });
+    else if (unlock.type === "state")    navigate({ to: "/encyclopedia/state/$id", params: { id: unlock.slug } });
+    else                                 navigate({ to: "/encyclopedia/entity/$id", params: { id: `${unlock.type ?? "entity"}.${unlock.slug}` } });
+  };
+
+  return (
+    <button
+      onClick={onOpen}
+      className="group relative flex flex-col items-start gap-2 rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-surface to-transparent p-3 text-right ring-1 ring-gold/20 transition hover:border-gold/60"
+    >
+      <div className="flex w-full items-center justify-between gap-2">
+        <span className="grid size-10 place-items-center rounded-xl bg-black/40 text-xl ring-1 ring-gold/30">
+          {glyph}
+        </span>
+        <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-bold text-gold">
+          من الموسوعة
+        </span>
+      </div>
+      <div className="min-w-0">
+        <p className="font-display truncate text-sm font-bold">{unlock.title}</p>
+        <p className="text-[10px] text-gold/80">{label}</p>
+      </div>
+    </button>
+  );
+}
