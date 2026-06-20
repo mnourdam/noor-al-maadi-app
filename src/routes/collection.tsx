@@ -1,11 +1,47 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+// ============================================================
+// Museum / Collection
+// ------------------------------------------------------------
+// SOURCE-OF-TRUTH RULES (museum cleanup):
+//
+//   1. Every visible card MUST correspond to a real, enabled
+//      row in Supabase `encyclopedia_entities`. No fake or
+//      placeholder hardcoded items, no invented poetic names.
+//
+//   2. Six museum categories (in this exact order):
+//        شخصيات · آثار · معالم · مدن · معارك · أحداث
+//      → entity_types: figure, artifact, landmark, city,
+//        battle, event.
+//      "دول" was removed from the museum on purpose; states
+//      live in the encyclopedia under "دول وحضارات" instead.
+//
+//   3. "Unlocked" for an entity is determined by ANY of:
+//        a) a row in Supabase `user_collection` for this user
+//           with (item_type, item_id) = (type, slug);
+//        b) an imported-campaign registry unlock whose raw id
+//           is `${type}:${slug}` OR `${type}:${legacy_id}`;
+//        c) a legacy profile array hit when the entity's
+//           `metadata.legacy_id` (or slug) matches an id the
+//           player has already discovered locally (only used
+//           for figures/artifacts, never to invent items).
+//
+//   4. Counts and "إرثٌ يكبر معك" prestige percentage are
+//      computed exclusively from the Supabase-backed visible
+//      lists + the unlocked-imported-registry items rendered
+//      in each tab. Legacy hidden items do not count.
+//
+//   5. Empty categories show a friendly empty state, never
+//      placeholder fake cards.
+// ============================================================
+
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles, Award, Trophy, Clock, AlertTriangle } from "lucide-react";
+import {
+  Lock, MapPin, Crown, Swords, Landmark, Users, Sparkles,
+  AlertTriangle, CalendarClock,
+} from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, fogHint, type Era } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 
-import { displayBadgeName } from "@/lib/display-names";
 import {
   getImportedRegistryItemsByType,
   getMissingRegistryUnlockIds,
@@ -17,103 +53,85 @@ import {
 } from "@/lib/importedUnlocks";
 import { pullAllFromCloud } from "@/lib/cloudSync";
 
-import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
+import type { ContentRegistryItem } from "@/types/contentRegistry";
 import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
-import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
 import { listCampaigns } from "@/lib/campaignStorage";
 
+import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
 
 export const Route = createFileRoute("/collection")({
   head: () => ({ meta: [{ title: "المتحف · أرشيفك التاريخي" }] }),
   component: CollectionPage,
 });
 
+// ───── Rarity presentation ─────────────────────────────────────
 type Rarity = "common" | "rare" | "epic" | "legendary";
-type SectionId = "figures" | "artifacts" | "battles" | "manuscripts" | "landmarks" | "dynasties" | "badges" | "achievements";
-
 const RARITY_META: Record<Rarity, { label: string; ring: string; chip: string; glow: string }> = {
-  common:    { label: "عادي",    ring: "ring-white/10",       chip: "bg-white/10 text-white/70",                        glow: "" },
-  rare:      { label: "نادر",    ring: "ring-sky-400/40",     chip: "bg-sky-400/15 text-sky-200",                       glow: "shadow-[0_0_24px_-8px_oklch(0.78_0.14_240/35%)]" },
-  epic:      { label: "ملحمي",   ring: "ring-fuchsia-400/45", chip: "bg-fuchsia-400/15 text-fuchsia-200",               glow: "shadow-[0_0_28px_-8px_oklch(0.7_0.2_320/40%)]" },
-  legendary: { label: "أسطوري",  ring: "ring-gold/60",        chip: "bg-gradient-gold text-primary-foreground",         glow: "shadow-gold" },
+  common:    { label: "عادي",    ring: "ring-white/10",       chip: "bg-white/10 text-white/70",                glow: "" },
+  rare:      { label: "نادر",    ring: "ring-sky-400/40",     chip: "bg-sky-400/15 text-sky-200",               glow: "shadow-[0_0_24px_-8px_oklch(0.78_0.14_240/35%)]" },
+  epic:      { label: "ملحمي",   ring: "ring-fuchsia-400/45", chip: "bg-fuchsia-400/15 text-fuchsia-200",       glow: "shadow-[0_0_28px_-8px_oklch(0.7_0.2_320/40%)]" },
+  legendary: { label: "أسطوري",  ring: "ring-gold/60",        chip: "bg-gradient-gold text-primary-foreground", glow: "shadow-gold" },
 };
 
-// ───── Artifact rarity overrides (legendary/epic/rare/common)
-const ARTIFACT_RARITY: Record<string, Rarity> = {
-  "kaaba-kiswa": "legendary",
-  "hattin-banner": "legendary",
-  "salah-letter": "legendary",
-  "nuruddin-minbar": "legendary",
-  "aqsa-stone": "legendary",
-  "khwarizmi-jabr": "epic",
-  "baghdad-manuscript": "epic",
-  "fatih-cannon": "epic",
-  "ain-jalut-arrow": "epic",
-  "hattin-map": "epic",
-  "mamluk-quran": "rare",
-  "cordoba-key": "rare",
-  "alhambra-tile": "rare",
-  "ottoman-tughra": "rare",
-  "doc-jerusalem-khutba": "rare",
-  "doc-crusades": "rare",
-};
-const aRarity = (id: string): Rarity => ARTIFACT_RARITY[id] ?? "common";
-const cRarity = (c: { rarity: string }): Rarity => (c.rarity as Rarity) ?? "common";
+type RevealItem = CollectibleRevealItem;
 
-// ───── Battles — curated, era + storyId for unlock check
-interface Battle { id: string; name: string; era: Era; year: string; location: string; victor: string; summary: string; storyId?: string; rarity: Rarity; icon: string }
-const BATTLES: Battle[] = [
-  { id: "b-badr",      name: "بدر الكبرى",        era: "seerah",   year: "2 هـ",     location: "بدر · الحجاز",       victor: "المسلمون",      summary: "أوّل معركةٍ فاصلة، نصرٌ سماوي على عددٍ قليل.", rarity: "legendary", icon: "🌟" },
-  { id: "b-yarmouk",   name: "اليرموك",           era: "rashidun", year: "15 هـ",    location: "نهر اليرموك · الشام", victor: "خالد بن الوليد", summary: "ستّة أيامٍ كسرت ظهر الروم وفتحت الشام.",       storyId: "yarmouk",     rarity: "legendary", icon: "⚔️" },
-  { id: "b-qadisiyyah", name: "القادسية",         era: "rashidun", year: "15 هـ",    location: "قرب الكوفة · العراق", victor: "سعد بن أبي وقّاص", summary: "أربعة أيامٍ أنهت إمبراطورية الساسانيين.",     storyId: "qadisiyyah",  rarity: "epic",      icon: "🏹" },
-  { id: "b-manzikert", name: "ملاذكرد",           era: "seljuk",   year: "463 هـ",   location: "ملاذكرد · الأناضول",  victor: "ألب أرسلان",     summary: "أُسر إمبراطور الروم وفُتحت أبواب الأناضول.",  rarity: "epic",      icon: "🛡️" },
-  { id: "b-hattin",    name: "حِطّين",            era: "ayyubid",  year: "583 هـ",   location: "سهل حِطّين · فلسطين", victor: "صلاح الدين",     summary: "نهاية الصليبيين وعودة الأذان للأقصى.",        storyId: "hattin",      rarity: "legendary", icon: "🕌" },
-  { id: "b-ain-jalut", name: "عين جالوت",         era: "mamluk",   year: "658 هـ",   location: "فلسطين",             victor: "قطز وبيبرس",    summary: "أوّل هزيمةٍ كبرى للمغول في التاريخ.",         storyId: "ain-jalut",   rarity: "legendary", icon: "🦁" },
-  { id: "b-constantinople", name: "فتح القسطنطينية", era: "ottoman", year: "857 هـ", location: "القسطنطينية",         victor: "محمد الفاتح",    summary: "بشارة النبي ﷺ تتحقّق بعد ثمانية قرون.",       storyId: "constantinople", rarity: "legendary", icon: "🏰" },
+// ───── Museum sections ─────────────────────────────────────────
+type SectionId = "figures" | "artifacts" | "landmarks" | "cities" | "battles" | "events";
+interface SectionDef {
+  id: SectionId;
+  label: string;
+  icon: any;
+  type: string;            // matches encyclopedia_entities.entity_type
+  glyph: string;           // default emoji for locked/empty cards
+  registryTypes?: string[]; // imported-registry types merged into this tab
+}
+const SECTIONS: SectionDef[] = [
+  { id: "figures",   label: "شخصيات", icon: Users,          type: "figure",   glyph: "👤", registryTypes: ["figure", "scholar"] },
+  { id: "artifacts", label: "آثار",   icon: Crown,          type: "artifact", glyph: "🏺", registryTypes: ["artifact"] },
+  { id: "landmarks", label: "معالم",  icon: Landmark,       type: "landmark", glyph: "🏛️" },
+  { id: "cities",    label: "مدن",    icon: MapPin,         type: "city",     glyph: "🌆", registryTypes: ["city"] },
+  { id: "battles",   label: "معارك",  icon: Swords,         type: "battle",   glyph: "⚔️",  registryTypes: ["battle"] },
+  { id: "events",    label: "أحداث",  icon: CalendarClock,  type: "event",    glyph: "📜" },
 ];
 
-// ───── Landmarks — derived from map regions + curated
-interface Landmark { id: string; name: string; era: Era; place: string; summary: string; regionId?: string; rarity: Rarity; icon: string }
-const LANDMARKS: Landmark[] = [
-  { id: "l-kaaba",     name: "الكعبة المشرّفة", era: "seerah",   place: "مكة المكرّمة",  summary: "قبلة المسلمين وبيت الله العتيق.",       regionId: "hijaz", rarity: "legendary", icon: "🕋" },
-  { id: "l-aqsa",      name: "المسجد الأقصى",   era: "ayyubid",  place: "القدس",         summary: "أولى القبلتين وثالث الحرمين.",          rarity: "legendary", icon: "🕌" },
-  { id: "l-umayyad",   name: "الجامع الأموي",   era: "umayyad",  place: "دمشق",          summary: "تحفة الأمويين ودرّة الشام.",            regionId: "sham", rarity: "epic", icon: "🏛️" },
-  { id: "l-bait-hikma", name: "بيت الحكمة",     era: "abbasid",  place: "بغداد",         summary: "أعظم مركزٍ علميٍّ في زمنه.",            regionId: "iraq", rarity: "epic", icon: "📚" },
-  { id: "l-zahra",     name: "مدينة الزهراء",   era: "andalus",  place: "قرطبة",         summary: "مدينة المرايا التي بناها الناصر.",      regionId: "andalus", rarity: "epic", icon: "🌹" },
-  { id: "l-alhambra",  name: "قصر الحمراء",     era: "andalus",  place: "غرناطة",        summary: "آخر ما تبقّى من جمال الأندلس.",         regionId: "andalus", rarity: "legendary", icon: "🏯" },
-  { id: "l-ayasofya",  name: "آيا صوفيا",       era: "ottoman",  place: "إسطنبول",       summary: "صلّى فيها الفاتح أول جمعة.",            regionId: "anatolia", rarity: "legendary", icon: "🕍" },
-  { id: "l-samarkand", name: "ساحة ريغستان",    era: "abbasid",  place: "سمرقند",        summary: "قلب طريق الحرير ومدارس تيمور.",         regionId: "transoxiana", rarity: "rare", icon: "🏛️" },
-];
-
-// ───── Profile-derived unlock helpers
-function useUnlocks() {
-  const { profile } = useProfile();
+// ───── Supabase user_collection hook ───────────────────────────
+function useUserCollectionByType() {
+  const [rows, setRows] = useState<Array<{ type: string; slug: string }>>([]);
+  const [refreshTick, setRefreshTick] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: sess } = await supabase.auth.getSession();
+        const uid = sess.session?.user?.id;
+        if (!uid) return;
+        const { data, error } = await supabase
+          .from("user_collection")
+          .select("item_id,item_type")
+          .eq("user_id", uid);
+        if (cancelled || error || !data) return;
+        setRows(data.map((r: any) => ({ type: r.item_type, slug: r.item_id })));
+      } catch { /* noop */ }
+    })();
+    const bump = () => setRefreshTick(t => t + 1);
+    window.addEventListener("focus", bump);
+    return () => { cancelled = true; window.removeEventListener("focus", bump); };
+  }, [refreshTick]);
   return useMemo(() => {
-    const eraHasProgress = (era: Era) => {
-      const hasArt = ARTIFACTS.some(a => a.era === era && profile.artifactsFound.includes(a.id));
-      const hasChar = CHARACTERS.some(c => c.era === era && profile.charactersUnlocked.includes(c.id));
-      const hasStory = STORIES.some(s => s.era === era && profile.storiesRead.includes(s.id));
-      return hasArt || hasChar || hasStory || profile.unlockedEras.includes(era);
-    };
-    const eraProgress = (era: Era) => {
-      const arts = ARTIFACTS.filter(a => a.era === era);
-      const chars = CHARACTERS.filter(c => c.era === era);
-      const sts = STORIES.filter(s => s.era === era);
-      const total = arts.length + chars.length + sts.length;
-      const done =
-        arts.filter(a => profile.artifactsFound.includes(a.id)).length +
-        chars.filter(c => profile.charactersUnlocked.includes(c.id)).length +
-        sts.filter(s => profile.storiesRead.includes(s.id)).length;
-      return { done, total };
-    };
-    return { profile, eraHasProgress, eraProgress };
-  }, [profile]);
+    const m = new Map<string, Set<string>>();
+    for (const r of rows) {
+      const s = m.get(r.type) ?? new Set<string>();
+      s.add(r.slug); m.set(r.type, s);
+    }
+    return m;
+  }, [rows]);
 }
 
-// ───── Reusable card
-function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, mystery }: {
-  unlocked: boolean; rarity: Rarity; icon: React.ReactNode; title: string; subtitle: string; footer?: string;
-  onClick: () => void; mystery?: { title: string; clue: string };
+// ───── Reusable card ───────────────────────────────────────────
+function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick }: {
+  unlocked: boolean; rarity: Rarity; icon: React.ReactNode; title: string;
+  subtitle: string; footer?: string; onClick: () => void;
 }) {
   const meta = RARITY_META[rarity];
   return (
@@ -122,7 +140,6 @@ function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, myster
       className={`group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-surface text-right transition-all duration-300 hover:-translate-y-0.5
         ${unlocked ? `ring-1 ${meta.ring} ${meta.glow}` : "opacity-70"}`}
     >
-      {/* rarity wash */}
       {unlocked && (
         <div className={`pointer-events-none absolute inset-0 opacity-60
           ${rarity === "legendary" ? "bg-gradient-to-br from-gold/15 via-gold/0 to-transparent" :
@@ -130,16 +147,8 @@ function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, myster
             rarity === "rare"      ? "bg-gradient-to-br from-sky-400/15 via-sky-400/0 to-transparent" :
                                      "bg-gradient-to-br from-white/5 to-transparent"}`} />
       )}
-      {/* fog wash for locked */}
       {!unlocked && (
-        <>
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,oklch(0.85_0.02_80/0.08),transparent_60%),radial-gradient(circle_at_70%_80%,oklch(0.82_0.05_240/0.07),transparent_60%)]" />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/40" />
-        </>
-      )}
-      {/* sheen */}
-      {unlocked && rarity !== "common" && (
-        <div className="pointer-events-none absolute -inset-x-10 -top-12 h-24 rotate-12 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/40" />
       )}
       <div className="relative p-3">
         <div className="flex items-start justify-between gap-2">
@@ -152,37 +161,25 @@ function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, myster
               </>
             )}
           </div>
-          {unlocked ? (
-            <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide ${meta.chip}`}>
-              {meta.label}
-            </span>
-          ) : (
-            <span className="rounded-full bg-black/40 px-2 py-0.5 text-[9px] font-bold tracking-wide text-gold/70 ring-1 ring-gold/20">
-              في الضباب
-            </span>
-          )}
+          <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide
+            ${unlocked ? meta.chip : "bg-black/40 text-gold/70 ring-1 ring-gold/20"}`}>
+            {unlocked ? meta.label : "غير مكتشف"}
+          </span>
         </div>
-        <p className={`font-display mt-2 line-clamp-1 text-sm font-bold ${unlocked ? "" : "italic text-gold/85"}`}>
-          {unlocked ? title : (mystery?.title ?? "أثرٌ في الضباب")}
+        <p className={`font-display mt-2 line-clamp-1 text-sm font-bold ${unlocked ? "" : "text-foreground/70"}`}>
+          {title}
         </p>
-        <p className="mt-0.5 line-clamp-1 text-[10px] text-gold/80">
-          {unlocked ? subtitle : "مجهولٌ بعد"}
-        </p>
-        <p className="mt-1 line-clamp-2 min-h-[28px] text-[10px] leading-snug text-muted-foreground">
-          {unlocked ? (footer ?? "") : (mystery?.clue ?? "اكمل رحلتك لتكشف هذا اللغز")}
-        </p>
+        <p className="mt-0.5 line-clamp-1 text-[10px] text-gold/80">{subtitle}</p>
+        {footer && (
+          <p className="mt-1 line-clamp-2 min-h-[28px] text-[10px] leading-snug text-muted-foreground">{footer}</p>
+        )}
       </div>
     </button>
   );
 }
 
-// ───── Reveal dialog (shared with imported campaign rewards)
-import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
-type RevealItem = CollectibleRevealItem;
-const RevealDialog = CollectibleRevealDialog;
-
-// ───── Section header with completion bar
-function SectionBar({ icon: Icon, title, done, total, accent }: { icon: any; title: string; done: number; total: number; accent: string }) {
+// ───── Section bar ─────────────────────────────────────────────
+function SectionBar({ icon: Icon, title, done, total }: { icon: any; title: string; done: number; total: number }) {
   const pct = total ? Math.round((done / total) * 100) : 0;
   return (
     <div className="mb-3">
@@ -194,46 +191,31 @@ function SectionBar({ icon: Icon, title, done, total, accent }: { icon: any; tit
         <span className="text-[10px] text-muted-foreground">{done}/{total} · {pct}%</span>
       </div>
       <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/5">
-        <div className={`h-full rounded-full ${accent}`} style={{ width: `${pct}%` }} />
+        <div className="bg-gradient-gold h-full rounded-full" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
 }
 
-const SECTIONS: { id: SectionId; label: string; icon: any }[] = [
-  { id: "figures",      label: "شخصيات",  icon: Users },
-  { id: "artifacts",    label: "آثار",    icon: Crown },
-  { id: "battles",      label: "معارك",   icon: Swords },
-  { id: "manuscripts",  label: "مخطوطات", icon: BookOpen },
-  { id: "landmarks",    label: "معالم",   icon: Landmark },
-  { id: "dynasties",    label: "دول",     icon: Scroll },
-  { id: "badges",       label: "شارات",   icon: Award },
-  { id: "achievements", label: "إنجازات", icon: Trophy },
-];
+// ───── Entity → display helpers ────────────────────────────────
+function rarityFromMetadata(meta: any, fallback: Rarity): Rarity {
+  const r = meta?.rarity;
+  return (r === "common" || r === "rare" || r === "epic" || r === "legendary") ? r : fallback;
+}
+function defaultRarity(type: string): Rarity {
+  return ["figure", "landmark", "battle"].includes(type) ? "epic" : "rare";
+}
 
+// ───── Main page ───────────────────────────────────────────────
 function CollectionPage() {
-  const { profile, eraHasProgress, eraProgress } = useUnlocks();
+  const { profile } = useProfile();
   const [section, setSection] = useState<SectionId>("figures");
   const [reveal, setReveal] = useState<RevealItem | null>(null);
   const navigate = useNavigate();
 
-  // Supabase-primary prefetch: warm the cache so artifact/landmark/figure
-  // detail pages render Supabase-overridden text instantly on navigation.
-  // Falls back silently if Supabase is offline.
-  const supaArtifacts = useEncyclopediaSupabaseList("artifact");
-  const supaLandmarks = useEncyclopediaSupabaseList("landmark");
-  useEncyclopediaSupabaseList("figure");
-
-  /** Override artifact display name/description from Supabase when available. */
-  const supaArtifact = (legacyId: string) => supaArtifacts.bySlug.get(legacyId.toLowerCase());
-  const supaLandmark = (legacyId: string) => supaLandmarks.bySlug.get(legacyId.replace(/^l-/, "").toLowerCase());
-  void supaArtifact; void supaLandmark; // available for future per-card overrides
-
-
-  // Re-read localStorage when we come back to this tab or after a cloud pull.
+  // Re-pull cloud data once on mount so newly unlocked items show up.
   const [refreshTick, setRefreshTick] = useState(0);
   useEffect(() => {
-    // Pull latest registry + campaigns from cloud so newly unlocked admin items show up.
     pullAllFromCloud().then(() => setRefreshTick(t => t + 1)).catch(() => {});
     const bump = () => setRefreshTick(t => t + 1);
     window.addEventListener("focus", bump);
@@ -244,36 +226,42 @@ function CollectionPage() {
     };
   }, []);
 
-  // counts per section
-  const artifactsOnly = ARTIFACTS.filter(a => a.type !== "manuscript");
-  const manuscripts   = ARTIFACTS.filter(a => a.type === "manuscript");
+  // ── Supabase entity lists (one per museum section) ──────────
+  const supFigures   = useEncyclopediaSupabaseList("figure");
+  const supArtifacts = useEncyclopediaSupabaseList("artifact");
+  const supLandmarks = useEncyclopediaSupabaseList("landmark");
+  const supCities    = useEncyclopediaSupabaseList("city");
+  const supBattles   = useEncyclopediaSupabaseList("battle");
+  const supEvents    = useEncyclopediaSupabaseList("event");
+  const supByType: Record<string, typeof supFigures> = {
+    figure: supFigures, artifact: supArtifacts, landmark: supLandmarks,
+    city: supCities, battle: supBattles, event: supEvents,
+  };
 
-  // Imported registry items merged into each museum section.
-  // figures section absorbs registry "figure" + "scholar".
-  const importedFigures      = useMemo(() => [
-    ...getImportedRegistryItemsByType("figure"),
-    ...getImportedRegistryItemsByType("scholar"),
-  ], [refreshTick]);
-  const importedArtifacts    = useMemo(() => getImportedRegistryItemsByType("artifact"), [refreshTick]);
-  const importedBattles      = useMemo(() => getImportedRegistryItemsByType("battle"), [refreshTick]);
-  const importedLandmarks    = useMemo(() => getImportedRegistryItemsByType("city"), [refreshTick]);
-  const importedDynasties    = useMemo(() => getImportedRegistryItemsByType("dynasty"), [refreshTick]);
-  const importedBadges       = useMemo(() => getImportedRegistryItemsByType("badge"), [refreshTick]);
-  const importedAchievements = useMemo(() => getImportedRegistryItemsByType("achievement"), [refreshTick]);
-  const rawMissingUnlockIds  = useMemo(() => getMissingRegistryUnlockIds(), [refreshTick]);
+  // ── Imported registry items (also real content) ─────────────
+  const importedByType = useMemo(() => {
+    const m: Record<string, Array<ContentRegistryItem & { unlocked: boolean }>> = {};
+    for (const s of SECTIONS) {
+      const all: Array<ContentRegistryItem & { unlocked: boolean }> = [];
+      for (const t of s.registryTypes ?? []) {
+        all.push(...getImportedRegistryItemsByType(t as any));
+      }
+      m[s.id] = all;
+    }
+    return m;
+  }, [refreshTick]);
 
-  // Resolve any "missing" unlocks against the Supabase encyclopedia so campaign
-  // rewards like "figure:prophet-muhammad" show up with proper Arabic names
-  // instead of triggering the "بلا تعريف" warning.
-  const allUnlockIds = useMemo(() => getUnlockedRegistryIds(), [refreshTick]);
-  const { resolved: encyclopediaUnlocks } = useResolvedUnlocks(allUnlockIds);
+  // ── User collection (Supabase) ──────────────────────────────
+  const userCollection = useUserCollectionByType();
 
-  // raw unlock id → source campaignId, then campaignId → Arabic title.
+  // ── Imported registry unlocks (raw "type:slug" strings) ─────
+  const importedUnlockSet = useMemo(() => new Set(getUnlockedRegistryIds()), [refreshTick]);
   const unlockSources = useMemo(() => getUnlockSourcesMap(), [refreshTick]);
+
+  // ── Campaign-title lookup for source label ──────────────────
   const campaignTitleById = useMemo(() => {
     const m = new Map<string, string>();
     for (const c of listCampaigns()) m.set(c.id, c.title);
-    // Hardcoded fallback for the first imported campaign per spec.
     if (!m.has("prophetic-mission")) m.set("prophetic-mission", "البعثة النبوية");
     return m;
   }, [refreshTick]);
@@ -281,86 +269,77 @@ function CollectionPage() {
     const cid = unlockSources.get(rawId);
     if (!cid) return "من الموسوعة";
     const title = campaignTitleById.get(cid);
-    if (!title) return "من الموسوعة";
-    return `من حملة ${title}`;
+    return title ? `من حملة ${title}` : "من الموسوعة";
   };
 
-  const encyclopediaByType = useMemo(() => {
-    const m = new Map<string, typeof encyclopediaUnlocks>();
-    for (const r of encyclopediaUnlocks) {
-      if (!r.found || !r.type) continue;
-      const arr = m.get(r.type) ?? [];
-      arr.push(r);
-      m.set(r.type, arr);
+  // ── Per-entity unlock check ─────────────────────────────────
+  function isEntityUnlocked(type: string, slug: string, metadata: any): boolean {
+    if (userCollection.get(type)?.has(slug)) return true;
+    if (importedUnlockSet.has(`${type}:${slug}`)) return true;
+    const legacyId = (metadata?.legacy_id as string | undefined) ?? null;
+    if (legacyId && importedUnlockSet.has(`${type}:${legacyId}`)) return true;
+    // Local legacy fallbacks — only for figures/artifacts to avoid inventing items.
+    if (type === "figure" && (profile.charactersUnlocked.includes(slug) || (legacyId && profile.charactersUnlocked.includes(legacyId)))) return true;
+    if (type === "artifact" && (profile.artifactsFound.includes(slug) || (legacyId && profile.artifactsFound.includes(legacyId)))) return true;
+    return false;
+  }
+
+  // ── Build per-section counts ────────────────────────────────
+  const sectionStats = useMemo(() => {
+    const out: Record<SectionId, { done: number; total: number }> = {} as any;
+    for (const s of SECTIONS) {
+      const entities = supByType[s.type].data ?? [];
+      const entityDone = entities.filter(e => isEntityUnlocked(s.type, e.slug, e.metadata)).length;
+      const imported   = importedByType[s.id] ?? [];
+      const importedDone = imported.filter(i => i.unlocked).length;
+      out[s.id] = {
+        done:  entityDone + importedDone,
+        total: entities.length + imported.length,
+      };
     }
-    return m;
-  }, [encyclopediaUnlocks]);
-  const encyclopediaResolvedRaws = useMemo(
-    () => new Set(encyclopediaUnlocks.filter(r => r.found).map(r => r.raw)),
-    [encyclopediaUnlocks],
-  );
-  const missingUnlockIds = useMemo(
-    () => rawMissingUnlockIds.filter(id => !encyclopediaResolvedRaws.has(id)),
-    [rawMissingUnlockIds, encyclopediaResolvedRaws],
-  );
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, importedByType, userCollection, importedUnlockSet, profile]);
 
-  useEffect(() => {
-    if (missingUnlockIds.length > 0) {
-      console.warn("[museum] unlock IDs without registry items:", missingUnlockIds);
-    }
-  }, [missingUnlockIds]);
-
-  const importedUnlockedCount = (arr: Array<{ unlocked: boolean }>) => arr.filter(i => i.unlocked).length;
-  const encCount = (t: string) => (encyclopediaByType.get(t) ?? []).length;
-  const encFigures   = encyclopediaByType.get("figure")   ?? [];
-  const encArtifacts = encyclopediaByType.get("artifact") ?? [];
-  const encBattles   = encyclopediaByType.get("battle")   ?? [];
-  const encLandmarks = [
-    ...(encyclopediaByType.get("landmark") ?? []),
-    ...(encyclopediaByType.get("city") ?? []),
-  ];
-  const encDynasties = [
-    ...(encyclopediaByType.get("state") ?? []),
-    ...(encyclopediaByType.get("event") ?? []),
-  ];
-
-  const counts: Record<SectionId, { done: number; total: number }> = {
-    figures:      {
-      done:  profile.charactersUnlocked.length + importedUnlockedCount(importedFigures) + encFigures.length,
-      total: CHARACTERS.length + importedFigures.length + encFigures.length,
-    },
-    artifacts:    {
-      done:  artifactsOnly.filter(a => profile.artifactsFound.includes(a.id)).length + importedUnlockedCount(importedArtifacts) + encArtifacts.length,
-      total: artifactsOnly.length + importedArtifacts.length + encArtifacts.length,
-    },
-    battles:      {
-      done:  BATTLES.filter(b => !b.storyId || profile.storiesRead.includes(b.storyId)).length + importedUnlockedCount(importedBattles) + encBattles.length,
-      total: BATTLES.length + importedBattles.length + encBattles.length,
-    },
-    manuscripts:  { done: manuscripts.filter(a => profile.artifactsFound.includes(a.id)).length, total: manuscripts.length },
-    landmarks:    {
-      done:  LANDMARKS.filter(l => !l.regionId || profile.regionsUnlocked.includes(l.regionId)).length + importedUnlockedCount(importedLandmarks) + encLandmarks.length,
-      total: LANDMARKS.length + importedLandmarks.length + encLandmarks.length,
-    },
-    dynasties:    {
-      done:  ERAS.filter(e => eraHasProgress(e.id)).length + importedUnlockedCount(importedDynasties) + encDynasties.length,
-      total: ERAS.length + importedDynasties.length + encDynasties.length,
-    },
-    badges:       { done: importedUnlockedCount(importedBadges),       total: importedBadges.length },
-    achievements: { done: importedUnlockedCount(importedAchievements), total: importedAchievements.length },
-  };
-  void encCount;
-
-  // Hide badges/achievements pills entirely when there are no imported items there.
-  const visibleSections = SECTIONS.filter(s => {
-    if (s.id === "badges")       return importedBadges.length > 0;
-    if (s.id === "achievements") return importedAchievements.length > 0;
-    return true;
-  });
-
-  const totalDone = Object.values(counts).reduce((s, c) => s + c.done, 0);
-  const totalAll  = Object.values(counts).reduce((s, c) => s + c.total, 0);
+  const totalDone = Object.values(sectionStats).reduce((s, c) => s + c.done, 0);
+  const totalAll  = Object.values(sectionStats).reduce((s, c) => s + c.total, 0);
   const prestige  = totalAll ? Math.round((totalDone / totalAll) * 100) : 0;
+
+  // ── Missing-registry warning (only for actually unresolved IDs) ──
+  const rawMissingUnlockIds = useMemo(() => getMissingRegistryUnlockIds(), [refreshTick]);
+  const missingUnlockIds = useMemo(() => {
+    // Hide ids that DO map to a Supabase entity (resolved via type:slug or legacy_id).
+    return rawMissingUnlockIds.filter(raw => {
+      const [t, ...rest] = raw.split(":");
+      const slug = rest.join(":");
+      if (!t || !slug) return true;
+      const list = supByType[t]?.data ?? [];
+      return !list.some(e => e.slug === slug || (e.metadata as any)?.legacy_id === slug);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawMissingUnlockIds, supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data]);
+
+  // ── Render section ──────────────────────────────────────────
+  const current = SECTIONS.find(s => s.id === section)!;
+  const currentEntities = supByType[current.type].data ?? [];
+  const currentImported = importedByType[current.id] ?? [];
+  const currentLoading  = supByType[current.type].isLoading;
+  const stats = sectionStats[current.id];
+
+  const openEntityReveal = (e: any, isOpen: boolean) => {
+    const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
+    const raw = `${current.type}:${e.slug}`;
+    setReveal({
+      rarity,
+      icon: current.glyph,
+      title: e.title ?? e.slug,
+      subtitle: e.subtitle ?? current.label,
+      lines: e.summary ? [e.summary] : ["عنصر من الموسوعة. افتحه لقراءة تفاصيله الكاملة."],
+      sourceLabel: isOpen ? sourceLabelFor(raw) : undefined,
+      alreadyOwned: isOpen,
+      onOpenEncyclopedia: () => navigate({ to: "/encyclopedia/entity/$id", params: { id: e.slug } }),
+    });
+  };
 
   return (
     <AppShell>
@@ -393,10 +372,10 @@ function CollectionPage() {
           <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
             <div className="flex-1">
-              <p className="font-bold">{missingUnlockIds.length} عنصر مفتوح بلا تعريف في السجل</p>
+              <p className="font-bold">{missingUnlockIds.length} عنصر مفتوح بلا تعريف في الموسوعة</p>
               <p className="text-[10px] text-amber-200/80">
                 المعرفات: {missingUnlockIds.slice(0, 3).join("، ")}{missingUnlockIds.length > 3 ? "…" : ""}.
-                {" "}أضِفها في لوحة الإدارة أو اسحب أحدث السجل من السحابة.
+                {" "}أضِفها في الموسوعة من لوحة الإدارة.
               </p>
             </div>
           </div>
@@ -404,10 +383,10 @@ function CollectionPage() {
 
         {/* Section pills */}
         <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {visibleSections.map(s => {
+          {SECTIONS.map(s => {
             const active = section === s.id;
             const Icon = s.icon;
-            const c = counts[s.id];
+            const c = sectionStats[s.id];
             return (
               <button key={s.id} onClick={() => setSection(s.id)}
                 className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all
@@ -420,251 +399,63 @@ function CollectionPage() {
           })}
         </div>
 
-        {/* Figures */}
-        {section === "figures" && (
-          <>
-            <SectionBar icon={Users} title="شخصيات تاريخية" done={counts.figures.done} total={counts.figures.total} accent="bg-gradient-gold" />
-            <div className="grid grid-cols-2 gap-3">
-              {CHARACTERS.map(c => {
-                const open = profile.charactersUnlocked.includes(c.id);
-                const r = cRarity(c);
-                return (
-                  <Card key={c.id} unlocked={open} rarity={r} icon={c.avatar}
-                    title={c.name} subtitle={c.title} footer={c.power}
-                    mystery={fogHint(c.id)}
-                    onClick={() => {
-                      if (open) navigate({ to: "/figure/$id", params: { id: c.id } });
-                    }} />
-                );
-              })}
-              {importedFigures.map(item => (
-                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
-              ))}
-              {encFigures.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} setReveal={setReveal} />
-              ))}
-            </div>
-          </>
-        )}
+        {/* Selected section */}
+        <SectionBar icon={current.icon} title={current.label} done={stats.done} total={stats.total} />
 
-        {/* Artifacts */}
-        {section === "artifacts" && (
-          <>
-            <SectionBar icon={Crown} title="آثار وكنوز" done={counts.artifacts.done} total={counts.artifacts.total} accent="bg-gradient-gold" />
-            <div className="grid grid-cols-2 gap-3">
-              {artifactsOnly.map(a => {
-                const open = profile.artifactsFound.includes(a.id);
-                const r = aRarity(a.id);
-                return (
-                  <Card key={a.id} unlocked={open} rarity={r} icon={a.icon}
-                    title={a.name} subtitle={`${a.typeLabel} · ${ERAS.find(e => e.id === a.era)?.name}`}
-                    mystery={fogHint(a.id)}
-                    onClick={() => open && setReveal({
-                      rarity: r, icon: a.icon, title: a.name,
-                      subtitle: `${a.typeLabel} · ${ERAS.find(e => e.id === a.era)?.name}`,
-                      lines: [a.description],
-                    })} />
-                );
-              })}
-              {importedArtifacts.map(item => (
-                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
-              ))}
-              {encArtifacts.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} setReveal={setReveal} />
-              ))}
-            </div>
-          </>
+        {currentLoading && currentEntities.length === 0 && currentImported.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/15 p-6 text-center text-xs text-muted-foreground">
+            جارٍ تحميل الموسوعة…
+          </div>
+        ) : currentEntities.length === 0 && currentImported.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/15 p-6 text-center text-xs text-muted-foreground">
+            لا توجد عناصر في هذه الفئة بعد
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {currentEntities.map((e: any) => {
+              const open = isEntityUnlocked(current.type, e.slug, e.metadata);
+              const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
+              return (
+                <Card
+                  key={`enc-${e.id ?? e.slug}`}
+                  unlocked={open}
+                  rarity={rarity}
+                  icon={current.glyph}
+                  title={e.title ?? e.slug}
+                  subtitle={e.subtitle ?? current.label}
+                  footer={e.summary?.slice(0, 80)}
+                  onClick={() => openEntityReveal(e, open)}
+                />
+              );
+            })}
+            {currentImported.map(item => (
+              <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+            ))}
+          </div>
         )}
-
-        {/* Battles */}
-        {section === "battles" && (
-          <>
-            <SectionBar icon={Swords} title="معارك فاصلة" done={counts.battles.done} total={counts.battles.total} accent="bg-gradient-to-r from-rose-500 to-gold" />
-            <div className="grid grid-cols-2 gap-3">
-              {BATTLES.map(b => {
-                const open = !b.storyId || profile.storiesRead.includes(b.storyId);
-                return (
-                  <Card key={b.id} unlocked={open} rarity={b.rarity} icon={b.icon}
-                    title={b.name} subtitle={`${b.year} · ${b.location}`} footer={`النصر: ${b.victor}`}
-                    mystery={fogHint(b.id)}
-                    onClick={() => { if (open) navigate({ to: "/battle/$id", params: { id: b.id } }); }} />
-                );
-              })}
-              {importedBattles.map(item => (
-                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
-              ))}
-              {encBattles.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} setReveal={setReveal} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Manuscripts */}
-        {section === "manuscripts" && (
-          <>
-            <SectionBar icon={BookOpen} title="كتب ومخطوطات" done={counts.manuscripts.done} total={counts.manuscripts.total} accent="bg-gradient-to-r from-amber-500 to-gold" />
-            <div className="space-y-2.5">
-              {manuscripts.map(m => {
-                const open = profile.artifactsFound.includes(m.id);
-                const r = aRarity(m.id);
-                const meta = RARITY_META[r];
-                const fog = fogHint(m.id);
-                return (
-                  <button key={m.id} onClick={() => open && setReveal({
-                    rarity: r, icon: m.icon, title: m.name,
-                    subtitle: `${m.typeLabel} · ${ERAS.find(e => e.id === m.era)?.name}`,
-                    lines: [m.description],
-                  })}
-                    className={`flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 text-right transition-all ${open ? `ring-1 ${meta.ring}` : "opacity-70"}`}>
-                    <div className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
-                      {open ? m.icon : (
-                        <>
-                          <span className="select-none text-2xl opacity-20 blur-[3px] grayscale">{m.icon}</span>
-                          <Lock className="absolute size-3.5 text-gold/70" />
-                        </>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={`font-display truncate text-sm font-bold ${open ? "" : "italic text-gold/85"}`}>{open ? m.name : fog.title}</p>
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${open ? meta.chip : "bg-black/40 text-gold/70 ring-1 ring-gold/20"}`}>{open ? meta.label : "في الضباب"}</span>
-                      </div>
-                      <p className="text-[10px] text-gold/80">{open ? `${m.typeLabel} · ${ERAS.find(e => e.id === m.era)?.name}` : "مخطوطٌ مجهول"}</p>
-                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{open ? m.description : fog.clue}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Landmarks */}
-        {section === "landmarks" && (
-          <>
-            <SectionBar icon={Landmark} title="معالم خالدة" done={counts.landmarks.done} total={counts.landmarks.total} accent="bg-gradient-to-r from-teal-500 to-gold" />
-            <div className="grid grid-cols-2 gap-3">
-              {LANDMARKS.map(l => {
-                const open = !l.regionId || profile.regionsUnlocked.includes(l.regionId);
-                return (
-                  <Card key={l.id} unlocked={open} rarity={l.rarity} icon={l.icon}
-                    title={l.name} subtitle={l.place} footer={ERAS.find(e => e.id === l.era)?.name}
-                    mystery={fogHint(l.id)}
-                    onClick={() => open && setReveal({
-                      rarity: l.rarity, icon: l.icon, title: l.name,
-                      subtitle: `${l.place} · ${ERAS.find(e => e.id === l.era)?.name}`,
-                      lines: [l.summary],
-                    })} />
-                );
-              })}
-              {importedLandmarks.map(item => (
-                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
-              ))}
-              {encLandmarks.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} setReveal={setReveal} />
-              ))}
-            </div>
-            <Link to="/map" className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-gold/30 bg-gold/5 py-2 text-xs text-gold">
-              <MapPin className="size-3.5" /> اكتشف المعالم على الخارطة
-            </Link>
-          </>
-        )}
-
-        {/* Dynasties */}
-        {section === "dynasties" && (
-          <>
-            <SectionBar icon={Scroll} title="دول وحضارات" done={counts.dynasties.done} total={counts.dynasties.total} accent="bg-gradient-gold" />
-            <div className="space-y-2.5">
-              {ERAS.map(e => {
-                const open = eraHasProgress(e.id);
-                const { done, total } = eraProgress(e.id);
-                const pct = total ? Math.round((done / total) * 100) : 0;
-                const r: Rarity = pct >= 80 ? "legendary" : pct >= 40 ? "epic" : pct > 0 ? "rare" : "common";
-                const meta = RARITY_META[r];
-                return (
-                  <button key={e.id} onClick={() => open && setReveal({
-                    rarity: r, icon: "📜", title: e.name,
-                    subtitle: `${e.years} · ${e.tagline}`,
-                    lines: [`اكتشفت ${done} من ${total} عنصرًا من هذه الحقبة (${pct}%).`, "تابع رحلتك لتكشف باقي إرثها."],
-                  })}
-                    className={`relative w-full overflow-hidden rounded-2xl border border-white/10 bg-surface p-3 text-right transition-all ${open ? `ring-1 ${meta.ring}` : "opacity-70"}`}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-display text-sm font-bold">{e.name}</p>
-                        <p className="text-[10px] text-gold/80">{e.years}</p>
-                      </div>
-                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${meta.chip}`}>{meta.label}</span>
-                    </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{e.tagline}</p>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/30">
-                      <div className="bg-gradient-gold h-full rounded-full" style={{ width: `${pct}%` }} />
-                    </div>
-                    <p className="mt-1 text-[10px] text-muted-foreground">{done}/{total} مكتشف · {pct}%</p>
-                  </button>
-                );
-              })}
-            </div>
-            {(importedDynasties.length > 0 || encDynasties.length > 0) && (
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                {importedDynasties.map(item => (
-                  <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
-                ))}
-                {encDynasties.map(r => (
-                  <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} setReveal={setReveal} />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Badges (imported only) */}
-        {section === "badges" && (
-          <>
-            <SectionBar icon={Award} title="شارات" done={counts.badges.done} total={counts.badges.total} accent="bg-gradient-to-r from-amber-500 to-gold" />
-            <div className="grid grid-cols-2 gap-3">
-              {importedBadges.map(item => (
-                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Achievements (imported only) */}
-        {section === "achievements" && (
-          <>
-            <SectionBar icon={Trophy} title="إنجازات" done={counts.achievements.done} total={counts.achievements.total} accent="bg-gradient-to-r from-emerald-500 to-gold" />
-            <div className="grid grid-cols-2 gap-3">
-              {importedAchievements.map(item => (
-                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
-              ))}
-            </div>
-          </>
-        )}
-
 
         {totalDone === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-white/15 p-6 text-center text-xs text-muted-foreground">
-            متحفك في انتظارك. ابدأ بحملة <Link to="/campaigns" className="text-gold underline-offset-4 hover:underline">صلاح الدين</Link> لتكشف أوّل قطعة.
+            متحفك في انتظارك. ابدأ بحملةٍ لتكشف أوّل قطعة.
           </div>
         )}
       </Screen>
-      <RevealDialog item={reveal} onClose={() => setReveal(null)} />
+      <CollectibleRevealDialog item={reveal} onClose={() => setReveal(null)} />
     </AppShell>
   );
 }
 
-// ───── Recent unlocks ribbon — pulls latest 3 from Supabase user_collection
-// with a legacy fallback drawn from in-app profile arrays for guests / offline.
+// ============================================================
+// Recent unlocks ribbon — "آخر المقتنيات"
+// Only museum-style collectible types are included. Events,
+// badges, achievements, and notifications are filtered out.
+// State entries appear ONLY when explicitly marked
+// `metadata.collectible === true` in the encyclopedia.
+// ============================================================
 function RecentUnlocks() {
-  const { profile } = useProfile();
   type Recent = { key: string; icon: string; kind: string; title: string; subtitle: string };
-
-  // Only museum-style collectibles. Events/badges/achievements/notifications
-  // are intentionally excluded — they belong in a future "آخر الأحداث المكتشفة".
-  const ALLOWED_TYPES = new Set([
-    "figure", "scholar", "artifact", "landmark", "city", "battle", "state",
-  ]);
+  const ALLOWED_TYPES = new Set(["figure", "scholar", "artifact", "landmark", "city", "battle"]);
+  // state handled separately below via metadata.collectible.
 
   const supaArtifacts = useEncyclopediaSupabaseList("artifact");
   const supaLandmarks = useEncyclopediaSupabaseList("landmark");
@@ -673,8 +464,6 @@ function RecentUnlocks() {
   const supaBattles   = useEncyclopediaSupabaseList("battle");
   const supaStates    = useEncyclopediaSupabaseList("state");
 
-  // Pull recent unlocks from Supabase (if signed in). Fetch extra so we can
-  // filter out non-museum types and slug-only rows and still end up with 3.
   const [supaRecents, setSupaRecents] = useState<Recent[] | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -689,7 +478,7 @@ function RecentUnlocks() {
           .select("item_id,item_type,unlocked_at,source_campaign_id")
           .eq("user_id", uid)
           .order("unlocked_at", { ascending: false })
-          .limit(20);
+          .limit(30);
         if (error || !data || cancelled) { if (!cancelled) setSupaRecents([]); return; }
 
         const campaigns = listCampaigns();
@@ -703,46 +492,45 @@ function RecentUnlocks() {
 
         const kindLabel: Record<string, string> = {
           figure: "شخصية", scholar: "شخصية", artifact: "أثر",
-          battle: "معركة", city: "معلم", landmark: "معلم",
-          state: "دولة",
+          battle: "معركة", city: "مدينة", landmark: "معلم", state: "دولة",
         };
         const iconFor = (t: string): string => ({
           figure: "👤", scholar: "👤", artifact: "💎",
-          battle: "⚔️", city: "🏛️", landmark: "🏛️",
-          state: "📜",
+          battle: "⚔️", city: "🌆", landmark: "🏛️", state: "📜",
         } as Record<string, string>)[t] ?? "✨";
 
-        const slugLookup = (t: string, slug: string): { title?: string; rarity?: string } => {
+        const lookupEntity = (t: string, slug: string): any => {
           const probe = (m: { bySlug: Map<string, any> }) => m.bySlug.get(slug.toLowerCase());
-          let e: any = null;
-          if (t === "figure" || t === "scholar") e = probe(supaFigures);
-          else if (t === "artifact") e = probe(supaArtifacts);
-          else if (t === "landmark") e = probe(supaLandmarks);
-          else if (t === "city") e = probe(supaCities) ?? probe(supaLandmarks);
-          else if (t === "battle") e = probe(supaBattles);
-          else if (t === "state") e = probe(supaStates);
-          if (!e) return {};
-          return { title: e.title ?? undefined, rarity: e.metadata?.rarity };
+          if (t === "figure" || t === "scholar") return probe(supaFigures);
+          if (t === "artifact") return probe(supaArtifacts);
+          if (t === "landmark") return probe(supaLandmarks);
+          if (t === "city")     return probe(supaCities) ?? probe(supaLandmarks);
+          if (t === "battle")   return probe(supaBattles);
+          if (t === "state")    return probe(supaStates);
+          return null;
         };
 
         const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);
 
         const list: Recent[] = [];
         for (const row of data as any[]) {
-          if (!ALLOWED_TYPES.has(row.item_type)) continue;
-          const lookup = slugLookup(row.item_type, row.item_id);
-          const title = lookup.title ?? (hasArabic(row.item_id) ? row.item_id : null);
+          const t = row.item_type;
+          if (!ALLOWED_TYPES.has(t) && t !== "state") continue;
+          const ent = lookupEntity(t, row.item_id);
+          // State requires explicit metadata.collectible === true.
+          if (t === "state" && !(ent?.metadata?.collectible === true)) continue;
+          const title = ent?.title ?? (hasArabic(row.item_id) ? row.item_id : null);
           if (!title) continue; // Hide unresolved English slugs.
           const subtitleParts: string[] = [];
-          if (lookup.rarity) subtitleParts.push(lookup.rarity);
+          if (ent?.metadata?.rarity) subtitleParts.push(ent.metadata.rarity);
           const src = campaignTitle(row.source_campaign_id);
           if (src) subtitleParts.push(src);
           list.push({
-            key: `sup-${row.item_id}`,
-            icon: iconFor(row.item_type),
-            kind: kindLabel[row.item_type] ?? row.item_type,
+            key: `sup-${t}-${row.item_id}`,
+            icon: iconFor(t),
+            kind: kindLabel[t] ?? t,
             title,
-            subtitle: subtitleParts.join(" · ") || (kindLabel[row.item_type] ?? "—"),
+            subtitle: subtitleParts.join(" · ") || (kindLabel[t] ?? "—"),
           });
           if (list.length >= 3) break;
         }
@@ -754,20 +542,7 @@ function RecentUnlocks() {
     return () => { cancelled = true; };
   }, [supaArtifacts, supaLandmarks, supaFigures, supaCities, supaBattles, supaStates]);
 
-  // Legacy fallback from in-app profile arrays.
-  const legacy: Recent[] = [];
-  const lastChar = [...profile.charactersUnlocked].slice(-1)[0];
-  const c = lastChar ? CHARACTERS.find((x) => x.id === lastChar) : undefined;
-  if (c) legacy.push({ key: `c-${c.id}`, icon: c.avatar, kind: "شخصية", title: c.name, subtitle: c.title });
-  const lastArtifact = [...profile.artifactsFound].slice(-1)[0];
-  const a = lastArtifact ? ARTIFACTS.find((x) => x.id === lastArtifact) : undefined;
-  if (a) legacy.push({ key: `a-${a.id}`, icon: a.icon, kind: "أثر", title: a.name, subtitle: a.typeLabel });
-  // Titles/badges intentionally omitted from "آخر المقتنيات" — they are not
-  // museum-style collectibles. They surface in their own profile sections.
-
-  const recents: Recent[] = (supaRecents && supaRecents.length > 0)
-    ? supaRecents.slice(0, 3)
-    : legacy.slice(0, 3);
+  const recents: Recent[] = supaRecents ?? [];
 
   return (
     <div className="mb-5 rounded-2xl border border-gold/20 bg-surface/70 p-4">
@@ -801,8 +576,9 @@ function RecentUnlocks() {
   );
 }
 
-
-// ───── Imported registry item card (admin-imported via campaigns)
+// ============================================================
+// Imported-registry card (real admin-imported content)
+// ============================================================
 function ImportedCard({
   item,
   setReveal,
@@ -820,16 +596,11 @@ function ImportedCard({
       alt={item.name}
       loading="lazy"
       className="absolute inset-0 size-full object-cover"
-      onError={(e) => {
-        // Fall back to emoji if the image fails to load.
-        const t = e.currentTarget;
-        t.style.display = "none";
-      }}
+      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
     />
   ) : (
     <span aria-hidden>{emoji}</span>
   );
-
   const revealIcon: React.ReactNode = imageUrl ? (
     <img src={imageUrl} alt={item.name} className="size-full rounded-2xl object-cover" />
   ) : (
@@ -841,16 +612,15 @@ function ImportedCard({
   return (
     <Card
       unlocked={item.unlocked}
-      rarity={rarity}
+      rarity={rarity as Rarity}
       icon={cardIcon}
       title={item.name}
       subtitle={subtitle}
       footer={footer}
-      mystery={{ title: "عنصرٌ مستورد", clue: "أكمل الحملة المرتبطة لتكشفه." }}
       onClick={() => {
         if (!item.unlocked) return;
         setReveal({
-          rarity,
+          rarity: rarity as Rarity,
           icon: revealIcon,
           title: item.name,
           subtitle,
@@ -864,95 +634,3 @@ function ImportedCard({
     />
   );
 }
-
-// ───── Encyclopedia-resolved unlock card (campaign rewards → encyclopedia_entities)
-// Clicking opens the unified reveal modal (same SFX + presentation as legacy
-// collectibles); the modal exposes an "open in encyclopedia" CTA.
-function EncyclopediaUnlockCard({
-  unlock,
-  navigate,
-  sourceLabel,
-  setReveal,
-}: {
-  unlock: {
-    raw: string;
-    type: string | null;
-    slug: string | null;
-    title: string | null;
-    subtitle: string | null;
-    summary: string | null;
-    metadata: Record<string, unknown> | null;
-  };
-  navigate: ReturnType<typeof useNavigate>;
-  sourceLabel: string;
-  setReveal: (r: RevealItem | null) => void;
-}) {
-  const TYPE_GLYPH: Record<string, string> = {
-    figure: "👤", artifact: "🏺", city: "🏛️", landmark: "🏛️",
-    battle: "⚔️", state: "🏳️", event: "📜",
-  };
-  const TYPE_LABEL: Record<string, string> = {
-    figure: "شخصية", artifact: "أثر", city: "مدينة", landmark: "معلم",
-    battle: "معركة", state: "دولة", event: "حدث",
-  };
-  const glyph = TYPE_GLYPH[unlock.type ?? ""] ?? "✨";
-  const label = TYPE_LABEL[unlock.type ?? ""] ?? "عنصر";
-
-  // Rarity: prefer metadata.rarity if author set it; else type-based default
-  // (figures/landmarks/battles → epic, others → rare). Never "common" so the
-  // discovery moment always feels meaningful.
-  const metaRarity = (unlock.metadata?.rarity as Rarity | undefined);
-  const fallbackRarity: Rarity = ["figure", "landmark", "battle"].includes(unlock.type ?? "")
-    ? "epic"
-    : "rare";
-  const rarity: Rarity = (["common", "rare", "epic", "legendary"] as const).includes(metaRarity as Rarity)
-    ? (metaRarity as Rarity)
-    : fallbackRarity;
-
-  const title = unlock.title ?? unlock.slug ?? "عنصر";
-  const subtitle = unlock.subtitle ?? `${label}`;
-  const summaryLines = unlock.summary
-    ? [unlock.summary]
-    : ["عنصر من الموسوعة. افتحه لقراءة تفاصيله الكاملة."];
-
-  const onOpen = () => {
-    setReveal({
-      rarity,
-      icon: glyph,
-      title,
-      subtitle,
-      lines: summaryLines,
-      sourceLabel,
-      alreadyOwned: true,
-      onOpenEncyclopedia: unlock.slug
-        ? () => navigate({ to: "/encyclopedia/entity/$id", params: { id: unlock.slug! } })
-        : undefined,
-    });
-  };
-
-  return (
-    <button
-      dir="rtl"
-      onClick={onOpen}
-      className="group relative flex w-full min-w-0 flex-col gap-2 overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-surface to-transparent p-3 text-right ring-1 ring-gold/20 transition hover:border-gold/60"
-    >
-      <div className="flex w-full min-w-0 items-center justify-between gap-2">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-black/40 text-lg ring-1 ring-gold/30">
-          {glyph}
-        </span>
-        <span className="shrink-0 rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-bold text-gold">
-          {label}
-        </span>
-      </div>
-      <div className="w-full min-w-0">
-        <p className="font-display line-clamp-2 break-words text-[12px] font-bold leading-snug sm:text-sm">
-          {title}
-        </p>
-        <p className="mt-1 line-clamp-1 break-words text-[10px] text-gold/80">
-          {sourceLabel}
-        </p>
-      </div>
-    </button>
-  );
-}
-
