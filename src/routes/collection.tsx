@@ -474,6 +474,9 @@ function CollectionPage() {
               {importedFigures.map(item => (
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
+              {encFigures.map(r => (
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+              ))}
             </div>
           </>
         )}
