@@ -159,12 +159,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     };
   }, [profile, user]);
 
-  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, referralCode }) => {
+  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, displayName, referralCode }) => {
     const u = username.trim();
     if (u.length < 3) return { ok: false, error: "اسم المستخدم قصير جداً" };
     if (password.length < 6) return { ok: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" };
-    const { data, error } = await signUpWithEmail({ email, password, username: u, referralCode });
+    const { data, error } = await signUpWithEmail({ email, password, username: u, displayName, referralCode });
     if (error) return { ok: false, error: error.message };
+    // Client-side fallback: if a session was returned, upsert display_name immediately.
+    if (data.session?.user) {
+      const name = (displayName ?? u).trim();
+      try { await cloudUpdateDisplayName(name); } catch { /* ignore */ }
+    }
     if (!data.session) {
       return { ok: true, error: "تحقق من بريدك لتأكيد الحساب." };
     }
@@ -195,9 +200,29 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  const updateDisplayNameFn = useCallback<AccountCtx["updateDisplayName"]>(async (name) => {
+    const r = await cloudUpdateDisplayName(name);
+    if (!r.ok) return { ok: false, error: r.error };
+    if (r.value) {
+      setAccount((prev) => prev ? { ...prev, display_name: r.value! } : prev);
+      login(r.value);
+    }
+    return { ok: true };
+  }, [login]);
+
+  const displayName = useMemo(() => {
+    return account?.display_name?.trim()
+      || (user?.user_metadata?.display_name as string | undefined)?.trim()
+      || (user?.user_metadata?.full_name as string | undefined)?.trim()
+      || account?.username
+      || user?.email?.split("@")[0]
+      || "ضيف";
+  }, [account, user]);
+
   const value = useMemo<AccountCtx>(() => ({
     user,
     account,
+    displayName,
     loadingSession,
     syncing,
     lastSyncAt,
@@ -205,7 +230,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     signIn,
     signOut: signOutFn,
     syncNow,
-  }), [user, account, loadingSession, syncing, lastSyncAt, signUp, signIn, signOutFn, syncNow]);
+    updateDisplayName: updateDisplayNameFn,
+  }), [user, account, displayName, loadingSession, syncing, lastSyncAt, signUp, signIn, signOutFn, syncNow, updateDisplayNameFn]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
