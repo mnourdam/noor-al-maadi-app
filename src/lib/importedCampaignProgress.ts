@@ -124,6 +124,40 @@ export function recordActivity(
   return cur;
 }
 
+/**
+ * Force an activity into the chapter's completedActivityIds without awarding
+ * XP/coins. Used when the user answered wrong and acknowledges the feedback
+ * to proceed (a heart was already deducted via recordActivity).
+ */
+export function markActivityComplete(
+  campaign: Campaign,
+  chapter: CampaignChapter,
+  activity: CampaignActivity,
+): CampaignProgress {
+  const all = readAll();
+  const cur = all[campaign.id] ?? blankCampaign(campaign.id);
+  const ch  = cur.chapters[chapter.id] ?? blankChapter();
+  if (!ch.completedActivityIds.includes(activity.id)) {
+    ch.completedActivityIds = [...ch.completedActivityIds, activity.id];
+  }
+  const allDone = chapter.activities.every(a => ch.completedActivityIds.includes(a.id));
+  ch.completed = allDone;
+  cur.chapters[chapter.id] = ch;
+  const campaignDone = campaign.chapters.every(c => cur.chapters[c.id]?.completed);
+  if (campaignDone && !cur.completed) {
+    cur.completed = true;
+    const unlocks = new Set<string>(cur.unlockedRegistryIds);
+    (campaign.unlocks ?? []).forEach(u => unlocks.add(u));
+    (campaign.finalRewards?.unlocks ?? []).forEach(u => unlocks.add(u));
+    campaign.chapters.forEach(c => (c.rewards?.unlocks ?? []).forEach(u => unlocks.add(u)));
+    cur.unlockedRegistryIds = [...unlocks];
+  }
+  cur.updatedAt = new Date().toISOString();
+  all[campaign.id] = cur;
+  writeAll(all);
+  return cur;
+}
+
 export function isChapterUnlocked(campaign: Campaign, chapter: CampaignChapter): boolean {
   if (!chapter.unlockRequirement) return true;
   return Boolean(getChapterProgress(campaign.id, chapter.unlockRequirement).completed);
