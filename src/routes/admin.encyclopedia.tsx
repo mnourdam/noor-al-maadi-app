@@ -52,6 +52,7 @@ function AdminEncyclopediaPage() {
   const [filter, setFilter] = useState<EntityType | "all">("all");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Entity | "new" | null>(null);
+  const [jsonUpdating, setJsonUpdating] = useState<Entity | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
   const notify = (kind: Toast["kind"], msg: string) => {
