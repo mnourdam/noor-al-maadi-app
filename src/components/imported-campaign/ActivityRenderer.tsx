@@ -146,7 +146,6 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
 
 // ---------- True / False ----------
 function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
-  const [picked, setPicked] = useState<boolean | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
   const [wrongPick, setWrongPick] = useState<boolean | null>(null);
