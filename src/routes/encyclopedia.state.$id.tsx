@@ -50,8 +50,14 @@ function StatePage() {
   const state = stateEntityForEra(id);
   const groups = stateEntities(id);
   const campaigns = ENGINE_CAMPAIGNS.filter((c) => c.packId === id);
+  const display = useEncyclopediaDisplay("state", id, {
+    title: era?.name ?? state?.title ?? id,
+    subtitle: era?.tagline ?? state?.period?.label ?? null,
+    summary: state?.description ?? era?.tagline ?? null,
+  });
 
   const totalEntities = SECTION_ORDER.reduce((s, k) => s + groups[k].length, 0);
+
 
   return (
     <AppShell>
