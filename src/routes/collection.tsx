@@ -267,6 +267,19 @@ function CollectionPage() {
   const [reveal, setReveal] = useState<RevealItem | null>(null);
   const navigate = useNavigate();
 
+  // Supabase-primary prefetch: warm the cache so artifact/landmark/figure
+  // detail pages render Supabase-overridden text instantly on navigation.
+  // Falls back silently if Supabase is offline.
+  const supaArtifacts = useEncyclopediaSupabaseList("artifact");
+  const supaLandmarks = useEncyclopediaSupabaseList("landmark");
+  useEncyclopediaSupabaseList("figure");
+
+  /** Override artifact display name/description from Supabase when available. */
+  const supaArtifact = (legacyId: string) => supaArtifacts.bySlug.get(legacyId.toLowerCase());
+  const supaLandmark = (legacyId: string) => supaLandmarks.bySlug.get(legacyId.replace(/^l-/, "").toLowerCase());
+  void supaArtifact; void supaLandmark; // available for future per-card overrides
+
+
   // Re-read localStorage when we come back to this tab or after a cloud pull.
   const [refreshTick, setRefreshTick] = useState(0);
   useEffect(() => {
