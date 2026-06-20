@@ -210,6 +210,10 @@ function Composer({ debugBlock }: { debugBlock: ReactNode }) {
         <header className="flex items-center gap-3">
           <Bell className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">إدارة الإشعارات</h1>
+          <Link to="/admin/import" search={{ type: "notifications" }} className="ml-auto inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">
+            <BookOpen className="h-4 w-4" /> استيراد مسودات إشعارات
+          </Link>
+          <Link to="/admin" className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">لوحة الإدارة</Link>
         </header>
         {debugBlock}
 
