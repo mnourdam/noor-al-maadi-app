@@ -46,6 +46,8 @@ export const SUPABASE_ENABLED_TYPES = new Set<string>([
   "state",
   "landmark",
   "artifact",
+  "event",
+  "scholar",
 ]);
 
 export function isSupabaseEnabled(entityType: string): boolean {

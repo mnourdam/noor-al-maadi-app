@@ -96,7 +96,7 @@ const SECTIONS: SectionDef[] = [
 
 // ───── Supabase user_collection hook ───────────────────────────
 function useUserCollectionByType() {
-  const [rows, setRows] = useState<Array<{ type: string; slug: string }>>([]);
+  const [rows, setRows] = useState<Array<{ type: string; slug: string; unlockedAt: string | null }>>([]);
   const [refreshTick, setRefreshTick] = useState(0);
   useEffect(() => {
     let cancelled = false;
@@ -108,17 +108,17 @@ function useUserCollectionByType() {
         if (!uid) return;
         const { data, error } = await supabase
           .from("user_collection")
-          .select("item_id,item_type")
+          .select("item_id,item_type,unlocked_at")
           .eq("user_id", uid);
         if (cancelled || error || !data) return;
-        setRows(data.map((r: any) => ({ type: r.item_type, slug: r.item_id })));
+        setRows(data.map((r: any) => ({ type: r.item_type, slug: r.item_id, unlockedAt: r.unlocked_at ?? null })));
       } catch { /* noop */ }
     })();
     const bump = () => setRefreshTick(t => t + 1);
     window.addEventListener("focus", bump);
     return () => { cancelled = true; window.removeEventListener("focus", bump); };
   }, [refreshTick]);
-  return useMemo(() => {
+  const byType = useMemo(() => {
     const m = new Map<string, Set<string>>();
     for (const r of rows) {
       const s = m.get(r.type) ?? new Set<string>();
@@ -126,7 +126,14 @@ function useUserCollectionByType() {
     }
     return m;
   }, [rows]);
+  const unlockedAt = useMemo(() => {
+    const m = new Map<string, string>(); // key `${type}:${slug}` → ISO
+    for (const r of rows) if (r.unlockedAt) m.set(`${r.type}:${r.slug}`, r.unlockedAt);
+    return m;
+  }, [rows]);
+  return { byType, unlockedAt, rows };
 }
+
 
 // ───── Reusable card ───────────────────────────────────────────
 function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick }: {
@@ -252,7 +259,9 @@ function CollectionPage() {
   }, [refreshTick]);
 
   // ── User collection (Supabase) ──────────────────────────────
-  const userCollection = useUserCollectionByType();
+  const userCollectionResult = useUserCollectionByType();
+  const userCollection = userCollectionResult.byType;
+  const userUnlockedAt = userCollectionResult.unlockedAt;
 
   // ── Imported registry unlocks (raw "type:slug" strings) ─────
   const importedUnlockSet = useMemo(() => new Set(getUnlockedRegistryIds()), [refreshTick]);
@@ -278,11 +287,37 @@ function CollectionPage() {
     if (importedUnlockSet.has(`${type}:${slug}`)) return true;
     const legacyId = (metadata?.legacy_id as string | undefined) ?? null;
     if (legacyId && importedUnlockSet.has(`${type}:${legacyId}`)) return true;
-    // Local legacy fallbacks — only for figures/artifacts to avoid inventing items.
+    // Aliases declared on the canonical entity (e.g. landmark with artifact alias).
+    const aliases: string[] = Array.isArray(metadata?.aliases) ? metadata.aliases : [];
+    for (const a of aliases) {
+      if (importedUnlockSet.has(a)) return true;
+      const [at, ...rest] = a.split(":");
+      const aSlug = rest.join(":") || at;
+      if (at && aSlug && userCollection.get(at)?.has(aSlug)) return true;
+    }
     if (type === "figure" && (profile.charactersUnlocked.includes(slug) || (legacyId && profile.charactersUnlocked.includes(legacyId)))) return true;
     if (type === "artifact" && (profile.artifactsFound.includes(slug) || (legacyId && profile.artifactsFound.includes(legacyId)))) return true;
     return false;
   }
+
+  // Resolve the most recent unlock timestamp across direct + alias matches.
+  function unlockedAtFor(type: string, slug: string, metadata: any): number {
+    const candidates: string[] = [`${type}:${slug}`];
+    const legacyId = (metadata?.legacy_id as string | undefined) ?? null;
+    if (legacyId) candidates.push(`${type}:${legacyId}`);
+    const aliases: string[] = Array.isArray(metadata?.aliases) ? metadata.aliases : [];
+    for (const a of aliases) candidates.push(a);
+    let best = 0;
+    for (const k of candidates) {
+      const v = userUnlockedAt.get(k);
+      if (v) {
+        const t = Date.parse(v);
+        if (Number.isFinite(t) && t > best) best = t;
+      }
+    }
+    return best;
+  }
+
 
   // ── Build per-section counts ────────────────────────────────
   const sectionStats = useMemo(() => {
@@ -305,26 +340,77 @@ function CollectionPage() {
   const totalAll  = Object.values(sectionStats).reduce((s, c) => s + c.total, 0);
   const prestige  = totalAll ? Math.round((totalDone / totalAll) * 100) : 0;
 
-  // ── Missing-registry warning (only for actually unresolved IDs) ──
+  // ── Missing-registry warning (canonical resolver) ────────────
+  // Build pool of all loaded enabled entities across the 6 museum types,
+  // plus state. We treat a raw id as resolved when it maps to ANY entity
+  // by (type+slug), bare slug across types, or metadata.aliases.
+  const allLoadedEntities = useMemo(() => {
+    return [
+      ...(supFigures.data ?? []),
+      ...(supArtifacts.data ?? []),
+      ...(supLandmarks.data ?? []),
+      ...(supCities.data ?? []),
+      ...(supBattles.data ?? []),
+      ...(supEvents.data ?? []),
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data]);
+
   const rawMissingUnlockIds = useMemo(() => getMissingRegistryUnlockIds(), [refreshTick]);
   const missingUnlockIds = useMemo(() => {
-    // Hide ids that DO map to a Supabase entity (resolved via type:slug or legacy_id).
     return rawMissingUnlockIds.filter(raw => {
-      const [t, ...rest] = raw.split(":");
-      const slug = rest.join(":");
-      if (!t || !slug) return true;
-      const list = supByType[t]?.data ?? [];
-      return !list.some(e => e.slug === slug || (e.metadata as any)?.legacy_id === slug);
+      const trimmed = (raw ?? "").trim();
+      if (!trimmed) return false;
+      const [t, ...rest] = trimmed.split(":");
+      const slug = (rest.join(":") || t).toLowerCase();
+      for (const e of allLoadedEntities) {
+        const meta = (e.metadata as any) ?? {};
+        if (e.slug === slug) return false;
+        if (meta.legacy_id === slug) return false;
+        const aliases: string[] = Array.isArray(meta.aliases) ? meta.aliases : [];
+        if (aliases.includes(trimmed) || aliases.includes(slug)) return false;
+      }
+      return true;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawMissingUnlockIds, supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data]);
+  }, [rawMissingUnlockIds, allLoadedEntities]);
+
 
   // ── Render section ──────────────────────────────────────────
   const current = SECTIONS.find(s => s.id === section)!;
-  const currentEntities = supByType[current.type].data ?? [];
-  const currentImported = importedByType[current.id] ?? [];
+  const rawCurrentEntities = supByType[current.type].data ?? [];
+  const rawCurrentImported = importedByType[current.id] ?? [];
   const currentLoading  = supByType[current.type].isLoading;
   const stats = sectionStats[current.id];
+
+  // Hide cards with no resolved Arabic title (no English slugs in public UI).
+  const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);
+  const currentEntities = useMemo(() => {
+    const items = rawCurrentEntities
+      .filter((e: any) => !!e.title && hasArabic(e.title))
+      .map((e: any) => {
+        const open = isEntityUnlocked(current.type, e.slug, e.metadata);
+        const ts = open ? unlockedAtFor(current.type, e.slug, e.metadata) : 0;
+        return { e, open, ts };
+      });
+    items.sort((a, b) => {
+      if (a.open !== b.open) return a.open ? -1 : 1;
+      if (a.open && b.open) {
+        if (a.ts !== b.ts) return b.ts - a.ts;
+      }
+      return (a.e.title ?? "").localeCompare(b.e.title ?? "", "ar");
+    });
+    return items;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type]);
+
+  const currentImported = useMemo(() => {
+    const items = rawCurrentImported.filter(i => !!i.name && hasArabic(i.name));
+    items.sort((a, b) => {
+      if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
+      return (a.name ?? "").localeCompare(b.name ?? "", "ar");
+    });
+    return items;
+  }, [rawCurrentImported]);
 
   const openEntityReveal = (e: any, isOpen: boolean) => {
     const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
@@ -340,6 +426,7 @@ function CollectionPage() {
       onOpenEncyclopedia: () => navigate({ to: "/encyclopedia/entity/$id", params: { id: e.slug } }),
     });
   };
+
 
   return (
     <AppShell>
@@ -412,8 +499,7 @@ function CollectionPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {currentEntities.map((e: any) => {
-              const open = isEntityUnlocked(current.type, e.slug, e.metadata);
+            {currentEntities.map(({ e, open }) => {
               const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
               return (
                 <Card
@@ -428,6 +514,7 @@ function CollectionPage() {
                 />
               );
             })}
+
             {currentImported.map(item => (
               <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
             ))}
