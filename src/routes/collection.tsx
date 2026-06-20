@@ -4,7 +4,7 @@ import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkle
 import { AppShell, Screen } from "@/components/AppShell";
 import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, fogHint, type Era } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+
 import { displayBadgeName } from "@/lib/display-names";
 import {
   getImportedRegistryItemsByType,
@@ -16,7 +16,7 @@ import {
   registryItemRarity,
 } from "@/lib/importedUnlocks";
 import { pullAllFromCloud } from "@/lib/cloudSync";
-import { audioManager } from "@/lib/audioManager";
+
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
 import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
@@ -176,64 +176,10 @@ function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, myster
   );
 }
 
-// ───── Reveal dialog
-interface RevealItem { rarity: Rarity; icon: React.ReactNode; title: string; subtitle: string; lines: string[]; alreadyOwned?: boolean }
-function RevealDialog({ item, onClose }: { item: RevealItem | null; onClose: () => void }) {
-  const open = !!item;
-  const meta = item ? RARITY_META[item.rarity] : RARITY_META.common;
-  useEffect(() => {
-    if (item) {
-      audioManager.playSfx("unlock-reward", { dedupeKey: `reveal:${item.title}` });
-    }
-  }, [item]);
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-sm overflow-hidden border-white/10 bg-surface p-0 [&>button]:text-gold">
-        {item && (
-          <div className="relative">
-            <div className={`relative overflow-hidden p-6 text-center
-              ${item.rarity === "legendary" ? "bg-gradient-to-b from-gold/25 via-gold/5 to-transparent" :
-                item.rarity === "epic"      ? "bg-gradient-to-b from-fuchsia-400/20 via-fuchsia-400/5 to-transparent" :
-                item.rarity === "rare"      ? "bg-gradient-to-b from-sky-400/20 via-sky-400/5 to-transparent" :
-                                              "bg-gradient-to-b from-white/10 to-transparent"}`}>
-              <div className="pointer-events-none absolute inset-0 opacity-50" style={{
-                backgroundImage: "radial-gradient(circle at 20% 30%, oklch(0.82 0.14 82 / 0.25), transparent 40%), radial-gradient(circle at 80% 70%, oklch(0.82 0.14 82 / 0.15), transparent 45%)",
-              }} />
-              <div className="reward-burst relative mx-auto grid size-24 place-items-center rounded-2xl bg-black/40 text-5xl ring-1 ring-white/10 animate-gold-pulse">
-                {item.icon}
-              </div>
-              <span className={`mt-3 inline-block rounded-full px-3 py-1 text-[10px] font-bold tracking-wider ${meta.chip}`}>
-                <Sparkles className="me-1 inline size-3" />
-                {meta.label} · اكتُشف
-              </span>
-              <DialogTitle className="font-display shimmer-text mt-2 text-2xl font-extrabold">
-                {item.title}
-              </DialogTitle>
-              <p className="mt-1 text-xs text-gold/90">{item.subtitle}</p>
-            </div>
-            <div className="space-y-2 p-5 text-[12.5px] leading-7 text-foreground/85">
-              {item.lines.map((l, i) => <p key={i}>{l}</p>)}
-            </div>
-            <div className="px-5 pb-5">
-              {item.alreadyOwned ? (
-                <button
-                  onClick={onClose}
-                  className="w-full rounded-xl border border-emerald-400/40 bg-emerald-500/10 py-2.5 text-sm font-bold text-emerald-200"
-                >
-                  مضاف إلى أرشيفك · تم فتحه عبر الحملة
-                </button>
-              ) : (
-                <button onClick={onClose} className="bg-gradient-gold shadow-gold w-full rounded-xl py-2.5 text-sm font-bold text-primary-foreground">
-                  أضف إلى أرشيفي
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
+// ───── Reveal dialog (shared with imported campaign rewards)
+import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
+type RevealItem = CollectibleRevealItem;
+const RevealDialog = CollectibleRevealDialog;
 
 // ───── Section header with completion bar
 function SectionBar({ icon: Icon, title, done, total, accent }: { icon: any; title: string; done: number; total: number; accent: string }) {
@@ -495,7 +441,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encFigures.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} setReveal={setReveal} />
               ))}
             </div>
           </>
@@ -524,7 +470,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encArtifacts.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} setReveal={setReveal} />
               ))}
             </div>
           </>
@@ -548,7 +494,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encBattles.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} setReveal={setReveal} />
               ))}
             </div>
           </>
@@ -616,7 +562,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encLandmarks.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} setReveal={setReveal} />
               ))}
             </div>
             <Link to="/map" className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-gold/30 bg-gold/5 py-2 text-xs text-gold">
@@ -665,7 +611,7 @@ function CollectionPage() {
                   <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
                 ))}
                 {encDynasties.map(r => (
-                  <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
+                  <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} setReveal={setReveal} />
                 ))}
               </div>
             )}
@@ -854,14 +800,26 @@ function ImportedCard({
 }
 
 // ───── Encyclopedia-resolved unlock card (campaign rewards → encyclopedia_entities)
+// Clicking opens the unified reveal modal (same SFX + presentation as legacy
+// collectibles); the modal exposes an "open in encyclopedia" CTA.
 function EncyclopediaUnlockCard({
   unlock,
   navigate,
   sourceLabel,
+  setReveal,
 }: {
-  unlock: { raw: string; type: string | null; slug: string | null; title: string | null };
+  unlock: {
+    raw: string;
+    type: string | null;
+    slug: string | null;
+    title: string | null;
+    subtitle: string | null;
+    summary: string | null;
+    metadata: Record<string, unknown> | null;
+  };
   navigate: ReturnType<typeof useNavigate>;
   sourceLabel: string;
+  setReveal: (r: RevealItem | null) => void;
 }) {
   const TYPE_GLYPH: Record<string, string> = {
     figure: "👤", artifact: "🏺", city: "🏛️", landmark: "🏛️",
@@ -874,12 +832,36 @@ function EncyclopediaUnlockCard({
   const glyph = TYPE_GLYPH[unlock.type ?? ""] ?? "✨";
   const label = TYPE_LABEL[unlock.type ?? ""] ?? "عنصر";
 
+  // Rarity: prefer metadata.rarity if author set it; else type-based default
+  // (figures/landmarks/battles → epic, others → rare). Never "common" so the
+  // discovery moment always feels meaningful.
+  const metaRarity = (unlock.metadata?.rarity as Rarity | undefined);
+  const fallbackRarity: Rarity = ["figure", "landmark", "battle"].includes(unlock.type ?? "")
+    ? "epic"
+    : "rare";
+  const rarity: Rarity = (["common", "rare", "epic", "legendary"] as const).includes(metaRarity as Rarity)
+    ? (metaRarity as Rarity)
+    : fallbackRarity;
+
+  const title = unlock.title ?? unlock.slug ?? "عنصر";
+  const subtitle = unlock.subtitle ?? `${label}`;
+  const summaryLines = unlock.summary
+    ? [unlock.summary]
+    : ["عنصر من الموسوعة. افتحه لقراءة تفاصيله الكاملة."];
+
   const onOpen = () => {
-    // All encyclopedia-resolved unlocks route to the generic entity page,
-    // which supports Supabase-only entities (legacy figure/city/battle
-    // routes 404 when the slug isn't in the hardcoded list).
-    if (!unlock.slug) return;
-    navigate({ to: "/encyclopedia/entity/$id", params: { id: unlock.slug } });
+    setReveal({
+      rarity,
+      icon: glyph,
+      title,
+      subtitle,
+      lines: summaryLines,
+      sourceLabel,
+      alreadyOwned: true,
+      onOpenEncyclopedia: unlock.slug
+        ? () => navigate({ to: "/encyclopedia/entity/$id", params: { id: unlock.slug! } })
+        : undefined,
+    });
   };
 
   return (
@@ -898,7 +880,7 @@ function EncyclopediaUnlockCard({
       </div>
       <div className="w-full min-w-0">
         <p className="font-display line-clamp-2 break-words text-[12px] font-bold leading-snug sm:text-sm">
-          {unlock.title ?? unlock.slug}
+          {title}
         </p>
         <p className="mt-1 line-clamp-1 break-words text-[10px] text-gold/80">
           {sourceLabel}
@@ -907,3 +889,4 @@ function EncyclopediaUnlockCard({
     </button>
   );
 }
+
