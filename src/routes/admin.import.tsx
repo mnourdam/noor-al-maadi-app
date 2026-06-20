@@ -334,6 +334,12 @@ interface ImportConfig<T> {
   buildDedupeFilter: (rows: T[]) => Record<string, any[]>;
   matchExisting: (existing: any, r: T) => boolean;
   preview: (r: T) => React.ReactNode;
+  /** Allow user to enable overwrite (upsert) for duplicates. */
+  allowOverwrite?: boolean;
+  /** Comma-separated unique columns for upsert onConflict (required when allowOverwrite). */
+  conflictTarget?: string;
+  /** Subset of columns to update on overwrite. If omitted, full row is upserted. */
+  overwriteFields?: string[];
 }
 
 const dailyFactsConfig: ImportConfig<{ title: string; body: string; deep_link: string | null; enabled: boolean }> = {
