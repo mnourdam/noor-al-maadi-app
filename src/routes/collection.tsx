@@ -527,6 +527,9 @@ function CollectionPage() {
               {importedBattles.map(item => (
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
+              {encBattles.map(r => (
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+              ))}
             </div>
           </>
         )}
