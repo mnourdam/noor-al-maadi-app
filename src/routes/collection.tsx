@@ -312,11 +312,34 @@ function CollectionPage() {
   const importedDynasties    = useMemo(() => getImportedRegistryItemsByType("dynasty"), [refreshTick]);
   const importedBadges       = useMemo(() => getImportedRegistryItemsByType("badge"), [refreshTick]);
   const importedAchievements = useMemo(() => getImportedRegistryItemsByType("achievement"), [refreshTick]);
-  const missingUnlockIds     = useMemo(() => getMissingRegistryUnlockIds(), [refreshTick]);
+  const rawMissingUnlockIds  = useMemo(() => getMissingRegistryUnlockIds(), [refreshTick]);
+
+  // Resolve any "missing" unlocks against the Supabase encyclopedia so campaign
+  // rewards like "figure:prophet-muhammad" show up with proper Arabic names
+  // instead of triggering the "بلا تعريف" warning.
+  const allUnlockIds = useMemo(() => getUnlockedRegistryIds(), [refreshTick]);
+  const { resolved: encyclopediaUnlocks } = useResolvedUnlocks(allUnlockIds);
+  const encyclopediaByType = useMemo(() => {
+    const m = new Map<string, typeof encyclopediaUnlocks>();
+    for (const r of encyclopediaUnlocks) {
+      if (!r.found || !r.type) continue;
+      const arr = m.get(r.type) ?? [];
+      arr.push(r);
+      m.set(r.type, arr);
+    }
+    return m;
+  }, [encyclopediaUnlocks]);
+  const encyclopediaResolvedRaws = useMemo(
+    () => new Set(encyclopediaUnlocks.filter(r => r.found).map(r => r.raw)),
+    [encyclopediaUnlocks],
+  );
+  const missingUnlockIds = useMemo(
+    () => rawMissingUnlockIds.filter(id => !encyclopediaResolvedRaws.has(id)),
+    [rawMissingUnlockIds, encyclopediaResolvedRaws],
+  );
 
   useEffect(() => {
     if (missingUnlockIds.length > 0) {
-      // eslint-disable-next-line no-console
       console.warn("[museum] unlock IDs without registry items:", missingUnlockIds);
     }
   }, [missingUnlockIds]);
