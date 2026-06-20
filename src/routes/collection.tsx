@@ -377,10 +377,40 @@ function CollectionPage() {
 
   // ── Render section ──────────────────────────────────────────
   const current = SECTIONS.find(s => s.id === section)!;
-  const currentEntities = supByType[current.type].data ?? [];
-  const currentImported = importedByType[current.id] ?? [];
+  const rawCurrentEntities = supByType[current.type].data ?? [];
+  const rawCurrentImported = importedByType[current.id] ?? [];
   const currentLoading  = supByType[current.type].isLoading;
   const stats = sectionStats[current.id];
+
+  // Hide cards with no resolved Arabic title (no English slugs in public UI).
+  const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);
+  const currentEntities = useMemo(() => {
+    const items = rawCurrentEntities
+      .filter((e: any) => !!e.title && hasArabic(e.title))
+      .map((e: any) => {
+        const open = isEntityUnlocked(current.type, e.slug, e.metadata);
+        const ts = open ? unlockedAtFor(current.type, e.slug, e.metadata) : 0;
+        return { e, open, ts };
+      });
+    items.sort((a, b) => {
+      if (a.open !== b.open) return a.open ? -1 : 1;
+      if (a.open && b.open) {
+        if (a.ts !== b.ts) return b.ts - a.ts;
+      }
+      return (a.e.title ?? "").localeCompare(b.e.title ?? "", "ar");
+    });
+    return items;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type]);
+
+  const currentImported = useMemo(() => {
+    const items = rawCurrentImported.filter(i => !!i.name && hasArabic(i.name));
+    items.sort((a, b) => {
+      if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
+      return (a.name ?? "").localeCompare(b.name ?? "", "ar");
+    });
+    return items;
+  }, [rawCurrentImported]);
 
   const openEntityReveal = (e: any, isOpen: boolean) => {
     const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
@@ -396,6 +426,7 @@ function CollectionPage() {
       onOpenEncyclopedia: () => navigate({ to: "/encyclopedia/entity/$id", params: { id: e.slug } }),
     });
   };
+
 
   return (
     <AppShell>
