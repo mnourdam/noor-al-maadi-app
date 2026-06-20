@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Swords, Lock, Crown, Check, ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { CAMPAIGNS, ERAS, UPCOMING_CAMPAIGNS, ARTIFACTS, CHARACTERS } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { listEngineCampaigns, campaignProgressFor } from "@/lib/campaign-engine";
 import { displayBadgeName } from "@/lib/display-names";
+import { listPublishedCampaigns } from "@/lib/campaignStorage";
+import type { Campaign as ImportedCampaign } from "@/types/campaign";
 
 const artifactName = (id?: string) => (id ? ARTIFACTS.find((a) => a.id === id)?.name ?? id : undefined);
 const characterName = (id?: string) => (id ? CHARACTERS.find((c) => c.id === id)?.name ?? id : undefined);
@@ -39,6 +42,10 @@ export const Route = createFileRoute("/campaigns/")({
 function CampaignsHub() {
   const { profile } = useProfile();
   const engineCampaigns = listEngineCampaigns();
+  // Surface admin-imported published campaigns (localStorage) without
+  // touching the existing card design. SSR-safe via post-mount hook.
+  const [importedCampaigns, setImportedCampaigns] = useState<ImportedCampaign[]>([]);
+  useEffect(() => { setImportedCampaigns(listPublishedCampaigns()); }, []);
   // Campaigns superseded by an engine campaign (by matching pack/era id)
   // are hidden from the legacy lists so users always enter via the new
   // chapter player — fixes the "Salah al-Din card doesn't open" issue
@@ -100,6 +107,36 @@ function CampaignsHub() {
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {/* === Imported published campaigns (admin-managed) === */}
+        {importedCampaigns.length > 0 && (
+          <div className="mb-6 space-y-3">
+            {importedCampaigns.map((c) => (
+              <div
+                key={c.id}
+                className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6"
+              >
+                <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
+                <div className="relative">
+                  <div className="flex items-center justify-between gap-2 text-[10px] tracking-widest text-gold">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Sparkles className="size-3.5" />
+                      حملة جديدة · {c.chapters.length.toLocaleString("ar-EG")} فصول
+                    </span>
+                    {c.historicalPeriod && (
+                      <span className="rounded-full border border-gold/40 bg-black/30 px-2 py-0.5 text-[10px] text-gold">
+                        {c.historicalPeriod}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="font-display mt-2 text-2xl font-bold shimmer-text">{c.title}</h2>
+                  {c.subtitle && <p className="mt-1 text-sm text-gold/80">{c.subtitle}</p>}
+                  {c.description && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{c.description}</p>}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
