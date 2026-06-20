@@ -478,3 +478,112 @@
   }
   .parchment-rail ::-webkit-scrollbar-track { background: transparent; }
 }
+
+/* ============================================================
+   Performance mode — Android WebView / small touch / reduced-motion
+   Activated by `html.perf-lite` (set in src/lib/perf-mode.ts).
+   Visual identity preserved on desktop. On lite mode:
+     - infinite background animations are stopped
+     - particles / embers / fog / parallax / shimmer are hidden
+     - backdrop-filter is disabled (very expensive on Android)
+     - heavy box-shadows are softened
+     - arabesque / calligraphy watermarks are dimmed
+     - long lists get content-visibility:auto for skip-paint
+   ============================================================ */
+
+/* prefers-reduced-motion: hard guard, applies to everyone */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html.perf-lite {
+  /* Stop every infinite/long-running decorative animation */
+  --shadow-elegant: 0 6px 18px -10px oklch(0 0 0 / 0.35);
+  --shadow-gold: 0 4px 14px -8px oklch(0.82 0.14 82 / 0.35);
+}
+
+html.perf-lite .animate-float,
+html.perf-lite .animate-gold-pulse,
+html.perf-lite .animate-ken-burns,
+html.perf-lite .shimmer-text,
+html.perf-lite .fog-layer,
+html.perf-lite .sail-drift,
+html.perf-lite .landmark-pulse,
+html.perf-lite .route-dash,
+html.perf-lite .animate-curtain,
+html.perf-lite .animate-stamp,
+html.perf-lite .animate-ink {
+  animation: none !important;
+}
+
+/* Drop the most expensive layers entirely on lite mode */
+html.perf-lite .particle-field,
+html.perf-lite .particle-field::before,
+html.perf-lite .particle-field::after,
+html.perf-lite .ember,
+html.perf-lite .fog-layer,
+html.perf-lite .arabesque-layer,
+html.perf-lite .arabesque-bg,
+html.perf-lite .calligraphy-watermark {
+  display: none !important;
+}
+
+/* backdrop-filter is extremely costly on Android WebView */
+html.perf-lite .glass,
+html.perf-lite [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: color-mix(in oklab, var(--color-surface) 92%, transparent);
+}
+
+/* Soften repeated card shadows */
+html.perf-lite .shadow-elegant,
+html.perf-lite .shadow-gold,
+html.perf-lite .shadow-lg,
+html.perf-lite .shadow-xl,
+html.perf-lite .shadow-2xl {
+  box-shadow: 0 2px 8px -4px oklch(0 0 0 / 0.35) !important;
+}
+
+/* Repeating gradients / heavy backgrounds: simplify on lite */
+html.perf-lite .parchment,
+html.perf-lite .parchment-dark,
+html.perf-lite .parchment-rail,
+html.perf-lite .map-parchment {
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* Trim hero ken-burns into a static frame */
+html.perf-lite .animate-ken-burns {
+  transform: scale(1.04) !important;
+}
+
+/* Long lists / admin tables: skip painting offscreen rows */
+html.perf-lite .perf-list > * {
+  content-visibility: auto;
+  contain-intrinsic-size: 96px;
+}
+
+/* Admin pages: always lighter, regardless of device */
+html .admin-lite .glass,
+html .admin-lite [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html .admin-lite .particle-field,
+html .admin-lite .ember,
+html .admin-lite .arabesque-layer,
+html .admin-lite .calligraphy-watermark {
+  display: none !important;
+}
+html .admin-lite ul,
+html .admin-lite table tbody {
+  content-visibility: auto;
+  contain-intrinsic-size: 96px;
+}
