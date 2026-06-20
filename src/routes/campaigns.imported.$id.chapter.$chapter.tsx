@@ -117,6 +117,28 @@ function ImportedChapterPlayer() {
         audioManager.playSfx("unlock-reward", { dedupeKey: `unlock:${rid}` }),
       );
     }
+
+    // ── Mirror writes to granular Supabase tables (no-op when signed out) ──
+    const nextCh = nextProgress.chapters[chapter!.id];
+    void upsertChapterProgress({
+      campaignId: campaign!.id,
+      chapterId: chapter!.id,
+      status: nextCh?.completed ? "completed" : "unlocked",
+      score: nextCh?.completedActivityIds.length ?? 0,
+      xpEarned: nextCh?.xpEarned ?? 0,
+      coinsEarned: nextCh?.coinsEarned ?? 0,
+      completed: nextCh?.completed ?? false,
+    });
+    if (newlyCampaign && (nextProgress.unlockedRegistryIds?.length ?? 0) > 0) {
+      void addCollectionItems(
+        nextProgress.unlockedRegistryIds.map((rid) => ({
+          itemId: rid,
+          itemType: "registry",
+          sourceCampaignId: campaign!.id,
+          sourceChapterId: chapter!.id,
+        })),
+      );
+    }
     bump();
   };
 
