@@ -1,11 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles, Clock, Trophy } from "lucide-react";
+import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles, Award, Trophy, Clock } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, fogHint, type Era } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { displayBadgeName } from "@/lib/display-names";
+import {
+  getImportedRegistryItemsByType,
+  registryItemIcon,
+  registryItemRarity,
+} from "@/lib/importedUnlocks";
+import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
 
 export const Route = createFileRoute("/collection")({
   head: () => ({ meta: [{ title: "المتحف · أرشيفك التاريخي" }] }),
@@ -13,7 +19,7 @@ export const Route = createFileRoute("/collection")({
 });
 
 type Rarity = "common" | "rare" | "epic" | "legendary";
-type SectionId = "figures" | "artifacts" | "battles" | "manuscripts" | "landmarks" | "dynasties";
+type SectionId = "figures" | "artifacts" | "battles" | "manuscripts" | "landmarks" | "dynasties" | "badges" | "achievements";
 
 const RARITY_META: Record<Rarity, { label: string; ring: string; chip: string; glow: string }> = {
   common:    { label: "عادي",    ring: "ring-white/10",       chip: "bg-white/10 text-white/70",                        glow: "" },
@@ -225,12 +231,14 @@ function SectionBar({ icon: Icon, title, done, total, accent }: { icon: any; tit
 }
 
 const SECTIONS: { id: SectionId; label: string; icon: any }[] = [
-  { id: "figures",     label: "شخصيات",   icon: Users },
-  { id: "artifacts",   label: "آثار",     icon: Crown },
-  { id: "battles",     label: "معارك",    icon: Swords },
-  { id: "manuscripts", label: "مخطوطات",  icon: BookOpen },
-  { id: "landmarks",   label: "معالم",    icon: Landmark },
-  { id: "dynasties",   label: "دول",      icon: Scroll },
+  { id: "figures",      label: "شخصيات",  icon: Users },
+  { id: "artifacts",    label: "آثار",    icon: Crown },
+  { id: "battles",      label: "معارك",   icon: Swords },
+  { id: "manuscripts",  label: "مخطوطات", icon: BookOpen },
+  { id: "landmarks",    label: "معالم",   icon: Landmark },
+  { id: "dynasties",    label: "دول",     icon: Scroll },
+  { id: "badges",       label: "شارات",   icon: Award },
+  { id: "achievements", label: "إنجازات", icon: Trophy },
 ];
 
 function CollectionPage() {
@@ -242,14 +250,54 @@ function CollectionPage() {
   // counts per section
   const artifactsOnly = ARTIFACTS.filter(a => a.type !== "manuscript");
   const manuscripts   = ARTIFACTS.filter(a => a.type === "manuscript");
+
+  // Imported registry items merged into each museum section.
+  // figures section absorbs registry "figure" + "scholar".
+  const importedFigures      = useMemo(() => [
+    ...getImportedRegistryItemsByType("figure"),
+    ...getImportedRegistryItemsByType("scholar"),
+  ], []);
+  const importedArtifacts    = useMemo(() => getImportedRegistryItemsByType("artifact"), []);
+  const importedBattles      = useMemo(() => getImportedRegistryItemsByType("battle"), []);
+  const importedLandmarks    = useMemo(() => getImportedRegistryItemsByType("city"), []);
+  const importedDynasties    = useMemo(() => getImportedRegistryItemsByType("dynasty"), []);
+  const importedBadges       = useMemo(() => getImportedRegistryItemsByType("badge"), []);
+  const importedAchievements = useMemo(() => getImportedRegistryItemsByType("achievement"), []);
+
+  const importedUnlockedCount = (arr: Array<{ unlocked: boolean }>) => arr.filter(i => i.unlocked).length;
+
   const counts: Record<SectionId, { done: number; total: number }> = {
-    figures:     { done: profile.charactersUnlocked.length, total: CHARACTERS.length },
-    artifacts:   { done: artifactsOnly.filter(a => profile.artifactsFound.includes(a.id)).length, total: artifactsOnly.length },
-    battles:     { done: BATTLES.filter(b => !b.storyId || profile.storiesRead.includes(b.storyId)).length, total: BATTLES.length },
-    manuscripts: { done: manuscripts.filter(a => profile.artifactsFound.includes(a.id)).length, total: manuscripts.length },
-    landmarks:   { done: LANDMARKS.filter(l => !l.regionId || profile.regionsUnlocked.includes(l.regionId)).length, total: LANDMARKS.length },
-    dynasties:   { done: ERAS.filter(e => eraHasProgress(e.id)).length, total: ERAS.length },
+    figures:      {
+      done:  profile.charactersUnlocked.length + importedUnlockedCount(importedFigures),
+      total: CHARACTERS.length + importedFigures.length,
+    },
+    artifacts:    {
+      done:  artifactsOnly.filter(a => profile.artifactsFound.includes(a.id)).length + importedUnlockedCount(importedArtifacts),
+      total: artifactsOnly.length + importedArtifacts.length,
+    },
+    battles:      {
+      done:  BATTLES.filter(b => !b.storyId || profile.storiesRead.includes(b.storyId)).length + importedUnlockedCount(importedBattles),
+      total: BATTLES.length + importedBattles.length,
+    },
+    manuscripts:  { done: manuscripts.filter(a => profile.artifactsFound.includes(a.id)).length, total: manuscripts.length },
+    landmarks:    {
+      done:  LANDMARKS.filter(l => !l.regionId || profile.regionsUnlocked.includes(l.regionId)).length + importedUnlockedCount(importedLandmarks),
+      total: LANDMARKS.length + importedLandmarks.length,
+    },
+    dynasties:    {
+      done:  ERAS.filter(e => eraHasProgress(e.id)).length + importedUnlockedCount(importedDynasties),
+      total: ERAS.length + importedDynasties.length,
+    },
+    badges:       { done: importedUnlockedCount(importedBadges),       total: importedBadges.length },
+    achievements: { done: importedUnlockedCount(importedAchievements), total: importedAchievements.length },
   };
+
+  // Hide badges/achievements pills entirely when there are no imported items there.
+  const visibleSections = SECTIONS.filter(s => {
+    if (s.id === "badges")       return importedBadges.length > 0;
+    if (s.id === "achievements") return importedAchievements.length > 0;
+    return true;
+  });
 
   const totalDone = Object.values(counts).reduce((s, c) => s + c.done, 0);
   const totalAll  = Object.values(counts).reduce((s, c) => s + c.total, 0);
@@ -284,7 +332,7 @@ function CollectionPage() {
 
         {/* Section pills */}
         <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {SECTIONS.map(s => {
+          {visibleSections.map(s => {
             const active = section === s.id;
             const Icon = s.icon;
             const c = counts[s.id];
@@ -317,6 +365,9 @@ function CollectionPage() {
                     }} />
                 );
               })}
+              {importedFigures.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
             </div>
           </>
         )}
@@ -340,6 +391,9 @@ function CollectionPage() {
                     })} />
                 );
               })}
+              {importedArtifacts.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
             </div>
           </>
         )}
@@ -358,6 +412,9 @@ function CollectionPage() {
                     onClick={() => { if (open) navigate({ to: "/battle/$id", params: { id: b.id } }); }} />
                 );
               })}
+              {importedBattles.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
             </div>
           </>
         )}
@@ -420,6 +477,9 @@ function CollectionPage() {
                     })} />
                 );
               })}
+              {importedLandmarks.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
             </div>
             <Link to="/map" className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-gold/30 bg-gold/5 py-2 text-xs text-gold">
               <MapPin className="size-3.5" /> اكتشف المعالم على الخارطة
@@ -461,8 +521,40 @@ function CollectionPage() {
                 );
               })}
             </div>
+            {importedDynasties.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {importedDynasties.map(item => (
+                  <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+                ))}
+              </div>
+            )}
           </>
         )}
+
+        {/* Badges (imported only) */}
+        {section === "badges" && (
+          <>
+            <SectionBar icon={Award} title="شارات" done={counts.badges.done} total={counts.badges.total} accent="bg-gradient-to-r from-amber-500 to-gold" />
+            <div className="grid grid-cols-2 gap-3">
+              {importedBadges.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Achievements (imported only) */}
+        {section === "achievements" && (
+          <>
+            <SectionBar icon={Trophy} title="إنجازات" done={counts.achievements.done} total={counts.achievements.total} accent="bg-gradient-to-r from-emerald-500 to-gold" />
+            <div className="grid grid-cols-2 gap-3">
+              {importedAchievements.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
+            </div>
+          </>
+        )}
+
 
         {totalDone === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-white/15 p-6 text-center text-xs text-muted-foreground">
@@ -554,5 +646,43 @@ function RecentUnlocks() {
         </>
       )}
     </div>
+  );
+}
+
+// ───── Imported registry item card (admin-imported via campaigns)
+function ImportedCard({
+  item,
+  setReveal,
+}: {
+  item: ContentRegistryItem & { unlocked: boolean };
+  setReveal: (r: RevealItem | null) => void;
+}) {
+  const rarity = registryItemRarity(item);
+  const icon = registryItemIcon(item);
+  const subtitle = item.subtitle ?? item.historicalPeriod ?? item.category ?? "مستورد";
+  const footer = item.description?.slice(0, 80);
+  return (
+    <Card
+      unlocked={item.unlocked}
+      rarity={rarity}
+      icon={icon}
+      title={item.name}
+      subtitle={subtitle}
+      footer={footer}
+      mystery={{ title: "عنصرٌ مستورد", clue: "أكمل الحملة المرتبطة لتكشفه." }}
+      onClick={() => {
+        if (!item.unlocked) return;
+        setReveal({
+          rarity,
+          icon,
+          title: item.name,
+          subtitle,
+          lines: [
+            item.description ?? "عنصرٌ مستورد من حملةٍ إدارية.",
+            ...(item.historicalPeriod ? [`الحقبة: ${item.historicalPeriod}`] : []),
+          ],
+        });
+      }}
+    />
   );
 }
