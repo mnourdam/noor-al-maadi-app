@@ -103,16 +103,22 @@ function CityPage() {
                 {city.glyph}
               </div>
               <div className="min-w-0 flex-1">
-                {city.honorific && (
-                  <p className="text-[11px] tracking-[0.2em] text-gold/85">{city.honorific}</p>
+                {(display.subtitle ?? city.honorific) && (
+                  <p className="text-[11px] tracking-[0.2em] text-gold/85">{display.subtitle ?? city.honorific}</p>
                 )}
-                <h1 className="font-display text-3xl font-bold leading-tight">{city.name}</h1>
+                <h1 className="font-display text-3xl font-bold leading-tight">{display.title || city.name}</h1>
                 <p className="mt-1 text-[11px] text-white/70">{city.romanized} · {city.founded}</p>
+                {display.isFromSupabase && (
+                  <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+                    <Database className="size-2.5" /> من قاعدة البيانات
+                  </span>
+                )}
               </div>
             </div>
             <p className="mt-3 max-w-md font-display text-[13px] leading-7 text-white/85">
-              {city.tagline}
+              {display.summary || city.tagline}
             </p>
+
           </div>
         </div>
       </section>
