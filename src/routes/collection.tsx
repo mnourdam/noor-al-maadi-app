@@ -10,6 +10,7 @@ import {
   getImportedRegistryItemsByType,
   getMissingRegistryUnlockIds,
   registryItemIcon,
+  registryItemImageUrl,
   registryItemRarity,
 } from "@/lib/importedUnlocks";
 import { pullAllFromCloud } from "@/lib/cloudSync";
