@@ -354,6 +354,19 @@ function CollectionPage() {
         {/* Recent unlocks — "آخر المقتنيات" */}
         <RecentUnlocks />
 
+        {missingUnlockIds.length > 0 && (
+          <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            <div className="flex-1">
+              <p className="font-bold">{missingUnlockIds.length} عنصر مفتوح بلا تعريف في السجل</p>
+              <p className="text-[10px] text-amber-200/80">
+                المعرفات: {missingUnlockIds.slice(0, 3).join("، ")}{missingUnlockIds.length > 3 ? "…" : ""}.
+                {" "}أضِفها في لوحة الإدارة أو اسحب أحدث السجل من السحابة.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Section pills */}
         <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
           {visibleSections.map(s => {
