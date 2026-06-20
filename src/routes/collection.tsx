@@ -231,12 +231,14 @@ function SectionBar({ icon: Icon, title, done, total, accent }: { icon: any; tit
 }
 
 const SECTIONS: { id: SectionId; label: string; icon: any }[] = [
-  { id: "figures",     label: "شخصيات",   icon: Users },
-  { id: "artifacts",   label: "آثار",     icon: Crown },
-  { id: "battles",     label: "معارك",    icon: Swords },
-  { id: "manuscripts", label: "مخطوطات",  icon: BookOpen },
-  { id: "landmarks",   label: "معالم",    icon: Landmark },
-  { id: "dynasties",   label: "دول",      icon: Scroll },
+  { id: "figures",      label: "شخصيات",  icon: Users },
+  { id: "artifacts",    label: "آثار",    icon: Crown },
+  { id: "battles",      label: "معارك",   icon: Swords },
+  { id: "manuscripts",  label: "مخطوطات", icon: BookOpen },
+  { id: "landmarks",    label: "معالم",   icon: Landmark },
+  { id: "dynasties",    label: "دول",     icon: Scroll },
+  { id: "badges",       label: "شارات",   icon: Award },
+  { id: "achievements", label: "إنجازات", icon: Trophy },
 ];
 
 function CollectionPage() {
@@ -248,14 +250,54 @@ function CollectionPage() {
   // counts per section
   const artifactsOnly = ARTIFACTS.filter(a => a.type !== "manuscript");
   const manuscripts   = ARTIFACTS.filter(a => a.type === "manuscript");
+
+  // Imported registry items merged into each museum section.
+  // figures section absorbs registry "figure" + "scholar".
+  const importedFigures      = useMemo(() => [
+    ...getImportedRegistryItemsByType("figure"),
+    ...getImportedRegistryItemsByType("scholar"),
+  ], []);
+  const importedArtifacts    = useMemo(() => getImportedRegistryItemsByType("artifact"), []);
+  const importedBattles      = useMemo(() => getImportedRegistryItemsByType("battle"), []);
+  const importedLandmarks    = useMemo(() => getImportedRegistryItemsByType("city"), []);
+  const importedDynasties    = useMemo(() => getImportedRegistryItemsByType("dynasty"), []);
+  const importedBadges       = useMemo(() => getImportedRegistryItemsByType("badge"), []);
+  const importedAchievements = useMemo(() => getImportedRegistryItemsByType("achievement"), []);
+
+  const importedUnlockedCount = (arr: Array<{ unlocked: boolean }>) => arr.filter(i => i.unlocked).length;
+
   const counts: Record<SectionId, { done: number; total: number }> = {
-    figures:     { done: profile.charactersUnlocked.length, total: CHARACTERS.length },
-    artifacts:   { done: artifactsOnly.filter(a => profile.artifactsFound.includes(a.id)).length, total: artifactsOnly.length },
-    battles:     { done: BATTLES.filter(b => !b.storyId || profile.storiesRead.includes(b.storyId)).length, total: BATTLES.length },
-    manuscripts: { done: manuscripts.filter(a => profile.artifactsFound.includes(a.id)).length, total: manuscripts.length },
-    landmarks:   { done: LANDMARKS.filter(l => !l.regionId || profile.regionsUnlocked.includes(l.regionId)).length, total: LANDMARKS.length },
-    dynasties:   { done: ERAS.filter(e => eraHasProgress(e.id)).length, total: ERAS.length },
+    figures:      {
+      done:  profile.charactersUnlocked.length + importedUnlockedCount(importedFigures),
+      total: CHARACTERS.length + importedFigures.length,
+    },
+    artifacts:    {
+      done:  artifactsOnly.filter(a => profile.artifactsFound.includes(a.id)).length + importedUnlockedCount(importedArtifacts),
+      total: artifactsOnly.length + importedArtifacts.length,
+    },
+    battles:      {
+      done:  BATTLES.filter(b => !b.storyId || profile.storiesRead.includes(b.storyId)).length + importedUnlockedCount(importedBattles),
+      total: BATTLES.length + importedBattles.length,
+    },
+    manuscripts:  { done: manuscripts.filter(a => profile.artifactsFound.includes(a.id)).length, total: manuscripts.length },
+    landmarks:    {
+      done:  LANDMARKS.filter(l => !l.regionId || profile.regionsUnlocked.includes(l.regionId)).length + importedUnlockedCount(importedLandmarks),
+      total: LANDMARKS.length + importedLandmarks.length,
+    },
+    dynasties:    {
+      done:  ERAS.filter(e => eraHasProgress(e.id)).length + importedUnlockedCount(importedDynasties),
+      total: ERAS.length + importedDynasties.length,
+    },
+    badges:       { done: importedUnlockedCount(importedBadges),       total: importedBadges.length },
+    achievements: { done: importedUnlockedCount(importedAchievements), total: importedAchievements.length },
   };
+
+  // Hide badges/achievements pills entirely when there are no imported items there.
+  const visibleSections = SECTIONS.filter(s => {
+    if (s.id === "badges")       return importedBadges.length > 0;
+    if (s.id === "achievements") return importedAchievements.length > 0;
+    return true;
+  });
 
   const totalDone = Object.values(counts).reduce((s, c) => s + c.done, 0);
   const totalAll  = Object.values(counts).reduce((s, c) => s + c.total, 0);
