@@ -4,7 +4,7 @@ import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkle
 import { AppShell, Screen } from "@/components/AppShell";
 import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, fogHint, type Era } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+
 import { displayBadgeName } from "@/lib/display-names";
 import {
   getImportedRegistryItemsByType,
