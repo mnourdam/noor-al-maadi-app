@@ -1,11 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles, Clock, Trophy } from "lucide-react";
+import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles, Award, Trophy } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, fogHint, type Era } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { displayBadgeName } from "@/lib/display-names";
+import {
+  getImportedRegistryItemsByType,
+  registryItemIcon,
+  registryItemRarity,
+} from "@/lib/importedUnlocks";
+import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
 
 export const Route = createFileRoute("/collection")({
   head: () => ({ meta: [{ title: "المتحف · أرشيفك التاريخي" }] }),
@@ -13,7 +19,7 @@ export const Route = createFileRoute("/collection")({
 });
 
 type Rarity = "common" | "rare" | "epic" | "legendary";
-type SectionId = "figures" | "artifacts" | "battles" | "manuscripts" | "landmarks" | "dynasties";
+type SectionId = "figures" | "artifacts" | "battles" | "manuscripts" | "landmarks" | "dynasties" | "badges" | "achievements";
 
 const RARITY_META: Record<Rarity, { label: string; ring: string; chip: string; glow: string }> = {
   common:    { label: "عادي",    ring: "ring-white/10",       chip: "bg-white/10 text-white/70",                        glow: "" },
