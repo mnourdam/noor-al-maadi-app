@@ -800,14 +800,26 @@ function ImportedCard({
 }
 
 // ───── Encyclopedia-resolved unlock card (campaign rewards → encyclopedia_entities)
+// Clicking opens the unified reveal modal (same SFX + presentation as legacy
+// collectibles); the modal exposes an "open in encyclopedia" CTA.
 function EncyclopediaUnlockCard({
   unlock,
   navigate,
   sourceLabel,
+  setReveal,
 }: {
-  unlock: { raw: string; type: string | null; slug: string | null; title: string | null };
+  unlock: {
+    raw: string;
+    type: string | null;
+    slug: string | null;
+    title: string | null;
+    subtitle: string | null;
+    summary: string | null;
+    metadata: Record<string, unknown> | null;
+  };
   navigate: ReturnType<typeof useNavigate>;
   sourceLabel: string;
+  setReveal: (r: RevealItem | null) => void;
 }) {
   const TYPE_GLYPH: Record<string, string> = {
     figure: "👤", artifact: "🏺", city: "🏛️", landmark: "🏛️",
@@ -820,12 +832,36 @@ function EncyclopediaUnlockCard({
   const glyph = TYPE_GLYPH[unlock.type ?? ""] ?? "✨";
   const label = TYPE_LABEL[unlock.type ?? ""] ?? "عنصر";
 
+  // Rarity: prefer metadata.rarity if author set it; else type-based default
+  // (figures/landmarks/battles → epic, others → rare). Never "common" so the
+  // discovery moment always feels meaningful.
+  const metaRarity = (unlock.metadata?.rarity as Rarity | undefined);
+  const fallbackRarity: Rarity = ["figure", "landmark", "battle"].includes(unlock.type ?? "")
+    ? "epic"
+    : "rare";
+  const rarity: Rarity = (["common", "rare", "epic", "legendary"] as const).includes(metaRarity as Rarity)
+    ? (metaRarity as Rarity)
+    : fallbackRarity;
+
+  const title = unlock.title ?? unlock.slug ?? "عنصر";
+  const subtitle = unlock.subtitle ?? `${label}`;
+  const summaryLines = unlock.summary
+    ? [unlock.summary]
+    : ["عنصر من الموسوعة. افتحه لقراءة تفاصيله الكاملة."];
+
   const onOpen = () => {
-    // All encyclopedia-resolved unlocks route to the generic entity page,
-    // which supports Supabase-only entities (legacy figure/city/battle
-    // routes 404 when the slug isn't in the hardcoded list).
-    if (!unlock.slug) return;
-    navigate({ to: "/encyclopedia/entity/$id", params: { id: unlock.slug } });
+    setReveal({
+      rarity,
+      icon: glyph,
+      title,
+      subtitle,
+      lines: summaryLines,
+      sourceLabel,
+      alreadyOwned: true,
+      onOpenEncyclopedia: unlock.slug
+        ? () => navigate({ to: "/encyclopedia/entity/$id", params: { id: unlock.slug! } })
+        : undefined,
+    });
   };
 
   return (
@@ -844,7 +880,7 @@ function EncyclopediaUnlockCard({
       </div>
       <div className="w-full min-w-0">
         <p className="font-display line-clamp-2 break-words text-[12px] font-bold leading-snug sm:text-sm">
-          {unlock.title ?? unlock.slug}
+          {title}
         </p>
         <p className="mt-1 line-clamp-1 break-words text-[10px] text-gold/80">
           {sourceLabel}
@@ -853,3 +889,4 @@ function EncyclopediaUnlockCard({
     </button>
   );
 }
+
