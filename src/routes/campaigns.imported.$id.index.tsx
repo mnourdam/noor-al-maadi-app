@@ -19,6 +19,7 @@ import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
+import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 
 export const Route = createFileRoute("/campaigns/imported/$id/")({
   head: () => ({ meta: [{ title: "حملة مستوردة — إرث" }] }),
