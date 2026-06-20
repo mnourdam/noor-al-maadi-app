@@ -141,12 +141,7 @@ function Index() {
                 المستوى {lvl.level} · {lvl.title}
               </p>
             </div>
-            <div className="glass animate-curtain flex items-center gap-3 rounded-full border border-gold/30 px-3 py-1.5">
-              <div className="flex items-center gap-1 text-gold">
-                <Flame className="size-3.5" />
-                <span className="text-xs font-bold">{profile.streak}</span>
-              </div>
-            </div>
+            {/* enthusiasm/streak intentionally not duplicated here — shown in the global top HUD */}
           </div>
 
           {/* Hero copy */}
