@@ -176,64 +176,10 @@ function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, myster
   );
 }
 
-// ───── Reveal dialog
-interface RevealItem { rarity: Rarity; icon: React.ReactNode; title: string; subtitle: string; lines: string[]; alreadyOwned?: boolean }
-function RevealDialog({ item, onClose }: { item: RevealItem | null; onClose: () => void }) {
-  const open = !!item;
-  const meta = item ? RARITY_META[item.rarity] : RARITY_META.common;
-  useEffect(() => {
-    if (item) {
-      audioManager.playSfx("unlock-reward", { dedupeKey: `reveal:${item.title}` });
-    }
-  }, [item]);
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-sm overflow-hidden border-white/10 bg-surface p-0 [&>button]:text-gold">
-        {item && (
-          <div className="relative">
-            <div className={`relative overflow-hidden p-6 text-center
-              ${item.rarity === "legendary" ? "bg-gradient-to-b from-gold/25 via-gold/5 to-transparent" :
-                item.rarity === "epic"      ? "bg-gradient-to-b from-fuchsia-400/20 via-fuchsia-400/5 to-transparent" :
-                item.rarity === "rare"      ? "bg-gradient-to-b from-sky-400/20 via-sky-400/5 to-transparent" :
-                                              "bg-gradient-to-b from-white/10 to-transparent"}`}>
-              <div className="pointer-events-none absolute inset-0 opacity-50" style={{
-                backgroundImage: "radial-gradient(circle at 20% 30%, oklch(0.82 0.14 82 / 0.25), transparent 40%), radial-gradient(circle at 80% 70%, oklch(0.82 0.14 82 / 0.15), transparent 45%)",
-              }} />
-              <div className="reward-burst relative mx-auto grid size-24 place-items-center rounded-2xl bg-black/40 text-5xl ring-1 ring-white/10 animate-gold-pulse">
-                {item.icon}
-              </div>
-              <span className={`mt-3 inline-block rounded-full px-3 py-1 text-[10px] font-bold tracking-wider ${meta.chip}`}>
-                <Sparkles className="me-1 inline size-3" />
-                {meta.label} · اكتُشف
-              </span>
-              <DialogTitle className="font-display shimmer-text mt-2 text-2xl font-extrabold">
-                {item.title}
-              </DialogTitle>
-              <p className="mt-1 text-xs text-gold/90">{item.subtitle}</p>
-            </div>
-            <div className="space-y-2 p-5 text-[12.5px] leading-7 text-foreground/85">
-              {item.lines.map((l, i) => <p key={i}>{l}</p>)}
-            </div>
-            <div className="px-5 pb-5">
-              {item.alreadyOwned ? (
-                <button
-                  onClick={onClose}
-                  className="w-full rounded-xl border border-emerald-400/40 bg-emerald-500/10 py-2.5 text-sm font-bold text-emerald-200"
-                >
-                  مضاف إلى أرشيفك · تم فتحه عبر الحملة
-                </button>
-              ) : (
-                <button onClick={onClose} className="bg-gradient-gold shadow-gold w-full rounded-xl py-2.5 text-sm font-bold text-primary-foreground">
-                  أضف إلى أرشيفي
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
+// ───── Reveal dialog (shared with imported campaign rewards)
+import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
+type RevealItem = CollectibleRevealItem;
+const RevealDialog = CollectibleRevealDialog;
 
 // ───── Section header with completion bar
 function SectionBar({ icon: Icon, title, done, total, accent }: { icon: any; title: string; done: number; total: number; accent: string }) {
