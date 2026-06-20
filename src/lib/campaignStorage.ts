@@ -33,6 +33,28 @@ const SUPPORTED_TYPES: CampaignQuestionType[] = [
   "reflection_prompt",
 ];
 
+/** Friendly aliases accepted in imported JSON, mapped to canonical types. */
+const TYPE_ALIASES: Record<string, CampaignQuestionType> = {
+  reading: "reading_then_question",
+  multiple_choice: "multiple_choice",
+  mcq: "multiple_choice",
+  true_false: "true_false",
+  ordering: "arrange_events",
+  arrange: "arrange_events",
+  decision: "decision_choice",
+  match: "match_pairs",
+  fill_blank: "fill_blank",
+  reflection: "reflection_prompt",
+};
+
+function canonicalActivityType(raw: any): CampaignQuestionType | undefined {
+  if (typeof raw !== "string") return undefined;
+  const v = raw.trim();
+  if (SUPPORTED_TYPES.includes(v as CampaignQuestionType)) return v as CampaignQuestionType;
+  return TYPE_ALIASES[v];
+}
+
+
 function isBrowser() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
