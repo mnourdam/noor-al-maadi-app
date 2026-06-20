@@ -203,10 +203,6 @@ function AdminEncyclopediaPage() {
             )}
           </div>
         )}
-              <p className="mt-1 text-sm text-slate-400">أضف مدخلًا يدويًا أو استورد JSON.</p>
-            )}
-          </div>
-        )}
 
         {visible.length > 0 && (
           <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
