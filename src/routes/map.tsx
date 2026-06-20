@@ -18,6 +18,8 @@ import {
   STATE_OVERLAYS, regionAtlasStats, type AtlasPin, type AtlasPinKind,
 } from "@/lib/atlas";
 import { AtlasViewport } from "@/components/AtlasViewport";
+import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
+
 
 export const Route = createFileRoute("/map")({
   head: () => ({ meta: [{ title: "خارطة العالم الإسلامي" }] }),
@@ -44,6 +46,14 @@ function MapPage() {
   const [devOpen, setDevOpen] = useState(false);
   const explorePct = explorationPercent(profile.regionsUnlocked);
   const region = MAP_REGIONS.find((r) => r.id === selectedId) ?? MAP_REGIONS[0];
+
+  // Supabase-primary prefetch for state entities. Coordinates remain in
+  // MAP_REGIONS (legacy); when metadata.mapCoords appears in encyclopedia_entities
+  // a future iteration can read them here. Falls back silently if offline.
+  const supaStates = useEncyclopediaSupabaseList("state");
+  const supaState = supaStates.bySlug.get(region.id);
+  void supaState; // reserved for region-label overrides; coords stay legacy
+
 
   const pins = useMemo(() => pinsForEra(eraFilter), [eraFilter]);
   const overlay = useMemo(() => overlayForEra(eraFilter), [eraFilter]);

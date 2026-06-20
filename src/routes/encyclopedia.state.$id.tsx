@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ChevronRight, BookOpen, Clock } from "lucide-react";
+import { ChevronRight, BookOpen, Clock, Database } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import {
@@ -8,6 +8,8 @@ import {
 } from "@/lib/encyclopedia";
 import { ENGINE_CAMPAIGNS } from "@/lib/campaign-engine/registry";
 import { ERAS, type Era } from "@/lib/data";
+import { useEncyclopediaDisplay } from "@/lib/encyclopedia-source";
+
 
 const SECTION_ORDER: EncyclopediaSection[] = [
   "figure", "scholar", "city", "battle", "event", "landmark", "artifact",
@@ -48,8 +50,14 @@ function StatePage() {
   const state = stateEntityForEra(id);
   const groups = stateEntities(id);
   const campaigns = ENGINE_CAMPAIGNS.filter((c) => c.packId === id);
+  const display = useEncyclopediaDisplay("state", id, {
+    title: era?.name ?? state?.title ?? id,
+    subtitle: era?.tagline ?? state?.period?.label ?? null,
+    summary: state?.description ?? era?.tagline ?? null,
+  });
 
   const totalEntities = SECTION_ORDER.reduce((s, k) => s + groups[k].length, 0);
+
 
   return (
     <AppShell>
@@ -66,16 +74,22 @@ function StatePage() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] tracking-[0.3em] text-gold/80">دولة</p>
-              <h1 className="font-display text-2xl font-bold">{era?.name ?? state?.title ?? id}</h1>
+              <h1 className="font-display text-2xl font-bold">{display.title || era?.name || id}</h1>
               <p className="mt-0.5 text-[11px] text-muted-foreground">{state?.period.label ?? era?.years}</p>
-              {era?.tagline && (
-                <p className="mt-1 text-[12px] italic text-white/70">«{era.tagline}»</p>
+              {(display.subtitle ?? era?.tagline) && (
+                <p className="mt-1 text-[12px] italic text-white/70">«{display.subtitle ?? era?.tagline}»</p>
+              )}
+              {display.isFromSupabase && (
+                <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+                  <Database className="size-2.5" /> من قاعدة البيانات
+                </span>
               )}
             </div>
           </div>
-          {state?.description && (
-            <p className="mt-3 text-[13px] leading-7 text-foreground/90">{state.description}</p>
+          {(display.summary || state?.description) && (
+            <p className="mt-3 text-[13px] leading-7 text-foreground/90">{display.summary || state?.description}</p>
           )}
+
 
           <div className="mt-4 flex flex-wrap gap-1.5 text-[10px]">
             <span className="rounded-full border border-gold/25 bg-black/30 px-2 py-0.5 text-gold/85">

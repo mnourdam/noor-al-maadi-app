@@ -84,8 +84,9 @@ function EntityPage() {
         </AppShell>
       );
     }
-    if (supa && supa.entity_type === "artifact") {
-      return <SupabaseOnlyArtifact entity={supa} />;
+    if (supa) {
+      // Supabase-only entity (no legacy pack) — render minimal generic view.
+      return <SupabaseOnlyEntity entity={supa} />;
     }
     return (
       <AppShell>
@@ -109,12 +110,13 @@ function EntityPage() {
     legacyRef?.kind === "character" ? CHARACTERS.some(c => c.id === legacyRef.id) :
     !!legacyRef;
 
-  // Supabase-primary overrides for artifacts: prefer DB title / description.
-  const fromSupabase = !!supa && e.type === "artifact";
+  // Supabase-primary override for all enabled types: prefer DB title/description.
+  const fromSupabase = !!supa && isSupabaseEnabled(e.type);
   const displayTitle = fromSupabase ? (supa!.title || e.title) : e.title;
   const displayDescription = fromSupabase
     ? (supa!.summary || supa!.subtitle || e.description)
     : e.description;
+
 
   return (
     <AppShell>
@@ -226,7 +228,14 @@ function EntityPage() {
   );
 }
 
-function SupabaseOnlyArtifact({ entity }: { entity: import("@/lib/encyclopedia-source").SupabaseEncyclopediaEntity }) {
+const SUPA_GLYPH: Record<string, string> = {
+  artifact: "🗝️", figure: "🪶", city: "🏙️", battle: "⚔️",
+  state: "🏛️", landmark: "🕌", event: "📜",
+};
+
+function SupabaseOnlyEntity({ entity }: { entity: import("@/lib/encyclopedia-source").SupabaseEncyclopediaEntity }) {
+  const glyph = SUPA_GLYPH[entity.entity_type] ?? "📜";
+  const label = TYPE_LABEL[entity.entity_type] ?? entity.entity_type;
   return (
     <AppShell>
       <div className="px-5 pt-8">
@@ -236,11 +245,12 @@ function SupabaseOnlyArtifact({ entity }: { entity: import("@/lib/encyclopedia-s
         <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
           <div className="flex items-start gap-3">
             <span className="grid size-14 place-items-center rounded-2xl bg-black/40 text-3xl ring-1 ring-white/10">
-              🗝️
+              {glyph}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] tracking-[0.3em] text-gold/80">أثر</p>
+              <p className="text-[11px] tracking-[0.3em] text-gold/80">{label}</p>
               <h1 className="font-display text-2xl font-bold">{entity.title}</h1>
+
               {entity.subtitle && (
                 <p className="mt-0.5 text-[11px] text-muted-foreground">{entity.subtitle}</p>
               )}

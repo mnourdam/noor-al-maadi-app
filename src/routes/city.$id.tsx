@@ -2,7 +2,7 @@ import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-rout
 import { useMemo } from "react";
 import {
   ArrowRight, Crown, MapPin, Landmark as LandmarkIcon, Sparkles, Users,
-  Swords, Scroll, BookOpen, Lock, Compass, Hourglass, Building2,
+  Swords, Scroll, BookOpen, Lock, Compass, Hourglass, Building2, Database,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -11,6 +11,8 @@ import {
 import { CITIES, getCity } from "@/lib/cities";
 import { useProfile } from "@/lib/profile";
 import { RelatedHistory } from "@/components/RelatedHistory";
+import { useEncyclopediaDisplay } from "@/lib/encyclopedia-source";
+
 
 export const Route = createFileRoute("/city/$id")({
   head: () => ({ meta: [{ title: "المدينة · في قلب الحضارة" }] }),
@@ -44,11 +46,14 @@ function CityPage() {
   const { id } = useParams({ from: "/city/$id" });
   const { profile } = useProfile();
   const city = getCity(id);
+  const legacyFacade = city ? { title: city.name, subtitle: city.honorific, summary: city.tagline } : null;
+  const display = useEncyclopediaDisplay("city", id, legacyFacade);
   if (!city) throw notFound();
 
   const region = MAP_REGIONS.find((r) => r.id === city.regionId);
   const unlocked = profile.regionsUnlocked.includes(city.regionId);
   const era = ERAS.find((e) => e.id === city.era);
+
 
   const characters = useMemo(
     () => CHARACTERS.filter((c) => city.characterIds.includes(c.id)),
@@ -98,16 +103,22 @@ function CityPage() {
                 {city.glyph}
               </div>
               <div className="min-w-0 flex-1">
-                {city.honorific && (
-                  <p className="text-[11px] tracking-[0.2em] text-gold/85">{city.honorific}</p>
+                {(display.subtitle ?? city.honorific) && (
+                  <p className="text-[11px] tracking-[0.2em] text-gold/85">{display.subtitle ?? city.honorific}</p>
                 )}
-                <h1 className="font-display text-3xl font-bold leading-tight">{city.name}</h1>
+                <h1 className="font-display text-3xl font-bold leading-tight">{display.title || city.name}</h1>
                 <p className="mt-1 text-[11px] text-white/70">{city.romanized} · {city.founded}</p>
+                {display.isFromSupabase && (
+                  <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+                    <Database className="size-2.5" /> من قاعدة البيانات
+                  </span>
+                )}
               </div>
             </div>
             <p className="mt-3 max-w-md font-display text-[13px] leading-7 text-white/85">
-              {city.tagline}
+              {display.summary || city.tagline}
             </p>
+
           </div>
         </div>
       </section>

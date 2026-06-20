@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ArrowRight, MapPin, Swords, Crown, Sparkles, Quote, Users, Scroll, Star, Lock } from "lucide-react";
+import { ArrowRight, MapPin, Swords, Crown, Sparkles, Quote, Users, Scroll, Star, Lock, Database } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   CHARACTERS, ERAS, ARTIFACTS, MAP_REGIONS, CAMPAIGNS, STORIES,
@@ -8,6 +8,8 @@ import {
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { RelatedHistory } from "@/components/RelatedHistory";
+import { useEncyclopediaDisplay } from "@/lib/encyclopedia-source";
+
 
 export const Route = createFileRoute("/figure/$id")({
   head: () => ({ meta: [{ title: "الشخصية · بطلٌ من التاريخ" }] }),
@@ -33,10 +35,13 @@ function FigurePage() {
 
   const card = CHARACTERS.find((c) => c.id === id);
   const prof = getCharacterProfile(id);
+  const legacyFacade = card ? { title: card.name, subtitle: card.title, summary: card.bio } : null;
+  const display = useEncyclopediaDisplay("figure", id, legacyFacade);
   if (!card) throw notFound();
 
   const unlocked = profile.charactersUnlocked.includes(id);
   const era = ERAS.find((e) => e.id === card.era);
+
 
   const related = useMemo(() => {
     const ids = prof?.relatedCharacterIds ?? [];
@@ -130,16 +135,22 @@ function FigurePage() {
 
           {/* hero text */}
           <div className="absolute inset-x-0 bottom-0 px-5 pb-6">
-            <p className="text-[10px] tracking-[0.25em] text-gold/85">{card.title}</p>
+            <p className="text-[10px] tracking-[0.25em] text-gold/85">{display.subtitle ?? card.title}</p>
             <h1 className="font-display shimmer-text mt-1 text-4xl font-extrabold leading-tight">
-              {prof?.fullName ?? card.name}
+              {prof?.fullName ?? display.title ?? card.name}
             </h1>
-            <p className="mt-1 text-[12px] text-white/80">{prof?.epithet ?? card.title}</p>
+            <p className="mt-1 text-[12px] text-white/80">{prof?.epithet ?? display.subtitle ?? card.title}</p>
             {prof?.lifespan && (
               <p className="mt-2 text-[11px] text-gold/80">{prof.lifespan}</p>
             )}
+            {display.isFromSupabase && (
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+                <Database className="size-2.5" /> من قاعدة البيانات
+              </span>
+            )}
           </div>
         </div>
+
 
         <div className="px-5 -mt-4 space-y-5">
           {/* discovery progress */}

@@ -1,9 +1,11 @@
 import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, MapPin, Crown, Swords, Flag, Scroll, Sparkles, Users, Landmark, BookOpen, Compass } from "lucide-react";
+import { ArrowLeft, MapPin, Crown, Swords, Flag, Scroll, Sparkles, Users, Landmark, BookOpen, Compass, Database } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { getBattleProfile, ERAS, CHARACTERS, MAP_REGIONS, ARTIFACTS, fogHint, type BattleProfile } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { RelatedHistory } from "@/components/RelatedHistory";
+import { useEncyclopediaDisplay } from "@/lib/encyclopedia-source";
+
 
 export const Route = createFileRoute("/battle/$id")({
   head: ({ params }) => {
@@ -41,6 +43,12 @@ function BattlePage() {
   const { profile } = useProfile();
   const navigate = useNavigate();
   const era = ERAS.find(e => e.id === battle.era);
+  const display = useEncyclopediaDisplay("battle", battle.id, {
+    title: battle.name,
+    subtitle: battle.subtitle,
+    summary: (battle as unknown as { description?: string }).description ?? null,
+  });
+
 
   const relatedChars = battle.relatedCharacterIds.map(id => CHARACTERS.find(c => c.id === id)).filter(Boolean) as typeof CHARACTERS;
   const relatedRegions = battle.relatedRegionIds.map(id => MAP_REGIONS.find(r => r.id === id)).filter(Boolean);
@@ -75,8 +83,14 @@ function BattlePage() {
               <span className="inline-block rounded-full bg-black/40 px-2 py-0.5 text-[10px] tracking-wider text-gold ring-1 ring-gold/20">
                 <Sparkles className="me-1 inline size-3" /> معركةٌ أسطوريّة · {era?.name}
               </span>
-              <h1 className="font-display shimmer-text mt-2 text-2xl font-extrabold leading-tight">{battle.name}</h1>
-              <p className="mt-1 text-xs text-gold/85">{battle.subtitle}</p>
+              <h1 className="font-display shimmer-text mt-2 text-2xl font-extrabold leading-tight">{display.title || battle.name}</h1>
+              <p className="mt-1 text-xs text-gold/85">{display.subtitle ?? battle.subtitle}</p>
+              {display.isFromSupabase && (
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+                  <Database className="size-2.5" /> من قاعدة البيانات
+                </span>
+              )}
+
               <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
                 <span className="rounded-full bg-black/40 px-2 py-0.5">{battle.hijri}</span>
                 <span className="rounded-full bg-black/40 px-2 py-0.5">{battle.year}</span>
