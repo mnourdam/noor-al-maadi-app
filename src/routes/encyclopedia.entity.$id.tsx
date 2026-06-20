@@ -12,8 +12,7 @@ import { getCity } from "@/lib/cities";
 import { RelatedHistory } from "@/components/RelatedHistory";
 import type { EntityRef } from "@/lib/knowledge-graph";
 import {
-  useEncyclopediaSupabaseEntity,
-  useEncyclopediaSupabaseEntityBySlug,
+  useEncyclopediaCanonicalEntity,
   isSupabaseEnabled,
 } from "@/lib/encyclopedia-source";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
