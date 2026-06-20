@@ -146,6 +146,7 @@ function RootComponent() {
     so?.lock?.("portrait").catch(() => {});
 
     // Initialize FCM push notifications (Android-native only; no-op on web).
+    console.log("[push] root effect reached");
     import("../lib/pushNotifications")
       .then((m) => m.initPushNotifications())
       .catch((err) => console.error("[push] dynamic import failed:", err));
