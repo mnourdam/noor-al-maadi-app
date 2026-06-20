@@ -18,6 +18,8 @@ import {
   STATE_OVERLAYS, regionAtlasStats, type AtlasPin, type AtlasPinKind,
 } from "@/lib/atlas";
 import { AtlasViewport } from "@/components/AtlasViewport";
+import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
+
 
 export const Route = createFileRoute("/map")({
   head: () => ({ meta: [{ title: "خارطة العالم الإسلامي" }] }),
