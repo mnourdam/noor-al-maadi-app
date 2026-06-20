@@ -37,6 +37,7 @@ export function AdminGate({ children }: { children: ReactNode }) {
     document.documentElement.classList.add("admin-lite");
     return () => document.documentElement.classList.remove("admin-lite");
   }, []);
+  if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <RefreshCw className="h-5 w-5 animate-spin" />
