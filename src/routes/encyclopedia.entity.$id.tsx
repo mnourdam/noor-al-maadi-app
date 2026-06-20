@@ -12,8 +12,7 @@ import { getCity } from "@/lib/cities";
 import { RelatedHistory } from "@/components/RelatedHistory";
 import type { EntityRef } from "@/lib/knowledge-graph";
 import {
-  useEncyclopediaSupabaseEntity,
-  useEncyclopediaSupabaseEntityBySlug,
+  useEncyclopediaCanonicalEntity,
   isSupabaseEnabled,
 } from "@/lib/encyclopedia-source";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
@@ -70,18 +69,14 @@ function EntityPage() {
   const { id } = Route.useParams() as { id: string };
   const pack = getPackEntity(id);
 
-  // Phase 1: Supabase is primary for artifacts only. We probe Supabase when
-  // either (a) the pack lookup failed entirely, or (b) the pack entity is
-  // an artifact — in which case Supabase values override pack values.
-  const probeType = pack?.type ?? "artifact";
-  const supaQuery = useEncyclopediaSupabaseEntity(probeType, id, {
-    enabled: !!pack && isSupabaseEnabled(probeType),
-  });
-  // Slug-only fallback for Supabase-only entities (no legacy pack) — covers
-  // campaign unlocks that route via /encyclopedia/entity/<slug> without
-  // knowing the canonical entity_type up front.
-  const slugQuery = useEncyclopediaSupabaseEntityBySlug(!pack ? id : "");
-  const supa = supaQuery.data ?? slugQuery.data ?? null;
+  // Canonical resolver: searches by slug + metadata.aliases across all
+  // entity types, picks the richest row. Hinted type from the pack only
+  // breaks ties — so `artifact:cave-of-hira` correctly surfaces the rich
+  // `landmark:cave-of-hira` article.
+  const probeType = pack?.type ?? null;
+  const canonicalQuery = useEncyclopediaCanonicalEntity(id, probeType);
+  const supa = canonicalQuery.data ?? null;
+  const slugQuery = { isLoading: canonicalQuery.isLoading };
 
   // Supabase-only entity (not in legacy packs) — render minimal view.
   if (!pack) {
@@ -117,12 +112,14 @@ function EntityPage() {
     legacyRef?.kind === "character" ? CHARACTERS.some(c => c.id === legacyRef.id) :
     !!legacyRef;
 
-  // Supabase-primary override for all enabled types: prefer DB title/description.
-  const fromSupabase = !!supa && isSupabaseEnabled(e.type);
+  // Supabase canonical wins whenever it exists, regardless of e.type — the
+  // resolver already picked the richest matching row across types.
+  const fromSupabase = !!supa;
   const displayTitle = fromSupabase ? (supa!.title || e.title) : e.title;
   const displayDescription = fromSupabase
     ? (supa!.summary || supa!.subtitle || e.description)
     : e.description;
+  void isSupabaseEnabled; // re-exported for backwards compat; not used here
 
 
   return (

@@ -66,7 +66,9 @@ type EncRow = {
   title: string;
   subtitle: string | null;
   summary: string | null;
+  body: unknown;
   metadata: unknown;
+  enabled?: boolean;
 };
 
 export type ResolvedUnlock = ParsedUnlock & {
@@ -77,9 +79,13 @@ export type ResolvedUnlock = ParsedUnlock & {
   found: boolean;
 };
 
+import { pickCanonicalEntity } from "./encyclopedia-source";
+
 /**
- * Resolve a list of unlock IDs to encyclopedia_entities (title + summary).
- * Single query batched by slug. Safe when signed out.
+ * Resolve a list of unlock IDs to encyclopedia_entities. For each id we
+ * fetch every row sharing its slug (or aliased by raw id via
+ * metadata.aliases) and pick the canonical (richest) one — so a sparse
+ * `artifact:cave-of-hira` falls through to the rich `landmark:cave-of-hira`.
  */
 export function useResolvedUnlocks(ids: string[] | undefined | null) {
   const parsed = useMemo(() => (ids ?? []).map(parseUnlockId), [ids?.join("|")]);
@@ -88,44 +94,87 @@ export function useResolvedUnlocks(ids: string[] | undefined | null) {
     () => Array.from(new Set(parsed.map(p => p.slug).filter((s): s is string => !!s))),
     [parsed],
   );
+  const rawIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          parsed
+            .map(p => p.raw)
+            .filter(r => r && !slugs.includes(r)),
+        ),
+      ),
+    [parsed, slugs],
+  );
 
   const query = useQuery({
-    queryKey: ["campaign-unlocks", slugs.join("|")],
+    queryKey: ["campaign-unlocks", slugs.join("|"), rawIds.join("|")],
     enabled: slugs.length > 0,
     staleTime: 60_000,
     retry: 1,
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
+        const seen = new Set<string>();
+        const rows: EncRow[] = [];
+        const push = (data: unknown) => {
+          for (const r of (data as (EncRow & { id?: string })[]) ?? []) {
+            const k = `${r.entity_type}:${r.slug}`;
+            if (!seen.has(k)) {
+              seen.add(k);
+              rows.push(r);
+            }
+          }
+        };
+        const slugRes = await supabase
           .from("encyclopedia_entities")
-          .select("entity_type, slug, title, subtitle, summary, metadata")
+          .select("entity_type, slug, title, subtitle, summary, body, metadata, enabled")
           .in("slug", slugs)
           .eq("enabled", true);
-        if (error) return [] as Array<EncRow>;
-        return (data ?? []) as Array<EncRow>;
+        if (!slugRes.error) push(slugRes.data);
+        for (const raw of rawIds) {
+          const aliasRes = await supabase
+            .from("encyclopedia_entities")
+            .select("entity_type, slug, title, subtitle, summary, body, metadata, enabled")
+            .contains("metadata", { aliases: [raw] })
+            .eq("enabled", true);
+          if (!aliasRes.error) push(aliasRes.data);
+        }
+        return rows;
       } catch {
-        return [] as Array<EncRow>;
+        return [] as EncRow[];
       }
     },
   });
 
-  const byKey = useMemo(() => {
+  const bySlug = useMemo(() => {
+    const m = new Map<string, EncRow[]>();
+    for (const r of query.data ?? []) {
+      const arr = m.get(r.slug) ?? [];
+      arr.push(r);
+      m.set(r.slug, arr);
+    }
+    return m;
+  }, [query.data]);
+
+  const byAlias = useMemo(() => {
     const m = new Map<string, EncRow>();
     for (const r of query.data ?? []) {
-      m.set(`${r.entity_type}:${r.slug}`, r);
-      if (!m.has(`:${r.slug}`)) m.set(`:${r.slug}`, r);
+      const aliases = (r.metadata as { aliases?: unknown } | null)?.aliases;
+      if (Array.isArray(aliases)) {
+        for (const a of aliases) if (typeof a === "string") m.set(a, r);
+      }
     }
     return m;
   }, [query.data]);
 
   const resolved: ResolvedUnlock[] = useMemo(
     () => parsed.map(p => {
-      const keyed = p.type && p.slug ? byKey.get(`${p.type}:${p.slug}`) : undefined;
-      const looseSlug = !keyed && p.slug ? byKey.get(`:${p.slug}`) : undefined;
-      const hit = keyed ?? looseSlug;
+      const matches = p.slug ? bySlug.get(p.slug) ?? [] : [];
+      let hit = pickCanonicalEntity(matches, p.type);
+      if (!hit && p.raw) hit = byAlias.get(p.raw) ?? null;
       return {
         ...p,
         type: hit?.entity_type ?? p.type,
+        slug: hit?.slug ?? p.slug,
         title: hit?.title ?? null,
         subtitle: hit?.subtitle ?? null,
         summary: hit?.summary ?? null,
@@ -133,8 +182,9 @@ export function useResolvedUnlocks(ids: string[] | undefined | null) {
         found: !!hit,
       };
     }),
-    [parsed, byKey],
+    [parsed, bySlug, byAlias],
   );
 
   return { resolved, isLoading: query.isLoading };
 }
+

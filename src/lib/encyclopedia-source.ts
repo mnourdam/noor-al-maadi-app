@@ -111,9 +111,119 @@ export function useEncyclopediaSupabaseEntity(
 }
 
 /**
- * Fetch a single enabled entity by slug across all entity_types. Useful for
- * resolving campaign unlock links where the caller knows the slug but not
- * the canonical entity type (e.g. /encyclopedia/entity/prophet-muhammad).
+ * Score how "rich" an encyclopedia entity is, so we can pick the canonical
+ * one when multiple rows share the same slug across different entity types.
+ * Pure, no I/O.
+ */
+export function entityRichness(e: {
+  body?: unknown;
+  summary?: string | null;
+  subtitle?: string | null;
+  enabled?: boolean;
+}): number {
+  let s = 0;
+  const b = e.body as Record<string, unknown> | null | undefined;
+  if (b && typeof b === "object") {
+    if (Array.isArray(b.sections)) s += (b.sections as unknown[]).length * 4;
+    if (Array.isArray(b.timeline)) s += (b.timeline as unknown[]).length * 3;
+    if (Array.isArray(b.facts)) s += (b.facts as unknown[]).length;
+    if (Array.isArray(b.sources)) s += (b.sources as unknown[]).length;
+    if (b.related && typeof b.related === "object") {
+      for (const v of Object.values(b.related as Record<string, unknown>))
+        if (Array.isArray(v)) s += v.length;
+    }
+    if (typeof b.overview === "string")
+      s += Math.min(5, Math.floor((b.overview as string).length / 200));
+  }
+  if (e.summary) s += 1;
+  if (e.subtitle) s += 1;
+  if (e.enabled) s += 0.5;
+  return s;
+}
+
+/** Pick the richest entity; ties broken by hinted type, then enabled. */
+export function pickCanonicalEntity<
+  T extends {
+    entity_type?: string;
+    enabled?: boolean;
+    body?: unknown;
+    summary?: string | null;
+    subtitle?: string | null;
+  },
+>(list: T[], preferType?: string | null): T | null {
+  if (!list || list.length === 0) return null;
+  return (
+    [...list].sort((a, b) => {
+      const ra = entityRichness(a), rb = entityRichness(b);
+      if (ra !== rb) return rb - ra;
+      if (preferType) {
+        const at = a.entity_type === preferType ? 1 : 0;
+        const bt = b.entity_type === preferType ? 1 : 0;
+        if (at !== bt) return bt - at;
+      }
+      const ae = a.enabled ? 1 : 0, be = b.enabled ? 1 : 0;
+      if (ae !== be) return be - ae;
+      return 0;
+    })[0] ?? null
+  );
+}
+
+/**
+ * Canonical resolver for a raw unlock id (`type:slug`, `slug`, or alias).
+ * Searches by slug AND by metadata.aliases containing the raw id, across
+ * all entity types, and returns the richest result. Hinted type only
+ * breaks ties.
+ */
+export function useEncyclopediaCanonicalEntity(
+  rawId: string,
+  hintedType?: string | null,
+) {
+  const slug = normalizeEntitySlug(rawId);
+  const raw = (rawId ?? "").trim();
+  return useQuery({
+    queryKey: ["encyclopedia-canonical", slug, raw, hintedType ?? ""],
+    enabled: !!slug,
+    staleTime: 60_000,
+    retry: 1,
+    queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
+      try {
+        const candidates: SupabaseEncyclopediaEntity[] = [];
+        const seen = new Set<string>();
+        const push = (rows: unknown) => {
+          for (const row of (rows as SupabaseEncyclopediaEntity[]) ?? []) {
+            if (row?.id && !seen.has(row.id)) {
+              seen.add(row.id);
+              candidates.push(row);
+            }
+          }
+        };
+        const slugRes = await supabase
+          .from("encyclopedia_entities")
+          .select("*")
+          .eq("slug", slug)
+          .eq("enabled", true);
+        if (!slugRes.error) push(slugRes.data);
+        if (raw && raw !== slug) {
+          const aliasRes = await supabase
+            .from("encyclopedia_entities")
+            .select("*")
+            .contains("metadata", { aliases: [raw] })
+            .eq("enabled", true);
+          if (!aliasRes.error) push(aliasRes.data);
+        }
+        return pickCanonicalEntity(candidates, hintedType ?? null);
+      } catch (e) {
+        if (typeof console !== "undefined")
+          console.warn("[encyclopedia-source] canonical fetch crashed", e);
+        return null;
+      }
+    },
+  });
+}
+
+/**
+ * Fetch a single enabled entity by slug across all entity_types. Picks the
+ * canonical (richest) row when multiple types share the same slug.
  */
 export function useEncyclopediaSupabaseEntityBySlug(rawId: string) {
   const slug = normalizeEntitySlug(rawId);
@@ -128,15 +238,13 @@ export function useEncyclopediaSupabaseEntityBySlug(rawId: string) {
           .from("encyclopedia_entities")
           .select("*")
           .eq("slug", slug)
-          .eq("enabled", true)
-          .limit(1)
-          .maybeSingle();
+          .eq("enabled", true);
         if (error) {
           if (typeof console !== "undefined")
             console.warn("[encyclopedia-source] slug fetch failed", error.message);
           return null;
         }
-        return (data as SupabaseEncyclopediaEntity | null) ?? null;
+        return pickCanonicalEntity((data as SupabaseEncyclopediaEntity[]) ?? []);
       } catch (e) {
         if (typeof console !== "undefined")
           console.warn("[encyclopedia-source] slug fetch crashed", e);
