@@ -234,7 +234,7 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
     slug: typeof obj.slug === "string" ? obj.slug : slugify(obj.title ?? id),
     title: String(obj.title ?? ""),
     subtitle: obj.subtitle,
-    historicalPeriod: obj.historicalPeriod,
+    historicalPeriod: obj.historicalPeriod ?? obj.period,
     description: obj.description,
     coverImage: obj.coverImage,
     mapRegion: obj.mapRegion,
@@ -244,7 +244,8 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
     status,
     tags: Array.isArray(obj.tags) ? obj.tags.map(String) : undefined,
     chapters,
-    finalRewards: obj.finalRewards,
+    finalRewards: obj.finalRewards ?? obj.rewards,
+
     unlocks: Array.isArray(obj.unlocks) ? obj.unlocks.map(String) : undefined,
   };
 
