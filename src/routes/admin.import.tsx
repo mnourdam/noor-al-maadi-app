@@ -18,7 +18,7 @@ export const Route = createFileRoute("/admin/import")({
   }),
   validateSearch: (s: Record<string, unknown>): { type?: ImportType } => {
     const t = s.type as string | undefined;
-    if (t === "daily_facts" || t === "today_in_history_events" || t === "notifications" || t === "campaigns" || t === "encyclopedia") {
+    if (t === "daily_facts" || t === "today_in_history_events" || t === "notifications" || t === "campaigns" || t === "encyclopedia" || t === "investigations") {
       return { type: t };
     }
     return {};
