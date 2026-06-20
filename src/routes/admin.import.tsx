@@ -556,6 +556,9 @@ const encyclopediaConfig: ImportConfig<EncRow> = {
       {r.summary && <div className="line-clamp-2 text-xs text-slate-400">{r.summary}</div>}
     </div>
   ),
+  allowOverwrite: true,
+  conflictTarget: "entity_type,slug",
+  overwriteFields: ["title", "subtitle", "summary", "body", "metadata", "enabled"],
 };
 
 // ============================================================
