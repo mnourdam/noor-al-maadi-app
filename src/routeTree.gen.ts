@@ -49,8 +49,10 @@ import { Route as PlayCampaignIdRouteImport } from './routes/play.campaign.$id'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
+import { Route as CampaignsImportedIdRouteImport } from './routes/campaigns.imported.$id'
 import { Route as PlayCampaignIdIndexRouteImport } from './routes/play.campaign.$id.index'
 import { Route as PlayCampaignIdChapterChapterRouteImport } from './routes/play.campaign.$id.chapter.$chapter'
+import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
 
 const TimelineRoute = TimelineRouteImport.update({
   id: '/timeline',
@@ -252,6 +254,11 @@ const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
   path: '/entity/$id',
   getParentRoute: () => EncyclopediaRoute,
 } as any)
+const CampaignsImportedIdRoute = CampaignsImportedIdRouteImport.update({
+  id: '/imported/$id',
+  path: '/imported/$id',
+  getParentRoute: () => CampaignsRoute,
+} as any)
 const PlayCampaignIdIndexRoute = PlayCampaignIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -262,6 +269,12 @@ const PlayCampaignIdChapterChapterRoute =
     id: '/chapter/$chapter',
     path: '/chapter/$chapter',
     getParentRoute: () => PlayCampaignIdRoute,
+  } as any)
+const CampaignsImportedIdChapterChapterRoute =
+  CampaignsImportedIdChapterChapterRouteImport.update({
+    id: '/chapter/$chapter',
+    path: '/chapter/$chapter',
+    getParentRoute: () => CampaignsImportedIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -301,11 +314,13 @@ export interface FileRoutesByFullPath {
   '/u/$username': typeof UUsernameRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
+  '/campaigns/imported/$id': typeof CampaignsImportedIdRouteWithChildren
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdRouteWithChildren
   '/play/campaign/$id/': typeof PlayCampaignIdIndexRoute
+  '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
 }
 export interface FileRoutesByTo {
@@ -343,10 +358,12 @@ export interface FileRoutesByTo {
   '/u/$username': typeof UUsernameRoute
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
+  '/campaigns/imported/$id': typeof CampaignsImportedIdRouteWithChildren
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdIndexRoute
+  '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
 }
 export interface FileRoutesById {
@@ -387,11 +404,13 @@ export interface FileRoutesById {
   '/u/$username': typeof UUsernameRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
+  '/campaigns/imported/$id': typeof CampaignsImportedIdRouteWithChildren
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdRouteWithChildren
   '/play/campaign/$id/': typeof PlayCampaignIdIndexRoute
+  '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
 }
 export interface FileRouteTypes {
@@ -433,11 +452,13 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/campaigns/'
     | '/encyclopedia/'
+    | '/campaigns/imported/$id'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
     | '/play/campaign/$id/'
+    | '/campaigns/imported/$id/chapter/$chapter'
     | '/play/campaign/$id/chapter/$chapter'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -475,10 +496,12 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/campaigns'
     | '/encyclopedia'
+    | '/campaigns/imported/$id'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
+    | '/campaigns/imported/$id/chapter/$chapter'
     | '/play/campaign/$id/chapter/$chapter'
   id:
     | '__root__'
@@ -518,11 +541,13 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/campaigns/'
     | '/encyclopedia/'
+    | '/campaigns/imported/$id'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
     | '/play/campaign/$id/'
+    | '/campaigns/imported/$id/chapter/$chapter'
     | '/play/campaign/$id/chapter/$chapter'
   fileRoutesById: FileRoutesById
 }
@@ -845,6 +870,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EncyclopediaEntityIdRouteImport
       parentRoute: typeof EncyclopediaRoute
     }
+    '/campaigns/imported/$id': {
+      id: '/campaigns/imported/$id'
+      path: '/imported/$id'
+      fullPath: '/campaigns/imported/$id'
+      preLoaderRoute: typeof CampaignsImportedIdRouteImport
+      parentRoute: typeof CampaignsRoute
+    }
     '/play/campaign/$id/': {
       id: '/play/campaign/$id/'
       path: '/'
@@ -859,17 +891,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayCampaignIdChapterChapterRouteImport
       parentRoute: typeof PlayCampaignIdRoute
     }
+    '/campaigns/imported/$id/chapter/$chapter': {
+      id: '/campaigns/imported/$id/chapter/$chapter'
+      path: '/chapter/$chapter'
+      fullPath: '/campaigns/imported/$id/chapter/$chapter'
+      preLoaderRoute: typeof CampaignsImportedIdChapterChapterRouteImport
+      parentRoute: typeof CampaignsImportedIdRoute
+    }
   }
 }
+
+interface CampaignsImportedIdRouteChildren {
+  CampaignsImportedIdChapterChapterRoute: typeof CampaignsImportedIdChapterChapterRoute
+}
+
+const CampaignsImportedIdRouteChildren: CampaignsImportedIdRouteChildren = {
+  CampaignsImportedIdChapterChapterRoute:
+    CampaignsImportedIdChapterChapterRoute,
+}
+
+const CampaignsImportedIdRouteWithChildren =
+  CampaignsImportedIdRoute._addFileChildren(CampaignsImportedIdRouteChildren)
 
 interface CampaignsRouteChildren {
   CampaignsEraRoute: typeof CampaignsEraRoute
   CampaignsIndexRoute: typeof CampaignsIndexRoute
+  CampaignsImportedIdRoute: typeof CampaignsImportedIdRouteWithChildren
 }
 
 const CampaignsRouteChildren: CampaignsRouteChildren = {
   CampaignsEraRoute: CampaignsEraRoute,
   CampaignsIndexRoute: CampaignsIndexRoute,
+  CampaignsImportedIdRoute: CampaignsImportedIdRouteWithChildren,
 }
 
 const CampaignsRouteWithChildren = CampaignsRoute._addFileChildren(
