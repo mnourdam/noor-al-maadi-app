@@ -147,9 +147,25 @@ function RootComponent() {
 
     // Initialize FCM push notifications (Android-native only; no-op on web).
     console.log("[push] root effect reached");
+    let unsub: (() => void) | undefined;
     import("../lib/pushNotifications")
-      .then((m) => m.initPushNotifications())
+      .then(async (m) => {
+        await m.initPushNotifications();
+        // Flush any token captured before the user was signed in.
+        m.flushPendingDeviceToken().catch(() => {});
+        const { supabase } = await import("../integrations/supabase/client");
+        const { data } = supabase.auth.onAuthStateChange((event) => {
+          if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+            m.flushPendingDeviceToken().catch(() => {});
+          }
+        });
+        unsub = () => data.subscription.unsubscribe();
+      })
       .catch((err) => console.error("[push] dynamic import failed:", err));
+    return () => {
+      unsub?.();
+    };
+
   }, []);
 
   return (

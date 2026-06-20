@@ -2,11 +2,82 @@
  * Push notifications setup for the native Android (Capacitor) build.
  *
  * On the web this is a no-op — `@capacitor/push-notifications` only works
- * inside the native shell. We only log the FCM token for now; persisting
- * it to the backend will come in a later step.
+ * inside the native shell. When a token is received from FCM we log it and
+ * upsert it into the `device_tokens` table for the currently signed-in user.
+ * If no user is signed in yet, we cache the token and persist it on the
+ * next sign-in (see `flushPendingDeviceToken`).
  */
 
+import { supabase } from "@/integrations/supabase/client";
+
 let initialized = false;
+let pendingToken: string | null = null;
+
+const PENDING_TOKEN_KEY = "irth.pendingFcmToken";
+
+function readPending(): string | null {
+  if (pendingToken) return pendingToken;
+  try {
+    if (typeof localStorage !== "undefined") {
+      return localStorage.getItem(PENDING_TOKEN_KEY);
+    }
+  } catch {}
+  return null;
+}
+
+function writePending(token: string | null) {
+  pendingToken = token;
+  try {
+    if (typeof localStorage !== "undefined") {
+      if (token) localStorage.setItem(PENDING_TOKEN_KEY, token);
+      else localStorage.removeItem(PENDING_TOKEN_KEY);
+    }
+  } catch {}
+}
+
+export async function saveDeviceToken(token: string): Promise<void> {
+  if (!token) return;
+  try {
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userData?.user) {
+      console.log("[push] token save skipped: no user yet");
+      writePending(token);
+      return;
+    }
+
+    console.log("[push] saving token to Supabase");
+    const { error } = await supabase
+      .from("device_tokens")
+      .upsert(
+        {
+          user_id: userData.user.id,
+          token,
+          platform: "android",
+          enabled: true,
+          last_seen_at: new Date().toISOString(),
+        },
+        { onConflict: "token" },
+      );
+
+    if (error) {
+      console.error("[push] token save failed", error);
+      writePending(token);
+      return;
+    }
+
+    console.log("[push] token saved");
+    writePending(null);
+  } catch (err) {
+    console.error("[push] token save failed", err);
+    writePending(token);
+  }
+}
+
+export async function flushPendingDeviceToken(): Promise<void> {
+  const t = readPending();
+  if (!t) return;
+  await saveDeviceToken(t);
+}
 
 export async function initPushNotifications(): Promise<void> {
   if (initialized) return;
@@ -43,9 +114,11 @@ export async function initPushNotifications(): Promise<void> {
 
     // 2. Listeners — register BEFORE calling register()
     await PushNotifications.addListener("registration", (token) => {
-      // The FCM device token. Copy this from logcat / Chrome remote
-      // devtools console to send a test push from Firebase Console.
       console.log("[push] ✅ FCM token:", token.value);
+      // Persist to Supabase (or stash for later if not signed in yet).
+      saveDeviceToken(token.value).catch((err) =>
+        console.error("[push] token save failed", err),
+      );
     });
 
     await PushNotifications.addListener("registrationError", (err) => {
