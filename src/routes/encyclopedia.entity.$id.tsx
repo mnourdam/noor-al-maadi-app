@@ -1,5 +1,5 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ChevronRight, Clock, ExternalLink } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ChevronRight, Clock, ExternalLink, Database } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import {
@@ -11,6 +11,10 @@ import { CHARACTERS, getBattleProfile } from "@/lib/data";
 import { getCity } from "@/lib/cities";
 import { RelatedHistory } from "@/components/RelatedHistory";
 import type { EntityRef } from "@/lib/knowledge-graph";
+import {
+  useEncyclopediaSupabaseEntity,
+  isSupabaseEnabled,
+} from "@/lib/encyclopedia-source";
 
 const SECTION_ORDER: EncyclopediaSection[] = [
   "state", "figure", "scholar", "city", "battle", "event", "landmark", "artifact",
@@ -24,7 +28,7 @@ const TYPE_LABEL: Record<string, string> = {
 export const Route = createFileRoute("/encyclopedia/entity/$id")({
   head: ({ params }) => {
     const e = getPackEntity(params.id);
-    if (!e) return { meta: [{ title: "عنصر غير موجود — الموسوعة" }] };
+    if (!e) return { meta: [{ title: "عنصر — الموسوعة" }] };
     return {
       meta: [
         { title: `${e.title} — الموسوعة التاريخية` },
@@ -34,9 +38,8 @@ export const Route = createFileRoute("/encyclopedia/entity/$id")({
       ],
     };
   },
-  beforeLoad: ({ params }) => {
-    if (!getPackEntity(params.id)) throw notFound();
-  },
+  // No beforeLoad notFound — Supabase-only artifacts (not in legacy packs)
+  // must still resolve. Missing-in-both is handled inside the component.
   component: EntityPage,
   notFoundComponent: () => (
     <AppShell>
@@ -61,7 +64,40 @@ function legacyEntityRef(b: NonNullable<ReturnType<typeof getPackEntity>>["bridg
 
 function EntityPage() {
   const { id } = Route.useParams() as { id: string };
-  const e = getPackEntity(id)!;
+  const pack = getPackEntity(id);
+
+  // Phase 1: Supabase is primary for artifacts only. We probe Supabase when
+  // either (a) the pack lookup failed entirely, or (b) the pack entity is
+  // an artifact — in which case Supabase values override pack values.
+  const probeType = pack?.type ?? "artifact";
+  const supaQuery = useEncyclopediaSupabaseEntity(probeType, id, {
+    enabled: isSupabaseEnabled(probeType),
+  });
+  const supa = supaQuery.data ?? null;
+
+  // Supabase-only artifact (not in legacy packs) — render minimal view.
+  if (!pack) {
+    if (supaQuery.isLoading) {
+      return (
+        <AppShell>
+          <div className="px-5 pt-10 text-center text-muted-foreground text-sm">جارٍ التحميل…</div>
+        </AppShell>
+      );
+    }
+    if (supa && supa.entity_type === "artifact") {
+      return <SupabaseOnlyArtifact entity={supa} />;
+    }
+    return (
+      <AppShell>
+        <div className="px-5 pt-10 text-center">
+          <h1 className="font-display text-xl">العنصر غير موجود</h1>
+          <Link to="/encyclopedia" className="mt-4 inline-block text-gold underline">عُد إلى الموسوعة</Link>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const e = pack;
   const era = e.bridges?.era ? ERAS.find((x) => x.id === e.bridges?.era) : undefined;
   const groups = neighboursGrouped(id);
   const isScholar = e.type === "figure" && (e.meta as { kind?: string } | undefined)?.kind === "scholar";
@@ -72,6 +108,13 @@ function EntityPage() {
     legacyRef?.kind === "battle"    ? !!getBattleProfile(legacyRef.id) :
     legacyRef?.kind === "character" ? CHARACTERS.some(c => c.id === legacyRef.id) :
     !!legacyRef;
+
+  // Supabase-primary overrides for artifacts: prefer DB title / description.
+  const fromSupabase = !!supa && e.type === "artifact";
+  const displayTitle = fromSupabase ? (supa!.title || e.title) : e.title;
+  const displayDescription = fromSupabase
+    ? (supa!.summary || supa!.subtitle || e.description)
+    : e.description;
 
   return (
     <AppShell>
@@ -88,12 +131,18 @@ function EntityPage() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] tracking-[0.3em] text-gold/80">{typeLabel}</p>
-              <h1 className="font-display text-2xl font-bold">{e.title}</h1>
+              <h1 className="font-display text-2xl font-bold">{displayTitle}</h1>
               {e.latin && <p className="mt-0.5 text-[11px] text-muted-foreground">{e.latin}</p>}
               <p className="mt-0.5 text-[11px] text-gold/70">{e.period.label}</p>
+              {fromSupabase && (
+                <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+                  <Database className="size-2.5" /> من قاعدة البيانات
+                </span>
+              )}
             </div>
           </div>
-          <p className="mt-3 text-[13px] leading-7 text-foreground/90">{e.description}</p>
+          <p className="mt-3 text-[13px] leading-7 text-foreground/90">{displayDescription}</p>
+
 
           {/* Context chips */}
           <div className="mt-4 flex flex-wrap gap-1.5 text-[10px]">
@@ -171,6 +220,39 @@ function EntityPage() {
           <RelatedHistory entity={legacyRef} title="شبكة التاريخ المرتبط" />
         )}
 
+        <div className="h-10" />
+      </div>
+    </AppShell>
+  );
+}
+
+function SupabaseOnlyArtifact({ entity }: { entity: import("@/lib/encyclopedia-source").SupabaseEncyclopediaEntity }) {
+  return (
+    <AppShell>
+      <div className="px-5 pt-8">
+        <Link to="/encyclopedia" className="inline-flex items-center gap-1 text-[11px] text-gold/80 hover:text-gold">
+          <ChevronRight className="size-3.5" /> الموسوعة
+        </Link>
+        <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
+          <div className="flex items-start gap-3">
+            <span className="grid size-14 place-items-center rounded-2xl bg-black/40 text-3xl ring-1 ring-white/10">
+              🗝️
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] tracking-[0.3em] text-gold/80">أثر</p>
+              <h1 className="font-display text-2xl font-bold">{entity.title}</h1>
+              {entity.subtitle && (
+                <p className="mt-0.5 text-[11px] text-muted-foreground">{entity.subtitle}</p>
+              )}
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+                <Database className="size-2.5" /> من قاعدة البيانات
+              </span>
+            </div>
+          </div>
+          {entity.summary && (
+            <p className="mt-3 text-[13px] leading-7 text-foreground/90">{entity.summary}</p>
+          )}
+        </div>
         <div className="h-10" />
       </div>
     </AppShell>
