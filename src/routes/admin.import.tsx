@@ -568,8 +568,10 @@ const encyclopediaConfig: ImportConfig<EncRow> = {
 function Importer<T>({ config }: { config: ImportConfig<T> }) {
   const [raw, setRaw] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
-  const [result, setResult] = useState<{ inserted: number; skipped: number; failed: number; errors: string[] } | null>(null);
+  const [result, setResult] = useState<{ inserted: number; updated: number; skipped: number; failed: number; errors: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [overwrite, setOverwrite] = useState(false);
+  const [existing, setExisting] = useState<any[]>([]);
 
   const parsed = useMemo(() => {
     if (!raw.trim()) return { rows: [] as T[], errors: [] as string[] };
@@ -584,6 +586,41 @@ function Importer<T>({ config }: { config: ImportConfig<T> }) {
     });
     return { rows, errors: errs };
   }, [raw, config]);
+
+  // Fetch existing rows for live preview status (جديد / تحديث / تخطّي)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (parsed.rows.length === 0) { setExisting([]); return; }
+      const filter = config.buildDedupeFilter(parsed.rows);
+      let q = supabase.from(config.table as any).select(config.dedupeColumns.join(","));
+      for (const [col, vals] of Object.entries(filter)) {
+        q = q.in(col, vals as any[]);
+      }
+      const { data } = await q;
+      if (!cancelled) setExisting((data ?? []) as any[]);
+    })();
+    return () => { cancelled = true; };
+  }, [parsed.rows, config]);
+
+  // Compute per-row status for preview, factoring in within-batch dupes.
+  const statuses = useMemo<("new" | "update" | "skip")[]>(() => {
+    const seen = new Set<string>();
+    return parsed.rows.map(r => {
+      const k = config.rowKey(r);
+      if (seen.has(k)) return "skip";
+      seen.add(k);
+      const isExisting = existing.some(e => config.matchExisting(e, r));
+      if (!isExisting) return "new";
+      return (overwrite && config.allowOverwrite) ? "update" : "skip";
+    });
+  }, [parsed.rows, existing, overwrite, config]);
+
+  const counts = useMemo(() => {
+    const c = { new: 0, update: 0, skip: 0 };
+    for (const s of statuses) c[s]++;
+    return c;
+  }, [statuses]);
 
   const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -609,28 +646,33 @@ function Importer<T>({ config }: { config: ImportConfig<T> }) {
         batch.push(r);
       }
 
-      // Fetch existing rows for dedupe
+      // Refetch existing rows (preview list may be stale)
       const filter = config.buildDedupeFilter(batch);
-      let existing: any[] = [];
+      let existingNow: any[] = [];
       if (batch.length > 0) {
         let q = supabase.from(config.table as any).select(config.dedupeColumns.join(","));
         for (const [col, vals] of Object.entries(filter)) {
           q = q.in(col, vals as any[]);
         }
         const { data } = await q;
-        existing = (data ?? []) as any[];
+        existingNow = (data ?? []) as any[];
       }
 
       const toInsert: T[] = [];
+      const toUpdate: T[] = [];
       let skippedExisting = 0;
       for (const r of batch) {
-        if (existing.some(e => config.matchExisting(e, r))) { skippedExisting++; continue; }
-        toInsert.push(r);
+        const isExisting = existingNow.some(e => config.matchExisting(e, r));
+        if (!isExisting) toInsert.push(r);
+        else if (overwrite && config.allowOverwrite) toUpdate.push(r);
+        else skippedExisting++;
       }
 
       let inserted = 0;
+      let updated = 0;
       let failed = 0;
       const rowErrors: string[] = [];
+
       // Insert in chunks of 100
       for (let i = 0; i < toInsert.length; i += 100) {
         const chunk = toInsert.slice(i, i + 100);
@@ -638,7 +680,6 @@ function Importer<T>({ config }: { config: ImportConfig<T> }) {
           .from(config.table as any)
           .insert(chunk as any, { count: "exact" });
         if (error) {
-          // fall back to row-by-row to attribute failures
           for (const row of chunk) {
             const { error: e2 } = await supabase.from(config.table as any).insert(row as any);
             if (e2) { failed++; rowErrors.push(e2.message); } else { inserted++; }
@@ -648,8 +689,41 @@ function Importer<T>({ config }: { config: ImportConfig<T> }) {
         }
       }
 
+      // Upsert updates by conflict target — only patches allowed fields,
+      // never id/created_at.
+      if (toUpdate.length > 0 && config.allowOverwrite && config.conflictTarget) {
+        const fields = config.overwriteFields;
+        const payloads = toUpdate.map(r => {
+          if (!fields) return r as any;
+          // Preserve conflict-target columns plus the allowlisted update columns.
+          const out: any = {};
+          for (const k of config.conflictTarget!.split(",")) {
+            out[k.trim()] = (r as any)[k.trim()];
+          }
+          for (const k of fields) out[k] = (r as any)[k];
+          return out;
+        });
+        for (let i = 0; i < payloads.length; i += 100) {
+          const chunk = payloads.slice(i, i + 100);
+          const { error, count } = await supabase
+            .from(config.table as any)
+            .upsert(chunk as any, { onConflict: config.conflictTarget, count: "exact" });
+          if (error) {
+            for (const row of chunk) {
+              const { error: e2 } = await supabase
+                .from(config.table as any)
+                .upsert(row as any, { onConflict: config.conflictTarget });
+              if (e2) { failed++; rowErrors.push(e2.message); } else { updated++; }
+            }
+          } else {
+            updated += count ?? chunk.length;
+          }
+        }
+      }
+
       setResult({
         inserted,
+        updated,
         skipped: skippedInBatch + skippedExisting,
         failed,
         errors: rowErrors.slice(0, 10),
@@ -680,6 +754,19 @@ function Importer<T>({ config }: { config: ImportConfig<T> }) {
           <div className="ml-auto text-xs text-slate-400">الجدول: {config.label}</div>
         </div>
 
+        {config.allowOverwrite && (
+          <label className="mb-3 inline-flex items-center gap-2 rounded-md border border-amber-500/20 bg-slate-950/50 px-3 py-1.5 text-sm text-amber-100">
+            <input
+              type="checkbox"
+              checked={overwrite}
+              onChange={e => setOverwrite(e.target.checked)}
+              className="accent-amber-500"
+            />
+            استبدال العناصر الموجودة
+            <span className="text-[11px] text-slate-400">(تحديث بنفس entity_type + slug)</span>
+          </label>
+        )}
+
         <textarea
           dir="ltr"
           value={raw}
@@ -701,8 +788,13 @@ function Importer<T>({ config }: { config: ImportConfig<T> }) {
 
       {parsed.rows.length > 0 && (
         <div className="rounded-xl border border-amber-500/20 bg-slate-900/60 p-5">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-semibold text-amber-200">معاينة ({parsed.rows.length} صف)</h3>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-200">جديد: {counts.new}</span>
+              <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">تحديث: {counts.update}</span>
+              <span className="rounded-full border border-slate-600 bg-slate-800/60 px-2 py-0.5 text-slate-300">تخطّي: {counts.skip}</span>
+            </div>
             <button
               onClick={runImport}
               disabled={busy || parsed.rows.length === 0 || parsed.errors.length > 0}
@@ -712,9 +804,21 @@ function Importer<T>({ config }: { config: ImportConfig<T> }) {
             </button>
           </div>
           <ul className="max-h-80 divide-y divide-slate-800 overflow-auto rounded-md border border-slate-800">
-            {parsed.rows.slice(0, 50).map((r, i) => (
-              <li key={i} className="p-3 text-sm">{config.preview(r)}</li>
-            ))}
+            {parsed.rows.slice(0, 50).map((r, i) => {
+              const s = statuses[i];
+              const badge =
+                s === "new"
+                  ? <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">جديد</span>
+                  : s === "update"
+                  ? <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">تحديث</span>
+                  : <span className="rounded-full border border-slate-600 bg-slate-800/60 px-2 py-0.5 text-[10px] text-slate-300">تخطّي</span>;
+              return (
+                <li key={i} className="flex items-start gap-3 p-3 text-sm">
+                  <div className="pt-0.5">{badge}</div>
+                  <div className="min-w-0 flex-1">{config.preview(r)}</div>
+                </li>
+              );
+            })}
           </ul>
           {parsed.rows.length > 50 && <p className="mt-2 text-xs text-slate-400">تُعرض أول 50 صف فقط في المعاينة.</p>}
         </div>
@@ -725,6 +829,7 @@ function Importer<T>({ config }: { config: ImportConfig<T> }) {
           <div className="font-semibold">نتيجة الاستيراد:</div>
           <ul className="mt-1 pr-5 list-disc">
             <li>تم الإدراج: {result.inserted}</li>
+            <li>تم التحديث: {result.updated}</li>
             <li>تم تخطّيه (مكرر): {result.skipped}</li>
             <li>فشل: {result.failed}</li>
           </ul>
