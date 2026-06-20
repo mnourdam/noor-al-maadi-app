@@ -202,6 +202,48 @@ export type Database = {
         }
         Relationships: []
       }
+      encyclopedia_entities: {
+        Row: {
+          body: Json
+          created_at: string
+          enabled: boolean
+          entity_type: string
+          id: string
+          metadata: Json
+          slug: string
+          subtitle: string | null
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: Json
+          created_at?: string
+          enabled?: boolean
+          entity_type: string
+          id?: string
+          metadata?: Json
+          slug: string
+          subtitle?: string | null
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: Json
+          created_at?: string
+          enabled?: boolean
+          entity_type?: string
+          id?: string
+          metadata?: Json
+          slug?: string
+          subtitle?: string | null
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           created_at: string

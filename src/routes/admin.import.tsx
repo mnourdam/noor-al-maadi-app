@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, type ChangeEvent } from "react";
-import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload } from "lucide-react";
+import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
-type ImportType = "daily_facts" | "today_in_history_events" | "notifications" | "campaigns";
+type ImportType = "daily_facts" | "today_in_history_events" | "notifications" | "campaigns" | "encyclopedia";
 
 export const Route = createFileRoute("/admin/import")({
   head: () => ({
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/admin/import")({
   }),
   validateSearch: (s: Record<string, unknown>): { type?: ImportType } => {
     const t = s.type as string | undefined;
-    if (t === "daily_facts" || t === "today_in_history_events" || t === "notifications" || t === "campaigns") {
+    if (t === "daily_facts" || t === "today_in_history_events" || t === "notifications" || t === "campaigns" || t === "encyclopedia") {
       return { type: t };
     }
     return {};
@@ -45,11 +45,13 @@ function ImportPage() {
           <TypeBtn active={active === "today_in_history_events"} onClick={() => setActive("today_in_history_events")} icon={<CalendarDays className="h-4 w-4" />}>أحداث تاريخية</TypeBtn>
           <TypeBtn active={active === "notifications"} onClick={() => setActive("notifications")} icon={<Bell className="h-4 w-4" />}>مسودات إشعارات</TypeBtn>
           <TypeBtn active={active === "campaigns"} onClick={() => setActive("campaigns")} icon={<Sword className="h-4 w-4" />}>حملات</TypeBtn>
+          <TypeBtn active={active === "encyclopedia"} onClick={() => setActive("encyclopedia")} icon={<Landmark className="h-4 w-4" />}>الموسوعة</TypeBtn>
         </div>
 
         {active === "daily_facts" && <Importer key="f" config={dailyFactsConfig} />}
         {active === "today_in_history_events" && <Importer key="e" config={todayEventsConfig} />}
         {active === "notifications" && <Importer key="n" config={notificationsConfig} />}
+        {active === "encyclopedia" && <Importer key="enc" config={encyclopediaConfig} />}
         {active === "campaigns" && <ComingSoon />}
       </div>
     </div>
@@ -231,6 +233,82 @@ const notificationsConfig: ImportConfig<{
       <div className="text-xs text-amber-300">{r.type} · {r.target_type} · {r.status}</div>
       <div className="font-medium">{r.title}</div>
       <div className="line-clamp-2 text-xs text-slate-400">{r.body}</div>
+    </div>
+  ),
+};
+
+const ENCYCLOPEDIA_TYPES = ["figure","city","battle","state","event","landmark","artifact"] as const;
+type EncEntityType = typeof ENCYCLOPEDIA_TYPES[number];
+
+interface EncRow {
+  entity_type: EncEntityType;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  summary: string | null;
+  body: any;
+  metadata: any;
+  enabled: boolean;
+}
+
+const encyclopediaConfig: ImportConfig<EncRow> = {
+  label: "encyclopedia_entities",
+  table: "encyclopedia_entities",
+  example: `[
+  {
+    "entity_type": "figure",
+    "slug": "salah-al-din",
+    "title": "صلاح الدين الأيوبي",
+    "subtitle": "محرر القدس",
+    "summary": "قائد ومؤسس الدولة الأيوبية...",
+    "body": { "sections": [{ "heading": "النشأة", "text": "..." }] },
+    "metadata": { "era": "ayyubid", "birth_year": 532, "tags": ["قائد","حكام"] },
+    "enabled": true
+  },
+  {
+    "entity_type": "battle",
+    "slug": "hattin",
+    "title": "معركة حطين",
+    "subtitle": "583هـ / 1187م",
+    "summary": "النصر الذي مهّد لتحرير القدس.",
+    "body": {},
+    "metadata": { "era": "ayyubid", "year_hijri": 583 },
+    "enabled": true
+  }
+]`,
+  validate: (row, i) => {
+    if (!row || typeof row !== "object") return { ok: false, error: `الصف ${i + 1}: ليس كائن JSON.` };
+    const entity_type = String(row.entity_type ?? "").trim() as EncEntityType;
+    if (!ENCYCLOPEDIA_TYPES.includes(entity_type)) {
+      return { ok: false, error: `الصف ${i + 1}: entity_type يجب أن يكون أحد: ${ENCYCLOPEDIA_TYPES.join(", ")}.` };
+    }
+    const slug = typeof row.slug === "string" ? row.slug.trim() : "";
+    const title = typeof row.title === "string" ? row.title.trim() : "";
+    if (!slug) return { ok: false, error: `الصف ${i + 1}: slug مطلوب.` };
+    if (!/^[a-z0-9-]+$/.test(slug)) return { ok: false, error: `الصف ${i + 1}: slug يجب أن يكون أحرف صغيرة وأرقام و-.` };
+    if (!title) return { ok: false, error: `الصف ${i + 1}: title مطلوب.` };
+    const body = row.body && typeof row.body === "object" ? row.body : {};
+    const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+    return {
+      ok: true,
+      row: {
+        entity_type, slug, title,
+        subtitle: typeof row.subtitle === "string" && row.subtitle.trim() ? row.subtitle.trim() : null,
+        summary: typeof row.summary === "string" && row.summary.trim() ? row.summary.trim() : null,
+        body, metadata,
+        enabled: row.enabled === false ? false : true,
+      },
+    };
+  },
+  rowKey: r => `${r.entity_type}|${r.slug}`,
+  dedupeColumns: ["entity_type", "slug"],
+  buildDedupeFilter: rows => ({ slug: Array.from(new Set(rows.map(r => r.slug))) }),
+  matchExisting: (e, r) => e.entity_type === r.entity_type && e.slug === r.slug,
+  preview: r => (
+    <div>
+      <div className="text-xs text-amber-300">{r.entity_type} · {r.slug}{r.enabled ? "" : " · معطّل"}</div>
+      <div className="font-medium">{r.title}{r.subtitle ? ` — ${r.subtitle}` : ""}</div>
+      {r.summary && <div className="line-clamp-2 text-xs text-slate-400">{r.summary}</div>}
     </div>
   ),
 };

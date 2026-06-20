@@ -69,8 +69,8 @@ function AdminHub() {
             desc="استيراد JSON للمعلومات والأحداث ومسودات الإشعارات." />
           <AdminCard to="/admin/campaigns" icon={<Sword className="h-5 w-5" />} title="إدارة الحملات"
             desc="إدارة حملات إرث التاريخية." />
-          <AdminCard icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
-            desc="إدارة مدخلات الموسوعة." comingSoon />
+          <AdminCard to="/admin/encyclopedia" icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
+            desc="إدارة مدخلات الموسوعة (شخصيات، مدن، معارك...)." />
         </section>
       </div>
     </div>
