@@ -112,12 +112,14 @@ function EntityPage() {
     legacyRef?.kind === "character" ? CHARACTERS.some(c => c.id === legacyRef.id) :
     !!legacyRef;
 
-  // Supabase-primary override for all enabled types: prefer DB title/description.
-  const fromSupabase = !!supa && isSupabaseEnabled(e.type);
+  // Supabase canonical wins whenever it exists, regardless of e.type — the
+  // resolver already picked the richest matching row across types.
+  const fromSupabase = !!supa;
   const displayTitle = fromSupabase ? (supa!.title || e.title) : e.title;
   const displayDescription = fromSupabase
     ? (supa!.summary || supa!.subtitle || e.description)
     : e.description;
+  void isSupabaseEnabled; // re-exported for backwards compat; not used here
 
 
   return (
