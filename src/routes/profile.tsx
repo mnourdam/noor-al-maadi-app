@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toWesternDigits } from "@/lib/formatNumber";
-import { Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin, Coins, Search, Gift, Bell } from "lucide-react";
+import { Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin, Coins, Search, Gift, Bell, Music, Zap } from "lucide-react";
+import { useAudioSettings } from "@/hooks/useAudioSettings";
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
@@ -353,6 +354,10 @@ function ProfilePage() {
             onChange={(v) => updateSettings({ reduceMotion: v })}
           />
         </div>
+
+        {/* Audio settings */}
+        <AudioSettingsCard />
+
 
         {/* Notification preferences */}
         <div className="mt-5 rounded-2xl border border-gold/25 bg-surface p-4">
