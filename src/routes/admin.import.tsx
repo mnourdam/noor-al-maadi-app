@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, type ChangeEvent } from "react";
-import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload } from "lucide-react";
+import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
-type ImportType = "daily_facts" | "today_in_history_events" | "notifications" | "campaigns";
+type ImportType = "daily_facts" | "today_in_history_events" | "notifications" | "campaigns" | "encyclopedia";
 
 export const Route = createFileRoute("/admin/import")({
   head: () => ({
