@@ -8,6 +8,7 @@ import {
   type PublicProfile, type FriendshipRow,
 } from "@/lib/social";
 import { useAccount } from "@/lib/account";
+import { toWesternDigits } from "@/lib/formatNumber";
 import { Avatar } from "@/components/Avatar";
 import { displayEntityName, displayCharacterName } from "@/lib/display-names";
 
