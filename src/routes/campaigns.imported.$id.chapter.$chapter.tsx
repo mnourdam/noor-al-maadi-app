@@ -304,10 +304,10 @@ function ImportedChapterPlayer() {
                 <div className={`mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted && !currentAck ? "pointer-events-none opacity-60" : ""}`}>
                   {activity ? (
                     <ActivityRenderer
-                      key={activity.id + ":" + (currentAck ? "ack" : "live")}
+                      key={activity.id}
                       activity={activity}
                       onResolve={onResolve}
-                      alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct"}
+                      alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct" && currentAck !== "wrong"}
                     />
                   ) : null}
                 </div>
