@@ -40,7 +40,7 @@ const DIFFICULTY_LABEL: Record<string, string> = {
 };
 
 function ImportedCampaignOverview() {
-  const { id } = useParams({ from: "/campaigns/imported/$id" });
+  const { id } = useParams({ from: "/campaigns/imported/$id/" });
   const [campaign, setCampaign] = useState<Campaign | null>(() => getCampaign(id) ?? null);
   const [loading, setLoading]   = useState(!campaign);
 
