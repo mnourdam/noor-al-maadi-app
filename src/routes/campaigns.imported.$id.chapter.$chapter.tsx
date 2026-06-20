@@ -2,8 +2,10 @@
 // /campaigns/imported/$id/chapter/$chapter — Imported chapter player
 // ------------------------------------------------------------
 // Walks the user through one chapter's activities, awarding
-// XP/coins/hearts via importedCampaignProgress. Visual identity
-// kept consistent with the existing dark cinematic player.
+// XP/coins/hearts via importedCampaignProgress. Hearts are
+// enforced (blocks new activities at 0), advancement waits for
+// an explicit "next" tap so feedback is readable, and a
+// completion modal lists rewards with resolved Arabic titles.
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -18,9 +20,14 @@ import {
   getChapterProgress, getCampaignProgress, recordActivity,
 } from "@/lib/importedCampaignProgress";
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
+import { OutOfHeartsModal } from "@/components/imported-campaign/OutOfHeartsModal";
+import { CampaignCompleteModal } from "@/components/imported-campaign/CampaignCompleteModal";
+import { UnlockList } from "@/components/imported-campaign/UnlockList";
 import { useProfile } from "@/lib/profile";
+import { getEffectiveHearts } from "@/lib/hearts";
 import { audioManager } from "@/lib/audioManager";
 import { upsertChapterProgress, addCollectionItems } from "@/lib/progressSync";
+import { parseUnlockId } from "@/lib/campaignUnlocks";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
@@ -60,19 +67,34 @@ function ImportedChapterPlayer() {
     [campaign, chapterId],
   );
 
-  // Live progress for HUD.
   const [progressTick, setProgressTick] = useState(0);
   const bump = () => setProgressTick(t => t + 1);
 
+  const { profile, addPoints, addDinars, loseHeart } = useProfile();
   const camProgress = campaign ? getCampaignProgress(campaign.id) : null;
   const chProgress  = campaign ? getChapterProgress(campaign.id, chapterId) : null;
 
-  // Current activity = first un-completed one (or last if all done).
+  // Track activities pending acknowledgement before we advance to the next one.
+  // Map activityId -> "correct" | "wrong" (latest outcome to display).
+  const [pendingAck, setPendingAck] = useState<Record<string, "correct" | "wrong" | undefined>>({});
+  const [outOfHeartsOpen, setOutOfHeartsOpen] = useState(false);
+  const [completionOpen, setCompletionOpen] = useState(false);
+
+  // Effective hearts derived from profile.
+  const effectiveHearts = useMemo(() => getEffectiveHearts(profile), [profile, progressTick]);
+  const heartsDepleted = effectiveHearts <= 0;
+
+  // Current activity = first activity that is either un-completed
+  // OR completed-and-not-yet-acknowledged.
   const currentIdx = useMemo(() => {
     if (!chapter || !chProgress) return 0;
-    const idx = chapter.activities.findIndex(a => !chProgress.completedActivityIds.includes(a.id));
+    const idx = chapter.activities.findIndex(a => {
+      const done = chProgress.completedActivityIds.includes(a.id);
+      const ackPending = pendingAck[a.id] === "correct";
+      return !done || ackPending;
+    });
     return idx === -1 ? chapter.activities.length - 1 : idx;
-  }, [chapter, chProgress, progressTick]);
+  }, [chapter, chProgress, progressTick, pendingAck]);
 
   if (loading) {
     return <AppShell><div className="px-5 pt-20 text-center text-muted-foreground">جاري التحميل…</div></AppShell>;
@@ -81,12 +103,20 @@ function ImportedChapterPlayer() {
 
   const activity = chapter.activities[currentIdx];
   const allDone  = chapter.activities.length > 0
-    && chapter.activities.every(a => chProgress?.completedActivityIds.includes(a.id));
+    && chapter.activities.every(a => chProgress?.completedActivityIds.includes(a.id))
+    && Object.values(pendingAck).every(v => v !== "correct");
 
-  const { addPoints, addDinars, loseHeart } = useProfile();
+  const currentAck = activity ? pendingAck[activity.id] : undefined;
 
   const onResolve = (correct: boolean) => {
     if (!activity) return;
+
+    // Hard hearts gate — if the user already has 0 hearts, block any answer.
+    if (!correct && heartsDepleted) {
+      setOutOfHeartsOpen(true);
+      return;
+    }
+
     const alreadyCompleted = chProgress?.completedActivityIds.includes(activity.id) ?? false;
     const xp     = activity.xpReward      ?? ACTIVITY_DEFAULTS.xpReward;
     const coins  = activity.coinsReward   ?? ACTIVITY_DEFAULTS.coinsReward;
@@ -97,8 +127,16 @@ function ImportedChapterPlayer() {
       if (coins > 0) addDinars(coins);
       audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
     } else if (!correct) {
-      for (let i = 0; i < Math.max(1, hearts); i++) loseHeart();
+      // Single heart per wrong attempt — clamp penalty to 1 to avoid burning all hearts on one mistake.
+      const toLose = Math.max(1, Math.min(1, hearts));
+      for (let i = 0; i < toLose; i++) loseHeart();
+      // If that drained the last heart, surface the modal next tick.
+      if (effectiveHearts - toLose <= 0) {
+        setTimeout(() => setOutOfHeartsOpen(true), 250);
+      }
     }
+
+    setPendingAck(prev => ({ ...prev, [activity.id]: correct ? "correct" : "wrong" }));
 
     const wasChapterComplete  = chProgress?.completed ?? false;
     const wasCampaignComplete = camProgress?.completed ?? false;
@@ -112,13 +150,12 @@ function ImportedChapterPlayer() {
     }
     if (newlyCampaign) {
       audioManager.playSfx("campaign-complete", { dedupeKey: `cam:${campaign!.id}` });
-      // also signal each newly-snapshotted registry unlock once
       (nextProgress.unlockedRegistryIds ?? []).slice(0, 1).forEach((rid) =>
         audioManager.playSfx("unlock-reward", { dedupeKey: `unlock:${rid}` }),
       );
     }
 
-    // ── Mirror writes to granular Supabase tables (no-op when signed out) ──
+    // Mirror writes to granular Supabase tables (no-op when signed out).
     const nextCh = nextProgress.chapters[chapter!.id];
     void upsertChapterProgress({
       campaignId: campaign!.id,
@@ -130,22 +167,49 @@ function ImportedChapterPlayer() {
       completed: nextCh?.completed ?? false,
     });
     if (newlyCampaign && (nextProgress.unlockedRegistryIds?.length ?? 0) > 0) {
-      void addCollectionItems(
-        nextProgress.unlockedRegistryIds.map((rid) => ({
+      // Persist BOTH the raw "type:slug" id (for backwards compat) and the
+      // bare slug + canonical type so the museum can match either shape.
+      const items = nextProgress.unlockedRegistryIds.flatMap((rid) => {
+        const parsed = parseUnlockId(rid);
+        const rows = [{
           itemId: rid,
-          itemType: "registry",
+          itemType: parsed.type ?? "registry",
           sourceCampaignId: campaign!.id,
           sourceChapterId: chapter!.id,
-        })),
-      );
+        }];
+        if (parsed.slug && parsed.type) {
+          rows.push({
+            itemId: `${parsed.type}:${parsed.slug}`,
+            itemType: parsed.type,
+            sourceCampaignId: campaign!.id,
+            sourceChapterId: chapter!.id,
+          });
+        }
+        return rows;
+      });
+      void addCollectionItems(items);
     }
+
+    if (newlyCampaign) {
+      setTimeout(() => setCompletionOpen(true), 350);
+    }
+    bump();
+  };
+
+  const acknowledgeAndAdvance = () => {
+    if (!activity) return;
+    setPendingAck(prev => {
+      const next = { ...prev };
+      delete next[activity.id];
+      return next;
+    });
     bump();
   };
 
   return (
     <AppShell>
       <div className="animate-reveal pb-10">
-        {/* HEADER (no local XP/coins/hearts HUD — global HUD owns those) */}
+        {/* HEADER */}
         <div className="sticky top-0 z-10 border-b border-gold/20 bg-[#0a0f1e]/95 px-3 py-3 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-2">
             <Link
@@ -160,7 +224,6 @@ function ImportedChapterPlayer() {
             </span>
           </div>
         </div>
-
 
         <div className="mx-auto max-w-2xl px-5 pt-4">
           <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold/80">
@@ -184,14 +247,16 @@ function ImportedChapterPlayer() {
             </div>
           )}
 
-          {/* Chapter reward preview */}
+          {/* Chapter reward preview — unlocks rendered with resolved names. */}
           {chapter.rewards && (chapter.rewards.xp || chapter.rewards.coins || chapter.rewards.unlocks?.length) && (
-            <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
-              {chapter.rewards.xp ? <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2 py-0.5 text-sky-200">+{chapter.rewards.xp} XP</span> : null}
-              {chapter.rewards.coins ? <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">+{chapter.rewards.coins} دينار</span> : null}
-              {(chapter.rewards.unlocks ?? []).map(u => (
-                <span key={u} className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-gold">🔓 {u}</span>
-              ))}
+            <div className="mt-4 space-y-2">
+              <div className="flex flex-wrap gap-2 text-[11px]">
+                {chapter.rewards.xp ? <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2 py-0.5 text-sky-200">+{chapter.rewards.xp} XP</span> : null}
+                {chapter.rewards.coins ? <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">+{chapter.rewards.coins} دينار</span> : null}
+              </div>
+              {(chapter.rewards.unlocks?.length ?? 0) > 0 && (
+                <UnlockList ids={chapter.rewards.unlocks ?? []} />
+              )}
             </div>
           )}
 
@@ -215,16 +280,42 @@ function ImportedChapterPlayer() {
                   done={chProgress?.completedActivityIds.length ?? 0}
                   total={chapter.activities.length}
                 />
-                <div className="mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5">
+
+                {heartsDepleted && (
+                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
+                    <Heart className="size-3.5" />
+                    <span className="flex-1">نفدت قلوبك — لا يمكنك بدء نشاط جديد الآن.</span>
+                    <button
+                      onClick={() => setOutOfHeartsOpen(true)}
+                      className="rounded-md border border-rose-400/40 bg-rose-500/20 px-2 py-0.5 text-[11px] font-bold"
+                    >
+                      التفاصيل
+                    </button>
+                  </div>
+                )}
+
+                <div className={`mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted && !currentAck ? "pointer-events-none opacity-60" : ""}`}>
                   {activity ? (
                     <ActivityRenderer
-                      key={activity.id + ":" + progressTick}
+                      key={activity.id + ":" + (currentAck ? "ack" : "live")}
                       activity={activity}
                       onResolve={onResolve}
-                      alreadyDone={chProgress?.completedActivityIds.includes(activity.id)}
+                      alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct"}
                     />
                   ) : null}
                 </div>
+
+                {/* Explicit acknowledgement step — keeps feedback visible until tap. */}
+                {currentAck === "correct" && (
+                  <button
+                    onClick={acknowledgeAndAdvance}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+                  >
+                    <Check className="size-4" /> التالي
+                    <ArrowLeft className="size-4" />
+                  </button>
+                )}
+
                 <p className="mt-3 text-center text-[11px] text-muted-foreground">
                   النشاط {(currentIdx + 1).toLocaleString("en-US")} من {chapter.activities.length.toLocaleString("en-US")}
                 </p>
@@ -233,6 +324,20 @@ function ImportedChapterPlayer() {
           </div>
         </div>
       </div>
+
+      <OutOfHeartsModal open={outOfHeartsOpen} onClose={() => setOutOfHeartsOpen(false)} />
+
+      {camProgress && (
+        <CampaignCompleteModal
+          open={completionOpen}
+          onClose={() => setCompletionOpen(false)}
+          campaignId={campaign.id}
+          campaignTitle={campaign.title}
+          xp={getCampaignProgress(campaign.id).totalXp}
+          coins={getCampaignProgress(campaign.id).totalCoins}
+          unlockIds={getCampaignProgress(campaign.id).unlockedRegistryIds}
+        />
+      )}
     </AppShell>
   );
 }
