@@ -34,6 +34,26 @@ export function getUnlockedRegistryIds(): string[] {
   }
 }
 
+/**
+ * Map from unlocked registry id → first campaignId that unlocked it.
+ * Lets the museum show "من حملة <campaign title>" instead of a generic label.
+ */
+export function getUnlockSourcesMap(): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!isBrowser()) return out;
+  try {
+    const raw = window.localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return out;
+    const map = JSON.parse(raw) as Record<string, { unlockedRegistryIds?: string[] }>;
+    for (const campaignId of Object.keys(map ?? {})) {
+      for (const id of map[campaignId]?.unlockedRegistryIds ?? []) {
+        if (!out.has(id)) out.set(id, campaignId);
+      }
+    }
+  } catch { /* noop */ }
+  return out;
+}
+
 export function isRegistryItemUnlocked(id: string): boolean {
   return getUnlockedRegistryIds().includes(id);
 }

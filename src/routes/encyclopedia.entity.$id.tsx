@@ -13,6 +13,7 @@ import { RelatedHistory } from "@/components/RelatedHistory";
 import type { EntityRef } from "@/lib/knowledge-graph";
 import {
   useEncyclopediaSupabaseEntity,
+  useEncyclopediaSupabaseEntityBySlug,
   isSupabaseEnabled,
 } from "@/lib/encyclopedia-source";
 
@@ -71,13 +72,17 @@ function EntityPage() {
   // an artifact — in which case Supabase values override pack values.
   const probeType = pack?.type ?? "artifact";
   const supaQuery = useEncyclopediaSupabaseEntity(probeType, id, {
-    enabled: isSupabaseEnabled(probeType),
+    enabled: !!pack && isSupabaseEnabled(probeType),
   });
-  const supa = supaQuery.data ?? null;
+  // Slug-only fallback for Supabase-only entities (no legacy pack) — covers
+  // campaign unlocks that route via /encyclopedia/entity/<slug> without
+  // knowing the canonical entity_type up front.
+  const slugQuery = useEncyclopediaSupabaseEntityBySlug(!pack ? id : "");
+  const supa = supaQuery.data ?? slugQuery.data ?? null;
 
-  // Supabase-only artifact (not in legacy packs) — render minimal view.
+  // Supabase-only entity (not in legacy packs) — render minimal view.
   if (!pack) {
-    if (supaQuery.isLoading) {
+    if (slugQuery.isLoading) {
       return (
         <AppShell>
           <div className="px-5 pt-10 text-center text-muted-foreground text-sm">جارٍ التحميل…</div>
@@ -85,7 +90,6 @@ function EntityPage() {
       );
     }
     if (supa) {
-      // Supabase-only entity (no legacy pack) — render minimal generic view.
       return <SupabaseOnlyEntity entity={supa} />;
     }
     return (

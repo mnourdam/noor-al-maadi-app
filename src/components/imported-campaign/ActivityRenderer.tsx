@@ -68,7 +68,7 @@ function HintRow({ hint }: { hint?: string }) {
 function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [picked, setPicked] = useState<number | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
-  const [wrongIdxs, setWrongIdxs] = useState<number[]>([]);
+  const [wrongPick, setWrongPick] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
   const options = activity.options ?? [];
 
@@ -78,18 +78,21 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
     ? activity.correctAnswer
     : options.findIndex(o => o === String(activity.correctAnswer));
 
+  const locked = resolved || wrongPick !== null;
+
   const submit = () => {
-    if (picked === null || resolved) return;
+    if (picked === null || locked) return;
     const isCorrect = picked === correctIndex;
     if (isCorrect) {
       setResolved(true);
       setFeedback("ok");
       onResolve(true);
     } else {
-      setWrongIdxs(w => (w.includes(picked) ? w : [...w, picked]));
+      // No retry: lock the activity, reveal the correct answer in green,
+      // mark the chosen option red, and let the parent advance via "التالي".
+      setWrongPick(picked);
       setFeedback("err");
       onResolve(false);
-      setPicked(null);
     }
   };
 
@@ -99,17 +102,17 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
       <PromptBlock activity={activity} />
       <div className="space-y-2">
         {options.map((opt, i) => {
-          const isPicked = picked === i;
-          const isAnswer = resolved && i === correctIndex;
-          const isWrong  = wrongIdxs.includes(i);
+          const isPicked  = picked === i;
+          const isAnswer  = (resolved || wrongPick !== null) && i === correctIndex;
+          const isWrong   = wrongPick === i && i !== correctIndex;
           return (
             <button
               key={`${i}-${opt}`}
-              disabled={resolved || isWrong}
+              disabled={locked}
               onClick={() => { setPicked(i); setFeedback(null); }}
               className={`w-full rounded-xl border px-3 py-2 text-right text-[12px] transition ${
-                isAnswer ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-100"
-                : isWrong ? "border-red-400/60 bg-red-500/15 text-red-200/70 line-through"
+                isAnswer ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
+                : isWrong ? "border-red-400/70 bg-red-500/20 text-red-100"
                 : isPicked ? "border-gold/60 bg-gold/10 text-foreground"
                 : "border-white/10 bg-black/30 text-foreground/90 hover:border-gold/40"
               }`}
@@ -120,7 +123,7 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
         })}
       </div>
       <HintRow hint={activity.hint} />
-      {!resolved && (
+      {!locked && (
         <button
           onClick={submit}
           disabled={picked === null}
@@ -143,23 +146,23 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
 
 // ---------- True / False ----------
 function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
-  const [picked, setPicked] = useState<boolean | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
-  const [wrongVals, setWrongVals] = useState<boolean[]>([]);
+  const [wrongPick, setWrongPick] = useState<boolean | null>(null);
   const correct = typeof activity.correctAnswer === "boolean"
     ? activity.correctAnswer
     : String(activity.correctAnswer).toLowerCase() === "true";
 
+  const locked = resolved || wrongPick !== null;
+
   const submit = (val: boolean) => {
-    if (resolved || wrongVals.includes(val)) return;
-    setPicked(val);
+    if (locked) return;
     if (val === correct) {
       setResolved(true);
       setFeedback("ok");
       onResolve(true);
     } else {
-      setWrongVals(w => [...w, val]);
+      setWrongPick(val);
       setFeedback("err");
       onResolve(false);
     }
@@ -171,16 +174,16 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
       <PromptBlock activity={activity} />
       <div className="grid grid-cols-2 gap-2">
         {[true, false].map((val) => {
-          const isWrong = wrongVals.includes(val);
-          const isCorrect = resolved && val === correct;
+          const isWrong   = wrongPick === val && val !== correct;
+          const isCorrect = (resolved || wrongPick !== null) && val === correct;
           return (
             <button
               key={String(val)}
-              disabled={resolved || isWrong}
+              disabled={locked}
               onClick={() => submit(val)}
               className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
-                isCorrect ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-100"
-                : isWrong ? "border-red-400/60 bg-red-500/15 text-red-200/70 line-through"
+                isCorrect ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
+                : isWrong ? "border-red-400/70 bg-red-500/20 text-red-100"
                 : "border-white/10 bg-black/30 hover:border-gold/40"
               }`}
             >

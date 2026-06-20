@@ -10,6 +10,7 @@ import {
   getImportedRegistryItemsByType,
   getMissingRegistryUnlockIds,
   getUnlockedRegistryIds,
+  getUnlockSourcesMap,
   registryItemIcon,
   registryItemImageUrl,
   registryItemRarity,
@@ -19,6 +20,7 @@ import { audioManager } from "@/lib/audioManager";
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
 import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
+import { listCampaigns } from "@/lib/campaignStorage";
 
 
 export const Route = createFileRoute("/collection")({
@@ -319,6 +321,24 @@ function CollectionPage() {
   // instead of triggering the "بلا تعريف" warning.
   const allUnlockIds = useMemo(() => getUnlockedRegistryIds(), [refreshTick]);
   const { resolved: encyclopediaUnlocks } = useResolvedUnlocks(allUnlockIds);
+
+  // raw unlock id → source campaignId, then campaignId → Arabic title.
+  const unlockSources = useMemo(() => getUnlockSourcesMap(), [refreshTick]);
+  const campaignTitleById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of listCampaigns()) m.set(c.id, c.title);
+    // Hardcoded fallback for the first imported campaign per spec.
+    if (!m.has("prophetic-mission")) m.set("prophetic-mission", "البعثة النبوية");
+    return m;
+  }, [refreshTick]);
+  const sourceLabelFor = (rawId: string): string => {
+    const cid = unlockSources.get(rawId);
+    if (!cid) return "من الموسوعة";
+    const title = campaignTitleById.get(cid);
+    if (!title) return "من الموسوعة";
+    return `من حملة ${title}`;
+  };
+
   const encyclopediaByType = useMemo(() => {
     const m = new Map<string, typeof encyclopediaUnlocks>();
     for (const r of encyclopediaUnlocks) {
@@ -475,7 +495,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encFigures.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
               ))}
             </div>
           </>
@@ -504,7 +524,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encArtifacts.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
               ))}
             </div>
           </>
@@ -528,7 +548,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encBattles.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
               ))}
             </div>
           </>
@@ -596,7 +616,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encLandmarks.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
               ))}
             </div>
             <Link to="/map" className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-gold/30 bg-gold/5 py-2 text-xs text-gold">
@@ -645,7 +665,7 @@ function CollectionPage() {
                   <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
                 ))}
                 {encDynasties.map(r => (
-                  <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+                  <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
                 ))}
               </div>
             )}
@@ -837,9 +857,11 @@ function ImportedCard({
 function EncyclopediaUnlockCard({
   unlock,
   navigate,
+  sourceLabel,
 }: {
   unlock: { raw: string; type: string | null; slug: string | null; title: string | null };
   navigate: ReturnType<typeof useNavigate>;
+  sourceLabel: string;
 }) {
   const TYPE_GLYPH: Record<string, string> = {
     figure: "👤", artifact: "🏺", city: "🏛️", landmark: "🏛️",
@@ -853,7 +875,7 @@ function EncyclopediaUnlockCard({
   const label = TYPE_LABEL[unlock.type ?? ""] ?? "عنصر";
 
   const onOpen = () => {
-    // Encyclopedia-resolved unlocks always go to the generic entity page,
+    // All encyclopedia-resolved unlocks route to the generic entity page,
     // which supports Supabase-only entities (legacy figure/city/battle
     // routes 404 when the slug isn't in the hardcoded list).
     if (!unlock.slug) return;
@@ -862,20 +884,25 @@ function EncyclopediaUnlockCard({
 
   return (
     <button
+      dir="rtl"
       onClick={onOpen}
-      className="group relative flex flex-col items-start gap-2 rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-surface to-transparent p-3 text-right ring-1 ring-gold/20 transition hover:border-gold/60"
+      className="group relative flex w-full min-w-0 flex-col gap-2 overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-surface to-transparent p-3 text-right ring-1 ring-gold/20 transition hover:border-gold/60"
     >
-      <div className="flex w-full items-center justify-between gap-2">
-        <span className="grid size-10 place-items-center rounded-xl bg-black/40 text-xl ring-1 ring-gold/30">
+      <div className="flex w-full min-w-0 items-center justify-between gap-2">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-black/40 text-lg ring-1 ring-gold/30">
           {glyph}
         </span>
-        <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-bold text-gold">
-          من الموسوعة
+        <span className="shrink-0 rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-bold text-gold">
+          {label}
         </span>
       </div>
-      <div className="min-w-0">
-        <p className="font-display truncate text-sm font-bold">{unlock.title}</p>
-        <p className="text-[10px] text-gold/80">{label}</p>
+      <div className="w-full min-w-0">
+        <p className="font-display line-clamp-2 break-words text-[12px] font-bold leading-snug sm:text-sm">
+          {unlock.title ?? unlock.slug}
+        </p>
+        <p className="mt-1 line-clamp-1 break-words text-[10px] text-gold/80">
+          {sourceLabel}
+        </p>
       </div>
     </button>
   );

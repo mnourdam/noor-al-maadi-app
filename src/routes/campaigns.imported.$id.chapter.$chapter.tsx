@@ -17,7 +17,7 @@ import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { getCampaign, listCampaigns } from "@/lib/campaignStorage";
 import { pullCampaignsFromCloud } from "@/lib/cloudSync";
 import {
-  getChapterProgress, getCampaignProgress, recordActivity,
+  getChapterProgress, getCampaignProgress, recordActivity, markActivityComplete,
 } from "@/lib/importedCampaignProgress";
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
 import { OutOfHeartsModal } from "@/components/imported-campaign/OutOfHeartsModal";
@@ -91,12 +91,12 @@ function ImportedChapterPlayer() {
   }, [heartsDepleted]);
 
   // Current activity = first activity that is either un-completed
-  // OR completed-and-not-yet-acknowledged.
+  // OR completed-and-not-yet-acknowledged (correct or wrong feedback pending).
   const currentIdx = useMemo(() => {
     if (!chapter || !chProgress) return 0;
     const idx = chapter.activities.findIndex(a => {
       const done = chProgress.completedActivityIds.includes(a.id);
-      const ackPending = pendingAck[a.id] === "correct";
+      const ackPending = pendingAck[a.id] === "correct" || pendingAck[a.id] === "wrong";
       return !done || ackPending;
     });
     return idx === -1 ? chapter.activities.length - 1 : idx;
@@ -110,7 +110,7 @@ function ImportedChapterPlayer() {
   const activity = chapter.activities[currentIdx];
   const allDone  = chapter.activities.length > 0
     && chapter.activities.every(a => chProgress?.completedActivityIds.includes(a.id))
-    && Object.values(pendingAck).every(v => v !== "correct");
+    && Object.values(pendingAck).every(v => v !== "correct" && v !== "wrong");
 
   const currentAck = activity ? pendingAck[activity.id] : undefined;
 
@@ -200,6 +200,11 @@ function ImportedChapterPlayer() {
 
   const acknowledgeAndAdvance = () => {
     if (!activity) return;
+    // If the user got it wrong, force-complete the activity locally so the
+    // player can advance to the next one (a heart was already deducted).
+    if (currentAck === "wrong" && campaign && chapter) {
+      markActivityComplete(campaign, chapter, activity);
+    }
     setPendingAck(prev => {
       const next = { ...prev };
       delete next[activity.id];
@@ -299,19 +304,23 @@ function ImportedChapterPlayer() {
                 <div className={`mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted && !currentAck ? "pointer-events-none opacity-60" : ""}`}>
                   {activity ? (
                     <ActivityRenderer
-                      key={activity.id + ":" + (currentAck ? "ack" : "live")}
+                      key={activity.id}
                       activity={activity}
                       onResolve={onResolve}
-                      alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct"}
+                      alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct" && currentAck !== "wrong"}
                     />
                   ) : null}
                 </div>
 
                 {/* Explicit acknowledgement step — keeps feedback visible until tap. */}
-                {currentAck === "correct" && (
+                {(currentAck === "correct" || currentAck === "wrong") && (
                   <button
                     onClick={acknowledgeAndAdvance}
-                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+                    className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold shadow-gold ${
+                      currentAck === "correct"
+                        ? "bg-gradient-gold text-primary-foreground"
+                        : "border border-rose-400/50 bg-rose-500/15 text-rose-100"
+                    }`}
                   >
                     <Check className="size-4" /> التالي
                     <ArrowLeft className="size-4" />
