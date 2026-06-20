@@ -190,9 +190,14 @@ function EntityPage() {
           </div>
         </div>
 
+        {/* Rich article body (overview / timeline / sections / facts / related / sources)
+            Reads from Supabase entity.body when present. Renders nothing for shallow entries. */}
+        {supa && <EncyclopediaArticleBody article={parseEncyclopediaArticle(supa.body, supa.metadata)} />}
+
         {/* Unlockables */}
         {e.unlockables.length > 0 && (
           <section className="mt-6">
+
             <h2 className="font-display mb-2 text-sm font-bold">يفتح</h2>
             <div className="flex flex-wrap gap-1.5">
               {e.unlockables.map((u, i) => (
