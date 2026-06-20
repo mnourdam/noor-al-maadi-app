@@ -762,10 +762,8 @@ function RecentUnlocks() {
   const lastArtifact = [...profile.artifactsFound].slice(-1)[0];
   const a = lastArtifact ? ARTIFACTS.find((x) => x.id === lastArtifact) : undefined;
   if (a) legacy.push({ key: `a-${a.id}`, icon: a.icon, kind: "أثر", title: a.name, subtitle: a.typeLabel });
-  const lastTitle = [...profile.titlesEarned].slice(-1)[0];
-  if (lastTitle) legacy.push({ key: `t-${lastTitle}`, icon: "👑", kind: "لقب", title: lastTitle, subtitle: "مُنح حديثًا" });
-  const lastBadge = [...profile.badges].slice(-1)[0];
-  if (lastBadge) legacy.push({ key: `b-${lastBadge}`, icon: "🏅", kind: "شارة", title: displayBadgeName(lastBadge), subtitle: "إنجاز جديد" });
+  // Titles/badges intentionally omitted from "آخر المقتنيات" — they are not
+  // museum-style collectibles. They surface in their own profile sections.
 
   const recents: Recent[] = (supaRecents && supaRecents.length > 0)
     ? supaRecents.slice(0, 3)
