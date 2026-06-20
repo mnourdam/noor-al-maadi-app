@@ -495,7 +495,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encFigures.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
               ))}
             </div>
           </>
@@ -524,7 +524,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encArtifacts.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
               ))}
             </div>
           </>
@@ -548,7 +548,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encBattles.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
               ))}
             </div>
           </>
@@ -616,7 +616,7 @@ function CollectionPage() {
                 <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
               ))}
               {encLandmarks.map(r => (
-                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+                <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
               ))}
             </div>
             <Link to="/map" className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-gold/30 bg-gold/5 py-2 text-xs text-gold">
@@ -665,7 +665,7 @@ function CollectionPage() {
                   <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
                 ))}
                 {encDynasties.map(r => (
-                  <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
+                  <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} sourceLabel={sourceLabelFor(r.raw)} />
                 ))}
               </div>
             )}
