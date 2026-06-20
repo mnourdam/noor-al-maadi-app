@@ -14,7 +14,7 @@ function timeAgo(ts: number | null): string {
 }
 
 export function AccountSection() {
-  const { user, account, syncing, lastSyncAt, syncNow, signOut } = useAccount();
+  const { user, account, displayName, syncing, lastSyncAt, syncNow, signOut } = useAccount();
   const isGuest = !user;
 
   return (
@@ -28,6 +28,7 @@ export function AccountSection() {
       </header>
 
       <div className="space-y-2 text-sm">
+        <Row label="الاسم" value={isGuest ? "—" : displayName} />
         <Row label="اسم المستخدم" value={account?.username ?? "—"} />
         <Row label="البريد" value={account?.email ?? user?.email ?? "—"} />
         <Row
