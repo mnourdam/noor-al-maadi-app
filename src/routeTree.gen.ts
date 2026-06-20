@@ -44,6 +44,7 @@ import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
+import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as PlayCampaignIdRouteImport } from './routes/play.campaign.$id'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
@@ -229,6 +230,11 @@ const BattleIdRoute = BattleIdRouteImport.update({
   path: '/battle/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/admin/notifications',
+  path: '/admin/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
   id: '/admin/campaigns',
   path: '/admin/campaigns',
@@ -301,6 +307,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
@@ -345,6 +352,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
@@ -391,6 +399,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
@@ -439,6 +448,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/timeline'
     | '/admin/campaigns'
+    | '/admin/notifications'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
@@ -483,6 +493,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/timeline'
     | '/admin/campaigns'
+    | '/admin/notifications'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
@@ -528,6 +539,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/timeline'
     | '/admin/campaigns'
+    | '/admin/notifications'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
@@ -575,6 +587,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   TimelineRoute: typeof TimelineRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRoute
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
   CompareIdRoute: typeof CompareIdRoute
@@ -836,6 +849,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BattleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/admin/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/campaigns': {
       id: '/admin/campaigns'
       path: '/admin/campaigns'
@@ -976,6 +996,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   TimelineRoute: TimelineRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
+  AdminNotificationsRoute: AdminNotificationsRoute,
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
   CompareIdRoute: CompareIdRoute,
