@@ -521,8 +521,40 @@ function CollectionPage() {
                 );
               })}
             </div>
+            {importedDynasties.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {importedDynasties.map(item => (
+                  <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+                ))}
+              </div>
+            )}
           </>
         )}
+
+        {/* Badges (imported only) */}
+        {section === "badges" && (
+          <>
+            <SectionBar icon={Award} title="شارات" done={counts.badges.done} total={counts.badges.total} accent="bg-gradient-to-r from-amber-500 to-gold" />
+            <div className="grid grid-cols-2 gap-3">
+              {importedBadges.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Achievements (imported only) */}
+        {section === "achievements" && (
+          <>
+            <SectionBar icon={Trophy} title="إنجازات" done={counts.achievements.done} total={counts.achievements.total} accent="bg-gradient-to-r from-emerald-500 to-gold" />
+            <div className="grid grid-cols-2 gap-3">
+              {importedAchievements.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
+            </div>
+          </>
+        )}
+
 
         {totalDone === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-white/15 p-6 text-center text-xs text-muted-foreground">
