@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Bell, Send, Save, RefreshCw, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAccount } from "@/lib/account";
 
 // ============================================================
 // /admin/notifications — Admin notification composer
@@ -48,16 +49,25 @@ interface NotificationRow {
 }
 
 function AdminNotificationsPage() {
+  const { user: accountUser, loadingSession } = useAccount();
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    if (loadingSession) return;
+    let alive = true;
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      const currentUserId = data.user?.id ?? null;
-      const currentEmail = data.user?.email ?? null;
+      const [{ data: sessionData }, { data: userData }] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase.auth.getUser(),
+      ]);
+      if (!alive) return;
+      const sessionUser = sessionData.session?.user ?? null;
+      const currentUser = userData.user ?? accountUser ?? sessionUser;
+      const currentUserId = currentUser?.id ?? null;
+      const currentEmail = currentUser?.email ?? null;
       const isAdmin = NORMALIZED_ALLOWED_ADMIN_EMAILS.includes(normalizeEmail(currentEmail));
       console.log("[admin notifications] current user id:", currentUserId);
       console.log("[admin notifications] current email:", currentEmail);
@@ -68,7 +78,10 @@ function AdminNotificationsPage() {
       setAllowed(isAdmin);
       setChecking(false);
     })();
-  }, []);
+    return () => {
+      alive = false;
+    };
+  }, [accountUser, loadingSession]);
 
   const debugBlock = <AdminDebugBlock userId={userId} email={email} isAdmin={allowed} />;
 
