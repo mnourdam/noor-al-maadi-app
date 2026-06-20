@@ -186,6 +186,98 @@ export type Database = {
           },
         ]
       }
+      notification_deliveries: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          notification_id: string
+          sent_at: string | null
+          status: string
+          token: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          notification_id: string
+          sent_at?: string | null
+          status?: string
+          token: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          notification_id?: string
+          sent_at?: string | null
+          status?: string
+          token?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_deliveries_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          deep_link: string | null
+          id: string
+          image_url: string | null
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string
+          target_type: string
+          target_user_id: string | null
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          deep_link?: string | null
+          id?: string
+          image_url?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target_type?: string
+          target_user_id?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          deep_link?: string | null
+          id?: string
+          image_url?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target_type?: string
+          target_user_id?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           artifacts_collected: number
@@ -325,6 +417,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      today_in_history_events: {
+        Row: {
+          body: string
+          created_at: string
+          day: number
+          deep_link: string | null
+          enabled: boolean
+          gregorian_year: string | null
+          hijri_year: string | null
+          id: string
+          month: number
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          day: number
+          deep_link?: string | null
+          enabled?: boolean
+          gregorian_year?: string | null
+          hijri_year?: string | null
+          id?: string
+          month: number
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          day?: number
+          deep_link?: string | null
+          enabled?: boolean
+          gregorian_year?: string | null
+          hijri_year?: string | null
+          id?: string
+          month?: number
+          title?: string
+        }
+        Relationships: []
       }
       user_campaign_progress: {
         Row: {
