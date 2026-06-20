@@ -183,7 +183,7 @@ function CampaignImporter() {
         .from("admin_campaigns" as any)
         .select("id")
         .in("id", ids);
-      const existingIds = new Set(((existing ?? []) as Array<{ id: string }>).map(r => r.id));
+      const existingIds = new Set((((existing as unknown) ?? []) as Array<{ id: string }>).map(r => r.id));
 
       for (const c of validCampaigns) {
         const exists = existingIds.has(c.id);
