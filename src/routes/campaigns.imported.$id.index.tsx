@@ -18,6 +18,7 @@ import { pullCampaignsFromCloud } from "@/lib/cloudSync";
 import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
+import { UnlockList } from "@/components/imported-campaign/UnlockList";
 
 export const Route = createFileRoute("/campaigns/imported/$id/")({
   head: () => ({ meta: [{ title: "حملة مستوردة — إرث" }] }),
