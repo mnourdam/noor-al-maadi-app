@@ -25,7 +25,7 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const { profile, logout, updateSettings, claimSeason, setBio, setFavorites, claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs } = useProfile();
-  const { account, user, displayName: accountDisplayName, updateDisplayName } = useAccount();
+  const { user, displayName: accountDisplayName, updateDisplayName } = useAccount();
   const displayName = accountDisplayName || profile.name || "ضيف";
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(profile.bio ?? "");
