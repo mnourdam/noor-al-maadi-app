@@ -340,19 +340,40 @@ function CollectionPage() {
   const totalAll  = Object.values(sectionStats).reduce((s, c) => s + c.total, 0);
   const prestige  = totalAll ? Math.round((totalDone / totalAll) * 100) : 0;
 
-  // ── Missing-registry warning (only for actually unresolved IDs) ──
+  // ── Missing-registry warning (canonical resolver) ────────────
+  // Build pool of all loaded enabled entities across the 6 museum types,
+  // plus state. We treat a raw id as resolved when it maps to ANY entity
+  // by (type+slug), bare slug across types, or metadata.aliases.
+  const allLoadedEntities = useMemo(() => {
+    return [
+      ...(supFigures.data ?? []),
+      ...(supArtifacts.data ?? []),
+      ...(supLandmarks.data ?? []),
+      ...(supCities.data ?? []),
+      ...(supBattles.data ?? []),
+      ...(supEvents.data ?? []),
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data]);
+
   const rawMissingUnlockIds = useMemo(() => getMissingRegistryUnlockIds(), [refreshTick]);
   const missingUnlockIds = useMemo(() => {
-    // Hide ids that DO map to a Supabase entity (resolved via type:slug or legacy_id).
     return rawMissingUnlockIds.filter(raw => {
-      const [t, ...rest] = raw.split(":");
-      const slug = rest.join(":");
-      if (!t || !slug) return true;
-      const list = supByType[t]?.data ?? [];
-      return !list.some(e => e.slug === slug || (e.metadata as any)?.legacy_id === slug);
+      const trimmed = (raw ?? "").trim();
+      if (!trimmed) return false;
+      const [t, ...rest] = trimmed.split(":");
+      const slug = (rest.join(":") || t).toLowerCase();
+      for (const e of allLoadedEntities) {
+        const meta = (e.metadata as any) ?? {};
+        if (e.slug === slug) return false;
+        if (meta.legacy_id === slug) return false;
+        const aliases: string[] = Array.isArray(meta.aliases) ? meta.aliases : [];
+        if (aliases.includes(trimmed) || aliases.includes(slug)) return false;
+      }
+      return true;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawMissingUnlockIds, supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data]);
+  }, [rawMissingUnlockIds, allLoadedEntities]);
+
 
   // ── Render section ──────────────────────────────────────────
   const current = SECTIONS.find(s => s.id === section)!;
