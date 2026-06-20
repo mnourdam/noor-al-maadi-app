@@ -44,6 +44,7 @@ import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
+import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as PlayCampaignIdRouteImport } from './routes/play.campaign.$id'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
@@ -226,6 +227,11 @@ const BattleIdRoute = BattleIdRouteImport.update({
   path: '/battle/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
+  id: '/admin/campaigns',
+  path: '/admin/campaigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlayCampaignIdRoute = PlayCampaignIdRouteImport.update({
   id: '/play/campaign/$id',
   path: '/play/campaign/$id',
@@ -280,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/admin/campaigns': typeof AdminCampaignsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
@@ -321,6 +328,7 @@ export interface FileRoutesByTo {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/admin/campaigns': typeof AdminCampaignsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
@@ -364,6 +372,7 @@ export interface FileRoutesById {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/admin/campaigns': typeof AdminCampaignsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
@@ -409,6 +418,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/admin/campaigns'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
@@ -450,6 +460,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/admin/campaigns'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
@@ -492,6 +503,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/admin/campaigns'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
@@ -536,6 +548,7 @@ export interface RootRouteChildren {
   ShareCardRoute: typeof ShareCardRoute
   TermsRoute: typeof TermsRoute
   TimelineRoute: typeof TimelineRoute
+  AdminCampaignsRoute: typeof AdminCampaignsRoute
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
   CompareIdRoute: typeof CompareIdRoute
@@ -797,6 +810,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BattleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/campaigns': {
+      id: '/admin/campaigns'
+      path: '/admin/campaigns'
+      fullPath: '/admin/campaigns'
+      preLoaderRoute: typeof AdminCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/play/campaign/$id': {
       id: '/play/campaign/$id'
       path: '/play/campaign/$id'
@@ -910,6 +930,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShareCardRoute: ShareCardRoute,
   TermsRoute: TermsRoute,
   TimelineRoute: TimelineRoute,
+  AdminCampaignsRoute: AdminCampaignsRoute,
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
   CompareIdRoute: CompareIdRoute,
