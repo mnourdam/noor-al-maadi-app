@@ -55,8 +55,19 @@ const REWARD_ARTIFACT_NAMES: Record<string, string> = {
 /** Resolve a badge ID to an Arabic name. Falls back to a generic label. */
 export function displayBadgeName(id?: string | null): string {
   if (!id) return "";
-  const trimmed = id.replace(/^badge-/, "");
-  return BADGE_NAMES[trimmed] ?? BADGE_NAMES[id] ?? "شارة";
+  const trimmed = id.replace(/^badge[-:]/, "");
+  return BADGE_NAMES[trimmed] ?? BADGE_NAMES[id] ?? "شارة جديدة";
+}
+
+/** Extra badge IDs surfaced by imported campaigns. Extends the curated map. */
+const IMPORTED_BADGE_NAMES: Record<string, string> = {
+  "prophetic-mission": "شارة البعثة النبوية",
+  "salahuddin": "شارة صلاح الدين",
+  "umar": "شارة الفاروق",
+};
+// Merge at module load so the alias survives the existing BADGE_NAMES lookup.
+for (const [k, v] of Object.entries(IMPORTED_BADGE_NAMES)) {
+  if (!BADGE_NAMES[k]) (BADGE_NAMES as Record<string, string>)[k] = v;
 }
 
 /** Resolve an artifact ID to its Arabic name across all known sources. */
