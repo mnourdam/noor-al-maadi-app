@@ -704,14 +704,38 @@ function ImportedCard({
   setReveal: (r: RevealItem | null) => void;
 }) {
   const rarity = registryItemRarity(item);
-  const icon = registryItemIcon(item);
+  const emoji = registryItemIcon(item);
+  const imageUrl = registryItemImageUrl(item);
+
+  const cardIcon: React.ReactNode = imageUrl ? (
+    <img
+      src={imageUrl}
+      alt={item.name}
+      loading="lazy"
+      className="absolute inset-0 size-full object-cover"
+      onError={(e) => {
+        // Fall back to emoji if the image fails to load.
+        const t = e.currentTarget;
+        t.style.display = "none";
+      }}
+    />
+  ) : (
+    <span aria-hidden>{emoji}</span>
+  );
+
+  const revealIcon: React.ReactNode = imageUrl ? (
+    <img src={imageUrl} alt={item.name} className="size-full rounded-2xl object-cover" />
+  ) : (
+    <span aria-hidden>{emoji}</span>
+  );
+
   const subtitle = item.subtitle ?? item.historicalPeriod ?? item.category ?? "مستورد";
   const footer = item.description?.slice(0, 80);
   return (
     <Card
       unlocked={item.unlocked}
       rarity={rarity}
-      icon={icon}
+      icon={cardIcon}
       title={item.name}
       subtitle={subtitle}
       footer={footer}
@@ -720,15 +744,17 @@ function ImportedCard({
         if (!item.unlocked) return;
         setReveal({
           rarity,
-          icon,
+          icon: revealIcon,
           title: item.name,
           subtitle,
           lines: [
             item.description ?? "عنصرٌ مستورد من حملةٍ إدارية.",
             ...(item.historicalPeriod ? [`الحقبة: ${item.historicalPeriod}`] : []),
           ],
+          alreadyOwned: true,
         });
       }}
     />
   );
 }
+
