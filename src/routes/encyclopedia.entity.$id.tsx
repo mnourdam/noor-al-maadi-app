@@ -275,8 +275,14 @@ function SupabaseOnlyEntity({ entity }: { entity: import("@/lib/encyclopedia-sou
             <p className="mt-3 text-[13px] leading-7 text-foreground/90">{entity.summary}</p>
           )}
         </div>
+
+        {/* Rich article body — overview / timeline / sections / facts / related / sources.
+            Backward-compatible: shallow entries (no body fields) render nothing here. */}
+        <EncyclopediaArticleBody article={parseEncyclopediaArticle(entity.body, entity.metadata)} />
+
         <div className="h-10" />
       </div>
+
     </AppShell>
   );
 }
