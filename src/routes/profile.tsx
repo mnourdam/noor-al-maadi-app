@@ -492,3 +492,53 @@ function SettingToggle({ icon, label, desc, value, onChange }: { icon: React.Rea
     </button>
   );
 }
+
+function AudioSettingsCard() {
+  const [audio, setAudio] = useAudioSettings();
+  return (
+    <div className="mt-5 rounded-2xl border border-gold/25 bg-surface p-4">
+      <p className="font-display mb-1 inline-flex items-center gap-2 text-sm font-bold">
+        <Music className="size-4 text-gold" /> إعدادات الصوت
+      </p>
+      <p className="mb-3 text-[11px] text-muted-foreground">
+        أجواء هادئة ومؤثرات لحظات الإنجاز. يمكنك إيقافها متى شئت.
+      </p>
+      <div className="space-y-2">
+        <SettingToggle
+          icon={<Volume2 className="size-4" />}
+          label="تشغيل الصوت"
+          desc="المفتاح الرئيسي للصوت في التطبيق"
+          value={audio.soundEnabled}
+          onChange={(v) => setAudio({ soundEnabled: v })}
+        />
+        <SettingToggle
+          icon={<Music className="size-4" />}
+          label="الخلفية الصوتية"
+          desc="نغمات أجواء خفيفة أثناء التصفّح"
+          value={audio.ambienceEnabled && audio.soundEnabled}
+          onChange={(v) => setAudio({ ambienceEnabled: v })}
+        />
+        <SettingToggle
+          icon={<Zap className="size-4" />}
+          label="مؤثرات الإنجاز"
+          desc="نغمة قصيرة عند إكمال نشاط أو فتح مكافأة"
+          value={audio.sfxEnabled && audio.soundEnabled}
+          onChange={(v) => setAudio({ sfxEnabled: v })}
+        />
+      </div>
+      <div className="mt-4">
+        <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>مستوى الصوت</span>
+          <span className="text-gold">{Math.round(audio.masterVolume * 100)}%</span>
+        </div>
+        <input
+          type="range" min={0} max={100} step={5}
+          value={Math.round(audio.masterVolume * 100)}
+          onChange={(e) => setAudio({ masterVolume: Number(e.target.value) / 100 })}
+          className="w-full accent-amber-400"
+          aria-label="مستوى الصوت"
+        />
+      </div>
+    </div>
+  );
+}
