@@ -854,13 +854,13 @@ function EncyclopediaUnlockCard({
 
   const onOpen = () => {
     // Route to the legacy detail page when the type maps; otherwise the
-    // generic encyclopedia entity page.
+    // generic encyclopedia entity page. IDs are always bare slugs.
     if (!unlock.slug) return;
     if (unlock.type === "figure")        navigate({ to: "/figure/$id",  params: { id: unlock.slug } });
     else if (unlock.type === "city")     navigate({ to: "/city/$id",    params: { id: unlock.slug } });
     else if (unlock.type === "battle")   navigate({ to: "/battle/$id",  params: { id: unlock.slug } });
     else if (unlock.type === "state")    navigate({ to: "/encyclopedia/state/$id", params: { id: unlock.slug } });
-    else                                 navigate({ to: "/encyclopedia/entity/$id", params: { id: `${unlock.type ?? "entity"}.${unlock.slug}` } });
+    else                                 navigate({ to: "/encyclopedia/entity/$id", params: { id: unlock.slug } });
   };
 
   return (
