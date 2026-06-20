@@ -105,9 +105,10 @@ export async function pushSave(userId: string, profile: ProfileState): Promise<b
   return true;
 }
 
-export async function signUpWithEmail(args: { email: string; password: string; username: string; referralCode?: string }) {
-  const { email, password, username, referralCode } = args;
+export async function signUpWithEmail(args: { email: string; password: string; username: string; referralCode?: string; displayName?: string }) {
+  const { email, password, username, referralCode, displayName } = args;
   const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
+  const name = (displayName ?? username).trim();
   return supabase.auth.signUp({
     email,
     password,
@@ -115,6 +116,8 @@ export async function signUpWithEmail(args: { email: string; password: string; u
       emailRedirectTo: redirectTo,
       data: {
         username: username.trim(),
+        display_name: name,
+        full_name: name,
         ...(referralCode ? { referral_code: referralCode.trim().toUpperCase() } : {}),
       },
     },
