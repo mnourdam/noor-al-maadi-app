@@ -169,7 +169,7 @@ function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, myster
 }
 
 // ───── Reveal dialog
-interface RevealItem { rarity: Rarity; icon: string; title: string; subtitle: string; lines: string[]; }
+interface RevealItem { rarity: Rarity; icon: React.ReactNode; title: string; subtitle: string; lines: string[]; alreadyOwned?: boolean }
 function RevealDialog({ item, onClose }: { item: RevealItem | null; onClose: () => void }) {
   const open = !!item;
   const meta = item ? RARITY_META[item.rarity] : RARITY_META.common;
