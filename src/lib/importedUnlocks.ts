@@ -38,21 +38,56 @@ export function isRegistryItemUnlocked(id: string): boolean {
   return getUnlockedRegistryIds().includes(id);
 }
 
+/** Normalize legacy/Arabic type aliases to a canonical RegistryItemType. */
+const TYPE_ALIASES: Record<string, RegistryItemType> = {
+  figure: "figure", character: "figure", person: "figure",
+  "شخصية": "figure", "شخصيات": "figure",
+  artifact: "artifact", relic: "artifact",
+  "أثر": "artifact", "آثار": "artifact",
+  city: "city", landmark: "city", place: "city",
+  "مدينة": "city", "معلم": "city", "معالم": "city",
+  battle: "battle", "معركة": "battle", "معارك": "battle",
+  scholar: "scholar", "عالم": "scholar", "علماء": "scholar",
+  dynasty: "dynasty", era: "dynasty", "دولة": "dynasty", "حقبة": "dynasty",
+  badge: "badge", "شارة": "badge", "شارات": "badge",
+  achievement: "achievement", "إنجاز": "achievement", "إنجازات": "achievement",
+};
+function normalizeType(raw: unknown): RegistryItemType | null {
+  if (typeof raw !== "string") return null;
+  const k = raw.trim().toLowerCase();
+  return TYPE_ALIASES[k] ?? TYPE_ALIASES[raw.trim()] ?? null;
+}
+function normalizeId(raw: unknown): string {
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
 /** Imported registry items, optionally filtered by type, joined with locked/unlocked flag. */
 export function getImportedRegistryItemsByType(
   type: RegistryItemType,
 ): Array<ContentRegistryItem & { unlocked: boolean }> {
-  const ids = new Set(getUnlockedRegistryIds());
+  const ids = new Set(getUnlockedRegistryIds().map(normalizeId));
   return listRegistry()
-    .filter(i => i.type === type)
-    .map(i => ({ ...i, unlocked: ids.has(i.id) }));
+    .filter(i => normalizeType(i.type) === type)
+    .map(i => ({ ...i, unlocked: ids.has(normalizeId(i.id)) }));
 }
 
 /** Convenience: just the unlocked ones. */
 export function getUnlockedRegistryItems(type?: RegistryItemType): ContentRegistryItem[] {
-  const ids = new Set(getUnlockedRegistryIds());
-  return listRegistry().filter(i => ids.has(i.id) && (!type || i.type === type));
+  const ids = new Set(getUnlockedRegistryIds().map(normalizeId));
+  return listRegistry().filter(i => {
+    if (!ids.has(normalizeId(i.id))) return false;
+    if (!type) return true;
+    return normalizeType(i.type) === type;
+  });
 }
+
+/** Unlock IDs that have no matching registry item — useful for diagnostics. */
+export function getMissingRegistryUnlockIds(): string[] {
+  const all = listRegistry().map(i => normalizeId(i.id));
+  const have = new Set(all);
+  return getUnlockedRegistryIds().filter(id => !have.has(normalizeId(id)));
+}
+
 
 const TYPE_ICON: Record<RegistryItemType, string> = {
   figure: "🧕",

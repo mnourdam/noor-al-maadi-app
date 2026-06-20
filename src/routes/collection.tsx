@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles, Award, Trophy, Clock } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Lock, MapPin, Crown, Swords, BookOpen, Landmark, Scroll, Users, Sparkles, Award, Trophy, Clock, AlertTriangle } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { ARTIFACTS, CHARACTERS, MAP_REGIONS, ERAS, STORIES, fogHint, type Era } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
@@ -8,9 +8,11 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { displayBadgeName } from "@/lib/display-names";
 import {
   getImportedRegistryItemsByType,
+  getMissingRegistryUnlockIds,
   registryItemIcon,
   registryItemRarity,
 } from "@/lib/importedUnlocks";
+import { pullAllFromCloud } from "@/lib/cloudSync";
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
 
 export const Route = createFileRoute("/collection")({
@@ -247,6 +249,20 @@ function CollectionPage() {
   const [reveal, setReveal] = useState<RevealItem | null>(null);
   const navigate = useNavigate();
 
+  // Re-read localStorage when we come back to this tab or after a cloud pull.
+  const [refreshTick, setRefreshTick] = useState(0);
+  useEffect(() => {
+    // Pull latest registry + campaigns from cloud so newly unlocked admin items show up.
+    pullAllFromCloud().then(() => setRefreshTick(t => t + 1)).catch(() => {});
+    const bump = () => setRefreshTick(t => t + 1);
+    window.addEventListener("focus", bump);
+    window.addEventListener("storage", bump);
+    return () => {
+      window.removeEventListener("focus", bump);
+      window.removeEventListener("storage", bump);
+    };
+  }, []);
+
   // counts per section
   const artifactsOnly = ARTIFACTS.filter(a => a.type !== "manuscript");
   const manuscripts   = ARTIFACTS.filter(a => a.type === "manuscript");
@@ -256,13 +272,21 @@ function CollectionPage() {
   const importedFigures      = useMemo(() => [
     ...getImportedRegistryItemsByType("figure"),
     ...getImportedRegistryItemsByType("scholar"),
-  ], []);
-  const importedArtifacts    = useMemo(() => getImportedRegistryItemsByType("artifact"), []);
-  const importedBattles      = useMemo(() => getImportedRegistryItemsByType("battle"), []);
-  const importedLandmarks    = useMemo(() => getImportedRegistryItemsByType("city"), []);
-  const importedDynasties    = useMemo(() => getImportedRegistryItemsByType("dynasty"), []);
-  const importedBadges       = useMemo(() => getImportedRegistryItemsByType("badge"), []);
-  const importedAchievements = useMemo(() => getImportedRegistryItemsByType("achievement"), []);
+  ], [refreshTick]);
+  const importedArtifacts    = useMemo(() => getImportedRegistryItemsByType("artifact"), [refreshTick]);
+  const importedBattles      = useMemo(() => getImportedRegistryItemsByType("battle"), [refreshTick]);
+  const importedLandmarks    = useMemo(() => getImportedRegistryItemsByType("city"), [refreshTick]);
+  const importedDynasties    = useMemo(() => getImportedRegistryItemsByType("dynasty"), [refreshTick]);
+  const importedBadges       = useMemo(() => getImportedRegistryItemsByType("badge"), [refreshTick]);
+  const importedAchievements = useMemo(() => getImportedRegistryItemsByType("achievement"), [refreshTick]);
+  const missingUnlockIds     = useMemo(() => getMissingRegistryUnlockIds(), [refreshTick]);
+
+  useEffect(() => {
+    if (missingUnlockIds.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn("[museum] unlock IDs without registry items:", missingUnlockIds);
+    }
+  }, [missingUnlockIds]);
 
   const importedUnlockedCount = (arr: Array<{ unlocked: boolean }>) => arr.filter(i => i.unlocked).length;
 
@@ -329,6 +353,19 @@ function CollectionPage() {
 
         {/* Recent unlocks — "آخر المقتنيات" */}
         <RecentUnlocks />
+
+        {missingUnlockIds.length > 0 && (
+          <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            <div className="flex-1">
+              <p className="font-bold">{missingUnlockIds.length} عنصر مفتوح بلا تعريف في السجل</p>
+              <p className="text-[10px] text-amber-200/80">
+                المعرفات: {missingUnlockIds.slice(0, 3).join("، ")}{missingUnlockIds.length > 3 ? "…" : ""}.
+                {" "}أضِفها في لوحة الإدارة أو اسحب أحدث السجل من السحابة.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Section pills */}
         <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
