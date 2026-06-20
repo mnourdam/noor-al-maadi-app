@@ -13,6 +13,7 @@ import { RelatedHistory } from "@/components/RelatedHistory";
 import type { EntityRef } from "@/lib/knowledge-graph";
 import {
   useEncyclopediaSupabaseEntity,
+  useEncyclopediaSupabaseEntityBySlug,
   isSupabaseEnabled,
 } from "@/lib/encyclopedia-source";
 
