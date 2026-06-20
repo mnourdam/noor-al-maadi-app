@@ -211,12 +211,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   }, [login]);
 
   const displayName = useMemo(() => {
-    return account?.display_name?.trim()
+    const resolved = account?.display_name?.trim()
       || (user?.user_metadata?.display_name as string | undefined)?.trim()
       || (user?.user_metadata?.full_name as string | undefined)?.trim()
-      || account?.username
-      || user?.email?.split("@")[0]
-      || "ضيف";
+      || (user?.user_metadata?.username as string | undefined)?.trim()
+      || account?.username?.trim()
+      || user?.email?.split("@")[0]?.trim();
+    if (resolved) return resolved;
+    return user ? "مستخدم إرث" : "ضيف";
   }, [account, user]);
 
   const value = useMemo<AccountCtx>(() => ({
