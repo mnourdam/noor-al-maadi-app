@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
-import { Bell, Send, Save, RefreshCw, ShieldAlert } from "lucide-react";
+import { Bell, Send, Save, RefreshCw, ShieldAlert, Zap, CalendarClock, UserMinus, Flag, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount } from "@/lib/account";
 
@@ -385,7 +385,150 @@ function Composer({ debugBlock }: { debugBlock: ReactNode }) {
             </ul>
           )}
         </section>
+
+        <AutomaticNotifications />
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// Automatic notifications section
+// ============================================================
+type AutoRun = {
+  id: string;
+  job_key: string;
+  run_date: string;
+  status: string;
+  notification_id: string | null;
+  created_at: string;
+};
+
+const AUTO_JOBS: { key: string; title: string; desc: string; icon: any }[] = [
+  { key: "today_in_history", title: "في مثل هذا اليوم", desc: "حدث تاريخي مطابق لتاريخ اليوم.", icon: CalendarClock },
+  { key: "daily_fact", title: "معلومة تاريخية", desc: "معلومة يومية يتم تدويرها بين المستخدمين.", icon: BookOpen },
+  { key: "inactive_user", title: "تذكير العودة", desc: "تذكير للمستخدمين غير النشطين لأكثر من 3 أيام.", icon: UserMinus },
+  { key: "incomplete_campaign", title: "حملة غير مكتملة", desc: "تذكير لإكمال الحملات المفتوحة.", icon: Flag },
+];
+
+function AutomaticNotifications() {
+  const [runs, setRuns] = useState<AutoRun[]>([]);
+  const [busyJob, setBusyJob] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const loadRuns = useCallback(async () => {
+    const { data } = await supabase
+      .from("automatic_notification_runs" as any)
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    setRuns(((data ?? []) as unknown) as AutoRun[]);
+  }, []);
+
+  useEffect(() => { loadRuns(); }, [loadRuns]);
+
+  const runJob = async (jobKey: string | null) => {
+    setBusyJob(jobKey ?? "all");
+    setFeedback(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("run-automatic-notifications", {
+        body: jobKey ? { jobs: [jobKey] } : {},
+      });
+      if (error) throw error;
+      setFeedback(`تم التشغيل — ${JSON.stringify(data?.results ?? data)}`);
+      await loadRuns();
+    } catch (err: any) {
+      setFeedback(`فشل التشغيل: ${err.message ?? err}`);
+    } finally {
+      setBusyJob(null);
+    }
+  };
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <Zap className="h-5 w-5 text-primary" />
+          الإشعارات التلقائية
+        </h2>
+        <button
+          onClick={() => runJob(null)}
+          disabled={!!busyJob}
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          <Zap className="h-3 w-3" />
+          تشغيل اختبار الآن (الكل)
+        </button>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        {AUTO_JOBS.map((job) => {
+          const Icon = job.icon;
+          const isBusy = busyJob === job.key;
+          return (
+            <div key={job.key} className="rounded-md border border-border p-3">
+              <div className="flex items-start gap-3">
+                <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{job.title}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{job.desc}</div>
+                  <div className="mt-1 font-mono text-[10px] text-muted-foreground/70">{job.key}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => runJob(job.key)}
+                disabled={!!busyJob}
+                className="mt-3 inline-flex items-center gap-1 rounded-md border border-input px-3 py-1 text-xs hover:bg-accent disabled:opacity-50"
+              >
+                {isBusy ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                تشغيل اختبار الآن
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {feedback && (
+        <pre dir="ltr" className="mt-4 max-h-48 overflow-auto rounded-md border border-border bg-muted/30 p-3 text-[11px] text-left">
+          {feedback}
+        </pre>
+      )}
+
+      <div className="mt-5">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">آخر 10 عمليات تلقائية</h3>
+          <button
+            onClick={loadRuns}
+            className="inline-flex items-center gap-1 rounded-md border border-input px-2 py-0.5 text-xs hover:bg-accent"
+          >
+            <RefreshCw className="h-3 w-3" />
+            تحديث
+          </button>
+        </div>
+        {runs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">لا توجد عمليات بعد.</p>
+        ) : (
+          <ul className="space-y-2">
+            {runs.map((r) => (
+              <li key={r.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-xs">
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate font-mono">{r.job_key}</span>
+                  <span className="text-muted-foreground">{new Date(r.created_at).toLocaleString()} · {r.run_date}</span>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 ${
+                    r.status === "success"
+                      ? "bg-green-500/15 text-green-500"
+                      : "bg-destructive/15 text-destructive"
+                  }`}
+                >
+                  {r.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }

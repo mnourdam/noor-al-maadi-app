@@ -44,6 +44,44 @@ export type Database = {
         }
         Relationships: []
       }
+      automatic_notification_runs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          id: string
+          job_key: string
+          notification_id: string | null
+          run_date: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          job_key: string
+          notification_id?: string | null
+          run_date: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          job_key?: string
+          notification_id?: string | null
+          run_date?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automatic_notification_runs_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cloud_saves: {
         Row: {
           client_updated_at: string | null
@@ -92,6 +130,36 @@ export type Database = {
           name?: string
           type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      daily_facts: {
+        Row: {
+          body: string
+          created_at: string
+          deep_link: string | null
+          enabled: boolean
+          id: string
+          last_sent_at: string | null
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          deep_link?: string | null
+          enabled?: boolean
+          id?: string
+          last_sent_at?: string | null
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          deep_link?: string | null
+          enabled?: boolean
+          id?: string
+          last_sent_at?: string | null
+          title?: string
         }
         Relationships: []
       }
