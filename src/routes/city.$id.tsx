@@ -46,11 +46,14 @@ function CityPage() {
   const { id } = useParams({ from: "/city/$id" });
   const { profile } = useProfile();
   const city = getCity(id);
+  const legacyFacade = city ? { title: city.name, subtitle: city.honorific, summary: city.tagline } : null;
+  const display = useEncyclopediaDisplay("city", id, legacyFacade);
   if (!city) throw notFound();
 
   const region = MAP_REGIONS.find((r) => r.id === city.regionId);
   const unlocked = profile.regionsUnlocked.includes(city.regionId);
   const era = ERAS.find((e) => e.id === city.era);
+
 
   const characters = useMemo(
     () => CHARACTERS.filter((c) => city.characterIds.includes(c.id)),
