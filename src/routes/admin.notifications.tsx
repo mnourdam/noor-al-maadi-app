@@ -103,7 +103,7 @@ function Composer() {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(20);
-    setRecent((data ?? []) as NotificationRow[]);
+    setRecent(((data ?? []) as unknown) as NotificationRow[]);
   }, []);
 
   useEffect(() => {
