@@ -8,17 +8,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
-import {
-  ArrowRight, ArrowLeft, Check, Heart, Zap, Coins, Sparkles, BookOpen, Scroll,
-} from "lucide-react";
+import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import type { Campaign, CampaignChapter } from "@/types/campaign";
+import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { getCampaign, listCampaigns } from "@/lib/campaignStorage";
 import { pullCampaignsFromCloud } from "@/lib/cloudSync";
 import {
   getChapterProgress, getCampaignProgress, recordActivity,
 } from "@/lib/importedCampaignProgress";
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
+import { useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
@@ -81,8 +81,21 @@ function ImportedChapterPlayer() {
   const allDone  = chapter.activities.length > 0
     && chapter.activities.every(a => chProgress?.completedActivityIds.includes(a.id));
 
+  const { addPoints, addDinars, loseHeart } = useProfile();
+
   const onResolve = (correct: boolean) => {
     if (!activity) return;
+    const alreadyCompleted = chProgress?.completedActivityIds.includes(activity.id) ?? false;
+    const xp     = activity.xpReward      ?? ACTIVITY_DEFAULTS.xpReward;
+    const coins  = activity.coinsReward   ?? ACTIVITY_DEFAULTS.coinsReward;
+    const hearts = activity.heartsPenalty ?? ACTIVITY_DEFAULTS.heartsPenalty;
+
+    if (correct && !alreadyCompleted) {
+      if (xp > 0) addPoints(xp);
+      if (coins > 0) addDinars(coins);
+    } else if (!correct) {
+      for (let i = 0; i < Math.max(1, hearts); i++) loseHeart();
+    }
     recordActivity(campaign, chapter, activity, correct);
     bump();
   };
@@ -90,7 +103,7 @@ function ImportedChapterPlayer() {
   return (
     <AppShell>
       <div className="animate-reveal pb-10">
-        {/* HEADER */}
+        {/* HEADER (no local XP/coins/hearts HUD — global HUD owns those) */}
         <div className="sticky top-0 z-10 border-b border-gold/20 bg-[#0a0f1e]/95 px-3 py-3 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-2">
             <Link
@@ -100,13 +113,12 @@ function ImportedChapterPlayer() {
             >
               <ArrowRight className="size-3.5" /> {campaign.title}
             </Link>
-            <div className="flex items-center gap-3 text-[11px]">
-              <span className="inline-flex items-center gap-1 text-sky-300"><Zap className="size-3" />{camProgress?.totalXp ?? 0}</span>
-              <span className="inline-flex items-center gap-1 text-amber-300"><Coins className="size-3" />{camProgress?.totalCoins ?? 0}</span>
-              <span className="inline-flex items-center gap-1 text-red-300"><Heart className="size-3" />{camProgress?.totalHeartsLost ?? 0}</span>
-            </div>
+            <span className="text-[10px] text-muted-foreground">
+              {camProgress?.completed ? "حملة مكتملة" : "حملة مستوردة"}
+            </span>
           </div>
         </div>
+
 
         <div className="mx-auto max-w-2xl px-5 pt-4">
           <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold/80">

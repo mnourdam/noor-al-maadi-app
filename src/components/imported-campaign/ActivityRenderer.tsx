@@ -1,13 +1,10 @@
 // ============================================================
 // Activity Renderers for Imported Campaigns
 // ------------------------------------------------------------
-// One small component per supported activity type. Each renderer
-// owns its UI + answer-check logic, then notifies the parent via
-// `onResolve(correct)` so the player can award XP / hearts.
-//
-// Renderers degrade gracefully: any malformed/missing field
-// falls back to a "mark complete" CTA so a bad import never
-// breaks the chapter.
+// Each renderer notifies the parent via `onResolve(correct)`.
+// - Correct answer: resolves the activity permanently.
+// - Wrong answer: shows feedback, lets the user retry,
+//   notifies the parent (so a heart can be deducted).
 // ============================================================
 
 import { useMemo, useState } from "react";
@@ -19,6 +16,9 @@ export interface RendererProps {
   onResolve: (correct: boolean) => void;
   alreadyDone?: boolean;
 }
+
+const FALLBACK_WRONG = "إجابة غير صحيحة، حاول مرة أخرى.";
+const FALLBACK_OK = "أحسنت، إجابة صحيحة.";
 
 function FeedbackBanner({ kind, text }: { kind: "ok" | "err"; text?: string }) {
   if (!text) return null;
@@ -68,6 +68,8 @@ function HintRow({ hint }: { hint?: string }) {
 function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [picked, setPicked] = useState<number | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const [wrongIdxs, setWrongIdxs] = useState<number[]>([]);
+  const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
   const options = activity.options ?? [];
 
   if (!options.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
@@ -79,8 +81,16 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
   const submit = () => {
     if (picked === null || resolved) return;
     const isCorrect = picked === correctIndex;
-    setResolved(true);
-    onResolve(isCorrect);
+    if (isCorrect) {
+      setResolved(true);
+      setFeedback("ok");
+      onResolve(true);
+    } else {
+      setWrongIdxs(w => (w.includes(picked) ? w : [...w, picked]));
+      setFeedback("err");
+      onResolve(false);
+      setPicked(null);
+    }
   };
 
   return (
@@ -91,15 +101,15 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
         {options.map((opt, i) => {
           const isPicked = picked === i;
           const isAnswer = resolved && i === correctIndex;
-          const isWrong  = resolved && isPicked && i !== correctIndex;
+          const isWrong  = wrongIdxs.includes(i);
           return (
             <button
               key={`${i}-${opt}`}
-              disabled={resolved}
-              onClick={() => setPicked(i)}
+              disabled={resolved || isWrong}
+              onClick={() => { setPicked(i); setFeedback(null); }}
               className={`w-full rounded-xl border px-3 py-2 text-right text-[12px] transition ${
                 isAnswer ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-100"
-                : isWrong ? "border-red-400/60 bg-red-500/15 text-red-100"
+                : isWrong ? "border-red-400/60 bg-red-500/15 text-red-200/70 line-through"
                 : isPicked ? "border-gold/60 bg-gold/10 text-foreground"
                 : "border-white/10 bg-black/30 text-foreground/90 hover:border-gold/40"
               }`}
@@ -119,10 +129,12 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
           تحقق من الإجابة
         </button>
       )}
-      {resolved && (
+      {feedback && (
         <FeedbackBanner
-          kind={picked === correctIndex ? "ok" : "err"}
-          text={picked === correctIndex ? activity.feedbackCorrect ?? "إجابة صحيحة." : activity.feedbackWrong ?? "إجابة غير صحيحة."}
+          kind={feedback}
+          text={feedback === "ok"
+            ? (activity.feedbackCorrect ?? FALLBACK_OK)
+            : (activity.feedbackWrong ?? FALLBACK_WRONG)}
         />
       )}
     </div>
@@ -133,15 +145,24 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
 function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [picked, setPicked] = useState<boolean | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
+  const [wrongVals, setWrongVals] = useState<boolean[]>([]);
   const correct = typeof activity.correctAnswer === "boolean"
     ? activity.correctAnswer
     : String(activity.correctAnswer).toLowerCase() === "true";
 
   const submit = (val: boolean) => {
-    if (resolved) return;
+    if (resolved || wrongVals.includes(val)) return;
     setPicked(val);
-    setResolved(true);
-    onResolve(val === correct);
+    if (val === correct) {
+      setResolved(true);
+      setFeedback("ok");
+      onResolve(true);
+    } else {
+      setWrongVals(w => [...w, val]);
+      setFeedback("err");
+      onResolve(false);
+    }
   };
 
   return (
@@ -149,26 +170,32 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <div className="grid grid-cols-2 gap-2">
-        {[true, false].map((val) => (
-          <button
-            key={String(val)}
-            disabled={resolved}
-            onClick={() => submit(val)}
-            className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
-              resolved && val === correct ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-100"
-              : resolved && picked === val ? "border-red-400/60 bg-red-500/15 text-red-100"
-              : "border-white/10 bg-black/30 hover:border-gold/40"
-            }`}
-          >
-            {val ? "صحيح" : "خطأ"}
-          </button>
-        ))}
+        {[true, false].map((val) => {
+          const isWrong = wrongVals.includes(val);
+          const isCorrect = resolved && val === correct;
+          return (
+            <button
+              key={String(val)}
+              disabled={resolved || isWrong}
+              onClick={() => submit(val)}
+              className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
+                isCorrect ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-100"
+                : isWrong ? "border-red-400/60 bg-red-500/15 text-red-200/70 line-through"
+                : "border-white/10 bg-black/30 hover:border-gold/40"
+              }`}
+            >
+              {val ? "صحيح" : "خطأ"}
+            </button>
+          );
+        })}
       </div>
       <HintRow hint={activity.hint} />
-      {resolved && (
+      {feedback && (
         <FeedbackBanner
-          kind={picked === correct ? "ok" : "err"}
-          text={picked === correct ? activity.feedbackCorrect ?? "إجابة صحيحة." : activity.feedbackWrong ?? "إجابة غير صحيحة."}
+          kind={feedback}
+          text={feedback === "ok"
+            ? (activity.feedbackCorrect ?? FALLBACK_OK)
+            : (activity.feedbackWrong ?? FALLBACK_WRONG)}
         />
       )}
     </div>
@@ -180,6 +207,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
   const correctOrder = activity.correctOrder ?? activity.options ?? [];
   const [order, setOrder] = useState<string[]>(() => shuffle(correctOrder));
   const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
 
   if (!correctOrder.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
 
@@ -190,16 +218,21 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
     if (j < 0 || j >= next.length) return;
     [next[idx], next[j]] = [next[j], next[idx]];
     setOrder(next);
+    setFeedback(null);
   };
 
   const submit = () => {
     if (resolved) return;
     const isCorrect = order.every((v, i) => v === correctOrder[i]);
-    setResolved(true);
-    onResolve(isCorrect);
+    if (isCorrect) {
+      setResolved(true);
+      setFeedback("ok");
+      onResolve(true);
+    } else {
+      setFeedback("err");
+      onResolve(false);
+    }
   };
-
-  const isCorrect = resolved && order.every((v, i) => v === correctOrder[i]);
 
   return (
     <div>
@@ -221,17 +254,19 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
           تحقق من الترتيب
         </button>
       )}
-      {resolved && (
+      {feedback && (
         <FeedbackBanner
-          kind={isCorrect ? "ok" : "err"}
-          text={isCorrect ? activity.feedbackCorrect ?? "ترتيب صحيح." : activity.feedbackWrong ?? `الترتيب الصحيح: ${correctOrder.join(" ← ")}`}
+          kind={feedback}
+          text={feedback === "ok"
+            ? (activity.feedbackCorrect ?? "ترتيب صحيح.")
+            : (activity.feedbackWrong ?? FALLBACK_WRONG)}
         />
       )}
     </div>
   );
 }
 
-// ---------- Decision Choice (no wrong answer — choose your path) ----------
+// ---------- Decision Choice (no wrong answer) ----------
 function DecisionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [picked, setPicked] = useState<number | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
@@ -242,7 +277,7 @@ function DecisionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
     if (resolved) return;
     setPicked(i);
     setResolved(true);
-    onResolve(true); // historical decisions are reflective, always credited
+    onResolve(true);
   };
 
   return (
@@ -275,17 +310,24 @@ function DecisionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
 // ---------- Match Pairs ----------
 function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const pairs = activity.pairs ?? [];
-  if (!pairs.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
-
   const rights = useMemo(() => shuffle(pairs.map(p => p.right)), [pairs]);
-  const [mapping, setMapping] = useState<Record<string, string>>({}); // leftKey -> rightValue
+  const [mapping, setMapping] = useState<Record<string, string>>({});
   const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
+
+  if (!pairs.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
 
   const submit = () => {
     if (resolved) return;
     const ok = pairs.every(p => mapping[p.left] === p.right);
-    setResolved(true);
-    onResolve(ok);
+    if (ok) {
+      setResolved(true);
+      setFeedback("ok");
+      onResolve(true);
+    } else {
+      setFeedback("err");
+      onResolve(false);
+    }
   };
 
   return (
@@ -300,7 +342,7 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
             <select
               disabled={resolved}
               value={mapping[p.left] ?? ""}
-              onChange={(e) => setMapping(m => ({ ...m, [p.left]: e.target.value }))}
+              onChange={(e) => { setMapping(m => ({ ...m, [p.left]: e.target.value })); setFeedback(null); }}
               className="flex-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-foreground outline-none"
             >
               <option value="" className="bg-[#0a0f1e]">— اختر —</option>
@@ -319,12 +361,12 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
           تحقق من المطابقة
         </button>
       )}
-      {resolved && (
+      {feedback && (
         <FeedbackBanner
-          kind={pairs.every(p => mapping[p.left] === p.right) ? "ok" : "err"}
-          text={pairs.every(p => mapping[p.left] === p.right)
-            ? activity.feedbackCorrect ?? "مطابقة صحيحة."
-            : activity.feedbackWrong ?? "بعض الأزواج غير متطابقة."}
+          kind={feedback}
+          text={feedback === "ok"
+            ? (activity.feedbackCorrect ?? FALLBACK_OK)
+            : (activity.feedbackWrong ?? FALLBACK_WRONG)}
         />
       )}
     </div>
@@ -335,13 +377,20 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
 function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [val, setVal] = useState("");
   const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
   const correct = String(activity.correctAnswer ?? "").trim().toLowerCase();
 
   const submit = () => {
     if (resolved) return;
     const ok = correct.length > 0 && val.trim().toLowerCase() === correct;
-    setResolved(true);
-    onResolve(ok);
+    if (ok) {
+      setResolved(true);
+      setFeedback("ok");
+      onResolve(true);
+    } else {
+      setFeedback("err");
+      onResolve(false);
+    }
   };
 
   return (
@@ -350,7 +399,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
       <PromptBlock activity={activity} />
       <input
         value={val}
-        onChange={(e) => setVal(e.target.value)}
+        onChange={(e) => { setVal(e.target.value); setFeedback(null); }}
         disabled={resolved}
         placeholder="اكتب إجابتك…"
         className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
@@ -361,19 +410,19 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
           تحقق
         </button>
       )}
-      {resolved && (
+      {feedback && (
         <FeedbackBanner
-          kind={val.trim().toLowerCase() === correct ? "ok" : "err"}
-          text={val.trim().toLowerCase() === correct
-            ? activity.feedbackCorrect ?? "إجابة صحيحة."
-            : activity.feedbackWrong ?? `الإجابة الصحيحة: ${activity.correctAnswer ?? "—"}`}
+          kind={feedback}
+          text={feedback === "ok"
+            ? (activity.feedbackCorrect ?? FALLBACK_OK)
+            : (activity.feedbackWrong ?? FALLBACK_WRONG)}
         />
       )}
     </div>
   );
 }
 
-// ---------- Reflection (free-form, always credited) ----------
+// ---------- Reflection ----------
 function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [val, setVal] = useState("");
   const [resolved, setResolved] = useState(alreadyDone ?? false);
@@ -406,7 +455,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
   );
 }
 
-// ---------- Safe fallback (renders prompt + optional options + a complete button) ----------
+// ---------- Fallback ----------
 function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   return (
@@ -447,7 +496,6 @@ export function ActivityRenderer(props: RendererProps) {
   }
 }
 
-// ---------- helpers ----------
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
