@@ -607,3 +607,41 @@ function RecentUnlocks() {
     </div>
   );
 }
+
+// ───── Imported registry item card (admin-imported via campaigns)
+function ImportedCard({
+  item,
+  setReveal,
+}: {
+  item: ContentRegistryItem & { unlocked: boolean };
+  setReveal: (r: RevealItem | null) => void;
+}) {
+  const rarity = registryItemRarity(item);
+  const icon = registryItemIcon(item);
+  const subtitle = item.subtitle ?? item.historicalPeriod ?? item.category ?? "مستورد";
+  const footer = item.description?.slice(0, 80);
+  return (
+    <Card
+      unlocked={item.unlocked}
+      rarity={rarity}
+      icon={icon}
+      title={item.name}
+      subtitle={subtitle}
+      footer={footer}
+      mystery={{ title: "عنصرٌ مستورد", clue: "أكمل الحملة المرتبطة لتكشفه." }}
+      onClick={() => {
+        if (!item.unlocked) return;
+        setReveal({
+          rarity,
+          icon,
+          title: item.name,
+          subtitle,
+          lines: [
+            item.description ?? "عنصرٌ مستورد من حملةٍ إدارية.",
+            ...(item.historicalPeriod ? [`الحقبة: ${item.historicalPeriod}`] : []),
+          ],
+        });
+      }}
+    />
+  );
+}
