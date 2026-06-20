@@ -144,6 +144,11 @@ function RootComponent() {
     };
     const so = (typeof screen !== "undefined" ? (screen.orientation as LockableOrientation | undefined) : undefined);
     so?.lock?.("portrait").catch(() => {});
+
+    // Initialize FCM push notifications (Android-native only; no-op on web).
+    import("../lib/pushNotifications")
+      .then((m) => m.initPushNotifications())
+      .catch((err) => console.error("[push] dynamic import failed:", err));
   }, []);
 
   return (

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1086073281544",
+    "project_id": "irth-9d7a8",
+    "storage_bucket": "irth-9d7a8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1086073281544:android:b3388a965771d0222085bd",
+        "android_client_info": {
+          "package_name": "app.lovable.irth"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6lZwzFVD0X4sadvPtWPGOUxlYXwtJVgo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
