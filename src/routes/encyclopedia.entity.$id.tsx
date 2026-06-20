@@ -131,12 +131,18 @@ function EntityPage() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] tracking-[0.3em] text-gold/80">{typeLabel}</p>
-              <h1 className="font-display text-2xl font-bold">{e.title}</h1>
+              <h1 className="font-display text-2xl font-bold">{displayTitle}</h1>
               {e.latin && <p className="mt-0.5 text-[11px] text-muted-foreground">{e.latin}</p>}
               <p className="mt-0.5 text-[11px] text-gold/70">{e.period.label}</p>
+              {fromSupabase && (
+                <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+                  <Database className="size-2.5" /> من قاعدة البيانات
+                </span>
+              )}
             </div>
           </div>
-          <p className="mt-3 text-[13px] leading-7 text-foreground/90">{e.description}</p>
+          <p className="mt-3 text-[13px] leading-7 text-foreground/90">{displayDescription}</p>
+
 
           {/* Context chips */}
           <div className="mt-4 flex flex-wrap gap-1.5 text-[10px]">
