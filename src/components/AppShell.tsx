@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { HUD } from "./HUD";
 import { FriendNotificationsPoller } from "./FriendNotificationsPoller";
 import { BackNavigationGuard } from "./BackNavigationGuard";
+import { AudioInitializer } from "./AudioInitializer";
 
 const tabs = [
   { to: "/", label: "المغامرة", icon: Compass },
@@ -20,6 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col pb-24">
       <HUD />
+      <AudioInitializer />
       <FriendNotificationsPoller />
       <BackNavigationGuard />
       <div className="flex-1">{children}</div>
