@@ -1,10 +1,18 @@
-// Modal shown when the user runs out of hearts mid-campaign.
+// Modal shown when the user runs out of hearts mid-activity.
+//
+// Offers two recovery paths:
+//   1. Solve a historical investigation (re-engagement loop — recovers
+//      one heart on completion via existing recoverHeartFromActivity).
+//   2. Buy a heart for 20 dinars (instant, deducts coins).
 
-import { Heart, Clock } from "lucide-react";
+import { Heart, Clock, Search, Coins } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { msUntilNextHeart, HEART_MAX, getEffectiveHearts } from "@/lib/hearts";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+
+const HEART_COST = 20;
 
 function formatMs(ms: number): string {
   if (ms <= 0) return "الآن";
@@ -22,14 +30,28 @@ interface Props {
 export function OutOfHeartsModal({ open, onClose }: Props) {
   const { profile, spendDinarsForHeart } = useProfile();
   const [, setTick] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (!open) return;
+    setError(null);
     const id = window.setInterval(() => setTick(t => t + 1), 1000);
     return () => window.clearInterval(id);
   }, [open]);
 
   const eff = getEffectiveHearts(profile);
   const ms = msUntilNextHeart(profile);
+  const coins = profile.dinars ?? 0;
+
+  const buy = () => {
+    setError(null);
+    if (coins < HEART_COST) {
+      setError(`تحتاج ${HEART_COST} دينارًا وعندك ${coins} فقط.`);
+      return;
+    }
+    const ok = spendDinarsForHeart();
+    if (!ok) setError("تعذّر شراء قلب الآن، حاول لاحقًا.");
+    else onClose();
+  };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -50,12 +72,26 @@ export function OutOfHeartsModal({ open, onClose }: Props) {
         </div>
 
         <div className="mt-5 flex flex-col gap-2">
-          <button
-            onClick={() => spendDinarsForHeart()}
-            className="rounded-xl border border-amber-300/40 bg-amber-500/15 px-4 py-2 text-sm font-bold text-amber-100"
+          <Link
+            to="/investigations"
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 rounded-xl border border-sky-300/40 bg-sky-500/15 px-4 py-2 text-sm font-bold text-sky-100"
           >
-            استبدال 20 دينارًا بقلب
+            <Search className="size-4" />
+            حل تحقيق تاريخي لاستعادة القلوب
+          </Link>
+          <button
+            onClick={buy}
+            className="flex items-center justify-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/15 px-4 py-2 text-sm font-bold text-amber-100"
+          >
+            <Coins className="size-4" />
+            شراء قلب بـ {HEART_COST} دينار
           </button>
+          {error && (
+            <p className="rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-1.5 text-[11px] text-rose-200">
+              {error}
+            </p>
+          )}
           <button
             onClick={onClose}
             className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-muted-foreground"
