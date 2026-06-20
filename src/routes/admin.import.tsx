@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, type ChangeEvent } from "react";
-import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark } from "lucide-react";
+import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
+import { validateCampaign } from "@/lib/campaignStorage";
+import type { Campaign } from "@/types/campaign";
+
 
 type ImportType = "daily_facts" | "today_in_history_events" | "notifications" | "campaigns" | "encyclopedia";
 
