@@ -284,6 +284,78 @@ export type Database = {
           },
         ]
       }
+      user_campaign_progress: {
+        Row: {
+          campaign_id: string
+          chapter_id: string
+          coins_earned: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          score: number
+          status: string
+          updated_at: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          campaign_id: string
+          chapter_id: string
+          coins_earned?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          score?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          campaign_id?: string
+          chapter_id?: string
+          coins_earned?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          score?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: []
+      }
+      user_collection: {
+        Row: {
+          id: string
+          item_id: string
+          item_type: string
+          source_campaign_id: string | null
+          source_chapter_id: string | null
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          item_type: string
+          source_campaign_id?: string | null
+          source_chapter_id?: string | null
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          item_type?: string
+          source_campaign_id?: string | null
+          source_chapter_id?: string | null
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
