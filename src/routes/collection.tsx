@@ -477,6 +477,9 @@ function CollectionPage() {
                     })} />
                 );
               })}
+              {importedLandmarks.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
             </div>
             <Link to="/map" className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-gold/30 bg-gold/5 py-2 text-xs text-gold">
               <MapPin className="size-3.5" /> اكتشف المعالم على الخارطة
