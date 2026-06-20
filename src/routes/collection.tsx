@@ -16,7 +16,7 @@ import {
   registryItemRarity,
 } from "@/lib/importedUnlocks";
 import { pullAllFromCloud } from "@/lib/cloudSync";
-import { audioManager } from "@/lib/audioManager";
+
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
 import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
