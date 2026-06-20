@@ -365,6 +365,9 @@ function CollectionPage() {
                     }} />
                 );
               })}
+              {importedFigures.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
             </div>
           </>
         )}
