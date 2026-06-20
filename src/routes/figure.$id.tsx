@@ -35,10 +35,13 @@ function FigurePage() {
 
   const card = CHARACTERS.find((c) => c.id === id);
   const prof = getCharacterProfile(id);
+  const legacyFacade = card ? { title: card.name, subtitle: card.title, summary: card.bio } : null;
+  const display = useEncyclopediaDisplay("figure", id, legacyFacade);
   if (!card) throw notFound();
 
   const unlocked = profile.charactersUnlocked.includes(id);
   const era = ERAS.find((e) => e.id === card.era);
+
 
   const related = useMemo(() => {
     const ids = prof?.relatedCharacterIds ?? [];
