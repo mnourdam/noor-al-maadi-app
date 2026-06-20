@@ -345,32 +345,45 @@ function CollectionPage() {
   }, [missingUnlockIds]);
 
   const importedUnlockedCount = (arr: Array<{ unlocked: boolean }>) => arr.filter(i => i.unlocked).length;
+  const encCount = (t: string) => (encyclopediaByType.get(t) ?? []).length;
+  const encFigures   = encyclopediaByType.get("figure")   ?? [];
+  const encArtifacts = encyclopediaByType.get("artifact") ?? [];
+  const encBattles   = encyclopediaByType.get("battle")   ?? [];
+  const encLandmarks = [
+    ...(encyclopediaByType.get("landmark") ?? []),
+    ...(encyclopediaByType.get("city") ?? []),
+  ];
+  const encDynasties = [
+    ...(encyclopediaByType.get("state") ?? []),
+    ...(encyclopediaByType.get("event") ?? []),
+  ];
 
   const counts: Record<SectionId, { done: number; total: number }> = {
     figures:      {
-      done:  profile.charactersUnlocked.length + importedUnlockedCount(importedFigures),
-      total: CHARACTERS.length + importedFigures.length,
+      done:  profile.charactersUnlocked.length + importedUnlockedCount(importedFigures) + encFigures.length,
+      total: CHARACTERS.length + importedFigures.length + encFigures.length,
     },
     artifacts:    {
-      done:  artifactsOnly.filter(a => profile.artifactsFound.includes(a.id)).length + importedUnlockedCount(importedArtifacts),
-      total: artifactsOnly.length + importedArtifacts.length,
+      done:  artifactsOnly.filter(a => profile.artifactsFound.includes(a.id)).length + importedUnlockedCount(importedArtifacts) + encArtifacts.length,
+      total: artifactsOnly.length + importedArtifacts.length + encArtifacts.length,
     },
     battles:      {
-      done:  BATTLES.filter(b => !b.storyId || profile.storiesRead.includes(b.storyId)).length + importedUnlockedCount(importedBattles),
-      total: BATTLES.length + importedBattles.length,
+      done:  BATTLES.filter(b => !b.storyId || profile.storiesRead.includes(b.storyId)).length + importedUnlockedCount(importedBattles) + encBattles.length,
+      total: BATTLES.length + importedBattles.length + encBattles.length,
     },
     manuscripts:  { done: manuscripts.filter(a => profile.artifactsFound.includes(a.id)).length, total: manuscripts.length },
     landmarks:    {
-      done:  LANDMARKS.filter(l => !l.regionId || profile.regionsUnlocked.includes(l.regionId)).length + importedUnlockedCount(importedLandmarks),
-      total: LANDMARKS.length + importedLandmarks.length,
+      done:  LANDMARKS.filter(l => !l.regionId || profile.regionsUnlocked.includes(l.regionId)).length + importedUnlockedCount(importedLandmarks) + encLandmarks.length,
+      total: LANDMARKS.length + importedLandmarks.length + encLandmarks.length,
     },
     dynasties:    {
-      done:  ERAS.filter(e => eraHasProgress(e.id)).length + importedUnlockedCount(importedDynasties),
-      total: ERAS.length + importedDynasties.length,
+      done:  ERAS.filter(e => eraHasProgress(e.id)).length + importedUnlockedCount(importedDynasties) + encDynasties.length,
+      total: ERAS.length + importedDynasties.length + encDynasties.length,
     },
     badges:       { done: importedUnlockedCount(importedBadges),       total: importedBadges.length },
     achievements: { done: importedUnlockedCount(importedAchievements), total: importedAchievements.length },
   };
+  void encCount;
 
   // Hide badges/achievements pills entirely when there are no imported items there.
   const visibleSections = SECTIONS.filter(s => {
