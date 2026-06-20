@@ -16,6 +16,9 @@ import {
   useEncyclopediaSupabaseEntityBySlug,
   isSupabaseEnabled,
 } from "@/lib/encyclopedia-source";
+import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
+import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
+
 
 const SECTION_ORDER: EncyclopediaSection[] = [
   "state", "figure", "scholar", "city", "battle", "event", "landmark", "artifact",
