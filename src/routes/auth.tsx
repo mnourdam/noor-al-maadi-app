@@ -55,7 +55,7 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const r = await signUp({ email, password, username, referralCode: referralCode || undefined });
+        const r = await signUp({ email, password, username, displayName: username, referralCode: referralCode || undefined });
         if (!r.ok) { setError(r.error ?? "تعذر إنشاء الحساب"); return; }
         if (r.error) { setInfo(r.error); return; } // verify email message
         navigate({ to: "/profile" });
