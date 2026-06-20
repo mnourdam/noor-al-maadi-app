@@ -112,8 +112,27 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           setLastSyncAt(Date.now());
         }
 
-        // Identity → never show "ضيف" once authenticated.
-        if (acc?.username) login(acc.username);
+        // Identity → never show "ضيف" once authenticated. Prefer display_name.
+        const identityName = acc?.display_name?.trim()
+          || (user.user_metadata?.display_name as string | undefined)?.trim()
+          || (user.user_metadata?.full_name as string | undefined)?.trim()
+          || acc?.username
+          || user.email?.split("@")[0]
+          || "";
+        if (identityName) login(identityName);
+
+        // One-time repair: if profile.display_name is empty/null/"ضيف", set it.
+        if (acc && (!acc.display_name || !acc.display_name.trim() || acc.display_name === "ضيف")) {
+          const repair = (user.user_metadata?.display_name as string | undefined)
+            || (user.user_metadata?.full_name as string | undefined)
+            || acc.username
+            || user.email?.split("@")[0]
+            || "مستخدم إرث";
+          try {
+            const r = await cloudUpdateDisplayName(repair);
+            if (r.ok && r.value) setAccount((prev) => prev ? { ...prev, display_name: r.value! } : prev);
+          } catch { /* ignore */ }
+        }
       } finally {
         if (!cancelled) setSyncing(false);
       }
