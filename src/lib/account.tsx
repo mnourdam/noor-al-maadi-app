@@ -9,6 +9,7 @@ import {
   signOut as cloudSignOut,
   signUpWithEmail,
   touchLastActive,
+  updateDisplayName as cloudUpdateDisplayName,
   type AccountProfile,
 } from "./cloud-save";
 import { useProfile, type ProfileState } from "./profile";
