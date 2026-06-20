@@ -143,8 +143,8 @@ function ImportedCampaignOverview() {
               <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
                 {finalRewards.xp ? <Pill label={`+${finalRewards.xp} XP`} /> : null}
                 {finalRewards.coins ? <Pill label={`+${finalRewards.coins} دينار`} /> : null}
-                {finalRewards.badgeId ? <Pill label={`🏅 ${finalRewards.badgeId}`} /> : null}
-                {finalRewards.artifactId ? <Pill label={`🗡️ ${finalRewards.artifactId}`} /> : null}
+                {finalRewards.badgeId ? <Pill label={`🏅 ${displayBadgeName(finalRewards.badgeId)}`} /> : null}
+                {finalRewards.artifactId ? <Pill label={`🗡️ ${displayArtifactName(finalRewards.artifactId)}`} /> : null}
               </div>
               {(finalRewards.unlocks?.length ?? 0) > 0 && (
                 <div className="mt-3">
