@@ -60,14 +60,26 @@ export function parseUnlockId(raw: string): ParsedUnlock {
   };
 }
 
+type EncRow = {
+  entity_type: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  summary: string | null;
+  metadata: unknown;
+};
+
 export type ResolvedUnlock = ParsedUnlock & {
   title: string | null;
+  subtitle: string | null;
+  summary: string | null;
+  metadata: Record<string, unknown> | null;
   found: boolean;
 };
 
 /**
- * Resolve a list of unlock IDs to encyclopedia_entities titles.
- * Single query batched by (type, slug). Safe when signed out.
+ * Resolve a list of unlock IDs to encyclopedia_entities (title + summary).
+ * Single query batched by slug. Safe when signed out.
  */
 export function useResolvedUnlocks(ids: string[] | undefined | null) {
   const parsed = useMemo(() => (ids ?? []).map(parseUnlockId), [ids?.join("|")]);
@@ -86,23 +98,22 @@ export function useResolvedUnlocks(ids: string[] | undefined | null) {
       try {
         const { data, error } = await supabase
           .from("encyclopedia_entities")
-          .select("entity_type, slug, title")
+          .select("entity_type, slug, title, subtitle, summary, metadata")
           .in("slug", slugs)
           .eq("enabled", true);
-        if (error) return [] as Array<{ entity_type: string; slug: string; title: string }>;
-        return (data ?? []) as Array<{ entity_type: string; slug: string; title: string }>;
+        if (error) return [] as Array<EncRow>;
+        return (data ?? []) as Array<EncRow>;
       } catch {
-        return [] as Array<{ entity_type: string; slug: string; title: string }>;
+        return [] as Array<EncRow>;
       }
     },
   });
 
   const byKey = useMemo(() => {
-    const m = new Map<string, { entity_type: string; title: string }>();
+    const m = new Map<string, EncRow>();
     for (const r of query.data ?? []) {
-      m.set(`${r.entity_type}:${r.slug}`, { entity_type: r.entity_type, title: r.title });
-      // Also index by slug-only for unlocks missing a type prefix.
-      if (!m.has(`:${r.slug}`)) m.set(`:${r.slug}`, { entity_type: r.entity_type, title: r.title });
+      m.set(`${r.entity_type}:${r.slug}`, r);
+      if (!m.has(`:${r.slug}`)) m.set(`:${r.slug}`, r);
     }
     return m;
   }, [query.data]);
@@ -114,9 +125,11 @@ export function useResolvedUnlocks(ids: string[] | undefined | null) {
       const hit = keyed ?? looseSlug;
       return {
         ...p,
-        // If found via loose match, surface the real entity type.
         type: hit?.entity_type ?? p.type,
         title: hit?.title ?? null,
+        subtitle: hit?.subtitle ?? null,
+        summary: hit?.summary ?? null,
+        metadata: (hit?.metadata as Record<string, unknown> | null) ?? null,
         found: !!hit,
       };
     }),
