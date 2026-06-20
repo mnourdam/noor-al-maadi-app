@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookOpen, CalendarDays, Pencil, Plus, RefreshCw, Save, ShieldAlert, Trash2, X } from "lucide-react";
+import { BookOpen, CalendarDays, Pencil, Plus, RefreshCw, Save, ShieldAlert, Trash2, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount } from "@/lib/account";
 
