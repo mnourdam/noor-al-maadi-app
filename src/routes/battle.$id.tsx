@@ -83,8 +83,14 @@ function BattlePage() {
               <span className="inline-block rounded-full bg-black/40 px-2 py-0.5 text-[10px] tracking-wider text-gold ring-1 ring-gold/20">
                 <Sparkles className="me-1 inline size-3" /> معركةٌ أسطوريّة · {era?.name}
               </span>
-              <h1 className="font-display shimmer-text mt-2 text-2xl font-extrabold leading-tight">{battle.name}</h1>
-              <p className="mt-1 text-xs text-gold/85">{battle.subtitle}</p>
+              <h1 className="font-display shimmer-text mt-2 text-2xl font-extrabold leading-tight">{display.title || battle.name}</h1>
+              <p className="mt-1 text-xs text-gold/85">{display.subtitle ?? battle.subtitle}</p>
+              {display.isFromSupabase && (
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+                  <Database className="size-2.5" /> من قاعدة البيانات
+                </span>
+              )}
+
               <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
                 <span className="rounded-full bg-black/40 px-2 py-0.5">{battle.hijri}</span>
                 <span className="rounded-full bg-black/40 px-2 py-0.5">{battle.year}</span>
