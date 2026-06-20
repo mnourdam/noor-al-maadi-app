@@ -200,6 +200,11 @@ function ImportedChapterPlayer() {
 
   const acknowledgeAndAdvance = () => {
     if (!activity) return;
+    // If the user got it wrong, force-complete the activity locally so the
+    // player can advance to the next one (a heart was already deducted).
+    if (currentAck === "wrong" && campaign && chapter) {
+      markActivityComplete(campaign, chapter, activity);
+    }
     setPendingAck(prev => {
       const next = { ...prev };
       delete next[activity.id];
