@@ -8,17 +8,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
-import {
-  ArrowRight, ArrowLeft, Check, Heart, Zap, Coins, Sparkles, BookOpen, Scroll,
-} from "lucide-react";
+import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import type { Campaign, CampaignChapter } from "@/types/campaign";
+import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { getCampaign, listCampaigns } from "@/lib/campaignStorage";
 import { pullCampaignsFromCloud } from "@/lib/cloudSync";
 import {
   getChapterProgress, getCampaignProgress, recordActivity,
 } from "@/lib/importedCampaignProgress";
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
+import { useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
