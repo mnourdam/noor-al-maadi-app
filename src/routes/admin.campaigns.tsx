@@ -17,6 +17,7 @@ import {
   listRegistry, upsertRegistryItem, deleteRegistryItem,
   knownRegistryIds, exportRegistry, REGISTRY_KEY,
 } from "@/lib/contentRegistryStorage";
+import { pullAllFromCloud, pushAllToCloud } from "@/lib/cloudSync";
 
 // ============================================================
 // /admin/campaigns — Hidden admin panel
@@ -122,7 +123,16 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
     setCampaigns(listCampaigns());
     setRegistry(listRegistry());
   };
-  useEffect(refresh, []);
+  useEffect(() => {
+    // Initial local read, then pull latest from cloud and re-read.
+    refresh();
+    pullAllFromCloud().then((res) => {
+      if (res) {
+        refresh();
+        notify("ok", `تمت المزامنة من السحابة: ${res.campaigns} حملة، ${res.registry} عنصر سجل.`);
+      }
+    });
+  }, []);
 
   const notify = (kind: "ok" | "err" | "warn", msg: string) => {
     setToast({ kind, msg });
