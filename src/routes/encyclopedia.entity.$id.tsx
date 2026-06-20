@@ -16,6 +16,9 @@ import {
   useEncyclopediaSupabaseEntityBySlug,
   isSupabaseEnabled,
 } from "@/lib/encyclopedia-source";
+import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
+import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
+
 
 const SECTION_ORDER: EncyclopediaSection[] = [
   "state", "figure", "scholar", "city", "battle", "event", "landmark", "artifact",
@@ -187,9 +190,14 @@ function EntityPage() {
           </div>
         </div>
 
+        {/* Rich article body (overview / timeline / sections / facts / related / sources)
+            Reads from Supabase entity.body when present. Renders nothing for shallow entries. */}
+        {supa && <EncyclopediaArticleBody article={parseEncyclopediaArticle(supa.body, supa.metadata)} />}
+
         {/* Unlockables */}
         {e.unlockables.length > 0 && (
           <section className="mt-6">
+
             <h2 className="font-display mb-2 text-sm font-bold">يفتح</h2>
             <div className="flex flex-wrap gap-1.5">
               {e.unlockables.map((u, i) => (
@@ -267,8 +275,14 @@ function SupabaseOnlyEntity({ entity }: { entity: import("@/lib/encyclopedia-sou
             <p className="mt-3 text-[13px] leading-7 text-foreground/90">{entity.summary}</p>
           )}
         </div>
+
+        {/* Rich article body — overview / timeline / sections / facts / related / sources.
+            Backward-compatible: shallow entries (no body fields) render nothing here. */}
+        <EncyclopediaArticleBody article={parseEncyclopediaArticle(entity.body, entity.metadata)} />
+
         <div className="h-10" />
       </div>
+
     </AppShell>
   );
 }
