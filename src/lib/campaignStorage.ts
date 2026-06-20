@@ -162,8 +162,8 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
     }
     const activities: CampaignActivity[] = Array.isArray(ch?.activities)
       ? ch.activities.map((a: any, ai: number) => {
-          const aType = a?.type as CampaignQuestionType;
-          if (!SUPPORTED_TYPES.includes(aType)) {
+          const aType = canonicalActivityType(a?.type);
+          if (!aType) {
             push("error", `نوع النشاط غير مدعوم: ${a?.type ?? "غير معرّف"}`, `chapters[${ci}].activities[${ai}].type`);
           }
           if (typeof a?.prompt !== "string" || !a.prompt.trim()) {
@@ -171,7 +171,8 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
           }
           return {
             id: (typeof a?.id === "string" && a.id) ? a.id : uid("act"),
-            type: aType,
+            type: (aType ?? a?.type) as CampaignQuestionType,
+
             prompt: String(a?.prompt ?? ""),
             contextText: a?.contextText,
             options: Array.isArray(a?.options) ? a.options.map(String) : undefined,
