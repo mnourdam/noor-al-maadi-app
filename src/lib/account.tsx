@@ -18,13 +18,15 @@ import { pushPublicStats, claimSignupReferral, REFERRAL_REWARDS } from "./social
 interface AccountCtx {
   user: User | null;
   account: AccountProfile | null;
+  displayName: string;
   loadingSession: boolean;
   syncing: boolean;
   lastSyncAt: number | null;
-  signUp: (args: { email: string; password: string; username: string; referralCode?: string }) => Promise<{ ok: boolean; error?: string }>;
+  signUp: (args: { email: string; password: string; username: string; displayName?: string; referralCode?: string }) => Promise<{ ok: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   syncNow: () => Promise<boolean>;
+  updateDisplayName: (name: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 const Ctx = createContext<AccountCtx | null>(null);
