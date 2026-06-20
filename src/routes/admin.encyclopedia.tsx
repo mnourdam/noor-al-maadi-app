@@ -88,6 +88,22 @@ function AdminEncyclopediaPage() {
     return c;
   }, [rows]);
 
+  // Duplicate-slug detector: warn (don't block) when two enabled rows share
+  // the same slug across different entity types. Campaign unlocks resolve
+  // canonically, but duplicates usually mean a content mistake worth fixing.
+  const duplicateSlugs = useMemo(() => {
+    const byS = new Map<string, Set<string>>();
+    for (const r of rows ?? []) {
+      if (!r.enabled) continue;
+      const s = byS.get(r.slug) ?? new Set<string>();
+      s.add(r.entity_type);
+      byS.set(r.slug, s);
+    }
+    return Array.from(byS.entries())
+      .filter(([, types]) => types.size > 1)
+      .map(([slug, types]) => ({ slug, types: Array.from(types) }));
+  }, [rows]);
+
   const toggleEnabled = async (e: Entity) => {
     const { error } = await supabase.from("encyclopedia_entities" as any)
       .update({ enabled: !e.enabled }).eq("id", e.id);
