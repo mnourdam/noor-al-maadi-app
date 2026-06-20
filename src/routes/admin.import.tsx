@@ -74,7 +74,7 @@ function ComingSoon() {
     <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
       <FileJson className="mx-auto h-8 w-8 text-amber-400/60" />
       <h3 className="mt-3 text-lg font-semibold text-slate-200">استيراد الحملات — قريبًا</h3>
-      <p className="mt-2 text-sm">سيتم تفعيل استيراد الحملات بعد الانتهاء من تحديد البنية النهائية.</p>
+      <p className="mt-2 text-sm">قريبًا — سيتم تفعيل استيراد الحملات بعد اعتماد schema النهائي.</p>
     </div>
   );
 }
