@@ -46,7 +46,7 @@ function ProfilePage() {
     if (!profile.lastActiveDay) return null;
     const d = new Date(profile.lastActiveDay);
     d.setDate(d.getDate() - Math.max(0, profile.streak - 1));
-    return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
+    return toWesternDigits(d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" }));
   }, [profile.lastActiveDay, profile.streak]);
 
   const favState = ERAS.find((e) => e.id === profile.favoriteStateId);
