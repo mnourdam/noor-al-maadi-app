@@ -237,6 +237,82 @@ const notificationsConfig: ImportConfig<{
   ),
 };
 
+const ENCYCLOPEDIA_TYPES = ["figure","city","battle","state","event","landmark","artifact"] as const;
+type EncEntityType = typeof ENCYCLOPEDIA_TYPES[number];
+
+interface EncRow {
+  entity_type: EncEntityType;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  summary: string | null;
+  body: any;
+  metadata: any;
+  enabled: boolean;
+}
+
+const encyclopediaConfig: ImportConfig<EncRow> = {
+  label: "encyclopedia_entities",
+  table: "encyclopedia_entities",
+  example: `[
+  {
+    "entity_type": "figure",
+    "slug": "salah-al-din",
+    "title": "صلاح الدين الأيوبي",
+    "subtitle": "محرر القدس",
+    "summary": "قائد ومؤسس الدولة الأيوبية...",
+    "body": { "sections": [{ "heading": "النشأة", "text": "..." }] },
+    "metadata": { "era": "ayyubid", "birth_year": 532, "tags": ["قائد","حكام"] },
+    "enabled": true
+  },
+  {
+    "entity_type": "battle",
+    "slug": "hattin",
+    "title": "معركة حطين",
+    "subtitle": "583هـ / 1187م",
+    "summary": "النصر الذي مهّد لتحرير القدس.",
+    "body": {},
+    "metadata": { "era": "ayyubid", "year_hijri": 583 },
+    "enabled": true
+  }
+]`,
+  validate: (row, i) => {
+    if (!row || typeof row !== "object") return { ok: false, error: `الصف ${i + 1}: ليس كائن JSON.` };
+    const entity_type = String(row.entity_type ?? "").trim() as EncEntityType;
+    if (!ENCYCLOPEDIA_TYPES.includes(entity_type)) {
+      return { ok: false, error: `الصف ${i + 1}: entity_type يجب أن يكون أحد: ${ENCYCLOPEDIA_TYPES.join(", ")}.` };
+    }
+    const slug = typeof row.slug === "string" ? row.slug.trim() : "";
+    const title = typeof row.title === "string" ? row.title.trim() : "";
+    if (!slug) return { ok: false, error: `الصف ${i + 1}: slug مطلوب.` };
+    if (!/^[a-z0-9-]+$/.test(slug)) return { ok: false, error: `الصف ${i + 1}: slug يجب أن يكون أحرف صغيرة وأرقام و-.` };
+    if (!title) return { ok: false, error: `الصف ${i + 1}: title مطلوب.` };
+    const body = row.body && typeof row.body === "object" ? row.body : {};
+    const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+    return {
+      ok: true,
+      row: {
+        entity_type, slug, title,
+        subtitle: typeof row.subtitle === "string" && row.subtitle.trim() ? row.subtitle.trim() : null,
+        summary: typeof row.summary === "string" && row.summary.trim() ? row.summary.trim() : null,
+        body, metadata,
+        enabled: row.enabled === false ? false : true,
+      },
+    };
+  },
+  rowKey: r => `${r.entity_type}|${r.slug}`,
+  dedupeColumns: ["entity_type", "slug"],
+  buildDedupeFilter: rows => ({ slug: Array.from(new Set(rows.map(r => r.slug))) }),
+  matchExisting: (e, r) => e.entity_type === r.entity_type && e.slug === r.slug,
+  preview: r => (
+    <div>
+      <div className="text-xs text-amber-300">{r.entity_type} · {r.slug}{r.enabled ? "" : " · معطّل"}</div>
+      <div className="font-medium">{r.title}{r.subtitle ? ` — ${r.subtitle}` : ""}</div>
+      {r.summary && <div className="line-clamp-2 text-xs text-slate-400">{r.summary}</div>}
+    </div>
+  ),
+};
+
 // ============================================================
 // Importer
 // ============================================================
