@@ -314,7 +314,7 @@ function CollectionPage() {
       const slug = rest.join(":");
       if (!t || !slug) return true;
       const list = supByType[t]?.data ?? [];
-      return !list.some(e => e.slug === slug || e.metadata?.legacy_id === slug);
+      return !list.some(e => e.slug === slug || (e.metadata as any)?.legacy_id === slug);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rawMissingUnlockIds, supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data]);
