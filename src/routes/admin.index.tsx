@@ -60,13 +60,26 @@ function AdminHub() {
           <StatCard label="أجهزة نشطة" value={stats.devices} />
         </section>
 
+        <section className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+          <div className="mb-1 flex items-center gap-2 text-amber-300">
+            <Upload className="h-4 w-4" />
+            <h2 className="text-sm font-semibold">إدارة المحتوى المستقبلية</h2>
+          </div>
+          <p className="text-xs leading-6 text-slate-300">
+            كل محتوى جديد — الموسوعة، الحملات، الإشعارات، المعلومات اليومية،
+            وأحداث «في مثل هذا اليوم» — يجب إدخاله عبر{" "}
+            <Link to="/admin/import" className="text-amber-300 underline">مركز الاستيراد</Link>{" "}
+            باستخدام ملفات JSON معتمدة. لا تُضِف محتوى يدويًا داخل الكود.
+          </p>
+        </section>
+
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <AdminCard to="/admin/notifications" icon={<Bell className="h-5 w-5" />} title="إدارة الإشعارات"
             desc="إنشاء وإرسال إشعارات يدوية والاطلاع على المسودات." />
           <AdminCard to="/admin/content" icon={<BookOpen className="h-5 w-5" />} title="محتوى الإشعارات التلقائية"
             desc="إدارة المعلومات اليومية وأحداث في مثل هذا اليوم." />
           <AdminCard to="/admin/import" icon={<Upload className="h-5 w-5" />} title="استيراد المحتوى"
-            desc="استيراد JSON للمعلومات والأحداث ومسودات الإشعارات." />
+            desc="استيراد JSON للموسوعة والحملات والإشعارات والمعلومات اليومية." />
           <AdminCard to="/admin/campaigns" icon={<Sword className="h-5 w-5" />} title="إدارة الحملات"
             desc="إدارة حملات إرث التاريخية." />
           <AdminCard to="/admin/encyclopedia" icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
@@ -74,6 +87,7 @@ function AdminHub() {
           <AdminCard to="/admin/migration" icon={<Database className="h-5 w-5" />} title="ترحيل المحتوى القديم"
             desc="نسخ data.ts / cities.ts / packs إلى Supabase دون حذف." />
         </section>
+
       </div>
     </div>
   );

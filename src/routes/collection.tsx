@@ -654,37 +654,102 @@ function CollectionPage() {
   );
 }
 
-// ───── Recent unlocks ribbon
+// ───── Recent unlocks ribbon — pulls latest 3 from Supabase user_collection
+// with a legacy fallback drawn from in-app profile arrays for guests / offline.
 function RecentUnlocks() {
   const { profile } = useProfile();
   type Recent = { key: string; icon: string; kind: string; title: string; subtitle: string };
-  const recents: Recent[] = [];
 
+  const supaArtifacts = useEncyclopediaSupabaseList("artifact");
+  const supaLandmarks = useEncyclopediaSupabaseList("landmark");
+  const supaFigures   = useEncyclopediaSupabaseList("figure");
+
+  // Pull latest 3 unlocks from Supabase (if signed in).
+  const [supaRecents, setSupaRecents] = useState<Recent[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: sess } = await supabase.auth.getSession();
+        const uid = sess.session?.user?.id;
+        if (!uid) { if (!cancelled) setSupaRecents([]); return; }
+        const { data, error } = await supabase
+          .from("user_collection")
+          .select("item_id,item_type,unlocked_at,source_campaign_id")
+          .eq("user_id", uid)
+          .order("unlocked_at", { ascending: false })
+          .limit(3);
+        if (error || !data || cancelled) { if (!cancelled) setSupaRecents([]); return; }
+
+        const campaigns = listCampaigns();
+        const campaignTitle = (cid: string | null) => {
+          if (!cid) return "";
+          const c = campaigns.find(x => x.id === cid);
+          if (c) return `من حملة ${c.title}`;
+          if (cid === "prophetic-mission") return "من حملة البعثة النبوية";
+          return "من حملة";
+        };
+
+        const kindLabel: Record<string, string> = {
+          figure: "شخصية", scholar: "شخصية", artifact: "أثر",
+          battle: "معركة", city: "معلم", landmark: "معلم",
+          state: "دولة", event: "حدث", badge: "شارة", achievement: "إنجاز",
+        };
+        const iconFor = (t: string): string => ({
+          figure: "👤", scholar: "👤", artifact: "💎",
+          battle: "⚔️", city: "🏛️", landmark: "🏛️",
+          state: "📜", event: "📅", badge: "🏅", achievement: "🏆",
+        } as Record<string, string>)[t] ?? "✨";
+
+        const slugLookup = (t: string, slug: string): { title?: string; rarity?: string } => {
+          const probe = (m: { bySlug: Map<string, any> }) => m.bySlug.get(slug.toLowerCase());
+          let e: any = null;
+          if (t === "figure" || t === "scholar") e = probe(supaFigures);
+          else if (t === "artifact") e = probe(supaArtifacts);
+          else if (t === "landmark" || t === "city") e = probe(supaLandmarks);
+          if (!e) return {};
+          return { title: e.title ?? undefined, rarity: e.metadata?.rarity };
+        };
+
+        const list: Recent[] = data.map((row: any) => {
+          const lookup = slugLookup(row.item_type, row.item_id);
+          const subtitleParts = [kindLabel[row.item_type] ?? row.item_type];
+          if (lookup.rarity) subtitleParts.push(lookup.rarity);
+          const src = campaignTitle(row.source_campaign_id);
+          if (src) subtitleParts.push(src);
+          return {
+            key: `sup-${row.item_id}`,
+            icon: iconFor(row.item_type),
+            kind: kindLabel[row.item_type] ?? row.item_type,
+            title: lookup.title ?? row.item_id,
+            subtitle: subtitleParts.slice(1).join(" · ") || (src || "—"),
+          };
+        });
+        if (!cancelled) setSupaRecents(list);
+      } catch {
+        if (!cancelled) setSupaRecents([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [supaArtifacts, supaLandmarks, supaFigures]);
+
+  // Legacy fallback from in-app profile arrays.
+  const legacy: Recent[] = [];
   const lastChar = [...profile.charactersUnlocked].slice(-1)[0];
   const c = lastChar ? CHARACTERS.find((x) => x.id === lastChar) : undefined;
-  if (c) recents.push({ key: `c-${c.id}`, icon: c.avatar, kind: "شخصية", title: c.name, subtitle: c.title });
-
+  if (c) legacy.push({ key: `c-${c.id}`, icon: c.avatar, kind: "شخصية", title: c.name, subtitle: c.title });
   const lastArtifact = [...profile.artifactsFound].slice(-1)[0];
   const a = lastArtifact ? ARTIFACTS.find((x) => x.id === lastArtifact) : undefined;
-  if (a) recents.push({ key: `a-${a.id}`, icon: a.icon, kind: "أثر", title: a.name, subtitle: a.typeLabel });
-
+  if (a) legacy.push({ key: `a-${a.id}`, icon: a.icon, kind: "أثر", title: a.name, subtitle: a.typeLabel });
   const lastTitle = [...profile.titlesEarned].slice(-1)[0];
-  if (lastTitle) recents.push({ key: `t-${lastTitle}`, icon: "👑", kind: "لقب", title: lastTitle, subtitle: "مُنح حديثًا" });
-
+  if (lastTitle) legacy.push({ key: `t-${lastTitle}`, icon: "👑", kind: "لقب", title: lastTitle, subtitle: "مُنح حديثًا" });
   const lastBadge = [...profile.badges].slice(-1)[0];
-  if (lastBadge) recents.push({ key: `b-${lastBadge}`, icon: "🏅", kind: "شارة", title: displayBadgeName(lastBadge), subtitle: "إنجاز جديد" });
+  if (lastBadge) legacy.push({ key: `b-${lastBadge}`, icon: "🏅", kind: "شارة", title: displayBadgeName(lastBadge), subtitle: "إنجاز جديد" });
 
-  // Build a small recency timeline from the tail of all unlock arrays.
-  const timeline = [
-    ...profile.charactersUnlocked.slice(-3).reverse().map((id) => {
-      const ch = CHARACTERS.find((x) => x.id === id);
-      return ch ? { id: `tc-${id}`, icon: ch.avatar, label: ch.name, kind: "شخصية" } : null;
-    }),
-    ...profile.artifactsFound.slice(-3).reverse().map((id) => {
-      const ar = ARTIFACTS.find((x) => x.id === id);
-      return ar ? { id: `ta-${id}`, icon: ar.icon, label: ar.name, kind: "أثر" } : null;
-    }),
-  ].filter(Boolean).slice(0, 6) as { id: string; icon: string; label: string; kind: string }[];
+  const recents: Recent[] = (supaRecents && supaRecents.length > 0)
+    ? supaRecents.slice(0, 3)
+    : legacy.slice(0, 3);
 
   return (
     <div className="mb-5 rounded-2xl border border-gold/20 bg-surface/70 p-4">
@@ -692,8 +757,8 @@ function RecentUnlocks() {
         <div className="flex items-center gap-2 text-[10px] tracking-[0.25em] text-gold">
           <Sparkles className="size-3.5" /> آخر المقتنيات
         </div>
-        {timeline.length > 0 && (
-          <span className="text-[10px] text-muted-foreground">{timeline.length} اكتشاف حديث</span>
+        {recents.length > 0 && (
+          <span className="text-[10px] text-muted-foreground">{recents.length} اكتشاف حديث</span>
         )}
       </div>
       {recents.length === 0 ? (
@@ -701,40 +766,23 @@ function RecentUnlocks() {
           لا توجد مقتنيات بعد — ابدأ حملةً ليبدأ متحفك في النمو.
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-2 gap-2">
-            {recents.map((r) => (
-              <div key={r.key} className="flex items-center gap-2 rounded-xl border border-gold/20 bg-gradient-to-bl from-gold/10 via-surface to-transparent p-2.5">
-                <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-black/40 text-lg ring-1 ring-gold/30">{r.icon}</div>
-                <div className="min-w-0">
-                  <p className="text-[9px] tracking-widest text-gold/80">{r.kind}</p>
-                  <p className="truncate font-display text-[12px] font-bold">{r.title}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{r.subtitle}</p>
-                </div>
+        <div className="grid grid-cols-1 gap-2">
+          {recents.map((r) => (
+            <div key={r.key} className="flex items-center gap-2 rounded-xl border border-gold/20 bg-gradient-to-bl from-gold/10 via-surface to-transparent p-2.5">
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-black/40 text-lg ring-1 ring-gold/30">{r.icon}</div>
+              <div className="min-w-0">
+                <p className="text-[9px] tracking-widest text-gold/80">{r.kind}</p>
+                <p className="truncate font-display text-[12px] font-bold">{r.title}</p>
+                <p className="truncate text-[10px] text-muted-foreground">{r.subtitle}</p>
               </div>
-            ))}
-          </div>
-          {timeline.length > 0 && (
-            <div className="mt-3 border-t border-white/10 pt-3">
-              <p className="mb-2 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Clock className="size-3" /> أحدث الاكتشافات
-              </p>
-              <ol className="relative space-y-1.5 pe-3">
-                {timeline.map((t) => (
-                  <li key={t.id} className="flex items-center gap-2 text-[11px]">
-                    <span className="grid size-6 place-items-center rounded-full bg-gold/15 text-[12px]">{t.icon}</span>
-                    <span className="truncate font-display text-foreground">{t.label}</span>
-                    <span className="text-[10px] text-muted-foreground">· {t.kind}</span>
-                  </li>
-                ))}
-              </ol>
             </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
     </div>
   );
 }
+
 
 // ───── Imported registry item card (admin-imported via campaigns)
 function ImportedCard({

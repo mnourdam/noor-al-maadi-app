@@ -7,8 +7,9 @@ import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
   ACHIEVEMENTS, evaluateAchievements, levelFor, CURRENT_SEASON,
-  AMBIENCE_TRACKS, ERAS, CHARACTERS, ARTIFACTS,
+  ERAS, CHARACTERS, ARTIFACTS,
 } from "@/lib/data";
+
 import { useProfile } from "@/lib/profile";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
 import { AccountSection } from "@/components/AccountSection";
@@ -386,13 +387,6 @@ function ProfilePage() {
         <h3 className="font-display mt-7 mb-3 text-sm font-bold">الإعدادات</h3>
         <div className="space-y-2">
           <SettingToggle
-            icon={<Volume2 className="size-4" />}
-            label="موسيقى الأجواء"
-            desc="نغمات هادئة تتبع العصر الذي تستكشفه"
-            value={profile.settings.ambienceEnabled}
-            onChange={(v) => updateSettings({ ambienceEnabled: v })}
-          />
-          <SettingToggle
             icon={<BellRing className="size-4" />}
             label="تفعيل الإشعارات"
             desc="مفتاح رئيسي لكل أنواع الإشعارات"
@@ -407,6 +401,7 @@ function ProfilePage() {
             onChange={(v) => updateSettings({ reduceMotion: v })}
           />
         </div>
+
 
         {/* Audio settings */}
         <AudioSettingsCard />
@@ -452,16 +447,7 @@ function ProfilePage() {
           </div>
         </div>
 
-        {profile.settings.ambienceEnabled && (
-          <div className="mt-3 rounded-2xl border border-white/10 bg-surface p-3">
-            <p className="text-[10px] text-gold">مقاطع الأجواء</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {AMBIENCE_TRACKS.map((t) => (
-                <span key={t.id} className="rounded-full border border-white/10 bg-background px-2 py-0.5 text-[10px] text-muted-foreground">{t.name}</span>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {profile.loggedIn && (
           <button

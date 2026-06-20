@@ -9,7 +9,7 @@
 import type { ProfileState } from "./profile";
 
 export const HEART_MAX = 5;
-export const HEART_RECOVERY_MS = 30 * 60 * 1000;        // 30 minutes per heart
+export const HEART_RECOVERY_MS = 15 * 60 * 1000;        // 15 minutes per heart
 export const ACTIVITY_COOLDOWN_MS = 30 * 60 * 1000;     // 30 min between activity-heals per source
 
 /** Activity sources that may restore one heart (with cooldown). */
