@@ -33,6 +33,10 @@ export function useAdminGuard() {
 
 export function AdminGate({ children }: { children: ReactNode }) {
   const { checking, allowed, email } = useAdminGuard();
+  useEffect(() => {
+    document.documentElement.classList.add("admin-lite");
+    return () => document.documentElement.classList.remove("admin-lite");
+  }, []);
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">

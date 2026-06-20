@@ -56,6 +56,11 @@ function AdminNotificationsPage() {
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    document.documentElement.classList.add("admin-lite");
+    return () => document.documentElement.classList.remove("admin-lite");
+  }, []);
+
+  useEffect(() => {
     if (loadingSession) return;
     let alive = true;
     (async () => {
