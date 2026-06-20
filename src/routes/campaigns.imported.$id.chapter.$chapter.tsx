@@ -20,6 +20,7 @@ import {
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
 import { useProfile } from "@/lib/profile";
 import { audioManager } from "@/lib/audioManager";
+import { upsertChapterProgress, addCollectionItems } from "@/lib/progressSync";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
@@ -114,6 +115,28 @@ function ImportedChapterPlayer() {
       // also signal each newly-snapshotted registry unlock once
       (nextProgress.unlockedRegistryIds ?? []).slice(0, 1).forEach((rid) =>
         audioManager.playSfx("unlock-reward", { dedupeKey: `unlock:${rid}` }),
+      );
+    }
+
+    // ── Mirror writes to granular Supabase tables (no-op when signed out) ──
+    const nextCh = nextProgress.chapters[chapter!.id];
+    void upsertChapterProgress({
+      campaignId: campaign!.id,
+      chapterId: chapter!.id,
+      status: nextCh?.completed ? "completed" : "unlocked",
+      score: nextCh?.completedActivityIds.length ?? 0,
+      xpEarned: nextCh?.xpEarned ?? 0,
+      coinsEarned: nextCh?.coinsEarned ?? 0,
+      completed: nextCh?.completed ?? false,
+    });
+    if (newlyCampaign && (nextProgress.unlockedRegistryIds?.length ?? 0) > 0) {
+      void addCollectionItems(
+        nextProgress.unlockedRegistryIds.map((rid) => ({
+          itemId: rid,
+          itemType: "registry",
+          sourceCampaignId: campaign!.id,
+          sourceChapterId: chapter!.id,
+        })),
       );
     }
     bump();
