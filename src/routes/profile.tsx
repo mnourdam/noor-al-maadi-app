@@ -25,12 +25,30 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const { profile, logout, updateSettings, claimSeason, setBio, setFavorites, claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs } = useProfile();
-  const { account, user } = useAccount();
-  const displayName = account?.username ?? (user ? profile.name : profile.name) ?? "ضيف";
+  const { account, user, displayName: accountDisplayName, updateDisplayName } = useAccount();
+  const displayName = accountDisplayName || profile.name || "ضيف";
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(profile.bio ?? "");
   const [pickingAvatar, setPickingAvatar] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(displayName === "ضيف" ? "" : displayName);
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameMsg, setNameMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const prefs = profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS;
+
+  async function saveName() {
+    const v = nameDraft.trim();
+    if (v.length < 2) { setNameMsg({ ok: false, text: "الاسم قصير جداً" }); return; }
+    setNameBusy(true);
+    setNameMsg(null);
+    const r = user ? await updateDisplayName(v) : { ok: true as const };
+    setNameBusy(false);
+    if (!r.ok) { setNameMsg({ ok: false, text: r.error ?? "تعذّر حفظ الاسم" }); return; }
+    if (!user) { /* guest: update local profile name */ }
+    setNameMsg({ ok: true, text: "تم حفظ الاسم" });
+    setEditingName(false);
+    setTimeout(() => setNameMsg(null), 2000);
+  }
 
   const lvl = levelFor(profile.points);
   const achievements = evaluateAchievements(profile);
