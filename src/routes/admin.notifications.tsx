@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Bell, Send, Save, RefreshCw, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,7 +109,7 @@ function AdminDebugBlock({ userId, email, isAdmin }: { userId: string | null; em
   );
 }
 
-function Composer({ debugBlock }: { debugBlock: React.ReactNode }) {
+function Composer({ debugBlock }: { debugBlock: ReactNode }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [type, setType] = useState<NotificationType>("manual");
