@@ -202,9 +202,18 @@ function RevealDialog({ item, onClose }: { item: RevealItem | null; onClose: () 
               {item.lines.map((l, i) => <p key={i}>{l}</p>)}
             </div>
             <div className="px-5 pb-5">
-              <button onClick={onClose} className="bg-gradient-gold shadow-gold w-full rounded-xl py-2.5 text-sm font-bold text-primary-foreground">
-                أضف إلى أرشيفي
-              </button>
+              {item.alreadyOwned ? (
+                <button
+                  onClick={onClose}
+                  className="w-full rounded-xl border border-emerald-400/40 bg-emerald-500/10 py-2.5 text-sm font-bold text-emerald-200"
+                >
+                  مضاف إلى أرشيفك · تم فتحه عبر الحملة
+                </button>
+              ) : (
+                <button onClick={onClose} className="bg-gradient-gold shadow-gold w-full rounded-xl py-2.5 text-sm font-bold text-primary-foreground">
+                  أضف إلى أرشيفي
+                </button>
+              )}
             </div>
           </div>
         )}
