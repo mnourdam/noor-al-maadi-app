@@ -40,7 +40,7 @@ export async function pullCampaignsFromCloud(): Promise<Campaign[] | null> {
     console.warn("[cloudSync] pull campaigns failed:", error.message);
     return null;
   }
-  const rows = (data ?? []).map(r => r.data as Campaign);
+  const rows = (data ?? []).map(r => r.data as unknown as Campaign);
   suppressPush = true;
   try { saveCampaigns(rows); } finally { suppressPush = false; }
   return rows;
@@ -55,7 +55,7 @@ export async function pullRegistryFromCloud(): Promise<ContentRegistryItem[] | n
     console.warn("[cloudSync] pull registry failed:", error.message);
     return null;
   }
-  const rows = (data ?? []).map(r => r.data as ContentRegistryItem);
+  const rows = (data ?? []).map(r => r.data as unknown as ContentRegistryItem);
   suppressPush = true;
   try { saveRegistry(rows); } finally { suppressPush = false; }
   return rows;
