@@ -391,6 +391,9 @@ function CollectionPage() {
                     })} />
                 );
               })}
+              {importedArtifacts.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
             </div>
           </>
         )}
@@ -409,6 +412,9 @@ function CollectionPage() {
                     onClick={() => { if (open) navigate({ to: "/battle/$id", params: { id: b.id } }); }} />
                 );
               })}
+              {importedBattles.map(item => (
+                <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+              ))}
             </div>
           </>
         )}
