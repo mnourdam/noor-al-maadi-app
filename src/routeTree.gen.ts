@@ -46,6 +46,7 @@ import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
@@ -244,6 +245,11 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   path: '/admin/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminMigrationRoute = AdminMigrationRouteImport.update({
+  id: '/admin/migration',
+  path: '/admin/migration',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminImportRoute = AdminImportRouteImport.update({
   id: '/admin/import',
   path: '/admin/import',
@@ -334,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/import': typeof AdminImportRoute
+  '/admin/migration': typeof AdminMigrationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -383,6 +390,7 @@ export interface FileRoutesByTo {
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/import': typeof AdminImportRoute
+  '/admin/migration': typeof AdminMigrationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -434,6 +442,7 @@ export interface FileRoutesById {
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/import': typeof AdminImportRoute
+  '/admin/migration': typeof AdminMigrationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -487,6 +496,7 @@ export interface FileRouteTypes {
     | '/admin/content'
     | '/admin/encyclopedia'
     | '/admin/import'
+    | '/admin/migration'
     | '/admin/notifications'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -536,6 +546,7 @@ export interface FileRouteTypes {
     | '/admin/content'
     | '/admin/encyclopedia'
     | '/admin/import'
+    | '/admin/migration'
     | '/admin/notifications'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -586,6 +597,7 @@ export interface FileRouteTypes {
     | '/admin/content'
     | '/admin/encyclopedia'
     | '/admin/import'
+    | '/admin/migration'
     | '/admin/notifications'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -638,6 +650,7 @@ export interface RootRouteChildren {
   AdminContentRoute: typeof AdminContentRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
   AdminImportRoute: typeof AdminImportRoute
+  AdminMigrationRoute: typeof AdminMigrationRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
@@ -915,6 +928,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/migration': {
+      id: '/admin/migration'
+      path: '/admin/migration'
+      fullPath: '/admin/migration'
+      preLoaderRoute: typeof AdminMigrationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/import': {
       id: '/admin/import'
       path: '/admin/import'
@@ -1079,6 +1099,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminContentRoute: AdminContentRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
   AdminImportRoute: AdminImportRoute,
+  AdminMigrationRoute: AdminMigrationRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,

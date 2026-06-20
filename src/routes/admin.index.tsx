@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck } from "lucide-react";
+import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -71,6 +71,8 @@ function AdminHub() {
             desc="إدارة حملات إرث التاريخية." />
           <AdminCard to="/admin/encyclopedia" icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
             desc="إدارة مدخلات الموسوعة (شخصيات، مدن، معارك...)." />
+          <AdminCard to="/admin/migration" icon={<Database className="h-5 w-5" />} title="ترحيل المحتوى القديم"
+            desc="نسخ data.ts / cities.ts / packs إلى Supabase دون حذف." />
         </section>
       </div>
     </div>
