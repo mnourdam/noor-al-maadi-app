@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ChevronRight, BookOpen, Clock } from "lucide-react";
+import { ChevronRight, BookOpen, Clock, Database } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import {
@@ -8,6 +8,8 @@ import {
 } from "@/lib/encyclopedia";
 import { ENGINE_CAMPAIGNS } from "@/lib/campaign-engine/registry";
 import { ERAS, type Era } from "@/lib/data";
+import { useEncyclopediaDisplay } from "@/lib/encyclopedia-source";
+
 
 const SECTION_ORDER: EncyclopediaSection[] = [
   "figure", "scholar", "city", "battle", "event", "landmark", "artifact",
