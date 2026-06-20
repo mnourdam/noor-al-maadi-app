@@ -69,18 +69,14 @@ function EntityPage() {
   const { id } = Route.useParams() as { id: string };
   const pack = getPackEntity(id);
 
-  // Phase 1: Supabase is primary for artifacts only. We probe Supabase when
-  // either (a) the pack lookup failed entirely, or (b) the pack entity is
-  // an artifact — in which case Supabase values override pack values.
-  const probeType = pack?.type ?? "artifact";
-  const supaQuery = useEncyclopediaSupabaseEntity(probeType, id, {
-    enabled: !!pack && isSupabaseEnabled(probeType),
-  });
-  // Slug-only fallback for Supabase-only entities (no legacy pack) — covers
-  // campaign unlocks that route via /encyclopedia/entity/<slug> without
-  // knowing the canonical entity_type up front.
-  const slugQuery = useEncyclopediaSupabaseEntityBySlug(!pack ? id : "");
-  const supa = supaQuery.data ?? slugQuery.data ?? null;
+  // Canonical resolver: searches by slug + metadata.aliases across all
+  // entity types, picks the richest row. Hinted type from the pack only
+  // breaks ties — so `artifact:cave-of-hira` correctly surfaces the rich
+  // `landmark:cave-of-hira` article.
+  const probeType = pack?.type ?? null;
+  const canonicalQuery = useEncyclopediaCanonicalEntity(id, probeType);
+  const supa = canonicalQuery.data ?? null;
+  const slugQuery = { isLoading: canonicalQuery.isLoading };
 
   // Supabase-only entity (not in legacy packs) — render minimal view.
   if (!pack) {
