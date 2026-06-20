@@ -639,10 +639,13 @@ function CollectionPage() {
                 );
               })}
             </div>
-            {importedDynasties.length > 0 && (
+            {(importedDynasties.length > 0 || encDynasties.length > 0) && (
               <div className="mt-3 grid grid-cols-2 gap-3">
                 {importedDynasties.map(item => (
                   <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
+                ))}
+                {encDynasties.map(r => (
+                  <EncyclopediaUnlockCard key={`enc-${r.raw}`} unlock={r} navigate={navigate} />
                 ))}
               </div>
             )}
