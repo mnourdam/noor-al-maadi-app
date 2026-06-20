@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark, Search, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { validateCampaign } from "@/lib/campaignStorage";
 import type { Campaign } from "@/types/campaign";
 
 
-type ImportType = "daily_facts" | "today_in_history_events" | "notifications" | "campaigns" | "encyclopedia";
+type ImportType = "daily_facts" | "today_in_history_events" | "notifications" | "campaigns" | "encyclopedia" | "investigations";
 
 export const Route = createFileRoute("/admin/import")({
   head: () => ({
