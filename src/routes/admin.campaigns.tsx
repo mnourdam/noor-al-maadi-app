@@ -257,6 +257,8 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
             campaigns={campaigns}
             registry={registry}
             onSnapshot={() => { snapshotBackup("manual"); notify("ok", "تم إنشاء نسخة احتياطية."); }}
+            onRefresh={refresh}
+            notify={notify}
           />
         )}
       </main>
@@ -675,15 +677,64 @@ function ImportPanel({ onImported, notify }: {
 }
 
 // ----- Backup panel -----
-function BackupPanel({ campaigns, registry, onSnapshot }: {
+function BackupPanel({ campaigns, registry, onSnapshot, onRefresh, notify }: {
   campaigns: Campaign[];
   registry: ContentRegistryItem[];
   onSnapshot: () => void;
+  onRefresh: () => void;
+  notify: (kind: "ok" | "err" | "warn", msg: string) => void;
 }) {
   const backup = JSON.stringify({ campaigns, registry, at: new Date().toISOString() }, null, 2);
+  const [busy, setBusy] = useState<"none" | "push" | "pull">("none");
+
+  const handleMigrate = async () => {
+    setBusy("push");
+    const report = await pushAllToCloud();
+    setBusy("none");
+    if (report.errors.length) {
+      notify("err", `فشل جزئي: ${report.errors.join(" | ")}`);
+    } else {
+      notify("ok", `تم رفع ${report.campaignsUploaded} حملة و ${report.registryUploaded} عنصر إلى السحابة.`);
+    }
+  };
+
+  const handlePull = async () => {
+    setBusy("pull");
+    const res = await pullAllFromCloud();
+    setBusy("none");
+    onRefresh();
+    if (res) notify("ok", `تم سحب ${res.campaigns} حملة و ${res.registry} عنصر من السحابة.`);
+    else notify("err", "فشل الاتصال بالسحابة.");
+  };
+
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <h2 className="font-display text-lg font-bold text-gold">تصدير ونسخ احتياطي</h2>
+
+      <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/5 p-4">
+        <h3 className="mb-2 text-sm font-bold text-emerald-200">المزامنة مع السحابة (Lovable Cloud)</h3>
+        <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+          تُحفظ التعديلات الجديدة تلقائيًا في السحابة. استخدم أزرار النقل أدناه لمرّة واحدة لنقل البيانات الموجودة في المتصفح إلى قاعدة البيانات،
+          أو لسحب أحدث نسخة من السحابة إلى هذا المتصفح.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleMigrate}
+            disabled={busy !== "none"}
+            className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-bold text-emerald-100 ring-1 ring-emerald-400/40 disabled:opacity-50"
+          >
+            {busy === "push" ? "جاري الرفع…" : "⬆ رفع بيانات المتصفح إلى السحابة"}
+          </button>
+          <button
+            onClick={handlePull}
+            disabled={busy !== "none"}
+            className="rounded-lg border border-emerald-400/40 px-3 py-1.5 text-xs text-emerald-100 disabled:opacity-50"
+          >
+            {busy === "pull" ? "جاري السحب…" : "⬇ سحب آخر نسخة من السحابة"}
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <button onClick={() => downloadJson("irth-campaigns.json", exportAllCampaigns())} className="rounded-lg border border-gold/40 px-3 py-1.5 text-xs text-gold">
           <FileJson className="me-1 inline size-3" /> تصدير كل الحملات
@@ -697,7 +748,7 @@ function BackupPanel({ campaigns, registry, onSnapshot }: {
         <button onClick={onSnapshot} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs">حفظ لقطة داخلية</button>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        البيانات مخزّنة حاليًا في المتصفح فقط ({CAMPAIGNS_KEY}، {REGISTRY_KEY}، {BACKUPS_KEY}). سيتم لاحقًا ربطها بقاعدة بيانات سحابية.
+        مفاتيح التخزين المحلية: {CAMPAIGNS_KEY}، {REGISTRY_KEY}، {BACKUPS_KEY}. مصدر الحقيقة الآن هو السحابة، والمتصفح يستخدم كذاكرة مؤقتة سريعة.
       </p>
     </section>
   );
