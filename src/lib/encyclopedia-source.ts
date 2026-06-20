@@ -111,6 +111,42 @@ export function useEncyclopediaSupabaseEntity(
 }
 
 /**
+ * Fetch a single enabled entity by slug across all entity_types. Useful for
+ * resolving campaign unlock links where the caller knows the slug but not
+ * the canonical entity type (e.g. /encyclopedia/entity/prophet-muhammad).
+ */
+export function useEncyclopediaSupabaseEntityBySlug(rawId: string) {
+  const slug = normalizeEntitySlug(rawId);
+  return useQuery({
+    queryKey: ["encyclopedia-entity-by-slug", slug],
+    enabled: !!slug,
+    staleTime: 60_000,
+    retry: 1,
+    queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
+      try {
+        const { data, error } = await supabase
+          .from("encyclopedia_entities")
+          .select("*")
+          .eq("slug", slug)
+          .eq("enabled", true)
+          .limit(1)
+          .maybeSingle();
+        if (error) {
+          if (typeof console !== "undefined")
+            console.warn("[encyclopedia-source] slug fetch failed", error.message);
+          return null;
+        }
+        return (data as SupabaseEncyclopediaEntity | null) ?? null;
+      } catch (e) {
+        if (typeof console !== "undefined")
+          console.warn("[encyclopedia-source] slug fetch crashed", e);
+        return null;
+      }
+    },
+  });
+}
+
+/**
  * Bulk fetch all enabled entities of a type (used by list/grid views like
  * the map and museum). Returns a Map keyed by slug for O(1) override lookup.
  */
