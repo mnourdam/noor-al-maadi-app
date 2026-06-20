@@ -96,7 +96,7 @@ const SECTIONS: SectionDef[] = [
 
 // ───── Supabase user_collection hook ───────────────────────────
 function useUserCollectionByType() {
-  const [rows, setRows] = useState<Array<{ type: string; slug: string }>>([]);
+  const [rows, setRows] = useState<Array<{ type: string; slug: string; unlockedAt: string | null }>>([]);
   const [refreshTick, setRefreshTick] = useState(0);
   useEffect(() => {
     let cancelled = false;
@@ -108,17 +108,17 @@ function useUserCollectionByType() {
         if (!uid) return;
         const { data, error } = await supabase
           .from("user_collection")
-          .select("item_id,item_type")
+          .select("item_id,item_type,unlocked_at")
           .eq("user_id", uid);
         if (cancelled || error || !data) return;
-        setRows(data.map((r: any) => ({ type: r.item_type, slug: r.item_id })));
+        setRows(data.map((r: any) => ({ type: r.item_type, slug: r.item_id, unlockedAt: r.unlocked_at ?? null })));
       } catch { /* noop */ }
     })();
     const bump = () => setRefreshTick(t => t + 1);
     window.addEventListener("focus", bump);
     return () => { cancelled = true; window.removeEventListener("focus", bump); };
   }, [refreshTick]);
-  return useMemo(() => {
+  const byType = useMemo(() => {
     const m = new Map<string, Set<string>>();
     for (const r of rows) {
       const s = m.get(r.type) ?? new Set<string>();
@@ -126,7 +126,14 @@ function useUserCollectionByType() {
     }
     return m;
   }, [rows]);
+  const unlockedAt = useMemo(() => {
+    const m = new Map<string, string>(); // key `${type}:${slug}` → ISO
+    for (const r of rows) if (r.unlockedAt) m.set(`${r.type}:${r.slug}`, r.unlockedAt);
+    return m;
+  }, [rows]);
+  return { byType, unlockedAt, rows };
 }
+
 
 // ───── Reusable card ───────────────────────────────────────────
 function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick }: {
