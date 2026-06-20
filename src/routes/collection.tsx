@@ -499,8 +499,7 @@ function CollectionPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {currentEntities.map((e: any) => {
-              const open = isEntityUnlocked(current.type, e.slug, e.metadata);
+            {currentEntities.map(({ e, open }) => {
               const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
               return (
                 <Card
@@ -515,6 +514,7 @@ function CollectionPage() {
                 />
               );
             })}
+
             {currentImported.map(item => (
               <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
             ))}
