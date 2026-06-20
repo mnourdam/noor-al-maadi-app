@@ -14,12 +14,16 @@ export async function initPushNotifications(): Promise<void> {
 
   try {
     const { Capacitor } = await import("@capacitor/core");
+    console.log("[push] init start");
+    console.log("[push] platform:", Capacitor.getPlatform());
+    console.log("[push] isNativePlatform:", Capacitor.isNativePlatform());
+
     if (!Capacitor.isNativePlatform || !Capacitor.isNativePlatform()) {
-      // Web/SSR — do nothing.
+      console.log("[push] skipped: web/SSR");
       return;
     }
     if (Capacitor.getPlatform() !== "android") {
-      // FCM wiring here targets Android only.
+      console.log("[push] skipped: not android");
       return;
     }
 
@@ -27,8 +31,10 @@ export async function initPushNotifications(): Promise<void> {
 
     // 1. Permission
     let perm = await PushNotifications.checkPermissions();
+    console.log("[push] permission (check):", perm);
     if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
       perm = await PushNotifications.requestPermissions();
+      console.log("[push] permission (request):", perm);
     }
     if (perm.receive !== "granted") {
       console.warn("[push] permission not granted:", perm.receive);
