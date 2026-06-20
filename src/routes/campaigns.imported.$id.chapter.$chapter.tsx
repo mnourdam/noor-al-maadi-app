@@ -91,12 +91,12 @@ function ImportedChapterPlayer() {
   }, [heartsDepleted]);
 
   // Current activity = first activity that is either un-completed
-  // OR completed-and-not-yet-acknowledged.
+  // OR completed-and-not-yet-acknowledged (correct or wrong feedback pending).
   const currentIdx = useMemo(() => {
     if (!chapter || !chProgress) return 0;
     const idx = chapter.activities.findIndex(a => {
       const done = chProgress.completedActivityIds.includes(a.id);
-      const ackPending = pendingAck[a.id] === "correct";
+      const ackPending = pendingAck[a.id] === "correct" || pendingAck[a.id] === "wrong";
       return !done || ackPending;
     });
     return idx === -1 ? chapter.activities.length - 1 : idx;
