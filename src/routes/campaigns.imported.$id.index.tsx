@@ -19,7 +19,7 @@ import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
 
-export const Route = createFileRoute("/campaigns/imported/$id")({
+export const Route = createFileRoute("/campaigns/imported/$id/")({
   head: () => ({ meta: [{ title: "حملة مستوردة — إرث" }] }),
   component: ImportedCampaignOverview,
   notFoundComponent: () => (
