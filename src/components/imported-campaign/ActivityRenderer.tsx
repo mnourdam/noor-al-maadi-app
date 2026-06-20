@@ -157,7 +157,6 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 
   const submit = (val: boolean) => {
     if (locked) return;
-    setPicked(val);
     if (val === correct) {
       setResolved(true);
       setFeedback("ok");
