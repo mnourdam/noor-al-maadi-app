@@ -45,11 +45,13 @@ function ImportPage() {
           <TypeBtn active={active === "today_in_history_events"} onClick={() => setActive("today_in_history_events")} icon={<CalendarDays className="h-4 w-4" />}>أحداث تاريخية</TypeBtn>
           <TypeBtn active={active === "notifications"} onClick={() => setActive("notifications")} icon={<Bell className="h-4 w-4" />}>مسودات إشعارات</TypeBtn>
           <TypeBtn active={active === "campaigns"} onClick={() => setActive("campaigns")} icon={<Sword className="h-4 w-4" />}>حملات</TypeBtn>
+          <TypeBtn active={active === "encyclopedia"} onClick={() => setActive("encyclopedia")} icon={<Landmark className="h-4 w-4" />}>الموسوعة</TypeBtn>
         </div>
 
         {active === "daily_facts" && <Importer key="f" config={dailyFactsConfig} />}
         {active === "today_in_history_events" && <Importer key="e" config={todayEventsConfig} />}
         {active === "notifications" && <Importer key="n" config={notificationsConfig} />}
+        {active === "encyclopedia" && <Importer key="enc" config={encyclopediaConfig} />}
         {active === "campaigns" && <ComingSoon />}
       </div>
     </div>
