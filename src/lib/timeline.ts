@@ -48,21 +48,21 @@ export const TIMELINE_END = 2024;
 
 /** Anchor centuries shown along the year ruler. */
 export const CENTURIES: { year: number; label: string }[] = [
-  { year: 600, label: "٦٠٠" },
-  { year: 700, label: "٧٠٠" },
-  { year: 800, label: "٨٠٠" },
-  { year: 900, label: "٩٠٠" },
-  { year: 1000, label: "١٠٠٠" },
-  { year: 1100, label: "١١٠٠" },
-  { year: 1200, label: "١٢٠٠" },
-  { year: 1300, label: "١٣٠٠" },
-  { year: 1400, label: "١٤٠٠" },
-  { year: 1500, label: "١٥٠٠" },
-  { year: 1600, label: "١٦٠٠" },
-  { year: 1700, label: "١٧٠٠" },
-  { year: 1800, label: "١٨٠٠" },
-  { year: 1900, label: "١٩٠٠" },
-  { year: 2000, label: "٢٠٠٠" },
+  { year: 600, label: "600" },
+  { year: 700, label: "700" },
+  { year: 800, label: "800" },
+  { year: 900, label: "900" },
+  { year: 1000, label: "1000" },
+  { year: 1100, label: "1100" },
+  { year: 1200, label: "1200" },
+  { year: 1300, label: "1300" },
+  { year: 1400, label: "1400" },
+  { year: 1500, label: "1500" },
+  { year: 1600, label: "1600" },
+  { year: 1700, label: "1700" },
+  { year: 1800, label: "1800" },
+  { year: 1900, label: "1900" },
+  { year: 2000, label: "2000" },
 ];
 
 /** Era backdrops painted as faint vertical washes behind everything else. */

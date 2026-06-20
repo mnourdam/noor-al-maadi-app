@@ -622,5 +622,5 @@ function RewardRow(props: { label: string; value: string; icon: string }) {
 }
 
 function toArDigit(n: number) {
-  return n.toLocaleString("ar-EG");
+  return n.toLocaleString("en-US");
 }

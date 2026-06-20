@@ -50,13 +50,13 @@ export function HUD() {
         </div>
         <div className="flex items-center gap-3 text-[11px]">
           <span className="inline-flex items-center gap-1 text-gold">
-            <Coins className="size-3.5" /> {profile.dinars.toLocaleString("ar-EG")}
+            <Coins className="size-3.5" /> {profile.dinars.toLocaleString("en-US")}
           </span>
           <span className="inline-flex items-center gap-1 text-amber-200">
-            <Star className="size-3.5" /> {profile.points.toLocaleString("ar-EG")}
+            <Star className="size-3.5" /> {profile.points.toLocaleString("en-US")}
           </span>
           <span className="inline-flex items-center gap-1 text-orange-400">
-            <Flame className="size-3.5" /> {profile.streak.toLocaleString("ar-EG")}
+            <Flame className="size-3.5" /> {profile.streak.toLocaleString("en-US")}
           </span>
           <Link to="/notifications" className="relative inline-flex items-center text-muted-foreground hover:text-gold" aria-label="الإشعارات">
             <Bell className="size-4" />

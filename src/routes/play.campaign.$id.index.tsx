@@ -100,7 +100,7 @@ function CampaignOverview() {
                   ⏱ {campaign.estimatedMinutes[0]}–{campaign.estimatedMinutes[1]} دقيقة
                 </span>
                 <span className="rounded-full bg-white/5 px-2 py-1">
-                  📜 {campaign.chapters.length.toLocaleString("ar-EG")} فصول
+                  📜 {campaign.chapters.length.toLocaleString("en-US")} فصول
                 </span>
                 {campaign.finalReward.legendary && (
                   <span className="rounded-full bg-gold/15 px-2 py-1 text-gold">⭐ مكافأة أسطورية</span>
@@ -154,11 +154,11 @@ function CampaignOverview() {
                   <div key={ch.id} className="animate-reveal">
                     <div className="-mr-[3px] flex items-start gap-3">
                       <div className={`chapter-seal shrink-0 ${done ? "ring-2 ring-gold" : ""} ${!unlocked ? "opacity-40 grayscale" : ""}`}>
-                        {done ? <Check className="size-5" /> : <span className="text-lg">{ch.index.toLocaleString("ar-EG")}</span>}
+                        {done ? <Check className="size-5" /> : <span className="text-lg">{ch.index.toLocaleString("en-US")}</span>}
                       </div>
                       <div className="flex-1 pt-1">
                         <p className="text-[10px] tracking-widest text-gold/70">
-                          الفصل {ch.index.toLocaleString("ar-EG")} · +{ch.xp} نقطة
+                          الفصل {ch.index.toLocaleString("en-US")} · +{ch.xp} نقطة
                         </p>
                         <h4 className={`font-display text-base font-bold ${!unlocked ? "text-muted-foreground" : ""}`}>
                           {ch.title}
@@ -316,7 +316,7 @@ function FinaleModal(props: {
           <p className="text-[10px] tracking-widest text-gold/80">فصول مُنجزة</p>
           <ol className="mt-2 space-y-1 text-[12px] text-muted-foreground">
             {props.chapters.map((c, i) => (
-              <li key={c}>{(i + 1).toLocaleString("ar-EG")}. {c}</li>
+              <li key={c}>{(i + 1).toLocaleString("en-US")}. {c}</li>
             ))}
           </ol>
         </div>

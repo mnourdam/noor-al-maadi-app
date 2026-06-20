@@ -101,7 +101,7 @@ function InvestigationGame({ inv, onSolved }: { inv: typeof INVESTIGATIONS[numbe
             onClick={() => setRevealed((r) => r + 1)}
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-gold/40 bg-transparent py-3 text-sm text-gold"
           >
-            <Lightbulb className="size-4" /> اكشف قرينة أخرى (-١٠ نقاط)
+            <Lightbulb className="size-4" /> اكشف قرينة أخرى (-10 نقاط)
           </button>
         )}
 

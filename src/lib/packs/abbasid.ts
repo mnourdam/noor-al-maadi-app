@@ -41,7 +41,7 @@ const FIGURE_IDS = [
     "خليفةٌ عبّاسي متأخّر، شيّد المدرسة المستنصرية ببغداد، أحد أعرق مراكز العلم في العالم الإسلامي.",
     ["abbasid.landmark.mustansiriyah","abbasid.city.baghdad"]],
   ["al-mustasim","المستعصم بالله","Al-Musta'sim",1242,1258,
-    "آخر خلفاء بني العباس في بغداد، سقطت في عهده العاصمة على يد المغول سنة ١٢٥٨م.",
+    "آخر خلفاء بني العباس في بغداد، سقطت في عهده العاصمة على يد المغول سنة 1258م.",
     ["abbasid.figure.hulagu","abbasid.battle.siege-baghdad","abbasid.event.fall-baghdad"]],
   ["abu-muslim","أبو مسلم الخراساني","Abu Muslim al-Khurasani",747,755,
     "قائد الدعوة العباسية في خراسان، صانع الثورة التي قلبت بني أمية، قتله المنصور لاحقًا.",
@@ -50,10 +50,10 @@ const FIGURE_IDS = [
     "وزير السلاجقة العظيم، مؤسّس المدارس النظامية ومنظّم الإدارة في زمن الخلافة العباسية المتأخرة.",
     ["abbasid.landmark.nizamiyya","abbasid.event.seljuk-rise","abbasid.city.baghdad"]],
   ["salahuddin","صلاح الدين الأيوبي","Salah al-Din al-Ayyubi",1171,1193,
-    "مؤسّس الدولة الأيوبية، حمى الخلافة العباسية اسميًا وأعاد القدس بعد حطين سنة ١١٨٧م.",
+    "مؤسّس الدولة الأيوبية، حمى الخلافة العباسية اسميًا وأعاد القدس بعد حطين سنة 1187م.",
     ["abbasid.state.abbasid","abbasid.city.baghdad"]],
   ["hulagu","هولاكو خان","Hulagu Khan",1256,1265,
-    "قائد المغول الذي اجتاح بلاد الإسلام وأسقط بغداد سنة ١٢٥٨م، فأنهى الخلافة العباسية.",
+    "قائد المغول الذي اجتاح بلاد الإسلام وأسقط بغداد سنة 1258م، فأنهى الخلافة العباسية.",
     ["abbasid.battle.siege-baghdad","abbasid.event.mongol-invasion","abbasid.event.fall-baghdad","abbasid.figure.al-mustasim"]],
 ] as const;
 
@@ -97,7 +97,7 @@ const SCHOLAR_IDS = [
 ] as const;
 
 const CITY_IDS = [
-  ["baghdad","بغداد","Baghdad","عاصمة الدولة العباسية، مدينة السلام التي أسّسها المنصور سنة ٧٦٢م، فصارت قلب الحضارة الإسلامية.",
+  ["baghdad","بغداد","Baghdad","عاصمة الدولة العباسية، مدينة السلام التي أسّسها المنصور سنة 762م، فصارت قلب الحضارة الإسلامية.",
     762,1258,["abbasid.figure.al-mansur","abbasid.event.build-baghdad","abbasid.landmark.round-city","abbasid.landmark.house-of-wisdom"]],
   ["samarra","سامراء","Samarra","عاصمة المعتصم وخلفائه، مدينة الجند الأتراك ومنبر الملوية الشهير.",
     836,892,["abbasid.figure.al-mutasim","abbasid.event.found-samarra","abbasid.landmark.malwiya","abbasid.landmark.samarra-mosque"]],
@@ -125,7 +125,7 @@ const CITY_IDS = [
 
 const BATTLE_IDS = [
   ["zab","معركة الزاب الكبرى","Battle of the Zab",750,750,
-    "المعركة الفاصلة سنة ٧٥٠م التي سحق فيها العباسيون جيش مروان بن محمد، فانتهت دولة بني أمية وقامت دولة بني العباس.",
+    "المعركة الفاصلة سنة 750م التي سحق فيها العباسيون جيش مروان بن محمد، فانتهت دولة بني أمية وقامت دولة بني العباس.",
     ["abbasid.figure.as-saffah","abbasid.figure.abu-muslim","abbasid.event.fall-umayyad","abbasid.event.found-abbasid"]],
   ["amorium","فتح عمورية","Sack of Amorium",838,838,
     "حملة المعتصم على عمورية البيزنطية ردًّا على نداء امرأة هاشمية، من أعظم انتصارات الدولة على الروم.",
@@ -134,7 +134,7 @@ const BATTLE_IDS = [
     "معركةٌ بين المسلمين بقيادة زياد بن صالح وجيش أسرة تانغ الصينية، حسمت نفوذ الإسلام في آسيا الوسطى ونقلت صناعة الورق إلى العالم الإسلامي.",
     ["abbasid.city.samarqand","abbasid.event.golden-age"]],
   ["siege-baghdad","حصار بغداد","Siege of Baghdad",1258,1258,
-    "حصار المغول بقيادة هولاكو لبغداد سنة ١٢٥٨م، انتهى بسقوط المدينة وقتل الخليفة المستعصم وانهيار الخلافة.",
+    "حصار المغول بقيادة هولاكو لبغداد سنة 1258م، انتهى بسقوط المدينة وقتل الخليفة المستعصم وانهيار الخلافة.",
     ["abbasid.figure.hulagu","abbasid.figure.al-mustasim","abbasid.event.fall-baghdad","abbasid.event.mongol-invasion"]],
   ["ankara","معركة أنقرة","Battle of Ankara",838,838,
     "اشتباكٌ بين جيش المعتصم وقوات البيزنطيين قبيل عمورية، مهّد للنصر الكبير.",
@@ -295,8 +295,8 @@ const entities: PackEntity[] = [
     latin: "Abbasid State",
     type: "state",
     description:
-      "ثاني الخلافات الكبرى في الإسلام، أسّسها أبو العباس السفّاح سنة ٧٥٠م، عاصمتها بغداد. شهدت العصر الذهبي للحضارة الإسلامية وانتهت بسقوط بغداد على يد المغول سنة ١٢٥٨م.",
-    period: { label: "٧٥٠ – ١٢٥٨ م", startYear: 750, endYear: 1258 },
+      "ثاني الخلافات الكبرى في الإسلام، أسّسها أبو العباس السفّاح سنة 750م، عاصمتها بغداد. شهدت العصر الذهبي للحضارة الإسلامية وانتهت بسقوط بغداد على يد المغول سنة 1258م.",
+    period: { label: "750 – 1258 م", startYear: 750, endYear: 1258 },
     relatedEntities: [
       "abbasid.figure.as-saffah","abbasid.figure.al-mansur","abbasid.figure.harun-al-rashid",
       "abbasid.figure.al-mamun","abbasid.figure.al-mutasim","abbasid.figure.al-mustasim",
@@ -418,7 +418,7 @@ const entities: PackEntity[] = [
   ...ACHIEVEMENT_IDS.map(([slug, title, latin, description, related]) => E({
     id: `abbasid.achievement.${slug}`,
     title, latin, type: "achievement", description,
-    period: { label: "٧٥٠ – ١٢٥٨ م", startYear: 750, endYear: 1258 },
+    period: { label: "750 – 1258 م", startYear: 750, endYear: 1258 },
     relatedEntities: ["abbasid.state.abbasid", ...related],
     unlockables: [{ kind: "title", refId: `abbasid.achievement.${slug}`, label: title }],
     image: { alt: title, glyph: "🏅", tone: "from-gold/40 to-slate-900" },
@@ -446,11 +446,11 @@ export const ABBASID_PACK: ContentPack = {
   id: "pack-003-abbasid",
   order: 3,
   title: "الدولة العباسية",
-  subtitle: "المجموعة ٣ · من بغداد إلى العصر الذهبي",
+  subtitle: "المجموعة 3 · من بغداد إلى العصر الذهبي",
   summary:
     "حزمة محتوى تاريخية شاملة عن الدولة العباسية: التأسيس، بناء بغداد، بيت الحكمة، العصر الذهبي، والسقوط على يد المغول.",
   era: "abbasid",
-  period: { label: "٧٥٠ – ١٢٥٨ م", startYear: 750, endYear: 1258 },
+  period: { label: "750 – 1258 م", startYear: 750, endYear: 1258 },
   cover: { alt: "غلاف الدولة العباسية", glyph: "🏴", tone: "from-stone-700/40 to-slate-900" },
   entities,
 };

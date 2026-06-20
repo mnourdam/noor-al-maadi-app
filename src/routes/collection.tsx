@@ -56,13 +56,13 @@ const cRarity = (c: { rarity: string }): Rarity => (c.rarity as Rarity) ?? "comm
 // ───── Battles — curated, era + storyId for unlock check
 interface Battle { id: string; name: string; era: Era; year: string; location: string; victor: string; summary: string; storyId?: string; rarity: Rarity; icon: string }
 const BATTLES: Battle[] = [
-  { id: "b-badr",      name: "بدر الكبرى",        era: "seerah",   year: "٢ هـ",     location: "بدر · الحجاز",       victor: "المسلمون",      summary: "أوّل معركةٍ فاصلة، نصرٌ سماوي على عددٍ قليل.", rarity: "legendary", icon: "🌟" },
-  { id: "b-yarmouk",   name: "اليرموك",           era: "rashidun", year: "١٥ هـ",    location: "نهر اليرموك · الشام", victor: "خالد بن الوليد", summary: "ستّة أيامٍ كسرت ظهر الروم وفتحت الشام.",       storyId: "yarmouk",     rarity: "legendary", icon: "⚔️" },
-  { id: "b-qadisiyyah", name: "القادسية",         era: "rashidun", year: "١٥ هـ",    location: "قرب الكوفة · العراق", victor: "سعد بن أبي وقّاص", summary: "أربعة أيامٍ أنهت إمبراطورية الساسانيين.",     storyId: "qadisiyyah",  rarity: "epic",      icon: "🏹" },
-  { id: "b-manzikert", name: "ملاذكرد",           era: "seljuk",   year: "٤٦٣ هـ",   location: "ملاذكرد · الأناضول",  victor: "ألب أرسلان",     summary: "أُسر إمبراطور الروم وفُتحت أبواب الأناضول.",  rarity: "epic",      icon: "🛡️" },
-  { id: "b-hattin",    name: "حِطّين",            era: "ayyubid",  year: "٥٨٣ هـ",   location: "سهل حِطّين · فلسطين", victor: "صلاح الدين",     summary: "نهاية الصليبيين وعودة الأذان للأقصى.",        storyId: "hattin",      rarity: "legendary", icon: "🕌" },
-  { id: "b-ain-jalut", name: "عين جالوت",         era: "mamluk",   year: "٦٥٨ هـ",   location: "فلسطين",             victor: "قطز وبيبرس",    summary: "أوّل هزيمةٍ كبرى للمغول في التاريخ.",         storyId: "ain-jalut",   rarity: "legendary", icon: "🦁" },
-  { id: "b-constantinople", name: "فتح القسطنطينية", era: "ottoman", year: "٨٥٧ هـ", location: "القسطنطينية",         victor: "محمد الفاتح",    summary: "بشارة النبي ﷺ تتحقّق بعد ثمانية قرون.",       storyId: "constantinople", rarity: "legendary", icon: "🏰" },
+  { id: "b-badr",      name: "بدر الكبرى",        era: "seerah",   year: "2 هـ",     location: "بدر · الحجاز",       victor: "المسلمون",      summary: "أوّل معركةٍ فاصلة، نصرٌ سماوي على عددٍ قليل.", rarity: "legendary", icon: "🌟" },
+  { id: "b-yarmouk",   name: "اليرموك",           era: "rashidun", year: "15 هـ",    location: "نهر اليرموك · الشام", victor: "خالد بن الوليد", summary: "ستّة أيامٍ كسرت ظهر الروم وفتحت الشام.",       storyId: "yarmouk",     rarity: "legendary", icon: "⚔️" },
+  { id: "b-qadisiyyah", name: "القادسية",         era: "rashidun", year: "15 هـ",    location: "قرب الكوفة · العراق", victor: "سعد بن أبي وقّاص", summary: "أربعة أيامٍ أنهت إمبراطورية الساسانيين.",     storyId: "qadisiyyah",  rarity: "epic",      icon: "🏹" },
+  { id: "b-manzikert", name: "ملاذكرد",           era: "seljuk",   year: "463 هـ",   location: "ملاذكرد · الأناضول",  victor: "ألب أرسلان",     summary: "أُسر إمبراطور الروم وفُتحت أبواب الأناضول.",  rarity: "epic",      icon: "🛡️" },
+  { id: "b-hattin",    name: "حِطّين",            era: "ayyubid",  year: "583 هـ",   location: "سهل حِطّين · فلسطين", victor: "صلاح الدين",     summary: "نهاية الصليبيين وعودة الأذان للأقصى.",        storyId: "hattin",      rarity: "legendary", icon: "🕌" },
+  { id: "b-ain-jalut", name: "عين جالوت",         era: "mamluk",   year: "658 هـ",   location: "فلسطين",             victor: "قطز وبيبرس",    summary: "أوّل هزيمةٍ كبرى للمغول في التاريخ.",         storyId: "ain-jalut",   rarity: "legendary", icon: "🦁" },
+  { id: "b-constantinople", name: "فتح القسطنطينية", era: "ottoman", year: "857 هـ", location: "القسطنطينية",         victor: "محمد الفاتح",    summary: "بشارة النبي ﷺ تتحقّق بعد ثمانية قرون.",       storyId: "constantinople", rarity: "legendary", icon: "🏰" },
 ];
 
 // ───── Landmarks — derived from map regions + curated

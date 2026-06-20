@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  Flame, Star, Sparkles, Search, ListOrdered, GitBranch, Map as MapIcon,
+  Star, Sparkles, Search, ListOrdered, GitBranch, Map as MapIcon,
   ChevronLeft, Crown, Lock, Compass, Eye, Play, Hourglass,
   Calendar,
 } from "lucide-react";
@@ -141,12 +141,7 @@ function Index() {
                 المستوى {lvl.level} · {lvl.title}
               </p>
             </div>
-            <div className="glass animate-curtain flex items-center gap-3 rounded-full border border-gold/30 px-3 py-1.5">
-              <div className="flex items-center gap-1 text-gold">
-                <Flame className="size-3.5" />
-                <span className="text-xs font-bold">{profile.streak}</span>
-              </div>
-            </div>
+            {/* enthusiasm/streak intentionally not duplicated here — shown in the global top HUD */}
           </div>
 
           {/* Hero copy */}
@@ -300,7 +295,7 @@ function Index() {
         <div className="grid grid-cols-2 gap-2.5">
           <ExploreTile to="/campaigns" icon={<Crown className="size-4" />} title="كل الحملات" subtitle={`${UPCOMING_CAMPAIGNS.length}+ قادمة`} />
           <ExploreTile to="/seasons" icon={<Sparkles className="size-4" />} title="المواسم" subtitle="مكافآت محدودة" />
-          <ExploreTile to="/timeline" icon={<Hourglass className="size-4" />} title="الخط الزمني" subtitle="١٤٠٠ سنة" />
+          <ExploreTile to="/timeline" icon={<Hourglass className="size-4" />} title="الخط الزمني" subtitle="1400 سنة" />
           <ExploreTile to="/map" icon={<MapIcon className="size-4" />} title="الخارطة" subtitle={`${UPCOMING_REGIONS.length}+ مناطق`} />
           <ExploreTile to="/on-this-day" icon={<Eye className="size-3.5" />} title="في مثل هذا اليوم" subtitle="أحداث اليوم" />
           <ExploreTile to="/collection" icon={<Star className="size-3.5" />} title="المتحف" subtitle="أرشيفك" />

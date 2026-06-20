@@ -10,7 +10,7 @@ function timeAgo(ts: number | null): string {
   if (m < 60) return `قبل ${m} دقيقة`;
   const h = Math.floor(m / 60);
   if (h < 24) return `قبل ${h} ساعة`;
-  return new Date(ts).toLocaleString("ar-EG");
+  return new Date(ts).toLocaleString("en-US");
 }
 
 export function AccountSection() {

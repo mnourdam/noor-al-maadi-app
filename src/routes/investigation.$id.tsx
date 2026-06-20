@@ -149,7 +149,7 @@ function InvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof getInve
         {!finished && (
           <section className="mt-6">
             <h2 className="font-display mb-2 text-sm font-bold">
-              السؤال {(qIndex + 1).toLocaleString("ar-EG")}/{inv.questions.length.toLocaleString("ar-EG")}
+              السؤال {(qIndex + 1).toLocaleString("en-US")}/{inv.questions.length.toLocaleString("en-US")}
             </h2>
             {heartsOut && (
               <div className="mb-3 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-[12px] text-red-100">

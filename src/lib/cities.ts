@@ -143,7 +143,7 @@ export const CITIES: CityProfile[] = [
     ],
     significance: [
       "فتحها عمر بن الخطاب صلحًا، فدخلها ماشيًا متواضعًا في عهدة عُمرية خالدة.",
-      "حرّرها صلاح الدين بعد حطّين، فأعاد الأذان إلى أقصاها بعد ٨٨ عامًا من الانقطاع.",
+      "حرّرها صلاح الدين بعد حطّين، فأعاد الأذان إلى أقصاها بعد 88 عامًا من الانقطاع.",
       "ظلّت مدينةً يلتقي عليها الحجّ والسياسة والروح في آنٍ واحد.",
     ],
     civilization: { name: "ميراث الأنبياء", eraId: "ayyubid", blurb: "حضارةٌ روحيّة عابرة للحضارات." },
@@ -215,7 +215,7 @@ export const CITIES: CityProfile[] = [
     regionId: "iraq",
     era: "abbasid",
     eras: ["abbasid", "seljuk"],
-    founded: "١٤٥ هـ · المنصور",
+    founded: "145 هـ · المنصور",
     population: "أكثر من مليون في القرن الرابع الهجري",
     glyph: "📜",
     toneClass: "from-purple-500/30 via-gold/15 to-transparent",
@@ -228,7 +228,7 @@ export const CITIES: CityProfile[] = [
     significance: [
       "اختار المنصور موقعها بعد دراسةٍ طويلة بين دجلة والفرات، فصارت قلب العالم.",
       "في عهد المأمون وُلِد بيت الحكمة، فترجم العالم القديم إلى لغةٍ واحدة.",
-      "ظلّت قبلة العلم حتى احترقت كتبها في نهر دجلة سنة ٦٥٦ هـ.",
+      "ظلّت قبلة العلم حتى احترقت كتبها في نهر دجلة سنة 656 هـ.",
     ],
     civilization: { name: "الخلافة العباسية", eraId: "abbasid", blurb: "ذروة الحضارة الإسلامية." },
     landmarks: [
@@ -239,7 +239,7 @@ export const CITIES: CityProfile[] = [
     ],
     eraNotes: [
       { eraId: "abbasid", title: "ذروة العلم", note: "الخوارزمي، الكِندي، ابن قُتيبة، والجاحظ كلّهم هنا." },
-      { eraId: "abbasid", title: "السقوط الكبير", note: "اجتياح هولاكو ٦٥٦ هـ وحرق المكتبات." },
+      { eraId: "abbasid", title: "السقوط الكبير", note: "اجتياح هولاكو 656 هـ وحرق المكتبات." },
     ],
     characterIds: ["harun", "khwarizmi"],
     battleIds: [],
@@ -257,7 +257,7 @@ export const CITIES: CityProfile[] = [
     regionId: "egypt",
     era: "ayyubid",
     eras: ["abbasid", "ayyubid", "mamluk", "ottoman"],
-    founded: "٣٥٨ هـ · جوهر الصقلي",
+    founded: "358 هـ · جوهر الصقلي",
     glyph: "🏯",
     toneClass: "from-orange-500/30 via-gold/15 to-transparent",
     tagline: "حصنُ الأمّة الذي كسر المغول وأنقذ الحضارة.",
@@ -298,7 +298,7 @@ export const CITIES: CityProfile[] = [
     regionId: "andalus",
     era: "andalus",
     eras: ["umayyad", "andalus"],
-    founded: "فتحت ٩٢ هـ",
+    founded: "فتحت 92 هـ",
     population: "نحو نصف مليون في القرن الرابع الهجري",
     glyph: "🏛️",
     toneClass: "from-rose-400/30 via-gold/15 to-transparent",
@@ -310,7 +310,7 @@ export const CITIES: CityProfile[] = [
     ],
     significance: [
       "أضاء عبد الرحمن الناصر شوارعها بالقناديل عشرة أميال، وأوروبا تتحسّس النور.",
-      "احتوت مكتبتها على أكثر من ٤٠٠ ألف مجلّد حين كانت أكبر مكتبة أوروبية تضمّ المئات.",
+      "احتوت مكتبتها على أكثر من 400 ألف مجلّد حين كانت أكبر مكتبة أوروبية تضمّ المئات.",
       "في جامعها الكبير صلّى الخلفاء، وفي حلقاته درّس ابن رشد فيلسوف العالم.",
     ],
     civilization: { name: "الأندلس الأمويّة", eraId: "andalus", blurb: "حضارةٌ جمعت الشرق والغرب." },
@@ -340,7 +340,7 @@ export const CITIES: CityProfile[] = [
     regionId: "andalus",
     era: "andalus",
     eras: ["andalus"],
-    founded: "ازدهرت في القرن ٦ هـ",
+    founded: "ازدهرت في القرن 6 هـ",
     glyph: "🏰",
     toneClass: "from-red-500/30 via-gold/15 to-transparent",
     tagline: "آخر معاقل الإسلام في الأندلس، وقصرٌ على تلٍّ أحمر.",
@@ -352,7 +352,7 @@ export const CITIES: CityProfile[] = [
     significance: [
       "ازدهرت بعد سقوط قرطبة، فاحتضنت لاجئي الأندلس قرنين وأكثر.",
       "في قصورها الحمراء كُتبت أرقّ القصائد، وعلى أسوارها رُسمت آخر معارك الأندلس.",
-      "سقطت سنة ١٤٩٢ م، فبكى أبو عبد الله الصغير حيث لم ينفع البكاء.",
+      "سقطت سنة 1492 م، فبكى أبو عبد الله الصغير حيث لم ينفع البكاء.",
     ],
     civilization: { name: "مملكة بني الأحمر", eraId: "andalus", blurb: "آخر ضوءٍ في الغرب الإسلامي." },
     landmarks: [
@@ -363,7 +363,7 @@ export const CITIES: CityProfile[] = [
     ],
     eraNotes: [
       { eraId: "andalus", title: "المملكة الأخيرة", note: "بنو الأحمر يصمدون قرنين بعد سقوط الموحّدين." },
-      { eraId: "andalus", title: "السقوط", note: "تسليم المفاتيح ١٤٩٢ م، ونهاية ثمانية قرون." },
+      { eraId: "andalus", title: "السقوط", note: "تسليم المفاتيح 1492 م، ونهاية ثمانية قرون." },
     ],
     characterIds: [],
     battleIds: [],
@@ -381,7 +381,7 @@ export const CITIES: CityProfile[] = [
     regionId: "anatolia",
     era: "ottoman",
     eras: ["ottoman"],
-    founded: "بُنيت ٣٣٠ م · فُتحت ٨٥٧ هـ",
+    founded: "بُنيت 330 م · فُتحت 857 هـ",
     glyph: "🕌",
     toneClass: "from-indigo-500/30 via-gold/15 to-transparent",
     tagline: "حلمٌ نبويٌّ تحقّق على يد فاتحٍ شاب.",
@@ -403,7 +403,7 @@ export const CITIES: CityProfile[] = [
       { id: "fatih-mosque", name: "جامع الفاتح", icon: "🕌", blurb: "بناه الفاتح بعد سنواتٍ من الفتح." },
     ],
     eraNotes: [
-      { eraId: "ottoman", title: "الفتح", note: "٢٩ مايو ١٤٥٣ م يدخل الفاتح المدينة." },
+      { eraId: "ottoman", title: "الفتح", note: "29 مايو 1453 م يدخل الفاتح المدينة." },
       { eraId: "ottoman", title: "العاصمة الجديدة", note: "تنقل العاصمة من أدرنة إلى إسلامبول." },
     ],
     characterIds: ["fatih"],
@@ -432,7 +432,7 @@ export const CITIES: CityProfile[] = [
       "تحفة العمارة التيمورية بقبابها الفيروزية",
     ],
     significance: [
-      "فتحها قُتيبة بن مسلم سنة ٩٣ هـ، فصارت بوّابة الإسلام إلى أعماق آسيا.",
+      "فتحها قُتيبة بن مسلم سنة 93 هـ، فصارت بوّابة الإسلام إلى أعماق آسيا.",
       "أنجبت أئمّة الحديث: البخاري ومسلم والترمذي، وعلماء الفلك والطبّ.",
       "في عهد التيموريّين بُنيت ساحة ريجستان بمدارسها الثلاث.",
     ],

@@ -93,7 +93,7 @@ function CampaignsHub() {
                     <div className="flex items-center justify-between gap-2 text-[10px] tracking-widest text-gold">
                       <span className="inline-flex items-center gap-1.5">
                         {complete ? <Crown className="size-3.5" /> : <Sparkles className="size-3.5" />}
-                        {complete ? "حملة مكتملة" : "حملة تفاعلية"} · {c.chapters.length.toLocaleString("ar-EG")} فصول
+                        {complete ? "حملة مكتملة" : "حملة تفاعلية"} · {c.chapters.length.toLocaleString("en-US")} فصول
                       </span>
                       <span className="rounded-full border border-gold/40 bg-black/30 px-2 py-0.5 font-display text-[11px] font-bold tracking-normal text-gold">
                         {p.percent}٪
@@ -132,7 +132,7 @@ function CampaignsHub() {
                   <div className="flex items-center justify-between gap-2 text-[10px] tracking-widest text-gold">
                     <span className="inline-flex items-center gap-1.5">
                       <Sparkles className="size-3.5" />
-                      حملة جديدة · {c.chapters.length.toLocaleString("ar-EG")} فصول
+                      حملة جديدة · {c.chapters.length.toLocaleString("en-US")} فصول
                     </span>
                     {c.historicalPeriod && (
                       <span className="rounded-full border border-gold/40 bg-black/30 px-2 py-0.5 text-[10px] text-gold">

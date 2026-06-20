@@ -188,10 +188,10 @@ function drawCard(
 
   // ===== Stats grid (2 columns × 4 rows) =====
   const stats: [string, string][] = [
-    ["نقاط الخبرة", s.xp.toLocaleString("ar-EG")],
-    ["السلسلة اليومية", `🔥 ${s.streak.toLocaleString("ar-EG")}`],
-    ["الحملات المكتملة", s.campaigns_completed.toLocaleString("ar-EG")],
-    ["الآثار المجموعة", s.artifacts_collected.toLocaleString("ar-EG")],
+    ["نقاط الخبرة", s.xp.toLocaleString("en-US")],
+    ["السلسلة اليومية", `🔥 ${s.streak.toLocaleString("en-US")}`],
+    ["الحملات المكتملة", s.campaigns_completed.toLocaleString("en-US")],
+    ["الآثار المجموعة", s.artifacts_collected.toLocaleString("en-US")],
     ["اكتشاف الموسوعة", `${s.discovery_pct}%`],
     ["الدولة المفضلة", s.favorite_state_id || "—"],
   ];

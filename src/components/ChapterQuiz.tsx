@@ -96,7 +96,7 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
       )}
       <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold/80">
         <HelpCircle className="size-3.5" />
-        {quiz.title ?? "اختبار الفصل"} · سؤال {(index + 1).toLocaleString("ar-EG")}/{quiz.questions.length.toLocaleString("ar-EG")}
+        {quiz.title ?? "اختبار الفصل"} · سؤال {(index + 1).toLocaleString("en-US")}/{quiz.questions.length.toLocaleString("en-US")}
       </div>
       <p className="font-display mt-3 text-[14px] font-bold leading-snug text-foreground">
         {q.question}

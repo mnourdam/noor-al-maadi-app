@@ -20,7 +20,7 @@ export type PackEntityType =
 export type PackRarity = "common" | "rare" | "epic" | "legendary";
 
 export interface PackPeriod {
-  /** Display label in Arabic, e.g. "١١٧١ – ١٢٥٠ م". */
+  /** Display label in Arabic, e.g. "1171 – 1250 م". */
   label: string;
   /** Numeric anchor used by the Great Timeline (CE). */
   startYear: number;

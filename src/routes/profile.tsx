@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { toWesternDigits } from "@/lib/formatNumber";
 import { Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin, Coins, Search, Gift, Bell } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
@@ -46,7 +47,7 @@ function ProfilePage() {
     if (!profile.lastActiveDay) return null;
     const d = new Date(profile.lastActiveDay);
     d.setDate(d.getDate() - Math.max(0, profile.streak - 1));
-    return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
+    return toWesternDigits(d.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" }));
   }, [profile.lastActiveDay, profile.streak]);
 
   const favState = ERAS.find((e) => e.id === profile.favoriteStateId);
@@ -128,7 +129,7 @@ function ProfilePage() {
             <p className="font-display text-sm font-bold inline-flex items-center gap-2">
               <Flame className="size-4 text-orange-400" /> سلسلتك اليومية
             </p>
-            <span className="text-[11px] text-muted-foreground">{profile.streak.toLocaleString("ar-EG")} يوم</span>
+            <span className="text-[11px] text-muted-foreground">{profile.streak.toLocaleString("en-US")} يوم</span>
           </div>
           <div className="mt-3 space-y-2">
             {STREAK_MILESTONES.map((m) => {
