@@ -110,7 +110,7 @@ function ImportedChapterPlayer() {
   const activity = chapter.activities[currentIdx];
   const allDone  = chapter.activities.length > 0
     && chapter.activities.every(a => chProgress?.completedActivityIds.includes(a.id))
-    && Object.values(pendingAck).every(v => v !== "correct");
+    && Object.values(pendingAck).every(v => v !== "correct" && v !== "wrong");
 
   const currentAck = activity ? pendingAck[activity.id] : undefined;
 
