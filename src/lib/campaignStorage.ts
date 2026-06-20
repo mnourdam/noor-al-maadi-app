@@ -182,9 +182,12 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
             feedbackCorrect: a?.feedbackCorrect,
             feedbackWrong: a?.feedbackWrong,
             hint: a?.hint,
-            xpReward: typeof a?.xpReward === "number" ? a.xpReward : ACTIVITY_DEFAULTS.xpReward,
-            coinsReward: typeof a?.coinsReward === "number" ? a.coinsReward : ACTIVITY_DEFAULTS.coinsReward,
-            heartsPenalty: typeof a?.heartsPenalty === "number" ? a.heartsPenalty : ACTIVITY_DEFAULTS.heartsPenalty,
+            xpReward: typeof a?.xpReward === "number" ? a.xpReward
+              : typeof a?.xp === "number" ? a.xp : ACTIVITY_DEFAULTS.xpReward,
+            coinsReward: typeof a?.coinsReward === "number" ? a.coinsReward
+              : typeof a?.coins === "number" ? a.coins : ACTIVITY_DEFAULTS.coinsReward,
+            heartsPenalty: typeof a?.heartsPenalty === "number" ? a.heartsPenalty
+              : typeof a?.hearts_penalty === "number" ? a.hearts_penalty : ACTIVITY_DEFAULTS.heartsPenalty,
             difficulty: a?.difficulty,
             relatedFigure: a?.relatedFigure,
             relatedCity: a?.relatedCity,
@@ -193,6 +196,11 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
           };
         })
       : [];
+    // Accept snake_case rewards on chapters (xp, coins, hearts_penalty, unlocks).
+    const chRewards = ch?.rewards && typeof ch.rewards === "object" ? { ...ch.rewards } : {};
+    if (typeof ch?.xp === "number" && chRewards.xp == null) chRewards.xp = ch.xp;
+    if (typeof ch?.coins === "number" && chRewards.coins == null) chRewards.coins = ch.coins;
+    if (Array.isArray(ch?.unlocks) && chRewards.unlocks == null) chRewards.unlocks = ch.unlocks;
     return {
       id: chId,
       title: String(ch?.title ?? ""),
@@ -201,10 +209,11 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
       historicalReadingText: ch?.historicalReadingText,
       order: typeof ch?.order === "number" ? ch.order : ci + 1,
       unlockRequirement: ch?.unlockRequirement,
-      rewards: ch?.rewards,
+      rewards: Object.keys(chRewards).length ? chRewards : undefined,
       activities,
     };
   });
+
 
   // Warn on missing registry references for unlocks.
   const allUnlocks: string[] = [
