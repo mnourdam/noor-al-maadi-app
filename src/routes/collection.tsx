@@ -857,9 +857,11 @@ function ImportedCard({
 function EncyclopediaUnlockCard({
   unlock,
   navigate,
+  sourceLabel,
 }: {
   unlock: { raw: string; type: string | null; slug: string | null; title: string | null };
   navigate: ReturnType<typeof useNavigate>;
+  sourceLabel: string;
 }) {
   const TYPE_GLYPH: Record<string, string> = {
     figure: "👤", artifact: "🏺", city: "🏛️", landmark: "🏛️",
@@ -873,7 +875,7 @@ function EncyclopediaUnlockCard({
   const label = TYPE_LABEL[unlock.type ?? ""] ?? "عنصر";
 
   const onOpen = () => {
-    // Encyclopedia-resolved unlocks always go to the generic entity page,
+    // All encyclopedia-resolved unlocks route to the generic entity page,
     // which supports Supabase-only entities (legacy figure/city/battle
     // routes 404 when the slug isn't in the hardcoded list).
     if (!unlock.slug) return;
@@ -882,20 +884,25 @@ function EncyclopediaUnlockCard({
 
   return (
     <button
+      dir="rtl"
       onClick={onOpen}
-      className="group relative flex flex-col items-start gap-2 rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-surface to-transparent p-3 text-right ring-1 ring-gold/20 transition hover:border-gold/60"
+      className="group relative flex w-full min-w-0 flex-col gap-2 overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-surface to-transparent p-3 text-right ring-1 ring-gold/20 transition hover:border-gold/60"
     >
-      <div className="flex w-full items-center justify-between gap-2">
-        <span className="grid size-10 place-items-center rounded-xl bg-black/40 text-xl ring-1 ring-gold/30">
+      <div className="flex w-full min-w-0 items-center justify-between gap-2">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-black/40 text-lg ring-1 ring-gold/30">
           {glyph}
         </span>
-        <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-bold text-gold">
-          من الموسوعة
+        <span className="shrink-0 rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-bold text-gold">
+          {label}
         </span>
       </div>
-      <div className="min-w-0">
-        <p className="font-display truncate text-sm font-bold">{unlock.title}</p>
-        <p className="text-[10px] text-gold/80">{label}</p>
+      <div className="w-full min-w-0">
+        <p className="font-display line-clamp-2 break-words text-[12px] font-bold leading-snug sm:text-sm">
+          {unlock.title ?? unlock.slug}
+        </p>
+        <p className="mt-1 line-clamp-1 break-words text-[10px] text-gold/80">
+          {sourceLabel}
+        </p>
       </div>
     </button>
   );
