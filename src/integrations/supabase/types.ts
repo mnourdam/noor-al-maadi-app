@@ -296,6 +296,51 @@ export type Database = {
           },
         ]
       }
+      investigations: {
+        Row: {
+          created_at: string
+          description: string | null
+          difficulty: string
+          enabled: boolean
+          id: string
+          related_entities: Json
+          reward: Json
+          slug: string
+          steps: Json
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          enabled?: boolean
+          id?: string
+          related_entities?: Json
+          reward?: Json
+          slug: string
+          steps?: Json
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          enabled?: boolean
+          id?: string
+          related_entities?: Json
+          reward?: Json
+          slug?: string
+          steps?: Json
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_deliveries: {
         Row: {
           created_at: string
