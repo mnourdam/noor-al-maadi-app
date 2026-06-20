@@ -386,13 +386,6 @@ function ProfilePage() {
         <h3 className="font-display mt-7 mb-3 text-sm font-bold">الإعدادات</h3>
         <div className="space-y-2">
           <SettingToggle
-            icon={<Volume2 className="size-4" />}
-            label="موسيقى الأجواء"
-            desc="نغمات هادئة تتبع العصر الذي تستكشفه"
-            value={profile.settings.ambienceEnabled}
-            onChange={(v) => updateSettings({ ambienceEnabled: v })}
-          />
-          <SettingToggle
             icon={<BellRing className="size-4" />}
             label="تفعيل الإشعارات"
             desc="مفتاح رئيسي لكل أنواع الإشعارات"
@@ -407,6 +400,7 @@ function ProfilePage() {
             onChange={(v) => updateSettings({ reduceMotion: v })}
           />
         </div>
+
 
         {/* Audio settings */}
         <AudioSettingsCard />
