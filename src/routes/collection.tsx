@@ -259,7 +259,9 @@ function CollectionPage() {
   }, [refreshTick]);
 
   // ── User collection (Supabase) ──────────────────────────────
-  const userCollection = useUserCollectionByType();
+  const userCollectionResult = useUserCollectionByType();
+  const userCollection = userCollectionResult.byType;
+  const userUnlockedAt = userCollectionResult.unlockedAt;
 
   // ── Imported registry unlocks (raw "type:slug" strings) ─────
   const importedUnlockSet = useMemo(() => new Set(getUnlockedRegistryIds()), [refreshTick]);
@@ -285,11 +287,37 @@ function CollectionPage() {
     if (importedUnlockSet.has(`${type}:${slug}`)) return true;
     const legacyId = (metadata?.legacy_id as string | undefined) ?? null;
     if (legacyId && importedUnlockSet.has(`${type}:${legacyId}`)) return true;
-    // Local legacy fallbacks — only for figures/artifacts to avoid inventing items.
+    // Aliases declared on the canonical entity (e.g. landmark with artifact alias).
+    const aliases: string[] = Array.isArray(metadata?.aliases) ? metadata.aliases : [];
+    for (const a of aliases) {
+      if (importedUnlockSet.has(a)) return true;
+      const [at, ...rest] = a.split(":");
+      const aSlug = rest.join(":") || at;
+      if (at && aSlug && userCollection.get(at)?.has(aSlug)) return true;
+    }
     if (type === "figure" && (profile.charactersUnlocked.includes(slug) || (legacyId && profile.charactersUnlocked.includes(legacyId)))) return true;
     if (type === "artifact" && (profile.artifactsFound.includes(slug) || (legacyId && profile.artifactsFound.includes(legacyId)))) return true;
     return false;
   }
+
+  // Resolve the most recent unlock timestamp across direct + alias matches.
+  function unlockedAtFor(type: string, slug: string, metadata: any): number {
+    const candidates: string[] = [`${type}:${slug}`];
+    const legacyId = (metadata?.legacy_id as string | undefined) ?? null;
+    if (legacyId) candidates.push(`${type}:${legacyId}`);
+    const aliases: string[] = Array.isArray(metadata?.aliases) ? metadata.aliases : [];
+    for (const a of aliases) candidates.push(a);
+    let best = 0;
+    for (const k of candidates) {
+      const v = userUnlockedAt.get(k);
+      if (v) {
+        const t = Date.parse(v);
+        if (Number.isFinite(t) && t > best) best = t;
+      }
+    }
+    return best;
+  }
+
 
   // ── Build per-section counts ────────────────────────────────
   const sectionStats = useMemo(() => {
