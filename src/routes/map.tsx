@@ -47,6 +47,14 @@ function MapPage() {
   const explorePct = explorationPercent(profile.regionsUnlocked);
   const region = MAP_REGIONS.find((r) => r.id === selectedId) ?? MAP_REGIONS[0];
 
+  // Supabase-primary prefetch for state entities. Coordinates remain in
+  // MAP_REGIONS (legacy); when metadata.mapCoords appears in encyclopedia_entities
+  // a future iteration can read them here. Falls back silently if offline.
+  const supaStates = useEncyclopediaSupabaseList("state");
+  const supaState = supaStates.bySlug.get(region.id);
+  void supaState; // reserved for region-label overrides; coords stay legacy
+
+
   const pins = useMemo(() => pinsForEra(eraFilter), [eraFilter]);
   const overlay = useMemo(() => overlayForEra(eraFilter), [eraFilter]);
   const eras = useMemo(() => atlasEras(), []);
