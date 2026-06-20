@@ -114,7 +114,7 @@ function PublicProfilePage() {
                     <span className="truncate text-gold/70">· {displayCharacterName(p.favorite_figure_id)}</span>
                   )}
                 </div>
-                <div className="truncate rounded-xl border border-white/10 p-2">آخر نشاط: {new Date(p.last_active).toLocaleDateString("ar")}</div>
+                <div className="truncate rounded-xl border border-white/10 p-2">آخر نشاط: {toWesternDigits(new Date(p.last_active).toLocaleDateString("ar"))}</div>
               </div>
             </div>
 
