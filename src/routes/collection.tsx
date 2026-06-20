@@ -321,6 +321,24 @@ function CollectionPage() {
   // instead of triggering the "بلا تعريف" warning.
   const allUnlockIds = useMemo(() => getUnlockedRegistryIds(), [refreshTick]);
   const { resolved: encyclopediaUnlocks } = useResolvedUnlocks(allUnlockIds);
+
+  // raw unlock id → source campaignId, then campaignId → Arabic title.
+  const unlockSources = useMemo(() => getUnlockSourcesMap(), [refreshTick]);
+  const campaignTitleById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of listCampaigns()) m.set(c.id, c.title);
+    // Hardcoded fallback for the first imported campaign per spec.
+    if (!m.has("prophetic-mission")) m.set("prophetic-mission", "البعثة النبوية");
+    return m;
+  }, [refreshTick]);
+  const sourceLabelFor = (rawId: string): string => {
+    const cid = unlockSources.get(rawId);
+    if (!cid) return "من الموسوعة";
+    const title = campaignTitleById.get(cid);
+    if (!title) return "من الموسوعة";
+    return `من حملة ${title}`;
+  };
+
   const encyclopediaByType = useMemo(() => {
     const m = new Map<string, typeof encyclopediaUnlocks>();
     for (const r of encyclopediaUnlocks) {
