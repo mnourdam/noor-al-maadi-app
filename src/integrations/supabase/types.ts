@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_campaigns: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          slug: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id: string
+          slug?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          slug?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cloud_saves: {
         Row: {
           client_updated_at: string | null
@@ -35,6 +65,33 @@ export type Database = {
           data?: Json
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      content_registry: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id: string
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          name?: string
+          type?: string
+          updated_at?: string
         }
         Relationships: []
       }

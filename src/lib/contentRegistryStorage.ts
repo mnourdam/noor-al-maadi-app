@@ -45,11 +45,14 @@ export function upsertRegistryItem(item: ContentRegistryItem): ContentRegistryIt
   const next = { ...item, updatedAt: now, createdAt: item.createdAt ?? now };
   if (idx >= 0) list[idx] = next; else list.push(next);
   saveRegistry(list);
+  // Fire-and-forget cloud push (no-op during a cloud→local pull).
+  import("@/lib/cloudSync").then(m => m.pushRegistryItem(next)).catch(() => {});
   return next;
 }
 
 export function deleteRegistryItem(id: string): void {
   saveRegistry(listRegistry().filter(i => i.id !== id));
+  import("@/lib/cloudSync").then(m => m.deleteRegistryItemFromCloud(id)).catch(() => {});
 }
 
 export function knownRegistryIds(): Set<string> {

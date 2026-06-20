@@ -45,7 +45,14 @@ function CampaignsHub() {
   // Surface admin-imported published campaigns (localStorage) without
   // touching the existing card design. SSR-safe via post-mount hook.
   const [importedCampaigns, setImportedCampaigns] = useState<ImportedCampaign[]>([]);
-  useEffect(() => { setImportedCampaigns(listPublishedCampaigns()); }, []);
+  useEffect(() => {
+    setImportedCampaigns(listPublishedCampaigns());
+    // Refresh from cloud, then re-read local cache.
+    import("@/lib/cloudSync")
+      .then((m) => m.pullCampaignsFromCloud())
+      .then(() => setImportedCampaigns(listPublishedCampaigns()))
+      .catch(() => {});
+  }, []);
   // Campaigns superseded by an engine campaign (by matching pack/era id)
   // are hidden from the legacy lists so users always enter via the new
   // chapter player — fixes the "Salah al-Din card doesn't open" issue
