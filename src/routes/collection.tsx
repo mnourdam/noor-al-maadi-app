@@ -10,6 +10,7 @@ import {
   getImportedRegistryItemsByType,
   getMissingRegistryUnlockIds,
   registryItemIcon,
+  registryItemImageUrl,
   registryItemRarity,
 } from "@/lib/importedUnlocks";
 import { pullAllFromCloud } from "@/lib/cloudSync";
@@ -104,7 +105,7 @@ function useUnlocks() {
 
 // ───── Reusable card
 function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, mystery }: {
-  unlocked: boolean; rarity: Rarity; icon: string; title: string; subtitle: string; footer?: string;
+  unlocked: boolean; rarity: Rarity; icon: React.ReactNode; title: string; subtitle: string; footer?: string;
   onClick: () => void; mystery?: { title: string; clue: string };
 }) {
   const meta = RARITY_META[rarity];
@@ -169,7 +170,7 @@ function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, myster
 }
 
 // ───── Reveal dialog
-interface RevealItem { rarity: Rarity; icon: string; title: string; subtitle: string; lines: string[]; }
+interface RevealItem { rarity: Rarity; icon: React.ReactNode; title: string; subtitle: string; lines: string[]; alreadyOwned?: boolean }
 function RevealDialog({ item, onClose }: { item: RevealItem | null; onClose: () => void }) {
   const open = !!item;
   const meta = item ? RARITY_META[item.rarity] : RARITY_META.common;
@@ -202,9 +203,18 @@ function RevealDialog({ item, onClose }: { item: RevealItem | null; onClose: () 
               {item.lines.map((l, i) => <p key={i}>{l}</p>)}
             </div>
             <div className="px-5 pb-5">
-              <button onClick={onClose} className="bg-gradient-gold shadow-gold w-full rounded-xl py-2.5 text-sm font-bold text-primary-foreground">
-                أضف إلى أرشيفي
-              </button>
+              {item.alreadyOwned ? (
+                <button
+                  onClick={onClose}
+                  className="w-full rounded-xl border border-emerald-400/40 bg-emerald-500/10 py-2.5 text-sm font-bold text-emerald-200"
+                >
+                  مضاف إلى أرشيفك · تم فتحه عبر الحملة
+                </button>
+              ) : (
+                <button onClick={onClose} className="bg-gradient-gold shadow-gold w-full rounded-xl py-2.5 text-sm font-bold text-primary-foreground">
+                  أضف إلى أرشيفي
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -695,14 +705,38 @@ function ImportedCard({
   setReveal: (r: RevealItem | null) => void;
 }) {
   const rarity = registryItemRarity(item);
-  const icon = registryItemIcon(item);
+  const emoji = registryItemIcon(item);
+  const imageUrl = registryItemImageUrl(item);
+
+  const cardIcon: React.ReactNode = imageUrl ? (
+    <img
+      src={imageUrl}
+      alt={item.name}
+      loading="lazy"
+      className="absolute inset-0 size-full object-cover"
+      onError={(e) => {
+        // Fall back to emoji if the image fails to load.
+        const t = e.currentTarget;
+        t.style.display = "none";
+      }}
+    />
+  ) : (
+    <span aria-hidden>{emoji}</span>
+  );
+
+  const revealIcon: React.ReactNode = imageUrl ? (
+    <img src={imageUrl} alt={item.name} className="size-full rounded-2xl object-cover" />
+  ) : (
+    <span aria-hidden>{emoji}</span>
+  );
+
   const subtitle = item.subtitle ?? item.historicalPeriod ?? item.category ?? "مستورد";
   const footer = item.description?.slice(0, 80);
   return (
     <Card
       unlocked={item.unlocked}
       rarity={rarity}
-      icon={icon}
+      icon={cardIcon}
       title={item.name}
       subtitle={subtitle}
       footer={footer}
@@ -711,15 +745,17 @@ function ImportedCard({
         if (!item.unlocked) return;
         setReveal({
           rarity,
-          icon,
+          icon: revealIcon,
           title: item.name,
           subtitle,
           lines: [
             item.description ?? "عنصرٌ مستورد من حملةٍ إدارية.",
             ...(item.historicalPeriod ? [`الحقبة: ${item.historicalPeriod}`] : []),
           ],
+          alreadyOwned: true,
         });
       }}
     />
   );
 }
+
