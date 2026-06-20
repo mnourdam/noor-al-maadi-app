@@ -332,7 +332,7 @@ function CollectionPage() {
 
         {/* Section pills */}
         <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {SECTIONS.map(s => {
+          {visibleSections.map(s => {
             const active = section === s.id;
             const Icon = s.icon;
             const c = counts[s.id];
