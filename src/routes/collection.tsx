@@ -10,6 +10,7 @@ import {
   getImportedRegistryItemsByType,
   getMissingRegistryUnlockIds,
   getUnlockedRegistryIds,
+  getUnlockSourcesMap,
   registryItemIcon,
   registryItemImageUrl,
   registryItemRarity,
@@ -19,6 +20,7 @@ import { audioManager } from "@/lib/audioManager";
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
 import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
+import { listCampaigns } from "@/lib/campaignStorage";
 
 
 export const Route = createFileRoute("/collection")({
