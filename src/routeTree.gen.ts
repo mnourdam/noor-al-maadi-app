@@ -32,6 +32,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EncyclopediaIndexRouteImport } from './routes/encyclopedia.index'
 import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as StoryIdRouteImport } from './routes/story.$id'
 import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
@@ -45,6 +46,7 @@ import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as PlayCampaignIdRouteImport } from './routes/play.campaign.$id'
@@ -171,6 +173,11 @@ const CampaignsIndexRoute = CampaignsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CampaignsRoute,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UUsernameRoute = UUsernameRouteImport.update({
   id: '/u/$username',
   path: '/u/$username',
@@ -234,6 +241,11 @@ const BattleIdRoute = BattleIdRouteImport.update({
 const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   id: '/admin/notifications',
   path: '/admin/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminImportRoute = AdminImportRouteImport.update({
+  id: '/admin/import',
+  path: '/admin/import',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminContentRoute = AdminContentRouteImport.update({
@@ -314,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/timeline': typeof TimelineRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
+  '/admin/import': typeof AdminImportRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -327,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/u/$username': typeof UUsernameRoute
+  '/admin/': typeof AdminIndexRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -360,6 +374,7 @@ export interface FileRoutesByTo {
   '/timeline': typeof TimelineRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
+  '/admin/import': typeof AdminImportRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -373,6 +388,7 @@ export interface FileRoutesByTo {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/u/$username': typeof UUsernameRoute
+  '/admin': typeof AdminIndexRoute
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -408,6 +424,7 @@ export interface FileRoutesById {
   '/timeline': typeof TimelineRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
+  '/admin/import': typeof AdminImportRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
@@ -421,6 +438,7 @@ export interface FileRoutesById {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/u/$username': typeof UUsernameRoute
+  '/admin/': typeof AdminIndexRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -458,6 +476,7 @@ export interface FileRouteTypes {
     | '/timeline'
     | '/admin/campaigns'
     | '/admin/content'
+    | '/admin/import'
     | '/admin/notifications'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -471,6 +490,7 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/u/$username'
+    | '/admin/'
     | '/campaigns/'
     | '/encyclopedia/'
     | '/encyclopedia/entity/$id'
@@ -504,6 +524,7 @@ export interface FileRouteTypes {
     | '/timeline'
     | '/admin/campaigns'
     | '/admin/content'
+    | '/admin/import'
     | '/admin/notifications'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -517,6 +538,7 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/u/$username'
+    | '/admin'
     | '/campaigns'
     | '/encyclopedia'
     | '/encyclopedia/entity/$id'
@@ -551,6 +573,7 @@ export interface FileRouteTypes {
     | '/timeline'
     | '/admin/campaigns'
     | '/admin/content'
+    | '/admin/import'
     | '/admin/notifications'
     | '/battle/$id'
     | '/campaigns/$era'
@@ -564,6 +587,7 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/u/$username'
+    | '/admin/'
     | '/campaigns/'
     | '/encyclopedia/'
     | '/encyclopedia/entity/$id'
@@ -600,6 +624,7 @@ export interface RootRouteChildren {
   TimelineRoute: typeof TimelineRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminContentRoute: typeof AdminContentRoute
+  AdminImportRoute: typeof AdminImportRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
@@ -612,6 +637,7 @@ export interface RootRouteChildren {
   PlayTimelineRoute: typeof PlayTimelineRoute
   StoryIdRoute: typeof StoryIdRoute
   UUsernameRoute: typeof UUsernameRoute
+  AdminIndexRoute: typeof AdminIndexRoute
   PlayCampaignIdRoute: typeof PlayCampaignIdRouteWithChildren
 }
 
@@ -778,6 +804,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CampaignsIndexRouteImport
       parentRoute: typeof CampaignsRoute
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/u/$username': {
       id: '/u/$username'
       path: '/u/$username'
@@ -867,6 +900,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/notifications'
       fullPath: '/admin/notifications'
       preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/import': {
+      id: '/admin/import'
+      path: '/admin/import'
+      fullPath: '/admin/import'
+      preLoaderRoute: typeof AdminImportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/content': {
@@ -1017,6 +1057,7 @@ const rootRouteChildren: RootRouteChildren = {
   TimelineRoute: TimelineRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminContentRoute: AdminContentRoute,
+  AdminImportRoute: AdminImportRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
@@ -1029,6 +1070,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayTimelineRoute: PlayTimelineRoute,
   StoryIdRoute: StoryIdRoute,
   UUsernameRoute: UUsernameRoute,
+  AdminIndexRoute: AdminIndexRoute,
   PlayCampaignIdRoute: PlayCampaignIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport

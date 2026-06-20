@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookOpen, CalendarDays, Pencil, Plus, RefreshCw, Save, ShieldAlert, Trash2, X } from "lucide-react";
+import { BookOpen, CalendarDays, Pencil, Plus, RefreshCw, Save, ShieldAlert, Trash2, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount } from "@/lib/account";
 
@@ -96,6 +96,10 @@ function ContentManager() {
         <header className="flex items-center gap-3">
           <BookOpen className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">إدارة محتوى الإشعارات التلقائية</h1>
+          <Link to="/admin/import" search={{ type: "daily_facts" }} className="ml-auto inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">
+            <Upload className="h-4 w-4" /> استيراد JSON
+          </Link>
+          <Link to="/admin" className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">لوحة الإدارة</Link>
         </header>
 
         <div className="flex gap-2 border-b border-border">
