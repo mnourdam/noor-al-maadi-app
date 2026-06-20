@@ -313,10 +313,14 @@ function ImportedChapterPlayer() {
                 </div>
 
                 {/* Explicit acknowledgement step — keeps feedback visible until tap. */}
-                {currentAck === "correct" && (
+                {(currentAck === "correct" || currentAck === "wrong") && (
                   <button
                     onClick={acknowledgeAndAdvance}
-                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+                    className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold shadow-gold ${
+                      currentAck === "correct"
+                        ? "bg-gradient-gold text-primary-foreground"
+                        : "border border-rose-400/50 bg-rose-500/15 text-rose-100"
+                    }`}
                   >
                     <Check className="size-4" /> التالي
                     <ArrowLeft className="size-4" />
