@@ -104,7 +104,7 @@ function useUnlocks() {
 
 // ───── Reusable card
 function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, mystery }: {
-  unlocked: boolean; rarity: Rarity; icon: string; title: string; subtitle: string; footer?: string;
+  unlocked: boolean; rarity: Rarity; icon: React.ReactNode; title: string; subtitle: string; footer?: string;
   onClick: () => void; mystery?: { title: string; clue: string };
 }) {
   const meta = RARITY_META[rarity];
