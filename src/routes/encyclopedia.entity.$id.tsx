@@ -84,8 +84,9 @@ function EntityPage() {
         </AppShell>
       );
     }
-    if (supa && supa.entity_type === "artifact") {
-      return <SupabaseOnlyArtifact entity={supa} />;
+    if (supa) {
+      // Supabase-only entity (no legacy pack) — render minimal generic view.
+      return <SupabaseOnlyEntity entity={supa} />;
     }
     return (
       <AppShell>
@@ -109,12 +110,13 @@ function EntityPage() {
     legacyRef?.kind === "character" ? CHARACTERS.some(c => c.id === legacyRef.id) :
     !!legacyRef;
 
-  // Supabase-primary overrides for artifacts: prefer DB title / description.
-  const fromSupabase = !!supa && e.type === "artifact";
+  // Supabase-primary override for all enabled types: prefer DB title/description.
+  const fromSupabase = !!supa && isSupabaseEnabled(e.type);
   const displayTitle = fromSupabase ? (supa!.title || e.title) : e.title;
   const displayDescription = fromSupabase
     ? (supa!.summary || supa!.subtitle || e.description)
     : e.description;
+
 
   return (
     <AppShell>
