@@ -113,38 +113,11 @@ function CampaignsHub() {
         {importedCampaigns.length > 0 && (
           <div className="mb-6 space-y-3">
             {importedCampaigns.map((c) => (
-              <Link
-                key={c.id}
-                to="/campaigns/imported/$id"
-                params={{ id: c.id }}
-                className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition hover:border-gold/60"
-              >
-                <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
-                <div className="relative">
-                  <div className="flex items-center justify-between gap-2 text-[10px] tracking-widest text-gold">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Sparkles className="size-3.5" />
-                      حملة جديدة · {c.chapters.length.toLocaleString("en-US")} فصول
-                    </span>
-                    {c.historicalPeriod && (
-                      <span className="rounded-full border border-gold/40 bg-black/30 px-2 py-0.5 text-[10px] text-gold">
-                        {c.historicalPeriod}
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="font-display mt-2 text-2xl font-bold shimmer-text">{c.title}</h2>
-                  {c.subtitle && <p className="mt-1 text-sm text-gold/80">{c.subtitle}</p>}
-                  {c.description && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{c.description}</p>}
-                  <div className="mt-3 flex items-center justify-end text-xs">
-                    <span className="flex items-center gap-1 text-gold">
-                      {c.chapters.length === 0 ? "اعرض" : "ابدأ"} <ArrowLeft className="size-3.5" />
-                    </span>
-                  </div>
-                </div>
-              </Link>
+              <ImportedCampaignCard key={c.id} c={c} />
             ))}
           </div>
         )}
+
 
         {/* Empty state when no engine or imported campaigns are available */}
         {engineCampaigns.length === 0 && importedCampaigns.length === 0 && (
