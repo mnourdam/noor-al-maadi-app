@@ -821,3 +821,53 @@ function ImportedCard({
   );
 }
 
+// ───── Encyclopedia-resolved unlock card (campaign rewards → encyclopedia_entities)
+function EncyclopediaUnlockCard({
+  unlock,
+  navigate,
+}: {
+  unlock: { raw: string; type: string | null; slug: string | null; title: string | null };
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  const TYPE_GLYPH: Record<string, string> = {
+    figure: "👤", artifact: "🏺", city: "🏛️", landmark: "🏛️",
+    battle: "⚔️", state: "🏳️", event: "📜",
+  };
+  const TYPE_LABEL: Record<string, string> = {
+    figure: "شخصية", artifact: "أثر", city: "مدينة", landmark: "معلم",
+    battle: "معركة", state: "دولة", event: "حدث",
+  };
+  const glyph = TYPE_GLYPH[unlock.type ?? ""] ?? "✨";
+  const label = TYPE_LABEL[unlock.type ?? ""] ?? "عنصر";
+
+  const onOpen = () => {
+    // Route to the legacy detail page when the type maps; otherwise the
+    // generic encyclopedia entity page.
+    if (!unlock.slug) return;
+    if (unlock.type === "figure")        navigate({ to: "/figure/$id",  params: { id: unlock.slug } });
+    else if (unlock.type === "city")     navigate({ to: "/city/$id",    params: { id: unlock.slug } });
+    else if (unlock.type === "battle")   navigate({ to: "/battle/$id",  params: { id: unlock.slug } });
+    else if (unlock.type === "state")    navigate({ to: "/encyclopedia/state/$id", params: { id: unlock.slug } });
+    else                                 navigate({ to: "/encyclopedia/entity/$id", params: { id: `${unlock.type ?? "entity"}.${unlock.slug}` } });
+  };
+
+  return (
+    <button
+      onClick={onOpen}
+      className="group relative flex flex-col items-start gap-2 rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-surface to-transparent p-3 text-right ring-1 ring-gold/20 transition hover:border-gold/60"
+    >
+      <div className="flex w-full items-center justify-between gap-2">
+        <span className="grid size-10 place-items-center rounded-xl bg-black/40 text-xl ring-1 ring-gold/30">
+          {glyph}
+        </span>
+        <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-bold text-gold">
+          من الموسوعة
+        </span>
+      </div>
+      <div className="min-w-0">
+        <p className="font-display truncate text-sm font-bold">{unlock.title}</p>
+        <p className="text-[10px] text-gold/80">{label}</p>
+      </div>
+    </button>
+  );
+}
