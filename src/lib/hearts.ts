@@ -17,7 +17,8 @@ export type HeartActivity =
   | { kind: "today-in-history"; id: string }
   | { kind: "document"; id: string }
   | { kind: "museum-artifact"; id: string }
-  | { kind: "knowledge-card"; id: string };
+  | { kind: "knowledge-card"; id: string }
+  | { kind: "investigation"; id: string };
 
 export function activityKey(a: HeartActivity): string {
   return `${a.kind}:${a.id}`;
