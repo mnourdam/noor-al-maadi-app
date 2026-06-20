@@ -156,6 +156,7 @@ export type Database = {
           created_at: string
           dinars: number
           discovery_pct: number
+          display_name: string | null
           email: string | null
           favorite_figure_id: string | null
           favorite_state_id: string | null
@@ -179,6 +180,7 @@ export type Database = {
           created_at?: string
           dinars?: number
           discovery_pct?: number
+          display_name?: string | null
           email?: string | null
           favorite_figure_id?: string | null
           favorite_state_id?: string | null
@@ -202,6 +204,7 @@ export type Database = {
           created_at?: string
           dinars?: number
           discovery_pct?: number
+          display_name?: string | null
           email?: string | null
           favorite_figure_id?: string | null
           favorite_state_id?: string | null
@@ -365,6 +368,7 @@ export type Database = {
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       gen_referral_code: { Args: never; Returns: string }
       get_my_email: { Args: never; Returns: string }
+      set_my_display_name: { Args: { p_name: string }; Returns: string }
       sync_my_public_stats: { Args: { p_stats: Json }; Returns: undefined }
     }
     Enums: {

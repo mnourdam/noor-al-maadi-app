@@ -27,6 +27,7 @@ const db: any = supabase;
 export interface AccountProfile {
   id: string;
   username: string;
+  display_name: string | null;
   email: string | null;
   join_date: string;
   last_active: string;
@@ -48,7 +49,7 @@ export async function getCurrentUser() {
 export async function fetchAccountProfile(userId: string): Promise<AccountProfile | null> {
   const { data, error } = await db
     .from("profiles")
-    .select("id, username, join_date, last_active")
+    .select("id, username, display_name, join_date, last_active")
     .eq("id", userId)
     .maybeSingle();
   if (error) {
@@ -56,10 +57,21 @@ export async function fetchAccountProfile(userId: string): Promise<AccountProfil
     return null;
   }
   if (!data) return null;
-  // Email lives in profiles but is column-restricted from authenticated reads.
-  // Fetch it via the security-definer RPC that only returns the caller's own email.
   const { data: emailVal } = await db.rpc("get_my_email");
   return { ...(data as Omit<AccountProfile, "email">), email: (emailVal as string | null) ?? null };
+}
+
+/** Update display_name via RPC (auth-only, doesn't touch other columns). */
+export async function updateDisplayName(name: string): Promise<{ ok: boolean; value?: string; error?: string }> {
+  const clean = name.trim();
+  if (!clean) return { ok: false, error: "الاسم لا يمكن أن يكون فارغاً" };
+  const { data, error } = await db.rpc("set_my_display_name", { p_name: clean });
+  if (error) return { ok: false, error: error.message };
+  // Best-effort: also mirror to auth user metadata.
+  try {
+    await supabase.auth.updateUser({ data: { display_name: clean, full_name: clean } });
+  } catch { /* ignore */ }
+  return { ok: true, value: (data as string) ?? clean };
 }
 
 export async function touchLastActive(userId: string): Promise<void> {
@@ -93,9 +105,10 @@ export async function pushSave(userId: string, profile: ProfileState): Promise<b
   return true;
 }
 
-export async function signUpWithEmail(args: { email: string; password: string; username: string; referralCode?: string }) {
-  const { email, password, username, referralCode } = args;
+export async function signUpWithEmail(args: { email: string; password: string; username: string; referralCode?: string; displayName?: string }) {
+  const { email, password, username, referralCode, displayName } = args;
   const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
+  const name = (displayName ?? username).trim();
   return supabase.auth.signUp({
     email,
     password,
@@ -103,6 +116,8 @@ export async function signUpWithEmail(args: { email: string; password: string; u
       emailRedirectTo: redirectTo,
       data: {
         username: username.trim(),
+        display_name: name,
+        full_name: name,
         ...(referralCode ? { referral_code: referralCode.trim().toUpperCase() } : {}),
       },
     },

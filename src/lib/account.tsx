@@ -9,6 +9,7 @@ import {
   signOut as cloudSignOut,
   signUpWithEmail,
   touchLastActive,
+  updateDisplayName as cloudUpdateDisplayName,
   type AccountProfile,
 } from "./cloud-save";
 import { useProfile, type ProfileState } from "./profile";
@@ -17,13 +18,15 @@ import { pushPublicStats, claimSignupReferral, REFERRAL_REWARDS } from "./social
 interface AccountCtx {
   user: User | null;
   account: AccountProfile | null;
+  displayName: string;
   loadingSession: boolean;
   syncing: boolean;
   lastSyncAt: number | null;
-  signUp: (args: { email: string; password: string; username: string; referralCode?: string }) => Promise<{ ok: boolean; error?: string }>;
+  signUp: (args: { email: string; password: string; username: string; displayName?: string; referralCode?: string }) => Promise<{ ok: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   syncNow: () => Promise<boolean>;
+  updateDisplayName: (name: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 const Ctx = createContext<AccountCtx | null>(null);
@@ -109,8 +112,27 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           setLastSyncAt(Date.now());
         }
 
-        // Identity → never show "ضيف" once authenticated.
-        if (acc?.username) login(acc.username);
+        // Identity → never show "ضيف" once authenticated. Prefer display_name.
+        const identityName = acc?.display_name?.trim()
+          || (user.user_metadata?.display_name as string | undefined)?.trim()
+          || (user.user_metadata?.full_name as string | undefined)?.trim()
+          || acc?.username
+          || user.email?.split("@")[0]
+          || "";
+        if (identityName) login(identityName);
+
+        // One-time repair: if profile.display_name is empty/null/"ضيف", set it.
+        if (acc && (!acc.display_name || !acc.display_name.trim() || acc.display_name === "ضيف")) {
+          const repair = (user.user_metadata?.display_name as string | undefined)
+            || (user.user_metadata?.full_name as string | undefined)
+            || acc.username
+            || user.email?.split("@")[0]
+            || "مستخدم إرث";
+          try {
+            const r = await cloudUpdateDisplayName(repair);
+            if (r.ok && r.value) setAccount((prev) => prev ? { ...prev, display_name: r.value! } : prev);
+          } catch { /* ignore */ }
+        }
       } finally {
         if (!cancelled) setSyncing(false);
       }
@@ -137,12 +159,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     };
   }, [profile, user]);
 
-  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, referralCode }) => {
+  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, displayName, referralCode }) => {
     const u = username.trim();
     if (u.length < 3) return { ok: false, error: "اسم المستخدم قصير جداً" };
     if (password.length < 6) return { ok: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" };
-    const { data, error } = await signUpWithEmail({ email, password, username: u, referralCode });
+    const { data, error } = await signUpWithEmail({ email, password, username: u, displayName, referralCode });
     if (error) return { ok: false, error: error.message };
+    // Client-side fallback: if a session was returned, upsert display_name immediately.
+    if (data.session?.user) {
+      const name = (displayName ?? u).trim();
+      try { await cloudUpdateDisplayName(name); } catch { /* ignore */ }
+    }
     if (!data.session) {
       return { ok: true, error: "تحقق من بريدك لتأكيد الحساب." };
     }
@@ -173,9 +200,29 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  const updateDisplayNameFn = useCallback<AccountCtx["updateDisplayName"]>(async (name) => {
+    const r = await cloudUpdateDisplayName(name);
+    if (!r.ok) return { ok: false, error: r.error };
+    if (r.value) {
+      setAccount((prev) => prev ? { ...prev, display_name: r.value! } : prev);
+      login(r.value);
+    }
+    return { ok: true };
+  }, [login]);
+
+  const displayName = useMemo(() => {
+    return account?.display_name?.trim()
+      || (user?.user_metadata?.display_name as string | undefined)?.trim()
+      || (user?.user_metadata?.full_name as string | undefined)?.trim()
+      || account?.username
+      || user?.email?.split("@")[0]
+      || "ضيف";
+  }, [account, user]);
+
   const value = useMemo<AccountCtx>(() => ({
     user,
     account,
+    displayName,
     loadingSession,
     syncing,
     lastSyncAt,
@@ -183,7 +230,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     signIn,
     signOut: signOutFn,
     syncNow,
-  }), [user, account, loadingSession, syncing, lastSyncAt, signUp, signIn, signOutFn, syncNow]);
+    updateDisplayName: updateDisplayNameFn,
+  }), [user, account, displayName, loadingSession, syncing, lastSyncAt, signUp, signIn, signOutFn, syncNow, updateDisplayNameFn]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

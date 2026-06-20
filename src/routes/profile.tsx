@@ -25,12 +25,30 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const { profile, logout, updateSettings, claimSeason, setBio, setFavorites, claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs } = useProfile();
-  const { account, user } = useAccount();
-  const displayName = account?.username ?? (user ? profile.name : profile.name) ?? "ضيف";
+  const { user, displayName: accountDisplayName, updateDisplayName } = useAccount();
+  const displayName = accountDisplayName || profile.name || "ضيف";
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(profile.bio ?? "");
   const [pickingAvatar, setPickingAvatar] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(displayName === "ضيف" ? "" : displayName);
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameMsg, setNameMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const prefs = profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS;
+
+  async function saveName() {
+    const v = nameDraft.trim();
+    if (v.length < 2) { setNameMsg({ ok: false, text: "الاسم قصير جداً" }); return; }
+    setNameBusy(true);
+    setNameMsg(null);
+    const r = user ? await updateDisplayName(v) : { ok: true as const };
+    setNameBusy(false);
+    if (!r.ok) { setNameMsg({ ok: false, text: r.error ?? "تعذّر حفظ الاسم" }); return; }
+    if (!user) { /* guest: update local profile name */ }
+    setNameMsg({ ok: true, text: "تم حفظ الاسم" });
+    setEditingName(false);
+    setTimeout(() => setNameMsg(null), 2000);
+  }
 
   const lvl = levelFor(profile.points);
   const achievements = evaluateAchievements(profile);
@@ -76,7 +94,42 @@ function ProfilePage() {
               </span>
             </button>
             <div className="min-w-0 flex-1">
-              <p className="font-display truncate text-lg font-bold">{displayName}</p>
+              {!editingName ? (
+                <div className="flex items-center gap-2">
+                  <p className="font-display truncate text-lg font-bold">{displayName}</p>
+                  {user && (
+                    <button
+                      onClick={() => { setNameDraft(displayName === "ضيف" ? "" : displayName); setEditingName(true); setNameMsg(null); }}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-gold/30 px-2 py-0.5 text-[10px] text-gold hover:bg-gold/10"
+                      aria-label="تعديل الاسم"
+                    >
+                      <Pencil className="size-3" /> تعديل الاسم
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value.slice(0, 60))}
+                    autoFocus
+                    placeholder="اسمك الظاهر"
+                    className="min-w-0 flex-1 rounded-lg border border-gold/30 bg-background px-2 py-1 text-sm outline-none focus:border-gold"
+                  />
+                  <button
+                    onClick={saveName}
+                    disabled={nameBusy}
+                    className="rounded-full bg-gradient-gold px-2.5 py-1 text-[10px] font-bold text-primary-foreground disabled:opacity-50"
+                  >{nameBusy ? "..." : "حفظ"}</button>
+                  <button
+                    onClick={() => { setEditingName(false); setNameMsg(null); }}
+                    className="rounded-full border border-white/15 px-2.5 py-1 text-[10px] text-muted-foreground hover:bg-white/5"
+                  >إلغاء</button>
+                </div>
+              )}
+              {nameMsg && (
+                <p className={`mt-1 text-[10px] ${nameMsg.ok ? "text-emerald-300" : "text-rose-300"}`}>{nameMsg.text}</p>
+              )}
               <p className="text-[11px] text-gold">المستوى {lvl.level} · {lvl.title}</p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
                 <div className="h-full bg-gradient-gold" style={{ width: `${Math.round(lvl.progress * 100)}%` }} />
