@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Landmark, Upload, RefreshCw, Eye, EyeOff, Trash2, Plus, Save, X,
-  CheckCircle2, AlertTriangle,
+  CheckCircle2, AlertTriangle, FileJson,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
