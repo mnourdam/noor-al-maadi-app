@@ -19,6 +19,7 @@ import {
 } from "@/lib/importedCampaignProgress";
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
 import { useProfile } from "@/lib/profile";
+import { audioManager } from "@/lib/audioManager";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
@@ -93,10 +94,28 @@ function ImportedChapterPlayer() {
     if (correct && !alreadyCompleted) {
       if (xp > 0) addPoints(xp);
       if (coins > 0) addDinars(coins);
+      audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
     } else if (!correct) {
       for (let i = 0; i < Math.max(1, hearts); i++) loseHeart();
     }
-    recordActivity(campaign, chapter, activity, correct);
+
+    const wasChapterComplete  = chProgress?.completed ?? false;
+    const wasCampaignComplete = camProgress?.completed ?? false;
+    const nextProgress = recordActivity(campaign!, chapter!, activity, correct);
+    const nextChapter   = nextProgress.chapters[chapter!.id];
+    const newlyChapter  = !wasChapterComplete  && Boolean(nextChapter?.completed);
+    const newlyCampaign = !wasCampaignComplete && nextProgress.completed;
+
+    if (newlyChapter) {
+      audioManager.playSfx("chapter-complete", { dedupeKey: `ch:${chapter!.id}` });
+    }
+    if (newlyCampaign) {
+      audioManager.playSfx("campaign-complete", { dedupeKey: `cam:${campaign!.id}` });
+      // also signal each newly-snapshotted registry unlock once
+      (nextProgress.unlockedRegistryIds ?? []).slice(0, 1).forEach((rid) =>
+        audioManager.playSfx("unlock-reward", { dedupeKey: `unlock:${rid}` }),
+      );
+    }
     bump();
   };
 

@@ -14,6 +14,7 @@ import {
   registryItemRarity,
 } from "@/lib/importedUnlocks";
 import { pullAllFromCloud } from "@/lib/cloudSync";
+import { audioManager } from "@/lib/audioManager";
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
 
 export const Route = createFileRoute("/collection")({
@@ -174,6 +175,11 @@ interface RevealItem { rarity: Rarity; icon: React.ReactNode; title: string; sub
 function RevealDialog({ item, onClose }: { item: RevealItem | null; onClose: () => void }) {
   const open = !!item;
   const meta = item ? RARITY_META[item.rarity] : RARITY_META.common;
+  useEffect(() => {
+    if (item) {
+      audioManager.playSfx("unlock-reward", { dedupeKey: `reveal:${item.title}` });
+    }
+  }, [item]);
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-sm overflow-hidden border-white/10 bg-surface p-0 [&>button]:text-gold">
