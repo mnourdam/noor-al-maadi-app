@@ -1,9 +1,11 @@
 import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, MapPin, Crown, Swords, Flag, Scroll, Sparkles, Users, Landmark, BookOpen, Compass } from "lucide-react";
+import { ArrowLeft, MapPin, Crown, Swords, Flag, Scroll, Sparkles, Users, Landmark, BookOpen, Compass, Database } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { getBattleProfile, ERAS, CHARACTERS, MAP_REGIONS, ARTIFACTS, fogHint, type BattleProfile } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { RelatedHistory } from "@/components/RelatedHistory";
+import { useEncyclopediaDisplay } from "@/lib/encyclopedia-source";
+
 
 export const Route = createFileRoute("/battle/$id")({
   head: ({ params }) => {
