@@ -249,6 +249,20 @@ function CollectionPage() {
   const [reveal, setReveal] = useState<RevealItem | null>(null);
   const navigate = useNavigate();
 
+  // Re-read localStorage when we come back to this tab or after a cloud pull.
+  const [refreshTick, setRefreshTick] = useState(0);
+  useEffect(() => {
+    // Pull latest registry + campaigns from cloud so newly unlocked admin items show up.
+    pullAllFromCloud().then(() => setRefreshTick(t => t + 1)).catch(() => {});
+    const bump = () => setRefreshTick(t => t + 1);
+    window.addEventListener("focus", bump);
+    window.addEventListener("storage", bump);
+    return () => {
+      window.removeEventListener("focus", bump);
+      window.removeEventListener("storage", bump);
+    };
+  }, []);
+
   // counts per section
   const artifactsOnly = ARTIFACTS.filter(a => a.type !== "manuscript");
   const manuscripts   = ARTIFACTS.filter(a => a.type === "manuscript");
@@ -258,13 +272,21 @@ function CollectionPage() {
   const importedFigures      = useMemo(() => [
     ...getImportedRegistryItemsByType("figure"),
     ...getImportedRegistryItemsByType("scholar"),
-  ], []);
-  const importedArtifacts    = useMemo(() => getImportedRegistryItemsByType("artifact"), []);
-  const importedBattles      = useMemo(() => getImportedRegistryItemsByType("battle"), []);
-  const importedLandmarks    = useMemo(() => getImportedRegistryItemsByType("city"), []);
-  const importedDynasties    = useMemo(() => getImportedRegistryItemsByType("dynasty"), []);
-  const importedBadges       = useMemo(() => getImportedRegistryItemsByType("badge"), []);
-  const importedAchievements = useMemo(() => getImportedRegistryItemsByType("achievement"), []);
+  ], [refreshTick]);
+  const importedArtifacts    = useMemo(() => getImportedRegistryItemsByType("artifact"), [refreshTick]);
+  const importedBattles      = useMemo(() => getImportedRegistryItemsByType("battle"), [refreshTick]);
+  const importedLandmarks    = useMemo(() => getImportedRegistryItemsByType("city"), [refreshTick]);
+  const importedDynasties    = useMemo(() => getImportedRegistryItemsByType("dynasty"), [refreshTick]);
+  const importedBadges       = useMemo(() => getImportedRegistryItemsByType("badge"), [refreshTick]);
+  const importedAchievements = useMemo(() => getImportedRegistryItemsByType("achievement"), [refreshTick]);
+  const missingUnlockIds     = useMemo(() => getMissingRegistryUnlockIds(), [refreshTick]);
+
+  useEffect(() => {
+    if (missingUnlockIds.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn("[museum] unlock IDs without registry items:", missingUnlockIds);
+    }
+  }, [missingUnlockIds]);
 
   const importedUnlockedCount = (arr: Array<{ unlocked: boolean }>) => arr.filter(i => i.unlocked).length;
 
