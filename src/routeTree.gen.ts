@@ -49,8 +49,8 @@ import { Route as PlayCampaignIdRouteImport } from './routes/play.campaign.$id'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
-import { Route as CampaignsImportedIdRouteImport } from './routes/campaigns.imported.$id'
 import { Route as PlayCampaignIdIndexRouteImport } from './routes/play.campaign.$id.index'
+import { Route as CampaignsImportedIdIndexRouteImport } from './routes/campaigns.imported.$id.index'
 import { Route as PlayCampaignIdChapterChapterRouteImport } from './routes/play.campaign.$id.chapter.$chapter'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
 
@@ -254,16 +254,17 @@ const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
   path: '/entity/$id',
   getParentRoute: () => EncyclopediaRoute,
 } as any)
-const CampaignsImportedIdRoute = CampaignsImportedIdRouteImport.update({
-  id: '/imported/$id',
-  path: '/imported/$id',
-  getParentRoute: () => CampaignsRoute,
-} as any)
 const PlayCampaignIdIndexRoute = PlayCampaignIdIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => PlayCampaignIdRoute,
 } as any)
+const CampaignsImportedIdIndexRoute =
+  CampaignsImportedIdIndexRouteImport.update({
+    id: '/imported/$id/',
+    path: '/imported/$id/',
+    getParentRoute: () => CampaignsRoute,
+  } as any)
 const PlayCampaignIdChapterChapterRoute =
   PlayCampaignIdChapterChapterRouteImport.update({
     id: '/chapter/$chapter',
@@ -272,9 +273,9 @@ const PlayCampaignIdChapterChapterRoute =
   } as any)
 const CampaignsImportedIdChapterChapterRoute =
   CampaignsImportedIdChapterChapterRouteImport.update({
-    id: '/chapter/$chapter',
-    path: '/chapter/$chapter',
-    getParentRoute: () => CampaignsImportedIdRoute,
+    id: '/imported/$id/chapter/$chapter',
+    path: '/imported/$id/chapter/$chapter',
+    getParentRoute: () => CampaignsRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -314,11 +315,11 @@ export interface FileRoutesByFullPath {
   '/u/$username': typeof UUsernameRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
-  '/campaigns/imported/$id': typeof CampaignsImportedIdRouteWithChildren
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdRouteWithChildren
+  '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
   '/play/campaign/$id/': typeof PlayCampaignIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
@@ -358,10 +359,10 @@ export interface FileRoutesByTo {
   '/u/$username': typeof UUsernameRoute
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
-  '/campaigns/imported/$id': typeof CampaignsImportedIdRouteWithChildren
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
+  '/campaigns/imported/$id': typeof CampaignsImportedIdIndexRoute
   '/play/campaign/$id': typeof PlayCampaignIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
@@ -404,11 +405,11 @@ export interface FileRoutesById {
   '/u/$username': typeof UUsernameRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
-  '/campaigns/imported/$id': typeof CampaignsImportedIdRouteWithChildren
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/play/campaign/$id': typeof PlayCampaignIdRouteWithChildren
+  '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
   '/play/campaign/$id/': typeof PlayCampaignIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
   '/play/campaign/$id/chapter/$chapter': typeof PlayCampaignIdChapterChapterRoute
@@ -452,11 +453,11 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/campaigns/'
     | '/encyclopedia/'
-    | '/campaigns/imported/$id'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
+    | '/campaigns/imported/$id/'
     | '/play/campaign/$id/'
     | '/campaigns/imported/$id/chapter/$chapter'
     | '/play/campaign/$id/chapter/$chapter'
@@ -496,10 +497,10 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/campaigns'
     | '/encyclopedia'
-    | '/campaigns/imported/$id'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
+    | '/campaigns/imported/$id'
     | '/play/campaign/$id'
     | '/campaigns/imported/$id/chapter/$chapter'
     | '/play/campaign/$id/chapter/$chapter'
@@ -541,11 +542,11 @@ export interface FileRouteTypes {
     | '/u/$username'
     | '/campaigns/'
     | '/encyclopedia/'
-    | '/campaigns/imported/$id'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/play/campaign/$id'
+    | '/campaigns/imported/$id/'
     | '/play/campaign/$id/'
     | '/campaigns/imported/$id/chapter/$chapter'
     | '/play/campaign/$id/chapter/$chapter'
@@ -870,19 +871,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EncyclopediaEntityIdRouteImport
       parentRoute: typeof EncyclopediaRoute
     }
-    '/campaigns/imported/$id': {
-      id: '/campaigns/imported/$id'
-      path: '/imported/$id'
-      fullPath: '/campaigns/imported/$id'
-      preLoaderRoute: typeof CampaignsImportedIdRouteImport
-      parentRoute: typeof CampaignsRoute
-    }
     '/play/campaign/$id/': {
       id: '/play/campaign/$id/'
       path: '/'
       fullPath: '/play/campaign/$id/'
       preLoaderRoute: typeof PlayCampaignIdIndexRouteImport
       parentRoute: typeof PlayCampaignIdRoute
+    }
+    '/campaigns/imported/$id/': {
+      id: '/campaigns/imported/$id/'
+      path: '/imported/$id'
+      fullPath: '/campaigns/imported/$id/'
+      preLoaderRoute: typeof CampaignsImportedIdIndexRouteImport
+      parentRoute: typeof CampaignsRoute
     }
     '/play/campaign/$id/chapter/$chapter': {
       id: '/play/campaign/$id/chapter/$chapter'
@@ -893,36 +894,27 @@ declare module '@tanstack/react-router' {
     }
     '/campaigns/imported/$id/chapter/$chapter': {
       id: '/campaigns/imported/$id/chapter/$chapter'
-      path: '/chapter/$chapter'
+      path: '/imported/$id/chapter/$chapter'
       fullPath: '/campaigns/imported/$id/chapter/$chapter'
       preLoaderRoute: typeof CampaignsImportedIdChapterChapterRouteImport
-      parentRoute: typeof CampaignsImportedIdRoute
+      parentRoute: typeof CampaignsRoute
     }
   }
 }
 
-interface CampaignsImportedIdRouteChildren {
-  CampaignsImportedIdChapterChapterRoute: typeof CampaignsImportedIdChapterChapterRoute
-}
-
-const CampaignsImportedIdRouteChildren: CampaignsImportedIdRouteChildren = {
-  CampaignsImportedIdChapterChapterRoute:
-    CampaignsImportedIdChapterChapterRoute,
-}
-
-const CampaignsImportedIdRouteWithChildren =
-  CampaignsImportedIdRoute._addFileChildren(CampaignsImportedIdRouteChildren)
-
 interface CampaignsRouteChildren {
   CampaignsEraRoute: typeof CampaignsEraRoute
   CampaignsIndexRoute: typeof CampaignsIndexRoute
-  CampaignsImportedIdRoute: typeof CampaignsImportedIdRouteWithChildren
+  CampaignsImportedIdIndexRoute: typeof CampaignsImportedIdIndexRoute
+  CampaignsImportedIdChapterChapterRoute: typeof CampaignsImportedIdChapterChapterRoute
 }
 
 const CampaignsRouteChildren: CampaignsRouteChildren = {
   CampaignsEraRoute: CampaignsEraRoute,
   CampaignsIndexRoute: CampaignsIndexRoute,
-  CampaignsImportedIdRoute: CampaignsImportedIdRouteWithChildren,
+  CampaignsImportedIdIndexRoute: CampaignsImportedIdIndexRoute,
+  CampaignsImportedIdChapterChapterRoute:
+    CampaignsImportedIdChapterChapterRoute,
 }
 
 const CampaignsRouteWithChildren = CampaignsRoute._addFileChildren(
