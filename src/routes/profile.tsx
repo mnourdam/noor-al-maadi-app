@@ -446,16 +446,7 @@ function ProfilePage() {
           </div>
         </div>
 
-        {profile.settings.ambienceEnabled && (
-          <div className="mt-3 rounded-2xl border border-white/10 bg-surface p-3">
-            <p className="text-[10px] text-gold">مقاطع الأجواء</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {AMBIENCE_TRACKS.map((t) => (
-                <span key={t.id} className="rounded-full border border-white/10 bg-background px-2 py-0.5 text-[10px] text-muted-foreground">{t.name}</span>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {profile.loggedIn && (
           <button
