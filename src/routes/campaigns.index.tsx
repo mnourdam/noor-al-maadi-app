@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Swords, Lock, Crown, Check, ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap } from "lucide-react";
+import { Crown, ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Swords } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { CAMPAIGNS, ERAS, UPCOMING_CAMPAIGNS, ARTIFACTS, CHARACTERS } from "@/lib/data";
+import { ARTIFACTS, CHARACTERS } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { listEngineCampaigns, campaignProgressFor } from "@/lib/campaign-engine";
 import { displayBadgeName } from "@/lib/display-names";
@@ -40,29 +40,19 @@ export const Route = createFileRoute("/campaigns/")({
 });
 
 function CampaignsHub() {
-  const { profile } = useProfile();
+  const { profile: _profile } = useProfile();
   const engineCampaigns = listEngineCampaigns();
-  // Surface admin-imported published campaigns (localStorage) without
-  // touching the existing card design. SSR-safe via post-mount hook.
+  // Admin-imported published campaigns (Supabase admin_campaigns → local cache).
   const [importedCampaigns, setImportedCampaigns] = useState<ImportedCampaign[]>([]);
   useEffect(() => {
     setImportedCampaigns(listPublishedCampaigns());
-    // Refresh from cloud, then re-read local cache.
     import("@/lib/cloudSync")
       .then((m) => m.pullCampaignsFromCloud())
       .then(() => setImportedCampaigns(listPublishedCampaigns()))
       .catch(() => {});
   }, []);
-  // Campaigns superseded by an engine campaign (by matching pack/era id)
-  // are hidden from the legacy lists so users always enter via the new
-  // chapter player — fixes the "Salah al-Din card doesn't open" issue
-  // caused by the duplicate legacy flagship card pointing at /campaigns/$era.
-  const supersededEras = new Set(
-    engineCampaigns
-      .map((c) => c.packId)
-      .filter((p): p is string => Boolean(p)),
-  );
-  const legacyCampaigns = CAMPAIGNS.filter((c) => !supersededEras.has(c.eraId));
+  const profile = _profile;
+
 
   return (
     <AppShell>
