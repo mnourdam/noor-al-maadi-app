@@ -2,7 +2,7 @@ import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-rout
 import { useMemo } from "react";
 import {
   ArrowRight, Crown, MapPin, Landmark as LandmarkIcon, Sparkles, Users,
-  Swords, Scroll, BookOpen, Lock, Compass, Hourglass, Building2,
+  Swords, Scroll, BookOpen, Lock, Compass, Hourglass, Building2, Database,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -11,6 +11,8 @@ import {
 import { CITIES, getCity } from "@/lib/cities";
 import { useProfile } from "@/lib/profile";
 import { RelatedHistory } from "@/components/RelatedHistory";
+import { useEncyclopediaDisplay } from "@/lib/encyclopedia-source";
+
 
 export const Route = createFileRoute("/city/$id")({
   head: () => ({ meta: [{ title: "المدينة · في قلب الحضارة" }] }),
