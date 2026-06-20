@@ -20,6 +20,7 @@ import {
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
 import { useProfile } from "@/lib/profile";
 import { audioManager } from "@/lib/audioManager";
+import { upsertChapterProgress, addCollectionItems } from "@/lib/progressSync";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
