@@ -660,11 +660,21 @@ function RecentUnlocks() {
   const { profile } = useProfile();
   type Recent = { key: string; icon: string; kind: string; title: string; subtitle: string };
 
+  // Only museum-style collectibles. Events/badges/achievements/notifications
+  // are intentionally excluded — they belong in a future "آخر الأحداث المكتشفة".
+  const ALLOWED_TYPES = new Set([
+    "figure", "scholar", "artifact", "landmark", "city", "battle", "state",
+  ]);
+
   const supaArtifacts = useEncyclopediaSupabaseList("artifact");
   const supaLandmarks = useEncyclopediaSupabaseList("landmark");
   const supaFigures   = useEncyclopediaSupabaseList("figure");
+  const supaCities    = useEncyclopediaSupabaseList("city");
+  const supaBattles   = useEncyclopediaSupabaseList("battle");
+  const supaStates    = useEncyclopediaSupabaseList("state");
 
-  // Pull latest 3 unlocks from Supabase (if signed in).
+  // Pull recent unlocks from Supabase (if signed in). Fetch extra so we can
+  // filter out non-museum types and slug-only rows and still end up with 3.
   const [supaRecents, setSupaRecents] = useState<Recent[] | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -679,7 +689,7 @@ function RecentUnlocks() {
           .select("item_id,item_type,unlocked_at,source_campaign_id")
           .eq("user_id", uid)
           .order("unlocked_at", { ascending: false })
-          .limit(3);
+          .limit(20);
         if (error || !data || cancelled) { if (!cancelled) setSupaRecents([]); return; }
 
         const campaigns = listCampaigns();
@@ -694,12 +704,12 @@ function RecentUnlocks() {
         const kindLabel: Record<string, string> = {
           figure: "شخصية", scholar: "شخصية", artifact: "أثر",
           battle: "معركة", city: "معلم", landmark: "معلم",
-          state: "دولة", event: "حدث", badge: "شارة", achievement: "إنجاز",
+          state: "دولة",
         };
         const iconFor = (t: string): string => ({
           figure: "👤", scholar: "👤", artifact: "💎",
           battle: "⚔️", city: "🏛️", landmark: "🏛️",
-          state: "📜", event: "📅", badge: "🏅", achievement: "🏆",
+          state: "📜",
         } as Record<string, string>)[t] ?? "✨";
 
         const slugLookup = (t: string, slug: string): { title?: string; rarity?: string } => {
@@ -707,32 +717,42 @@ function RecentUnlocks() {
           let e: any = null;
           if (t === "figure" || t === "scholar") e = probe(supaFigures);
           else if (t === "artifact") e = probe(supaArtifacts);
-          else if (t === "landmark" || t === "city") e = probe(supaLandmarks);
+          else if (t === "landmark") e = probe(supaLandmarks);
+          else if (t === "city") e = probe(supaCities) ?? probe(supaLandmarks);
+          else if (t === "battle") e = probe(supaBattles);
+          else if (t === "state") e = probe(supaStates);
           if (!e) return {};
           return { title: e.title ?? undefined, rarity: e.metadata?.rarity };
         };
 
-        const list: Recent[] = data.map((row: any) => {
+        const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);
+
+        const list: Recent[] = [];
+        for (const row of data as any[]) {
+          if (!ALLOWED_TYPES.has(row.item_type)) continue;
           const lookup = slugLookup(row.item_type, row.item_id);
-          const subtitleParts = [kindLabel[row.item_type] ?? row.item_type];
+          const title = lookup.title ?? (hasArabic(row.item_id) ? row.item_id : null);
+          if (!title) continue; // Hide unresolved English slugs.
+          const subtitleParts: string[] = [];
           if (lookup.rarity) subtitleParts.push(lookup.rarity);
           const src = campaignTitle(row.source_campaign_id);
           if (src) subtitleParts.push(src);
-          return {
+          list.push({
             key: `sup-${row.item_id}`,
             icon: iconFor(row.item_type),
             kind: kindLabel[row.item_type] ?? row.item_type,
-            title: lookup.title ?? row.item_id,
-            subtitle: subtitleParts.slice(1).join(" · ") || (src || "—"),
-          };
-        });
+            title,
+            subtitle: subtitleParts.join(" · ") || (kindLabel[row.item_type] ?? "—"),
+          });
+          if (list.length >= 3) break;
+        }
         if (!cancelled) setSupaRecents(list);
       } catch {
         if (!cancelled) setSupaRecents([]);
       }
     })();
     return () => { cancelled = true; };
-  }, [supaArtifacts, supaLandmarks, supaFigures]);
+  }, [supaArtifacts, supaLandmarks, supaFigures, supaCities, supaBattles, supaStates]);
 
   // Legacy fallback from in-app profile arrays.
   const legacy: Recent[] = [];
