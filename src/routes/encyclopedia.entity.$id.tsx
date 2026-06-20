@@ -228,7 +228,14 @@ function EntityPage() {
   );
 }
 
-function SupabaseOnlyArtifact({ entity }: { entity: import("@/lib/encyclopedia-source").SupabaseEncyclopediaEntity }) {
+const SUPA_GLYPH: Record<string, string> = {
+  artifact: "🗝️", figure: "🪶", city: "🏙️", battle: "⚔️",
+  state: "🏛️", landmark: "🕌", event: "📜",
+};
+
+function SupabaseOnlyEntity({ entity }: { entity: import("@/lib/encyclopedia-source").SupabaseEncyclopediaEntity }) {
+  const glyph = SUPA_GLYPH[entity.entity_type] ?? "📜";
+  const label = TYPE_LABEL[entity.entity_type] ?? entity.entity_type;
   return (
     <AppShell>
       <div className="px-5 pt-8">
