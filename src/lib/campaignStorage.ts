@@ -33,6 +33,28 @@ const SUPPORTED_TYPES: CampaignQuestionType[] = [
   "reflection_prompt",
 ];
 
+/** Friendly aliases accepted in imported JSON, mapped to canonical types. */
+const TYPE_ALIASES: Record<string, CampaignQuestionType> = {
+  reading: "reading_then_question",
+  multiple_choice: "multiple_choice",
+  mcq: "multiple_choice",
+  true_false: "true_false",
+  ordering: "arrange_events",
+  arrange: "arrange_events",
+  decision: "decision_choice",
+  match: "match_pairs",
+  fill_blank: "fill_blank",
+  reflection: "reflection_prompt",
+};
+
+function canonicalActivityType(raw: any): CampaignQuestionType | undefined {
+  if (typeof raw !== "string") return undefined;
+  const v = raw.trim();
+  if (SUPPORTED_TYPES.includes(v as CampaignQuestionType)) return v as CampaignQuestionType;
+  return TYPE_ALIASES[v];
+}
+
+
 function isBrowser() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
@@ -140,8 +162,8 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
     }
     const activities: CampaignActivity[] = Array.isArray(ch?.activities)
       ? ch.activities.map((a: any, ai: number) => {
-          const aType = a?.type as CampaignQuestionType;
-          if (!SUPPORTED_TYPES.includes(aType)) {
+          const aType = canonicalActivityType(a?.type);
+          if (!aType) {
             push("error", `نوع النشاط غير مدعوم: ${a?.type ?? "غير معرّف"}`, `chapters[${ci}].activities[${ai}].type`);
           }
           if (typeof a?.prompt !== "string" || !a.prompt.trim()) {
@@ -149,7 +171,8 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
           }
           return {
             id: (typeof a?.id === "string" && a.id) ? a.id : uid("act"),
-            type: aType,
+            type: (aType ?? a?.type) as CampaignQuestionType,
+
             prompt: String(a?.prompt ?? ""),
             contextText: a?.contextText,
             options: Array.isArray(a?.options) ? a.options.map(String) : undefined,
@@ -159,9 +182,12 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
             feedbackCorrect: a?.feedbackCorrect,
             feedbackWrong: a?.feedbackWrong,
             hint: a?.hint,
-            xpReward: typeof a?.xpReward === "number" ? a.xpReward : ACTIVITY_DEFAULTS.xpReward,
-            coinsReward: typeof a?.coinsReward === "number" ? a.coinsReward : ACTIVITY_DEFAULTS.coinsReward,
-            heartsPenalty: typeof a?.heartsPenalty === "number" ? a.heartsPenalty : ACTIVITY_DEFAULTS.heartsPenalty,
+            xpReward: typeof a?.xpReward === "number" ? a.xpReward
+              : typeof a?.xp === "number" ? a.xp : ACTIVITY_DEFAULTS.xpReward,
+            coinsReward: typeof a?.coinsReward === "number" ? a.coinsReward
+              : typeof a?.coins === "number" ? a.coins : ACTIVITY_DEFAULTS.coinsReward,
+            heartsPenalty: typeof a?.heartsPenalty === "number" ? a.heartsPenalty
+              : typeof a?.hearts_penalty === "number" ? a.hearts_penalty : ACTIVITY_DEFAULTS.heartsPenalty,
             difficulty: a?.difficulty,
             relatedFigure: a?.relatedFigure,
             relatedCity: a?.relatedCity,
@@ -170,6 +196,11 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
           };
         })
       : [];
+    // Accept snake_case rewards on chapters (xp, coins, hearts_penalty, unlocks).
+    const chRewards = ch?.rewards && typeof ch.rewards === "object" ? { ...ch.rewards } : {};
+    if (typeof ch?.xp === "number" && chRewards.xp == null) chRewards.xp = ch.xp;
+    if (typeof ch?.coins === "number" && chRewards.coins == null) chRewards.coins = ch.coins;
+    if (Array.isArray(ch?.unlocks) && chRewards.unlocks == null) chRewards.unlocks = ch.unlocks;
     return {
       id: chId,
       title: String(ch?.title ?? ""),
@@ -178,10 +209,11 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
       historicalReadingText: ch?.historicalReadingText,
       order: typeof ch?.order === "number" ? ch.order : ci + 1,
       unlockRequirement: ch?.unlockRequirement,
-      rewards: ch?.rewards,
+      rewards: Object.keys(chRewards).length ? chRewards : undefined,
       activities,
     };
   });
+
 
   // Warn on missing registry references for unlocks.
   const allUnlocks: string[] = [
@@ -202,7 +234,7 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
     slug: typeof obj.slug === "string" ? obj.slug : slugify(obj.title ?? id),
     title: String(obj.title ?? ""),
     subtitle: obj.subtitle,
-    historicalPeriod: obj.historicalPeriod,
+    historicalPeriod: obj.historicalPeriod ?? obj.period,
     description: obj.description,
     coverImage: obj.coverImage,
     mapRegion: obj.mapRegion,
@@ -212,7 +244,8 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
     status,
     tags: Array.isArray(obj.tags) ? obj.tags.map(String) : undefined,
     chapters,
-    finalRewards: obj.finalRewards,
+    finalRewards: obj.finalRewards ?? obj.rewards,
+
     unlocks: Array.isArray(obj.unlocks) ? obj.unlocks.map(String) : undefined,
   };
 

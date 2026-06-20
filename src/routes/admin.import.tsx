@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, type ChangeEvent } from "react";
-import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark } from "lucide-react";
+import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
+import { validateCampaign } from "@/lib/campaignStorage";
+import type { Campaign } from "@/types/campaign";
+
 
 type ImportType = "daily_facts" | "today_in_history_events" | "notifications" | "campaigns" | "encyclopedia";
 
@@ -52,7 +55,7 @@ function ImportPage() {
         {active === "today_in_history_events" && <Importer key="e" config={todayEventsConfig} />}
         {active === "notifications" && <Importer key="n" config={notificationsConfig} />}
         {active === "encyclopedia" && <Importer key="enc" config={encyclopediaConfig} />}
-        {active === "campaigns" && <ComingSoon />}
+        {active === "campaigns" && <CampaignImporter />}
       </div>
     </div>
   );
@@ -71,15 +74,251 @@ function TypeBtn({ active, onClick, icon, children }: { active: boolean; onClick
   );
 }
 
-function ComingSoon() {
+// ============================================================
+// Campaign Importer (admin_campaigns)
+// ------------------------------------------------------------
+// Accepts a single Campaign JSON object OR an array of them.
+// Validates with shared validateCampaign (Arabic messages),
+// then upserts into Supabase public.admin_campaigns as draft by default.
+// ============================================================
+
+const CAMPAIGN_EXAMPLE = `{
+  "id": "fath-makka",
+  "slug": "fath-makka",
+  "title": "فتح مكة",
+  "subtitle": "اليوم الذي تغيّر فيه وجه الجزيرة",
+  "period": "8 هـ / 630 م",
+  "description": "رحلة عبر الأحداث التي مهّدت لفتح مكة وما تلاه من تأسيس مجتمع التوحيد.",
+  "difficulty": "medium",
+  "estimatedDuration": "20 دقيقة",
+  "tags": ["السيرة","فتوحات"],
+  "rewards": { "xp": 200, "coins": 100, "badgeId": "fath-makka-badge", "unlocks": ["artifact:miftah-al-kaaba"] },
+  "chapters": [
+    {
+      "id": "ch1",
+      "title": "نقض العهد",
+      "order": 1,
+      "xp": 30, "coins": 15, "hearts_penalty": 1,
+      "unlocks": [],
+      "activities": [
+        {
+          "type": "reading",
+          "prompt": "اقرأ المقطع ثم أجب.",
+          "contextText": "في السنة الثامنة للهجرة نقضت قريش صلح الحديبية...",
+          "feedbackCorrect": "أحسنت."
+        },
+        {
+          "type": "multiple_choice",
+          "prompt": "في أي سنة هجرية كان فتح مكة؟",
+          "options": ["6 هـ","7 هـ","8 هـ","9 هـ"],
+          "correctAnswer": 2,
+          "feedbackCorrect": "صحيح.",
+          "feedbackWrong": "في رمضان من السنة الثامنة."
+        },
+        {
+          "type": "ordering",
+          "prompt": "رتّب الأحداث زمنيًا.",
+          "options": ["صلح الحديبية","نقض قريش العهد","خروج النبي ﷺ بعشرة آلاف","دخول مكة"],
+          "correctOrder": ["صلح الحديبية","نقض قريش العهد","خروج النبي ﷺ بعشرة آلاف","دخول مكة"]
+        },
+        {
+          "type": "decision",
+          "prompt": "ماذا تختار لو كنت قائدًا للجيش؟",
+          "options": ["الهجوم المباشر","التطويق السلمي","التفاوض"],
+          "correctAnswer": 1
+        },
+        {
+          "type": "reflection",
+          "prompt": "ما أعظم درس تعلّمته من فتح مكة؟"
+        }
+      ]
+    }
+  ]
+}`;
+
+interface CampaignImportRow { ok: boolean; campaign?: Campaign; errors: string[]; warnings: string[]; }
+
+function CampaignImporter() {
+  const [raw, setRaw] = useState("");
+  const [publishOnImport, setPublishOnImport] = useState(false);
+  const [overwrite, setOverwrite] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ inserted: number; updated: number; skipped: number; failed: number; errors: string[] } | null>(null);
+  const [topError, setTopError] = useState<string | null>(null);
+
+  const parsed = useMemo<CampaignImportRow[]>(() => {
+    if (!raw.trim()) return [];
+    let data: any;
+    try { data = JSON.parse(raw); }
+    catch (e: any) { return [{ ok: false, errors: [`JSON غير صالح: ${e.message}`], warnings: [] }]; }
+    const list: any[] = Array.isArray(data) ? data : [data];
+    return list.map((item, i) => {
+      const v = validateCampaign(item);
+      const errs = v.issues.filter(x => x.level === "error").map(x => `الحملة #${i + 1}: ${x.message}`);
+      const warns = v.issues.filter(x => x.level === "warning").map(x => `الحملة #${i + 1}: ${x.message}`);
+      return { ok: v.ok, campaign: v.normalized, errors: errs, warnings: warns };
+    });
+  }, [raw]);
+
+  const validCampaigns = parsed.filter(p => p.ok && p.campaign).map(p => p.campaign!) as Campaign[];
+  const allErrors = parsed.flatMap(p => p.errors);
+  const allWarnings = parsed.flatMap(p => p.warnings);
+
+  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRaw(await file.text());
+    e.target.value = "";
+  };
+
+  const runImport = async () => {
+    setBusy(true); setResult(null); setTopError(null);
+    try {
+      let inserted = 0, updated = 0, skipped = 0, failed = 0;
+      const rowErrs: string[] = [];
+
+      // Pre-fetch existing ids to differentiate insert vs update.
+      const ids = validCampaigns.map(c => c.id);
+      const { data: existing } = await supabase
+        .from("admin_campaigns" as any)
+        .select("id")
+        .in("id", ids);
+      const existingIds = new Set((((existing as unknown) ?? []) as Array<{ id: string }>).map(r => r.id));
+
+      for (const c of validCampaigns) {
+        const exists = existingIds.has(c.id);
+        if (exists && !overwrite) { skipped++; continue; }
+        const status = publishOnImport ? "published" : (exists ? undefined : "draft");
+        const row: any = {
+          id: c.id,
+          slug: c.slug ?? null,
+          title: c.title,
+          data: { ...c, status: publishOnImport ? "published" : (c.status ?? "draft") },
+          updated_at: new Date().toISOString(),
+        };
+        if (status) row.status = status;
+        const { error } = await supabase
+          .from("admin_campaigns" as any)
+          .upsert(row, { onConflict: "id" });
+        if (error) { failed++; rowErrs.push(`${c.id}: ${error.message}`); continue; }
+        if (exists) updated++; else inserted++;
+      }
+
+      setResult({ inserted, updated, skipped, failed, errors: rowErrs.slice(0, 10) });
+    } catch (err: any) {
+      setTopError(err?.message ?? String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const canImport = validCampaigns.length > 0 && !busy && allErrors.length === 0;
+
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
-      <FileJson className="mx-auto h-8 w-8 text-amber-400/60" />
-      <h3 className="mt-3 text-lg font-semibold text-slate-200">استيراد الحملات — قريبًا</h3>
-      <p className="mt-2 text-sm">قريبًا — سيتم تفعيل استيراد الحملات بعد اعتماد schema النهائي.</p>
+    <div className="space-y-4">
+      <div className="rounded-xl border border-amber-500/20 bg-slate-900/60 p-5">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">
+            <Upload className="h-4 w-4" /> رفع ملف .json
+            <input type="file" accept="application/json,.json" className="hidden" onChange={onFile} />
+          </label>
+          <button onClick={() => setRaw(CAMPAIGN_EXAMPLE)}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-600 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800">
+            <FileJson className="h-3.5 w-3.5" /> مثال
+          </button>
+          <button onClick={() => { setRaw(""); setResult(null); }}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-600 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800">
+            مسح
+          </button>
+          <label className="ms-auto inline-flex items-center gap-1.5 text-xs text-slate-300">
+            <input type="checkbox" checked={publishOnImport} onChange={e => setPublishOnImport(e.target.checked)} />
+            نشر فور الاستيراد
+          </label>
+          <label className="inline-flex items-center gap-1.5 text-xs text-slate-300">
+            <input type="checkbox" checked={overwrite} onChange={e => setOverwrite(e.target.checked)} />
+            استبدال إن وُجد
+          </label>
+        </div>
+        <textarea
+          value={raw}
+          onChange={e => setRaw(e.target.value)}
+          placeholder="الصق JSON للحملة هنا… (كائن واحد أو مصفوفة [ ... ])"
+          dir="ltr"
+          className="h-72 w-full rounded-md border border-slate-700 bg-slate-950/60 p-3 font-mono text-xs text-slate-100"
+        />
+        <details className="mt-2 text-xs text-slate-400">
+          <summary className="cursor-pointer hover:text-amber-300">نموذج schema</summary>
+          <pre className="mt-2 overflow-x-auto rounded-md border border-slate-800 bg-slate-950/60 p-3 text-[11px] text-slate-300">{CAMPAIGN_EXAMPLE}</pre>
+        </details>
+      </div>
+
+      {raw.trim() && (
+        <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+          <h3 className="mb-2 text-sm font-semibold text-amber-200">نتيجة التحقق</h3>
+          <p className="text-xs text-slate-300">
+            صالح: <span className="text-emerald-300">{validCampaigns.length}</span> ·
+            أخطاء: <span className="text-red-300"> {allErrors.length}</span> ·
+            تحذيرات: <span className="text-amber-300"> {allWarnings.length}</span>
+          </p>
+          {allErrors.length > 0 && (
+            <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-red-200">
+              {allErrors.slice(0, 12).map((e, i) => <li key={i}>{e}</li>)}
+              {allErrors.length > 12 && <li>…و{allErrors.length - 12} خطأ آخر</li>}
+            </ul>
+          )}
+          {allWarnings.length > 0 && (
+            <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-amber-200">
+              {allWarnings.slice(0, 6).map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          )}
+          {validCampaigns.length > 0 && (
+            <ul className="mt-3 space-y-1 text-xs text-slate-200">
+              {validCampaigns.map(c => (
+                <li key={c.id} className="rounded-md border border-slate-800 bg-slate-950/40 px-2 py-1.5">
+                  <span className="text-amber-300">{c.id}</span> — {c.title} · {c.chapters.length} فصول
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <button
+          disabled={!canImport}
+          onClick={runImport}
+          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition ${
+            canImport ? "bg-amber-500 text-slate-950 hover:bg-amber-400" : "cursor-not-allowed bg-slate-800 text-slate-500"
+          }`}
+        >
+          <Upload className="h-4 w-4" /> {busy ? "جارٍ الاستيراد…" : `استيراد ${validCampaigns.length} حملة`}
+        </button>
+        <Link to="/admin/campaigns" className="text-xs text-amber-300 hover:text-amber-200">
+          فتح إدارة الحملات →
+        </Link>
+      </div>
+
+      {topError && (
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+          <AlertTriangle className="me-1 inline h-4 w-4" /> {topError}
+        </div>
+      )}
+
+      {result && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+          <CheckCircle2 className="me-1 inline h-4 w-4" />
+          تم. تمت إضافة {result.inserted} · تحديث {result.updated} · تخطّي {result.skipped} · فشل {result.failed}.
+          {result.errors.length > 0 && (
+            <ul className="mt-2 list-inside list-disc text-xs text-red-200">
+              {result.errors.map((e, i) => <li key={i}>{e}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
 
 // ============================================================
 // Per-type configuration
