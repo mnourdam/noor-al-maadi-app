@@ -77,11 +77,14 @@ export function upsertCampaign(c: Campaign): Campaign {
   const next = { ...c, updatedAt: now, createdAt: c.createdAt ?? now };
   if (idx >= 0) list[idx] = next; else list.push(next);
   saveCampaigns(list);
+  // Fire-and-forget cloud push (no-op during a cloud→local pull).
+  import("@/lib/cloudSync").then(m => m.pushCampaign(next)).catch(() => {});
   return next;
 }
 
 export function deleteCampaign(id: string): void {
   saveCampaigns(listCampaigns().filter(c => c.id !== id));
+  import("@/lib/cloudSync").then(m => m.deleteCampaignFromCloud(id)).catch(() => {});
 }
 
 export function duplicateCampaign(id: string): Campaign | undefined {
