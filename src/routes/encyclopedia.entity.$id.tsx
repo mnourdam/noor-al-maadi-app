@@ -245,11 +245,12 @@ function SupabaseOnlyEntity({ entity }: { entity: import("@/lib/encyclopedia-sou
         <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
           <div className="flex items-start gap-3">
             <span className="grid size-14 place-items-center rounded-2xl bg-black/40 text-3xl ring-1 ring-white/10">
-              🗝️
+              {glyph}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] tracking-[0.3em] text-gold/80">أثر</p>
+              <p className="text-[11px] tracking-[0.3em] text-gold/80">{label}</p>
               <h1 className="font-display text-2xl font-bold">{entity.title}</h1>
+
               {entity.subtitle && (
                 <p className="mt-0.5 text-[11px] text-muted-foreground">{entity.subtitle}</p>
               )}
