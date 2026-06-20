@@ -89,24 +89,37 @@ export function getMissingRegistryUnlockIds(): string[] {
 }
 
 
+// Neutral, non-gendered placeholders. `figure` defaults to a silhouette
+// so we don't imply gender (the previous 🧕 was inappropriate for male
+// historical figures). Pick something more specific via item.image.
 const TYPE_ICON: Record<RegistryItemType, string> = {
-  figure: "🧕",
-  artifact: "🏺",
-  city: "🏙️",
-  battle: "⚔️",
-  scholar: "📖",
-  dynasty: "📜",
-  badge: "🎖️",
+  figure:      "👤",
+  scholar:     "📖",
+  artifact:    "🏺",
+  city:        "🏛️",
+  battle:      "⚔️",
+  dynasty:     "🏳️",
+  badge:       "🎖️",
   achievement: "🏆",
 };
 
-/** Emoji icon for a registry item (image URLs are not supported by Card). */
+/** Returns either a usable image URL or `null`. Emoji/grapheme `image` values are not URLs. */
+export function registryItemImageUrl(item: ContentRegistryItem): string | null {
+  const img = item.image?.trim();
+  if (!img) return null;
+  if (/^(https?:|data:|\/)/i.test(img)) return img;
+  return null;
+}
+
+/** Emoji fallback for a registry item when no image URL is available. */
 export function registryItemIcon(item: ContentRegistryItem): string {
-  // If `image` is a single grapheme (emoji), use it as-is; otherwise fall back to type icon.
-  if (item.image && [...item.image].length === 1) return item.image;
-  return TYPE_ICON[item.type] ?? "✨";
+  // If `image` is a single grapheme (emoji), use it as-is.
+  if (item.image && [...item.image.trim()].length === 1) return item.image.trim();
+  const norm = normalizeType(item.type);
+  return (norm && TYPE_ICON[norm]) ?? "✨";
 }
 
 export function registryItemRarity(item: ContentRegistryItem): "common" | "rare" | "epic" | "legendary" {
   return (item.rarity as any) ?? "common";
 }
+
