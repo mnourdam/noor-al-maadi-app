@@ -1,5 +1,5 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ChevronRight, Clock, ExternalLink } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ChevronRight, Clock, ExternalLink, Database } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import {
@@ -11,6 +11,10 @@ import { CHARACTERS, getBattleProfile } from "@/lib/data";
 import { getCity } from "@/lib/cities";
 import { RelatedHistory } from "@/components/RelatedHistory";
 import type { EntityRef } from "@/lib/knowledge-graph";
+import {
+  useEncyclopediaSupabaseEntity,
+  isSupabaseEnabled,
+} from "@/lib/encyclopedia-source";
 
 const SECTION_ORDER: EncyclopediaSection[] = [
   "state", "figure", "scholar", "city", "battle", "event", "landmark", "artifact",
@@ -24,7 +28,7 @@ const TYPE_LABEL: Record<string, string> = {
 export const Route = createFileRoute("/encyclopedia/entity/$id")({
   head: ({ params }) => {
     const e = getPackEntity(params.id);
-    if (!e) return { meta: [{ title: "عنصر غير موجود — الموسوعة" }] };
+    if (!e) return { meta: [{ title: "عنصر — الموسوعة" }] };
     return {
       meta: [
         { title: `${e.title} — الموسوعة التاريخية` },
@@ -34,9 +38,8 @@ export const Route = createFileRoute("/encyclopedia/entity/$id")({
       ],
     };
   },
-  beforeLoad: ({ params }) => {
-    if (!getPackEntity(params.id)) throw notFound();
-  },
+  // No beforeLoad notFound — Supabase-only artifacts (not in legacy packs)
+  // must still resolve. Missing-in-both is handled inside the component.
   component: EntityPage,
   notFoundComponent: () => (
     <AppShell>
@@ -61,7 +64,40 @@ function legacyEntityRef(b: NonNullable<ReturnType<typeof getPackEntity>>["bridg
 
 function EntityPage() {
   const { id } = Route.useParams() as { id: string };
-  const e = getPackEntity(id)!;
+  const pack = getPackEntity(id);
+
+  // Phase 1: Supabase is primary for artifacts only. We probe Supabase when
+  // either (a) the pack lookup failed entirely, or (b) the pack entity is
+  // an artifact — in which case Supabase values override pack values.
+  const probeType = pack?.type ?? "artifact";
+  const supaQuery = useEncyclopediaSupabaseEntity(probeType, id, {
+    enabled: isSupabaseEnabled(probeType),
+  });
+  const supa = supaQuery.data ?? null;
+
+  // Supabase-only artifact (not in legacy packs) — render minimal view.
+  if (!pack) {
+    if (supaQuery.isLoading) {
+      return (
+        <AppShell>
+          <div className="px-5 pt-10 text-center text-muted-foreground text-sm">جارٍ التحميل…</div>
+        </AppShell>
+      );
+    }
+    if (supa && supa.entity_type === "artifact") {
+      return <SupabaseOnlyArtifact entity={supa} />;
+    }
+    return (
+      <AppShell>
+        <div className="px-5 pt-10 text-center">
+          <h1 className="font-display text-xl">العنصر غير موجود</h1>
+          <Link to="/encyclopedia" className="mt-4 inline-block text-gold underline">عُد إلى الموسوعة</Link>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const e = pack;
   const era = e.bridges?.era ? ERAS.find((x) => x.id === e.bridges?.era) : undefined;
   const groups = neighboursGrouped(id);
   const isScholar = e.type === "figure" && (e.meta as { kind?: string } | undefined)?.kind === "scholar";
@@ -72,6 +108,13 @@ function EntityPage() {
     legacyRef?.kind === "battle"    ? !!getBattleProfile(legacyRef.id) :
     legacyRef?.kind === "character" ? CHARACTERS.some(c => c.id === legacyRef.id) :
     !!legacyRef;
+
+  // Supabase-primary overrides for artifacts: prefer DB title / description.
+  const fromSupabase = !!supa && e.type === "artifact";
+  const displayTitle = fromSupabase ? (supa!.title || e.title) : e.title;
+  const displayDescription = fromSupabase
+    ? (supa!.summary || supa!.subtitle || e.description)
+    : e.description;
 
   return (
     <AppShell>
