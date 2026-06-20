@@ -202,6 +202,7 @@ function AdminEncyclopediaPage() {
                     <td className="px-3 py-2">
                       <div className="flex justify-end gap-1.5">
                         <IconBtn onClick={() => setEditing(e)} icon={Save} label="تحرير" />
+                        <IconBtn onClick={() => setJsonUpdating(e)} icon={FileJson} label="تحديث من JSON" />
                         <IconBtn onClick={() => toggleEnabled(e)} icon={e.enabled ? EyeOff : Eye}
                           label={e.enabled ? "تعطيل" : "تفعيل"} />
                         <IconBtn onClick={() => remove(e)} icon={Trash2} label="حذف" danger />
