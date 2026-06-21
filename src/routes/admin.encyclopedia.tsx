@@ -242,8 +242,15 @@ function AdminEncyclopediaPage() {
                           ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
                           : "border-slate-600 bg-slate-800 text-slate-400"
                       }`}>{e.enabled ? "مفعّل" : "معطّل"}</span>
+                      {(e.timeline_year != null || e.timeline_start_year != null) && (
+                        <span className="ms-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200" title="على الخط الزمني">
+                          ⌛ {e.timeline_year ?? `${e.timeline_start_year}–${e.timeline_end_year ?? "?"}`}
+                          {e.timeline_category ? ` · ${e.timeline_category}` : ""}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-xs text-slate-400">{formatDate(e.updated_at)}</td>
+
                     <td className="px-3 py-2">
                       <div className="flex justify-end gap-1.5">
                         <IconBtn onClick={() => setEditing(e)} icon={Save} label="تحرير" />
