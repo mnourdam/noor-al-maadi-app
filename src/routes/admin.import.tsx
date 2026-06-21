@@ -496,6 +496,27 @@ interface EncRow {
   body: any;
   metadata: any;
   enabled: boolean;
+  timeline_year: number | null;
+  timeline_start_year: number | null;
+  timeline_end_year: number | null;
+  timeline_hijri: string | null;
+  timeline_order: number | null;
+  timeline_category: string | null;
+  timeline_tone: string | null;
+  timeline_glyph: string | null;
+}
+
+const TIMELINE_CATEGORIES = ["caliphate", "figure", "battle", "book", "event"] as const;
+
+function parseIntOrNull(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "number" ? v : parseInt(String(v), 10);
+  return Number.isFinite(n) ? n : null;
+}
+function parseStrOrNull(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  return s ? s : null;
 }
 
 const encyclopediaConfig: ImportConfig<EncRow> = {
@@ -510,7 +531,11 @@ const encyclopediaConfig: ImportConfig<EncRow> = {
     "summary": "قائد ومؤسس الدولة الأيوبية...",
     "body": { "sections": [{ "heading": "النشأة", "text": "..." }] },
     "metadata": { "era": "ayyubid", "birth_year": 532, "tags": ["قائد","حكام"] },
-    "enabled": true
+    "enabled": true,
+    "timeline_start_year": 1137,
+    "timeline_end_year": 1193,
+    "timeline_category": "figure",
+    "timeline_tone": "gold"
   },
   {
     "entity_type": "battle",
@@ -519,8 +544,12 @@ const encyclopediaConfig: ImportConfig<EncRow> = {
     "subtitle": "583هـ / 1187م",
     "summary": "النصر الذي مهّد لتحرير القدس.",
     "body": {},
-    "metadata": { "era": "ayyubid", "year_hijri": 583 },
-    "enabled": true
+    "metadata": { "era": "ayyubid" },
+    "enabled": true,
+    "timeline_year": 1187,
+    "timeline_hijri": "583 هـ",
+    "timeline_category": "battle",
+    "timeline_glyph": "⚔️"
   }
 ]`,
   validate: (row, i) => {
@@ -536,6 +565,10 @@ const encyclopediaConfig: ImportConfig<EncRow> = {
     if (!title) return { ok: false, error: `الصف ${i + 1}: title مطلوب.` };
     const body = row.body && typeof row.body === "object" ? row.body : {};
     const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+    const cat = parseStrOrNull(row.timeline_category);
+    if (cat && !TIMELINE_CATEGORIES.includes(cat as any)) {
+      return { ok: false, error: `الصف ${i + 1}: timeline_category يجب أن يكون أحد: ${TIMELINE_CATEGORIES.join(", ")}.` };
+    }
     return {
       ok: true,
       row: {
@@ -544,6 +577,14 @@ const encyclopediaConfig: ImportConfig<EncRow> = {
         summary: typeof row.summary === "string" && row.summary.trim() ? row.summary.trim() : null,
         body, metadata,
         enabled: row.enabled === false ? false : true,
+        timeline_year: parseIntOrNull(row.timeline_year),
+        timeline_start_year: parseIntOrNull(row.timeline_start_year),
+        timeline_end_year: parseIntOrNull(row.timeline_end_year),
+        timeline_hijri: parseStrOrNull(row.timeline_hijri),
+        timeline_order: parseIntOrNull(row.timeline_order) ?? 0,
+        timeline_category: cat,
+        timeline_tone: parseStrOrNull(row.timeline_tone),
+        timeline_glyph: parseStrOrNull(row.timeline_glyph),
       },
     };
   },
@@ -556,11 +597,24 @@ const encyclopediaConfig: ImportConfig<EncRow> = {
       <div className="text-xs text-amber-300">{r.entity_type} · {r.slug}{r.enabled ? "" : " · معطّل"}</div>
       <div className="font-medium">{r.title}{r.subtitle ? ` — ${r.subtitle}` : ""}</div>
       {r.summary && <div className="line-clamp-2 text-xs text-slate-400">{r.summary}</div>}
+      {(r.timeline_year || r.timeline_start_year) && (
+        <div className="mt-1 text-[10px] text-amber-200/80">
+          خط زمني: {r.timeline_year
+            ? `${r.timeline_year} م`
+            : `${r.timeline_start_year} – ${r.timeline_end_year ?? "?"} م`}
+          {r.timeline_category ? ` · ${r.timeline_category}` : ""}
+        </div>
+      )}
     </div>
   ),
   allowOverwrite: true,
   conflictTarget: "entity_type,slug",
-  overwriteFields: ["title", "subtitle", "summary", "body", "metadata", "enabled"],
+  overwriteFields: [
+    "title", "subtitle", "summary", "body", "metadata", "enabled",
+    "timeline_year", "timeline_start_year", "timeline_end_year",
+    "timeline_hijri", "timeline_order", "timeline_category",
+    "timeline_tone", "timeline_glyph",
+  ],
 };
 
 // ---- Investigations ----
