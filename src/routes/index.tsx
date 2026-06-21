@@ -12,14 +12,10 @@ import {
   UPCOMING_REGIONS, MYSTERY_CHARACTERS, FLAGSHIP_CHAPTERS,
   nextActiveCampaign,
 } from "@/lib/data";
-import {
-  todayEvents as calendarToday, gregorianLabel, hijriLabel,
-  CALENDAR_TYPE_LABELS, CALENDAR_TYPE_GLYPHS, primaryHref,
-  IMPORTANCE_LABEL,
-} from "@/lib/historical-calendar";
 import { useProfile } from "@/lib/profile";
 import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS } from "@/lib/notifications";
 import { useAccount } from "@/lib/account";
+import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
 import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
