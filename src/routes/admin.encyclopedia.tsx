@@ -42,7 +42,17 @@ interface Entity {
   enabled: boolean;
   created_at: string;
   updated_at: string;
+  timeline_year: number | null;
+  timeline_start_year: number | null;
+  timeline_end_year: number | null;
+  timeline_hijri: string | null;
+  timeline_order: number | null;
+  timeline_category: string | null;
+  timeline_tone: string | null;
+  timeline_glyph: string | null;
 }
+
+const TIMELINE_CATEGORIES = ["caliphate", "figure", "battle", "book", "event"] as const;
 
 interface Toast { kind: "ok" | "err"; msg: string }
 
@@ -301,8 +311,27 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     enabled: value?.enabled ?? true,
     body: JSON.stringify(value?.body ?? {}, null, 2),
     metadata: JSON.stringify(value?.metadata ?? {}, null, 2),
+    timeline_year: value?.timeline_year == null ? "" : String(value.timeline_year),
+    timeline_start_year: value?.timeline_start_year == null ? "" : String(value.timeline_start_year),
+    timeline_end_year: value?.timeline_end_year == null ? "" : String(value.timeline_end_year),
+    timeline_hijri: value?.timeline_hijri ?? "",
+    timeline_order: value?.timeline_order == null ? "" : String(value.timeline_order),
+    timeline_category: value?.timeline_category ?? "",
+    timeline_tone: value?.timeline_tone ?? "",
+    timeline_glyph: value?.timeline_glyph ?? "",
   });
   const [busy, setBusy] = useState(false);
+
+  const intOrNull = (s: string): number | null => {
+    const t = s.trim();
+    if (!t) return null;
+    const n = parseInt(t, 10);
+    return Number.isFinite(n) ? n : null;
+  };
+  const strOrNull = (s: string): string | null => {
+    const t = s.trim();
+    return t ? t : null;
+  };
 
   const save = async () => {
     if (!form.slug.trim()) return onError("slug مطلوب.");
@@ -311,6 +340,9 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     let body: any, metadata: any;
     try { body = JSON.parse(form.body || "{}"); } catch (e: any) { return onError(`body ليس JSON صحيح: ${e.message}`); }
     try { metadata = JSON.parse(form.metadata || "{}"); } catch (e: any) { return onError(`metadata ليس JSON صحيح: ${e.message}`); }
+    if (form.timeline_category && !TIMELINE_CATEGORIES.includes(form.timeline_category as any)) {
+      return onError(`timeline_category يجب أن يكون: ${TIMELINE_CATEGORIES.join(", ")}.`);
+    }
 
     setBusy(true);
     const payload = {
@@ -321,6 +353,14 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
       summary: form.summary.trim() || null,
       body, metadata,
       enabled: form.enabled,
+      timeline_year: intOrNull(form.timeline_year),
+      timeline_start_year: intOrNull(form.timeline_start_year),
+      timeline_end_year: intOrNull(form.timeline_end_year),
+      timeline_hijri: strOrNull(form.timeline_hijri),
+      timeline_order: intOrNull(form.timeline_order) ?? 0,
+      timeline_category: strOrNull(form.timeline_category),
+      timeline_tone: strOrNull(form.timeline_tone),
+      timeline_glyph: strOrNull(form.timeline_glyph),
     };
     const { error } = isNew
       ? await supabase.from("encyclopedia_entities" as any).insert(payload)
@@ -384,6 +424,58 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs" />
           </Field>
         </div>
+
+        <fieldset className="mt-4 rounded-lg border border-amber-500/20 bg-slate-900/40 p-3">
+          <legend className="px-2 text-xs font-bold text-amber-200">الخط الزمني الكبير</legend>
+          <p className="mb-2 text-[11px] text-slate-400">
+            املأ سنة واحدة لنقاط (معركة، حدث، كتاب) أو سنتَي بداية ونهاية لشريط (دولة، شخصية).
+          </p>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Field label="السنة (نقطة) — ميلادي">
+              <input value={form.timeline_year} onChange={e => setForm(f => ({ ...f, timeline_year: e.target.value }))}
+                placeholder="1187" dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm" />
+            </Field>
+            <Field label="سنة البداية (شريط)">
+              <input value={form.timeline_start_year} onChange={e => setForm(f => ({ ...f, timeline_start_year: e.target.value }))}
+                placeholder="1137" dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm" />
+            </Field>
+            <Field label="سنة النهاية (شريط)">
+              <input value={form.timeline_end_year} onChange={e => setForm(f => ({ ...f, timeline_end_year: e.target.value }))}
+                placeholder="1193" dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm" />
+            </Field>
+            <Field label="التصنيف">
+              <select value={form.timeline_category}
+                onChange={e => setForm(f => ({ ...f, timeline_category: e.target.value }))}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
+                <option value="">(تلقائي حسب النوع)</option>
+                {TIMELINE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
+            <Field label="التاريخ الهجري (عرض)">
+              <input value={form.timeline_hijri} onChange={e => setForm(f => ({ ...f, timeline_hijri: e.target.value }))}
+                placeholder="583 هـ" dir="rtl"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+            </Field>
+            <Field label="ترتيب (لحسم التساوي)">
+              <input value={form.timeline_order} onChange={e => setForm(f => ({ ...f, timeline_order: e.target.value }))}
+                placeholder="0" dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm" />
+            </Field>
+            <Field label="اللون (tone)">
+              <input value={form.timeline_tone} onChange={e => setForm(f => ({ ...f, timeline_tone: e.target.value }))}
+                placeholder="gold | emerald | violet | ..." dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs" />
+            </Field>
+            <Field label="الأيقونة (glyph)">
+              <input value={form.timeline_glyph} onChange={e => setForm(f => ({ ...f, timeline_glyph: e.target.value }))}
+                placeholder="⚔️" dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+            </Field>
+          </div>
+        </fieldset>
 
         <label className="mt-3 flex items-center gap-2 text-sm">
           <input type="checkbox" checked={form.enabled}
