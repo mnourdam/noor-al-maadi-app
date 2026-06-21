@@ -42,7 +42,17 @@ interface Entity {
   enabled: boolean;
   created_at: string;
   updated_at: string;
+  timeline_year: number | null;
+  timeline_start_year: number | null;
+  timeline_end_year: number | null;
+  timeline_hijri: string | null;
+  timeline_order: number | null;
+  timeline_category: string | null;
+  timeline_tone: string | null;
+  timeline_glyph: string | null;
 }
+
+const TIMELINE_CATEGORIES = ["caliphate", "figure", "battle", "book", "event"] as const;
 
 interface Toast { kind: "ok" | "err"; msg: string }
 
