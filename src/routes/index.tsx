@@ -293,25 +293,58 @@ function Index() {
         </Link>
       </section>
 
+      {/* ============ CONTINUE JOURNEY ============ */}
+      <section className="mt-10 px-5">
+        <SectionHeader icon={<Play className="size-3.5" />} eyebrow="تابع رحلتك" title="رحلتك الأخيرة" />
+        {active && activeEra ? (
+          <Link
+            to="/campaigns/$era" params={{ era: active.eraId }}
+            className="group relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark p-5 transition hover:border-gold/60"
+          >
+            <div className="arabesque-layer" />
+            <div className="relative">
+              <div className="flex items-center gap-2 text-[10px] tracking-[0.25em] text-gold">
+                <Crown className="size-3.5" />
+                <span>{activeEra.name}</span>
+              </div>
+              <p className="font-display mt-2 text-base font-bold shimmer-text">{active.title}</p>
+              <div className="mt-4 flex items-center gap-3">
+                <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full bg-gradient-gold transition-all" style={{ width: `${activePct}%` }} />
+                </div>
+                <span className="text-[10px] text-white/65">{activeDone}/{active.missions.length} فصول</span>
+              </div>
+              <div className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-bold text-gold">
+                متابعة الرحلة <ChevronLeft className="size-4" />
+              </div>
+            </div>
+          </Link>
+        ) : (
+          <Link
+            to="/campaigns"
+            className="block rounded-3xl border border-white/10 bg-surface/60 p-5 text-center transition hover:border-gold/40"
+          >
+            <p className="text-[13px] text-white/70">ابدأ أول حملة لتظهر هنا رحلتك الأخيرة</p>
+            <span className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-bold text-gold">
+              استعرض الحملات <ChevronLeft className="size-4" />
+            </span>
+          </Link>
+        )}
+      </section>
+
       {/* ============ EXPLORE MORE ============ */}
       <section className="mt-10 mb-6 px-5">
         <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشف المزيد" title="عوالم تنتظر" />
         <div className="grid grid-cols-2 gap-2.5">
-          <ExploreTile to="/campaigns" icon={<Crown className="size-4" />} title="كل الحملات" subtitle={`${UPCOMING_CAMPAIGNS.length}+ قادمة`} />
-          <ExploreTile to="/seasons" icon={<Sparkles className="size-4" />} title="المواسم" subtitle="مكافآت محدودة" />
-          <ExploreTile to="/timeline" icon={<Hourglass className="size-4" />} title="الخط الزمني" subtitle="1400 سنة" />
-          <ExploreTile to="/map" icon={<MapIcon className="size-4" />} title="الخارطة" subtitle={`${UPCOMING_REGIONS.length}+ مناطق`} />
+          <ExploreTile to="/campaigns" icon={<Crown className="size-4" />} title="الحملات" subtitle="رحلات تاريخية كبرى" />
+          <ExploreTile to="/map" icon={<MapIcon className="size-4" />} title="الأطلس الإسلامي" subtitle="استكشف العالم عبر العصور" />
+          <ExploreTile to="/timeline" icon={<Hourglass className="size-4" />} title="الزمن العظيم" subtitle="1400 سنة من التاريخ" />
+          <ExploreTile to="/collection" icon={<Star className="size-4" />} title="المتحف" subtitle="أرشيفك ومقتنياتك" />
           {todayEvent && (
-            <ExploreTile to="/on-this-day" icon={<Eye className="size-3.5" />} title="في مثل هذا اليوم" subtitle="أحداث اليوم" />
+            <div className="col-span-2">
+              <ExploreTile to="/on-this-day" icon={<Calendar className="size-4" />} title="في مثل هذا اليوم" subtitle="حدث اليوم" />
+            </div>
           )}
-          <ExploreTile to="/collection" icon={<Star className="size-3.5" />} title="المتحف" subtitle="أرشيفك" />
-        </div>
-        <div className="gold-divider my-6" />
-        <div className="grid grid-cols-4 gap-2">
-          <ModeChip to="/play/investigate" icon={<Search className="size-4" />} label="تحقيق" />
-          <ModeChip to="/play/timeline" icon={<ListOrdered className="size-4" />} label="ترتيب" />
-          <ModeChip to="/play/decisions" icon={<GitBranch className="size-4" />} label="قرارات" />
-          <ModeChip to="/map" icon={<MapIcon className="size-4" />} label="الخارطة" />
         </div>
       </section>
       <OnboardingTour />
