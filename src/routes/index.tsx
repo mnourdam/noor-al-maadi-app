@@ -423,19 +423,18 @@ function DiscoveryCard({ d }: { d: DiscoveryItem }) {
   }
   return <Link to={d.to as "/"}>{content}</Link>;
 }
-// ----- Historical calendar: Today card -----
-function OnThisDayCalendarCard() {
-  const events = calendarToday();
-  if (events.length === 0) return null;
-  const main = events[0];
-  const href = primaryHref(main) ?? "/history-calendar";
-  const hijri = hijriLabel(main);
+// ----- Today in History: card backed by today_in_history_events -----
+function OnThisDayCalendarCard({ event }: { event: TodayInHistoryEvent }) {
+  const href = event.deep_link ?? "/on-this-day";
+  const yearBits: string[] = [];
+  if (event.hijri_year) yearBits.push(`${event.hijri_year} هـ`);
+  if (event.gregorian_year) yearBits.push(`${event.gregorian_year} م`);
   return (
     <section className="mt-10 px-5">
       <SectionHeader
         icon={<Calendar className="size-3.5" />}
-        eyebrow="التقويم التاريخي"
-        title="حدث في مثل هذا اليوم"
+        eyebrow="في مثل هذا اليوم"
+        title="حدث من تاريخنا"
       />
       <Link
         to={href as "/"}
@@ -443,30 +442,18 @@ function OnThisDayCalendarCard() {
       >
         <div className="absolute -left-10 -top-10 size-32 rounded-full bg-gold/15 blur-3xl" />
         <div className="relative">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[10px] tracking-[0.25em] text-gold">
-              {gregorianLabel(main)} · {main.year}
-            </p>
-            <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
-              {IMPORTANCE_LABEL[main.importance]}
-            </span>
-          </div>
-          {hijri && <p className="mt-0.5 text-[10px] text-white/50">الموافق {hijri}</p>}
-          <h3 className="font-display mt-1 text-lg font-bold leading-snug">{main.title}</h3>
-          <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{main.description}</p>
-          <div className="mt-3 flex items-center justify-between text-[11px]">
-            <span className="rounded-full border border-white/10 px-2 py-0.5 text-white/70">
-              {CALENDAR_TYPE_GLYPHS[main.type]} {CALENDAR_TYPE_LABELS[main.type]}
-            </span>
+          {yearBits.length > 0 && (
+            <p className="text-[10px] tracking-[0.25em] text-gold">{yearBits.join(" / ")}</p>
+          )}
+          <h3 className="font-display mt-1 text-lg font-bold leading-snug">{event.title}</h3>
+          <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{event.body}</p>
+          <div className="mt-3 flex items-center justify-end text-[11px]">
             <span className="flex items-center gap-1 text-gold">اقرأ المزيد <ChevronLeft className="size-3" /></span>
           </div>
-          {events.length > 1 && (
-            <p className="mt-3 text-[10px] text-white/55">
-              +{events.length - 1} أحداث أخرى في نفس اليوم
-            </p>
-          )}
         </div>
       </Link>
     </section>
+  );
+}
   );
 }
