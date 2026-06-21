@@ -48,15 +48,23 @@ function Index() {
   const { account, user } = useAccount();
   const displayName = account?.username ?? (user ? profile.name : profile.name);
   const [mounted, setMounted] = useState(false);
+  const { selected: todayEvent } = useTodayInHistoryEvent();
   useEffect(() => {
     setMounted(true);
     touchStreak();
     // Fire the daily / re-engagement / season notifications when due.
-    const today = todayOnThisDay();
+    // Only send the "today in history" in-app notification if a real,
+    // enabled row exists for today — same rule as the edge function.
     const season = currentSeason();
     runDailyNotifications({
       prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
-      today: { title: today.title, teaser: today.detail, href: "/on-this-day" },
+      today: todayEvent
+        ? {
+            title: todayEvent.title,
+            teaser: todayEvent.body,
+            href: todayEvent.deep_link ?? "/on-this-day",
+          }
+        : null,
       season: {
         name: season.name,
         tagline: season.tagline,
@@ -64,7 +72,7 @@ function Index() {
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [touchStreak]);
+  }, [touchStreak, todayEvent?.id]);
 
   const lvl = levelFor(profile.points);
   // Cinematic hero background slider — rotates every 5s with crossfade + ken-burns.
