@@ -105,6 +105,18 @@ function TimelinePage() {
     () => (sbPoints.points.length > 0 ? sbPoints.points : allPoints()),
     [sbPoints.points],
   );
+
+  // Debug: open /timeline?debug=1 to inspect the Supabase-backed dataset.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!new URLSearchParams(window.location.search).has("debug")) return;
+    // eslint-disable-next-line no-console
+    console.log("[timeline] supabase bands:", sbBands.bands.length,
+      sbBands.bands.slice(0, 5).map(b => `${b.id}:${b.label}:${b.start}-${b.end}`));
+    // eslint-disable-next-line no-console
+    console.log("[timeline] supabase points:", sbPoints.points.length,
+      sbPoints.points.slice(0, 8).map(p => `${p.id}:${p.label}:${p.year}:${p.lane}`));
+  }, [sbBands.bands, sbPoints.points]);
   // Pack stacked rows for caliphate & figure lanes.
   const caliphateBands = useMemo(() => BANDS_ALL.filter((b) => b.lane === "caliphate"), [BANDS_ALL]);
   const figureBands    = useMemo(() => BANDS_ALL.filter((b) => b.lane === "figure"), [BANDS_ALL]);
