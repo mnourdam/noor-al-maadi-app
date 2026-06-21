@@ -565,7 +565,11 @@ const encyclopediaConfig: ImportConfig<EncRow> = {
     if (!title) return { ok: false, error: `الصف ${i + 1}: title مطلوب.` };
     const body = row.body && typeof row.body === "object" ? row.body : {};
     const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
-    const cat = parseStrOrNull(row.timeline_category);
+    // Accept snake_case (canonical) AND camelCase aliases so JSON authored
+    // with either convention does not silently drop timeline fields.
+    const pick = <T,>(snake: string, camel: string): T | undefined =>
+      row[snake] !== undefined ? row[snake] : row[camel];
+    const cat = parseStrOrNull(pick("timeline_category", "timelineCategory"));
     if (cat && !TIMELINE_CATEGORIES.includes(cat as any)) {
       return { ok: false, error: `الصف ${i + 1}: timeline_category يجب أن يكون أحد: ${TIMELINE_CATEGORIES.join(", ")}.` };
     }
@@ -577,14 +581,14 @@ const encyclopediaConfig: ImportConfig<EncRow> = {
         summary: typeof row.summary === "string" && row.summary.trim() ? row.summary.trim() : null,
         body, metadata,
         enabled: row.enabled === false ? false : true,
-        timeline_year: parseIntOrNull(row.timeline_year),
-        timeline_start_year: parseIntOrNull(row.timeline_start_year),
-        timeline_end_year: parseIntOrNull(row.timeline_end_year),
-        timeline_hijri: parseStrOrNull(row.timeline_hijri),
-        timeline_order: parseIntOrNull(row.timeline_order) ?? 0,
+        timeline_year: parseIntOrNull(pick("timeline_year", "timelineYear")),
+        timeline_start_year: parseIntOrNull(pick("timeline_start_year", "timelineStartYear")),
+        timeline_end_year: parseIntOrNull(pick("timeline_end_year", "timelineEndYear")),
+        timeline_hijri: parseStrOrNull(pick("timeline_hijri", "timelineHijri")),
+        timeline_order: parseIntOrNull(pick("timeline_order", "timelineOrder")) ?? 0,
         timeline_category: cat,
-        timeline_tone: parseStrOrNull(row.timeline_tone),
-        timeline_glyph: parseStrOrNull(row.timeline_glyph),
+        timeline_tone: parseStrOrNull(pick("timeline_tone", "timelineTone")),
+        timeline_glyph: parseStrOrNull(pick("timeline_glyph", "timelineGlyph")),
       },
     };
   },
