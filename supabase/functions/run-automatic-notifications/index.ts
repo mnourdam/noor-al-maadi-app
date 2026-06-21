@@ -92,12 +92,16 @@ async function runTodayInHistory(admin: any, baseUrl: string, serviceKey: string
   const month = now.getUTCMonth() + 1;
   const day = now.getUTCDate();
 
+  // Deterministic selection — must match src/lib/today-in-history.ts so the
+  // notification, the Adventure page card, and the Today in History page
+  // resolve the SAME event for the same date.
   const { data: events, error } = await admin
     .from("today_in_history_events")
     .select("*")
     .eq("enabled", true)
     .eq("month", month)
     .eq("day", day)
+    .order("created_at", { ascending: true })
     .limit(1);
 
   if (error) return { job: jobKey, error: error.message };

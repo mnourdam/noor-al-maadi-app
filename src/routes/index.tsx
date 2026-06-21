@@ -7,19 +7,15 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
-  dailyStory, todayOnThisDay, ERAS, CAMPAIGNS, ARTIFACTS, CHARACTERS,
+  dailyStory, ERAS, CAMPAIGNS, ARTIFACTS, CHARACTERS,
   levelFor, currentSeason, UPCOMING_CAMPAIGNS,
   UPCOMING_REGIONS, MYSTERY_CHARACTERS, FLAGSHIP_CHAPTERS,
   nextActiveCampaign,
 } from "@/lib/data";
-import {
-  todayEvents as calendarToday, gregorianLabel, hijriLabel,
-  CALENDAR_TYPE_LABELS, CALENDAR_TYPE_GLYPHS, primaryHref,
-  IMPORTANCE_LABEL,
-} from "@/lib/historical-calendar";
 import { useProfile } from "@/lib/profile";
 import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS } from "@/lib/notifications";
 import { useAccount } from "@/lib/account";
+import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
 import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
@@ -52,15 +48,23 @@ function Index() {
   const { account, user } = useAccount();
   const displayName = account?.username ?? (user ? profile.name : profile.name);
   const [mounted, setMounted] = useState(false);
+  const { selected: todayEvent } = useTodayInHistoryEvent();
   useEffect(() => {
     setMounted(true);
     touchStreak();
     // Fire the daily / re-engagement / season notifications when due.
-    const today = todayOnThisDay();
+    // Only send the "today in history" in-app notification if a real,
+    // enabled row exists for today — same rule as the edge function.
     const season = currentSeason();
     runDailyNotifications({
       prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
-      today: { title: today.title, teaser: today.detail, href: "/on-this-day" },
+      today: todayEvent
+        ? {
+            title: todayEvent.title,
+            teaser: todayEvent.body,
+            href: todayEvent.deep_link ?? "/on-this-day",
+          }
+        : null,
       season: {
         name: season.name,
         tagline: season.tagline,
@@ -68,7 +72,7 @@ function Index() {
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [touchStreak]);
+  }, [touchStreak, todayEvent?.id]);
 
   const lvl = levelFor(profile.points);
   // Cinematic hero background slider — rotates every 5s with crossfade + ken-burns.
@@ -233,7 +237,7 @@ function Index() {
 
       {/* ============ DAILY MISSIONS ============ */}
       {/* ============ TODAY IN HISTORY ============ */}
-      {mounted && <OnThisDayCalendarCard />}
+      {mounted && todayEvent && <OnThisDayCalendarCard event={todayEvent} />}
 
       {/* ============ EXPLORE HISTORY ============ */}
       <section className="mt-10 px-5">
@@ -297,7 +301,9 @@ function Index() {
           <ExploreTile to="/seasons" icon={<Sparkles className="size-4" />} title="المواسم" subtitle="مكافآت محدودة" />
           <ExploreTile to="/timeline" icon={<Hourglass className="size-4" />} title="الخط الزمني" subtitle="1400 سنة" />
           <ExploreTile to="/map" icon={<MapIcon className="size-4" />} title="الخارطة" subtitle={`${UPCOMING_REGIONS.length}+ مناطق`} />
-          <ExploreTile to="/on-this-day" icon={<Eye className="size-3.5" />} title="في مثل هذا اليوم" subtitle="أحداث اليوم" />
+          {todayEvent && (
+            <ExploreTile to="/on-this-day" icon={<Eye className="size-3.5" />} title="في مثل هذا اليوم" subtitle="أحداث اليوم" />
+          )}
           <ExploreTile to="/collection" icon={<Star className="size-3.5" />} title="المتحف" subtitle="أرشيفك" />
         </div>
         <div className="gold-divider my-6" />
@@ -367,7 +373,10 @@ type DiscoveryItem =
 
 function rotatingDiscovery(): DiscoveryItem | null {
   const day = Math.floor(Date.now() / 86400000);
-  const order: DiscoveryItem["kind"][] = ["character", "artifact", "event", "manuscript", "location"];
+  // Note: "event" kind intentionally excluded — Today-in-History has its
+  // own dedicated card backed by today_in_history_events, so the rotating
+  // discovery never falls back to fake/legacy event data here.
+  const order: DiscoveryItem["kind"][] = ["character", "artifact", "manuscript", "location"];
   const kind = order[day % order.length];
   const eraName = (e: string) => ERAS.find((x) => x.id === e)?.name ?? "";
 
@@ -378,10 +387,6 @@ function rotatingDiscovery(): DiscoveryItem | null {
   if (kind === "artifact") {
     const a = ARTIFACTS[day % ARTIFACTS.length];
     return { kind, id: a.id, title: a.name, eyebrow: `أثر · ${a.typeLabel}`, body: a.description, icon: a.icon, era: eraName(a.era), to: "/collection" };
-  }
-  if (kind === "event") {
-    const e = todayOnThisDay();
-    return { kind, id: e.title, title: e.title, eyebrow: `في مثل هذا اليوم · ${e.year}`, body: e.detail, icon: "📅", era: eraName(e.era), to: "/on-this-day" };
   }
   if (kind === "manuscript") {
     const mans = ARTIFACTS.filter((a) => a.type === "manuscript");
@@ -417,19 +422,18 @@ function DiscoveryCard({ d }: { d: DiscoveryItem }) {
   }
   return <Link to={d.to as "/"}>{content}</Link>;
 }
-// ----- Historical calendar: Today card -----
-function OnThisDayCalendarCard() {
-  const events = calendarToday();
-  if (events.length === 0) return null;
-  const main = events[0];
-  const href = primaryHref(main) ?? "/history-calendar";
-  const hijri = hijriLabel(main);
+// ----- Today in History: card backed by today_in_history_events -----
+function OnThisDayCalendarCard({ event }: { event: TodayInHistoryEvent }) {
+  const href = event.deep_link ?? "/on-this-day";
+  const yearBits: string[] = [];
+  if (event.hijri_year) yearBits.push(`${event.hijri_year} هـ`);
+  if (event.gregorian_year) yearBits.push(`${event.gregorian_year} م`);
   return (
     <section className="mt-10 px-5">
       <SectionHeader
         icon={<Calendar className="size-3.5" />}
-        eyebrow="التقويم التاريخي"
-        title="حدث في مثل هذا اليوم"
+        eyebrow="في مثل هذا اليوم"
+        title="حدث من تاريخنا"
       />
       <Link
         to={href as "/"}
@@ -437,28 +441,14 @@ function OnThisDayCalendarCard() {
       >
         <div className="absolute -left-10 -top-10 size-32 rounded-full bg-gold/15 blur-3xl" />
         <div className="relative">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[10px] tracking-[0.25em] text-gold">
-              {gregorianLabel(main)} · {main.year}
-            </p>
-            <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
-              {IMPORTANCE_LABEL[main.importance]}
-            </span>
-          </div>
-          {hijri && <p className="mt-0.5 text-[10px] text-white/50">الموافق {hijri}</p>}
-          <h3 className="font-display mt-1 text-lg font-bold leading-snug">{main.title}</h3>
-          <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{main.description}</p>
-          <div className="mt-3 flex items-center justify-between text-[11px]">
-            <span className="rounded-full border border-white/10 px-2 py-0.5 text-white/70">
-              {CALENDAR_TYPE_GLYPHS[main.type]} {CALENDAR_TYPE_LABELS[main.type]}
-            </span>
+          {yearBits.length > 0 && (
+            <p className="text-[10px] tracking-[0.25em] text-gold">{yearBits.join(" / ")}</p>
+          )}
+          <h3 className="font-display mt-1 text-lg font-bold leading-snug">{event.title}</h3>
+          <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{event.body}</p>
+          <div className="mt-3 flex items-center justify-end text-[11px]">
             <span className="flex items-center gap-1 text-gold">اقرأ المزيد <ChevronLeft className="size-3" /></span>
           </div>
-          {events.length > 1 && (
-            <p className="mt-3 text-[10px] text-white/55">
-              +{events.length - 1} أحداث أخرى في نفس اليوم
-            </p>
-          )}
         </div>
       </Link>
     </section>
