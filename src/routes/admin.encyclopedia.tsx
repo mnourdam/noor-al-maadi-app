@@ -311,8 +311,27 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     enabled: value?.enabled ?? true,
     body: JSON.stringify(value?.body ?? {}, null, 2),
     metadata: JSON.stringify(value?.metadata ?? {}, null, 2),
+    timeline_year: value?.timeline_year == null ? "" : String(value.timeline_year),
+    timeline_start_year: value?.timeline_start_year == null ? "" : String(value.timeline_start_year),
+    timeline_end_year: value?.timeline_end_year == null ? "" : String(value.timeline_end_year),
+    timeline_hijri: value?.timeline_hijri ?? "",
+    timeline_order: value?.timeline_order == null ? "" : String(value.timeline_order),
+    timeline_category: value?.timeline_category ?? "",
+    timeline_tone: value?.timeline_tone ?? "",
+    timeline_glyph: value?.timeline_glyph ?? "",
   });
   const [busy, setBusy] = useState(false);
+
+  const intOrNull = (s: string): number | null => {
+    const t = s.trim();
+    if (!t) return null;
+    const n = parseInt(t, 10);
+    return Number.isFinite(n) ? n : null;
+  };
+  const strOrNull = (s: string): string | null => {
+    const t = s.trim();
+    return t ? t : null;
+  };
 
   const save = async () => {
     if (!form.slug.trim()) return onError("slug مطلوب.");
@@ -321,6 +340,9 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     let body: any, metadata: any;
     try { body = JSON.parse(form.body || "{}"); } catch (e: any) { return onError(`body ليس JSON صحيح: ${e.message}`); }
     try { metadata = JSON.parse(form.metadata || "{}"); } catch (e: any) { return onError(`metadata ليس JSON صحيح: ${e.message}`); }
+    if (form.timeline_category && !TIMELINE_CATEGORIES.includes(form.timeline_category as any)) {
+      return onError(`timeline_category يجب أن يكون: ${TIMELINE_CATEGORIES.join(", ")}.`);
+    }
 
     setBusy(true);
     const payload = {
@@ -331,6 +353,14 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
       summary: form.summary.trim() || null,
       body, metadata,
       enabled: form.enabled,
+      timeline_year: intOrNull(form.timeline_year),
+      timeline_start_year: intOrNull(form.timeline_start_year),
+      timeline_end_year: intOrNull(form.timeline_end_year),
+      timeline_hijri: strOrNull(form.timeline_hijri),
+      timeline_order: intOrNull(form.timeline_order) ?? 0,
+      timeline_category: strOrNull(form.timeline_category),
+      timeline_tone: strOrNull(form.timeline_tone),
+      timeline_glyph: strOrNull(form.timeline_glyph),
     };
     const { error } = isNew
       ? await supabase.from("encyclopedia_entities" as any).insert(payload)
