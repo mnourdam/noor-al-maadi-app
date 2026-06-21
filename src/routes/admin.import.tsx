@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark, Search, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { validateCampaign } from "@/lib/campaignStorage";
 import type { Campaign } from "@/types/campaign";
 
 
-type ImportType = "daily_facts" | "today_in_history_events" | "notifications" | "campaigns" | "encyclopedia";
+type ImportType = "daily_facts" | "today_in_history_events" | "notifications" | "campaigns" | "encyclopedia" | "investigations";
 
 export const Route = createFileRoute("/admin/import")({
   head: () => ({
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/admin/import")({
   }),
   validateSearch: (s: Record<string, unknown>): { type?: ImportType } => {
     const t = s.type as string | undefined;
-    if (t === "daily_facts" || t === "today_in_history_events" || t === "notifications" || t === "campaigns" || t === "encyclopedia") {
+    if (t === "daily_facts" || t === "today_in_history_events" || t === "notifications" || t === "campaigns" || t === "encyclopedia" || t === "investigations") {
       return { type: t };
     }
     return {};
@@ -49,12 +49,14 @@ function ImportPage() {
           <TypeBtn active={active === "notifications"} onClick={() => setActive("notifications")} icon={<Bell className="h-4 w-4" />}>مسودات إشعارات</TypeBtn>
           <TypeBtn active={active === "campaigns"} onClick={() => setActive("campaigns")} icon={<Sword className="h-4 w-4" />}>حملات</TypeBtn>
           <TypeBtn active={active === "encyclopedia"} onClick={() => setActive("encyclopedia")} icon={<Landmark className="h-4 w-4" />}>الموسوعة</TypeBtn>
+          <TypeBtn active={active === "investigations"} onClick={() => setActive("investigations")} icon={<Search className="h-4 w-4" />}>التحقيقات</TypeBtn>
         </div>
 
         {active === "daily_facts" && <Importer key="f" config={dailyFactsConfig} />}
         {active === "today_in_history_events" && <Importer key="e" config={todayEventsConfig} />}
         {active === "notifications" && <Importer key="n" config={notificationsConfig} />}
         {active === "encyclopedia" && <Importer key="enc" config={encyclopediaConfig} />}
+        {active === "investigations" && <Importer key="inv" config={investigationsConfig} />}
         {active === "campaigns" && <CampaignImporter />}
       </div>
     </div>
@@ -559,6 +561,102 @@ const encyclopediaConfig: ImportConfig<EncRow> = {
   allowOverwrite: true,
   conflictTarget: "entity_type,slug",
   overwriteFields: ["title", "subtitle", "summary", "body", "metadata", "enabled"],
+};
+
+// ---- Investigations ----
+
+interface InvRow {
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  difficulty: string;
+  reward: any;
+  steps: any[];
+  related_entities: any[];
+  enabled: boolean;
+}
+
+const investigationsConfig: ImportConfig<InvRow> = {
+  label: "investigations",
+  table: "investigations",
+  example: `[
+  {
+    "slug": "saqifah-investigation",
+    "title": "ماذا حدث في السقيفة؟",
+    "subtitle": "تحقيق في لحظة انتقال القيادة",
+    "description": "اكشف القرائن وحدّد ما جرى في سقيفة بني ساعدة.",
+    "difficulty": "easy",
+    "reward": { "hearts": 2, "xp": 40, "coins": 20 },
+    "related_entities": ["event:saqifah-meeting","figure:abu-bakr","landmark:saqifah-bani-saidah"],
+    "steps": [
+      { "type": "briefing",   "title": "بداية القضية", "text": "..." },
+      { "type": "evidence",   "id": "e1", "title": "قرينة تاريخية", "text": "..." },
+      { "type": "question",   "prompt": "ما الأقرب لما جرى؟", "options": ["...","..."], "correctAnswer": 1 },
+      { "type": "decision",   "prompt": "ماذا تختار؟", "options": ["...","..."], "correctAnswer": 0 },
+      { "type": "conclusion", "title": "الخلاصة", "text": "..." }
+    ],
+    "enabled": true
+  }
+]`,
+  validate: (row, i) => {
+    if (!row || typeof row !== "object") return { ok: false, error: `الصف ${i + 1}: ليس كائن JSON.` };
+    const slug = typeof row.slug === "string" ? row.slug.trim() : "";
+    const title = typeof row.title === "string" ? row.title.trim() : "";
+    if (!slug) return { ok: false, error: `الصف ${i + 1}: slug مطلوب.` };
+    if (!/^[a-z0-9-]+$/.test(slug)) return { ok: false, error: `الصف ${i + 1}: slug يجب أن يكون أحرف صغيرة وأرقام و-.` };
+    if (!title) return { ok: false, error: `الصف ${i + 1}: title مطلوب.` };
+    const difficulty = typeof row.difficulty === "string" && row.difficulty.trim() ? row.difficulty.trim() : "easy";
+    const reward = row.reward && typeof row.reward === "object" && !Array.isArray(row.reward) ? row.reward : {};
+    const steps = Array.isArray(row.steps) ? row.steps : [];
+    const related = Array.isArray(row.related_entities) ? row.related_entities : [];
+    const allowedStepTypes = new Set(["briefing", "evidence", "question", "decision", "conclusion"]);
+    for (let s = 0; s < steps.length; s++) {
+      const st = steps[s];
+      if (!st || typeof st !== "object" || !allowedStepTypes.has(st.type)) {
+        return { ok: false, error: `الصف ${i + 1}: الخطوة #${s + 1} نوعها غير صالح.` };
+      }
+      if ((st.type === "question" || st.type === "decision") && !Array.isArray(st.options)) {
+        return { ok: false, error: `الصف ${i + 1}: الخطوة #${s + 1} (${st.type}) تحتاج options.` };
+      }
+    }
+    return {
+      ok: true,
+      row: {
+        slug, title,
+        subtitle: typeof row.subtitle === "string" && row.subtitle.trim() ? row.subtitle.trim() : null,
+        description: typeof row.description === "string" && row.description.trim() ? row.description.trim() : null,
+        difficulty,
+        reward, steps, related_entities: related,
+        enabled: row.enabled === false ? false : true,
+      },
+    };
+  },
+  rowKey: (r) => `inv|${r.slug}`,
+  dedupeColumns: ["slug"],
+  buildDedupeFilter: (rows) => ({ slug: Array.from(new Set(rows.map((r) => r.slug))) }),
+  matchExisting: (e, r) => e.slug === r.slug,
+  preview: (r) => {
+    const reward = r.reward ?? {};
+    const qCount = r.steps.filter((s: any) => s?.type === "question" || s?.type === "decision").length;
+    return (
+      <div>
+        <div className="text-xs text-amber-300">
+          {r.slug} · {r.difficulty}{r.enabled ? "" : " · معطّل"}
+        </div>
+        <div className="font-medium">{r.title}{r.subtitle ? ` — ${r.subtitle}` : ""}</div>
+        <div className="text-xs text-slate-400">
+          {r.steps.length} خطوة · {qCount} سؤال
+          {reward.hearts ? ` · ❤️${reward.hearts}` : ""}
+          {reward.xp ? ` · XP+${reward.xp}` : ""}
+          {reward.coins ? ` · 🪙${reward.coins}` : ""}
+        </div>
+      </div>
+    );
+  },
+  allowOverwrite: true,
+  conflictTarget: "slug",
+  overwriteFields: ["title", "subtitle", "description", "difficulty", "reward", "steps", "related_entities", "enabled"],
 };
 
 // ============================================================

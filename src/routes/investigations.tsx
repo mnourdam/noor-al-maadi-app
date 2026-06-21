@@ -1,7 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Search, ChevronLeft, Check, Coins, Star } from "lucide-react";
+import { Search, ChevronLeft, Check, Coins, Star, Heart, Loader2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { INVESTIGATION_REGISTRY } from "@/lib/investigations";
+import {
+  useSupabaseInvestigations,
+  countQuestions,
+  type InvestigationRow,
+  type InvestigationReward,
+} from "@/lib/investigations-source";
 import { useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/investigations")({
@@ -11,11 +17,27 @@ export const Route = createFileRoute("/investigations")({
 
 function InvestigationsIndex() {
   const { profile } = useProfile();
+  const { rows } = useSupabaseInvestigations();
+
+  // Hide legacy items whose slug/id was overridden by a Supabase investigation.
+  const supabaseSlugs = new Set((rows ?? []).map((r) => r.slug));
+  const legacyVisible = INVESTIGATION_REGISTRY.filter((l) => !supabaseSlugs.has(l.id));
+
   return (
     <AppShell>
-      <Screen title="التحقيقات التاريخية" subtitle="اكشف القرائن، استنتج الإجابة، واربح الدنانير">
+      <Screen title="التحقيقات التاريخية" subtitle="اكشف القرائن، استنتج الإجابة، واربح القلوب والدنانير">
+        {rows === null && (
+          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> جارٍ التحميل…
+          </div>
+        )}
+
         <div className="space-y-3">
-          {INVESTIGATION_REGISTRY.map((inv) => {
+          {(rows ?? []).map((inv) => (
+            <SupabaseRow key={inv.id} inv={inv} done={profile.investigationsCompleted.includes(inv.slug)} />
+          ))}
+
+          {legacyVisible.map((inv) => {
             const done = profile.investigationsCompleted.includes(inv.id);
             return (
               <Link
@@ -38,8 +60,43 @@ function InvestigationsIndex() {
               </Link>
             );
           })}
+
+          {rows !== null && rows.length === 0 && legacyVisible.length === 0 && (
+            <div className="rounded-2xl border border-white/10 bg-surface p-6 text-center text-sm text-muted-foreground">
+              لا توجد تحقيقات متاحة حاليًا.
+            </div>
+          )}
         </div>
       </Screen>
     </AppShell>
+  );
+}
+
+function SupabaseRow({ inv, done }: { inv: InvestigationRow; done: boolean }) {
+  const reward = (inv.reward ?? {}) as InvestigationReward;
+  const steps = Array.isArray(inv.steps) ? inv.steps : [];
+  return (
+    <Link
+      to="/investigation/$id"
+      params={{ id: inv.slug }}
+      className={`flex items-center gap-3 rounded-2xl border p-4 ${done ? "border-gold/40 bg-gold/5" : "border-white/10 bg-surface"}`}
+    >
+      <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
+        <Search className="size-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-display truncate text-sm font-bold">{inv.title}</p>
+        {inv.subtitle && (
+          <p className="truncate text-[11px] text-muted-foreground">{inv.subtitle}</p>
+        )}
+        <p className="mt-0.5 inline-flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+          <span className="text-amber-300">{steps.length} خطوة · {countQuestions(steps)} سؤال</span>
+          {reward.hearts ? <span className="inline-flex items-center gap-1 text-rose-300"><Heart className="size-3" /> +{reward.hearts}</span> : null}
+          {reward.xp ? <span className="inline-flex items-center gap-1 text-gold"><Star className="size-3" /> +{reward.xp}</span> : null}
+          {reward.coins ? <span className="inline-flex items-center gap-1 text-gold"><Coins className="size-3" /> +{reward.coins}</span> : null}
+        </p>
+      </div>
+      {done ? <Check className="size-4 text-gold" /> : <ChevronLeft className="size-4 text-muted-foreground" />}
+    </Link>
   );
 }

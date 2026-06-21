@@ -1,8 +1,14 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, Lightbulb, ChevronRight, Check, X, Trophy, Coins, BookOpen, Lock } from "lucide-react";
+import { Search, ChevronRight, Check, X, Trophy, Coins, BookOpen, Heart, Star, Loader2, Lightbulb, Lock } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { getInvestigation, investigationScopeKey } from "@/lib/investigations";
+import {
+  useSupabaseInvestigation,
+  type InvestigationRow,
+  type InvestigationReward,
+  type InvestigationStep,
+} from "@/lib/investigations-source";
 import { useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/investigation/$id")({
@@ -12,20 +18,302 @@ export const Route = createFileRoute("/investigation/$id")({
 
 function InvestigationPage() {
   const { id } = useParams({ from: "/investigation/$id" });
-  const inv = getInvestigation(id);
+  // Try Supabase first by slug; fall back to legacy by id.
+  const { row, error } = useSupabaseInvestigation(id);
 
-  if (!inv) {
+  if (row === undefined && !error) {
     return (
       <AppShell>
-        <div className="px-5 pt-20 text-center text-muted-foreground">القضية غير موجودة.</div>
+        <div className="flex items-center justify-center gap-2 px-5 pt-20 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" /> جارٍ التحميل…
+        </div>
       </AppShell>
     );
   }
 
-  return <InvestigationGame key={inv.id} inv={inv} />;
+  if (row) return <SupabaseInvestigationGame key={row.id} row={row} />;
+
+  // Fallback: legacy in-code investigation by id.
+  const legacy = getInvestigation(id);
+  if (legacy) return <LegacyInvestigationGame key={legacy.id} inv={legacy} />;
+
+  return (
+    <AppShell>
+      <div className="px-5 pt-20 text-center text-muted-foreground">القضية غير موجودة.</div>
+    </AppShell>
+  );
 }
 
-function InvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof getInvestigation>> }) {
+// ============================================================
+// Supabase player — renders briefing/evidence/question/decision/conclusion
+// ============================================================
+function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
+  const {
+    profile, completeInvestigation, addDinars, awardBadge, findArtifact,
+    loseHeart, hasHearts, recoverHeartFromActivity,
+  } = useProfile();
+
+  const steps: InvestigationStep[] = useMemo(
+    () => (Array.isArray(row.steps) ? row.steps : []),
+    [row.steps],
+  );
+  const reward = (row.reward ?? {}) as InvestigationReward;
+  const related: string[] = Array.isArray(row.related_entities) ? row.related_entities : [];
+
+  const alreadyDone = profile.investigationsCompleted.includes(row.slug);
+
+  const [idx, setIdx] = useState(0);
+  const [picked, setPicked] = useState<number | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [finished, setFinished] = useState(alreadyDone);
+  const [heartGain, setHeartGain] = useState<number>(0);
+
+  const step = steps[idx];
+  const isLast = idx >= steps.length - 1;
+  const heartsOut = !hasHearts();
+
+  const onConfirm = () => {
+    if (!step) return;
+    if (step.type === "question" || step.type === "decision") {
+      if (picked == null || revealed) return;
+      if (heartsOut && step.type === "question") return;
+      const correctIndex = step.correctAnswer;
+      const isCorrect = typeof correctIndex === "number" ? picked === correctIndex : true;
+      if (step.type === "question" && !isCorrect) loseHeart();
+      if (isCorrect) setCorrectCount((c) => c + 1);
+      setRevealed(true);
+    }
+  };
+
+  const grantRewards = () => {
+    const xp = Math.max(0, Number(reward.xp ?? 0));
+    const coins = Math.max(0, Number(reward.coins ?? 0));
+    const hearts = Math.max(0, Number(reward.hearts ?? 0));
+
+    completeInvestigation(row.slug, xp); // adds xp + auto-coins from xp/4
+    const autoCoins = Math.max(1, Math.floor(xp / 4));
+    const deltaCoins = Math.max(0, coins - autoCoins);
+    if (deltaCoins > 0) addDinars(deltaCoins);
+    if (reward.badge) awardBadge(reward.badge);
+    if (reward.artifact) findArtifact(reward.artifact);
+
+    // Heart restoration — respects cooldown so the same investigation
+    // can't be farmed back-to-back for hearts.
+    let gained = 0;
+    for (let i = 0; i < hearts; i++) {
+      const out = recoverHeartFromActivity({ kind: "investigation", id: `${row.slug}:${i}` });
+      if (out.ok) gained++;
+    }
+    setHeartGain(gained);
+  };
+
+  const onNext = () => {
+    setPicked(null);
+    setRevealed(false);
+    if (!isLast) { setIdx((i) => i + 1); return; }
+    if (!alreadyDone) grantRewards();
+    setFinished(true);
+  };
+
+  if (steps.length === 0) {
+    return (
+      <AppShell>
+        <div className="px-5 pt-20 text-center text-muted-foreground">لا توجد خطوات لهذا التحقيق.</div>
+      </AppShell>
+    );
+  }
+
+  const questionLikeIndex = steps.slice(0, idx + 1).filter((s) => s.type === "question" || s.type === "decision").length;
+  const totalQuestionLike = steps.filter((s) => s.type === "question" || s.type === "decision").length;
+
+  return (
+    <AppShell>
+      <div className="px-5 pt-6">
+        <Link to="/investigations" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+          <ChevronRight className="size-4" /> كل التحقيقات
+        </Link>
+
+        <div className="mt-4 rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
+          <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold">
+            <Search className="size-3.5" /> تحقيق تاريخي · {row.difficulty}
+          </div>
+          <h1 className="font-display mt-2 text-lg font-bold leading-snug">{row.title}</h1>
+          {row.subtitle && <p className="mt-1 text-[12px] text-gold/90">{row.subtitle}</p>}
+          {row.description && <p className="mt-2 text-[12px] leading-7 text-foreground/90">{row.description}</p>}
+        </div>
+
+        {related.length > 0 && (
+          <section className="mt-5">
+            <h2 className="font-display mb-2 text-sm font-bold">مراجع موسوعية</h2>
+            <div className="flex flex-wrap gap-2">
+              {related.map((rid) => (
+                <Link
+                  key={rid}
+                  to="/encyclopedia/entity/$id"
+                  params={{ id: rid }}
+                  className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold hover:bg-gold/10"
+                >
+                  <BookOpen className="size-3" /> {rid}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {!finished && step && (
+          <section className="mt-6">
+            <h2 className="font-display mb-2 text-sm font-bold">
+              خطوة {(idx + 1).toLocaleString("en-US")}/{steps.length.toLocaleString("en-US")}
+              {(step.type === "question" || step.type === "decision") && (
+                <span className="ms-2 text-[11px] text-muted-foreground">
+                  سؤال {questionLikeIndex}/{totalQuestionLike}
+                </span>
+              )}
+            </h2>
+
+            {heartsOut && step.type === "question" && (
+              <div className="mb-3 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-[12px] text-red-100">
+                نفدت قلوبك. أكمل بعد استرداد قلب.
+              </div>
+            )}
+
+            <StepCard step={step} picked={picked} setPicked={setPicked} revealed={revealed} heartsOut={heartsOut} />
+
+            <div className="mt-4">
+              {(step.type === "question" || step.type === "decision") && !revealed ? (
+                <button
+                  onClick={onConfirm}
+                  disabled={picked == null || (heartsOut && step.type === "question")}
+                  className="flex w-full items-center justify-center rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground disabled:opacity-40"
+                >
+                  تأكيد الإجابة
+                </button>
+              ) : (
+                <button
+                  onClick={onNext}
+                  className="flex w-full items-center justify-center rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground"
+                >
+                  {isLast ? "إنهاء التحقيق" : "التالي"}
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
+        {finished && (
+          <section className="mt-6 rounded-3xl border border-gold/30 bg-gradient-to-br from-gold/15 to-transparent p-5 text-center">
+            <Trophy className="mx-auto size-7 text-gold" />
+            <p className="font-display mt-2 text-lg font-bold text-gold">قضية محلولة!</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">
+              {correctCount}/{totalQuestionLike} إجابات صحيحة
+              {!alreadyDone && (
+                <>
+                  {reward.xp ? <> · <Star className="inline size-3" /> +{reward.xp}</> : null}
+                  {reward.coins ? <> · <Coins className="inline size-3" /> +{reward.coins}</> : null}
+                  {heartGain > 0 ? <> · <Heart className="inline size-3 text-rose-300" /> +{heartGain}</> : null}
+                </>
+              )}
+            </p>
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <Link to="/investigations" className="text-sm text-gold">قضية أخرى</Link>
+              <Link to="/campaigns" className="text-xs text-muted-foreground">العودة للحملات</Link>
+            </div>
+          </section>
+        )}
+      </div>
+    </AppShell>
+  );
+}
+
+function StepCard({
+  step, picked, setPicked, revealed, heartsOut,
+}: {
+  step: InvestigationStep;
+  picked: number | null;
+  setPicked: (n: number) => void;
+  revealed: boolean;
+  heartsOut: boolean;
+}) {
+  if (step.type === "briefing") {
+    return (
+      <div className="rounded-2xl border border-gold/25 bg-surface p-4">
+        <div className="inline-flex items-center gap-2 text-[10px] text-gold">
+          <Lightbulb className="size-3.5" /> بداية القضية
+        </div>
+        {step.title && <p className="font-display mt-1 text-[14px] font-bold">{step.title}</p>}
+        <p className="mt-2 whitespace-pre-line text-[13px] leading-7 text-foreground/90">{step.text}</p>
+      </div>
+    );
+  }
+  if (step.type === "evidence") {
+    return (
+      <div className="rounded-2xl border border-amber-400/30 bg-amber-500/5 p-4">
+        <div className="inline-flex items-center gap-2 text-[10px] text-amber-300">
+          <Search className="size-3.5" /> قرينة تاريخية
+        </div>
+        {step.title && <p className="font-display mt-1 text-[14px] font-bold">{step.title}</p>}
+        <p className="mt-2 whitespace-pre-line text-[13px] leading-7 text-foreground/90">{step.text}</p>
+      </div>
+    );
+  }
+  if (step.type === "conclusion") {
+    return (
+      <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/5 p-4">
+        <div className="inline-flex items-center gap-2 text-[10px] text-emerald-300">
+          <Trophy className="size-3.5" /> الخلاصة
+        </div>
+        {step.title && <p className="font-display mt-1 text-[14px] font-bold">{step.title}</p>}
+        <p className="mt-2 whitespace-pre-line text-[13px] leading-7 text-foreground/90">{step.text}</p>
+      </div>
+    );
+  }
+  // question / decision
+  const isQuestion = step.type === "question";
+  const correctIndex = step.correctAnswer;
+  return (
+    <div className="rounded-2xl border border-gold/25 bg-surface p-4">
+      <div className="inline-flex items-center gap-2 text-[10px] text-gold">
+        {isQuestion ? <Lightbulb className="size-3.5" /> : <Lock className="size-3.5" />}
+        {isQuestion ? "سؤال" : "قرار"}
+      </div>
+      <p className="font-display mt-2 text-[14px] font-bold leading-snug">{step.prompt}</p>
+      <div className="mt-3 space-y-2">
+        {step.options.map((opt, i) => {
+          const isPicked = picked === i;
+          const isCorrect = typeof correctIndex === "number" && i === correctIndex;
+          let style = "border-white/10 bg-background/60";
+          if (revealed) {
+            if (isCorrect) style = "border-emerald-500/60 bg-emerald-500/10";
+            else if (isPicked) style = isQuestion ? "border-red-500/60 bg-red-500/10" : "border-gold/60 bg-gold/10";
+          } else if (isPicked) style = "border-gold/60 bg-gold/10";
+          return (
+            <button
+              key={i}
+              disabled={revealed || (heartsOut && isQuestion)}
+              onClick={() => setPicked(i)}
+              className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-right text-[12px] transition ${style}`}
+            >
+              <span>{opt}</span>
+              {revealed && isCorrect && <Check className="size-3.5 text-emerald-400" />}
+              {revealed && isPicked && !isCorrect && isQuestion && <X className="size-3.5 text-red-400" />}
+            </button>
+          );
+        })}
+      </div>
+      {revealed && step.explanation && (
+        <p className="mt-3 rounded-xl border border-gold/20 bg-gold/5 p-3 text-[12px] leading-6 text-foreground/90">
+          {step.explanation}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Legacy player (unchanged) — backward compatibility
+// ============================================================
+function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof getInvestigation>> }) {
   const {
     profile, completeInvestigation, awardBadge, findArtifact, unlockCharacter,
     buyHint, hintsRevealed, loseHeart, hasHearts, addDinars,
