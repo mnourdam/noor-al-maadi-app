@@ -455,5 +455,3 @@ function OnThisDayCalendarCard({ event }: { event: TodayInHistoryEvent }) {
     </section>
   );
 }
-  );
-}
