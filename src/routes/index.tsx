@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
-  dailyStory, todayOnThisDay, ERAS, CAMPAIGNS, ARTIFACTS, CHARACTERS,
+  dailyStory, ERAS, CAMPAIGNS, ARTIFACTS, CHARACTERS,
   levelFor, currentSeason, UPCOMING_CAMPAIGNS,
   UPCOMING_REGIONS, MYSTERY_CHARACTERS, FLAGSHIP_CHAPTERS,
   nextActiveCampaign,
