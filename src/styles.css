@@ -477,6 +477,10 @@
     border-radius: 4px;
   }
   .parchment-rail ::-webkit-scrollbar-track { background: transparent; }
+
+  /* Generic hide-scrollbar utility for horizontal rails */
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 }
 
 /* ============================================================
