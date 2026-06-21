@@ -45,6 +45,7 @@ import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
+import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
@@ -241,6 +242,11 @@ const BattleIdRoute = BattleIdRouteImport.update({
   path: '/battle/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminOfflineRoute = AdminOfflineRouteImport.update({
+  id: '/admin/offline',
+  path: '/admin/offline',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   id: '/admin/notifications',
   path: '/admin/notifications',
@@ -349,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/offline': typeof AdminOfflineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
@@ -400,6 +407,7 @@ export interface FileRoutesByTo {
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/offline': typeof AdminOfflineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
@@ -453,6 +461,7 @@ export interface FileRoutesById {
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/offline': typeof AdminOfflineRoute
   '/battle/$id': typeof BattleIdRoute
   '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
@@ -508,6 +517,7 @@ export interface FileRouteTypes {
     | '/admin/investigations'
     | '/admin/migration'
     | '/admin/notifications'
+    | '/admin/offline'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
@@ -559,6 +569,7 @@ export interface FileRouteTypes {
     | '/admin/investigations'
     | '/admin/migration'
     | '/admin/notifications'
+    | '/admin/offline'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
@@ -611,6 +622,7 @@ export interface FileRouteTypes {
     | '/admin/investigations'
     | '/admin/migration'
     | '/admin/notifications'
+    | '/admin/offline'
     | '/battle/$id'
     | '/campaigns/$era'
     | '/city/$id'
@@ -665,6 +677,7 @@ export interface RootRouteChildren {
   AdminInvestigationsRoute: typeof AdminInvestigationsRoute
   AdminMigrationRoute: typeof AdminMigrationRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminOfflineRoute: typeof AdminOfflineRoute
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
   CompareIdRoute: typeof CompareIdRoute
@@ -934,6 +947,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BattleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/offline': {
+      id: '/admin/offline'
+      path: '/admin/offline'
+      fullPath: '/admin/offline'
+      preLoaderRoute: typeof AdminOfflineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/notifications': {
       id: '/admin/notifications'
       path: '/admin/notifications'
@@ -1122,6 +1142,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminInvestigationsRoute: AdminInvestigationsRoute,
   AdminMigrationRoute: AdminMigrationRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminOfflineRoute: AdminOfflineRoute,
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
   CompareIdRoute: CompareIdRoute,
