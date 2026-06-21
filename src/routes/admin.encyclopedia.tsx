@@ -425,6 +425,58 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
           </Field>
         </div>
 
+        <fieldset className="mt-4 rounded-lg border border-amber-500/20 bg-slate-900/40 p-3">
+          <legend className="px-2 text-xs font-bold text-amber-200">الخط الزمني الكبير</legend>
+          <p className="mb-2 text-[11px] text-slate-400">
+            املأ سنة واحدة لنقاط (معركة، حدث، كتاب) أو سنتَي بداية ونهاية لشريط (دولة، شخصية).
+          </p>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Field label="السنة (نقطة) — ميلادي">
+              <input value={form.timeline_year} onChange={e => setForm(f => ({ ...f, timeline_year: e.target.value }))}
+                placeholder="1187" dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm" />
+            </Field>
+            <Field label="سنة البداية (شريط)">
+              <input value={form.timeline_start_year} onChange={e => setForm(f => ({ ...f, timeline_start_year: e.target.value }))}
+                placeholder="1137" dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm" />
+            </Field>
+            <Field label="سنة النهاية (شريط)">
+              <input value={form.timeline_end_year} onChange={e => setForm(f => ({ ...f, timeline_end_year: e.target.value }))}
+                placeholder="1193" dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm" />
+            </Field>
+            <Field label="التصنيف">
+              <select value={form.timeline_category}
+                onChange={e => setForm(f => ({ ...f, timeline_category: e.target.value }))}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
+                <option value="">(تلقائي حسب النوع)</option>
+                {TIMELINE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
+            <Field label="التاريخ الهجري (عرض)">
+              <input value={form.timeline_hijri} onChange={e => setForm(f => ({ ...f, timeline_hijri: e.target.value }))}
+                placeholder="583 هـ" dir="rtl"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+            </Field>
+            <Field label="ترتيب (لحسم التساوي)">
+              <input value={form.timeline_order} onChange={e => setForm(f => ({ ...f, timeline_order: e.target.value }))}
+                placeholder="0" dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm" />
+            </Field>
+            <Field label="اللون (tone)">
+              <input value={form.timeline_tone} onChange={e => setForm(f => ({ ...f, timeline_tone: e.target.value }))}
+                placeholder="gold | emerald | violet | ..." dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs" />
+            </Field>
+            <Field label="الأيقونة (glyph)">
+              <input value={form.timeline_glyph} onChange={e => setForm(f => ({ ...f, timeline_glyph: e.target.value }))}
+                placeholder="⚔️" dir="ltr"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+            </Field>
+          </div>
+        </fieldset>
+
         <label className="mt-3 flex items-center gap-2 text-sm">
           <input type="checkbox" checked={form.enabled}
             onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))} />
