@@ -237,7 +237,7 @@ function Index() {
 
       {/* ============ DAILY MISSIONS ============ */}
       {/* ============ TODAY IN HISTORY ============ */}
-      {mounted && <OnThisDayCalendarCard />}
+      {mounted && todayEvent && <OnThisDayCalendarCard event={todayEvent} />}
 
       {/* ============ EXPLORE HISTORY ============ */}
       <section className="mt-10 px-5">
