@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Search, Map as MapIcon, ChevronLeft, Crown, Lock, Compass, Play,
   Hourglass, Calendar, Heart, Coins, Trophy, Package, BookOpen,
-  Swords, Sparkles, Bell, Gem,
+  Swords, Sparkles, Bell, Gem, Target, Flame,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -16,6 +16,7 @@ import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
 import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS } from "@/lib/notifications";
 import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
+import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import salahuddinHero from "@/assets/salahuddin-hero.jpg";
 import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
@@ -23,11 +24,6 @@ import heroDesertCaravan from "@/assets/hero-desert-caravan.jpg";
 import heroManuscriptLamp from "@/assets/hero-manuscript-lamp.jpg";
 import heroBattlefield from "@/assets/hero-battlefield.jpg";
 import heroFortress from "@/assets/hero-fortress.jpg";
-
-const HERO_BACKGROUNDS = [
-  salahuddinHero, heroCitySunrise, heroDesertCaravan,
-  heroManuscriptLamp, heroBattlefield, heroFortress,
-];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,12 +35,22 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+// ============================================================
+// Hero carousel slide types
+// ============================================================
+type HeroSlide =
+  | { kind: "campaign"; bg: string; eyebrow: string; title: string; subtitle: string; quote?: string; progress?: { done: number; total: number }; cta: { label: string; link: React.ReactNode } }
+  | { kind: "history"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } }
+  | { kind: "discovery"; bg: string; eyebrow: string; title: string; subtitle: string; icon: string; cta: { label: string; link: React.ReactNode } }
+  | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
+
 function Index() {
   const { profile, touchStreak } = useProfile();
   const { account, user } = useAccount();
   const displayName = account?.username ?? (user ? profile.name : profile.name);
   const [mounted, setMounted] = useState(false);
   const { selected: todayEvent } = useTodayInHistoryEvent();
+  const stats = useRealCollectionStats();
 
   useEffect(() => {
     setMounted(true);
@@ -64,17 +70,11 @@ function Index() {
   }, [touchStreak, todayEvent?.id]);
 
   const lvl = levelFor(profile.points);
-  const [bgIndex, setBgIndex] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setBgIndex((i) => (i + 1) % HERO_BACKGROUNDS.length), 5000);
-    return () => clearInterval(id);
-  }, []);
 
-  // ===== Active campaign =====
+  // ===== Active campaign / next chapter =====
   const active = nextActiveCampaign(profile.missionsCompleted);
   const activeEra = active ? ERAS.find((e) => e.id === active.eraId) : undefined;
   const activeDone = active ? active.missions.filter((m) => profile.missionsCompleted.includes(m.id)).length : 0;
-  const activePct  = active ? Math.round((activeDone / active.missions.length) * 100) : 0;
   const activeHasStarted = activeDone > 0;
   const isFlagship = active?.flagship === true;
   const nextChapter = isFlagship
@@ -83,136 +83,219 @@ function Index() {
     : null;
   const nextMission = active?.missions.find((m) => !profile.missionsCompleted.includes(m.id)) ?? null;
 
+  // ===== Build hero slides =====
+  const slides = useMemo<HeroSlide[]>(() => {
+    const out: HeroSlide[] = [];
+    if (active && activeEra) {
+      out.push({
+        kind: "campaign",
+        bg: salahuddinHero,
+        eyebrow: isFlagship ? "رحلتك الحالية" : "حملتك النشطة",
+        title: active.title,
+        subtitle: isFlagship && nextChapter
+          ? `الفصل ${nextChapter.index} · ${nextChapter.title}`
+          : (activeHasStarted ? "تابع رحلتك في هذه الحملة." : active.intro),
+        quote: isFlagship && nextChapter?.hook ? `«${nextChapter.hook}»` : undefined,
+        progress: { done: activeDone, total: active.missions.length },
+        cta: {
+          label: activeHasStarted ? "تابع رحلتك" : "ابدأ الرحلة",
+          link: isFlagship && nextChapter
+            ? <Link to="/play/chapter" search={{ id: nextChapter.id }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
+                <Play className="size-4 fill-current" />{activeHasStarted ? "تابع رحلتك" : "ابدأ الرحلة"}
+              </Link>
+            : <Link to="/campaigns/$era" params={{ era: active.eraId }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
+                <Play className="size-4 fill-current" />{activeHasStarted ? "تابع الحملة" : "ابدأ الحملة"}
+              </Link>,
+        },
+      });
+    }
+    if (todayEvent) {
+      const yr = todayEvent.hijri_year ? `${todayEvent.hijri_year} هـ` : (todayEvent.gregorian_year ? `${todayEvent.gregorian_year} م` : "في مثل هذا اليوم");
+      out.push({
+        kind: "history",
+        bg: heroManuscriptLamp,
+        eyebrow: `في مثل هذا اليوم · ${yr}`,
+        title: todayEvent.title,
+        subtitle: todayEvent.body,
+        cta: {
+          label: "اقرأ القصة",
+          link: <Link to={(todayEvent.deep_link ?? "/on-this-day") as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
+            <BookOpen className="size-4" />اقرأ القصة
+          </Link>,
+        },
+      });
+    }
+    if (stats.recent.length > 0) {
+      const r = stats.recent[0];
+      out.push({
+        kind: "discovery",
+        bg: heroFortress,
+        eyebrow: `آخر اكتشافاتك · ${r.kind}`,
+        title: r.title,
+        subtitle: r.subtitle ?? "افتح أرشيفك التاريخي واكتشف ما جمعته.",
+        icon: r.icon,
+        cta: {
+          label: "اعرض في المتحف",
+          link: <Link to="/collection" className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
+            <Gem className="size-4" />اعرض في المتحف
+          </Link>,
+        },
+      });
+    }
+    out.push({
+      kind: "timeline",
+      bg: heroDesertCaravan,
+      eyebrow: "الخط الزمني العظيم",
+      title: "أكثر من 1400 سنة من التاريخ",
+      subtitle: "تجوّل في العصور من البعثة حتى اليوم.",
+      cta: {
+        label: "ابدأ الرحلة الزمنية",
+        link: <Link to="/timeline" className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
+          <Hourglass className="size-4" />ابدأ الرحلة الزمنية
+        </Link>,
+      },
+    });
+    return out;
+  }, [active, activeEra, isFlagship, nextChapter, activeHasStarted, activeDone, todayEvent, stats.recent]);
+
+  // Carousel
+  const [slideIdx, setSlideIdx] = useState(0);
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const id = setInterval(() => setSlideIdx((i) => (i + 1) % slides.length), 7000);
+    return () => clearInterval(id);
+  }, [slides.length]);
+  useEffect(() => { if (slideIdx >= slides.length) setSlideIdx(0); }, [slides.length, slideIdx]);
+  const slide = slides[Math.min(slideIdx, slides.length - 1)] ?? slides[0];
+
   // ===== Stats strip =====
   const hearts = getEffectiveHearts(profile);
-  const battlesCompleted = useMemo(() => {
-    // Count completed missions that look like battles via story id contains battle keywords —
-    // simpler: count all completed missions across all CAMPAIGNS classified as "story" referencing
-    // known battle ids. For now use missionsCompleted length as a proxy with safe label.
-    const ids = new Set(profile.missionsCompleted);
-    return CAMPAIGNS.flatMap((c) => c.missions).filter(
-      (m) => ids.has(m.id) && (m.title.includes("معركة") || m.title.includes("غزوة") || m.title.includes("فتح")),
-    ).length;
-  }, [profile.missionsCompleted]);
-  const collectionCount = profile.artifactsFound.length + profile.charactersUnlocked.length;
-  const eventsDiscovered = profile.storiesRead.length + profile.timelinesCompleted.length;
 
-  // ===== Recently discovered =====
-  const recent = useMemo(() => {
-    type RecentItem = { key: string; kind: string; title: string; subtitle: string; icon: string; to: string };
-    const out: RecentItem[] = [];
-    profile.charactersUnlocked.slice(-4).reverse().forEach((id) => {
-      const c = CHARACTERS.find((x) => x.id === id);
-      if (c) out.push({ key: `c-${id}`, kind: "شخصية", title: c.name, subtitle: c.title, icon: c.avatar, to: "/collection" });
-    });
-    profile.artifactsFound.slice(-4).reverse().forEach((id) => {
-      const a = ARTIFACTS.find((x) => x.id === id);
-      if (a) out.push({ key: `a-${id}`, kind: a.typeLabel, title: a.name, subtitle: a.description, icon: a.icon, to: "/collection" });
-    });
-    return out.slice(0, 6);
-  }, [profile.charactersUnlocked, profile.artifactsFound]);
+  // ===== Today's Objective =====
+  const objective = useMemo(() => {
+    if (active && (nextChapter || nextMission)) {
+      const xp = isFlagship && nextChapter ? (nextChapter.rewards?.points ?? 40) : (nextMission?.reward ?? 20);
+      const dinars = Math.max(5, Math.round(xp / 4));
+      const rewardLabel =
+        isFlagship && nextChapter?.rewards?.artifactIds?.[0]
+          ? (ARTIFACTS.find((a) => a.id === nextChapter!.rewards!.artifactIds![0])?.name ?? "أثر نادر")
+          : isFlagship && nextChapter?.rewards?.characterIds?.[0]
+            ? (CHARACTERS.find((c) => c.id === nextChapter!.rewards!.characterIds![0])?.name ?? "شخصية")
+            : "تقدّم في الحملة";
+      return {
+        title: isFlagship && nextChapter ? nextChapter.title : (nextMission?.title ?? active.title),
+        subtitle: isFlagship && nextChapter
+          ? `أكمل الفصل ${nextChapter.index} من ${active.title}`
+          : `أكمل المهمة التالية في ${active.title}`,
+        xp, dinars, rewardLabel,
+        link: isFlagship && nextChapter
+          ? (<Link to="/play/chapter" search={{ id: nextChapter.id }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+              <Play className="size-4 fill-current" />ابدأ الآن
+            </Link>)
+          : (<Link to="/campaigns/$era" params={{ era: active.eraId }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+              <Play className="size-4 fill-current" />ابدأ الآن
+            </Link>),
+      };
+    }
+    if (todayEvent) {
+      return {
+        title: todayEvent.title,
+        subtitle: "اقرأ حدث اليوم وانطلق في رحلتك.",
+        xp: 15, dinars: 5, rewardLabel: "معرفة جديدة",
+        link: <Link to={(todayEvent.deep_link ?? "/on-this-day") as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+          <BookOpen className="size-4" />ابدأ الآن
+        </Link>,
+      };
+    }
+    return null;
+  }, [active, nextChapter, nextMission, isFlagship, todayEvent]);
 
   return (
     <AppShell>
-      {/* ============ CINEMATIC HERO ============ */}
+      {/* ============ 1. DYNAMIC HERO CAROUSEL ============ */}
       <section className="relative -mt-2 overflow-hidden">
         <div className="relative h-[78vh] min-h-[560px] w-full overflow-hidden">
-          {HERO_BACKGROUNDS.map((src, i) => (
+          {slides.map((s, i) => (
             <img
-              key={src}
-              src={src}
-              alt={active?.title ?? "إرث"}
+              key={`${s.kind}-${i}`}
+              src={s.bg}
+              alt=""
               loading={i === 0 ? "eager" : "lazy"}
               decoding="async"
-              className={`animate-ken-burns absolute inset-0 size-full object-cover transition-opacity duration-[1500ms] ease-in-out ${
-                i === bgIndex ? "opacity-100" : "opacity-0"
-              }`}
+              className={`animate-ken-burns absolute inset-0 size-full object-cover transition-opacity duration-[1200ms] ease-in-out ${i === slideIdx ? "opacity-100" : "opacity-0"}`}
             />
           ))}
           <div className="ink-overlay absolute inset-0" />
           <div className="arabesque-layer" />
-          {Array.from({ length: 14 }).map((_, i) => (
-            <span
-              key={i}
-              className="ember"
-              style={{
-                left: `${(i * 73) % 100}%`,
-                animationDelay: `${(i * 0.7) % 7}s`,
-                animationDuration: `${6 + ((i * 1.3) % 5)}s`,
-              }}
-            />
+          {Array.from({ length: 12 }).map((_, i) => (
+            <span key={i} className="ember" style={{
+              left: `${(i * 73) % 100}%`,
+              animationDelay: `${(i * 0.7) % 7}s`,
+              animationDuration: `${6 + ((i * 1.3) % 5)}s`,
+            }} />
           ))}
 
+          {/* Top greeting strip */}
           <div className="relative z-10 flex items-start justify-between px-5 pt-8">
             <div className="animate-curtain rounded-2xl bg-gradient-to-l from-black/55 via-black/35 to-transparent px-3 py-2 ring-1 ring-white/10 backdrop-blur-sm">
               <p className="text-[11px] tracking-[0.2em] text-gold drop-shadow-[0_1px_4px_oklch(0_0_0/0.6)]">مرحبًا بك، {displayName}</p>
               <p className="font-display mt-1 text-[11px] text-white/80">المستوى {lvl.level} · {lvl.title}</p>
             </div>
+            {profile.streak > 1 && (
+              <div className="animate-curtain inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 ring-1 ring-gold/30 backdrop-blur-sm">
+                <Flame className="size-3.5 text-gold" />
+                <span className="font-display text-[11px] font-bold text-gold">{profile.streak}</span>
+              </div>
+            )}
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 z-10 px-6 pb-10">
-            {active && activeEra ? (
-              <div className="animate-curtain max-w-xl">
+          {/* Slide content */}
+          <div className="absolute inset-x-0 bottom-0 z-10 px-6 pb-12">
+            {slide && (
+              <div key={`slide-${slideIdx}`} className="animate-curtain max-w-xl">
                 <div className="flex items-center gap-2 text-[11px] text-gold">
-                  <Crown className="size-3.5" />
-                  <span className="tracking-[0.25em]">
-                    {isFlagship ? "رحلتك الحالية" : "حملتك النشطة"} · {activeEra.name}
-                  </span>
+                  {slide.kind === "campaign" && <Crown className="size-3.5" />}
+                  {slide.kind === "history" && <Calendar className="size-3.5" />}
+                  {slide.kind === "discovery" && <Gem className="size-3.5" />}
+                  {slide.kind === "timeline" && <Hourglass className="size-3.5" />}
+                  <span className="tracking-[0.25em]">{slide.eyebrow}</span>
                 </div>
                 <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white drop-shadow-[0_4px_18px_oklch(0_0_0/0.6)]">
-                  {active.title}
+                  {slide.kind === "discovery" && <span className="me-2 text-3xl">{slide.icon}</span>}
+                  {slide.title}
                 </h1>
-                <p className="mt-3 text-sm text-white/75">
-                  {isFlagship && nextChapter ? (
-                    <>الفصل {nextChapter.index} · <span className="text-gold">{nextChapter.title}</span></>
-                  ) : (
-                    activeHasStarted ? "تابع رحلتك في هذه الحملة." : active.intro
-                  )}
-                </p>
-                {isFlagship && nextChapter?.hook && (
-                  <p className="mt-2 line-clamp-2 text-[13px] italic text-white/55">«{nextChapter.hook}»</p>
+                <p className="mt-3 line-clamp-3 text-sm text-white/75">{slide.subtitle}</p>
+                {slide.kind === "campaign" && slide.quote && (
+                  <p className="mt-2 line-clamp-2 text-[13px] italic text-white/55">{slide.quote}</p>
                 )}
-
-                <div className="mt-5 flex items-center gap-3">
-                  <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
-                    <div className="h-full bg-gradient-gold transition-all" style={{ width: `${activePct}%` }} />
+                {slide.kind === "campaign" && slide.progress && (
+                  <div className="mt-5 flex items-center gap-3">
+                    <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
+                      <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round((slide.progress.done / slide.progress.total) * 100)}%` }} />
+                    </div>
+                    <span className="text-[11px] text-white/70">{slide.progress.done}/{slide.progress.total} فصل</span>
                   </div>
-                  <span className="text-[11px] text-white/70">{activeDone}/{active.missions.length} فصل</span>
-                </div>
-
+                )}
                 <div className="mt-6 flex items-center gap-3">
-                  {isFlagship && nextChapter ? (
-                    <Link
-                      to="/play/chapter" search={{ id: nextChapter.id }}
-                      className="shadow-gold animate-gold-pulse inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
-                    >
-                      <Play className="size-4 fill-current" />
-                      {activeHasStarted ? "تابع رحلتك" : "ابدأ الرحلة"}
-                    </Link>
-                  ) : (
+                  {slide.cta.link}
+                  {slide.kind === "campaign" && active && (
                     <Link
                       to="/campaigns/$era" params={{ era: active.eraId }}
-                      className="shadow-gold animate-gold-pulse inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
+                      className="glass inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-3 text-xs text-white/80"
                     >
-                      <Play className="size-4 fill-current" />
-                      {activeHasStarted ? "تابع رحلتك" : "ابدأ الحملة"}
+                      استكشف الحملة
                     </Link>
                   )}
-                  <Link
-                    to="/campaigns/$era" params={{ era: active.eraId }}
-                    className="glass inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-3 text-xs text-white/80"
-                  >
-                    كل الفصول
-                  </Link>
                 </div>
               </div>
-            ) : (
+            )}
+            {!slide && (
               <div className="animate-curtain max-w-xl">
                 <div className="flex items-center gap-2 text-[11px] text-gold">
                   <Lock className="size-3.5" />
                   <span className="tracking-[0.25em]">قريبًا · حملة جديدة</span>
                 </div>
-                <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white drop-shadow-[0_4px_18px_oklch(0_0_0/0.6)]">
+                <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white">
                   {UPCOMING_CAMPAIGNS[0]?.name ?? "حملة قادمة"}
                 </h1>
                 <p className="mt-3 line-clamp-3 text-sm text-white/75">
@@ -225,64 +308,72 @@ function Index() {
                 </div>
               </div>
             )}
+
+            {/* Dots */}
+            {slides.length > 1 && (
+              <div className="mt-6 flex items-center gap-1.5">
+                {slides.map((_, i) => (
+                  <button
+                    key={i}
+                    aria-label={`الشريحة ${i + 1}`}
+                    onClick={() => setSlideIdx(i)}
+                    className={`h-1.5 rounded-full transition-all ${i === slideIdx ? "w-8 bg-gold" : "w-1.5 bg-white/30"}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* ============ PROGRESSION STRIP ============ */}
-      <section className="mt-5 px-5">
+      {/* ============ 2. TODAY'S OBJECTIVE ============ */}
+      {objective && (
+        <section className="mt-6 px-5">
+          <SectionHeader icon={<Target className="size-3.5" />} eyebrow="هدفك اليوم" title="ابدأ من هنا" />
+          <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 p-5 shadow-elegant">
+            <div className="arabesque-layer" />
+            <div className="absolute -left-10 -top-10 size-40 rounded-full bg-gold/15 blur-3xl" />
+            <div className="relative">
+              <p className="text-[10px] tracking-[0.25em] text-gold">{objective.subtitle}</p>
+              <p className="font-display mt-1 text-lg font-bold leading-snug shimmer-text">{objective.title}</p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
+                  <Sparkles className="size-3" /> {objective.xp} خبرة
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
+                  <Coins className="size-3" /> {objective.dinars} دينار
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-[11px] text-white/75">
+                  <Gem className="size-3" /> {objective.rewardLabel}
+                </span>
+              </div>
+              <div className="mt-5">{objective.link}</div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ============ 3. REAL PROGRESS STRIP ============ */}
+      <section className="mt-8 px-5">
         <div className="parchment-dark relative overflow-hidden rounded-2xl border border-gold/20 px-3 py-3 shadow-elegant">
           <div className="arabesque-layer opacity-40" />
           <div className="relative -mx-1 flex items-stretch gap-1 overflow-x-auto no-scrollbar">
             <Stat icon={<Heart className="size-3.5" />} label="القلوب" value={`${hearts}/${HEART_MAX}`} tone="rose" />
             <Stat icon={<Coins className="size-3.5" />} label="دنانير" value={profile.dinars} tone="gold" />
             <Stat icon={<Trophy className="size-3.5" />} label="مستوى" value={lvl.level} tone="gold" />
-            <Stat icon={<Package className="size-3.5" />} label="المتحف" value={collectionCount} tone="emerald" />
-            <Stat icon={<BookOpen className="size-3.5" />} label="أحداث" value={eventsDiscovered} tone="indigo" />
-            <Stat icon={<Swords className="size-3.5" />} label="معارك" value={battlesCompleted} tone="ruby" />
+            <Stat icon={<Package className="size-3.5" />} label="المتحف" value={stats.totalCollection} tone="emerald" />
+            <Stat icon={<BookOpen className="size-3.5" />} label="أحداث" value={stats.eventsDiscovered} tone="indigo" />
+            <Stat icon={<Swords className="size-3.5" />} label="معارك" value={stats.battlesCompleted} tone="ruby" />
           </div>
         </div>
       </section>
 
-      {/* ============ WHAT'S NEXT ============ */}
-      {active && (nextChapter || nextMission) && (
-        <section className="mt-10 px-5">
-          <SectionHeader icon={<Sparkles className="size-3.5" />} eyebrow="ماذا ينتظرك الآن؟" title="فصلك التالي" />
-          <NextUpCard
-            title={isFlagship && nextChapter ? nextChapter.title : (nextMission?.title ?? active.title)}
-            subtitle={isFlagship && nextChapter ? `الفصل ${nextChapter.index} · ${nextChapter.setting ?? activeEra?.name ?? ""}` : (activeEra?.name ?? "")}
-            xp={isFlagship && nextChapter ? (nextChapter.rewards?.points ?? 40) : (nextMission?.reward ?? 0)}
-            dinars={Math.max(5, Math.round(((isFlagship && nextChapter ? (nextChapter.rewards?.points ?? 40) : (nextMission?.reward ?? 0)) / 4)))}
-            rewardLabel={isFlagship && nextChapter?.rewards?.artifactIds?.[0]
-              ? (ARTIFACTS.find((a) => a.id === nextChapter.rewards!.artifactIds![0])?.name ?? "أثر نادر")
-              : isFlagship && nextChapter?.rewards?.characterIds?.[0]
-                ? (CHARACTERS.find((c) => c.id === nextChapter!.rewards!.characterIds![0])?.name ?? "شخصية")
-                : "تقدّم في الحملة"}
-            to={isFlagship && nextChapter ? { route: "/play/chapter", search: { id: nextChapter.id } } : { route: "/campaigns/$era", params: { era: active.eraId } }}
-          />
-        </section>
-      )}
-
-      {/* ============ RECENTLY DISCOVERED ============ */}
+      {/* ============ 4. RECENTLY DISCOVERED ============ */}
       <section className="mt-10 px-5">
         <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
-        {recent.length > 0 ? (
+        {stats.recent.length > 0 ? (
           <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 no-scrollbar">
-            {recent.map((r) => (
-              <Link
-                key={r.key}
-                to={r.to as "/"}
-                className="group relative w-44 shrink-0 overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-3 transition hover:border-gold/50"
-              >
-                <div className="absolute -left-6 -top-6 size-20 rounded-full bg-gold/10 blur-2xl" />
-                <div className="relative">
-                  <div className="text-2xl">{r.icon}</div>
-                  <p className="mt-2 text-[10px] tracking-[0.2em] text-gold">{r.kind}</p>
-                  <p className="font-display mt-0.5 text-sm font-bold leading-tight line-clamp-1">{r.title}</p>
-                  <p className="mt-1 line-clamp-2 text-[11px] text-white/60 leading-snug">{r.subtitle}</p>
-                </div>
-              </Link>
-            ))}
+            {stats.recent.map((r) => <RecentCard key={r.key} item={r} />)}
           </div>
         ) : (
           <EmptyState
@@ -293,12 +384,36 @@ function Index() {
         )}
       </section>
 
-      {/* ============ TODAY IN HISTORY ============ */}
+      {/* ============ 5. TODAY IN HISTORY ============ */}
       {mounted && todayEvent && <OnThisDayCalendarCard event={todayEvent} />}
 
-      {/* ============ WORLD ACTIVITY ============ */}
+      {/* ============ 6. THE GREAT TIMELINE ============ */}
       <section className="mt-10 px-5">
-        <SectionHeader icon={<Bell className="size-3.5" />} eyebrow="جديد في إرث" title="نبضات العالم" />
+        <Link
+          to="/timeline"
+          className="group relative block h-56 overflow-hidden rounded-3xl border border-gold/30 shadow-elegant"
+        >
+          <img src={heroDesertCaravan} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-1000 group-hover:scale-105" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/20" />
+          <div className="arabesque-layer opacity-60" />
+          <div className="absolute inset-0 flex flex-col justify-end p-5">
+            <div className="flex items-center gap-2 text-[10px] tracking-[0.3em] text-gold">
+              <Hourglass className="size-3.5" /> الخط الزمني العظيم
+            </div>
+            <h2 className="font-display mt-2 text-2xl font-bold leading-tight text-white drop-shadow-[0_2px_8px_oklch(0_0_0/0.7)]">
+              رحلة عبر أكثر من 1400 سنة من التاريخ الإسلامي
+            </h2>
+            <p className="mt-1 text-[12px] text-white/70">من البعثة النبوية إلى عصرنا — استكشف العصور حدثًا حدثًا.</p>
+            <div className="mt-3 inline-flex w-fit items-center gap-2 rounded-full bg-gradient-gold px-4 py-2 text-xs font-bold text-primary-foreground shadow-gold">
+              <Play className="size-3.5 fill-current" /> ابدأ الرحلة الزمنية
+            </div>
+          </div>
+        </Link>
+      </section>
+
+      {/* ============ 7. NEW IN IRTH ============ */}
+      <section className="mt-10 px-5">
+        <SectionHeader icon={<Bell className="size-3.5" />} eyebrow="آخر التحديثات" title="جديد في إرث" />
         <EmptyState
           icon={<Bell className="size-5 text-gold" />}
           title="لا توجد تحديثات جديدة بعد"
@@ -306,8 +421,8 @@ function Index() {
         />
       </section>
 
-      {/* ============ EXPLORE IRTH WORLDS ============ */}
-      <section className="mt-10 mb-6 px-5">
+      {/* ============ 8. EXPLORE IRTH ============ */}
+      <section className="mt-10 mb-8 px-5">
         <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشف" title="عوالم إرث" />
         <div className="grid grid-cols-2 gap-3">
           <WorldCard to="/campaigns" icon={<Crown className="size-5" />} title="الحملات" subtitle="رحلات تاريخية كبرى" />
@@ -355,50 +470,28 @@ function Stat({ icon, label, value, tone }: { icon: React.ReactNode; label: stri
   );
 }
 
-type NextTo =
-  | { route: "/play/chapter"; search: { id: string } }
-  | { route: "/campaigns/$era"; params: { era: string } };
-
-function NextUpCard({
-  title, subtitle, xp, dinars, rewardLabel, to,
-}: {
-  title: string; subtitle: string; xp: number; dinars: number; rewardLabel: string; to: NextTo;
-}) {
-  const inner = (
-    <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 p-5 shadow-elegant">
-      <div className="arabesque-layer" />
-      <div className="absolute -left-10 -top-10 size-40 rounded-full bg-gold/15 blur-3xl" />
+function RecentCard({ item }: { item: UnifiedUnlock }) {
+  return (
+    <Link
+      to={item.to as "/"}
+      className="group relative w-44 shrink-0 overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-3 transition hover:border-gold/50"
+    >
+      <div className="absolute -left-6 -top-6 size-20 rounded-full bg-gold/10 blur-2xl" />
       <div className="relative">
-        <p className="text-[10px] tracking-[0.25em] text-gold">{subtitle}</p>
-        <p className="font-display mt-1 text-lg font-bold leading-snug shimmer-text">{title}</p>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
-            <Sparkles className="size-3" /> {xp} خبرة
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
-            <Coins className="size-3" /> {dinars} دينار
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-[11px] text-white/75">
-            <Gem className="size-3" /> {rewardLabel}
-          </span>
-        </div>
-        <div className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-bold text-gold">
-          ابدأ الآن <ChevronLeft className="size-4" />
-        </div>
+        <div className="text-2xl">{item.icon}</div>
+        <p className="mt-2 text-[10px] tracking-[0.2em] text-gold">{item.kind}</p>
+        <p className="font-display mt-0.5 text-sm font-bold leading-tight line-clamp-1">{item.title}</p>
+        {item.subtitle && <p className="mt-1 line-clamp-2 text-[11px] text-white/60 leading-snug">{item.subtitle}</p>}
       </div>
-    </div>
+    </Link>
   );
-  if (to.route === "/play/chapter") {
-    return <Link to="/play/chapter" search={to.search}>{inner}</Link>;
-  }
-  return <Link to="/campaigns/$era" params={to.params}>{inner}</Link>;
 }
 
 function WorldCard({ to, icon, title, subtitle, wide }: { to: string; icon: React.ReactNode; title: string; subtitle: string; wide?: boolean }) {
   return (
     <Link
       to={to as "/"}
-      className={`group relative block overflow-hidden rounded-2xl border border-gold/20 parchment-dark p-4 transition hover:border-gold/50 ${wide ? "min-h-[90px]" : "min-h-[110px]"}`}
+      className={`group relative block overflow-hidden rounded-2xl border border-gold/20 parchment-dark p-4 transition hover:border-gold/50 ${wide ? "min-h-[90px]" : "min-h-[120px]"}`}
     >
       <div className="arabesque-layer opacity-40" />
       <div className={`relative flex ${wide ? "items-center gap-4" : "flex-col gap-3"}`}>
@@ -423,7 +516,7 @@ function EmptyState({ icon, title, body }: { icon: React.ReactNode; title: strin
   );
 }
 
-// ----- Today in History: card backed by today_in_history_events -----
+// ----- Today in History card -----
 function OnThisDayCalendarCard({ event }: { event: TodayInHistoryEvent }) {
   const href = event.deep_link ?? "/on-this-day";
   const yearBits: string[] = [];
@@ -434,22 +527,21 @@ function OnThisDayCalendarCard({ event }: { event: TodayInHistoryEvent }) {
       <SectionHeader icon={<Calendar className="size-3.5" />} eyebrow="في مثل هذا اليوم" title="حدث من تاريخنا" />
       <Link
         to={href as "/"}
-        className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark p-5 transition hover:border-gold/60"
+        className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark transition hover:border-gold/60"
       >
+        <div className="relative h-32 w-full overflow-hidden">
+          <img src={heroManuscriptLamp} alt="" className="size-full object-cover opacity-50" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-surface" />
+        </div>
         <div className="arabesque-layer opacity-50" />
         <div className="absolute -left-10 -top-10 size-32 rounded-full bg-gold/15 blur-3xl" />
-        <div className="relative flex gap-4">
-          {/* Date stamp */}
-          <div className="shrink-0 rounded-2xl border border-gold/40 bg-black/30 px-3 py-2 text-center">
+        <div className="relative flex gap-4 p-5 pt-0 -mt-10">
+          <div className="shrink-0 rounded-2xl border border-gold/40 bg-black/60 px-3 py-2 text-center backdrop-blur-sm">
             <div className="text-[9px] tracking-[0.2em] text-gold/80">يوم</div>
-            <div className="font-display text-2xl font-bold text-gold leading-none mt-1">
-              {new Date().getDate()}
-            </div>
-            <div className="text-[9px] text-white/55 mt-1">
-              {new Date().toLocaleDateString("ar", { month: "short" })}
-            </div>
+            <div className="font-display text-2xl font-bold text-gold leading-none mt-1">{new Date().getDate()}</div>
+            <div className="text-[9px] text-white/55 mt-1">{new Date().toLocaleDateString("ar", { month: "short" })}</div>
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 pt-1">
             {yearBits.length > 0 && (
               <p className="text-[10px] tracking-[0.25em] text-gold">{yearBits.join(" · ")}</p>
             )}
