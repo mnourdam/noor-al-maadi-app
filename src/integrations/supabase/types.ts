@@ -213,6 +213,14 @@ export type Database = {
           slug: string
           subtitle: string | null
           summary: string | null
+          timeline_category: string | null
+          timeline_end_year: number | null
+          timeline_glyph: string | null
+          timeline_hijri: string | null
+          timeline_order: number | null
+          timeline_start_year: number | null
+          timeline_tone: string | null
+          timeline_year: number | null
           title: string
           updated_at: string
         }
@@ -226,6 +234,14 @@ export type Database = {
           slug: string
           subtitle?: string | null
           summary?: string | null
+          timeline_category?: string | null
+          timeline_end_year?: number | null
+          timeline_glyph?: string | null
+          timeline_hijri?: string | null
+          timeline_order?: number | null
+          timeline_start_year?: number | null
+          timeline_tone?: string | null
+          timeline_year?: number | null
           title: string
           updated_at?: string
         }
@@ -239,6 +255,14 @@ export type Database = {
           slug?: string
           subtitle?: string | null
           summary?: string | null
+          timeline_category?: string | null
+          timeline_end_year?: number | null
+          timeline_glyph?: string | null
+          timeline_hijri?: string | null
+          timeline_order?: number | null
+          timeline_start_year?: number | null
+          timeline_tone?: string | null
+          timeline_year?: number | null
           title?: string
           updated_at?: string
         }
