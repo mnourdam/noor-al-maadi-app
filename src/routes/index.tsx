@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  Star, Sparkles, Search, ListOrdered, GitBranch, Map as MapIcon,
-  ChevronLeft, Crown, Lock, Compass, Eye, Play, Hourglass,
+  Star, Search, Map as MapIcon,
+  ChevronLeft, Crown, Lock, Compass, Play, Hourglass,
   Calendar,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
