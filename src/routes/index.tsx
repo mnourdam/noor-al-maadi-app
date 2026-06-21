@@ -373,7 +373,10 @@ type DiscoveryItem =
 
 function rotatingDiscovery(): DiscoveryItem | null {
   const day = Math.floor(Date.now() / 86400000);
-  const order: DiscoveryItem["kind"][] = ["character", "artifact", "event", "manuscript", "location"];
+  // Note: "event" kind intentionally excluded — Today-in-History has its
+  // own dedicated card backed by today_in_history_events, so the rotating
+  // discovery never falls back to fake/legacy event data here.
+  const order: DiscoveryItem["kind"][] = ["character", "artifact", "manuscript", "location"];
   const kind = order[day % order.length];
   const eraName = (e: string) => ERAS.find((x) => x.id === e)?.name ?? "";
 
@@ -384,10 +387,6 @@ function rotatingDiscovery(): DiscoveryItem | null {
   if (kind === "artifact") {
     const a = ARTIFACTS[day % ARTIFACTS.length];
     return { kind, id: a.id, title: a.name, eyebrow: `أثر · ${a.typeLabel}`, body: a.description, icon: a.icon, era: eraName(a.era), to: "/collection" };
-  }
-  if (kind === "event") {
-    const e = todayOnThisDay();
-    return { kind, id: e.title, title: e.title, eyebrow: `في مثل هذا اليوم · ${e.year}`, body: e.detail, icon: "📅", era: eraName(e.era), to: "/on-this-day" };
   }
   if (kind === "manuscript") {
     const mans = ARTIFACTS.filter((a) => a.type === "manuscript");
