@@ -92,10 +92,19 @@ function TimelinePage() {
 
   const x = (year: number) => (year - TIMELINE_START) * pxPerYear + 120;
 
-  // Combined static + pack-derived data so every encyclopedia entity with a
-  // timelinePosition / period appears on the Great Timeline automatically.
-  const BANDS_ALL  = useMemo(() => allBands(), []);
-  const POINTS_ALL = useMemo(() => allPoints(), []);
+  // Supabase-backed timeline content with safe fallback to legacy arrays.
+  // When Supabase returns at least one band/point, it becomes the source of
+  // truth; otherwise we fall back to the legacy static/pack-derived dataset.
+  const sbBands = useTimelineBands();
+  const sbPoints = useTimelinePoints();
+  const BANDS_ALL  = useMemo(
+    () => (sbBands.bands.length > 0 ? sbBands.bands : allBands()),
+    [sbBands.bands],
+  );
+  const POINTS_ALL = useMemo(
+    () => (sbPoints.points.length > 0 ? sbPoints.points : allPoints()),
+    [sbPoints.points],
+  );
   // Pack stacked rows for caliphate & figure lanes.
   const caliphateBands = useMemo(() => BANDS_ALL.filter((b) => b.lane === "caliphate"), [BANDS_ALL]);
   const figureBands    = useMemo(() => BANDS_ALL.filter((b) => b.lane === "figure"), [BANDS_ALL]);
