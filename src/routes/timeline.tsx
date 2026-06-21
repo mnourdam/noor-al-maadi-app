@@ -7,6 +7,7 @@ import {
   TIMELINE_START, TIMELINE_END, LANE_META, TONE_CLASSES,
   type TimelineLane, type TimelinePoint, type TimelineBand,
 } from "@/lib/timeline";
+import { useTimelineBands, useTimelinePoints } from "@/lib/timeline-source";
 
 export const Route = createFileRoute("/timeline")({
   head: () => ({
