@@ -211,36 +211,65 @@ export function AtlasStage({
     return () => el.removeEventListener("wheel", onWheel);
   }, [clamp, stopInertia]);
 
-  // ── Pinch (dampened) ────────────────────────────────────────────────────
-  // Bind touch listeners ONCE; read current scale from the ref so we never
-  // re-attach on every pinch frame.
-  const pinch = useRef<{ dist: number; scale: number } | null>(null);
+  // ── Pinch zoom (midpoint-anchored) + two-finger pan ─────────────────────
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length !== 2) return;
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length < 2) return;
       stopInertia();
-      interaction.current = "pinch";
+      const rect = el.getBoundingClientRect();
       const [a, b] = [e.touches[0], e.touches[1]];
+      const midX = (a.clientX + b.clientX) / 2 - rect.left - rect.width / 2;
+      const midY = (a.clientY + b.clientY) / 2 - rect.top - rect.height / 2;
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      if (!pinch.current) { pinch.current = { dist, scale: viewRef.current.scale }; return; }
-      const raw = dist / pinch.current.dist;
-      const ratio = 1 + (raw - 1) * 0.55;
-      setView((v) => clamp({ ...v, scale: pinch.current!.scale * ratio }));
+      pinch.current = {
+        dist,
+        scale: viewRef.current.scale,
+        midX,
+        midY,
+        tx: viewRef.current.tx,
+        ty: viewRef.current.ty,
+      };
+      interaction.current = "pinch";
       e.preventDefault();
     };
-    const onTouchEnd = () => {
-      pinch.current = null;
-      if (interaction.current === "pinch") interaction.current = "idle";
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length < 2 || !pinch.current) return;
+      const rect = el.getBoundingClientRect();
+      const [a, b] = [e.touches[0], e.touches[1]];
+      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const midX = (a.clientX + b.clientX) / 2 - rect.left - rect.width / 2;
+      const midY = (a.clientY + b.clientY) / 2 - rect.top - rect.height / 2;
+      const raw = dist / Math.max(1, pinch.current.dist);
+      const damped = 1 + (raw - 1) * 0.85;
+      const s = clampScalar(pinch.current.scale * damped, MIN_SCALE, MAX_SCALE);
+      const k = s / pinch.current.scale;
+      // Anchor zoom around the original midpoint, then translate by the midpoint delta.
+      const tx = pinch.current.midX - (pinch.current.midX - pinch.current.tx) * k
+        + (midX - pinch.current.midX);
+      const ty = pinch.current.midY - (pinch.current.midY - pinch.current.ty) * k
+        + (midY - pinch.current.midY);
+      scheduleView({ scale: s, tx, ty });
+      e.preventDefault();
     };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) {
+        pinch.current = null;
+        if (interaction.current === "pinch") interaction.current = "idle";
+      }
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("touchcancel", onTouchEnd);
     return () => {
+      el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [clamp, stopInertia]);
+  }, [scheduleView, stopInertia]);
 
   // ── Cleanup ─────────────────────────────────────────────────────────────
   useEffect(() => () => {
