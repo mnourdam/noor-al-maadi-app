@@ -360,7 +360,7 @@ export function AtlasStage({
         }}>
           {/* Phase 1 — frozen Atlas v1 raster as primary base (canonical APS surface). */}
           <image
-            href={atlasMaster.url}
+            href={useAtlasRasterUrl()}
             x={0}
             y={0}
             width={VB_W}

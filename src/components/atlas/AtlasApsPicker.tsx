@@ -205,7 +205,7 @@ export function AtlasApsPicker({
         >
           <img
             data-role="stage"
-            src={atlasMaster.url}
+            src={ATLAS_BASE_URL}
             width={RASTER.width}
             height={RASTER.height}
             draggable={false}
