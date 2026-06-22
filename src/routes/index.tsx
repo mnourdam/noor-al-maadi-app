@@ -534,8 +534,20 @@ function Index() {
       <section className="mt-10 px-5">
         <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
         {stats.recent.length > 0 ? (
-          <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 no-scrollbar">
-            {stats.recent.map((r) => <RecentCard key={r.key} item={r} />)}
+          <div className="relative">
+            <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 no-scrollbar snap-x snap-mandatory">
+              {stats.recent.map((r) => <RecentCard key={r.key} item={r} />)}
+            </div>
+            {/* Scroll affordance: gradient edge + arrow hint (RTL: more items on the left) */}
+            {stats.recent.length > 2 && (
+              <>
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-l from-background via-background/70 to-transparent" />
+                <div className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 grid size-8 place-items-center rounded-full bg-black/50 ring-1 ring-gold/40 backdrop-blur-sm animate-pulse">
+                  <ChevronLeft className="size-4 text-gold" />
+                </div>
+              </>
+            )}
+            <p className="mt-1 text-[10px] text-white/40 text-center">اسحب أفقيًا لرؤية المزيد</p>
           </div>
         ) : (
           <EmptyState
