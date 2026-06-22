@@ -17,6 +17,9 @@ import {
 } from "@/lib/encyclopedia-source";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
+import { useEntityUnlockState } from "@/lib/itemUnlock";
+import { LockedItemView } from "@/components/LockedItemView";
+
 
 
 const SECTION_ORDER: EncyclopediaSection[] = [
