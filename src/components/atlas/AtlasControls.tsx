@@ -74,22 +74,23 @@ export function AtlasControls({
   onSearch: (q: string) => void;
 }) {
   return (
-    <div className="pointer-events-auto absolute top-0 right-0 left-0 z-20 p-3 sm:p-4" dir="rtl">
+    <div className="pointer-events-auto absolute top-0 right-0 left-0 z-20 p-2 sm:p-4" dir="rtl">
       <div
-        className="mx-auto flex max-w-3xl flex-col gap-2 rounded-2xl border border-amber-400/30 px-3 py-2 shadow-lg backdrop-blur"
+        className="mx-auto flex w-full max-w-3xl flex-col gap-2 rounded-2xl border border-amber-400/30 px-2.5 py-2 shadow-lg backdrop-blur sm:px-3"
         style={{
           backgroundImage:
             "linear-gradient(180deg, oklch(0.20 0.04 250 / 0.92), oklch(0.16 0.05 255 / 0.92))",
         }}
       >
-        <div className="flex items-center gap-2">
-          <div className="flex flex-1 items-center gap-2 rounded-full border border-amber-400/30 bg-slate-950/40 px-3 py-1.5 text-amber-50">
-            <Search className="size-4 opacity-60" />
+        {/* Row 1: search full width, era inline only on sm+ */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-amber-400/30 bg-slate-950/40 px-3 py-1.5 text-amber-50">
+            <Search className="size-4 shrink-0 opacity-60" />
             <input
               value={search}
               onChange={(e) => onSearch(e.target.value)}
               placeholder="ابحث في الأطلس..."
-              className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-amber-200/40"
+              className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-amber-200/40"
             />
           </div>
 
@@ -98,7 +99,7 @@ export function AtlasControls({
               value={era ?? ""}
               onChange={(e) => onEra(e.target.value || null)}
               aria-label="العصر"
-              className="rounded-full border border-amber-400/30 bg-slate-950/60 px-3 py-1.5 text-[12px] font-bold text-amber-100 outline-none"
+              className="w-full min-w-0 shrink rounded-full border border-amber-400/30 bg-slate-950/60 px-3 py-1.5 text-[12px] font-bold text-amber-100 outline-none sm:w-auto sm:max-w-[45%]"
             >
               <option value="">كل العصور</option>
               {facets.eras.map((e) => (
@@ -110,8 +111,9 @@ export function AtlasControls({
           )}
         </div>
 
+        {/* Row 2: kind chips — horizontal scroll, never overflows */}
         {facets.kinds.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+          <div className="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Chip active={kind === null} onClick={() => onKind(null)}>الكل</Chip>
             {facets.kinds.map((k) => (
               <Chip key={k.id} active={kind === k.id} onClick={() => onKind(kind === k.id ? null : k.id)}>

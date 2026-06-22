@@ -1,0 +1,452 @@
+// Phase 2.5 — Bulk APS Review workshop.
+// Render all review/unverified atlas entities on the master raster at once,
+// allow dragging pins to correct APS positions, batch verify / publish / hide
+// from one screen. Player /map is unaffected — only published+verified rows
+// are exposed via RLS to anon/auth.
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowRight, Check, Eye, EyeOff, RefreshCw, Save, Search, ShieldCheck, Upload,
+} from "lucide-react";
+import { AdminGate } from "@/lib/admin-guard";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  KIND_LABEL_AR, STATUS_LABEL_AR,
+  listAllAtlasEntities, updateAtlasEntity,
+  type AtlasEntityKind, type AtlasEntityRow,
+} from "@/lib/atlas-entities";
+import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
+import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
+import { geoToAps } from "@/lib/atlas/transform";
+import { ERAS } from "@/lib/data";
+
+const RASTER = ATLAS_V1_PIXEL_SIZE;
+const ERA_LABEL: Record<string, string> = Object.fromEntries(ERAS.map((e) => [e.id, e.name]));
+const eraLabel = (id: string | null | undefined) => (id ? ERA_LABEL[id] ?? id : "—");
+
+export const Route = createFileRoute("/admin/atlas-review")({
+  head: () => ({
+    meta: [
+      { title: "مراجعة كيانات الأطلس — إرث" },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
+  component: () => (
+    <AdminGate><AtlasReviewPage /></AdminGate>
+  ),
+});
+
+type LocalPos = { x: number; y: number };
+
+function AtlasReviewPage() {
+  const [rows, setRows] = useState<AtlasEntityRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters
+  const [search, setSearch] = useState("");
+  const [kind, setKind] = useState<AtlasEntityKind | "all">("all");
+  const [era, setEra] = useState<string>("all");
+  const [batch, setBatch] = useState<string>("all");
+  const [onlyUnverified, setOnlyUnverified] = useState(true);
+
+  // Selection + drafts
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [drafts, setDrafts] = useState<Record<string, LocalPos>>({});
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+
+  // Stage
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [wrapSize, setWrapSize] = useState({ w: 1, h: 1 });
+  const [scale, setScale] = useState(0.06);
+  const [tx, setTx] = useState(0);
+  const [ty, setTy] = useState(0);
+
+  const reload = useCallback(async () => {
+    setLoading(true); setError(null);
+    try { setRows(await listAllAtlasEntities()); }
+    catch (e: any) { setError(e.message ?? String(e)); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { reload(); }, [reload]);
+
+  useEffect(() => {
+    const el = wrapRef.current; if (!el) return;
+    const update = () => setWrapSize({ w: el.clientWidth || 1, h: el.clientHeight || 1 });
+    update();
+    const ro = new ResizeObserver(update); ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const didFit = useRef(false);
+  useEffect(() => {
+    if (didFit.current || wrapSize.w < 10) return;
+    didFit.current = true;
+    const sx = wrapSize.w / RASTER.width;
+    const sy = wrapSize.h / RASTER.height;
+    const s = Math.min(sx, sy) * 0.96;
+    setScale(s);
+    setTx((wrapSize.w - RASTER.width * s) / 2);
+    setTy((wrapSize.h - RASTER.height * s) / 2);
+  }, [wrapSize]);
+
+  // Batches available
+  const batches = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) {
+      const b = (r.metadata as any)?.import_batch as string | undefined;
+      if (b) set.add(b);
+    }
+    return Array.from(set).sort();
+  }, [rows]);
+
+  // Working set (review filter)
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (onlyUnverified) {
+        if (r.aps_verified && r.status === "published") return false;
+      }
+      if (kind !== "all" && r.kind !== kind) return false;
+      if (era !== "all" && r.era !== era) return false;
+      if (batch !== "all" && (r.metadata as any)?.import_batch !== batch) return false;
+      if (q && !`${r.name_ar} ${r.name_en ?? ""} ${r.slug}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [rows, search, kind, era, batch, onlyUnverified]);
+
+  // Drag handlers — convert client px → APS via current transform
+  const dragRef = useRef<{
+    id: string;
+    pointerId: number;
+    start: { cx: number; cy: number; ax: number; ay: number };
+    moved: boolean;
+  } | null>(null);
+  const panRef = useRef<{ x: number; y: number; tx: number; ty: number; moved: boolean } | null>(null);
+
+  const clientToAps = (cx: number, cy: number) => {
+    const rect = wrapRef.current!.getBoundingClientRect();
+    return { x: (cx - rect.left - tx) / scale, y: (cy - rect.top - ty) / scale };
+  };
+
+  const onPinDown = (e: React.PointerEvent, r: AtlasEntityRow) => {
+    e.stopPropagation();
+    (e.target as Element).setPointerCapture(e.pointerId);
+    const cur = drafts[r.id] ?? { x: r.aps_x, y: r.aps_y };
+    dragRef.current = {
+      id: r.id, pointerId: e.pointerId,
+      start: { cx: e.clientX, cy: e.clientY, ax: cur.x, ay: cur.y },
+      moved: false,
+    };
+    setFocusedId(r.id);
+  };
+  const onPinMove = (e: React.PointerEvent) => {
+    const d = dragRef.current; if (!d || d.pointerId !== e.pointerId) return;
+    const dx = (e.clientX - d.start.cx) / scale;
+    const dy = (e.clientY - d.start.cy) / scale;
+    if (Math.abs(dx) + Math.abs(dy) > 0.5) d.moved = true;
+    const nx = Math.max(0, Math.min(RASTER.width - 1, Math.round(d.start.ax + dx)));
+    const ny = Math.max(0, Math.min(RASTER.height - 1, Math.round(d.start.ay + dy)));
+    setDrafts((p) => ({ ...p, [d.id]: { x: nx, y: ny } }));
+  };
+  const onPinUp = (e: React.PointerEvent) => {
+    const d = dragRef.current; if (!d) return;
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
+    dragRef.current = null;
+  };
+
+  const onStageDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).dataset.role !== "stage") return;
+    wrapRef.current?.setPointerCapture(e.pointerId);
+    panRef.current = { x: e.clientX, y: e.clientY, tx, ty, moved: false };
+  };
+  const onStageMove = (e: React.PointerEvent) => {
+    if (!panRef.current) return;
+    setTx(panRef.current.tx + (e.clientX - panRef.current.x));
+    setTy(panRef.current.ty + (e.clientY - panRef.current.y));
+  };
+  const onStageUp = () => { panRef.current = null; };
+
+  useEffect(() => {
+    const el = wrapRef.current; if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+      const step = Math.min(0.25, Math.abs(e.deltaY) * 0.0015);
+      const factor = e.deltaY < 0 ? 1 + step : 1 / (1 + step);
+      setScale((prev) => {
+        const next = Math.max(0.01, Math.min(8, prev * factor));
+        const k = next / prev;
+        setTx((tx0) => sx - (sx - tx0) * k);
+        setTy((ty0) => sy - (sy - ty0) * k);
+        return next;
+      });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Mutations
+  const flagSaving = (id: string, on: boolean) =>
+    setSavingIds((p) => { const n = new Set(p); on ? n.add(id) : n.delete(id); return n; });
+
+  const saveOne = async (id: string, opts?: { verify?: boolean; publish?: boolean; clearDraft?: boolean }) => {
+    const row = rows.find((r) => r.id === id); if (!row) return;
+    const draft = drafts[id];
+    const patch: any = {};
+    if (draft && (draft.x !== row.aps_x || draft.y !== row.aps_y)) {
+      patch.aps_x = draft.x; patch.aps_y = draft.y;
+    }
+    if (opts?.verify) {
+      const { data: ures } = await supabase.auth.getUser();
+      patch.aps_verified = true;
+      patch.aps_verified_by = ures.user?.id ?? null;
+    }
+    if (opts?.publish) patch.status = "published";
+    if (Object.keys(patch).length === 0) return;
+    flagSaving(id, true);
+    try {
+      const updated = await updateAtlasEntity(id, patch);
+      setRows((rs) => rs.map((r) => (r.id === id ? updated : r)));
+      if (opts?.clearDraft !== false) setDrafts((p) => { const n = { ...p }; delete n[id]; return n; });
+    } catch (e: any) {
+      alert(`فشل الحفظ (${row.name_ar}): ${e.message ?? e}`);
+    } finally {
+      flagSaving(id, false);
+    }
+  };
+
+  const saveAllDrafts = async () => {
+    const ids = Object.keys(drafts);
+    for (const id of ids) await saveOne(id);
+  };
+
+  const batchAction = async (action: "verify" | "publish" | "verify+publish" | "reset" | "hide") => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) { alert("اختر عناصر أولاً"); return; }
+    if (!confirm(`تطبيق "${action}" على ${ids.length} عنصر؟`)) return;
+    for (const id of ids) {
+      const row = rows.find((r) => r.id === id); if (!row) continue;
+      try {
+        if (action === "reset") {
+          // recompute APS from lat/lon (TPS suggestion)
+          if (row.lat == null || row.lon == null) continue;
+          const aps = geoToAps(row.lon, row.lat);
+          setDrafts((p) => ({ ...p, [id]: { x: Math.round(aps.x), y: Math.round(aps.y) } }));
+          continue;
+        }
+        if (action === "hide") {
+          const updated = await updateAtlasEntity(id, { status: "retired" });
+          setRows((rs) => rs.map((r) => (r.id === id ? updated : r)));
+          continue;
+        }
+        const verify = action === "verify" || action === "verify+publish";
+        const publish = action === "publish" || action === "verify+publish";
+        await saveOne(id, { verify, publish });
+      } catch (e: any) {
+        alert(`فشل (${row.name_ar}): ${e.message ?? e}`);
+      }
+    }
+    setSelected(new Set());
+  };
+
+  const toggleSelect = (id: string) =>
+    setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const selectAllVisible = () => setSelected(new Set(filtered.map((r) => r.id)));
+  const clearSelection = () => setSelected(new Set());
+
+  const dirtyCount = Object.keys(drafts).length;
+
+  return (
+    <div dir="rtl" className="fixed inset-0 flex flex-col bg-stone-950 text-stone-100">
+      {/* Header */}
+      <header className="flex items-center gap-2 border-b border-stone-800 bg-stone-900 px-3 py-2">
+        <Link to="/admin" className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 text-[11px] hover:bg-stone-700">
+          <ArrowRight className="size-3.5" /> الإدارة
+        </Link>
+        <h1 className="text-sm font-bold text-amber-100">مراجعة الأطلس الجماعية</h1>
+        <span className="text-[11px] text-stone-400">
+          {filtered.length} عنصر · {dirtyCount} تغيير غير محفوظ
+        </span>
+        <div className="ml-auto flex items-center gap-1.5 text-[11px]">
+          <button onClick={reload} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">
+            <RefreshCw className="size-3.5" /> تحديث
+          </button>
+          <button disabled={dirtyCount === 0} onClick={saveAllDrafts}
+            className="inline-flex items-center gap-1 rounded bg-amber-500 px-3 py-1 font-bold text-stone-950 hover:bg-amber-400 disabled:opacity-40">
+            <Save className="size-3.5" /> حفظ كل المواقع ({dirtyCount})
+          </button>
+        </div>
+      </header>
+
+      {/* Batch action bar */}
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-stone-800 bg-stone-900/70 px-3 py-2 text-[11px]">
+        <span className="font-bold text-amber-200">المحدد: {selected.size}</span>
+        <button onClick={selectAllVisible} className="rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">تحديد الكل المرئي</button>
+        <button onClick={clearSelection} className="rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">إلغاء</button>
+        <span className="mx-2 h-4 w-px bg-stone-700" />
+        <button onClick={() => batchAction("verify")} className="inline-flex items-center gap-1 rounded bg-emerald-700 px-2 py-1 font-bold hover:bg-emerald-600"><ShieldCheck className="size-3.5" /> تأكيد</button>
+        <button onClick={() => batchAction("publish")} className="inline-flex items-center gap-1 rounded bg-sky-700 px-2 py-1 font-bold hover:bg-sky-600"><Upload className="size-3.5" /> نشر</button>
+        <button onClick={() => batchAction("verify+publish")} className="inline-flex items-center gap-1 rounded bg-amber-600 px-2 py-1 font-bold text-stone-950 hover:bg-amber-500"><Check className="size-3.5" /> تأكيد ونشر</button>
+        <button onClick={() => batchAction("reset")} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700"><RefreshCw className="size-3.5" /> إعادة لاقتراح TPS</button>
+        <button onClick={() => batchAction("hide")} className="inline-flex items-center gap-1 rounded border border-rose-800 bg-rose-900/40 px-2 py-1 text-rose-200 hover:bg-rose-900/70"><EyeOff className="size-3.5" /> إخفاء</button>
+      </div>
+
+      <div className="flex min-h-0 flex-1">
+        {/* Side list */}
+        <aside className="flex w-80 flex-col border-l border-stone-800 bg-stone-900/40">
+          {/* Filters */}
+          <div className="space-y-2 border-b border-stone-800 p-2">
+            <div className="flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1.5">
+              <Search className="size-3.5 opacity-60" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="بحث بالاسم أو slug..."
+                className="min-w-0 flex-1 bg-transparent text-[12px] outline-none" />
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+              <select value={kind} onChange={(e) => setKind(e.target.value as any)}
+                className="rounded border border-stone-700 bg-stone-950 px-2 py-1">
+                <option value="all">كل الأنواع</option>
+                {(["place","battle","artifact_site","region","event","figure_marker","route_point"] as AtlasEntityKind[]).map((k) => (
+                  <option key={k} value={k}>{KIND_LABEL_AR[k]}</option>
+                ))}
+              </select>
+              <select value={era} onChange={(e) => setEra(e.target.value)}
+                className="rounded border border-stone-700 bg-stone-950 px-2 py-1">
+                <option value="all">كل العصور</option>
+                {ERAS.map((er) => <option key={er.id} value={er.id}>{er.name}</option>)}
+              </select>
+              <select value={batch} onChange={(e) => setBatch(e.target.value)}
+                className="col-span-2 rounded border border-stone-700 bg-stone-950 px-2 py-1">
+                <option value="all">كل دفعات الاستيراد</option>
+                {batches.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+              <label className="col-span-2 flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1">
+                <input type="checkbox" checked={onlyUnverified} onChange={(e) => setOnlyUnverified(e.target.checked)} />
+                <span>غير مؤكّد فقط</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {loading && <div className="p-3 text-[12px] text-stone-400">جاري التحميل…</div>}
+            {error && <div className="p-3 text-[12px] text-rose-300">{error}</div>}
+            {!loading && filtered.length === 0 && (
+              <div className="p-3 text-[12px] text-stone-400">لا توجد عناصر مطابقة.</div>
+            )}
+            <ul className="divide-y divide-stone-800/80">
+              {filtered.map((r) => {
+                const dirty = !!drafts[r.id] && (drafts[r.id].x !== r.aps_x || drafts[r.id].y !== r.aps_y);
+                const isSel = selected.has(r.id);
+                const cur = drafts[r.id] ?? { x: r.aps_x, y: r.aps_y };
+                return (
+                  <li key={r.id} className={`flex items-start gap-2 p-2 text-[12px] ${focusedId === r.id ? "bg-amber-500/10" : ""}`}>
+                    <input type="checkbox" checked={isSel} onChange={() => toggleSelect(r.id)} className="mt-1" />
+                    <button onClick={() => { setFocusedId(r.id); centerOn(r, cur, scale, wrapSize, setTx, setTy); }}
+                      className="min-w-0 flex-1 text-right">
+                      <div className="truncate font-bold text-amber-100">{r.name_ar}</div>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-stone-400">
+                        <span>{KIND_LABEL_AR[r.kind]}</span>
+                        <span>· {eraLabel(r.era)}</span>
+                        <span>· APS {Math.round(cur.x)},{Math.round(cur.y)}</span>
+                        {dirty && <span className="text-amber-300">· غُيِّر</span>}
+                        <span>· {STATUS_LABEL_AR[r.status]}</span>
+                        {r.aps_verified && <span className="text-emerald-300">· مؤكّد</span>}
+                        {r.encyclopedia_entity_id
+                          ? <span className="text-sky-300">· موسوعة ✓</span>
+                          : <span className="text-stone-500">· بلا موسوعة</span>}
+                      </div>
+                    </button>
+                    <button disabled={!dirty || savingIds.has(r.id)} onClick={() => saveOne(r.id)}
+                      title="حفظ هذا العنصر"
+                      className="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-stone-950 hover:bg-amber-400 disabled:opacity-30">
+                      حفظ
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </aside>
+
+        {/* Stage */}
+        <main
+          ref={wrapRef}
+          className="relative flex-1 overflow-hidden bg-stone-900"
+          style={{ touchAction: "none" }}
+          onPointerDown={onStageDown}
+          onPointerMove={(e) => { onStageMove(e); onPinMove(e); }}
+          onPointerUp={(e) => { onStageUp(); onPinUp(e); }}
+        >
+          <div
+            data-role="stage"
+            style={{
+              position: "absolute", left: 0, top: 0,
+              transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+              transformOrigin: "0 0",
+              width: RASTER.width, height: RASTER.height,
+              cursor: "grab",
+            }}
+          >
+            <img data-role="stage" src={ATLAS_BASE_URL}
+              width={RASTER.width} height={RASTER.height} draggable={false}
+              alt="" style={{ display: "block", userSelect: "none" }} />
+            {filtered.map((r) => {
+              const pos = drafts[r.id] ?? { x: r.aps_x, y: r.aps_y };
+              const focused = focusedId === r.id;
+              const isSel = selected.has(r.id);
+              const dirty = !!drafts[r.id] && (drafts[r.id].x !== r.aps_x || drafts[r.id].y !== r.aps_y);
+              const color = dirty ? "#f59e0b" : r.aps_verified ? "#10b981" : "#f43f5e";
+              return (
+                <div key={r.id} style={{ position: "absolute", left: pos.x, top: pos.y, pointerEvents: "auto" }}>
+                  <div
+                    onPointerDown={(e) => onPinDown(e, r)}
+                    onClick={(e) => { e.stopPropagation(); setFocusedId(r.id); }}
+                    style={{
+                      position: "absolute",
+                      transform: `translate(-50%, -50%) scale(${1 / scale})`,
+                      cursor: "grab",
+                    }}
+                  >
+                    <div style={{
+                      width: focused ? 22 : 16, height: focused ? 22 : 16,
+                      borderRadius: "50%", background: color,
+                      border: `${isSel ? 3 : 2}px solid ${isSel ? "#fbbf24" : "#fff"}`,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.7)",
+                    }} />
+                    {focused && (
+                      <div style={{
+                        position: "absolute", top: -28, left: "50%",
+                        transform: "translateX(-50%)",
+                        background: "rgba(15,23,42,0.92)", color: "#fde68a",
+                        padding: "2px 6px", borderRadius: 4, fontSize: 11,
+                        fontWeight: 700, whiteSpace: "nowrap", border: "1px solid #92400e",
+                      }}>{r.name_ar}</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-stone-950/85 px-2 py-1 font-mono text-[11px] text-amber-200">
+            مقياس {(scale * 100).toFixed(0)}% · اسحب الدبّوس لتعديل APS
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function centerOn(
+  r: AtlasEntityRow,
+  pos: LocalPos,
+  scale: number,
+  wrap: { w: number; h: number },
+  setTx: (n: number) => void,
+  setTy: (n: number) => void,
+) {
+  setTx(wrap.w / 2 - pos.x * scale);
+  setTy(wrap.h / 2 - pos.y * scale);
+}
