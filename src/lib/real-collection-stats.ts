@@ -18,7 +18,11 @@ import { useProfile } from "./profile";
 import { ARTIFACTS, CHARACTERS, CAMPAIGNS } from "./data";
 import { getUnlockedRegistryIds } from "./importedUnlocks";
 import { listRegistry } from "./contentRegistryStorage";
+import { displayName } from "./display-names";
 import { supabase } from "@/integrations/supabase/client";
+
+/** Fallback Arabic label for any unresolved item id. */
+const UNNAMED = "مقتنى غير مسمى";
 
 export type UnifiedUnlock = {
   key: string;
