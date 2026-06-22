@@ -286,10 +286,12 @@ function CollectionPage() {
     if (userCollection.get(type)?.has(slug)) return true;
     if (importedUnlockSet.has(`${type}:${slug}`)) return true;
     const legacyId = (metadata?.legacy_id as string | undefined) ?? null;
+    if (legacyId && userCollection.get(type)?.has(legacyId)) return true;
     if (legacyId && importedUnlockSet.has(`${type}:${legacyId}`)) return true;
     // Aliases declared on the canonical entity (e.g. landmark with artifact alias).
     const aliases: string[] = Array.isArray(metadata?.aliases) ? metadata.aliases : [];
     for (const a of aliases) {
+      if (userCollection.get(type)?.has(a)) return true;
       if (importedUnlockSet.has(a)) return true;
       const [at, ...rest] = a.split(":");
       const aSlug = rest.join(":") || at;
@@ -306,7 +308,10 @@ function CollectionPage() {
     const legacyId = (metadata?.legacy_id as string | undefined) ?? null;
     if (legacyId) candidates.push(`${type}:${legacyId}`);
     const aliases: string[] = Array.isArray(metadata?.aliases) ? metadata.aliases : [];
-    for (const a of aliases) candidates.push(a);
+    for (const a of aliases) {
+      candidates.push(a);
+      candidates.push(`${type}:${a}`);
+    }
     let best = 0;
     for (const k of candidates) {
       const v = userUnlockedAt.get(k);
