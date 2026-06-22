@@ -67,27 +67,63 @@ export function AtlasStage({
     };
   }, []);
 
-  // Pointer drag
+  // Pointer drag with velocity tracking → inertia on release
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+  const lastMove = useRef<{ x: number; y: number; t: number; vx: number; vy: number }>({ x: 0, y: 0, t: 0, vx: 0, vy: 0 });
+  const inertiaRaf = useRef<number | null>(null);
+
+  const stopInertia = () => {
+    if (inertiaRaf.current != null) { cancelAnimationFrame(inertiaRaf.current); inertiaRaf.current = null; }
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
+    stopInertia();
     (e.target as Element).setPointerCapture?.(e.pointerId);
     drag.current = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
+    lastMove.current = { x: e.clientX, y: e.clientY, t: performance.now(), vx: 0, vy: 0 };
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current) return;
     const dx = e.clientX - drag.current.x;
     const dy = e.clientY - drag.current.y;
+    const now = performance.now();
+    const dt = Math.max(8, now - lastMove.current.t);
+    lastMove.current = {
+      x: e.clientX, y: e.clientY, t: now,
+      // smoothed velocity (px/ms)
+      vx: 0.6 * lastMove.current.vx + 0.4 * ((e.clientX - lastMove.current.x) / dt),
+      vy: 0.6 * lastMove.current.vy + 0.4 * ((e.clientY - lastMove.current.y) / dt),
+    };
     setView((v) => clamp({ ...v, tx: drag.current!.tx + dx, ty: drag.current!.ty + dy }));
   };
-  const onPointerUp = () => { drag.current = null; };
+  const onPointerUp = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    // launch inertia with exponential decay
+    let vx = lastMove.current.vx;
+    let vy = lastMove.current.vy;
+    const speed = Math.hypot(vx, vy);
+    if (speed < 0.05) return; // too slow → no inertia
+    const decay = 0.92;
+    const step = () => {
+      vx *= decay; vy *= decay;
+      if (Math.hypot(vx, vy) < 0.02) { inertiaRaf.current = null; return; }
+      setView((v) => clamp({ ...v, tx: v.tx + vx * 16, ty: v.ty + vy * 16 }));
+      inertiaRaf.current = requestAnimationFrame(step);
+    };
+    inertiaRaf.current = requestAnimationFrame(step);
+  };
 
-  // Wheel zoom focused on cursor
+  // Wheel zoom focused on cursor — gentler factor
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      stopInertia();
+      // Slower, distance-aware zoom (less aggressive than fixed step)
+      const step = Math.min(0.18, Math.abs(e.deltaY) * 0.0015);
+      const factor = e.deltaY < 0 ? 1 + step : 1 / (1 + step);
       const rect = el.getBoundingClientRect();
       const px = e.clientX - rect.left - rect.width / 2;
       const py = e.clientY - rect.top - rect.height / 2;
@@ -101,17 +137,20 @@ export function AtlasStage({
     return () => el.removeEventListener("wheel", onWheel);
   }, [clamp]);
 
-  // Pinch
+  // Pinch — dampened so small finger movement doesn't fly the zoom
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length !== 2) return;
+      stopInertia();
       const [a, b] = [e.touches[0], e.touches[1]];
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
       if (!pinch.current) { pinch.current = { dist, scale: view.scale }; return; }
-      const ratio = dist / pinch.current.dist;
+      const raw = dist / pinch.current.dist;
+      // dampen: pull ratio toward 1.0 so pinch is calmer
+      const ratio = 1 + (raw - 1) * 0.55;
       setView((v) => clamp({ ...v, scale: pinch.current!.scale * ratio }));
       e.preventDefault();
     };
@@ -123,6 +162,10 @@ export function AtlasStage({
       el.removeEventListener("touchend", onTouchEnd);
     };
   }, [view.scale, clamp]);
+
+  // Cleanup any pending inertia on unmount
+  useEffect(() => () => stopInertia(), []);
+
 
   // Viewport bbox in SVG coords for tier-4 culling
   const bbox = (() => {
@@ -171,8 +214,10 @@ export function AtlasStage({
         <g style={{
           transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`,
           transformOrigin: "center",
-          transition: drag.current || pinch.current ? "none" : "transform 160ms ease-out",
+          transition: drag.current || pinch.current ? "none" : "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)",
+          willChange: "transform",
         }}>
+
           {/* Historical atlas foundation — coastlines, seas, rivers, mountains, washes, anchors */}
           <AtlasBaseLayers
             inv={inv}
@@ -261,9 +306,10 @@ export function AtlasStage({
 
       {/* Zoom controls */}
       <div className="absolute right-4 bottom-4 flex flex-col gap-1.5">
-        <ZoomBtn label="+" onClick={() => setView((v) => clamp({ ...v, scale: v.scale * 1.4 }))} />
-        <ZoomBtn label="−" onClick={() => setView((v) => clamp({ ...v, scale: v.scale / 1.4 }))} />
-        <ZoomBtn label="⟲" onClick={() => setView(IDENTITY)} />
+        <ZoomBtn label="+" onClick={() => { stopInertia(); setView((v) => clamp({ ...v, scale: v.scale * 1.25 })); }} />
+        <ZoomBtn label="−" onClick={() => { stopInertia(); setView((v) => clamp({ ...v, scale: v.scale / 1.25 })); }} />
+
+        <ZoomBtn label="⟲" onClick={() => { stopInertia(); setView(IDENTITY); }} />
       </div>
     </div>
   );
