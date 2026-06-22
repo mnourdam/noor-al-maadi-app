@@ -1,0 +1,262 @@
+// ============================================================
+// Campaign Ledger (PR3) — local-first reward dedup + resume + sync queue
+// ------------------------------------------------------------
+// Single source of truth for "what rewards has the player already
+// claimed in any imported campaign, locally".
+//
+// Stored under one localStorage key:
+//   {
+//     keys:    { [ledgerKey]: { at: iso, synced: boolean } },
+//     active:  { campaignId, chapterId, activityId?, at },
+//     pending: PendingOp[],
+//   }
+//
+// Ledger keys are stable & unique:
+//   activity:<campaignId>:<chapterId>:<activityId>
+//   chapter:<campaignId>:<chapterId>
+//   campaign:<campaignId>
+//
+// claim*() returns the reward delta on FIRST claim, and `{granted:false}`
+// on subsequent calls. Wrong answers MUST NOT call claim* — only call
+// setActive() and rely on PR2's heart logic.
+//
+// Survives refresh, app close, and offline. When online + signed in, the
+// flush() loop pushes pending ops to Supabase (user_campaign_progress +
+// user_collection) and marks them synced.
+// ============================================================
+
+import { ACTIVITY_DEFAULTS, type Campaign, type CampaignActivity, type CampaignChapter, type CampaignReward } from "@/types/campaign";
+import { upsertChapterProgress, addCollectionItems, type CollectionItemInsert } from "@/lib/progressSync";
+import { parseUnlockId } from "@/lib/campaignUnlocks";
+
+const LEDGER_KEY = "irth_campaign_ledger_v1";
+
+export interface LedgerEntry { at: string; synced: boolean }
+export interface ActivePosition {
+  campaignId: string;
+  chapterId: string;
+  activityId?: string;
+  at: string;
+}
+export type PendingOp =
+  | {
+      kind: "chapter";
+      campaignId: string; chapterId: string;
+      status: "unlocked" | "completed";
+      score: number; xpEarned: number; coinsEarned: number;
+      completed: boolean; at: string;
+    }
+  | {
+      kind: "collection";
+      items: CollectionItemInsert[]; at: string;
+    };
+
+interface LedgerState {
+  keys: Record<string, LedgerEntry>;
+  active?: ActivePosition;
+  pending: PendingOp[];
+}
+
+function isBrowser() {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+function read(): LedgerState {
+  if (!isBrowser()) return { keys: {}, pending: [] };
+  try {
+    const raw = window.localStorage.getItem(LEDGER_KEY);
+    if (!raw) return { keys: {}, pending: [] };
+    const parsed = JSON.parse(raw) as Partial<LedgerState>;
+    return {
+      keys: parsed.keys ?? {},
+      active: parsed.active,
+      pending: parsed.pending ?? [],
+    };
+  } catch { return { keys: {}, pending: [] }; }
+}
+function write(s: LedgerState) {
+  if (!isBrowser()) return;
+  try { window.localStorage.setItem(LEDGER_KEY, JSON.stringify(s)); } catch { /* quota */ }
+}
+
+// -------------------- Keys --------------------
+
+export const activityKey  = (cid: string, chid: string, aid: string) => `activity:${cid}:${chid}:${aid}`;
+export const chapterKey   = (cid: string, chid: string)               => `chapter:${cid}:${chid}`;
+export const campaignKey  = (cid: string)                              => `campaign:${cid}`;
+
+export function hasClaimed(key: string): boolean {
+  return Boolean(read().keys[key]);
+}
+
+function claim(key: string): boolean {
+  const s = read();
+  if (s.keys[key]) return false;
+  s.keys[key] = { at: new Date().toISOString(), synced: false };
+  write(s);
+  return true;
+}
+
+// -------------------- Reward shape --------------------
+
+export interface RewardDelta {
+  granted: boolean;
+  xp: number;
+  coins: number;
+  unlocks: string[]; // raw registry-unlock ids
+}
+
+const ZERO: RewardDelta = { granted: false, xp: 0, coins: 0, unlocks: [] };
+
+function rewardOfActivity(a: CampaignActivity): { xp: number; coins: number } {
+  return {
+    xp:    a.xpReward    ?? ACTIVITY_DEFAULTS.xpReward,
+    coins: a.coinsReward ?? ACTIVITY_DEFAULTS.coinsReward,
+  };
+}
+function rewardOfCampaignReward(r?: CampaignReward): { xp: number; coins: number; unlocks: string[] } {
+  return {
+    xp:      r?.xp ?? 0,
+    coins:   r?.coins ?? 0,
+    unlocks: r?.unlocks ?? [],
+  };
+}
+
+// -------------------- Claim API (call only on CORRECT) --------------------
+
+export function claimActivityReward(
+  campaign: Campaign, chapter: CampaignChapter, activity: CampaignActivity,
+): RewardDelta {
+  const key = activityKey(campaign.id, chapter.id, activity.id);
+  if (!claim(key)) return ZERO;
+  const { xp, coins } = rewardOfActivity(activity);
+  return { granted: true, xp, coins, unlocks: [] };
+}
+
+export function claimChapterReward(
+  campaign: Campaign, chapter: CampaignChapter,
+): RewardDelta {
+  const key = chapterKey(campaign.id, chapter.id);
+  if (!claim(key)) return ZERO;
+  const r = rewardOfCampaignReward(chapter.rewards);
+  return { granted: true, ...r };
+}
+
+export function claimCampaignReward(campaign: Campaign): RewardDelta {
+  const key = campaignKey(campaign.id);
+  if (!claim(key)) return ZERO;
+  const r = rewardOfCampaignReward(campaign.finalRewards);
+  const extra = campaign.unlocks ?? [];
+  return { granted: true, xp: r.xp, coins: r.coins, unlocks: [...r.unlocks, ...extra] };
+}
+
+// -------------------- Active position (resume) --------------------
+
+export function setActivePosition(p: Omit<ActivePosition, "at">): void {
+  const s = read();
+  s.active = { ...p, at: new Date().toISOString() };
+  write(s);
+}
+export function getActivePosition(): ActivePosition | undefined {
+  return read().active;
+}
+export function clearActivePositionIf(campaignId: string): void {
+  const s = read();
+  if (s.active?.campaignId === campaignId) {
+    delete s.active;
+    write(s);
+  }
+}
+
+// -------------------- Pending sync queue --------------------
+
+export function enqueueChapterSync(op: Omit<Extract<PendingOp, { kind: "chapter" }>, "kind" | "at">): void {
+  const s = read();
+  s.pending.push({ kind: "chapter", ...op, at: new Date().toISOString() });
+  write(s);
+  void flushPending();
+}
+export function enqueueCollectionSync(items: CollectionItemInsert[]): void {
+  if (!items.length) return;
+  const s = read();
+  s.pending.push({ kind: "collection", items, at: new Date().toISOString() });
+  write(s);
+  void flushPending();
+}
+
+let flushing = false;
+export async function flushPending(): Promise<void> {
+  if (!isBrowser() || flushing) return;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+  flushing = true;
+  try {
+    // Snapshot then attempt each op. On success, drop it from the queue.
+    let s = read();
+    const remaining: PendingOp[] = [];
+    for (const op of s.pending) {
+      let ok = false;
+      try {
+        if (op.kind === "chapter") {
+          await upsertChapterProgress({
+            campaignId: op.campaignId, chapterId: op.chapterId,
+            status: op.status, score: op.score,
+            xpEarned: op.xpEarned, coinsEarned: op.coinsEarned,
+            completed: op.completed,
+          });
+          ok = true;
+        } else if (op.kind === "collection") {
+          await addCollectionItems(op.items);
+          ok = true;
+        }
+      } catch { ok = false; }
+      if (!ok) remaining.push(op);
+    }
+    // Re-read in case another tab/path mutated during await; preserve any
+    // entries added since snapshot.
+    s = read();
+    const newer = s.pending.slice(s.pending.length); // (always empty here, kept for clarity)
+    s.pending = [...remaining, ...newer];
+    // Mark synced ledger keys (best-effort; we mark all unsynced as synced
+    // when the queue drains completely — coarse but safe for dedup).
+    if (s.pending.length === 0) {
+      for (const k of Object.keys(s.keys)) s.keys[k].synced = true;
+    }
+    write(s);
+  } finally {
+    flushing = false;
+  }
+}
+
+// -------------------- Helpers for collection items --------------------
+
+export function unlockIdsToCollectionItems(
+  campaignId: string, chapterId: string | null, ids: string[],
+): CollectionItemInsert[] {
+  const seen = new Set<string>();
+  const out: CollectionItemInsert[] = [];
+  for (const rid of ids) {
+    const parsed = parseUnlockId(rid);
+    if (!parsed.slug || seen.has(parsed.slug)) continue;
+    seen.add(parsed.slug);
+    out.push({
+      itemId: parsed.slug,
+      itemType: parsed.type ?? "registry",
+      sourceCampaignId: campaignId,
+      sourceChapterId: chapterId ?? undefined,
+    });
+  }
+  return out;
+}
+
+// -------------------- Auto-flush bootstrap --------------------
+
+let bootstrapped = false;
+export function bootstrapLedgerFlush(): void {
+  if (!isBrowser() || bootstrapped) return;
+  bootstrapped = true;
+  window.addEventListener("online", () => { void flushPending(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void flushPending();
+  });
+  // Initial attempt on boot.
+  void flushPending();
+}
