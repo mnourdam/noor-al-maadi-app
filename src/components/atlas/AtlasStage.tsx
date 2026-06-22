@@ -309,7 +309,7 @@ export function AtlasStage({
         <ZoomBtn label="+" onClick={() => { stopInertia(); setView((v) => clamp({ ...v, scale: v.scale * 1.25 })); }} />
         <ZoomBtn label="−" onClick={() => { stopInertia(); setView((v) => clamp({ ...v, scale: v.scale / 1.25 })); }} />
 
-        <ZoomBtn label="⟲" onClick={() => setView(IDENTITY)} />
+        <ZoomBtn label="⟲" onClick={() => { stopInertia(); setView(IDENTITY); }} />
       </div>
     </div>
   );
