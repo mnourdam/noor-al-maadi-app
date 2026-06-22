@@ -296,7 +296,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const eff = getEffectiveHearts(p, now);
         const next = Math.max(0, eff - 1);
         result = next;
-        return { ...p, hearts: next, heartsAt: now };
+        return { ...p, ...commitHearts(p, next, now) };
       });
       return result;
     },
@@ -313,8 +313,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         outcome = { ok: true };
         return {
           ...p,
-          hearts: eff + 1,
-          heartsAt: now,
+          ...commitHearts(p, eff + 1, now),
           activityCooldowns: { ...(p.activityCooldowns ?? {}), [k]: now + ACTIVITY_COOLDOWN_MS },
         };
       });
@@ -329,7 +328,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         if (eff >= HEART_MAX) return p;
         if ((p.dinars ?? 0) < COST) return p;
         ok = true;
-        return { ...p, hearts: eff + 1, heartsAt: now, dinars: p.dinars - COST };
+        return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - COST };
       });
       return ok;
     },
