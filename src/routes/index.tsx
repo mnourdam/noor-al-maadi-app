@@ -588,11 +588,17 @@ function Index() {
       {/* ============ 7. NEW IN IRTH ============ */}
       <section className="mt-10 px-5">
         <SectionHeader icon={<Bell className="size-3.5" />} eyebrow="آخر التحديثات" title="جديد في إرث" />
-        <EmptyState
-          icon={<Bell className="size-5 text-gold" />}
-          title="لا توجد تحديثات جديدة بعد"
-          body="ستظهر هنا الحملات والشخصيات والتحقيقات الجديدة فور إضافتها."
-        />
+        {latestUpdates.length > 0 ? (
+          <div className="space-y-2">
+            {latestUpdates.map((u) => <UpdateRow key={u.key} item={u} />)}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Bell className="size-5 text-gold" />}
+            title="لا توجد تحديثات جديدة بعد"
+            body="ستظهر هنا الحملات والشخصيات والتحقيقات الجديدة فور إضافتها."
+          />
+        )}
       </section>
 
       {/* ============ 8. EXPLORE IRTH ============ */}
