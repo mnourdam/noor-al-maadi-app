@@ -167,49 +167,25 @@ export function useRealCollectionStats() {
       });
     }
 
-    // 2. Imported registry unlocks
-    for (const id of importedIds) {
-      const item = registryById.get(id.toLowerCase());
-      if (!item) { logMissingTitle("registry-missing", id); continue; }
-      if (!isValidArabicTitle(item.name)) { logMissingTitle("registry", item.id); continue; }
-      const kind = kindFromType(String(item.type));
-      const img = (item.image ?? "").trim();
-      const icon = img && [...img].length === 1 ? img : KIND_ICON[kind];
-      const slug = (item as any).slug ?? item.id;
-      push({
-        key: `reg:${item.id}`,
-        kind,
-        title: item.name.trim(),
-        subtitle: kind,
-        icon,
-        to: `/encyclopedia/entity/${slug}`,
-        unlockedAt: 0,
-      });
-    }
-
-    // NOTE: legacy profile arrays (charactersUnlocked / artifactsFound) are
-    // intentionally NOT included here. They contained demo/seed data
-    // (e.g. Salah al-Din, Umar) that polluted the homepage "latest
-    // discoveries" rail with items the player never actually unlocked in
-    // the current Supabase-based gameplay. Source of truth = Supabase
-    // user_collection + imported registry unlocks only.
+    // NOTE: Imported-registry unlocks (localStorage) are NO LONGER an
+    // independent unlock source. They are migrated into Supabase
+    // user_collection on boot / SIGNED_IN by registryUnlockMigration.ts.
+    // The registry map is still consulted above to resolve Arabic
+    // display names/images for Supabase rows.
+    //
+    // Legacy profile arrays (charactersUnlocked / artifactsFound) are
+    // also intentionally NOT included — they contained demo/seed data
+    // (e.g. Salah al-Din, Umar) and are not migrated.
 
     return out;
-  }, [supaRows, importedIds, registryById]);
+  }, [supaRows, registryById]);
 
 
-  // Recently discovered: prefer items with real timestamps, then locals
-  // (most-recent first by profile array order — newest pushed last).
+  // Recently discovered: Supabase rows only, newest first.
   const recent = useMemo<UnifiedUnlock[]>(() => {
-    const stamped = all.filter((u) => u.unlockedAt > 0).sort((a, b) => b.unlockedAt - a.unlockedAt);
-    const importedRev = [...all.filter((u) => u.unlockedAt === 0 && u.key.startsWith("reg:"))].reverse();
-    const merged: UnifiedUnlock[] = [];
-    const pushUnique = (u: UnifiedUnlock) => {
-      if (!merged.find((m) => m.key === u.key)) merged.push(u);
-    };
-    stamped.forEach(pushUnique);
-    importedRev.forEach(pushUnique);
-    return merged.slice(0, 8);
+    return [...all]
+      .sort((a, b) => b.unlockedAt - a.unlockedAt)
+      .slice(0, 8);
   }, [all]);
 
 
