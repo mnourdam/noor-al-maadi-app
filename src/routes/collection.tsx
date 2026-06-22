@@ -476,15 +476,16 @@ function CollectionPage() {
         {missingUnlockIds.length > 0 && (
           <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-            <div className="flex-1">
-              <p className="font-bold">{missingUnlockIds.length} عنصر مفتوح بلا تعريف في الموسوعة</p>
-              <p className="text-[10px] text-amber-200/80">
-                المعرفات: {missingUnlockIds.slice(0, 3).join("، ")}{missingUnlockIds.length > 3 ? "…" : ""}.
-                {" "}أضِفها في الموسوعة من لوحة الإدارة.
-              </p>
+            <div className="flex-1 space-y-0.5">
+              {missingUnlockIds.map((mid) => (
+                <p key={mid} className="font-mono text-[10px]">
+                  عنصر مفتوح بلا صفحة موسوعية: <span className="font-bold">{mid}</span>
+                </p>
+              ))}
             </div>
           </div>
         )}
+
 
         {/* Section pills */}
         <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
