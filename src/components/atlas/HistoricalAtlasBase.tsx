@@ -257,10 +257,7 @@ export function AtlasBaseLayers({
       {/* 4. Warm coastal halo across the canvas */}
       <rect width="100" height="60" fill="url(#atlas-coast-halo)" pointerEvents="none" />
 
-      </g>
 
-      {/* 4. Warm coastal halo across the canvas */}
-      <rect width="100" height="60" fill="url(#atlas-coast-halo)" pointerEvents="none" />
 
       {/* 5. Rivers — drawn on top of land only (they overlay everything but read as ink on parchment) */}
       {showRivers && (
