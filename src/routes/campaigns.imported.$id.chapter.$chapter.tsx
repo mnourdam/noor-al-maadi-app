@@ -26,8 +26,11 @@ import { UnlockList } from "@/components/imported-campaign/UnlockList";
 import { useProfile } from "@/lib/profile";
 import { getEffectiveHearts } from "@/lib/hearts";
 import { audioManager } from "@/lib/audioManager";
-import { upsertChapterProgress, addCollectionItems } from "@/lib/progressSync";
-import { parseUnlockId } from "@/lib/campaignUnlocks";
+import {
+  claimActivityReward, claimChapterReward, claimCampaignReward,
+  enqueueChapterSync, enqueueCollectionSync, setActivePosition,
+  clearActivePositionIf, unlockIdsToCollectionItems,
+} from "@/lib/campaignLedger";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
