@@ -1,10 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Crown, ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords } from "lucide-react";
+import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { ARTIFACTS, CHARACTERS } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
-import { listEngineCampaigns, campaignProgressFor } from "@/lib/campaign-engine";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { listPublishedCampaigns } from "@/lib/campaignStorage";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
