@@ -343,6 +343,7 @@ function EntityEditor({
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pickingAps, setPickingAps] = useState(false);
+  const [apsPickedNotice, setApsPickedNotice] = useState<{ x: number; y: number } | null>(null);
 
   // Auto-suggest slug when name changes and admin hasn't touched it
   useEffect(() => {
@@ -600,8 +601,15 @@ function EntityEditor({
             setApsX(p.x);
             setApsY(p.y);
             setPickingAps(false);
+            setApsPickedNotice({ x: p.x, y: p.y });
+            window.setTimeout(() => setApsPickedNotice(null), 4000);
           }}
         />
+      )}
+      {apsPickedNotice && (
+        <div className="fixed bottom-4 left-1/2 z-[70] -translate-x-1/2 rounded-lg border border-emerald-500/50 bg-emerald-600/95 px-4 py-2 text-sm font-semibold text-white shadow-lg">
+          تم تحديث APS من الأطلس: {apsPickedNotice.x}, {apsPickedNotice.y} — احفظ التعديلات
+        </div>
       )}
     </div>
   );
