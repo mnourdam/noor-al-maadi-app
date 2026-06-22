@@ -164,6 +164,8 @@ function RootComponent() {
         const { data } = supabase.auth.onAuthStateChange((event) => {
           if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
             m.flushPendingDeviceToken().catch(() => {});
+            // PR3: drain any queued campaign sync ops now that we have a session.
+            import("../lib/campaignLedger").then((l) => l.flushPending()).catch(() => {});
           }
         });
         unsub = () => data.subscription.unsubscribe();
