@@ -415,17 +415,35 @@ function CollectionPage() {
   const openEntityReveal = (e: any, isOpen: boolean) => {
     const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
     const raw = `${current.type}:${e.slug}`;
+    if (!isOpen) {
+      // Locked: never leak summary/details. Show locked preview only.
+      const sourceCid = unlockSources.get(raw);
+      const sourceTitle = sourceCid ? campaignTitleById.get(sourceCid) : undefined;
+      setReveal({
+        rarity,
+        icon: current.glyph,
+        title: e.title ?? "مقتنى غامض",
+        subtitle: current.label,
+        lines: [],
+        locked: true,
+        lockedHint: sourceTitle
+          ? `ينفتح عند إكمال: ${sourceTitle}`
+          : "تابع رحلتك في الحملات لاكتشاف هذا المقتنى.",
+      });
+      return;
+    }
     setReveal({
       rarity,
       icon: current.glyph,
       title: e.title ?? e.slug,
       subtitle: e.subtitle ?? current.label,
       lines: e.summary ? [e.summary] : ["عنصر من الموسوعة. افتحه لقراءة تفاصيله الكاملة."],
-      sourceLabel: isOpen ? sourceLabelFor(raw) : undefined,
-      alreadyOwned: isOpen,
+      sourceLabel: sourceLabelFor(raw),
+      alreadyOwned: true,
       onOpenEncyclopedia: () => navigate({ to: "/encyclopedia/entity/$id", params: { id: e.slug } }),
     });
   };
+
 
 
   return (
@@ -701,11 +719,22 @@ function ImportedCard({
       unlocked={item.unlocked}
       rarity={rarity as Rarity}
       icon={cardIcon}
-      title={item.name}
+      title={item.unlocked ? item.name : (item.name || "مقتنى غامض")}
       subtitle={subtitle}
-      footer={footer}
+      footer={item.unlocked ? footer : undefined}
       onClick={() => {
-        if (!item.unlocked) return;
+        if (!item.unlocked) {
+          setReveal({
+            rarity: rarity as Rarity,
+            icon: revealIcon,
+            title: item.name || "مقتنى غامض",
+            subtitle,
+            lines: [],
+            locked: true,
+            lockedHint: "تابع رحلتك في الحملات لاكتشاف هذا المقتنى.",
+          });
+          return;
+        }
         setReveal({
           rarity: rarity as Rarity,
           icon: revealIcon,
@@ -721,3 +750,4 @@ function ImportedCard({
     />
   );
 }
+

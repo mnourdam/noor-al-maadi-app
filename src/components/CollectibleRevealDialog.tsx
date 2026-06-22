@@ -10,7 +10,7 @@
 // action when an entity slug is available.
 
 import { useEffect } from "react";
-import { Sparkles, BookOpen } from "lucide-react";
+import { Sparkles, BookOpen, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { audioManager } from "@/lib/audioManager";
 
@@ -28,6 +28,10 @@ export interface CollectibleRevealItem {
   alreadyOwned?: boolean;
   /** If provided, render an "افتح في الموسوعة" button. */
   onOpenEncyclopedia?: () => void;
+  /** Show a locked-preview variant instead of the reveal celebration. */
+  locked?: boolean;
+  /** Arabic hint shown for locked items, e.g. "ينفتح عند إكمال: <campaign>". */
+  lockedHint?: string;
 }
 
 const RARITY_META: Record<CollectibleRarity, { label: string; chip: string; wash: string }> = {
@@ -36,6 +40,7 @@ const RARITY_META: Record<CollectibleRarity, { label: string; chip: string; wash
   epic:      { label: "ملحمي",  chip: "bg-fuchsia-400/15 text-fuchsia-200",               wash: "from-fuchsia-400/20 via-fuchsia-400/5 to-transparent" },
   legendary: { label: "أسطوري", chip: "bg-gradient-gold text-primary-foreground",         wash: "from-gold/25 via-gold/5 to-transparent" },
 };
+
 
 export function CollectibleRevealDialog({
   item,
@@ -48,7 +53,7 @@ export function CollectibleRevealDialog({
   const meta = item ? RARITY_META[item.rarity] : RARITY_META.common;
 
   useEffect(() => {
-    if (item) {
+    if (item && !item.locked) {
       audioManager.playSfx("unlock-reward", { dedupeKey: `reveal:${item.title}` });
     }
   }, [item]);
@@ -59,7 +64,41 @@ export function CollectibleRevealDialog({
         dir="rtl"
         className="max-w-sm overflow-hidden border-white/10 bg-surface p-0 [&>button]:text-gold"
       >
-        {item && (
+        {item && (item.locked ? (
+          <div className="relative">
+            <div className="relative overflow-hidden p-6 text-center bg-gradient-to-b from-black/40 to-transparent">
+              <div className="relative mx-auto grid size-24 place-items-center overflow-hidden rounded-2xl bg-black/60 ring-1 ring-gold/30">
+                <span className="absolute select-none text-5xl opacity-25 blur-[3px] grayscale" aria-hidden>
+                  {item.icon}
+                </span>
+                <Lock className="size-9 text-gold" />
+              </div>
+              <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-black/40 px-3 py-1 text-[10px] font-bold tracking-wider text-gold ring-1 ring-gold/30">
+                <Lock className="size-3" /> غير مكتشف
+              </span>
+              <DialogTitle className="font-display mt-2 text-2xl font-extrabold text-foreground/85">
+                {item.title?.trim() ? item.title : "مقتنى غامض"}
+              </DialogTitle>
+              <p className="mt-1 text-xs text-gold/80">{item.subtitle}</p>
+            </div>
+            <div className="space-y-3 px-5 pb-5 text-center text-[12.5px] leading-7 text-foreground/85">
+              <p className="font-bold">هذا المقتنى لم يُفتح بعد</p>
+              <p className="text-muted-foreground">أكمل الحملة أو الفصل المرتبط لاكتشافه.</p>
+              {item.lockedHint && (
+                <div className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1.5 text-[11px] text-gold">
+                  <Sparkles className="size-3.5" />
+                  {item.lockedHint}
+                </div>
+              )}
+              <button
+                onClick={onClose}
+                className="mt-2 w-full rounded-xl border border-white/10 py-2.5 text-sm font-bold text-muted-foreground"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        ) : (
           <div className="relative">
             <div className={`relative overflow-hidden p-6 text-center bg-gradient-to-b ${meta.wash}`}>
               <div
@@ -113,8 +152,9 @@ export function CollectibleRevealDialog({
               </button>
             </div>
           </div>
-        )}
+        ))}
       </DialogContent>
     </Dialog>
   );
 }
+
