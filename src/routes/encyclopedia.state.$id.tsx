@@ -6,7 +6,7 @@ import {
   SECTION_LABELS, SECTION_GLYPHS, stateEntities, stateEntityForEra, sortChrono,
   KNOWN_ERAS, type EncyclopediaSection,
 } from "@/lib/encyclopedia";
-import { ENGINE_CAMPAIGNS } from "@/lib/campaign-engine/registry";
+// Legacy campaign-engine removed in PR 1b. Campaigns now live in Supabase admin_campaigns.
 import { ERAS, type Era } from "@/lib/data";
 import { useEncyclopediaDisplay } from "@/lib/encyclopedia-source";
 
