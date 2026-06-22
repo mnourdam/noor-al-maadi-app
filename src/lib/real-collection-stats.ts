@@ -202,17 +202,16 @@ export function useRealCollectionStats() {
   // (most-recent first by profile array order — newest pushed last).
   const recent = useMemo<UnifiedUnlock[]>(() => {
     const stamped = all.filter((u) => u.unlockedAt > 0).sort((a, b) => b.unlockedAt - a.unlockedAt);
-    const localRev = [...all.filter((u) => u.unlockedAt === 0 && u.key.startsWith("loc:"))].reverse();
     const importedRev = [...all.filter((u) => u.unlockedAt === 0 && u.key.startsWith("reg:"))].reverse();
     const merged: UnifiedUnlock[] = [];
     const pushUnique = (u: UnifiedUnlock) => {
       if (!merged.find((m) => m.key === u.key)) merged.push(u);
     };
     stamped.forEach(pushUnique);
-    localRev.forEach(pushUnique);
     importedRev.forEach(pushUnique);
     return merged.slice(0, 8);
   }, [all]);
+
 
   // ===== Aggregate counters =====
   const totalCollection = all.length;
