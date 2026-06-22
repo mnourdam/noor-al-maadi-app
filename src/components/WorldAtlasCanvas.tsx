@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Building2, Swords, User, Landmark, Gem, Calendar, Crown, Plus, Minus, RotateCcw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { WorldEntity, WorldEntityType, MapCoords } from "@/lib/world-map-source";
+import { ATLAS_REGIONS, ATLAS_REFERENCES, type AtlasRegionId } from "@/lib/atlas-regions";
 
 export type MapMarker = WorldEntity & { coords: MapCoords };
 
