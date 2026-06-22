@@ -313,7 +313,7 @@ function StepCard({
 function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof getInvestigation>> }) {
   const {
     profile, completeInvestigation, awardBadge, findArtifact, unlockCharacter,
-    buyHint, hintsRevealed, loseHeart, hasHearts, addDinars,
+    buyHint, hintsRevealed, addDinars,
   } = useProfile();
 
   const scope = investigationScopeKey(inv.id);
@@ -328,15 +328,13 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
 
   const q = inv.questions[qIndex];
   const isLastQuestion = qIndex >= inv.questions.length - 1;
-  const heartsOut = !hasHearts();
+  // Investigations never gate on hearts and never consume hearts.
   const totalReward = useMemo(() => inv.reward, [inv.reward]);
 
   const onSubmit = () => {
     if (picked == null || reveals[q.id]) return;
-    if (heartsOut) return;
     const correct = picked === q.correctIndex;
-    if (!correct) loseHeart();
-    else setCorrectCount((c) => c + 1);
+    if (correct) setCorrectCount((c) => c + 1);
     setReveals((r) => ({ ...r, [q.id]: true }));
   };
 
