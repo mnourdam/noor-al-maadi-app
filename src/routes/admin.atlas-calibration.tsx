@@ -353,20 +353,28 @@ function CalibrationPage() {
         </div>
 
         <ul className="flex-1 overflow-y-auto p-2">
-          {rows.map((r) => {
+          {[...rows]
+            .sort((a, b) => Number(NEEDS_REVIEW.has(b.id)) - Number(NEEDS_REVIEW.has(a.id)))
+            .map((r) => {
             const diff = diffById.get(r.id);
             const drift = diff != null && diff > PIN_TOLERANCE_PX;
             const active = r.id === selectedId;
+            const needsReview = NEEDS_REVIEW.has(r.id);
             return (
               <li key={r.id}>
                 <button
                   onClick={() => { setSelectedId(r.id); centerOn(r.aps, Math.max(scale, 1)); }}
                   className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-right text-[12px] ${
                     active ? "bg-amber-500/15 ring-1 ring-amber-400/40" : "hover:bg-stone-800"
-                  }`}
+                  } ${needsReview ? "ring-1 ring-rose-500/40" : ""}`}
                 >
                   <span className={`size-2 rounded-full ${r.verified ? "bg-emerald-400" : "bg-stone-500"}`} />
                   <span className="flex-1 truncate">{r.name}</span>
+                  {needsReview && (
+                    <span className="rounded bg-rose-500/25 px-1 text-[10px] font-bold text-rose-200" title="مرساة تحتاج مراجعة (بواقي عالية)">
+                      مراجعة
+                    </span>
+                  )}
                   {drift && (
                     <span className="rounded bg-rose-500/20 px-1 text-[10px] text-rose-300" title={`فرق ${diff!.toFixed(0)} px`}>
                       Δ {diff!.toFixed(0)}
