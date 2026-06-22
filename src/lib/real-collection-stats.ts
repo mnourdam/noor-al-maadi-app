@@ -19,6 +19,7 @@ import { ARTIFACTS, CHARACTERS, CAMPAIGNS } from "./data";
 // (registry localStorage is no longer an unlock source; see registryUnlockMigration.ts)
 import { listRegistry } from "./contentRegistryStorage";
 import { displayName } from "./display-names";
+import { getPackEntity } from "./packs/registry";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Items whose Arabic title cannot be resolved are excluded from
@@ -79,6 +80,7 @@ function useSupabaseCollection() {
   const [rows, setRows] = useState<
     Array<{ type: string; slug: string; unlockedAt: number }>
   >([]);
+  const [validSlugs, setValidSlugs] = useState<Set<string> | null>(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -86,13 +88,20 @@ function useSupabaseCollection() {
         const { data: sess } = await supabase.auth.getSession();
         const uid = sess.session?.user?.id;
         if (!uid) return;
-        const { data } = await supabase
-          .from("user_collection")
-          .select("item_id,item_type,unlocked_at")
-          .eq("user_id", uid);
-        if (cancelled || !data) return;
+        const [colRes, encRes] = await Promise.all([
+          supabase
+            .from("user_collection")
+            .select("item_id,item_type,unlocked_at")
+            .eq("user_id", uid),
+          supabase.from("encyclopedia_entities").select("slug").eq("enabled", true),
+        ]);
+        if (cancelled) return;
+        const slugSet = new Set<string>(
+          (encRes.data ?? []).map((r: any) => String(r.slug ?? "").toLowerCase()),
+        );
+        setValidSlugs(slugSet);
         setRows(
-          data.map((r: any) => ({
+          (colRes.data ?? []).map((r: any) => ({
             type: String(r.item_type ?? ""),
             slug: String(r.item_id ?? ""),
             unlockedAt: r.unlocked_at ? new Date(r.unlocked_at).getTime() : 0,
@@ -106,12 +115,12 @@ function useSupabaseCollection() {
       cancelled = true;
     };
   }, []);
-  return rows;
+  return { rows, validSlugs };
 }
 
 export function useRealCollectionStats() {
   const { profile } = useProfile();
-  const supaRows = useSupabaseCollection();
+  const { rows: supaRows, validSlugs } = useSupabaseCollection();
 
   // Registry is consulted only for display metadata (Arabic name/image)
   // of Supabase rows. It is no longer an unlock source.
@@ -142,7 +151,17 @@ export function useRealCollectionStats() {
     // 1. Supabase user_collection — has reliable timestamps
     for (const r of supaRows) {
       const kind = kindFromType(r.type);
-      const regItem = registryById.get(r.slug.toLowerCase());
+      const slugLower = r.slug.toLowerCase();
+      // Route-resolvability guard: only surface rows whose slug exists in
+      // the canonical content (pack registry OR Supabase encyclopedia_entities).
+      // This filters out legacy/demo rows with malformed slugs (e.g.
+      // `figure_salah_al_din`) that would lead to /encyclopedia/entity/<slug>
+      // not-found pages.
+      const inPack = !!getPackEntity(r.slug);
+      const inEnc = validSlugs ? validSlugs.has(slugLower) : true; // be lenient until loaded
+      if (!inPack && !inEnc) { logMissingTitle("supabase-route", r.slug); continue; }
+
+      const regItem = registryById.get(slugLower);
       const dn = displayName(r.slug);
       const candidate =
         (isValidArabicTitle(regItem?.name) ? regItem!.name : null) ??
@@ -172,7 +191,7 @@ export function useRealCollectionStats() {
     // (e.g. Salah al-Din, Umar) and are not migrated.
 
     return out;
-  }, [supaRows, registryById]);
+  }, [supaRows, validSlugs, registryById]);
 
 
   // Recently discovered: Supabase rows only, newest first.

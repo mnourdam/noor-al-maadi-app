@@ -10,6 +10,7 @@ import {
   type InvestigationStep,
 } from "@/lib/investigations-source";
 import { useProfile } from "@/lib/profile";
+import { displayName } from "@/lib/display-names";
 
 export const Route = createFileRoute("/investigation/$id")({
   head: () => ({ meta: [{ title: "تحقيق تاريخي" }] }),
@@ -50,7 +51,7 @@ function InvestigationPage() {
 function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
     profile, completeInvestigation, addDinars, awardBadge, findArtifact,
-    loseHeart, hasHearts, recoverHeartFromActivity,
+    recoverHeartFromActivity,
   } = useProfile();
 
   const steps: InvestigationStep[] = useMemo(
@@ -71,16 +72,15 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
   const step = steps[idx];
   const isLast = idx >= steps.length - 1;
-  const heartsOut = !hasHearts();
+  // Investigations are the recovery path when hearts are empty — they
+  // never gate on hearts and never consume hearts.
 
   const onConfirm = () => {
     if (!step) return;
     if (step.type === "question" || step.type === "decision") {
       if (picked == null || revealed) return;
-      if (heartsOut && step.type === "question") return;
       const correctIndex = step.correctAnswer;
       const isCorrect = typeof correctIndex === "number" ? picked === correctIndex : true;
-      if (step.type === "question" && !isCorrect) loseHeart();
       if (isCorrect) setCorrectCount((c) => c + 1);
       setRevealed(true);
     }
@@ -147,16 +147,19 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
           <section className="mt-5">
             <h2 className="font-display mb-2 text-sm font-bold">مراجع موسوعية</h2>
             <div className="flex flex-wrap gap-2">
-              {related.map((rid) => (
-                <Link
-                  key={rid}
-                  to="/encyclopedia/entity/$id"
-                  params={{ id: rid }}
-                  className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold hover:bg-gold/10"
-                >
-                  <BookOpen className="size-3" /> {rid}
-                </Link>
-              ))}
+              {related.map((rid) => {
+                const label = displayName(rid);
+                return (
+                  <Link
+                    key={rid}
+                    to="/encyclopedia/entity/$id"
+                    params={{ id: rid }}
+                    className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold hover:bg-gold/10"
+                  >
+                    <BookOpen className="size-3" /> {label && label !== rid ? label : "مرجع تاريخي"}
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}
@@ -172,19 +175,13 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
               )}
             </h2>
 
-            {heartsOut && step.type === "question" && (
-              <div className="mb-3 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-[12px] text-red-100">
-                نفدت قلوبك. أكمل بعد استرداد قلب.
-              </div>
-            )}
-
-            <StepCard step={step} picked={picked} setPicked={setPicked} revealed={revealed} heartsOut={heartsOut} />
+            <StepCard step={step} picked={picked} setPicked={setPicked} revealed={revealed} heartsOut={false} />
 
             <div className="mt-4">
               {(step.type === "question" || step.type === "decision") && !revealed ? (
                 <button
                   onClick={onConfirm}
-                  disabled={picked == null || (heartsOut && step.type === "question")}
+                  disabled={picked == null}
                   className="flex w-full items-center justify-center rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground disabled:opacity-40"
                 >
                   تأكيد الإجابة
@@ -316,7 +313,7 @@ function StepCard({
 function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof getInvestigation>> }) {
   const {
     profile, completeInvestigation, awardBadge, findArtifact, unlockCharacter,
-    buyHint, hintsRevealed, loseHeart, hasHearts, addDinars,
+    buyHint, hintsRevealed, addDinars,
   } = useProfile();
 
   const scope = investigationScopeKey(inv.id);
@@ -331,15 +328,13 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
 
   const q = inv.questions[qIndex];
   const isLastQuestion = qIndex >= inv.questions.length - 1;
-  const heartsOut = !hasHearts();
+  // Investigations never gate on hearts and never consume hearts.
   const totalReward = useMemo(() => inv.reward, [inv.reward]);
 
   const onSubmit = () => {
     if (picked == null || reveals[q.id]) return;
-    if (heartsOut) return;
     const correct = picked === q.correctIndex;
-    if (!correct) loseHeart();
-    else setCorrectCount((c) => c + 1);
+    if (correct) setCorrectCount((c) => c + 1);
     setReveals((r) => ({ ...r, [q.id]: true }));
   };
 
@@ -439,11 +434,6 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
             <h2 className="font-display mb-2 text-sm font-bold">
               السؤال {(qIndex + 1).toLocaleString("en-US")}/{inv.questions.length.toLocaleString("en-US")}
             </h2>
-            {heartsOut && (
-              <div className="mb-3 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-[12px] text-red-100">
-                نفدت قلوبك. انتظر استرداد قلب أو استخدم نشاطًا تعليميًا لاستعادته.
-              </div>
-            )}
             <div className="rounded-2xl border border-gold/25 bg-surface p-4">
               <p className="font-display text-[14px] font-bold leading-snug">{q.question}</p>
               <div className="mt-3 space-y-2">
@@ -459,7 +449,7 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
                   return (
                     <button
                       key={i}
-                      disabled={!!reveals[q.id] || heartsOut}
+                      disabled={!!reveals[q.id]}
                       onClick={() => setPicked(i)}
                       className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-right text-[12px] transition ${style}`}
                     >
@@ -479,7 +469,7 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
                 {!reveals[q.id] ? (
                   <button
                     onClick={onSubmit}
-                    disabled={picked == null || heartsOut}
+                    disabled={picked == null}
                     className="flex w-full items-center justify-center rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground disabled:opacity-40"
                   >
                     تأكيد الإجابة
