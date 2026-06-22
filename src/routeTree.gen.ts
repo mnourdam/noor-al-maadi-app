@@ -48,6 +48,7 @@ import { Route as BattleIdRouteImport } from './routes/battle.$id'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
+import { Route as AdminMapRouteImport } from './routes/admin.map'
 import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
 import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
@@ -254,6 +255,11 @@ const AdminMigrationRoute = AdminMigrationRouteImport.update({
   path: '/admin/migration',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminMapRoute = AdminMapRouteImport.update({
+  id: '/admin/map',
+  path: '/admin/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminInvestigationsRoute = AdminInvestigationsRouteImport.update({
   id: '/admin/investigations',
   path: '/admin/investigations',
@@ -334,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/investigations': typeof AdminInvestigationsRoute
+  '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
@@ -383,6 +390,7 @@ export interface FileRoutesByTo {
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/investigations': typeof AdminInvestigationsRoute
+  '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
@@ -435,6 +443,7 @@ export interface FileRoutesById {
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/investigations': typeof AdminInvestigationsRoute
+  '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
@@ -488,6 +497,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia'
     | '/admin/import'
     | '/admin/investigations'
+    | '/admin/map'
     | '/admin/migration'
     | '/admin/notifications'
     | '/admin/offline'
@@ -537,6 +547,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia'
     | '/admin/import'
     | '/admin/investigations'
+    | '/admin/map'
     | '/admin/migration'
     | '/admin/notifications'
     | '/admin/offline'
@@ -588,6 +599,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia'
     | '/admin/import'
     | '/admin/investigations'
+    | '/admin/map'
     | '/admin/migration'
     | '/admin/notifications'
     | '/admin/offline'
@@ -640,6 +652,7 @@ export interface RootRouteChildren {
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
   AdminImportRoute: typeof AdminImportRoute
   AdminInvestigationsRoute: typeof AdminInvestigationsRoute
+  AdminMapRoute: typeof AdminMapRoute
   AdminMigrationRoute: typeof AdminMigrationRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOfflineRoute: typeof AdminOfflineRoute
@@ -932,6 +945,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMigrationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/map': {
+      id: '/admin/map'
+      path: '/admin/map'
+      fullPath: '/admin/map'
+      preLoaderRoute: typeof AdminMapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/investigations': {
       id: '/admin/investigations'
       path: '/admin/investigations'
@@ -1069,6 +1089,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
   AdminImportRoute: AdminImportRoute,
   AdminInvestigationsRoute: AdminInvestigationsRoute,
+  AdminMapRoute: AdminMapRoute,
   AdminMigrationRoute: AdminMigrationRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOfflineRoute: AdminOfflineRoute,
