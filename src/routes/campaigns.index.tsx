@@ -41,8 +41,7 @@ export const Route = createFileRoute("/campaigns/")({
 });
 
 function CampaignsHub() {
-  const { profile: _profile } = useProfile();
-  const engineCampaigns = listEngineCampaigns();
+  useProfile(); // keep subscription for parity
   // Admin-imported published campaigns (Supabase admin_campaigns → local cache).
   const [importedCampaigns, setImportedCampaigns] = useState<ImportedCampaign[]>([]);
   useEffect(() => {
@@ -52,63 +51,11 @@ function CampaignsHub() {
       .then(() => setImportedCampaigns(listPublishedCampaigns()))
       .catch(() => {});
   }, []);
-  const profile = _profile;
-
 
   return (
     <AppShell>
       <Screen title="الحملات" subtitle="رحلاتٌ مصمَّمة تأخذك عبر العصور">
-        {/* === Campaign Engine (data-driven) === */}
-        {engineCampaigns.length > 0 && (
-          <div className="mb-6 space-y-4">
-            {engineCampaigns.map((c) => {
-              const p = campaignProgressFor(c, profile);
-              const complete = p.completed || p.percent >= 100;
-              const mainReward = artifactName(c.finalReward.artifactId)
-                ?? (c.finalReward.characterIds?.[0] ? characterName(c.finalReward.characterIds[0]) : undefined)
-                ?? c.finalReward.title;
-              return (
-                <Link
-                  key={c.id}
-                  to="/play/campaign/$id"
-                  params={{ id: c.id }}
-                  className={`shadow-elegant relative block overflow-hidden rounded-3xl border p-6 ${
-                    complete
-                      ? "border-gold/60 bg-gradient-to-tl from-gold/20 via-surface to-amber-900/30 ring-1 ring-gold/40"
-                      : "border-gold/40 bg-gradient-to-tl from-amber-900/40 via-surface to-stone-900/40"
-                  }`}
-                >
-                  <div className="particle-field" />
-                  <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
-                  <div className="relative">
-                    <div className="flex items-center justify-between gap-2 text-[10px] tracking-widest text-gold">
-                      <span className="inline-flex items-center gap-1.5">
-                        {complete ? <Crown className="size-3.5" /> : <Sparkles className="size-3.5" />}
-                        {complete ? "حملة مكتملة" : "حملة تفاعلية"} · {c.chapters.length.toLocaleString("en-US")} فصول
-                      </span>
-                      <span className="rounded-full border border-gold/40 bg-black/30 px-2 py-0.5 font-display text-[11px] font-bold tracking-normal text-gold">
-                        {p.percent}٪
-                      </span>
-                    </div>
-                    <h2 className="font-display mt-2 text-2xl font-bold shimmer-text">{c.title}</h2>
-                    {c.subtitle && <p className="mt-1 text-sm text-gold/80">{c.subtitle}</p>}
-                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{c.intro}</p>
-                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full bg-gradient-gold transition-all" style={{ width: `${p.percent}%` }} />
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground inline-flex items-center gap-1"><BookOpen className="size-3" /> {p.completedChapters}/{p.totalChapters} فصلًا</span>
-                      <span className="flex items-center gap-1 text-gold">{complete ? "اعرض" : p.completedChapters > 0 ? "تابع" : "ابدأ"} <ArrowLeft className="size-3.5" /></span>
-                    </div>
-                    <RewardRow main={mainReward} badge={c.finalReward.badgeName ?? displayBadgeName(c.finalReward.badgeId)} xp={c.finalReward.xp} />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-
-        {/* === Imported published campaigns (admin-managed) === */}
+        {/* === Imported published campaigns (admin-managed, Supabase source of truth) === */}
         {importedCampaigns.length > 0 && (
           <div className="mb-6 space-y-3">
             {importedCampaigns.map((c) => (
@@ -117,9 +64,7 @@ function CampaignsHub() {
           </div>
         )}
 
-
-        {/* Empty state when no engine or imported campaigns are available */}
-        {engineCampaigns.length === 0 && importedCampaigns.length === 0 && (
+        {importedCampaigns.length === 0 && (
           <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
             <Swords className="mx-auto mb-3 size-8 text-gold/70" />
             <p className="font-display text-base font-bold text-gold">لا توجد حملات متاحة بعد</p>
