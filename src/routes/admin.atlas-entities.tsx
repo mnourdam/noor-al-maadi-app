@@ -10,8 +10,11 @@ import {
   RefreshCw,
   Save,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
+import { geoToAps } from "@/lib/atlas/transform";
+
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -52,9 +55,11 @@ function AdminAtlasEntitiesPage() {
   const [rows, setRows] = useState<AtlasEntityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AtlasEntityRow | "new" | null>(null);
+  const [importing, setImporting] = useState(false);
   const [encyclopedia, setEncyclopedia] = useState<EncyclopediaRef[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
 
   const reload = async () => {
     setLoading(true);
@@ -117,12 +122,20 @@ function AdminAtlasEntitiesPage() {
               <RefreshCw className="inline size-4" />
             </button>
             <button
+              onClick={() => setImporting(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/10"
+            >
+              <Upload className="size-4" />
+              استيراد JSON
+            </button>
+            <button
               onClick={() => setEditing("new")}
               className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-bold text-slate-950 hover:bg-amber-400"
             >
               <Plus className="size-4" />
               كيان جديد
             </button>
+
           </div>
         </header>
 
@@ -267,6 +280,17 @@ function AdminAtlasEntitiesPage() {
           }}
         />
       )}
+
+      {importing && (
+        <ImportJsonDialog
+          onClose={() => setImporting(false)}
+          onDone={async () => {
+            setImporting(false);
+            await reload();
+          }}
+        />
+      )}
+
     </div>
   );
 }
@@ -566,3 +590,211 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+// ─────────────────────────────────────────────────────────────
+// JSON Import (Phase 1 helper — not the full bulk import system)
+// ─────────────────────────────────────────────────────────────
+
+type ImportResult = {
+  inserted: number;
+  skipped: number;
+  errors: { index: number; slug?: string; message: string }[];
+};
+
+const EXAMPLE_JSON = `{
+  "slug": "jerusalem",
+  "kind": "place",
+  "name_ar": "القدس",
+  "name_en": "Jerusalem",
+  "aps_x": 5230,
+  "aps_y": 2860,
+  "lon": 35.2137,
+  "lat": 31.7683,
+  "era": "early-islamic",
+  "metadata": { "tier": "major_city" }
+}`;
+
+function ImportJsonDialog({
+  onClose,
+  onDone,
+}: {
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [text, setText] = useState("");
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [parseErr, setParseErr] = useState<string | null>(null);
+
+  const run = async () => {
+    setParseErr(null);
+    setResult(null);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      setParseErr("JSON غير صالح: " + (e as Error).message);
+      return;
+    }
+    const items: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
+
+    setRunning(true);
+    const res: ImportResult = { inserted: 0, skipped: 0, errors: [] };
+
+    for (let i = 0; i < items.length; i++) {
+      const raw = items[i] as Record<string, any>;
+      try {
+        if (!raw || typeof raw !== "object") throw new Error("ليس كائنًا");
+        const slug = String(raw.slug ?? "").trim();
+        if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(slug)) throw new Error("slug مفقود أو غير صالح");
+        const kind = String(raw.kind ?? "").trim() as AtlasEntityKind;
+        if (!ATLAS_ENTITY_KINDS.includes(kind)) throw new Error("kind مفقود أو غير صالح");
+        const name_ar = String(raw.name_ar ?? "").trim();
+        if (!name_ar) throw new Error("name_ar مطلوب");
+
+        let aps_x = raw.aps_x;
+        let aps_y = raw.aps_y;
+        const hasAps = Number.isFinite(aps_x) && Number.isFinite(aps_y);
+        const hasGeo = Number.isFinite(raw.lon) && Number.isFinite(raw.lat);
+        if (!hasAps && !hasGeo) throw new Error("APS أو lon/lat مطلوب");
+        if (!hasAps && hasGeo) {
+          const p = geoToAps(Number(raw.lon), Number(raw.lat));
+          aps_x = Math.round(p.x);
+          aps_y = Math.round(p.y);
+        }
+        aps_x = Math.round(Number(aps_x));
+        aps_y = Math.round(Number(aps_y));
+        if (
+          aps_x < 0 ||
+          aps_x >= ATLAS_V1_PIXEL_SIZE.width ||
+          aps_y < 0 ||
+          aps_y >= ATLAS_V1_PIXEL_SIZE.height
+        ) {
+          throw new Error(
+            `APS خارج الحدود (${aps_x}, ${aps_y}) — يجب أن يكون ضمن ${ATLAS_V1_PIXEL_SIZE.width}×${ATLAS_V1_PIXEL_SIZE.height}`,
+          );
+        }
+
+        await createAtlasEntity({
+          slug,
+          kind,
+          name_ar,
+          name_en: raw.name_en ? String(raw.name_en).trim() : null,
+          aps_x,
+          aps_y,
+          lon: hasGeo ? Number(raw.lon) : null,
+          lat: hasGeo ? Number(raw.lat) : null,
+          geo_source: hasGeo ? (hasAps ? "manual" : "geoToAps") : null,
+          era: raw.era ? String(raw.era).trim() : null,
+          year_start: Number.isFinite(raw.year_start) ? Number(raw.year_start) : null,
+          year_end: Number.isFinite(raw.year_end) ? Number(raw.year_end) : null,
+          encyclopedia_entity_id: raw.encyclopedia_entity_id || null,
+          metadata: raw.metadata ?? null,
+        } as any);
+        res.inserted += 1;
+      } catch (e) {
+        res.skipped += 1;
+        res.errors.push({
+          index: i,
+          slug: typeof (items[i] as any)?.slug === "string" ? (items[i] as any).slug : undefined,
+          message: (e as Error).message,
+        });
+      }
+    }
+
+    setResult(res);
+    setRunning(false);
+  };
+
+  return (
+    <div
+      dir="rtl"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-amber-100">
+            <Upload className="size-5" /> استيراد كيانات أطلس من JSON
+          </h2>
+          <button onClick={onClose} className="rounded p-1 hover:bg-slate-800">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <p className="mb-2 text-xs text-slate-400">
+          ألصق كائنًا واحدًا أو مصفوفة كائنات. كل العناصر تُنشأ كـ <b>مسودة غير موثّقة</b>،
+          ثم يمكن توثيقها ونشرها من القائمة.
+        </p>
+        <details className="mb-3 rounded border border-slate-800 bg-slate-950 p-2 text-[11px] text-slate-400">
+          <summary className="cursor-pointer text-slate-300">عرض مثال</summary>
+          <pre dir="ltr" className="mt-2 overflow-x-auto font-mono text-[11px] text-slate-400">
+{EXAMPLE_JSON}
+          </pre>
+        </details>
+
+        <textarea
+          dir="ltr"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={EXAMPLE_JSON}
+          rows={14}
+          className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono text-[12px] text-slate-200"
+        />
+
+        {parseErr && (
+          <div className="mt-2 rounded border border-rose-500/40 bg-rose-500/10 p-2 text-sm text-rose-200">
+            {parseErr}
+          </div>
+        )}
+
+        {result && (
+          <div className="mt-3 space-y-2 rounded border border-slate-700 bg-slate-950 p-3 text-sm">
+            <div className="flex gap-4">
+              <span className="text-emerald-300">✓ تم الإدخال: {result.inserted}</span>
+              <span className="text-amber-300">⤬ تم التخطي: {result.skipped}</span>
+            </div>
+            {result.errors.length > 0 && (
+              <ul className="space-y-1 text-[12px] text-rose-200">
+                {result.errors.map((e, i) => (
+                  <li key={i} className="font-mono">
+                    [#{e.index}{e.slug ? ` ${e.slug}` : ""}] {e.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        <div className="mt-5 flex items-center justify-end gap-2 border-t border-slate-800 pt-4">
+          <button
+            onClick={onClose}
+            className="rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800"
+          >
+            إغلاق
+          </button>
+          {result && result.inserted > 0 && (
+            <button
+              onClick={onDone}
+              className="rounded border border-emerald-700 bg-emerald-600/20 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-600/30"
+            >
+              تحديث القائمة
+            </button>
+          )}
+          <button
+            disabled={running || !text.trim()}
+            onClick={run}
+            className="flex items-center gap-1.5 rounded bg-amber-500 px-3 py-1.5 text-sm font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
+          >
+            {running ? <RefreshCw className="size-4 animate-spin" /> : <Upload className="size-4" />}
+            تشغيل الاستيراد
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
