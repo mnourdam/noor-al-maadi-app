@@ -81,7 +81,7 @@ export const ATLAS_ANCHORS_V1: readonly AtlasAnchor[] = SEEDS.map((s) => ({
   ...s,
   aps: s.aps ?? seedAps(s.lon, s.lat),
   verified: s.verified ?? false,
-})) as const;
+}));
 
 export function getAnchor(id: string): AtlasAnchor | undefined {
   return ATLAS_ANCHORS_V1.find((a) => a.id === id);
