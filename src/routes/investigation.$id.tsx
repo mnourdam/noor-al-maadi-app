@@ -469,7 +469,7 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
                 {!reveals[q.id] ? (
                   <button
                     onClick={onSubmit}
-                    disabled={picked == null || heartsOut}
+                    disabled={picked == null}
                     className="flex w-full items-center justify-center rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground disabled:opacity-40"
                   >
                     تأكيد الإجابة
