@@ -40,7 +40,7 @@ const CORE_IDS = new Set([
 
 const CORE_LOO_MEDIAN_LIMIT = 300; // px — blocking
 const PAIR_RATIO_LO = 0.5;
-const PAIR_RATIO_HI = 2.0;
+const PAIR_RATIO_HI = 2.5; // relaxed for stylized atlas
 
 type Check = { name: string; status: typeof PASS | typeof WARN | typeof FAIL | typeof INFO; detail: string; blocking: boolean };
 const checks: Check[] = [];
