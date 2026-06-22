@@ -6,7 +6,7 @@
 //   2. Buy a heart for 20 dinars (instant, deducts coins).
 
 import { Heart, Clock, Search, Coins } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { msUntilNextHeart, HEART_MAX, getEffectiveHearts } from "@/lib/hearts";
