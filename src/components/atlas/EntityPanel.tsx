@@ -1,9 +1,7 @@
 // P0-B — EntityPanel.
-// Replaces the old HubPanel "dead-end popup" with a discovery surface that
-// automatically groups connected encyclopedia content and proximity neighbours,
-// and lets the user navigate into related entities or open them in the
-// encyclopedia. No empty dead-end screens — every section either shows content
-// or an explicit "coming soon" line so the user always knows where they stand.
+// Unified detail surface for atlas hubs. Irth identity: deep navy + warm gold,
+// manuscript-inspired. Used for both legacy hubs (city/landmark) and atlas_entities
+// (via AtlasEntityDetailPanel which wraps this shell).
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -32,9 +30,7 @@ const GROUP_ORDER: WorldEntityType[] = [
 ];
 
 export type EntityContext = {
-  /** Encyclopedia entities directly linked or sharing region/era. */
   related: WorldEntity[];
-  /** Entities within atlas proximity that aren't already in `related`. */
   nearby: (WorldEntity & { distance: number })[];
 };
 
@@ -48,9 +44,7 @@ export function EntityPanel({
   hub: HubMarker;
   context: EntityContext;
   onClose: () => void;
-  /** Called when the user picks a related entity that exists on the atlas. */
   onNavigate: (entity: WorldEntity) => void;
-  /** Pan/zoom the atlas to focus this hub. */
   onLocate: () => void;
 }) {
   const Icon = ICON[hub.entity_type];
@@ -73,111 +67,155 @@ export function EntityPanel({
   const hasAnything = totalRelated > 0 || context.nearby.length > 0;
 
   return (
+    <UnifiedDetailShell
+      Icon={Icon}
+      kindLabel={ENTITY_TYPE_AR_SINGULAR[hub.entity_type]}
+      title={hub.title}
+      subtitle={hub.subtitle ?? null}
+      regionName={regionName ?? null}
+      eraText={era ? eraLabel(era) : null}
+      encyclopediaSlug={hub.slug}
+      onClose={onClose}
+      onLocate={onLocate}
+      summary={hub.summary ?? null}
+    >
+      {totalRelated > 0 ? (
+        <div className="space-y-4">
+          <SectionHeader icon={BookOpen} label="مرتبط بهذا الموقع" count={totalRelated} />
+          {GROUP_ORDER.map((t) => {
+            const items = groups.get(t);
+            if (!items?.length) return null;
+            const G = ICON[t];
+            return (
+              <section key={t}>
+                <div className="mb-1.5 flex items-center gap-2 text-[12px] font-bold text-amber-300/90">
+                  <G className="size-3.5" /> {ENTITY_TYPE_AR_SINGULAR[t]}
+                  <span className="text-amber-200/50">({items.length})</span>
+                </div>
+                <ul className="grid gap-1">
+                  {items.map((e) => (
+                    <RelatedRow key={e.id} entity={e} onNavigate={onNavigate} />
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyHint>لم تُربط بعد محتويات موسوعية بهذا الموقع. ستظهر هنا تلقائيًا عند إضافتها.</EmptyHint>
+      )}
+
+      {context.nearby.length > 0 && (
+        <div className="space-y-2">
+          <SectionHeader icon={MapPin} label="بالقرب على الأطلس" count={context.nearby.length} />
+          <ul className="grid gap-1">
+            {context.nearby.map((e) => (
+              <RelatedRow key={e.id} entity={e} onNavigate={onNavigate} showType />
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!hasAnything && (
+        <div className="rounded-xl border border-dashed border-amber-400/25 bg-slate-900/40 p-4 text-center text-[12px] text-amber-100/70">
+          هذا الموقع موجود على الأطلس، لكنه لا يحوي اتصالات موسوعية بعد.<br />
+          افتحه في الموسوعة لقراءة المزيد، أو أضف محتوى مرتبطًا من لوحة الإدارة.
+        </div>
+      )}
+    </UnifiedDetailShell>
+  );
+}
+
+/** Shared visual shell — deep navy + gold, manuscript-inspired. */
+export function UnifiedDetailShell({
+  Icon, kindLabel, title, subtitle, regionName, eraText,
+  encyclopediaSlug, encyclopediaLabel = "افتح في الموسوعة",
+  onClose, onLocate, summary, children,
+}: {
+  Icon: LucideIcon;
+  kindLabel: string;
+  title: string;
+  subtitle?: string | null;
+  regionName?: string | null;
+  eraText?: string | null;
+  /** When null/undefined, render a polished empty state instead of the link. */
+  encyclopediaSlug?: string | null;
+  encyclopediaLabel?: string;
+  onClose: () => void;
+  onLocate?: () => void;
+  summary?: string | null;
+  children?: React.ReactNode;
+}) {
+  return (
     <aside
       dir="rtl"
       className="pointer-events-auto absolute inset-y-0 right-0 z-30 flex w-full max-w-md flex-col
-                 border-l border-amber-900/30 bg-amber-50/95 text-amber-950 shadow-2xl
+                 border-l border-amber-400/20 text-amber-50 shadow-[0_0_60px_rgba(0,0,0,0.6)]
                  animate-in slide-in-from-right duration-200"
+      style={{
+        backgroundImage:
+          "linear-gradient(180deg, oklch(0.20 0.04 250) 0%, oklch(0.16 0.05 255) 60%, oklch(0.13 0.04 255) 100%)",
+      }}
     >
       {/* Header */}
-      <header className="flex items-start gap-3 border-b border-amber-900/20 p-4">
+      <header className="flex items-start gap-3 border-b border-amber-400/15 p-4">
         <div
-          className="grid size-14 place-items-center rounded-2xl text-amber-50 shrink-0 shadow-sm"
-          style={{ backgroundImage: "linear-gradient(135deg, oklch(0.32 0.09 45), oklch(0.45 0.12 50))" }}
+          className="grid size-14 place-items-center rounded-2xl text-slate-950 shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]"
+          style={{ backgroundImage: "linear-gradient(135deg, oklch(0.82 0.14 80), oklch(0.68 0.16 70))" }}
         >
           <Icon className="size-7" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] uppercase tracking-wider text-amber-800/80">
-            <span className="font-bold">{ENTITY_TYPE_AR_SINGULAR[hub.entity_type]}</span>
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] uppercase tracking-wider text-amber-300/80">
+            <span className="font-bold">{kindLabel}</span>
             {regionName && (<><span aria-hidden>·</span><span>{regionName}</span></>)}
-            {era && (<><span aria-hidden>·</span><span>{eraLabel(era)}</span></>)}
+            {eraText && (<><span aria-hidden>·</span><span>{eraText}</span></>)}
           </p>
-          <h2 className="font-display text-xl font-bold leading-tight">{hub.title}</h2>
-          {hub.subtitle && <p className="mt-0.5 text-[12px] text-amber-900/80">{hub.subtitle}</p>}
+          <h2 className="font-display text-xl font-bold leading-tight text-amber-50">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-[12px] text-amber-200/70">{subtitle}</p>}
         </div>
         <button onClick={onClose} aria-label="إغلاق"
-          className="rounded-full p-1 text-amber-900 hover:bg-amber-900/10">
+          className="rounded-full p-1 text-amber-200/80 hover:bg-amber-400/10">
           <X className="size-5" />
         </button>
       </header>
 
       {/* Quick action chips */}
-      <div className="flex flex-wrap gap-2 border-b border-amber-900/15 px-4 py-2.5">
-        <Link
-          to="/encyclopedia/entity/$id"
-          params={{ id: hub.slug }}
-          className="inline-flex items-center gap-1.5 rounded-full bg-amber-900 px-3 py-1.5 text-[12px] font-bold text-amber-50 hover:bg-amber-800"
-        >
-          <BookOpen className="size-3.5" /> افتح في الموسوعة
-        </Link>
-        <button
-          onClick={onLocate}
-          className="inline-flex items-center gap-1.5 rounded-full border border-amber-900/30 bg-amber-50 px-3 py-1.5 text-[12px] font-bold text-amber-900 hover:bg-amber-100"
-        >
-          <Compass className="size-3.5" /> تموقع على الخريطة
-        </button>
+      <div className="flex flex-wrap gap-2 border-b border-amber-400/10 px-4 py-2.5">
+        {encyclopediaSlug ? (
+          <Link
+            to="/encyclopedia/entity/$id"
+            params={{ id: encyclopediaSlug }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-b from-amber-400 to-amber-500 px-3 py-1.5 text-[12px] font-bold text-slate-950 hover:from-amber-300 hover:to-amber-400 shadow"
+          >
+            <BookOpen className="size-3.5" /> {encyclopediaLabel}
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/20 bg-slate-900/60 px-3 py-1.5 text-[12px] font-medium text-amber-100/60">
+            <BookOpen className="size-3.5" /> لا يوجد ربط بالموسوعة بعد
+          </span>
+        )}
+        {onLocate && (
+          <button
+            onClick={onLocate}
+            className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-slate-900/50 px-3 py-1.5 text-[12px] font-bold text-amber-100 hover:bg-slate-900/80"
+          >
+            <Compass className="size-3.5" /> تموقع على الخريطة
+          </button>
+        )}
       </div>
 
-      {/* Body */}
+      {/* Body — parchment panel on navy for high-value text */}
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        {hub.summary && (
-          <p className="text-[13px] leading-relaxed text-amber-950/90">{hub.summary}</p>
-        )}
-
-        {/* Connected encyclopedia content */}
-        {totalRelated > 0 ? (
-          <div className="space-y-4">
-            <SectionHeader
-              icon={BookOpen}
-              label="مرتبط بهذا الموقع"
-              count={totalRelated}
-            />
-            {GROUP_ORDER.map((t) => {
-              const items = groups.get(t);
-              if (!items?.length) return null;
-              const G = ICON[t];
-              return (
-                <section key={t}>
-                  <div className="mb-1.5 flex items-center gap-2 text-[12px] font-bold text-amber-900">
-                    <G className="size-3.5" /> {ENTITY_TYPE_AR_SINGULAR[t]}
-                    <span className="text-amber-800/60">({items.length})</span>
-                  </div>
-                  <ul className="grid gap-1">
-                    {items.map((e) => (
-                      <RelatedRow key={e.id} entity={e} onNavigate={onNavigate} />
-                    ))}
-                  </ul>
-                </section>
-              );
-            })}
-          </div>
-        ) : (
-          <EmptyHint>لم تُربط بعد محتويات موسوعية بهذا الموقع. ستظهر هنا تلقائيًا عند إضافتها.</EmptyHint>
-        )}
-
-        {/* Nearby on the atlas (proximity) */}
-        {context.nearby.length > 0 && (
-          <div className="space-y-2">
-            <SectionHeader
-              icon={MapPin}
-              label="بالقرب على الأطلس"
-              count={context.nearby.length}
-            />
-            <ul className="grid gap-1">
-              {context.nearby.map((e) => (
-                <RelatedRow key={e.id} entity={e} onNavigate={onNavigate} showType />
-              ))}
-            </ul>
+        {summary && (
+          <div
+            className="rounded-xl border border-amber-400/20 p-3.5 text-[13px] leading-relaxed text-amber-950 shadow-inner"
+            style={{ backgroundImage: "linear-gradient(180deg, oklch(0.95 0.04 85), oklch(0.91 0.05 80))" }}
+          >
+            {summary}
           </div>
         )}
-
-        {!hasAnything && (
-          <div className="rounded-xl border border-dashed border-amber-900/25 bg-amber-100/40 p-4 text-center text-[12px] text-amber-900/80">
-            هذا الموقع موجود على الأطلس، لكنه لا يحوي اتصالات موسوعية بعد.<br />
-            افتحه في الموسوعة لقراءة المزيد، أو أضف محتوى مرتبطًا من لوحة الإدارة.
-          </div>
-        )}
+        {children}
       </div>
     </aside>
   );
@@ -185,9 +223,9 @@ export function EntityPanel({
 
 function SectionHeader({ icon: Icon, label, count }: { icon: LucideIcon; label: string; count: number }) {
   return (
-    <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-800/70">
+    <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
       <Icon className="size-3.5" /> {label}
-      <span className="text-amber-800/60">({count})</span>
+      <span className="text-amber-200/50">({count})</span>
     </p>
   );
 }
@@ -204,22 +242,22 @@ function RelatedRow({
   const TypeIcon = ICON[entity.entity_type];
   return (
     <li>
-      <div className="flex items-center gap-1 rounded-lg border border-transparent px-1 hover:border-amber-900/20 hover:bg-amber-100/70">
+      <div className="flex items-center gap-1 rounded-lg border border-transparent px-1 hover:border-amber-400/20 hover:bg-amber-400/5">
         <Link
           to="/encyclopedia/entity/$id"
           params={{ id: entity.slug }}
-          className="flex flex-1 items-center gap-2 truncate py-2 pr-1.5 text-[13px]"
+          className="flex flex-1 items-center gap-2 truncate py-2 pr-1.5 text-[13px] text-amber-50"
         >
-          {showType && <TypeIcon className="size-3.5 shrink-0 text-amber-800/80" />}
+          {showType && <TypeIcon className="size-3.5 shrink-0 text-amber-300/80" />}
           <span className="truncate font-medium">{entity.title}</span>
-          {era && <span className="shrink-0 text-[10px] text-amber-800/70">{eraLabel(era)}</span>}
+          {era && <span className="shrink-0 text-[10px] text-amber-200/60">{eraLabel(era)}</span>}
         </Link>
         {hasCoords && (
           <button
             onClick={() => onNavigate(entity)}
             aria-label="تموقع على الخريطة"
             title="تموقع على الخريطة"
-            className="grid size-7 shrink-0 place-items-center rounded-md text-amber-900/70 hover:bg-amber-900/10 hover:text-amber-900"
+            className="grid size-7 shrink-0 place-items-center rounded-md text-amber-200/70 hover:bg-amber-400/10 hover:text-amber-100"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -231,7 +269,7 @@ function RelatedRow({
 
 function EmptyHint({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-amber-900/20 bg-amber-100/50 p-3 text-center text-[12px] text-amber-900/80">
+    <div className="rounded-xl border border-amber-400/20 bg-slate-900/40 p-3 text-center text-[12px] text-amber-100/70">
       {children}
     </div>
   );
