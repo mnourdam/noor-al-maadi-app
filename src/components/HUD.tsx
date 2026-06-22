@@ -3,7 +3,7 @@ import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart } from "@/lib/hearts";
-import { unreadCount } from "@/lib/notifications";
+import { unreadCount, formatBadgeCount } from "@/lib/notifications";
 
 /**
  * Compact top-of-screen HUD: hearts, dinars, streak.
