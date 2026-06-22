@@ -74,9 +74,10 @@ function ImportedChapterPlayer() {
   const camProgress = campaign ? getCampaignProgress(campaign.id) : null;
   const chProgress  = campaign ? getChapterProgress(campaign.id, chapterId) : null;
 
-  // Track activities pending acknowledgement before we advance to the next one.
-  // Map activityId -> "correct" | "wrong" (latest outcome to display).
-  const [pendingAck, setPendingAck] = useState<Record<string, "correct" | "wrong" | undefined>>({});
+  // PR2: strict progression. We only track a *correct* ack (gates the "Next" button).
+  // Wrong answers never enter pendingAck — the activity stays open for retry.
+  const [pendingAck, setPendingAck] = useState<Record<string, "correct" | undefined>>({});
+  const [wrongFlash, setWrongFlash] = useState<Record<string, number>>({}); // activityId → attempt count (drives shake/feedback)
   const [outOfHeartsOpen, setOutOfHeartsOpen] = useState(false);
   const [completionOpen, setCompletionOpen] = useState(false);
 
@@ -90,13 +91,22 @@ function ImportedChapterPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heartsDepleted]);
 
-  // Current activity = first activity that is either un-completed
-  // OR completed-and-not-yet-acknowledged (correct or wrong feedback pending).
+  // PR2 anti-skip: hard URL guard. If this chapter is locked, redirect to overview.
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!campaign || !chapter) return;
+    if (!isChapterUnlocked(campaign, chapter)) {
+      navigate({ to: "/campaigns/imported/$id", params: { id: campaign.id }, replace: true });
+    }
+  }, [campaign, chapter, navigate]);
+
+  // Current activity = first activity that is either un-completed,
+  // OR completed-and-not-yet-acknowledged (correct feedback pending).
   const currentIdx = useMemo(() => {
     if (!chapter || !chProgress) return 0;
     const idx = chapter.activities.findIndex(a => {
       const done = chProgress.completedActivityIds.includes(a.id);
-      const ackPending = pendingAck[a.id] === "correct" || pendingAck[a.id] === "wrong";
+      const ackPending = pendingAck[a.id] === "correct";
       return !done || ackPending;
     });
     return idx === -1 ? chapter.activities.length - 1 : idx;
@@ -110,9 +120,10 @@ function ImportedChapterPlayer() {
   const activity = chapter.activities[currentIdx];
   const allDone  = chapter.activities.length > 0
     && chapter.activities.every(a => chProgress?.completedActivityIds.includes(a.id))
-    && Object.values(pendingAck).every(v => v !== "correct" && v !== "wrong");
+    && Object.values(pendingAck).every(v => v !== "correct");
 
   const currentAck = activity ? pendingAck[activity.id] : undefined;
+  const wrongAttempts = activity ? (wrongFlash[activity.id] ?? 0) : 0;
 
   const onResolve = (correct: boolean) => {
     if (!activity) return;
