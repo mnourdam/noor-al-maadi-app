@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
-import { HEART_MAX, getEffectiveHearts, msUntilNextHeart } from "@/lib/hearts";
+import { HEART_MAX, getEffectiveHearts, msUntilNextHeart, formatHeartTimer } from "@/lib/hearts";
 import { unreadCount, formatBadgeCount } from "@/lib/notifications";
 
 /**
@@ -15,7 +15,8 @@ export function HUD() {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => force((n) => n + 1), 30_000);
+    // 1s tick so the MM:SS heart timer counts smoothly.
+    const id = setInterval(() => force((n) => n + 1), 1_000);
     const recount = () => setUnread(unreadCount());
     recount();
     window.addEventListener("irth:notifications:updated", recount);
@@ -31,7 +32,6 @@ export function HUD() {
   const now = Date.now();
   const hearts = getEffectiveHearts(profile, now);
   const next = msUntilNextHeart(profile, now);
-  const mins = Math.max(1, Math.ceil(next / 60_000));
 
   return (
     <div className="sticky top-0 z-40 mx-auto w-full max-w-md px-3 pt-2">
@@ -45,7 +45,9 @@ export function HUD() {
             />
           ))}
           {hearts < HEART_MAX && (
-            <span className="ms-1 text-[10px] tabular-nums text-muted-foreground">{mins}د</span>
+            <span className="ms-1 text-[10px] tabular-nums text-muted-foreground" aria-label="القلب التالي خلال">
+              {formatHeartTimer(next)}
+            </span>
           )}
         </div>
         <div className="flex items-center gap-3 text-[11px]">
