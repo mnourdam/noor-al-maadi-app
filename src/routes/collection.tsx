@@ -719,11 +719,22 @@ function ImportedCard({
       unlocked={item.unlocked}
       rarity={rarity as Rarity}
       icon={cardIcon}
-      title={item.name}
+      title={item.unlocked ? item.name : (item.name || "مقتنى غامض")}
       subtitle={subtitle}
-      footer={footer}
+      footer={item.unlocked ? footer : undefined}
       onClick={() => {
-        if (!item.unlocked) return;
+        if (!item.unlocked) {
+          setReveal({
+            rarity: rarity as Rarity,
+            icon: revealIcon,
+            title: item.name || "مقتنى غامض",
+            subtitle,
+            lines: [],
+            locked: true,
+            lockedHint: "تابع رحلتك في الحملات لاكتشاف هذا المقتنى.",
+          });
+          return;
+        }
         setReveal({
           rarity: rarity as Rarity,
           icon: revealIcon,
@@ -739,3 +750,4 @@ function ImportedCard({
     />
   );
 }
+
