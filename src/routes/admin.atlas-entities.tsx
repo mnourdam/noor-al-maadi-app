@@ -343,6 +343,7 @@ function EntityEditor({
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pickingAps, setPickingAps] = useState(false);
+  const [apsPickedNotice, setApsPickedNotice] = useState<{ x: number; y: number } | null>(null);
 
   // Auto-suggest slug when name changes and admin hasn't touched it
   useEffect(() => {
