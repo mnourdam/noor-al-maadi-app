@@ -184,9 +184,27 @@ export function WorldAtlasCanvas({
               transition: drag.current ? "none" : "transform 120ms ease-out",
             }}
           >
-            <rect width="100" height="60" fill="url(#wm-sea)" opacity="0.55" />
-            <rect width="100" height="60" fill="url(#wm-grid)" />
-            <g className="ink-stroke-light" fill="none" strokeWidth="0.2">
+            <rect
+              width="100"
+              height="60"
+              fill="url(#wm-sea)"
+              opacity="0.55"
+              onClick={editMode && onPlace ? (e) => {
+                const svg = svgRef.current; if (!svg) return;
+                const pt = svg.createSVGPoint();
+                pt.x = e.clientX; pt.y = e.clientY;
+                const ctm = (e.currentTarget as SVGRectElement).getScreenCTM();
+                if (!ctm) return;
+                const p = pt.matrixTransform(ctm.inverse());
+                onPlace({
+                  x: Math.round(Math.max(0, Math.min(100, p.x)) * 10) / 10,
+                  y: Math.round(Math.max(0, Math.min(60, p.y)) * 10) / 10,
+                });
+              } : undefined}
+              style={{ cursor: editMode && onPlace ? "crosshair" : undefined }}
+            />
+            <rect width="100" height="60" fill="url(#wm-grid)" pointerEvents="none" />
+            <g className="ink-stroke-light" fill="none" strokeWidth="0.2" pointerEvents="none">
               <path d="M2,20 Q25,24 50,20 T98,20" />
               <path d="M2,42 Q30,46 60,42 T98,44" />
               <path d="M52,4 Q60,8 70,6 T96,4" />
@@ -223,7 +241,45 @@ export function WorldAtlasCanvas({
                 </g>
               );
             })}
+
+            {/* Edit-mode preview pin (draggable) */}
+            {editMode && previewCoords && (
+              <g
+                transform={`translate(${previewCoords.x} ${previewCoords.y})`}
+                style={{ cursor: "grab" }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  const svg = svgRef.current; if (!svg || !onPlace) return;
+                  (e.target as Element).setPointerCapture?.(e.pointerId);
+                  const move = (ev: PointerEvent) => {
+                    const pt = svg.createSVGPoint();
+                    pt.x = ev.clientX; pt.y = ev.clientY;
+                    const ctm = svg.getScreenCTM();
+                    if (!ctm) return;
+                    const p = pt.matrixTransform(ctm.inverse());
+                    // account for outer g transform
+                    const lx = (p.x - 50 - view.tx / (svg.clientWidth / 100)) / view.scale + 50;
+                    const ly = (p.y - 30 - view.ty / (svg.clientHeight / 60)) / view.scale + 30;
+                    onPlace({
+                      x: Math.round(Math.max(0, Math.min(100, lx)) * 10) / 10,
+                      y: Math.round(Math.max(0, Math.min(60, ly)) * 10) / 10,
+                    });
+                  };
+                  const up = () => {
+                    window.removeEventListener("pointermove", move);
+                    window.removeEventListener("pointerup", up);
+                  };
+                  window.addEventListener("pointermove", move);
+                  window.addEventListener("pointerup", up);
+                }}
+              >
+                <circle r={2.6} fill="url(#wm-glow)" />
+                <circle r={1.3} fill="oklch(0.95 0.18 70)" stroke="oklch(0.22 0.06 40)" strokeWidth={0.18} />
+                <circle r={0.45} fill="oklch(0.22 0.06 40)" />
+              </g>
+            )}
           </g>
+
         </svg>
       </div>
 
