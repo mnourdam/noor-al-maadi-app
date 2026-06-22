@@ -525,6 +525,20 @@ function CalibrationPage() {
                     pointerEvents: "auto",
                   }}
                 >
+                  {NEEDS_REVIEW.has(r.id) && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "50%", left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: 32, height: 32,
+                        borderRadius: "50%",
+                        border: "2px dashed rgba(244,63,94,0.95)",
+                        boxShadow: "0 0 0 2px rgba(244,63,94,0.2)",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  )}
                   <div
                     style={{
                       width: active ? 20 : 14,
