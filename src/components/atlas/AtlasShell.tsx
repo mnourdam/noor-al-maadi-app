@@ -13,7 +13,8 @@ import { useAtlasLayers, useEntityContext, type HubMarker, type Tier } from "@/l
 import { AtlasStage } from "./AtlasStage";
 import { AtlasControls } from "./AtlasControls";
 import { EntityPanel } from "./EntityPanel";
-import { AtlasEntityPopover } from "./AtlasEntityPins";
+import { AtlasEntityDetailPanel } from "./AtlasEntityDetailPanel";
+import { apsToViewBox } from "@/lib/atlas/aps";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 
 export function AtlasShell() {
@@ -89,8 +90,16 @@ export function AtlasShell() {
         focusOn={focusOn}
         onAtlasEntitySelect={setAtlasEntity}
       />
-
-      <AtlasEntityPopover entity={atlasEntity} onClose={() => setAtlasEntity(null)} />
+      {atlasEntity && (
+        <AtlasEntityDetailPanel
+          entity={atlasEntity}
+          onClose={() => setAtlasEntity(null)}
+          onLocate={() => {
+            const vb = apsToViewBox({ x: atlasEntity.aps_x, y: atlasEntity.aps_y });
+            setFocusOn({ x: vb.x, y: vb.y });
+          }}
+        />
+      )}
 
       <AtlasControls
         eras={derived.eras}

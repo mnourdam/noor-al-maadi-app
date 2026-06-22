@@ -34,10 +34,10 @@ const TYPE_FILL: Record<WorldEntityType, string> = {
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 50;           // deep inspection of the frozen v1 raster
-const MAX_VELOCITY = 1.0;       // px/ms — caps post-flick travel
-const TOUCH_VELOCITY = 0.45;    // px/ms — softer flick on mobile
-const MAX_INERTIA_FRAMES = 28;  // ~460ms ceiling
-const TOUCH_PAN_GAIN = 0.5;     // touch drag sensitivity multiplier
+const MAX_VELOCITY = 1.0;       // px/ms — caps post-flick travel (mouse only)
+const MAX_INERTIA_FRAMES = 28;  // ~460ms ceiling (mouse only)
+const TOUCH_PAN_GAIN = 0.22;    // touch drag sensitivity (Google-Maps feel)
+const TOUCH_INERTIA = false;    // disable post-flick coast on touch
 const VB_W = 100;
 const VB_H = 60;
 
@@ -167,13 +167,17 @@ export function AtlasStage({
   const onPointerUp = () => {
     if (!drag.current) return;
     drag.current = null;
-    const vMax = dragKind.current === "touch" ? TOUCH_VELOCITY : MAX_VELOCITY;
-    let vx = clampScalar(lastMove.current.vx, -vMax, vMax);
-    let vy = clampScalar(lastMove.current.vy, -vMax, vMax);
+    // No inertia on touch — small finger movement = small map movement, no slide.
+    if (dragKind.current === "touch" || !TOUCH_INERTIA && dragKind.current !== "mouse") {
+      interaction.current = "idle";
+      return;
+    }
+    let vx = clampScalar(lastMove.current.vx, -MAX_VELOCITY, MAX_VELOCITY);
+    let vy = clampScalar(lastMove.current.vy, -MAX_VELOCITY, MAX_VELOCITY);
     const speed = Math.hypot(vx, vy);
     if (speed < 0.1) { interaction.current = "idle"; return; }
     interaction.current = "inertia";
-    const decay = dragKind.current === "touch" ? 0.86 : 0.9;
+    const decay = 0.9;
     let frames = 0;
     const step = () => {
       vx *= decay; vy *= decay;
