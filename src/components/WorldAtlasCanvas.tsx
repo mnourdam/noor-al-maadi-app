@@ -49,8 +49,9 @@ export function WorldAtlasCanvas({
   onPlace?: (coords: MapCoords) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
-
+  const innerGRef = useRef<SVGGElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+
   const [view, setView] = useState<View>(IDENTITY);
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const pinch = useRef<{ dist: number; scale: number; cx: number; cy: number } | null>(null);
