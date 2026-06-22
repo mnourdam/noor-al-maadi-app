@@ -150,8 +150,9 @@ function AdminMapPage() {
     else delete nextMeta.region;
     const { error } = await supabase
       .from("encyclopedia_entities")
-      .update({ metadata: nextMeta })
+      .update({ metadata: nextMeta as never })
       .eq("id", selected.id);
+
     setSaving(false);
     if (error) { setStatusMsg(`فشل الحفظ: ${error.message}`); return; }
     setStatusMsg("تم الحفظ ✓");
