@@ -136,6 +136,36 @@ export type Database = {
           },
         ]
       }
+      atlas_import_runs: {
+        Row: {
+          batch: string
+          counts: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          notes: string | null
+        }
+        Insert: {
+          batch: string
+          counts?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          notes?: string | null
+        }
+        Update: {
+          batch?: string
+          counts?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       automatic_notification_runs: {
         Row: {
           created_at: string
