@@ -92,6 +92,8 @@ function AdminHub() {
             desc="إنشاء وتأكيد ونشر كيانات الأطلس على رسم v1." />
           <AdminCard to="/admin/atlas-import" icon={<Upload className="h-5 w-5" />} title="استيراد دفعات الأطلس (Phase 2.5)"
             desc="استيراد JSON جماعي لكيانات الأطلس — يحفظ الصفوف كقيد مراجعة دون نشر." />
+          <AdminCard to="/admin/atlas-review" icon={<MapPin className="h-5 w-5" />} title="مراجعة الأطلس الجماعية"
+            desc="سحب وتأكيد ونشر كيانات المراجعة على الأطلس من شاشة واحدة." />
 
           <AdminCard to="/admin/migration" icon={<Database className="h-5 w-5" />} title="ترحيل المحتوى القديم"
             desc="نسخ data.ts / cities.ts / packs إلى Supabase دون حذف." />
