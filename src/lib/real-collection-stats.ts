@@ -187,53 +187,31 @@ export function useRealCollectionStats() {
       });
     }
 
-    // 3. Local profile arrays — characters
-    profile.charactersUnlocked.forEach((id) => {
-      const c = CHARACTERS.find((x) => x.id === id);
-      if (!c) return;
-      push({
-        key: `loc:c:${id}`,
-        kind: "شخصية",
-        title: c.name,
-        subtitle: c.title,
-        icon: c.avatar,
-        to: `/encyclopedia/entity/${id}`,
-        unlockedAt: 0,
-      });
-    });
-    // 3b. Local profile arrays — artifacts
-    profile.artifactsFound.forEach((id) => {
-      const a = ARTIFACTS.find((x) => x.id === id);
-      if (!a) return;
-      push({
-        key: `loc:a:${id}`,
-        kind: "أثر",
-        title: a.name,
-        subtitle: a.description,
-        icon: a.icon,
-        to: `/encyclopedia/entity/${id}`,
-        unlockedAt: 0,
-      });
-    });
+    // NOTE: legacy profile arrays (charactersUnlocked / artifactsFound) are
+    // intentionally NOT included here. They contained demo/seed data
+    // (e.g. Salah al-Din, Umar) that polluted the homepage "latest
+    // discoveries" rail with items the player never actually unlocked in
+    // the current Supabase-based gameplay. Source of truth = Supabase
+    // user_collection + imported registry unlocks only.
 
     return out;
-  }, [supaRows, importedIds, registryById, profile.charactersUnlocked, profile.artifactsFound]);
+  }, [supaRows, importedIds, registryById]);
+
 
   // Recently discovered: prefer items with real timestamps, then locals
   // (most-recent first by profile array order — newest pushed last).
   const recent = useMemo<UnifiedUnlock[]>(() => {
     const stamped = all.filter((u) => u.unlockedAt > 0).sort((a, b) => b.unlockedAt - a.unlockedAt);
-    const localRev = [...all.filter((u) => u.unlockedAt === 0 && u.key.startsWith("loc:"))].reverse();
     const importedRev = [...all.filter((u) => u.unlockedAt === 0 && u.key.startsWith("reg:"))].reverse();
     const merged: UnifiedUnlock[] = [];
     const pushUnique = (u: UnifiedUnlock) => {
       if (!merged.find((m) => m.key === u.key)) merged.push(u);
     };
     stamped.forEach(pushUnique);
-    localRev.forEach(pushUnique);
     importedRev.forEach(pushUnique);
     return merged.slice(0, 8);
   }, [all]);
+
 
   // ===== Aggregate counters =====
   const totalCollection = all.length;
