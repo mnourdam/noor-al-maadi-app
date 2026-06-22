@@ -143,6 +143,19 @@ export function useRealCollectionStats() {
       return [];
     }
   }, []);
+export function useRealCollectionStats() {
+  const { profile } = useProfile();
+  const { rows: supaRows, validSlugs, slugTitles } = useSupabaseCollection();
+
+  // Registry is consulted only for display metadata (Arabic name/image)
+  // of Supabase rows. It is no longer an unlock source.
+  const registry = useMemo(() => {
+    try {
+      return listRegistry();
+    } catch {
+      return [];
+    }
+  }, []);
   const registryById = useMemo(() => {
     const m = new Map<string, ReturnType<typeof listRegistry>[number]>();
     for (const i of registry) m.set(i.id.toLowerCase(), i);
@@ -175,8 +188,10 @@ export function useRealCollectionStats() {
 
       const regItem = registryById.get(slugLower);
       const dn = displayName(r.slug);
+      const encTitle = slugTitles.get(slugLower);
       const candidate =
         (isValidArabicTitle(regItem?.name) ? regItem!.name : null) ??
+        (isValidArabicTitle(encTitle) ? encTitle! : null) ??
         (dn !== r.slug && isValidArabicTitle(dn) ? dn : null);
       if (!candidate) { logMissingTitle("supabase", r.slug); continue; }
       const img = (regItem?.image ?? "").trim();
@@ -203,7 +218,7 @@ export function useRealCollectionStats() {
     // (e.g. Salah al-Din, Umar) and are not migrated.
 
     return out;
-  }, [supaRows, validSlugs, registryById]);
+  }, [supaRows, validSlugs, slugTitles, registryById]);
 
 
   // Recently discovered: Supabase rows only, newest first.
