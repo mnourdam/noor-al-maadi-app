@@ -45,7 +45,9 @@ export function HUD() {
             />
           ))}
           {hearts < HEART_MAX && (
-            <span className="ms-1 text-[10px] tabular-nums text-muted-foreground">{mins}د</span>
+            <span className="ms-1 text-[10px] tabular-nums text-muted-foreground" aria-label="القلب التالي خلال">
+              {formatHeartTimer(next)}
+            </span>
           )}
         </div>
         <div className="flex items-center gap-3 text-[11px]">
