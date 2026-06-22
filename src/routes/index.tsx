@@ -7,9 +7,8 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
-  ERAS, CAMPAIGNS, ARTIFACTS, CHARACTERS,
+  ERAS, ARTIFACTS, CHARACTERS,
   levelFor, currentSeason, UPCOMING_CAMPAIGNS,
-  FLAGSHIP_CHAPTERS, nextActiveCampaign,
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
@@ -18,11 +17,15 @@ import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
 import { OnboardingTour } from "@/components/OnboardingTour";
-import salahuddinHero from "@/assets/salahuddin-hero.jpg";
+import { listPublishedCampaigns } from "@/lib/campaignStorage";
+import { getCampaignProgress } from "@/lib/importedCampaignProgress";
+import { listRegistry } from "@/lib/contentRegistryStorage";
+import { registryItemIcon, registryItemImageUrl } from "@/lib/importedUnlocks";
+import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
+import type { ContentRegistryItem } from "@/types/contentRegistry";
 import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
 import heroDesertCaravan from "@/assets/hero-desert-caravan.jpg";
 import heroManuscriptLamp from "@/assets/hero-manuscript-lamp.jpg";
-import heroBattlefield from "@/assets/hero-battlefield.jpg";
 import heroFortress from "@/assets/hero-fortress.jpg";
 
 export const Route = createFileRoute("/")({
