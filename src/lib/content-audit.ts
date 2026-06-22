@@ -205,7 +205,7 @@ export function buildAuditReport(): AuditReport {
   return {
     totals: {
       ...buckets,
-      campaigns: ENGINE_CAMPAIGNS.length,
+      campaigns: 0,
       achievementsLegacy: ACHIEVEMENTS.length,
       entitiesTotal: all.length,
       relationships,
