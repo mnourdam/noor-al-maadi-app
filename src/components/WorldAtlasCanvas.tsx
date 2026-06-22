@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Building2, Swords, User, Landmark, Gem, Calendar, Crown, Plus, Minus, RotateCcw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { WorldEntity, WorldEntityType, MapCoords } from "@/lib/world-map-source";
-import { ATLAS_REGIONS, ATLAS_REFERENCES, type AtlasRegionId } from "@/lib/atlas-regions";
+import { ATLAS_REGIONS, type AtlasRegionId } from "@/lib/atlas-regions";
+import { AtlasBaseDefs, AtlasBaseLayers } from "./atlas/HistoricalAtlasBase";
 
 export type MapMarker = WorldEntity & { coords: MapCoords };
 
@@ -170,17 +171,10 @@ export function WorldAtlasCanvas({
           className="block w-full h-[420px]"
         >
           <defs>
+            <AtlasBaseDefs />
             <pattern id="wm-grid" width="5" height="5" patternUnits="userSpaceOnUse">
-
               <path d="M5 0 L0 0 0 5" fill="none" stroke="oklch(0.32 0.06 50 / 0.18)" strokeWidth="0.1" />
             </pattern>
-            <pattern id="wm-sea" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
-              <line x1="0" y1="0" x2="0" y2="3" stroke="oklch(0.55 0.08 230 / 0.22)" strokeWidth="0.15" />
-            </pattern>
-            <radialGradient id="wm-glow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="oklch(0.95 0.14 82 / 0.8)" />
-              <stop offset="100%" stopColor="oklch(0.85 0.14 82 / 0)" />
-            </radialGradient>
           </defs>
 
           <g
@@ -191,81 +185,62 @@ export function WorldAtlasCanvas({
               transition: drag.current ? "none" : "transform 120ms ease-out",
             }}
           >
-            <rect
+            {/* Historical atlas foundation */}
+            <AtlasBaseLayers />
 
-              width="100"
-              height="60"
-              fill="url(#wm-sea)"
-              opacity="0.55"
-              onClick={editMode && onPlace ? (e) => {
-                const svg = svgRef.current; if (!svg) return;
-                const pt = svg.createSVGPoint();
-                pt.x = e.clientX; pt.y = e.clientY;
-                const ctm = (e.currentTarget as SVGRectElement).getScreenCTM();
-                if (!ctm) return;
-                const p = pt.matrixTransform(ctm.inverse());
-                onPlace({
-                  x: Math.round(Math.max(0, Math.min(100, p.x)) * 10) / 10,
-                  y: Math.round(Math.max(0, Math.min(60, p.y)) * 10) / 10,
-                });
-              } : undefined}
-              style={{ cursor: editMode && onPlace ? "crosshair" : undefined }}
-            />
-            <rect width="100" height="60" fill="url(#wm-grid)" pointerEvents="none" />
+            {/* Region highlight (admin hover) — drawn on top of base wash */}
+            {highlightedRegion && (() => {
+              const r = ATLAS_REGIONS.find((x) => x.id === highlightedRegion);
+              if (!r) return null;
+              return (
+                <polygon
+                  points={r.polygon}
+                  fill="oklch(0.88 0.14 78 / 0.45)"
+                  stroke="oklch(0.42 0.10 60 / 0.95)"
+                  strokeWidth={0.3}
+                  pointerEvents="none"
+                />
+              );
+            })()}
 
-            {/* Historical atlas regions */}
-            <g className="atlas-regions">
-              {ATLAS_REGIONS.map((r) => {
-                const active = highlightedRegion === r.id;
-                return (
+            {/* Invisible region hover targets for admin */}
+            {onRegionHover && (
+              <g className="region-hover-targets">
+                {ATLAS_REGIONS.map((r) => (
                   <polygon
                     key={r.id}
                     points={r.polygon}
-                    fill={active ? "oklch(0.88 0.10 78 / 0.55)" : "oklch(0.92 0.06 82 / 0.30)"}
-                    stroke="oklch(0.42 0.10 60 / 0.75)"
-                    strokeWidth={active ? 0.28 : 0.18}
-                    strokeLinejoin="round"
-                    onPointerEnter={() => onRegionHover?.(r.id)}
-                    onPointerLeave={() => onRegionHover?.(null)}
-                    style={{ cursor: onRegionHover ? "pointer" : undefined, transition: "fill 160ms ease, stroke-width 160ms ease" }}
+                    fill="transparent"
+                    onPointerEnter={() => onRegionHover(r.id)}
+                    onPointerLeave={() => onRegionHover(null)}
+                    style={{ cursor: "pointer" }}
                   />
-                );
-              })}
-              {/* Region labels */}
-              {ATLAS_REGIONS.map((r) => (
-                <text
-                  key={`label-${r.id}`}
-                  x={r.label.x}
-                  y={r.label.y}
-                  textAnchor="middle"
-                  fontSize={1.6}
-                  fontWeight={700}
-                  fill="oklch(0.32 0.08 50 / 0.82)"
-                  pointerEvents="none"
-                  style={{ fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
-                >
-                  {r.name}
-                </text>
-              ))}
-            </g>
+                ))}
+              </g>
+            )}
 
-            {/* Reference cities — small orienting dots */}
-            <g className="atlas-references" pointerEvents="none">
-              {ATLAS_REFERENCES.map((c) => (
-                <g key={c.name} transform={`translate(${c.x} ${c.y})`}>
-                  <circle r={0.35} fill="oklch(0.30 0.06 40 / 0.55)" />
-                  <text
-                    x={0.6}
-                    y={0.4}
-                    fontSize={1.05}
-                    fill="oklch(0.30 0.06 40 / 0.70)"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  >
-                    {c.name}
-                  </text>
-                </g>
-              ))}
-            </g>
+            {/* Edit-mode click-to-place overlay */}
+            {editMode && onPlace && (
+              <rect
+                width="100"
+                height="60"
+                fill="transparent"
+                onClick={(e) => {
+                  const svg = svgRef.current; if (!svg) return;
+                  const pt = svg.createSVGPoint();
+                  pt.x = e.clientX; pt.y = e.clientY;
+                  const ctm = (e.currentTarget as SVGRectElement).getScreenCTM();
+                  if (!ctm) return;
+                  const p = pt.matrixTransform(ctm.inverse());
+                  onPlace({
+                    x: Math.round(Math.max(0, Math.min(100, p.x)) * 10) / 10,
+                    y: Math.round(Math.max(0, Math.min(60, p.y)) * 10) / 10,
+                  });
+                }}
+                style={{ cursor: "crosshair" }}
+              />
+            )}
+
 
 
             {/* Markers */}
@@ -281,7 +256,7 @@ export function WorldAtlasCanvas({
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => { e.stopPropagation(); onSelect(m); }}
                 >
-                  {active && <circle r={2.4} fill="url(#wm-glow)" />}
+                  {active && <circle r={2.4} fill="url(#atlas-glow)" />}
                   <circle r={r + 0.3} fill="oklch(0.22 0.06 40)" opacity={0.5} />
                   <circle r={r} fill={fill} stroke="oklch(0.95 0.04 80)" strokeWidth={0.12} />
                   {active && (
@@ -331,7 +306,7 @@ export function WorldAtlasCanvas({
                 }}
 
               >
-                <circle r={2.6} fill="url(#wm-glow)" />
+                <circle r={2.6} fill="url(#atlas-glow)" />
                 <circle r={1.3} fill="oklch(0.95 0.18 70)" stroke="oklch(0.22 0.06 40)" strokeWidth={0.18} />
                 <circle r={0.45} fill="oklch(0.22 0.06 40)" />
               </g>
