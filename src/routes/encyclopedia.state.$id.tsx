@@ -49,7 +49,7 @@ function StatePage() {
   const era = ERAS.find((e) => e.id === id);
   const state = stateEntityForEra(id);
   const groups = stateEntities(id);
-  const campaigns = ENGINE_CAMPAIGNS.filter((c) => c.packId === id);
+  const campaigns: { id: string; title: string; intro: string }[] = []; // legacy engine removed
   const display = useEncyclopediaDisplay("state", id, {
     title: era?.name ?? state?.title ?? id,
     subtitle: era?.tagline ?? state?.period?.label ?? null,
