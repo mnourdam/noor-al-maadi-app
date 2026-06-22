@@ -144,6 +144,8 @@ export function AtlasApsPicker({
     <div
       dir="rtl"
       className="fixed inset-0 z-[60] flex flex-col bg-stone-950 text-stone-100"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDownCapture={(e) => e.stopPropagation()}
     >
       <header className="flex items-center justify-between border-b border-stone-800 bg-stone-900 px-4 py-2">
         <div className="flex items-center gap-3">
