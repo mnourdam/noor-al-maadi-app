@@ -6,7 +6,7 @@ import {
   SECTION_LABELS, SECTION_GLYPHS, stateEntities, stateEntityForEra, sortChrono,
   KNOWN_ERAS, type EncyclopediaSection,
 } from "@/lib/encyclopedia";
-import { ENGINE_CAMPAIGNS } from "@/lib/campaign-engine/registry";
+// Legacy campaign-engine removed in PR 1b. Campaigns now live in Supabase admin_campaigns.
 import { ERAS, type Era } from "@/lib/data";
 import { useEncyclopediaDisplay } from "@/lib/encyclopedia-source";
 
@@ -49,7 +49,7 @@ function StatePage() {
   const era = ERAS.find((e) => e.id === id);
   const state = stateEntityForEra(id);
   const groups = stateEntities(id);
-  const campaigns = ENGINE_CAMPAIGNS.filter((c) => c.packId === id);
+  const campaigns: { id: string; title: string; intro: string }[] = []; // legacy engine removed
   const display = useEncyclopediaDisplay("state", id, {
     title: era?.name ?? state?.title ?? id,
     subtitle: era?.tagline ?? state?.period?.label ?? null,
@@ -112,29 +112,8 @@ function StatePage() {
           </div>
         </div>
 
-        {/* Campaigns */}
-        {campaigns.length > 0 && (
-          <section className="mt-6">
-            <h2 className="font-display mb-2 text-sm font-bold">الحملات المرتبطة</h2>
-            <div className="grid grid-cols-1 gap-2">
-              {campaigns.map((c) => (
-                <Link
-                  key={c.id}
-                  to="/play/campaign/$id" params={{ id: c.id }}
-                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
-                >
-                  <span className="grid size-10 place-items-center rounded-xl bg-black/35 text-xl ring-1 ring-white/5">
-                    🎯
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-display text-[13px] font-bold line-clamp-1">{c.title}</p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">{c.intro}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Legacy "associated campaigns" section removed in PR 1b — campaign-engine deleted. */}
+        {false && campaigns.length > 0 && null}
 
         {/* Grouped sections */}
         {SECTION_ORDER.map((s) => {
