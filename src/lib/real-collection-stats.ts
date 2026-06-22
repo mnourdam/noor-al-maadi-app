@@ -80,6 +80,7 @@ function useSupabaseCollection() {
   const [rows, setRows] = useState<
     Array<{ type: string; slug: string; unlockedAt: number }>
   >([]);
+  const [validSlugs, setValidSlugs] = useState<Set<string> | null>(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -87,13 +88,20 @@ function useSupabaseCollection() {
         const { data: sess } = await supabase.auth.getSession();
         const uid = sess.session?.user?.id;
         if (!uid) return;
-        const { data } = await supabase
-          .from("user_collection")
-          .select("item_id,item_type,unlocked_at")
-          .eq("user_id", uid);
-        if (cancelled || !data) return;
+        const [colRes, encRes] = await Promise.all([
+          supabase
+            .from("user_collection")
+            .select("item_id,item_type,unlocked_at")
+            .eq("user_id", uid),
+          supabase.from("encyclopedia_entities").select("slug").eq("enabled", true),
+        ]);
+        if (cancelled) return;
+        const slugSet = new Set<string>(
+          (encRes.data ?? []).map((r: any) => String(r.slug ?? "").toLowerCase()),
+        );
+        setValidSlugs(slugSet);
         setRows(
-          data.map((r: any) => ({
+          (colRes.data ?? []).map((r: any) => ({
             type: String(r.item_type ?? ""),
             slug: String(r.item_id ?? ""),
             unlockedAt: r.unlocked_at ? new Date(r.unlocked_at).getTime() : 0,
@@ -107,7 +115,7 @@ function useSupabaseCollection() {
       cancelled = true;
     };
   }, []);
-  return rows;
+  return { rows, validSlugs };
 }
 
 export function useRealCollectionStats() {
