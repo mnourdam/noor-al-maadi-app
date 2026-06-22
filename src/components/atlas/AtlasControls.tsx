@@ -1,11 +1,22 @@
-// Phase 2 — Atlas controls.
-// Search + filter ONLY over published atlas_entities. No legacy data sources.
+// Phase 2 stabilization — Atlas controls.
+// Search + filter ONLY over published atlas_entities.
+// - Era IDs are resolved to Arabic display names (no raw ids exposed).
+// - Era picker is a compact dropdown — mobile-friendly.
 import { Search } from "lucide-react";
 import {
   KIND_LABEL_AR,
   type AtlasEntityKind,
   type AtlasEntityRow,
 } from "@/lib/atlas-entities";
+import { ERAS } from "@/lib/data";
+
+const ERA_LABEL_AR: Record<string, string> = Object.fromEntries(
+  ERAS.map((e) => [e.id, e.name]),
+);
+
+function eraLabel(id: string): string {
+  return ERA_LABEL_AR[id] ?? id;
+}
 
 export type AtlasFacets = {
   kinds: { id: AtlasEntityKind; count: number }[];
@@ -24,7 +35,7 @@ export function buildAtlasFacets(entities: AtlasEntityRow[]): AtlasFacets {
       .map(([id, count]) => ({ id, count }))
       .sort((a, b) => b.count - a.count),
     eras: Array.from(eraCounts.entries())
-      .map(([id, count]) => ({ id, label: id, count }))
+      .map(([id, count]) => ({ id, label: eraLabel(id), count }))
       .sort((a, b) => b.count - a.count),
   };
 }
@@ -65,7 +76,7 @@ export function AtlasControls({
   return (
     <div className="pointer-events-auto absolute top-0 right-0 left-0 z-20 p-3 sm:p-4" dir="rtl">
       <div
-        className="mx-auto flex max-w-5xl flex-col gap-2 rounded-2xl border border-amber-400/30 px-3 py-2 shadow-lg backdrop-blur"
+        className="mx-auto flex max-w-3xl flex-col gap-2 rounded-2xl border border-amber-400/30 px-3 py-2 shadow-lg backdrop-blur"
         style={{
           backgroundImage:
             "linear-gradient(180deg, oklch(0.20 0.04 250 / 0.92), oklch(0.16 0.05 255 / 0.92))",
@@ -81,22 +92,31 @@ export function AtlasControls({
               className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-amber-200/40"
             />
           </div>
+
+          {facets.eras.length > 0 && (
+            <select
+              value={era ?? ""}
+              onChange={(e) => onEra(e.target.value || null)}
+              aria-label="العصر"
+              className="rounded-full border border-amber-400/30 bg-slate-950/60 px-3 py-1.5 text-[12px] font-bold text-amber-100 outline-none"
+            >
+              <option value="">كل العصور</option>
+              {facets.eras.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.label} ({e.count})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
-        {(facets.kinds.length > 0 || facets.eras.length > 0) && (
+
+        {facets.kinds.length > 0 && (
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            <Chip active={kind === null && era === null} onClick={() => { onEra(null); onKind(null); }}>
-              الكل
-            </Chip>
+            <Chip active={kind === null} onClick={() => onKind(null)}>الكل</Chip>
             {facets.kinds.map((k) => (
               <Chip key={k.id} active={kind === k.id} onClick={() => onKind(kind === k.id ? null : k.id)}>
                 {KIND_LABEL_AR[k.id]}
                 <span className="mx-1 text-amber-200/60">{k.count}</span>
-              </Chip>
-            ))}
-            {facets.eras.length > 0 && <span className="mx-1 h-4 w-px bg-amber-400/20" />}
-            {facets.eras.map((e) => (
-              <Chip key={e.id} active={era === e.id} onClick={() => onEra(era === e.id ? null : e.id)}>
-                {e.label}
               </Chip>
             ))}
           </div>
