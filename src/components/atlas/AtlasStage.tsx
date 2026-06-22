@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Building2, Calendar, Crown, Gem, Landmark, Swords, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { ATLAS_REFERENCES } from "@/lib/atlas-regions";
+import { AtlasBaseDefs, AtlasBaseLayers } from "./HistoricalAtlasBase";
 import {
   TIER_LABEL,
   tierForScale,
