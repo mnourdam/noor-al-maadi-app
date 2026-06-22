@@ -1,24 +1,21 @@
-// Phase 2 — Atlas Stage.
-// Frozen Atlas v1 raster + the unified `atlas_entities` marker layer. No legacy hubs.
-//
-// UX fixes (Phase 2 / section B):
-//   • Pan is bound from first paint — drag works immediately with no warm-up zoom.
-//   • Touch sensitivity capped at 0.32 (Google-Maps-ish feel).
-//   • Hard edge clamp tied to the raster bounds: empty space outside the
-//     atlas is never visible at any zoom.
-//   • Locate-on-map cancels in-flight animation frames, guards against NaN,
-//     and never blocks the render loop.
+// Phase 2 stabilization — Atlas Stage.
+// • ONLY the approved Atlas v1 raster ever renders (no legacy fallback flash).
+//   Loading state is a parchment skeleton above an opaque slate backdrop.
+// • Pan is live from first paint at scale=1 — bounds are computed from the
+//   raster's intrinsic aspect ratio so the user always has some pan room.
+// • Pinch zoom keeps the world point under the finger midpoint stable
+//   (Google-Maps-style). Clamp is RELAXED during the active pinch and
+//   reapplied on release to prevent horizontal drift snapping.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AtlasBaseDefs, AtlasBaseLayers } from "./HistoricalAtlasBase";
 import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 50;
-const TOUCH_PAN_GAIN = 0.32;
 const VB_W = 100;
 const VB_H = 60;
+const RASTER_ASPECT = VB_W / VB_H;
 
 type View = { scale: number; tx: number; ty: number };
 const IDENTITY: View = { scale: 1, tx: 0, ty: 0 };
@@ -30,13 +27,10 @@ export function AtlasStage({
   entities,
   selectedId,
   onSelect,
-  focusOn,
 }: {
   entities: AtlasEntityRow[];
   selectedId: string | null;
   onSelect: (entity: AtlasEntityRow | null) => void;
-  /** New object identity → smooth-pan the view onto these viewBox coords. */
-  focusOn?: { x: number; y: number } | null;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>(IDENTITY);
@@ -58,16 +52,41 @@ export function AtlasStage({
     return () => ro.disconnect();
   }, []);
 
-  // Hard edge clamp. transform-origin: center → at scale s, the raster
-  // half-extent is (wrap*s)/2 and the visible half-extent is wrap/2.
-  // The largest legal translate is therefore ((s-1)*wrap)/2 on each axis.
-  // When s = 1 this collapses to 0 — no out-of-bounds movement is possible.
-  const clamp = useCallback((v: View): View => {
+  // Pan-bound computation that accounts for the raster's intrinsic aspect
+  // (xMidYMid slice). At scale 1 the SVG still fills the viewport but the
+  // raster may overflow on one axis — we allow panning into that overflow,
+  // so drag works immediately without requiring zoom-in first.
+  const clamp = useCallback((v: View, opts?: { relax?: boolean }): View => {
     const s = clampScalar(v.scale, MIN_SCALE, MAX_SCALE);
     const w = wrapSizeRef.current.w;
     const h = wrapSizeRef.current.h;
-    const maxX = Math.max(0, ((s - 1) * w) / 2);
-    const maxY = Math.max(0, ((s - 1) * h) / 2);
+
+    // Visible raster CSS extent at scale 1, given xMidYMid slice.
+    const viewportAspect = w / h;
+    let baseW: number, baseH: number;
+    if (viewportAspect > RASTER_ASPECT) {
+      // Raster filled to viewport width; overflows vertically.
+      baseW = w;
+      baseH = w / RASTER_ASPECT;
+    } else {
+      baseH = h;
+      baseW = h * RASTER_ASPECT;
+    }
+
+    const scaledW = baseW * s;
+    const scaledH = baseH * s;
+    // Allowed translate = how far the scaled raster can slide before the
+    // viewport edge passes the raster edge.
+    let maxX = Math.max(0, (scaledW - w) / 2);
+    let maxY = Math.max(0, (scaledH - h) / 2);
+
+    // During active gestures we relax the clamp by ~12% so the world point
+    // under the finger never snaps sideways. Reapplied tight on release.
+    if (opts?.relax) {
+      maxX += w * 0.12;
+      maxY += h * 0.12;
+    }
+
     return {
       scale: s,
       tx: clampScalar(v.tx, -maxX, maxX),
@@ -75,25 +94,20 @@ export function AtlasStage({
     };
   }, []);
 
-  // rAF-coalesced pan flush.
+  // rAF-coalesced view flush.
   const pendingView = useRef<View | null>(null);
   const flushRaf = useRef<number | null>(null);
-  const tweenRaf = useRef<number | null>(null);
 
   const cancelAnimations = useCallback(() => {
     if (flushRaf.current != null) {
       cancelAnimationFrame(flushRaf.current);
       flushRaf.current = null;
     }
-    if (tweenRaf.current != null) {
-      cancelAnimationFrame(tweenRaf.current);
-      tweenRaf.current = null;
-    }
     pendingView.current = null;
   }, []);
 
-  const scheduleView = useCallback((next: View) => {
-    pendingView.current = clamp(next);
+  const scheduleView = useCallback((next: View, opts?: { relax?: boolean }) => {
+    pendingView.current = clamp(next, opts);
     if (flushRaf.current != null) return;
     flushRaf.current = requestAnimationFrame(() => {
       flushRaf.current = null;
@@ -103,7 +117,7 @@ export function AtlasStage({
     });
   }, [clamp]);
 
-  // ── Pointer drag (active from first paint) ─────────────────────────────
+  // ── Pointer drag (active from first paint, including scale=1) ─────────
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const pinch = useRef<
     { dist: number; scale: number; midX: number; midY: number; tx: number; ty: number } | null
@@ -122,18 +136,22 @@ export function AtlasStage({
       drag.current = null;
       return;
     }
-    const gain = e.pointerType === "touch" ? TOUCH_PAN_GAIN : 1;
-    const dx = (e.clientX - drag.current.x) * gain;
-    const dy = (e.clientY - drag.current.y) * gain;
+    // 1:1 drag for both touch and mouse — feels like Google Maps.
+    const dx = e.clientX - drag.current.x;
+    const dy = e.clientY - drag.current.y;
     scheduleView({
       scale: viewRef.current.scale,
       tx: drag.current.tx + dx,
       ty: drag.current.ty + dy,
     });
   };
-  const onPointerUp = () => { drag.current = null; };
+  const onPointerUp = () => {
+    drag.current = null;
+    // Re-clamp tightly on release.
+    setView((v) => clamp(v));
+  };
 
-  // ── Wheel zoom ──────────────────────────────────────────────────────────
+  // ── Wheel zoom (cursor-anchored) ──────────────────────────────────────
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -155,7 +173,7 @@ export function AtlasStage({
     return () => el.removeEventListener("wheel", onWheel);
   }, [clamp, cancelAnimations]);
 
-  // ── Pinch zoom + two-finger pan ────────────────────────────────────────
+  // ── Pinch zoom + two-finger pan (Google-Maps-style anchor) ───────────
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -163,39 +181,43 @@ export function AtlasStage({
       if (e.touches.length < 2) return;
       cancelAnimations();
       const rect = el.getBoundingClientRect();
-      const [a, b] = [e.touches[0], e.touches[1]];
+      const a = e.touches[0], b = e.touches[1];
       const midX = (a.clientX + b.clientX) / 2 - rect.left - rect.width / 2;
       const midY = (a.clientY + b.clientY) / 2 - rect.top - rect.height / 2;
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
       pinch.current = {
-        dist,
+        dist: Math.max(1, dist),
         scale: viewRef.current.scale,
         midX, midY,
         tx: viewRef.current.tx,
         ty: viewRef.current.ty,
       };
+      drag.current = null;
       e.preventDefault();
     };
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length < 2 || !pinch.current) return;
       const rect = el.getBoundingClientRect();
-      const [a, b] = [e.touches[0], e.touches[1]];
+      const a = e.touches[0], b = e.touches[1];
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
       const midX = (a.clientX + b.clientX) / 2 - rect.left - rect.width / 2;
       const midY = (a.clientY + b.clientY) / 2 - rect.top - rect.height / 2;
-      const raw = dist / Math.max(1, pinch.current.dist);
-      const damped = 1 + (raw - 1) * 0.85;
-      const s = clampScalar(pinch.current.scale * damped, MIN_SCALE, MAX_SCALE);
+      const ratio = dist / pinch.current.dist;
+      const s = clampScalar(pinch.current.scale * ratio, MIN_SCALE, MAX_SCALE);
       const k = s / pinch.current.scale;
-      const tx = pinch.current.midX - (pinch.current.midX - pinch.current.tx) * k
-        + (midX - pinch.current.midX);
-      const ty = pinch.current.midY - (pinch.current.midY - pinch.current.ty) * k
-        + (midY - pinch.current.midY);
-      scheduleView({ scale: s, tx, ty });
+      // Keep the world point under the original midpoint anchored under the
+      // current midpoint. Same math both axes.
+      const tx = midX - (pinch.current.midX - pinch.current.tx) * k;
+      const ty = midY - (pinch.current.midY - pinch.current.ty) * k;
+      scheduleView({ scale: s, tx, ty }, { relax: true });
       e.preventDefault();
     };
     const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) pinch.current = null;
+      if (e.touches.length < 2) {
+        pinch.current = null;
+        // Settle tight clamp.
+        setView((v) => clamp(v));
+      }
     };
     el.addEventListener("touchstart", onTouchStart, { passive: false });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -207,33 +229,11 @@ export function AtlasStage({
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [scheduleView, cancelAnimations]);
+  }, [scheduleView, cancelAnimations, clamp]);
 
   useEffect(() => () => cancelAnimations(), [cancelAnimations]);
 
-  // ── External focus (panel → "locate on map") ───────────────────────────
-  // Hardened: guards NaN, cancels in-flight animation, never blocks render.
-  useEffect(() => {
-    if (!focusOn) return;
-    if (!Number.isFinite(focusOn.x) || !Number.isFinite(focusOn.y)) return;
-    cancelAnimations();
-    const wrap = wrapSizeRef.current;
-    if (wrap.w <= 1 || wrap.h <= 1) return;
-    const targetScale = Math.max(viewRef.current.scale, 4);
-    const k = wrap.w / VB_W;
-    const cssX = (focusOn.x - VB_W / 2) * k * targetScale;
-    const cssY = (focusOn.y - VB_H / 2) * k * targetScale;
-    const target = clamp({ scale: targetScale, tx: -cssX, ty: -cssY });
-    // Single-frame settle — CSS transition handles the visual tween.
-    tweenRaf.current = requestAnimationFrame(() => {
-      tweenRaf.current = null;
-      setView(target);
-    });
-  }, [focusOn, clamp, cancelAnimations]);
-
   const inv = 1 / view.scale;
-
-  // CSS transition only when the user is not actively dragging/pinching.
   const isInteracting = drag.current != null || pinch.current != null;
   const useTransition = !isInteracting;
 
@@ -248,19 +248,27 @@ export function AtlasStage({
       style={{ touchAction: "none", background: "oklch(0.13 0.04 255)" }}
       dir="ltr"
     >
+      {/* Parchment loading skeleton — sits BELOW the raster, never the
+          legacy procedural atlas. Fades out the moment the raster loads. */}
+      {!rasterLoaded && (
+        <div
+          className="absolute inset-0 animate-pulse"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse at center, oklch(0.30 0.04 80 / 0.35), transparent 70%), linear-gradient(180deg, oklch(0.16 0.04 252), oklch(0.13 0.04 255))",
+          }}
+        />
+      )}
+
       <svg
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         preserveAspectRatio="xMidYMid slice"
         className="block size-full"
       >
-        <defs>
-          <AtlasBaseDefs />
-        </defs>
-
         <g style={{
           transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`,
           transformOrigin: "center",
-          transition: useTransition ? "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
+          transition: useTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
           willChange: "transform",
         }}>
           <image
@@ -271,17 +279,8 @@ export function AtlasStage({
             height={VB_H}
             preserveAspectRatio="none"
             onLoad={() => setRasterLoaded(true)}
-            style={{ imageRendering: "auto" }}
+            style={{ imageRendering: "auto", opacity: rasterLoaded ? 1 : 0, transition: "opacity 200ms ease-out" }}
           />
-          {!rasterLoaded && (
-            <AtlasBaseLayers
-              inv={inv}
-              showRegionLabels
-              showSeaLabels
-              showCities={false}
-              showMountains={false}
-            />
-          )}
 
           <AtlasEntityPinsLayer
             entities={entities}
