@@ -178,6 +178,7 @@ export function WorldAtlasCanvas({
           </defs>
 
           <g
+            ref={innerGRef}
             style={{
               transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`,
               transformOrigin: "center",
@@ -185,6 +186,7 @@ export function WorldAtlasCanvas({
             }}
           >
             <rect
+
               width="100"
               height="60"
               fill="url(#wm-sea)"
