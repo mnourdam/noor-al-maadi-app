@@ -158,12 +158,14 @@ export function WorldAtlasCanvas({
         onPointerCancel={onPointerUp}
       >
         <svg
+          ref={svgRef}
           viewBox="0 0 100 60"
           preserveAspectRatio="xMidYMid meet"
           className="block w-full h-[420px]"
         >
           <defs>
             <pattern id="wm-grid" width="5" height="5" patternUnits="userSpaceOnUse">
+
               <path d="M5 0 L0 0 0 5" fill="none" stroke="oklch(0.32 0.06 50 / 0.18)" strokeWidth="0.1" />
             </pattern>
             <pattern id="wm-sea" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
