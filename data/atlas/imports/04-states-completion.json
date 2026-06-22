@@ -1,0 +1,26 @@
+{
+  "batch": "states-completion-01",
+  "default_kind": "region",
+  "atlas_version": "v1",
+  "notes": "Remaining major dynasties/states. Each row's APS anchor = the dynasty's principal capital. Region pin marks a single point; cartographic extent is left for Phase 3 polygons.",
+  "entities": [
+    { "slug": "rashidun-caliphate", "name_ar": "الخلافة الراشدة", "name_en": "Rashidun Caliphate", "lat": 24.4686, "lon": 39.6142, "era": "rashidun", "year_start": 632, "year_end": 661 },
+    { "slug": "umayyad-caliphate", "name_ar": "الدولة الأموية", "name_en": "Umayyad Caliphate", "lat": 33.5138, "lon": 36.2765, "era": "umayyad", "year_start": 661, "year_end": 750 },
+    { "slug": "abbasid-caliphate", "name_ar": "الدولة العباسية", "name_en": "Abbasid Caliphate", "lat": 33.3152, "lon": 44.3661, "era": "abbasid", "year_start": 750, "year_end": 1258 },
+    { "slug": "umayyad-al-andalus", "name_ar": "الدولة الأموية بالأندلس", "name_en": "Umayyad Emirate/Caliphate of Cordoba", "lat": 37.8882, "lon": -4.7794, "era": "umayyad-al-andalus", "year_start": 756, "year_end": 1031 },
+    { "slug": "fatimid-caliphate", "name_ar": "الدولة الفاطمية", "name_en": "Fatimid Caliphate", "lat": 30.0444, "lon": 31.2357, "era": "fatimid", "year_start": 909, "year_end": 1171 },
+    { "slug": "ayyubid-sultanate", "name_ar": "الدولة الأيوبية", "name_en": "Ayyubid Sultanate", "lat": 30.0444, "lon": 31.2357, "era": "ayyubid", "year_start": 1171, "year_end": 1260 },
+    { "slug": "mamluk-sultanate", "name_ar": "دولة المماليك", "name_en": "Mamluk Sultanate", "lat": 30.0444, "lon": 31.2357, "era": "mamluk", "year_start": 1250, "year_end": 1517 },
+    { "slug": "almoravid-dynasty", "name_ar": "دولة المرابطين", "name_en": "Almoravid Dynasty", "lat": 31.6295, "lon": -7.9811, "era": "almoravid", "year_start": 1040, "year_end": 1147 },
+    { "slug": "almohad-caliphate", "name_ar": "دولة الموحدين", "name_en": "Almohad Caliphate", "lat": 31.6295, "lon": -7.9811, "era": "almohad", "year_start": 1121, "year_end": 1269 },
+    { "slug": "nasrid-emirate", "name_ar": "إمارة بني نصر بغرناطة", "name_en": "Nasrid Emirate of Granada", "lat": 37.1773, "lon": -3.5986, "era": "nasrid", "year_start": 1238, "year_end": 1492 },
+    { "slug": "samanid-empire", "name_ar": "الدولة السامانية", "name_en": "Samanid Empire", "lat": 39.7747, "lon": 64.4286, "era": "samanid", "year_start": 819, "year_end": 999 },
+    { "slug": "ghaznavid-empire", "name_ar": "الدولة الغزنوية", "name_en": "Ghaznavid Empire", "lat": 33.5550, "lon": 68.4242, "era": "ghaznavid", "year_start": 977, "year_end": 1186 },
+    { "slug": "seljuk-empire", "name_ar": "الدولة السلجوقية", "name_en": "Great Seljuk Empire", "lat": 32.6546, "lon": 51.6680, "era": "seljuk", "year_start": 1037, "year_end": 1194 },
+    { "slug": "timurid-empire", "name_ar": "الدولة التيمورية", "name_en": "Timurid Empire", "lat": 39.6270, "lon": 66.9750, "era": "timurid", "year_start": 1370, "year_end": 1507 },
+    { "slug": "delhi-sultanate", "name_ar": "سلطنة دلهي", "name_en": "Delhi Sultanate", "lat": 28.6139, "lon": 77.2090, "era": "delhi-sultanate", "year_start": 1206, "year_end": 1526 },
+    { "slug": "mughal-empire", "name_ar": "الدولة المغولية الإسلامية", "name_en": "Mughal Empire", "lat": 28.6139, "lon": 77.2090, "era": "mughal", "year_start": 1526, "year_end": 1857 },
+    { "slug": "ottoman-empire", "name_ar": "الدولة العثمانية", "name_en": "Ottoman Empire", "lat": 41.0082, "lon": 28.9784, "era": "ottoman", "year_start": 1299, "year_end": 1922 },
+    { "slug": "safavid-empire", "name_ar": "الدولة الصفوية", "name_en": "Safavid Empire", "lat": 32.6546, "lon": 51.6680, "era": "safavid", "year_start": 1501, "year_end": 1736 }
+  ]
+}
