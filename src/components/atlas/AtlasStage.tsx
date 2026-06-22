@@ -341,7 +341,7 @@ export function AtlasStage({
       <svg
         ref={svgRef}
         viewBox={`0 0 ${VB_W} ${VB_H}`}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="xMidYMid slice"
         className="block size-full"
       >
         <defs>
