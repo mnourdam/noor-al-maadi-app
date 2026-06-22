@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
-import { HEART_MAX, getEffectiveHearts, msUntilNextHeart } from "@/lib/hearts";
+import { HEART_MAX, getEffectiveHearts, msUntilNextHeart, formatHeartTimer } from "@/lib/hearts";
 import { unreadCount, formatBadgeCount } from "@/lib/notifications";
 
 /**
