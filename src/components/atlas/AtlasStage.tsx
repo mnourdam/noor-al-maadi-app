@@ -131,41 +131,51 @@ export function AtlasStage({
   }, []);
 
   // ── Pointer drag with velocity tracking ─────────────────────────────────
+  const dragKind = useRef<"mouse" | "touch" | "pen">("mouse");
   const onPointerDown = (e: React.PointerEvent) => {
+    // Two-finger pinch is handled by the touch listener below; ignore extra pointers.
+    if (e.pointerType === "touch" && pinch.current) return;
     stopInertia();
-    // Capture on the container, not the target — children may unmount on tier change.
     wrapRef.current?.setPointerCapture?.(e.pointerId);
     interaction.current = "drag";
+    dragKind.current = (e.pointerType as "mouse" | "touch" | "pen") || "mouse";
     drag.current = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
     lastMove.current = { x: e.clientX, y: e.clientY, t: performance.now(), vx: 0, vy: 0 };
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current) return;
-    const dx = e.clientX - drag.current.x;
-    const dy = e.clientY - drag.current.y;
+    if (e.pointerType === "touch" && pinch.current) {
+      // A second finger landed — abandon drag, let pinch take over.
+      drag.current = null;
+      return;
+    }
+    const gain = e.pointerType === "touch" ? TOUCH_PAN_GAIN : 1;
+    const dx = (e.clientX - drag.current.x) * gain;
+    const dy = (e.clientY - drag.current.y) * gain;
     const now = performance.now();
     const dt = Math.max(8, now - lastMove.current.t);
     lastMove.current = {
       x: e.clientX, y: e.clientY, t: now,
-      vx: 0.6 * lastMove.current.vx + 0.4 * ((e.clientX - lastMove.current.x) / dt),
-      vy: 0.6 * lastMove.current.vy + 0.4 * ((e.clientY - lastMove.current.y) / dt),
+      vx: 0.6 * lastMove.current.vx + 0.4 * (((e.clientX - lastMove.current.x) * gain) / dt),
+      vy: 0.6 * lastMove.current.vy + 0.4 * (((e.clientY - lastMove.current.y) * gain) / dt),
     };
     scheduleView({ scale: view.scale, tx: drag.current.tx + dx, ty: drag.current.ty + dy });
   };
   const onPointerUp = () => {
     if (!drag.current) return;
     drag.current = null;
-    let vx = clampScalar(lastMove.current.vx, -MAX_VELOCITY, MAX_VELOCITY);
-    let vy = clampScalar(lastMove.current.vy, -MAX_VELOCITY, MAX_VELOCITY);
+    const vMax = dragKind.current === "touch" ? TOUCH_VELOCITY : MAX_VELOCITY;
+    let vx = clampScalar(lastMove.current.vx, -vMax, vMax);
+    let vy = clampScalar(lastMove.current.vy, -vMax, vMax);
     const speed = Math.hypot(vx, vy);
-    if (speed < 0.08) { interaction.current = "idle"; return; }
+    if (speed < 0.1) { interaction.current = "idle"; return; }
     interaction.current = "inertia";
-    const decay = 0.9;
+    const decay = dragKind.current === "touch" ? 0.86 : 0.9;
     let frames = 0;
     const step = () => {
       vx *= decay; vy *= decay;
       frames++;
-      if (frames >= MAX_INERTIA_FRAMES || Math.hypot(vx, vy) < 0.04) {
+      if (frames >= MAX_INERTIA_FRAMES || Math.hypot(vx, vy) < 0.05) {
         inertiaRaf.current = null;
         interaction.current = "idle";
         return;
