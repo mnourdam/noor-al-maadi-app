@@ -82,6 +82,7 @@ function useSupabaseCollection() {
   >([]);
   const [validSlugs, setValidSlugs] = useState<Set<string> | null>(null);
   const [slugTitles, setSlugTitles] = useState<Map<string, string>>(new Map());
+  const [canonicalSlugFor, setCanonicalSlugFor] = useState<Map<string, string>>(new Map());
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -96,22 +97,34 @@ function useSupabaseCollection() {
             .eq("user_id", uid),
           supabase
             .from("encyclopedia_entities")
-            .select("slug,title")
+            .select("slug,title,metadata")
             .eq("enabled", true),
         ]);
         if (cancelled) return;
         const slugSet = new Set<string>();
         const titleMap = new Map<string, string>();
-        for (const r of (encRes.data ?? []) as Array<{ slug: string; title: string | null }>) {
+        const canonicalMap = new Map<string, string>();
+        for (const r of (encRes.data ?? []) as Array<{ slug: string; title: string | null; metadata: any }>) {
           const s = String(r.slug ?? "").toLowerCase();
           if (!s) continue;
           slugSet.add(s);
+          canonicalMap.set(s, s);
           const t = (r.title ?? "").trim();
           // Prefer the first Arabic title encountered per slug.
           if (t && !titleMap.has(s) && HAS_ARABIC.test(t)) titleMap.set(s, t);
+          const aliases = Array.isArray(r.metadata?.aliases) ? r.metadata.aliases : [];
+          const legacyId = typeof r.metadata?.legacy_id === "string" ? r.metadata.legacy_id : null;
+          for (const rawAlias of [legacyId, ...aliases]) {
+            const a = String(rawAlias ?? "").toLowerCase().trim();
+            if (!a) continue;
+            slugSet.add(a);
+            canonicalMap.set(a, s);
+            if (t && HAS_ARABIC.test(t) && !titleMap.has(a)) titleMap.set(a, t);
+          }
         }
         setValidSlugs(slugSet);
         setSlugTitles(titleMap);
+        setCanonicalSlugFor(canonicalMap);
         setRows(
           (colRes.data ?? []).map((r: any) => ({
             type: String(r.item_type ?? ""),
@@ -127,12 +140,12 @@ function useSupabaseCollection() {
       cancelled = true;
     };
   }, []);
-  return { rows, validSlugs, slugTitles };
+  return { rows, validSlugs, slugTitles, canonicalSlugFor };
 }
 
 export function useRealCollectionStats() {
   const { profile } = useProfile();
-  const { rows: supaRows, validSlugs, slugTitles } = useSupabaseCollection();
+  const { rows: supaRows, validSlugs, slugTitles, canonicalSlugFor } = useSupabaseCollection();
 
   // Registry is consulted only for display metadata (Arabic name/image)
   // of Supabase rows. It is no longer an unlock source.
@@ -164,6 +177,7 @@ export function useRealCollectionStats() {
     for (const r of supaRows) {
       const kind = kindFromType(r.type);
       const slugLower = r.slug.toLowerCase();
+      const canonicalSlug = canonicalSlugFor.get(slugLower) ?? slugLower;
       // Route-resolvability guard: only surface rows whose slug exists in
       // the canonical content (pack registry OR Supabase encyclopedia_entities).
       // This filters out legacy/demo rows with malformed slugs (e.g.
@@ -189,7 +203,7 @@ export function useRealCollectionStats() {
         title: candidate,
         subtitle: kind,
         icon,
-        to: `/encyclopedia/entity/${r.slug}`,
+        to: `/encyclopedia/entity/${canonicalSlug}`,
         unlockedAt: r.unlockedAt,
       });
     }
@@ -205,7 +219,7 @@ export function useRealCollectionStats() {
     // (e.g. Salah al-Din, Umar) and are not migrated.
 
     return out;
-  }, [supaRows, validSlugs, slugTitles, registryById]);
+  }, [supaRows, validSlugs, slugTitles, canonicalSlugFor, registryById]);
 
 
   // Recently discovered: Supabase rows only, newest first.
