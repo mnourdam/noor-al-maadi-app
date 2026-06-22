@@ -13,6 +13,8 @@ import { useAtlasLayers, useEntityContext, type HubMarker, type Tier } from "@/l
 import { AtlasStage } from "./AtlasStage";
 import { AtlasControls } from "./AtlasControls";
 import { EntityPanel } from "./EntityPanel";
+import { AtlasEntityPopover } from "./AtlasEntityPins";
+import type { AtlasEntityRow } from "@/lib/atlas-entities";
 
 export function AtlasShell() {
   const { data, isLoading } = useWorldMapData();
