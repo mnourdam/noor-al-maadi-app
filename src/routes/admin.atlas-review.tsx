@@ -232,7 +232,7 @@ function AtlasReviewPage() {
         if (action === "reset") {
           // recompute APS from lat/lon (TPS suggestion)
           if (row.lat == null || row.lon == null) continue;
-          const aps = geoToAps({ lat: row.lat, lon: row.lon });
+          const aps = geoToAps(row.lon, row.lat);
           setDrafts((p) => ({ ...p, [id]: { x: Math.round(aps.x), y: Math.round(aps.y) } }));
           continue;
         }
