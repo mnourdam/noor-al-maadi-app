@@ -13,7 +13,7 @@ import {
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
-import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS } from "@/lib/notifications";
+import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS, unreadCount, formatBadgeCount } from "@/lib/notifications";
 import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
@@ -51,6 +51,17 @@ function Index() {
   const [mounted, setMounted] = useState(false);
   const { selected: todayEvent } = useTodayInHistoryEvent();
   const stats = useRealCollectionStats();
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    const recount = () => setUnread(unreadCount());
+    recount();
+    window.addEventListener("irth:notifications:updated", recount);
+    window.addEventListener("focus", recount);
+    return () => {
+      window.removeEventListener("irth:notifications:updated", recount);
+      window.removeEventListener("focus", recount);
+    };
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -325,6 +336,31 @@ function Index() {
           </div>
         </div>
       </section>
+
+      {/* ============ Unread notifications banner ============ */}
+      {unread > 0 && (
+        <section className="mt-4 px-5">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-gold/40 bg-gold/10 p-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/20 text-gold">
+                <Bell className="size-4" />
+                <span className="absolute -mt-6 -ms-6 grid min-w-[16px] h-[16px] place-items-center rounded-full bg-gradient-gold px-1 text-[9px] font-bold text-primary-foreground">
+                  {formatBadgeCount(unread)}
+                </span>
+              </div>
+              <p className="font-display truncate text-sm font-bold text-gold">
+                لديك {unread.toLocaleString("en-US")} {unread === 1 ? "إشعار جديد" : "إشعارات جديدة"}
+              </p>
+            </div>
+            <Link
+              to="/notifications"
+              className="shrink-0 rounded-full bg-gradient-gold px-3 py-1.5 text-[11px] font-bold text-primary-foreground hover:opacity-90"
+            >
+              عرض الإشعارات
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* ============ 2. TODAY'S OBJECTIVE ============ */}
       {objective && (

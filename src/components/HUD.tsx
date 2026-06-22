@@ -3,7 +3,7 @@ import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart } from "@/lib/hearts";
-import { unreadCount } from "@/lib/notifications";
+import { unreadCount, formatBadgeCount } from "@/lib/notifications";
 
 /**
  * Compact top-of-screen HUD: hearts, dinars, streak.
@@ -61,8 +61,8 @@ export function HUD() {
           <Link to="/notifications" className="relative inline-flex items-center text-muted-foreground hover:text-gold" aria-label="الإشعارات">
             <Bell className="size-4" />
             {unread > 0 && (
-              <span className="absolute -top-1 -left-1 grid min-w-[14px] h-[14px] place-items-center rounded-full bg-gradient-gold px-1 text-[9px] font-bold text-primary-foreground">
-                {unread > 9 ? "9+" : unread}
+              <span className="absolute -top-1 -left-1 grid min-w-[16px] h-[16px] place-items-center rounded-full bg-gradient-gold px-1 text-[9px] font-bold text-primary-foreground">
+                {formatBadgeCount(unread)}
               </span>
             )}
           </Link>
