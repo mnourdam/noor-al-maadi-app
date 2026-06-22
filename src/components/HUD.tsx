@@ -15,7 +15,8 @@ export function HUD() {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => force((n) => n + 1), 30_000);
+    // 1s tick so the MM:SS heart timer counts smoothly.
+    const id = setInterval(() => force((n) => n + 1), 1_000);
     const recount = () => setUnread(unreadCount());
     recount();
     window.addEventListener("irth:notifications:updated", recount);
@@ -31,7 +32,6 @@ export function HUD() {
   const now = Date.now();
   const hearts = getEffectiveHearts(profile, now);
   const next = msUntilNextHeart(profile, now);
-  const mins = Math.max(1, Math.ceil(next / 60_000));
 
   return (
     <div className="sticky top-0 z-40 mx-auto w-full max-w-md px-3 pt-2">
