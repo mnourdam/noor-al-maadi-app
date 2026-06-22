@@ -17,7 +17,7 @@ import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { getCampaign, listCampaigns } from "@/lib/campaignStorage";
 import { pullCampaignsFromCloud } from "@/lib/cloudSync";
 import {
-  getChapterProgress, getCampaignProgress, recordActivity, markActivityComplete,
+  getChapterProgress, getCampaignProgress, recordActivity, isChapterUnlocked,
 } from "@/lib/importedCampaignProgress";
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
 import { OutOfHeartsModal } from "@/components/imported-campaign/OutOfHeartsModal";
