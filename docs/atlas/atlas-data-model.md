@@ -1,6 +1,17 @@
-# Atlas Data Model — Phase 1
+# Atlas Data Model — Phase 1 ✅ COMPLETE
 
-_Last updated: 2026-06-22_
+_Status: **complete** — end-to-end workflow validated 2026-06-22._
+
+## Status
+
+Phase 1 is closed. Smoke test passed end-to-end: admin create → APS picker
+on the frozen Atlas v1 raster → save → **تأكيد APS** → **نشر** → live `/map`
+renders the pin at the exact visual point clicked in the picker → marker
+click → encyclopedia link opens.
+
+The live `/map` now renders the same frozen Atlas v1 raster
+(`src/assets/atlas/atlas-v1-master.jpg.asset.json`) as the picker, so APS is
+visually canonical end-to-end.
 
 ## Principles
 
@@ -60,10 +71,38 @@ Trigger `atlas_entities_enforce_state()`:
 - Live marker layer: `src/components/atlas/AtlasEntityPins.tsx`
   (wired into `src/components/atlas/AtlasStage.tsx` + `AtlasShell.tsx`)
 
-## Phase 1 limitations
+## Phase 1 limitations (deferred — by design)
 
 - No `atlas_anchors` table — calibration data still lives in `src/data/atlas-anchors.ts`.
 - No `atlas_entity_links` table — only direct FK to `encyclopedia_entities`.
-- No bulk import — single-row admin create only.
-- Single neutral pin visual; per-kind iconography deferred to Phase 2.
+- No bulk import pipeline (`atlas_import_batches`) — only the small admin JSON paste helper.
+- Single neutral pin visual; per-kind iconography deferred.
 - No campaign / investigation / artifact / figure / Today-in-History links.
+- Procedural `HistoricalAtlasBase` only renders as a fallback while the raster loads;
+  the legacy hub markers (cities/landmarks from `world-map-source`) still overlay the
+  raster at their original viewBox coordinates and have not been re-registered into APS.
+
+## Recommended next milestone — Phase 2
+
+**Goal:** turn the proven Phase 1 surface into a richer, more usable atlas.
+
+Suggested scope (pick one track or sequence them):
+
+1. **Per-kind marker iconography & clustering** — replace the neutral pin with
+   kind-specific glyphs (place / battle / figure / artifact / event / region /
+   route_point), add a small zoom-aware cluster so dense regions stay readable.
+2. **Migrate legacy hubs into `atlas_entities`** — re-anchor the existing
+   cities/landmarks (currently in `world-map-source` viewBox coords) onto APS
+   via the picker, then retire the procedural marker layer entirely. This is
+   what fully unifies "what admins place" with "what players see."
+3. **Bulk import + `atlas_import_batches`** — promote the Phase 1 JSON helper
+   into a real import pipeline with batch tracking, validation report, and
+   rollback. Unblocks loading curated datasets (early-Islamic cities, major
+   battles, etc.).
+4. **`atlas_entity_links` generic linker** — let one atlas entity link to
+   multiple encyclopedia entries / campaigns / artifacts with typed
+   relationships, replacing the single FK.
+
+Recommended order: **(1) iconography → (2) migrate legacy hubs → (3) bulk
+import → (4) generic links.** That sequence keeps every step visually
+verifiable on `/map`, which is the discipline that made Phase 1 succeed.
