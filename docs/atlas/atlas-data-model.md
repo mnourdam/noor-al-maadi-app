@@ -1,6 +1,17 @@
-# Atlas Data Model — Phase 1
+# Atlas Data Model — Phase 1 ✅ COMPLETE
 
-_Last updated: 2026-06-22_
+_Status: **complete** — end-to-end workflow validated 2026-06-22._
+
+## Status
+
+Phase 1 is closed. Smoke test passed end-to-end: admin create → APS picker
+on the frozen Atlas v1 raster → save → **تأكيد APS** → **نشر** → live `/map`
+renders the pin at the exact visual point clicked in the picker → marker
+click → encyclopedia link opens.
+
+The live `/map` now renders the same frozen Atlas v1 raster
+(`src/assets/atlas/atlas-v1-master.jpg.asset.json`) as the picker, so APS is
+visually canonical end-to-end.
 
 ## Principles
 
