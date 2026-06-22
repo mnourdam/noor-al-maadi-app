@@ -72,9 +72,9 @@ const SEEDS: AnchorSeed[] = [
   { id: "basra",         name: "Basra",          region: "Lower Mesopotamia",    lon: 47.78, lat: 30.51, aps: { x:  6268, y: 3294 }, verified: true,  notes: "Persian Gulf head" },
   { id: "isfahan",       name: "Isfahan",        region: "Persia",               lon: 51.67, lat: 32.65, aps: { x:  6803, y: 3257 }, verified: true,  notes: "Central Persia" },
   { id: "nishapur",      name: "Nishapur",       region: "Khorasan",             lon: 58.80, lat: 36.21, aps: { x:  6829, y: 2366 }, verified: true,  notes: "NE Persia, bridges to Transoxiana" },
-  { id: "samarkand",     name: "Samarkand",      region: "Transoxiana",          lon: 66.97, lat: 39.65, aps: { x: 10472, y: 2149 }, verified: true,  notes: "Far-east-inland; Silk Road hinge" },
-  { id: "bukhara",       name: "Bukhara",        region: "Transoxiana",          lon: 64.42, lat: 39.77, aps: { x:  9822, y: 2412 }, verified: true,  notes: "Small-scale residual pair with Samarkand" },
-  { id: "delhi",         name: "Delhi",          region: "Indian subcontinent",  lon: 77.10, lat: 28.70, aps: { x: 10116, y: 3594 }, verified: true,  notes: "SE anchor; locks far-east bound of v1" },
+  { id: "samarkand",     name: "Samarkand",      region: "Transoxiana",          lon: 66.97, lat: 39.65, aps: { x: 10084, y: 2192 }, verified: true,  notes: "Far-east-inland; Silk Road hinge" },
+  { id: "bukhara",       name: "Bukhara",        region: "Transoxiana",          lon: 64.42, lat: 39.77, aps: { x:  9521, y: 2166 }, verified: true,  notes: "Small-scale residual pair with Samarkand" },
+  { id: "delhi",         name: "Delhi",          region: "Indian subcontinent",  lon: 77.10, lat: 28.70, aps: { x: 10160, y: 3606 }, verified: true,  notes: "SE anchor; locks far-east bound of v1" },
 ];
 
 export const ATLAS_ANCHORS_V1: readonly AtlasAnchor[] = SEEDS.map((s) => ({
