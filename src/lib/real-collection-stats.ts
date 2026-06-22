@@ -16,7 +16,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useProfile } from "./profile";
 import { ARTIFACTS, CHARACTERS, CAMPAIGNS } from "./data";
-import { getUnlockedRegistryIds } from "./importedUnlocks";
+// (registry localStorage is no longer an unlock source; see registryUnlockMigration.ts)
 import { listRegistry } from "./contentRegistryStorage";
 import { displayName } from "./display-names";
 import { supabase } from "@/integrations/supabase/client";
