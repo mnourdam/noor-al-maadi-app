@@ -227,13 +227,18 @@ export function AtlasStage({
   }, [stopInertia]);
 
   // ── External focus (panel → "show on map") ──────────────────────────────
+  // Reads `view.scale` and `wrapSize` from refs so the effect's dep set is
+  // honest (only `focusOn`), and re-running it on the SAME hub still works
+  // because AtlasShell always passes a fresh object identity.
   useEffect(() => {
     if (!focusOn) return;
     stopInertia();
     interaction.current = "tween";
+    const currentScale = viewRef.current.scale;
+    const wrap = wrapSizeRef.current;
     // Center atlas coord (x,y) in viewBox 100x60 → CSS-space tx/ty for our transform.
-    const targetScale = Math.max(view.scale, 3.5);
-    const k = wrapSize.w / VB_W; // approx units→px (preserveAspectRatio=meet, but x dominates)
+    const targetScale = Math.max(currentScale, 3.5);
+    const k = wrap.w / VB_W; // approx units→px (preserveAspectRatio=meet, but x dominates)
     const cssX = (focusOn.x - VB_W / 2) * k * targetScale;
     const cssY = (focusOn.y - VB_H / 2) * k * targetScale;
     setView(clamp({ scale: targetScale, tx: -cssX, ty: -cssY }));
@@ -241,8 +246,7 @@ export function AtlasStage({
       if (interaction.current === "tween") interaction.current = "idle";
     }, 280);
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusOn]);
+  }, [focusOn, clamp, stopInertia]);
 
   // ── Tier-4 viewport culling (memoized, no per-render layout read) ───────
   const bbox = useMemo(() => {
