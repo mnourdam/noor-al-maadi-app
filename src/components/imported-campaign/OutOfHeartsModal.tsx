@@ -6,7 +6,7 @@
 //   2. Buy a heart for 20 dinars (instant, deducts coins).
 
 import { Heart, Clock, Search, Coins } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { msUntilNextHeart, HEART_MAX, getEffectiveHearts } from "@/lib/hearts";
@@ -31,9 +31,14 @@ export function OutOfHeartsModal({ open, onClose }: Props) {
   const { profile, spendDinarsForHeart } = useProfile();
   const [, setTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // Ref-based reentrancy guard: same-tick rapid clicks would otherwise each
+  // queue a setState updater (each seeing the previous result) and burn
+  // multiple hearts/dinars before React re-renders to disable the button.
+  const buyingRef = useRef(false);
   useEffect(() => {
     if (!open) return;
     setError(null);
+    buyingRef.current = false;
     const id = window.setInterval(() => setTick(t => t + 1), 1000);
     return () => window.clearInterval(id);
   }, [open]);
@@ -43,14 +48,22 @@ export function OutOfHeartsModal({ open, onClose }: Props) {
   const coins = profile.dinars ?? 0;
 
   const buy = () => {
+    if (buyingRef.current) return;
+    buyingRef.current = true;
     setError(null);
     if (coins < HEART_COST) {
       setError(`تحتاج ${HEART_COST} دينارًا وعندك ${coins} فقط.`);
+      buyingRef.current = false;
       return;
     }
     const ok = spendDinarsForHeart();
-    if (!ok) setError("تعذّر شراء قلب الآن، حاول لاحقًا.");
-    else onClose();
+    if (!ok) {
+      setError("تعذّر شراء قلب الآن، حاول لاحقًا.");
+      buyingRef.current = false;
+    } else {
+      // Leave the guard set; the modal will unmount on close.
+      onClose();
+    }
   };
 
   return (
