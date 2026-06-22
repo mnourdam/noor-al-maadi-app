@@ -303,6 +303,92 @@ export function backfillLedgerFromLegacyProgress(): { keysAdded: number } {
   return { keysAdded: added };
 }
 
+// -------------------- Hydrate from Supabase --------------------
+
+/**
+ * Seed the local ledger from rows already persisted in
+ * `user_campaign_progress` for the currently signed-in user. Mirrors the
+ * shape of `backfillLedgerFromLegacyProgress` but pulls from cloud.
+ *
+ * - Per chapter row with `completed_at` set: insert `chapter:<cid>:<chid>`
+ *   plus `activity:<cid>:<chid>:<aid>` for every activity in that chapter
+ *   (enumerated from the local imported-campaign cache).
+ * - Per campaign whose every chapter is completed locally: insert
+ *   `campaign:<cid>`.
+ * - All inserted keys are written with `{ at, synced:true }` and ONLY when
+ *   missing — existing entries are never overwritten.
+ * - No reward grants, no SFX, no `enqueue*` calls. Active position is left
+ *   untouched.
+ * - Safe and idempotent: re-runs after the first do nothing.
+ */
+export async function hydrateLedgerFromCloud(): Promise<{ keysAdded: number } | null> {
+  if (!isBrowser()) return null;
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const uid = sessionData.session?.user?.id;
+    if (!uid) return null;
+
+    const { data: rows, error } = await supabase
+      .from("user_campaign_progress")
+      .select("campaign_id, chapter_id, completed_at")
+      .eq("user_id", uid);
+    if (error || !rows) return null;
+
+    // Local campaign cache lets us expand a completed chapter into its
+    // activity ids. Missing campaigns are skipped silently — the chapter
+    // key alone is still seeded so future correct answers cannot re-grant
+    // chapter/campaign rewards.
+    const { listCampaigns } = await import("@/lib/campaignStorage");
+    const campaigns = listCampaigns();
+    const campaignById = new Map(campaigns.map(c => [c.id, c] as const));
+
+    const s = read();
+    const now = new Date().toISOString();
+    let added = 0;
+    const addIfMissing = (k: string) => {
+      if (s.keys[k]) return;
+      s.keys[k] = { at: now, synced: true };
+      added += 1;
+    };
+
+    // Track per-campaign completed chapter sets so we can decide
+    // campaign-level completion without a second cloud round trip.
+    const completedChaptersByCampaign = new Map<string, Set<string>>();
+
+    for (const row of rows) {
+      const cid  = row.campaign_id;
+      const chid = row.chapter_id;
+      if (!cid || !chid || !row.completed_at) continue;
+
+      addIfMissing(chapterKey(cid, chid));
+
+      const campaign = campaignById.get(cid);
+      const chapter = campaign?.chapters.find(c => c.id === chid);
+      for (const a of chapter?.activities ?? []) {
+        if (a?.id) addIfMissing(activityKey(cid, chid, a.id));
+      }
+
+      let set = completedChaptersByCampaign.get(cid);
+      if (!set) { set = new Set(); completedChaptersByCampaign.set(cid, set); }
+      set.add(chid);
+    }
+
+    // Campaign-level key: every chapter in the local definition is completed.
+    for (const [cid, completedSet] of completedChaptersByCampaign) {
+      const campaign = campaignById.get(cid);
+      if (!campaign || campaign.chapters.length === 0) continue;
+      const allDone = campaign.chapters.every(ch => completedSet.has(ch.id));
+      if (allDone) addIfMissing(campaignKey(cid));
+    }
+
+    if (added > 0) write(s);
+    return { keysAdded: added };
+  } catch {
+    return null;
+  }
+}
+
 // -------------------- Auto-flush bootstrap --------------------
 
 let bootstrapped = false;
@@ -317,5 +403,8 @@ export function bootstrapLedgerFlush(): void {
   });
   // Initial attempt on boot.
   void flushPending();
+  // Best-effort cloud hydration on boot (no-op when signed out).
+  void hydrateLedgerFromCloud();
 }
+
 
