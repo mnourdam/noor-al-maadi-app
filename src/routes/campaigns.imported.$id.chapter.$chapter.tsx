@@ -9,8 +9,8 @@
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
-import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart } from "lucide-react";
+import { createFileRoute, Link, useParams, useNavigate, notFound } from "@tanstack/react-router";
+import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart, X as XIcon } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import type { Campaign, CampaignChapter } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
