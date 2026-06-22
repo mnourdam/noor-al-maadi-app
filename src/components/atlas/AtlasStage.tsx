@@ -61,6 +61,10 @@ export function AtlasStage({
   const svgRef = useRef<SVGSVGElement>(null);
   const [view, setView] = useState<View>(IDENTITY);
   const tier = tierForScale(view.scale);
+  // Mirror of `view` for use inside long-lived listeners/effects without
+  // re-binding them on every state change.
+  const viewRef = useRef<View>(view);
+  useEffect(() => { viewRef.current = view; }, [view]);
 
   // Cached wrap size — ResizeObserver, NOT a layout read per render.
   const [wrapSize, setWrapSize] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
