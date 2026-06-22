@@ -33,9 +33,11 @@ const TYPE_FILL: Record<WorldEntityType, string> = {
 };
 
 const MIN_SCALE = 1;
-const MAX_SCALE = 8;            // tightened from 9 — keeps declustering O(N) realistic
-const MAX_VELOCITY = 1.5;       // px/ms — caps post-flick travel
-const MAX_INERTIA_FRAMES = 36;  // ~600ms ceiling
+const MAX_SCALE = 50;           // deep inspection of the frozen v1 raster
+const MAX_VELOCITY = 1.0;       // px/ms — caps post-flick travel
+const TOUCH_VELOCITY = 0.45;    // px/ms — softer flick on mobile
+const MAX_INERTIA_FRAMES = 28;  // ~460ms ceiling
+const TOUCH_PAN_GAIN = 0.5;     // touch drag sensitivity multiplier
 const VB_W = 100;
 const VB_H = 60;
 
