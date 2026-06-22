@@ -18,6 +18,7 @@ import { pullCampaignsFromCloud } from "@/lib/cloudSync";
 import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
+import { getActivePosition } from "@/lib/campaignLedger";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 
