@@ -128,8 +128,8 @@ function ImportedChapterPlayer() {
   const onResolve = (correct: boolean) => {
     if (!activity) return;
 
-    // Hard hearts gate — if the user already has 0 hearts, block any answer.
-    if (!correct && heartsDepleted) {
+    // PR2 hard hearts gate — at 0 hearts, no answer is accepted (right or wrong).
+    if (heartsDepleted) {
       setOutOfHeartsOpen(true);
       return;
     }
@@ -139,25 +139,30 @@ function ImportedChapterPlayer() {
     const coins  = activity.coinsReward   ?? ACTIVITY_DEFAULTS.coinsReward;
     const hearts = activity.heartsPenalty ?? ACTIVITY_DEFAULTS.heartsPenalty;
 
-    if (correct && !alreadyCompleted) {
-      if (xp > 0) addPoints(xp);
-      if (coins > 0) addDinars(coins);
-      audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
-    } else if (!correct) {
-      // Single heart per wrong attempt — clamp penalty to 1 to avoid burning all hearts on one mistake.
+    if (!correct) {
+      // PR2 strict: wrong = lose 1 heart, no progression, no rewards.
       const toLose = Math.max(1, Math.min(1, hearts));
       for (let i = 0; i < toLose; i++) loseHeart();
-      // If that drained the last heart, surface the modal next tick.
+      audioManager.playSfx("error", { dedupeKey: `wrong:${activity.id}:${Date.now()}` });
+      setWrongFlash(prev => ({ ...prev, [activity.id]: (prev[activity.id] ?? 0) + 1 }));
       if (effectiveHearts - toLose <= 0) {
         setTimeout(() => setOutOfHeartsOpen(true), 250);
       }
+      return; // do NOT call recordActivity / pendingAck / advance
     }
 
-    setPendingAck(prev => ({ ...prev, [activity.id]: correct ? "correct" : "wrong" }));
+    // Correct branch — grant rewards once (recordActivity is idempotent per activity).
+    if (!alreadyCompleted) {
+      if (xp > 0) addPoints(xp);
+      if (coins > 0) addDinars(coins);
+      audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
+    }
+
+    setPendingAck(prev => ({ ...prev, [activity.id]: "correct" }));
 
     const wasChapterComplete  = chProgress?.completed ?? false;
     const wasCampaignComplete = camProgress?.completed ?? false;
-    const nextProgress = recordActivity(campaign!, chapter!, activity, correct);
+    const nextProgress = recordActivity(campaign!, chapter!, activity, true);
     const nextChapter   = nextProgress.chapters[chapter!.id];
     const newlyChapter  = !wasChapterComplete  && Boolean(nextChapter?.completed);
     const newlyCampaign = !wasCampaignComplete && nextProgress.completed;
@@ -172,7 +177,6 @@ function ImportedChapterPlayer() {
       );
     }
 
-    // Mirror writes to granular Supabase tables (no-op when signed out).
     const nextCh = nextProgress.chapters[chapter!.id];
     void upsertChapterProgress({
       campaignId: campaign!.id,
@@ -184,8 +188,6 @@ function ImportedChapterPlayer() {
       completed: nextCh?.completed ?? false,
     });
     if (newlyCampaign && (nextProgress.unlockedRegistryIds?.length ?? 0) > 0) {
-      // Normalize unlocks: store bare slug + canonical entity_type only.
-      // Skip rows we cannot parse cleanly so we never persist raw colon IDs.
       const seen = new Set<string>();
       const items = nextProgress.unlockedRegistryIds.flatMap((rid) => {
         const parsed = parseUnlockId(rid);
@@ -209,13 +211,9 @@ function ImportedChapterPlayer() {
     bump();
   };
 
+  // PR2: only advances after a correct answer (or on activities without validation).
   const acknowledgeAndAdvance = () => {
-    if (!activity) return;
-    // If the user got it wrong, force-complete the activity locally so the
-    // player can advance to the next one (a heart was already deducted).
-    if (currentAck === "wrong" && campaign && chapter) {
-      markActivityComplete(campaign, chapter, activity);
-    }
+    if (!activity || currentAck !== "correct") return;
     setPendingAck(prev => {
       const next = { ...prev };
       delete next[activity.id];
