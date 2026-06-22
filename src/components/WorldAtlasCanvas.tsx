@@ -252,20 +252,19 @@ export function WorldAtlasCanvas({
                 style={{ cursor: "grab" }}
                 onPointerDown={(e) => {
                   e.stopPropagation();
-                  const svg = svgRef.current; if (!svg || !onPlace) return;
+                  const inner = innerGRef.current; if (!inner || !onPlace) return;
                   (e.target as Element).setPointerCapture?.(e.pointerId);
+                  const svg = svgRef.current;
                   const move = (ev: PointerEvent) => {
+                    if (!svg) return;
                     const pt = svg.createSVGPoint();
                     pt.x = ev.clientX; pt.y = ev.clientY;
-                    const ctm = svg.getScreenCTM();
+                    const ctm = inner.getScreenCTM();
                     if (!ctm) return;
                     const p = pt.matrixTransform(ctm.inverse());
-                    // account for outer g transform
-                    const lx = (p.x - 50 - view.tx / (svg.clientWidth / 100)) / view.scale + 50;
-                    const ly = (p.y - 30 - view.ty / (svg.clientHeight / 60)) / view.scale + 30;
                     onPlace({
-                      x: Math.round(Math.max(0, Math.min(100, lx)) * 10) / 10,
-                      y: Math.round(Math.max(0, Math.min(60, ly)) * 10) / 10,
+                      x: Math.round(Math.max(0, Math.min(100, p.x)) * 10) / 10,
+                      y: Math.round(Math.max(0, Math.min(60, p.y)) * 10) / 10,
                     });
                   };
                   const up = () => {
@@ -275,6 +274,7 @@ export function WorldAtlasCanvas({
                   window.addEventListener("pointermove", move);
                   window.addEventListener("pointerup", up);
                 }}
+
               >
                 <circle r={2.6} fill="url(#wm-glow)" />
                 <circle r={1.3} fill="oklch(0.95 0.18 70)" stroke="oklch(0.22 0.06 40)" strokeWidth={0.18} />
