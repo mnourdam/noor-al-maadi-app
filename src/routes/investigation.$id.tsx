@@ -72,16 +72,15 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
   const step = steps[idx];
   const isLast = idx >= steps.length - 1;
-  const heartsOut = !hasHearts();
+  // Investigations are the recovery path when hearts are empty — they
+  // never gate on hearts and never consume hearts.
 
   const onConfirm = () => {
     if (!step) return;
     if (step.type === "question" || step.type === "decision") {
       if (picked == null || revealed) return;
-      if (heartsOut && step.type === "question") return;
       const correctIndex = step.correctAnswer;
       const isCorrect = typeof correctIndex === "number" ? picked === correctIndex : true;
-      if (step.type === "question" && !isCorrect) loseHeart();
       if (isCorrect) setCorrectCount((c) => c + 1);
       setRevealed(true);
     }
