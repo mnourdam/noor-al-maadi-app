@@ -1,6 +1,6 @@
 # Atlas Calibration Report (stylized-atlas, core/periphery model)
 
-_Generated: 2026-06-22T20:50:45.750Z_
+_Generated: 2026-06-22T20:55:49.608Z_
 
 **Atlas:** IRTH MASTER ATLAS V1 — FROZEN (14192×7088)
 **Anchors:** 16
@@ -24,32 +24,32 @@ this metric unreliable on the edges), verification status.
 | # | Check | Status | Blocking | Detail |
 |---|---|---|---|---|
 | 1 | Boundary clamp (APS inside raster) | PASS | yes | all 16 anchors inside [0, 14192) × [0, 7088) |
-| 2 | Core TPS LOO (median ≤ 300 px) — [jerusalem, cairo, alexandria, damascus, baghdad, basra] | PASS | yes | n=6, median=135.6 px, max=369.4 px |
-| 3 | Periphery TPS LOO (informational — not blocking) | INFO | no | n=10, median=868.5 px, max=2017.2 px — periphery LOO mostly reflects artistic stretch and TPS extrapolation, not pin quality |
-| 4 | Close-pair scale (within [0.5×, 2×] of median local scale) | FAIL | yes | alexandria↔cairo: 0.96× ref ok; mecca↔medina: 1.46× ref ok; samarkand↔bukhara: 2.60× ref DRIFT; baghdad↔basra: 1.23× ref ok; bukhara↔nishapur: 3.85× ref DRIFT |
-| 5 | Inverse round-trip (APS→geo→APS < 1 px) | PASS | yes | worst residual = 2.57e-12 px |
+| 2 | Core TPS LOO (median ≤ 300 px) — [jerusalem, cairo, alexandria, damascus, baghdad, basra] | PASS | yes | n=6, median=134.0 px, max=342.9 px |
+| 3 | Periphery TPS LOO (informational — not blocking) | INFO | no | n=10, median=855.0 px, max=1405.4 px — periphery LOO mostly reflects artistic stretch and TPS extrapolation, not pin quality |
+| 4 | Close-pair scale (within [0.5×, 2×] of median local scale) | FAIL | yes | alexandria↔cairo: 0.95× ref ok; mecca↔medina: 1.46× ref ok; samarkand↔bukhara: 2.08× ref DRIFT; baghdad↔basra: 1.22× ref ok; bukhara↔nishapur: 3.45× ref DRIFT |
+| 5 | Inverse round-trip (APS→geo→APS < 1 px) | PASS | yes | worst residual = 2.42e-12 px |
 | 6 | Anchor verification (human-confirmed on v1 raster) | PASS | no | all anchors verified |
 
 ## TPS leave-one-out residuals (sorted)
 
 | Held-out | Region | Δx | Δy | dist (px) |
 |---|---|---|---|---|
-| delhi | periphery | -1311.5 | 1532.7 | 2017.2 |
-| nishapur | periphery | -1465.3 | -628.2 | 1594.3 |
-| mecca | periphery | -206.4 | -1130.8 | 1149.5 |
-| marrakech | periphery | 625.3 | 824.5 | 1034.8 |
-| cordoba | periphery | -483.5 | -733.7 | 878.7 |
-| medina | periphery | 244.5 | 822.7 | 858.2 |
-| isfahan | periphery | 612.4 | 441.2 | 754.8 |
-| constantinople | periphery | -481.1 | 516.7 | 706.0 |
-| bukhara | periphery | 310.8 | 369.0 | 482.4 |
-| samarkand | periphery | -8.2 | -385.2 | 385.3 |
-| baghdad | CORE | -246.9 | -274.7 | 369.4 |
-| basra | CORE | -106.0 | -160.5 | 192.4 |
-| damascus | CORE | 116.2 | -75.4 | 138.5 |
-| alexandria | CORE | 124.7 | -45.4 | 132.7 |
-| cairo | CORE | -91.7 | 38.2 | 99.3 |
-| jerusalem | CORE | -82.7 | -4.4 | 82.8 |
+| nishapur | periphery | -1352.2 | -382.8 | 1405.4 |
+| mecca | periphery | -229.6 | -1128.7 | 1151.8 |
+| delhi | periphery | -802.6 | 732.3 | 1086.5 |
+| marrakech | periphery | 568.6 | 822.3 | 999.7 |
+| medina | periphery | 251.5 | 819.6 | 857.3 |
+| cordoba | periphery | -435.4 | -733.2 | 852.8 |
+| isfahan | periphery | 581.6 | 412.2 | 712.9 |
+| constantinople | periphery | -432.3 | 557.5 | 705.5 |
+| baghdad | CORE | -231.0 | -253.4 | 342.9 |
+| bukhara | periphery | 320.4 | 89.5 | 332.6 |
+| basra | CORE | -112.1 | -167.9 | 201.9 |
+| damascus | CORE | 116.0 | -74.4 | 137.8 |
+| alexandria | CORE | 121.2 | -48.0 | 130.3 |
+| cairo | CORE | -89.9 | 39.5 | 98.2 |
+| samarkand | periphery | -66.7 | -70.5 | 97.1 |
+| jerusalem | CORE | -83.0 | -5.8 | 83.2 |
 
 ## Notes
 
