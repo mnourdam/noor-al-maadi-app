@@ -3,7 +3,7 @@
 // precisely on the artwork (canonical source of truth).
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Crosshair, MaximizeIcon, ScanSearch, X, Check } from "lucide-react";
-import atlasMaster from "@/assets/atlas/atlas-v1-master.jpg.asset.json";
+import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
 
 const RASTER = ATLAS_V1_PIXEL_SIZE;
@@ -205,7 +205,7 @@ export function AtlasApsPicker({
         >
           <img
             data-role="stage"
-            src={atlasMaster.url}
+            src={ATLAS_BASE_URL}
             width={RASTER.width}
             height={RASTER.height}
             draggable={false}

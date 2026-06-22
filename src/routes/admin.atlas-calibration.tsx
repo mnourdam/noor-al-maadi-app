@@ -23,7 +23,7 @@ import {
   ScanSearch, ShieldCheck, Upload, X,
 } from "lucide-react";
 import { AdminGate } from "@/lib/admin-guard";
-import atlasMaster from "@/assets/atlas/atlas-v1-master.jpg.asset.json";
+import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import {
   ATLAS_ANCHORS_V1,
   ATLAS_V1_PIXEL_SIZE,
@@ -444,7 +444,7 @@ function CalibrationPage() {
         >
           <img
             data-role="stage"
-            src={atlasMaster.url}
+            src={ATLAS_BASE_URL}
             width={RASTER.width}
             height={RASTER.height}
             draggable={false}

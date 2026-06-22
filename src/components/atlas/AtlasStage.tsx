@@ -7,7 +7,7 @@ import { Building2, Calendar, Crown, Gem, Landmark, Swords, User } from "lucide-
 import type { LucideIcon } from "lucide-react";
 import { AtlasBaseDefs, AtlasBaseLayers } from "./HistoricalAtlasBase";
 import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
-import atlasMaster from "@/assets/atlas/atlas-v1-master.jpg.asset.json";
+import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import {
   TIER_LABEL,
@@ -360,7 +360,7 @@ export function AtlasStage({
         }}>
           {/* Phase 1 — frozen Atlas v1 raster as primary base (canonical APS surface). */}
           <image
-            href={atlasMaster.url}
+            href={ATLAS_BASE_URL}
             x={0}
             y={0}
             width={VB_W}
