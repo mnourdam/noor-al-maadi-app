@@ -25,6 +25,7 @@ export function AtlasShell() {
   const [tier, setTier] = useState<Tier>(1);
   // Identity-change triggers the AtlasStage focus tween.
   const [focusOn, setFocusOn] = useState<{ x: number; y: number } | null>(null);
+  const [atlasEntity, setAtlasEntity] = useState<AtlasEntityRow | null>(null);
 
   const layers = useAtlasLayers(data, { era, type, search });
   const derived = useWorldMapDerived(data, { era, type });
