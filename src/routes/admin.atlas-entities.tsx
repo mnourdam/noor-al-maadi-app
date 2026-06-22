@@ -10,8 +10,11 @@ import {
   RefreshCw,
   Save,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
+import { geoToAps } from "@/lib/atlas/transform";
+
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -52,9 +55,11 @@ function AdminAtlasEntitiesPage() {
   const [rows, setRows] = useState<AtlasEntityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AtlasEntityRow | "new" | null>(null);
+  const [importing, setImporting] = useState(false);
   const [encyclopedia, setEncyclopedia] = useState<EncyclopediaRef[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
 
   const reload = async () => {
     setLoading(true);
@@ -117,12 +122,20 @@ function AdminAtlasEntitiesPage() {
               <RefreshCw className="inline size-4" />
             </button>
             <button
+              onClick={() => setImporting(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/10"
+            >
+              <Upload className="size-4" />
+              استيراد JSON
+            </button>
+            <button
               onClick={() => setEditing("new")}
               className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-bold text-slate-950 hover:bg-amber-400"
             >
               <Plus className="size-4" />
               كيان جديد
             </button>
+
           </div>
         </header>
 
@@ -267,6 +280,17 @@ function AdminAtlasEntitiesPage() {
           }}
         />
       )}
+
+      {importing && (
+        <ImportJsonDialog
+          onClose={() => setImporting(false)}
+          onDone={async () => {
+            setImporting(false);
+            await reload();
+          }}
+        />
+      )}
+
     </div>
   );
 }
