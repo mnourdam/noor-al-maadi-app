@@ -59,22 +59,22 @@ type AnchorSeed = Omit<AtlasAnchor, "aps" | "verified"> & {
 };
 
 const SEEDS: AnchorSeed[] = [
-  { id: "cordoba",       name: "Cordoba",        region: "Iberia (NW)",          lon: -4.78, lat: 37.89, notes: "Far-west anchor; controls western edge tightness" },
-  { id: "marrakech",     name: "Marrakech",      region: "Maghreb (SW)",         lon: -7.99, lat: 31.63, notes: "Anchors SW quadrant + Atlas mountains" },
-  { id: "cairo",         name: "Cairo",          region: "Egypt",                lon: 31.24, lat: 30.04, notes: "Nile delta hinge" },
-  { id: "alexandria",    name: "Alexandria",     region: "Egypt coast",          lon: 29.92, lat: 31.20, notes: "Coastline pair with Cairo, fixes delta shape" },
-  { id: "jerusalem",     name: "Jerusalem",      region: "Levant",               lon: 35.23, lat: 31.78, notes: "Center-south, dense reference region" },
-  { id: "damascus",      name: "Damascus",       region: "Levant inland",        lon: 36.29, lat: 33.51, notes: "Pairs with Jerusalem for inland scale" },
-  { id: "constantinople",name: "Constantinople", region: "Bosporus",             lon: 28.98, lat: 41.01, notes: "NW anchor; locks Black Sea / Aegean hinge" },
-  { id: "mecca",         name: "Mecca",          region: "Hejaz",                lon: 39.83, lat: 21.42, notes: "South-central; controls Arabian peninsula" },
-  { id: "medina",        name: "Medina",         region: "Hejaz",                lon: 39.61, lat: 24.47, notes: "Pairs with Mecca; small-scale residual check" },
-  { id: "baghdad",       name: "Baghdad",        region: "Mesopotamia",          lon: 44.36, lat: 33.31, notes: "Central crossroad" },
-  { id: "basra",         name: "Basra",          region: "Lower Mesopotamia",    lon: 47.78, lat: 30.51, notes: "Persian Gulf head" },
-  { id: "isfahan",       name: "Isfahan",        region: "Persia",               lon: 51.67, lat: 32.65, notes: "Central Persia" },
-  { id: "nishapur",      name: "Nishapur",       region: "Khorasan",             lon: 58.80, lat: 36.21, notes: "NE Persia, bridges to Transoxiana" },
-  { id: "samarkand",     name: "Samarkand",      region: "Transoxiana",          lon: 66.97, lat: 39.65, notes: "Far-east-inland; Silk Road hinge" },
-  { id: "bukhara",       name: "Bukhara",        region: "Transoxiana",          lon: 64.42, lat: 39.77, notes: "Small-scale residual pair with Samarkand" },
-  { id: "delhi",         name: "Delhi",          region: "Indian subcontinent",  lon: 77.10, lat: 28.70, notes: "SE anchor; locks far-east bound of v1" },
+  { id: "cordoba",       name: "Cordoba",        region: "Iberia (NW)",          lon: -4.78, lat: 37.89, aps: { x:   902, y: 2662 }, verified: true,  notes: "Far-west anchor; controls western edge tightness" },
+  { id: "marrakech",     name: "Marrakech",      region: "Maghreb (SW)",         lon: -7.99, lat: 31.63, aps: { x:   497, y: 3568 }, verified: true,  notes: "Anchors SW quadrant + Atlas mountains" },
+  { id: "cairo",         name: "Cairo",          region: "Egypt",                lon: 31.24, lat: 30.04, aps: { x:  4359, y: 3704 }, verified: true,  notes: "Nile delta hinge" },
+  { id: "alexandria",    name: "Alexandria",     region: "Egypt coast",          lon: 29.92, lat: 31.20, aps: { x:  4311, y: 3497 }, verified: true,  notes: "Coastline pair with Cairo, fixes delta shape" },
+  { id: "jerusalem",     name: "Jerusalem",      region: "Levant",               lon: 35.23, lat: 31.78, aps: { x:  4820, y: 3362 }, verified: true,  notes: "Center-south, dense reference region" },
+  { id: "damascus",      name: "Damascus",       region: "Levant inland",        lon: 36.29, lat: 33.51, aps: { x:  5032, y: 2975 }, verified: true,  notes: "Pairs with Jerusalem for inland scale" },
+  { id: "constantinople",name: "Constantinople", region: "Bosporus",             lon: 28.98, lat: 41.01, aps: { x:  4101, y: 2386 }, verified: true,  notes: "NW anchor; locks Black Sea / Aegean hinge" },
+  { id: "mecca",         name: "Mecca",          region: "Hejaz",                lon: 39.83, lat: 21.42, aps: { x:  5318, y: 4140 }, verified: false, notes: "South-central; controls Arabian peninsula (unconfirmed in tool)" },
+  { id: "medina",        name: "Medina",         region: "Hejaz",                lon: 39.61, lat: 24.47, aps: { x:  5439, y: 4536 }, verified: false, notes: "Pairs with Mecca; small-scale residual check (unconfirmed in tool)" },
+  { id: "baghdad",       name: "Baghdad",        region: "Mesopotamia",          lon: 44.36, lat: 33.31, aps: { x:  5789, y: 2815 }, verified: true,  notes: "Central crossroad" },
+  { id: "basra",         name: "Basra",          region: "Lower Mesopotamia",    lon: 47.78, lat: 30.51, aps: { x:  6268, y: 3294 }, verified: true,  notes: "Persian Gulf head" },
+  { id: "isfahan",       name: "Isfahan",        region: "Persia",               lon: 51.67, lat: 32.65, aps: { x:  6803, y: 3257 }, verified: true,  notes: "Central Persia" },
+  { id: "nishapur",      name: "Nishapur",       region: "Khorasan",             lon: 58.80, lat: 36.21, aps: { x:  6829, y: 2366 }, verified: true,  notes: "NE Persia, bridges to Transoxiana" },
+  { id: "samarkand",     name: "Samarkand",      region: "Transoxiana",          lon: 66.97, lat: 39.65, aps: { x:  7959, y: 3726 }, verified: true,  notes: "Far-east-inland; Silk Road hinge" },
+  { id: "bukhara",       name: "Bukhara",        region: "Transoxiana",          lon: 64.42, lat: 39.77, aps: { x:  7615, y: 2703 }, verified: true,  notes: "Small-scale residual pair with Samarkand" },
+  { id: "delhi",         name: "Delhi",          region: "Indian subcontinent",  lon: 77.10, lat: 28.70, aps: { x: 10116, y: 3594 }, verified: true,  notes: "SE anchor; locks far-east bound of v1" },
 ];
 
 export const ATLAS_ANCHORS_V1: readonly AtlasAnchor[] = SEEDS.map((s) => ({
