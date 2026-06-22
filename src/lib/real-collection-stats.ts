@@ -132,19 +132,6 @@ function useSupabaseCollection() {
 
 export function useRealCollectionStats() {
   const { profile } = useProfile();
-  const { rows: supaRows, validSlugs } = useSupabaseCollection();
-
-  // Registry is consulted only for display metadata (Arabic name/image)
-  // of Supabase rows. It is no longer an unlock source.
-  const registry = useMemo(() => {
-    try {
-      return listRegistry();
-    } catch {
-      return [];
-    }
-  }, []);
-export function useRealCollectionStats() {
-  const { profile } = useProfile();
   const { rows: supaRows, validSlugs, slugTitles } = useSupabaseCollection();
 
   // Registry is consulted only for display metadata (Arabic name/image)
