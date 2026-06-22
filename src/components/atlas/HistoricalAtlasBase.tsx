@@ -149,26 +149,45 @@ const CITY_ANCHORS: { name: string; x: number; y: number; major?: boolean }[] = 
 export function AtlasBaseDefs() {
   return (
     <>
-      <pattern id="atlas-land-grain" width="3" height="3" patternUnits="userSpaceOnUse">
-        <rect width="3" height="3" fill="oklch(0.91 0.06 82)" />
-        <circle cx="0.6" cy="0.7" r="0.18" fill="oklch(0.82 0.08 70 / 0.35)" />
-        <circle cx="2.1" cy="2.3" r="0.14" fill="oklch(0.78 0.07 60 / 0.30)" />
+      {/* Warm parchment with two-tone speckle for depth */}
+      <pattern id="atlas-land-grain" width="4" height="4" patternUnits="userSpaceOnUse">
+        <rect width="4" height="4" fill="oklch(0.905 0.075 80)" />
+        <circle cx="0.6" cy="0.8" r="0.22" fill="oklch(0.82 0.09 65 / 0.32)" />
+        <circle cx="2.6" cy="2.4" r="0.16" fill="oklch(0.78 0.08 55 / 0.28)" />
+        <circle cx="1.4" cy="3.2" r="0.10" fill="oklch(0.72 0.07 50 / 0.22)" />
+        <circle cx="3.4" cy="0.6" r="0.08" fill="oklch(0.70 0.07 50 / 0.20)" />
       </pattern>
-      <pattern id="atlas-sea-hatch" width="2.4" height="2.4" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
-        <line x1="0" y1="0" x2="0" y2="2.4" stroke="oklch(0.40 0.07 220 / 0.32)" strokeWidth="0.12" />
+      {/* Soft sea stipple — denser dots, lower contrast than hatching */}
+      <pattern id="atlas-sea-hatch" width="3" height="3" patternUnits="userSpaceOnUse">
+        <circle cx="0.7" cy="0.7" r="0.13" fill="oklch(0.38 0.08 225 / 0.28)" />
+        <circle cx="2.2" cy="2.1" r="0.10" fill="oklch(0.38 0.08 225 / 0.22)" />
       </pattern>
+      {/* Hand-drawn wave glyphs scattered across the sea */}
+      <pattern id="atlas-sea-waves" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(0)">
+        <path d="M 1,4 q 1.2,-0.9 2.4,0 t 2.4,0" fill="none"
+              stroke="oklch(0.36 0.09 225 / 0.32)" strokeWidth="0.10" strokeLinecap="round" />
+        <path d="M 4.5,7 q 0.9,-0.7 1.8,0 t 1.8,0" fill="none"
+              stroke="oklch(0.36 0.09 225 / 0.24)" strokeWidth="0.09" strokeLinecap="round" />
+      </pattern>
+      {/* Warm coastal halo — outer glow rim under land */}
       <radialGradient id="atlas-coast-halo" cx="50%" cy="50%" r="60%">
         <stop offset="60%" stopColor="oklch(0.93 0.07 78 / 0)" />
-        <stop offset="100%" stopColor="oklch(0.82 0.10 60 / 0.30)" />
+        <stop offset="100%" stopColor="oklch(0.78 0.10 55 / 0.35)" />
       </radialGradient>
-      <radialGradient id="atlas-vignette" cx="50%" cy="50%" r="72%">
-        <stop offset="55%" stopColor="oklch(0.95 0.04 80 / 0)" />
-        <stop offset="100%" stopColor="oklch(0.26 0.05 40 / 0.45)" />
+      {/* Stronger vignette for premium depth */}
+      <radialGradient id="atlas-vignette" cx="50%" cy="50%" r="78%">
+        <stop offset="45%" stopColor="oklch(0.95 0.04 80 / 0)" />
+        <stop offset="100%" stopColor="oklch(0.22 0.05 38 / 0.55)" />
       </radialGradient>
       <radialGradient id="atlas-glow" cx="50%" cy="50%" r="50%">
         <stop offset="0%" stopColor="oklch(0.95 0.14 82 / 0.85)" />
         <stop offset="100%" stopColor="oklch(0.85 0.14 82 / 0)" />
       </radialGradient>
+      {/* Sea depth ramp — deeper near land, lighter offshore */}
+      <linearGradient id="atlas-sea-depth" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"  stopColor="oklch(0.75 0.07 220)" />
+        <stop offset="100%" stopColor="oklch(0.69 0.08 225)" />
+      </linearGradient>
     </>
   );
 }
@@ -193,31 +212,51 @@ export function AtlasBaseLayers({
   showSeaLabels = true,
   showRegionLabels = true,
 }: AtlasBaseProps) {
-  const COAST = "oklch(0.28 0.08 50 / 0.85)";
-  const OCEAN = "oklch(0.78 0.06 220)";
-  const RIVER = "oklch(0.40 0.11 225 / 0.78)";
+  const COAST       = "oklch(0.24 0.08 45 / 0.92)";
+  const COAST_SOFT  = "oklch(0.42 0.10 55 / 0.55)";
+  const RIVER       = "oklch(0.38 0.11 225 / 0.78)";
 
   return (
     <g className="atlas-base">
-      {/* 1. Continuous ocean base (Atlantic + Med + Red + Gulf + Arabian Sea + Indian Ocean) */}
-      <rect width="100" height="60" fill={OCEAN} />
-      {/* Sea hatch over the entire canvas — will be covered by land paint */}
+      {/* 1. Sea base — depth gradient + stipple + wave glyphs (continuous ocean) */}
+      <rect width="100" height="60" fill="url(#atlas-sea-depth)" />
       <rect width="100" height="60" fill="url(#atlas-sea-hatch)" />
+      <rect width="100" height="60" fill="url(#atlas-sea-waves)" />
 
-      {/* 2. The single landmass — paints parchment over the ocean wherever land exists */}
+      {/* 2. Single landmass — soft outer halo, parchment fill, double-stroked coast */}
       <g className="atlas-land">
+        {/* Outer halo — soft wide stroke gives hand-drawn warmth around coast */}
+        <path d={EURASIA_AFRICA_ARABIA} fill="none"
+              stroke="oklch(0.78 0.11 55 / 0.55)" strokeWidth="0.9" strokeLinejoin="round" />
+        {/* Land fill */}
         <path d={EURASIA_AFRICA_ARABIA} fill="url(#atlas-land-grain)" />
-        <path d={EURASIA_AFRICA_ARABIA} fill="none" stroke={COAST} strokeWidth="0.24" strokeLinejoin="round" />
+        {/* Softer mid stroke for depth */}
+        <path d={EURASIA_AFRICA_ARABIA} fill="none"
+              stroke={COAST_SOFT} strokeWidth="0.42" strokeLinejoin="round" strokeLinecap="round" />
+        {/* Sharp ink coastline on top */}
+        <path d={EURASIA_AFRICA_ARABIA} fill="none"
+              stroke={COAST} strokeWidth="0.18" strokeLinejoin="round" strokeLinecap="round" />
       </g>
 
-      {/* 3. Inland seas painted back over the land — Black, Caspian, Aral, Aegean inlet */}
+      {/* 3. Inland seas painted back over the land */}
       <g className="atlas-inland-seas">
         {INLAND_SEAS.map((s) => (
           <g key={s.id} transform={s.tilt ? `rotate(${s.tilt} ${s.cx} ${s.cy})` : undefined}>
-            <ellipse cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} fill={OCEAN} stroke={COAST} strokeWidth="0.22" />
+            <ellipse cx={s.cx} cy={s.cy} rx={s.rx + 0.18} ry={s.ry + 0.18}
+                     fill="none" stroke="oklch(0.78 0.11 55 / 0.55)" strokeWidth="0.55" />
+            <ellipse cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} fill="url(#atlas-sea-depth)" />
             <ellipse cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} fill="url(#atlas-sea-hatch)" />
+            <ellipse cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry}
+                     fill="none" stroke={COAST_SOFT} strokeWidth="0.30" />
+            <ellipse cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry}
+                     fill="none" stroke={COAST} strokeWidth="0.14" />
           </g>
         ))}
+      </g>
+
+      {/* 4. Warm coastal halo across the canvas */}
+      <rect width="100" height="60" fill="url(#atlas-coast-halo)" pointerEvents="none" />
+
       </g>
 
       {/* 4. Warm coastal halo across the canvas */}
