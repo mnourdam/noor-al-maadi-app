@@ -167,13 +167,17 @@ export function AtlasStage({
   const onPointerUp = () => {
     if (!drag.current) return;
     drag.current = null;
-    const vMax = dragKind.current === "touch" ? TOUCH_VELOCITY : MAX_VELOCITY;
-    let vx = clampScalar(lastMove.current.vx, -vMax, vMax);
-    let vy = clampScalar(lastMove.current.vy, -vMax, vMax);
+    // No inertia on touch — small finger movement = small map movement, no slide.
+    if (dragKind.current === "touch" || !TOUCH_INERTIA && dragKind.current !== "mouse") {
+      interaction.current = "idle";
+      return;
+    }
+    let vx = clampScalar(lastMove.current.vx, -MAX_VELOCITY, MAX_VELOCITY);
+    let vy = clampScalar(lastMove.current.vy, -MAX_VELOCITY, MAX_VELOCITY);
     const speed = Math.hypot(vx, vy);
     if (speed < 0.1) { interaction.current = "idle"; return; }
     interaction.current = "inertia";
-    const decay = dragKind.current === "touch" ? 0.86 : 0.9;
+    const decay = 0.9;
     let frames = 0;
     const step = () => {
       vx *= decay; vy *= decay;
