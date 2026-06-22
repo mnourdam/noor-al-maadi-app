@@ -143,7 +143,7 @@ function ImportedChapterPlayer() {
       // PR2 strict: wrong = lose 1 heart, no progression, no rewards.
       const toLose = Math.max(1, Math.min(1, hearts));
       for (let i = 0; i < toLose; i++) loseHeart();
-      audioManager.playSfx("error", { dedupeKey: `wrong:${activity.id}:${Date.now()}` });
+      // (no error SFX defined — visual feedback only)
       setWrongFlash(prev => ({ ...prev, [activity.id]: (prev[activity.id] ?? 0) + 1 }));
       if (effectiveHearts - toLose <= 0) {
         setTimeout(() => setOutOfHeartsOpen(true), 250);
