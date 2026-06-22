@@ -146,21 +146,18 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
 function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
-  const [wrongPick, setWrongPick] = useState<boolean | null>(null);
   const correct = typeof activity.correctAnswer === "boolean"
     ? activity.correctAnswer
     : String(activity.correctAnswer).toLowerCase() === "true";
 
-  const locked = resolved || wrongPick !== null;
-
   const submit = (val: boolean) => {
-    if (locked) return;
+    if (resolved) return;
     if (val === correct) {
       setResolved(true);
       setFeedback("ok");
       onResolve(true);
     } else {
-      setWrongPick(val);
+      // Wrong: allow retry, do not lock, do not reveal correct.
       setFeedback("err");
       onResolve(false);
     }
@@ -172,16 +169,14 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
       <PromptBlock activity={activity} />
       <div className="grid grid-cols-2 gap-2">
         {[true, false].map((val) => {
-          const isWrong   = wrongPick === val && val !== correct;
-          const isCorrect = (resolved || wrongPick !== null) && val === correct;
+          const isCorrect = resolved && val === correct;
           return (
             <button
               key={String(val)}
-              disabled={locked}
+              disabled={resolved}
               onClick={() => submit(val)}
               className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
                 isCorrect ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
-                : isWrong ? "border-red-400/70 bg-red-500/20 text-red-100"
                 : "border-white/10 bg-black/30 hover:border-gold/40"
               }`}
             >
