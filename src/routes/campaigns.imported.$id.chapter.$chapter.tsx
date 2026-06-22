@@ -9,15 +9,15 @@
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
-import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart } from "lucide-react";
+import { createFileRoute, Link, useParams, useNavigate, notFound } from "@tanstack/react-router";
+import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart, X as XIcon } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import type { Campaign, CampaignChapter } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { getCampaign, listCampaigns } from "@/lib/campaignStorage";
 import { pullCampaignsFromCloud } from "@/lib/cloudSync";
 import {
-  getChapterProgress, getCampaignProgress, recordActivity, markActivityComplete,
+  getChapterProgress, getCampaignProgress, recordActivity, isChapterUnlocked,
 } from "@/lib/importedCampaignProgress";
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
 import { OutOfHeartsModal } from "@/components/imported-campaign/OutOfHeartsModal";
@@ -74,9 +74,10 @@ function ImportedChapterPlayer() {
   const camProgress = campaign ? getCampaignProgress(campaign.id) : null;
   const chProgress  = campaign ? getChapterProgress(campaign.id, chapterId) : null;
 
-  // Track activities pending acknowledgement before we advance to the next one.
-  // Map activityId -> "correct" | "wrong" (latest outcome to display).
-  const [pendingAck, setPendingAck] = useState<Record<string, "correct" | "wrong" | undefined>>({});
+  // PR2: strict progression. We only track a *correct* ack (gates the "Next" button).
+  // Wrong answers never enter pendingAck — the activity stays open for retry.
+  const [pendingAck, setPendingAck] = useState<Record<string, "correct" | undefined>>({});
+  const [wrongFlash, setWrongFlash] = useState<Record<string, number>>({}); // activityId → attempt count (drives shake/feedback)
   const [outOfHeartsOpen, setOutOfHeartsOpen] = useState(false);
   const [completionOpen, setCompletionOpen] = useState(false);
 
@@ -90,13 +91,22 @@ function ImportedChapterPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heartsDepleted]);
 
-  // Current activity = first activity that is either un-completed
-  // OR completed-and-not-yet-acknowledged (correct or wrong feedback pending).
+  // PR2 anti-skip: hard URL guard. If this chapter is locked, redirect to overview.
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!campaign || !chapter) return;
+    if (!isChapterUnlocked(campaign, chapter)) {
+      navigate({ to: "/campaigns/imported/$id", params: { id: campaign.id }, replace: true });
+    }
+  }, [campaign, chapter, navigate]);
+
+  // Current activity = first activity that is either un-completed,
+  // OR completed-and-not-yet-acknowledged (correct feedback pending).
   const currentIdx = useMemo(() => {
     if (!chapter || !chProgress) return 0;
     const idx = chapter.activities.findIndex(a => {
       const done = chProgress.completedActivityIds.includes(a.id);
-      const ackPending = pendingAck[a.id] === "correct" || pendingAck[a.id] === "wrong";
+      const ackPending = pendingAck[a.id] === "correct";
       return !done || ackPending;
     });
     return idx === -1 ? chapter.activities.length - 1 : idx;
@@ -110,15 +120,16 @@ function ImportedChapterPlayer() {
   const activity = chapter.activities[currentIdx];
   const allDone  = chapter.activities.length > 0
     && chapter.activities.every(a => chProgress?.completedActivityIds.includes(a.id))
-    && Object.values(pendingAck).every(v => v !== "correct" && v !== "wrong");
+    && Object.values(pendingAck).every(v => v !== "correct");
 
   const currentAck = activity ? pendingAck[activity.id] : undefined;
+  const wrongAttempts = activity ? (wrongFlash[activity.id] ?? 0) : 0;
 
   const onResolve = (correct: boolean) => {
     if (!activity) return;
 
-    // Hard hearts gate — if the user already has 0 hearts, block any answer.
-    if (!correct && heartsDepleted) {
+    // PR2 hard hearts gate — at 0 hearts, no answer is accepted (right or wrong).
+    if (heartsDepleted) {
       setOutOfHeartsOpen(true);
       return;
     }
@@ -128,25 +139,30 @@ function ImportedChapterPlayer() {
     const coins  = activity.coinsReward   ?? ACTIVITY_DEFAULTS.coinsReward;
     const hearts = activity.heartsPenalty ?? ACTIVITY_DEFAULTS.heartsPenalty;
 
-    if (correct && !alreadyCompleted) {
-      if (xp > 0) addPoints(xp);
-      if (coins > 0) addDinars(coins);
-      audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
-    } else if (!correct) {
-      // Single heart per wrong attempt — clamp penalty to 1 to avoid burning all hearts on one mistake.
+    if (!correct) {
+      // PR2 strict: wrong = lose 1 heart, no progression, no rewards.
       const toLose = Math.max(1, Math.min(1, hearts));
       for (let i = 0; i < toLose; i++) loseHeart();
-      // If that drained the last heart, surface the modal next tick.
+      // (no error SFX defined — visual feedback only)
+      setWrongFlash(prev => ({ ...prev, [activity.id]: (prev[activity.id] ?? 0) + 1 }));
       if (effectiveHearts - toLose <= 0) {
         setTimeout(() => setOutOfHeartsOpen(true), 250);
       }
+      return; // do NOT call recordActivity / pendingAck / advance
     }
 
-    setPendingAck(prev => ({ ...prev, [activity.id]: correct ? "correct" : "wrong" }));
+    // Correct branch — grant rewards once (recordActivity is idempotent per activity).
+    if (!alreadyCompleted) {
+      if (xp > 0) addPoints(xp);
+      if (coins > 0) addDinars(coins);
+      audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
+    }
+
+    setPendingAck(prev => ({ ...prev, [activity.id]: "correct" }));
 
     const wasChapterComplete  = chProgress?.completed ?? false;
     const wasCampaignComplete = camProgress?.completed ?? false;
-    const nextProgress = recordActivity(campaign!, chapter!, activity, correct);
+    const nextProgress = recordActivity(campaign!, chapter!, activity, true);
     const nextChapter   = nextProgress.chapters[chapter!.id];
     const newlyChapter  = !wasChapterComplete  && Boolean(nextChapter?.completed);
     const newlyCampaign = !wasCampaignComplete && nextProgress.completed;
@@ -161,7 +177,6 @@ function ImportedChapterPlayer() {
       );
     }
 
-    // Mirror writes to granular Supabase tables (no-op when signed out).
     const nextCh = nextProgress.chapters[chapter!.id];
     void upsertChapterProgress({
       campaignId: campaign!.id,
@@ -173,8 +188,6 @@ function ImportedChapterPlayer() {
       completed: nextCh?.completed ?? false,
     });
     if (newlyCampaign && (nextProgress.unlockedRegistryIds?.length ?? 0) > 0) {
-      // Normalize unlocks: store bare slug + canonical entity_type only.
-      // Skip rows we cannot parse cleanly so we never persist raw colon IDs.
       const seen = new Set<string>();
       const items = nextProgress.unlockedRegistryIds.flatMap((rid) => {
         const parsed = parseUnlockId(rid);
@@ -198,13 +211,9 @@ function ImportedChapterPlayer() {
     bump();
   };
 
+  // PR2: only advances after a correct answer (or on activities without validation).
   const acknowledgeAndAdvance = () => {
-    if (!activity) return;
-    // If the user got it wrong, force-complete the activity locally so the
-    // player can advance to the next one (a heart was already deducted).
-    if (currentAck === "wrong" && campaign && chapter) {
-      markActivityComplete(campaign, chapter, activity);
-    }
+    if (!activity || currentAck !== "correct") return;
     setPendingAck(prev => {
       const next = { ...prev };
       delete next[activity.id];
@@ -301,26 +310,30 @@ function ImportedChapterPlayer() {
                   </div>
                 )}
 
-                <div className={`mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted && !currentAck ? "pointer-events-none opacity-60" : ""}`}>
+                <div className={`mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted ? "pointer-events-none opacity-60" : ""}`}>
                   {activity ? (
                     <ActivityRenderer
-                      key={activity.id}
+                      key={`${activity.id}:${wrongAttempts}`}
                       activity={activity}
                       onResolve={onResolve}
-                      alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct" && currentAck !== "wrong"}
+                      alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct"}
                     />
                   ) : null}
                 </div>
 
-                {/* Explicit acknowledgement step — keeps feedback visible until tap. */}
-                {(currentAck === "correct" || currentAck === "wrong") && (
+                {/* PR2: wrong-answer banner — no Next button, must retry. */}
+                {currentAck !== "correct" && wrongAttempts > 0 && !heartsDepleted && (
+                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
+                    <XIcon className="size-3.5" />
+                    <span className="flex-1">إجابة غير صحيحة. خسرتَ قلبًا — حاول مرة أخرى.</span>
+                  </div>
+                )}
+
+                {/* Advance only after a correct answer. */}
+                {currentAck === "correct" && (
                   <button
                     onClick={acknowledgeAndAdvance}
-                    className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold shadow-gold ${
-                      currentAck === "correct"
-                        ? "bg-gradient-gold text-primary-foreground"
-                        : "border border-rose-400/50 bg-rose-500/15 text-rose-100"
-                    }`}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
                   >
                     <Check className="size-4" /> التالي
                     <ArrowLeft className="size-4" />
