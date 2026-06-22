@@ -113,14 +113,8 @@ export function useRealCollectionStats() {
   const { profile } = useProfile();
   const supaRows = useSupabaseCollection();
 
-  // Imported registry unlocks (localStorage)
-  const importedIds = useMemo(() => {
-    try {
-      return getUnlockedRegistryIds();
-    } catch {
-      return [];
-    }
-  }, [profile.missionsCompleted]); // re-evaluate when player progresses
+  // Registry is consulted only for display metadata (Arabic name/image)
+  // of Supabase rows. It is no longer an unlock source.
   const registry = useMemo(() => {
     try {
       return listRegistry();
