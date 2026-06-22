@@ -29,17 +29,35 @@ All imported rows land as `status='review'`, `aps_verified=false`. They do
 **not** become player-visible until a human verifies APS in
 `/admin/atlas-entities` and publishes.
 
-## Coverage report (after each batch)
+## Coverage report — post-Phase-2.5 import
 
-After each import, copy the current snapshot from `/admin/atlas-import`:
+Snapshot taken immediately after the four batches landed:
 
-```text
-Kind            Total   Published   Review   Verified
-place              ?         ?         ?        ?
-battle             ?         ?         ?        ?
-region             ?         ?         ?        ?
-artifact_site      ?         ?         ?        ?
-```
+| Kind            | Total | Published | Review | Verified |
+| --------------- | ----: | --------: | -----: | -------: |
+| place           |    33 |         6 |     27 |        6 |
+| battle          |    32 |         7 |     25 |        7 |
+| artifact_site   |    19 |         0 |     19 |        0 |
+| region          |    28 |        10 |     18 |       10 |
+| **Total**       | **112** | **23**  | **89** |   **23** |
+
+Player-visible (`status='published'` AND `aps_verified=true`): **23** —
+unchanged from the pre-2.5 baseline, confirming no review rows leak to `/map`.
+
+### Per-batch results
+
+| Batch                  | Target | Inserted | Skipped | Failed |
+| ---------------------- | -----: | -------: | ------: | -----: |
+| 01-cities-priority     |     30 |       26 |       4 |      0 |
+| 02-battles-priority    |     25 |       25 |       0 |      0 |
+| 03-landmarks-priority  |     20 |       20 |       0 |      0 |
+| 04-states-completion   |     18 |       18 |       0 |      0 |
+| **Total**              | **93** |   **89** |   **4** |  **0** |
+
+Skips in batch 1 = slugs already present from the Phase 2 backfill
+(damascus, baghdad, cairo, cordoba). Idempotency confirmed: re-running any
+batch produces 0 inserts.
+
 
 ## Idempotency
 
