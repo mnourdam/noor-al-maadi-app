@@ -66,6 +66,7 @@ export function AtlasStage({
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [view, setView] = useState<View>(IDENTITY);
+  const [rasterLoaded, setRasterLoaded] = useState(false);
   const tier = tierForScale(view.scale);
   // Mirror of `view` for use inside long-lived listeners/effects without
   // re-binding them on every state change.
