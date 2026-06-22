@@ -449,7 +449,7 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
                   return (
                     <button
                       key={i}
-                      disabled={!!reveals[q.id] || heartsOut}
+                      disabled={!!reveals[q.id]}
                       onClick={() => setPicked(i)}
                       className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-right text-[12px] transition ${style}`}
                     >
