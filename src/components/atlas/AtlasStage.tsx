@@ -306,8 +306,9 @@ export function AtlasStage({
 
       {/* Zoom controls */}
       <div className="absolute right-4 bottom-4 flex flex-col gap-1.5">
-        <ZoomBtn label="+" onClick={() => setView((v) => clamp({ ...v, scale: v.scale * 1.4 }))} />
-        <ZoomBtn label="−" onClick={() => setView((v) => clamp({ ...v, scale: v.scale / 1.4 }))} />
+        <ZoomBtn label="+" onClick={() => { stopInertia(); setView((v) => clamp({ ...v, scale: v.scale * 1.25 })); }} />
+        <ZoomBtn label="−" onClick={() => { stopInertia(); setView((v) => clamp({ ...v, scale: v.scale / 1.25 })); }} />
+
         <ZoomBtn label="⟲" onClick={() => setView(IDENTITY)} />
       </div>
     </div>
