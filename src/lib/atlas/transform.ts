@@ -136,3 +136,101 @@ export function leaveOneOut(anchors: readonly AtlasAnchor[]) {
     return { id: held.id, dx, dy, dist: Math.hypot(dx, dy) };
   });
 }
+
+// ── Thin-Plate Spline (TPS) ────────────────────────────────────────────────
+// Stylized-atlas model: TPS interpolates exactly at every anchor and produces
+// a smooth artistic-aware warp elsewhere. The useful diagnostic is leave-one-
+// out TPS: a "good" pin sits where its neighbors would predict; a misplaced
+// pin (wrong city / wrong region) yields a large LOO error.
+
+/** Solve a general n×n linear system via Gauss-Jordan w/ partial pivoting. */
+function solveLinear(A: number[][], b: number[]): number[] {
+  const n = A.length;
+  const M: number[][] = A.map((row, i) => [...row, b[i]]);
+  for (let i = 0; i < n; i++) {
+    let pivot = i;
+    for (let r = i + 1; r < n; r++) {
+      if (Math.abs(M[r][i]) > Math.abs(M[pivot][i])) pivot = r;
+    }
+    if (pivot !== i) [M[i], M[pivot]] = [M[pivot], M[i]];
+    const div = M[i][i];
+    if (Math.abs(div) < 1e-12) throw new Error("singular TPS matrix");
+    for (let c = i; c <= n; c++) M[i][c] /= div;
+    for (let r = 0; r < n; r++) {
+      if (r === i) continue;
+      const f = M[r][i];
+      if (f === 0) continue;
+      for (let c = i; c <= n; c++) M[r][c] -= f * M[i][c];
+    }
+  }
+  return M.map((row) => row[n]);
+}
+
+const tpsKernel = (r2: number) => (r2 <= 0 ? 0 : r2 * Math.log(r2) * 0.5);
+
+export type TpsModel = {
+  ctrls: Array<{ lon: number; lat: number }>;
+  /** Weights for x output: [w0..w_{n-1}, a0, a_lon, a_lat]. */
+  wx: number[];
+  wy: number[];
+};
+
+/**
+ * Fit a TPS that interpolates (lon, lat) → (x, y) exactly at every anchor.
+ * Requires ≥3 non-colinear control points.
+ */
+export function fitTPS(anchors: readonly AtlasAnchor[]): TpsModel {
+  const n = anchors.length;
+  if (n < 3) throw new Error("need ≥3 anchors for TPS");
+  const sz = n + 3;
+  const L: number[][] = Array.from({ length: sz }, () => new Array(sz).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const dlon = anchors[i].lon - anchors[j].lon;
+      const dlat = anchors[i].lat - anchors[j].lat;
+      L[i][j] = tpsKernel(dlon * dlon + dlat * dlat);
+    }
+    L[i][n] = 1;
+    L[i][n + 1] = anchors[i].lon;
+    L[i][n + 2] = anchors[i].lat;
+    L[n][i] = 1;
+    L[n + 1][i] = anchors[i].lon;
+    L[n + 2][i] = anchors[i].lat;
+  }
+  const bx = new Array(sz).fill(0);
+  const by = new Array(sz).fill(0);
+  for (let i = 0; i < n; i++) {
+    bx[i] = anchors[i].aps.x;
+    by[i] = anchors[i].aps.y;
+  }
+  const wx = solveLinear(L.map((r) => [...r]), bx);
+  const wy = solveLinear(L.map((r) => [...r]), by);
+  return { ctrls: anchors.map((a) => ({ lon: a.lon, lat: a.lat })), wx, wy };
+}
+
+/** Evaluate a TPS model at (lon, lat). */
+export function evalTPS(m: TpsModel, lon: number, lat: number): ApsCoord {
+  const n = m.ctrls.length;
+  let x = m.wx[n] + m.wx[n + 1] * lon + m.wx[n + 2] * lat;
+  let y = m.wy[n] + m.wy[n + 1] * lon + m.wy[n + 2] * lat;
+  for (let i = 0; i < n; i++) {
+    const dlon = lon - m.ctrls[i].lon;
+    const dlat = lat - m.ctrls[i].lat;
+    const k = tpsKernel(dlon * dlon + dlat * dlat);
+    x += m.wx[i] * k;
+    y += m.wy[i] * k;
+  }
+  return { x, y };
+}
+
+/** Leave-one-out using TPS: fit on n-1 anchors, predict the held-out one. */
+export function leaveOneOutTPS(anchors: readonly AtlasAnchor[]) {
+  return anchors.map((held) => {
+    const rest = anchors.filter((a) => a.id !== held.id);
+    const m = fitTPS(rest);
+    const p = evalTPS(m, held.lon, held.lat);
+    const dx = held.aps.x - p.x;
+    const dy = held.aps.y - p.y;
+    return { id: held.id, dx, dy, dist: Math.hypot(dx, dy) };
+  });
+}
