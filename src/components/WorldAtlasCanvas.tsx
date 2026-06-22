@@ -256,7 +256,7 @@ export function WorldAtlasCanvas({
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => { e.stopPropagation(); onSelect(m); }}
                 >
-                  {active && <circle r={2.4} fill="url(#wm-glow)" />}
+                  {active && <circle r={2.4} fill="url(#atlas-glow)" />}
                   <circle r={r + 0.3} fill="oklch(0.22 0.06 40)" opacity={0.5} />
                   <circle r={r} fill={fill} stroke="oklch(0.95 0.04 80)" strokeWidth={0.12} />
                   {active && (
@@ -306,7 +306,7 @@ export function WorldAtlasCanvas({
                 }}
 
               >
-                <circle r={2.6} fill="url(#wm-glow)" />
+                <circle r={2.6} fill="url(#atlas-glow)" />
                 <circle r={1.3} fill="oklch(0.95 0.18 70)" stroke="oklch(0.22 0.06 40)" strokeWidth={0.18} />
                 <circle r={0.45} fill="oklch(0.22 0.06 40)" />
               </g>
