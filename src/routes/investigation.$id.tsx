@@ -51,7 +51,7 @@ function InvestigationPage() {
 function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
     profile, completeInvestigation, addDinars, awardBadge, findArtifact,
-    loseHeart, hasHearts, recoverHeartFromActivity,
+    recoverHeartFromActivity,
   } = useProfile();
 
   const steps: InvestigationStep[] = useMemo(
