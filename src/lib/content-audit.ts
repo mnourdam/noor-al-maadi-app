@@ -1,8 +1,10 @@
 import { CONTENT_PACKS, allPackEntities } from "./packs/registry";
 import type { ContentPack, PackEntity, PackEntityType } from "./packs/types";
-import { ENGINE_CAMPAIGNS } from "./campaign-engine/registry";
-import type { EntityLink } from "./campaign-engine/types";
 import { ACHIEVEMENTS } from "./data";
+
+// NOTE: Legacy hardcoded "campaign-engine" was removed in PR 1b.
+// Active campaigns now live in Supabase `admin_campaigns` + imported registry.
+// The audit treats engine campaign counts as 0 until a Supabase-driven audit lands.
 
 // ============================================================
 // Content Audit — pure analytics over the Content Pack registry.
