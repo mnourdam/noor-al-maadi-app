@@ -100,7 +100,10 @@ function ImportedChapterPlayer() {
     if (!campaign || !chapter) return;
     if (!isChapterUnlocked(campaign, chapter)) {
       navigate({ to: "/campaigns/imported/$id", params: { id: campaign.id }, replace: true });
+      return;
     }
+    // PR3: persist resume pointer the moment we enter this chapter.
+    setActivePosition({ campaignId: campaign.id, chapterId: chapter.id });
   }, [campaign, chapter, navigate]);
 
   // Current activity = first activity that is either un-completed,
