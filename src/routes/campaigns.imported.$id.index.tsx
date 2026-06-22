@@ -18,6 +18,7 @@ import { pullCampaignsFromCloud } from "@/lib/cloudSync";
 import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
+import { getActivePosition } from "@/lib/campaignLedger";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 
@@ -128,6 +129,23 @@ function ImportedCampaignOverview() {
               <p className="mt-1 text-[11px] text-muted-foreground">
                 {completedCount}/{chapters.length} فصلًا · {percent}٪
               </p>
+              {/* PR3: resume button — last active chapter for this campaign. */}
+              {(() => {
+                const active = getActivePosition();
+                const resumeChId = active?.campaignId === campaign.id
+                  ? active.chapterId
+                  : chapters.find(ch => !progress?.chapters[ch.id]?.completed && isChapterUnlocked(campaign, ch))?.id;
+                if (!resumeChId || progress?.completed) return null;
+                return (
+                  <Link
+                    to="/campaigns/imported/$id/chapter/$chapter"
+                    params={{ id: campaign.id, chapter: resumeChId }}
+                    className="mt-4 inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold px-4 py-2 text-sm font-bold text-primary-foreground shadow-gold"
+                  >
+                    {completedCount === 0 ? "ابدأ الرحلة" : "متابعة من حيث توقفت"}
+                  </Link>
+                );
+              })()}
             </div>
           </div>
         </div>

@@ -140,6 +140,10 @@ function RootComponent() {
     // Apply Android/WebView/reduced-motion perf-mode class on <html>.
     import("../lib/perf-mode").then((m) => m.applyPerfMode()).catch(() => {});
 
+    // PR3: bootstrap campaign-ledger sync flush (online + visibility events).
+    import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
+
+
     // Lock orientation to portrait on supported platforms (Android / Capacitor / installed PWA).
     // Browsers that don't allow this silently reject — that's fine.
     type LockableOrientation = ScreenOrientation & {
@@ -160,6 +164,8 @@ function RootComponent() {
         const { data } = supabase.auth.onAuthStateChange((event) => {
           if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
             m.flushPendingDeviceToken().catch(() => {});
+            // PR3: drain any queued campaign sync ops now that we have a session.
+            import("../lib/campaignLedger").then((l) => l.flushPending()).catch(() => {});
           }
         });
         unsub = () => data.subscription.unsubscribe();

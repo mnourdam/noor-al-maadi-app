@@ -26,8 +26,11 @@ import { UnlockList } from "@/components/imported-campaign/UnlockList";
 import { useProfile } from "@/lib/profile";
 import { getEffectiveHearts } from "@/lib/hearts";
 import { audioManager } from "@/lib/audioManager";
-import { upsertChapterProgress, addCollectionItems } from "@/lib/progressSync";
-import { parseUnlockId } from "@/lib/campaignUnlocks";
+import {
+  claimActivityReward, claimChapterReward, claimCampaignReward,
+  enqueueChapterSync, enqueueCollectionSync, setActivePosition,
+  clearActivePositionIf, unlockIdsToCollectionItems,
+} from "@/lib/campaignLedger";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
@@ -97,7 +100,10 @@ function ImportedChapterPlayer() {
     if (!campaign || !chapter) return;
     if (!isChapterUnlocked(campaign, chapter)) {
       navigate({ to: "/campaigns/imported/$id", params: { id: campaign.id }, replace: true });
+      return;
     }
+    // PR3: persist resume pointer the moment we enter this chapter.
+    setActivePosition({ campaignId: campaign.id, chapterId: chapter.id });
   }, [campaign, chapter, navigate]);
 
   // Current activity = first activity that is either un-completed,
@@ -134,27 +140,29 @@ function ImportedChapterPlayer() {
       return;
     }
 
-    const alreadyCompleted = chProgress?.completedActivityIds.includes(activity.id) ?? false;
-    const xp     = activity.xpReward      ?? ACTIVITY_DEFAULTS.xpReward;
-    const coins  = activity.coinsReward   ?? ACTIVITY_DEFAULTS.coinsReward;
     const hearts = activity.heartsPenalty ?? ACTIVITY_DEFAULTS.heartsPenalty;
 
     if (!correct) {
       // PR2 strict: wrong = lose 1 heart, no progression, no rewards.
+      // PR3: do NOT write the reward ledger; do NOT advance active position.
       const toLose = Math.max(1, Math.min(1, hearts));
       for (let i = 0; i < toLose; i++) loseHeart();
-      // (no error SFX defined — visual feedback only)
       setWrongFlash(prev => ({ ...prev, [activity.id]: (prev[activity.id] ?? 0) + 1 }));
+      // Persist resume position on the current (still-open) activity.
+      setActivePosition({ campaignId: campaign!.id, chapterId: chapter!.id, activityId: activity.id });
       if (effectiveHearts - toLose <= 0) {
         setTimeout(() => setOutOfHeartsOpen(true), 250);
       }
       return; // do NOT call recordActivity / pendingAck / advance
     }
 
-    // Correct branch — grant rewards once (recordActivity is idempotent per activity).
-    if (!alreadyCompleted) {
-      if (xp > 0) addPoints(xp);
-      if (coins > 0) addDinars(coins);
+    // ---- Correct branch ----
+    // PR3 local-first reward ledger: only grants once, across refreshes /
+    // offline / reopen. Returns {granted:false, xp:0, coins:0} on replays.
+    const actDelta = claimActivityReward(campaign!, chapter!, activity);
+    if (actDelta.granted) {
+      if (actDelta.xp > 0)    addPoints(actDelta.xp);
+      if (actDelta.coins > 0) addDinars(actDelta.coins);
       audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
     }
 
@@ -167,18 +175,43 @@ function ImportedChapterPlayer() {
     const newlyChapter  = !wasChapterComplete  && Boolean(nextChapter?.completed);
     const newlyCampaign = !wasCampaignComplete && nextProgress.completed;
 
+    // Chapter completion rewards — claimed once via ledger.
     if (newlyChapter) {
       audioManager.playSfx("chapter-complete", { dedupeKey: `ch:${chapter!.id}` });
+      const chDelta = claimChapterReward(campaign!, chapter!);
+      if (chDelta.granted) {
+        if (chDelta.xp > 0)    addPoints(chDelta.xp);
+        if (chDelta.coins > 0) addDinars(chDelta.coins);
+        const items = unlockIdsToCollectionItems(campaign!.id, chapter!.id, chDelta.unlocks);
+        if (items.length) enqueueCollectionSync(items);
+      }
     }
+
+    // Campaign completion rewards — claimed once via ledger.
     if (newlyCampaign) {
       audioManager.playSfx("campaign-complete", { dedupeKey: `cam:${campaign!.id}` });
+      const camDelta = claimCampaignReward(campaign!);
+      if (camDelta.granted) {
+        if (camDelta.xp > 0)    addPoints(camDelta.xp);
+        if (camDelta.coins > 0) addDinars(camDelta.coins);
+        const items = unlockIdsToCollectionItems(campaign!.id, null, camDelta.unlocks);
+        if (items.length) enqueueCollectionSync(items);
+      }
+      // Surface unlock SFX (best-effort).
       (nextProgress.unlockedRegistryIds ?? []).slice(0, 1).forEach((rid) =>
         audioManager.playSfx("unlock-reward", { dedupeKey: `unlock:${rid}` }),
       );
+      // Campaign is finished — drop the active-position pointer for this id
+      // so the next reopen lands on the overview, not the final activity.
+      clearActivePositionIf(campaign!.id);
+    } else {
+      // Update active position to the just-completed activity (resume here).
+      setActivePosition({ campaignId: campaign!.id, chapterId: chapter!.id, activityId: activity.id });
     }
 
+    // Queue chapter-level Supabase sync (offline-safe).
     const nextCh = nextProgress.chapters[chapter!.id];
-    void upsertChapterProgress({
+    enqueueChapterSync({
       campaignId: campaign!.id,
       chapterId: chapter!.id,
       status: nextCh?.completed ? "completed" : "unlocked",
@@ -187,23 +220,6 @@ function ImportedChapterPlayer() {
       coinsEarned: nextCh?.coinsEarned ?? 0,
       completed: nextCh?.completed ?? false,
     });
-    if (newlyCampaign && (nextProgress.unlockedRegistryIds?.length ?? 0) > 0) {
-      const seen = new Set<string>();
-      const items = nextProgress.unlockedRegistryIds.flatMap((rid) => {
-        const parsed = parseUnlockId(rid);
-        if (!parsed.slug) return [];
-        const itemType = parsed.type ?? "registry";
-        if (seen.has(parsed.slug)) return [];
-        seen.add(parsed.slug);
-        return [{
-          itemId: parsed.slug,
-          itemType,
-          sourceCampaignId: campaign!.id,
-          sourceChapterId: chapter!.id,
-        }];
-      });
-      if (items.length) void addCollectionItems(items);
-    }
 
     if (newlyCampaign) {
       setTimeout(() => setCompletionOpen(true), 350);
