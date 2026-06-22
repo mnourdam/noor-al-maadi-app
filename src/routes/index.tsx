@@ -7,9 +7,8 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
-  ERAS, CAMPAIGNS, ARTIFACTS, CHARACTERS,
+  ERAS, ARTIFACTS, CHARACTERS,
   levelFor, currentSeason, UPCOMING_CAMPAIGNS,
-  FLAGSHIP_CHAPTERS, nextActiveCampaign,
 } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
@@ -18,11 +17,15 @@ import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
 import { OnboardingTour } from "@/components/OnboardingTour";
-import salahuddinHero from "@/assets/salahuddin-hero.jpg";
+import { listPublishedCampaigns } from "@/lib/campaignStorage";
+import { getCampaignProgress } from "@/lib/importedCampaignProgress";
+import { listRegistry } from "@/lib/contentRegistryStorage";
+import { registryItemIcon, registryItemImageUrl } from "@/lib/importedUnlocks";
+import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
+import type { ContentRegistryItem } from "@/types/contentRegistry";
 import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
 import heroDesertCaravan from "@/assets/hero-desert-caravan.jpg";
 import heroManuscriptLamp from "@/assets/hero-manuscript-lamp.jpg";
-import heroBattlefield from "@/assets/hero-battlefield.jpg";
 import heroFortress from "@/assets/hero-fortress.jpg";
 
 export const Route = createFileRoute("/")({
@@ -82,41 +85,99 @@ function Index() {
 
   const lvl = levelFor(profile.points);
 
-  // ===== Active campaign / next chapter =====
-  const active = nextActiveCampaign(profile.missionsCompleted);
-  const activeEra = active ? ERAS.find((e) => e.id === active.eraId) : undefined;
-  const activeDone = active ? active.missions.filter((m) => profile.missionsCompleted.includes(m.id)).length : 0;
-  const activeHasStarted = activeDone > 0;
-  const isFlagship = active?.flagship === true;
-  const nextChapter = isFlagship
-    ? (FLAGSHIP_CHAPTERS.find((c) => !profile.missionsCompleted.includes(c.missionId))
-        ?? FLAGSHIP_CHAPTERS[FLAGSHIP_CHAPTERS.length - 1])
-    : null;
-  const nextMission = active?.missions.find((m) => !profile.missionsCompleted.includes(m.id)) ?? null;
+  // ===== Imported campaigns (admin/import = single source of truth) =====
+  const [importedCampaigns, setImportedCampaigns] = useState<ImportedCampaign[]>(() => {
+    try { return listPublishedCampaigns(); } catch { return []; }
+  });
+  const [registryItems, setRegistryItems] = useState<ContentRegistryItem[]>(() => {
+    try { return listRegistry(); } catch { return []; }
+  });
+  useEffect(() => {
+    import("@/lib/cloudSync")
+      .then((m) => m.pullAllFromCloud())
+      .then(() => {
+        try { setImportedCampaigns(listPublishedCampaigns()); } catch {}
+        try { setRegistryItems(listRegistry()); } catch {}
+      })
+      .catch(() => {});
+  }, []);
+  const [progressTick, setProgressTick] = useState(0);
+  useEffect(() => {
+    const onFocus = () => setProgressTick((t) => t + 1);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+
+  type CampaignSelection = {
+    campaign: ImportedCampaign;
+    progress: ReturnType<typeof getCampaignProgress>;
+    hasStarted: boolean;
+    isComplete: boolean;
+    completedChapters: number;
+    nextChapter: CampaignChapter | null;
+    nextActivity: CampaignActivity | null;
+  };
+  const campaignSel = useMemo<CampaignSelection | null>(() => {
+    if (!importedCampaigns.length) return null;
+    const enriched: CampaignSelection[] = importedCampaigns.map((c) => {
+      const p = getCampaignProgress(c.id);
+      const sorted = [...c.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const completedChapters = sorted.filter((ch) => p.chapters[ch.id]?.completed).length;
+      const nextChapter = sorted.find((ch) => !p.chapters[ch.id]?.completed) ?? null;
+      const nextActivity = nextChapter
+        ? (nextChapter.activities.find(
+            (a) => !(p.chapters[nextChapter.id]?.completedActivityIds ?? []).includes(a.id),
+          ) ?? null)
+        : null;
+      const hasStarted =
+        completedChapters > 0 ||
+        Object.values(p.chapters).some((ch) => (ch.completedActivityIds?.length ?? 0) > 0);
+      return { campaign: c, progress: p, hasStarted, isComplete: p.completed, completedChapters, nextChapter, nextActivity };
+    });
+    // Priority: active & resumable → next unfinished published → first
+    return (
+      enriched.find((e) => e.hasStarted && !e.isComplete) ??
+      enriched.find((e) => !e.isComplete) ??
+      enriched[0]
+    );
+  }, [importedCampaigns, progressTick]);
 
   // ===== Build hero slides =====
   const slides = useMemo<HeroSlide[]>(() => {
     const out: HeroSlide[] = [];
-    if (active && activeEra) {
+    if (campaignSel) {
+      const { campaign, hasStarted, isComplete, completedChapters, nextChapter } = campaignSel;
+      const total = campaign.chapters.length;
+      const ctaLabel = isComplete
+        ? "استعرض الحملة"
+        : hasStarted
+          ? "تابع الرحلة"
+          : "ابدأ الحملة";
+      const heroBg =
+        (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) ||
+        heroFortress;
+      const subtitle =
+        nextChapter && !isComplete
+          ? `الفصل ${nextChapter.order ?? completedChapters + 1} · ${nextChapter.title}`
+          : (campaign.subtitle ?? campaign.description ?? "تابع رحلتك في هذه الحملة.");
       out.push({
         kind: "campaign",
-        bg: salahuddinHero,
-        eyebrow: isFlagship ? "رحلتك الحالية" : "حملتك النشطة",
-        title: active.title,
-        subtitle: isFlagship && nextChapter
-          ? `الفصل ${nextChapter.index} · ${nextChapter.title}`
-          : (activeHasStarted ? "تابع رحلتك في هذه الحملة." : active.intro),
-        quote: isFlagship && nextChapter?.hook ? `«${nextChapter.hook}»` : undefined,
-        progress: { done: activeDone, total: active.missions.length },
+        bg: heroBg,
+        eyebrow: hasStarted ? "حملتك النشطة" : "حملة جديدة بانتظارك",
+        title: campaign.title,
+        subtitle,
+        progress: { done: completedChapters, total },
         cta: {
-          label: activeHasStarted ? "تابع رحلتك" : "ابدأ الرحلة",
-          link: isFlagship && nextChapter
-            ? <Link to="/play/chapter" search={{ id: nextChapter.id }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
-                <Play className="size-4 fill-current" />{activeHasStarted ? "تابع رحلتك" : "ابدأ الرحلة"}
-              </Link>
-            : <Link to="/campaigns/$era" params={{ era: active.eraId }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
-                <Play className="size-4 fill-current" />{activeHasStarted ? "تابع الحملة" : "ابدأ الحملة"}
-              </Link>,
+          label: ctaLabel,
+          link: (
+            <Link
+              to="/campaigns/imported/$id"
+              params={{ id: campaign.id }}
+              className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
+            >
+              <Play className="size-4 fill-current" />{ctaLabel}
+            </Link>
+          ),
         },
       });
     }
@@ -167,7 +228,7 @@ function Index() {
       },
     });
     return out;
-  }, [active, activeEra, isFlagship, nextChapter, activeHasStarted, activeDone, todayEvent, stats.recent]);
+  }, [campaignSel, todayEvent, stats.recent]);
 
   // Carousel
   const [slideIdx, setSlideIdx] = useState(0);
@@ -182,31 +243,49 @@ function Index() {
   // ===== Stats strip =====
   const hearts = getEffectiveHearts(profile);
 
-  // ===== Today's Objective =====
+  // ===== Today's Objective (imported campaign-driven) =====
   const objective = useMemo(() => {
-    if (active && (nextChapter || nextMission)) {
-      const xp = isFlagship && nextChapter ? (nextChapter.rewards?.points ?? 40) : (nextMission?.reward ?? 20);
-      const dinars = Math.max(5, Math.round(xp / 4));
-      const rewardLabel =
-        isFlagship && nextChapter?.rewards?.artifactIds?.[0]
-          ? (ARTIFACTS.find((a) => a.id === nextChapter!.rewards!.artifactIds![0])?.name ?? "أثر نادر")
-          : isFlagship && nextChapter?.rewards?.characterIds?.[0]
-            ? (CHARACTERS.find((c) => c.id === nextChapter!.rewards!.characterIds![0])?.name ?? "شخصية")
-            : "تقدّم في الحملة";
+    if (campaignSel && !campaignSel.isComplete && campaignSel.nextChapter) {
+      const { campaign, nextChapter, nextActivity } = campaignSel;
+      const xp = nextActivity?.xpReward ?? 10;
+      const dinars = nextActivity?.coinsReward ?? 5;
       return {
-        title: isFlagship && nextChapter ? nextChapter.title : (nextMission?.title ?? active.title),
-        subtitle: isFlagship && nextChapter
-          ? `أكمل الفصل ${nextChapter.index} من ${active.title}`
-          : `أكمل المهمة التالية في ${active.title}`,
-        xp, dinars, rewardLabel,
-        link: isFlagship && nextChapter
-          ? (<Link to="/play/chapter" search={{ id: nextChapter.id }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
-              <Play className="size-4 fill-current" />ابدأ الآن
-            </Link>)
-          : (<Link to="/campaigns/$era" params={{ era: active.eraId }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
-              <Play className="size-4 fill-current" />ابدأ الآن
-            </Link>),
+        title: nextActivity?.prompt?.trim() || nextChapter.title,
+        subtitle: nextActivity
+          ? `الفصل ${nextChapter.order ?? "?"} · ${nextChapter.title} — ${campaign.title}`
+          : `أكمل الفصل ${nextChapter.order ?? "?"} من ${campaign.title}`,
+        xp,
+        dinars,
+        rewardLabel: "تقدّم في الحملة",
+        link: (
+          <Link
+            to="/campaigns/imported/$id"
+            params={{ id: campaign.id }}
+            className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground"
+          >
+            <Play className="size-4 fill-current" />
+            {campaignSel.hasStarted ? "تابع الرحلة" : "ابدأ الحملة"}
+          </Link>
+        ),
       };
+    }
+    if (campaignSel && campaignSel.isComplete) {
+      // Suggest a fresh published campaign if any
+      const fresh = importedCampaigns
+        .map((c) => ({ c, p: getCampaignProgress(c.id) }))
+        .find((x) => !x.p.completed);
+      if (fresh) {
+        return {
+          title: fresh.c.title,
+          subtitle: "ابدأ حملتك التالية",
+          xp: 10, dinars: 5, rewardLabel: "حملة جديدة",
+          link: (
+            <Link to="/campaigns/imported/$id" params={{ id: fresh.c.id }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+              <Play className="size-4 fill-current" />ابدأ الحملة
+            </Link>
+          ),
+        };
+      }
     }
     if (todayEvent) {
       return {
@@ -219,7 +298,54 @@ function Index() {
       };
     }
     return null;
-  }, [active, nextChapter, nextMission, isFlagship, todayEvent]);
+  }, [campaignSel, importedCampaigns, todayEvent]);
+
+  // ===== Latest updates (newest content from admin/import) =====
+  type LatestUpdate = {
+    key: string;
+    kind: "حملة" | "شخصية" | "أثر" | "مدينة" | "معركة" | "علم" | "دولة" | "شارة" | "إنجاز" | "محتوى";
+    title: string;
+    subtitle?: string;
+    icon: string;
+    image: string | null;
+    to: string;
+    ts: number;
+  };
+  const REG_KIND: Record<string, LatestUpdate["kind"]> = {
+    figure: "شخصية", scholar: "علم", artifact: "أثر", city: "مدينة",
+    battle: "معركة", dynasty: "دولة", badge: "شارة", achievement: "إنجاز",
+  };
+  const latestUpdates = useMemo<LatestUpdate[]>(() => {
+    const items: LatestUpdate[] = [];
+    for (const c of importedCampaigns) {
+      const ts = Date.parse(c.updatedAt ?? c.createdAt ?? "") || 0;
+      items.push({
+        key: `c:${c.id}`,
+        kind: "حملة",
+        title: c.title?.trim() || "حملة جديدة",
+        subtitle: c.subtitle ?? c.description ?? c.historicalPeriod ?? undefined,
+        icon: "👑",
+        image: c.coverImage && /^(https?:|data:|\/)/i.test(c.coverImage) ? c.coverImage : null,
+        to: `/campaigns/imported/${c.id}`,
+        ts,
+      });
+    }
+    for (const i of registryItems) {
+      const ts = Date.parse(i.updatedAt ?? i.createdAt ?? "") || 0;
+      const kind = REG_KIND[String(i.type).toLowerCase()] ?? "محتوى";
+      items.push({
+        key: `r:${i.id}`,
+        kind,
+        title: i.name?.trim() || "مقتنى غير مسمى",
+        subtitle: kind,
+        icon: registryItemIcon(i),
+        image: registryItemImageUrl(i),
+        to: "/collection",
+        ts,
+      });
+    }
+    return items.sort((a, b) => b.ts - a.ts).slice(0, 3);
+  }, [importedCampaigns, registryItems]);
 
   return (
     <AppShell>
@@ -289,9 +415,9 @@ function Index() {
                 )}
                 <div className="mt-6 flex items-center gap-3">
                   {slide.cta.link}
-                  {slide.kind === "campaign" && active && (
+                  {slide.kind === "campaign" && campaignSel && (
                     <Link
-                      to="/campaigns/$era" params={{ era: active.eraId }}
+                      to="/campaigns/imported/$id" params={{ id: campaignSel.campaign.id }}
                       className="glass inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-3 text-xs text-white/80"
                     >
                       استكشف الحملة
@@ -408,8 +534,20 @@ function Index() {
       <section className="mt-10 px-5">
         <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
         {stats.recent.length > 0 ? (
-          <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 no-scrollbar">
-            {stats.recent.map((r) => <RecentCard key={r.key} item={r} />)}
+          <div className="relative">
+            <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 no-scrollbar snap-x snap-mandatory">
+              {stats.recent.map((r) => <RecentCard key={r.key} item={r} />)}
+            </div>
+            {/* Scroll affordance: gradient edge + arrow hint (RTL: more items on the left) */}
+            {stats.recent.length > 2 && (
+              <>
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-l from-background via-background/70 to-transparent" />
+                <div className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 grid size-8 place-items-center rounded-full bg-black/50 ring-1 ring-gold/40 backdrop-blur-sm animate-pulse">
+                  <ChevronLeft className="size-4 text-gold" />
+                </div>
+              </>
+            )}
+            <p className="mt-1 text-[10px] text-white/40 text-center">اسحب أفقيًا لرؤية المزيد</p>
           </div>
         ) : (
           <EmptyState
@@ -450,11 +588,17 @@ function Index() {
       {/* ============ 7. NEW IN IRTH ============ */}
       <section className="mt-10 px-5">
         <SectionHeader icon={<Bell className="size-3.5" />} eyebrow="آخر التحديثات" title="جديد في إرث" />
-        <EmptyState
-          icon={<Bell className="size-5 text-gold" />}
-          title="لا توجد تحديثات جديدة بعد"
-          body="ستظهر هنا الحملات والشخصيات والتحقيقات الجديدة فور إضافتها."
-        />
+        {latestUpdates.length > 0 ? (
+          <div className="space-y-2">
+            {latestUpdates.map((u) => <UpdateRow key={u.key} item={u} />)}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Bell className="size-5 text-gold" />}
+            title="لا توجد تحديثات جديدة بعد"
+            body="ستظهر هنا الحملات والشخصيات والتحقيقات الجديدة فور إضافتها."
+          />
+        )}
       </section>
 
       {/* ============ 8. EXPLORE IRTH ============ */}
@@ -510,7 +654,7 @@ function RecentCard({ item }: { item: UnifiedUnlock }) {
   return (
     <Link
       to={item.to as "/"}
-      className="group relative w-44 shrink-0 overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-3 transition hover:border-gold/50"
+      className="group relative w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-3 transition hover:border-gold/50"
     >
       <div className="absolute -left-6 -top-6 size-20 rounded-full bg-gold/10 blur-2xl" />
       <div className="relative">
@@ -519,6 +663,25 @@ function RecentCard({ item }: { item: UnifiedUnlock }) {
         <p className="font-display mt-0.5 text-sm font-bold leading-tight line-clamp-1">{item.title}</p>
         {item.subtitle && <p className="mt-1 line-clamp-2 text-[11px] text-white/60 leading-snug">{item.subtitle}</p>}
       </div>
+    </Link>
+  );
+}
+
+function UpdateRow({ item }: { item: { kind: string; title: string; subtitle?: string; icon: string; image: string | null; to: string } }) {
+  return (
+    <Link
+      to={item.to as "/"}
+      className="group flex items-center gap-3 rounded-2xl border border-gold/20 bg-surface/60 p-3 transition hover:border-gold/50"
+    >
+      <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gold/10 text-xl text-gold">
+        {item.image ? <img src={item.image} alt="" className="size-full object-cover" /> : <span>{item.icon}</span>}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] tracking-[0.2em] text-gold">{item.kind}</p>
+        <p className="font-display text-sm font-bold leading-tight line-clamp-1">{item.title}</p>
+        {item.subtitle && <p className="mt-0.5 text-[11px] text-white/55 line-clamp-1">{item.subtitle}</p>}
+      </div>
+      <ChevronLeft className="size-4 shrink-0 text-gold/50 group-hover:text-gold" />
     </Link>
   );
 }

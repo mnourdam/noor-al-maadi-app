@@ -18,7 +18,11 @@ import { useProfile } from "./profile";
 import { ARTIFACTS, CHARACTERS, CAMPAIGNS } from "./data";
 import { getUnlockedRegistryIds } from "./importedUnlocks";
 import { listRegistry } from "./contentRegistryStorage";
+import { displayName } from "./display-names";
 import { supabase } from "@/integrations/supabase/client";
+
+/** Fallback Arabic label for any unresolved item id. */
+const UNNAMED = "مقتنى غير مسمى";
 
 export type UnifiedUnlock = {
   key: string;
@@ -127,12 +131,19 @@ export function useRealCollectionStats() {
     // 1. Supabase user_collection — has reliable timestamps
     for (const r of supaRows) {
       const kind = kindFromType(r.type);
+      const regItem = registryById.get(r.slug.toLowerCase());
+      const resolvedTitle =
+        regItem?.name ??
+        (displayName(r.slug) !== r.slug ? displayName(r.slug) : null) ??
+        UNNAMED;
+      const img = (regItem?.image ?? "").trim();
+      const icon = img && [...img].length === 1 ? img : KIND_ICON[kind];
       push({
         key: `sb:${r.type}:${r.slug}`,
         kind,
-        title: r.slug, // best-effort; museum resolves titles
+        title: resolvedTitle,
         subtitle: kind,
-        icon: KIND_ICON[kind],
+        icon,
         to: "/collection",
         unlockedAt: r.unlockedAt,
       });
@@ -148,7 +159,7 @@ export function useRealCollectionStats() {
       push({
         key: `reg:${item.id}`,
         kind,
-        title: item.name ?? id,
+        title: item.name?.trim() || UNNAMED,
         subtitle: kind,
         icon,
         to: "/collection",
