@@ -165,7 +165,10 @@ function RootComponent() {
           if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
             m.flushPendingDeviceToken().catch(() => {});
             // PR3: drain any queued campaign sync ops now that we have a session.
-            import("../lib/campaignLedger").then((l) => l.flushPending()).catch(() => {});
+            import("../lib/campaignLedger").then((l) => {
+              void l.flushPending();
+              if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
+            }).catch(() => {});
           }
         });
         unsub = () => data.subscription.unsubscribe();
