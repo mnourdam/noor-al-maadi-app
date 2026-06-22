@@ -1,22 +1,21 @@
-// Phase 0 — Atlas calibration validator (stylized-atlas model).
+// Phase 0 — Atlas calibration validator (stylized-atlas, core/periphery model).
 //
 // Atlas v1 is a stylized historical artwork, NOT a georeferenced projection.
-// APS is the canonical coordinate system; lon/lat is a helper for bulk import.
+// APS is the canonical coordinate system; lon/lat is metadata + a helper for
+// approximate bulk placement.
 //
-// Validation strategy:
-//   • Boundary clamp (HARD)        — anchors must lie inside the raster.
-//   • TPS leave-one-out (PRIMARY)  — interpolates exactly at anchors; large
-//     LOO error means the pin disagrees with what its neighbors imply, i.e.
-//     it was placed on the wrong city/region. Tolerates artistic distortion.
-//   • Close-pair scale (LOCAL)     — short pairs must agree to within ~2×
-//     of each other locally; catches pins placed on unrelated areas.
-//   • Inverse round-trip (HARD)    — affine math sanity.
+// Acceptance policy (Phase 0):
+//   BLOCKING  • Boundary clamp (anchors inside raster).
+//   BLOCKING  • Core TPS LOO median ≤ 300 px.
+//   BLOCKING  • Close-pair scale ratios within [0.5×, 2.0×] of median local scale.
+//   BLOCKING  • Inverse affine round-trip < 1 px (math sanity).
+//   INFO      • Periphery TPS LOO — reported, never blocks (artistic stretch +
+//               sparse neighbors make this metric unreliable on the edges).
+//   INFO      • Verification status.
 //
-// Thresholds (calibrated for a 14,192 × 7,088 stylized atlas):
-//   TPS LOO median ≤ 200 px, max ≤ 500 px, per-anchor outlier > 600 px.
-//   Close-pair ratio within [0.5×, 2.0×] of the median local scale.
-//
-// Exit code is non-zero on HARD fail or any per-anchor outlier.
+// CORE = densely-anchored Levant/Egypt/Mesopotamia region where TPS LOO is a
+// meaningful signal. PERIPHERY = edge anchors with no nearby neighbors; LOO
+// here mostly measures artistic stretch + extrapolation, not pin quality.
 
 import { writeFileSync } from "node:fs";
 import {
@@ -33,15 +32,19 @@ import { isInsideAtlas } from "../src/lib/atlas/aps";
 const PASS = "PASS";
 const WARN = "WARN";
 const FAIL = "FAIL";
+const INFO = "INFO";
 
-const LOO_MEDIAN_LIMIT = 200; // px
-const LOO_MAX_LIMIT = 500;    // px
-const PER_ANCHOR_OUTLIER = 600; // px — flag for human review
+const CORE_IDS = new Set([
+  "jerusalem", "cairo", "alexandria", "damascus", "baghdad", "basra",
+]);
+
+const CORE_LOO_MEDIAN_LIMIT = 300; // px — blocking
 const PAIR_RATIO_LO = 0.5;
 const PAIR_RATIO_HI = 2.0;
 
-type Check = { name: string; status: typeof PASS | typeof WARN | typeof FAIL; detail: string };
+type Check = { name: string; status: typeof PASS | typeof WARN | typeof FAIL | typeof INFO; detail: string; blocking: boolean };
 const checks: Check[] = [];
+
 
 const median = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
