@@ -181,6 +181,10 @@ function RootComponent() {
               void l.flushPending();
               if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
             }).catch(() => {});
+            // Sync local registry unlocks → Supabase.
+            import("../lib/registryUnlockMigration")
+              .then((mig) => mig.migrateRegistryUnlocksToSupabase())
+              .catch(() => {});
           }
         });
         unsub = () => data.subscription.unsubscribe();
@@ -188,6 +192,7 @@ function RootComponent() {
       .catch((err) => console.error("[push] dynamic import failed:", err));
     return () => {
       unsub?.();
+      window.removeEventListener("online", onOnline);
     };
 
   }, []);
