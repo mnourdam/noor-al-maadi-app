@@ -1,146 +1,97 @@
-// Phase 3 — Cinematic Atlas Shell (full-screen exploration experience).
+// Phase 2 — Cinematic Atlas Shell (unified data source: atlas_entities).
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, AlertCircle } from "lucide-react";
-import {
-  useWorldMapData,
-  useWorldMapDerived,
-  extractCoords,
-  type WorldEntity,
-  type WorldEntityType,
-} from "@/lib/world-map-source";
-import { useAtlasLayers, useEntityContext, type HubMarker, type Tier } from "@/lib/atlas-hubs";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { AtlasStage } from "./AtlasStage";
-import { AtlasControls } from "./AtlasControls";
-import { EntityPanel } from "./EntityPanel";
+import {
+  AtlasControls,
+  buildAtlasFacets,
+  filterAtlasEntities,
+} from "./AtlasControls";
 import { AtlasEntityDetailPanel } from "./AtlasEntityDetailPanel";
 import { apsToViewBox } from "@/lib/atlas/aps";
-import type { AtlasEntityRow } from "@/lib/atlas-entities";
+import { usePublishedAtlasEntities } from "@/lib/atlas-entities-query";
+import type { AtlasEntityKind, AtlasEntityRow } from "@/lib/atlas-entities";
 
 export function AtlasShell() {
-  const { data, isLoading } = useWorldMapData();
+  const { data: entities = [], isLoading } = usePublishedAtlasEntities();
+  const [kind, setKind] = useState<AtlasEntityKind | null>(null);
   const [era, setEra] = useState<string | null>(null);
-  const [type, setType] = useState<WorldEntityType | null>(null);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [tier, setTier] = useState<Tier>(1);
-  // Identity-change triggers the AtlasStage focus tween.
   const [focusOn, setFocusOn] = useState<{ x: number; y: number } | null>(null);
-  const [atlasEntity, setAtlasEntity] = useState<AtlasEntityRow | null>(null);
 
-  const layers = useAtlasLayers(data, { era, type, search });
-  const derived = useWorldMapDerived(data, { era, type });
-
-  const allHubs = useMemo(
-    () => [...layers.cities, ...layers.landmarks, ...layers.entities],
-    [layers],
-  );
-  const hubsById = useMemo(
-    () => new Map(allHubs.map((m) => [m.id, m])),
-    [allHubs],
-  );
-  const hubsBySlug = useMemo(
-    () => new Map(allHubs.map((m) => [m.slug, m])),
-    [allHubs],
+  const facets = useMemo(() => buildAtlasFacets(entities), [entities]);
+  const visible = useMemo(
+    () => filterAtlasEntities(entities, { kind, era, search }),
+    [entities, kind, era, search],
   );
 
-  const selected = selectedId ? hubsById.get(selectedId) ?? null : null;
-  const context = useEntityContext(data, selected);
+  const entityById = useMemo(
+    () => new Map(entities.map((e) => [e.id, e])),
+    [entities],
+  );
+  const selected = selectedId ? entityById.get(selectedId) ?? null : null;
 
-  // Clear selection when filters drop it
+  // Drop selection when filters hide it.
   useEffect(() => {
-    if (selectedId && !hubsById.has(selectedId)) setSelectedId(null);
-  }, [hubsById, selectedId]);
-
-  const handleSelect = (m: HubMarker | null) => {
-    setSelectedId(m?.id ?? null);
-  };
-
-  const handleLocate = () => {
-    if (selected) setFocusOn({ x: selected.coords.x, y: selected.coords.y });
-  };
-
-  const handleNavigateToRelated = (entity: WorldEntity) => {
-    // If the related entity has coords AND is on the current map, swap selection
-    // AND pan to it. Otherwise leave it to the encyclopedia link in the row.
-    const onMap = hubsBySlug.get(entity.slug);
-    if (onMap) {
-      setSelectedId(onMap.id);
-      setFocusOn({ x: onMap.coords.x, y: onMap.coords.y });
-      return;
+    if (selectedId && !visible.find((e) => e.id === selectedId)) {
+      setSelectedId(null);
     }
-    const coords = extractCoords(entity.metadata);
-    if (coords) setFocusOn(coords);
+  }, [visible, selectedId]);
+
+  const handleLocate = (entity: AtlasEntityRow) => {
+    const vb = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
+    // Fresh object identity ensures AtlasStage tween effect re-runs.
+    setFocusOn({ x: vb.x, y: vb.y });
   };
 
   return (
-    <div className="fixed inset-0 z-40 bg-amber-100" dir="rtl">
+    <div className="fixed inset-0 z-40 bg-slate-950" dir="rtl">
       <Link
         to="/"
-        className="pointer-events-auto absolute top-3 left-3 z-30 flex items-center gap-1 rounded-full border border-amber-900/30 bg-amber-50/90 px-3 py-1.5 text-[12px] font-bold text-amber-950 shadow-sm hover:bg-amber-50"
+        className="pointer-events-auto absolute top-3 left-3 z-30 flex items-center gap-1 rounded-full border border-amber-400/30 bg-slate-950/80 px-3 py-1.5 text-[12px] font-bold text-amber-100 shadow-sm hover:bg-slate-900"
       >
         <ChevronRight className="size-4" /> الرئيسية
       </Link>
 
       <AtlasStage
-        layers={layers}
+        entities={visible}
         selectedId={selectedId}
-        onSelect={handleSelect}
-        onTierChange={setTier}
+        onSelect={(e) => setSelectedId(e?.id ?? null)}
         focusOn={focusOn}
-        onAtlasEntitySelect={setAtlasEntity}
       />
-      {atlasEntity && (
-        <AtlasEntityDetailPanel
-          entity={atlasEntity}
-          onClose={() => setAtlasEntity(null)}
-          onLocate={() => {
-            const vb = apsToViewBox({ x: atlasEntity.aps_x, y: atlasEntity.aps_y });
-            setFocusOn({ x: vb.x, y: vb.y });
-          }}
-        />
-      )}
 
       <AtlasControls
-        eras={derived.eras}
-        types={derived.typesWithData}
+        facets={facets}
+        kind={kind}
         era={era}
-        type={type}
         search={search}
+        onKind={setKind}
         onEra={setEra}
-        onType={setType}
         onSearch={setSearch}
       />
 
-      {!isLoading && layers.cities.length === 0 && layers.landmarks.length === 0 && (
+      {isLoading && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
-          <div className="pointer-events-auto rounded-2xl border border-amber-900/25 bg-amber-50/95 p-5 text-center text-amber-950 shadow-lg max-w-sm">
-            <AlertCircle className="mx-auto mb-2 size-5 text-amber-800" />
-            <p className="font-display font-bold">لا توجد مواقع على الخريطة بعد</p>
-            <p className="mt-1 text-[12px] text-amber-900/80">
-              أضف إحداثيات للمدن والمعالم من لوحة الإدارة لتبدأ التجربة.
-            </p>
-            <Link
-              to="/admin/map"
-              className="mt-3 inline-block rounded-full bg-amber-900 px-4 py-1.5 text-[12px] font-bold text-amber-50"
-            >إدارة الخريطة</Link>
+          <div className="rounded-full border border-amber-400/30 bg-slate-950/80 px-4 py-2 text-[12px] text-amber-100 shadow-lg">
+            <Loader2 className="ml-2 inline size-3.5 animate-spin" />
+            جاري تحميل الأطلس...
           </div>
         </div>
       )}
 
-      {tier < 4 && layers.entities.length > 0 && !selected && (
-        <div className="pointer-events-none absolute bottom-16 left-1/2 -translate-x-1/2 rounded-full border border-amber-900/25 bg-amber-50/85 px-3 py-1 text-[11px] text-amber-900 shadow-sm">
-          قرّب لاكتشاف {layers.entities.length} عنصرًا تاريخيًا
+      {!isLoading && entities.length > 0 && visible.length === 0 && (
+        <div className="pointer-events-none absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full border border-amber-400/30 bg-slate-950/80 px-4 py-1.5 text-[12px] text-amber-100">
+          لا توجد نتائج مطابقة
         </div>
       )}
 
       {selected && (
-        <EntityPanel
-          hub={selected}
-          context={context}
+        <AtlasEntityDetailPanel
+          entity={selected}
           onClose={() => setSelectedId(null)}
-          onNavigate={handleNavigateToRelated}
-          onLocate={handleLocate}
+          onLocate={() => handleLocate(selected)}
         />
       )}
     </div>

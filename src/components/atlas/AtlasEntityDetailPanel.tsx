@@ -1,16 +1,17 @@
-// Unified detail panel for atlas_entities (Phase 1 imports).
-// Shares the same Irth-identity shell as the legacy hub EntityPanel so the
-// /map experience feels consistent regardless of data source.
-import { MapPin, Building2, Swords, User, Landmark, Gem, Calendar, Crown, Compass } from "lucide-react";
+// Phase 2 — Single detail panel for every atlas marker.
+// Wraps `UnifiedDetailShell` and links to the encyclopedia by UUID.
+import {
+  MapPin, Building2, Swords, User, Landmark, Gem, Calendar, Crown, Compass,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { UnifiedDetailShell } from "./EntityPanel";
+import { UnifiedDetailShell } from "./UnifiedDetailShell";
 import { KIND_LABEL_AR, type AtlasEntityRow } from "@/lib/atlas-entities";
 
 const KIND_ICON: Record<string, LucideIcon> = {
   place: Building2,
   battle: Swords,
-  figure: User,
-  artifact: Gem,
+  figure_marker: User,
+  artifact_site: Gem,
   event: Calendar,
   region: Crown,
   route_point: Compass,
@@ -28,7 +29,13 @@ export function AtlasEntityDetailPanel({
   onLocate?: () => void;
 }) {
   const Icon = KIND_ICON[entity.kind] ?? MapPin;
-  const era = entity.era || (entity.year_start != null ? `${entity.year_start}م` : null);
+  const era =
+    entity.era ||
+    (entity.year_start != null
+      ? entity.year_end != null && entity.year_end !== entity.year_start
+        ? `${entity.year_start}–${entity.year_end}م`
+        : `${entity.year_start}م`
+      : null);
   const summary =
     (entity.metadata && typeof (entity.metadata as Record<string, unknown>).note === "string"
       ? ((entity.metadata as Record<string, unknown>).note as string)
@@ -42,15 +49,14 @@ export function AtlasEntityDetailPanel({
       subtitle={entity.name_en ?? null}
       regionName={null}
       eraText={era}
-      encyclopediaSlug={entity.encyclopedia_entity_id ?? null}
-      encyclopediaLabel="اقرأ في الموسوعة"
+      encyclopediaId={entity.encyclopedia_entity_id ?? null}
       onClose={onClose}
       onLocate={onLocate}
       summary={summary}
     >
       {!summary && !entity.encyclopedia_entity_id && (
-        <div className="rounded-xl border border-dashed border-amber-400/25 bg-slate-900/40 p-4 text-center text-[12px] text-amber-100/70">
-          هذا الكيان مُسجَّل على الأطلس، ولم يُربط بعد بمحتوى موسوعي أو وصف تفصيلي.
+        <div className="rounded-xl border border-amber-400/20 bg-slate-900/40 p-4 text-center text-[12px] leading-relaxed text-amber-100/70">
+          هذا الموقع موجود على الأطلس. ستظهر المقالة الموسوعية قريبًا.
         </div>
       )}
     </UnifiedDetailShell>
