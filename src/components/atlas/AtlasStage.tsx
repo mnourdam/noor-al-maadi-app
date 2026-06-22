@@ -214,8 +214,10 @@ export function AtlasStage({
         <g style={{
           transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`,
           transformOrigin: "center",
-          transition: drag.current || pinch.current ? "none" : "transform 160ms ease-out",
+          transition: drag.current || pinch.current ? "none" : "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)",
+          willChange: "transform",
         }}>
+
           {/* Historical atlas foundation — coastlines, seas, rivers, mountains, washes, anchors */}
           <AtlasBaseLayers
             inv={inv}
