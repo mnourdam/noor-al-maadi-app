@@ -6,6 +6,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Building2, Calendar, Crown, Gem, Landmark, Swords, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AtlasBaseDefs, AtlasBaseLayers } from "./HistoricalAtlasBase";
+import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
+import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import {
   TIER_LABEL,
   tierForScale,
