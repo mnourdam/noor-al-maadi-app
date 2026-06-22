@@ -112,29 +112,8 @@ function StatePage() {
           </div>
         </div>
 
-        {/* Campaigns */}
-        {campaigns.length > 0 && (
-          <section className="mt-6">
-            <h2 className="font-display mb-2 text-sm font-bold">الحملات المرتبطة</h2>
-            <div className="grid grid-cols-1 gap-2">
-              {campaigns.map((c) => (
-                <Link
-                  key={c.id}
-                  to="/play/campaign/$id" params={{ id: c.id }}
-                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
-                >
-                  <span className="grid size-10 place-items-center rounded-xl bg-black/35 text-xl ring-1 ring-white/5">
-                    🎯
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-display text-[13px] font-bold line-clamp-1">{c.title}</p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">{c.intro}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Legacy "associated campaigns" section removed in PR 1b — campaign-engine deleted. */}
+        {false && campaigns.length > 0 && null}
 
         {/* Grouped sections */}
         {SECTION_ORDER.map((s) => {
