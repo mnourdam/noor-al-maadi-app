@@ -415,9 +415,9 @@ function Index() {
                 )}
                 <div className="mt-6 flex items-center gap-3">
                   {slide.cta.link}
-                  {slide.kind === "campaign" && active && (
+                  {slide.kind === "campaign" && campaignSel && (
                     <Link
-                      to="/campaigns/$era" params={{ era: active.eraId }}
+                      to="/campaigns/imported/$id" params={{ id: campaignSel.campaign.id }}
                       className="glass inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-3 text-xs text-white/80"
                     >
                       استكشف الحملة
