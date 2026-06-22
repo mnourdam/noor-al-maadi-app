@@ -8,7 +8,7 @@
 //     atlas is never visible at any zoom.
 //   • Locate-on-map cancels in-flight animation frames, guards against NaN,
 //     and never blocks the render loop.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AtlasBaseDefs, AtlasBaseLayers } from "./HistoricalAtlasBase";
 import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
