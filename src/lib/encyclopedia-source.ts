@@ -182,6 +182,7 @@ export function useEncyclopediaCanonicalEntity(
 ) {
   const slug = normalizeEntitySlug(rawId);
   const raw = (rawId ?? "").trim();
+  const lookupIds = Array.from(new Set([raw, slug].filter(Boolean)));
   return useQuery({
     queryKey: ["encyclopedia-canonical", slug, raw, hintedType ?? ""],
     enabled: !!slug,
@@ -205,13 +206,20 @@ export function useEncyclopediaCanonicalEntity(
           .eq("slug", slug)
           .eq("enabled", true);
         if (!slugRes.error) push(slugRes.data);
-        if (raw && raw !== slug) {
+        for (const id of lookupIds) {
           const aliasRes = await supabase
             .from("encyclopedia_entities")
             .select("*")
-            .contains("metadata", { aliases: [raw] })
+            .contains("metadata", { aliases: [id] })
             .eq("enabled", true);
           if (!aliasRes.error) push(aliasRes.data);
+
+          const legacyRes = await supabase
+            .from("encyclopedia_entities")
+            .select("*")
+            .contains("metadata", { legacy_id: id })
+            .eq("enabled", true);
+          if (!legacyRes.error) push(legacyRes.data);
         }
         return pickCanonicalEntity(candidates, hintedType ?? null);
       } catch (e) {
