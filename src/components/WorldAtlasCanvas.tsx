@@ -41,6 +41,8 @@ export function WorldAtlasCanvas({
   editMode = false,
   previewCoords = null,
   onPlace,
+  highlightedRegion = null,
+  onRegionHover,
 }: {
   markers: MapMarker[];
   selectedId: string | null;
@@ -48,6 +50,8 @@ export function WorldAtlasCanvas({
   editMode?: boolean;
   previewCoords?: MapCoords | null;
   onPlace?: (coords: MapCoords) => void;
+  highlightedRegion?: AtlasRegionId | null;
+  onRegionHover?: (id: AtlasRegionId | null) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const innerGRef = useRef<SVGGElement>(null);
