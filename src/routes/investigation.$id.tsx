@@ -10,6 +10,7 @@ import {
   type InvestigationStep,
 } from "@/lib/investigations-source";
 import { useProfile } from "@/lib/profile";
+import { displayName } from "@/lib/display-names";
 
 export const Route = createFileRoute("/investigation/$id")({
   head: () => ({ meta: [{ title: "تحقيق تاريخي" }] }),
