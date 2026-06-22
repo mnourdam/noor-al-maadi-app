@@ -12,8 +12,10 @@ import {
   Trash2,
   Upload,
   X,
+  Crosshair,
 } from "lucide-react";
 import { geoToAps } from "@/lib/atlas/transform";
+import { AtlasApsPicker } from "@/components/atlas/AtlasApsPicker";
 
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
