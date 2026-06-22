@@ -1,4 +1,6 @@
-// Phase 2 — Cinematic Atlas Shell (unified data source: atlas_entities).
+// Phase 2 stabilization — Cinematic Atlas Shell.
+// Single data source: published+verified atlas_entities. Compact popover
+// detail (no full-side sheet). No "locate on map" affordance.
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, Loader2 } from "lucide-react";
@@ -9,9 +11,8 @@ import {
   filterAtlasEntities,
 } from "./AtlasControls";
 import { AtlasEntityDetailPanel } from "./AtlasEntityDetailPanel";
-import { apsToViewBox } from "@/lib/atlas/aps";
 import { usePublishedAtlasEntities } from "@/lib/atlas-entities-query";
-import type { AtlasEntityKind, AtlasEntityRow } from "@/lib/atlas-entities";
+import type { AtlasEntityKind } from "@/lib/atlas-entities";
 
 export function AtlasShell() {
   const { data: entities = [], isLoading } = usePublishedAtlasEntities();
@@ -19,7 +20,6 @@ export function AtlasShell() {
   const [era, setEra] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [focusOn, setFocusOn] = useState<{ x: number; y: number } | null>(null);
 
   const facets = useMemo(() => buildAtlasFacets(entities), [entities]);
   const visible = useMemo(
@@ -33,18 +33,11 @@ export function AtlasShell() {
   );
   const selected = selectedId ? entityById.get(selectedId) ?? null : null;
 
-  // Drop selection when filters hide it.
   useEffect(() => {
     if (selectedId && !visible.find((e) => e.id === selectedId)) {
       setSelectedId(null);
     }
   }, [visible, selectedId]);
-
-  const handleLocate = (entity: AtlasEntityRow) => {
-    const vb = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
-    // Fresh object identity ensures AtlasStage tween effect re-runs.
-    setFocusOn({ x: vb.x, y: vb.y });
-  };
 
   return (
     <div className="fixed inset-0 z-40 bg-slate-950" dir="rtl">
@@ -59,7 +52,6 @@ export function AtlasShell() {
         entities={visible}
         selectedId={selectedId}
         onSelect={(e) => setSelectedId(e?.id ?? null)}
-        focusOn={focusOn}
       />
 
       <AtlasControls
@@ -91,7 +83,6 @@ export function AtlasShell() {
         <AtlasEntityDetailPanel
           entity={selected}
           onClose={() => setSelectedId(null)}
-          onLocate={() => handleLocate(selected)}
         />
       )}
     </div>
