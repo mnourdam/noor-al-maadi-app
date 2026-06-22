@@ -44,6 +44,19 @@ const STORAGE_KEY = "atlas-calibration-wip-v1";
 const PIN_TOLERANCE_PX = 8;
 const RASTER = ATLAS_V1_PIXEL_SIZE;
 
+// Anchors flagged by the Phase 0.1 validator as needing rework
+// (high affine residuals or close-pair drift). Surfaced in the UI so the
+// reviewer can target them on the re-export pass.
+const NEEDS_REVIEW: ReadonlySet<string> = new Set([
+  "samarkand", "bukhara", "mecca", "medina", "marrakech",
+]);
+
+// Sister pairs that should sit visually close on the raster — drawn as a
+// dashed connector so any gross mismatch is immediately obvious.
+const SISTER_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ["samarkand", "bukhara"],
+];
+
 type WorkingAnchor = AtlasAnchor;
 
 type ReviewerB = { id: string; aps: { x: number; y: number } }[] | null;
