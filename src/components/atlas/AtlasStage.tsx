@@ -61,9 +61,15 @@ export function AtlasStage({
   const svgRef = useRef<SVGSVGElement>(null);
   const [view, setView] = useState<View>(IDENTITY);
   const tier = tierForScale(view.scale);
+  // Mirror of `view` for use inside long-lived listeners/effects without
+  // re-binding them on every state change.
+  const viewRef = useRef<View>(view);
+  useEffect(() => { viewRef.current = view; }, [view]);
 
   // Cached wrap size — ResizeObserver, NOT a layout read per render.
   const [wrapSize, setWrapSize] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
+  const wrapSizeRef = useRef(wrapSize);
+  useEffect(() => { wrapSizeRef.current = wrapSize; }, [wrapSize]);
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -184,6 +190,8 @@ export function AtlasStage({
   }, [clamp, stopInertia]);
 
   // ── Pinch (dampened) ────────────────────────────────────────────────────
+  // Bind touch listeners ONCE; read current scale from the ref so we never
+  // re-attach on every pinch frame.
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
   useEffect(() => {
     const el = wrapRef.current;
@@ -194,7 +202,7 @@ export function AtlasStage({
       interaction.current = "pinch";
       const [a, b] = [e.touches[0], e.touches[1]];
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      if (!pinch.current) { pinch.current = { dist, scale: view.scale }; return; }
+      if (!pinch.current) { pinch.current = { dist, scale: viewRef.current.scale }; return; }
       const raw = dist / pinch.current.dist;
       const ratio = 1 + (raw - 1) * 0.55;
       setView((v) => clamp({ ...v, scale: pinch.current!.scale * ratio }));
@@ -210,7 +218,7 @@ export function AtlasStage({
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
     };
-  }, [view.scale, clamp, stopInertia]);
+  }, [clamp, stopInertia]);
 
   // ── Cleanup ─────────────────────────────────────────────────────────────
   useEffect(() => () => {
@@ -219,13 +227,18 @@ export function AtlasStage({
   }, [stopInertia]);
 
   // ── External focus (panel → "show on map") ──────────────────────────────
+  // Reads `view.scale` and `wrapSize` from refs so the effect's dep set is
+  // honest (only `focusOn`), and re-running it on the SAME hub still works
+  // because AtlasShell always passes a fresh object identity.
   useEffect(() => {
     if (!focusOn) return;
     stopInertia();
     interaction.current = "tween";
+    const currentScale = viewRef.current.scale;
+    const wrap = wrapSizeRef.current;
     // Center atlas coord (x,y) in viewBox 100x60 → CSS-space tx/ty for our transform.
-    const targetScale = Math.max(view.scale, 3.5);
-    const k = wrapSize.w / VB_W; // approx units→px (preserveAspectRatio=meet, but x dominates)
+    const targetScale = Math.max(currentScale, 3.5);
+    const k = wrap.w / VB_W; // approx units→px (preserveAspectRatio=meet, but x dominates)
     const cssX = (focusOn.x - VB_W / 2) * k * targetScale;
     const cssY = (focusOn.y - VB_H / 2) * k * targetScale;
     setView(clamp({ scale: targetScale, tx: -cssX, ty: -cssY }));
@@ -233,8 +246,7 @@ export function AtlasStage({
       if (interaction.current === "tween") interaction.current = "idle";
     }, 280);
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusOn]);
+  }, [focusOn, clamp, stopInertia]);
 
   // ── Tier-4 viewport culling (memoized, no per-render layout read) ───────
   const bbox = useMemo(() => {

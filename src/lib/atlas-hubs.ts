@@ -145,6 +145,10 @@ export function useHubEntities(
  * All derivation is client-side over the already-loaded world-map dataset, so
  * the panel opens instantly without an extra network round-trip.
  */
+// TODO(perf): currently O(N) per selection — fine for N ≲ 5k entities. When
+// the atlas crosses that threshold, build region/slug indexes once per
+// `all` change (e.g. via a separate `useAtlasIndex(all)` memo) and have
+// this hook do constant-time lookups instead of a full scan.
 export function useEntityContext(
   all: WorldEntity[] | undefined,
   hub: HubMarker | null,
