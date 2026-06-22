@@ -48,7 +48,10 @@ export interface InAppNotification {
   body: string;
   href?: string;
   at: number;
+  /** Legacy boolean flag — kept for back-compat with older stored items. */
   read?: boolean;
+  /** Timestamp the user opened/read this notification. null/undefined = unread. */
+  readAt?: number | null;
 }
 
 const INBOX_KEY = "irth.notifications.inbox.v1";
@@ -67,21 +70,47 @@ function write<T>(k: string, v: T) {
   try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore quota */ }
 }
 
+export function isUnread(n: InAppNotification): boolean {
+  return !n.readAt && !n.read;
+}
+
+function emitUpdated() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("irth:notifications:updated"));
+  }
+}
+
 export function getInbox(): InAppNotification[] {
   return read<InAppNotification[]>(INBOX_KEY, []);
 }
 export function unreadCount(): number {
-  return getInbox().filter((n) => !n.read).length;
+  return getInbox().filter(isUnread).length;
+}
+/** Format unread count for badge: 0 hides, 1-99 number, 100+ → "99+". */
+export function formatBadgeCount(n: number): string {
+  if (n <= 0) return "";
+  if (n >= 100) return "99+";
+  return String(n);
+}
+export function markRead(id: string): void {
+  const now = Date.now();
+  const next = getInbox().map((n) =>
+    n.id === id && isUnread(n) ? { ...n, read: true, readAt: now } : n,
+  );
+  write(INBOX_KEY, next);
+  emitUpdated();
 }
 export function markAllRead(): void {
-  write(INBOX_KEY, getInbox().map((n) => ({ ...n, read: true })));
+  const now = Date.now();
+  write(INBOX_KEY, getInbox().map((n) => ({ ...n, read: true, readAt: n.readAt ?? now })));
+  emitUpdated();
 }
-export function clearInbox(): void { write(INBOX_KEY, []); }
+export function clearInbox(): void { write(INBOX_KEY, []); emitUpdated(); }
 
 function pushInbox(n: InAppNotification): void {
   const list = [n, ...getInbox().filter((x) => x.id !== n.id)].slice(0, MAX_INBOX);
   write(INBOX_KEY, list);
-  window.dispatchEvent(new CustomEvent("irth:notifications:updated"));
+  emitUpdated();
 }
 
 // ============== Permission + delivery ==============
