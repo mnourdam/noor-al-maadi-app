@@ -337,6 +337,31 @@ function Index() {
         </div>
       </section>
 
+      {/* ============ Unread notifications banner ============ */}
+      {unread > 0 && (
+        <section className="mt-4 px-5">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-gold/40 bg-gold/10 p-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/20 text-gold">
+                <Bell className="size-4" />
+                <span className="absolute -mt-6 -ms-6 grid min-w-[16px] h-[16px] place-items-center rounded-full bg-gradient-gold px-1 text-[9px] font-bold text-primary-foreground">
+                  {formatBadgeCount(unread)}
+                </span>
+              </div>
+              <p className="font-display truncate text-sm font-bold text-gold">
+                لديك {unread.toLocaleString("en-US")} {unread === 1 ? "إشعار جديد" : "إشعارات جديدة"}
+              </p>
+            </div>
+            <Link
+              to="/notifications"
+              className="shrink-0 rounded-full bg-gradient-gold px-3 py-1.5 text-[11px] font-bold text-primary-foreground hover:opacity-90"
+            >
+              عرض الإشعارات
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* ============ 2. TODAY'S OBJECTIVE ============ */}
       {objective && (
         <section className="mt-6 px-5">
