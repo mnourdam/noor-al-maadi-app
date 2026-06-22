@@ -568,29 +568,8 @@ function Index() {
       {/* ============ 5. TODAY IN HISTORY ============ */}
       {mounted && todayEvent && <OnThisDayCalendarCard event={todayEvent} />}
 
-      {/* ============ 6. THE GREAT TIMELINE ============ */}
-      <section className="mt-10 px-5">
-        <Link
-          to="/timeline"
-          className="group relative block h-56 overflow-hidden rounded-3xl border border-gold/30 shadow-elegant"
-        >
-          <img src={heroDesertCaravan} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-1000 group-hover:scale-105" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/20" />
-          <div className="arabesque-layer opacity-60" />
-          <div className="absolute inset-0 flex flex-col justify-end p-5">
-            <div className="flex items-center gap-2 text-[10px] tracking-[0.3em] text-gold">
-              <Hourglass className="size-3.5" /> الخط الزمني العظيم
-            </div>
-            <h2 className="font-display mt-2 text-2xl font-bold leading-tight text-white drop-shadow-[0_2px_8px_oklch(0_0_0/0.7)]">
-              رحلة عبر أكثر من 1400 سنة من التاريخ الإسلامي
-            </h2>
-            <p className="mt-1 text-[12px] text-white/70">من البعثة النبوية إلى عصرنا — استكشف العصور حدثًا حدثًا.</p>
-            <div className="mt-3 inline-flex w-fit items-center gap-2 rounded-full bg-gradient-gold px-4 py-2 text-xs font-bold text-primary-foreground shadow-gold">
-              <Play className="size-3.5 fill-current" /> ابدأ الرحلة الزمنية
-            </div>
-          </div>
-        </Link>
-      </section>
+      {/* ============ 6. (removed) duplicate timeline promo —
+            timeline is already linked from "عوالم إرث" below. ============ */}
 
       {/* ============ 7. NEW IN IRTH ============ */}
       <section className="mt-10 px-5">
