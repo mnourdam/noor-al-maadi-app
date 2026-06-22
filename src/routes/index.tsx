@@ -333,10 +333,17 @@ function Index() {
     for (const i of registryItems) {
       const ts = Date.parse(i.updatedAt ?? i.createdAt ?? "") || 0;
       const kind = REG_KIND[String(i.type).toLowerCase()] ?? "محتوى";
+      const title = i.name?.trim();
+      if (!title || !/[\u0600-\u06FF]/.test(title)) {
+        // Skip items without a valid Arabic display name.
+        // eslint-disable-next-line no-console
+        console.warn(`[home] skipping registry item without Arabic title: ${i.id}`);
+        continue;
+      }
       items.push({
         key: `r:${i.id}`,
         kind,
-        title: i.name?.trim() || "مقتنى غير مسمى",
+        title,
         subtitle: kind,
         icon: registryItemIcon(i),
         image: registryItemImageUrl(i),
