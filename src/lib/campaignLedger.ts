@@ -247,12 +247,70 @@ export function unlockIdsToCollectionItems(
   return out;
 }
 
+// -------------------- Backfill from legacy progress --------------------
+
+/**
+ * Seed the ledger with `synced:true` entries for every activity/chapter/
+ * campaign already marked complete in `irth_campaign_progress`. This prevents
+ * the new claim* API from re-granting XP/coins/unlocks for work the user
+ * finished before the ledger existed.
+ *
+ * - Idempotent: existing ledger keys are left untouched (no overwrite, no
+ *   timestamp churn). Re-running is a no-op.
+ * - No reward grants: this only writes ledger keys; addPoints/addDinars are
+ *   never called, no SFX, no collection unlock applied.
+ * - No sync enqueue: pending queue is untouched; entries are pre-marked
+ *   `synced:true` so the flush loop ignores them.
+ */
+export function backfillLedgerFromLegacyProgress(): { keysAdded: number } {
+  if (!isBrowser()) return { keysAdded: 0 };
+
+  // Read legacy progress directly to avoid a circular import with
+  // importedCampaignProgress.ts (which itself imports nothing from here).
+  let legacy: Record<string, {
+    completed?: boolean;
+    chapters?: Record<string, { completed?: boolean; completedActivityIds?: string[] }>;
+  }> = {};
+  try {
+    const raw = window.localStorage.getItem("irth_campaign_progress");
+    if (raw) legacy = JSON.parse(raw) ?? {};
+  } catch { return { keysAdded: 0 }; }
+
+  const s = read();
+  const now = new Date().toISOString();
+  let added = 0;
+  const addIfMissing = (k: string) => {
+    if (s.keys[k]) return;
+    s.keys[k] = { at: now, synced: true };
+    added += 1;
+  };
+
+  for (const [cid, prog] of Object.entries(legacy)) {
+    if (!cid) continue;
+    if (prog?.completed) addIfMissing(campaignKey(cid));
+    const chapters = prog?.chapters ?? {};
+    for (const [chid, ch] of Object.entries(chapters)) {
+      if (!chid) continue;
+      if (ch?.completed) addIfMissing(chapterKey(cid, chid));
+      for (const aid of ch?.completedActivityIds ?? []) {
+        if (!aid) continue;
+        addIfMissing(activityKey(cid, chid, aid));
+      }
+    }
+  }
+
+  if (added > 0) write(s);
+  return { keysAdded: added };
+}
+
 // -------------------- Auto-flush bootstrap --------------------
 
 let bootstrapped = false;
 export function bootstrapLedgerFlush(): void {
   if (!isBrowser() || bootstrapped) return;
   bootstrapped = true;
+  // PR3 backfill must run BEFORE any claim* call could occur this session.
+  try { backfillLedgerFromLegacyProgress(); } catch { /* never block boot */ }
   window.addEventListener("online", () => { void flushPending(); });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") void flushPending();
@@ -260,3 +318,4 @@ export function bootstrapLedgerFlush(): void {
   // Initial attempt on boot.
   void flushPending();
 }
+
