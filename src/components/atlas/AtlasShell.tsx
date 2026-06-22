@@ -90,8 +90,16 @@ export function AtlasShell() {
         focusOn={focusOn}
         onAtlasEntitySelect={setAtlasEntity}
       />
-
-      <AtlasEntityPopover entity={atlasEntity} onClose={() => setAtlasEntity(null)} />
+      {atlasEntity && (
+        <AtlasEntityDetailPanel
+          entity={atlasEntity}
+          onClose={() => setAtlasEntity(null)}
+          onLocate={() => {
+            const vb = apsToViewBox({ x: atlasEntity.aps_x, y: atlasEntity.aps_y });
+            setFocusOn({ x: vb.x, y: vb.y });
+          }}
+        />
+      )}
 
       <AtlasControls
         eras={derived.eras}
