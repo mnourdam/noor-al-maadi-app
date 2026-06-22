@@ -127,7 +127,7 @@ export function CollectibleRevealDialog({
             <div className="space-y-2 p-5 text-[12.5px] leading-7 text-foreground/85">
               {item.lines.filter(Boolean).map((l, i) => <p key={i}>{l}</p>)}
               <p className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-center text-[11px] font-bold text-emerald-200">
-                تمت إضافته إلى أرشيفك
+                مكتشف في أرشيفك
               </p>
             </div>
 
@@ -142,13 +142,9 @@ export function CollectibleRevealDialog({
               )}
               <button
                 onClick={onClose}
-                className={`w-full rounded-xl py-2.5 text-sm font-bold ${
-                  item.alreadyOwned
-                    ? "border border-white/10 text-muted-foreground"
-                    : "bg-gradient-gold text-primary-foreground shadow-gold"
-                }`}
+                className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-bold text-muted-foreground"
               >
-                {item.alreadyOwned ? "إغلاق" : "أضف إلى أرشيفي"}
+                إغلاق
               </button>
             </div>
           </div>

@@ -162,7 +162,7 @@ export function useRealCollectionStats() {
         title: candidate,
         subtitle: kind,
         icon,
-        to: "/collection",
+        to: `/encyclopedia/entity/${r.slug}`,
         unlockedAt: r.unlockedAt,
       });
     }
@@ -175,13 +175,14 @@ export function useRealCollectionStats() {
       const kind = kindFromType(String(item.type));
       const img = (item.image ?? "").trim();
       const icon = img && [...img].length === 1 ? img : KIND_ICON[kind];
+      const slug = (item as any).slug ?? item.id;
       push({
         key: `reg:${item.id}`,
         kind,
         title: item.name.trim(),
         subtitle: kind,
         icon,
-        to: "/collection",
+        to: `/encyclopedia/entity/${slug}`,
         unlockedAt: 0,
       });
     }
@@ -196,7 +197,7 @@ export function useRealCollectionStats() {
         title: c.name,
         subtitle: c.title,
         icon: c.avatar,
-        to: "/collection",
+        to: `/encyclopedia/entity/${id}`,
         unlockedAt: 0,
       });
     });
@@ -210,7 +211,7 @@ export function useRealCollectionStats() {
         title: a.name,
         subtitle: a.description,
         icon: a.icon,
-        to: "/collection",
+        to: `/encyclopedia/entity/${id}`,
         unlockedAt: 0,
       });
     });
