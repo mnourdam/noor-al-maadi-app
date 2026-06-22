@@ -1,202 +1,162 @@
-// Phase 3.6 — Historical Atlas Foundation (manuscript aesthetic, land-first).
-// Coordinate space: viewBox 0 0 100 60 (unchanged — all existing city
-// coordinates remain valid). Arabic-only labels. No tiles, no political
-// borders. Land silhouettes hand-drawn around the existing city anchors so
-// Iberia, Maghreb, Egypt, the Levant, Arabia, Anatolia, Persia, Khurasan,
-// Transoxiana and Hind are recognizable before any marker appears.
+// Phase 3.7 — Continuous coastline atlas.
+// Ocean is one body. Eurasia-Africa-Arabia is ONE land path painted on top
+// of the ocean, so the Mediterranean opens through Gibraltar to the
+// Atlantic, the Red Sea opens through Bab al-Mandeb to the Arabian Sea,
+// and the Persian Gulf sits between Arabia and Persia as a real notch.
+// Black Sea, Caspian and Aral remain distinct inland seas (separate blue
+// shapes painted back over the land).
+//
+// Coordinate space: viewBox 0 0 100 60. Every city anchor below sits
+// inside the land path on purpose — coordinate compatibility preserved.
 
-// ─── Seas (large, properly shaped — what's not blue is land) ────────────────
-// Each path is intentionally generous so the *negative space* — the land —
-// reads as a real continent rather than a parchment void.
-const SEAS: Record<string, string> = {
-  // Atlantic — full left edge with Bay of Biscay notch and a bow around
-  // Iberia's western flank.
-  atlantic:
-    "M -4,-4 L 3,-4 L 3,4 C 4,6 4,8 3,10 L 1,13 C 0,15 0,17 1,19 L 3,21 L 3,24 L 1,32 L -1,46 L -3,60 L -4,64 Z",
+// ─── ONE LAND PATH ───────────────────────────────────────────────────────────
+// Clockwise from top-left. Carries the Med inlet (south Europe ↔ N Africa,
+// open at Gibraltar), Red Sea inlet (W Arabia ↔ E Africa, open at Bab
+// al-Mandeb), Persian Gulf notch (Persia ↔ Arabia), Sind/Makran south coast.
+const EURASIA_AFRICA_ARABIA = `
+  M -4,-4
+  L 104,-4
+  L 104,52
+  C 100,53 95,53.2 90,52.8
+  C 86,52.6 84,52.4 83,52
+  C 82.5,47 82,42 82,37
+  C 78,37 73,37 68,36.8
+  C 66,36.8 64,36.4 63,35.4
+  C 60,33 57,31 54.5,29.5
+  C 56.5,31 59,34 61.5,37
+  C 63,40 63,44 62.5,47
+  C 62,49 60,51 57,52
+  C 53,52.6 49,53 45.5,53.5
+  C 45.8,49 46,44 44.5,39
+  C 44.5,35 44.2,31.5 44.5,29.5
+  L 39.5,29.5
+  C 38.8,32 38.2,37 37.8,42
+  C 37.4,47 37,52 37.5,57
+  L 38,60
+  L -4,60
+  L -4,30
+  C -2,27 0,25 2,22.5
+  C 5,22.5 10,23 14,23
+  C 22,24 30,24.5 36,26
+  C 39,27 42,26.5 43,24.5
+  C 43.5,21 43.6,18 44,16
+  C 42,14.5 38,13.8 32,13.4
+  C 26,13 20,13 14,14
+  C 10,16 6,19 3,21
+  C 1,18 -1,14 -2,10
+  C -3,5 -4,0 -4,-2
+  Z
+`;
 
-  // Mediterranean — single elongated basin from Gibraltar to the Levantine
-  // coast, with a southern bulge for the Gulf of Sidra and a notch at the
-  // Aegean. Land north of it = southern Europe; land south = Maghreb/Egypt.
-  mediterranean:
-    "M 3,19 \
-     C 6,18 10,18 14,18.5 \
-     C 20,17.5 28,17 34,17.5 \
-     C 38,17.8 41,18.2 42.5,19 \
-     L 43,21 \
-     C 43,23 42,23.8 40,24 \
-     C 34,24.5 27,25 21,24.5 \
-     C 16,24 11,24.2 7,23.5 \
-     C 4,23 3,21.5 3,20.5 Z",
+// ─── Inland seas (distinct, painted on top of land) ─────────────────────────
+type Inland = { id: string; cx: number; cy: number; rx: number; ry: number; tilt?: number };
+const INLAND_SEAS: Inland[] = [
+  { id: "black",   cx: 53,   cy: 9.4,  rx: 10.5, ry: 2.6 },
+  { id: "caspian", cx: 66,   cy: 19,   rx: 3.2,  ry: 6.8 },
+  { id: "aral",    cx: 73,   cy: 12,   rx: 1.4,  ry: 1.0 },
+];
 
-  // Aegean inlet — small notch between Greece and Anatolia
-  aegean:
-    "M 41,15 C 42,15 43,16 43,17.5 L 42.5,19 L 41.5,18 C 41,17 41,16 41,15 Z",
-
-  // Black Sea — broad ellipse north of Anatolia
-  black:
-    "M 44,8 \
-     C 49,7 55,7 60,7.8 \
-     C 63,8.5 63.5,10 62,11.5 \
-     C 57,12.8 50,12.8 46,12 \
-     C 43,11.2 42.5,9 44,8 Z",
-
-  // Caspian — vertical oblong east of the Caucasus
-  caspian:
-    "M 63,12.5 \
-     C 66,12 68.5,13 69,15 \
-     C 69.5,18 69,22 67.5,24 \
-     C 65.5,25 63.5,24 63,21.5 \
-     C 62.5,18 62.5,14.5 63,12.5 Z",
-
-  // Red Sea — long narrow rift, Suez (NW) → Bab al-Mandeb (SE)
-  red_sea:
-    "M 38,28.5 \
-     C 39.5,28.5 40.5,29.5 41,31 \
-     L 43,38 \
-     L 45.5,46 \
-     L 48,53 \
-     C 48.5,55 47.5,55.5 46.5,54.5 \
-     L 44,49 \
-     L 41,40 \
-     L 38.5,33 \
-     C 37.5,31 37,29.5 38,28.5 Z",
-
-  // Persian / Arabian Gulf — runs NW from Mesopotamia to Strait of Hormuz
-  gulf:
-    "M 52,31 \
-     C 55,31.5 57.5,33 60,35 \
-     L 63,38 L 64.5,41 \
-     C 64.8,42.5 63.5,42.8 62,42 \
-     L 58,39.5 L 55,37 L 52,34 \
-     C 51,33 51,31.5 52,31 Z",
-
-  // Arabian Sea / Indian Ocean — broad southern band, with Gulf of Oman
-  arabian_sea:
-    "M -2,54 \
-     C 6,52.5 14,52 22,52.2 \
-     C 30,52.5 36,52 41,52 \
-     C 46,52 50,53 56,52.5 \
-     C 62,52 66,50.5 70,49.5 \
-     C 76,48.5 82,48 88,48.2 \
-     C 94,48.5 100,49.5 102,52 \
-     L 102,64 L -4,64 Z",
-
-  // Bay of Bengal — east of India
-  bengal:
-    "M 96,30 C 100,32 102,40 100,48 L 98,52 L 96,48 C 95,40 95,34 96,30 Z",
-};
-
-// ─── Rivers ──────────────────────────────────────────────────────────────────
+// ─── Rivers (sit on top of land, plausible directions) ─────────────────────
 const RIVERS: Record<string, string> = {
-  // Nile — from headwaters in the south up to the delta on the Med
-  nile:
-    "M 35,58 C 34.5,52 35,46 35.5,40 C 35.8,35 35.8,32 36,30 L 36,28.5",
-  // Tigris — Anatolian highlands → Basra
-  tigris:
-    "M 51,17 C 53,20 54.5,23 55.5,26 C 56.5,28.5 57.5,30.5 58.5,32 L 59,33",
-  // Euphrates — Anatolian highlands → joins Tigris near Basra
-  euphrates:
-    "M 48,17.5 C 50,21 52,24 54,27 C 55.5,29.5 57,31 58.5,32.5",
-  // Indus — Hindu Kush south through Sind into Arabian Sea
-  indus:
-    "M 86,15 C 86,20 86.5,25 86,30 C 85.5,36 84.5,42 83,48 L 82,52",
-  // Oxus / Amu Darya — Pamir → Aral region
-  oxus:
-    "M 85,14 C 80,15 75,16.5 70,17 C 67,17.3 64,17 62,16",
-  // Guadalquivir — short stroke in Al-Andalus toward Atlantic
-  guadalquivir:
-    "M 9,16.5 C 7,17 5,17.5 3,18",
+  // Nile — south → Mediterranean delta
+  nile:        "M 35,58 C 34.5,52 35,46 35.5,40 C 35.8,35 35.8,32 36,30 L 36,28",
+  // Tigris — Taurus → head of Persian Gulf
+  tigris:      "M 51,16.5 C 53,20 54.5,23 55.5,26 C 56.5,28.5 57.5,30.5 58.5,32",
+  // Euphrates — Taurus → joins Tigris near Basra
+  euphrates:   "M 48,17 C 50,21 52,24 54,27 C 55.5,29.5 57,31 58.5,32.5",
+  // Indus — Hindu Kush → Arabian Sea (Sind delta)
+  indus:       "M 86,15 C 86,20 86.5,25 86,30 C 85.5,36 84.5,42 83,48 L 82,52",
+  // Oxus (Amu Darya) — Pamir → Aral region
+  oxus:        "M 85,14 C 80,15 75,15.5 70,15.5 C 67,15.5 64,15 62,15",
+  // Guadalquivir — Al-Andalus → Atlantic
+  guadalquivir:"M 9,18.5 C 7,19.5 5,20.2 3,20.8",
   // Jordan — Galilee → Dead Sea
-  jordan:
-    "M 44,23 L 44.2,26 L 44.5,28.5",
+  jordan:      "M 44,23 L 44.2,26 L 44.5,28.2",
 };
 
-// ─── Mountain glyph chains (decorative triangles) ──────────────────────────
+// ─── Mountain glyph chains ──────────────────────────────────────────────────
 const MOUNTAINS: [number, number][][] = [
   // Atlas (N. Africa)
   [[8,25.5],[11,26],[14,25.8],[17,26],[20,25.8],[23,26]],
   // Taurus (S. Anatolia)
-  [[44,15.5],[47,15.3],[50,15.6],[53,15.3],[56,15.6],[59,15.3]],
+  [[44,15.2],[47,15],[50,15.2],[53,15],[56,15.2],[59,15]],
   // Caucasus (between Black & Caspian)
-  [[58,11],[60,11.3],[62,11.5]],
-  // Zagros (W. Persia)
+  [[59,11.4],[61,11.6],[63,11.8],[65,11.6]],
+  // Zagros (W. Persia, NW→SE)
   [[57,21],[59,23],[61,25],[63,27],[65,29],[67,31]],
-  // Hindu Kush (Khurasan/Transoxiana border into Hind)
+  // Hindu Kush (Khurasan → Hind)
   [[78,17],[81,17.3],[84,17],[87,17.3],[90,17]],
   // Pyrenees (north Iberia)
-  [[3,10],[5,10.2],[7,10],[9,10.2],[11,10]],
+  [[3,9],[5,9.2],[7,9],[9,9.2],[11,9]],
   // Sarawat (W. Arabia, parallel to Red Sea)
-  [[45,32],[45.3,35],[45.6,38],[46,42],[46.3,46],[46.6,49]],
+  [[46.5,32],[46.7,35],[46.9,38],[47,42],[47.1,46],[47.2,49]],
 ];
 
 // ─── Sea labels (Arabic) ────────────────────────────────────────────────────
 const SEA_LABELS: { name: string; x: number; y: number; size?: number; rotate?: number }[] = [
-  { name: "البحر المتوسط",  x: 22,   y: 21,   size: 2.1 },
-  { name: "البحر الأسود",   x: 53,   y: 10,   size: 1.2 },
+  { name: "البحر المتوسط",  x: 22,   y: 20,   size: 2.1 },
+  { name: "البحر الأسود",   x: 53,   y: 9.6,  size: 1.2 },
   { name: "بحر قزوين",      x: 66,   y: 18,   size: 1.1, rotate: 78 },
-  { name: "البحر الأحمر",   x: 41.5, y: 40,   size: 1.2, rotate: 72 },
-  { name: "الخليج العربي",  x: 58,   y: 37,   size: 1.1, rotate: 42 },
-  { name: "بحر العرب",      x: 70,   y: 58,   size: 2.0 },
-  { name: "المحيط الأطلسي", x: 1.4,  y: 38,   size: 1.2, rotate: -90 },
-  { name: "المحيط الهندي",  x: 95,   y: 58,   size: 1.4 },
+  { name: "البحر الأحمر",   x: 41.2, y: 40,   size: 1.2, rotate: 78 },
+  { name: "الخليج العربي",  x: 58,   y: 35,   size: 1.1, rotate: 45 },
+  { name: "بحر العرب",      x: 66,   y: 57,   size: 2.0 },
+  { name: "المحيط الأطلسي", x: -1,   y: 38,   size: 1.2, rotate: -90 },
+  { name: "المحيط الهندي",  x: 92,   y: 57,   size: 1.4 },
 ];
 
-// ─── Region labels (the geography the user must read instantly) ─────────────
+// ─── Region labels ──────────────────────────────────────────────────────────
 const REGION_LABELS: { name: string; x: number; y: number; size?: number }[] = [
-  { name: "الأندلس",       x: 6.5,  y: 14,   size: 1.9 },
-  { name: "المغرب",        x: 14,   y: 29,   size: 1.9 },
-  { name: "إفريقية",       x: 26,   y: 29,   size: 1.7 },
+  { name: "الأندلس",       x: 7,    y: 14,   size: 1.9 },
+  { name: "المغرب",        x: 9,    y: 28,   size: 1.7 },
+  { name: "إفريقية",       x: 22,   y: 29,   size: 1.7 },
   { name: "مصر",           x: 34,   y: 33,   size: 2.0 },
-  { name: "النوبة",        x: 36,   y: 45,   size: 1.4 },
+  { name: "النوبة",        x: 35,   y: 47,   size: 1.4 },
   { name: "الشام",         x: 46,   y: 22.5, size: 1.7 },
-  { name: "الحجاز",        x: 47,   y: 39,   size: 1.7 },
-  { name: "نجد",           x: 52,   y: 43,   size: 1.5 },
-  { name: "اليمن",         x: 50,   y: 51,   size: 1.6 },
+  { name: "الحجاز",        x: 48,   y: 39,   size: 1.7 },
+  { name: "نجد",           x: 53,   y: 43,   size: 1.5 },
+  { name: "اليمن",         x: 51,   y: 51,   size: 1.6 },
   { name: "عُمان",         x: 60,   y: 47,   size: 1.4 },
   { name: "العراق",        x: 55,   y: 25,   size: 1.7 },
-  { name: "الأناضول",      x: 52,   y: 13.5, size: 1.9 },
-  { name: "فارس",          x: 67,   y: 27,   size: 1.9 },
-  { name: "خراسان",        x: 75,   y: 22,   size: 1.7 },
-  { name: "ما وراء النهر", x: 78,   y: 11,   size: 1.5 },
-  { name: "السند",         x: 87,   y: 28,   size: 1.5 },
-  { name: "الهند",         x: 92,   y: 38,   size: 2.0 },
+  { name: "الأناضول",      x: 52,   y: 13,   size: 1.9 },
+  { name: "فارس",          x: 67,   y: 28,   size: 1.9 },
+  { name: "خراسان",        x: 74,   y: 22,   size: 1.7 },
+  { name: "ما وراء النهر", x: 78,   y: 10.5, size: 1.5 },
+  { name: "السند",         x: 85,   y: 31,   size: 1.5 },
+  { name: "الهند",         x: 93,   y: 38,   size: 2.0 },
 ];
 
 // ─── City anchors (real positions, Arabic only) ─────────────────────────────
 const CITY_ANCHORS: { name: string; x: number; y: number; major?: boolean }[] = [
-  { name: "قرطبة",      x: 7.5,  y: 17.5, major: true },
-  { name: "فاس",        x: 14,   y: 28.5 },
-  { name: "القيروان",   x: 24,   y: 27 },
-  { name: "القاهرة",    x: 36,   y: 30,   major: true },
-  { name: "القدس",      x: 44,   y: 27.5, major: true },
-  { name: "دمشق",       x: 46,   y: 25,   major: true },
-  { name: "المدينة",    x: 44.5, y: 38,   major: true },
-  { name: "مكة",        x: 45,   y: 41,   major: true },
-  { name: "بغداد",      x: 56,   y: 27.5, major: true },
-  { name: "البصرة",     x: 58,   y: 31 },
-  { name: "القسطنطينية",x: 47,   y: 14.5, major: true },
-  { name: "أصفهان",     x: 64,   y: 29 },
-  { name: "نيسابور",    x: 72,   y: 23 },
-  { name: "سمرقند",     x: 79,   y: 13.5, major: true },
-  { name: "بخارى",      x: 76,   y: 15,   major: true },
-  { name: "دلهي",       x: 87,   y: 31,   major: true },
+  { name: "قرطبة",       x: 7.5,  y: 17.5, major: true },
+  { name: "فاس",         x: 14,   y: 28.5 },
+  { name: "القيروان",    x: 24,   y: 27 },
+  { name: "القاهرة",     x: 36,   y: 30,   major: true },
+  { name: "القدس",       x: 44,   y: 27.5, major: true },
+  { name: "دمشق",        x: 46,   y: 25,   major: true },
+  { name: "المدينة",     x: 44.7, y: 38,   major: true },
+  { name: "مكة",         x: 45.2, y: 41,   major: true },
+  { name: "بغداد",       x: 56,   y: 27.5, major: true },
+  { name: "البصرة",      x: 57,   y: 30.5 },
+  { name: "القسطنطينية", x: 47,   y: 14.5, major: true },
+  { name: "أصفهان",      x: 64,   y: 29 },
+  { name: "نيسابور",     x: 72,   y: 23 },
+  { name: "سمرقند",      x: 79,   y: 13.5, major: true },
+  { name: "بخارى",       x: 76,   y: 15,   major: true },
+  { name: "دلهي",        x: 87,   y: 31,   major: true },
 ];
 
-// Shared defs — include once per SVG via <AtlasBaseDefs/> in its <defs>.
+// Shared defs — include once per SVG via <AtlasBaseDefs/>.
 export function AtlasBaseDefs() {
   return (
     <>
-      {/* Subtle parchment grain so land doesn't read as flat fill */}
       <pattern id="atlas-land-grain" width="3" height="3" patternUnits="userSpaceOnUse">
         <rect width="3" height="3" fill="oklch(0.91 0.06 82)" />
         <circle cx="0.6" cy="0.7" r="0.18" fill="oklch(0.82 0.08 70 / 0.35)" />
         <circle cx="2.1" cy="2.3" r="0.14" fill="oklch(0.78 0.07 60 / 0.30)" />
       </pattern>
-      {/* Diagonal hatch overlay for seas — manuscript engraving feel */}
       <pattern id="atlas-sea-hatch" width="2.4" height="2.4" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
         <line x1="0" y1="0" x2="0" y2="2.4" stroke="oklch(0.40 0.07 220 / 0.32)" strokeWidth="0.12" />
       </pattern>
-      {/* Soft ring of warmer parchment along coastlines */}
       <radialGradient id="atlas-coast-halo" cx="50%" cy="50%" r="60%">
         <stop offset="60%" stopColor="oklch(0.93 0.07 78 / 0)" />
         <stop offset="100%" stopColor="oklch(0.82 0.10 60 / 0.30)" />
@@ -234,29 +194,36 @@ export function AtlasBaseLayers({
   showRegionLabels = true,
 }: AtlasBaseProps) {
   const COAST = "oklch(0.28 0.08 50 / 0.85)";
-  const SEA_FILL = "oklch(0.78 0.06 220)";
+  const OCEAN = "oklch(0.78 0.06 220)";
   const RIVER = "oklch(0.40 0.11 225 / 0.78)";
 
   return (
     <g className="atlas-base">
-      {/* Parchment land base (grain) — what's left after seas are painted */}
-      <rect width="100" height="60" fill="url(#atlas-land-grain)" />
+      {/* 1. Continuous ocean base (Atlantic + Med + Red + Gulf + Arabian Sea + Indian Ocean) */}
+      <rect width="100" height="60" fill={OCEAN} />
+      {/* Sea hatch over the entire canvas — will be covered by land paint */}
+      <rect width="100" height="60" fill="url(#atlas-sea-hatch)" />
 
-      {/* Soft warm coastal halo across the whole canvas (subtle warmth) */}
-      <rect width="100" height="60" fill="url(#atlas-coast-halo)" pointerEvents="none" />
+      {/* 2. The single landmass — paints parchment over the ocean wherever land exists */}
+      <g className="atlas-land">
+        <path d={EURASIA_AFRICA_ARABIA} fill="url(#atlas-land-grain)" />
+        <path d={EURASIA_AFRICA_ARABIA} fill="none" stroke={COAST} strokeWidth="0.24" strokeLinejoin="round" />
+      </g>
 
-      {/* Seas: fill → hatch → ink coast */}
-      <g className="atlas-seas">
-        {Object.entries(SEAS).map(([k, d]) => (
-          <g key={k}>
-            <path d={d} fill={SEA_FILL} />
-            <path d={d} fill="url(#atlas-sea-hatch)" />
-            <path d={d} fill="none" stroke={COAST} strokeWidth="0.22" strokeLinejoin="round" />
+      {/* 3. Inland seas painted back over the land — Black, Caspian, Aral, Aegean inlet */}
+      <g className="atlas-inland-seas">
+        {INLAND_SEAS.map((s) => (
+          <g key={s.id} transform={s.tilt ? `rotate(${s.tilt} ${s.cx} ${s.cy})` : undefined}>
+            <ellipse cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} fill={OCEAN} stroke={COAST} strokeWidth="0.22" />
+            <ellipse cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} fill="url(#atlas-sea-hatch)" />
           </g>
         ))}
       </g>
 
-      {/* Rivers */}
+      {/* 4. Warm coastal halo across the canvas */}
+      <rect width="100" height="60" fill="url(#atlas-coast-halo)" pointerEvents="none" />
+
+      {/* 5. Rivers — drawn on top of land only (they overlay everything but read as ink on parchment) */}
       {showRivers && (
         <g className="atlas-rivers" pointerEvents="none" fill="none"
            stroke={RIVER} strokeLinecap="round" strokeLinejoin="round">
@@ -266,7 +233,7 @@ export function AtlasBaseLayers({
         </g>
       )}
 
-      {/* Mountain glyph chains */}
+      {/* 6. Mountain glyph chains */}
       {showMountains && (
         <g className="atlas-mountains" pointerEvents="none" fill="oklch(0.34 0.06 50 / 0.62)">
           {MOUNTAINS.flat().map(([x, y], i) => (
@@ -275,7 +242,7 @@ export function AtlasBaseLayers({
         </g>
       )}
 
-      {/* Sea labels */}
+      {/* 7. Sea labels */}
       {showSeaLabels && (
         <g className="atlas-sea-labels" pointerEvents="none">
           {SEA_LABELS.map((s) => (
@@ -292,7 +259,7 @@ export function AtlasBaseLayers({
         </g>
       )}
 
-      {/* Region labels — the geographic literacy layer */}
+      {/* 8. Region labels */}
       {showRegionLabels && (
         <g className="atlas-region-labels" pointerEvents="none">
           {REGION_LABELS.map((r) => (
@@ -309,7 +276,7 @@ export function AtlasBaseLayers({
         </g>
       )}
 
-      {/* City anchors (decorative reference dots + Arabic names) */}
+      {/* 9. City anchors */}
       {showCities && (
         <g className="atlas-cities" pointerEvents="none">
           {CITY_ANCHORS.map((c) => {
@@ -331,7 +298,7 @@ export function AtlasBaseLayers({
         </g>
       )}
 
-      {/* Vignette over everything */}
+      {/* 10. Vignette over everything */}
       <rect width="100" height="60" fill="url(#atlas-vignette)" pointerEvents="none" />
     </g>
   );
