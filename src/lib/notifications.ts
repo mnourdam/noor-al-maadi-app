@@ -132,6 +132,7 @@ function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InA
     href: n.href,
     at: Date.now(),
     read: false,
+    readAt: null,
   };
   pushInbox(final);
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
