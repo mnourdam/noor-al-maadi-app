@@ -51,6 +51,17 @@ function Index() {
   const [mounted, setMounted] = useState(false);
   const { selected: todayEvent } = useTodayInHistoryEvent();
   const stats = useRealCollectionStats();
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    const recount = () => setUnread(unreadCount());
+    recount();
+    window.addEventListener("irth:notifications:updated", recount);
+    window.addEventListener("focus", recount);
+    return () => {
+      window.removeEventListener("irth:notifications:updated", recount);
+      window.removeEventListener("focus", recount);
+    };
+  }, []);
 
   useEffect(() => {
     setMounted(true);
