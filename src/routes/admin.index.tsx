@@ -90,6 +90,8 @@ function AdminHub() {
             desc="إدارة المواقع والإحداثيات الجغرافية لعالم إرث." />
           <AdminCard to="/admin/atlas-entities" icon={<MapPin className="h-5 w-5" />} title="كيانات الأطلس (Phase 1)"
             desc="إنشاء وتأكيد ونشر كيانات الأطلس على رسم v1." />
+          <AdminCard to="/admin/atlas-import" icon={<Upload className="h-5 w-5" />} title="استيراد دفعات الأطلس (Phase 2.5)"
+            desc="استيراد JSON جماعي لكيانات الأطلس — يحفظ الصفوف كقيد مراجعة دون نشر." />
 
           <AdminCard to="/admin/migration" icon={<Database className="h-5 w-5" />} title="ترحيل المحتوى القديم"
             desc="نسخ data.ts / cities.ts / packs إلى Supabase دون حذف." />

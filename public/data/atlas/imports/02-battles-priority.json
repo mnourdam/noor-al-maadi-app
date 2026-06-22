@@ -1,0 +1,33 @@
+{
+  "batch": "battles-priority-01",
+  "default_kind": "battle",
+  "atlas_version": "v1",
+  "notes": "Decisive battles across Islamic history. APS anchor = battle site lat/lon (approximate where exact site unknown).",
+  "entities": [
+    { "slug": "battle-of-badr", "name_ar": "غزوة بدر", "name_en": "Battle of Badr", "lat": 23.7361, "lon": 38.7861, "era": "early-islamic", "year_start": 624 },
+    { "slug": "battle-of-uhud", "name_ar": "غزوة أحد", "name_en": "Battle of Uhud", "lat": 24.5089, "lon": 39.6011, "era": "early-islamic", "year_start": 625 },
+    { "slug": "battle-of-the-trench", "name_ar": "غزوة الخندق", "name_en": "Battle of the Trench", "lat": 24.4711, "lon": 39.6058, "era": "early-islamic", "year_start": 627 },
+    { "slug": "battle-of-mutah", "name_ar": "معركة مؤتة", "name_en": "Battle of Mu'tah", "lat": 31.0833, "lon": 35.7000, "era": "early-islamic", "year_start": 629 },
+    { "slug": "battle-of-hunayn", "name_ar": "غزوة حنين", "name_en": "Battle of Hunayn", "lat": 21.4500, "lon": 40.4167, "era": "early-islamic", "year_start": 630 },
+    { "slug": "battle-of-yarmouk", "name_ar": "معركة اليرموك", "name_en": "Battle of Yarmouk", "lat": 32.7333, "lon": 35.9333, "era": "rashidun", "year_start": 636 },
+    { "slug": "battle-of-qadisiyyah", "name_ar": "معركة القادسية", "name_en": "Battle of al-Qadisiyyah", "lat": 31.7333, "lon": 44.2667, "era": "rashidun", "year_start": 636 },
+    { "slug": "battle-of-nahavand", "name_ar": "معركة نهاوند", "name_en": "Battle of Nahavand", "lat": 34.1889, "lon": 48.3789, "era": "rashidun", "year_start": 642 },
+    { "slug": "battle-of-karbala", "name_ar": "معركة كربلاء", "name_en": "Battle of Karbala", "lat": 32.6160, "lon": 44.0240, "era": "umayyad", "year_start": 680 },
+    { "slug": "battle-of-talas", "name_ar": "معركة طلاس", "name_en": "Battle of Talas", "lat": 42.5236, "lon": 72.2331, "era": "abbasid", "year_start": 751 },
+    { "slug": "battle-of-zallaqa", "name_ar": "معركة الزلاقة", "name_en": "Battle of Sagrajas (Zallaqa)", "lat": 38.8833, "lon": -6.9667, "era": "almoravid", "year_start": 1086 },
+    { "slug": "battle-of-manzikert", "name_ar": "معركة ملاذكرد", "name_en": "Battle of Manzikert", "lat": 39.1454, "lon": 42.5394, "era": "seljuk", "year_start": 1071 },
+    { "slug": "battle-of-hattin", "name_ar": "معركة حطين", "name_en": "Battle of Hattin", "lat": 32.8056, "lon": 35.4444, "era": "ayyubid", "year_start": 1187 },
+    { "slug": "battle-of-ain-jalut", "name_ar": "معركة عين جالوت", "name_en": "Battle of Ain Jalut", "lat": 32.5500, "lon": 35.3500, "era": "mamluk", "year_start": 1260 },
+    { "slug": "battle-of-las-navas", "name_ar": "معركة العقاب", "name_en": "Battle of Las Navas de Tolosa", "lat": 38.2806, "lon": -3.5639, "era": "almohad", "year_start": 1212 },
+    { "slug": "battle-of-kose-dag", "name_ar": "معركة كوسة داغ", "name_en": "Battle of Köse Dağ", "lat": 39.9667, "lon": 37.7167, "era": "seljuk", "year_start": 1243 },
+    { "slug": "battle-of-ankara", "name_ar": "معركة أنقرة", "name_en": "Battle of Ankara", "lat": 39.9333, "lon": 32.8500, "era": "ottoman", "year_start": 1402 },
+    { "slug": "fall-of-constantinople", "name_ar": "فتح القسطنطينية", "name_en": "Fall of Constantinople", "lat": 41.0186, "lon": 28.9647, "era": "ottoman", "year_start": 1453 },
+    { "slug": "battle-of-chaldiran", "name_ar": "معركة جالديران", "name_en": "Battle of Chaldiran", "lat": 39.0833, "lon": 44.3167, "era": "ottoman", "year_start": 1514 },
+    { "slug": "battle-of-mohacs", "name_ar": "معركة موهاج", "name_en": "Battle of Mohács", "lat": 45.9833, "lon": 18.6833, "era": "ottoman", "year_start": 1526 },
+    { "slug": "battle-of-lepanto", "name_ar": "معركة ليبانتو", "name_en": "Battle of Lepanto", "lat": 38.3167, "lon": 21.2333, "era": "ottoman", "year_start": 1571 },
+    { "slug": "siege-of-vienna-1683", "name_ar": "حصار فيينا 1683", "name_en": "Siege of Vienna (1683)", "lat": 48.2082, "lon": 16.3738, "era": "ottoman", "year_start": 1683 },
+    { "slug": "battle-of-plassey", "name_ar": "معركة بلاسي", "name_en": "Battle of Plassey", "lat": 23.8000, "lon": 88.2500, "era": "mughal", "year_start": 1757 },
+    { "slug": "battle-of-navarino", "name_ar": "معركة نافارينو", "name_en": "Battle of Navarino", "lat": 36.9333, "lon": 21.6833, "era": "ottoman", "year_start": 1827 },
+    { "slug": "gallipoli-campaign", "name_ar": "معركة جناق قلعة", "name_en": "Gallipoli Campaign", "lat": 40.2333, "lon": 26.4167, "era": "ottoman", "year_start": 1915, "year_end": 1916 }
+  ]
+}

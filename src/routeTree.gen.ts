@@ -54,6 +54,7 @@ import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
+import { Route as AdminAtlasImportRouteImport } from './routes/admin.atlas-import'
 import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-entities'
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
@@ -287,6 +288,11 @@ const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
   path: '/admin/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAtlasImportRoute = AdminAtlasImportRouteImport.update({
+  id: '/admin/atlas-import',
+  path: '/admin/atlas-import',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAtlasEntitiesRoute = AdminAtlasEntitiesRouteImport.update({
   id: '/admin/atlas-entities',
   path: '/admin/atlas-entities',
@@ -349,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/timeline': typeof TimelineRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
+  '/admin/atlas-import': typeof AdminAtlasImportRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -401,6 +408,7 @@ export interface FileRoutesByTo {
   '/timeline': typeof TimelineRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
+  '/admin/atlas-import': typeof AdminAtlasImportRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -456,6 +464,7 @@ export interface FileRoutesById {
   '/timeline': typeof TimelineRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
+  '/admin/atlas-import': typeof AdminAtlasImportRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -512,6 +521,7 @@ export interface FileRouteTypes {
     | '/timeline'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
+    | '/admin/atlas-import'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
@@ -564,6 +574,7 @@ export interface FileRouteTypes {
     | '/timeline'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
+    | '/admin/atlas-import'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
@@ -618,6 +629,7 @@ export interface FileRouteTypes {
     | '/timeline'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
+    | '/admin/atlas-import'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
@@ -673,6 +685,7 @@ export interface RootRouteChildren {
   TimelineRoute: typeof TimelineRoute
   AdminAtlasCalibrationRoute: typeof AdminAtlasCalibrationRoute
   AdminAtlasEntitiesRoute: typeof AdminAtlasEntitiesRoute
+  AdminAtlasImportRoute: typeof AdminAtlasImportRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminContentRoute: typeof AdminContentRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
@@ -1013,6 +1026,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/atlas-import': {
+      id: '/admin/atlas-import'
+      path: '/admin/atlas-import'
+      fullPath: '/admin/atlas-import'
+      preLoaderRoute: typeof AdminAtlasImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/atlas-entities': {
       id: '/admin/atlas-entities'
       path: '/admin/atlas-entities'
@@ -1126,6 +1146,7 @@ const rootRouteChildren: RootRouteChildren = {
   TimelineRoute: TimelineRoute,
   AdminAtlasCalibrationRoute: AdminAtlasCalibrationRoute,
   AdminAtlasEntitiesRoute: AdminAtlasEntitiesRoute,
+  AdminAtlasImportRoute: AdminAtlasImportRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminContentRoute: AdminContentRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
@@ -1151,13 +1172,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

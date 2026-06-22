@@ -1,0 +1,28 @@
+{
+  "batch": "landmarks-priority-01",
+  "default_kind": "artifact_site",
+  "atlas_version": "v1",
+  "notes": "Iconic structures across Islamic civilization. kind=artifact_site for surviving physical monuments; kind=place for site-only or destroyed structures.",
+  "entities": [
+    { "slug": "kaaba", "name_ar": "الكعبة المشرفة", "name_en": "The Kaaba", "lat": 21.4225, "lon": 39.8262, "era": "pre-islamic", "kind": "artifact_site" },
+    { "slug": "masjid-al-nabawi", "name_ar": "المسجد النبوي", "name_en": "Masjid an-Nabawi", "lat": 24.4672, "lon": 39.6111, "era": "early-islamic", "year_start": 622, "kind": "artifact_site" },
+    { "slug": "dome-of-the-rock", "name_ar": "قبة الصخرة", "name_en": "Dome of the Rock", "lat": 31.7780, "lon": 35.2354, "era": "umayyad", "year_start": 691, "kind": "artifact_site" },
+    { "slug": "al-aqsa-mosque", "name_ar": "المسجد الأقصى", "name_en": "Al-Aqsa Mosque", "lat": 31.7761, "lon": 35.2358, "era": "umayyad", "year_start": 705, "kind": "artifact_site" },
+    { "slug": "great-mosque-damascus", "name_ar": "الجامع الأموي بدمشق", "name_en": "Great Mosque of Damascus", "lat": 33.5117, "lon": 36.3067, "era": "umayyad", "year_start": 715, "kind": "artifact_site" },
+    { "slug": "great-mosque-kairouan", "name_ar": "جامع عقبة بن نافع", "name_en": "Great Mosque of Kairouan", "lat": 35.6817, "lon": 10.1036, "era": "umayyad", "year_start": 670, "kind": "artifact_site" },
+    { "slug": "al-azhar-mosque", "name_ar": "الجامع الأزهر", "name_en": "Al-Azhar Mosque", "lat": 30.0459, "lon": 31.2625, "era": "fatimid", "year_start": 972, "kind": "artifact_site" },
+    { "slug": "qarawiyyin", "name_ar": "جامعة القرويين", "name_en": "Al-Qarawiyyin", "lat": 34.0648, "lon": -4.9734, "era": "idrisid", "year_start": 859, "kind": "artifact_site" },
+    { "slug": "alhambra", "name_ar": "قصر الحمراء", "name_en": "Alhambra", "lat": 37.1761, "lon": -3.5881, "era": "nasrid", "year_start": 1238, "kind": "artifact_site" },
+    { "slug": "mezquita-cordoba", "name_ar": "جامع قرطبة", "name_en": "Mezquita of Cordoba", "lat": 37.8786, "lon": -4.7794, "era": "umayyad-al-andalus", "year_start": 785, "kind": "artifact_site" },
+    { "slug": "mustansiriya-madrasa", "name_ar": "المدرسة المستنصرية", "name_en": "Mustansiriya Madrasa", "lat": 33.3422, "lon": 44.3917, "era": "abbasid", "year_start": 1227, "kind": "artifact_site" },
+    { "slug": "bayt-al-hikma", "name_ar": "بيت الحكمة", "name_en": "House of Wisdom (site)", "lat": 33.3152, "lon": 44.3661, "era": "abbasid", "year_start": 830, "kind": "place" },
+    { "slug": "citadel-of-aleppo", "name_ar": "قلعة حلب", "name_en": "Citadel of Aleppo", "lat": 36.1990, "lon": 37.1626, "era": "ayyubid", "kind": "artifact_site" },
+    { "slug": "citadel-of-cairo", "name_ar": "قلعة صلاح الدين", "name_en": "Citadel of Cairo", "lat": 30.0287, "lon": 31.2599, "era": "ayyubid", "year_start": 1176, "kind": "artifact_site" },
+    { "slug": "suleymaniye-mosque", "name_ar": "جامع السليمانية", "name_en": "Süleymaniye Mosque", "lat": 41.0161, "lon": 28.9639, "era": "ottoman", "year_start": 1557, "kind": "artifact_site" },
+    { "slug": "selimiye-mosque", "name_ar": "جامع السليمية", "name_en": "Selimiye Mosque", "lat": 41.6781, "lon": 26.5594, "era": "ottoman", "year_start": 1575, "kind": "artifact_site" },
+    { "slug": "registan", "name_ar": "ساحة ريغستان", "name_en": "Registan", "lat": 39.6547, "lon": 66.9758, "era": "timurid", "year_start": 1417, "kind": "artifact_site" },
+    { "slug": "gur-e-amir", "name_ar": "ضريح كور أمير", "name_en": "Gur-e Amir", "lat": 39.6486, "lon": 66.9692, "era": "timurid", "year_start": 1403, "kind": "artifact_site" },
+    { "slug": "qutb-minar", "name_ar": "قطب منار", "name_en": "Qutb Minar", "lat": 28.5244, "lon": 77.1855, "era": "delhi-sultanate", "year_start": 1199, "kind": "artifact_site" },
+    { "slug": "taj-mahal", "name_ar": "تاج محل", "name_en": "Taj Mahal", "lat": 27.1751, "lon": 78.0421, "era": "mughal", "year_start": 1632, "kind": "artifact_site" }
+  ]
+}
