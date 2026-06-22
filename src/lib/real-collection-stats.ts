@@ -19,6 +19,7 @@ import { ARTIFACTS, CHARACTERS, CAMPAIGNS } from "./data";
 // (registry localStorage is no longer an unlock source; see registryUnlockMigration.ts)
 import { listRegistry } from "./contentRegistryStorage";
 import { displayName } from "./display-names";
+import { getPackEntity } from "./packs/registry";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Items whose Arabic title cannot be resolved are excluded from
