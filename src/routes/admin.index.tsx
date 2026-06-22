@@ -86,6 +86,9 @@ function AdminHub() {
             desc="إدارة مدخلات الموسوعة (شخصيات، مدن، معارك...)." />
           <AdminCard to="/admin/investigations" icon={<Search className="h-5 w-5" />} title="إدارة التحقيقات"
             desc="تحقيقات تاريخية قابلة للعب من Supabase." />
+          <AdminCard to="/admin/map" icon={<MapPin className="h-5 w-5" />} title="إدارة الخريطة"
+            desc="إدارة المواقع والإحداثيات الجغرافية لعالم إرث." />
+
           <AdminCard to="/admin/migration" icon={<Database className="h-5 w-5" />} title="ترحيل المحتوى القديم"
             desc="نسخ data.ts / cities.ts / packs إلى Supabase دون حذف." />
           <AdminCard to="/admin/offline" icon={<HardDrive className="h-5 w-5" />} title="لقطة المحتوى دون اتصال"
