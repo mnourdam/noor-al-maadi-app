@@ -54,6 +54,7 @@ import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
+import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
@@ -285,6 +286,11 @@ const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
   path: '/admin/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAtlasCalibrationRoute = AdminAtlasCalibrationRouteImport.update({
+  id: '/admin/atlas-calibration',
+  path: '/admin/atlas-calibration',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EncyclopediaTypeTypeRoute = EncyclopediaTypeTypeRouteImport.update({
   id: '/type/$type',
   path: '/type/$type',
@@ -335,6 +341,7 @@ export interface FileRoutesByFullPath {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -385,6 +392,7 @@ export interface FileRoutesByTo {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -438,6 +446,7 @@ export interface FileRoutesById {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -492,6 +501,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/admin/atlas-calibration'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
@@ -542,6 +552,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/admin/atlas-calibration'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
@@ -594,6 +605,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/admin/atlas-calibration'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
@@ -647,6 +659,7 @@ export interface RootRouteChildren {
   ShareCardRoute: typeof ShareCardRoute
   TermsRoute: typeof TermsRoute
   TimelineRoute: typeof TimelineRoute
+  AdminAtlasCalibrationRoute: typeof AdminAtlasCalibrationRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminContentRoute: typeof AdminContentRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
@@ -987,6 +1000,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/atlas-calibration': {
+      id: '/admin/atlas-calibration'
+      path: '/admin/atlas-calibration'
+      fullPath: '/admin/atlas-calibration'
+      preLoaderRoute: typeof AdminAtlasCalibrationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/encyclopedia/type/$type': {
       id: '/encyclopedia/type/$type'
       path: '/type/$type'
@@ -1084,6 +1104,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShareCardRoute: ShareCardRoute,
   TermsRoute: TermsRoute,
   TimelineRoute: TimelineRoute,
+  AdminAtlasCalibrationRoute: AdminAtlasCalibrationRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminContentRoute: AdminContentRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
