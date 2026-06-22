@@ -120,7 +120,7 @@ function useSupabaseCollection() {
 
 export function useRealCollectionStats() {
   const { profile } = useProfile();
-  const supaRows = useSupabaseCollection();
+  const { rows: supaRows, validSlugs } = useSupabaseCollection();
 
   // Registry is consulted only for display metadata (Arabic name/image)
   // of Supabase rows. It is no longer an unlock source.
@@ -151,7 +151,17 @@ export function useRealCollectionStats() {
     // 1. Supabase user_collection — has reliable timestamps
     for (const r of supaRows) {
       const kind = kindFromType(r.type);
-      const regItem = registryById.get(r.slug.toLowerCase());
+      const slugLower = r.slug.toLowerCase();
+      // Route-resolvability guard: only surface rows whose slug exists in
+      // the canonical content (pack registry OR Supabase encyclopedia_entities).
+      // This filters out legacy/demo rows with malformed slugs (e.g.
+      // `figure_salah_al_din`) that would lead to /encyclopedia/entity/<slug>
+      // not-found pages.
+      const inPack = !!getPackEntity(r.slug);
+      const inEnc = validSlugs ? validSlugs.has(slugLower) : true; // be lenient until loaded
+      if (!inPack && !inEnc) { logMissingTitle("supabase-route", r.slug); continue; }
+
+      const regItem = registryById.get(slugLower);
       const dn = displayName(r.slug);
       const candidate =
         (isValidArabicTitle(regItem?.name) ? regItem!.name : null) ??
@@ -181,7 +191,7 @@ export function useRealCollectionStats() {
     // (e.g. Salah al-Din, Umar) and are not migrated.
 
     return out;
-  }, [supaRows, registryById]);
+  }, [supaRows, validSlugs, registryById]);
 
 
   // Recently discovered: Supabase rows only, newest first.
