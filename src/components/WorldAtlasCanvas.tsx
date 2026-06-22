@@ -212,11 +212,61 @@ export function WorldAtlasCanvas({
               style={{ cursor: editMode && onPlace ? "crosshair" : undefined }}
             />
             <rect width="100" height="60" fill="url(#wm-grid)" pointerEvents="none" />
-            <g className="ink-stroke-light" fill="none" strokeWidth="0.2" pointerEvents="none">
-              <path d="M2,20 Q25,24 50,20 T98,20" />
-              <path d="M2,42 Q30,46 60,42 T98,44" />
-              <path d="M52,4 Q60,8 70,6 T96,4" />
+
+            {/* Historical atlas regions */}
+            <g className="atlas-regions">
+              {ATLAS_REGIONS.map((r) => {
+                const active = highlightedRegion === r.id;
+                return (
+                  <polygon
+                    key={r.id}
+                    points={r.polygon}
+                    fill={active ? "oklch(0.88 0.10 78 / 0.55)" : "oklch(0.92 0.06 82 / 0.30)"}
+                    stroke="oklch(0.42 0.10 60 / 0.75)"
+                    strokeWidth={active ? 0.28 : 0.18}
+                    strokeLinejoin="round"
+                    onPointerEnter={() => onRegionHover?.(r.id)}
+                    onPointerLeave={() => onRegionHover?.(null)}
+                    style={{ cursor: onRegionHover ? "pointer" : undefined, transition: "fill 160ms ease, stroke-width 160ms ease" }}
+                  />
+                );
+              })}
+              {/* Region labels */}
+              {ATLAS_REGIONS.map((r) => (
+                <text
+                  key={`label-${r.id}`}
+                  x={r.label.x}
+                  y={r.label.y}
+                  textAnchor="middle"
+                  fontSize={1.6}
+                  fontWeight={700}
+                  fill="oklch(0.32 0.08 50 / 0.82)"
+                  pointerEvents="none"
+                  style={{ fontFamily: "var(--font-display)", letterSpacing: "0.04em" }}
+                >
+                  {r.name}
+                </text>
+              ))}
             </g>
+
+            {/* Reference cities — small orienting dots */}
+            <g className="atlas-references" pointerEvents="none">
+              {ATLAS_REFERENCES.map((c) => (
+                <g key={c.name} transform={`translate(${c.x} ${c.y})`}>
+                  <circle r={0.35} fill="oklch(0.30 0.06 40 / 0.55)" />
+                  <text
+                    x={0.6}
+                    y={0.4}
+                    fontSize={1.05}
+                    fill="oklch(0.30 0.06 40 / 0.70)"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
+                    {c.name}
+                  </text>
+                </g>
+              ))}
+            </g>
+
 
             {/* Markers */}
             {markers.map((m) => {
