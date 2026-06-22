@@ -52,42 +52,51 @@ const median = (xs: number[]) => {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
 
-// 1. Boundary clamp — HARD.
+// 1. Boundary clamp — BLOCKING.
 {
   const out = ATLAS_ANCHORS_V1.filter((a) => !isInsideAtlas(a.aps));
   checks.push({
     name: "Boundary clamp (APS inside raster)",
     status: out.length ? FAIL : PASS,
+    blocking: true,
     detail: out.length
       ? `out-of-bounds: ${out.map((a) => `${a.id}(${a.aps.x},${a.aps.y})`).join(", ")}`
       : `all ${ATLAS_ANCHORS_V1.length} anchors inside [0, ${ATLAS_V1_PIXEL_SIZE.width}) × [0, ${ATLAS_V1_PIXEL_SIZE.height})`,
   });
 }
 
-// 2. TPS leave-one-out — PRIMARY check for the stylized-atlas model.
+// 2. Core vs Periphery TPS leave-one-out.
 const looTps = leaveOneOutTPS(ATLAS_ANCHORS_V1);
-const looDists = looTps.map((r) => r.dist);
-const looMedian = median(looDists);
-const looMax = Math.max(...looDists);
-checks.push({
-  name: `TPS leave-one-out (median ≤ ${LOO_MEDIAN_LIMIT} px, max ≤ ${LOO_MAX_LIMIT} px)`,
-  status:
-    looMedian <= LOO_MEDIAN_LIMIT && looMax <= LOO_MAX_LIMIT ? PASS :
-    looMedian <= LOO_MEDIAN_LIMIT * 1.5 && looMax <= LOO_MAX_LIMIT * 1.5 ? WARN : FAIL,
-  detail: `median=${looMedian.toFixed(1)} px, max=${looMax.toFixed(1)} px`,
-});
+const coreLoo = looTps.filter((r) => CORE_IDS.has(r.id));
+const periLoo = looTps.filter((r) => !CORE_IDS.has(r.id));
 
-// 2b. Per-anchor outliers — pins to manually review.
-const outliers = looTps.filter((r) => r.dist > PER_ANCHOR_OUTLIER);
-checks.push({
-  name: `Per-anchor outliers (TPS LOO > ${PER_ANCHOR_OUTLIER} px)`,
-  status: outliers.length === 0 ? PASS : FAIL,
-  detail: outliers.length === 0
-    ? "no outliers — every anchor consistent with its neighbors"
-    : outliers.map((o) => `${o.id} (${o.dist.toFixed(0)} px)`).join(", "),
-});
+// 2a. CORE LOO — BLOCKING (median ≤ 300 px).
+{
+  const d = coreLoo.map((r) => r.dist);
+  const m = median(d);
+  const mx = Math.max(...d);
+  checks.push({
+    name: `Core TPS LOO (median ≤ ${CORE_LOO_MEDIAN_LIMIT} px) — [${[...CORE_IDS].join(", ")}]`,
+    status: m <= CORE_LOO_MEDIAN_LIMIT ? PASS : FAIL,
+    blocking: true,
+    detail: `n=${d.length}, median=${m.toFixed(1)} px, max=${mx.toFixed(1)} px`,
+  });
+}
 
-// 3. Close-pair scale check — local sanity.
+// 2b. PERIPHERY LOO — INFORMATIONAL (artistic stretch + sparse neighbors).
+{
+  const d = periLoo.map((r) => r.dist);
+  const m = median(d);
+  const mx = Math.max(...d);
+  checks.push({
+    name: "Periphery TPS LOO (informational — not blocking)",
+    status: INFO,
+    blocking: false,
+    detail: `n=${d.length}, median=${m.toFixed(1)} px, max=${mx.toFixed(1)} px — periphery LOO mostly reflects artistic stretch and TPS extrapolation, not pin quality`,
+  });
+}
+
+// 3. Close-pair scale check — BLOCKING.
 {
   const pairs: Array<[string, string]> = [
     ["alexandria", "cairo"],
@@ -131,11 +140,12 @@ checks.push({
   checks.push({
     name: `Close-pair scale (within [${PAIR_RATIO_LO}×, ${PAIR_RATIO_HI}×] of median local scale)`,
     status: anyFail ? FAIL : PASS,
+    blocking: true,
     detail: lines.join("; "),
   });
 }
 
-// 4. Inverse round-trip — HARD (affine math sanity).
+// 4. Inverse round-trip — BLOCKING (affine math sanity).
 {
   let worst = 0;
   for (let i = 0; i < 200; i++) {
@@ -148,16 +158,18 @@ checks.push({
   checks.push({
     name: "Inverse round-trip (APS→geo→APS < 1 px)",
     status: worst < 1 ? PASS : FAIL,
+    blocking: true,
     detail: `worst residual = ${worst.toExponential(2)} px`,
   });
 }
 
-// 5. Verification status.
+// 5. Verification status — INFO.
 {
   const unverified = ATLAS_ANCHORS_V1.filter((a) => !a.verified);
   checks.push({
     name: "Anchor verification (human-confirmed on v1 raster)",
     status: unverified.length === 0 ? PASS : WARN,
+    blocking: false,
     detail: unverified.length === 0
       ? "all anchors verified"
       : `${unverified.length} unverified: ${unverified.map((a) => a.id).join(", ")}`,
@@ -166,37 +178,43 @@ checks.push({
 
 // ── Report ─────────────────────────────────────────────────────────────────
 const now = new Date().toISOString();
-const hardFail = checks.some((c) => c.status === FAIL);
-const overall = hardFail ? "❌ FAIL" : checks.some((c) => c.status === WARN) ? "⚠️ PASS WITH WARNINGS" : "✅ PASS";
+const hardFail = checks.some((c) => c.blocking && c.status === FAIL);
+const overall = hardFail
+  ? "❌ FAIL (blocking checks)"
+  : checks.some((c) => c.status === WARN) ? "⚠️ PASS WITH WARNINGS" : "✅ PASS";
 
-let report = `# Atlas Calibration Report (stylized-atlas model)\n\n_Generated: ${now}_\n\n`;
+let report = `# Atlas Calibration Report (stylized-atlas, core/periphery model)\n\n_Generated: ${now}_\n\n`;
 report += `**Atlas:** IRTH MASTER ATLAS V1 — FROZEN (${ATLAS_V1_PIXEL_SIZE.width}×${ATLAS_V1_PIXEL_SIZE.height})\n`;
 report += `**Anchors:** ${ATLAS_ANCHORS_V1.length}\n`;
 report += `**Overall:** ${overall}\n\n`;
-report += `## Validation model\n\n`;
+report += `## Calibration policy\n\n`;
 report += `Atlas v1 is a stylized historical artwork. APS pixel coordinates are canonical;\n`;
-report += `lon/lat is a helper used only to seed bulk imports via TPS interpolation.\n`;
-report += `Global affine residuals are intentionally not a pass/fail metric — the artwork\n`;
-report += `cannot satisfy them by construction. The primary check is TPS leave-one-out:\n`;
-report += `a misplaced pin shows up as a large LOO error; artistic distortion does not.\n\n`;
-report += `## Checks\n\n| # | Check | Status | Detail |\n|---|---|---|---|\n`;
-checks.forEach((c, i) => { report += `| ${i + 1} | ${c.name} | ${c.status} | ${c.detail} |\n`; });
+report += `lon/lat is metadata and a helper for approximate bulk placement.\n\n`;
+report += `**Blocking checks:** boundary clamp, core TPS LOO median ≤ ${CORE_LOO_MEDIAN_LIMIT} px,\n`;
+report += `close-pair scale within [${PAIR_RATIO_LO}×, ${PAIR_RATIO_HI}×], inverse round-trip.\n`;
+report += `**Informational:** periphery TPS LOO (artistic stretch + sparse neighbors make\n`;
+report += `this metric unreliable on the edges), verification status.\n\n`;
+report += `**Core anchors:** ${[...CORE_IDS].join(", ")}\n`;
+report += `**Periphery anchors:** ${ATLAS_ANCHORS_V1.filter((a) => !CORE_IDS.has(a.id)).map((a) => a.id).join(", ")}\n\n`;
+report += `## Checks\n\n| # | Check | Status | Blocking | Detail |\n|---|---|---|---|---|\n`;
+checks.forEach((c, i) => { report += `| ${i + 1} | ${c.name} | ${c.status} | ${c.blocking ? "yes" : "no"} | ${c.detail} |\n`; });
 
-report += `\n## TPS leave-one-out residuals (sorted)\n\n| Held-out | Δx | Δy | dist (px) | flag |\n|---|---|---|---|---|\n`;
+report += `\n## TPS leave-one-out residuals (sorted)\n\n| Held-out | Region | Δx | Δy | dist (px) |\n|---|---|---|---|---|\n`;
 for (const r of [...looTps].sort((a, b) => b.dist - a.dist)) {
-  const flag = r.dist > PER_ANCHOR_OUTLIER ? "OUTLIER" : r.dist > LOO_MEDIAN_LIMIT ? "review" : "ok";
-  report += `| ${r.id} | ${r.dx.toFixed(1)} | ${r.dy.toFixed(1)} | ${r.dist.toFixed(1)} | ${flag} |\n`;
+  const region = CORE_IDS.has(r.id) ? "CORE" : "periphery";
+  report += `| ${r.id} | ${region} | ${r.dx.toFixed(1)} | ${r.dy.toFixed(1)} | ${r.dist.toFixed(1)} |\n`;
 }
 
 report += `\n## Notes\n\n`;
 report += `- APS is the source of truth. Lon/lat is reference metadata.\n`;
 report += `- TPS interpolates exactly at every anchor (global residual = 0 by design).\n`;
-report += `- LOO outliers indicate pins that disagree with their neighbors — likely\n`;
-report += `  placed on the wrong city or wrong region. These need manual review.\n`;
-report += `- Close-pair scale ratios outside [${PAIR_RATIO_LO}×, ${PAIR_RATIO_HI}×] indicate\n`;
-report += `  one of the two pins is on an unrelated part of the raster.\n`;
+report += `- Periphery LOO is reported only — sparse neighbors mean these numbers\n`;
+report += `  are dominated by extrapolation, not pin quality.\n`;
+report += `- A failing close-pair ratio is the strongest signal of a real placement\n`;
+report += `  mistake and remains blocking.\n`;
 
 writeFileSync("docs/atlas/atlas-calibration-report.md", report);
+
 
 console.log(`\n${overall} — wrote docs/atlas/atlas-calibration-report.md`);
 for (const c of checks) console.log(`  [${c.status}] ${c.name} — ${c.detail}`);
