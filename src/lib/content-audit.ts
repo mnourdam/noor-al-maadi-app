@@ -52,26 +52,14 @@ export function packStats(): PackStats[] {
   return CONTENT_PACKS.map(pack => {
     const buckets = bucketCounts(pack.entities);
     const relationships = pack.entities.reduce((n, e) => n + e.relatedEntities.length, 0);
-    const campaigns = ENGINE_CAMPAIGNS.filter(c => c.packId === pack.id).length;
+    const campaigns = 0; // legacy engine removed; Supabase campaigns are not pack-scoped
     return { pack, buckets, campaigns, total: pack.entities.length, relationships };
   });
 }
 
 function collectCampaignRefs(): Set<string> {
-  const out = new Set<string>();
-  const push = (links?: EntityLink[]) => links?.forEach(l => out.add(l.id));
-  for (const c of ENGINE_CAMPAIGNS) {
-    push(c.related);
-    if (c.packId) out.add(c.packId);
-    for (const ch of c.chapters) {
-      push(ch.figures); push(ch.locations); push(ch.events);
-      const u = ch.unlocks;
-      if (!u) continue;
-      [u.characters, u.artifacts, u.cities, u.regions, u.battles,
-       u.events, u.states, u.packEntities].forEach(arr => arr?.forEach(id => out.add(id)));
-    }
-  }
-  return out;
+  // Legacy engine removed. Returns empty set until a Supabase-driven audit lands.
+  return new Set<string>();
 }
 
 function entityMatchesRef(e: PackEntity, ids: Set<string>): boolean {
