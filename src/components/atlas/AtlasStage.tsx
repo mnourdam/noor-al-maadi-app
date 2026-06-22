@@ -107,6 +107,9 @@ export function AtlasStage({
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const lastMove = useRef({ x: 0, y: 0, t: 0, vx: 0, vy: 0 });
   const inertiaRaf = useRef<number | null>(null);
+  const pinch = useRef<
+    { dist: number; scale: number; midX: number; midY: number; tx: number; ty: number } | null
+  >(null);
 
   // rAF-coalesce pan updates: store target in ref, flush at most once per frame.
   const pendingView = useRef<View | null>(null);
