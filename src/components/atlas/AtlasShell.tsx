@@ -5,12 +5,14 @@ import { ChevronRight, AlertCircle } from "lucide-react";
 import {
   useWorldMapData,
   useWorldMapDerived,
+  extractCoords,
+  type WorldEntity,
   type WorldEntityType,
 } from "@/lib/world-map-source";
-import { useAtlasLayers, useHubEntities, type HubMarker, type Tier } from "@/lib/atlas-hubs";
+import { useAtlasLayers, useEntityContext, type HubMarker, type Tier } from "@/lib/atlas-hubs";
 import { AtlasStage } from "./AtlasStage";
 import { AtlasControls } from "./AtlasControls";
-import { HubPanel } from "./HubPanel";
+import { EntityPanel } from "./EntityPanel";
 
 export function AtlasShell() {
   const { data, isLoading } = useWorldMapData();
@@ -19,6 +21,8 @@ export function AtlasShell() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tier, setTier] = useState<Tier>(1);
+  // Identity-change triggers the AtlasStage focus tween.
+  const [focusOn, setFocusOn] = useState<{ x: number; y: number } | null>(null);
 
   const layers = useAtlasLayers(data, { era, type, search });
   const derived = useWorldMapDerived(data, { era, type });
@@ -27,20 +31,46 @@ export function AtlasShell() {
     () => [...layers.cities, ...layers.landmarks, ...layers.entities],
     [layers],
   );
-  const selected = useMemo(
-    () => allHubs.find((m) => m.id === selectedId) ?? null,
-    [allHubs, selectedId],
+  const hubsById = useMemo(
+    () => new Map(allHubs.map((m) => [m.id, m])),
+    [allHubs],
   );
-  const linked = useHubEntities(data, selected);
+  const hubsBySlug = useMemo(
+    () => new Map(allHubs.map((m) => [m.slug, m])),
+    [allHubs],
+  );
+
+  const selected = selectedId ? hubsById.get(selectedId) ?? null : null;
+  const context = useEntityContext(data, selected);
 
   // Clear selection when filters drop it
   useEffect(() => {
-    if (selectedId && !allHubs.some((m) => m.id === selectedId)) setSelectedId(null);
-  }, [allHubs, selectedId]);
+    if (selectedId && !hubsById.has(selectedId)) setSelectedId(null);
+  }, [hubsById, selectedId]);
+
+  const handleSelect = (m: HubMarker | null) => {
+    setSelectedId(m?.id ?? null);
+  };
+
+  const handleLocate = () => {
+    if (selected) setFocusOn({ x: selected.coords.x, y: selected.coords.y });
+  };
+
+  const handleNavigateToRelated = (entity: WorldEntity) => {
+    // If the related entity has coords AND is on the current map, swap selection
+    // AND pan to it. Otherwise leave it to the encyclopedia link in the row.
+    const onMap = hubsBySlug.get(entity.slug);
+    if (onMap) {
+      setSelectedId(onMap.id);
+      setFocusOn({ x: onMap.coords.x, y: onMap.coords.y });
+      return;
+    }
+    const coords = extractCoords(entity.metadata);
+    if (coords) setFocusOn(coords);
+  };
 
   return (
     <div className="fixed inset-0 z-40 bg-amber-100" dir="rtl">
-      {/* Back to app */}
       <Link
         to="/"
         className="pointer-events-auto absolute top-3 left-3 z-30 flex items-center gap-1 rounded-full border border-amber-900/30 bg-amber-50/90 px-3 py-1.5 text-[12px] font-bold text-amber-950 shadow-sm hover:bg-amber-50"
@@ -51,8 +81,9 @@ export function AtlasShell() {
       <AtlasStage
         layers={layers}
         selectedId={selectedId}
-        onSelect={(m: HubMarker | null) => setSelectedId(m?.id ?? null)}
+        onSelect={handleSelect}
         onTierChange={setTier}
+        focusOn={focusOn}
       />
 
       <AtlasControls
@@ -66,7 +97,6 @@ export function AtlasShell() {
         onSearch={setSearch}
       />
 
-      {/* Empty / loading state */}
       {!isLoading && layers.cities.length === 0 && layers.landmarks.length === 0 && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
           <div className="pointer-events-auto rounded-2xl border border-amber-900/25 bg-amber-50/95 p-5 text-center text-amber-950 shadow-lg max-w-sm">
@@ -83,7 +113,6 @@ export function AtlasShell() {
         </div>
       )}
 
-      {/* Tier hint when zoomed out and many entities exist */}
       {tier < 4 && layers.entities.length > 0 && !selected && (
         <div className="pointer-events-none absolute bottom-16 left-1/2 -translate-x-1/2 rounded-full border border-amber-900/25 bg-amber-50/85 px-3 py-1 text-[11px] text-amber-900 shadow-sm">
           قرّب لاكتشاف {layers.entities.length} عنصرًا تاريخيًا
@@ -91,7 +120,13 @@ export function AtlasShell() {
       )}
 
       {selected && (
-        <HubPanel hub={selected} linked={linked} onClose={() => setSelectedId(null)} />
+        <EntityPanel
+          hub={selected}
+          context={context}
+          onClose={() => setSelectedId(null)}
+          onNavigate={handleNavigateToRelated}
+          onLocate={handleLocate}
+        />
       )}
     </div>
   );
