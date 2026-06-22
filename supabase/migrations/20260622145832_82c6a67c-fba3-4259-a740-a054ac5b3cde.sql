@@ -1,0 +1,1 @@
+DELETE FROM public.user_collection WHERE item_id = 'figure_salah_al_din';
