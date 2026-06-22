@@ -44,6 +44,19 @@ const STORAGE_KEY = "atlas-calibration-wip-v1";
 const PIN_TOLERANCE_PX = 8;
 const RASTER = ATLAS_V1_PIXEL_SIZE;
 
+// Anchors flagged by the Phase 0.1 validator as needing rework
+// (high affine residuals or close-pair drift). Surfaced in the UI so the
+// reviewer can target them on the re-export pass.
+const NEEDS_REVIEW: ReadonlySet<string> = new Set([
+  "samarkand", "bukhara", "mecca", "medina", "marrakech",
+]);
+
+// Sister pairs that should sit visually close on the raster — drawn as a
+// dashed connector so any gross mismatch is immediately obvious.
+const SISTER_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ["samarkand", "bukhara"],
+];
+
 type WorkingAnchor = AtlasAnchor;
 
 type ReviewerB = { id: string; aps: { x: number; y: number } }[] | null;
@@ -313,6 +326,11 @@ function CalibrationPage() {
           </div>
         </header>
 
+        <div className="border-b border-stone-800 bg-amber-500/5 px-3 py-2 text-[11px] leading-snug text-amber-200/90">
+          ⚠️ ضع المرساة على الموقع الجغرافي الفعلي للمدينة قدر الإمكان، لا على
+          النص أو الاسم المرسوم. التسميات قد تكون بعيدة عن النقطة الحقيقية.
+        </div>
+
         <div className="flex flex-wrap gap-1.5 border-b border-stone-800 p-2 text-[11px]">
           <ToolBtn onClick={fitToScreen} icon={MaximizeIcon} label="ملاءمة" />
           <ToolBtn onClick={setOneToOne} icon={ScanSearch} label="1:1" />
@@ -335,20 +353,28 @@ function CalibrationPage() {
         </div>
 
         <ul className="flex-1 overflow-y-auto p-2">
-          {rows.map((r) => {
+          {[...rows]
+            .sort((a, b) => Number(NEEDS_REVIEW.has(b.id)) - Number(NEEDS_REVIEW.has(a.id)))
+            .map((r) => {
             const diff = diffById.get(r.id);
             const drift = diff != null && diff > PIN_TOLERANCE_PX;
             const active = r.id === selectedId;
+            const needsReview = NEEDS_REVIEW.has(r.id);
             return (
               <li key={r.id}>
                 <button
                   onClick={() => { setSelectedId(r.id); centerOn(r.aps, Math.max(scale, 1)); }}
                   className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-right text-[12px] ${
                     active ? "bg-amber-500/15 ring-1 ring-amber-400/40" : "hover:bg-stone-800"
-                  }`}
+                  } ${needsReview ? "ring-1 ring-rose-500/40" : ""}`}
                 >
                   <span className={`size-2 rounded-full ${r.verified ? "bg-emerald-400" : "bg-stone-500"}`} />
                   <span className="flex-1 truncate">{r.name}</span>
+                  {needsReview && (
+                    <span className="rounded bg-rose-500/25 px-1 text-[10px] font-bold text-rose-200" title="مرساة تحتاج مراجعة (بواقي عالية)">
+                      مراجعة
+                    </span>
+                  )}
                   {drift && (
                     <span className="rounded bg-rose-500/20 px-1 text-[10px] text-rose-300" title={`فرق ${diff!.toFixed(0)} px`}>
                       Δ {diff!.toFixed(0)}
@@ -374,6 +400,12 @@ function CalibrationPage() {
               APS: {Math.round(selected.aps.x)}, {Math.round(selected.aps.y)}
             </p>
             {selected.notes && <p className="mt-1 text-[11px] text-stone-400">{selected.notes}</p>}
+            {NEEDS_REVIEW.has(selected.id) && (
+              <p className="mt-2 rounded border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200">
+                ⚠️ هذه المرساة سببت بواقي عالية في التحقق. أعد قياسها بعناية على
+                الموقع الجغرافي الفعلي (ليس على نص الاسم) ثم أكدها مجدداً.
+              </p>
+            )}
             <div className="mt-2 flex gap-2">
               {selected.verified ? (
                 <button onClick={unconfirmSelected} className="flex-1 rounded bg-stone-700 px-2 py-1.5 text-[12px] hover:bg-stone-600">
@@ -419,6 +451,42 @@ function CalibrationPage() {
             alt="Atlas v1 master"
             style={{ display: "block", userSelect: "none", pointerEvents: "auto" }}
           />
+          {/* Sister-pair connectors — visually flag pairs that should sit close. */}
+          <svg
+            width={RASTER.width}
+            height={RASTER.height}
+            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          >
+            {SISTER_PAIRS.map(([aId, bId]) => {
+              const a = rows.find((r) => r.id === aId);
+              const b = rows.find((r) => r.id === bId);
+              if (!a || !b) return null;
+              const dist = Math.hypot(a.aps.x - b.aps.x, a.aps.y - b.aps.y);
+              // ~13 km between Samarkand/Bukhara → expect ≲ 250 px at v1 scale.
+              const tooFar = dist > 350;
+              return (
+                <g key={`${aId}-${bId}`}>
+                  <line
+                    x1={a.aps.x} y1={a.aps.y} x2={b.aps.x} y2={b.aps.y}
+                    stroke={tooFar ? "rgba(244,63,94,0.85)" : "rgba(16,185,129,0.7)"}
+                    strokeWidth={Math.max(2, 4 / scale)}
+                    strokeDasharray={`${12 / scale} ${8 / scale}`}
+                  />
+                  <text
+                    x={(a.aps.x + b.aps.x) / 2}
+                    y={(a.aps.y + b.aps.y) / 2 - 8 / scale}
+                    fontSize={14 / scale}
+                    fontWeight={700}
+                    fill={tooFar ? "#fecdd3" : "#a7f3d0"}
+                    textAnchor="middle"
+                    style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: 3 / scale }}
+                  >
+                    {Math.round(dist)} px {tooFar ? "⚠️ بعيد جداً" : ""}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
           {/* Pins */}
           {rows.map((r) => {
             const active = r.id === selectedId;
@@ -457,6 +525,20 @@ function CalibrationPage() {
                     pointerEvents: "auto",
                   }}
                 >
+                  {NEEDS_REVIEW.has(r.id) && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "50%", left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: 32, height: 32,
+                        borderRadius: "50%",
+                        border: "2px dashed rgba(244,63,94,0.95)",
+                        boxShadow: "0 0 0 2px rgba(244,63,94,0.2)",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  )}
                   <div
                     style={{
                       width: active ? 20 : 14,
