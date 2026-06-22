@@ -87,7 +87,10 @@ export function AtlasShell() {
         onSelect={handleSelect}
         onTierChange={setTier}
         focusOn={focusOn}
+        onAtlasEntitySelect={setAtlasEntity}
       />
+
+      <AtlasEntityPopover entity={atlasEntity} onClose={() => setAtlasEntity(null)} />
 
       <AtlasControls
         eras={derived.eras}
