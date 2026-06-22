@@ -1,6 +1,6 @@
 # Atlas Calibration Report
 
-_Generated: 2026-06-22T20:30:30.511Z_
+_Generated: 2026-06-22T20:42:35.430Z_
 
 **Atlas:** IRTH MASTER ATLAS V1 — FROZEN (14192×7088)
 **Anchors:** 16
@@ -11,59 +11,59 @@ _Generated: 2026-06-22T20:30:30.511Z_
 | # | Check | Status | Detail |
 |---|---|---|---|
 | 1 | Boundary clamp (APS inside raster) | PASS | all 16 anchors inside [0, 14192) × [0, 7088) |
-| 2 | Affine residuals (median ≤ 25 px, max ≤ 80 px) | WARN | median=263.0 px, max=1019.0 px |
-| 3 | Leave-one-out (median ≤ 25 px, max ≤ 80 px) | WARN | median=349.2 px, max=1378.8 px |
-| 4 | Inverse round-trip (APS→geo→APS < 1 px) | PASS | worst residual = 3.75e-12 px |
-| 5 | Close-pair scale check (within 5% of global px/km) | WARN | alexandria↔cairo: 1.055× ref (drift); mecca↔medina: 1.091× ref (drift); samarkand↔bukhara: 4.425× ref (drift) |
-| 6 | Anchor verification (visual measurement on v1 raster) | WARN | 2/16 anchors PROVISIONAL — re-measure per plan §3.4: mecca, medina |
+| 2 | Affine residuals (median ≤ 25 px, max ≤ 80 px) | WARN | median=428.0 px, max=1291.0 px |
+| 3 | Leave-one-out (median ≤ 25 px, max ≤ 80 px) | WARN | median=538.9 px, max=1724.0 px |
+| 4 | Inverse round-trip (APS→geo→APS < 1 px) | PASS | worst residual = 3.67e-12 px |
+| 5 | Close-pair scale check (within 5% of global px/km) | WARN | alexandria↔cairo: 0.955× ref (ok); mecca↔medina: 1.464× ref (drift); samarkand↔bukhara: 2.604× ref (drift) |
+| 6 | Anchor verification (visual measurement on v1 raster) | PASS | all anchors verified |
 
 ## Per-anchor residuals (affine fit on all 16)
 
 | Anchor | Δx | Δy | dist (px) |
 |---|---|---|---|
-| samarkand | -93.6 | 1014.7 | 1019.0 |
-| nishapur | -445.8 | -638.9 | 779.1 |
-| delhi | 768.8 | -103.2 | 775.7 |
-| medina | -88.3 | 516.7 | 524.2 |
-| baghdad | -42.0 | -426.7 | 428.8 |
-| mecca | -298.4 | -150.2 | 334.1 |
-| cordoba | 297.7 | -103.6 | 315.2 |
-| marrakech | 91.8 | 251.5 | 267.8 |
-| cairo | -174.0 | 190.8 | 258.2 |
-| damascus | 47.4 | -237.5 | 242.2 |
-| isfahan | 194.9 | -53.7 | 202.2 |
-| basra | 19.3 | -201.0 | 201.9 |
-| bukhara | -168.9 | 6.0 | 169.0 |
-| constantinople | 41.9 | -150.7 | 156.4 |
-| alexandria | -59.1 | 88.6 | 106.5 |
-| jerusalem | -91.6 | -2.5 | 91.6 |
+| nishapur | -1256.5 | -296.3 | 1291.0 |
+| samarkand | 1272.7 | -59.7 | 1274.1 |
+| bukhara | 915.4 | 204.6 | 938.0 |
+| marrakech | 833.5 | 191.8 | 855.3 |
+| constantinople | -718.5 | 145.1 | 733.0 |
+| medina | 303.0 | 477.3 | 565.4 |
+| baghdad | -474.4 | -268.4 | 545.1 |
+| mecca | 243.7 | -474.5 | 533.4 |
+| damascus | -297.0 | -125.9 | 322.6 |
+| isfahan | -284.9 | 132.1 | 314.0 |
+| jerusalem | -305.4 | 48.6 | 309.2 |
+| cordoba | 184.9 | -243.6 | 305.8 |
+| basra | -266.5 | -106.9 | 287.1 |
+| cairo | -219.7 | 161.9 | 272.9 |
+| delhi | 236.3 | 126.9 | 268.2 |
+| alexandria | -166.7 | 87.0 | 188.1 |
 
 ## Leave-one-out residuals
 
 | Held-out | Δx | Δy | dist (px) |
 |---|---|---|---|
-| samarkand | -126.6 | 1372.9 | 1378.8 |
-| delhi | 1063.8 | -142.9 | 1073.3 |
-| nishapur | -514.6 | -737.6 | 899.4 |
-| medina | -113.1 | 662.1 | 671.7 |
-| mecca | -464.2 | -233.7 | 519.7 |
-| cordoba | 481.3 | -167.5 | 509.6 |
-| baghdad | -45.0 | -456.7 | 458.9 |
-| marrakech | 142.3 | 389.9 | 415.1 |
-| cairo | -190.9 | 209.3 | 283.3 |
-| damascus | 50.7 | -254.2 | 259.2 |
-| bukhara | -224.8 | 7.9 | 224.9 |
-| basra | 21.1 | -219.0 | 220.0 |
-| isfahan | 211.8 | -58.3 | 219.7 |
-| constantinople | 54.9 | -197.6 | 205.1 |
-| alexandria | -64.3 | 96.3 | 115.8 |
-| jerusalem | -98.2 | -2.7 | 98.2 |
+| samarkand | 1722.1 | -80.8 | 1724.0 |
+| nishapur | -1450.6 | -342.1 | 1490.4 |
+| marrakech | 1292.1 | 297.4 | 1325.8 |
+| bukhara | 1218.1 | 272.2 | 1248.2 |
+| constantinople | -941.9 | 190.2 | 960.9 |
+| mecca | 379.0 | -738.1 | 829.7 |
+| medina | 388.3 | 611.7 | 724.5 |
+| baghdad | -507.8 | -287.3 | 583.4 |
+| cordoba | 299.0 | -393.8 | 494.4 |
+| delhi | 327.0 | 175.6 | 371.2 |
+| damascus | -317.8 | -134.8 | 345.2 |
+| isfahan | -309.6 | 143.6 | 341.3 |
+| jerusalem | -327.4 | 52.1 | 331.6 |
+| basra | -290.2 | -116.5 | 312.8 |
+| cairo | -241.0 | 177.6 | 299.4 |
+| alexandria | -181.3 | 94.6 | 204.5 |
 
 ## Fitted affine parameters (lon, lat → APS)
 
 ```
-x = 104.3419 · lon + -21.7050 · lat + 1925.4150
-y = 1.4199 · lon + -88.7254 · lat + 6134.1882
+x = 116.9360 · lon + 46.0399 · lat + -457.4215
+y = -5.1324 · lon + -119.6670 · lat + 7297.2109
 ```
 
 ## Notes
