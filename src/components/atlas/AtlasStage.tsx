@@ -342,6 +342,11 @@ export function AtlasStage({
               ))}
             </g>
           )}
+
+          {/* Phase 1 — atlas_entities pin layer (always visible, no tier gate) */}
+          {onAtlasEntitySelect && (
+            <AtlasEntityPinsLayer inv={inv} onSelect={onAtlasEntitySelect} />
+          )}
         </g>
       </svg>
 
