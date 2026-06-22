@@ -400,6 +400,12 @@ function CalibrationPage() {
               APS: {Math.round(selected.aps.x)}, {Math.round(selected.aps.y)}
             </p>
             {selected.notes && <p className="mt-1 text-[11px] text-stone-400">{selected.notes}</p>}
+            {NEEDS_REVIEW.has(selected.id) && (
+              <p className="mt-2 rounded border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200">
+                ⚠️ هذه المرساة سببت بواقي عالية في التحقق. أعد قياسها بعناية على
+                الموقع الجغرافي الفعلي (ليس على نص الاسم) ثم أكدها مجدداً.
+              </p>
+            )}
             <div className="mt-2 flex gap-2">
               {selected.verified ? (
                 <button onClick={unconfirmSelected} className="flex-1 rounded bg-stone-700 px-2 py-1.5 text-[12px] hover:bg-stone-600">
