@@ -326,6 +326,11 @@ function CalibrationPage() {
           </div>
         </header>
 
+        <div className="border-b border-stone-800 bg-amber-500/5 px-3 py-2 text-[11px] leading-snug text-amber-200/90">
+          ⚠️ ضع المرساة على الموقع الجغرافي الفعلي للمدينة قدر الإمكان، لا على
+          النص أو الاسم المرسوم. التسميات قد تكون بعيدة عن النقطة الحقيقية.
+        </div>
+
         <div className="flex flex-wrap gap-1.5 border-b border-stone-800 p-2 text-[11px]">
           <ToolBtn onClick={fitToScreen} icon={MaximizeIcon} label="ملاءمة" />
           <ToolBtn onClick={setOneToOne} icon={ScanSearch} label="1:1" />
