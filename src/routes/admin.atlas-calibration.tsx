@@ -451,6 +451,42 @@ function CalibrationPage() {
             alt="Atlas v1 master"
             style={{ display: "block", userSelect: "none", pointerEvents: "auto" }}
           />
+          {/* Sister-pair connectors — visually flag pairs that should sit close. */}
+          <svg
+            width={RASTER.width}
+            height={RASTER.height}
+            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          >
+            {SISTER_PAIRS.map(([aId, bId]) => {
+              const a = rows.find((r) => r.id === aId);
+              const b = rows.find((r) => r.id === bId);
+              if (!a || !b) return null;
+              const dist = Math.hypot(a.aps.x - b.aps.x, a.aps.y - b.aps.y);
+              // ~13 km between Samarkand/Bukhara → expect ≲ 250 px at v1 scale.
+              const tooFar = dist > 350;
+              return (
+                <g key={`${aId}-${bId}`}>
+                  <line
+                    x1={a.aps.x} y1={a.aps.y} x2={b.aps.x} y2={b.aps.y}
+                    stroke={tooFar ? "rgba(244,63,94,0.85)" : "rgba(16,185,129,0.7)"}
+                    strokeWidth={Math.max(2, 4 / scale)}
+                    strokeDasharray={`${12 / scale} ${8 / scale}`}
+                  />
+                  <text
+                    x={(a.aps.x + b.aps.x) / 2}
+                    y={(a.aps.y + b.aps.y) / 2 - 8 / scale}
+                    fontSize={14 / scale}
+                    fontWeight={700}
+                    fill={tooFar ? "#fecdd3" : "#a7f3d0"}
+                    textAnchor="middle"
+                    style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: 3 / scale }}
+                  >
+                    {Math.round(dist)} px {tooFar ? "⚠️ بعيد جداً" : ""}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
           {/* Pins */}
           {rows.map((r) => {
             const active = r.id === selectedId;
