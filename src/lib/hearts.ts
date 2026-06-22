@@ -42,6 +42,44 @@ export function msUntilNextHeart(p: ProfileState, now: number = Date.now()): num
   return rem === 0 ? HEART_RECOVERY_MS : rem;
 }
 
+/**
+ * Compute the next committed `{ hearts, heartsAt }` after a delta-driven
+ * change (lose / buy / recover). Preserves partial regeneration progress so
+ * losing a heart at 4/5 while a timer is ticking does NOT reset the timer.
+ *
+ * Rules:
+ *   - newEff clamped to [0, HEART_MAX].
+ *   - At MAX: anchor = now (no active timer).
+ *   - Below MAX: anchor = rolling anchor (last regen tick moment), so the
+ *     in-flight regeneration interval continues unbroken across the change.
+ *   - From a previously-full state, the anchor starts fresh at `now`.
+ */
+export function commitHearts(
+  p: ProfileState,
+  newEff: number,
+  now: number = Date.now(),
+): { hearts: number; heartsAt: number } {
+  const clamped = Math.max(0, Math.min(HEART_MAX, Math.floor(newEff)));
+  if (clamped >= HEART_MAX) return { hearts: HEART_MAX, heartsAt: now };
+  const base = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
+  const at = p.heartsAt ?? now;
+  if (base >= HEART_MAX) return { hearts: clamped, heartsAt: now };
+  const elapsed = Math.max(0, now - at);
+  const gained = Math.floor(elapsed / HEART_RECOVERY_MS);
+  let rolling = at + gained * HEART_RECOVERY_MS;
+  if (rolling > now || now - rolling >= HEART_RECOVERY_MS) rolling = now;
+  return { hearts: clamped, heartsAt: rolling };
+}
+
+/** Format milliseconds as "MM:SS" for the next-heart timer. */
+export function formatHeartTimer(ms: number): string {
+  if (ms <= 0) return "00:00";
+  const totalSec = Math.ceil(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
 /** Streak milestones; idempotent claim via profile.streakMilestonesClaimed. */
 export interface StreakMilestone {
   days: number;
