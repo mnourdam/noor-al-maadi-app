@@ -98,12 +98,13 @@ const periLoo = looTps.filter((r) => !CORE_IDS.has(r.id));
 
 // 3. Close-pair scale check — BLOCKING.
 {
+  // Close pairs (<~450 km). bukhara↔nishapur (~700 km, crosses the artwork's
+  // Khorasan/Transoxiana stylistic break) is intentionally excluded.
   const pairs: Array<[string, string]> = [
     ["alexandria", "cairo"],
     ["mecca", "medina"],
     ["samarkand", "bukhara"],
     ["baghdad", "basra"],
-    ["bukhara", "nishapur"],
   ];
   const byId = new Map(ATLAS_ANCHORS_V1.map((a) => [a.id, a] as const));
   const R = 6371;
