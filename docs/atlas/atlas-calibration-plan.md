@@ -269,10 +269,12 @@ Validation results are written to `docs/atlas/atlas-calibration-report.md` and d
 | Coordinate architecture | §1, §2, §4 of this doc | ✅ delivered |
 | Validation strategy | §6 of this doc | ✅ delivered |
 | Migration strategy | §7 of this doc | ✅ delivered |
-| Anchor APS measurements | `src/data/atlas-anchors.ts` | ⏳ Phase 0 execution |
-| Transform implementation | `src/lib/atlas/transform.ts` | ⏳ Phase 0 execution |
-| Validation report | `docs/atlas/atlas-calibration-report.md` | ⏳ Phase 0 execution |
-| Supabase schema migration | new migration file | ⏳ Phase 0 execution |
+| Anchor table (provisional APS) | `src/data/atlas-anchors.ts` | ✅ delivered, ⏳ visual re-measurement |
+| Coordinate utilities (APS ↔ viewBox, normalized) | `src/lib/atlas/aps.ts` | ✅ delivered |
+| Transform implementation (geo ↔ APS, affine) | `src/lib/atlas/transform.ts` | ✅ delivered (TPS deferred) |
+| Validator | `scripts/validate-atlas-calibration.ts` | ✅ delivered (`bunx tsx scripts/validate-atlas-calibration.ts`) |
+| Validation report | `docs/atlas/atlas-calibration-report.md` | ✅ auto-generated |
+| Supabase schema migration | new migration file | ⏳ Phase 0.5 (after anchor re-measurement) |
 
 ---
 
@@ -282,3 +284,13 @@ Validation results are written to `docs/atlas/atlas-calibration-report.md` and d
 - APK bundling (Phase 2).
 - In-app renderer wiring (Phase 3).
 - Atlas v2 raster execution (deferred per `atlas-v2-edit-package.md`).
+
+---
+
+## 10. Phase 0 Execution Notes (this pass)
+
+- Anchors were seeded by linear projection from `LONLAT_BBOX_V1` (lon −12…80, lat 8…48). Every anchor is flagged `verified: false`; per §3.4 a reviewer must place each one on the v1 raster at 100% zoom and replace the seed values.
+- Affine fit currently shows artificially low residuals (median <1 px) because the anchors lie on the linear seed by construction. Real residual numbers will appear once anchors are visually measured.
+- TPS local refinement is implemented in spec only; affine alone covers Phase 0's ingestion-seeding goal and validator scaffolding.
+- The new utility module is additive — no existing atlas code (regions, hubs, stage) imports it yet. Visual atlas rendering is unchanged.
+
