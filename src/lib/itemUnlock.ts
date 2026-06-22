@@ -111,12 +111,17 @@ export function useEntityUnlockState(
     const loading = supaUnlocks == null;
     const legacyId: string | undefined =
       typeof metadata?.legacy_id === "string" ? metadata.legacy_id : undefined;
-    const aliases: string[] = Array.isArray(metadata?.aliases) ? metadata.aliases : [];
 
     let unlocked = false;
     let sourceCampaignId: string | undefined;
 
-    // 1. Supabase user_collection (typed) — preferred.
+    // Supabase user_collection is the ONLY authority for `unlocked`.
+    // Registry/localStorage and legacy profile arrays are intentionally
+    // NOT consulted here — they would let unconfirmed/demo entries
+    // (e.g. Salah al-Din, Umar) reveal full encyclopedia content.
+    // The registry → Supabase migration (registryUnlockMigration.ts)
+    // promotes real local unlocks into Supabase on boot / SIGNED_IN /
+    // online; until that completes the item stays in locked preview.
     if (supaUnlocks) {
       if (type && supaUnlocks.byType.get(type)?.has(slug)) {
         unlocked = true;
@@ -130,41 +135,15 @@ export function useEntityUnlockState(
       }
     }
 
-    // 2. Imported registry unlocks (raw "type:slug").
-    if (!unlocked) {
+    // Resolve hint campaign title from registry sources map when Supabase
+    // didn't carry it (purely cosmetic; never affects `unlocked`).
+    if (!unlocked && !sourceCampaignId) {
       const candidates: string[] = [];
       if (type) candidates.push(`${type}:${slug}`);
       if (type && legacyId) candidates.push(`${type}:${legacyId}`);
-      for (const a of aliases) candidates.push(a);
       for (const c of candidates) {
-        if (registryUnlocks.has(c)) {
-          unlocked = true;
-          sourceCampaignId = registrySources.get(c);
-          break;
-        }
-      }
-      // Type-unknown: any registry id whose slug-part === slug.
-      if (!unlocked && !type) {
-        for (const raw of registryUnlocks) {
-          const parts = raw.split(":");
-          const s = parts.length > 1 ? parts.slice(1).join(":") : parts[0];
-          if (s === slug) {
-            unlocked = true;
-            sourceCampaignId = registrySources.get(raw);
-            break;
-          }
-        }
-      }
-    }
-
-    // 3. Legacy profile arrays.
-    if (!unlocked) {
-      if ((type === "figure" || !type) &&
-          (profile.charactersUnlocked.includes(slug) || (legacyId && profile.charactersUnlocked.includes(legacyId)))) {
-        unlocked = true;
-      } else if ((type === "artifact" || !type) &&
-          (profile.artifactsFound.includes(slug) || (legacyId && profile.artifactsFound.includes(legacyId)))) {
-        unlocked = true;
+        const src = registrySources.get(c);
+        if (src) { sourceCampaignId = src; break; }
       }
     }
 
@@ -175,8 +154,9 @@ export function useEntityUnlockState(
       unlockHint: unlocked ? "" : hintForCampaign(sourceCampaignTitle),
       sourceCampaignTitle,
     };
-  }, [supaUnlocks, registryUnlocks, registrySources, campaignTitles, profile, slug, type, metadata]);
+  }, [supaUnlocks, registrySources, campaignTitles, profile, slug, type, metadata]);
 }
+
 
 /** Pure helper for non-React code paths (e.g. building a reveal payload). */
 export function buildUnlockHint(sourceCampaignTitle?: string): string {
