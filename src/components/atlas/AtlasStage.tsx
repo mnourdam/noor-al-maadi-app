@@ -7,6 +7,7 @@ import { Building2, Calendar, Crown, Gem, Landmark, Swords, User } from "lucide-
 import type { LucideIcon } from "lucide-react";
 import { AtlasBaseDefs, AtlasBaseLayers } from "./HistoricalAtlasBase";
 import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
+import atlasMaster from "@/assets/atlas/atlas-v1-master.jpg.asset.json";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import {
   TIER_LABEL,
