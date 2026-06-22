@@ -207,26 +207,33 @@ function CalibrationPage() {
   }, []);
 
   // ── Pin drag (in screen space → APS update) ────────────────────────────
-  const dragPin = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  // dragOffset = client cursor minus pin's pixel-space anchor in raster coords,
+  // so dragging is sub-pixel stable regardless of zoom level.
+  const dragPin = useRef<{ id: string; dxAps: number; dyAps: number } | null>(null);
   const onPinPointerDown = (e: React.PointerEvent, id: string) => {
     e.stopPropagation();
     setSelectedId(id);
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
-    // Compute offset between cursor and pin center, in screen px.
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
     const row = rows.find((r) => r.id === id)!;
-    const screenX = row.aps.x * scale + tx;
-    const screenY = row.aps.y * scale + ty;
-    dragPin.current = { id, offsetX: e.clientX - screenX, offsetY: e.clientY - screenY };
+    const cursorAx = (e.clientX - rect.left - tx) / scale;
+    const cursorAy = (e.clientY - rect.top - ty) / scale;
+    dragPin.current = {
+      id,
+      dxAps: row.aps.x - cursorAx,
+      dyAps: row.aps.y - cursorAy,
+    };
   };
   const onPinPointerMove = (e: React.PointerEvent) => {
     if (!dragPin.current) return;
     const rect = wrapRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const sx = e.clientX - rect.left - dragPin.current.offsetX + rect.left;
-    const sy = e.clientY - rect.top - dragPin.current.offsetY + rect.top;
-    const ax = (sx - rect.left - tx) / scale;
-    const ay = (sy - rect.top - ty) / scale;
+    const cursorAx = (e.clientX - rect.left - tx) / scale;
+    const cursorAy = (e.clientY - rect.top - ty) / scale;
+    const ax = cursorAx + dragPin.current.dxAps;
+    const ay = cursorAy + dragPin.current.dyAps;
     const id = dragPin.current.id;
     setRows((prev) => prev.map((r) =>
       r.id === id
