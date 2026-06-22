@@ -99,7 +99,7 @@ export function useEntityUnlockState(
     return () => { cancelled = true; window.removeEventListener("focus", bump); };
   }, [tick, slug, type]);
 
-  const registryUnlocks = useMemo(() => new Set(getUnlockedRegistryIds()), [tick]);
+  // (registry localStorage unlocks are no longer an unlock authority)
   const registrySources = useMemo(() => getUnlockSourcesMap(), [tick]);
   const campaignTitles = useMemo(() => {
     const m = new Map<string, string>(Object.entries(KNOWN_TITLES));
