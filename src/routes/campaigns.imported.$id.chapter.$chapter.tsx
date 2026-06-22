@@ -310,26 +310,30 @@ function ImportedChapterPlayer() {
                   </div>
                 )}
 
-                <div className={`mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted && !currentAck ? "pointer-events-none opacity-60" : ""}`}>
+                <div className={`mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted ? "pointer-events-none opacity-60" : ""}`}>
                   {activity ? (
                     <ActivityRenderer
-                      key={activity.id}
+                      key={`${activity.id}:${wrongAttempts}`}
                       activity={activity}
                       onResolve={onResolve}
-                      alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct" && currentAck !== "wrong"}
+                      alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct"}
                     />
                   ) : null}
                 </div>
 
-                {/* Explicit acknowledgement step — keeps feedback visible until tap. */}
-                {(currentAck === "correct" || currentAck === "wrong") && (
+                {/* PR2: wrong-answer banner — no Next button, must retry. */}
+                {currentAck !== "correct" && wrongAttempts > 0 && !heartsDepleted && (
+                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
+                    <XIcon className="size-3.5" />
+                    <span className="flex-1">إجابة غير صحيحة. خسرتَ قلبًا — حاول مرة أخرى.</span>
+                  </div>
+                )}
+
+                {/* Advance only after a correct answer. */}
+                {currentAck === "correct" && (
                   <button
                     onClick={acknowledgeAndAdvance}
-                    className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold shadow-gold ${
-                      currentAck === "correct"
-                        ? "bg-gradient-gold text-primary-foreground"
-                        : "border border-rose-400/50 bg-rose-500/15 text-rose-100"
-                    }`}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
                   >
                     <Check className="size-4" /> التالي
                     <ArrowLeft className="size-4" />
