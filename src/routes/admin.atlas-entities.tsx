@@ -590,6 +590,19 @@ function EntityEditor({
           </p>
         )}
       </div>
+
+      {pickingAps && (
+        <AtlasApsPicker
+          initial={{ x: aps_x, y: aps_y }}
+          label={name_ar || slug}
+          onClose={() => setPickingAps(false)}
+          onPick={(p) => {
+            setApsX(p.x);
+            setApsY(p.y);
+            setPickingAps(false);
+          }}
+        />
+      )}
     </div>
   );
 }
