@@ -15,10 +15,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/lib/profile";
-import {
-  getUnlockedRegistryIds,
-  getUnlockSourcesMap,
-} from "@/lib/importedUnlocks";
+import { getUnlockSourcesMap } from "@/lib/importedUnlocks";
+
 import { listCampaigns } from "@/lib/campaignStorage";
 
 export interface UnlockState {
