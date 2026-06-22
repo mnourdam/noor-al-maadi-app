@@ -81,6 +81,7 @@ function useSupabaseCollection() {
     Array<{ type: string; slug: string; unlockedAt: number }>
   >([]);
   const [validSlugs, setValidSlugs] = useState<Set<string> | null>(null);
+  const [slugTitles, setSlugTitles] = useState<Map<string, string>>(new Map());
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -93,13 +94,24 @@ function useSupabaseCollection() {
             .from("user_collection")
             .select("item_id,item_type,unlocked_at")
             .eq("user_id", uid),
-          supabase.from("encyclopedia_entities").select("slug").eq("enabled", true),
+          supabase
+            .from("encyclopedia_entities")
+            .select("slug,title")
+            .eq("enabled", true),
         ]);
         if (cancelled) return;
-        const slugSet = new Set<string>(
-          (encRes.data ?? []).map((r: any) => String(r.slug ?? "").toLowerCase()),
-        );
+        const slugSet = new Set<string>();
+        const titleMap = new Map<string, string>();
+        for (const r of (encRes.data ?? []) as Array<{ slug: string; title: string | null }>) {
+          const s = String(r.slug ?? "").toLowerCase();
+          if (!s) continue;
+          slugSet.add(s);
+          const t = (r.title ?? "").trim();
+          // Prefer the first Arabic title encountered per slug.
+          if (t && !titleMap.has(s) && HAS_ARABIC.test(t)) titleMap.set(s, t);
+        }
         setValidSlugs(slugSet);
+        setSlugTitles(titleMap);
         setRows(
           (colRes.data ?? []).map((r: any) => ({
             type: String(r.item_type ?? ""),
@@ -115,7 +127,7 @@ function useSupabaseCollection() {
       cancelled = true;
     };
   }, []);
-  return { rows, validSlugs };
+  return { rows, validSlugs, slugTitles };
 }
 
 export function useRealCollectionStats() {
