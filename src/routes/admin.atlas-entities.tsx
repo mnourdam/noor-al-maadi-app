@@ -1,0 +1,568 @@
+// Phase 1 — Admin: Atlas Entities (list + create + edit + verify + publish).
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowRight,
+  Check,
+  ChevronRight,
+  MapPin,
+  Plus,
+  RefreshCw,
+  Save,
+  Trash2,
+  X,
+} from "lucide-react";
+import { AdminGate } from "@/lib/admin-guard";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  ATLAS_ENTITY_KINDS,
+  ATLAS_ENTITY_STATUSES,
+  KIND_LABEL_AR,
+  STATUS_LABEL_AR,
+  createAtlasEntity,
+  deleteAtlasEntity,
+  listAllAtlasEntities,
+  setAtlasEntityStatus,
+  suggestSlug,
+  unverifyAtlasEntity,
+  updateAtlasEntity,
+  verifyAtlasEntity,
+  type AtlasEntityKind,
+  type AtlasEntityRow,
+} from "@/lib/atlas-entities";
+import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
+
+export const Route = createFileRoute("/admin/atlas-entities")({
+  head: () => ({
+    meta: [
+      { title: "إدارة كيانات الأطلس — إرث" },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
+  component: () => (
+    <AdminGate>
+      <AdminAtlasEntitiesPage />
+    </AdminGate>
+  ),
+});
+
+type EncyclopediaRef = { id: string; title: string; entity_type: string; slug: string };
+
+function AdminAtlasEntitiesPage() {
+  const [rows, setRows] = useState<AtlasEntityRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<AtlasEntityRow | "new" | null>(null);
+  const [encyclopedia, setEncyclopedia] = useState<EncyclopediaRef[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const list = await listAllAtlasEntities();
+      setRows(list);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    reload();
+    // Encyclopedia options for the picker
+    supabase
+      .from("encyclopedia_entities")
+      .select("id, title, entity_type, slug")
+      .eq("enabled", true)
+      .order("title", { ascending: true })
+      .limit(2000)
+      .then(({ data }) => {
+        if (data) setEncyclopedia(data as EncyclopediaRef[]);
+      });
+  }, []);
+
+  const action = async (id: string, fn: () => Promise<unknown>) => {
+    setBusyId(id);
+    setError(null);
+    try {
+      await fn();
+      await reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <header className="flex items-center justify-between gap-3 border-b border-amber-500/20 pb-3">
+          <div className="flex items-center gap-2">
+            <Link to="/admin" className="text-amber-300 hover:text-amber-200">
+              <ChevronRight className="size-4" />
+            </Link>
+            <MapPin className="size-6 text-amber-400" />
+            <h1 className="text-xl font-bold text-amber-100">كيانات الأطلس</h1>
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-300">
+              المرحلة 1
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={reload}
+              className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800"
+            >
+              <RefreshCw className="inline size-4" />
+            </button>
+            <button
+              onClick={() => setEditing("new")}
+              className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-bold text-slate-950 hover:bg-amber-400"
+            >
+              <Plus className="size-4" />
+              كيان جديد
+            </button>
+          </div>
+        </header>
+
+        {error && (
+          <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center gap-2 text-slate-400">
+            <RefreshCw className="size-4 animate-spin" /> جاري التحميل…
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-400">
+            لا توجد كيانات بعد. أنشئ أول كيان للبدء.
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-slate-800">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-right text-xs uppercase text-slate-400">
+                <tr>
+                  <th className="px-3 py-2">الاسم</th>
+                  <th className="px-3 py-2">النوع</th>
+                  <th className="px-3 py-2">APS</th>
+                  <th className="px-3 py-2">التحقق</th>
+                  <th className="px-3 py-2">الحالة</th>
+                  <th className="px-3 py-2">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800 bg-slate-950">
+                {rows.map((r) => (
+                  <tr key={r.id} className="hover:bg-slate-900/50">
+                    <td className="px-3 py-2">
+                      <div className="font-semibold text-slate-100">{r.name_ar}</div>
+                      <div className="font-mono text-[11px] text-slate-500">{r.slug}</div>
+                    </td>
+                    <td className="px-3 py-2 text-slate-300">{KIND_LABEL_AR[r.kind]}</td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-slate-400">
+                      {r.aps_x}, {r.aps_y}
+                    </td>
+                    <td className="px-3 py-2">
+                      {r.aps_verified ? (
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">
+                          ✓ موثّق
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-300">
+                          غير موثّق
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <StatusPill status={r.status} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          disabled={busyId === r.id}
+                          onClick={() => setEditing(r)}
+                          className="rounded border border-slate-700 px-2 py-0.5 text-[11px] hover:bg-slate-800"
+                        >
+                          تعديل
+                        </button>
+                        {!r.aps_verified ? (
+                          <button
+                            disabled={busyId === r.id}
+                            onClick={async () => {
+                              const { data } = await supabase.auth.getUser();
+                              return action(r.id, () => verifyAtlasEntity(r.id, data.user?.id ?? null));
+                            }}
+                            className="rounded border border-emerald-700 bg-emerald-600/20 px-2 py-0.5 text-[11px] text-emerald-200 hover:bg-emerald-600/30"
+                          >
+                            تأكيد APS
+                          </button>
+                        ) : (
+                          <button
+                            disabled={busyId === r.id}
+                            onClick={() => action(r.id, () => unverifyAtlasEntity(r.id))}
+                            className="rounded border border-amber-700 px-2 py-0.5 text-[11px] text-amber-200 hover:bg-amber-600/20"
+                          >
+                            إلغاء التوثيق
+                          </button>
+                        )}
+                        {r.status !== "published" ? (
+                          <button
+                            disabled={busyId === r.id || !r.aps_verified}
+                            onClick={() => action(r.id, () => setAtlasEntityStatus(r.id, "published"))}
+                            className="rounded border border-sky-700 bg-sky-600/20 px-2 py-0.5 text-[11px] text-sky-200 hover:bg-sky-600/30 disabled:opacity-40"
+                            title={r.aps_verified ? "" : "يجب توثيق APS قبل النشر"}
+                          >
+                            نشر
+                          </button>
+                        ) : (
+                          <button
+                            disabled={busyId === r.id}
+                            onClick={() => action(r.id, () => setAtlasEntityStatus(r.id, "retired"))}
+                            className="rounded border border-slate-600 px-2 py-0.5 text-[11px] text-slate-300 hover:bg-slate-800"
+                          >
+                            تقاعد
+                          </button>
+                        )}
+                        {r.status === "draft" && (
+                          <button
+                            disabled={busyId === r.id}
+                            onClick={() => {
+                              if (confirm(`حذف "${r.name_ar}"؟`)) {
+                                action(r.id, () => deleteAtlasEntity(r.id));
+                              }
+                            }}
+                            className="rounded border border-rose-700 px-2 py-0.5 text-[11px] text-rose-300 hover:bg-rose-600/20"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <Link
+          to="/map"
+          className="inline-flex items-center gap-1.5 text-sm text-amber-300 hover:text-amber-200"
+        >
+          <ArrowRight className="size-4" />
+          عرض الأطلس الحي
+        </Link>
+      </div>
+
+      {editing && (
+        <EntityEditor
+          row={editing === "new" ? null : editing}
+          encyclopedia={encyclopedia}
+          onClose={() => setEditing(null)}
+          onSaved={async () => {
+            setEditing(null);
+            await reload();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function StatusPill({ status }: { status: AtlasEntityRow["status"] }) {
+  const styles: Record<AtlasEntityRow["status"], string> = {
+    draft: "bg-slate-500/15 text-slate-300",
+    review: "bg-amber-500/15 text-amber-300",
+    published: "bg-emerald-500/15 text-emerald-300",
+    retired: "bg-rose-500/15 text-rose-300",
+  };
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] ${styles[status]}`}>
+      {STATUS_LABEL_AR[status]}
+    </span>
+  );
+}
+
+function EntityEditor({
+  row,
+  encyclopedia,
+  onClose,
+  onSaved,
+}: {
+  row: AtlasEntityRow | null;
+  encyclopedia: EncyclopediaRef[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const isNew = row === null;
+  const [name_ar, setNameAr] = useState(row?.name_ar ?? "");
+  const [name_en, setNameEn] = useState(row?.name_en ?? "");
+  const [slug, setSlug] = useState(row?.slug ?? "");
+  const [slugTouched, setSlugTouched] = useState(!isNew);
+  const [kind, setKind] = useState<AtlasEntityKind>(row?.kind ?? "place");
+  const [aps_x, setApsX] = useState<number>(row?.aps_x ?? 7000);
+  const [aps_y, setApsY] = useState<number>(row?.aps_y ?? 3500);
+  const [lon, setLon] = useState<string>(row?.lon != null ? String(row.lon) : "");
+  const [lat, setLat] = useState<string>(row?.lat != null ? String(row.lat) : "");
+  const [era, setEra] = useState(row?.era ?? "");
+  const [year_start, setYearStart] = useState<string>(
+    row?.year_start != null ? String(row.year_start) : "",
+  );
+  const [year_end, setYearEnd] = useState<string>(
+    row?.year_end != null ? String(row.year_end) : "",
+  );
+  const [encyclopediaId, setEncyclopediaId] = useState<string>(row?.encyclopedia_entity_id ?? "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Auto-suggest slug when name changes and admin hasn't touched it
+  useEffect(() => {
+    if (!slugTouched && isNew) setSlug(suggestSlug(name_ar, name_en));
+  }, [name_ar, name_en, slugTouched, isNew]);
+
+  const apsInBounds =
+    aps_x >= 0 &&
+    aps_x < ATLAS_V1_PIXEL_SIZE.width &&
+    aps_y >= 0 &&
+    aps_y < ATLAS_V1_PIXEL_SIZE.height;
+
+  const valid = name_ar.trim().length > 0 && /^[a-z0-9][a-z0-9-]{1,63}$/.test(slug) && apsInBounds;
+
+  const onSave = async () => {
+    setSaving(true);
+    setErr(null);
+    try {
+      const payload = {
+        slug,
+        kind,
+        name_ar: name_ar.trim(),
+        name_en: name_en.trim() || null,
+        aps_x: Math.round(aps_x),
+        aps_y: Math.round(aps_y),
+        lon: lon ? Number(lon) : null,
+        lat: lat ? Number(lat) : null,
+        geo_source: (lon && lat) ? "manual" : null,
+        era: era.trim() || null,
+        year_start: year_start ? Number(year_start) : null,
+        year_end: year_end ? Number(year_end) : null,
+        encyclopedia_entity_id: encyclopediaId || null,
+      };
+      if (isNew) {
+        await createAtlasEntity(payload as any);
+      } else {
+        await updateAtlasEntity(row!.id, payload);
+      }
+      onSaved();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      dir="rtl"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
+          <h2 className="text-lg font-bold text-amber-100">
+            {isNew ? "إنشاء كيان أطلس" : `تعديل: ${row!.name_ar}`}
+          </h2>
+          <button onClick={onClose} className="rounded p-1 hover:bg-slate-800">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {err && (
+          <div className="mb-3 rounded border border-rose-500/40 bg-rose-500/10 p-2 text-sm text-rose-200">
+            {err}
+          </div>
+        )}
+
+        <div className="grid gap-3 text-sm">
+          <Field label="الاسم بالعربية *">
+            <input
+              value={name_ar}
+              onChange={(e) => setNameAr(e.target.value)}
+              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5"
+            />
+          </Field>
+          <Field label="Name (EN)">
+            <input
+              value={name_en}
+              onChange={(e) => setNameEn(e.target.value)}
+              dir="ltr"
+              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono"
+            />
+          </Field>
+          <Field label="Slug *">
+            <input
+              value={slug}
+              dir="ltr"
+              onChange={(e) => {
+                setSlug(e.target.value);
+                setSlugTouched(true);
+              }}
+              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono text-amber-200"
+              placeholder="lowercase-with-dashes"
+            />
+            <p className="mt-1 text-[11px] text-slate-500">
+              يُشتق تلقائيًا من الاسم. يمكن تعديله قبل الحفظ.
+            </p>
+          </Field>
+          <Field label="النوع">
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value as AtlasEntityKind)}
+              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5"
+            >
+              {ATLAS_ENTITY_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {KIND_LABEL_AR[k]}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="APS X *">
+              <input
+                type="number"
+                value={aps_x}
+                onChange={(e) => setApsX(Number(e.target.value))}
+                className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono"
+                min={0}
+                max={ATLAS_V1_PIXEL_SIZE.width - 1}
+              />
+            </Field>
+            <Field label="APS Y *">
+              <input
+                type="number"
+                value={aps_y}
+                onChange={(e) => setApsY(Number(e.target.value))}
+                className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono"
+                min={0}
+                max={ATLAS_V1_PIXEL_SIZE.height - 1}
+              />
+            </Field>
+          </div>
+          <p className="-mt-2 text-[11px] text-slate-500">
+            حدود الأطلس: 0–{ATLAS_V1_PIXEL_SIZE.width - 1} × 0–{ATLAS_V1_PIXEL_SIZE.height - 1}.
+            استخدم{" "}
+            <Link
+              to="/admin/atlas-calibration"
+              target="_blank"
+              className="text-amber-300 underline"
+            >
+              أداة المعايرة
+            </Link>{" "}
+            لقياس الإحداثيات على الصورة.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Lon (اختياري)">
+              <input
+                type="number"
+                step="0.01"
+                value={lon}
+                onChange={(e) => setLon(e.target.value)}
+                className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono"
+              />
+            </Field>
+            <Field label="Lat (اختياري)">
+              <input
+                type="number"
+                step="0.01"
+                value={lat}
+                onChange={(e) => setLat(e.target.value)}
+                className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono"
+              />
+            </Field>
+          </div>
+
+          <Field label="الحقبة (اختياري)">
+            <input
+              value={era}
+              onChange={(e) => setEra(e.target.value)}
+              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="سنة البداية">
+              <input
+                type="number"
+                value={year_start}
+                onChange={(e) => setYearStart(e.target.value)}
+                className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5"
+              />
+            </Field>
+            <Field label="سنة النهاية">
+              <input
+                type="number"
+                value={year_end}
+                onChange={(e) => setYearEnd(e.target.value)}
+                className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5"
+              />
+            </Field>
+          </div>
+
+          <Field label="ربط بالموسوعة (اختياري)">
+            <select
+              value={encyclopediaId}
+              onChange={(e) => setEncyclopediaId(e.target.value)}
+              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5"
+            >
+              <option value="">— بدون ربط —</option>
+              {encyclopedia.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.title} ({opt.entity_type})
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2 border-t border-slate-800 pt-4">
+          <button
+            onClick={onClose}
+            className="rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800"
+          >
+            إلغاء
+          </button>
+          <button
+            disabled={!valid || saving}
+            onClick={onSave}
+            className="flex items-center gap-1.5 rounded bg-amber-500 px-3 py-1.5 text-sm font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
+          >
+            {saving ? <RefreshCw className="size-4 animate-spin" /> : <Save className="size-4" />}
+            {isNew ? "إنشاء (مسودة)" : "حفظ التعديلات"}
+          </button>
+        </div>
+
+        {!isNew && (
+          <p className="mt-3 text-[11px] text-slate-500">
+            ملاحظة: تغيير إحداثيات APS سيُعيد ضبط حالة التوثيق تلقائيًا.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-slate-400">{label}</span>
+      {children}
+    </label>
+  );
+}

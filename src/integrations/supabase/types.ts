@@ -44,6 +44,98 @@ export type Database = {
         }
         Relationships: []
       }
+      atlas_entities: {
+        Row: {
+          aps_verified: boolean
+          aps_verified_at: string | null
+          aps_verified_by: string | null
+          aps_x: number
+          aps_y: number
+          atlas_version: string
+          created_at: string
+          created_by: string | null
+          encyclopedia_entity_id: string | null
+          era: string | null
+          geo_source: string | null
+          id: string
+          kind: Database["public"]["Enums"]["atlas_entity_kind"]
+          lat: number | null
+          lon: number | null
+          metadata: Json
+          name_ar: string
+          name_en: string | null
+          published_at: string | null
+          slug: string
+          status: Database["public"]["Enums"]["atlas_entity_status"]
+          updated_at: string
+          updated_by: string | null
+          year_end: number | null
+          year_start: number | null
+        }
+        Insert: {
+          aps_verified?: boolean
+          aps_verified_at?: string | null
+          aps_verified_by?: string | null
+          aps_x: number
+          aps_y: number
+          atlas_version?: string
+          created_at?: string
+          created_by?: string | null
+          encyclopedia_entity_id?: string | null
+          era?: string | null
+          geo_source?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["atlas_entity_kind"]
+          lat?: number | null
+          lon?: number | null
+          metadata?: Json
+          name_ar: string
+          name_en?: string | null
+          published_at?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["atlas_entity_status"]
+          updated_at?: string
+          updated_by?: string | null
+          year_end?: number | null
+          year_start?: number | null
+        }
+        Update: {
+          aps_verified?: boolean
+          aps_verified_at?: string | null
+          aps_verified_by?: string | null
+          aps_x?: number
+          aps_y?: number
+          atlas_version?: string
+          created_at?: string
+          created_by?: string | null
+          encyclopedia_entity_id?: string | null
+          era?: string | null
+          geo_source?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["atlas_entity_kind"]
+          lat?: number | null
+          lon?: number | null
+          metadata?: Json
+          name_ar?: string
+          name_en?: string | null
+          published_at?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["atlas_entity_status"]
+          updated_at?: string
+          updated_by?: string | null
+          year_end?: number | null
+          year_start?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_entities_encyclopedia_entity_id_fkey"
+            columns: ["encyclopedia_entity_id"]
+            isOneToOne: false
+            referencedRelation: "encyclopedia_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automatic_notification_runs: {
         Row: {
           created_at: string
@@ -722,7 +814,15 @@ export type Database = {
       sync_my_public_stats: { Args: { p_stats: Json }; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      atlas_entity_kind:
+        | "place"
+        | "battle"
+        | "event"
+        | "figure_marker"
+        | "artifact_site"
+        | "region"
+        | "route_point"
+      atlas_entity_status: "draft" | "review" | "published" | "retired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -849,6 +949,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      atlas_entity_kind: [
+        "place",
+        "battle",
+        "event",
+        "figure_marker",
+        "artifact_site",
+        "region",
+        "route_point",
+      ],
+      atlas_entity_status: ["draft", "review", "published", "retired"],
+    },
   },
 } as const

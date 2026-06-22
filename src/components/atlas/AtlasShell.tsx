@@ -13,6 +13,8 @@ import { useAtlasLayers, useEntityContext, type HubMarker, type Tier } from "@/l
 import { AtlasStage } from "./AtlasStage";
 import { AtlasControls } from "./AtlasControls";
 import { EntityPanel } from "./EntityPanel";
+import { AtlasEntityPopover } from "./AtlasEntityPins";
+import type { AtlasEntityRow } from "@/lib/atlas-entities";
 
 export function AtlasShell() {
   const { data, isLoading } = useWorldMapData();
@@ -23,6 +25,7 @@ export function AtlasShell() {
   const [tier, setTier] = useState<Tier>(1);
   // Identity-change triggers the AtlasStage focus tween.
   const [focusOn, setFocusOn] = useState<{ x: number; y: number } | null>(null);
+  const [atlasEntity, setAtlasEntity] = useState<AtlasEntityRow | null>(null);
 
   const layers = useAtlasLayers(data, { era, type, search });
   const derived = useWorldMapDerived(data, { era, type });
@@ -84,7 +87,10 @@ export function AtlasShell() {
         onSelect={handleSelect}
         onTierChange={setTier}
         focusOn={focusOn}
+        onAtlasEntitySelect={setAtlasEntity}
       />
+
+      <AtlasEntityPopover entity={atlasEntity} onClose={() => setAtlasEntity(null)} />
 
       <AtlasControls
         eras={derived.eras}

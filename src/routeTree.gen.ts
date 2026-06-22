@@ -54,6 +54,7 @@ import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
+import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-entities'
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
@@ -286,6 +287,11 @@ const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
   path: '/admin/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAtlasEntitiesRoute = AdminAtlasEntitiesRouteImport.update({
+  id: '/admin/atlas-entities',
+  path: '/admin/atlas-entities',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAtlasCalibrationRoute = AdminAtlasCalibrationRouteImport.update({
   id: '/admin/atlas-calibration',
   path: '/admin/atlas-calibration',
@@ -342,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
+  '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -393,6 +400,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
+  '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -447,6 +455,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
+  '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -502,6 +511,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/timeline'
     | '/admin/atlas-calibration'
+    | '/admin/atlas-entities'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
@@ -553,6 +563,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/timeline'
     | '/admin/atlas-calibration'
+    | '/admin/atlas-entities'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
@@ -606,6 +617,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/timeline'
     | '/admin/atlas-calibration'
+    | '/admin/atlas-entities'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
@@ -660,6 +672,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   TimelineRoute: typeof TimelineRoute
   AdminAtlasCalibrationRoute: typeof AdminAtlasCalibrationRoute
+  AdminAtlasEntitiesRoute: typeof AdminAtlasEntitiesRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminContentRoute: typeof AdminContentRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
@@ -1000,6 +1013,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/atlas-entities': {
+      id: '/admin/atlas-entities'
+      path: '/admin/atlas-entities'
+      fullPath: '/admin/atlas-entities'
+      preLoaderRoute: typeof AdminAtlasEntitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/atlas-calibration': {
       id: '/admin/atlas-calibration'
       path: '/admin/atlas-calibration'
@@ -1105,6 +1125,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   TimelineRoute: TimelineRoute,
   AdminAtlasCalibrationRoute: AdminAtlasCalibrationRoute,
+  AdminAtlasEntitiesRoute: AdminAtlasEntitiesRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminContentRoute: AdminContentRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,

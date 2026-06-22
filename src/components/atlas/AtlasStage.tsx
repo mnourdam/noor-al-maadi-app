@@ -6,6 +6,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Building2, Calendar, Crown, Gem, Landmark, Swords, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AtlasBaseDefs, AtlasBaseLayers } from "./HistoricalAtlasBase";
+import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
+import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import {
   TIER_LABEL,
   tierForScale,
@@ -49,6 +51,7 @@ export function AtlasStage({
   onSelect,
   onTierChange,
   focusOn,
+  onAtlasEntitySelect,
 }: {
   layers: AtlasLayers;
   selectedId: string | null;
@@ -56,6 +59,8 @@ export function AtlasStage({
   onTierChange?: (t: Tier) => void;
   /** When this object identity changes, smoothly center the view on these atlas coords. */
   focusOn?: { x: number; y: number } | null;
+  /** Phase 1 — additive atlas_entities marker layer. */
+  onAtlasEntitySelect?: (entity: AtlasEntityRow) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -336,6 +341,11 @@ export function AtlasStage({
                   active={selectedId === e.id} onSelect={onSelect} />
               ))}
             </g>
+          )}
+
+          {/* Phase 1 — atlas_entities pin layer (always visible, no tier gate) */}
+          {onAtlasEntitySelect && (
+            <AtlasEntityPinsLayer inv={inv} onSelect={onAtlasEntitySelect} />
           )}
         </g>
       </svg>
