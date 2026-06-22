@@ -12,8 +12,10 @@ import {
   Trash2,
   Upload,
   X,
+  Crosshair,
 } from "lucide-react";
 import { geoToAps } from "@/lib/atlas/transform";
+import { AtlasApsPicker } from "@/components/atlas/AtlasApsPicker";
 
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
@@ -340,6 +342,7 @@ function EntityEditor({
   const [encyclopediaId, setEncyclopediaId] = useState<string>(row?.encyclopedia_entity_id ?? "");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [pickingAps, setPickingAps] = useState(false);
 
   // Auto-suggest slug when name changes and admin hasn't touched it
   useEffect(() => {
@@ -478,18 +481,27 @@ function EntityEditor({
               />
             </Field>
           </div>
-          <p className="-mt-2 text-[11px] text-slate-500">
-            حدود الأطلس: 0–{ATLAS_V1_PIXEL_SIZE.width - 1} × 0–{ATLAS_V1_PIXEL_SIZE.height - 1}.
-            استخدم{" "}
-            <Link
-              to="/admin/atlas-calibration"
-              target="_blank"
-              className="text-amber-300 underline"
+          <div className="-mt-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] text-slate-500">
+              حدود الأطلس: 0–{ATLAS_V1_PIXEL_SIZE.width - 1} × 0–{ATLAS_V1_PIXEL_SIZE.height - 1}.
+              APS هو المصدر الموثوق للموقع.
+            </p>
+            <button
+              type="button"
+              onClick={() => setPickingAps(true)}
+              className="inline-flex items-center gap-1.5 rounded border border-amber-500/50 bg-amber-500/10 px-2.5 py-1 text-[12px] font-semibold text-amber-200 hover:bg-amber-500/20"
             >
-              أداة المعايرة
-            </Link>{" "}
-            لقياس الإحداثيات على الصورة.
-          </p>
+              <Crosshair className="size-3.5" />
+              اختيار APS من الأطلس
+            </button>
+          </div>
+          {!isNew && (
+            <p className="-mt-1 text-[11px] text-amber-300/80">
+              تغيير الإحداثيات سيُعيد ضبط حالة التوثيق تلقائياً ويتطلب إعادة التأكيد والنشر.
+            </p>
+          )}
+
+
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Lon (اختياري)">
@@ -578,6 +590,19 @@ function EntityEditor({
           </p>
         )}
       </div>
+
+      {pickingAps && (
+        <AtlasApsPicker
+          initial={{ x: aps_x, y: aps_y }}
+          label={name_ar || slug}
+          onClose={() => setPickingAps(false)}
+          onPick={(p) => {
+            setApsX(p.x);
+            setApsY(p.y);
+            setPickingAps(false);
+          }}
+        />
+      )}
     </div>
   );
 }
