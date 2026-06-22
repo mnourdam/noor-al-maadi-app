@@ -80,16 +80,14 @@ function EntityPage() {
   const supa = canonicalQuery.data ?? null;
   const slugQuery = { isLoading: canonicalQuery.isLoading };
 
-  // Unlock gate (direct URL safety). Uses the same data sources as the
-  // museum — no new unlock storage. Type may be unknown when only the
-  // slug is in the URL; the helper falls back to a slug-wide search.
-  const lockType = supa?.entity_type ?? pack?.type ?? null;
-  const lockMeta = supa?.metadata ?? (pack as any)?.meta ?? null;
-  const unlock = useEntityUnlockState(id, lockType, lockMeta);
+  // Encyclopedia is an OPEN knowledge library. Do NOT gate on collection
+  // unlock state — direct URL access must always show the article when
+  // the entity exists and is enabled. Museum/Collection gating lives in
+  // /collection and the reveal dialog, not here.
 
   // Supabase-only entity (not in legacy packs) — render minimal view.
   if (!pack) {
-    if (slugQuery.isLoading || unlock.loading) {
+    if (slugQuery.isLoading) {
       return (
         <AppShell>
           <div className="px-5 pt-10 text-center text-muted-foreground text-sm">جارٍ التحميل…</div>
@@ -97,16 +95,6 @@ function EntityPage() {
       );
     }
     if (supa) {
-      if (!unlock.unlocked) {
-        return (
-          <LockedItemView
-            typeLabel={TYPE_LABEL[supa.entity_type] ?? supa.entity_type}
-            title={supa.title}
-            glyph={SUPA_GLYPH[supa.entity_type] ?? "❓"}
-            unlockHint={unlock.unlockHint}
-          />
-        );
-      }
       return <SupabaseOnlyEntity entity={supa} />;
     }
     return (
@@ -119,23 +107,6 @@ function EntityPage() {
     );
   }
 
-  if (unlock.loading) {
-    return (
-      <AppShell>
-        <div className="px-5 pt-10 text-center text-muted-foreground text-sm">جارٍ التحميل…</div>
-      </AppShell>
-    );
-  }
-  if (!unlock.unlocked) {
-    return (
-      <LockedItemView
-        typeLabel={TYPE_LABEL[pack.type] ?? pack.type}
-        title={pack.title}
-        glyph={pack.image?.glyph ?? "❓"}
-        unlockHint={unlock.unlockHint}
-      />
-    );
-  }
 
 
   const e = pack;
