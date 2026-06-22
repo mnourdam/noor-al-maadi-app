@@ -51,6 +51,7 @@ export function AtlasStage({
   onSelect,
   onTierChange,
   focusOn,
+  onAtlasEntitySelect,
 }: {
   layers: AtlasLayers;
   selectedId: string | null;
@@ -58,6 +59,8 @@ export function AtlasStage({
   onTierChange?: (t: Tier) => void;
   /** When this object identity changes, smoothly center the view on these atlas coords. */
   focusOn?: { x: number; y: number } | null;
+  /** Phase 1 — additive atlas_entities marker layer. */
+  onAtlasEntitySelect?: (entity: AtlasEntityRow) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
