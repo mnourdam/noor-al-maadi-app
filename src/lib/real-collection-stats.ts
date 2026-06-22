@@ -21,8 +21,25 @@ import { listRegistry } from "./contentRegistryStorage";
 import { displayName } from "./display-names";
 import { supabase } from "@/integrations/supabase/client";
 
-/** Fallback Arabic label for any unresolved item id. */
-const UNNAMED = "مقتنى غير مسمى";
+/** Items whose Arabic title cannot be resolved are excluded from
+ *  homepage rails. Their raw IDs are logged once so data owners can
+ *  fix the underlying registry/Supabase content. */
+const _missingTitlesLogged = new Set<string>();
+function logMissingTitle(source: string, id: string) {
+  const k = `${source}:${id}`;
+  if (_missingTitlesLogged.has(k)) return;
+  _missingTitlesLogged.add(k);
+  // eslint-disable-next-line no-console
+  console.warn(`[home] unresolved Arabic title (${source}): ${id}`);
+}
+/** Arabic regex: any letter in the Arabic Unicode block. */
+const HAS_ARABIC = /[\u0600-\u06FF]/;
+function isValidArabicTitle(s: string | null | undefined): s is string {
+  if (!s) return false;
+  const t = s.trim();
+  if (!t) return false;
+  return HAS_ARABIC.test(t);
+}
 
 export type UnifiedUnlock = {
   key: string;
@@ -132,16 +149,17 @@ export function useRealCollectionStats() {
     for (const r of supaRows) {
       const kind = kindFromType(r.type);
       const regItem = registryById.get(r.slug.toLowerCase());
-      const resolvedTitle =
-        regItem?.name ??
-        (displayName(r.slug) !== r.slug ? displayName(r.slug) : null) ??
-        UNNAMED;
+      const dn = displayName(r.slug);
+      const candidate =
+        (isValidArabicTitle(regItem?.name) ? regItem!.name : null) ??
+        (dn !== r.slug && isValidArabicTitle(dn) ? dn : null);
+      if (!candidate) { logMissingTitle("supabase", r.slug); continue; }
       const img = (regItem?.image ?? "").trim();
       const icon = img && [...img].length === 1 ? img : KIND_ICON[kind];
       push({
         key: `sb:${r.type}:${r.slug}`,
         kind,
-        title: resolvedTitle,
+        title: candidate,
         subtitle: kind,
         icon,
         to: "/collection",
@@ -152,14 +170,15 @@ export function useRealCollectionStats() {
     // 2. Imported registry unlocks
     for (const id of importedIds) {
       const item = registryById.get(id.toLowerCase());
-      if (!item) continue;
+      if (!item) { logMissingTitle("registry-missing", id); continue; }
+      if (!isValidArabicTitle(item.name)) { logMissingTitle("registry", item.id); continue; }
       const kind = kindFromType(String(item.type));
       const img = (item.image ?? "").trim();
       const icon = img && [...img].length === 1 ? img : KIND_ICON[kind];
       push({
         key: `reg:${item.id}`,
         kind,
-        title: item.name?.trim() || UNNAMED,
+        title: item.name.trim(),
         subtitle: kind,
         icon,
         to: "/collection",
