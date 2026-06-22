@@ -165,16 +165,7 @@ export function AtlasStage({
         className="block size-full"
       >
         <defs>
-          <pattern id="atlas-sea" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
-            <line x1="0" y1="0" x2="0" y2="3" stroke="oklch(0.55 0.08 230 / 0.20)" strokeWidth="0.12" />
-          </pattern>
-          <pattern id="atlas-grid" width="5" height="5" patternUnits="userSpaceOnUse">
-            <path d="M5 0 L0 0 0 5" fill="none" stroke="oklch(0.32 0.06 50 / 0.14)" strokeWidth="0.08" />
-          </pattern>
-          <radialGradient id="atlas-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="oklch(0.95 0.14 82 / 0.85)" />
-            <stop offset="100%" stopColor="oklch(0.85 0.14 82 / 0)" />
-          </radialGradient>
+          <AtlasBaseDefs />
         </defs>
 
         <g style={{
@@ -182,45 +173,15 @@ export function AtlasStage({
           transformOrigin: "center",
           transition: drag.current || pinch.current ? "none" : "transform 160ms ease-out",
         }}>
-          <rect width={VB_W} height={VB_H} fill="url(#atlas-sea)" opacity={0.65} />
-          <rect width={VB_W} height={VB_H} fill="url(#atlas-grid)" pointerEvents="none" />
+          {/* Historical atlas foundation — coastlines, seas, rivers, mountains, washes, anchors */}
+          <AtlasBaseLayers
+            inv={inv}
+            showRegionLabels={tier <= 2}
+            showSeaLabels={tier <= 3}
+            showCities={tier >= 2}
+            showMountains={tier >= 2}
+          />
 
-          {/* Regions */}
-          <g className="layer-regions">
-            {layers.regions.map((r) => (
-              <polygon
-                key={r.id}
-                points={r.polygon}
-                fill="oklch(0.92 0.06 82 / 0.32)"
-                stroke="oklch(0.42 0.10 60 / 0.78)"
-                strokeWidth={0.18}
-                strokeLinejoin="round"
-              />
-            ))}
-            {layers.regions.map((r) => (
-              <text
-                key={`rl-${r.id}`}
-                x={r.label.x}
-                y={r.label.y}
-                textAnchor="middle"
-                fontSize={2.2 * inv}
-                fontWeight={800}
-                fill="oklch(0.30 0.08 50)"
-                opacity={tier === 1 ? 1 : Math.max(0, 1 - (tier - 1) * 0.45)}
-                pointerEvents="none"
-                style={{ fontFamily: "var(--font-display)", letterSpacing: "0.06em", transition: "opacity 200ms" }}
-              >{r.name}</text>
-            ))}
-          </g>
-
-          {/* Reference anchors — always faint */}
-          {tier <= 2 && (
-            <g className="layer-references" pointerEvents="none" opacity={0.7}>
-              {ATLAS_REFERENCES.map((c) => (
-                <circle key={c.name} cx={c.x} cy={c.y} r={0.25 * inv} fill="oklch(0.30 0.06 40 / 0.55)" />
-              ))}
-            </g>
-          )}
 
           {/* Cities — tier 2+ */}
           {tier >= 2 && (
