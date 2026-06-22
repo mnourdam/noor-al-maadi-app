@@ -10,7 +10,7 @@
 // action when an entity slug is available.
 
 import { useEffect } from "react";
-import { Sparkles, BookOpen } from "lucide-react";
+import { Sparkles, BookOpen, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { audioManager } from "@/lib/audioManager";
 
@@ -28,6 +28,10 @@ export interface CollectibleRevealItem {
   alreadyOwned?: boolean;
   /** If provided, render an "افتح في الموسوعة" button. */
   onOpenEncyclopedia?: () => void;
+  /** Show a locked-preview variant instead of the reveal celebration. */
+  locked?: boolean;
+  /** Arabic hint shown for locked items, e.g. "ينفتح عند إكمال: <campaign>". */
+  lockedHint?: string;
 }
 
 const RARITY_META: Record<CollectibleRarity, { label: string; chip: string; wash: string }> = {
@@ -36,6 +40,7 @@ const RARITY_META: Record<CollectibleRarity, { label: string; chip: string; wash
   epic:      { label: "ملحمي",  chip: "bg-fuchsia-400/15 text-fuchsia-200",               wash: "from-fuchsia-400/20 via-fuchsia-400/5 to-transparent" },
   legendary: { label: "أسطوري", chip: "bg-gradient-gold text-primary-foreground",         wash: "from-gold/25 via-gold/5 to-transparent" },
 };
+
 
 export function CollectibleRevealDialog({
   item,
