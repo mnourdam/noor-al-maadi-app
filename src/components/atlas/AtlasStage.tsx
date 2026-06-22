@@ -68,6 +68,8 @@ export function AtlasStage({
 
   // Cached wrap size — ResizeObserver, NOT a layout read per render.
   const [wrapSize, setWrapSize] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
+  const wrapSizeRef = useRef(wrapSize);
+  useEffect(() => { wrapSizeRef.current = wrapSize; }, [wrapSize]);
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
