@@ -33,9 +33,11 @@ const TYPE_FILL: Record<WorldEntityType, string> = {
 };
 
 const MIN_SCALE = 1;
-const MAX_SCALE = 8;            // tightened from 9 — keeps declustering O(N) realistic
-const MAX_VELOCITY = 1.5;       // px/ms — caps post-flick travel
-const MAX_INERTIA_FRAMES = 36;  // ~600ms ceiling
+const MAX_SCALE = 50;           // deep inspection of the frozen v1 raster
+const MAX_VELOCITY = 1.0;       // px/ms — caps post-flick travel
+const TOUCH_VELOCITY = 0.45;    // px/ms — softer flick on mobile
+const MAX_INERTIA_FRAMES = 28;  // ~460ms ceiling
+const TOUCH_PAN_GAIN = 0.5;     // touch drag sensitivity multiplier
 const VB_W = 100;
 const VB_H = 60;
 
@@ -105,6 +107,9 @@ export function AtlasStage({
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const lastMove = useRef({ x: 0, y: 0, t: 0, vx: 0, vy: 0 });
   const inertiaRaf = useRef<number | null>(null);
+  const pinch = useRef<
+    { dist: number; scale: number; midX: number; midY: number; tx: number; ty: number } | null
+  >(null);
 
   // rAF-coalesce pan updates: store target in ref, flush at most once per frame.
   const pendingView = useRef<View | null>(null);
@@ -129,41 +134,51 @@ export function AtlasStage({
   }, []);
 
   // ── Pointer drag with velocity tracking ─────────────────────────────────
+  const dragKind = useRef<"mouse" | "touch" | "pen">("mouse");
   const onPointerDown = (e: React.PointerEvent) => {
+    // Two-finger pinch is handled by the touch listener below; ignore extra pointers.
+    if (e.pointerType === "touch" && pinch.current) return;
     stopInertia();
-    // Capture on the container, not the target — children may unmount on tier change.
     wrapRef.current?.setPointerCapture?.(e.pointerId);
     interaction.current = "drag";
+    dragKind.current = (e.pointerType as "mouse" | "touch" | "pen") || "mouse";
     drag.current = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
     lastMove.current = { x: e.clientX, y: e.clientY, t: performance.now(), vx: 0, vy: 0 };
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current) return;
-    const dx = e.clientX - drag.current.x;
-    const dy = e.clientY - drag.current.y;
+    if (e.pointerType === "touch" && pinch.current) {
+      // A second finger landed — abandon drag, let pinch take over.
+      drag.current = null;
+      return;
+    }
+    const gain = e.pointerType === "touch" ? TOUCH_PAN_GAIN : 1;
+    const dx = (e.clientX - drag.current.x) * gain;
+    const dy = (e.clientY - drag.current.y) * gain;
     const now = performance.now();
     const dt = Math.max(8, now - lastMove.current.t);
     lastMove.current = {
       x: e.clientX, y: e.clientY, t: now,
-      vx: 0.6 * lastMove.current.vx + 0.4 * ((e.clientX - lastMove.current.x) / dt),
-      vy: 0.6 * lastMove.current.vy + 0.4 * ((e.clientY - lastMove.current.y) / dt),
+      vx: 0.6 * lastMove.current.vx + 0.4 * (((e.clientX - lastMove.current.x) * gain) / dt),
+      vy: 0.6 * lastMove.current.vy + 0.4 * (((e.clientY - lastMove.current.y) * gain) / dt),
     };
     scheduleView({ scale: view.scale, tx: drag.current.tx + dx, ty: drag.current.ty + dy });
   };
   const onPointerUp = () => {
     if (!drag.current) return;
     drag.current = null;
-    let vx = clampScalar(lastMove.current.vx, -MAX_VELOCITY, MAX_VELOCITY);
-    let vy = clampScalar(lastMove.current.vy, -MAX_VELOCITY, MAX_VELOCITY);
+    const vMax = dragKind.current === "touch" ? TOUCH_VELOCITY : MAX_VELOCITY;
+    let vx = clampScalar(lastMove.current.vx, -vMax, vMax);
+    let vy = clampScalar(lastMove.current.vy, -vMax, vMax);
     const speed = Math.hypot(vx, vy);
-    if (speed < 0.08) { interaction.current = "idle"; return; }
+    if (speed < 0.1) { interaction.current = "idle"; return; }
     interaction.current = "inertia";
-    const decay = 0.9;
+    const decay = dragKind.current === "touch" ? 0.86 : 0.9;
     let frames = 0;
     const step = () => {
       vx *= decay; vy *= decay;
       frames++;
-      if (frames >= MAX_INERTIA_FRAMES || Math.hypot(vx, vy) < 0.04) {
+      if (frames >= MAX_INERTIA_FRAMES || Math.hypot(vx, vy) < 0.05) {
         inertiaRaf.current = null;
         interaction.current = "idle";
         return;
@@ -196,36 +211,65 @@ export function AtlasStage({
     return () => el.removeEventListener("wheel", onWheel);
   }, [clamp, stopInertia]);
 
-  // ── Pinch (dampened) ────────────────────────────────────────────────────
-  // Bind touch listeners ONCE; read current scale from the ref so we never
-  // re-attach on every pinch frame.
-  const pinch = useRef<{ dist: number; scale: number } | null>(null);
+  // ── Pinch zoom (midpoint-anchored) + two-finger pan ─────────────────────
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length !== 2) return;
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length < 2) return;
       stopInertia();
-      interaction.current = "pinch";
+      const rect = el.getBoundingClientRect();
       const [a, b] = [e.touches[0], e.touches[1]];
+      const midX = (a.clientX + b.clientX) / 2 - rect.left - rect.width / 2;
+      const midY = (a.clientY + b.clientY) / 2 - rect.top - rect.height / 2;
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      if (!pinch.current) { pinch.current = { dist, scale: viewRef.current.scale }; return; }
-      const raw = dist / pinch.current.dist;
-      const ratio = 1 + (raw - 1) * 0.55;
-      setView((v) => clamp({ ...v, scale: pinch.current!.scale * ratio }));
+      pinch.current = {
+        dist,
+        scale: viewRef.current.scale,
+        midX,
+        midY,
+        tx: viewRef.current.tx,
+        ty: viewRef.current.ty,
+      };
+      interaction.current = "pinch";
       e.preventDefault();
     };
-    const onTouchEnd = () => {
-      pinch.current = null;
-      if (interaction.current === "pinch") interaction.current = "idle";
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length < 2 || !pinch.current) return;
+      const rect = el.getBoundingClientRect();
+      const [a, b] = [e.touches[0], e.touches[1]];
+      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const midX = (a.clientX + b.clientX) / 2 - rect.left - rect.width / 2;
+      const midY = (a.clientY + b.clientY) / 2 - rect.top - rect.height / 2;
+      const raw = dist / Math.max(1, pinch.current.dist);
+      const damped = 1 + (raw - 1) * 0.85;
+      const s = clampScalar(pinch.current.scale * damped, MIN_SCALE, MAX_SCALE);
+      const k = s / pinch.current.scale;
+      // Anchor zoom around the original midpoint, then translate by the midpoint delta.
+      const tx = pinch.current.midX - (pinch.current.midX - pinch.current.tx) * k
+        + (midX - pinch.current.midX);
+      const ty = pinch.current.midY - (pinch.current.midY - pinch.current.ty) * k
+        + (midY - pinch.current.midY);
+      scheduleView({ scale: s, tx, ty });
+      e.preventDefault();
     };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) {
+        pinch.current = null;
+        if (interaction.current === "pinch") interaction.current = "idle";
+      }
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("touchcancel", onTouchEnd);
     return () => {
+      el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [clamp, stopInertia]);
+  }, [scheduleView, stopInertia]);
 
   // ── Cleanup ─────────────────────────────────────────────────────────────
   useEffect(() => () => {
@@ -297,7 +341,7 @@ export function AtlasStage({
       <svg
         ref={svgRef}
         viewBox={`0 0 ${VB_W} ${VB_H}`}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="xMidYMid slice"
         className="block size-full"
       >
         <defs>
