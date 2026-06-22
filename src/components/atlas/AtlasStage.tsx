@@ -7,6 +7,7 @@ import { Building2, Calendar, Crown, Gem, Landmark, Swords, User } from "lucide-
 import type { LucideIcon } from "lucide-react";
 import { AtlasBaseDefs, AtlasBaseLayers } from "./HistoricalAtlasBase";
 import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
+import atlasMaster from "@/assets/atlas/atlas-v1-master.jpg.asset.json";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import {
   TIER_LABEL,
@@ -65,6 +66,7 @@ export function AtlasStage({
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [view, setView] = useState<View>(IDENTITY);
+  const [rasterLoaded, setRasterLoaded] = useState(false);
   const tier = tierForScale(view.scale);
   // Mirror of `view` for use inside long-lived listeners/effects without
   // re-binding them on every state change.
@@ -308,13 +310,26 @@ export function AtlasStage({
           transition: useTransition ? "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
           willChange: "transform",
         }}>
-          <AtlasBaseLayers
-            inv={inv}
-            showRegionLabels={tier <= 2}
-            showSeaLabels={tier <= 3}
-            showCities={tier >= 2}
-            showMountains={tier >= 2}
+          {/* Phase 1 — frozen Atlas v1 raster as primary base (canonical APS surface). */}
+          <image
+            href={atlasMaster.url}
+            x={0}
+            y={0}
+            width={VB_W}
+            height={VB_H}
+            preserveAspectRatio="none"
+            onLoad={() => setRasterLoaded(true)}
+            style={{ imageRendering: "auto" }}
           />
+          {!rasterLoaded && (
+            <AtlasBaseLayers
+              inv={inv}
+              showRegionLabels={tier <= 2}
+              showSeaLabels={tier <= 3}
+              showCities={tier >= 2}
+              showMountains={tier >= 2}
+            />
+          )}
 
           {tier >= 2 && (
             <g className="layer-cities">
