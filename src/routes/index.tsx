@@ -654,7 +654,7 @@ function RecentCard({ item }: { item: UnifiedUnlock }) {
   return (
     <Link
       to={item.to as "/"}
-      className="group relative w-44 shrink-0 overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-3 transition hover:border-gold/50"
+      className="group relative w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-3 transition hover:border-gold/50"
     >
       <div className="absolute -left-6 -top-6 size-20 rounded-full bg-gold/10 blur-2xl" />
       <div className="relative">
@@ -663,6 +663,25 @@ function RecentCard({ item }: { item: UnifiedUnlock }) {
         <p className="font-display mt-0.5 text-sm font-bold leading-tight line-clamp-1">{item.title}</p>
         {item.subtitle && <p className="mt-1 line-clamp-2 text-[11px] text-white/60 leading-snug">{item.subtitle}</p>}
       </div>
+    </Link>
+  );
+}
+
+function UpdateRow({ item }: { item: { kind: string; title: string; subtitle?: string; icon: string; image: string | null; to: string } }) {
+  return (
+    <Link
+      to={item.to as "/"}
+      className="group flex items-center gap-3 rounded-2xl border border-gold/20 bg-surface/60 p-3 transition hover:border-gold/50"
+    >
+      <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gold/10 text-xl text-gold">
+        {item.image ? <img src={item.image} alt="" className="size-full object-cover" /> : <span>{item.icon}</span>}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] tracking-[0.2em] text-gold">{item.kind}</p>
+        <p className="font-display text-sm font-bold leading-tight line-clamp-1">{item.title}</p>
+        {item.subtitle && <p className="mt-0.5 text-[11px] text-white/55 line-clamp-1">{item.subtitle}</p>}
+      </div>
+      <ChevronLeft className="size-4 shrink-0 text-gold/50 group-hover:text-gold" />
     </Link>
   );
 }
