@@ -188,6 +188,8 @@ export function AtlasStage({
   }, [clamp, stopInertia]);
 
   // ── Pinch (dampened) ────────────────────────────────────────────────────
+  // Bind touch listeners ONCE; read current scale from the ref so we never
+  // re-attach on every pinch frame.
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
   useEffect(() => {
     const el = wrapRef.current;
@@ -198,7 +200,7 @@ export function AtlasStage({
       interaction.current = "pinch";
       const [a, b] = [e.touches[0], e.touches[1]];
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      if (!pinch.current) { pinch.current = { dist, scale: view.scale }; return; }
+      if (!pinch.current) { pinch.current = { dist, scale: viewRef.current.scale }; return; }
       const raw = dist / pinch.current.dist;
       const ratio = 1 + (raw - 1) * 0.55;
       setView((v) => clamp({ ...v, scale: pinch.current!.scale * ratio }));
@@ -214,7 +216,7 @@ export function AtlasStage({
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
     };
-  }, [view.scale, clamp, stopInertia]);
+  }, [clamp, stopInertia]);
 
   // ── Cleanup ─────────────────────────────────────────────────────────────
   useEffect(() => () => {
