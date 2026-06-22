@@ -434,11 +434,6 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
             <h2 className="font-display mb-2 text-sm font-bold">
               السؤال {(qIndex + 1).toLocaleString("en-US")}/{inv.questions.length.toLocaleString("en-US")}
             </h2>
-            {heartsOut && (
-              <div className="mb-3 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-[12px] text-red-100">
-                نفدت قلوبك. انتظر استرداد قلب أو استخدم نشاطًا تعليميًا لاستعادته.
-              </div>
-            )}
             <div className="rounded-2xl border border-gold/25 bg-surface p-4">
               <p className="font-display text-[14px] font-bold leading-snug">{q.question}</p>
               <div className="mt-3 space-y-2">
