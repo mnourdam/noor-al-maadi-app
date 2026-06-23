@@ -1,13 +1,8 @@
 /**
  * Centralized display-name resolver for player-facing labels.
- *
- * Internal IDs (e.g. `salahuddin-sword`, `legendary-liberator`,
- * `bayt_hikma_detective`, `mamluk.state.mamluk`) must never reach the UI.
- * Components should funnel raw IDs through these helpers to obtain a
- * localized Arabic display string.
+ * Supabase-only: curated maps for badges/artifacts; generic resolver
+ * falls back to the raw id. No legacy pack/data dependency.
  */
-import { ARTIFACTS, CHARACTERS, ERAS } from "@/lib/data";
-import { getPackEntity } from "@/lib/packs/registry";
 
 /** Curated map of known badge IDs → Arabic display names. */
 const BADGE_NAMES: Record<string, string> = {
@@ -39,9 +34,14 @@ const BADGE_NAMES: Record<string, string> = {
   season_yarmouk: "شارة اليرموك",
   season_ain_jalut: "شارة عين جالوت",
   season_seljuk: "شارة السلاجقة",
+
+  // Imported campaign aliases
+  "prophetic-mission": "شارة البعثة النبوية",
+  "salahuddin": "شارة صلاح الدين",
+  "umar": "شارة الفاروق",
 };
 
-/** Curated map of known reward-artifact IDs (used outside ARTIFACTS table). */
+/** Curated map of known reward-artifact IDs. */
 const REWARD_ARTIFACT_NAMES: Record<string, string> = {
   "ref_artifact_lantern": "قنديل الإرث",
   "umari-covenant": "العهدة العمريّة",
@@ -59,56 +59,26 @@ export function displayBadgeName(id?: string | null): string {
   return BADGE_NAMES[trimmed] ?? BADGE_NAMES[id] ?? "شارة جديدة";
 }
 
-/** Extra badge IDs surfaced by imported campaigns. Extends the curated map. */
-const IMPORTED_BADGE_NAMES: Record<string, string> = {
-  "prophetic-mission": "شارة البعثة النبوية",
-  "salahuddin": "شارة صلاح الدين",
-  "umar": "شارة الفاروق",
-};
-// Merge at module load so the alias survives the existing BADGE_NAMES lookup.
-for (const [k, v] of Object.entries(IMPORTED_BADGE_NAMES)) {
-  if (!BADGE_NAMES[k]) (BADGE_NAMES as Record<string, string>)[k] = v;
-}
-
-/** Resolve an artifact ID to its Arabic name across all known sources. */
+/** Resolve an artifact ID to its Arabic name. */
 export function displayArtifactName(id?: string | null): string {
   if (!id) return "";
-  const direct = ARTIFACTS.find((a) => a.id === id);
-  if (direct) return direct.name;
-  const pack = getPackEntity(id);
-  if (pack?.title) return pack.title;
   return REWARD_ARTIFACT_NAMES[id] ?? "أثر نادر";
 }
 
 /** Resolve a character / figure ID to an Arabic name. */
 export function displayCharacterName(id?: string | null): string {
   if (!id) return "";
-  const direct = CHARACTERS.find((c) => c.id === id);
-  if (direct) return direct.name;
-  const pack = getPackEntity(id);
-  return pack?.title ?? "شخصية تاريخية";
+  return "شخصية تاريخية";
 }
 
-/** Resolve a pack entity ID (e.g. `mamluk.state.mamluk`) to an Arabic name. */
+/** Resolve a pack entity ID to an Arabic name (legacy compat — returns id). */
 export function displayEntityName(id?: string | null): string {
-  if (!id) return "";
-  const pack = getPackEntity(id);
-  if (pack?.title) return pack.title;
-  // Try era prefix fallback (e.g. `mamluk.state.mamluk` → "الدولة المملوكية").
-  const eraId = id.split(".")[0];
-  const era = ERAS.find((e) => e.id === eraId);
-  return era?.name ?? id;
+  return id ?? "";
 }
 
-/** Generic resolver: try entity → artifact → character → badge → raw. */
+/** Generic resolver: try badge → artifact → raw. */
 export function displayName(id?: string | null): string {
   if (!id) return "";
-  const pack = getPackEntity(id);
-  if (pack?.title) return pack.title;
-  const art = ARTIFACTS.find((a) => a.id === id);
-  if (art) return art.name;
-  const ch = CHARACTERS.find((c) => c.id === id);
-  if (ch) return ch.name;
   if (BADGE_NAMES[id]) return BADGE_NAMES[id];
   if (REWARD_ARTIFACT_NAMES[id]) return REWARD_ARTIFACT_NAMES[id];
   return id;
