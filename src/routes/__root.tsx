@@ -143,17 +143,10 @@ function RootComponent() {
     // PR3: bootstrap campaign-ledger sync flush (online + visibility events).
     import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
 
-    // Migrate localStorage registry unlocks → Supabase user_collection (boot).
-    import("../lib/registryUnlockMigration")
-      .then((m) => m.migrateRegistryUnlocksToSupabase())
-      .catch(() => {});
-    // Retry when coming back online.
-    const onOnline = () => {
-      import("../lib/registryUnlockMigration")
-        .then((m) => m.migrateRegistryUnlocksToSupabase())
-        .catch(() => {});
-    };
+    // (registry → user_collection migration removed; user_collection is authoritative)
+    const onOnline = () => {};
     window.addEventListener("online", onOnline);
+
 
 
     // Lock orientation to portrait on supported platforms (Android / Capacitor / installed PWA).
@@ -181,10 +174,6 @@ function RootComponent() {
               void l.flushPending();
               if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
             }).catch(() => {});
-            // Sync local registry unlocks → Supabase.
-            import("../lib/registryUnlockMigration")
-              .then((mig) => mig.migrateRegistryUnlocksToSupabase())
-              .catch(() => {});
           }
         });
         unsub = () => data.subscription.unsubscribe();
