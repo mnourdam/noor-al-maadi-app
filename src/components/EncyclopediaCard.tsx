@@ -31,9 +31,21 @@ function metaRecord(entity: SupabaseEncyclopediaEntity): Record<string, unknown>
   return m && typeof m === "object" ? (m as Record<string, unknown>) : {};
 }
 
-export function entityHref(entity: SupabaseEncyclopediaEntity): string {
-  if (entity.entity_type === "state") return `/encyclopedia/state/${entity.slug}`;
-  return `/encyclopedia/entity/${entity.slug}`;
+export function entityHref(
+  entity:
+    | SupabaseEncyclopediaEntity
+    | { id?: string; slug?: string; type?: string; entity_type?: string },
+): string {
+  const type =
+    (entity as { entity_type?: string }).entity_type ??
+    (entity as { type?: string }).type ??
+    "";
+  const slug =
+    (entity as { slug?: string }).slug ??
+    (entity as { id?: string }).id ??
+    "";
+  if (type === "state") return `/encyclopedia/state/${slug}`;
+  return `/encyclopedia/entity/${slug}`;
 }
 
 export function EncyclopediaCard({ entity }: { entity: SupabaseEncyclopediaEntity }) {
