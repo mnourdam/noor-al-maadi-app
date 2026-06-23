@@ -10,12 +10,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useParams, useNavigate, notFound } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart, X as XIcon } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import type { Campaign, CampaignChapter } from "@/types/campaign";
+import type { CampaignChapter } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
-import { getCampaign, listCampaigns } from "@/lib/campaignStorage";
-import { pullCampaignsFromCloud } from "@/lib/cloudSync";
+import { fetchCampaignByIdOrSlug } from "@/lib/supabaseCampaigns";
 import {
   getChapterProgress, getCampaignProgress, recordActivity, isChapterUnlocked,
 } from "@/lib/importedCampaignProgress";
@@ -50,20 +50,11 @@ export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")
 
 function ImportedChapterPlayer() {
   const { id, chapter: chapterId } = useParams({ from: "/campaigns/imported/$id/chapter/$chapter" });
-  const [campaign, setCampaign] = useState<Campaign | null>(() => getCampaign(id) ?? null);
-  const [loading, setLoading]   = useState(!campaign);
+  const { data: campaign, isLoading: loading } = useQuery({
+    queryKey: ["campaign", id],
+    queryFn: () => fetchCampaignByIdOrSlug(id),
+  });
 
-  useEffect(() => {
-    if (campaign) return;
-    let cancelled = false;
-    pullCampaignsFromCloud().then(() => {
-      if (cancelled) return;
-      const next = listCampaigns().find(c => c.id === id) ?? null;
-      setCampaign(next);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-    return () => { cancelled = true; };
-  }, [id, campaign]);
 
   const chapter: CampaignChapter | undefined = useMemo(
     () => campaign?.chapters.find(c => c.id === chapterId),
