@@ -1,19 +1,35 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ChevronRight, Search, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell, Screen } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
-import {
-  SECTION_LABELS, SECTION_GLYPHS, KNOWN_ERAS,
-  entitiesForSection, applyFilters, sortChrono,
-  type EncyclopediaSection,
-} from "@/lib/encyclopedia";
+import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 
-const VALID = new Set<string>(Object.keys(SECTION_LABELS));
+const SECTION_LABELS: Record<string, string> = {
+  state: "الدول",
+  figure: "الشخصيات",
+  battle: "المعارك",
+  city: "المدن",
+  event: "الأحداث",
+  landmark: "المعالم",
+  artifact: "الآثار",
+};
+const SECTION_GLYPHS: Record<string, string> = {
+  state: "🏛️",
+  figure: "🪶",
+  battle: "⚔️",
+  city: "🏙️",
+  event: "📜",
+  landmark: "🕌",
+  artifact: "🗝️",
+};
+const VALID = new Set(Object.keys(SECTION_LABELS));
 
 export const Route = createFileRoute("/encyclopedia/type/$type")({
   head: ({ params }) => {
-    const label = (SECTION_LABELS as Record<string, string>)[params.type] ?? "الموسوعة";
+    const label = SECTION_LABELS[params.type] ?? "الموسوعة";
     return {
       meta: [
         { title: `${label} — الموسوعة التاريخية` },
@@ -34,16 +50,52 @@ export const Route = createFileRoute("/encyclopedia/type/$type")({
   ),
 });
 
-function TypeBrowsePage() {
-  const { type } = Route.useParams() as { type: EncyclopediaSection };
-  const [query, setQuery] = useState("");
-  const [era, setEra] = useState<string | "">("");
+function metaEra(entity: SupabaseEncyclopediaEntity): string {
+  const m = entity.metadata && typeof entity.metadata === "object"
+    ? (entity.metadata as Record<string, unknown>)
+    : {};
+  return typeof m.era === "string" ? (m.era as string) : "";
+}
 
-  const all = useMemo(() => entitiesForSection(type), [type]);
-  const filtered = useMemo(
-    () => sortChrono(applyFilters(all, { query, era: era || undefined })),
-    [all, query, era],
-  );
+function TypeBrowsePage() {
+  const { type } = Route.useParams();
+  const [query, setQuery] = useState("");
+  const [era, setEra] = useState<string>("");
+
+  const { data: all = [], isLoading } = useQuery({
+    queryKey: ["encyclopedia", "type", type],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("encyclopedia_entities")
+        .select("id,slug,entity_type,title,subtitle,summary,metadata")
+        .eq("enabled", true)
+        .eq("entity_type", type)
+        .order("title");
+      if (error) throw error;
+      return (data ?? []) as SupabaseEncyclopediaEntity[];
+    },
+  });
+
+  const eras = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of all) {
+      const er = metaEra(e);
+      if (er) set.add(er);
+    }
+    return Array.from(set).sort();
+  }, [all]);
+
+  const q = query.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    return all
+      .filter((e) => !era || metaEra(e) === era)
+      .filter((e) => {
+        if (!q) return true;
+        const hay = `${e.title} ${e.subtitle ?? ""} ${e.summary ?? ""} ${e.slug}`.toLowerCase();
+        return hay.includes(q);
+      });
+  }, [all, q, era]);
 
   return (
     <AppShell>
@@ -67,7 +119,6 @@ function TypeBrowsePage() {
         </div>
         <div className="ornament-divider mt-3" />
 
-        {/* Search */}
         <div className="relative mt-4">
           <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gold/70" />
           <input
@@ -87,17 +138,20 @@ function TypeBrowsePage() {
           )}
         </div>
 
-        {/* Era filters */}
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <Chip active={era === ""} onClick={() => setEra("")}>كل العصور</Chip>
-          {KNOWN_ERAS.map((e) => (
-            <Chip key={e.id} active={era === e.id} onClick={() => setEra(e.id)}>{e.label}</Chip>
-          ))}
-        </div>
+        {eras.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <Chip active={era === ""} onClick={() => setEra("")}>كل العصور</Chip>
+            {eras.map((e) => (
+              <Chip key={e} active={era === e} onClick={() => setEra(e)}>{e}</Chip>
+            ))}
+          </div>
+        )}
 
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <p className="mt-8 text-center text-xs text-muted-foreground">جارٍ التحميل…</p>
+        ) : filtered.length === 0 ? (
           <p className="mt-8 rounded-2xl border border-white/10 bg-surface/70 p-6 text-center text-xs text-muted-foreground">
-            لا توجد عناصر مطابقة.
+            {all.length === 0 ? "لا توجد عناصر في هذا القسم بعد." : "لا توجد عناصر مطابقة."}
           </p>
         ) : (
           <div className="mt-5 grid grid-cols-2 gap-2.5 pb-8">

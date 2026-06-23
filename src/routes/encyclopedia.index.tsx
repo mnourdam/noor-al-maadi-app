@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell, Screen } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
-import {
-  SECTION_LABELS, SECTION_GLYPHS, KNOWN_ERAS, sectionCounts, searchAll,
-  stateEntityForEra, type EncyclopediaSection,
-} from "@/lib/encyclopedia";
+import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 
 export const Route = createFileRoute("/encyclopedia/")({
   head: () => ({
@@ -14,23 +13,93 @@ export const Route = createFileRoute("/encyclopedia/")({
       { title: "الموسوعة التاريخية — إرث" },
       { name: "description", content: "تصفّح حر لكل الدول والشخصيات والعلماء والمعارك والمدن والأحداث والمعالم والآثار في عالم إرث." },
       { property: "og:title", content: "الموسوعة التاريخية — إرث" },
-      { property: "og:description", content: "تصفّح حر لكل المحتوى التاريخي في إرث: دول، شخصيات، علماء، معارك، مدن، أحداث، معالم وآثار." },
+      { property: "og:description", content: "تصفّح حر لكل المحتوى التاريخي في إرث." },
     ],
   }),
   component: EncyclopediaHub,
 });
 
-const SECTIONS = Object.keys(SECTION_LABELS) as EncyclopediaSection[];
+const SECTION_LABELS: Record<string, string> = {
+  state: "الدول",
+  figure: "الشخصيات",
+  battle: "المعارك",
+  city: "المدن",
+  event: "الأحداث",
+  landmark: "المعالم",
+  artifact: "الآثار",
+};
+const SECTION_GLYPHS: Record<string, string> = {
+  state: "🏛️",
+  figure: "🪶",
+  battle: "⚔️",
+  city: "🏙️",
+  event: "📜",
+  landmark: "🕌",
+  artifact: "🗝️",
+};
+const SECTIONS = Object.keys(SECTION_LABELS);
+
+function useAllEncyclopedia() {
+  return useQuery({
+    queryKey: ["encyclopedia", "all-min"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("encyclopedia_entities")
+        .select("id,slug,entity_type,title,subtitle,summary,metadata")
+        .eq("enabled", true)
+        .order("title");
+      if (error) throw error;
+      return (data ?? []) as SupabaseEncyclopediaEntity[];
+    },
+  });
+}
+
+function metaEra(entity: SupabaseEncyclopediaEntity): string {
+  const m = entity.metadata && typeof entity.metadata === "object"
+    ? (entity.metadata as Record<string, unknown>)
+    : {};
+  return typeof m.era === "string" ? (m.era as string) : "";
+}
 
 function EncyclopediaHub() {
   const [query, setQuery] = useState("");
-  const [era, setEra] = useState<string | "">("");
+  const [era, setEra] = useState<string>("");
 
-  const counts = useMemo(() => sectionCounts(), []);
-  const results = useMemo(
-    () => (query.trim() ? searchAll(query, era || undefined, 30) : []),
-    [query, era],
+  const { data: all = [], isLoading } = useAllEncyclopedia();
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const s of SECTIONS) c[s] = 0;
+    for (const e of all) c[e.entity_type] = (c[e.entity_type] ?? 0) + 1;
+    return c;
+  }, [all]);
+
+  const eras = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of all) {
+      const er = metaEra(e);
+      if (er) set.add(er);
+    }
+    return Array.from(set).sort();
+  }, [all]);
+
+  const states = useMemo(
+    () => all.filter((e) => e.entity_type === "state"),
+    [all],
   );
+
+  const q = query.trim().toLowerCase();
+  const results = useMemo(() => {
+    if (!q) return [];
+    return all
+      .filter((e) => !era || metaEra(e) === era)
+      .filter((e) => {
+        const hay = `${e.title} ${e.subtitle ?? ""} ${e.summary ?? ""} ${e.slug}`.toLowerCase();
+        return hay.includes(q);
+      })
+      .slice(0, 30);
+  }, [all, q, era]);
 
   return (
     <AppShell>
@@ -57,16 +126,24 @@ function EncyclopediaHub() {
           )}
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <FilterChip active={era === ""} onClick={() => setEra("")}>كل العصور</FilterChip>
-          {KNOWN_ERAS.map((e) => (
-            <FilterChip key={e.id} active={era === e.id} onClick={() => setEra(e.id)}>
-              {e.label}
-            </FilterChip>
-          ))}
-        </div>
+        {eras.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <FilterChip active={era === ""} onClick={() => setEra("")}>كل العصور</FilterChip>
+            {eras.map((e) => (
+              <FilterChip key={e} active={era === e} onClick={() => setEra(e)}>
+                {e}
+              </FilterChip>
+            ))}
+          </div>
+        )}
 
-        {query.trim() ? (
+        {isLoading ? (
+          <p className="mt-8 text-center text-xs text-muted-foreground">جارٍ التحميل…</p>
+        ) : all.length === 0 ? (
+          <p className="mt-8 rounded-2xl border border-white/10 bg-surface/70 p-6 text-center text-xs text-muted-foreground">
+            لا توجد عناصر في الموسوعة بعد.
+          </p>
+        ) : q ? (
           <section className="mt-6">
             <div className="mb-2 flex items-center gap-2">
               <h2 className="font-display text-sm font-bold">نتائج البحث</h2>
@@ -86,33 +163,33 @@ function EncyclopediaHub() {
           </section>
         ) : (
           <>
-            <section className="mt-6">
-              <h2 className="font-display mb-2 text-sm font-bold">الدول</h2>
-              <div className="grid grid-cols-1 gap-2.5">
-                {KNOWN_ERAS.map((e) => {
-                  const state = stateEntityForEra(e.id);
-                  return (
+            {states.length > 0 && (
+              <section className="mt-6">
+                <h2 className="font-display mb-2 text-sm font-bold">الدول</h2>
+                <div className="grid grid-cols-1 gap-2.5">
+                  {states.map((s) => (
                     <Link
-                      key={e.id}
+                      key={s.id}
                       to="/encyclopedia/state/$id"
-                      params={{ id: e.id }}
+                      params={{ id: s.slug }}
                       className="group flex items-center gap-3 rounded-2xl border border-gold/25 bg-gradient-to-l from-gold/10 via-transparent to-transparent p-3 transition hover:border-gold/50"
                     >
                       <span className="grid size-12 place-items-center rounded-xl bg-black/35 text-2xl ring-1 ring-white/5">
-                        {state?.image.glyph ?? "🏛️"}
+                        🏛️
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="font-display text-sm font-bold">{e.label}</p>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">
-                          {state?.description ?? "صفحة الدولة الكاملة"}
-                        </p>
+                        <p className="font-display text-sm font-bold">{s.title}</p>
+                        {s.subtitle && (
+                          <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">
+                            {s.subtitle}
+                          </p>
+                        )}
                       </div>
-                      <span className="text-[10px] text-gold/70">{state?.period.label ?? ""}</span>
                     </Link>
-                  );
-                })}
-              </div>
-            </section>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section className="mt-6">
               <h2 className="font-display mb-2 text-sm font-bold">الأقسام</h2>
@@ -129,7 +206,7 @@ function EncyclopediaHub() {
                         {SECTION_GLYPHS[s]}
                       </span>
                       <span className="rounded-full bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
-                        {counts[s]}
+                        {counts[s] ?? 0}
                       </span>
                     </div>
                     <p className="font-display mt-2 text-sm font-bold">{SECTION_LABELS[s]}</p>
