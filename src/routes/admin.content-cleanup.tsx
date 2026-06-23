@@ -212,6 +212,38 @@ function Page() {
             </p>
           </div>
           <button
+            onClick={() => {
+              if (!enc || !audit) return;
+              // Preset: archive every row that carries a pack_id (legacy pack
+              // origin) AND has a richer or equal enabled non-pack row sharing
+              // its slug. Falls back to "no pack-twin canonical" → keep.
+              const next = new Set(archiveIds);
+              const nextRelink = new Map(relink);
+              for (const row of enc) {
+                const meta = row.metadata as { pack_id?: unknown } | null;
+                if (!meta || typeof meta !== "object" || !("pack_id" in meta)) continue;
+                const twins = audit.encBySlug.get(row.slug) ?? [];
+                const cleanTwins = twins.filter(t => {
+                  const m = t.metadata as any;
+                  return t.enabled && t.id !== row.id && !(m && typeof m === "object" && "pack_id" in m);
+                });
+                if (cleanTwins.length === 0) continue; // no replacement → keep
+                next.add(row.id);
+                // repoint atlas refs that currently point at the pack row
+                const canon = pickCanonical(cleanTwins);
+                for (const a of atlas ?? []) {
+                  if (a.encyclopedia_entity_id === row.id) nextRelink.set(a.id, canon.id);
+                }
+              }
+              setArchiveIds(next);
+              setRelink(nextRelink);
+            }}
+            disabled={!audit}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-200 hover:bg-red-500/20 disabled:opacity-50"
+          >
+            تحديد الموروث (pack)
+          </button>
+          <button
             onClick={() => setPreviewOpen(true)}
             disabled={!audit || (archiveIds.size === 0 && relink.size === 0)}
             className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
@@ -219,6 +251,7 @@ function Page() {
             <Eye className="size-3.5" /> معاينة وتنفيذ
           </button>
         </div>
+
 
         {loading && (
           <div className="flex items-center gap-2 text-slate-400 text-sm">
