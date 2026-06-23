@@ -8,13 +8,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight, Lock, Check, Crown, Trophy, Scroll, BookOpen, Sparkles,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import type { Campaign } from "@/types/campaign";
-import { getCampaign, listCampaigns } from "@/lib/campaignStorage";
-import { pullCampaignsFromCloud } from "@/lib/cloudSync";
+import { fetchCampaignByIdOrSlug } from "@/lib/supabaseCampaigns";
 import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
@@ -44,21 +43,11 @@ const DIFFICULTY_LABEL: Record<string, string> = {
 
 function ImportedCampaignOverview() {
   const { id } = useParams({ from: "/campaigns/imported/$id/" });
-  const [campaign, setCampaign] = useState<Campaign | null>(() => getCampaign(id) ?? null);
-  const [loading, setLoading]   = useState(!campaign);
+  const { data: campaign, isLoading } = useQuery({
+    queryKey: ["campaign", id],
+    queryFn: () => fetchCampaignByIdOrSlug(id),
+  });
 
-  // First mount: if local cache missed, pull from cloud and retry.
-  useEffect(() => {
-    if (campaign) return;
-    let cancelled = false;
-    pullCampaignsFromCloud().then(() => {
-      if (cancelled) return;
-      const next = listCampaigns().find(c => c.id === id) ?? null;
-      setCampaign(next);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-    return () => { cancelled = true; };
-  }, [id, campaign]);
 
   // Progress tick — re-read from localStorage when window regains focus.
   const [tick, setTick] = useState(0);
@@ -74,7 +63,7 @@ function ImportedCampaignOverview() {
   );
   const percent = campaign ? campaignCompletionPercent(campaign) : 0;
 
-  if (loading) {
+  if (isLoading) {
     return <AppShell><div className="px-5 pt-20 text-center text-muted-foreground">جاري التحميل…</div></AppShell>;
   }
   if (!campaign) throw notFound();

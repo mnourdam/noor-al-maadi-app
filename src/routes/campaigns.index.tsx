@@ -1,39 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { ARTIFACTS, CHARACTERS } from "@/lib/data";
 import { useProfile } from "@/lib/profile";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
-import { listPublishedCampaigns } from "@/lib/campaignStorage";
+import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
-
-const artifactName = (id?: string) => (id ? ARTIFACTS.find((a) => a.id === id)?.name ?? id : undefined);
-const characterName = (id?: string) => (id ? CHARACTERS.find((c) => c.id === id)?.name ?? id : undefined);
-
-
-function RewardRow({ main, badge, xp }: { main?: string; badge?: string; xp?: number }) {
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[10px]">
-      {main && (
-        <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-gold">
-          <Trophy className="size-3" /> {main}
-        </span>
-      )}
-      {badge && (
-        <span className="inline-flex items-center gap-1 rounded-full border border-fuchsia-400/30 bg-fuchsia-400/10 px-2 py-0.5 text-fuchsia-200">
-          <Award className="size-3" /> {badge}
-        </span>
-      )}
-      {typeof xp === "number" && xp > 0 && (
-        <span className="inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 text-sky-200">
-          <Zap className="size-3" /> {xp} XP
-        </span>
-      )}
-    </div>
-  );
-}
 
 export const Route = createFileRoute("/campaigns/")({
   head: () => ({ meta: [{ title: "الحملات التاريخية" }] }),
@@ -41,22 +14,20 @@ export const Route = createFileRoute("/campaigns/")({
 });
 
 function CampaignsHub() {
-  useProfile(); // keep subscription for parity
-  // Admin-imported published campaigns (Supabase admin_campaigns → local cache).
-  const [importedCampaigns, setImportedCampaigns] = useState<ImportedCampaign[]>([]);
-  useEffect(() => {
-    setImportedCampaigns(listPublishedCampaigns());
-    import("@/lib/cloudSync")
-      .then((m) => m.pullCampaignsFromCloud())
-      .then(() => setImportedCampaigns(listPublishedCampaigns()))
-      .catch(() => {});
-  }, []);
+  useProfile();
+  const { data: importedCampaigns = [], isLoading } = useQuery({
+    queryKey: ["campaigns", "published"],
+    queryFn: fetchPublishedCampaigns,
+  });
 
   return (
     <AppShell>
       <Screen title="الحملات" subtitle="رحلاتٌ مصمَّمة تأخذك عبر العصور">
-        {/* === Imported published campaigns (admin-managed, Supabase source of truth) === */}
-        {importedCampaigns.length > 0 && (
+        {isLoading && (
+          <div className="px-2 py-10 text-center text-sm text-muted-foreground">جاري التحميل…</div>
+        )}
+
+        {!isLoading && importedCampaigns.length > 0 && (
           <div className="mb-6 space-y-3">
             {importedCampaigns.map((c) => (
               <ImportedCampaignCard key={c.id} c={c} />
@@ -64,11 +35,10 @@ function CampaignsHub() {
           </div>
         )}
 
-        {importedCampaigns.length === 0 && (
+        {!isLoading && importedCampaigns.length === 0 && (
           <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
             <Swords className="mx-auto mb-3 size-8 text-gold/70" />
-            <p className="font-display text-base font-bold text-gold">لا توجد حملات متاحة بعد</p>
-            <p className="mt-1 text-xs text-muted-foreground">سيتم نشر حملات جديدة قريبًا.</p>
+            <p className="font-display text-base font-bold text-gold">لا توجد حملات منشورة حاليًا.</p>
           </div>
         )}
       </Screen>
