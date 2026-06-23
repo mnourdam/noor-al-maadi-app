@@ -13,7 +13,9 @@ import { RelatedHistory } from "@/components/RelatedHistory";
 import type { EntityRef } from "@/lib/knowledge-graph";
 import {
   useEncyclopediaCanonicalEntity,
+  useEncyclopediaSupabaseEntityById,
   isSupabaseEnabled,
+  isUuid,
 } from "@/lib/encyclopedia-source";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
