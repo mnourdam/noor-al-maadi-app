@@ -51,6 +51,7 @@ import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminMapRouteImport } from './routes/admin.map'
 import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
 import { Route as AdminImportRouteImport } from './routes/admin.import'
+import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
@@ -274,6 +275,11 @@ const AdminImportRoute = AdminImportRouteImport.update({
   path: '/admin/import',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEncyclopediaAuditRoute = AdminEncyclopediaAuditRouteImport.update({
+  id: '/admin/encyclopedia-audit',
+  path: '/admin/encyclopedia-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminEncyclopediaRoute = AdminEncyclopediaRouteImport.update({
   id: '/admin/encyclopedia',
   path: '/admin/encyclopedia',
@@ -366,6 +372,7 @@ export interface FileRoutesByFullPath {
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
+  '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
@@ -420,6 +427,7 @@ export interface FileRoutesByTo {
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
+  '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
@@ -477,6 +485,7 @@ export interface FileRoutesById {
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
+  '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
@@ -535,6 +544,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
+    | '/admin/encyclopedia-audit'
     | '/admin/import'
     | '/admin/investigations'
     | '/admin/map'
@@ -589,6 +599,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
+    | '/admin/encyclopedia-audit'
     | '/admin/import'
     | '/admin/investigations'
     | '/admin/map'
@@ -645,6 +656,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/encyclopedia'
+    | '/admin/encyclopedia-audit'
     | '/admin/import'
     | '/admin/investigations'
     | '/admin/map'
@@ -702,6 +714,7 @@ export interface RootRouteChildren {
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminContentRoute: typeof AdminContentRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
+  AdminEncyclopediaAuditRoute: typeof AdminEncyclopediaAuditRoute
   AdminImportRoute: typeof AdminImportRoute
   AdminInvestigationsRoute: typeof AdminInvestigationsRoute
   AdminMapRoute: typeof AdminMapRoute
@@ -1018,6 +1031,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminImportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/encyclopedia-audit': {
+      id: '/admin/encyclopedia-audit'
+      path: '/admin/encyclopedia-audit'
+      fullPath: '/admin/encyclopedia-audit'
+      preLoaderRoute: typeof AdminEncyclopediaAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/encyclopedia': {
       id: '/admin/encyclopedia'
       path: '/admin/encyclopedia'
@@ -1171,6 +1191,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminContentRoute: AdminContentRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
+  AdminEncyclopediaAuditRoute: AdminEncyclopediaAuditRoute,
   AdminImportRoute: AdminImportRoute,
   AdminInvestigationsRoute: AdminInvestigationsRoute,
   AdminMapRoute: AdminMapRoute,
