@@ -231,6 +231,43 @@ export function useEncyclopediaCanonicalEntity(
   });
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function isUuid(s: string): boolean {
+  return !!s && UUID_RE.test(s.trim());
+}
+
+/** Fetch a single enabled entity by UUID — used by atlas → encyclopedia links. */
+export function useEncyclopediaSupabaseEntityById(rawId: string) {
+  const id = (rawId ?? "").trim();
+  const enabled = isUuid(id);
+  return useQuery({
+    queryKey: ["encyclopedia-entity-by-id", id],
+    enabled,
+    staleTime: 60_000,
+    retry: 1,
+    queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
+      try {
+        const { data, error } = await supabase
+          .from("encyclopedia_entities")
+          .select("*")
+          .eq("id", id)
+          .eq("enabled", true)
+          .maybeSingle();
+        if (error) {
+          if (typeof console !== "undefined")
+            console.warn("[encyclopedia-source] id fetch failed", error.message);
+          return null;
+        }
+        return (data as SupabaseEncyclopediaEntity | null) ?? null;
+      } catch (e) {
+        if (typeof console !== "undefined")
+          console.warn("[encyclopedia-source] id fetch crashed", e);
+        return null;
+      }
+    },
+  });
+}
+
 /**
  * Fetch a single enabled entity by slug across all entity_types. Picks the
  * canonical (richest) row when multiple types share the same slug.
