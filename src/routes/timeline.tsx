@@ -97,14 +97,8 @@ function TimelinePage() {
   // truth; otherwise we fall back to the legacy static/pack-derived dataset.
   const sbBands = useTimelineBands();
   const sbPoints = useTimelinePoints();
-  const BANDS_ALL  = useMemo(
-    () => (sbBands.bands.length > 0 ? sbBands.bands : allBands()),
-    [sbBands.bands],
-  );
-  const POINTS_ALL = useMemo(
-    () => (sbPoints.points.length > 0 ? sbPoints.points : allPoints()),
-    [sbPoints.points],
-  );
+  const BANDS_ALL: TimelineBand[]  = useMemo(() => sbBands.bands,  [sbBands.bands]);
+  const POINTS_ALL: TimelinePoint[] = useMemo(() => sbPoints.points, [sbPoints.points]);
 
   // Debug: open /timeline?debug=1 to inspect the Supabase-backed dataset.
   useEffect(() => {
