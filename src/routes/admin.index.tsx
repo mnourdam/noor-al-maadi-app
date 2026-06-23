@@ -86,6 +86,8 @@ function AdminHub() {
             desc="إدارة مدخلات الموسوعة (شخصيات، مدن، معارك...)." />
           <AdminCard to="/admin/encyclopedia-audit" icon={<ShieldCheck className="h-5 w-5" />} title="تدقيق توحيد الموسوعة"
             desc="مكررات slug/عناوين/legacy_id، صفوف ضعيفة، تعطيل آمن." />
+          <AdminCard to="/admin/content-cleanup" icon={<ShieldCheck className="h-5 w-5" />} title="تنظيف المحتوى (دفعي)"
+            desc="أرشفة المكررات وإعادة ربط الأطلس بالقياسي — معاينة قبل التنفيذ." />
           <AdminCard to="/admin/investigations" icon={<Search className="h-5 w-5" />} title="إدارة التحقيقات"
             desc="تحقيقات تاريخية قابلة للعب من Supabase." />
           <AdminCard to="/admin/map" icon={<MapPin className="h-5 w-5" />} title="إدارة الخريطة"
