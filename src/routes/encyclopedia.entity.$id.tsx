@@ -71,16 +71,16 @@ function legacyEntityRef(b: NonNullable<ReturnType<typeof getPackEntity>>["bridg
 
 function EntityPage() {
   const { id } = Route.useParams() as { id: string };
-  const pack = getPackEntity(id);
+  const idIsUuid = isUuid(id);
+  const pack = idIsUuid ? null : getPackEntity(id);
 
-  // Canonical resolver: searches by slug + metadata.aliases across all
-  // entity types, picks the richest row. Hinted type from the pack only
-  // breaks ties — so `artifact:cave-of-hira` correctly surfaces the rich
-  // `landmark:cave-of-hira` article.
+  // Atlas → encyclopedia links pass the encyclopedia_entities UUID.
+  // Players following slug URLs use the canonical (slug + aliases) resolver.
   const probeType = pack?.type ?? null;
-  const canonicalQuery = useEncyclopediaCanonicalEntity(id, probeType);
-  const supa = canonicalQuery.data ?? null;
-  const slugQuery = { isLoading: canonicalQuery.isLoading };
+  const byIdQuery = useEncyclopediaSupabaseEntityById(id);
+  const canonicalQuery = useEncyclopediaCanonicalEntity(idIsUuid ? "" : id, probeType);
+  const supa = (idIsUuid ? byIdQuery.data : canonicalQuery.data) ?? null;
+  const slugQuery = { isLoading: idIsUuid ? byIdQuery.isLoading : canonicalQuery.isLoading };
 
   // Encyclopedia is an OPEN knowledge library. Do NOT gate on collection
   // unlock state — direct URL access must always show the article when
