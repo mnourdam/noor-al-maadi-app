@@ -13,7 +13,7 @@ import { createFileRoute, Link, useParams, useNavigate, notFound } from "@tansta
 import { useQuery } from "@tanstack/react-query";
 import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart, X as XIcon } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import type { CampaignChapter } from "@/types/campaign";
+import type { Campaign, CampaignChapter } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { fetchCampaignByIdOrSlug } from "@/lib/supabaseCampaigns";
 import {
