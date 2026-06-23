@@ -105,6 +105,85 @@ function Page() {
     setRows((prev) => prev?.map(x => x.id === r.id ? { ...x, enabled: !r.enabled } : x) ?? null);
   }
 
+  const [exporting, setExporting] = useState(false);
+  async function exportJson() {
+    if (!rows || !groups) return;
+    setExporting(true);
+    try {
+      // Atlas link audit — fetch alongside, do not block page render.
+      const { data: atlasData, error: atlasErr } = await supabase
+        .from("atlas_entities")
+        .select("id,slug,kind,name_ar,status,encyclopedia_entity_id");
+      const enabledIds = new Set(rows.filter(r => r.enabled).map(r => r.id));
+      const allIds = new Set(rows.map(r => r.id));
+      const atlas = (atlasData as any[] | null) ?? [];
+      const atlasLinkIssues = atlasErr ? [{ error: atlasErr.message }] : atlas
+        .map(a => {
+          const eid = a.encyclopedia_entity_id as string | null;
+          let issue: string | null = null;
+          if (!eid) issue = "missing_encyclopedia_entity_id";
+          else if (!allIds.has(eid)) issue = "encyclopedia_entity_id_not_found";
+          else if (!enabledIds.has(eid)) issue = "links_to_disabled_row";
+          return issue ? { atlas_id: a.id, slug: a.slug, kind: a.kind, name_ar: a.name_ar, status: a.status, encyclopedia_entity_id: eid, issue } : null;
+        })
+        .filter(Boolean);
+
+      const slim = (r: Row) => ({
+        id: r.id, entity_type: r.entity_type, slug: r.slug, title: r.title,
+        enabled: r.enabled, richness: entityRichness(r), updated_at: r.updated_at,
+        legacy_id: legacyIdOf(r),
+      });
+      const byTypeCoverage: Record<string, { total: number; enabled: number; weak: number }> = {};
+      for (const r of rows) {
+        const t = r.entity_type || "unknown";
+        const c = byTypeCoverage[t] ?? { total: 0, enabled: 0, weak: 0 };
+        c.total++; if (r.enabled) c.enabled++; if (isWeak(r)) c.weak++;
+        byTypeCoverage[t] = c;
+      }
+
+      const payload = {
+        generated_at: new Date().toISOString(),
+        source: "encyclopedia_entities",
+        totals: {
+          rows: rows.length,
+          enabled: rows.filter(r => r.enabled).length,
+          disabled: rows.filter(r => !r.enabled).length,
+          duplicate_slug_groups: groups.dupSlugs.length,
+          duplicate_title_groups: groups.dupTitles.length,
+          duplicate_legacy_id_groups: groups.dupLegacy.length,
+          weak_rows: groups.weak.length,
+          atlas_entities: atlas.length,
+          atlas_link_issues: atlasLinkIssues.length,
+        },
+        coverage: byTypeCoverage,
+        duplicate_slugs: groups.dupSlugs.map(([slug, list]) => {
+          const ranked = [...list].sort((a, b) => entityRichness(b) - entityRichness(a));
+          return { slug, count: list.length, canonical_id: ranked[0]?.id ?? null, rows: ranked.map(slim) };
+        }),
+        duplicate_titles: groups.dupTitles.map(([title, list]) => {
+          const ranked = [...list].sort((a, b) => entityRichness(b) - entityRichness(a));
+          return { title, count: list.length, canonical_id: ranked[0]?.id ?? null, rows: ranked.map(slim) };
+        }),
+        duplicate_legacy_ids: groups.dupLegacy.map(([legacy_id, list]) => {
+          const ranked = [...list].sort((a, b) => entityRichness(b) - entityRichness(a));
+          return { legacy_id, count: list.length, canonical_id: ranked[0]?.id ?? null, rows: ranked.map(slim) };
+        }),
+        weak_rows: groups.weak.map(slim),
+        atlas_link_issues: atlasLinkIssues,
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `encyclopedia-audit-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div dir="rtl" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-slate-100">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -115,13 +194,22 @@ function Page() {
         </header>
         <div className="flex items-center gap-3">
           <ShieldCheck className="size-6 text-amber-400" />
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-bold text-amber-100">تدقيق توحيد الموسوعة</h1>
             <p className="text-xs text-slate-400">
               اعرض الصفوف المكررة والضعيفة. التعطيل الآمن فقط (enabled=false) — بدون حذف صلب.
             </p>
           </div>
+          <button
+            onClick={exportJson}
+            disabled={!rows || !groups || exporting}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+          >
+            {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+            تصدير JSON
+          </button>
         </div>
+
 
         {loading && (
           <div className="flex items-center gap-2 text-slate-400 text-sm">
