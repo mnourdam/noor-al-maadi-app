@@ -11,8 +11,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Era } from "@/lib/data";
-import type { TimelineBand, TimelinePoint, TimelineLane } from "@/lib/timeline";
+import type { Era, TimelineBand, TimelinePoint, TimelineLane } from "@/lib/timeline";
 
 type TimelineRow = {
   id: string;
