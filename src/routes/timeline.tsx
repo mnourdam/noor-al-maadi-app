@@ -3,7 +3,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { ChevronLeft, ZoomIn, ZoomOut, Crown, Swords, BookOpen, Sparkles, Users, Compass, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
-  allBands, allPoints, CENTURIES, ERA_BACKDROPS,
+  CENTURIES, ERA_BACKDROPS,
   TIMELINE_START, TIMELINE_END, LANE_META, TONE_CLASSES,
   type TimelineLane, type TimelinePoint, type TimelineBand,
 } from "@/lib/timeline";
