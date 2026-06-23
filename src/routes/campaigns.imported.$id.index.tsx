@@ -63,7 +63,7 @@ function ImportedCampaignOverview() {
   );
   const percent = campaign ? campaignCompletionPercent(campaign) : 0;
 
-  if (loading) {
+  if (isLoading) {
     return <AppShell><div className="px-5 pt-20 text-center text-muted-foreground">جاري التحميل…</div></AppShell>;
   }
   if (!campaign) throw notFound();
