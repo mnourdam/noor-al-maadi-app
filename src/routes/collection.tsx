@@ -245,18 +245,15 @@ function CollectionPage() {
     city: supCities, battle: supBattles, event: supEvents,
   };
 
-  // ── Imported registry items (also real content) ─────────────
+  // ── Imported registry items: museum is Supabase-only now. ───
+  // Keep the shape so downstream consumers (rendering, counts)
+  // continue to work without legacy registry fallback.
   const importedByType = useMemo(() => {
     const m: Record<string, Array<ContentRegistryItem & { unlocked: boolean }>> = {};
-    for (const s of SECTIONS) {
-      const all: Array<ContentRegistryItem & { unlocked: boolean }> = [];
-      for (const t of s.registryTypes ?? []) {
-        all.push(...getImportedRegistryItemsByType(t as any));
-      }
-      m[s.id] = all;
-    }
+    for (const s of SECTIONS) m[s.id] = [];
     return m;
-  }, [refreshTick]);
+  }, []);
+
 
   // ── User collection (Supabase) ──────────────────────────────
   const userCollectionResult = useUserCollectionByType();
@@ -264,7 +261,9 @@ function CollectionPage() {
   const userUnlockedAt = userCollectionResult.unlockedAt;
 
   // ── Imported registry unlocks (raw "type:slug" strings) ─────
-  const importedUnlockSet = useMemo(() => new Set(getUnlockedRegistryIds()), [refreshTick]);
+  // ── Imported registry unlocks: Supabase-only museum, no fallback ──
+  const importedUnlockSet = useMemo(() => new Set<string>(), []);
+
   const unlockSources = useMemo(() => getUnlockSourcesMap(), [refreshTick]);
 
   // ── Campaign-title lookup for source label ──────────────────
