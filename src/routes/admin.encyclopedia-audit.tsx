@@ -14,7 +14,7 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, ShieldCheck, EyeOff, Eye, AlertTriangle, Loader2 } from "lucide-react";
+import { ChevronRight, ShieldCheck, EyeOff, Eye, AlertTriangle, Loader2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { entityRichness } from "@/lib/encyclopedia-source";
