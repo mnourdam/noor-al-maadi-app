@@ -9,7 +9,7 @@ import {
   citiesForStory, citiesForEra, citiesInRegion, getCity,
   type CityProfile,
 } from "./cities";
-import { packEntitiesForBridge, neighborsOf } from "./packs";
+import { packEntitiesForBridge, neighborsOf } from "./packs/registry";
 
 export type EntityKind = "character" | "battle" | "region" | "story" | "artifact" | "campaign" | "city";
 
