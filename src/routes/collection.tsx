@@ -261,7 +261,9 @@ function CollectionPage() {
   const userUnlockedAt = userCollectionResult.unlockedAt;
 
   // ── Imported registry unlocks (raw "type:slug" strings) ─────
-  const importedUnlockSet = useMemo(() => new Set(getUnlockedRegistryIds()), [refreshTick]);
+  // ── Imported registry unlocks: Supabase-only museum, no fallback ──
+  const importedUnlockSet = useMemo(() => new Set<string>(), []);
+
   const unlockSources = useMemo(() => getUnlockSourcesMap(), [refreshTick]);
 
   // ── Campaign-title lookup for source label ──────────────────
