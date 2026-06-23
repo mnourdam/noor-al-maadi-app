@@ -43,7 +43,6 @@ import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
 import { Route as FigureIdRouteImport } from './routes/figure.$id'
 import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
-import { Route as CampaignsEraRouteImport } from './routes/campaigns.$era'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
@@ -236,11 +235,6 @@ const CityIdRoute = CityIdRouteImport.update({
   path: '/city/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CampaignsEraRoute = CampaignsEraRouteImport.update({
-  id: '/$era',
-  path: '/$era',
-  getParentRoute: () => CampaignsRoute,
-} as any)
 const BattleIdRoute = BattleIdRouteImport.update({
   id: '/battle/$id',
   path: '/battle/$id',
@@ -387,7 +381,6 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/battle/$id': typeof BattleIdRoute
-  '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
   '/figure/$id': typeof FigureIdRoute
@@ -443,7 +436,6 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/battle/$id': typeof BattleIdRoute
-  '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
   '/figure/$id': typeof FigureIdRoute
@@ -502,7 +494,6 @@ export interface FileRoutesById {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/battle/$id': typeof BattleIdRoute
-  '/campaigns/$era': typeof CampaignsEraRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
   '/figure/$id': typeof FigureIdRoute
@@ -562,7 +553,6 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offline'
     | '/battle/$id'
-    | '/campaigns/$era'
     | '/city/$id'
     | '/compare/$id'
     | '/figure/$id'
@@ -618,7 +608,6 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offline'
     | '/battle/$id'
-    | '/campaigns/$era'
     | '/city/$id'
     | '/compare/$id'
     | '/figure/$id'
@@ -676,7 +665,6 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offline'
     | '/battle/$id'
-    | '/campaigns/$era'
     | '/city/$id'
     | '/compare/$id'
     | '/figure/$id'
@@ -988,13 +976,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CityIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/campaigns/$era': {
-      id: '/campaigns/$era'
-      path: '/$era'
-      fullPath: '/campaigns/$era'
-      preLoaderRoute: typeof CampaignsEraRouteImport
-      parentRoute: typeof CampaignsRoute
-    }
     '/battle/$id': {
       id: '/battle/$id'
       path: '/battle/$id'
@@ -1146,14 +1127,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface CampaignsRouteChildren {
-  CampaignsEraRoute: typeof CampaignsEraRoute
   CampaignsIndexRoute: typeof CampaignsIndexRoute
   CampaignsImportedIdIndexRoute: typeof CampaignsImportedIdIndexRoute
   CampaignsImportedIdChapterChapterRoute: typeof CampaignsImportedIdChapterChapterRoute
 }
 
 const CampaignsRouteChildren: CampaignsRouteChildren = {
-  CampaignsEraRoute: CampaignsEraRoute,
   CampaignsIndexRoute: CampaignsIndexRoute,
   CampaignsImportedIdIndexRoute: CampaignsImportedIdIndexRoute,
   CampaignsImportedIdChapterChapterRoute:
