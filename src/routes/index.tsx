@@ -603,7 +603,6 @@ function Index() {
           <WorldCard to="/map" icon={<MapIcon className="size-5" />} title="الأطلس الإسلامي" subtitle="خارطة العصور" />
           <WorldCard to="/collection" icon={<Package className="size-5" />} title="المتحف" subtitle="أرشيفك ومقتنياتك" />
           <WorldCard to="/worlds" icon={<Compass className="size-5" />} title="عوالم إرث" subtitle="استكشف الحضارات" />
-          <WorldCard to="/encyclopedia/path/andalus" icon={<Sparkles className="size-5" />} title="مسارات الاستكشاف" subtitle="رحلات مترابطة" />
           <div className="col-span-2">
             <WorldCard to="/timeline" icon={<Hourglass className="size-5" />} title="الخط الزمني العظيم" subtitle="أكثر من 1400 سنة من التاريخ" wide />
           </div>
