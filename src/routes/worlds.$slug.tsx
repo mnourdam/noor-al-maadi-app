@@ -166,7 +166,7 @@ function WorldDetailPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-gold/80">عالم مرتبط</p>
-                      <p className="font-display truncate text-[13px] font-bold">{w.title}</p>
+                      <p className="font-display text-[13px] font-bold leading-snug break-words">{w.title}</p>
                     </div>
                     <ChevronRight className="size-4 text-gold/60 group-hover:text-gold" />
                   </Link>
