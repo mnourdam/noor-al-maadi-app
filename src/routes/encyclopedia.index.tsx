@@ -6,7 +6,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
-import { eraLabel } from "@/lib/era-labels";
+import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 
 export const Route = createFileRoute("/encyclopedia/")({
   head: () => ({
@@ -86,6 +86,7 @@ function seededShuffle<T>(arr: T[], seed: number): T[] {
 function EncyclopediaHub() {
   const [query, setQuery] = useState("");
   const [era, setEra] = useState<string>("");
+  const [showAllEras, setShowAllEras] = useState(false);
 
   const { data: all = [], isLoading } = useAllEncyclopedia();
 
@@ -101,9 +102,16 @@ function EncyclopediaHub() {
     for (const e of all) {
       const er = metaEra(e);
       if (!er) continue;
-      m.set(er, (m.get(er) ?? 0) + 1);
+      const canon = toCanonicalEra(er) ?? er;
+      m.set(canon, (m.get(canon) ?? 0) + 1);
     }
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+    // chronological order per canonical taxonomy; unknown sinks to the end
+    return Array.from(m.entries()).sort((a, b) => {
+      const ai = eraSortIndex(a[0]);
+      const bi = eraSortIndex(b[0]);
+      if (ai !== bi) return ai - bi;
+      return b[1] - a[1];
+    });
   }, [all]);
 
   const states = useMemo(
@@ -130,7 +138,7 @@ function EncyclopediaHub() {
   const results = useMemo(() => {
     if (!q && !era) return [];
     return all
-      .filter((e) => !era || metaEra(e) === era)
+      .filter((e) => !era || (toCanonicalEra(metaEra(e)) ?? metaEra(e)) === era)
       .filter((e) => {
         if (!q) return true;
         const hay = `${e.title} ${e.subtitle ?? ""} ${e.summary ?? ""} ${e.slug}`.toLowerCase();
@@ -258,16 +266,24 @@ function EncyclopediaHub() {
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {eraCounts.map(([name, n]) => (
+                  {(showAllEras ? eraCounts : eraCounts.slice(0, 8)).map(([name, n]) => (
                     <button
                       key={name}
                       onClick={() => setEra(name)}
                       className="rounded-2xl border border-white/10 bg-surface px-3 py-2 text-right transition hover:border-gold/40"
                     >
-                      <span className="font-display block text-xs font-bold">{eraLabel(name)}</span>
+                      <span className="font-display block text-xs font-bold">{canonicalEraLabel(name)}</span>
                       <span className="text-[10px] text-gold/80">{n} عنصر</span>
                     </button>
                   ))}
+                  {eraCounts.length > 8 && (
+                    <button
+                      onClick={() => setShowAllEras((v) => !v)}
+                      className="rounded-2xl border border-gold/30 bg-black/30 px-3 py-2 text-[11px] text-gold/90 hover:border-gold/60"
+                    >
+                      {showAllEras ? "عرض أقل" : `عرض المزيد (${eraCounts.length - 8})`}
+                    </button>
+                  )}
                 </div>
               )}
             </section>
