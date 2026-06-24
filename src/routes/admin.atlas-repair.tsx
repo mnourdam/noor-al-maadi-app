@@ -350,6 +350,56 @@ function AtlasRepairPage() {
     await reload();
   };
 
+  const stubPlan = useMemo(() => computeStubPlan(issued, enc), [issued, enc]);
+
+  const runStubBulk = async () => {
+    setStubRunning(true);
+    setStubProgress({ done: 0, total: stubPlan.length, failed: 0 });
+    let done = 0, failed = 0;
+    const newEnc: EncEntity[] = [];
+    const updatedRows: AtlasEntityRow[] = [];
+    for (const item of stubPlan) {
+      try {
+        const { data, error: insErr } = await supabase
+          .from("encyclopedia_entities")
+          .insert({
+            entity_type: item.entity_type,
+            slug: item.slug,
+            title: item.title,
+            subtitle: item.subtitle,
+            summary: null,
+            body: {},
+            metadata: {
+              source: "atlas_repair_stub",
+              atlas_id: item.row.id,
+              atlas_slug: item.row.slug,
+              aliases: [item.row.slug],
+              needs_content_expansion: true,
+            },
+            enabled: true,
+          })
+          .select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled")
+          .single();
+        if (insErr) throw insErr;
+        const created = data as EncEntity;
+        newEnc.push(created);
+        const u = await updateAtlasEntity(item.row.id, { encyclopedia_entity_id: created.id });
+        updatedRows.push(u);
+      } catch {
+        failed++;
+      }
+      done++;
+      setStubProgress({ done, total: stubPlan.length, failed });
+    }
+    if (newEnc.length) setEnc((es) => [...es, ...newEnc]);
+    if (updatedRows.length) {
+      setRows((rs) => rs.map((r) => updatedRows.find((u) => u.id === r.id) ?? r));
+    }
+    setStubRunning(false);
+    setStubResult({ created: updatedRows.length, failed });
+    await reload();
+  };
+
 
   return (
     <div dir="rtl" className="min-h-screen bg-stone-950 text-stone-100">
