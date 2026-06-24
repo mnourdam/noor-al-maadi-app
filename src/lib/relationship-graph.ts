@@ -146,9 +146,24 @@ export async function resolveRelatedEntities(
       ...asStringList(cm.supporting_entities),
       ...asStringList(cmeta.supporting_entities),
     ].map(stripPrefix);
-    if (!core.includes(selfSlug) && !sup.includes(selfSlug)) continue;
+    const campSlug = typeof cm.slug === "string" ? cm.slug : "";
+    const hintMatch =
+      typeof meta.campaign === "string" && meta.campaign === campSlug;
+    if (!hintMatch && !core.includes(selfSlug) && !sup.includes(selfSlug)) continue;
     bump(core, 80, "campaign-core");
     bump(sup, 70, "campaign-supporting");
+  }
+
+  // 2b. Other entities that declare the same metadata.campaign hint.
+  if (typeof meta.campaign === "string" && meta.campaign.trim()) {
+    const { data: camp_sibs } = await supabase
+      .from("encyclopedia_entities")
+      .select("slug")
+      .eq("enabled", true)
+      .neq("id", selfId)
+      .contains("metadata", { campaign: meta.campaign })
+      .limit(60);
+    bump((camp_sibs ?? []).map((r: { slug: string }) => r.slug), 75, "campaign-core");
   }
 
   // 3. Geography reverse lookup — entities that point AT this entity.
