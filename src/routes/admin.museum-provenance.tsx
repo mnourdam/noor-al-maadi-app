@@ -215,6 +215,13 @@ function MuseumProvenance() {
         </div>
       </header>
 
+      {!loading && !err && (
+        <div className="rounded border border-dashed border-border bg-muted/20 p-2 font-mono text-xs">
+          debug · visible={stats.visible} · hidden={stats.hidden} · legacy/demo hidden=
+          {rows.filter((r) => r.isLegacy && !r.willRemainVisible).length}
+        </div>
+      )}
+
       {loading && <div>جارٍ التحميل…</div>}
       {err && (
         <div className="rounded border border-destructive bg-destructive/10 p-3 text-destructive">
