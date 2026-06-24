@@ -186,6 +186,10 @@ function AtlasRepairPage() {
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [manual, setManual] = useState<Record<string, string>>({});
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number }>({ done: 0, total: 0, failed: 0 });
+  const [bulkResult, setBulkResult] = useState<{ fixed: number; failed: number } | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true); setError(null);
