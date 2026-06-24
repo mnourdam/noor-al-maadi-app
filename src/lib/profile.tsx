@@ -403,6 +403,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     resetProfile: () => setProfile(initial),
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
     grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
+    markAchievementEarned: (id) => {
+      let isNew = false;
+      update((p) => {
+        if (p.achievementsEarned?.[id]) return p;
+        isNew = true;
+        return { ...p, achievementsEarned: { ...(p.achievementsEarned ?? {}), [id]: Date.now() } };
+      });
+      return isNew;
+    },
   }), [profile, update, awardBadge]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;
