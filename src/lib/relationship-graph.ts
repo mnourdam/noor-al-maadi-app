@@ -123,15 +123,29 @@ export async function resolveRelatedEntities(
     if (typeof v === "string" && v.trim()) bump([v.trim()], 95, "biography");
   }
 
-  // 2. Campaigns containing this entity.
+  // 2. Campaigns containing this entity. References can live at top-level
+  //    or under data.metadata, and slugs may be "<type>:<slug>" or dotted.
+  const stripPrefix = (s: string) => {
+    const colon = s.includes(":") ? s.split(":").pop()! : s;
+    return normalizeEntitySlug(colon);
+  };
   const { data: camps } = await supabase
     .from("admin_campaigns")
     .select("data")
     .limit(500);
   for (const c of camps ?? []) {
     const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
-    const core = asStringList(cm.core_entities).map(normalizeEntitySlug);
-    const sup = asStringList(cm.supporting_entities).map(normalizeEntitySlug);
+    const cmeta = (cm.metadata && typeof cm.metadata === "object"
+      ? (cm.metadata as Record<string, unknown>)
+      : {});
+    const core = [
+      ...asStringList(cm.core_entities),
+      ...asStringList(cmeta.core_entities),
+    ].map(stripPrefix);
+    const sup = [
+      ...asStringList(cm.supporting_entities),
+      ...asStringList(cmeta.supporting_entities),
+    ].map(stripPrefix);
     if (!core.includes(selfSlug) && !sup.includes(selfSlug)) continue;
     bump(core, 80, "campaign-core");
     bump(sup, 70, "campaign-supporting");
