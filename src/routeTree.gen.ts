@@ -51,6 +51,7 @@ import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminMapRouteImport } from './routes/admin.map'
 import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
 import { Route as AdminImportRouteImport } from './routes/admin.import'
+import { Route as AdminExplorationPathRepairRouteImport } from './routes/admin.exploration-path-repair'
 import { Route as AdminEraNormalizationRouteImport } from './routes/admin.era-normalization'
 import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
@@ -286,6 +287,12 @@ const AdminImportRoute = AdminImportRouteImport.update({
   path: '/admin/import',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminExplorationPathRepairRoute =
+  AdminExplorationPathRepairRouteImport.update({
+    id: '/admin/exploration-path-repair',
+    path: '/admin/exploration-path-repair',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminEraNormalizationRoute = AdminEraNormalizationRouteImport.update({
   id: '/admin/era-normalization',
   path: '/admin/era-normalization',
@@ -452,6 +459,7 @@ export interface FileRoutesByFullPath {
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
+  '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
@@ -518,6 +526,7 @@ export interface FileRoutesByTo {
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
+  '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
@@ -587,6 +596,7 @@ export interface FileRoutesById {
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
+  '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
@@ -657,6 +667,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/era-normalization'
+    | '/admin/exploration-path-repair'
     | '/admin/import'
     | '/admin/investigations'
     | '/admin/map'
@@ -723,6 +734,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/era-normalization'
+    | '/admin/exploration-path-repair'
     | '/admin/import'
     | '/admin/investigations'
     | '/admin/map'
@@ -791,6 +803,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/era-normalization'
+    | '/admin/exploration-path-repair'
     | '/admin/import'
     | '/admin/investigations'
     | '/admin/map'
@@ -860,6 +873,7 @@ export interface RootRouteChildren {
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
   AdminEncyclopediaAuditRoute: typeof AdminEncyclopediaAuditRoute
   AdminEraNormalizationRoute: typeof AdminEraNormalizationRoute
+  AdminExplorationPathRepairRoute: typeof AdminExplorationPathRepairRoute
   AdminImportRoute: typeof AdminImportRoute
   AdminInvestigationsRoute: typeof AdminInvestigationsRoute
   AdminMapRoute: typeof AdminMapRoute
@@ -1177,6 +1191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminImportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/exploration-path-repair': {
+      id: '/admin/exploration-path-repair'
+      path: '/admin/exploration-path-repair'
+      fullPath: '/admin/exploration-path-repair'
+      preLoaderRoute: typeof AdminExplorationPathRepairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/era-normalization': {
       id: '/admin/era-normalization'
       path: '/admin/era-normalization'
@@ -1425,6 +1446,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
   AdminEncyclopediaAuditRoute: AdminEncyclopediaAuditRoute,
   AdminEraNormalizationRoute: AdminEraNormalizationRoute,
+  AdminExplorationPathRepairRoute: AdminExplorationPathRepairRoute,
   AdminImportRoute: AdminImportRoute,
   AdminInvestigationsRoute: AdminInvestigationsRoute,
   AdminMapRoute: AdminMapRoute,
