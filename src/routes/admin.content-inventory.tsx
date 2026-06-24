@@ -248,6 +248,53 @@ function download(name: string, content: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
+function toSummaryText(inv: Inventory): string {
+  const L: string[] = [];
+  const h = (t: string) => L.push("", `=== ${t} ===`);
+  const kv = (k: string, v: any) => L.push(`${k}: ${v}`);
+  L.push(`Content Inventory Report`);
+  L.push(`Generated: ${new Date(inv.generated_at).toLocaleString()}`);
+
+  h("1. Encyclopedia");
+  kv("total", inv.encyclopedia.total);
+  kv("with_body", inv.encyclopedia.with_body);
+  kv("empty_body", inv.encyclopedia.empty_body);
+  kv("atlas_repair_stub", inv.encyclopedia.atlas_repair_stub);
+  L.push("-- by type --");
+  for (const t of ENC_TYPES) kv(t, inv.encyclopedia.by_type[t] ?? 0);
+  L.push("-- by era --");
+  for (const [k, v] of Object.entries(inv.encyclopedia.by_era)) kv(k, v);
+
+  h("2. Campaigns");
+  for (const [k, v] of Object.entries(inv.campaigns)) kv(k, v);
+  h("3. Investigations");
+  for (const [k, v] of Object.entries(inv.investigations)) kv(k, v);
+  h("4. Today in History");
+  for (const [k, v] of Object.entries(inv.today_in_history)) kv(k, v);
+  h("5. Notifications");
+  for (const [k, v] of Object.entries(inv.notifications)) kv(k, v);
+  h("6. Atlas");
+  for (const [k, v] of Object.entries(inv.atlas)) kv(k, v);
+
+  h("7. Growth");
+  kv("this_week", inv.growth.week);
+  kv("this_month", inv.growth.month);
+  L.push("-- this week by type --");
+  for (const [k, v] of Object.entries(inv.growth.by_type_week)) kv(k, v);
+  L.push("-- this month by type --");
+  for (const [k, v] of Object.entries(inv.growth.by_type_month)) kv(k, v);
+
+  h("8. Top Areas");
+  L.push("-- top eras --");
+  for (const e of inv.top.eras) kv(e.era, e.count);
+  L.push("-- top campaigns by chapters --");
+  for (const c of inv.top.campaigns_by_chapters) kv(c.title, c.chapters);
+  L.push("-- entity types --");
+  for (const t of inv.top.entity_types) kv(t.type, t.count);
+
+  return L.join("\n");
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-lg border border-border bg-card p-4">
