@@ -320,6 +320,13 @@ function AtlasRepairPage() {
               تغطية: <strong className={coverage === 100 ? "text-emerald-300" : "text-amber-300"}>{coverage}%</strong>
               {" "}({valid}/{total})
             </span>
+            <button
+              onClick={() => { setBulkResult(null); setBulkOpen(true); }}
+              disabled={loading || bulkPlan.length === 0}
+              className="inline-flex items-center gap-1 rounded border border-emerald-700 bg-emerald-900/40 px-2 py-1 text-emerald-100 hover:bg-emerald-900/70 disabled:opacity-40"
+            >
+              <Wand2 className="size-3.5" /> إصلاح جماعي آمن ({bulkPlan.length})
+            </button>
             <button onClick={reload} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">
               <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} /> إعادة تدقيق
             </button>
