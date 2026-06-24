@@ -1,5 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { todayKey, dailyMissionsForDate } from "./data";
+function todayKey(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function dailyMissionsForDate(_d: Date = new Date()): { id: string }[] {
+  return [];
+}
 import { HEART_MAX, getEffectiveHearts, commitHearts, ACTIVITY_COOLDOWN_MS, activityKey, STREAK_MILESTONES, type HeartActivity, type StreakMilestone } from "./hearts";
 import { DEFAULT_AVATAR_ID } from "./avatars";
 import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notifications";
