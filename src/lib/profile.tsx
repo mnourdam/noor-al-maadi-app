@@ -147,6 +147,7 @@ interface Ctx {
   // Social v1
   grantTitle: (title: string) => void;
   grantArtifact: (id: string) => void;
+  markAchievementEarned: (id: string) => boolean; // returns true if it was newly marked
 }
 
 const ProfileContext = createContext<Ctx | null>(null);
