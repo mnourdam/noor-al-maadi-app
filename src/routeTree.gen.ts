@@ -56,6 +56,7 @@ import { Route as AdminContentCleanupRouteImport } from './routes/admin.content-
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as AdminAtlasReviewRouteImport } from './routes/admin.atlas-review'
+import { Route as AdminAtlasRepairRouteImport } from './routes/admin.atlas-repair'
 import { Route as AdminAtlasImportRouteImport } from './routes/admin.atlas-import'
 import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-entities'
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
@@ -300,6 +301,11 @@ const AdminAtlasReviewRoute = AdminAtlasReviewRouteImport.update({
   path: '/admin/atlas-review',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAtlasRepairRoute = AdminAtlasRepairRouteImport.update({
+  id: '/admin/atlas-repair',
+  path: '/admin/atlas-repair',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAtlasImportRoute = AdminAtlasImportRouteImport.update({
   id: '/admin/atlas-import',
   path: '/admin/atlas-import',
@@ -368,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
   '/admin/atlas-import': typeof AdminAtlasImportRoute
+  '/admin/atlas-repair': typeof AdminAtlasRepairRoute
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
@@ -423,6 +430,7 @@ export interface FileRoutesByTo {
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
   '/admin/atlas-import': typeof AdminAtlasImportRoute
+  '/admin/atlas-repair': typeof AdminAtlasRepairRoute
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
@@ -481,6 +489,7 @@ export interface FileRoutesById {
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
   '/admin/atlas-import': typeof AdminAtlasImportRoute
+  '/admin/atlas-repair': typeof AdminAtlasRepairRoute
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
@@ -540,6 +549,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
     | '/admin/atlas-import'
+    | '/admin/atlas-repair'
     | '/admin/atlas-review'
     | '/admin/campaigns'
     | '/admin/content'
@@ -595,6 +605,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
     | '/admin/atlas-import'
+    | '/admin/atlas-repair'
     | '/admin/atlas-review'
     | '/admin/campaigns'
     | '/admin/content'
@@ -652,6 +663,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
     | '/admin/atlas-import'
+    | '/admin/atlas-repair'
     | '/admin/atlas-review'
     | '/admin/campaigns'
     | '/admin/content'
@@ -710,6 +722,7 @@ export interface RootRouteChildren {
   AdminAtlasCalibrationRoute: typeof AdminAtlasCalibrationRoute
   AdminAtlasEntitiesRoute: typeof AdminAtlasEntitiesRoute
   AdminAtlasImportRoute: typeof AdminAtlasImportRoute
+  AdminAtlasRepairRoute: typeof AdminAtlasRepairRoute
   AdminAtlasReviewRoute: typeof AdminAtlasReviewRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminContentRoute: typeof AdminContentRoute
@@ -1067,6 +1080,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAtlasReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/atlas-repair': {
+      id: '/admin/atlas-repair'
+      path: '/admin/atlas-repair'
+      fullPath: '/admin/atlas-repair'
+      preLoaderRoute: typeof AdminAtlasRepairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/atlas-import': {
       id: '/admin/atlas-import'
       path: '/admin/atlas-import'
@@ -1186,6 +1206,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAtlasCalibrationRoute: AdminAtlasCalibrationRoute,
   AdminAtlasEntitiesRoute: AdminAtlasEntitiesRoute,
   AdminAtlasImportRoute: AdminAtlasImportRoute,
+  AdminAtlasRepairRoute: AdminAtlasRepairRoute,
   AdminAtlasReviewRoute: AdminAtlasReviewRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminContentRoute: AdminContentRoute,
