@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Database, Network } from "lucide-react";
+import { ChevronRight, Database, Network, BookOpen } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
@@ -14,6 +14,7 @@ import {
   resolveRelatedEntities,
   groupRelatedByReason,
 } from "@/lib/relationship-graph";
+import { buildContextBlocks } from "@/lib/context-blocks";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
@@ -100,6 +101,9 @@ function EntityPage() {
   });
 
   const groups = groupRelatedByReason(relatedQuery.data ?? []);
+  const contextBlocks = entity
+    ? buildContextBlocks(entity, relatedQuery.data ?? [])
+    : [];
 
 
   if (query.isLoading) {
@@ -164,6 +168,30 @@ function EntityPage() {
         </div>
 
         <EncyclopediaArticleBody article={parseEncyclopediaArticle(entity.body, entity.metadata)} />
+
+        {contextBlocks.length > 0 && (
+          <section className="mt-8 space-y-6">
+            {contextBlocks.map((b) => (
+              <div key={b.id}>
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="h-px flex-1 bg-gold/15" />
+                  <h3 className="font-display text-[13px] font-bold text-gold/90">
+                    {b.title}
+                  </h3>
+                  <span className="text-[10px] text-muted-foreground">
+                    {b.items.length}
+                  </span>
+                  <span className="h-px flex-1 bg-gold/15" />
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {b.items.map((n) => (
+                    <EncyclopediaCard key={n.entity.id} entity={n.entity} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
 
         <section className="mt-8">
           <div className="mb-3 flex items-center gap-2">
