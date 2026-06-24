@@ -58,6 +58,15 @@ function WorldDetailPage() {
     queryFn: () => fetchWorldDetail(slug),
   });
 
+  const { data: worldsIndex } = useQuery({
+    queryKey: ["worlds-index"],
+    staleTime: 60_000,
+    queryFn: () => fetchWorldsIndex(),
+  });
+
+  const titleBySlug = new Map((worldsIndex ?? []).map((w) => [w.hub.slug, w.entity.title]));
+
+
   if (!hub) {
     return (
       <AppShell>
