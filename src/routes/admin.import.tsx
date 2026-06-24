@@ -179,6 +179,7 @@ function CampaignImporter() {
     try {
       let inserted = 0, updated = 0, skipped = 0, failed = 0;
       const rowErrs: string[] = [];
+      const reports: CampaignIntegrityReport[] = [];
 
       // Pre-fetch existing ids to differentiate insert vs update.
       const ids = validCampaigns.map(c => c.id);
@@ -191,29 +192,42 @@ function CampaignImporter() {
       for (const c of validCampaigns) {
         const exists = existingIds.has(c.id);
         if (exists && !overwrite) { skipped++; continue; }
+
+        // Auto-assign world/era from metadata when confident.
+        let enriched = c;
+        if (!c.worldSlug) {
+          const inf = inferWorldFromMetadata(c);
+          if (inf && inf.confidence === "high") {
+            enriched = { ...c, worldSlug: inf.worldSlug, era: c.era ?? inf.era };
+          }
+        }
+
         const status = publishOnImport ? "published" : (exists ? undefined : "draft");
         const row: any = {
-          id: c.id,
-          slug: c.slug ?? null,
-          title: c.title,
-          data: { ...c, status: publishOnImport ? "published" : (c.status ?? "draft") },
+          id: enriched.id,
+          slug: enriched.slug ?? null,
+          title: enriched.title,
+          data: { ...enriched, status: publishOnImport ? "published" : (enriched.status ?? "draft") },
           updated_at: new Date().toISOString(),
         };
         if (status) row.status = status;
         const { error } = await supabase
           .from("admin_campaigns" as any)
           .upsert(row, { onConflict: "id" });
-        if (error) { failed++; rowErrs.push(`${c.id}: ${error.message}`); continue; }
+        if (error) { failed++; rowErrs.push(`${enriched.id}: ${error.message}`); continue; }
         if (exists) updated++; else inserted++;
+
+        reports.push(runCampaignIntegrity(enriched));
       }
 
-      setResult({ inserted, updated, skipped, failed, errors: rowErrs.slice(0, 10) });
+      setResult({ inserted, updated, skipped, failed, errors: rowErrs.slice(0, 10), reports });
     } catch (err: any) {
       setTopError(err?.message ?? String(err));
     } finally {
       setBusy(false);
     }
   };
+
 
   const canImport = validCampaigns.length > 0 && !busy && allErrors.length === 0;
 
