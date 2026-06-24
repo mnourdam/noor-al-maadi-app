@@ -61,34 +61,39 @@ function EntityPage() {
     queryKey: ["encyclopedia", "entity", id],
     staleTime: 60_000,
     queryFn: async () => {
-      if (isUuid(id)) {
-        const res = await supabase
-          .from("encyclopedia_entities")
-          .select("*")
-          .eq("enabled", true)
-          .eq("id", id)
-          .maybeSingle();
-        return (res.data ?? null) as SupabaseEncyclopediaEntity | null;
-      }
-      const res = await supabase
-        .from("encyclopedia_entities")
-        .select("*")
-        .eq("enabled", true)
-        .eq("slug", id);
-      const rows = (res.data ?? []) as SupabaseEncyclopediaEntity[];
-      if (rows.length > 0) return rows[0];
+      const fetchById = async (eid: string) => {
+        const r = await supabase.from("encyclopedia_entities").select("*").eq("id", eid).maybeSingle();
+        return (r.data ?? null) as SupabaseEncyclopediaEntity | null;
+      };
+      const followCanonical = async (row: SupabaseEncyclopediaEntity | null) => {
+        if (!row) return null;
+        const meta = (row.metadata && typeof row.metadata === "object") ? row.metadata as any : {};
+        const cid = typeof meta.canonical_id === "string" ? meta.canonical_id : null;
+        if (cid && cid !== row.id) {
+          const canon = await fetchById(cid);
+          if (canon && canon.enabled) return canon;
+        }
+        return row.enabled ? row : null;
+      };
 
-      const alias = await supabase
-        .from("encyclopedia_entities")
-        .select("*")
-        .eq("enabled", true)
-        .or(
-          `metadata.cs.{"aliases":["${id}"]},metadata.cs.{"legacy_id":"${id}"}`,
-        )
-        .limit(1);
-      return ((alias.data ?? [])[0] ?? null) as SupabaseEncyclopediaEntity | null;
+      let primary: SupabaseEncyclopediaEntity | null = null;
+      if (isUuid(id)) {
+        primary = await fetchById(id);
+      } else {
+        const res = await supabase.from("encyclopedia_entities").select("*").eq("slug", id);
+        const rows = (res.data ?? []) as SupabaseEncyclopediaEntity[];
+        primary = rows[0] ?? null;
+        if (!primary) {
+          const alias = await supabase
+            .from("encyclopedia_entities").select("*")
+            .or(`metadata.cs.{"aliases":["${id}"]},metadata.cs.{"legacy_id":"${id}"}`).limit(1);
+          primary = ((alias.data ?? [])[0] ?? null) as SupabaseEncyclopediaEntity | null;
+        }
+      }
+      return followCanonical(primary);
     },
   });
+
 
   const entity = query.data ?? null;
 
