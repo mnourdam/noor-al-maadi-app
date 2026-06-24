@@ -14,6 +14,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ProfileProvider } from "../lib/profile";
 import { AccountProvider } from "../lib/account";
 import { FirstLaunchGate } from "../components/FirstLaunchGate";
+import { Toaster } from "../components/ui/sonner";
+import { AchievementWatcher } from "../components/AchievementWatcher";
 
 function NotFoundComponent() {
   return (
@@ -214,6 +216,8 @@ function RootComponent() {
         <AccountProvider>
           <Outlet />
           <FirstLaunchGate />
+          <AchievementWatcher />
+          <Toaster position="top-center" richColors closeButton />
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
