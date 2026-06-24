@@ -94,10 +94,12 @@ function ReferralsPage() {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <Box label="إجمالي" value={stats.total} />
-          <Box label="نشط" value={stats.active} />
-          <Box label="دينار" value={stats.rewards} />
+        <div className="mt-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
+          <Box label="دعوات" value={serverStats?.invited ?? stats.total} />
+          <Box label="انضموا" value={serverStats?.joined ?? 0} />
+          <Box label="مستوى 5" value={serverStats?.level5 ?? stats.active} />
+          <Box label="تحويل %" value={serverStats?.conversion_pct ?? 0} />
+          <Box label="إجمالي دنانير" value={serverStats?.total_dinars ?? stats.rewards} />
         </div>
 
         <div className="mt-5">
