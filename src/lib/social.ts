@@ -54,14 +54,15 @@ export async function fetchPublicProfileByUsername(username: string): Promise<Pu
 }
 
 /**
- * Owner-only helper for fetching the current user's referral code. Reads from
- * the base `profiles` table — succeeds only under the
- * "Users can view their own profile" RLS policy.
+ * Owner-only helper for fetching the current user's referral code. Goes
+ * through the `get_my_profile` SECURITY DEFINER RPC because direct SELECT
+ * on private profile columns is no longer permitted to authenticated.
  */
-export async function fetchMyReferralCode(ownerId: string): Promise<string | null> {
-  const { data } = await db.from("profiles").select("referral_code").eq("id", ownerId).maybeSingle();
+export async function fetchMyReferralCode(_ownerId: string): Promise<string | null> {
+  const { data } = await db.rpc("get_my_profile");
   return ((data as { referral_code: string | null } | null)?.referral_code) ?? null;
 }
+
 
 
 /**
