@@ -160,7 +160,7 @@ function EncyclopediaHub() {
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[10px] text-gold/80">إجمالي العناصر</p>
-              <p className="font-display text-3xl font-bold text-gold">{total.toLocaleString("ar-EG")}</p>
+              <p className="font-display text-3xl font-bold text-gold">{total.toLocaleString("en-US")}</p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center text-[10px] text-muted-foreground">
               <div><div className="text-foreground font-bold">{counts.figure ?? 0}</div>شخصيات</div>
