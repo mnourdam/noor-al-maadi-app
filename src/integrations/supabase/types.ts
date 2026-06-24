@@ -1084,6 +1084,46 @@ export type Database = {
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       gen_referral_code: { Args: never; Returns: string }
       get_my_email: { Args: never; Returns: string }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          account_status: string
+          artifacts_collected: number
+          avatar_id: string | null
+          bio: string | null
+          campaigns_completed: number
+          created_at: string
+          dinars: number
+          discovery_pct: number
+          display_name: string | null
+          email: string | null
+          favorite_figure_id: string | null
+          favorite_state_id: string | null
+          hearts: number
+          id: string
+          investigations_completed: number
+          join_date: string
+          last_active: string
+          level: number
+          locale: string
+          longest_streak: number
+          marketing_opt_in: boolean
+          museum_items_unlocked: number
+          referral_code: string | null
+          referred_by: string | null
+          streak: number
+          title: string | null
+          updated_at: string
+          username: string
+          xp: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       grant_level5_reward: { Args: { p_referred_id: string }; Returns: string }
       grant_signup_reward: { Args: { p_referred_id: string }; Returns: string }
       is_content_admin: { Args: never; Returns: boolean }
