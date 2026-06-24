@@ -515,6 +515,17 @@ function AtlasRepairPage() {
           onRun={runBulk}
         />
       )}
+
+      {stubOpen && (
+        <StubBulkModal
+          plan={stubPlan}
+          running={stubRunning}
+          progress={stubProgress}
+          result={stubResult}
+          onClose={() => { if (!stubRunning) { setStubOpen(false); setStubResult(null); } }}
+          onRun={runStubBulk}
+        />
+      )}
     </div>
   );
 }
