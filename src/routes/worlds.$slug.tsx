@@ -8,11 +8,13 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
   fetchWorldDetail,
+  fetchWorldsIndex,
   WORLD_HUBS,
   findHub,
   type WorldSectionKey,
 } from "@/lib/worlds";
 import type { RelatedNode } from "@/lib/relationship-graph";
+
 
 export const Route = createFileRoute("/worlds/$slug")({
   head: ({ params }) => ({
@@ -56,6 +58,15 @@ function WorldDetailPage() {
     queryFn: () => fetchWorldDetail(slug),
   });
 
+  const { data: worldsIndex } = useQuery({
+    queryKey: ["worlds-index"],
+    staleTime: 60_000,
+    queryFn: () => fetchWorldsIndex(),
+  });
+
+  const titleBySlug = new Map((worldsIndex ?? []).map((w) => [w.hub.slug, w.entity.title]));
+
+
   if (!hub) {
     return (
       <AppShell>
@@ -67,7 +78,7 @@ function WorldDetailPage() {
               <Link key={h.slug} to="/worlds/$slug" params={{ slug: h.slug }}
                 className="rounded-2xl border border-gold/20 bg-black/30 p-3 text-right">
                 <p className="text-lg">{h.glyph}</p>
-                <p className="font-display text-[13px] font-bold">{h.slug}</p>
+                <p className="font-display text-[13px] font-bold">{titleBySlug.get(h.slug) ?? "—"}</p>
               </Link>
             ))}
           </div>
@@ -155,7 +166,7 @@ function WorldDetailPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-gold/80">عالم مرتبط</p>
-                      <p className="font-display truncate text-[13px] font-bold">{w.title}</p>
+                      <p className="font-display text-[13px] font-bold leading-snug break-words">{w.title}</p>
                     </div>
                     <ChevronRight className="size-4 text-gold/60 group-hover:text-gold" />
                   </Link>
@@ -180,7 +191,9 @@ function WorldDetailPage() {
               <ArrowRight className="size-4 text-gold/70" />
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] text-muted-foreground">العالم السابق</p>
-                <p className="font-display truncate text-[12px] font-bold">{prevHub.glyph} {prevHub.slug}</p>
+                <p className="font-display text-[12px] font-bold leading-snug break-words">
+                  {prevHub.glyph} {titleBySlug.get(prevHub.slug) ?? ""}
+                </p>
               </div>
             </Link>
           ) : <div />}
@@ -189,12 +202,15 @@ function WorldDetailPage() {
               className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
               <div className="min-w-0 flex-1 text-left">
                 <p className="text-[10px] text-muted-foreground">العالم التالي</p>
-                <p className="font-display truncate text-[12px] font-bold">{nextHub.glyph} {nextHub.slug}</p>
+                <p className="font-display text-[12px] font-bold leading-snug break-words">
+                  {nextHub.glyph} {titleBySlug.get(nextHub.slug) ?? ""}
+                </p>
               </div>
               <ArrowLeft className="size-4 text-gold/70" />
             </Link>
           ) : <div />}
         </div>
+
       </div>
     </AppShell>
   );
