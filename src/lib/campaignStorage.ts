@@ -18,6 +18,7 @@ import type {
   ValidationResult,
 } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
+import { sortCampaignsChronological } from "./campaignChronology";
 
 export const CAMPAIGNS_KEY = "irth_admin_campaigns";
 export const BACKUPS_KEY = "irth_admin_backups";
