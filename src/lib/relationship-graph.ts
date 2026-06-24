@@ -92,7 +92,7 @@ export async function resolveRelatedEntities(
 
   const bump = (refs: string[], score: number, reason: RelationReason) => {
     for (const raw of refs) {
-      const key = raw.toLowerCase();
+      const key = normalizeEntitySlug(raw);
       if (!key || key === selfSlug || key === selfId) continue;
       const prev = scores.get(key);
       if (!prev || score > prev.score) scores.set(key, { score, reason });
