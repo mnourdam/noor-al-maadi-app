@@ -82,11 +82,23 @@ function canonicalIdOf(r: Row): string | null {
   return typeof v === "string" ? v : null;
 }
 
+type GroupStatus = "unresolved" | "partially_resolved" | "fully_resolved";
 type Group = {
   key: string;
   rows: Row[];
   suggested: Row;
 };
+
+function isHiddenDup(r: Row): boolean {
+  return !!(r.metadata as any)?.hidden_duplicate || (!r.enabled && !!canonicalIdOf(r));
+}
+function groupStatus(g: Group): GroupStatus {
+  const hidden = g.rows.filter(isHiddenDup).length;
+  const enabled = g.rows.filter(r => r.enabled && !isHiddenDup(r)).length;
+  if (hidden === 0) return "unresolved";
+  if (hidden === g.rows.length - 1 && enabled === 1) return "fully_resolved";
+  return "partially_resolved";
+}
 
 function buildGroups(rows: Row[]): Group[] {
   const buckets = new Map<string, Row[]>();
