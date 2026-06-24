@@ -163,13 +163,15 @@ function Section({ title, icon, children }: { title: string; icon?: React.ReactN
 }
 
 function Row({ other, right }: { other: PublicProfile; right: React.ReactNode }) {
+  const displayName = other.display_name?.trim() || other.username || "—";
+  const fallbackChar = (displayName[0] ?? other.username?.[0] ?? "?");
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3">
-      <Avatar avatarId={other.avatar_id} size="sm" fallbackChar={other.username?.[0] ?? "?"} />
+      <Avatar avatarId={other.avatar_id} size="sm" fallbackChar={fallbackChar} />
       <Link to="/u/$username" params={{ username: other.username }} className="min-w-0 flex-1">
-        <div className="truncate text-sm font-bold">{other.username}</div>
+        <div className="truncate text-sm font-bold">{displayName}</div>
         <div className="truncate text-[11px] text-muted-foreground">
-          المستوى {other.level} • {other.title ?? "—"} • {other.campaigns_completed} حملة
+          @{other.username} • المستوى {other.level} • {other.campaigns_completed} حملة
         </div>
       </Link>
       {right}
