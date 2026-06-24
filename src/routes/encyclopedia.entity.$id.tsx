@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
-import { ChevronRight, Database } from "lucide-react";
+import { ChevronRight, Database, Network } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
@@ -11,6 +10,10 @@ import {
 } from "@/lib/encyclopedia-source";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
+import {
+  resolveRelatedEntities,
+  groupRelatedByReason,
+} from "@/lib/relationship-graph";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
@@ -22,23 +25,6 @@ const TYPE_LABEL: Record<string, string> = {
   landmark: "معلم",
   artifact: "أثر",
 };
-const SECTION_LABELS: Record<string, string> = {
-  figure: "الشخصيات",
-  city: "المدن",
-  battle: "المعارك",
-  event: "الأحداث",
-  landmark: "المعالم",
-  artifact: "الآثار",
-};
-const SECTION_GLYPHS: Record<string, string> = {
-  figure: "🪶",
-  city: "🏙️",
-  battle: "⚔️",
-  event: "📜",
-  landmark: "🕌",
-  artifact: "🗝️",
-};
-const SECTION_ORDER = Object.keys(SECTION_LABELS);
 const SUPA_GLYPH: Record<string, string> = {
   artifact: "🗝️",
   figure: "🪶",
@@ -48,26 +34,6 @@ const SUPA_GLYPH: Record<string, string> = {
   landmark: "🕌",
   event: "📜",
 };
-
-function metaObj(entity: Pick<SupabaseEncyclopediaEntity, "metadata">): Record<string, unknown> {
-  return entity.metadata && typeof entity.metadata === "object"
-    ? (entity.metadata as Record<string, unknown>)
-    : {};
-}
-
-function asStringList(v: unknown): string[] {
-  if (!Array.isArray(v)) return [];
-  const out: string[] = [];
-  for (const x of v) {
-    if (typeof x === "string" && x.trim()) out.push(x.trim());
-    else if (x && typeof x === "object") {
-      const o = x as Record<string, unknown>;
-      const s = (typeof o.slug === "string" && o.slug) || (typeof o.id === "string" && o.id) || (typeof o.entity_slug === "string" && o.entity_slug) || (typeof o.entity_id === "string" && o.entity_id);
-      if (typeof s === "string" && s) out.push(s);
-    }
-  }
-  return out;
-}
 
 export const Route = createFileRoute("/encyclopedia/entity/$id")({
   head: ({ params }) => ({
