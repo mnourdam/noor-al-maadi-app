@@ -230,6 +230,10 @@ function AtlasRepairPage() {
   const [bulkRunning, setBulkRunning] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number }>({ done: 0, total: 0, failed: 0 });
   const [bulkResult, setBulkResult] = useState<{ fixed: number; failed: number } | null>(null);
+  const [stubOpen, setStubOpen] = useState(false);
+  const [stubRunning, setStubRunning] = useState(false);
+  const [stubProgress, setStubProgress] = useState<{ done: number; total: number; failed: number }>({ done: 0, total: 0, failed: 0 });
+  const [stubResult, setStubResult] = useState<{ created: number; failed: number } | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true); setError(null);
