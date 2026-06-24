@@ -5,7 +5,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import {
-  advanceReferralStage, buildReferralLink, fetchPublicProfileById, listMyReferrals,
+  advanceReferralStage, buildReferralLink, fetchMyReferralCode, listMyReferrals,
   REFERRAL_REWARDS, type PublicProfile, type ReferralRow,
 } from "@/lib/social";
 import { fetchMyReferralStats, type MyReferralStats } from "@/lib/referrals";
@@ -25,10 +25,11 @@ function ReferralsPage() {
 
   useEffect(() => {
     if (!user) return;
-    fetchPublicProfileById(user.id).then((p) => setCode(p?.referral_code ?? null));
+    fetchMyReferralCode(user.id).then(setCode);
     listMyReferrals(user.id).then(setRows);
     fetchMyReferralStats().then(setServerStats).catch(() => {});
   }, [user]);
+
 
   const link = code ? buildReferralLink(code) : "";
   const stats = useMemo(() => ({

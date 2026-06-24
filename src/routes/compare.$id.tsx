@@ -42,16 +42,15 @@ function ComparePage() {
     );
   }
 
+  // XP, dinars, streak are owner-private and not exposed for other players.
   const rows: { label: string; me: number | string; them: number | string }[] = other ? [
     { label: "المستوى", me: me.level, them: other.level },
-    { label: "XP", me: me.xp, them: other.xp },
-    { label: "الدينار", me: me.dinars, them: other.dinars },
     { label: "الحملات", me: me.campaigns_completed, them: other.campaigns_completed },
     { label: "الآثار", me: me.artifacts_collected, them: other.artifacts_collected },
     { label: "الموسوعة %", me: me.discovery_pct, them: other.discovery_pct },
     { label: "الإنجازات", me: me.achievements, them: "—" },
-    { label: "السلسلة", me: me.streak, them: other.streak },
   ] : [];
+
 
   return (
     <AppShell>

@@ -6,6 +6,11 @@ import { levelFor } from "./app-constants";
 const db: any = supabase;
 
 // =========== Types ===========
+// Public profile data exposed to other authenticated users. Sensitive fields
+// (xp, dinars, streak, hearts, last_active, join_date, referral_code,
+// account_status, marketing_opt_in, locale, referred_by) are intentionally
+// NOT exposed here — they are owner-only or admin-only. The fields are kept
+// as `?` so legacy call sites compile; for non-owner reads they are absent.
 export interface PublicProfile {
   id: string;
   username: string;
@@ -13,38 +18,52 @@ export interface PublicProfile {
   bio: string | null;
   title: string | null;
   level: number;
-  xp: number;
-  dinars: number;
-  streak: number;
   campaigns_completed: number;
   artifacts_collected: number;
   discovery_pct: number;
   favorite_state_id: string | null;
   favorite_figure_id: string | null;
   avatar_id: string | null;
-  referral_code: string | null;
-  last_active: string;
-  join_date: string;
+  // Owner-only / unavailable through the public view. Always undefined when
+  // returned from a public read.
+  xp?: number;
+  dinars?: number;
+  streak?: number;
+  referral_code?: string | null;
+  last_active?: string;
+  join_date?: string;
 }
 
+// Only safe, intentionally public columns. Backed by the `public_profiles`
+// view (security_invoker=on) — never read from the base `profiles` table
+// for non-owner queries.
 const PUBLIC_COLS =
-  "id, username, display_name, bio, title, level, xp, dinars, streak, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id, referral_code, last_active, join_date";
+  "id, username, display_name, bio, title, level, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id";
+
+const PUBLIC_VIEW = "public_profiles";
 
 // =========== Public profile reads ===========
 export async function fetchPublicProfileById(id: string): Promise<PublicProfile | null> {
-  const { data } = await db.from("profiles").select(PUBLIC_COLS).eq("id", id).maybeSingle();
+  const { data } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).eq("id", id).maybeSingle();
   return (data as PublicProfile) ?? null;
 }
 
 export async function fetchPublicProfileByUsername(username: string): Promise<PublicProfile | null> {
-  const { data } = await db.from("profiles").select(PUBLIC_COLS).ilike("username", username).maybeSingle();
+  const { data } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).ilike("username", username).maybeSingle();
   return (data as PublicProfile) ?? null;
 }
 
-export async function fetchPublicProfileByReferral(code: string): Promise<PublicProfile | null> {
-  const { data } = await db.from("profiles").select(PUBLIC_COLS).eq("referral_code", code.toUpperCase()).maybeSingle();
-  return (data as PublicProfile) ?? null;
+/**
+ * Owner-only helper for fetching the current user's referral code. Goes
+ * through the `get_my_profile` SECURITY DEFINER RPC because direct SELECT
+ * on private profile columns is no longer permitted to authenticated.
+ */
+export async function fetchMyReferralCode(_ownerId: string): Promise<string | null> {
+  const { data } = await db.rpc("get_my_profile");
+  return ((data as { referral_code: string | null } | null)?.referral_code) ?? null;
 }
+
+
 
 /**
  * Search players by username OR display_name (case-insensitive, Arabic-safe).
@@ -63,8 +82,9 @@ export async function searchPlayers(q: string, excludeId?: string): Promise<Publ
   const safe = term.replace(/[,()]/g, " ");
   const pattern = `%${safe}%`;
   let query = db
-    .from("profiles")
+    .from(PUBLIC_VIEW)
     .select(PUBLIC_COLS)
+
     .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
     .limit(20);
   if (excludeId) query = query.neq("id", excludeId);
@@ -136,7 +156,7 @@ export async function listFriendships(userId: string): Promise<FriendEntry[]> {
   const list = (rows as FriendshipRow[]) ?? [];
   if (!list.length) return [];
   const otherIds = list.map((r) => (r.user_a === userId ? r.user_b : r.user_a));
-  const { data: profiles } = await db.from("profiles").select(PUBLIC_COLS).in("id", otherIds);
+  const { data: profiles } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).in("id", otherIds);
   const byId: Record<string, PublicProfile> = {};
   for (const p of (profiles as PublicProfile[]) ?? []) byId[p.id] = p;
   return list
@@ -218,7 +238,7 @@ export async function listMyReferrals(userId: string): Promise<{ row: ReferralRo
   const list = (rows as ReferralRow[]) ?? [];
   if (!list.length) return [];
   const ids = list.map((r) => r.referred_id);
-  const { data: profiles } = await db.from("profiles").select(PUBLIC_COLS).in("id", ids);
+  const { data: profiles } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).in("id", ids);
   const byId: Record<string, PublicProfile> = {};
   for (const p of (profiles as PublicProfile[]) ?? []) byId[p.id] = p;
   return list.map((r) => ({ row: r, friend: byId[r.referred_id] ?? null }));

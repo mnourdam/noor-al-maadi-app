@@ -90,12 +90,11 @@ function PublicProfilePage() {
 
               <div className="mt-4 grid grid-cols-3 gap-2">
                 <Stat icon={<Crown className="size-4" />} label="المستوى" value={p.level} />
-                <Stat icon={<Star className="size-4" />} label="XP" value={p.xp} />
-                <Stat icon={<Coins className="size-4" />} label="دينار" value={p.dinars} />
-                <Stat icon={<Flame className="size-4" />} label="السلسلة" value={p.streak} />
                 <Stat icon={<Trophy className="size-4" />} label="حملات" value={p.campaigns_completed} />
                 <Stat icon={<IdCard className="size-4" />} label="آثار" value={p.artifacts_collected} />
               </div>
+              {/* XP, dinars, streak, last_active are private and intentionally
+                  not displayed for other players (security finding fix). */}
 
               <div className="mt-4 rounded-2xl border border-white/10 p-3 text-sm">
                 <div className="flex justify-between">
@@ -107,7 +106,7 @@ function PublicProfilePage() {
                 </div>
               </div>
 
-              <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-muted-foreground sm:grid-cols-2">
+              <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-muted-foreground">
                 <div className="flex min-w-0 items-center gap-1 rounded-xl border border-white/10 p-2">
                   <MapPin className="size-3.5 shrink-0 text-gold" />
                   <span className="truncate">{p.favorite_state_id ? displayEntityName(p.favorite_state_id) : "—"}</span>
@@ -115,8 +114,8 @@ function PublicProfilePage() {
                     <span className="truncate text-gold/70">· {displayCharacterName(p.favorite_figure_id)}</span>
                   )}
                 </div>
-                <div className="truncate rounded-xl border border-white/10 p-2">آخر نشاط: {toWesternDigits(new Date(p.last_active).toLocaleDateString("ar"))}</div>
               </div>
+
             </div>
 
             {user && user.id !== p.id && (
