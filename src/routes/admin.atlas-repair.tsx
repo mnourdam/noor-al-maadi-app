@@ -175,6 +175,46 @@ function computeBulkPlan(
   return plan;
 }
 
+// ---- Bulk stub-creation plan --------------------------------------------
+
+type StubPlanItem = {
+  row: AtlasEntityRow;
+  entity_type: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+};
+
+function computeStubPlan(
+  issued: { row: AtlasEntityRow; issue: IssueKind }[],
+  enc: EncEntity[],
+): StubPlanItem[] {
+  const usedSlugs = new Set<string>();
+  for (const e of enc) usedSlugs.add(`${e.entity_type}::${normalizeEntitySlug(e.slug)}`);
+  const plan: StubPlanItem[] = [];
+  for (const { row, issue } of issued) {
+    if (issue !== "missing") continue;
+    // Skip if a strong canonical match exists — avoid overwriting strong matches
+    const cands = suggestCandidates(row, enc);
+    if (cands[0] && cands[0].score >= BULK_MIN_SCORE) continue;
+    const compat = KIND_TO_TYPES[row.kind] ?? ["landmark"];
+    const entity_type = compat[0];
+    const title = (row.name_ar ?? "").trim();
+    if (!title) continue;
+    const baseSlug = normalizeEntitySlug(row.slug) || normalizeEntitySlug(title);
+    if (!baseSlug) continue;
+    let slug = baseSlug;
+    let n = 1;
+    while (usedSlugs.has(`${entity_type}::${slug}`)) {
+      n++;
+      slug = `${baseSlug}-${n}`;
+    }
+    usedSlugs.add(`${entity_type}::${slug}`);
+    plan.push({ row, entity_type, slug, title, subtitle: row.name_en ?? null });
+  }
+  return plan;
+}
+
 // ---- Component -----------------------------------------------------------
 
 function AtlasRepairPage() {
@@ -190,6 +230,10 @@ function AtlasRepairPage() {
   const [bulkRunning, setBulkRunning] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number }>({ done: 0, total: 0, failed: 0 });
   const [bulkResult, setBulkResult] = useState<{ fixed: number; failed: number } | null>(null);
+  const [stubOpen, setStubOpen] = useState(false);
+  const [stubRunning, setStubRunning] = useState(false);
+  const [stubProgress, setStubProgress] = useState<{ done: number; total: number; failed: number }>({ done: 0, total: 0, failed: 0 });
+  const [stubResult, setStubResult] = useState<{ created: number; failed: number } | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true); setError(null);
@@ -306,6 +350,56 @@ function AtlasRepairPage() {
     await reload();
   };
 
+  const stubPlan = useMemo(() => computeStubPlan(issued, enc), [issued, enc]);
+
+  const runStubBulk = async () => {
+    setStubRunning(true);
+    setStubProgress({ done: 0, total: stubPlan.length, failed: 0 });
+    let done = 0, failed = 0;
+    const newEnc: EncEntity[] = [];
+    const updatedRows: AtlasEntityRow[] = [];
+    for (const item of stubPlan) {
+      try {
+        const { data, error: insErr } = await supabase
+          .from("encyclopedia_entities")
+          .insert({
+            entity_type: item.entity_type,
+            slug: item.slug,
+            title: item.title,
+            subtitle: item.subtitle,
+            summary: null,
+            body: {},
+            metadata: {
+              source: "atlas_repair_stub",
+              atlas_id: item.row.id,
+              atlas_slug: item.row.slug,
+              aliases: [item.row.slug],
+              needs_content_expansion: true,
+            },
+            enabled: true,
+          })
+          .select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled")
+          .single();
+        if (insErr) throw insErr;
+        const created = data as EncEntity;
+        newEnc.push(created);
+        const u = await updateAtlasEntity(item.row.id, { encyclopedia_entity_id: created.id });
+        updatedRows.push(u);
+      } catch {
+        failed++;
+      }
+      done++;
+      setStubProgress({ done, total: stubPlan.length, failed });
+    }
+    if (newEnc.length) setEnc((es) => [...es, ...newEnc]);
+    if (updatedRows.length) {
+      setRows((rs) => rs.map((r) => updatedRows.find((u) => u.id === r.id) ?? r));
+    }
+    setStubRunning(false);
+    setStubResult({ created: updatedRows.length, failed });
+    await reload();
+  };
+
 
   return (
     <div dir="rtl" className="min-h-screen bg-stone-950 text-stone-100">
@@ -326,6 +420,13 @@ function AtlasRepairPage() {
               className="inline-flex items-center gap-1 rounded border border-emerald-700 bg-emerald-900/40 px-2 py-1 text-emerald-100 hover:bg-emerald-900/70 disabled:opacity-40"
             >
               <Wand2 className="size-3.5" /> إصلاح جماعي آمن ({bulkPlan.length})
+            </button>
+            <button
+              onClick={() => { setStubResult(null); setStubOpen(true); }}
+              disabled={loading || stubPlan.length === 0}
+              className="inline-flex items-center gap-1 rounded border border-sky-700 bg-sky-900/40 px-2 py-1 text-sky-100 hover:bg-sky-900/70 disabled:opacity-40"
+            >
+              <PlusCircle className="size-3.5" /> إنشاء كيانات للروابط المفقودة ({stubPlan.length})
             </button>
             <button onClick={reload} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">
               <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} /> إعادة تدقيق
@@ -412,6 +513,17 @@ function AtlasRepairPage() {
           result={bulkResult}
           onClose={() => { if (!bulkRunning) { setBulkOpen(false); setBulkResult(null); } }}
           onRun={runBulk}
+        />
+      )}
+
+      {stubOpen && (
+        <StubBulkModal
+          plan={stubPlan}
+          running={stubRunning}
+          progress={stubProgress}
+          result={stubResult}
+          onClose={() => { if (!stubRunning) { setStubOpen(false); setStubResult(null); } }}
+          onRun={runStubBulk}
         />
       )}
     </div>
@@ -636,5 +748,96 @@ function RepairRow({
         </ul>
       )}
     </article>
+  );
+}
+
+// ---- Stub bulk modal -----------------------------------------------------
+
+function StubBulkModal({
+  plan, running, progress, result, onClose, onRun,
+}: {
+  plan: StubPlanItem[];
+  running: boolean;
+  progress: { done: number; total: number; failed: number };
+  result: { created: number; failed: number } | null;
+  onClose: () => void;
+  onRun: () => void;
+}) {
+  return (
+    <div dir="rtl" className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/80 p-3">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg border border-stone-700 bg-stone-900 shadow-xl">
+        <header className="flex items-center gap-2 border-b border-stone-800 px-4 py-2.5">
+          <PlusCircle className="size-4 text-sky-300" />
+          <h2 className="text-sm font-bold text-amber-100">إنشاء كيانات موسوعة بسيطة للروابط المفقودة</h2>
+          <span className="text-[11px] text-stone-400">
+            (الصفوف بلا رابط فقط · لا تتجاوز ترشيحات قوية ≥ {BULK_MIN_SCORE} · مفعّل · بحاجة توسيع محتوى)
+          </span>
+          <button onClick={onClose} disabled={running}
+            className="ml-auto rounded border border-stone-700 bg-stone-800 px-2 py-1 text-[11px] hover:bg-stone-700 disabled:opacity-40">
+            إغلاق
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-auto px-4 py-3 text-[12px]">
+          {result ? (
+            <div className="space-y-2">
+              <div className="rounded border border-sky-700/50 bg-sky-900/20 p-3 text-sky-100">
+                ✓ أُنشئ {result.created} كيانًا{result.failed > 0 ? ` · فشل ${result.failed}` : ""}.
+              </div>
+              <div className="text-stone-400">أُعيد التدقيق تلقائيًا. الكيانات الجديدة مُعلَّمة <code>needs_content_expansion</code>.</div>
+            </div>
+          ) : plan.length === 0 ? (
+            <div className="rounded border border-stone-800 bg-stone-950/40 p-4 text-center text-stone-400">
+              لا توجد روابط مفقودة قابلة للإنشاء الآمن حاليًا.
+            </div>
+          ) : (
+            <>
+              <div className="mb-2 text-stone-300">
+                سيتم إنشاء <strong className="text-amber-200">{plan.length}</strong> كيانًا في <code className="text-stone-400">encyclopedia_entities</code> ثم ربطها بصفوف الأطلس المطابقة. لن يُحذف أو يُؤرشف أو يُستبدل أي كيان قائم.
+              </div>
+              <ul className="divide-y divide-stone-800 rounded border border-stone-800">
+                {plan.map(({ row, entity_type, slug, title, subtitle }) => (
+                  <li key={row.id} className="flex flex-wrap items-center gap-2 px-2.5 py-1.5">
+                    <span className="rounded bg-rose-900/40 px-1.5 py-0.5 text-[10px] font-bold text-rose-200">بلا رابط</span>
+                    <span className="font-bold text-amber-100">{row.name_ar}</span>
+                    <code className="text-[10px] text-stone-500">{row.slug}</code>
+                    <ArrowRight className="size-3 text-stone-500" />
+                    <span className="text-sky-200">{title}</span>
+                    <code className="text-[10px] text-stone-500">{entity_type}/{slug}</code>
+                    {subtitle && <span className="text-[10px] text-stone-500">· {subtitle}</span>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+
+        <footer className="flex items-center gap-2 border-t border-stone-800 px-4 py-2.5 text-[12px]">
+          {running ? (
+            <span className="text-amber-200">
+              <RefreshCw className="mr-1 inline size-3.5 animate-spin" />
+              {progress.done}/{progress.total} {progress.failed > 0 ? `· فشل ${progress.failed}` : ""}
+            </span>
+          ) : result ? (
+            <button onClick={onClose}
+              className="ml-auto rounded bg-amber-500 px-3 py-1.5 font-bold text-stone-950 hover:bg-amber-400">
+              تم
+            </button>
+          ) : (
+            <>
+              <span className="text-stone-400">سيُنشأ {plan.length} كيانًا ويُربط تلقائيًا.</span>
+              <button onClick={onClose}
+                className="ml-auto rounded border border-stone-700 bg-stone-800 px-3 py-1.5 hover:bg-stone-700">
+                إلغاء
+              </button>
+              <button onClick={onRun} disabled={plan.length === 0}
+                className="rounded bg-sky-500 px-3 py-1.5 font-bold text-stone-950 hover:bg-sky-400 disabled:opacity-40">
+                تنفيذ الإنشاء
+              </button>
+            </>
+          )}
+        </footer>
+      </div>
+    </div>
   );
 }
