@@ -127,6 +127,10 @@ function ImportedChapterPlayer() {
 
   const onResolve = (correct: boolean) => {
     if (!activity) return;
+    // PR1: hard guard against rapid duplicate submissions.
+    if (resolveLockRef.current) return;
+    resolveLockRef.current = true;
+    setTimeout(() => { resolveLockRef.current = false; }, 350);
 
     // PR2 hard hearts gate — at 0 hearts, no answer is accepted (right or wrong).
     if (heartsDepleted) {
@@ -137,10 +141,12 @@ function ImportedChapterPlayer() {
     const hearts = activity.heartsPenalty ?? ACTIVITY_DEFAULTS.heartsPenalty;
 
     if (!correct) {
-      // PR2 strict: wrong = lose 1 heart, no progression, no rewards.
-      // PR3: do NOT write the reward ledger; do NOT advance active position.
+      // PR1: idempotent decrement — same attempt key never decrements twice.
+      // Each wrong tap increments wrongAttempts, producing a fresh key, so
+      // the player still loses one heart per genuine wrong answer.
       const toLose = Math.max(1, Math.min(1, hearts));
-      for (let i = 0; i < toLose; i++) loseHeart();
+      const attemptKey = `act:${campaign!.id}:${chapter!.id}:${activity.id}:${wrongAttempts}`;
+      for (let i = 0; i < toLose; i++) loseHeartOnce(attemptKey);
       setWrongFlash(prev => ({ ...prev, [activity.id]: (prev[activity.id] ?? 0) + 1 }));
       // Persist resume position on the current (still-open) activity.
       setActivePosition({ campaignId: campaign!.id, chapterId: chapter!.id, activityId: activity.id });
@@ -149,6 +155,7 @@ function ImportedChapterPlayer() {
       }
       return; // do NOT call recordActivity / pendingAck / advance
     }
+
 
     // ---- Correct branch ----
     // PR3 local-first reward ledger: only grants once, across refreshes /
