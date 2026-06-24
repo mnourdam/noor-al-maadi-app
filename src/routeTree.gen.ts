@@ -57,6 +57,7 @@ import { Route as AdminContentIntegrityRepairRouteImport } from './routes/admin.
 import { Route as AdminContentIntegrityRouteImport } from './routes/admin.content-integrity'
 import { Route as AdminContentFoundationRouteImport } from './routes/admin.content-foundation'
 import { Route as AdminContentCleanupRouteImport } from './routes/admin.content-cleanup'
+import { Route as AdminContentAutoHealRouteImport } from './routes/admin.content-auto-heal'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as AdminAtlasReviewRouteImport } from './routes/admin.atlas-review'
@@ -311,6 +312,11 @@ const AdminContentCleanupRoute = AdminContentCleanupRouteImport.update({
   path: '/admin/content-cleanup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminContentAutoHealRoute = AdminContentAutoHealRouteImport.update({
+  id: '/admin/content-auto-heal',
+  path: '/admin/content-auto-heal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminContentRoute = AdminContentRouteImport.update({
   id: '/admin/content',
   path: '/admin/content',
@@ -403,6 +409,7 @@ export interface FileRoutesByFullPath {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
+  '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
   '/admin/content-foundation': typeof AdminContentFoundationRoute
   '/admin/content-integrity': typeof AdminContentIntegrityRoute
@@ -463,6 +470,7 @@ export interface FileRoutesByTo {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
+  '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
   '/admin/content-foundation': typeof AdminContentFoundationRoute
   '/admin/content-integrity': typeof AdminContentIntegrityRoute
@@ -526,6 +534,7 @@ export interface FileRoutesById {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
+  '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
   '/admin/content-foundation': typeof AdminContentFoundationRoute
   '/admin/content-integrity': typeof AdminContentIntegrityRoute
@@ -590,6 +599,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-review'
     | '/admin/campaigns'
     | '/admin/content'
+    | '/admin/content-auto-heal'
     | '/admin/content-cleanup'
     | '/admin/content-foundation'
     | '/admin/content-integrity'
@@ -650,6 +660,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-review'
     | '/admin/campaigns'
     | '/admin/content'
+    | '/admin/content-auto-heal'
     | '/admin/content-cleanup'
     | '/admin/content-foundation'
     | '/admin/content-integrity'
@@ -712,6 +723,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-review'
     | '/admin/campaigns'
     | '/admin/content'
+    | '/admin/content-auto-heal'
     | '/admin/content-cleanup'
     | '/admin/content-foundation'
     | '/admin/content-integrity'
@@ -775,6 +787,7 @@ export interface RootRouteChildren {
   AdminAtlasReviewRoute: typeof AdminAtlasReviewRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminContentRoute: typeof AdminContentRoute
+  AdminContentAutoHealRoute: typeof AdminContentAutoHealRoute
   AdminContentCleanupRoute: typeof AdminContentCleanupRoute
   AdminContentFoundationRoute: typeof AdminContentFoundationRoute
   AdminContentIntegrityRoute: typeof AdminContentIntegrityRoute
@@ -1140,6 +1153,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminContentCleanupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/content-auto-heal': {
+      id: '/admin/content-auto-heal'
+      path: '/admin/content-auto-heal'
+      fullPath: '/admin/content-auto-heal'
+      preLoaderRoute: typeof AdminContentAutoHealRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/content': {
       id: '/admin/content'
       path: '/admin/content'
@@ -1291,6 +1311,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAtlasReviewRoute: AdminAtlasReviewRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminContentRoute: AdminContentRoute,
+  AdminContentAutoHealRoute: AdminContentAutoHealRoute,
   AdminContentCleanupRoute: AdminContentCleanupRoute,
   AdminContentFoundationRoute: AdminContentFoundationRoute,
   AdminContentIntegrityRoute: AdminContentIntegrityRoute,
