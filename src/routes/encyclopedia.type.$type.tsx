@@ -143,7 +143,7 @@ function TypeBrowsePage() {
           <div className="mt-3 flex flex-wrap gap-1.5">
             <Chip active={era === ""} onClick={() => setEra("")}>كل العصور</Chip>
             {eras.map((e) => (
-              <Chip key={e} active={era === e} onClick={() => setEra(e)}>{e}</Chip>
+              <Chip key={e} active={era === e} onClick={() => setEra(e)}>{eraLabel(e)}</Chip>
             ))}
           </div>
         )}
