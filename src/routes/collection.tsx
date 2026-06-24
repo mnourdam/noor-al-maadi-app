@@ -415,6 +415,11 @@ function CollectionPage() {
   const currentEntities = useMemo(() => {
     const items = rawCurrentEntities
       .filter((e: any) => !!e.title && hasArabic(e.title))
+      .filter((e: any) =>
+        current.type !== "artifact"
+          ? true
+          : isArtifactVisible(e.slug, e.metadata, e.metadata?.legacy_id),
+      )
       .map((e: any) => {
         const open = isEntityUnlocked(current.type, e.slug, e.metadata);
         const ts = open ? unlockedAtFor(current.type, e.slug, e.metadata) : 0;
@@ -429,7 +434,7 @@ function CollectionPage() {
     });
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type]);
+  }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type, campaignArtifactRefs]);
 
   const currentImported = useMemo(() => {
     const items = rawCurrentImported.filter(i => !!i.name && hasArabic(i.name));
