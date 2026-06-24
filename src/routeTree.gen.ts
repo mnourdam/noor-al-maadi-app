@@ -46,7 +46,6 @@ import { Route as FigureIdRouteImport } from './routes/figure.$id'
 import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
-import { Route as AdminQaFriendsStreakRouteImport } from './routes/admin.qa-friends-streak'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum-provenance'
@@ -266,11 +265,6 @@ const CityIdRoute = CityIdRouteImport.update({
 const BattleIdRoute = BattleIdRouteImport.update({
   id: '/battle/$id',
   path: '/battle/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminQaFriendsStreakRoute = AdminQaFriendsStreakRouteImport.update({
-  id: '/admin/qa-friends-streak',
-  path: '/admin/qa-friends-streak',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminOfflineRoute = AdminOfflineRouteImport.update({
@@ -507,7 +501,6 @@ export interface FileRoutesByFullPath {
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
-  '/admin/qa-friends-streak': typeof AdminQaFriendsStreakRoute
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
@@ -580,7 +573,6 @@ export interface FileRoutesByTo {
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
-  '/admin/qa-friends-streak': typeof AdminQaFriendsStreakRoute
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
@@ -656,7 +648,6 @@ export interface FileRoutesById {
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
-  '/admin/qa-friends-streak': typeof AdminQaFriendsStreakRoute
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
@@ -733,7 +724,6 @@ export interface FileRouteTypes {
     | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
-    | '/admin/qa-friends-streak'
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
@@ -806,7 +796,6 @@ export interface FileRouteTypes {
     | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
-    | '/admin/qa-friends-streak'
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
@@ -881,7 +870,6 @@ export interface FileRouteTypes {
     | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
-    | '/admin/qa-friends-streak'
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
@@ -957,7 +945,6 @@ export interface RootRouteChildren {
   AdminMuseumProvenanceRoute: typeof AdminMuseumProvenanceRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOfflineRoute: typeof AdminOfflineRoute
-  AdminQaFriendsStreakRoute: typeof AdminQaFriendsStreakRoute
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
   CompareIdRoute: typeof CompareIdRoute
@@ -1233,13 +1220,6 @@ declare module '@tanstack/react-router' {
       path: '/battle/$id'
       fullPath: '/battle/$id'
       preLoaderRoute: typeof BattleIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/qa-friends-streak': {
-      id: '/admin/qa-friends-streak'
-      path: '/admin/qa-friends-streak'
-      fullPath: '/admin/qa-friends-streak'
-      preLoaderRoute: typeof AdminQaFriendsStreakRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/offline': {
@@ -1578,7 +1558,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminMuseumProvenanceRoute: AdminMuseumProvenanceRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOfflineRoute: AdminOfflineRoute,
-  AdminQaFriendsStreakRoute: AdminQaFriendsStreakRoute,
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
   CompareIdRoute: CompareIdRoute,
