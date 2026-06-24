@@ -768,12 +768,13 @@ function RepairRow({
 // ---- Stub bulk modal -----------------------------------------------------
 
 function StubBulkModal({
-  plan, running, progress, result, onClose, onRun,
+  plan, skipped, running, progress, result, onClose, onRun,
 }: {
   plan: StubPlanItem[];
+  skipped: StubSkip[];
   running: boolean;
   progress: { done: number; total: number; failed: number };
-  result: { created: number; failed: number } | null;
+  result: { created: number; linked: number; failed: number; failures: { row: AtlasEntityRow; reason: string }[] } | null;
   onClose: () => void;
   onRun: () => void;
 }) {
@@ -796,14 +797,53 @@ function StubBulkModal({
           {result ? (
             <div className="space-y-2">
               <div className="rounded border border-sky-700/50 bg-sky-900/20 p-3 text-sky-100">
-                ✓ أُنشئ {result.created} كيانًا{result.failed > 0 ? ` · فشل ${result.failed}` : ""}.
+                <div className="font-bold">ملخّص التنفيذ</div>
+                <ul className="mt-1 space-y-0.5 text-[11px]">
+                  <li>• أُنشئ: <strong>{result.created}</strong></li>
+                  <li>• رُبط بصفوف الأطلس: <strong>{result.linked}</strong></li>
+                  <li>• تُخطّي قبل التنفيذ (لا يستوفي شروط الإنشاء الآمن): <strong>{skipped.length}</strong></li>
+                  <li>• فشل أثناء التنفيذ: <strong>{result.failed}</strong></li>
+                </ul>
               </div>
+              {result.failures.length > 0 && (
+                <details className="rounded border border-rose-800/60 bg-rose-900/10 p-2 text-rose-100">
+                  <summary className="cursor-pointer text-[11px] font-bold">أسباب الفشل ({result.failures.length})</summary>
+                  <ul className="mt-1 space-y-0.5 text-[10px]">
+                    {result.failures.map((f, i) => (
+                      <li key={i}><code className="text-stone-400">{f.row.slug}</code> — {f.reason}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {skipped.length > 0 && (
+                <details className="rounded border border-stone-700 bg-stone-950/40 p-2 text-stone-200">
+                  <summary className="cursor-pointer text-[11px] font-bold">أسباب التخطّي ({skipped.length})</summary>
+                  <ul className="mt-1 space-y-0.5 text-[10px]">
+                    {skipped.map((s, i) => (
+                      <li key={i}><code className="text-stone-400">{s.row.slug}</code> — {s.reason}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
               <div className="text-stone-400">أُعيد التدقيق تلقائيًا. الكيانات الجديدة مُعلَّمة <code>needs_content_expansion</code>.</div>
             </div>
           ) : plan.length === 0 ? (
-            <div className="rounded border border-stone-800 bg-stone-950/40 p-4 text-center text-stone-400">
-              لا توجد روابط مفقودة قابلة للإنشاء الآمن حاليًا.
+            <div className="space-y-2">
+              <div className="rounded border border-stone-800 bg-stone-950/40 p-4 text-center text-stone-400">
+                لا توجد روابط مفقودة قابلة للإنشاء الآمن حاليًا.
+              </div>
+              {skipped.length > 0 && (
+                <details className="rounded border border-stone-700 bg-stone-950/40 p-2 text-stone-200">
+                  <summary className="cursor-pointer text-[11px] font-bold">صفوف "بلا رابط" مُتخطَّاة ({skipped.length})</summary>
+                  <ul className="mt-1 space-y-0.5 text-[10px]">
+                    {skipped.map((s, i) => (
+                      <li key={i}><code className="text-stone-400">{s.row.slug}</code> — {s.reason}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </div>
+
           ) : (
             <>
               <div className="mb-2 text-stone-300">
