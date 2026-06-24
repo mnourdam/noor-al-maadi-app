@@ -143,7 +143,12 @@ function Index() {
         Object.values(p.chapters).some((ch) => (ch.completedActivityIds?.length ?? 0) > 0);
       return { campaign: c, progress: p, hasStarted, isComplete: p.completed, completedChapters, nextChapter, nextActivity };
     });
-    // Priority: active & resumable → next unfinished published → first
+    // Priority (chronological):
+    //  1. an in-progress campaign (resume what you started)
+    //  2. otherwise the OLDEST unplayed/unfinished campaign
+    //  3. otherwise the oldest campaign overall.
+    // `enriched` already preserves the chronological order coming from
+    // listPublishedCampaigns(), so `.find` returns the earliest match.
     return (
       enriched.find((e) => e.hasStarted && !e.isComplete) ??
       enriched.find((e) => !e.isComplete) ??
