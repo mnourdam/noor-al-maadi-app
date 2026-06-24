@@ -30,9 +30,41 @@ export const WORLD_HUBS: WorldHub[] = [
 
 export const WORLD_SLUGS = new Set(WORLD_HUBS.map((h) => h.slug));
 
+// Canonical era tag per hub. Used to enforce strict world membership for
+// related entities so that, e.g., prophetic-era events never appear inside
+// the Ottoman world page. Hubs whose data has no era tag fall back to the
+// hub slug itself.
+export const WORLD_ERA: Record<string, string> = {
+  prophetic: "prophetic",
+  rashidun: "rashidun",
+  umayyad: "umayyad",
+  andalus: "andalus",
+  abbasid: "abbasid",
+  seljuk: "seljuk",
+  zengid: "zengid",
+  "ayyubid-state": "ayyubid",
+  "mamluk-sultanate": "mamluk",
+  ottoman: "ottoman",
+};
+
+// State-reference aliases an entity may use to declare it belongs to a hub.
+const WORLD_STATE_ALIASES: Record<string, string[]> = {
+  "ayyubid-state": ["ayyubid", "ayyubid-state", "ayyubid-sultanate"],
+  "mamluk-sultanate": ["mamluk", "mamluks", "mamluk-sultanate"],
+  ottoman: ["ottoman", "ottomans", "ottoman-empire", "ottoman-state"],
+  umayyad: ["umayyad", "umayyads", "umayyad-caliphate", "umayyad-state"],
+  abbasid: ["abbasid", "abbasids", "abbasid-caliphate", "abbasid-state"],
+  andalus: ["andalus", "al-andalus", "andalus-state"],
+  rashidun: ["rashidun", "rashidun-caliphate"],
+  seljuk: ["seljuk", "seljuks", "seljuk-empire", "seljuk-state"],
+  zengid: ["zengid", "zengids"],
+  prophetic: ["prophetic"],
+};
+
 export function findHub(slug: string): WorldHub | null {
   return WORLD_HUBS.find((h) => h.slug === slug) ?? null;
 }
+
 
 export type WorldSummary = {
   hub: WorldHub;
@@ -189,16 +221,70 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
   const scholars: RelatedNode[] = [];
   const states: RelatedNode[] = [];
 
+
+
+  // Strict world membership filter. The relationship resolver pulls in
+  // entities via campaigns, geography, and atlas links — none of which
+  // guarantee historical belonging. We accept a related entity for THIS
+  // world only when at least one explicit signal confirms it:
+  //   1. listed in this hub's own related / related_entities
+  //   2. entity.metadata.era matches the hub era
+  //   3. entity.metadata.state | affiliation | world | worldSlug matches
+  //      this hub's slug (or an accepted alias)
+  // Everything else is treated as ambiguous and surfaced for admin review
+  // instead of leaking onto the player-facing world page.
+  const hubMeta = metaObj(entity);
+  const explicitAllow = new Set<string>([
+    ...asStringList(hubMeta.related_entities).map(stripPrefix),
+    ...asStringList(hubMeta.related).map(stripPrefix),
+  ]);
+  const hubEra = WORLD_ERA[slug] ?? slug;
+  const acceptedStateRefs = new Set<string>(WORLD_STATE_ALIASES[slug] ?? [slug]);
+
+  const ambiguous: RelatedNode[] = [];
+  const belongs = (n: RelatedNode): boolean => {
+    const m = metaObj(n.entity);
+    if (explicitAllow.has(n.entity.slug)) return true;
+    const era = typeof m.era === "string" ? m.era.toLowerCase() : "";
+    if (era && era === hubEra) return true;
+    const refFields = ["state", "affiliation", "world", "worldSlug", "world_slug"];
+    for (const f of refFields) {
+      const v = m[f];
+      if (typeof v === "string" && acceptedStateRefs.has(v.toLowerCase())) return true;
+    }
+    const rel = asStringList(m.related_entities).map(stripPrefix);
+    if (rel.includes(slug)) return true;
+    return false;
+  };
+
   for (const n of related) {
     const t = n.entity.entity_type;
+    if (t === "state") {
+      // Connected worlds are handled separately below.
+      states.push(n);
+      continue;
+    }
+    if (!belongs(n)) {
+      ambiguous.push(n);
+      continue;
+    }
     if (t === "scholar") scholars.push(n);
-    else if (t === "state") states.push(n);
     else if ((SECTION_KEYS as string[]).includes(t)) {
       sections[t as WorldSectionKey].push(n);
     }
   }
   // Fold scholars into the figures section so player UI stays tidy.
   sections.figure = [...sections.figure, ...scholars];
+
+  if (ambiguous.length > 0 && typeof console !== "undefined") {
+    // Admin-review signal: never silently include ambiguous entities, but
+    // make them discoverable for triage.
+    console.warn(
+      `[worlds] ${ambiguous.length} ambiguous related entities suppressed for world "${slug}":`,
+      ambiguous.slice(0, 25).map((n) => `${n.entity.entity_type}:${n.entity.slug}`),
+    );
+  }
+
 
   const connectedWorlds: SupabaseEncyclopediaEntity[] = states
     .filter((n) => WORLD_SLUGS.has(n.entity.slug) && n.entity.slug !== slug)
