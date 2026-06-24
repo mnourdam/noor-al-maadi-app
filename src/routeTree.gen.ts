@@ -52,6 +52,7 @@ import { Route as AdminInvestigationsRouteImport } from './routes/admin.investig
 import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
+import { Route as AdminContentFoundationRouteImport } from './routes/admin.content-foundation'
 import { Route as AdminContentCleanupRouteImport } from './routes/admin.content-cleanup'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
@@ -281,6 +282,11 @@ const AdminEncyclopediaRoute = AdminEncyclopediaRouteImport.update({
   path: '/admin/encyclopedia',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminContentFoundationRoute = AdminContentFoundationRouteImport.update({
+  id: '/admin/content-foundation',
+  path: '/admin/content-foundation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminContentCleanupRoute = AdminContentCleanupRouteImport.update({
   id: '/admin/content-cleanup',
   path: '/admin/content-cleanup',
@@ -379,6 +385,7 @@ export interface FileRoutesByFullPath {
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
+  '/admin/content-foundation': typeof AdminContentFoundationRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/import': typeof AdminImportRoute
@@ -435,6 +442,7 @@ export interface FileRoutesByTo {
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
+  '/admin/content-foundation': typeof AdminContentFoundationRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/import': typeof AdminImportRoute
@@ -494,6 +502,7 @@ export interface FileRoutesById {
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
+  '/admin/content-foundation': typeof AdminContentFoundationRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/import': typeof AdminImportRoute
@@ -554,6 +563,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/content-cleanup'
+    | '/admin/content-foundation'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/import'
@@ -610,6 +620,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/content-cleanup'
+    | '/admin/content-foundation'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/import'
@@ -668,6 +679,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/content-cleanup'
+    | '/admin/content-foundation'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/import'
@@ -727,6 +739,7 @@ export interface RootRouteChildren {
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminContentRoute: typeof AdminContentRoute
   AdminContentCleanupRoute: typeof AdminContentCleanupRoute
+  AdminContentFoundationRoute: typeof AdminContentFoundationRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
   AdminEncyclopediaAuditRoute: typeof AdminEncyclopediaAuditRoute
   AdminImportRoute: typeof AdminImportRoute
@@ -1052,6 +1065,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEncyclopediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/content-foundation': {
+      id: '/admin/content-foundation'
+      path: '/admin/content-foundation'
+      fullPath: '/admin/content-foundation'
+      preLoaderRoute: typeof AdminContentFoundationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/content-cleanup': {
       id: '/admin/content-cleanup'
       path: '/admin/content-cleanup'
@@ -1211,6 +1231,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminContentRoute: AdminContentRoute,
   AdminContentCleanupRoute: AdminContentCleanupRoute,
+  AdminContentFoundationRoute: AdminContentFoundationRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
   AdminEncyclopediaAuditRoute: AdminEncyclopediaAuditRoute,
   AdminImportRoute: AdminImportRoute,
@@ -1235,13 +1256,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
