@@ -169,6 +169,30 @@ function EntityPage() {
 
         <EncyclopediaArticleBody article={parseEncyclopediaArticle(entity.body, entity.metadata)} />
 
+        {contextBlocks.length > 0 && (
+          <section className="mt-8 space-y-6">
+            {contextBlocks.map((b) => (
+              <div key={b.id}>
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="h-px flex-1 bg-gold/15" />
+                  <h3 className="font-display text-[13px] font-bold text-gold/90">
+                    {b.title}
+                  </h3>
+                  <span className="text-[10px] text-muted-foreground">
+                    {b.items.length}
+                  </span>
+                  <span className="h-px flex-1 bg-gold/15" />
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {b.items.map((n) => (
+                    <EncyclopediaCard key={n.entity.id} entity={n.entity} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+
         <section className="mt-8">
           <div className="mb-3 flex items-center gap-2">
             <Network className="size-4 text-gold" />
