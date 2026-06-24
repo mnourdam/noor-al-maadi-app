@@ -9,6 +9,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Campaign } from "@/types/campaign";
 import { sortCampaignsChronological } from "./campaignChronology";
+import { withBackfilledChronologyAll } from "./campaignChronologyBackfill";
 
 /** All published campaigns, ordered chronologically (oldest historical period first). */
 export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
@@ -23,7 +24,10 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   const all = (data ?? [])
     .map((r) => r.data as unknown as Campaign)
     .filter((c) => c && c.status === "published");
-  return sortCampaignsChronological(all);
+  // PR3: backfill chronology on legacy campaigns so they sort into the
+  // same axis as new chronological_order-aware campaigns. Read-only —
+  // does not write back to the database.
+  return sortCampaignsChronological(withBackfilledChronologyAll(all));
 }
 
 /** Resolve a published campaign by UUID id or slug. */

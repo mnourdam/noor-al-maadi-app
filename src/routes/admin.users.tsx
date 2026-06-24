@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Users, Search, Download, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, X, Coins, Sparkles } from "lucide-react";
 import { AdminGate } from "@/lib/admin-guard";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import {
   adminListUsers,
   adminUserDetail,
@@ -140,25 +141,23 @@ function AdminUsers() {
   const pageEnd = Math.min(offset + rows.length, total);
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-slate-100">
+    <AdminLayout
+      title="إدارة المستخدمين"
+      subtitle="قائمة لاعبي إرث — بحث، تصفية، وإجراءات إدارية موثّقة."
+      breadcrumbs={[{ label: "المستخدمون" }]}
+      actions={
+        <>
+          <button onClick={() => setReloadKey((k) => k + 1)} className="inline-flex items-center gap-1 rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">
+            <RefreshCw className="h-4 w-4" /> تحديث
+          </button>
+          <button onClick={handleExportCsv} className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/20">
+            <Download className="h-4 w-4" /> CSV
+          </button>
+        </>
+      }
+    >
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-500/20 pb-4">
-          <div className="flex items-center gap-3">
-            <Users className="h-7 w-7 text-amber-400" />
-            <div>
-              <h1 className="text-2xl font-bold text-amber-100">إدارة المستخدمين</h1>
-              <p className="text-sm text-slate-400">قائمة لاعبي إرث — بحث، تصفية، وإجراءات إدارية موثّقة.</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setReloadKey((k) => k + 1)} className="inline-flex items-center gap-1 rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">
-              <RefreshCw className="h-4 w-4" /> تحديث
-            </button>
-            <button onClick={handleExportCsv} className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/20">
-              <Download className="h-4 w-4" /> CSV
-            </button>
-          </div>
-        </header>
+
 
         <section className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -256,7 +255,7 @@ function AdminUsers() {
           onChanged={() => setReloadKey((k) => k + 1)}
         />
       )}
-    </div>
+    </AdminLayout>
   );
 }
 

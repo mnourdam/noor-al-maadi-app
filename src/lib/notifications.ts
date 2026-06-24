@@ -97,18 +97,27 @@ export function formatBadgeCount(n: number): string {
   if (n >= 100) return "99+";
   return String(n);
 }
-export function markRead(id: string): void {
+export function markRead(id: string): boolean {
   const now = Date.now();
-  const next = getInbox().map((n) =>
+  const current = getInbox();
+  const target = current.find((n) => n.id === id);
+  // Already read or doesn't exist — treat as a successful no-op.
+  if (!target || !isUnread(target)) return true;
+  const next = current.map((n) =>
     n.id === id && isUnread(n) ? { ...n, read: true, readAt: now } : n,
   );
-  write(INBOX_KEY, next);
-  emitUpdated();
+  const ok = write(INBOX_KEY, next);
+  // Only emit on a real, persisted change. If the write fails the inbox
+  // stays unchanged on disk, so the next refresh will show the item as
+  // unread again — preventing silent loss.
+  if (ok) emitUpdated();
+  return ok;
 }
-export function markAllRead(): void {
+export function markAllRead(): boolean {
   const now = Date.now();
-  write(INBOX_KEY, getInbox().map((n) => ({ ...n, read: true, readAt: n.readAt ?? now })));
-  emitUpdated();
+  const ok = write(INBOX_KEY, getInbox().map((n) => ({ ...n, read: true, readAt: n.readAt ?? now })));
+  if (ok) emitUpdated();
+  return ok;
 }
 export function clearInbox(): void { write(INBOX_KEY, []); emitUpdated(); }
 

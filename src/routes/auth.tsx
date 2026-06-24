@@ -55,7 +55,16 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const r = await signUp({ email, password, username, displayName: username, referralCode: referralCode || undefined });
+        // PR6: mirror the server-side normalization (`upper(trim(...))`)
+        // exactly so client validation never disagrees with the RPC.
+        const normalizedReferral = referralCode.trim().toUpperCase();
+        const r = await signUp({
+          email,
+          password,
+          username,
+          displayName: username,
+          referralCode: normalizedReferral || undefined,
+        });
         if (!r.ok) { setError(r.error ?? "تعذر إنشاء الحساب"); return; }
         if (r.error) { setInfo(r.error); return; } // verify email message
         navigate({ to: "/profile" });
@@ -68,6 +77,7 @@ function AuthPage() {
       setBusy(false);
     }
   }
+
 
   return (
     <AppShell>
@@ -142,7 +152,8 @@ function AuthPage() {
               <Field icon={<Gift className="size-4" />} label="رمز الإحالة (اختياري)">
                 <input
                   value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  onChange={(e) => setReferralCode(e.target.value.replace(/\s+/g, "").toUpperCase())}
+                  onBlur={(e) => setReferralCode(e.target.value.trim().toUpperCase())}
                   maxLength={20}
                   className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   placeholder="IRTH-XXXXXX"

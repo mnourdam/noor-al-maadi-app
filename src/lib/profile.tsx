@@ -14,6 +14,14 @@ import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notificati
 
 const STORAGE_KEY = "hakaya.profile.v2";
 
+/**
+ * Per-page dedup set for `loseHeartOnce`. Survives across re-renders /
+ * provider remounts inside a single tab but is intentionally NOT
+ * persisted — heart loss for the same attempt should only be skipped
+ * for the immediate rapid-tap window, not forever.
+ */
+const heartPenaltyDedup = new Set<string>();
+
 export interface AppSettings {
   ambienceEnabled: boolean;
   ambienceVolume: number; // 0..1
@@ -131,7 +139,15 @@ interface Ctx {
   setAvatar: (id: string) => void;
   setNotificationPrefs: (patch: Partial<NotificationPrefs>) => void;
   // Engagement v1
-  loseHeart: () => number;          // returns new effective hearts
+  loseHeart: () => number;          // returns new effective hearts (raw — prefer loseHeartOnce)
+  /**
+   * Idempotent heart loss keyed by a unique attempt id (e.g.
+   * "campaign:chapter:activity:attempt"). Subsequent calls with the
+   * same key in the lifetime of the page are no-ops. Use this from
+   * gameplay code instead of `loseHeart()` to prevent double-decrement
+   * on multi-tap / re-render races.
+   */
+  loseHeartOnce: (attemptKey: string) => number;
   hasHearts: () => boolean;
   recoverHeartFromActivity: (a: HeartActivity) => { ok: boolean; reason?: "full" | "cooldown" };
   spendDinarsForHeart: () => boolean;
@@ -301,6 +317,27 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     // ============= Engagement v1 =============
     loseHeart: () => {
+      let result = HEART_MAX;
+      update((p) => {
+        const now = Date.now();
+        const eff = getEffectiveHearts(p, now);
+        const next = Math.max(0, eff - 1);
+        result = next;
+        return { ...p, ...commitHearts(p, next, now) };
+      });
+      return result;
+    },
+    loseHeartOnce: (attemptKey: string) => {
+      if (!attemptKey) return getEffectiveHearts(profile);
+      if (heartPenaltyDedup.has(attemptKey)) {
+        return getEffectiveHearts(profile);
+      }
+      heartPenaltyDedup.add(attemptKey);
+      // Cap the dedup set so it can't grow forever during a long session.
+      if (heartPenaltyDedup.size > 500) {
+        const first = heartPenaltyDedup.values().next().value;
+        if (first) heartPenaltyDedup.delete(first);
+      }
       let result = HEART_MAX;
       update((p) => {
         const now = Date.now();

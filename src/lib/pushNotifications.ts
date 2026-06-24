@@ -35,14 +35,34 @@ function writePending(token: string | null) {
   } catch {}
 }
 
+// PR7: cap retries — never loop forever on persistent failure.
+const MAX_TOKEN_SAVE_ATTEMPTS = 3;
+let tokenSaveAttempts = 0;
+let tokenSaveDisabledReason: string | null = null;
+
+/** Read-only view of the retry state. UI can surface a non-blocking banner. */
+export function getPushTokenSaveState(): { disabled: boolean; attempts: number; reason: string | null } {
+  return { disabled: tokenSaveAttempts >= MAX_TOKEN_SAVE_ATTEMPTS, attempts: tokenSaveAttempts, reason: tokenSaveDisabledReason };
+}
+
+/** Call after a successful manual retry or sign-in to allow saveDeviceToken to try again. */
+export function resetPushTokenSaveAttempts(): void {
+  tokenSaveAttempts = 0;
+  tokenSaveDisabledReason = null;
+}
+
 export async function saveDeviceToken(token: string): Promise<void> {
   if (!token) return;
+  if (tokenSaveAttempts >= MAX_TOKEN_SAVE_ATTEMPTS) {
+    console.warn("[push] token save skipped: max attempts reached", tokenSaveDisabledReason);
+    return;
+  }
   try {
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userData?.user) {
       console.log("[push] token save skipped: no user yet");
       writePending(token);
-      return;
+      return; // not a failed attempt — we just have no user to attach to.
     }
 
     console.log("[push] saving token to Supabase");
@@ -60,16 +80,29 @@ export async function saveDeviceToken(token: string): Promise<void> {
       );
 
     if (error) {
-      console.error("[push] token save failed", error);
+      tokenSaveAttempts += 1;
+      tokenSaveDisabledReason = error.message;
+      console.error("[push] token save failed", error, "attempts:", tokenSaveAttempts);
       writePending(token);
+      if (tokenSaveAttempts >= MAX_TOKEN_SAVE_ATTEMPTS && typeof window !== "undefined") {
+        // Non-blocking banner — UI listens to this event and shows a toast.
+        window.dispatchEvent(new CustomEvent("irth:push:save-disabled", { detail: { reason: error.message } }));
+      }
       return;
     }
 
     console.log("[push] token saved");
+    tokenSaveAttempts = 0;
+    tokenSaveDisabledReason = null;
     writePending(null);
   } catch (err) {
-    console.error("[push] token save failed", err);
+    tokenSaveAttempts += 1;
+    tokenSaveDisabledReason = err instanceof Error ? err.message : String(err);
+    console.error("[push] token save failed", err, "attempts:", tokenSaveAttempts);
     writePending(token);
+    if (tokenSaveAttempts >= MAX_TOKEN_SAVE_ATTEMPTS && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("irth:push:save-disabled", { detail: { reason: tokenSaveDisabledReason } }));
+    }
   }
 }
 

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark, Search, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import { validateCampaign } from "@/lib/campaignStorage";
 import { inferWorldFromMetadata, runCampaignIntegrity, summarizeIntegrity, type CampaignIntegrityReport } from "@/lib/contentIntegrity";
 import type { Campaign } from "@/types/campaign";
@@ -32,18 +33,12 @@ function ImportPage() {
   const [active, setActive] = useState<ImportType>(type ?? "daily_facts");
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-slate-100">
+    <AdminLayout
+      title="استيراد المحتوى (JSON)"
+      subtitle="معلومات يومية · أحداث · إشعارات · حملات · موسوعة · تحقيقات"
+      breadcrumbs={[{ label: "الاستيراد" }]}
+    >
       <div className="mx-auto max-w-4xl space-y-6">
-        <header className="flex items-center justify-between gap-3 border-b border-amber-500/20 pb-3">
-          <div className="flex items-center gap-3">
-            <Upload className="h-6 w-6 text-amber-400" />
-            <h1 className="text-2xl font-bold text-amber-100">استيراد المحتوى (JSON)</h1>
-          </div>
-          <Link to="/admin" className="inline-flex items-center gap-1 text-sm text-amber-300 hover:text-amber-200">
-            <ArrowRight className="h-4 w-4" /> لوحة الإدارة
-          </Link>
-        </header>
-
         <div className="flex flex-wrap gap-2">
           <TypeBtn active={active === "daily_facts"} onClick={() => setActive("daily_facts")} icon={<BookOpen className="h-4 w-4" />}>معلومات يومية</TypeBtn>
           <TypeBtn active={active === "today_in_history_events"} onClick={() => setActive("today_in_history_events")} icon={<CalendarDays className="h-4 w-4" />}>أحداث تاريخية</TypeBtn>
@@ -60,9 +55,10 @@ function ImportPage() {
         {active === "investigations" && <Importer key="inv" config={investigationsConfig} />}
         {active === "campaigns" && <CampaignImporter />}
       </div>
-    </div>
+    </AdminLayout>
   );
 }
+
 
 function TypeBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
   return (
