@@ -86,6 +86,7 @@ function seededShuffle<T>(arr: T[], seed: number): T[] {
 function EncyclopediaHub() {
   const [query, setQuery] = useState("");
   const [era, setEra] = useState<string>("");
+  const [showAllEras, setShowAllEras] = useState(false);
 
   const { data: all = [], isLoading } = useAllEncyclopedia();
 
