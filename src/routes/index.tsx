@@ -585,6 +585,10 @@ function Index() {
       {/* ============ 6. (removed) duplicate timeline promo —
             timeline is already linked from "عوالم إرث" below. ============ */}
 
+
+      {/* ============ 6b. HISTORICAL WORLDS ============ */}
+      <WorldsHomepageSection />
+
       {/* ============ 7. NEW IN IRTH ============ */}
       <section className="mt-10 px-5">
         <SectionHeader icon={<Bell className="size-3.5" />} eyebrow="آخر التحديثات" title="جديد في إرث" />
