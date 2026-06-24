@@ -371,6 +371,28 @@ function ContentInventory() {
           >
             تصدير CSV
           </button>
+          <button
+            className="rounded border border-border bg-primary px-3 py-1 text-sm text-primary-foreground disabled:opacity-50"
+            disabled={!inv}
+            onClick={async () => {
+              if (!inv) return;
+              const text = toSummaryText(inv);
+              try {
+                await navigator.clipboard.writeText(text);
+              } catch {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand("copy");
+                document.body.removeChild(ta);
+              }
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            }}
+          >
+            {copied ? "تم النسخ ✓" : "نسخ التقرير"}
+          </button>
         </div>
       </div>
 
