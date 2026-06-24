@@ -88,25 +88,32 @@ type Report = {
   atlas: AtlasEntity[];
   campaigns: Campaign[];
   unlocks: UnlockRef[];
-  enc_by_key: Map<string, EncEntity>; // "type:slug" -> entity
+  enc_by_key: Map<string, EncEntity>;
   enc_by_id: Map<string, EncEntity>;
   // Section 1
   unlocks_total: number;
   unlocks_missing: UnlockRef[];
-  unlocks_broken: UnlockRef[]; // bad format
-  // Section 2
+  unlocks_broken: UnlockRef[];
+  core_refs_total: number;
+  core_refs_missing: { campaign: string; raw: string }[];
+  supporting_refs_total: number;
+  supporting_refs_missing: { campaign: string; raw: string }[];
+  // Section 2 (museum via metadata)
   museum_total: number;
-  museum_unlocked_via_campaign: number;
-  museum_orphan: EncEntity[]; // artifacts not in any unlock
-  rewards_missing_artifact: UnlockRef[]; // artifact unlocks pointing to nothing
+  museum_obtainable: EncEntity[];
+  museum_encyclopedia_only: EncEntity[];
+  museum_unobtainable: EncEntity[];
+  rewards_missing_artifact: UnlockRef[];
   // Section 3
   enc_reachable_campaign: Set<string>;
   enc_reachable_atlas: Set<string>;
+  enc_reachable_discoverable: Set<string>;
+  enc_reachable_museum: Set<string>;
   enc_orphan: EncEntity[];
-  // Section 4 = museum
+  enc_orphan_legacy: EncEntity[]; // orphan count under old rules (atlas+unlocks only)
   // Section 5
   atlas_without_enc: AtlasEntity[];
-  enc_without_atlas_expected: EncEntity[]; // city/landmark/battle without atlas link
+  enc_without_atlas_expected: EncEntity[];
   // Section 6
   score_campaign: number;
   score_encyclopedia: number;
@@ -115,6 +122,11 @@ type Report = {
 };
 
 const ATLAS_EXPECTED_TYPES = new Set(["city", "landmark", "battle"]);
+
+function parseRef(raw: string): { type: string; slug: string } {
+  const [type, ...rest] = String(raw).split(":");
+  return { type: type ?? "", slug: rest.join(":") };
+}
 
 async function buildReport(): Promise<Report> {
   const [encyclopedia, atlas, campaigns] = await Promise.all([
@@ -142,50 +154,112 @@ async function buildReport(): Promise<Report> {
     if (hit) enc_reachable_campaign.add(hit.id);
   }
 
+  // NEW: core_entities / supporting_entities from campaign metadata
+  const core_refs_missing: { campaign: string; raw: string }[] = [];
+  const supporting_refs_missing: { campaign: string; raw: string }[] = [];
+  let core_refs_total = 0;
+  let supporting_refs_total = 0;
+  for (const c of campaigns) {
+    const meta = c.data?.metadata ?? {};
+    const core: string[] = Array.isArray(meta.core_entities) ? meta.core_entities : [];
+    const sup: string[] = Array.isArray(meta.supporting_entities) ? meta.supporting_entities : [];
+    core_refs_total += core.length;
+    supporting_refs_total += sup.length;
+    for (const raw of core) {
+      const hit = enc_by_key.get(raw);
+      if (hit) enc_reachable_campaign.add(hit.id);
+      else core_refs_missing.push({ campaign: c.slug, raw });
+    }
+    for (const raw of sup) {
+      const hit = enc_by_key.get(raw);
+      if (hit) enc_reachable_campaign.add(hit.id);
+      else supporting_refs_missing.push({ campaign: c.slug, raw });
+    }
+  }
+
   const enc_reachable_atlas = new Set<string>();
   for (const a of atlas) {
     if (a.encyclopedia_entity_id) enc_reachable_atlas.add(a.encyclopedia_entity_id);
   }
 
-  const enc_orphan = encyclopedia.filter(
-    (e) => !enc_reachable_campaign.has(e.id) && !enc_reachable_atlas.has(e.id),
-  );
+  // Discoverable flag (metadata.discoverable === true)
+  const enc_reachable_discoverable = new Set<string>();
+  for (const e of encyclopedia) {
+    if (e.metadata?.discoverable === true) enc_reachable_discoverable.add(e.id);
+  }
 
-  // Museum = artifact entities
+  // Museum from encyclopedia metadata
   const artifacts = encyclopedia.filter((e) => e.entity_type === "artifact");
-  const unlocked_artifact_ids = new Set<string>();
+  const museum_obtainable: EncEntity[] = [];
+  const museum_encyclopedia_only: EncEntity[] = [];
+  const museum_unobtainable: EncEntity[] = [];
+  const enc_reachable_museum = new Set<string>();
+  for (const a of artifacts) {
+    const m = a.metadata?.museum ?? {};
+    const obtainable = m.obtainable === true;
+    const encOnly = m.encyclopedia_only === true;
+    const sources: any[] = Array.isArray(m.unlock_sources) ? m.unlock_sources : [];
+    if (obtainable) {
+      museum_obtainable.push(a);
+      enc_reachable_museum.add(a.id);
+    } else if (encOnly) {
+      museum_encyclopedia_only.push(a);
+      enc_reachable_museum.add(a.id);
+    } else if (sources.length > 0) {
+      museum_obtainable.push(a);
+      enc_reachable_museum.add(a.id);
+    } else {
+      museum_unobtainable.push(a);
+    }
+  }
+
+  // Broken reward refs (artifact unlocks pointing nowhere)
   const rewards_missing_artifact: UnlockRef[] = [];
   for (const u of unlocks) {
     if (u.type !== "artifact") continue;
     const hit = enc_by_key.get(`artifact:${u.slug}`);
-    if (hit) unlocked_artifact_ids.add(hit.id);
-    else rewards_missing_artifact.push(u);
+    if (!hit) rewards_missing_artifact.push(u);
   }
-  const museum_orphan = artifacts.filter((a) => !unlocked_artifact_ids.has(a.id));
 
-  // Atlas reachability
+  // Reachability: union of all rules
+  const enc_orphan = encyclopedia.filter(
+    (e) =>
+      !enc_reachable_campaign.has(e.id) &&
+      !enc_reachable_atlas.has(e.id) &&
+      !enc_reachable_discoverable.has(e.id) &&
+      !enc_reachable_museum.has(e.id),
+  );
+  const enc_orphan_legacy = encyclopedia.filter(
+    (e) => !enc_reachable_campaign.has(e.id) && !enc_reachable_atlas.has(e.id),
+  );
+
   const atlas_without_enc = atlas.filter((a) => !a.encyclopedia_entity_id);
   const enc_with_atlas = new Set(enc_reachable_atlas);
   const enc_without_atlas_expected = encyclopedia.filter(
     (e) => ATLAS_EXPECTED_TYPES.has(e.entity_type) && !enc_with_atlas.has(e.id),
   );
 
-  // Scores
   const pct = (ok: number, total: number) =>
     total === 0 ? 100 : Math.round((ok / total) * 1000) / 10;
 
+  const campaignRefTotal =
+    unlocks.length + core_refs_total + supporting_refs_total;
+  const campaignRefBroken =
+    unlocks_missing.length +
+    unlocks_broken.length +
+    core_refs_missing.length +
+    supporting_refs_missing.length;
   const score_campaign = pct(
-    unlocks.length - unlocks_missing.length - unlocks_broken.length,
-    Math.max(unlocks.length, 1),
+    Math.max(campaignRefTotal - campaignRefBroken, 0),
+    Math.max(campaignRefTotal, 1),
   );
   const score_encyclopedia = pct(
     encyclopedia.length - enc_orphan.length,
     Math.max(encyclopedia.length, 1),
   );
-  const score_museum = pct(
-    artifacts.length - museum_orphan.length,
-    Math.max(artifacts.length, 1),
-  );
+  // Museum score: encyclopedia_only doesn't count as failure
+  const museumDenom = artifacts.length - museum_encyclopedia_only.length;
+  const score_museum = pct(museum_obtainable.length, Math.max(museumDenom, 1));
   const score_overall =
     Math.round(((score_campaign + score_encyclopedia + score_museum) / 3) * 10) / 10;
 
@@ -199,13 +273,21 @@ async function buildReport(): Promise<Report> {
     unlocks_total: unlocks.length,
     unlocks_missing,
     unlocks_broken,
+    core_refs_total,
+    core_refs_missing,
+    supporting_refs_total,
+    supporting_refs_missing,
     museum_total: artifacts.length,
-    museum_unlocked_via_campaign: unlocked_artifact_ids.size,
-    museum_orphan,
+    museum_obtainable,
+    museum_encyclopedia_only,
+    museum_unobtainable,
     rewards_missing_artifact,
     enc_reachable_campaign,
     enc_reachable_atlas,
+    enc_reachable_discoverable,
+    enc_reachable_museum,
     enc_orphan,
+    enc_orphan_legacy,
     atlas_without_enc,
     enc_without_atlas_expected,
     score_campaign,
