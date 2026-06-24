@@ -131,7 +131,15 @@ interface Ctx {
   setAvatar: (id: string) => void;
   setNotificationPrefs: (patch: Partial<NotificationPrefs>) => void;
   // Engagement v1
-  loseHeart: () => number;          // returns new effective hearts
+  loseHeart: () => number;          // returns new effective hearts (raw — prefer loseHeartOnce)
+  /**
+   * Idempotent heart loss keyed by a unique attempt id (e.g.
+   * "campaign:chapter:activity:attempt"). Subsequent calls with the
+   * same key in the lifetime of the page are no-ops. Use this from
+   * gameplay code instead of `loseHeart()` to prevent double-decrement
+   * on multi-tap / re-render races.
+   */
+  loseHeartOnce: (attemptKey: string) => number;
   hasHearts: () => boolean;
   recoverHeartFromActivity: (a: HeartActivity) => { ok: boolean; reason?: "full" | "cooldown" };
   spendDinarsForHeart: () => boolean;
