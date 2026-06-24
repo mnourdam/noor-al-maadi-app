@@ -142,6 +142,39 @@ function suggestCandidates(row: AtlasEntityRow, list: EncEntity[]): Candidate[] 
   return results.slice(0, 8);
 }
 
+// ---- Bulk safe-relink plan ----------------------------------------------
+
+const BULK_MIN_SCORE = 80;
+const BULK_AMBIGUITY_GAP = 10;
+
+type BulkPlanItem = {
+  row: AtlasEntityRow;
+  issue: IssueKind;
+  candidate: Candidate;
+};
+
+function computeBulkPlan(
+  issued: { row: AtlasEntityRow; issue: IssueKind }[],
+  enc: EncEntity[],
+): BulkPlanItem[] {
+  const plan: BulkPlanItem[] = [];
+  for (const { row, issue } of issued) {
+    if (issue === "ok" || issue === "type_mismatch") continue;
+    const cands = suggestCandidates(row, enc);
+    const top = cands[0];
+    if (!top) continue;
+    if (top.score < BULK_MIN_SCORE) continue;
+    if (!top.entity.enabled) continue;
+    const compat = KIND_TO_TYPES[row.kind] ?? [];
+    if (compat.length > 0 && !compat.includes(top.entity.entity_type)) continue;
+    const second = cands[1];
+    if (second && top.score - second.score < BULK_AMBIGUITY_GAP) continue;
+    if (row.encyclopedia_entity_id === top.entity.id) continue;
+    plan.push({ row, issue, candidate: top });
+  }
+  return plan;
+}
+
 // ---- Component -----------------------------------------------------------
 
 function AtlasRepairPage() {
@@ -153,6 +186,10 @@ function AtlasRepairPage() {
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [manual, setManual] = useState<Record<string, string>>({});
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number }>({ done: 0, total: 0, failed: 0 });
+  const [bulkResult, setBulkResult] = useState<{ fixed: number; failed: number } | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true); setError(null);
@@ -244,6 +281,32 @@ function AtlasRepairPage() {
     }
   };
 
+  const bulkPlan = useMemo(() => computeBulkPlan(issued, enc), [issued, enc]);
+
+  const runBulk = async () => {
+    setBulkRunning(true);
+    setBulkProgress({ done: 0, total: bulkPlan.length, failed: 0 });
+    let done = 0, failed = 0;
+    const updatedRows: AtlasEntityRow[] = [];
+    for (const item of bulkPlan) {
+      try {
+        const u = await updateAtlasEntity(item.row.id, { encyclopedia_entity_id: item.candidate.entity.id });
+        updatedRows.push(u);
+      } catch {
+        failed++;
+      }
+      done++;
+      setBulkProgress({ done, total: bulkPlan.length, failed });
+    }
+    if (updatedRows.length) {
+      setRows((rs) => rs.map((r) => updatedRows.find((u) => u.id === r.id) ?? r));
+    }
+    setBulkRunning(false);
+    setBulkResult({ fixed: updatedRows.length, failed });
+    await reload();
+  };
+
+
   return (
     <div dir="rtl" className="min-h-screen bg-stone-950 text-stone-100">
       <header className="sticky top-0 z-10 border-b border-stone-800 bg-stone-900/90 px-3 py-2 backdrop-blur">
@@ -257,6 +320,13 @@ function AtlasRepairPage() {
               تغطية: <strong className={coverage === 100 ? "text-emerald-300" : "text-amber-300"}>{coverage}%</strong>
               {" "}({valid}/{total})
             </span>
+            <button
+              onClick={() => { setBulkResult(null); setBulkOpen(true); }}
+              disabled={loading || bulkPlan.length === 0}
+              className="inline-flex items-center gap-1 rounded border border-emerald-700 bg-emerald-900/40 px-2 py-1 text-emerald-100 hover:bg-emerald-900/70 disabled:opacity-40"
+            >
+              <Wand2 className="size-3.5" /> إصلاح جماعي آمن ({bulkPlan.length})
+            </button>
             <button onClick={reload} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">
               <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} /> إعادة تدقيق
             </button>
@@ -332,6 +402,112 @@ function AtlasRepairPage() {
             />
           ))}
         </section>
+      </div>
+
+      {bulkOpen && (
+        <BulkRepairModal
+          plan={bulkPlan}
+          running={bulkRunning}
+          progress={bulkProgress}
+          result={bulkResult}
+          onClose={() => { if (!bulkRunning) { setBulkOpen(false); setBulkResult(null); } }}
+          onRun={runBulk}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Bulk modal ----------------------------------------------------------
+
+function BulkRepairModal({
+  plan, running, progress, result, onClose, onRun,
+}: {
+  plan: BulkPlanItem[];
+  running: boolean;
+  progress: { done: number; total: number; failed: number };
+  result: { fixed: number; failed: number } | null;
+  onClose: () => void;
+  onRun: () => void;
+}) {
+  return (
+    <div dir="rtl" className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/80 p-3">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg border border-stone-700 bg-stone-900 shadow-xl">
+        <header className="flex items-center gap-2 border-b border-stone-800 px-4 py-2.5">
+          <Wand2 className="size-4 text-emerald-300" />
+          <h2 className="text-sm font-bold text-amber-100">معاينة الإصلاح الجماعي الآمن</h2>
+          <span className="text-[11px] text-stone-400">
+            (درجة ≥ {BULK_MIN_SCORE}، فجوة ≥ {BULK_AMBIGUITY_GAP}، نوع متوافق، كيان مفعّل)
+          </span>
+          <button onClick={onClose} disabled={running}
+            className="ml-auto rounded border border-stone-700 bg-stone-800 px-2 py-1 text-[11px] hover:bg-stone-700 disabled:opacity-40">
+            إغلاق
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-auto px-4 py-3 text-[12px]">
+          {result ? (
+            <div className="space-y-2">
+              <div className="rounded border border-emerald-700/50 bg-emerald-900/20 p-3 text-emerald-100">
+                ✓ تم إصلاح {result.fixed} رابطًا{result.failed > 0 ? ` · فشل ${result.failed}` : ""}.
+              </div>
+              <div className="text-stone-400">أُعيد التدقيق تلقائيًا.</div>
+            </div>
+          ) : plan.length === 0 ? (
+            <div className="rounded border border-stone-800 bg-stone-950/40 p-4 text-center text-stone-400">
+              لا توجد روابط بدرجة عالية وآمنة للإصلاح الجماعي حاليًا.
+            </div>
+          ) : (
+            <>
+              <div className="mb-2 text-stone-300">
+                سيتم إعادة ربط <strong className="text-amber-200">{plan.length}</strong> صفًا فقط (تحديث
+                {" "}<code className="text-stone-400">encyclopedia_entity_id</code>). لن يُحذف أو يُؤرشف أي كيان، ولن تُنشأ كيانات جديدة.
+              </div>
+              <ul className="divide-y divide-stone-800 rounded border border-stone-800">
+                {plan.map(({ row, issue, candidate }) => (
+                  <li key={row.id} className="flex flex-wrap items-center gap-2 px-2.5 py-1.5">
+                    <span className={`rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-bold text-amber-200`}>
+                      {ISSUE_LABEL[issue]}
+                    </span>
+                    <span className="font-bold text-amber-100">{row.name_ar}</span>
+                    <code className="text-[10px] text-stone-500">{row.slug}</code>
+                    <ArrowRight className="size-3 text-stone-500" />
+                    <span className="text-emerald-200">{candidate.entity.title}</span>
+                    <code className="text-[10px] text-stone-500">{candidate.entity.entity_type}/{candidate.entity.slug}</code>
+                    <span className="text-stone-400">· درجة {candidate.score}</span>
+                    <span className="text-stone-500 truncate">· {candidate.reasons.slice(0, 3).join(" · ")}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+
+        <footer className="flex items-center gap-2 border-t border-stone-800 px-4 py-2.5 text-[12px]">
+          {running ? (
+            <span className="text-amber-200">
+              <RefreshCw className="mr-1 inline size-3.5 animate-spin" />
+              {progress.done}/{progress.total} {progress.failed > 0 ? `· فشل ${progress.failed}` : ""}
+            </span>
+          ) : result ? (
+            <button onClick={onClose}
+              className="ml-auto rounded bg-amber-500 px-3 py-1.5 font-bold text-stone-950 hover:bg-amber-400">
+              تم
+            </button>
+          ) : (
+            <>
+              <span className="text-stone-400">سيتم تحديث {plan.length} صفًا.</span>
+              <button onClick={onClose}
+                className="ml-auto rounded border border-stone-700 bg-stone-800 px-3 py-1.5 hover:bg-stone-700">
+                إلغاء
+              </button>
+              <button onClick={onRun} disabled={plan.length === 0}
+                className="rounded bg-emerald-500 px-3 py-1.5 font-bold text-stone-950 hover:bg-emerald-400 disabled:opacity-40">
+                تنفيذ الإصلاح
+              </button>
+            </>
+          )}
+        </footer>
       </div>
     </div>
   );
