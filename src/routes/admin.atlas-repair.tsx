@@ -242,16 +242,36 @@ function AtlasRepairPage() {
   const [stubProgress, setStubProgress] = useState<{ done: number; total: number; failed: number }>({ done: 0, total: 0, failed: 0 });
   const [stubResult, setStubResult] = useState<{ created: number; linked: number; failed: number; failures: { row: AtlasEntityRow; reason: string }[] } | null>(null);
 
+  const [encTotal, setEncTotal] = useState<number | null>(null);
+
   const reload = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [a, e] = await Promise.all([
-        listAllAtlasEntities(),
-        supabase.from("encyclopedia_entities").select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled").limit(5000),
-      ]);
-      if (e.error) throw e.error;
+      // Paginate encyclopedia_entities: PostgREST caps per-request rows (default 1000),
+      // so .limit(5000) silently truncates. We page until exhausted.
+      const PAGE = 1000;
+      const all: EncEntity[] = [];
+      let from = 0;
+      let total: number | null = null;
+      for (;;) {
+        const { data, error, count } = await supabase
+          .from("encyclopedia_entities")
+          .select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled", { count: "exact" })
+          .order("id", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const chunk = (data as EncEntity[] | null) ?? [];
+        all.push(...chunk);
+        if (total === null && typeof count === "number") total = count;
+        if (chunk.length < PAGE) break;
+        from += PAGE;
+        if (total !== null && all.length >= total) break;
+        if (from > 100000) break; // safety
+      }
+      const a = await listAllAtlasEntities();
       setRows(a);
-      setEnc((e.data as EncEntity[] | null) ?? []);
+      setEnc(all);
+      setEncTotal(total);
     } catch (err: any) {
       setError(err?.message ?? String(err));
     } finally { setLoading(false); }
