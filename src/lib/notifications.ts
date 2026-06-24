@@ -129,7 +129,7 @@ export async function ensurePermission(): Promise<NotificationPermission> {
   return Notification.permission;
 }
 
-function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InAppNotification {
+function deliverWithStatus(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): { notification: InAppNotification; pushed: boolean } {
   const final: InAppNotification = {
     id: n.id ?? `${n.category}:${Date.now()}`,
     category: n.category,
@@ -140,11 +140,15 @@ function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InA
     read: false,
     readAt: null,
   };
-  pushInbox(final);
+  const pushed = pushInbox(final);
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
     try { new Notification(final.title, { body: final.body, tag: final.category, icon: "/favicon.ico" }); } catch { /* ignore */ }
   }
-  return final;
+  return { notification: final, pushed };
+}
+
+function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InAppNotification {
+  return deliverWithStatus(n).notification;
 }
 
 /** Public deliver — used by ad-hoc notifications (friend requests, etc.). */
@@ -152,6 +156,12 @@ export function deliverNotification(
   n: Omit<InAppNotification, "at" | "id"> & { id?: string },
 ): InAppNotification {
   return deliver(n);
+}
+
+export function deliverNotificationWithStatus(
+  n: Omit<InAppNotification, "at" | "id"> & { id?: string },
+): { notification: InAppNotification; pushed: boolean } {
+  return deliverWithStatus(n);
 }
 
 // ============== Scheduling guards (fire-once-per-day-ish) ==============

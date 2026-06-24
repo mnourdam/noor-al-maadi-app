@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import { listFriendships } from "@/lib/social";
-import { DEFAULT_NOTIFICATION_PREFS, INBOX_KEY, deliverNotification, getInbox, unreadCount } from "@/lib/notifications";
+import { DEFAULT_NOTIFICATION_PREFS, INBOX_KEY, deliverNotificationWithStatus, getInbox, unreadCount } from "@/lib/notifications";
 
 /**
  * Quietly polls the friendships table every 60s while signed in and emits
@@ -204,7 +204,7 @@ export async function runFriendNotificationPollerTick(
         rowDebug.deliverNotificationCalled = true;
         diag.deliverNotificationCalledIds.push(notificationId);
         try {
-          deliverNotification(isIncoming ? {
+          const result = deliverNotificationWithStatus(isIncoming ? {
             id: notificationId,
             category: "friend",
             title: "طلب صداقة جديد",
@@ -217,7 +217,7 @@ export async function runFriendNotificationPollerTick(
             body: `قبل ${name} طلب صداقتك`,
             href: "/friends",
           });
-          rowDebug.deliveredToInbox = getInbox().some((n) => n.id === notificationId);
+          rowDebug.deliveredToInbox = result.pushed && getInbox().some((n) => n.id === notificationId);
           if (rowDebug.deliveredToInbox) {
             if (isIncoming) nextIncoming.add(f.row.id);
             else nextAccepted.add(f.row.id);
