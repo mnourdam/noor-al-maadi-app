@@ -91,7 +91,7 @@ function norm(s: string | null | undefined): string {
     .replace(/(^-|-$)/g, "");
 }
 
-function suggestMatches(u: UnlockRef, enc: EncEntity[]): EncEntity[] {
+function scoreMatches(u: UnlockRef, enc: EncEntity[]): { e: EncEntity; s: number }[] {
   const target = norm(u.slug);
   const sameType = enc.filter((e) => !u.type || e.entity_type === u.type);
   const scored: { e: EncEntity; s: number }[] = [];
@@ -110,7 +110,52 @@ function suggestMatches(u: UnlockRef, enc: EncEntity[]): EncEntity[] {
     if (s > 0) scored.push({ e, s });
   }
   scored.sort((a, b) => b.s - a.s);
-  return scored.slice(0, 5).map((x) => x.e);
+  return scored;
+}
+
+function suggestMatches(u: UnlockRef, enc: EncEntity[]): EncEntity[] {
+  return scoreMatches(u, enc).slice(0, 5).map((x) => x.e);
+}
+
+const AUTO_FIX_THRESHOLD = 85;
+
+type AutoFixPlan = { u: UnlockRef; match: EncEntity; score: number; newVal: string };
+
+function planAutoFixes(missing: UnlockRef[], enc: EncEntity[]): AutoFixPlan[] {
+  const out: AutoFixPlan[] = [];
+  for (const u of missing) {
+    const scored = scoreMatches(u, enc);
+    const top = scored[0];
+    const second = scored[1];
+    if (!top || top.s < AUTO_FIX_THRESHOLD) continue;
+    // Require a clear winner (avoid ambiguous ties)
+    if (second && top.s - second.s < 10) continue;
+    out.push({ u, match: top.e, score: top.s, newVal: `${top.e.entity_type}:${top.e.slug}` });
+  }
+  return out;
+}
+
+async function applyBulkUnlockFixes(plans: AutoFixPlan[], campaigns: Campaign[]) {
+  // Group by campaign to avoid clobbering when multiple unlocks change in same row.
+  const byCampaign = new Map<string, AutoFixPlan[]>();
+  for (const p of plans) {
+    const arr = byCampaign.get(p.u.campaignId) ?? [];
+    arr.push(p);
+    byCampaign.set(p.u.campaignId, arr);
+  }
+  for (const [campaignId, items] of byCampaign) {
+    const campaign = campaigns.find((c) => c.id === campaignId);
+    if (!campaign) continue;
+    const data = JSON.parse(JSON.stringify(campaign.data ?? {}));
+    const chapters = Array.isArray(data.chapters) ? data.chapters : [];
+    for (const p of items) {
+      const ch = chapters[p.u.chapterIndex];
+      if (!ch?.rewards?.unlocks) continue;
+      ch.rewards.unlocks[p.u.unlockIndex] = p.newVal;
+    }
+    const { error } = await supabase.from("admin_campaigns").update({ data }).eq("id", campaignId);
+    if (error) throw error;
+  }
 }
 
 type Report = {
