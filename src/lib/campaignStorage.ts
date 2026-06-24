@@ -83,8 +83,6 @@ export function listCampaigns(): Campaign[] {
 export function listPublishedCampaigns(): Campaign[] {
   // Always return campaigns in chronological order (oldest historical period
   // first) — see src/lib/campaignChronology.ts.
-  // Lazy import to avoid circular deps during SSR.
-  const { sortCampaignsChronological } = require("./campaignChronology") as typeof import("./campaignChronology");
   return sortCampaignsChronological(listCampaigns().filter(c => c.status === "published"));
 }
 
