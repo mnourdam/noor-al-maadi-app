@@ -29,6 +29,7 @@ const CAT_LABEL = {
 
 function NotificationsPage() {
   const [list, setList] = useState<InAppNotification[]>([]);
+  const [persistError, setPersistError] = useState<string | null>(null);
 
   const refresh = useCallback(() => setList(getInbox()), []);
 
@@ -41,7 +42,33 @@ function NotificationsPage() {
   const unread = list.filter(isUnread).sort((a, b) => b.at - a.at);
   const read = list.filter((n) => !isUnread(n)).sort((a, b) => b.at - a.at);
 
-  const onOpen = (id: string) => markRead(id);
+  // PR5: optimistic mark-as-read with rollback on storage failure.
+  const onOpen = (id: string) => {
+    const snapshot = list;
+    const optimistic = list.map((n) =>
+      n.id === id && isUnread(n) ? { ...n, read: true, readAt: Date.now() } : n,
+    );
+    setList(optimistic);
+    const ok = markRead(id);
+    if (!ok) {
+      setList(snapshot);
+      setPersistError("تعذّر حفظ حالة القراءة. حاول مرة أخرى.");
+      setTimeout(() => setPersistError(null), 3000);
+    }
+  };
+
+  const onMarkAllRead = () => {
+    const snapshot = list;
+    const now = Date.now();
+    setList(list.map((n) => ({ ...n, read: true, readAt: n.readAt ?? now })));
+    const ok = markAllRead();
+    if (!ok) {
+      setList(snapshot);
+      setPersistError("تعذّر حفظ حالة القراءة. حاول مرة أخرى.");
+      setTimeout(() => setPersistError(null), 3000);
+    }
+  };
+
 
   return (
     <AppShell>
