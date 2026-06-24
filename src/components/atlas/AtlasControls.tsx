@@ -8,7 +8,7 @@ import {
   type AtlasEntityKind,
   type AtlasEntityRow,
 } from "@/lib/atlas-entities";
-import { ERAS } from "@/lib/data";
+import { ERAS } from "@/lib/app-constants";
 
 const ERA_LABEL_AR: Record<string, string> = Object.fromEntries(
   ERAS.map((e) => [e.id, e.name]),

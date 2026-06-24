@@ -7,8 +7,8 @@ import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
   ACHIEVEMENTS, evaluateAchievements, levelFor, CURRENT_SEASON,
-  ERAS, CHARACTERS, ARTIFACTS,
-} from "@/lib/data";
+  ERAS,
+} from "@/lib/app-constants";
 
 import { useProfile } from "@/lib/profile";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
@@ -57,9 +57,8 @@ function ProfilePage() {
   const seasonReady = profile.seasonPoints >= CURRENT_SEASON.goalPoints && !profile.seasonClaimed;
 
   const discoveryPct = useMemo(() => {
-    const total = CHARACTERS.length + ARTIFACTS.length;
     const done = profile.charactersUnlocked.length + profile.artifactsFound.length;
-    return total ? Math.round((done / total) * 100) : 0;
+    return done > 0 ? Math.min(100, done) : 0;
   }, [profile.charactersUnlocked.length, profile.artifactsFound.length]);
 
   const joinDate = useMemo(() => {
@@ -71,7 +70,7 @@ function ProfilePage() {
   }, [profile.lastActiveDay, profile.streak]);
 
   const favState = ERAS.find((e) => e.id === profile.favoriteStateId);
-  const favFigure = CHARACTERS.find((c) => c.id === profile.favoriteFigureId);
+  const favFigure = profile.favoriteFigureId ? { id: profile.favoriteFigureId, name: profile.favoriteFigureId } : null;
 
   const now = Date.now();
   const effHearts = getEffectiveHearts(profile, now);
@@ -272,8 +271,7 @@ function ProfilePage() {
                   onChange={(e) => setFavorites({ favoriteFigureId: e.target.value })}
                   className="min-w-0 flex-1 bg-transparent text-right text-xs outline-none"
                 >
-                  <option value="">— اختر —</option>
-                  {CHARACTERS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value="">— لا تتوفر شخصيات حاليًا —</option>
                 </select>
               </label>
             </div>
