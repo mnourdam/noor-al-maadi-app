@@ -33,7 +33,6 @@ function writeSeen(s: SeenState) {
 export function FriendNotificationsPoller() {
   const { user } = useAccount();
   const { profile } = useProfile();
-  const initRef = useRef(false);
 
   useEffect(() => {
     if (!user) return;
@@ -52,36 +51,45 @@ export function FriendNotificationsPoller() {
         for (const f of list) {
           const name = (f.other.display_name?.trim() || f.other.username || "صديق");
           if (f.direction === "incoming" && !seen.incoming.includes(f.row.id)) {
+            deliverNotification({
+              id: `friend_request:${f.row.id}`,
+              category: "friend",
+              title: "طلب صداقة جديد",
+              body: `أرسل إليك ${name} طلب صداقة`,
+              href: "/friends?tab=requests",
+            });
             nextIncoming.add(f.row.id);
-            // First sync after sign-in: don't spam with backlog notifications.
-            if (initRef.current) {
-              deliverNotification({
-                id: `friend_request:${f.row.id}`,
-                category: "friend",
-                title: "طلب صداقة جديد",
-                body: `أرسل إليك ${name} طلب صداقة`,
-                href: "/friends?tab=requests",
-              });
-            }
           }
-          if (f.direction === "accepted" && !seen.accepted.includes(f.row.id)) {
+          if (
+            f.direction === "accepted" &&
+            f.row.requester === user!.id &&
+            !seen.accepted.includes(f.row.id)
+          ) {
+            deliverNotification({
+              id: `friend_request_accepted:${f.row.id}`,
+              category: "friend",
+              title: "تم قبول طلب الصداقة",
+              body: `قبل ${name} طلب صداقتك`,
+              href: "/friends",
+            });
             nextAccepted.add(f.row.id);
-            if (initRef.current && f.row.requester === user!.id) {
-              deliverNotification({
-                id: `friend_request_accepted:${f.row.id}`,
-                category: "friend",
-                title: "تم قبول طلب الصداقة",
-                body: `قبل ${name} طلب صداقتك`,
-                href: "/friends",
-              });
-            }
           }
         }
 
         writeSeen({ incoming: Array.from(nextIncoming), accepted: Array.from(nextAccepted) });
-        initRef.current = true;
       } catch { /* ignore network blips */ }
     }
+
+    tick();
+    const id = setInterval(tick, 60_000);
+    const onFocus = () => tick();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [user, profile.settings?.notificationPrefs]);
 
     tick();
     const id = setInterval(tick, 60_000);
