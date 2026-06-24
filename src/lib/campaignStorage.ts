@@ -18,6 +18,7 @@ import type {
   ValidationResult,
 } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
+import { sortCampaignsChronological } from "./campaignChronology";
 
 export const CAMPAIGNS_KEY = "irth_admin_campaigns";
 export const BACKUPS_KEY = "irth_admin_backups";
@@ -80,7 +81,9 @@ export function listCampaigns(): Campaign[] {
 }
 
 export function listPublishedCampaigns(): Campaign[] {
-  return listCampaigns().filter(c => c.status === "published");
+  // Always return campaigns in chronological order (oldest historical period
+  // first) — see src/lib/campaignChronology.ts.
+  return sortCampaignsChronological(listCampaigns().filter(c => c.status === "published"));
 }
 
 export function getCampaign(id: string): Campaign | undefined {

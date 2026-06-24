@@ -26,6 +26,7 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const { profile, logout, updateSettings, claimSeason, setBio, setFavorites, claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs } = useProfile();
+  const [confirmReset, setConfirmReset] = useState(false);
   const { user, displayName: accountDisplayName, updateDisplayName } = useAccount();
   const displayName = user ? (accountDisplayName || "مستخدم إرث") : (profile.name || "ضيف");
   const [editingBio, setEditingBio] = useState(false);
@@ -449,9 +450,40 @@ function ProfilePage() {
 
         {profile.loggedIn && (
           <button
-            onClick={logout}
+            onClick={() => setConfirmReset(true)}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-surface py-3 text-xs text-muted-foreground"
           ><LogOut className="size-4" /> تسجيل الخروج وإعادة التهيئة</button>
+        )}
+
+        {confirmReset && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+            role="dialog"
+            aria-modal="true"
+            onClick={() => setConfirmReset(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-3xl border border-gold/30 bg-surface p-5 shadow-elegant"
+            >
+              <h3 className="font-display text-lg font-bold text-gold">تأكيد حذف التقدم</h3>
+              <p className="mt-2 text-sm leading-7 text-foreground/85">
+                هل تريد بالتأكيد حذف تقدمك الحالي والخروج من الحساب؟ لا يمكن التراجع عن هذا الإجراء إذا لم يكن تقدمك محفوظًا في حسابك.
+              </p>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  onClick={() => setConfirmReset(false)}
+                  className="rounded-full border border-white/15 px-4 py-2 text-sm text-muted-foreground hover:bg-white/5"
+                >إلغاء</button>
+                <button
+                  onClick={() => { setConfirmReset(false); logout(); }}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-l from-rose-600 to-rose-500 px-4 py-2 text-sm font-bold text-white shadow-elegant"
+                >
+                  <LogOut className="size-4" /> حذف التقدم والخروج
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         <Link

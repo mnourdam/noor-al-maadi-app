@@ -8,21 +8,22 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Campaign } from "@/types/campaign";
+import { sortCampaignsChronological } from "./campaignChronology";
 
-/** All published campaigns, freshest first. */
+/** All published campaigns, ordered chronologically (oldest historical period first). */
 export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   const { data, error } = await supabase
     .from("admin_campaigns")
     .select("id, slug, data")
-    .eq("status", "published")
-    .order("updated_at", { ascending: false });
+    .eq("status", "published");
   if (error) {
     console.warn("[supabaseCampaigns] list failed:", error.message);
     return [];
   }
-  return (data ?? [])
+  const all = (data ?? [])
     .map((r) => r.data as unknown as Campaign)
     .filter((c) => c && c.status === "published");
+  return sortCampaignsChronological(all);
 }
 
 /** Resolve a published campaign by UUID id or slug. */

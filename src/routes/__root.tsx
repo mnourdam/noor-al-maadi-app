@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ProfileProvider } from "../lib/profile";
 import { AccountProvider } from "../lib/account";
+import { FirstLaunchGate } from "../components/FirstLaunchGate";
 
 function NotFoundComponent() {
   return (
@@ -140,6 +141,10 @@ function RootComponent() {
     // Apply Android/WebView/reduced-motion perf-mode class on <html>.
     import("../lib/perf-mode").then((m) => m.applyPerfMode()).catch(() => {});
 
+    // One-time localStorage cleanup for legacy unlock ids that no longer
+    // resolve to a canonical encyclopedia entity.
+    import("../lib/orphanUnlocksMigration").then((m) => m.migrateOrphanUnlocks()).catch(() => {});
+
     // PR3: bootstrap campaign-ledger sync flush (online + visibility events).
     import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
 
@@ -191,6 +196,7 @@ function RootComponent() {
       <ProfileProvider>
         <AccountProvider>
           <Outlet />
+          <FirstLaunchGate />
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>

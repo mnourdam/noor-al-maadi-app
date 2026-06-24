@@ -27,7 +27,7 @@ import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
 import heroDesertCaravan from "@/assets/hero-desert-caravan.jpg";
 import heroManuscriptLamp from "@/assets/hero-manuscript-lamp.jpg";
 import heroFortress from "@/assets/hero-fortress.jpg";
-import { EXPLORATION_PATHS } from "@/lib/exploration-paths";
+
 import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
 
@@ -143,7 +143,12 @@ function Index() {
         Object.values(p.chapters).some((ch) => (ch.completedActivityIds?.length ?? 0) > 0);
       return { campaign: c, progress: p, hasStarted, isComplete: p.completed, completedChapters, nextChapter, nextActivity };
     });
-    // Priority: active & resumable → next unfinished published → first
+    // Priority (chronological):
+    //  1. an in-progress campaign (resume what you started)
+    //  2. otherwise the OLDEST unplayed/unfinished campaign
+    //  3. otherwise the oldest campaign overall.
+    // `enriched` already preserves the chronological order coming from
+    // listPublishedCampaigns(), so `.find` returns the earliest match.
     return (
       enriched.find((e) => e.hasStarted && !e.isComplete) ??
       enriched.find((e) => !e.isComplete) ??
@@ -560,30 +565,8 @@ function Index() {
         )}
       </section>
 
-      {/* ============ EXPLORATION PATHS ============ */}
-      <section className="mt-10 px-5">
-        <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="رحلات مترابطة" title="مسارات الاستكشاف" />
-        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 no-scrollbar snap-x snap-mandatory">
-          {EXPLORATION_PATHS.map((p) => (
-            <Link
-              key={p.id}
-              to="/encyclopedia/path/$id"
-              params={{ id: p.id }}
-              className="group relative w-52 shrink-0 snap-start overflow-hidden rounded-2xl border border-gold/25 parchment-dark p-4 transition hover:border-gold/55"
-            >
-              <div className="absolute -left-6 -top-6 size-20 rounded-full bg-gold/15 blur-2xl" />
-              <div className="relative">
-                <div className="text-3xl">{p.glyph}</div>
-                <p className="mt-2 text-[10px] tracking-[0.2em] text-gold">مسار استكشاف</p>
-                <p className="font-display mt-0.5 text-sm font-bold leading-tight">{p.title}</p>
-                {p.subtitle && (
-                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-white/60">{p.subtitle}</p>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* ============ EXPLORATION PATHS — removed from home for now.
+            Will return as Curated Exploration Paths (separate feature). ============ */}
 
       {/* ============ 5. TODAY IN HISTORY ============ */}
       {mounted && todayEvent && <OnThisDayCalendarCard event={todayEvent} />}
@@ -620,7 +603,6 @@ function Index() {
           <WorldCard to="/map" icon={<MapIcon className="size-5" />} title="الأطلس الإسلامي" subtitle="خارطة العصور" />
           <WorldCard to="/collection" icon={<Package className="size-5" />} title="المتحف" subtitle="أرشيفك ومقتنياتك" />
           <WorldCard to="/worlds" icon={<Compass className="size-5" />} title="عوالم إرث" subtitle="استكشف الحضارات" />
-          <WorldCard to="/encyclopedia/path/andalus" icon={<Sparkles className="size-5" />} title="مسارات الاستكشاف" subtitle="رحلات مترابطة" />
           <div className="col-span-2">
             <WorldCard to="/timeline" icon={<Hourglass className="size-5" />} title="الخط الزمني العظيم" subtitle="أكثر من 1400 سنة من التاريخ" wide />
           </div>
