@@ -130,7 +130,7 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
     .eq("enabled", true);
 
   const bySlug = new Map<string, SupabaseEncyclopediaEntity>();
-  for (const r of (rows ?? []) as SupabaseEncyclopediaEntity[]) {
+  for (const r of (rows ?? []) as unknown as SupabaseEncyclopediaEntity[]) {
     bySlug.set(r.slug, r);
   }
 

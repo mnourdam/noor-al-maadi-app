@@ -274,7 +274,7 @@ export async function resolveRelatedEntities(
     .eq("enabled", true)
     .in("slug", keys);
 
-  const nodes: RelatedNode[] = ((rows ?? []) as SupabaseEncyclopediaEntity[]).map((r) => {
+  const nodes: RelatedNode[] = ((rows ?? []) as unknown as SupabaseEncyclopediaEntity[]).map((r) => {
     const ref = scores.get(r.slug.toLowerCase())!;
     return { entity: r, score: ref.score, reason: ref.reason };
   });
