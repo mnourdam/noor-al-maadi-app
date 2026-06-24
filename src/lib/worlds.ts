@@ -210,6 +210,19 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
 
   const related = await resolveRelatedEntities(entity);
 
+  const sections: Record<WorldSectionKey, RelatedNode[]> = {
+    figure: [],
+    city: [],
+    event: [],
+    battle: [],
+    landmark: [],
+    artifact: [],
+  };
+  const scholars: RelatedNode[] = [];
+  const states: RelatedNode[] = [];
+
+
+
   // Strict world membership filter. The relationship resolver pulls in
   // entities via campaigns, geography, and atlas links — none of which
   // guarantee historical belonging. We accept a related entity for THIS
