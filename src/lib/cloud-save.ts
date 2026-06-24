@@ -46,20 +46,27 @@ export async function getCurrentUser() {
   return data.user;
 }
 
-export async function fetchAccountProfile(userId: string): Promise<AccountProfile | null> {
-  const { data, error } = await db
-    .from("profiles")
-    .select("id, username, display_name, join_date, last_active")
-    .eq("id", userId)
-    .maybeSingle();
+export async function fetchAccountProfile(_userId: string): Promise<AccountProfile | null> {
+  // Direct SELECT on private profile columns (join_date, last_active) is no
+  // longer permitted for authenticated; go through the owner-only RPC.
+  const { data, error } = await db.rpc("get_my_profile");
   if (error) {
     console.error("[cloud-save] fetchAccountProfile", error);
     return null;
   }
   if (!data) return null;
+  const row = data as { id: string; username: string; display_name: string | null; join_date: string; last_active: string };
   const { data: emailVal } = await db.rpc("get_my_email");
-  return { ...(data as Omit<AccountProfile, "email">), email: (emailVal as string | null) ?? null };
+  return {
+    id: row.id,
+    username: row.username,
+    display_name: row.display_name,
+    join_date: row.join_date,
+    last_active: row.last_active,
+    email: (emailVal as string | null) ?? null,
+  };
 }
+
 
 /** Update display_name via RPC (auth-only, doesn't touch other columns). */
 export async function updateDisplayName(name: string): Promise<{ ok: boolean; value?: string; error?: string }> {
