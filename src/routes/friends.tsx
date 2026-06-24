@@ -41,9 +41,15 @@ function FriendsPage() {
 
   async function doSearch() {
     setBusy(true); setMsg(null);
-    const r = await searchPlayers(q);
-    setResults(r.filter((p) => p.id !== user!.id));
-    setBusy(false);
+    try {
+      const r = await searchPlayers(q, user!.id);
+      setResults(r);
+      if (r.length === 0 && q.trim()) setMsg("لا يوجد مستخدمون مطابقون");
+    } catch {
+      setMsg("تعذر تنفيذ البحث");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function invite(id: string) {
@@ -57,6 +63,10 @@ function FriendsPage() {
   const incoming = friends.filter((f) => f.direction === "incoming");
   const outgoing = friends.filter((f) => f.direction === "outgoing");
   const accepted = friends.filter((f) => f.direction === "accepted");
+
+  // Map of other-user id -> existing relationship direction (to hide Add for them).
+  const relById = new Map<string, FriendEntry["direction"]>();
+  for (const f of friends) relById.set(f.other.id, f.direction);
 
   return (
     <AppShell>
@@ -72,23 +82,37 @@ function FriendsPage() {
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && doSearch()}
             className="w-full bg-transparent text-sm outline-none"
-            placeholder="اسم المستخدم أو معرّف"
+            placeholder="اسم العرض أو اسم المستخدم"
           />
-          <button disabled={busy} onClick={doSearch} className="rounded-xl bg-gradient-gold px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-gold">بحث</button>
+          <button disabled={busy || !q.trim()} onClick={doSearch} className="rounded-xl bg-gradient-gold px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
+            {busy ? "…" : "بحث"}
+          </button>
         </div>
         {msg && <p className="mt-2 text-center text-xs text-gold">{msg}</p>}
 
         {results.length > 0 && (
           <Section title="نتائج البحث">
-            {results.map((p) => (
-              <Row key={p.id} other={p} right={
-                <button onClick={() => invite(p.id)} className="flex items-center gap-1 rounded-xl bg-gradient-gold px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-gold">
-                  <UserPlus className="size-3.5" /> إضافة
-                </button>
-              } />
-            ))}
+            {results.map((p) => {
+              const rel = relById.get(p.id);
+              return (
+                <Row key={p.id} other={p} right={
+                  rel === "accepted" ? (
+                    <span className="rounded-xl border border-emerald-500/30 px-2 py-1 text-[11px] text-emerald-300">صديق</span>
+                  ) : rel === "outgoing" ? (
+                    <span className="rounded-xl border border-white/10 px-2 py-1 text-[11px] text-muted-foreground">طلب مرسل</span>
+                  ) : rel === "incoming" ? (
+                    <span className="rounded-xl border border-gold/30 px-2 py-1 text-[11px] text-gold">بانتظار قبولك</span>
+                  ) : (
+                    <button onClick={() => invite(p.id)} className="flex items-center gap-1 rounded-xl bg-gradient-gold px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-gold">
+                      <UserPlus className="size-3.5" /> إضافة
+                    </button>
+                  )
+                } />
+              );
+            })}
           </Section>
         )}
+
 
         {incoming.length > 0 && (
           <Section title={`طلبات واردة (${incoming.length})`}>
@@ -139,13 +163,15 @@ function Section({ title, icon, children }: { title: string; icon?: React.ReactN
 }
 
 function Row({ other, right }: { other: PublicProfile; right: React.ReactNode }) {
+  const displayName = other.display_name?.trim() || other.username || "—";
+  const fallbackChar = (displayName[0] ?? other.username?.[0] ?? "?");
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3">
-      <Avatar avatarId={other.avatar_id} size="sm" fallbackChar={other.username?.[0] ?? "?"} />
+      <Avatar avatarId={other.avatar_id} size="sm" fallbackChar={fallbackChar} />
       <Link to="/u/$username" params={{ username: other.username }} className="min-w-0 flex-1">
-        <div className="truncate text-sm font-bold">{other.username}</div>
+        <div className="truncate text-sm font-bold">{displayName}</div>
         <div className="truncate text-[11px] text-muted-foreground">
-          المستوى {other.level} • {other.title ?? "—"} • {other.campaigns_completed} حملة
+          @{other.username} • المستوى {other.level} • {other.campaigns_completed} حملة
         </div>
       </Link>
       {right}
