@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Land
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { validateCampaign } from "@/lib/campaignStorage";
+import { inferWorldFromMetadata, runCampaignIntegrity, summarizeIntegrity, type CampaignIntegrityReport } from "@/lib/contentIntegrity";
 import type { Campaign } from "@/types/campaign";
 
 
@@ -145,7 +146,7 @@ function CampaignImporter() {
   const [publishOnImport, setPublishOnImport] = useState(false);
   const [overwrite, setOverwrite] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ inserted: number; updated: number; skipped: number; failed: number; errors: string[] } | null>(null);
+  const [result, setResult] = useState<{ inserted: number; updated: number; skipped: number; failed: number; errors: string[]; reports: CampaignIntegrityReport[] } | null>(null);
   const [topError, setTopError] = useState<string | null>(null);
 
   const parsed = useMemo<CampaignImportRow[]>(() => {
@@ -178,6 +179,7 @@ function CampaignImporter() {
     try {
       let inserted = 0, updated = 0, skipped = 0, failed = 0;
       const rowErrs: string[] = [];
+      const reports: CampaignIntegrityReport[] = [];
 
       // Pre-fetch existing ids to differentiate insert vs update.
       const ids = validCampaigns.map(c => c.id);
@@ -190,29 +192,42 @@ function CampaignImporter() {
       for (const c of validCampaigns) {
         const exists = existingIds.has(c.id);
         if (exists && !overwrite) { skipped++; continue; }
+
+        // Auto-assign world/era from metadata when confident.
+        let enriched = c;
+        if (!c.worldSlug) {
+          const inf = inferWorldFromMetadata(c);
+          if (inf && inf.confidence === "high") {
+            enriched = { ...c, worldSlug: inf.worldSlug, era: c.era ?? inf.era };
+          }
+        }
+
         const status = publishOnImport ? "published" : (exists ? undefined : "draft");
         const row: any = {
-          id: c.id,
-          slug: c.slug ?? null,
-          title: c.title,
-          data: { ...c, status: publishOnImport ? "published" : (c.status ?? "draft") },
+          id: enriched.id,
+          slug: enriched.slug ?? null,
+          title: enriched.title,
+          data: { ...enriched, status: publishOnImport ? "published" : (enriched.status ?? "draft") },
           updated_at: new Date().toISOString(),
         };
         if (status) row.status = status;
         const { error } = await supabase
           .from("admin_campaigns" as any)
           .upsert(row, { onConflict: "id" });
-        if (error) { failed++; rowErrs.push(`${c.id}: ${error.message}`); continue; }
+        if (error) { failed++; rowErrs.push(`${enriched.id}: ${error.message}`); continue; }
         if (exists) updated++; else inserted++;
+
+        reports.push(runCampaignIntegrity(enriched));
       }
 
-      setResult({ inserted, updated, skipped, failed, errors: rowErrs.slice(0, 10) });
+      setResult({ inserted, updated, skipped, failed, errors: rowErrs.slice(0, 10), reports });
     } catch (err: any) {
       setTopError(err?.message ?? String(err));
     } finally {
       setBusy(false);
     }
   };
+
 
   const canImport = validCampaigns.length > 0 && !busy && allErrors.length === 0;
 
@@ -307,16 +322,58 @@ function CampaignImporter() {
       )}
 
       {result && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-          <CheckCircle2 className="me-1 inline h-4 w-4" />
-          تم. تمت إضافة {result.inserted} · تحديث {result.updated} · تخطّي {result.skipped} · فشل {result.failed}.
-          {result.errors.length > 0 && (
-            <ul className="mt-2 list-inside list-disc text-xs text-red-200">
-              {result.errors.map((e, i) => <li key={i}>{e}</li>)}
-            </ul>
-          )}
+        <div className="space-y-3">
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+            <CheckCircle2 className="me-1 inline h-4 w-4" />
+            تم. تمت إضافة {result.inserted} · تحديث {result.updated} · تخطّي {result.skipped} · فشل {result.failed}.
+            {result.errors.length > 0 && (
+              <ul className="mt-2 list-inside list-disc text-xs text-red-200">
+                {result.errors.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+            )}
+          </div>
+
+          {result.reports.length > 0 && (() => {
+            const sum = summarizeIntegrity(result.reports);
+            return (
+              <div className="rounded-xl border border-amber-500/30 bg-slate-900/60 p-4">
+                <h3 className="mb-2 text-sm font-bold text-amber-200">تقرير سلامة المحتوى</h3>
+                <p className="mb-3 text-xs text-slate-300">
+                  المجموع: <span className="text-amber-200">{sum.total}</span> ·
+                  جاهز: <span className="text-emerald-300"> {sum.ok}</span> ·
+                  يحتاج مراجعة: <span className="text-amber-300"> {sum.review}</span>
+                </p>
+                <div className="space-y-3">
+                  {result.reports.map((r) => (
+                    <div key={r.campaignId} className="rounded-md border border-slate-800 bg-slate-950/40 p-3">
+                      <div className="mb-1.5 flex items-center gap-2 text-xs">
+                        <span className="font-semibold text-amber-200">{r.title}</span>
+                        <span className="text-slate-500">{r.campaignId}</span>
+                        {r.needsReview && (
+                          <span className="ms-auto rounded bg-amber-500/20 px-2 py-0.5 text-amber-200">يتطلب مراجعة</span>
+                        )}
+                      </div>
+                      <ul className="space-y-0.5 text-[11px]">
+                        {r.lines.map((l, i) => (
+                          <li key={i} className={
+                            l.status === "ok" ? "text-emerald-300"
+                            : l.status === "warning" ? "text-amber-300"
+                            : "text-red-300"
+                          }>
+                            {l.status === "ok" ? "✔" : l.status === "warning" ? "⚠" : "✖"} {l.label}
+                            {l.detail && <span className="text-slate-400"> — {l.detail}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
+
     </div>
   );
 }

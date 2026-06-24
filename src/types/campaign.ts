@@ -88,9 +88,26 @@ export interface Campaign {
   finalRewards?: CampaignReward;
   /** Registry item ids unlocked when the campaign is fully completed. */
   unlocks?: string[];
+  /**
+   * Deterministic chronological position. Primary sort axis for player-facing
+   * lists. Lower = earlier in history. When set, this always wins over
+   * sort_year and historicalPeriod parsing.
+   */
+  chronological_order?: number;
+  /**
+   * Canonical starting year (Hijri preferred, fallback to Gregorian
+   * converted to Hijri-scale by subtracting 622). Used when
+   * chronological_order is absent.
+   */
+  sort_year?: number;
+  /** Optional canonical world slug (e.g. "ottoman", "abbasid"). */
+  worldSlug?: string;
+  /** Optional canonical era key. */
+  era?: string;
   createdAt?: string;
   updatedAt?: string;
 }
+
 
 /** Defaults applied when an imported activity omits reward fields. */
 export const ACTIVITY_DEFAULTS = {
