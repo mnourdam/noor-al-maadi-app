@@ -59,6 +59,7 @@ export interface ProfileState {
   activityCooldowns: Record<string, number>; // key -> ms epoch expiry
   streakMilestonesClaimed: number[];
   hintsPurchased: Record<string, number>; // e.g. "inv:<id>" -> count revealed
+  achievementsEarned: Record<string, number>; // id -> earned-at ms epoch
 }
 
 const initial: ProfileState = {
