@@ -357,7 +357,9 @@ function AtlasRepairPage() {
     await reload();
   };
 
-  const stubPlan = useMemo(() => computeStubPlan(issued, enc), [issued, enc]);
+  const stubPlanResult = useMemo(() => computeStubPlan(issued, enc), [issued, enc]);
+  const stubPlan = stubPlanResult.plan;
+  const stubSkips = stubPlanResult.skipped;
 
   const runStubBulk = async () => {
     setStubRunning(true);
@@ -365,6 +367,7 @@ function AtlasRepairPage() {
     let done = 0, failed = 0;
     const newEnc: EncEntity[] = [];
     const updatedRows: AtlasEntityRow[] = [];
+    const failures: { row: AtlasEntityRow; reason: string }[] = [];
     for (const item of stubPlan) {
       try {
         const { data, error: insErr } = await supabase
@@ -392,8 +395,9 @@ function AtlasRepairPage() {
         newEnc.push(created);
         const u = await updateAtlasEntity(item.row.id, { encyclopedia_entity_id: created.id });
         updatedRows.push(u);
-      } catch {
+      } catch (e: any) {
         failed++;
+        failures.push({ row: item.row, reason: e?.message ?? String(e) });
       }
       done++;
       setStubProgress({ done, total: stubPlan.length, failed });
@@ -403,9 +407,10 @@ function AtlasRepairPage() {
       setRows((rs) => rs.map((r) => updatedRows.find((u) => u.id === r.id) ?? r));
     }
     setStubRunning(false);
-    setStubResult({ created: updatedRows.length, failed });
+    setStubResult({ created: newEnc.length, linked: updatedRows.length, failed, failures });
     await reload();
   };
+
 
 
   return (
