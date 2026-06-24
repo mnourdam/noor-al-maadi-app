@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { AdminGate } from "@/lib/admin-guard";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
+import { FriendNotificationsPoller, FRIEND_NOTIFICATIONS_SEEN_KEY, clearFriendNotificationSeen, getFriendNotificationsDebugState, readFriendNotificationSeen, runFriendNotificationPollerTick, type FriendNotificationPollerDiagnostics } from "@/components/FriendNotificationsPoller";
+import { INBOX_KEY, clearInbox, deliverNotification, getInbox, pushInbox, unreadCount, type InAppNotification } from "@/lib/notifications";
 import {
   listFriendships, searchPlayers, sendFriendRequest,
   type FriendEntry, type PublicProfile,
@@ -40,6 +42,9 @@ function QAPanel() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [now, setNow] = useState(todayKey());
+  const [friendDiag, setFriendDiag] = useState<FriendNotificationPollerDiagnostics | null>(null);
+  const [mountState, setMountState] = useState(getFriendNotificationsDebugState());
+  const [inboxStats, setInboxStats] = useState({ inboxCount: getInbox().length, unread: unreadCount() });
 
   useEffect(() => { setNow(todayKey()); }, [profile.lastActiveDay]);
 
@@ -48,6 +53,30 @@ function QAPanel() {
     setFriends(await listFriendships(user.id));
   }
   useEffect(() => { reloadFriends(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
+
+  function refreshNotificationDebug() {
+    setMountState(getFriendNotificationsDebugState());
+    setInboxStats({ inboxCount: getInbox().length, unread: unreadCount() });
+  }
+
+  useEffect(() => {
+    refreshNotificationDebug();
+    const refresh = () => refreshNotificationDebug();
+    window.addEventListener("irth:friend-notifications:debug", refresh);
+    window.addEventListener("irth:notifications:updated", refresh);
+    return () => {
+      window.removeEventListener("irth:friend-notifications:debug", refresh);
+      window.removeEventListener("irth:notifications:updated", refresh);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    runFriendNotificationPollerTick(user.id, { deliver: false, source: "qa-inspect" }).then((diag) => {
+      setFriendDiag(diag);
+      refreshNotificationDebug();
+    });
+  }, [user?.id]);
 
   const relById = new Map<string, FriendEntry["direction"]>();
   for (const f of friends) relById.set(f.other.id, f.direction);
@@ -73,6 +102,61 @@ function QAPanel() {
     reloadFriends();
   }
 
+  async function runPollerNow() {
+    if (!user) return;
+    setBusy(true); setMsg(null);
+    const diag = await runFriendNotificationPollerTick(user.id, { deliver: true, source: "qa-run-button" });
+    setFriendDiag(diag);
+    refreshNotificationDebug();
+    setBusy(false);
+  }
+
+  async function inspectPoller() {
+    if (!user) return;
+    const diag = await runFriendNotificationPollerTick(user.id, { deliver: false, source: "qa-inspect" });
+    setFriendDiag(diag);
+    refreshNotificationDebug();
+  }
+
+  async function clearSeenAndInspect() {
+    clearFriendNotificationSeen();
+    await inspectPoller();
+  }
+
+  function clearInboxWithActualKey() {
+    clearInbox();
+    refreshNotificationDebug();
+  }
+
+  function testPushInbox() {
+    const n: InAppNotification = {
+      id: `qa-pushInbox:${Date.now()}`,
+      category: "friend",
+      title: "QA pushInbox",
+      body: "اختبار مباشر لصندوق الإشعارات المحلي",
+      href: "/notifications",
+      at: Date.now(),
+      read: false,
+      readAt: null,
+    };
+    const ok = pushInbox(n);
+    setMsg(ok ? `pushInbox OK: ${n.id}` : `pushInbox FAILED: ${n.id}`);
+    refreshNotificationDebug();
+  }
+
+  function testDeliverNotification() {
+    const id = `qa-deliver:friend_request:${Date.now()}`;
+    deliverNotification({
+      id,
+      category: "friend",
+      title: "طلب صداقة جديد",
+      body: "اختبار deliverNotification لصندوق الإشعارات المحلي",
+      href: "/friends?tab=requests",
+    });
+    setMsg(getInbox().some((n) => n.id === id) ? `deliverNotification OK: ${id}` : `deliverNotification FAILED: ${id}`);
+    refreshNotificationDebug();
+  }
+
   function simulate(deltaDays: number | "today") {
     const next = deltaDays === "today" ? todayKey() : shiftedKey(deltaDays);
     replaceProfile({ ...profile, lastActiveDay: next });
@@ -86,6 +170,7 @@ function QAPanel() {
 
   return (
     <div className="min-h-screen bg-slate-950 p-6 text-slate-100">
+      <FriendNotificationsPoller />
       <div className="mx-auto max-w-3xl space-y-8">
         <header>
           <h1 className="text-2xl font-bold text-amber-300">QA — الأصدقاء والسلسلة</h1>
@@ -140,6 +225,44 @@ function QAPanel() {
           </div>
         </section>
 
+        {/* Friend notifications diagnostics */}
+        <section className="rounded-xl border border-cyan-500/20 bg-slate-900/60 p-4">
+          <h2 className="mb-3 font-bold text-cyan-200">تشخيص إشعارات الأصدقاء</h2>
+          <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+            <Stat label="FriendNotificationsPoller mounted" value={mountState.mounted ? `yes (${mountState.mountedCount})` : "no"} />
+            <Stat label="current user id" value={user.id} />
+            <Stat label="friends seen key" value={FRIEND_NOTIFICATIONS_SEEN_KEY} />
+            <Stat label="notifications inbox key" value={INBOX_KEY} />
+            <Stat label="friendships returned" value={String(friendDiag?.friendshipCount ?? friends.length)} />
+            <Stat label="generated notification ids" value={String(friendDiag?.generatedNotificationIds.length ?? 0)} />
+            <Stat label="deliverNotification calls" value={String(friendDiag?.deliverNotificationCalledIds.length ?? 0)} />
+            <Stat label="inbox / unreadCount" value={`${inboxStats.inboxCount} / ${inboxStats.unread}`} />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button onClick={runPollerNow} disabled={busy}
+              className="rounded-md bg-cyan-400 px-3 py-1.5 text-xs font-bold text-slate-950 disabled:opacity-50">Run poller tick now</button>
+            <button onClick={clearSeenAndInspect}
+              className="rounded-md border border-cyan-400/40 px-3 py-1.5 text-xs">Clear friend seen set</button>
+            <button onClick={clearInboxWithActualKey}
+              className="rounded-md border border-cyan-400/40 px-3 py-1.5 text-xs">Clear notification inbox</button>
+            <button onClick={testPushInbox}
+              className="rounded-md bg-slate-700 px-3 py-1.5 text-xs font-bold">Test pushInbox fake</button>
+            <button onClick={testDeliverNotification}
+              className="rounded-md bg-slate-700 px-3 py-1.5 text-xs font-bold">Test deliverNotification fake</button>
+            <button onClick={inspectPoller}
+              className="rounded-md border border-slate-600 px-3 py-1.5 text-xs">Inspect without delivery</button>
+          </div>
+
+          <div className="mt-4 space-y-3 text-xs">
+            <DebugBlock title="current seen ids" value={readFriendNotificationSeen()} />
+            <DebugBlock title="raw incoming pending friendships for current user" value={friendDiag?.incomingPending ?? []} />
+            <DebugBlock title="raw outgoing accepted friendships for current user" value={friendDiag?.outgoingAccepted ?? []} />
+            <DebugBlock title="row delivery decisions" value={friendDiag?.rows ?? []} />
+            <DebugBlock title="last poller diagnostic" value={friendDiag ?? mountState.lastTick ?? null} />
+          </div>
+        </section>
+
         {/* Streak */}
         <section className="rounded-xl border border-amber-500/20 bg-slate-900/60 p-4">
           <h2 className="mb-3 font-bold text-amber-200">السلسلة اليومية</h2>
@@ -164,6 +287,17 @@ function QAPanel() {
           </p>
         </section>
       </div>
+    </div>
+  );
+}
+
+function DebugBlock({ title, value }: { title: string; value: unknown }) {
+  return (
+    <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+      <div className="mb-1 font-bold text-cyan-200">{title}</div>
+      <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-relaxed text-slate-300" dir="ltr">
+        {JSON.stringify(value, null, 2)}
+      </pre>
     </div>
   );
 }

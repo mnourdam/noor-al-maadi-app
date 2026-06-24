@@ -54,7 +54,7 @@ export interface InAppNotification {
   readAt?: number | null;
 }
 
-const INBOX_KEY = "irth.notifications.inbox.v1";
+export const INBOX_KEY = "irth.notifications.inbox.v1";
 const FIRED_KEY = "irth.notifications.fired.v1";
 const LAST_OPEN_KEY = "irth.lastOpenedAt";
 const MAX_INBOX = 50;
@@ -65,9 +65,14 @@ function read<T>(k: string, fallback: T): T {
   if (typeof localStorage === "undefined") return fallback;
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
 }
-function write<T>(k: string, v: T) {
-  if (typeof localStorage === "undefined") return;
-  try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore quota */ }
+function write<T>(k: string, v: T): boolean {
+  if (typeof localStorage === "undefined") return false;
+  try {
+    localStorage.setItem(k, JSON.stringify(v));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function isUnread(n: InAppNotification): boolean {
@@ -107,10 +112,11 @@ export function markAllRead(): void {
 }
 export function clearInbox(): void { write(INBOX_KEY, []); emitUpdated(); }
 
-function pushInbox(n: InAppNotification): void {
+export function pushInbox(n: InAppNotification): boolean {
   const list = [n, ...getInbox().filter((x) => x.id !== n.id)].slice(0, MAX_INBOX);
-  write(INBOX_KEY, list);
-  emitUpdated();
+  const ok = write(INBOX_KEY, list);
+  if (ok) emitUpdated();
+  return ok;
 }
 
 // ============== Permission + delivery ==============
