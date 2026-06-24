@@ -18,6 +18,7 @@ import { AvatarPicker } from "@/components/AvatarPicker";
 import { DEFAULT_NOTIFICATION_PREFS, ensurePermission } from "@/lib/notifications";
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 import { useAccount } from "@/lib/account";
+import { clearLocalPlayerProgress } from "@/lib/resetProgress";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
