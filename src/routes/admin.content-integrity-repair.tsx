@@ -91,7 +91,7 @@ function norm(s: string | null | undefined): string {
     .replace(/(^-|-$)/g, "");
 }
 
-function suggestMatches(u: UnlockRef, enc: EncEntity[]): EncEntity[] {
+function scoreMatches(u: UnlockRef, enc: EncEntity[]): { e: EncEntity; s: number }[] {
   const target = norm(u.slug);
   const sameType = enc.filter((e) => !u.type || e.entity_type === u.type);
   const scored: { e: EncEntity; s: number }[] = [];
@@ -110,7 +110,52 @@ function suggestMatches(u: UnlockRef, enc: EncEntity[]): EncEntity[] {
     if (s > 0) scored.push({ e, s });
   }
   scored.sort((a, b) => b.s - a.s);
-  return scored.slice(0, 5).map((x) => x.e);
+  return scored;
+}
+
+function suggestMatches(u: UnlockRef, enc: EncEntity[]): EncEntity[] {
+  return scoreMatches(u, enc).slice(0, 5).map((x) => x.e);
+}
+
+const AUTO_FIX_THRESHOLD = 85;
+
+type AutoFixPlan = { u: UnlockRef; match: EncEntity; score: number; newVal: string };
+
+function planAutoFixes(missing: UnlockRef[], enc: EncEntity[]): AutoFixPlan[] {
+  const out: AutoFixPlan[] = [];
+  for (const u of missing) {
+    const scored = scoreMatches(u, enc);
+    const top = scored[0];
+    const second = scored[1];
+    if (!top || top.s < AUTO_FIX_THRESHOLD) continue;
+    // Require a clear winner (avoid ambiguous ties)
+    if (second && top.s - second.s < 10) continue;
+    out.push({ u, match: top.e, score: top.s, newVal: `${top.e.entity_type}:${top.e.slug}` });
+  }
+  return out;
+}
+
+async function applyBulkUnlockFixes(plans: AutoFixPlan[], campaigns: Campaign[]) {
+  // Group by campaign to avoid clobbering when multiple unlocks change in same row.
+  const byCampaign = new Map<string, AutoFixPlan[]>();
+  for (const p of plans) {
+    const arr = byCampaign.get(p.u.campaignId) ?? [];
+    arr.push(p);
+    byCampaign.set(p.u.campaignId, arr);
+  }
+  for (const [campaignId, items] of byCampaign) {
+    const campaign = campaigns.find((c) => c.id === campaignId);
+    if (!campaign) continue;
+    const data = JSON.parse(JSON.stringify(campaign.data ?? {}));
+    const chapters = Array.isArray(data.chapters) ? data.chapters : [];
+    for (const p of items) {
+      const ch = chapters[p.u.chapterIndex];
+      if (!ch?.rewards?.unlocks) continue;
+      ch.rewards.unlocks[p.u.unlockIndex] = p.newVal;
+    }
+    const { error } = await supabase.from("admin_campaigns").update({ data }).eq("id", campaignId);
+    if (error) throw error;
+  }
 }
 
 type Report = {
@@ -245,6 +290,7 @@ function ContentIntegrityRepair() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ title: string; lines: string[]; onConfirm: () => Promise<void> } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ applied: number; remaining: number } | null>(null);
 
   async function run() {
     setLoading(true);
@@ -325,10 +371,54 @@ function ContentIntegrityRepair() {
           </Section>
 
           <Section title="١. إصلاح مكافآت الحملات">
+            {(() => {
+              const plans = planAutoFixes(r.unlocks_missing, r.encyclopedia);
+              return (
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 p-2 text-sm">
+                  <span className="font-medium">إصلاح تلقائي آمن:</span>
+                  <span className="text-muted-foreground">
+                    {plans.length} مرشّح بثقة ≥ {AUTO_FIX_THRESHOLD} من أصل {r.unlocks_missing.length} مكسور.
+                    {r.unlocks_missing.length - plans.length > 0 && (
+                      <> ({r.unlocks_missing.length - plans.length} يحتاج مراجعة يدوية)</>
+                    )}
+                  </span>
+                  <button
+                    disabled={plans.length === 0 || !!busy}
+                    onClick={() =>
+                      setPreview({
+                        title: `إصلاح تلقائي لـ ${plans.length} مرجع`,
+                        lines: plans
+                          .slice(0, 200)
+                          .map(
+                            (p) =>
+                              `[${p.score}] ${p.u.campaignSlug}/${p.u.chapterId}: ${p.u.raw}  →  ${p.newVal}`,
+                          )
+                          .concat(plans.length > 200 ? [`… +${plans.length - 200} أخرى`] : []),
+                        onConfirm: async () => {
+                          await applyBulkUnlockFixes(plans, r.campaigns);
+                          const fresh = await buildReport();
+                          setR(fresh);
+                          setBulkResult({ applied: plans.length, remaining: fresh.unlocks_missing.length });
+                        },
+                      })
+                    }
+                    className="rounded border bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    معاينة الإصلاح التلقائي
+                  </button>
+                  {bulkResult && (
+                    <span className="text-xs text-emerald-700">
+                      تم تطبيق {bulkResult.applied}؛ المتبقي: {bulkResult.remaining}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
             {r.unlocks_missing.length === 0 ? (
               <div className="text-sm text-muted-foreground">لا توجد مراجع مكسورة.</div>
             ) : (
               <div className="space-y-3">
+
                 {r.unlocks_missing.slice(0, 50).map((u, i) => {
                   const matches = suggestMatches(u, r.encyclopedia);
                   const campaign = r.campaigns.find((c) => c.id === u.campaignId)!;
