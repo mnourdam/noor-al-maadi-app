@@ -109,6 +109,34 @@ function expandAliases(key: string): string[] {
   return extra ? [key, ...extra] : [key];
 }
 
+// PR4: module-level cache for the campaigns scan. resolveRelatedEntities
+// was previously refetching all (limit 500) campaigns on every entity
+// page view — a classic N+page-views pattern. A 60s TTL eliminates the
+// duplicate fetches without changing semantics.
+const CAMPAIGN_CACHE_TTL_MS = 60_000;
+let campaignsCachePromise: Promise<Array<{ data: unknown }>> | null = null;
+let campaignsCacheAt = 0;
+
+async function getCampaignsForRelations(): Promise<Array<{ data: unknown }>> {
+  const now = Date.now();
+  if (campaignsCachePromise && now - campaignsCacheAt < CAMPAIGN_CACHE_TTL_MS) {
+    return campaignsCachePromise;
+  }
+  campaignsCacheAt = now;
+  campaignsCachePromise = (async () => {
+    const { data } = await supabase
+      .from("admin_campaigns")
+      .select("data")
+      .limit(500);
+    return (data ?? []) as Array<{ data: unknown }>;
+  })().catch((err) => {
+    // On failure, invalidate so the next call retries instead of caching the error.
+    campaignsCachePromise = null;
+    throw err;
+  });
+  return campaignsCachePromise;
+}
+
 export async function resolveRelatedEntities(
   entity: SupabaseEncyclopediaEntity,
 ): Promise<RelatedNode[]> {
@@ -161,11 +189,8 @@ export async function resolveRelatedEntities(
     const colon = s.includes(":") ? s.split(":").pop()! : s;
     return normalizeEntitySlug(colon);
   };
-  const { data: camps } = await supabase
-    .from("admin_campaigns")
-    .select("data")
-    .limit(500);
-  for (const c of camps ?? []) {
+  const camps = await getCampaignsForRelations();
+  for (const c of camps) {
     const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
     const cmeta = (cm.metadata && typeof cm.metadata === "object"
       ? (cm.metadata as Record<string, unknown>)
