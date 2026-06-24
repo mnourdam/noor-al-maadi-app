@@ -46,6 +46,7 @@ import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum-provenance'
 import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminMapRouteImport } from './routes/admin.map'
 import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
@@ -257,6 +258,11 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   path: '/admin/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminMuseumProvenanceRoute = AdminMuseumProvenanceRouteImport.update({
+  id: '/admin/museum-provenance',
+  path: '/admin/museum-provenance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminMigrationRoute = AdminMigrationRouteImport.update({
   id: '/admin/migration',
   path: '/admin/migration',
@@ -429,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
+  '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/battle/$id': typeof BattleIdRoute
@@ -491,6 +498,7 @@ export interface FileRoutesByTo {
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
+  '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/battle/$id': typeof BattleIdRoute
@@ -556,6 +564,7 @@ export interface FileRoutesById {
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
+  '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/battle/$id': typeof BattleIdRoute
@@ -622,6 +631,7 @@ export interface FileRouteTypes {
     | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
+    | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
     | '/battle/$id'
@@ -684,6 +694,7 @@ export interface FileRouteTypes {
     | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
+    | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
     | '/battle/$id'
@@ -748,6 +759,7 @@ export interface FileRouteTypes {
     | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
+    | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
     | '/battle/$id'
@@ -813,6 +825,7 @@ export interface RootRouteChildren {
   AdminInvestigationsRoute: typeof AdminInvestigationsRoute
   AdminMapRoute: typeof AdminMapRoute
   AdminMigrationRoute: typeof AdminMigrationRoute
+  AdminMuseumProvenanceRoute: typeof AdminMuseumProvenanceRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOfflineRoute: typeof AdminOfflineRoute
   BattleIdRoute: typeof BattleIdRoute
@@ -1090,6 +1103,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/museum-provenance': {
+      id: '/admin/museum-provenance'
+      path: '/admin/museum-provenance'
+      fullPath: '/admin/museum-provenance'
+      preLoaderRoute: typeof AdminMuseumProvenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/migration': {
       id: '/admin/migration'
       path: '/admin/migration'
@@ -1345,6 +1365,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminInvestigationsRoute: AdminInvestigationsRoute,
   AdminMapRoute: AdminMapRoute,
   AdminMigrationRoute: AdminMigrationRoute,
+  AdminMuseumProvenanceRoute: AdminMuseumProvenanceRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOfflineRoute: AdminOfflineRoute,
   BattleIdRoute: BattleIdRoute,
