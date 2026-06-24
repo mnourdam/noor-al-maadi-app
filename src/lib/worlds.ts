@@ -277,12 +277,37 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
   // Fold scholars into the figures section so player UI stays tidy.
   sections.figure = [...sections.figure, ...scholars];
 
+  // Sprint 2 — Historical Chronology Engine.
+  // Every section is ordered deterministically by timeline_order →
+  // timeline_year → timeline_start_year → metadata year. Never by
+  // relationship score, created_at, or insertion order.
+  for (const k of SECTION_KEYS) {
+    sections[k] = sortEntitiesChronological(sections[k]);
+  }
+
   if (ambiguous.length > 0 && typeof console !== "undefined") {
     // Admin-review signal: never silently include ambiguous entities, but
     // make them discoverable for triage.
     console.warn(
       `[worlds] ${ambiguous.length} ambiguous related entities suppressed for world "${slug}":`,
       ambiguous.slice(0, 25).map((n) => `${n.entity.entity_type}:${n.entity.slug}`),
+    );
+  }
+
+  // Admin-review signal: count entities missing any chronology signal so
+  // the admin review surface can flag them for backfill.
+  const missingChronology = SECTION_KEYS.reduce(
+    (sum, k) => sum + sections[k].filter((n) => !Number.isFinite(
+      // entitySortKey returns +Infinity when nothing is known
+      (n.entity.timeline_order ?? 0) ||
+      (n.entity.timeline_year ?? 0) ||
+      (n.entity.timeline_start_year ?? 0),
+    )).length,
+    0,
+  );
+  if (missingChronology > 0 && typeof console !== "undefined") {
+    console.warn(
+      `[worlds] ${missingChronology} related entities in "${slug}" have no chronology — add timeline_order for deterministic placement.`,
     );
   }
 
