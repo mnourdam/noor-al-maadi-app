@@ -299,40 +299,132 @@ function Page() {
 
         {groups && (
           <>
-            <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <Stat l="إجمالي الكيانات" v={rows?.length ?? 0} />
-              <Stat l="مجموعات مكررة" v={groups.length} />
-              <Stat l="صفوف مكررة" v={groups.reduce((n, g) => n + g.rows.length, 0)} />
-              <Stat l="مخفية مسبقاً" v={rows?.filter(r => !!(r.metadata as any)?.hidden_duplicate).length ?? 0} />
-            </section>
-
-            <p className="text-[11px] text-slate-400">
-              الترشيح: نفس <code>entity_type</code> + عنوان عربي معياري (أو slug معياري). تحقّق من العصر والتاريخ
-              يدوياً قبل الحل.
-            </p>
-
-            <div className="space-y-4">
-              {groups.map(g => (
-                <GroupCard
-                  key={g.key}
-                  g={g}
-                  atlasByEnt={atlasByEnt}
-                  campaignsBySlug={campaignsBySlug}
-                  busy={busy}
-                  onMarkCanonical={(r) => markCanonical(g, r)}
-                  onHide={(dup, can) => softHideAndRedirect(dup, can)}
-                />
-              ))}
-              {groups.length === 0 && (
-                <div className="rounded-lg border border-white/10 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-                  لا توجد مجموعات مكررة مرشحة.
-                </div>
-              )}
-            </div>
+            <GroupsView
+              rows={rows ?? []}
+              groups={groups}
+              atlasByEnt={atlasByEnt}
+              campaignsBySlug={campaignsBySlug}
+              busy={busy}
+              onMarkCanonical={(g, r) => markCanonical(g, r)}
+              onHide={(dup, can) => softHideAndRedirect(dup, can)}
+            />
           </>
         )}
       </div>
     </div>
+  );
+}
+
+type FilterMode = "all" | "open" | "done" | "collapsed";
+
+function GroupsView({ rows, groups, atlasByEnt, campaignsBySlug, busy, onMarkCanonical, onHide }: {
+  rows: Row[];
+  groups: Group[];
+  atlasByEnt: Map<string, Atlas[]>;
+  campaignsBySlug: Map<string, Campaign[]>;
+  busy: string | null;
+  onMarkCanonical: (g: Group, r: Row) => void;
+  onHide: (dup: Row, can: Row) => void;
+}) {
+  const statuses = useMemo(() => {
+    const m = new Map<string, GroupStatus>();
+    for (const g of groups) m.set(g.key, groupStatus(g));
+    return m;
+  }, [groups]);
+
+  // Collapse state per group; default = collapsed iff fully_resolved
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [filter, setFilter] = useState<FilterMode>("all");
+
+  // Initialize defaults when groups change (don't override user choices already set)
+  useEffect(() => {
+    setCollapsed(prev => {
+      const next = { ...prev };
+      for (const g of groups) {
+        if (!(g.key in next)) next[g.key] = statuses.get(g.key) === "fully_resolved";
+      }
+      return next;
+    });
+  }, [groups, statuses]);
+
+  const counts = useMemo(() => {
+    let done = 0, open = 0;
+    for (const g of groups) (statuses.get(g.key) === "fully_resolved" ? done++ : open++);
+    const hidden = rows.filter(r => !!(r.metadata as any)?.hidden_duplicate).length;
+    return { done, open, hidden };
+  }, [groups, statuses, rows]);
+
+  const visible = useMemo(() => {
+    return groups.filter(g => {
+      const s = statuses.get(g.key)!;
+      if (filter === "open") return s !== "fully_resolved";
+      if (filter === "done") return s === "fully_resolved";
+      if (filter === "collapsed") return collapsed[g.key];
+      return true;
+    });
+  }, [groups, statuses, filter, collapsed]);
+
+  const setAllCollapsed = (v: boolean) => {
+    const next: Record<string, boolean> = {};
+    for (const g of groups) next[g.key] = v;
+    setCollapsed(next);
+  };
+
+  return (
+    <>
+      <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <Stat l="مجموعات مكتملة" v={counts.done} />
+        <Stat l="مجموعات متبقية" v={counts.open} />
+        <Stat l="مكررات مخفية" v={counts.hidden} />
+        <Stat l="إجمالي المجموعات" v={groups.length} />
+      </section>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-slate-900/60 p-2 text-xs">
+        {([
+          ["all", "الكل"],
+          ["open", "غير منتهية"],
+          ["done", "منتهية"],
+          ["collapsed", "مطوية فقط"],
+        ] as [FilterMode, string][]).map(([k, lbl]) => (
+          <button key={k} onClick={() => setFilter(k)}
+            className={`rounded border px-2 py-1 ${filter === k ? "border-amber-400 bg-amber-500/20 text-amber-100" : "border-white/10 bg-slate-950/40 text-slate-300 hover:bg-white/5"}`}>
+            {lbl}
+          </button>
+        ))}
+        <span className="mx-2 h-4 w-px bg-white/10" />
+        <button onClick={() => setAllCollapsed(true)}
+          className="rounded border border-white/10 bg-slate-950/40 px-2 py-1 text-slate-300 hover:bg-white/5">طي الكل</button>
+        <button onClick={() => setAllCollapsed(false)}
+          className="rounded border border-white/10 bg-slate-950/40 px-2 py-1 text-slate-300 hover:bg-white/5">فتح الكل</button>
+        <span className="ms-auto text-[10px] text-slate-400">يظهر {visible.length} من {groups.length}</span>
+      </div>
+
+      <p className="text-[11px] text-slate-400">
+        الترشيح: نفس <code>entity_type</code> + عنوان عربي معياري (أو slug معياري). المجموعات المكتملة تُطوى تلقائياً.
+      </p>
+
+      <div className="space-y-4">
+        {visible.map(g => (
+          <GroupCard
+            key={g.key}
+            g={g}
+            status={statuses.get(g.key)!}
+            collapsed={!!collapsed[g.key]}
+            onToggle={() => setCollapsed(p => ({ ...p, [g.key]: !p[g.key] }))}
+            atlasByEnt={atlasByEnt}
+            campaignsBySlug={campaignsBySlug}
+            busy={busy}
+            onMarkCanonical={(r) => onMarkCanonical(g, r)}
+            onHide={(dup, can) => onHide(dup, can)}
+          />
+        ))}
+        {visible.length === 0 && (
+          <div className="rounded-lg border border-white/10 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+            لا توجد مجموعات لعرضها بهذا المرشّح.
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
