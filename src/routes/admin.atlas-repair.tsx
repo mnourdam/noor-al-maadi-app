@@ -142,6 +142,39 @@ function suggestCandidates(row: AtlasEntityRow, list: EncEntity[]): Candidate[] 
   return results.slice(0, 8);
 }
 
+// ---- Bulk safe-relink plan ----------------------------------------------
+
+const BULK_MIN_SCORE = 80;
+const BULK_AMBIGUITY_GAP = 10;
+
+type BulkPlanItem = {
+  row: AtlasEntityRow;
+  issue: IssueKind;
+  candidate: Candidate;
+};
+
+function computeBulkPlan(
+  issued: { row: AtlasEntityRow; issue: IssueKind }[],
+  enc: EncEntity[],
+): BulkPlanItem[] {
+  const plan: BulkPlanItem[] = [];
+  for (const { row, issue } of issued) {
+    if (issue === "ok" || issue === "type_mismatch") continue;
+    const cands = suggestCandidates(row, enc);
+    const top = cands[0];
+    if (!top) continue;
+    if (top.score < BULK_MIN_SCORE) continue;
+    if (!top.entity.enabled) continue;
+    const compat = KIND_TO_TYPES[row.kind] ?? [];
+    if (compat.length > 0 && !compat.includes(top.entity.entity_type)) continue;
+    const second = cands[1];
+    if (second && top.score - second.score < BULK_AMBIGUITY_GAP) continue;
+    if (row.encyclopedia_entity_id === top.entity.id) continue;
+    plan.push({ row, issue, candidate: top });
+  }
+  return plan;
+}
+
 // ---- Component -----------------------------------------------------------
 
 function AtlasRepairPage() {
