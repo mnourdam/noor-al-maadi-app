@@ -1,14 +1,16 @@
 // ============================================================
 // Campaign chronological ordering.
 // ------------------------------------------------------------
-// Players should always be guided from the oldest historical
-// campaigns to the most recent ones. We never order by
-// created_at / updated_at / title.
+// Player-facing campaign order is DETERMINISTIC and never depends
+// on created_at / updated_at / imported_at / insertion order.
 //
-// We try to extract the earliest year mentioned in
-// `historicalPeriod` (Hijri or Gregorian). If a campaign has no
-// parseable year we treat it as +Infinity so it sinks to the end
-// instead of randomly leading the list.
+// Priority chain (lower = earlier in history):
+//   1. chronological_order   — explicit admin-curated position
+//   2. sort_year             — canonical starting year (Hijri scale)
+//   3. historicalPeriod      — parsed from Arabic text as fallback
+//
+// Campaigns missing all three sink to the end with a stable
+// alphabetical tiebreaker, never random.
 // ============================================================
 
 import type { Campaign } from "@/types/campaign";
@@ -21,28 +23,44 @@ function westernize(s: string): string {
   return s.replace(/[٠-٩۰-۹]/g, (d) => AR_INDIC[d] ?? d);
 }
 
-/** Earliest year (Hijri preferred, else Gregorian) extracted from the campaign. */
-export function campaignSortYear(c: Campaign): number {
-  const period = westernize(c.historicalPeriod ?? "");
-  // Detect Gregorian markers (م) — convert to approximate Hijri only if needed.
-  // We sort numerically so we just need a comparable axis. Hijri years are
-  // ~622 years behind Gregorian; we add an offset when only Gregorian is present
-  // so the two scales don't interleave incorrectly.
-  const nums = period.match(/\d{1,4}/g)?.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0) ?? [];
-  if (!nums.length) return Number.POSITIVE_INFINITY;
+/** Final fallback: parse earliest year from `historicalPeriod` (Hijri-normalized). */
+export function parseHistoricalPeriodYear(period: string | undefined | null): number | null {
+  if (!period) return null;
+  const text = westernize(period);
+  const nums = text.match(/\d{1,4}/g)?.map(Number).filter((n) => Number.isFinite(n) && n > 0) ?? [];
+  if (!nums.length) return null;
   const minYear = Math.min(...nums);
-  // Heuristic: if the string contains "م" but not "هـ"/"هجري", treat as Gregorian.
-  const hasGregorian = /م(?![ا-ي])/.test(period) || /ميلاد/.test(period);
-  const hasHijri = /ه|هـ|هجري/.test(period);
+  const hasGregorian = /م(?![ا-ي])/.test(text) || /ميلاد/.test(text);
+  const hasHijri = /ه|هـ|هجري/.test(text);
   if (hasGregorian && !hasHijri) return Math.max(0, minYear - 622);
   return minYear;
+}
+
+/** Resolved sort key. Lower = earlier. POSITIVE_INFINITY for unknown. */
+export function campaignSortKey(c: Campaign): number {
+  if (typeof c.chronological_order === "number" && Number.isFinite(c.chronological_order)) {
+    return c.chronological_order;
+  }
+  if (typeof c.sort_year === "number" && Number.isFinite(c.sort_year)) {
+    // Offset sort_year by a large constant so explicit chronological_order
+    // values (typically small integers) always precede year-based positions.
+    return 1_000_000 + c.sort_year;
+  }
+  const parsed = parseHistoricalPeriodYear(c.historicalPeriod);
+  if (parsed != null) return 2_000_000 + parsed;
+  return Number.POSITIVE_INFINITY;
+}
+
+/** Back-compat shim — used in older modules. */
+export function campaignSortYear(c: Campaign): number {
+  return campaignSortKey(c);
 }
 
 /** Sort campaigns from oldest historical period → newest. */
 export function sortCampaignsChronological<T extends Campaign>(list: T[]): T[] {
   return [...list].sort((a, b) => {
-    const ya = campaignSortYear(a);
-    const yb = campaignSortYear(b);
+    const ya = campaignSortKey(a);
+    const yb = campaignSortKey(b);
     if (ya !== yb) return ya - yb;
     return (a.title ?? "").localeCompare(b.title ?? "", "ar");
   });
