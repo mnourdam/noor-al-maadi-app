@@ -91,16 +91,5 @@ export function FriendNotificationsPoller() {
     };
   }, [user, profile.settings?.notificationPrefs]);
 
-    tick();
-    const id = setInterval(tick, 60_000);
-    const onFocus = () => tick();
-    window.addEventListener("focus", onFocus);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [user, profile.settings?.notificationPrefs]);
-
   return null;
 }
