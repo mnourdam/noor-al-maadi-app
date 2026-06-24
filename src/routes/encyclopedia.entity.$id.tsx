@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Database, Network } from "lucide-react";
+import { ChevronRight, Database, Network, BookOpen } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
