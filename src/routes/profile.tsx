@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toWesternDigits } from "@/lib/formatNumber";
-import { Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, Wrench, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin, Coins, Search, Gift, Bell, Music, Zap } from "lucide-react";
+import { Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info, ChevronLeft, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin, Coins, Search, Gift, Bell, Music, Zap } from "lucide-react";
 import { useAudioSettings } from "@/hooks/useAudioSettings";
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
