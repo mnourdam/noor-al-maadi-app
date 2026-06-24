@@ -437,8 +437,11 @@ function Stat({ l, v }: { l: string; v: number }) {
   );
 }
 
-function GroupCard({ g, atlasByEnt, campaignsBySlug, busy, onMarkCanonical, onHide }: {
+function GroupCard({ g, status, collapsed, onToggle, atlasByEnt, campaignsBySlug, busy, onMarkCanonical, onHide }: {
   g: Group;
+  status: GroupStatus;
+  collapsed: boolean;
+  onToggle: () => void;
   atlasByEnt: Map<string, Atlas[]>;
   campaignsBySlug: Map<string, Campaign[]>;
   busy: string | null;
@@ -448,16 +451,29 @@ function GroupCard({ g, atlasByEnt, campaignsBySlug, busy, onMarkCanonical, onHi
   const [chosenId, setChosenId] = useState<string>(g.suggested.id);
   const canonical = g.rows.find(r => r.id === chosenId) ?? g.suggested;
 
+  const statusBadge =
+    status === "fully_resolved"
+      ? { txt: "مكتملة", cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" }
+      : status === "partially_resolved"
+      ? { txt: "جزئية", cls: "bg-amber-500/15 text-amber-200 border-amber-500/30" }
+      : { txt: "غير محلولة", cls: "bg-rose-500/15 text-rose-200 border-rose-500/30" };
+
   return (
     <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4">
       <div className="mb-2 flex items-center gap-2">
+        <button onClick={onToggle} className="inline-flex items-center text-slate-300 hover:text-amber-200" aria-label={collapsed ? "فتح" : "طي"}>
+          {collapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
+        </button>
         <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">{g.rows[0].entity_type}</span>
         <span className="text-sm font-bold text-amber-100">{g.suggested.title}</span>
-        <span className="text-[10px] text-slate-400">× {g.rows.length}</span>
+        <span className="text-[10px] text-slate-400">({g.rows.length})</span>
+        <span className={`rounded border px-1.5 py-0.5 text-[10px] ${statusBadge.cls}`}>{statusBadge.txt}</span>
         <span className="ms-auto font-mono text-[10px] text-slate-500">{g.key}</span>
       </div>
 
+      {collapsed ? null : (
       <div className="space-y-1.5">
+
         {g.rows.map(r => {
           const aList = atlasByEnt.get(r.id) ?? [];
           const cList = campaignsBySlug.get(r.slug) ?? [];
