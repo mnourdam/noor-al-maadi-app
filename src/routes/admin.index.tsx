@@ -74,6 +74,8 @@ function AdminHub() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <AdminCard to="/admin/users" icon={<Users className="h-5 w-5" />} title="إدارة المستخدمين"
+            desc="قائمة اللاعبين، البحث والتصفية، إجراءات إدارية موثّقة، وتصدير CSV." />
           <AdminCard to="/admin/notifications" icon={<Bell className="h-5 w-5" />} title="إدارة الإشعارات"
             desc="إنشاء وإرسال إشعارات يدوية والاطلاع على المسودات." />
           <AdminCard to="/admin/content" icon={<BookOpen className="h-5 w-5" />} title="محتوى الإشعارات التلقائية"
