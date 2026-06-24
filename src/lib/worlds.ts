@@ -210,27 +210,68 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
 
   const related = await resolveRelatedEntities(entity);
 
-  const sections: Record<WorldSectionKey, RelatedNode[]> = {
-    figure: [],
-    city: [],
-    event: [],
-    battle: [],
-    landmark: [],
-    artifact: [],
+  // Strict world membership filter. The relationship resolver pulls in
+  // entities via campaigns, geography, and atlas links — none of which
+  // guarantee historical belonging. We accept a related entity for THIS
+  // world only when at least one explicit signal confirms it:
+  //   1. listed in this hub's own related / related_entities
+  //   2. entity.metadata.era matches the hub era
+  //   3. entity.metadata.state | affiliation | world | worldSlug matches
+  //      this hub's slug (or an accepted alias)
+  // Everything else is treated as ambiguous and surfaced for admin review
+  // instead of leaking onto the player-facing world page.
+  const hubMeta = metaObj(entity);
+  const explicitAllow = new Set<string>([
+    ...asStringList(hubMeta.related_entities).map(stripPrefix),
+    ...asStringList(hubMeta.related).map(stripPrefix),
+  ]);
+  const hubEra = WORLD_ERA[slug] ?? slug;
+  const acceptedStateRefs = new Set<string>(WORLD_STATE_ALIASES[slug] ?? [slug]);
+
+  const ambiguous: RelatedNode[] = [];
+  const belongs = (n: RelatedNode): boolean => {
+    const m = metaObj(n.entity);
+    if (explicitAllow.has(n.entity.slug)) return true;
+    const era = typeof m.era === "string" ? m.era.toLowerCase() : "";
+    if (era && era === hubEra) return true;
+    const refFields = ["state", "affiliation", "world", "worldSlug", "world_slug"];
+    for (const f of refFields) {
+      const v = m[f];
+      if (typeof v === "string" && acceptedStateRefs.has(v.toLowerCase())) return true;
+    }
+    const rel = asStringList(m.related_entities).map(stripPrefix);
+    if (rel.includes(slug)) return true;
+    return false;
   };
-  const scholars: RelatedNode[] = [];
-  const states: RelatedNode[] = [];
 
   for (const n of related) {
     const t = n.entity.entity_type;
+    if (t === "state") {
+      // Connected worlds are handled separately below.
+      states.push(n);
+      continue;
+    }
+    if (!belongs(n)) {
+      ambiguous.push(n);
+      continue;
+    }
     if (t === "scholar") scholars.push(n);
-    else if (t === "state") states.push(n);
     else if ((SECTION_KEYS as string[]).includes(t)) {
       sections[t as WorldSectionKey].push(n);
     }
   }
   // Fold scholars into the figures section so player UI stays tidy.
   sections.figure = [...sections.figure, ...scholars];
+
+  if (ambiguous.length > 0 && typeof console !== "undefined") {
+    // Admin-review signal: never silently include ambiguous entities, but
+    // make them discoverable for triage.
+    console.warn(
+      `[worlds] ${ambiguous.length} ambiguous related entities suppressed for world "${slug}":`,
+      ambiguous.slice(0, 25).map((n) => `${n.entity.entity_type}:${n.entity.slug}`),
+    );
+  }
+
 
   const connectedWorlds: SupabaseEncyclopediaEntity[] = states
     .filter((n) => WORLD_SLUGS.has(n.entity.slug) && n.entity.slug !== slug)
