@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ProfileProvider } from "../lib/profile";
 import { AccountProvider } from "../lib/account";
+import { FirstLaunchGate } from "../components/FirstLaunchGate";
 
 function NotFoundComponent() {
   return (
