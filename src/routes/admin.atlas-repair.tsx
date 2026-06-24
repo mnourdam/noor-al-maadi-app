@@ -281,6 +281,32 @@ function AtlasRepairPage() {
     }
   };
 
+  const bulkPlan = useMemo(() => computeBulkPlan(issued, enc), [issued, enc]);
+
+  const runBulk = async () => {
+    setBulkRunning(true);
+    setBulkProgress({ done: 0, total: bulkPlan.length, failed: 0 });
+    let done = 0, failed = 0;
+    const updatedRows: AtlasEntityRow[] = [];
+    for (const item of bulkPlan) {
+      try {
+        const u = await updateAtlasEntity(item.row.id, { encyclopedia_entity_id: item.candidate.entity.id });
+        updatedRows.push(u);
+      } catch {
+        failed++;
+      }
+      done++;
+      setBulkProgress({ done, total: bulkPlan.length, failed });
+    }
+    if (updatedRows.length) {
+      setRows((rs) => rs.map((r) => updatedRows.find((u) => u.id === r.id) ?? r));
+    }
+    setBulkRunning(false);
+    setBulkResult({ fixed: updatedRows.length, failed });
+    await reload();
+  };
+
+
   return (
     <div dir="rtl" className="min-h-screen bg-stone-950 text-stone-100">
       <header className="sticky top-0 z-10 border-b border-stone-800 bg-stone-900/90 px-3 py-2 backdrop-blur">
