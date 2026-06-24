@@ -36,6 +36,19 @@ function InvestigationsIndex() {
   const supabaseSlugs = new Set((rows ?? []).map((r) => r.slug));
   const legacyVisible = INVESTIGATION_REGISTRY.filter((l) => !supabaseSlugs.has(l.id));
 
+  // Combine into a single list and shuffle once per session (no chronological order).
+  type Item =
+    | { kind: "supabase"; row: InvestigationRow }
+    | { kind: "legacy"; row: (typeof INVESTIGATION_REGISTRY)[number] };
+  const shuffledItems = useMemo<Item[]>(() => {
+    const combined: Item[] = [
+      ...(rows ?? []).map((r) => ({ kind: "supabase" as const, row: r })),
+      ...legacyVisible.map((r) => ({ kind: "legacy" as const, row: r })),
+    ];
+    return shuffle(combined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows?.length, legacyVisible.length, SESSION_SHUFFLE_SEED]);
+
   return (
     <AppShell>
       <Screen title="التحقيقات التاريخية" subtitle="اكشف القرائن، استنتج الإجابة، واربح القلوب والدنانير">
