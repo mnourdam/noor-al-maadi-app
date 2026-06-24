@@ -6,6 +6,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import { eraLabel } from "@/lib/era-labels";
 
 export const Route = createFileRoute("/encyclopedia/")({
   head: () => ({
