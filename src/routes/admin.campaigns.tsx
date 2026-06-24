@@ -342,3 +342,210 @@ function formatDate(iso: string) {
   try { return new Date(iso).toLocaleDateString("ar-EG", { year: "numeric", month: "short", day: "numeric" }); }
   catch { return iso; }
 }
+
+// ============================================================
+// Inventory Panel — read-only audit & export
+// ============================================================
+
+interface InventoryRow {
+  id: string;
+  slug: string | null;
+  chronological_order: number | null;
+  sort_year: number | null;
+  parsed_year: number | null;
+  title: string;
+  subtitle: string;
+  period: string;
+  worldSlug: string;
+  era: string;
+  status: Status;
+  chapters: number;
+  published: "published" | "draft" | "archived";
+  created_at: string;
+  imported_at: string;
+  updated_at: string;
+}
+
+function toInventoryRow(c: AdminCampaign): InventoryRow {
+  const d = c.data ?? {};
+  const chronological_order = pickNumber(d.chronological_order, d.chronologicalOrder);
+  const sort_year = pickNumber(d.sort_year, d.sortYear, d.startYear);
+  const period = String(d.historicalPeriod ?? d.period ?? "");
+  const parsed_year = parseHistoricalPeriodYear(period);
+  return {
+    id: c.id,
+    slug: c.slug,
+    chronological_order,
+    sort_year,
+    parsed_year,
+    title: c.title ?? "",
+    subtitle: String(d.subtitle ?? d.description ?? ""),
+    period,
+    worldSlug: String(d.worldSlug ?? d.world ?? ""),
+    era: String(d.era ?? ""),
+    status: c.status,
+    chapters: chapterCount(d),
+    published: c.status,
+    created_at: c.created_at,
+    imported_at: String(d.imported_at ?? d.importedAt ?? ""),
+    updated_at: c.updated_at,
+  };
+}
+
+function pickNumber(...vals: any[]): number | null {
+  for (const v of vals) {
+    const n = typeof v === "string" ? Number(v) : v;
+    if (typeof n === "number" && Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function inventorySortKey(r: InventoryRow): number {
+  if (r.chronological_order != null) return r.chronological_order;
+  if (r.sort_year != null) return 1_000_000 + r.sort_year;
+  if (r.parsed_year != null) return 2_000_000 + r.parsed_year;
+  return Number.POSITIVE_INFINITY;
+}
+
+function InventoryPanel({ rows }: { rows: AdminCampaign[] }) {
+  const inv = useMemo(() => {
+    return rows
+      .map(toInventoryRow)
+      .sort((a, b) => {
+        const ka = inventorySortKey(a);
+        const kb = inventorySortKey(b);
+        if (ka !== kb) return ka - kb;
+        return a.title.localeCompare(b.title, "ar");
+      });
+  }, [rows]);
+
+  const total = inv.length;
+  const missingMeta = inv.filter(r => r.chronological_order == null && r.sort_year == null && r.parsed_year == null).length;
+
+  const byWorld = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of inv) {
+      const k = r.worldSlug || r.era || "— غير محدّد —";
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [inv]);
+
+  const exportCSV = () => {
+    const headers = [
+      "chronological_order","sort_year","parsed_year","title","subtitle","period",
+      "worldSlug","era","status","chapters","published","slug","id","created_at","imported_at","updated_at",
+    ];
+    const esc = (v: any) => {
+      const s = v == null ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [headers.join(",")];
+    for (const r of inv) {
+      lines.push([
+        r.chronological_order ?? "", r.sort_year ?? "", r.parsed_year ?? "",
+        r.title, r.subtitle, r.period, r.worldSlug, r.era, r.status, r.chapters,
+        r.published, r.slug ?? "", r.id, r.created_at, r.imported_at, r.updated_at,
+      ].map(esc).join(","));
+    }
+    download(`campaigns-inventory-${stamp()}.csv`, lines.join("\n"), "text/csv;charset=utf-8");
+  };
+
+  const exportJSON = () => {
+    const payload = {
+      generated_at: new Date().toISOString(),
+      total,
+      missing_chronology_metadata: missingMeta,
+      by_world: Object.fromEntries(byWorld),
+      campaigns: inv,
+    };
+    download(`campaigns-inventory-${stamp()}.json`, JSON.stringify(payload, null, 2), "application/json");
+  };
+
+  return (
+    <section className="rounded-xl border border-amber-500/20 bg-slate-900/40 p-4">
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-amber-100">
+          <ClipboardList className="h-4 w-4 text-amber-400" />
+          <h2 className="text-sm font-bold">جرد الحملات (للقراءة والتصدير فقط)</h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-lg border border-slate-700 px-2 py-1 text-[11px] text-slate-300">
+            الإجمالي: <strong className="text-amber-200">{total}</strong>
+          </span>
+          <span className={`rounded-lg border px-2 py-1 text-[11px] ${
+            missingMeta > 0 ? "border-amber-400/40 text-amber-200" : "border-slate-700 text-slate-400"
+          }`}>
+            بلا بيانات ترتيب: <strong>{missingMeta}</strong>
+          </span>
+          <button onClick={exportCSV}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:border-amber-400 hover:text-amber-300">
+            <FileSpreadsheet className="h-3.5 w-3.5" /> CSV
+          </button>
+          <button onClick={exportJSON}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:border-amber-400 hover:text-amber-300">
+            <FileJson className="h-3.5 w-3.5" /> JSON
+          </button>
+        </div>
+      </header>
+
+      {byWorld.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {byWorld.map(([w, n]) => (
+            <span key={w} className="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-0.5 text-[11px] text-slate-300">
+              {w}: <strong className="text-amber-200">{n}</strong>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-lg border border-slate-800">
+        <table className="min-w-full text-right text-[11px] text-slate-300">
+          <thead className="bg-slate-900/70 text-amber-200/80">
+            <tr>
+              {["#","ترتيب","سنة","سنة مُستنبطة","العنوان","العنوان الفرعي","الفترة","العالم","الحقبة","الحالة","فصول","slug","أُنشئت","استيراد"].map(h => (
+                <th key={h} className="whitespace-nowrap px-2 py-1.5 font-semibold">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {inv.map((r, i) => (
+              <tr key={r.id} className="border-t border-slate-800 hover:bg-slate-900/40">
+                <td className="px-2 py-1 text-slate-500">{i + 1}</td>
+                <td className="px-2 py-1">{r.chronological_order ?? "—"}</td>
+                <td className="px-2 py-1">{r.sort_year ?? "—"}</td>
+                <td className="px-2 py-1 text-slate-500">{r.parsed_year ?? "—"}</td>
+                <td className="px-2 py-1 font-semibold text-amber-100">{r.title}</td>
+                <td className="max-w-[18ch] truncate px-2 py-1 text-slate-400">{r.subtitle}</td>
+                <td className="whitespace-nowrap px-2 py-1">{r.period || "—"}</td>
+                <td className="px-2 py-1">{r.worldSlug || "—"}</td>
+                <td className="px-2 py-1">{r.era || "—"}</td>
+                <td className="px-2 py-1">{labelStatus(r.status)}</td>
+                <td className="px-2 py-1">{r.chapters}</td>
+                <td className="px-2 py-1 text-slate-500">{r.slug ?? "—"}</td>
+                <td className="whitespace-nowrap px-2 py-1 text-slate-500">{formatDate(r.created_at)}</td>
+                <td className="whitespace-nowrap px-2 py-1 text-slate-500">{r.imported_at ? formatDate(r.imported_at) : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function download(name: string, content: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function stamp() {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+}
