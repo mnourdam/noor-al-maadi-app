@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Database, Network, BookOpen } from "lucide-react";
+import { ChevronRight, Database, Network, BookOpen, Compass } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
@@ -235,6 +235,37 @@ function EntityPage() {
             </div>
           )}
         </section>
+
+        {relatedQuery.data && relatedQuery.data.length > 0 && (
+          <section className="mt-8">
+            <div className="mb-3 flex items-center gap-2">
+              <Compass className="size-4 text-gold" />
+              <h2 className="font-display text-base font-bold">تابع الرحلة</h2>
+            </div>
+            <ol className="space-y-2">
+              {relatedQuery.data.slice(0, 3).map((n, i) => (
+                <li key={n.entity.id}>
+                  <Link
+                    to="/encyclopedia/entity/$id"
+                    params={{ id: n.entity.slug }}
+                    className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
+                  >
+                    <span className="grid size-10 place-items-center rounded-xl bg-black/40 text-xl ring-1 ring-white/10">
+                      {SUPA_GLYPH[n.entity.entity_type] ?? "📜"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] tracking-[0.2em] text-gold/80">
+                        محطة {i + 1} · {TYPE_LABEL[n.entity.entity_type] ?? n.entity.entity_type}
+                      </p>
+                      <p className="font-display text-[13px] font-bold">{n.entity.title}</p>
+                    </div>
+                    <ChevronRight className="size-4 text-gold/60 group-hover:text-gold" />
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         <div className="h-10" />
       </div>

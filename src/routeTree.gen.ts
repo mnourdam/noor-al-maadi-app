@@ -71,6 +71,7 @@ import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-ent
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
+import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
 import { Route as CampaignsImportedIdIndexRouteImport } from './routes/campaigns.imported.$id.index'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
@@ -388,6 +389,11 @@ const EncyclopediaStateIdRoute = EncyclopediaStateIdRouteImport.update({
   path: '/state/$id',
   getParentRoute: () => EncyclopediaRoute,
 } as any)
+const EncyclopediaPathIdRoute = EncyclopediaPathIdRouteImport.update({
+  id: '/path/$id',
+  path: '/path/$id',
+  getParentRoute: () => EncyclopediaRoute,
+} as any)
 const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
   id: '/entity/$id',
   path: '/entity/$id',
@@ -468,6 +474,7 @@ export interface FileRoutesByFullPath {
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
+  '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
@@ -533,6 +540,7 @@ export interface FileRoutesByTo {
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
+  '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/campaigns/imported/$id': typeof CampaignsImportedIdIndexRoute
@@ -601,6 +609,7 @@ export interface FileRoutesById {
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
+  '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
@@ -670,6 +679,7 @@ export interface FileRouteTypes {
     | '/campaigns/'
     | '/encyclopedia/'
     | '/encyclopedia/entity/$id'
+    | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/campaigns/imported/$id/'
@@ -735,6 +745,7 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/encyclopedia'
     | '/encyclopedia/entity/$id'
+    | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/campaigns/imported/$id'
@@ -802,6 +813,7 @@ export interface FileRouteTypes {
     | '/campaigns/'
     | '/encyclopedia/'
     | '/encyclopedia/entity/$id'
+    | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/campaigns/imported/$id/'
@@ -1305,6 +1317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EncyclopediaStateIdRouteImport
       parentRoute: typeof EncyclopediaRoute
     }
+    '/encyclopedia/path/$id': {
+      id: '/encyclopedia/path/$id'
+      path: '/path/$id'
+      fullPath: '/encyclopedia/path/$id'
+      preLoaderRoute: typeof EncyclopediaPathIdRouteImport
+      parentRoute: typeof EncyclopediaRoute
+    }
     '/encyclopedia/entity/$id': {
       id: '/encyclopedia/entity/$id'
       path: '/entity/$id'
@@ -1349,6 +1368,7 @@ const CampaignsRouteWithChildren = CampaignsRoute._addFileChildren(
 interface EncyclopediaRouteChildren {
   EncyclopediaIndexRoute: typeof EncyclopediaIndexRoute
   EncyclopediaEntityIdRoute: typeof EncyclopediaEntityIdRoute
+  EncyclopediaPathIdRoute: typeof EncyclopediaPathIdRoute
   EncyclopediaStateIdRoute: typeof EncyclopediaStateIdRoute
   EncyclopediaTypeTypeRoute: typeof EncyclopediaTypeTypeRoute
 }
@@ -1356,6 +1376,7 @@ interface EncyclopediaRouteChildren {
 const EncyclopediaRouteChildren: EncyclopediaRouteChildren = {
   EncyclopediaIndexRoute: EncyclopediaIndexRoute,
   EncyclopediaEntityIdRoute: EncyclopediaEntityIdRoute,
+  EncyclopediaPathIdRoute: EncyclopediaPathIdRoute,
   EncyclopediaStateIdRoute: EncyclopediaStateIdRoute,
   EncyclopediaTypeTypeRoute: EncyclopediaTypeTypeRoute,
 }
