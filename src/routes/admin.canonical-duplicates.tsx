@@ -515,7 +515,9 @@ function GroupCard({ g, status, collapsed, onToggle, atlasByEnt, campaignsBySlug
           );
         })}
       </div>
+      )}
 
+      {collapsed ? null : (
       <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-2 text-[11px]">
         <Wand2 className="size-3.5 text-amber-300" />
         <span className="text-slate-400">القياسي المختار:</span>
@@ -530,6 +532,8 @@ function GroupCard({ g, status, collapsed, onToggle, atlasByEnt, campaignsBySlug
         </button>
         <span className="text-slate-500"><Link2 className="inline size-3" /> الإخفاء يعيد ربط الأطلس + استبدال slug في الحملات</span>
       </div>
+      )}
+
     </div>
   );
 }
