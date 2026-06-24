@@ -72,7 +72,11 @@ function Index() {
 
   useEffect(() => {
     setMounted(true);
-    touchStreak();
+    // Guard: when signed in, wait for cloud profile pull to finish so we don't
+    // operate on stale local streak state and risk overwriting cloud progress.
+    if (!user || lastSyncAt) {
+      touchStreak();
+    }
     const season = currentSeason();
     runDailyNotifications({
       prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
@@ -85,7 +89,8 @@ function Index() {
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [touchStreak, todayEvent?.id]);
+  }, [touchStreak, todayEvent?.id, user, lastSyncAt]);
+
 
   const lvl = levelFor(profile.points);
 
