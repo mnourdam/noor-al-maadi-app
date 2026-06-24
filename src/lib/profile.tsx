@@ -319,6 +319,27 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       });
       return result;
     },
+    loseHeartOnce: (attemptKey: string) => {
+      if (!attemptKey) return getEffectiveHearts(profile);
+      if (heartPenaltyDedup.has(attemptKey)) {
+        return getEffectiveHearts(profile);
+      }
+      heartPenaltyDedup.add(attemptKey);
+      // Cap the dedup set so it can't grow forever during a long session.
+      if (heartPenaltyDedup.size > 500) {
+        const first = heartPenaltyDedup.values().next().value;
+        if (first) heartPenaltyDedup.delete(first);
+      }
+      let result = HEART_MAX;
+      update((p) => {
+        const now = Date.now();
+        const eff = getEffectiveHearts(p, now);
+        const next = Math.max(0, eff - 1);
+        result = next;
+        return { ...p, ...commitHearts(p, next, now) };
+      });
+      return result;
+    },
     hasHearts: () => getEffectiveHearts(profile) > 0,
     recoverHeartFromActivity: (a) => {
       let outcome: { ok: boolean; reason?: "full" | "cooldown" } = { ok: false };
