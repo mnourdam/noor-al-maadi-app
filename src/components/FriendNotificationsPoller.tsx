@@ -50,15 +50,17 @@ export function FriendNotificationsPoller() {
         const nextAccepted = new Set(seen.accepted);
 
         for (const f of list) {
+          const name = (f.other.display_name?.trim() || f.other.username || "صديق");
           if (f.direction === "incoming" && !seen.incoming.includes(f.row.id)) {
             nextIncoming.add(f.row.id);
             // First sync after sign-in: don't spam with backlog notifications.
             if (initRef.current) {
               deliverNotification({
+                id: `friend_request:${f.row.id}`,
                 category: "friend",
                 title: "طلب صداقة جديد",
-                body: `وصلك طلب صداقة جديد من @${f.other.username}`,
-                href: "/friends",
+                body: `أرسل إليك ${name} طلب صداقة`,
+                href: "/friends?tab=requests",
               });
             }
           }
@@ -66,9 +68,10 @@ export function FriendNotificationsPoller() {
             nextAccepted.add(f.row.id);
             if (initRef.current && f.row.requester === user!.id) {
               deliverNotification({
+                id: `friend_request_accepted:${f.row.id}`,
                 category: "friend",
-                title: "قُبل طلب الصداقة",
-                body: `قبل @${f.other.username} طلب صداقتك`,
+                title: "تم قبول طلب الصداقة",
+                body: `قبل ${name} طلب صداقتك`,
                 href: "/friends",
               });
             }
