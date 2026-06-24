@@ -52,7 +52,8 @@ type HeroSlide =
 
 function Index() {
   const { profile, touchStreak } = useProfile();
-  const { account, user } = useAccount();
+  const { account, user, lastSyncAt } = useAccount();
+
   const displayName = account?.username ?? (user ? profile.name : profile.name);
   const [mounted, setMounted] = useState(false);
   const { selected: todayEvent } = useTodayInHistoryEvent();
