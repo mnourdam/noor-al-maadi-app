@@ -73,6 +73,11 @@ function NotificationsPage() {
   return (
     <AppShell>
       <Screen title="الإشعارات" subtitle="آخر تنبيهاتك التاريخية">
+        {persistError && (
+          <div className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-200">
+            {persistError}
+          </div>
+        )}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <Link to="/profile" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
             <ChevronLeft className="size-4" /> الحساب
@@ -80,12 +85,13 @@ function NotificationsPage() {
           <div className="flex items-center gap-2">
             {unread.length > 0 && (
               <button
-                onClick={() => { markAllRead(); }}
+                onClick={onMarkAllRead}
                 className="inline-flex items-center gap-1 rounded-full border border-gold/40 px-3 py-1 text-[11px] text-gold hover:bg-gold/10"
               >
                 <CheckCheck className="size-3.5" /> تحديد الكل كمقروء
               </button>
             )}
+
             {list.length > 0 && (
               <button
                 onClick={() => { clearInbox(); }}
