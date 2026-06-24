@@ -508,36 +508,16 @@ function ContentAutoHeal() {
             )}
           </Section>
 
-          <Section title={`٢. ربط الكيانات المرتبطة بالحملات (${snap.related.length})`}>
+          <Section title="٢. ربط الكيانات المرتبطة بالحملات">
             <p className="mb-2 text-xs text-muted-foreground">
-              يستنتج كيانات الموسوعة من عنوان/وصف/فصول الحملة بمطابقة دقيقة للعنوان أو الاسم البديل، ويضيفها إلى
-              <code className="mx-1 font-mono">metadata.related_entities</code>.
+              تم نقل بناء العلاقات إلى أداة مخصّصة تعتمد على المراجع الصريحة فقط (مكافآت، فتوحات،
+              <code className="mx-1 font-mono">encyclopedia_refs</code>) — بدون مطابقة نصية.
             </p>
-            <button
-              disabled={snap.related.length === 0 || !!busy}
-              onClick={() =>
-                setPreview({
-                  title: `ربط ${snap.related.length} حملة بكياناتها`,
-                  lines: snap.related.map(
-                    (r) => `${r.campaignSlug}: +${r.add.length} (${r.add.slice(0, 4).join(", ")}${r.add.length > 4 ? "…" : ""})`,
-                  ),
-                  onConfirm: async () => {
-                    await applyCampaignRelated(snap.related, snap.campaigns);
-                    setLastReport((prev) => ({
-                      fixedUnlocks: prev?.fixedUnlocks ?? 0,
-                      linkedCampaigns: snap.related.length,
-                      museumObtainable: prev?.museumObtainable ?? 0,
-                      museumEncOnly: prev?.museumEncOnly ?? 0,
-                      remainingManual: prev?.remainingManual ?? remainingManual,
-                    }));
-                  },
-                })
-              }
-              className="rounded bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"
-            >
-              معاينة ربط الكيانات
-            </button>
+            <Link to="/admin/campaign-relationships" className="inline-block rounded bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700">
+              فتح باني علاقات الحملات
+            </Link>
           </Section>
+
 
           <Section title={`٣. توليد خريطة فتح المتحف (${snap.museum.obtainable.length} قابل + ${snap.museum.encyclopediaOnly.length} موسوعة فقط)`}>
             <p className="mb-2 text-xs text-muted-foreground">
