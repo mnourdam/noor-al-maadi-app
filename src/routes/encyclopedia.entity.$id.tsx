@@ -49,11 +49,24 @@ const SUPA_GLYPH: Record<string, string> = {
   event: "📜",
 };
 
-function metaEra(entity: Pick<SupabaseEncyclopediaEntity, "metadata">): string {
-  const m = entity.metadata && typeof entity.metadata === "object"
+function metaObj(entity: Pick<SupabaseEncyclopediaEntity, "metadata">): Record<string, unknown> {
+  return entity.metadata && typeof entity.metadata === "object"
     ? (entity.metadata as Record<string, unknown>)
     : {};
-  return typeof m.era === "string" ? (m.era as string) : "";
+}
+
+function asStringList(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const out: string[] = [];
+  for (const x of v) {
+    if (typeof x === "string" && x.trim()) out.push(x.trim());
+    else if (x && typeof x === "object") {
+      const o = x as Record<string, unknown>;
+      const s = (typeof o.slug === "string" && o.slug) || (typeof o.id === "string" && o.id) || (typeof o.entity_slug === "string" && o.entity_slug) || (typeof o.entity_id === "string" && o.entity_id);
+      if (typeof s === "string" && s) out.push(s);
+    }
+  }
+  return out;
 }
 
 export const Route = createFileRoute("/encyclopedia/entity/$id")({
@@ -90,7 +103,6 @@ function EntityPage() {
           .maybeSingle();
         return (res.data ?? null) as SupabaseEncyclopediaEntity | null;
       }
-      // slug lookup — pick richest if multiple
       const res = await supabase
         .from("encyclopedia_entities")
         .select("*")
@@ -99,7 +111,6 @@ function EntityPage() {
       const rows = (res.data ?? []) as SupabaseEncyclopediaEntity[];
       if (rows.length > 0) return rows[0];
 
-      // alias / legacy_id fallback
       const alias = await supabase
         .from("encyclopedia_entities")
         .select("*")
@@ -113,22 +124,91 @@ function EntityPage() {
   });
 
   const entity = query.data ?? null;
-  const era = entity ? metaEra(entity) : "";
 
+  // Relationship-priority related query (NOT era-based).
   const relatedQuery = useQuery({
-    queryKey: ["encyclopedia", "entity-related", entity?.id ?? "", era],
-    enabled: !!entity && !!era,
+    queryKey: ["encyclopedia", "entity-related-v2", entity?.id ?? ""],
+    enabled: !!entity,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const meta = metaObj(entity!);
+      const scores = new Map<string, number>(); // key=slug, value=score
+
+      const bump = (refs: string[], score: number) => {
+        for (const r of refs) {
+          const key = r.toLowerCase();
+          if (!key || key === entity!.slug.toLowerCase() || key === entity!.id) continue;
+          scores.set(key, Math.max(scores.get(key) ?? 0, score));
+        }
+      };
+
+      // 1. Explicit relationships in metadata.
+      bump(asStringList(meta.related_entities), 100);
+      bump(asStringList(meta.related), 100);
+      bump(asStringList(meta.relationships), 90);
+
+      // 2. Same campaign (core/supporting_entities containing this slug).
+      const { data: camps } = await supabase
+        .from("admin_campaigns")
+        .select("metadata")
+        .limit(500);
+      for (const c of camps ?? []) {
+        const cm = (c.metadata && typeof c.metadata === "object" ? c.metadata : {}) as Record<string, unknown>;
+        const core = asStringList(cm.core_entities);
+        const sup = asStringList(cm.supporting_entities);
+        const all = [...core, ...sup].map((s) => s.toLowerCase());
+        if (!all.includes(entity!.slug.toLowerCase())) continue;
+        bump(core, 80);
+        bump(sup, 70);
+      }
+
+      // 3. Same city / state (explicit references).
+      const cityRef = typeof meta.city === "string" ? meta.city : "";
+      const stateRef = typeof meta.state === "string" ? meta.state : "";
+      const ors: string[] = [];
+      if (cityRef) ors.push(`metadata->>city.eq.${cityRef}`);
+      if (stateRef) ors.push(`metadata->>state.eq.${stateRef}`);
+      if (entity!.entity_type === "city" || entity!.entity_type === "state") {
+        ors.push(`metadata->>${entity!.entity_type}.eq.${entity!.slug}`);
+      }
+      if (ors.length > 0) {
+        const { data: geo } = await supabase
+          .from("encyclopedia_entities")
+          .select("slug")
+          .eq("enabled", true)
+          .neq("id", entity!.id)
+          .or(ors.join(","))
+          .limit(60);
+        bump((geo ?? []).map((r: { slug: string }) => r.slug), 60);
+      }
+
+      // 4. Atlas relationship — same atlas_id family.
+      const atlasId = typeof meta.atlas_id === "string" ? meta.atlas_id : "";
+      if (atlasId) {
+        const { data: atl } = await supabase
+          .from("encyclopedia_entities")
+          .select("slug")
+          .eq("enabled", true)
+          .neq("id", entity!.id)
+          .contains("metadata", { atlas_id: atlasId })
+          .limit(30);
+        bump((atl ?? []).map((r: { slug: string }) => r.slug), 40);
+      }
+
+      if (scores.size === 0) return [];
+
+      // Resolve to entities.
+      const keys = Array.from(scores.keys());
+      const { data: rows } = await supabase
         .from("encyclopedia_entities")
         .select("id,slug,entity_type,title,subtitle,summary,metadata")
         .eq("enabled", true)
-        .contains("metadata", { era })
-        .neq("id", entity!.id)
-        .limit(60);
-      if (error) throw error;
-      return (data ?? []) as SupabaseEncyclopediaEntity[];
+        .in("slug", keys);
+      const list = ((rows ?? []) as SupabaseEncyclopediaEntity[])
+        .map((r) => ({ r, s: scores.get(r.slug.toLowerCase()) ?? 0 }))
+        .sort((a, b) => b.s - a.s)
+        .map((x) => x.r);
+      return list;
     },
   });
 
