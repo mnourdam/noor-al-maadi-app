@@ -71,6 +71,8 @@ function EraNormalization() {
     }
   }
 
+  useEffect(() => { void load(); }, []);
+
   const analysis = useMemo(() => {
     if (!rows) return null;
     const rawCounts = new Map<string, number>();
