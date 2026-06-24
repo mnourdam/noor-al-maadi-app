@@ -5,8 +5,9 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
-import { normalizeEntitySlug } from "@/lib/encyclopedia-source";
+import { normalizeEntitySlug, ENCYCLOPEDIA_ENTITY_COLUMNS } from "@/lib/encyclopedia-source";
 import { resolveRelatedEntities, type RelatedNode } from "@/lib/relationship-graph";
+import { sortEntitiesChronological } from "@/lib/entityChronology";
 
 export type WorldHub = {
   slug: string;
