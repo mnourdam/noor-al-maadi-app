@@ -137,7 +137,7 @@ function EncyclopediaHub() {
   const results = useMemo(() => {
     if (!q && !era) return [];
     return all
-      .filter((e) => !era || metaEra(e) === era)
+      .filter((e) => !era || (toCanonicalEra(metaEra(e)) ?? metaEra(e)) === era)
       .filter((e) => {
         if (!q) return true;
         const hay = `${e.title} ${e.subtitle ?? ""} ${e.summary ?? ""} ${e.slug}`.toLowerCase();
