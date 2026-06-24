@@ -27,7 +27,7 @@ import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
 import heroDesertCaravan from "@/assets/hero-desert-caravan.jpg";
 import heroManuscriptLamp from "@/assets/hero-manuscript-lamp.jpg";
 import heroFortress from "@/assets/hero-fortress.jpg";
-import { EXPLORATION_PATHS } from "@/lib/exploration-paths";
+
 import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
 
