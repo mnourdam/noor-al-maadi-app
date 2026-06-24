@@ -92,6 +92,8 @@ function AdminHub() {
             desc="أرشفة المكررات وإعادة ربط الأطلس بالقياسي — معاينة قبل التنفيذ." />
           <AdminCard to="/admin/exploration-path-repair" icon={<Compass className="h-5 w-5" />} title="إصلاح مسارات الاستكشاف"
             desc="إضافة related_entities إلى محاور المسارات الفارغة بناءً على بيانات Supabase فقط." />
+          <AdminCard to="/admin/historical-hubs-audit" icon={<Network className="h-5 w-5" />} title="تدقيق المحاور التاريخية"
+            desc="قياس قوة الربط في الرسم البياني للمحاور الكبرى — للقراءة فقط." />
 
           <AdminCard to="/admin/investigations" icon={<Search className="h-5 w-5" />} title="إدارة التحقيقات"
             desc="تحقيقات تاريخية قابلة للعب من Supabase." />
