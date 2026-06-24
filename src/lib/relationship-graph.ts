@@ -80,6 +80,35 @@ function asStringList(v: unknown): string[] {
 
 type ScoredRef = { score: number; reason: RelationReason };
 
+// Canonical aliases for legacy short slugs. Only applied as ADDITIONAL
+// candidates — the original slug is also kept. The final `.in("slug", keys)`
+// resolution drops any alias that doesn't correspond to a live enabled row,
+// so aliases never invent content.
+const STATE_ALIASES: Record<string, string[]> = {
+  mamluk: ["mamluk-sultanate"],
+  mamluks: ["mamluk-sultanate"],
+  abbasid: ["abbasid-caliphate", "abbasid-state"],
+  abbasids: ["abbasid-caliphate"],
+  umayyad: ["umayyad-caliphate", "umayyad-state"],
+  umayyads: ["umayyad-caliphate"],
+  andalus: ["al-andalus", "andalus-state"],
+  andalusia: ["al-andalus"],
+  rashidun: ["rashidun-caliphate"],
+  ottoman: ["ottoman-empire", "ottoman-state"],
+  ottomans: ["ottoman-empire"],
+  fatimid: ["fatimid-caliphate", "fatimid-state"],
+  fatimids: ["fatimid-caliphate"],
+  ayyubid: ["ayyubid-sultanate", "ayyubid-state"],
+  ayyubids: ["ayyubid-sultanate"],
+  seljuk: ["seljuk-empire", "seljuk-state"],
+  seljuks: ["seljuk-empire"],
+};
+
+function expandAliases(key: string): string[] {
+  const extra = STATE_ALIASES[key];
+  return extra ? [key, ...extra] : [key];
+}
+
 export async function resolveRelatedEntities(
   entity: SupabaseEncyclopediaEntity,
 ): Promise<RelatedNode[]> {
@@ -92,10 +121,13 @@ export async function resolveRelatedEntities(
 
   const bump = (refs: string[], score: number, reason: RelationReason) => {
     for (const raw of refs) {
-      const key = normalizeEntitySlug(raw);
-      if (!key || key === selfSlug || key === selfId) continue;
-      const prev = scores.get(key);
-      if (!prev || score > prev.score) scores.set(key, { score, reason });
+      const base = normalizeEntitySlug(raw);
+      if (!base) continue;
+      for (const key of expandAliases(base)) {
+        if (!key || key === selfSlug || key === selfId) continue;
+        const prev = scores.get(key);
+        if (!prev || score > prev.score) scores.set(key, { score, reason });
+      }
     }
   };
 
