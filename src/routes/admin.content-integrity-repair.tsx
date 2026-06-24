@@ -371,10 +371,54 @@ function ContentIntegrityRepair() {
           </Section>
 
           <Section title="١. إصلاح مكافآت الحملات">
+            {(() => {
+              const plans = planAutoFixes(r.unlocks_missing, r.encyclopedia);
+              return (
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 p-2 text-sm">
+                  <span className="font-medium">إصلاح تلقائي آمن:</span>
+                  <span className="text-muted-foreground">
+                    {plans.length} مرشّح بثقة ≥ {AUTO_FIX_THRESHOLD} من أصل {r.unlocks_missing.length} مكسور.
+                    {r.unlocks_missing.length - plans.length > 0 && (
+                      <> ({r.unlocks_missing.length - plans.length} يحتاج مراجعة يدوية)</>
+                    )}
+                  </span>
+                  <button
+                    disabled={plans.length === 0 || !!busy}
+                    onClick={() =>
+                      setPreview({
+                        title: `إصلاح تلقائي لـ ${plans.length} مرجع`,
+                        lines: plans
+                          .slice(0, 200)
+                          .map(
+                            (p) =>
+                              `[${p.score}] ${p.u.campaignSlug}/${p.u.chapterId}: ${p.u.raw}  →  ${p.newVal}`,
+                          )
+                          .concat(plans.length > 200 ? [`… +${plans.length - 200} أخرى`] : []),
+                        onConfirm: async () => {
+                          await applyBulkUnlockFixes(plans, r.campaigns);
+                          const fresh = await buildReport();
+                          setR(fresh);
+                          setBulkResult({ applied: plans.length, remaining: fresh.unlocks_missing.length });
+                        },
+                      })
+                    }
+                    className="rounded border bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    معاينة الإصلاح التلقائي
+                  </button>
+                  {bulkResult && (
+                    <span className="text-xs text-emerald-700">
+                      تم تطبيق {bulkResult.applied}؛ المتبقي: {bulkResult.remaining}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
             {r.unlocks_missing.length === 0 ? (
               <div className="text-sm text-muted-foreground">لا توجد مراجع مكسورة.</div>
             ) : (
               <div className="space-y-3">
+
                 {r.unlocks_missing.slice(0, 50).map((u, i) => {
                   const matches = suggestMatches(u, r.encyclopedia);
                   const campaign = r.campaigns.find((c) => c.id === u.campaignId)!;
