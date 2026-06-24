@@ -206,7 +206,7 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
     .eq("slug", slug)
     .eq("enabled", true)
     .maybeSingle();
-  const entity = (data ?? null) as SupabaseEncyclopediaEntity | null;
+  const entity = (data ?? null) as unknown as SupabaseEncyclopediaEntity | null;
   if (!entity) return null;
 
   const related = await resolveRelatedEntities(entity);
