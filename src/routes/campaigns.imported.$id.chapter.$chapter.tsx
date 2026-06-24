@@ -64,7 +64,10 @@ function ImportedChapterPlayer() {
   const [progressTick, setProgressTick] = useState(0);
   const bump = () => setProgressTick(t => t + 1);
 
-  const { profile, addPoints, addDinars, loseHeart } = useProfile();
+  const { profile, addPoints, addDinars, loseHeartOnce } = useProfile();
+  // PR1: per-render lock to swallow rapid duplicate onResolve calls
+  // (e.g. double-tap on the answer button before the next paint).
+  const resolveLockRef = useRef(false);
   const camProgress = campaign ? getCampaignProgress(campaign.id) : null;
   const chProgress  = campaign ? getChapterProgress(campaign.id, chapterId) : null;
 
