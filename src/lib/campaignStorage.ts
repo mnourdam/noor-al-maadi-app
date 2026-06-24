@@ -250,7 +250,16 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
     finalRewards: obj.finalRewards ?? obj.rewards,
 
     unlocks: Array.isArray(obj.unlocks) ? obj.unlocks.map(String) : undefined,
+
+    chronological_order: typeof obj.chronological_order === "number" ? obj.chronological_order
+      : typeof obj.chronologicalOrder === "number" ? obj.chronologicalOrder : undefined,
+    sort_year: typeof obj.sort_year === "number" ? obj.sort_year
+      : typeof obj.sortYear === "number" ? obj.sortYear : undefined,
+    worldSlug: typeof obj.worldSlug === "string" ? obj.worldSlug
+      : typeof obj.world_slug === "string" ? obj.world_slug : undefined,
+    era: typeof obj.era === "string" ? obj.era : undefined,
   };
+
 
   return { ok: !issues.some(i => i.level === "error"), issues, normalized };
 }
