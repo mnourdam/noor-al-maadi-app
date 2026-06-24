@@ -196,6 +196,7 @@ function RootComponent() {
       <ProfileProvider>
         <AccountProvider>
           <Outlet />
+          <FirstLaunchGate />
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
