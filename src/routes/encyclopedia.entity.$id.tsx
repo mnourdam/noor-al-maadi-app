@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
-import { ChevronRight, Database } from "lucide-react";
+import { ChevronRight, Database, Network } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
@@ -11,6 +10,10 @@ import {
 } from "@/lib/encyclopedia-source";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
+import {
+  resolveRelatedEntities,
+  groupRelatedByReason,
+} from "@/lib/relationship-graph";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
@@ -22,23 +25,6 @@ const TYPE_LABEL: Record<string, string> = {
   landmark: "معلم",
   artifact: "أثر",
 };
-const SECTION_LABELS: Record<string, string> = {
-  figure: "الشخصيات",
-  city: "المدن",
-  battle: "المعارك",
-  event: "الأحداث",
-  landmark: "المعالم",
-  artifact: "الآثار",
-};
-const SECTION_GLYPHS: Record<string, string> = {
-  figure: "🪶",
-  city: "🏙️",
-  battle: "⚔️",
-  event: "📜",
-  landmark: "🕌",
-  artifact: "🗝️",
-};
-const SECTION_ORDER = Object.keys(SECTION_LABELS);
 const SUPA_GLYPH: Record<string, string> = {
   artifact: "🗝️",
   figure: "🪶",
@@ -48,26 +34,6 @@ const SUPA_GLYPH: Record<string, string> = {
   landmark: "🕌",
   event: "📜",
 };
-
-function metaObj(entity: Pick<SupabaseEncyclopediaEntity, "metadata">): Record<string, unknown> {
-  return entity.metadata && typeof entity.metadata === "object"
-    ? (entity.metadata as Record<string, unknown>)
-    : {};
-}
-
-function asStringList(v: unknown): string[] {
-  if (!Array.isArray(v)) return [];
-  const out: string[] = [];
-  for (const x of v) {
-    if (typeof x === "string" && x.trim()) out.push(x.trim());
-    else if (x && typeof x === "object") {
-      const o = x as Record<string, unknown>;
-      const s = (typeof o.slug === "string" && o.slug) || (typeof o.id === "string" && o.id) || (typeof o.entity_slug === "string" && o.entity_slug) || (typeof o.entity_id === "string" && o.entity_id);
-      if (typeof s === "string" && s) out.push(s);
-    }
-  }
-  return out;
-}
 
 export const Route = createFileRoute("/encyclopedia/entity/$id")({
   head: ({ params }) => ({
@@ -125,101 +91,16 @@ function EntityPage() {
 
   const entity = query.data ?? null;
 
-  // Relationship-priority related query (NOT era-based).
+  // Relationship-graph (Phase 1 — Knowledge Graph experience).
   const relatedQuery = useQuery({
-    queryKey: ["encyclopedia", "entity-related-v2", entity?.id ?? ""],
+    queryKey: ["encyclopedia", "graph", entity?.id ?? ""],
     enabled: !!entity,
     staleTime: 60_000,
-    queryFn: async () => {
-      const meta = metaObj(entity!);
-      const scores = new Map<string, number>(); // key=slug, value=score
-
-      const bump = (refs: string[], score: number) => {
-        for (const r of refs) {
-          const key = r.toLowerCase();
-          if (!key || key === entity!.slug.toLowerCase() || key === entity!.id) continue;
-          scores.set(key, Math.max(scores.get(key) ?? 0, score));
-        }
-      };
-
-      // 1. Explicit relationships in metadata.
-      bump(asStringList(meta.related_entities), 100);
-      bump(asStringList(meta.related), 100);
-      bump(asStringList(meta.relationships), 90);
-
-      // 2. Same campaign (core/supporting_entities containing this slug).
-      const { data: camps } = await supabase
-        .from("admin_campaigns")
-        .select("data")
-        .limit(500);
-      for (const c of camps ?? []) {
-        const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
-        const core = asStringList(cm.core_entities);
-        const sup = asStringList(cm.supporting_entities);
-        const all = [...core, ...sup].map((s) => s.toLowerCase());
-        if (!all.includes(entity!.slug.toLowerCase())) continue;
-        bump(core, 80);
-        bump(sup, 70);
-      }
-
-      // 3. Same city / state (explicit references).
-      const cityRef = typeof meta.city === "string" ? meta.city : "";
-      const stateRef = typeof meta.state === "string" ? meta.state : "";
-      const ors: string[] = [];
-      if (cityRef) ors.push(`metadata->>city.eq.${cityRef}`);
-      if (stateRef) ors.push(`metadata->>state.eq.${stateRef}`);
-      if (entity!.entity_type === "city" || entity!.entity_type === "state") {
-        ors.push(`metadata->>${entity!.entity_type}.eq.${entity!.slug}`);
-      }
-      if (ors.length > 0) {
-        const { data: geo } = await supabase
-          .from("encyclopedia_entities")
-          .select("slug")
-          .eq("enabled", true)
-          .neq("id", entity!.id)
-          .or(ors.join(","))
-          .limit(60);
-        bump((geo ?? []).map((r: { slug: string }) => r.slug), 60);
-      }
-
-      // 4. Atlas relationship — same atlas_id family.
-      const atlasId = typeof meta.atlas_id === "string" ? meta.atlas_id : "";
-      if (atlasId) {
-        const { data: atl } = await supabase
-          .from("encyclopedia_entities")
-          .select("slug")
-          .eq("enabled", true)
-          .neq("id", entity!.id)
-          .contains("metadata", { atlas_id: atlasId })
-          .limit(30);
-        bump((atl ?? []).map((r: { slug: string }) => r.slug), 40);
-      }
-
-      if (scores.size === 0) return [];
-
-      // Resolve to entities.
-      const keys = Array.from(scores.keys());
-      const { data: rows } = await supabase
-        .from("encyclopedia_entities")
-        .select("id,slug,entity_type,title,subtitle,summary,metadata")
-        .eq("enabled", true)
-        .in("slug", keys);
-      const list = ((rows ?? []) as SupabaseEncyclopediaEntity[])
-        .map((r) => ({ r, s: scores.get(r.slug.toLowerCase()) ?? 0 }))
-        .sort((a, b) => b.s - a.s)
-        .map((x) => x.r);
-      return list;
-    },
+    queryFn: async () => (entity ? resolveRelatedEntities(entity) : []),
   });
 
-  const groups = useMemo(() => {
-    const g: Record<string, SupabaseEncyclopediaEntity[]> = {};
-    for (const s of SECTION_ORDER) g[s] = [];
-    for (const r of relatedQuery.data ?? []) {
-      if (g[r.entity_type]) g[r.entity_type].push(r);
-    }
-    return g;
-  }, [relatedQuery.data]);
+  const groups = groupRelatedByReason(relatedQuery.data ?? []);
+
 
   if (query.isLoading) {
     return (
@@ -284,27 +165,47 @@ function EntityPage() {
 
         <EncyclopediaArticleBody article={parseEncyclopediaArticle(entity.body, entity.metadata)} />
 
-        {SECTION_ORDER.map((s) => {
-          const list = groups[s];
-          if (list.length === 0) return null;
-          return (
-            <section key={s} className="mt-6">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-lg">{SECTION_GLYPHS[s]}</span>
-                <h2 className="font-display text-sm font-bold">{SECTION_LABELS[s]}</h2>
-                <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
-                  {list.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                {list.slice(0, 12).map((n) => <EncyclopediaCard key={n.id} entity={n} />)}
-              </div>
-            </section>
-          );
-        })}
+        <section className="mt-8">
+          <div className="mb-3 flex items-center gap-2">
+            <Network className="size-4 text-gold" />
+            <h2 className="font-display text-base font-bold">شبكة التاريخ المرتبط</h2>
+            {relatedQuery.data && relatedQuery.data.length > 0 && (
+              <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
+                {relatedQuery.data.length}
+              </span>
+            )}
+          </div>
+
+          {relatedQuery.isLoading ? (
+            <p className="text-center text-[12px] text-muted-foreground py-6">جارٍ بناء الشبكة…</p>
+          ) : groups.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gold/20 bg-black/20 p-6 text-center">
+              <p className="text-[12px] text-muted-foreground">لا توجد روابط تاريخية موثقة بعد</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {groups.map((g) => (
+                <div key={g.reason}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="rounded-full border border-gold/25 bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
+                      {g.label}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">{g.items.length}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {g.items.slice(0, 12).map((n) => (
+                      <EncyclopediaCard key={n.entity.id} entity={n.entity} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="h-10" />
       </div>
+
     </AppShell>
   );
 }
