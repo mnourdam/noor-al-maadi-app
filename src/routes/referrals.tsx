@@ -21,11 +21,13 @@ function ReferralsPage() {
   const { profile, addDinars, awardBadge, grantTitle, grantArtifact } = useProfile();
   const [code, setCode] = useState<string | null>(null);
   const [rows, setRows] = useState<{ row: ReferralRow; friend: PublicProfile | null }[]>([]);
+  const [serverStats, setServerStats] = useState<MyReferralStats | null>(null);
 
   useEffect(() => {
     if (!user) return;
     fetchPublicProfileById(user.id).then((p) => setCode(p?.referral_code ?? null));
     listMyReferrals(user.id).then(setRows);
+    fetchMyReferralStats().then(setServerStats).catch(() => {});
   }, [user]);
 
   const link = code ? buildReferralLink(code) : "";
