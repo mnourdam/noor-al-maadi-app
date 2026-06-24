@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { Search, ChevronLeft, Check, Coins, Star, Heart, Loader2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { INVESTIGATION_REGISTRY } from "@/lib/investigations";
@@ -8,6 +9,18 @@ import {
   type InvestigationRow,
   type InvestigationReward,
 } from "@/lib/investigations-source";
+
+// Fresh random seed per app load/session so the order reshuffles on reload.
+const SESSION_SHUFFLE_SEED = Math.random();
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 import { useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/investigations")({
