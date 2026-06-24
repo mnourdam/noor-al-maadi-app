@@ -47,6 +47,7 @@ import { Route as FigureIdRouteImport } from './routes/figure.$id'
 import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
+import { Route as AdminWorldMembershipReviewRouteImport } from './routes/admin.world-membership-review'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
@@ -274,6 +275,12 @@ const BattleIdRoute = BattleIdRouteImport.update({
   path: '/battle/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminWorldMembershipReviewRoute =
+  AdminWorldMembershipReviewRouteImport.update({
+    id: '/admin/world-membership-review',
+    path: '/admin/world-membership-review',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
@@ -515,6 +522,7 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/users': typeof AdminUsersRoute
+  '/admin/world-membership-review': typeof AdminWorldMembershipReviewRoute
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
@@ -589,6 +597,7 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/users': typeof AdminUsersRoute
+  '/admin/world-membership-review': typeof AdminWorldMembershipReviewRoute
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
@@ -666,6 +675,7 @@ export interface FileRoutesById {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/users': typeof AdminUsersRoute
+  '/admin/world-membership-review': typeof AdminWorldMembershipReviewRoute
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
@@ -744,6 +754,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offline'
     | '/admin/users'
+    | '/admin/world-membership-review'
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
@@ -818,6 +829,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offline'
     | '/admin/users'
+    | '/admin/world-membership-review'
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
@@ -894,6 +906,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offline'
     | '/admin/users'
+    | '/admin/world-membership-review'
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
@@ -971,6 +984,7 @@ export interface RootRouteChildren {
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOfflineRoute: typeof AdminOfflineRoute
   AdminUsersRoute: typeof AdminUsersRoute
+  AdminWorldMembershipReviewRoute: typeof AdminWorldMembershipReviewRoute
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
   CompareIdRoute: typeof CompareIdRoute
@@ -1253,6 +1267,13 @@ declare module '@tanstack/react-router' {
       path: '/battle/$id'
       fullPath: '/battle/$id'
       preLoaderRoute: typeof BattleIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/world-membership-review': {
+      id: '/admin/world-membership-review'
+      path: '/admin/world-membership-review'
+      fullPath: '/admin/world-membership-review'
+      preLoaderRoute: typeof AdminWorldMembershipReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
@@ -1600,6 +1621,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOfflineRoute: AdminOfflineRoute,
   AdminUsersRoute: AdminUsersRoute,
+  AdminWorldMembershipReviewRoute: AdminWorldMembershipReviewRoute,
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
   CompareIdRoute: CompareIdRoute,
@@ -1618,13 +1640,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
