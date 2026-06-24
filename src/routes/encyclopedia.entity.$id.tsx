@@ -165,27 +165,47 @@ function EntityPage() {
 
         <EncyclopediaArticleBody article={parseEncyclopediaArticle(entity.body, entity.metadata)} />
 
-        {SECTION_ORDER.map((s) => {
-          const list = groups[s];
-          if (list.length === 0) return null;
-          return (
-            <section key={s} className="mt-6">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-lg">{SECTION_GLYPHS[s]}</span>
-                <h2 className="font-display text-sm font-bold">{SECTION_LABELS[s]}</h2>
-                <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
-                  {list.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                {list.slice(0, 12).map((n) => <EncyclopediaCard key={n.id} entity={n} />)}
-              </div>
-            </section>
-          );
-        })}
+        <section className="mt-8">
+          <div className="mb-3 flex items-center gap-2">
+            <Network className="size-4 text-gold" />
+            <h2 className="font-display text-base font-bold">شبكة التاريخ المرتبط</h2>
+            {relatedQuery.data && relatedQuery.data.length > 0 && (
+              <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
+                {relatedQuery.data.length}
+              </span>
+            )}
+          </div>
+
+          {relatedQuery.isLoading ? (
+            <p className="text-center text-[12px] text-muted-foreground py-6">جارٍ بناء الشبكة…</p>
+          ) : groups.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gold/20 bg-black/20 p-6 text-center">
+              <p className="text-[12px] text-muted-foreground">لا توجد روابط تاريخية موثقة بعد</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {groups.map((g) => (
+                <div key={g.reason}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="rounded-full border border-gold/25 bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
+                      {g.label}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">{g.items.length}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {g.items.slice(0, 12).map((n) => (
+                      <EncyclopediaCard key={n.entity.id} entity={n.entity} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="h-10" />
       </div>
+
     </AppShell>
   );
 }
