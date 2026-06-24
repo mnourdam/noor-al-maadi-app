@@ -98,6 +98,9 @@ function AdminHub() {
             desc="بناء related_entities لكل محور من المرشحين الحقيقيين في Supabase." />
           <AdminCard to="/admin/cross-hub-links" icon={<Network className="h-5 w-5" />} title="روابط المحاور المتقاطعة"
             desc="ربط المحاور الكبرى ببعضها (نبوي ↔ راشدون ↔ أموي ↔ ...) داخل related_entities." />
+          <AdminCard to="/admin/qa-friends-streak" icon={<ShieldCheck className="h-5 w-5" />} title="QA — أصدقاء وسلسلة (مؤقت)"
+            desc="لوحة فحص يدوي للبحث عن الأصدقاء والسلسلة اليومية. تُحذف بعد التأكد." />
+
 
           <AdminCard to="/admin/investigations" icon={<Search className="h-5 w-5" />} title="إدارة التحقيقات"
             desc="تحقيقات تاريخية قابلة للعب من Supabase." />
