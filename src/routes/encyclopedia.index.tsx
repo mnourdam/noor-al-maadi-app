@@ -266,16 +266,24 @@ function EncyclopediaHub() {
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {eraCounts.map(([name, n]) => (
+                  {(showAllEras ? eraCounts : eraCounts.slice(0, 8)).map(([name, n]) => (
                     <button
                       key={name}
                       onClick={() => setEra(name)}
                       className="rounded-2xl border border-white/10 bg-surface px-3 py-2 text-right transition hover:border-gold/40"
                     >
-                      <span className="font-display block text-xs font-bold">{eraLabel(name)}</span>
+                      <span className="font-display block text-xs font-bold">{canonicalEraLabel(name)}</span>
                       <span className="text-[10px] text-gold/80">{n} عنصر</span>
                     </button>
                   ))}
+                  {eraCounts.length > 8 && (
+                    <button
+                      onClick={() => setShowAllEras((v) => !v)}
+                      className="rounded-2xl border border-gold/30 bg-black/30 px-3 py-2 text-[11px] text-gold/90 hover:border-gold/60"
+                    >
+                      {showAllEras ? "عرض أقل" : `عرض المزيد (${eraCounts.length - 8})`}
+                    </button>
+                  )}
                 </div>
               )}
             </section>
