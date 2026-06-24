@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Landmark, Search, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import { validateCampaign } from "@/lib/campaignStorage";
 import { inferWorldFromMetadata, runCampaignIntegrity, summarizeIntegrity, type CampaignIntegrityReport } from "@/lib/contentIntegrity";
 import type { Campaign } from "@/types/campaign";
