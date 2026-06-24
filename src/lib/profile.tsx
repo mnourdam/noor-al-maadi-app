@@ -98,6 +98,7 @@ const initial: ProfileState = {
   activityCooldowns: {},
   streakMilestonesClaimed: [],
   hintsPurchased: {},
+  achievementsEarned: {},
 };
 
 interface Ctx {
