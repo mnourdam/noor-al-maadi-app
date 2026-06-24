@@ -125,7 +125,7 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
   const slugs = WORLD_HUBS.map((h) => h.slug);
   const { data: rows } = await supabase
     .from("encyclopedia_entities")
-    .select("id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body")
+    .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
     .in("slug", slugs)
     .eq("enabled", true);
 
@@ -202,7 +202,7 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
   if (!hub) return null;
   const { data } = await supabase
     .from("encyclopedia_entities")
-    .select("id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body")
+    .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
     .eq("slug", slug)
     .eq("enabled", true)
     .maybeSingle();

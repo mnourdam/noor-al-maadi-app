@@ -270,7 +270,7 @@ export async function resolveRelatedEntities(
   const keys = Array.from(scores.keys());
   const { data: rows } = await supabase
     .from("encyclopedia_entities")
-    .select("id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body")
+    .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
     .eq("enabled", true)
     .in("slug", keys);
 
