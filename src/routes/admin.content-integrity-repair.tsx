@@ -290,6 +290,7 @@ function ContentIntegrityRepair() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ title: string; lines: string[]; onConfirm: () => Promise<void> } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ applied: number; remaining: number } | null>(null);
 
   async function run() {
     setLoading(true);
