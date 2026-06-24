@@ -531,6 +531,7 @@ function AtlasRepairPage() {
       {stubOpen && (
         <StubBulkModal
           plan={stubPlan}
+          skipped={stubSkips}
           running={stubRunning}
           progress={stubProgress}
           result={stubResult}
@@ -538,6 +539,7 @@ function AtlasRepairPage() {
           onRun={runStubBulk}
         />
       )}
+
     </div>
   );
 }
