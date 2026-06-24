@@ -81,8 +81,9 @@ export async function searchPlayers(q: string, excludeId?: string): Promise<Publ
   const safe = term.replace(/[,()]/g, " ");
   const pattern = `%${safe}%`;
   let query = db
-    .from("profiles")
+    .from(PUBLIC_VIEW)
     .select(PUBLIC_COLS)
+
     .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
     .limit(20);
   if (excludeId) query = query.neq("id", excludeId);
