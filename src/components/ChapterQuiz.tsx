@@ -22,7 +22,7 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
   const {
     profile, completeMission, awardBadge,
     unlockCharacter, findArtifact, unlockEra,
-    loseHeart, hasHearts,
+    loseHeartOnce, hasHearts,
   } = useProfile();
 
   const firstUnanswered = useMemo(
@@ -44,6 +44,8 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
 
   const submit = () => {
     if (picked == null) return;
+    // PR1: guard against double-tap / re-render races on submit.
+    if (revealed) return;
     if (!hasHearts()) return;
     setRevealed(true);
     if (picked === q.correctIndex) {
@@ -53,9 +55,12 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
       q.unlock?.artifacts?.forEach(findArtifact);
       q.unlock?.states?.forEach(unlockEra);
     } else {
-      loseHeart();
+      // Idempotent: same key won't decrement twice if React fires submit
+      // twice for the same question/attempt.
+      loseHeartOnce(`quiz:${campaignId}:${chapterId}:${quiz.id}:${q.id}`);
     }
   };
+
 
   const next = () => {
     setPicked(null);
