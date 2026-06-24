@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network } from "lucide-react";
+import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -94,6 +94,8 @@ function AdminHub() {
             desc="إضافة related_entities إلى محاور المسارات الفارغة بناءً على بيانات Supabase فقط." />
           <AdminCard to="/admin/historical-hubs-audit" icon={<Network className="h-5 w-5" />} title="تدقيق المحاور التاريخية"
             desc="قياس قوة الربط في الرسم البياني للمحاور الكبرى — للقراءة فقط." />
+          <AdminCard to="/admin/hub-builder" icon={<Hammer className="h-5 w-5" />} title="باني المحاور التاريخية"
+            desc="بناء related_entities لكل محور من المرشحين الحقيقيين في Supabase." />
 
           <AdminCard to="/admin/investigations" icon={<Search className="h-5 w-5" />} title="إدارة التحقيقات"
             desc="تحقيقات تاريخية قابلة للعب من Supabase." />
