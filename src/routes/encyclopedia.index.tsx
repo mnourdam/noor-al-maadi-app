@@ -264,7 +264,7 @@ function EncyclopediaHub() {
                       onClick={() => setEra(name)}
                       className="rounded-2xl border border-white/10 bg-surface px-3 py-2 text-right transition hover:border-gold/40"
                     >
-                      <span className="font-display block text-xs font-bold">{name}</span>
+                      <span className="font-display block text-xs font-bold">{eraLabel(name)}</span>
                       <span className="text-[10px] text-gold/80">{n} عنصر</span>
                     </button>
                   ))}
