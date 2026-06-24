@@ -4,7 +4,7 @@ import { Globe2, ChevronLeft, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { fetchWorldsIndex } from "@/lib/worlds";
 
-export const Route = createFileRoute("/worlds")({
+export const Route = createFileRoute("/worlds/")({
   head: () => ({
     meta: [
       { title: "عوالم إرث — استكشاف الحضارات والعصور" },

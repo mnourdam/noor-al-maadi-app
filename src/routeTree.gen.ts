@@ -30,6 +30,7 @@ import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorldsIndexRouteImport } from './routes/worlds.index'
 import { Route as EncyclopediaIndexRouteImport } from './routes/encyclopedia.index'
 import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -183,6 +184,11 @@ const AboutRoute = AboutRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorldsIndexRoute = WorldsIndexRouteImport.update({
+  id: '/worlds/',
+  path: '/worlds/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EncyclopediaIndexRoute = EncyclopediaIndexRouteImport.update({
@@ -503,6 +509,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
+  '/worlds/': typeof WorldsIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -573,6 +580,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
+  '/worlds': typeof WorldsIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -646,6 +654,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
+  '/worlds/': typeof WorldsIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -720,6 +729,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/campaigns/'
     | '/encyclopedia/'
+    | '/worlds/'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -790,6 +800,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/campaigns'
     | '/encyclopedia'
+    | '/worlds'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -862,6 +873,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/campaigns/'
     | '/encyclopedia/'
+    | '/worlds/'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -933,6 +945,7 @@ export interface RootRouteChildren {
   StoryIdRoute: typeof StoryIdRoute
   UUsernameRoute: typeof UUsernameRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  WorldsIndexRoute: typeof WorldsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1082,6 +1095,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worlds/': {
+      id: '/worlds/'
+      path: '/worlds'
+      fullPath: '/worlds/'
+      preLoaderRoute: typeof WorldsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/encyclopedia/': {
@@ -1530,6 +1550,7 @@ const rootRouteChildren: RootRouteChildren = {
   StoryIdRoute: StoryIdRoute,
   UUsernameRoute: UUsernameRoute,
   AdminIndexRoute: AdminIndexRoute,
+  WorldsIndexRoute: WorldsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
