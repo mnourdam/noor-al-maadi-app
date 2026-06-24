@@ -101,6 +101,9 @@ function EntityPage() {
   });
 
   const groups = groupRelatedByReason(relatedQuery.data ?? []);
+  const contextBlocks = entity
+    ? buildContextBlocks(entity, relatedQuery.data ?? [])
+    : [];
 
 
   if (query.isLoading) {
