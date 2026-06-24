@@ -7,9 +7,9 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
-  ERAS, ARTIFACTS, CHARACTERS,
-  levelFor, currentSeason, UPCOMING_CAMPAIGNS,
-} from "@/lib/data";
+  ERAS,
+  levelFor, currentSeason,
+} from "@/lib/app-constants";
 import { useProfile } from "@/lib/profile";
 import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
 import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS, unreadCount, formatBadgeCount } from "@/lib/notifications";
@@ -432,10 +432,10 @@ function Index() {
                   <span className="tracking-[0.25em]">قريبًا · حملة جديدة</span>
                 </div>
                 <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white">
-                  {UPCOMING_CAMPAIGNS[0]?.name ?? "حملة قادمة"}
+                  حملة قادمة
                 </h1>
                 <p className="mt-3 line-clamp-3 text-sm text-white/75">
-                  {UPCOMING_CAMPAIGNS[0]?.teaser ?? "لقد أتممت كل الحملات الحالية. ترقّب الحملات القادمة قريبًا."}
+                  لقد أتممت كل الحملات الحالية. ترقّب الحملات القادمة قريبًا.
                 </p>
                 <div className="mt-6">
                   <Link to="/campaigns" className="glass inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-xs text-gold">

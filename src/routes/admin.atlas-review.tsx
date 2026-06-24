@@ -18,7 +18,7 @@ import {
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
 import { geoToAps } from "@/lib/atlas/transform";
-import { ERAS } from "@/lib/data";
+import { ERAS } from "@/lib/app-constants";
 
 const RASTER = ATLAS_V1_PIXEL_SIZE;
 const ERA_LABEL: Record<string, string> = Object.fromEntries(ERAS.map((e) => [e.id, e.name]));

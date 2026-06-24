@@ -8,7 +8,7 @@ import {
   advanceReferralStage, buildReferralLink, fetchPublicProfileById, listMyReferrals,
   REFERRAL_REWARDS, type PublicProfile, type ReferralRow,
 } from "@/lib/social";
-import { levelFor } from "@/lib/data";
+import { levelFor } from "@/lib/app-constants";
 
 export const Route = createFileRoute("/referrals")({
   head: () => ({ meta: [{ title: "حملة الإرث" }] }),

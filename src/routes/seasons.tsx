@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Sparkles, Lock, Trophy, Calendar as CalendarIcon } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { SEASONS, currentSeason, seasonStatus, type Season } from "@/lib/data";
+import { SEASONS, currentSeason, seasonStatus, type Season } from "@/lib/app-constants";
 import { useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/seasons")({

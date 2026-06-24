@@ -15,11 +15,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useProfile } from "./profile";
-import { ARTIFACTS, CHARACTERS, CAMPAIGNS } from "./data";
-// (registry localStorage is no longer an unlock source; see registryUnlockMigration.ts)
 import { listRegistry } from "./contentRegistryStorage";
 import { displayName } from "./display-names";
-import { getPackEntity } from "./packs/registry";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Items whose Arabic title cannot be resolved are excluded from
@@ -183,9 +180,8 @@ export function useRealCollectionStats() {
       // This filters out legacy/demo rows with malformed slugs (e.g.
       // `figure_salah_al_din`) that would lead to /encyclopedia/entity/<slug>
       // not-found pages.
-      const inPack = !!getPackEntity(r.slug);
       const inEnc = validSlugs ? validSlugs.has(slugLower) : true; // be lenient until loaded
-      if (!inPack && !inEnc) { logMissingTitle("supabase-route", r.slug); continue; }
+      if (!inEnc) { logMissingTitle("supabase-route", r.slug); continue; }
 
       const regItem = registryById.get(slugLower);
       const dn = displayName(r.slug);
@@ -236,14 +232,7 @@ export function useRealCollectionStats() {
     profile.storiesRead.length +
     profile.timelinesCompleted.length +
     profile.investigationsCompleted.length;
-  const battlesCompleted = useMemo(() => {
-    const ids = new Set(profile.missionsCompleted);
-    return CAMPAIGNS.flatMap((c) => c.missions).filter(
-      (m) =>
-        ids.has(m.id) &&
-        (m.title.includes("معركة") || m.title.includes("غزوة") || m.title.includes("فتح")),
-    ).length;
-  }, [profile.missionsCompleted]);
+  const battlesCompleted = profile.missionsCompleted.length;
 
   return {
     totalCollection,
