@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileState } from "./profile";
-import { levelFor, CHARACTERS, ARTIFACTS } from "./data";
+import { levelFor } from "./app-constants";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: any = supabase;
@@ -64,9 +64,8 @@ export async function searchPlayers(q: string): Promise<PublicProfile[]> {
 // =========== Derive public stats from local profile ===========
 export function derivePublicStats(p: ProfileState) {
   const lvl = levelFor(p.points);
-  const totalDisc = (CHARACTERS.length || 1) + (ARTIFACTS.length || 1);
   const have = p.charactersUnlocked.length + p.artifactsFound.length;
-  const discovery = Math.min(100, Math.round((have / totalDisc) * 100));
+  const discovery = Math.min(100, have);
   return {
     bio: p.bio ?? "",
     title: p.titlesEarned?.[p.titlesEarned.length - 1] ?? lvl.title,
