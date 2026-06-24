@@ -5,8 +5,9 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
-import { normalizeEntitySlug } from "@/lib/encyclopedia-source";
+import { normalizeEntitySlug, ENCYCLOPEDIA_ENTITY_COLUMNS } from "@/lib/encyclopedia-source";
 import { resolveRelatedEntities, type RelatedNode } from "@/lib/relationship-graph";
+import { sortEntitiesChronological } from "@/lib/entityChronology";
 
 export type WorldHub = {
   slug: string;
@@ -124,12 +125,12 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
   const slugs = WORLD_HUBS.map((h) => h.slug);
   const { data: rows } = await supabase
     .from("encyclopedia_entities")
-    .select("id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body")
+    .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
     .in("slug", slugs)
     .eq("enabled", true);
 
   const bySlug = new Map<string, SupabaseEncyclopediaEntity>();
-  for (const r of (rows ?? []) as SupabaseEncyclopediaEntity[]) {
+  for (const r of (rows ?? []) as unknown as SupabaseEncyclopediaEntity[]) {
     bySlug.set(r.slug, r);
   }
 
@@ -201,11 +202,11 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
   if (!hub) return null;
   const { data } = await supabase
     .from("encyclopedia_entities")
-    .select("id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body")
+    .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
     .eq("slug", slug)
     .eq("enabled", true)
     .maybeSingle();
-  const entity = (data ?? null) as SupabaseEncyclopediaEntity | null;
+  const entity = (data ?? null) as unknown as SupabaseEncyclopediaEntity | null;
   if (!entity) return null;
 
   const related = await resolveRelatedEntities(entity);
@@ -276,12 +277,37 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
   // Fold scholars into the figures section so player UI stays tidy.
   sections.figure = [...sections.figure, ...scholars];
 
+  // Sprint 2 — Historical Chronology Engine.
+  // Every section is ordered deterministically by timeline_order →
+  // timeline_year → timeline_start_year → metadata year. Never by
+  // relationship score, created_at, or insertion order.
+  for (const k of SECTION_KEYS) {
+    sections[k] = sortEntitiesChronological(sections[k]);
+  }
+
   if (ambiguous.length > 0 && typeof console !== "undefined") {
     // Admin-review signal: never silently include ambiguous entities, but
     // make them discoverable for triage.
     console.warn(
       `[worlds] ${ambiguous.length} ambiguous related entities suppressed for world "${slug}":`,
       ambiguous.slice(0, 25).map((n) => `${n.entity.entity_type}:${n.entity.slug}`),
+    );
+  }
+
+  // Admin-review signal: count entities missing any chronology signal so
+  // the admin review surface can flag them for backfill.
+  const missingChronology = SECTION_KEYS.reduce(
+    (sum, k) => sum + sections[k].filter((n) => !Number.isFinite(
+      // entitySortKey returns +Infinity when nothing is known
+      (n.entity.timeline_order ?? 0) ||
+      (n.entity.timeline_year ?? 0) ||
+      (n.entity.timeline_start_year ?? 0),
+    )).length,
+    0,
+  );
+  if (missingChronology > 0 && typeof console !== "undefined") {
+    console.warn(
+      `[worlds] ${missingChronology} related entities in "${slug}" have no chronology — add timeline_order for deterministic placement.`,
     );
   }
 

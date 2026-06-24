@@ -18,7 +18,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
-import { normalizeEntitySlug } from "@/lib/encyclopedia-source";
+import { normalizeEntitySlug, ENCYCLOPEDIA_ENTITY_COLUMNS } from "@/lib/encyclopedia-source";
 
 export type RelationReason =
   | "explicit"
@@ -270,11 +270,11 @@ export async function resolveRelatedEntities(
   const keys = Array.from(scores.keys());
   const { data: rows } = await supabase
     .from("encyclopedia_entities")
-    .select("id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body")
+    .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
     .eq("enabled", true)
     .in("slug", keys);
 
-  const nodes: RelatedNode[] = ((rows ?? []) as SupabaseEncyclopediaEntity[]).map((r) => {
+  const nodes: RelatedNode[] = ((rows ?? []) as unknown as SupabaseEncyclopediaEntity[]).map((r) => {
     const ref = scores.get(r.slug.toLowerCase())!;
     return { entity: r, score: ref.score, reason: ref.reason };
   });

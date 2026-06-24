@@ -27,7 +27,17 @@ export type SupabaseEncyclopediaEntity = {
   enabled: boolean;
   created_at: string;
   updated_at: string;
+  // Chronology fields (Sprint 2 — Historical Chronology Engine). Optional
+  // because legacy entities and older selects may omit them.
+  timeline_order?: number | null;
+  timeline_year?: number | null;
+  timeline_start_year?: number | null;
 };
+
+/** Columns required to render + chronologically sort an entity. */
+export const ENCYCLOPEDIA_ENTITY_COLUMNS =
+  "id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body," +
+  "timeline_order,timeline_year,timeline_start_year";
 
 export type EncyclopediaSourceTag = "supabase" | "legacy" | "fallback";
 
