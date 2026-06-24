@@ -8,11 +8,13 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
   fetchWorldDetail,
+  fetchWorldsIndex,
   WORLD_HUBS,
   findHub,
   type WorldSectionKey,
 } from "@/lib/worlds";
 import type { RelatedNode } from "@/lib/relationship-graph";
+
 
 export const Route = createFileRoute("/worlds/$slug")({
   head: ({ params }) => ({
