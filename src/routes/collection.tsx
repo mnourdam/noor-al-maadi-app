@@ -58,6 +58,7 @@ import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
 import { listCampaigns } from "@/lib/campaignStorage";
 
 import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
+import { classifyArtifact, fetchCampaignArtifactRefSet } from "@/lib/museumVisibility";
 
 export const Route = createFileRoute("/collection")({
   head: () => ({ meta: [{ title: "المتحف · أرشيفك التاريخي" }] }),
@@ -245,6 +246,24 @@ function CollectionPage() {
     city: supCities, battle: supBattles, event: supEvents,
   };
 
+  // ── Museum runtime visibility for artifacts ─────────────────
+  // Hide legacy/demo artifacts that are not admin-imported,
+  // not campaign-referenced, and not museum_enabled=true.
+  // No deletes; runtime filtering only.
+  const [campaignArtifactRefs, setCampaignArtifactRefs] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    fetchCampaignArtifactRefSet()
+      .then(s => { if (!cancelled) setCampaignArtifactRefs(s); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  const isArtifactVisible = (slug: string, metadata: any, legacyId?: string | null) => {
+    const hasRef = campaignArtifactRefs.has(slug.toLowerCase()) ||
+      (legacyId ? campaignArtifactRefs.has(String(legacyId).toLowerCase()) : false);
+    return classifyArtifact(metadata, hasRef).visible;
+  };
+
   // ── Imported registry items: museum is Supabase-only now. ───
   // Keep the shape so downstream consumers (rendering, counts)
   // continue to work without legacy registry fallback.
@@ -327,7 +346,12 @@ function CollectionPage() {
   const sectionStats = useMemo(() => {
     const out: Record<SectionId, { done: number; total: number }> = {} as any;
     for (const s of SECTIONS) {
-      const entities = supByType[s.type].data ?? [];
+      let entities = supByType[s.type].data ?? [];
+      if (s.type === "artifact") {
+        entities = entities.filter((e: any) =>
+          isArtifactVisible(e.slug, e.metadata, e.metadata?.legacy_id),
+        );
+      }
       const entityDone = entities.filter(e => isEntityUnlocked(s.type, e.slug, e.metadata)).length;
       const imported   = importedByType[s.id] ?? [];
       const importedDone = imported.filter(i => i.unlocked).length;
@@ -338,7 +362,7 @@ function CollectionPage() {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, importedByType, userCollection, importedUnlockSet, profile]);
+  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, importedByType, userCollection, importedUnlockSet, profile, campaignArtifactRefs]);
 
   const totalDone = Object.values(sectionStats).reduce((s, c) => s + c.done, 0);
   const totalAll  = Object.values(sectionStats).reduce((s, c) => s + c.total, 0);
@@ -391,6 +415,11 @@ function CollectionPage() {
   const currentEntities = useMemo(() => {
     const items = rawCurrentEntities
       .filter((e: any) => !!e.title && hasArabic(e.title))
+      .filter((e: any) =>
+        current.type !== "artifact"
+          ? true
+          : isArtifactVisible(e.slug, e.metadata, e.metadata?.legacy_id),
+      )
       .map((e: any) => {
         const open = isEntityUnlocked(current.type, e.slug, e.metadata);
         const ts = open ? unlockedAtFor(current.type, e.slug, e.metadata) : 0;
@@ -405,7 +434,7 @@ function CollectionPage() {
     });
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type]);
+  }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type, campaignArtifactRefs]);
 
   const currentImported = useMemo(() => {
     const items = rawCurrentImported.filter(i => !!i.name && hasArabic(i.name));
