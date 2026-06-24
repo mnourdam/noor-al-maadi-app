@@ -59,15 +59,22 @@ function InvestigationsIndex() {
         )}
 
         <div className="space-y-3">
-          {(rows ?? []).map((inv) => (
-            <SupabaseRow key={inv.id} inv={inv} done={profile.investigationsCompleted.includes(inv.slug)} />
-          ))}
-
-          {legacyVisible.map((inv) => {
+          {shuffledItems.map((item) => {
+            if (item.kind === "supabase") {
+              const inv = item.row;
+              return (
+                <SupabaseRow
+                  key={`s:${inv.id}`}
+                  inv={inv}
+                  done={profile.investigationsCompleted.includes(inv.slug)}
+                />
+              );
+            }
+            const inv = item.row;
             const done = profile.investigationsCompleted.includes(inv.id);
             return (
               <Link
-                key={inv.id}
+                key={`l:${inv.id}`}
                 to="/investigation/$id"
                 params={{ id: inv.id }}
                 className={`flex items-center gap-3 rounded-2xl border p-4 ${done ? "border-gold/40 bg-gold/5" : "border-white/10 bg-surface"}`}
