@@ -101,9 +101,16 @@ function EncyclopediaHub() {
     for (const e of all) {
       const er = metaEra(e);
       if (!er) continue;
-      m.set(er, (m.get(er) ?? 0) + 1);
+      const canon = toCanonicalEra(er) ?? er;
+      m.set(canon, (m.get(canon) ?? 0) + 1);
     }
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+    // chronological order per canonical taxonomy; unknown sinks to the end
+    return Array.from(m.entries()).sort((a, b) => {
+      const ai = eraSortIndex(a[0]);
+      const bi = eraSortIndex(b[0]);
+      if (ai !== bi) return ai - bi;
+      return b[1] - a[1];
+    });
   }, [all]);
 
   const states = useMemo(
