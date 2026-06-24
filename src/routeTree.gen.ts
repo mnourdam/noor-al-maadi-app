@@ -57,6 +57,7 @@ import { Route as AdminExplorationPathRepairRouteImport } from './routes/admin.e
 import { Route as AdminEraNormalizationRouteImport } from './routes/admin.era-normalization'
 import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
+import { Route as AdminCrossHubLinksRouteImport } from './routes/admin.cross-hub-links'
 import { Route as AdminContentInventoryRouteImport } from './routes/admin.content-inventory'
 import { Route as AdminContentIntegrityRepairRouteImport } from './routes/admin.content-integrity-repair'
 import { Route as AdminContentIntegrityRouteImport } from './routes/admin.content-integrity'
@@ -321,6 +322,11 @@ const AdminEncyclopediaRoute = AdminEncyclopediaRouteImport.update({
   path: '/admin/encyclopedia',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCrossHubLinksRoute = AdminCrossHubLinksRouteImport.update({
+  id: '/admin/cross-hub-links',
+  path: '/admin/cross-hub-links',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminContentInventoryRoute = AdminContentInventoryRouteImport.update({
   id: '/admin/content-inventory',
   path: '/admin/content-inventory',
@@ -469,6 +475,7 @@ export interface FileRoutesByFullPath {
   '/admin/content-integrity': typeof AdminContentIntegrityRoute
   '/admin/content-integrity-repair': typeof AdminContentIntegrityRepairRoute
   '/admin/content-inventory': typeof AdminContentInventoryRoute
+  '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
@@ -538,6 +545,7 @@ export interface FileRoutesByTo {
   '/admin/content-integrity': typeof AdminContentIntegrityRoute
   '/admin/content-integrity-repair': typeof AdminContentIntegrityRepairRoute
   '/admin/content-inventory': typeof AdminContentInventoryRoute
+  '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
@@ -610,6 +618,7 @@ export interface FileRoutesById {
   '/admin/content-integrity': typeof AdminContentIntegrityRoute
   '/admin/content-integrity-repair': typeof AdminContentIntegrityRepairRoute
   '/admin/content-inventory': typeof AdminContentInventoryRoute
+  '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
@@ -683,6 +692,7 @@ export interface FileRouteTypes {
     | '/admin/content-integrity'
     | '/admin/content-integrity-repair'
     | '/admin/content-inventory'
+    | '/admin/cross-hub-links'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/era-normalization'
@@ -752,6 +762,7 @@ export interface FileRouteTypes {
     | '/admin/content-integrity'
     | '/admin/content-integrity-repair'
     | '/admin/content-inventory'
+    | '/admin/cross-hub-links'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/era-normalization'
@@ -823,6 +834,7 @@ export interface FileRouteTypes {
     | '/admin/content-integrity'
     | '/admin/content-integrity-repair'
     | '/admin/content-inventory'
+    | '/admin/cross-hub-links'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/era-normalization'
@@ -895,6 +907,7 @@ export interface RootRouteChildren {
   AdminContentIntegrityRoute: typeof AdminContentIntegrityRoute
   AdminContentIntegrityRepairRoute: typeof AdminContentIntegrityRepairRoute
   AdminContentInventoryRoute: typeof AdminContentInventoryRoute
+  AdminCrossHubLinksRoute: typeof AdminCrossHubLinksRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
   AdminEncyclopediaAuditRoute: typeof AdminEncyclopediaAuditRoute
   AdminEraNormalizationRoute: typeof AdminEraNormalizationRoute
@@ -1260,6 +1273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEncyclopediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/cross-hub-links': {
+      id: '/admin/cross-hub-links'
+      path: '/admin/cross-hub-links'
+      fullPath: '/admin/cross-hub-links'
+      preLoaderRoute: typeof AdminCrossHubLinksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/content-inventory': {
       id: '/admin/content-inventory'
       path: '/admin/content-inventory'
@@ -1484,6 +1504,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminContentIntegrityRoute: AdminContentIntegrityRoute,
   AdminContentIntegrityRepairRoute: AdminContentIntegrityRepairRoute,
   AdminContentInventoryRoute: AdminContentInventoryRoute,
+  AdminCrossHubLinksRoute: AdminCrossHubLinksRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
   AdminEncyclopediaAuditRoute: AdminEncyclopediaAuditRoute,
   AdminEraNormalizationRoute: AdminEraNormalizationRoute,
@@ -1513,13 +1534,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
