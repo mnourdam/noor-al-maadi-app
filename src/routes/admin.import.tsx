@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, Bell, CalendarDays, FileJson, Sword, Upload, Land
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { validateCampaign } from "@/lib/campaignStorage";
+import { inferWorldFromMetadata, runCampaignIntegrity, summarizeIntegrity, type CampaignIntegrityReport } from "@/lib/contentIntegrity";
 import type { Campaign } from "@/types/campaign";
 
 
