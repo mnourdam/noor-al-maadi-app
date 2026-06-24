@@ -1,29 +1,59 @@
 import { useEffect, useRef, useState } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { Share2, Download, MessageCircle, Send } from "lucide-react";
 import type { ProfileState } from "@/lib/profile";
 import { derivePublicStats } from "@/lib/social";
-import { getAvatar } from "@/lib/avatars";
+import { getAvatar, RARITY_LABEL, type AvatarRarity } from "@/lib/avatars";
+import { AvatarArt } from "./AvatarArt";
 
 /**
  * بطاقة الهوية التاريخية — Shareable Card
- * Renders a portrait PNG via canvas (no extra deps) and offers native + social share.
+ *
+ * One of Irth's primary marketing surfaces. Renders a portrait PNG via
+ * canvas (no extra deps), embeds the official Irth logo, the player's
+ * vector emblem, and a stats block. The layout reserves space for future
+ * badges, medals, and seasonal decorations so we don't have to redesign it.
+ *
+ * No raw URLs are ever drawn into the image — sharing happens through the
+ * Web Share API and platform buttons below the card.
  */
-export function ShareCard({ profile, username, referralCode }: {
+export function ShareCard({ profile, username, referralCode, decorations = [] }: {
   profile: ProfileState;
   username: string;
   referralCode?: string | null;
+  /** Future expansion: badge / medal / seasonal-decoration ids. */
+  decorations?: string[];
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const stats = derivePublicStats(profile);
+  const avatar = getAvatar(profile.avatarId);
 
   useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
-    drawCard(c, { username, ...stats, avatarGlyph: getAvatar(profile.avatarId).glyph, referralCode: referralCode ?? "" });
-    setDataUrl(c.toDataURL("image/png"));
+    let cancelled = false;
+    (async () => {
+      const [logoImg, emblemImg] = await Promise.all([
+        loadImage("/irth-icon.png"),
+        loadImage(svgDataUrl(renderToStaticMarkup(<AvatarArt id={avatar.id} />))),
+      ]);
+      if (cancelled) return;
+      drawCard(c, {
+        username,
+        ...stats,
+        emblemImg,
+        logoImg,
+        rarity: avatar.rarity,
+        avatarName: avatar.name,
+        referralCode: referralCode ?? "",
+        decorations,
+      });
+      setDataUrl(c.toDataURL("image/png"));
+    })().catch(() => { /* drawing failed — leave empty canvas */ });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username, profile.points, profile.streak, profile.dinars, profile.campaignsCompleted.length, profile.artifactsFound.length, profile.avatarId, referralCode]);
+  }, [username, profile.points, profile.streak, profile.dinars, profile.campaignsCompleted.length, profile.artifactsFound.length, profile.avatarId, referralCode, decorations.join(",")]);
 
   const shareText = `بطاقتي التاريخية في إرث — المستوى ${stats.level} • ${stats.xp} XP\nانضم إلى رحلتك التاريخية في إرث`;
   const shareUrl = typeof window !== "undefined"
@@ -88,17 +118,33 @@ export function ShareCard({ profile, username, referralCode }: {
   );
 }
 
-function drawCard(
-  c: HTMLCanvasElement,
-  s: {
-    username: string; title: string | null; level: number; xp: number;
-    campaigns_completed: number; artifacts_collected: number; discovery_pct: number;
-    streak: number; favorite_state_id: string | null; referralCode: string; avatarGlyph: string;
-  },
-) {
+// ───────────────────────────────────────────────────────────────────────
+// Canvas drawing
+// ───────────────────────────────────────────────────────────────────────
+
+/** Rarity → outer-frame accent colour, mirroring the in-app ring system. */
+const RARITY_ACCENT: Record<AvatarRarity, string> = {
+  common:    "#d4af37",
+  uncommon:  "#34d399",
+  rare:      "#38bdf8",
+  epic:      "#a78bfa",
+  legendary: "#f5d062",
+};
+
+interface CardData {
+  username: string; title: string | null; level: number; xp: number;
+  campaigns_completed: number; artifacts_collected: number; discovery_pct: number;
+  streak: number; favorite_state_id: string | null; referralCode: string;
+  emblemImg: HTMLImageElement; logoImg: HTMLImageElement;
+  rarity: AvatarRarity; avatarName: string;
+  decorations: string[];
+}
+
+function drawCard(c: HTMLCanvasElement, s: CardData) {
   const ctx = c.getContext("2d");
   if (!ctx) return;
   const W = c.width, H = c.height;
+  const accent = RARITY_ACCENT[s.rarity];
 
   // ===== Background =====
   const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -107,75 +153,118 @@ function drawCard(
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Outer gold frame
-  ctx.strokeStyle = "#d4af37";
+  // Subtle radial vignette behind the emblem.
+  const vg = ctx.createRadialGradient(W / 2, 380, 10, W / 2, 380, 380);
+  vg.addColorStop(0, "rgba(212,175,55,0.18)");
+  vg.addColorStop(1, "rgba(212,175,55,0)");
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Outer rarity-tinted frame
+  ctx.strokeStyle = accent;
   ctx.lineWidth = 4;
   roundRect(ctx, 24, 24, W - 48, H - 48, 36);
   ctx.stroke();
 
-  // Inner thin frame
+  // Inner thin gold frame
   ctx.strokeStyle = "rgba(212,175,55,0.35)";
   ctx.lineWidth = 1;
   roundRect(ctx, 40, 40, W - 80, H - 80, 28);
   ctx.stroke();
 
   ctx.direction = "rtl";
+  ctx.textBaseline = "alphabetic";
 
-  // ===== Header / brand =====
+  // ===== Header: logo (upper-left) + small caption =====
+  const logoSize = 72;
+  const logoX = 64;
+  const logoY = 64;
+  if (s.logoImg.complete && s.logoImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 4, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(212,175,55,0.6)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Soft drop shadow under the mark.
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = 18;
+    ctx.drawImage(s.logoImg, logoX, logoY, logoSize, logoSize);
+    ctx.restore();
+  }
+
   ctx.textAlign = "left";
-  ctx.fillStyle = "#d4af37";
-  ctx.font = "bold 34px system-ui";
-  ctx.fillText("إرث", 70, 100);
   ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.font = "18px system-ui";
-  ctx.fillText("Irth · بطاقة الهوية التاريخية", 70, 128);
-
-  ctx.textAlign = "right";
-  ctx.fillStyle = "rgba(212,175,55,0.85)";
   ctx.font = "16px system-ui";
-  ctx.fillText("irth-app.lovable.app", W - 70, 110);
+  ctx.fillText("بطاقة الهوية التاريخية", logoX + logoSize + 16, logoY + 34);
+  ctx.fillStyle = "rgba(212,175,55,0.85)";
+  ctx.font = "bold 18px system-ui";
+  ctx.fillText("Irth · إرث", logoX + logoSize + 16, logoY + 58);
 
-  // ===== Avatar disc =====
+  // ===== Avatar disc (centre) =====
   const cx = W / 2;
-  const ay = 280;
-  // gold glow
-  const glow = ctx.createRadialGradient(cx, ay, 10, cx, ay, 170);
-  glow.addColorStop(0, "rgba(212,175,55,0.45)");
-  glow.addColorStop(1, "rgba(212,175,55,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, ay - 170, W, 340);
+  const ay = 340;
+  const ringR = 130;
 
+  // Rarity halo
+  const halo = ctx.createRadialGradient(cx, ay, 20, cx, ay, ringR + 60);
+  halo.addColorStop(0, hexAlpha(accent, 0.35));
+  halo.addColorStop(1, hexAlpha(accent, 0));
+  ctx.fillStyle = halo;
+  ctx.fillRect(cx - ringR - 80, ay - ringR - 80, (ringR + 80) * 2, (ringR + 80) * 2);
+
+  // Disc
   ctx.beginPath();
-  ctx.arc(cx, ay, 105, 0, Math.PI * 2);
+  ctx.arc(cx, ay, 108, 0, Math.PI * 2);
   const ag = ctx.createLinearGradient(cx - 100, ay - 100, cx + 100, ay + 100);
   ag.addColorStop(0, "#1a223d");
   ag.addColorStop(1, "#0b1228");
   ctx.fillStyle = ag;
   ctx.fill();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = "#d4af37";
+
+  // Outer rarity ring + inner gold ring
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = accent;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, ay, 98, 0, Math.PI * 2);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = "rgba(212,175,55,0.5)";
   ctx.stroke();
 
+  // Emblem SVG inside disc
+  const emSize = 160;
+  ctx.drawImage(s.emblemImg, cx - emSize / 2, ay - emSize / 2, emSize, emSize);
+
+  // Rarity ribbon below disc
+  const rarityText = RARITY_LABEL[s.rarity];
+  ctx.font = "600 14px system-ui";
+  const rw = ctx.measureText(rarityText).width + 28;
+  const rx = cx - rw / 2;
+  const ry = ay + 118;
+  roundRect(ctx, rx, ry, rw, 24, 12);
+  ctx.fillStyle = hexAlpha(accent, 0.18);
+  ctx.fill();
+  ctx.strokeStyle = hexAlpha(accent, 0.7);
+  ctx.lineWidth = 1;
+  ctx.stroke();
   ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = "110px system-ui, 'Segoe UI Emoji', 'Apple Color Emoji'";
-  ctx.fillStyle = "#d4af37";
-  ctx.fillText(s.avatarGlyph, cx, ay + 8);
-  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = accent;
+  ctx.fillText(rarityText, cx, ry + 17);
 
   // ===== Username + title =====
   ctx.fillStyle = "#fff";
-  ctx.font = "bold 48px system-ui";
-  ctx.fillText(truncate(ctx, s.username, W - 160), cx, ay + 175);
+  ctx.font = "bold 46px system-ui";
+  ctx.fillText(truncate(ctx, s.username, W - 160), cx, ay + 200);
 
   ctx.fillStyle = "#d4af37";
   ctx.font = "22px system-ui";
-  ctx.fillText(truncate(ctx, s.title ?? "مستكشف التاريخ", W - 200), cx, ay + 215);
+  ctx.fillText(truncate(ctx, s.title ?? "مستكشف التاريخ", W - 200), cx, ay + 236);
 
   // ===== Level pill =====
-  const pillW = 220, pillH = 56;
+  const pillW = 220, pillH = 52;
   const px = cx - pillW / 2;
-  const py = ay + 250;
+  const py = ay + 264;
   roundRect(ctx, px, py, pillW, pillH, pillH / 2);
   const lg = ctx.createLinearGradient(px, py, px + pillW, py);
   lg.addColorStop(0, "#d4af37");
@@ -183,13 +272,13 @@ function drawCard(
   ctx.fillStyle = lg;
   ctx.fill();
   ctx.fillStyle = "#0b1228";
-  ctx.font = "bold 26px system-ui";
-  ctx.fillText(`المستوى ${s.level}`, cx, py + 38);
+  ctx.font = "bold 24px system-ui";
+  ctx.fillText(`المستوى ${s.level}`, cx, py + 35);
 
-  // ===== Stats grid (2 columns × 4 rows) =====
-  const stats: [string, string][] = [
+  // ===== Stats grid (2 × 3) =====
+  const statsRows: [string, string][] = [
     ["نقاط الخبرة", s.xp.toLocaleString("en-US")],
-    ["السلسلة اليومية", `🔥 ${s.streak.toLocaleString("en-US")}`],
+    ["السلسلة اليومية", `${s.streak.toLocaleString("en-US")} يوم`],
     ["الحملات المكتملة", s.campaigns_completed.toLocaleString("en-US")],
     ["الآثار المجموعة", s.artifacts_collected.toLocaleString("en-US")],
     ["اكتشاف الموسوعة", `${s.discovery_pct}%`],
@@ -198,14 +287,14 @@ function drawCard(
   const gx = 70;
   const gw = W - 140;
   const colW = (gw - 16) / 2;
-  const rowH = 90;
+  const rowH = 82;
   const gy = ay + 340;
-  for (let i = 0; i < stats.length; i++) {
+  for (let i = 0; i < statsRows.length; i++) {
     const col = i % 2;
     const row = Math.floor(i / 2);
-    const rx = gx + col * (colW + 16);
-    const ry = gy + row * (rowH + 12);
-    roundRect(ctx, rx, ry, colW, rowH, 18);
+    const rxs = gx + col * (colW + 16);
+    const rys = gy + row * (rowH + 12);
+    roundRect(ctx, rxs, rys, colW, rowH, 18);
     ctx.fillStyle = "rgba(255,255,255,0.04)";
     ctx.fill();
     ctx.strokeStyle = "rgba(212,175,55,0.25)";
@@ -214,24 +303,60 @@ function drawCard(
 
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = "18px system-ui";
-    ctx.fillText(stats[i][0], rx + colW / 2, ry + 32);
+    ctx.font = "16px system-ui";
+    ctx.fillText(statsRows[i][0], rxs + colW / 2, rys + 30);
     ctx.fillStyle = "#fff";
-    ctx.font = "bold 30px system-ui";
-    ctx.fillText(truncate(ctx, stats[i][1], colW - 24), rx + colW / 2, ry + 68);
+    ctx.font = "bold 28px system-ui";
+    ctx.fillText(truncate(ctx, statsRows[i][1], colW - 24), rxs + colW / 2, rys + 62);
+  }
+
+  // ===== Decoration slots (future badges / medals / seasonal) =====
+  // Always rendered so the card layout stays stable as items get added.
+  const slotCount = 5;
+  const slotSize = 44;
+  const slotGap = 14;
+  const slotsW = slotCount * slotSize + (slotCount - 1) * slotGap;
+  const sxStart = cx - slotsW / 2;
+  const syRow = H - 168;
+  for (let i = 0; i < slotCount; i++) {
+    const xs = sxStart + i * (slotSize + slotGap);
+    ctx.beginPath();
+    ctx.arc(xs + slotSize / 2, syRow + slotSize / 2, slotSize / 2, 0, Math.PI * 2);
+    const filled = i < s.decorations.length;
+    ctx.fillStyle = filled ? hexAlpha(accent, 0.15) : "rgba(255,255,255,0.025)";
+    ctx.fill();
+    ctx.strokeStyle = filled ? hexAlpha(accent, 0.7) : "rgba(212,175,55,0.18)";
+    ctx.lineWidth = filled ? 1.5 : 1;
+    ctx.setLineDash(filled ? [] : [2, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
   // ===== Footer =====
   ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.font = "bold 22px system-ui";
-  ctx.fillText("انضم إلى رحلتك التاريخية في إرث", cx, H - 110);
+  ctx.fillText("انضم إلى رحلتك التاريخية في إرث", cx, H - 96);
   if (s.referralCode) {
+    // Referral stamp — code only, no URL.
+    const stampW = 260, stampH = 44;
+    const stx = cx - stampW / 2;
+    const sty = H - 80;
+    roundRect(ctx, stx, sty, stampW, stampH, 10);
+    ctx.fillStyle = "rgba(212,175,55,0.1)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(212,175,55,0.5)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
     ctx.fillStyle = "#d4af37";
-    ctx.font = "bold 26px system-ui";
-    ctx.fillText(`رمز الدعوة · ${s.referralCode}`, cx, H - 72);
+    ctx.font = "bold 20px system-ui";
+    ctx.fillText(`رمز الدعوة · ${s.referralCode}`, cx, sty + 29);
   }
 }
+
+// ───────────────────────────────────────────────────────────────────────
+// Utilities
+// ───────────────────────────────────────────────────────────────────────
 
 function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
   if (ctx.measureText(text).width <= maxWidth) return text;
@@ -248,4 +373,30 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function svgDataUrl(svg: string): string {
+  // unicode-safe base64 encoding
+  const wrapped = svg.includes("xmlns")
+    ? svg
+    : svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+  return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(wrapped)));
+}
+
+function hexAlpha(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
