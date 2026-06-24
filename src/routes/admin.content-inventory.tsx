@@ -321,6 +321,7 @@ function ContentInventory() {
   const [inv, setInv] = useState<Inventory | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string>("");
+  const [copied, setCopied] = useState(false);
 
   async function load() {
     setLoading(true);
