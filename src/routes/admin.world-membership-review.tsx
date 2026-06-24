@@ -138,8 +138,9 @@ function ReviewPage() {
     <AdminLayout
       title="مراجعة انتماء العوالم"
       subtitle="كيانات بلا تصنيف تاريخي — لا يتم النشر التلقائي"
-      back={{ to: "/admin", label: "لوحة الإدارة" }}
+      breadcrumbs={[{ label: "مراجعة العوالم" }]}
     >
+
       <div className="space-y-4">
         <div className="rounded-2xl border border-gold/20 bg-black/30 p-3 text-[12px] text-muted-foreground">
           هذه القائمة تعرض الكيانات التي لا تحمل أي إشارة موثقة إلى عصر أو دولة
