@@ -719,6 +719,46 @@ function EmptyState({ icon, title, body }: { icon: React.ReactNode; title: strin
   );
 }
 
+// ----- Historical Worlds homepage section -----
+function WorldsHomepageSection() {
+  const { data } = useQuery({
+    queryKey: ["worlds-index"],
+    staleTime: 60_000,
+    queryFn: fetchWorldsIndex,
+  });
+  const worlds = (data ?? []).slice(0, 4);
+  if (worlds.length === 0) return null;
+  return (
+    <section className="mt-10 px-5">
+      <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشاف الحضارات" title="🌍 عوالم إرث" />
+      <div className="grid grid-cols-2 gap-3">
+        {worlds.map((w) => (
+          <Link
+            key={w.hub.slug}
+            to="/worlds/$slug"
+            params={{ slug: w.hub.slug }}
+            className="group relative overflow-hidden rounded-2xl border border-gold/25 parchment-dark p-4 transition hover:border-gold/55"
+          >
+            <div className="absolute -left-6 -top-6 size-20 rounded-full bg-gold/15 blur-2xl" />
+            <div className="relative">
+              <div className="text-3xl">{w.hub.glyph}</div>
+              <p className="mt-2 text-[10px] tracking-[0.2em] text-gold">عالم #{w.hub.order}</p>
+              <p className="font-display mt-0.5 text-sm font-bold leading-tight line-clamp-1">{w.entity.title}</p>
+              <p className="mt-1 text-[10px] text-white/55">{w.relatedCount} كيان · {w.campaignsCount} حملة</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+      <Link
+        to="/worlds"
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-gold/40 bg-black/30 px-5 py-3 text-[12px] font-bold text-gold hover:bg-gold/10"
+      >
+        استكشف جميع العوالم <ChevronLeft className="size-3.5" />
+      </Link>
+    </section>
+  );
+}
+
 // ----- Today in History card -----
 function OnThisDayCalendarCard({ event }: { event: TodayInHistoryEvent }) {
   const href = event.deep_link ?? "/on-this-day";
