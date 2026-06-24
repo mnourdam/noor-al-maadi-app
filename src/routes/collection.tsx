@@ -58,6 +58,7 @@ import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
 import { listCampaigns } from "@/lib/campaignStorage";
 
 import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
+import { classifyArtifact, fetchCampaignArtifactRefSet } from "@/lib/museumVisibility";
 
 export const Route = createFileRoute("/collection")({
   head: () => ({ meta: [{ title: "المتحف · أرشيفك التاريخي" }] }),
