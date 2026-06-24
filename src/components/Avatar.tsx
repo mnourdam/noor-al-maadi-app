@@ -1,34 +1,64 @@
-import { getAvatar } from "@/lib/avatars";
+import { getAvatar, type AvatarRarity } from "@/lib/avatars";
+import { AvatarArt } from "./AvatarArt";
+import { Lock } from "lucide-react";
 
 interface AvatarProps {
   avatarId?: string | null;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   fallbackChar?: string;
   ring?: boolean;
+  locked?: boolean;
   className?: string;
 }
 
 const SIZE_MAP = {
-  xs: "size-7  text-sm",
-  sm: "size-9  text-base",
-  md: "size-12 text-xl",
-  lg: "size-16 text-3xl",
-  xl: "size-24 text-5xl",
+  xs: { box: "size-7",  art: "size-5" },
+  sm: { box: "size-9",  art: "size-7" },
+  md: { box: "size-12", art: "size-9" },
+  lg: { box: "size-16", art: "size-12" },
+  xl: { box: "size-24", art: "size-20" },
 } as const;
 
 /**
- * Historical Avatar badge. Renders the selected glyph atop a gold gradient
- * disc. Used in profile, friends, public profile, ID card, compare & share.
+ * Rarity → outer ring colour. Used as the collectible "tier" marker.
+ * Tints chosen to read against the Irth dark-navy surface.
  */
-export function Avatar({ avatarId, size = "md", fallbackChar, ring = true, className = "" }: AvatarProps) {
-  const a = avatarId ? getAvatar(avatarId) : null;
-  const glyph = a?.glyph ?? fallbackChar ?? "★";
+const RARITY_RING: Record<AvatarRarity, string> = {
+  common:    "ring-1 ring-gold/30",
+  uncommon:  "ring-2 ring-emerald-400/60",
+  rare:      "ring-2 ring-sky-400/60",
+  epic:      "ring-2 ring-violet-400/70",
+  legendary: "ring-2 ring-gold/90 shadow-[0_0_18px_rgba(212,175,55,0.45)]",
+};
+
+/**
+ * Irth Identity Emblem badge. Renders the chosen vector emblem on a deep
+ * navy disc with a rarity ring. The badge is intentionally NOT an emoji
+ * and not user-uploaded — emblems are part of the brand identity.
+ */
+export function Avatar({
+  avatarId,
+  size = "md",
+  fallbackChar: _fallback,
+  ring = true,
+  locked = false,
+  className = "",
+}: AvatarProps) {
+  const a = avatarId ? getAvatar(avatarId) : getAvatar(null);
+  const sz = SIZE_MAP[size];
+  const rarityRing = ring ? RARITY_RING[a.rarity] : "";
   return (
     <div
-      aria-label={a?.name ?? "صورة شخصية"}
-      className={`grid place-items-center rounded-full bg-gradient-gold text-primary-foreground select-none ${ring ? "shadow-gold ring-1 ring-gold/40" : ""} ${SIZE_MAP[size]} ${className}`}
+      aria-label={a.name}
+      title={a.name}
+      className={`relative grid place-items-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#1b2a48_0%,#0a1426_70%)] ${rarityRing} ${sz.box} ${className}`}
     >
-      <span className="leading-none">{glyph}</span>
+      <AvatarArt id={a.id} className={`${sz.art} text-gold`} />
+      {locked && (
+        <span className="absolute inset-0 grid place-items-center rounded-full bg-black/60 text-gold">
+          <Lock className="size-1/3" />
+        </span>
+      )}
     </div>
   );
 }
