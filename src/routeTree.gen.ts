@@ -61,6 +61,7 @@ import { Route as AdminContentFoundationRouteImport } from './routes/admin.conte
 import { Route as AdminContentCleanupRouteImport } from './routes/admin.content-cleanup'
 import { Route as AdminContentAutoHealRouteImport } from './routes/admin.content-auto-heal'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
+import { Route as AdminCanonicalDuplicatesRouteImport } from './routes/admin.canonical-duplicates'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as AdminCampaignRelationshipsRouteImport } from './routes/admin.campaign-relationships'
 import { Route as AdminAtlasReviewRouteImport } from './routes/admin.atlas-review'
@@ -335,6 +336,12 @@ const AdminContentRoute = AdminContentRouteImport.update({
   path: '/admin/content',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCanonicalDuplicatesRoute =
+  AdminCanonicalDuplicatesRouteImport.update({
+    id: '/admin/canonical-duplicates',
+    path: '/admin/canonical-duplicates',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
   id: '/admin/campaigns',
   path: '/admin/campaigns',
@@ -428,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
@@ -492,6 +500,7 @@ export interface FileRoutesByTo {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
@@ -559,6 +568,7 @@ export interface FileRoutesById {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
@@ -627,6 +637,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-review'
     | '/admin/campaign-relationships'
     | '/admin/campaigns'
+    | '/admin/canonical-duplicates'
     | '/admin/content'
     | '/admin/content-auto-heal'
     | '/admin/content-cleanup'
@@ -691,6 +702,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-review'
     | '/admin/campaign-relationships'
     | '/admin/campaigns'
+    | '/admin/canonical-duplicates'
     | '/admin/content'
     | '/admin/content-auto-heal'
     | '/admin/content-cleanup'
@@ -757,6 +769,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-review'
     | '/admin/campaign-relationships'
     | '/admin/campaigns'
+    | '/admin/canonical-duplicates'
     | '/admin/content'
     | '/admin/content-auto-heal'
     | '/admin/content-cleanup'
@@ -824,6 +837,7 @@ export interface RootRouteChildren {
   AdminAtlasReviewRoute: typeof AdminAtlasReviewRoute
   AdminCampaignRelationshipsRoute: typeof AdminCampaignRelationshipsRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
+  AdminCanonicalDuplicatesRoute: typeof AdminCanonicalDuplicatesRoute
   AdminContentRoute: typeof AdminContentRoute
   AdminContentAutoHealRoute: typeof AdminContentAutoHealRoute
   AdminContentCleanupRoute: typeof AdminContentCleanupRoute
@@ -1221,6 +1235,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminContentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/canonical-duplicates': {
+      id: '/admin/canonical-duplicates'
+      path: '/admin/canonical-duplicates'
+      fullPath: '/admin/canonical-duplicates'
+      preLoaderRoute: typeof AdminCanonicalDuplicatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/campaigns': {
       id: '/admin/campaigns'
       path: '/admin/campaigns'
@@ -1372,6 +1393,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAtlasReviewRoute: AdminAtlasReviewRoute,
   AdminCampaignRelationshipsRoute: AdminCampaignRelationshipsRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
+  AdminCanonicalDuplicatesRoute: AdminCanonicalDuplicatesRoute,
   AdminContentRoute: AdminContentRoute,
   AdminContentAutoHealRoute: AdminContentAutoHealRoute,
   AdminContentCleanupRoute: AdminContentCleanupRoute,
