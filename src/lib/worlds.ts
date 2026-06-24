@@ -30,9 +30,41 @@ export const WORLD_HUBS: WorldHub[] = [
 
 export const WORLD_SLUGS = new Set(WORLD_HUBS.map((h) => h.slug));
 
+// Canonical era tag per hub. Used to enforce strict world membership for
+// related entities so that, e.g., prophetic-era events never appear inside
+// the Ottoman world page. Hubs whose data has no era tag fall back to the
+// hub slug itself.
+export const WORLD_ERA: Record<string, string> = {
+  prophetic: "prophetic",
+  rashidun: "rashidun",
+  umayyad: "umayyad",
+  andalus: "andalus",
+  abbasid: "abbasid",
+  seljuk: "seljuk",
+  zengid: "zengid",
+  "ayyubid-state": "ayyubid",
+  "mamluk-sultanate": "mamluk",
+  ottoman: "ottoman",
+};
+
+// State-reference aliases an entity may use to declare it belongs to a hub.
+const WORLD_STATE_ALIASES: Record<string, string[]> = {
+  "ayyubid-state": ["ayyubid", "ayyubid-state", "ayyubid-sultanate"],
+  "mamluk-sultanate": ["mamluk", "mamluks", "mamluk-sultanate"],
+  ottoman: ["ottoman", "ottomans", "ottoman-empire", "ottoman-state"],
+  umayyad: ["umayyad", "umayyads", "umayyad-caliphate", "umayyad-state"],
+  abbasid: ["abbasid", "abbasids", "abbasid-caliphate", "abbasid-state"],
+  andalus: ["andalus", "al-andalus", "andalus-state"],
+  rashidun: ["rashidun", "rashidun-caliphate"],
+  seljuk: ["seljuk", "seljuks", "seljuk-empire", "seljuk-state"],
+  zengid: ["zengid", "zengids"],
+  prophetic: ["prophetic"],
+};
+
 export function findHub(slug: string): WorldHub | null {
   return WORLD_HUBS.find((h) => h.slug === slug) ?? null;
 }
+
 
 export type WorldSummary = {
   hub: WorldHub;
