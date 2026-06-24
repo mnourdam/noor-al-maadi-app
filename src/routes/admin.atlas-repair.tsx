@@ -750,3 +750,94 @@ function RepairRow({
     </article>
   );
 }
+
+// ---- Stub bulk modal -----------------------------------------------------
+
+function StubBulkModal({
+  plan, running, progress, result, onClose, onRun,
+}: {
+  plan: StubPlanItem[];
+  running: boolean;
+  progress: { done: number; total: number; failed: number };
+  result: { created: number; failed: number } | null;
+  onClose: () => void;
+  onRun: () => void;
+}) {
+  return (
+    <div dir="rtl" className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/80 p-3">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg border border-stone-700 bg-stone-900 shadow-xl">
+        <header className="flex items-center gap-2 border-b border-stone-800 px-4 py-2.5">
+          <PlusCircle className="size-4 text-sky-300" />
+          <h2 className="text-sm font-bold text-amber-100">إنشاء كيانات موسوعة بسيطة للروابط المفقودة</h2>
+          <span className="text-[11px] text-stone-400">
+            (الصفوف بلا رابط فقط · لا تتجاوز ترشيحات قوية ≥ {BULK_MIN_SCORE} · مفعّل · بحاجة توسيع محتوى)
+          </span>
+          <button onClick={onClose} disabled={running}
+            className="ml-auto rounded border border-stone-700 bg-stone-800 px-2 py-1 text-[11px] hover:bg-stone-700 disabled:opacity-40">
+            إغلاق
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-auto px-4 py-3 text-[12px]">
+          {result ? (
+            <div className="space-y-2">
+              <div className="rounded border border-sky-700/50 bg-sky-900/20 p-3 text-sky-100">
+                ✓ أُنشئ {result.created} كيانًا{result.failed > 0 ? ` · فشل ${result.failed}` : ""}.
+              </div>
+              <div className="text-stone-400">أُعيد التدقيق تلقائيًا. الكيانات الجديدة مُعلَّمة <code>needs_content_expansion</code>.</div>
+            </div>
+          ) : plan.length === 0 ? (
+            <div className="rounded border border-stone-800 bg-stone-950/40 p-4 text-center text-stone-400">
+              لا توجد روابط مفقودة قابلة للإنشاء الآمن حاليًا.
+            </div>
+          ) : (
+            <>
+              <div className="mb-2 text-stone-300">
+                سيتم إنشاء <strong className="text-amber-200">{plan.length}</strong> كيانًا في <code className="text-stone-400">encyclopedia_entities</code> ثم ربطها بصفوف الأطلس المطابقة. لن يُحذف أو يُؤرشف أو يُستبدل أي كيان قائم.
+              </div>
+              <ul className="divide-y divide-stone-800 rounded border border-stone-800">
+                {plan.map(({ row, entity_type, slug, title, subtitle }) => (
+                  <li key={row.id} className="flex flex-wrap items-center gap-2 px-2.5 py-1.5">
+                    <span className="rounded bg-rose-900/40 px-1.5 py-0.5 text-[10px] font-bold text-rose-200">بلا رابط</span>
+                    <span className="font-bold text-amber-100">{row.name_ar}</span>
+                    <code className="text-[10px] text-stone-500">{row.slug}</code>
+                    <ArrowRight className="size-3 text-stone-500" />
+                    <span className="text-sky-200">{title}</span>
+                    <code className="text-[10px] text-stone-500">{entity_type}/{slug}</code>
+                    {subtitle && <span className="text-[10px] text-stone-500">· {subtitle}</span>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+
+        <footer className="flex items-center gap-2 border-t border-stone-800 px-4 py-2.5 text-[12px]">
+          {running ? (
+            <span className="text-amber-200">
+              <RefreshCw className="mr-1 inline size-3.5 animate-spin" />
+              {progress.done}/{progress.total} {progress.failed > 0 ? `· فشل ${progress.failed}` : ""}
+            </span>
+          ) : result ? (
+            <button onClick={onClose}
+              className="ml-auto rounded bg-amber-500 px-3 py-1.5 font-bold text-stone-950 hover:bg-amber-400">
+              تم
+            </button>
+          ) : (
+            <>
+              <span className="text-stone-400">سيُنشأ {plan.length} كيانًا ويُربط تلقائيًا.</span>
+              <button onClick={onClose}
+                className="ml-auto rounded border border-stone-700 bg-stone-800 px-3 py-1.5 hover:bg-stone-700">
+                إلغاء
+              </button>
+              <button onClick={onRun} disabled={plan.length === 0}
+                className="rounded bg-sky-500 px-3 py-1.5 font-bold text-stone-950 hover:bg-sky-400 disabled:opacity-40">
+                تنفيذ الإنشاء
+              </button>
+            </>
+          )}
+        </footer>
+      </div>
+    </div>
+  );
+}
