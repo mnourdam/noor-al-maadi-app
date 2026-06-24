@@ -42,14 +42,15 @@ function ReferralsPage() {
     }, 0),
   }), [rows]);
 
-  // Referee-side: advance own stages as profile grows.
+  // Referee-side: ping server so it grants/awards level-based rewards.
+  // The server is the single source of truth for dinars (signup +50, level-5 +100).
+  // Local-only effects (badges/titles/artifacts for stages 3 & 4) remain client-side.
   useEffect(() => {
     if (!user) return;
     (async () => {
       const lvl = levelFor(profile.points).level;
       if (lvl >= 5) {
-        const r = await advanceReferralStage(2, profile);
-        if (r.ok) { addDinars(REFERRAL_REWARDS.stage2.dinars); grantArtifact(REFERRAL_REWARDS.stage2.artifact); }
+        await advanceReferralStage(2, profile); // server pays +100 via grant_level5_reward (idempotent)
       }
       if (profile.campaignsCompleted.length >= 1) {
         const r = await advanceReferralStage(3, profile);
