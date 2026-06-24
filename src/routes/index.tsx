@@ -28,6 +28,8 @@ import heroDesertCaravan from "@/assets/hero-desert-caravan.jpg";
 import heroManuscriptLamp from "@/assets/hero-manuscript-lamp.jpg";
 import heroFortress from "@/assets/hero-fortress.jpg";
 import { EXPLORATION_PATHS } from "@/lib/exploration-paths";
+import { useQuery } from "@tanstack/react-query";
+import { fetchWorldsIndex } from "@/lib/worlds";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -583,6 +585,10 @@ function Index() {
       {/* ============ 6. (removed) duplicate timeline promo —
             timeline is already linked from "عوالم إرث" below. ============ */}
 
+
+      {/* ============ 6b. HISTORICAL WORLDS ============ */}
+      <WorldsHomepageSection />
+
       {/* ============ 7. NEW IN IRTH ============ */}
       <section className="mt-10 px-5">
         <SectionHeader icon={<Bell className="size-3.5" />} eyebrow="آخر التحديثات" title="جديد في إرث" />
@@ -607,6 +613,8 @@ function Index() {
           <WorldCard to="/encyclopedia" icon={<Search className="size-5" />} title="الموسوعة" subtitle="ابحث وتعلّم" />
           <WorldCard to="/map" icon={<MapIcon className="size-5" />} title="الأطلس الإسلامي" subtitle="خارطة العصور" />
           <WorldCard to="/collection" icon={<Package className="size-5" />} title="المتحف" subtitle="أرشيفك ومقتنياتك" />
+          <WorldCard to="/worlds" icon={<Compass className="size-5" />} title="عوالم إرث" subtitle="استكشف الحضارات" />
+          <WorldCard to="/encyclopedia/path/andalus" icon={<Sparkles className="size-5" />} title="مسارات الاستكشاف" subtitle="رحلات مترابطة" />
           <div className="col-span-2">
             <WorldCard to="/timeline" icon={<Hourglass className="size-5" />} title="الخط الزمني العظيم" subtitle="أكثر من 1400 سنة من التاريخ" wide />
           </div>
@@ -710,6 +718,46 @@ function EmptyState({ icon, title, body }: { icon: React.ReactNode; title: strin
       <p className="font-display text-sm font-bold">{title}</p>
       <p className="mt-1 text-[12px] text-white/55">{body}</p>
     </div>
+  );
+}
+
+// ----- Historical Worlds homepage section -----
+function WorldsHomepageSection() {
+  const { data } = useQuery({
+    queryKey: ["worlds-index"],
+    staleTime: 60_000,
+    queryFn: fetchWorldsIndex,
+  });
+  const worlds = (data ?? []).slice(0, 4);
+  if (worlds.length === 0) return null;
+  return (
+    <section className="mt-10 px-5">
+      <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشاف الحضارات" title="🌍 عوالم إرث" />
+      <div className="grid grid-cols-2 gap-3">
+        {worlds.map((w) => (
+          <Link
+            key={w.hub.slug}
+            to="/worlds/$slug"
+            params={{ slug: w.hub.slug }}
+            className="group relative overflow-hidden rounded-2xl border border-gold/25 parchment-dark p-4 transition hover:border-gold/55"
+          >
+            <div className="absolute -left-6 -top-6 size-20 rounded-full bg-gold/15 blur-2xl" />
+            <div className="relative">
+              <div className="text-3xl">{w.hub.glyph}</div>
+              <p className="mt-2 text-[10px] tracking-[0.2em] text-gold">عالم #{w.hub.order}</p>
+              <p className="font-display mt-0.5 text-sm font-bold leading-tight line-clamp-1">{w.entity.title}</p>
+              <p className="mt-1 text-[10px] text-white/55">{w.relatedCount} كيان · {w.campaignsCount} حملة</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+      <Link
+        to="/worlds"
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-gold/40 bg-black/30 px-5 py-3 text-[12px] font-bold text-gold hover:bg-gold/10"
+      >
+        استكشف جميع العوالم <ChevronLeft className="size-3.5" />
+      </Link>
+    </section>
   );
 }
 

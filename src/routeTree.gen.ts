@@ -30,9 +30,11 @@ import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorldsIndexRouteImport } from './routes/worlds.index'
 import { Route as EncyclopediaIndexRouteImport } from './routes/encyclopedia.index'
 import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as WorldsSlugRouteImport } from './routes/worlds.$slug'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as StoryIdRouteImport } from './routes/story.$id'
 import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
@@ -185,6 +187,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorldsIndexRoute = WorldsIndexRouteImport.update({
+  id: '/worlds/',
+  path: '/worlds/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EncyclopediaIndexRoute = EncyclopediaIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -198,6 +205,11 @@ const CampaignsIndexRoute = CampaignsIndexRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorldsSlugRoute = WorldsSlugRouteImport.update({
+  id: '/worlds/$slug',
+  path: '/worlds/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UUsernameRoute = UUsernameRouteImport.update({
@@ -500,9 +512,11 @@ export interface FileRoutesByFullPath {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/u/$username': typeof UUsernameRoute
+  '/worlds/$slug': typeof WorldsSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
+  '/worlds/': typeof WorldsIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -570,9 +584,11 @@ export interface FileRoutesByTo {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/u/$username': typeof UUsernameRoute
+  '/worlds/$slug': typeof WorldsSlugRoute
   '/admin': typeof AdminIndexRoute
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
+  '/worlds': typeof WorldsIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -643,9 +659,11 @@ export interface FileRoutesById {
   '/play/timeline': typeof PlayTimelineRoute
   '/story/$id': typeof StoryIdRoute
   '/u/$username': typeof UUsernameRoute
+  '/worlds/$slug': typeof WorldsSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
+  '/worlds/': typeof WorldsIndexRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -717,9 +735,11 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/u/$username'
+    | '/worlds/$slug'
     | '/admin/'
     | '/campaigns/'
     | '/encyclopedia/'
+    | '/worlds/'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -787,9 +807,11 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/u/$username'
+    | '/worlds/$slug'
     | '/admin'
     | '/campaigns'
     | '/encyclopedia'
+    | '/worlds'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -859,9 +881,11 @@ export interface FileRouteTypes {
     | '/play/timeline'
     | '/story/$id'
     | '/u/$username'
+    | '/worlds/$slug'
     | '/admin/'
     | '/campaigns/'
     | '/encyclopedia/'
+    | '/worlds/'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -932,7 +956,9 @@ export interface RootRouteChildren {
   PlayTimelineRoute: typeof PlayTimelineRoute
   StoryIdRoute: typeof StoryIdRoute
   UUsernameRoute: typeof UUsernameRoute
+  WorldsSlugRoute: typeof WorldsSlugRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  WorldsIndexRoute: typeof WorldsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1084,6 +1110,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/worlds/': {
+      id: '/worlds/'
+      path: '/worlds'
+      fullPath: '/worlds/'
+      preLoaderRoute: typeof WorldsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/encyclopedia/': {
       id: '/encyclopedia/'
       path: '/'
@@ -1103,6 +1136,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worlds/$slug': {
+      id: '/worlds/$slug'
+      path: '/worlds/$slug'
+      fullPath: '/worlds/$slug'
+      preLoaderRoute: typeof WorldsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/u/$username': {
@@ -1529,7 +1569,9 @@ const rootRouteChildren: RootRouteChildren = {
   PlayTimelineRoute: PlayTimelineRoute,
   StoryIdRoute: StoryIdRoute,
   UUsernameRoute: UUsernameRoute,
+  WorldsSlugRoute: WorldsSlugRoute,
   AdminIndexRoute: AdminIndexRoute,
+  WorldsIndexRoute: WorldsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
