@@ -12,7 +12,7 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, ShieldCheck, Loader2, AlertTriangle, Crown, EyeOff, Link2, Wand2 } from "lucide-react";
+import { ChevronRight, ShieldCheck, Loader2, AlertTriangle, Crown, EyeOff, Link2, Wand2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { entityRichness } from "@/lib/encyclopedia-source";
