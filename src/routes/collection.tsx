@@ -413,6 +413,8 @@ function CollectionPage() {
   // Hide cards with no resolved Arabic title (no English slugs in public UI).
   const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);
   const currentEntities = useMemo(() => {
+    // Museum shows ONLY items the player has actually unlocked through
+    // gameplay/rewards. Encyclopedia remains the place to browse the rest.
     const items = rawCurrentEntities
       .filter((e: any) => !!e.title && hasArabic(e.title))
       .filter((e: any) =>
@@ -424,12 +426,10 @@ function CollectionPage() {
         const open = isEntityUnlocked(current.type, e.slug, e.metadata);
         const ts = open ? unlockedAtFor(current.type, e.slug, e.metadata) : 0;
         return { e, open, ts };
-      });
+      })
+      .filter(({ open }) => open);
     items.sort((a, b) => {
-      if (a.open !== b.open) return a.open ? -1 : 1;
-      if (a.open && b.open) {
-        if (a.ts !== b.ts) return b.ts - a.ts;
-      }
+      if (a.ts !== b.ts) return b.ts - a.ts;
       return (a.e.title ?? "").localeCompare(b.e.title ?? "", "ar");
     });
     return items;
@@ -437,12 +437,9 @@ function CollectionPage() {
   }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type, campaignArtifactRefs]);
 
   const currentImported = useMemo(() => {
-    const items = rawCurrentImported.filter(i => !!i.name && hasArabic(i.name));
-    items.sort((a, b) => {
-      if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
-      return (a.name ?? "").localeCompare(b.name ?? "", "ar");
-    });
-    return items;
+    return rawCurrentImported
+      .filter(i => !!i.name && hasArabic(i.name) && i.unlocked)
+      .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "ar"));
   }, [rawCurrentImported]);
 
   const openEntityReveal = (e: any, isOpen: boolean) => {
