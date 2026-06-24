@@ -403,6 +403,112 @@ function AtlasRepairPage() {
           ))}
         </section>
       </div>
+
+      {bulkOpen && (
+        <BulkRepairModal
+          plan={bulkPlan}
+          running={bulkRunning}
+          progress={bulkProgress}
+          result={bulkResult}
+          onClose={() => { if (!bulkRunning) { setBulkOpen(false); setBulkResult(null); } }}
+          onRun={runBulk}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Bulk modal ----------------------------------------------------------
+
+function BulkRepairModal({
+  plan, running, progress, result, onClose, onRun,
+}: {
+  plan: BulkPlanItem[];
+  running: boolean;
+  progress: { done: number; total: number; failed: number };
+  result: { fixed: number; failed: number } | null;
+  onClose: () => void;
+  onRun: () => void;
+}) {
+  return (
+    <div dir="rtl" className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/80 p-3">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg border border-stone-700 bg-stone-900 shadow-xl">
+        <header className="flex items-center gap-2 border-b border-stone-800 px-4 py-2.5">
+          <Wand2 className="size-4 text-emerald-300" />
+          <h2 className="text-sm font-bold text-amber-100">معاينة الإصلاح الجماعي الآمن</h2>
+          <span className="text-[11px] text-stone-400">
+            (درجة ≥ {BULK_MIN_SCORE}، فجوة ≥ {BULK_AMBIGUITY_GAP}، نوع متوافق، كيان مفعّل)
+          </span>
+          <button onClick={onClose} disabled={running}
+            className="ml-auto rounded border border-stone-700 bg-stone-800 px-2 py-1 text-[11px] hover:bg-stone-700 disabled:opacity-40">
+            إغلاق
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-auto px-4 py-3 text-[12px]">
+          {result ? (
+            <div className="space-y-2">
+              <div className="rounded border border-emerald-700/50 bg-emerald-900/20 p-3 text-emerald-100">
+                ✓ تم إصلاح {result.fixed} رابطًا{result.failed > 0 ? ` · فشل ${result.failed}` : ""}.
+              </div>
+              <div className="text-stone-400">أُعيد التدقيق تلقائيًا.</div>
+            </div>
+          ) : plan.length === 0 ? (
+            <div className="rounded border border-stone-800 bg-stone-950/40 p-4 text-center text-stone-400">
+              لا توجد روابط بدرجة عالية وآمنة للإصلاح الجماعي حاليًا.
+            </div>
+          ) : (
+            <>
+              <div className="mb-2 text-stone-300">
+                سيتم إعادة ربط <strong className="text-amber-200">{plan.length}</strong> صفًا فقط (تحديث
+                {" "}<code className="text-stone-400">encyclopedia_entity_id</code>). لن يُحذف أو يُؤرشف أي كيان، ولن تُنشأ كيانات جديدة.
+              </div>
+              <ul className="divide-y divide-stone-800 rounded border border-stone-800">
+                {plan.map(({ row, issue, candidate }) => (
+                  <li key={row.id} className="flex flex-wrap items-center gap-2 px-2.5 py-1.5">
+                    <span className={`rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-bold text-amber-200`}>
+                      {ISSUE_LABEL[issue]}
+                    </span>
+                    <span className="font-bold text-amber-100">{row.name_ar}</span>
+                    <code className="text-[10px] text-stone-500">{row.slug}</code>
+                    <ArrowRight className="size-3 text-stone-500" />
+                    <span className="text-emerald-200">{candidate.entity.title}</span>
+                    <code className="text-[10px] text-stone-500">{candidate.entity.entity_type}/{candidate.entity.slug}</code>
+                    <span className="text-stone-400">· درجة {candidate.score}</span>
+                    <span className="text-stone-500 truncate">· {candidate.reasons.slice(0, 3).join(" · ")}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+
+        <footer className="flex items-center gap-2 border-t border-stone-800 px-4 py-2.5 text-[12px]">
+          {running ? (
+            <span className="text-amber-200">
+              <RefreshCw className="mr-1 inline size-3.5 animate-spin" />
+              {progress.done}/{progress.total} {progress.failed > 0 ? `· فشل ${progress.failed}` : ""}
+            </span>
+          ) : result ? (
+            <button onClick={onClose}
+              className="ml-auto rounded bg-amber-500 px-3 py-1.5 font-bold text-stone-950 hover:bg-amber-400">
+              تم
+            </button>
+          ) : (
+            <>
+              <span className="text-stone-400">سيتم تحديث {plan.length} صفًا.</span>
+              <button onClick={onClose}
+                className="ml-auto rounded border border-stone-700 bg-stone-800 px-3 py-1.5 hover:bg-stone-700">
+                إلغاء
+              </button>
+              <button onClick={onRun} disabled={plan.length === 0}
+                className="rounded bg-emerald-500 px-3 py-1.5 font-bold text-stone-950 hover:bg-emerald-400 disabled:opacity-40">
+                تنفيذ الإصلاح
+              </button>
+            </>
+          )}
+        </footer>
+      </div>
     </div>
   );
 }
