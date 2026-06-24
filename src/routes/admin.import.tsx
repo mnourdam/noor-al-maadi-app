@@ -146,7 +146,7 @@ function CampaignImporter() {
   const [publishOnImport, setPublishOnImport] = useState(false);
   const [overwrite, setOverwrite] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ inserted: number; updated: number; skipped: number; failed: number; errors: string[] } | null>(null);
+  const [result, setResult] = useState<{ inserted: number; updated: number; skipped: number; failed: number; errors: string[]; reports: CampaignIntegrityReport[] } | null>(null);
   const [topError, setTopError] = useState<string | null>(null);
 
   const parsed = useMemo<CampaignImportRow[]>(() => {
