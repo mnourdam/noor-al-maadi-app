@@ -9,6 +9,7 @@ const db: any = supabase;
 export interface PublicProfile {
   id: string;
   username: string;
+  display_name: string | null;
   bio: string | null;
   title: string | null;
   level: number;
@@ -27,7 +28,7 @@ export interface PublicProfile {
 }
 
 const PUBLIC_COLS =
-  "id, username, bio, title, level, xp, dinars, streak, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id, referral_code, last_active, join_date";
+  "id, username, display_name, bio, title, level, xp, dinars, streak, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id, referral_code, last_active, join_date";
 
 // =========== Public profile reads ===========
 export async function fetchPublicProfileById(id: string): Promise<PublicProfile | null> {
@@ -45,21 +46,40 @@ export async function fetchPublicProfileByReferral(code: string): Promise<Public
   return (data as PublicProfile) ?? null;
 }
 
-export async function searchPlayers(q: string): Promise<PublicProfile[]> {
+/**
+ * Search players by username OR display_name (case-insensitive, Arabic-safe).
+ * Excludes the current user server-side. Deduplicates and caps at 20 results.
+ */
+export async function searchPlayers(q: string, excludeId?: string): Promise<PublicProfile[]> {
   const term = q.trim();
   if (!term) return [];
-  // By id (UUID-ish)
+  // Treat input that looks like a UUID as a direct id lookup.
   if (term.length >= 32 && term.includes("-")) {
     const one = await fetchPublicProfileById(term);
-    return one ? [one] : [];
+    if (!one || (excludeId && one.id === excludeId)) return [];
+    return [one];
   }
-  const { data } = await db
+  // Escape PostgREST .or() special chars (, and ) inside the pattern.
+  const safe = term.replace(/[,()]/g, " ");
+  const pattern = `%${safe}%`;
+  let query = db
     .from("profiles")
     .select(PUBLIC_COLS)
-    .ilike("username", `%${term}%`)
+    .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
     .limit(20);
-  return (data as PublicProfile[]) ?? [];
+  if (excludeId) query = query.neq("id", excludeId);
+  const { data } = await query;
+  const rows = (data as PublicProfile[]) ?? [];
+  const seen = new Set<string>();
+  const out: PublicProfile[] = [];
+  for (const p of rows) {
+    if (seen.has(p.id)) continue;
+    seen.add(p.id);
+    out.push(p);
+  }
+  return out;
 }
+
 
 // =========== Derive public stats from local profile ===========
 export function derivePublicStats(p: ProfileState) {
