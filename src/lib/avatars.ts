@@ -1,102 +1,196 @@
 /**
- * Historical avatar collection — Quality of Life v1
+ * Irth Identity Emblems — collectible avatar system.
  *
- * Curated set of 60 in-app avatars themed around Islamic/Arab history.
- * Each avatar is rendered as a glyph (emoji or symbolic character) on top
- * of a gold gradient — no remote images, no uploads.
+ * Each avatar is a premium vector emblem rendered by `<AvatarArt>` on top of
+ * a dark navy disc with parchment-gold detailing. Emblems are NOT emoji and
+ * NOT generic icons — they are part of the Irth visual identity.
+ *
+ * The data model is future-proof: every avatar carries rarity + unlock
+ * metadata so we can later gate premium emblems behind campaigns,
+ * achievements, museum progress, or special events. Today most are
+ * unlocked by default (`unlock_method: "default"`).
  */
+
+export type AvatarCategory =
+  | "banner"      // Caliphate / dynasty banners
+  | "symbol"      // Crescents, calligraphy, identity marks
+  | "weapon"      // Sword, shield, etc.
+  | "knowledge"   // Scroll, book, scholar tools
+  | "role"        // Scholar, explorer, cartographer, curator, historian, horseman
+  | "place"       // Mosque, castle, oasis
+  | "tool";       // Compass, astrolabe
+
+export type AvatarRarity =
+  | "common"
+  | "uncommon"
+  | "rare"
+  | "epic"
+  | "legendary";
+
+export type AvatarUnlockMethod =
+  | "default"
+  | "achievement"
+  | "campaign"
+  | "museum"
+  | "event"
+  | "level"
+  | "referral";
+
+export interface AvatarUnlockRequirement {
+  /** Free-text Arabic description of the requirement, shown in the picker. */
+  label?: string;
+  /** Optional structured ref — e.g. achievement id, campaign id, museum count. */
+  refId?: string;
+  /** Numeric threshold for level/count-based unlocks. */
+  threshold?: number;
+}
 
 export interface HistoricalAvatar {
   id: string;
-  name: string;          // Arabic label
-  glyph: string;         // single character / emoji rendered in the badge
-  category: "holy" | "weapon" | "armor" | "knowledge" | "symbol" | "tool" | "nature";
+  name: string;                 // Arabic display name
+  category: AvatarCategory;
+  rarity: AvatarRarity;
+  unlock_method: AvatarUnlockMethod;
+  unlock_requirement?: AvatarUnlockRequirement;
+  /**
+   * Unicode fallback rune used by the share-card canvas exporter (which
+   * cannot render React SVGs). The in-app UI always uses `<AvatarArt>`.
+   */
+  glyph: string;
 }
 
 export const AVATARS: HistoricalAvatar[] = [
-  // Holy places & symbols
-  { id: "kaaba",       name: "الكعبة",          glyph: "🕋", category: "holy"   },
-  { id: "aqsa",        name: "المسجد الأقصى",   glyph: "🕌", category: "holy"   },
-  { id: "minaret",     name: "المئذنة",         glyph: "🕌", category: "holy"   },
-  { id: "mihrab",      name: "المحراب",         glyph: "⛩",  category: "holy"   },
-  { id: "crescent",    name: "الهلال",          glyph: "☪",  category: "symbol" },
-  { id: "star",        name: "نجمة الإرث",      glyph: "★",  category: "symbol" },
-  { id: "rosette",     name: "الوردة الإسلامية", glyph: "❀", category: "symbol" },
-  { id: "calligraphy", name: "خط عربي",         glyph: "ﷲ",  category: "symbol" },
-  { id: "prayer_bead", name: "السبحة",          glyph: "📿", category: "holy"   },
-  { id: "lantern",     name: "فانوس قديم",      glyph: "🏮", category: "tool"   },
+  // ── Banners ──────────────────────────────────────────────
+  { id: "banner_rashidun", name: "راية الراشدين", category: "banner", rarity: "uncommon",  unlock_method: "default", glyph: "▲" },
+  { id: "banner_umayyad",  name: "راية أموية",    category: "banner", rarity: "rare",      unlock_method: "default", glyph: "▲" },
+  { id: "banner_abbasid",  name: "راية عباسية",   category: "banner", rarity: "rare",      unlock_method: "default", glyph: "▲" },
+  { id: "banner_andalus",  name: "راية الأندلس",  category: "banner", rarity: "rare",      unlock_method: "default", glyph: "▲" },
+  { id: "banner_ayyubid",  name: "راية أيوبية",   category: "banner", rarity: "rare",      unlock_method: "default", glyph: "▲" },
+  { id: "banner_ottoman",  name: "راية عثمانية",  category: "banner", rarity: "rare",      unlock_method: "default", glyph: "▲" },
 
-  // Weapons
-  { id: "sword",       name: "السيف",           glyph: "⚔",  category: "weapon" },
-  { id: "scimitar",    name: "السيف المعقوف",   glyph: "🗡", category: "weapon" },
-  { id: "spear",       name: "الرمح",           glyph: "🔱", category: "weapon" },
-  { id: "bow",         name: "القوس",           glyph: "🏹", category: "weapon" },
-  { id: "shield",      name: "الترس",           glyph: "🛡", category: "armor"  },
-  { id: "dagger",      name: "الخنجر",          glyph: "🔪", category: "weapon" },
-  { id: "axe",         name: "البلطة",          glyph: "🪓", category: "weapon" },
+  // ── Symbols ──────────────────────────────────────────────
+  { id: "crescent_star", name: "الهلال والنجمة", category: "symbol", rarity: "common",   unlock_method: "default", glyph: "☪" },
+  { id: "calligraphy",   name: "خط عربي",        category: "symbol", rarity: "uncommon", unlock_method: "default", glyph: "ﷲ" },
+  { id: "star",          name: "نجمة إرث",       category: "symbol", rarity: "common",   unlock_method: "default", glyph: "★" },
 
-  // Armor
-  { id: "helmet",      name: "الخوذة",          glyph: "🪖", category: "armor"  },
-  { id: "armor",       name: "الدرع",           glyph: "🛡", category: "armor"  },
-  { id: "ring",        name: "خاتم عثماني",     glyph: "💍", category: "armor"  },
+  // ── Weapons / armor ──────────────────────────────────────
+  { id: "sword",  name: "السيف",  category: "weapon", rarity: "common",   unlock_method: "default", glyph: "⚔" },
+  { id: "shield", name: "الترس",  category: "weapon", rarity: "common",   unlock_method: "default", glyph: "🛡" },
 
-  // Knowledge & manuscripts
-  { id: "manuscript",  name: "مخطوط نادر",      glyph: "📜", category: "knowledge" },
-  { id: "abbasid_book",name: "كتاب عباسي",      glyph: "📖", category: "knowledge" },
-  { id: "quill",       name: "الريشة والمحبرة", glyph: "🖋", category: "knowledge" },
-  { id: "hikma",       name: "بيت الحكمة",      glyph: "🏛", category: "knowledge" },
-  { id: "library",     name: "خزانة الكتب",     glyph: "📚", category: "knowledge" },
-  { id: "ink",         name: "محبرة",           glyph: "🖋", category: "knowledge" },
-  { id: "scroll",      name: "لفافة",           glyph: "📜", category: "knowledge" },
-  { id: "tablet",      name: "اللوح",           glyph: "🪧", category: "knowledge" },
+  // ── Knowledge ────────────────────────────────────────────
+  { id: "scroll", name: "اللفافة", category: "knowledge", rarity: "common",   unlock_method: "default", glyph: "📜" },
+  { id: "book",   name: "الكتاب",  category: "knowledge", rarity: "common",   unlock_method: "default", glyph: "📖" },
 
-  // Flags
-  { id: "umayyad_flag",name: "راية أموية",      glyph: "🏳", category: "symbol" },
-  { id: "abbasid_flag",name: "راية عباسية",     glyph: "🏴", category: "symbol" },
-  { id: "rashidun_flag",name:"راية الراشدين",   glyph: "🏳", category: "symbol" },
-  { id: "ayyubid_flag",name: "راية أيوبية",     glyph: "🏴", category: "symbol" },
-  { id: "ottoman_flag",name: "راية عثمانية",    glyph: "🏴", category: "symbol" },
+  // ── Roles ────────────────────────────────────────────────
+  { id: "scholar",        name: "العالِم",          category: "role", rarity: "uncommon", unlock_method: "default", glyph: "✦" },
+  { id: "explorer",       name: "الرحّالة",         category: "role", rarity: "uncommon", unlock_method: "default", glyph: "✦" },
+  { id: "cartographer",   name: "رسّام الخرائط",    category: "role", rarity: "uncommon", unlock_method: "default", glyph: "✦" },
+  { id: "museum_curator", name: "أمين المتحف",      category: "role", rarity: "rare",     unlock_method: "default", glyph: "✦" },
+  { id: "historian",      name: "المؤرّخ",          category: "role", rarity: "rare",     unlock_method: "default", glyph: "✦" },
+  { id: "horseman",       name: "الفارس",           category: "role", rarity: "uncommon", unlock_method: "default", glyph: "✦" },
 
-  // Tools & science
-  { id: "compass",     name: "البوصلة",         glyph: "🧭", category: "tool"   },
-  { id: "astrolabe",   name: "الأسطرلاب",       glyph: "⚙",  category: "tool"   },
-  { id: "hourglass",   name: "الساعة الرملية",  glyph: "⌛", category: "tool"   },
-  { id: "map",         name: "خارطة الأقاليم",  glyph: "🗺", category: "tool"   },
-  { id: "telescope",   name: "المرقاب",         glyph: "🔭", category: "tool"   },
-  { id: "scale",       name: "الميزان",         glyph: "⚖",  category: "tool"   },
-  { id: "key",         name: "مفتاح القدس",     glyph: "🗝", category: "tool"   },
-  { id: "abacus",      name: "العدّاد",         glyph: "🧮", category: "tool"   },
-  { id: "scissors",    name: "المقص",           glyph: "✂",  category: "tool"   },
-  { id: "magnifier",   name: "العدسة",          glyph: "🔍", category: "tool"   },
+  // ── Places ───────────────────────────────────────────────
+  { id: "mosque", name: "المسجد", category: "place", rarity: "common", unlock_method: "default", glyph: "🕌" },
+  { id: "castle", name: "القلعة", category: "place", rarity: "common", unlock_method: "default", glyph: "🏰" },
 
-  // Nature & animals
-  { id: "horse",       name: "الفرس العربي",    glyph: "🐎", category: "nature" },
-  { id: "camel",       name: "الجمل",           glyph: "🐪", category: "nature" },
-  { id: "falcon",      name: "الصقر",           glyph: "🦅", category: "nature" },
-  { id: "lion",        name: "الأسد",           glyph: "🦁", category: "nature" },
-  { id: "palm",        name: "النخلة",          glyph: "🌴", category: "nature" },
-  { id: "olive",       name: "الزيتون",         glyph: "🫒", category: "nature" },
-  { id: "desert",      name: "الصحراء",         glyph: "🏜", category: "nature" },
-  { id: "oasis",       name: "الواحة",          glyph: "🌿", category: "nature" },
-
-  // Architecture
-  { id: "dome",        name: "القبة",           glyph: "🕋", category: "holy"   },
-  { id: "gate",        name: "بوابة المدينة",   glyph: "🚪", category: "symbol" },
-  { id: "fortress",    name: "القلعة",          glyph: "🏰", category: "armor"  },
-  { id: "tower",       name: "البرج",           glyph: "🗼", category: "armor"  },
-  { id: "caravan",     name: "القافلة",         glyph: "🐫", category: "nature" },
-  { id: "well",        name: "البئر",           glyph: "💧", category: "nature" },
-
-  // Misc
-  { id: "coin",        name: "الدينار",         glyph: "🪙", category: "tool"   },
-  { id: "incense",     name: "العود والبخور",   glyph: "🕯", category: "tool"   },
-  { id: "crown",       name: "تاج الخلافة",     glyph: "👑", category: "symbol" },
-  { id: "torch",       name: "الشعلة",          glyph: "🔥", category: "symbol" },
+  // ── Tools ────────────────────────────────────────────────
+  { id: "compass",   name: "البوصلة",  category: "tool", rarity: "common",   unlock_method: "default", glyph: "🧭" },
+  { id: "astrolabe", name: "الأسطرلاب", category: "tool", rarity: "uncommon", unlock_method: "default", glyph: "⚙" },
 ];
 
-export const DEFAULT_AVATAR_ID = "kaaba";
+export const DEFAULT_AVATAR_ID = "crescent_star";
 
+/** Backwards-compatible avatar resolver. Falls back to the default emblem. */
 export function getAvatar(id?: string | null): HistoricalAvatar {
-  if (!id) return AVATARS[0];
-  return AVATARS.find((a) => a.id === id) ?? AVATARS[0];
+  if (!id) return AVATARS.find((a) => a.id === DEFAULT_AVATAR_ID) ?? AVATARS[0];
+  // Legacy id remap: previous emoji set used different ids.
+  const legacyMap: Record<string, string> = {
+    kaaba: "mosque",
+    aqsa: "mosque",
+    minaret: "mosque",
+    mihrab: "mosque",
+    crescent: "crescent_star",
+    rosette: "star",
+    prayer_bead: "scroll",
+    lantern: "scroll",
+    scimitar: "sword",
+    spear: "sword",
+    bow: "sword",
+    dagger: "sword",
+    axe: "sword",
+    helmet: "shield",
+    armor: "shield",
+    ring: "calligraphy",
+    manuscript: "scroll",
+    abbasid_book: "book",
+    quill: "scroll",
+    hikma: "scholar",
+    library: "book",
+    ink: "scroll",
+    tablet: "scroll",
+    umayyad_flag: "banner_umayyad",
+    abbasid_flag: "banner_abbasid",
+    rashidun_flag: "banner_rashidun",
+    ayyubid_flag: "banner_ayyubid",
+    ottoman_flag: "banner_ottoman",
+    hourglass: "astrolabe",
+    map: "cartographer",
+    telescope: "astrolabe",
+    scale: "scholar",
+    key: "scroll",
+    abacus: "scholar",
+    scissors: "scroll",
+    magnifier: "historian",
+    horse: "horseman",
+    camel: "explorer",
+    falcon: "explorer",
+    lion: "shield",
+    palm: "mosque",
+    olive: "mosque",
+    desert: "explorer",
+    oasis: "explorer",
+    dome: "mosque",
+    gate: "castle",
+    fortress: "castle",
+    tower: "castle",
+    caravan: "explorer",
+    well: "explorer",
+    coin: "museum_curator",
+    incense: "calligraphy",
+    crown: "banner_ottoman",
+    torch: "historian",
+  };
+  const remapped = legacyMap[id] ?? id;
+  return AVATARS.find((a) => a.id === remapped) ?? AVATARS[0];
+}
+
+export const RARITY_LABEL: Record<AvatarRarity, string> = {
+  common: "شائع",
+  uncommon: "غير شائع",
+  rare: "نادر",
+  epic: "ملحمي",
+  legendary: "أسطوري",
+};
+
+export const CATEGORY_LABEL: Record<AvatarCategory, string> = {
+  banner: "الرايات",
+  symbol: "الرموز",
+  weapon: "السلاح والدرع",
+  knowledge: "المعرفة",
+  role: "الشخصيات",
+  place: "الأماكن",
+  tool: "الأدوات",
+};
+
+/**
+ * Returns whether an avatar is available to the given player profile.
+ * Today all `default` avatars are unlocked. Other unlock methods are
+ * reserved for future content and currently treated as locked.
+ */
+export function isAvatarUnlocked(
+  avatar: HistoricalAvatar,
+  _ctx: { unlockedAvatarIds?: string[] } = {},
+): boolean {
+  if (avatar.unlock_method === "default") return true;
+  return (_ctx.unlockedAvatarIds ?? []).includes(avatar.id);
 }
