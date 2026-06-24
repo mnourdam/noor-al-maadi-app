@@ -255,7 +255,7 @@ function AdminUsers() {
           onChanged={() => setReloadKey((k) => k + 1)}
         />
       )}
-    </div>
+    </AdminLayout>
   );
 }
 
