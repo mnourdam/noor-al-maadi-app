@@ -8,6 +8,7 @@ import {
   advanceReferralStage, buildReferralLink, fetchPublicProfileById, listMyReferrals,
   REFERRAL_REWARDS, type PublicProfile, type ReferralRow,
 } from "@/lib/social";
+import { fetchMyReferralStats, type MyReferralStats } from "@/lib/referrals";
 import { levelFor } from "@/lib/app-constants";
 
 export const Route = createFileRoute("/referrals")({
