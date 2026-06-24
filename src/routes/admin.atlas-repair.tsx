@@ -421,6 +421,13 @@ function AtlasRepairPage() {
             >
               <Wand2 className="size-3.5" /> إصلاح جماعي آمن ({bulkPlan.length})
             </button>
+            <button
+              onClick={() => { setStubResult(null); setStubOpen(true); }}
+              disabled={loading || stubPlan.length === 0}
+              className="inline-flex items-center gap-1 rounded border border-sky-700 bg-sky-900/40 px-2 py-1 text-sky-100 hover:bg-sky-900/70 disabled:opacity-40"
+            >
+              <PlusCircle className="size-3.5" /> إنشاء كيانات للروابط المفقودة ({stubPlan.length})
+            </button>
             <button onClick={reload} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">
               <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} /> إعادة تدقيق
             </button>
