@@ -184,9 +184,26 @@ function RootComponent() {
         unsub = () => data.subscription.unsubscribe();
       })
       .catch((err) => console.error("[push] dynamic import failed:", err));
+    // Heartbeat: touch last_active when the tab becomes visible, throttled to
+    // once every 5 minutes per session. Powers "active now / today / week".
+    let lastTouch = 0;
+    const touchActive = async () => {
+      const now = Date.now();
+      if (now - lastTouch < 5 * 60 * 1000) return;
+      lastTouch = now;
+      try {
+        const { touchMyLastActive } = await import("../lib/adminUsers");
+        await touchMyLastActive();
+      } catch { /* silent */ }
+    };
+    const onVisible = () => { if (document.visibilityState === "visible") void touchActive(); };
+    document.addEventListener("visibilitychange", onVisible);
+    void touchActive();
+
     return () => {
       unsub?.();
       window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
     };
 
   }, []);
