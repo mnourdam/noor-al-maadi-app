@@ -130,8 +130,8 @@ export async function resolveRelatedEntities(
     .limit(500);
   for (const c of camps ?? []) {
     const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
-    const core = asStringList(cm.core_entities).map((s) => s.toLowerCase());
-    const sup = asStringList(cm.supporting_entities).map((s) => s.toLowerCase());
+    const core = asStringList(cm.core_entities).map(normalizeEntitySlug);
+    const sup = asStringList(cm.supporting_entities).map(normalizeEntitySlug);
     if (!core.includes(selfSlug) && !sup.includes(selfSlug)) continue;
     bump(core, 80, "campaign-core");
     bump(sup, 70, "campaign-supporting");
