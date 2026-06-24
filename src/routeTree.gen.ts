@@ -53,6 +53,7 @@ import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
 import { Route as AdminContentInventoryRouteImport } from './routes/admin.content-inventory'
+import { Route as AdminContentIntegrityRouteImport } from './routes/admin.content-integrity'
 import { Route as AdminContentFoundationRouteImport } from './routes/admin.content-foundation'
 import { Route as AdminContentCleanupRouteImport } from './routes/admin.content-cleanup'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
@@ -288,6 +289,11 @@ const AdminContentInventoryRoute = AdminContentInventoryRouteImport.update({
   path: '/admin/content-inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminContentIntegrityRoute = AdminContentIntegrityRouteImport.update({
+  id: '/admin/content-integrity',
+  path: '/admin/content-integrity',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminContentFoundationRoute = AdminContentFoundationRouteImport.update({
   id: '/admin/content-foundation',
   path: '/admin/content-foundation',
@@ -392,6 +398,7 @@ export interface FileRoutesByFullPath {
   '/admin/content': typeof AdminContentRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
   '/admin/content-foundation': typeof AdminContentFoundationRoute
+  '/admin/content-integrity': typeof AdminContentIntegrityRoute
   '/admin/content-inventory': typeof AdminContentInventoryRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
@@ -450,6 +457,7 @@ export interface FileRoutesByTo {
   '/admin/content': typeof AdminContentRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
   '/admin/content-foundation': typeof AdminContentFoundationRoute
+  '/admin/content-integrity': typeof AdminContentIntegrityRoute
   '/admin/content-inventory': typeof AdminContentInventoryRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
@@ -511,6 +519,7 @@ export interface FileRoutesById {
   '/admin/content': typeof AdminContentRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
   '/admin/content-foundation': typeof AdminContentFoundationRoute
+  '/admin/content-integrity': typeof AdminContentIntegrityRoute
   '/admin/content-inventory': typeof AdminContentInventoryRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
@@ -573,6 +582,7 @@ export interface FileRouteTypes {
     | '/admin/content'
     | '/admin/content-cleanup'
     | '/admin/content-foundation'
+    | '/admin/content-integrity'
     | '/admin/content-inventory'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
@@ -631,6 +641,7 @@ export interface FileRouteTypes {
     | '/admin/content'
     | '/admin/content-cleanup'
     | '/admin/content-foundation'
+    | '/admin/content-integrity'
     | '/admin/content-inventory'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
@@ -691,6 +702,7 @@ export interface FileRouteTypes {
     | '/admin/content'
     | '/admin/content-cleanup'
     | '/admin/content-foundation'
+    | '/admin/content-integrity'
     | '/admin/content-inventory'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
@@ -752,6 +764,7 @@ export interface RootRouteChildren {
   AdminContentRoute: typeof AdminContentRoute
   AdminContentCleanupRoute: typeof AdminContentCleanupRoute
   AdminContentFoundationRoute: typeof AdminContentFoundationRoute
+  AdminContentIntegrityRoute: typeof AdminContentIntegrityRoute
   AdminContentInventoryRoute: typeof AdminContentInventoryRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
   AdminEncyclopediaAuditRoute: typeof AdminEncyclopediaAuditRoute
@@ -1085,6 +1098,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminContentInventoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/content-integrity': {
+      id: '/admin/content-integrity'
+      path: '/admin/content-integrity'
+      fullPath: '/admin/content-integrity'
+      preLoaderRoute: typeof AdminContentIntegrityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/content-foundation': {
       id: '/admin/content-foundation'
       path: '/admin/content-foundation'
@@ -1252,6 +1272,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminContentRoute: AdminContentRoute,
   AdminContentCleanupRoute: AdminContentCleanupRoute,
   AdminContentFoundationRoute: AdminContentFoundationRoute,
+  AdminContentIntegrityRoute: AdminContentIntegrityRoute,
   AdminContentInventoryRoute: AdminContentInventoryRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
   AdminEncyclopediaAuditRoute: AdminEncyclopediaAuditRoute,
