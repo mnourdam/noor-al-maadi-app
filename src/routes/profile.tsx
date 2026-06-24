@@ -462,7 +462,7 @@ function ProfilePage() {
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
             role="dialog"
             aria-modal="true"
-            onClick={() => setConfirmReset(false)}
+            onClick={() => !resetting && setConfirmReset(false)}
           >
             <div
               onClick={(e) => e.stopPropagation()}
@@ -470,18 +470,31 @@ function ProfilePage() {
             >
               <h3 className="font-display text-lg font-bold text-gold">تأكيد حذف التقدم</h3>
               <p className="mt-2 text-sm leading-7 text-foreground/85">
-                هل تريد بالتأكيد حذف تقدمك الحالي والخروج من الحساب؟ لا يمكن التراجع عن هذا الإجراء إذا لم يكن تقدمك محفوظًا في حسابك.
+                سيتم حذف التقدم المحلي على هذا الجهاز (الحملات، المتحف، الإنجازات، القلوب، الدنانير، الخبرة، الستريك، وإشعاراتك المحلية) وتسجيل الخروج. إذا كان لديك تقدم محفوظ في الحساب فقد تتم استعادته عند تسجيل الدخول مجددًا.
               </p>
               <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
+                  disabled={resetting}
                   onClick={() => setConfirmReset(false)}
-                  className="rounded-full border border-white/15 px-4 py-2 text-sm text-muted-foreground hover:bg-white/5"
+                  className="rounded-full border border-white/15 px-4 py-2 text-sm text-muted-foreground hover:bg-white/5 disabled:opacity-50"
                 >إلغاء</button>
                 <button
-                  onClick={() => { setConfirmReset(false); logout(); }}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-l from-rose-600 to-rose-500 px-4 py-2 text-sm font-bold text-white shadow-elegant"
+                  disabled={resetting}
+                  onClick={async () => {
+                    setResetting(true);
+                    try {
+                      clearLocalPlayerProgress();
+                      logout();
+                      if (user) { try { await signOut(); } catch { /* ignore */ } }
+                    } finally {
+                      setResetting(false);
+                      setConfirmReset(false);
+                      if (typeof window !== "undefined") window.location.assign("/");
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-l from-rose-600 to-rose-500 px-4 py-2 text-sm font-bold text-white shadow-elegant disabled:opacity-60"
                 >
-                  <LogOut className="size-4" /> حذف التقدم والخروج
+                  <LogOut className="size-4" /> {resetting ? "جارٍ الحذف…" : "حذف التقدم والخروج"}
                 </button>
               </div>
             </div>
