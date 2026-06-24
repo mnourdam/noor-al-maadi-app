@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin } from "lucide-react";
+import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -90,6 +90,8 @@ function AdminHub() {
             desc="كشف الكيانات المكررة، تعيين قياسي، إخفاء ناعم وإعادة توجيه الأطلس والحملات." />
           <AdminCard to="/admin/content-cleanup" icon={<ShieldCheck className="h-5 w-5" />} title="تنظيف المحتوى (دفعي)"
             desc="أرشفة المكررات وإعادة ربط الأطلس بالقياسي — معاينة قبل التنفيذ." />
+          <AdminCard to="/admin/exploration-path-repair" icon={<Compass className="h-5 w-5" />} title="إصلاح مسارات الاستكشاف"
+            desc="إضافة related_entities إلى محاور المسارات الفارغة بناءً على بيانات Supabase فقط." />
 
           <AdminCard to="/admin/investigations" icon={<Search className="h-5 w-5" />} title="إدارة التحقيقات"
             desc="تحقيقات تاريخية قابلة للعب من Supabase." />
