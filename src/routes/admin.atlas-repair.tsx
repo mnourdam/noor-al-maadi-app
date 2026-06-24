@@ -484,6 +484,10 @@ function AtlasRepairPage() {
           ))}
         </section>
 
+        {/* Debug: audit vs raw DB */}
+        <DebugConsistencyPanel rows={rows} byId={byId} encLoaded={enc.length} encTotal={encTotal} counts={counts} />
+
+
         {/* Controls */}
         <section className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 rounded border border-stone-700 bg-stone-900 px-2 py-1.5">
