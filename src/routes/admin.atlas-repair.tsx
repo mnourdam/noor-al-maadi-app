@@ -242,16 +242,36 @@ function AtlasRepairPage() {
   const [stubProgress, setStubProgress] = useState<{ done: number; total: number; failed: number }>({ done: 0, total: 0, failed: 0 });
   const [stubResult, setStubResult] = useState<{ created: number; linked: number; failed: number; failures: { row: AtlasEntityRow; reason: string }[] } | null>(null);
 
+  const [encTotal, setEncTotal] = useState<number | null>(null);
+
   const reload = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [a, e] = await Promise.all([
-        listAllAtlasEntities(),
-        supabase.from("encyclopedia_entities").select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled").limit(5000),
-      ]);
-      if (e.error) throw e.error;
+      // Paginate encyclopedia_entities: PostgREST caps per-request rows (default 1000),
+      // so .limit(5000) silently truncates. We page until exhausted.
+      const PAGE = 1000;
+      const all: EncEntity[] = [];
+      let from = 0;
+      let total: number | null = null;
+      for (;;) {
+        const { data, error, count } = await supabase
+          .from("encyclopedia_entities")
+          .select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled", { count: "exact" })
+          .order("id", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const chunk = (data as EncEntity[] | null) ?? [];
+        all.push(...chunk);
+        if (total === null && typeof count === "number") total = count;
+        if (chunk.length < PAGE) break;
+        from += PAGE;
+        if (total !== null && all.length >= total) break;
+        if (from > 100000) break; // safety
+      }
+      const a = await listAllAtlasEntities();
       setRows(a);
-      setEnc((e.data as EncEntity[] | null) ?? []);
+      setEnc(all);
+      setEncTotal(total);
     } catch (err: any) {
       setError(err?.message ?? String(err));
     } finally { setLoading(false); }
@@ -464,6 +484,10 @@ function AtlasRepairPage() {
           ))}
         </section>
 
+        {/* Debug: audit vs raw DB */}
+        <DebugConsistencyPanel rows={rows} byId={byId} encLoaded={enc.length} encTotal={encTotal} counts={counts} />
+
+
         {/* Controls */}
         <section className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 rounded border border-stone-700 bg-stone-900 px-2 py-1.5">
@@ -540,6 +564,69 @@ function AtlasRepairPage() {
         />
       )}
 
+    </div>
+  );
+}
+
+// ---- Debug consistency panel ---------------------------------------------
+
+function DebugConsistencyPanel({
+  rows, byId, encLoaded, encTotal, counts,
+}: {
+  rows: AtlasEntityRow[];
+  byId: Map<string, EncEntity>;
+  encLoaded: number;
+  encTotal: number | null;
+  counts: Record<IssueKind, number>;
+}) {
+  // Raw "DB-as-seen-by-client" counts — these are computed from the same atlas
+  // rows but ignore the audit's enabled / type / slug / richness filters.
+  let rawMissing = 0;       // atlas.encyclopedia_entity_id IS NULL
+  let rawLinked = 0;        // id set AND target found in loaded encyclopedia map
+  let rawDangling = 0;      // id set but target not in loaded map
+  let rawDisabled = 0;      // linked AND target.enabled = false
+  for (const r of rows) {
+    if (!r.encyclopedia_entity_id) { rawMissing++; continue; }
+    const e = byId.get(r.encyclopedia_entity_id);
+    if (!e) { rawDangling++; continue; }
+    rawLinked++;
+    if (!e.enabled) rawDisabled++;
+  }
+  const truncated = encTotal !== null && encLoaded < encTotal;
+  return (
+    <section className="rounded border border-stone-800 bg-stone-900/60 p-3 text-[11px] text-stone-200">
+      <div className="mb-2 flex items-center gap-2">
+        <ShieldAlert className="size-3.5 text-amber-300" />
+        <strong className="text-amber-100">تشخيص التدقيق</strong>
+        <span className="text-stone-400">
+          encyclopedia: محمَّل {encLoaded.toLocaleString("ar")} / إجمالي {encTotal?.toLocaleString("ar") ?? "—"}
+          {truncated && <span className="ms-2 rounded bg-rose-900/60 px-1.5 py-0.5 text-rose-100">مبتور!</span>}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Stat label="raw linked (DB)" value={rawLinked} />
+        <Stat label="audit ok" value={counts.ok} />
+        <Stat label="raw missing (DB)" value={rawMissing} />
+        <Stat label="audit missing" value={counts.missing} />
+        <Stat label="raw dangling" value={rawDangling} />
+        <Stat label="audit dangling" value={counts.dangling} />
+        <Stat label="raw disabled" value={rawDisabled} />
+        <Stat label="audit disabled" value={counts.disabled} />
+      </div>
+      <p className="mt-2 text-stone-400">
+        الفجوة بين <code>raw linked</code> و<code>audit ok</code> = صفوف مربوطة بكيان فعّال لكن تفشل في فحوصات
+        النوع/الـslug/الغنى. الفجوة في <code>missing</code> أو <code>dangling</code> غالبًا تعني أن قائمة
+        الموسوعة مبتورة (حدّ PostgREST). إن ظهر «مبتور!» أعلاه فأعد التحميل بعد تأكيد التصفّح الجزئي.
+      </p>
+    </section>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded border border-stone-800 bg-stone-950/60 px-2 py-1.5">
+      <div className="text-base font-bold text-stone-100">{value.toLocaleString("ar")}</div>
+      <div className="text-stone-400">{label}</div>
     </div>
   );
 }
