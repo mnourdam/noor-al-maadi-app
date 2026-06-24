@@ -154,7 +154,7 @@ export async function listFriendships(userId: string): Promise<FriendEntry[]> {
   const list = (rows as FriendshipRow[]) ?? [];
   if (!list.length) return [];
   const otherIds = list.map((r) => (r.user_a === userId ? r.user_b : r.user_a));
-  const { data: profiles } = await db.from("profiles").select(PUBLIC_COLS).in("id", otherIds);
+  const { data: profiles } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).in("id", otherIds);
   const byId: Record<string, PublicProfile> = {};
   for (const p of (profiles as PublicProfile[]) ?? []) byId[p.id] = p;
   return list
@@ -236,7 +236,7 @@ export async function listMyReferrals(userId: string): Promise<{ row: ReferralRo
   const list = (rows as ReferralRow[]) ?? [];
   if (!list.length) return [];
   const ids = list.map((r) => r.referred_id);
-  const { data: profiles } = await db.from("profiles").select(PUBLIC_COLS).in("id", ids);
+  const { data: profiles } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).in("id", ids);
   const byId: Record<string, PublicProfile> = {};
   for (const p of (profiles as PublicProfile[]) ?? []) byId[p.id] = p;
   return list.map((r) => ({ row: r, friend: byId[r.referred_id] ?? null }));
