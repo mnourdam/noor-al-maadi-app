@@ -404,13 +404,17 @@ function ContentIntegrity() {
           <Section title="1. الحملة ← الموسوعة">
             <div className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
               <Stat label="إجمالي مراجع الفتح" value={r.unlocks_total} />
-              <Stat label="مراجع مفقودة" value={r.unlocks_missing.length} tone={r.unlocks_missing.length ? "bad" : "good"} />
+              <Stat label="مراجع فتح مفقودة" value={r.unlocks_missing.length} tone={r.unlocks_missing.length ? "bad" : "good"} />
               <Stat label="معرّفات مكسورة" value={r.unlocks_broken.length} tone={r.unlocks_broken.length ? "bad" : "good"} />
               <Stat label="حملات مفهرسة" value={r.campaigns.length} />
+              <Stat label="core_entities" value={r.core_refs_total} />
+              <Stat label="core مفقودة" value={r.core_refs_missing.length} tone={r.core_refs_missing.length ? "bad" : "good"} />
+              <Stat label="supporting_entities" value={r.supporting_refs_total} />
+              <Stat label="supporting مفقودة" value={r.supporting_refs_missing.length} tone={r.supporting_refs_missing.length ? "bad" : "good"} />
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <div className="mb-1 text-xs font-medium text-muted-foreground">مراجع مفقودة</div>
+                <div className="mb-1 text-xs font-medium text-muted-foreground">مراجع فتح مفقودة</div>
                 <List
                   items={r.unlocks_missing}
                   empty="لا يوجد"
@@ -423,14 +427,14 @@ function ContentIntegrity() {
                 />
               </div>
               <div>
-                <div className="mb-1 text-xs font-medium text-muted-foreground">معرّفات مكسورة</div>
+                <div className="mb-1 text-xs font-medium text-muted-foreground">core/supporting مفقودة</div>
                 <List
-                  items={r.unlocks_broken}
+                  items={[...r.core_refs_missing.map((x) => ({ ...x, kind: "core" })), ...r.supporting_refs_missing.map((x) => ({ ...x, kind: "supporting" }))]}
                   empty="لا يوجد"
-                  render={(u: UnlockRef) => (
+                  render={(x: any) => (
                     <div className="flex items-center justify-between gap-3">
-                      <code className="font-mono text-xs">{u.raw || "(فارغ)"}</code>
-                      <span className="text-xs text-muted-foreground">{u.campaign} / {u.chapter}</span>
+                      <code className="font-mono text-xs">{x.raw}</code>
+                      <span className="text-xs text-muted-foreground">{x.campaign} · {x.kind}</span>
                     </div>
                   )}
                 />
@@ -440,10 +444,10 @@ function ContentIntegrity() {
 
           <Section title="2. الحملة ← المتحف">
             <div className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-              <Stat label="إجمالي تحف المتحف" value={r.museum_total} />
-              <Stat label="مفتوحة عبر الحملات" value={r.museum_unlocked_via_campaign} />
+              <Stat label="إجمالي تحف الموسوعة" value={r.museum_total} />
+              <Stat label="قابلة للحصول" value={r.museum_obtainable.length} tone="good" />
               <Stat label="مكافآت تحف مفقودة" value={r.rewards_missing_artifact.length} tone={r.rewards_missing_artifact.length ? "bad" : "good"} />
-              <Stat label="تحف بلا مصدر فتح" value={r.museum_orphan.length} tone={r.museum_orphan.length ? "warn" : "good"} />
+              <Stat label="غير قابلة للحصول" value={r.museum_unobtainable.length} tone={r.museum_unobtainable.length ? "warn" : "good"} />
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
@@ -460,9 +464,9 @@ function ContentIntegrity() {
                 />
               </div>
               <div>
-                <div className="mb-1 text-xs font-medium text-muted-foreground">تحف بلا مصدر فتح</div>
+                <div className="mb-1 text-xs font-medium text-muted-foreground">تحف غير قابلة للحصول</div>
                 <List
-                  items={r.museum_orphan}
+                  items={r.museum_unobtainable}
                   empty="لا يوجد"
                   render={(e: EncEntity) => (
                     <div className="flex items-center justify-between gap-3">
@@ -480,7 +484,10 @@ function ContentIntegrity() {
               <Stat label="إجمالي الموسوعة" value={r.encyclopedia.length} />
               <Stat label="موصولة بحملة" value={r.enc_reachable_campaign.size} />
               <Stat label="موصولة بالأطلس" value={r.enc_reachable_atlas.size} />
-              <Stat label="يتيمة (لا حملة ولا أطلس)" value={r.enc_orphan.length} tone={r.enc_orphan.length ? "warn" : "good"} />
+              <Stat label="قابلة للاكتشاف" value={r.enc_reachable_discoverable.size} />
+              <Stat label="عبر المتحف" value={r.enc_reachable_museum.size} />
+              <Stat label="يتيمة (قواعد جديدة)" value={r.enc_orphan.length} tone={r.enc_orphan.length ? "warn" : "good"} />
+              <Stat label="يتيمة (قواعد قديمة)" value={r.enc_orphan_legacy.length} />
             </div>
             <List
               items={r.enc_orphan}
@@ -495,12 +502,14 @@ function ContentIntegrity() {
           </Section>
 
           <Section title="4. وصول المتحف">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-              <Stat label="قابلة للحصول" value={r.museum_unlocked_via_campaign} tone="good" />
-              <Stat label="غير قابلة للحصول" value={r.museum_total - r.museum_unlocked_via_campaign} tone={r.museum_total - r.museum_unlocked_via_campaign ? "warn" : "good"} />
-              <Stat label="تحف يتيمة" value={r.museum_orphan.length} tone={r.museum_orphan.length ? "warn" : "good"} />
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <Stat label="قابلة للحصول" value={r.museum_obtainable.length} tone="good" />
+              <Stat label="موسوعة فقط" value={r.museum_encyclopedia_only.length} />
+              <Stat label="غير قابلة للحصول" value={r.museum_unobtainable.length} tone={r.museum_unobtainable.length ? "warn" : "good"} />
+              <Stat label="إجمالي التحف" value={r.museum_total} />
             </div>
           </Section>
+
 
           <Section title="5. وصول الأطلس">
             <div className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-3">
