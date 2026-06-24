@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import { listFriendships } from "@/lib/social";
