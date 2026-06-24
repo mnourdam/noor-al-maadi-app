@@ -28,6 +28,7 @@ import { Route as ContentAuditRouteImport } from './routes/content-audit'
 import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorldsIndexRouteImport } from './routes/worlds.index'
@@ -176,6 +177,11 @@ const CampaignsRoute = CampaignsRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AchievementsRoute = AchievementsRouteImport.update({
+  id: '/achievements',
+  path: '/achievements',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -459,6 +465,7 @@ const CampaignsImportedIdChapterChapterRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/achievements': typeof AchievementsRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
@@ -534,6 +541,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/achievements': typeof AchievementsRoute
   '/auth': typeof AuthRoute
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
@@ -608,6 +616,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/achievements': typeof AchievementsRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
@@ -685,6 +694,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/achievements'
     | '/auth'
     | '/campaigns'
     | '/collection'
@@ -760,6 +770,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/achievements'
     | '/auth'
     | '/collection'
     | '/content-audit'
@@ -833,6 +844,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/achievements'
     | '/auth'
     | '/campaigns'
     | '/collection'
@@ -909,6 +921,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AchievementsRoute: typeof AchievementsRoute
   AuthRoute: typeof AuthRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
   CollectionRoute: typeof CollectionRoute
@@ -1107,6 +1120,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/achievements': {
+      id: '/achievements'
+      path: '/achievements'
+      fullPath: '/achievements'
+      preLoaderRoute: typeof AchievementsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -1530,6 +1550,7 @@ const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AchievementsRoute: AchievementsRoute,
   AuthRoute: AuthRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
   CollectionRoute: CollectionRoute,

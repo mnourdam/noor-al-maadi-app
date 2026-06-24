@@ -59,6 +59,7 @@ export interface ProfileState {
   activityCooldowns: Record<string, number>; // key -> ms epoch expiry
   streakMilestonesClaimed: number[];
   hintsPurchased: Record<string, number>; // e.g. "inv:<id>" -> count revealed
+  achievementsEarned: Record<string, number>; // id -> earned-at ms epoch
 }
 
 const initial: ProfileState = {
@@ -97,6 +98,7 @@ const initial: ProfileState = {
   activityCooldowns: {},
   streakMilestonesClaimed: [],
   hintsPurchased: {},
+  achievementsEarned: {},
 };
 
 interface Ctx {
@@ -145,6 +147,7 @@ interface Ctx {
   // Social v1
   grantTitle: (title: string) => void;
   grantArtifact: (id: string) => void;
+  markAchievementEarned: (id: string) => boolean; // returns true if it was newly marked
 }
 
 const ProfileContext = createContext<Ctx | null>(null);
@@ -400,6 +403,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     resetProfile: () => setProfile(initial),
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
     grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
+    markAchievementEarned: (id) => {
+      let isNew = false;
+      update((p) => {
+        if (p.achievementsEarned?.[id]) return p;
+        isNew = true;
+        return { ...p, achievementsEarned: { ...(p.achievementsEarned ?? {}), [id]: Date.now() } };
+      });
+      return isNew;
+    },
   }), [profile, update, awardBadge]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;

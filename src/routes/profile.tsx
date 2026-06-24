@@ -359,29 +359,56 @@ function ProfilePage() {
           </div>
         )}
 
-        {/* Achievements */}
-        <h3 className="font-display mt-7 mb-3 text-sm font-bold">الإنجازات</h3>
+        {/* Achievements — highlight latest 5 */}
+        <div className="mt-7 mb-3 flex items-end justify-between gap-2">
+          <div>
+            <h3 className="font-display text-sm font-bold">الإنجازات</h3>
+            <p className="text-[11px] text-muted-foreground">
+              {achievements.filter((a) => a.earned).length} من {ACHIEVEMENTS.length} مفتوحة
+            </p>
+          </div>
+          <Link
+            to="/achievements"
+            className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] text-gold transition-colors hover:bg-gold/20"
+          >
+            عرض الكل
+            <ChevronLeft className="size-3" />
+          </Link>
+        </div>
         <div className="space-y-2">
-          {ACHIEVEMENTS.map((a) => {
-            const p = achievements.find((x) => x.id === a.id)!;
-            const pct = Math.round((p.current / a.goal) * 100);
-            const secret = a.secret && !p.earned;
-            return (
-              <div key={a.id} className={`flex items-center gap-3 rounded-2xl border p-3 ${p.earned ? "border-gold/40 bg-gold/5" : "border-white/10 bg-surface"}`}>
-                <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-lg">{secret ? "❔" : a.icon}</div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display truncate text-sm font-bold">{secret ? "إنجاز سرّي" : a.name}</p>
-                  <p className="line-clamp-1 text-[11px] text-muted-foreground">{secret ? "اكتشف بنفسك…" : a.desc}</p>
-                  {!secret && (
-                    <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full bg-gradient-gold" style={{ width: `${pct}%` }} />
-                    </div>
-                  )}
+          {(() => {
+            const earnedAt = profile.achievementsEarned ?? {};
+            const ranked = [...ACHIEVEMENTS]
+              .map((a) => {
+                const p = achievements.find((x) => x.id === a.id)!;
+                const ts = earnedAt[a.id] ?? 0;
+                const pct = p.current / a.goal;
+                // Earned (recent first), then near-complete, then the rest.
+                const sortKey = p.earned ? 2_000_000_000_000 + ts : pct * 1_000_000;
+                return { a, p, ts, sortKey };
+              })
+              .sort((x, y) => y.sortKey - x.sortKey)
+              .slice(0, 5);
+            return ranked.map(({ a, p }) => {
+              const pct = Math.round((p.current / a.goal) * 100);
+              const secret = a.secret && !p.earned;
+              return (
+                <div key={a.id} className={`flex items-center gap-3 rounded-2xl border p-3 ${p.earned ? "border-gold/40 bg-gold/5" : "border-white/10 bg-surface"}`}>
+                  <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-lg">{secret ? "❔" : a.icon}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display truncate text-sm font-bold">{secret ? "إنجاز سرّي" : a.name}</p>
+                    <p className="line-clamp-1 text-[11px] text-muted-foreground">{secret ? "اكتشف بنفسك…" : a.desc}</p>
+                    {!secret && (
+                      <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-full bg-gradient-gold" style={{ width: `${pct}%` }} />
+                      </div>
+                    )}
+                  </div>
+                  {p.earned && <Trophy className="size-4 shrink-0 text-gold" />}
                 </div>
-                {p.earned && <Trophy className="size-4 shrink-0 text-gold" />}
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
 
         {/* Settings */}

@@ -64,27 +64,43 @@ export function levelFor(points: number) {
 // ============================================================
 // ACHIEVEMENTS — long-term goals (rendered with derived state)
 // ============================================================
+export type AchievementCategory =
+  | "reading"
+  | "exploration"
+  | "mastery"
+  | "dedication"
+  | "campaigns";
+
+export const ACHIEVEMENT_CATEGORIES: { id: AchievementCategory; name: string; tagline: string; icon: string }[] = [
+  { id: "reading",     name: "القراءة والرواية",   tagline: "إنجازات القراءة والاستيعاب", icon: "📖" },
+  { id: "exploration", name: "الاستكشاف",          tagline: "اكتشاف الشخصيات والأماكن",   icon: "🗺️" },
+  { id: "mastery",     name: "الإتقان",            tagline: "تحقيقات وقرارات وخطوط زمن",  icon: "🧭" },
+  { id: "dedication",  name: "المثابرة",           tagline: "السلاسل اليومية والمستويات", icon: "🔥" },
+  { id: "campaigns",   name: "الحملات التاريخية",  tagline: "إنجاز الحملات الكبرى",        icon: "⚔️" },
+];
+
 export interface AchievementDef {
   id: string;
   name: string;
   desc: string;
   icon: string;
   goal: number;
+  category: AchievementCategory;
   secret?: boolean;
 }
 export const ACHIEVEMENTS: AchievementDef[] = [
-  { id: "ach_read_5",     name: "قارئ التاريخ",        desc: "أنهِ قراءة 5 قصص.",            icon: "📖", goal: 5 },
-  { id: "ach_read_15",    name: "راوي الأمّة",         desc: "أنهِ قراءة 15 قصة.",           icon: "📚", goal: 15 },
-  { id: "ach_inv_5",      name: "محقّق ماهر",          desc: "حلّ 5 قضايا تحقيق.",           icon: "🔍", goal: 5 },
-  { id: "ach_decisions_5",name: "صانع القرار",         desc: "اتّخذ 5 قراراتٍ تاريخية.",      icon: "🧭", goal: 5 },
-  { id: "ach_timeline_5", name: "حافظ التواريخ",        desc: "رتّب 5 خطوطٍ زمنية.",          icon: "🗓️", goal: 5 },
-  { id: "ach_artifact_10",name: "جامع الآثار",          desc: "اكتشف 10 آثار.",               icon: "🏺", goal: 10 },
-  { id: "ach_char_6",     name: "كاتب السير",           desc: "افتح 6 شخصيات.",              icon: "🎴", goal: 6 },
-  { id: "ach_region_5",   name: "فاتح الأقاليم",        desc: "افتح 5 مناطق على الخارطة.",    icon: "🗺️", goal: 5 },
-  { id: "ach_streak_7",   name: "أسبوعٌ من النور",       desc: "حافظ على 7 أيام متتالية.",     icon: "🔥", goal: 7 },
-  { id: "ach_streak_30",  name: "شهرٌ من الإصرار",       desc: "حافظ على 30 يومًا متتالية.",   icon: "🌙", goal: 30 },
-  { id: "ach_campaign_3", name: "قائد الحملات",          desc: "أتمم 3 حملات تاريخية.",        icon: "⚔️", goal: 3 },
-  { id: "ach_level_5",    name: "عالم التاريخ",         desc: "ابلغ المستوى الخامس.",         icon: "⭐", goal: 5 },
+  { id: "ach_read_5",      name: "قارئ التاريخ",      desc: "أنهِ قراءة 5 قصص.",          icon: "📖", goal: 5,  category: "reading" },
+  { id: "ach_read_15",     name: "راوي الأمّة",       desc: "أنهِ قراءة 15 قصة.",         icon: "📚", goal: 15, category: "reading" },
+  { id: "ach_inv_5",       name: "محقّق ماهر",        desc: "حلّ 5 قضايا تحقيق.",         icon: "🔍", goal: 5,  category: "mastery" },
+  { id: "ach_decisions_5", name: "صانع القرار",       desc: "اتّخذ 5 قراراتٍ تاريخية.",    icon: "🧭", goal: 5,  category: "mastery" },
+  { id: "ach_timeline_5",  name: "حافظ التواريخ",      desc: "رتّب 5 خطوطٍ زمنية.",        icon: "🗓️", goal: 5,  category: "mastery" },
+  { id: "ach_artifact_10", name: "جامع الآثار",        desc: "اكتشف 10 آثار.",             icon: "🏺", goal: 10, category: "exploration" },
+  { id: "ach_char_6",      name: "كاتب السير",         desc: "افتح 6 شخصيات.",            icon: "🎴", goal: 6,  category: "exploration" },
+  { id: "ach_region_5",    name: "فاتح الأقاليم",      desc: "افتح 5 مناطق على الخارطة.",  icon: "🗺️", goal: 5,  category: "exploration" },
+  { id: "ach_streak_7",    name: "أسبوعٌ من النور",     desc: "حافظ على 7 أيام متتالية.",   icon: "🔥", goal: 7,  category: "dedication" },
+  { id: "ach_streak_30",   name: "شهرٌ من الإصرار",     desc: "حافظ على 30 يومًا متتالية.", icon: "🌙", goal: 30, category: "dedication" },
+  { id: "ach_campaign_3",  name: "قائد الحملات",        desc: "أتمم 3 حملات تاريخية.",      icon: "⚔️", goal: 3,  category: "campaigns" },
+  { id: "ach_level_5",     name: "عالم التاريخ",       desc: "ابلغ المستوى الخامس.",       icon: "⭐", goal: 5,  category: "dedication" },
 ];
 
 export interface AchievementProgress { id: string; current: number; earned: boolean }
