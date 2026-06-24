@@ -136,9 +136,10 @@ export function AtlasStage({
       drag.current = null;
       return;
     }
-    // 1:1 drag for both touch and mouse — feels like Google Maps.
-    const dx = e.clientX - drag.current.x;
-    const dy = e.clientY - drag.current.y;
+    // Weighted pan — 0.65× pointer delta feels controlled and map-like.
+    const PAN_GAIN = 0.65;
+    const dx = (e.clientX - drag.current.x) * PAN_GAIN;
+    const dy = (e.clientY - drag.current.y) * PAN_GAIN;
     scheduleView({
       scale: viewRef.current.scale,
       tx: drag.current.tx + dx,
@@ -205,11 +206,11 @@ export function AtlasStage({
       const ratio = dist / pinch.current.dist;
       const s = clampScalar(pinch.current.scale * ratio, MIN_SCALE, MAX_SCALE);
       const k = s / pinch.current.scale;
-      // Keep the world point under the original midpoint anchored under the
-      // current midpoint. Same math both axes.
+      // Anchor the world point under the initial finger centroid under the
+      // current centroid. Tight clamp every frame — no drift on release.
       const tx = midX - (pinch.current.midX - pinch.current.tx) * k;
       const ty = midY - (pinch.current.midY - pinch.current.ty) * k;
-      scheduleView({ scale: s, tx, ty }, { relax: true });
+      scheduleView({ scale: s, tx, ty });
       e.preventDefault();
     };
     const onTouchEnd = (e: TouchEvent) => {
