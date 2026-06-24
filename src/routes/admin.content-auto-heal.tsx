@@ -508,36 +508,16 @@ function ContentAutoHeal() {
             )}
           </Section>
 
-          <Section title={`٢. ربط الكيانات المرتبطة بالحملات (${snap.related.length})`}>
+          <Section title="٢. ربط الكيانات المرتبطة بالحملات">
             <p className="mb-2 text-xs text-muted-foreground">
-              يستنتج كيانات الموسوعة من عنوان/وصف/فصول الحملة بمطابقة دقيقة للعنوان أو الاسم البديل، ويضيفها إلى
-              <code className="mx-1 font-mono">metadata.related_entities</code>.
+              تم نقل بناء العلاقات إلى أداة مخصّصة تعتمد على المراجع الصريحة فقط (مكافآت، فتوحات،
+              <code className="mx-1 font-mono">encyclopedia_refs</code>) — بدون مطابقة نصية.
             </p>
-            <button
-              disabled={snap.related.length === 0 || !!busy}
-              onClick={() =>
-                setPreview({
-                  title: `ربط ${snap.related.length} حملة بكياناتها`,
-                  lines: snap.related.map(
-                    (r) => `${r.campaignSlug}: +${r.add.length} (${r.add.slice(0, 4).join(", ")}${r.add.length > 4 ? "…" : ""})`,
-                  ),
-                  onConfirm: async () => {
-                    await applyCampaignRelated(snap.related, snap.campaigns);
-                    setLastReport((prev) => ({
-                      fixedUnlocks: prev?.fixedUnlocks ?? 0,
-                      linkedCampaigns: snap.related.length,
-                      museumObtainable: prev?.museumObtainable ?? 0,
-                      museumEncOnly: prev?.museumEncOnly ?? 0,
-                      remainingManual: prev?.remainingManual ?? remainingManual,
-                    }));
-                  },
-                })
-              }
-              className="rounded bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"
-            >
-              معاينة ربط الكيانات
-            </button>
+            <Link to="/admin/campaign-relationships" className="inline-block rounded bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700">
+              فتح باني علاقات الحملات
+            </Link>
           </Section>
+
 
           <Section title={`٣. توليد خريطة فتح المتحف (${snap.museum.obtainable.length} قابل + ${snap.museum.encyclopediaOnly.length} موسوعة فقط)`}>
             <p className="mb-2 text-xs text-muted-foreground">
@@ -574,7 +554,7 @@ function ContentAutoHeal() {
 
           <Section title="٤. تنفيذ كل الإصلاحات الآلية">
             <p className="mb-2 text-xs text-muted-foreground">
-              يطبّق إصلاح المكافآت ثم ربط الكيانات ثم خريطة المتحف ضمن معاينة واحدة. لا عمليات حذف.
+              يطبّق إصلاح المكافآت وخريطة المتحف ضمن معاينة واحدة. لا عمليات حذف. (ربط الكيانات أصبح في أداة مستقلة.)
             </p>
             <button
               disabled={!!busy}
@@ -583,18 +563,16 @@ function ContentAutoHeal() {
                   title: "إصلاح ذاتي شامل",
                   lines: [
                     `مكافآت سيتم إصلاحها: ${snap.unlockFixes.length}`,
-                    `حملات سيتم ربط كياناتها: ${snap.related.length}`,
                     `تحف ستصبح قابلة للحصول: ${snap.museum.obtainable.length}`,
                     `تحف ستوسم كموسوعة فقط: ${snap.museum.encyclopediaOnly.length}`,
                     `يتبقى للمراجعة اليدوية: ${remainingManual}`,
                   ],
                   onConfirm: async () => {
                     await applyUnlockFixes(snap.unlockFixes, snap.campaigns);
-                    await applyCampaignRelated(snap.related, snap.campaigns);
                     await applyMuseum(snap.museum);
                     setLastReport({
                       fixedUnlocks: snap.unlockFixes.length,
-                      linkedCampaigns: snap.related.length,
+                      linkedCampaigns: 0,
                       museumObtainable: snap.museum.obtainable.length,
                       museumEncOnly: snap.museum.encyclopediaOnly.length,
                       remainingManual: snap.missing.length - snap.unlockFixes.length,
@@ -607,6 +585,7 @@ function ContentAutoHeal() {
               معاينة الإصلاح الذاتي الشامل
             </button>
           </Section>
+
         </>
       )}
     </div>

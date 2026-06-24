@@ -60,6 +60,7 @@ import { Route as AdminContentCleanupRouteImport } from './routes/admin.content-
 import { Route as AdminContentAutoHealRouteImport } from './routes/admin.content-auto-heal'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
+import { Route as AdminCampaignRelationshipsRouteImport } from './routes/admin.campaign-relationships'
 import { Route as AdminAtlasReviewRouteImport } from './routes/admin.atlas-review'
 import { Route as AdminAtlasRepairRouteImport } from './routes/admin.atlas-repair'
 import { Route as AdminAtlasImportRouteImport } from './routes/admin.atlas-import'
@@ -327,6 +328,12 @@ const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
   path: '/admin/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCampaignRelationshipsRoute =
+  AdminCampaignRelationshipsRouteImport.update({
+    id: '/admin/campaign-relationships',
+    path: '/admin/campaign-relationships',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminAtlasReviewRoute = AdminAtlasReviewRouteImport.update({
   id: '/admin/atlas-review',
   path: '/admin/atlas-review',
@@ -407,6 +414,7 @@ export interface FileRoutesByFullPath {
   '/admin/atlas-import': typeof AdminAtlasImportRoute
   '/admin/atlas-repair': typeof AdminAtlasRepairRoute
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
+  '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
@@ -468,6 +476,7 @@ export interface FileRoutesByTo {
   '/admin/atlas-import': typeof AdminAtlasImportRoute
   '/admin/atlas-repair': typeof AdminAtlasRepairRoute
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
+  '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
@@ -532,6 +541,7 @@ export interface FileRoutesById {
   '/admin/atlas-import': typeof AdminAtlasImportRoute
   '/admin/atlas-repair': typeof AdminAtlasRepairRoute
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
+  '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
@@ -597,6 +607,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-import'
     | '/admin/atlas-repair'
     | '/admin/atlas-review'
+    | '/admin/campaign-relationships'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/content-auto-heal'
@@ -658,6 +669,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-import'
     | '/admin/atlas-repair'
     | '/admin/atlas-review'
+    | '/admin/campaign-relationships'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/content-auto-heal'
@@ -721,6 +733,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-import'
     | '/admin/atlas-repair'
     | '/admin/atlas-review'
+    | '/admin/campaign-relationships'
     | '/admin/campaigns'
     | '/admin/content'
     | '/admin/content-auto-heal'
@@ -785,6 +798,7 @@ export interface RootRouteChildren {
   AdminAtlasImportRoute: typeof AdminAtlasImportRoute
   AdminAtlasRepairRoute: typeof AdminAtlasRepairRoute
   AdminAtlasReviewRoute: typeof AdminAtlasReviewRoute
+  AdminCampaignRelationshipsRoute: typeof AdminCampaignRelationshipsRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminContentRoute: typeof AdminContentRoute
   AdminContentAutoHealRoute: typeof AdminContentAutoHealRoute
@@ -1174,6 +1188,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/campaign-relationships': {
+      id: '/admin/campaign-relationships'
+      path: '/admin/campaign-relationships'
+      fullPath: '/admin/campaign-relationships'
+      preLoaderRoute: typeof AdminCampaignRelationshipsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/atlas-review': {
       id: '/admin/atlas-review'
       path: '/admin/atlas-review'
@@ -1309,6 +1330,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAtlasImportRoute: AdminAtlasImportRoute,
   AdminAtlasRepairRoute: AdminAtlasRepairRoute,
   AdminAtlasReviewRoute: AdminAtlasReviewRoute,
+  AdminCampaignRelationshipsRoute: AdminCampaignRelationshipsRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminContentRoute: AdminContentRoute,
   AdminContentAutoHealRoute: AdminContentAutoHealRoute,
