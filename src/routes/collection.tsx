@@ -246,6 +246,24 @@ function CollectionPage() {
     city: supCities, battle: supBattles, event: supEvents,
   };
 
+  // ── Museum runtime visibility for artifacts ─────────────────
+  // Hide legacy/demo artifacts that are not admin-imported,
+  // not campaign-referenced, and not museum_enabled=true.
+  // No deletes; runtime filtering only.
+  const [campaignArtifactRefs, setCampaignArtifactRefs] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    fetchCampaignArtifactRefSet()
+      .then(s => { if (!cancelled) setCampaignArtifactRefs(s); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  const isArtifactVisible = (slug: string, metadata: any, legacyId?: string | null) => {
+    const hasRef = campaignArtifactRefs.has(slug.toLowerCase()) ||
+      (legacyId ? campaignArtifactRefs.has(String(legacyId).toLowerCase()) : false);
+    return classifyArtifact(metadata, hasRef).visible;
+  };
+
   // ── Imported registry items: museum is Supabase-only now. ───
   // Keep the shape so downstream consumers (rendering, counts)
   // continue to work without legacy registry fallback.
