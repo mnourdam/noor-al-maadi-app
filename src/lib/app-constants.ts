@@ -79,6 +79,33 @@ export const ACHIEVEMENT_CATEGORIES: { id: AchievementCategory; name: string; ta
   { id: "campaigns",   name: "الحملات التاريخية",  tagline: "إنجاز الحملات الكبرى",        icon: "⚔️" },
 ];
 
+export type AchievementRarity =
+  | "common"
+  | "uncommon"
+  | "rare"
+  | "epic"
+  | "legendary"
+  | "secret";
+
+export type AchievementRewardKind =
+  | "xp"
+  | "dinars"
+  | "museum"
+  | "badge"
+  | "avatar"
+  | "title"
+  | "none";
+
+export interface AchievementReward {
+  kind: AchievementRewardKind;
+  /** Numeric amount for xp / dinars. */
+  amount?: number;
+  /** Target id for museum unlock, badge, avatar, or title. */
+  refId?: string;
+  /** Optional human-readable label (e.g. title text). */
+  label?: string;
+}
+
 export interface AchievementDef {
   id: string;
   name: string;
@@ -86,6 +113,13 @@ export interface AchievementDef {
   icon: string;
   goal: number;
   category: AchievementCategory;
+  /** Visual rarity tier. Defaults to "common" when omitted. */
+  rarity?: AchievementRarity;
+  /** Zero or more rewards granted when the achievement unlocks. */
+  rewards?: AchievementReward[];
+  /** Hide name/desc/icon in lists until unlocked. Implies secret styling. */
+  hidden_until_unlocked?: boolean;
+  /** Legacy alias for hidden_until_unlocked. */
   secret?: boolean;
 }
 export const ACHIEVEMENTS: AchievementDef[] = [
