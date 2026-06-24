@@ -554,7 +554,7 @@ function ContentAutoHeal() {
 
           <Section title="٤. تنفيذ كل الإصلاحات الآلية">
             <p className="mb-2 text-xs text-muted-foreground">
-              يطبّق إصلاح المكافآت ثم ربط الكيانات ثم خريطة المتحف ضمن معاينة واحدة. لا عمليات حذف.
+              يطبّق إصلاح المكافآت وخريطة المتحف ضمن معاينة واحدة. لا عمليات حذف. (ربط الكيانات أصبح في أداة مستقلة.)
             </p>
             <button
               disabled={!!busy}
@@ -563,18 +563,16 @@ function ContentAutoHeal() {
                   title: "إصلاح ذاتي شامل",
                   lines: [
                     `مكافآت سيتم إصلاحها: ${snap.unlockFixes.length}`,
-                    `حملات سيتم ربط كياناتها: ${snap.related.length}`,
                     `تحف ستصبح قابلة للحصول: ${snap.museum.obtainable.length}`,
                     `تحف ستوسم كموسوعة فقط: ${snap.museum.encyclopediaOnly.length}`,
                     `يتبقى للمراجعة اليدوية: ${remainingManual}`,
                   ],
                   onConfirm: async () => {
                     await applyUnlockFixes(snap.unlockFixes, snap.campaigns);
-                    await applyCampaignRelated(snap.related, snap.campaigns);
                     await applyMuseum(snap.museum);
                     setLastReport({
                       fixedUnlocks: snap.unlockFixes.length,
-                      linkedCampaigns: snap.related.length,
+                      linkedCampaigns: 0,
                       museumObtainable: snap.museum.obtainable.length,
                       museumEncOnly: snap.museum.encyclopediaOnly.length,
                       remainingManual: snap.missing.length - snap.unlockFixes.length,
@@ -587,6 +585,7 @@ function ContentAutoHeal() {
               معاينة الإصلاح الذاتي الشامل
             </button>
           </Section>
+
         </>
       )}
     </div>
