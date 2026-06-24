@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          id: string
+          reason: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          id?: string
+          reason?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          id?: string
+          reason?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_campaigns: {
         Row: {
           created_at: string
@@ -581,6 +614,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: string
           artifacts_collected: number
           avatar_id: string | null
           bio: string | null
@@ -592,10 +626,16 @@ export type Database = {
           email: string | null
           favorite_figure_id: string | null
           favorite_state_id: string | null
+          hearts: number
           id: string
+          investigations_completed: number
           join_date: string
           last_active: string
           level: number
+          locale: string
+          longest_streak: number
+          marketing_opt_in: boolean
+          museum_items_unlocked: number
           referral_code: string | null
           referred_by: string | null
           streak: number
@@ -605,6 +645,7 @@ export type Database = {
           xp: number
         }
         Insert: {
+          account_status?: string
           artifacts_collected?: number
           avatar_id?: string | null
           bio?: string | null
@@ -616,10 +657,16 @@ export type Database = {
           email?: string | null
           favorite_figure_id?: string | null
           favorite_state_id?: string | null
+          hearts?: number
           id: string
+          investigations_completed?: number
           join_date?: string
           last_active?: string
           level?: number
+          locale?: string
+          longest_streak?: number
+          marketing_opt_in?: boolean
+          museum_items_unlocked?: number
           referral_code?: string | null
           referred_by?: string | null
           streak?: number
@@ -629,6 +676,7 @@ export type Database = {
           xp?: number
         }
         Update: {
+          account_status?: string
           artifacts_collected?: number
           avatar_id?: string | null
           bio?: string | null
@@ -640,10 +688,16 @@ export type Database = {
           email?: string | null
           favorite_figure_id?: string | null
           favorite_state_id?: string | null
+          hearts?: number
           id?: string
+          investigations_completed?: number
           join_date?: string
           last_active?: string
           level?: number
+          locale?: string
+          longest_streak?: number
+          marketing_opt_in?: boolean
+          museum_items_unlocked?: number
           referral_code?: string | null
           referred_by?: string | null
           streak?: number
@@ -835,13 +889,50 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_balance: {
+        Args: {
+          p_delta: number
+          p_field: string
+          p_reason: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      admin_list_users: {
+        Args: {
+          p_filter?: string
+          p_joined_after?: string
+          p_joined_before?: string
+          p_limit?: number
+          p_max_level?: number
+          p_min_level?: number
+          p_offset?: number
+          p_search?: string
+        }
+        Returns: Json
+      }
+      admin_set_account_status: {
+        Args: { p_reason: string; p_status: string; p_user_id: string }
+        Returns: Json
+      }
+      admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
       advance_referral_stage: { Args: { p_stage: number }; Returns: Json }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       gen_referral_code: { Args: never; Returns: string }
       get_my_email: { Args: never; Returns: string }
       is_content_admin: { Args: never; Returns: boolean }
+      log_admin_action: {
+        Args: {
+          p_action: string
+          p_detail: Json
+          p_reason: string
+          p_target: string
+        }
+        Returns: string
+      }
       set_my_display_name: { Args: { p_name: string }; Returns: string }
       sync_my_public_stats: { Args: { p_stats: Json }; Returns: undefined }
+      touch_my_last_active: { Args: never; Returns: undefined }
     }
     Enums: {
       atlas_entity_kind:

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer } from "lucide-react";
+import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -74,6 +74,8 @@ function AdminHub() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <AdminCard to="/admin/users" icon={<Users className="h-5 w-5" />} title="إدارة المستخدمين"
+            desc="قائمة اللاعبين، البحث والتصفية، إجراءات إدارية موثّقة، وتصدير CSV." />
           <AdminCard to="/admin/notifications" icon={<Bell className="h-5 w-5" />} title="إدارة الإشعارات"
             desc="إنشاء وإرسال إشعارات يدوية والاطلاع على المسودات." />
           <AdminCard to="/admin/content" icon={<BookOpen className="h-5 w-5" />} title="محتوى الإشعارات التلقائية"
