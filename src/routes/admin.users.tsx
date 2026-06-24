@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Users, Search, Download, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, X, Coins, Sparkles } from "lucide-react";
 import { AdminGate } from "@/lib/admin-guard";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import {
   adminListUsers,
   adminUserDetail,
