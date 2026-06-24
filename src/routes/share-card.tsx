@@ -5,7 +5,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { ShareCard } from "@/components/ShareCard";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
-import { fetchPublicProfileById } from "@/lib/social";
+import { fetchMyReferralCode } from "@/lib/social";
 
 export const Route = createFileRoute("/share-card")({
   head: () => ({ meta: [{ title: "بطاقة الهوية التاريخية" }] }),
@@ -17,7 +17,8 @@ function ShareCardPage() {
   const { profile } = useProfile();
   const [code, setCode] = useState<string | null>(null);
 
-  useEffect(() => { if (user) fetchPublicProfileById(user.id).then((p) => setCode(p?.referral_code ?? null)); }, [user]);
+  useEffect(() => { if (user) fetchMyReferralCode(user.id).then(setCode); }, [user]);
+
 
   const username = account?.username ?? profile.name ?? "صديق التاريخ";
 
