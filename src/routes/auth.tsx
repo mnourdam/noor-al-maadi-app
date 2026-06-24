@@ -152,7 +152,8 @@ function AuthPage() {
               <Field icon={<Gift className="size-4" />} label="رمز الإحالة (اختياري)">
                 <input
                   value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  onChange={(e) => setReferralCode(e.target.value.replace(/\s+/g, "").toUpperCase())}
+                  onBlur={(e) => setReferralCode(e.target.value.trim().toUpperCase())}
                   maxLength={20}
                   className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   placeholder="IRTH-XXXXXX"
