@@ -138,6 +138,8 @@ function AdminCampaignsPage() {
           </div>
         )}
 
+        {rows && rows.length > 0 && <InventoryPanel rows={rows} />}
+
         {rows && rows.length > 0 && (
           <section className="grid gap-3 md:grid-cols-2">
             {rows.map(c => (
