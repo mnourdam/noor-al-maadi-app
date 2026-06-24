@@ -18,7 +18,7 @@ export const Route = createFileRoute("/referrals")({
 
 function ReferralsPage() {
   const { user } = useAccount();
-  const { profile, addDinars, awardBadge, grantTitle, grantArtifact } = useProfile();
+  const { profile, awardBadge, grantTitle } = useProfile();
   const [code, setCode] = useState<string | null>(null);
   const [rows, setRows] = useState<{ row: ReferralRow; friend: PublicProfile | null }[]>([]);
   const [serverStats, setServerStats] = useState<MyReferralStats | null>(null);
