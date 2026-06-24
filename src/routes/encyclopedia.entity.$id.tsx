@@ -150,10 +150,10 @@ function EntityPage() {
       // 2. Same campaign (core/supporting_entities containing this slug).
       const { data: camps } = await supabase
         .from("admin_campaigns")
-        .select("metadata")
+        .select("data")
         .limit(500);
       for (const c of camps ?? []) {
-        const cm = (c.metadata && typeof c.metadata === "object" ? c.metadata : {}) as Record<string, unknown>;
+        const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
         const core = asStringList(cm.core_entities);
         const sup = asStringList(cm.supporting_entities);
         const all = [...core, ...sup].map((s) => s.toLowerCase());
