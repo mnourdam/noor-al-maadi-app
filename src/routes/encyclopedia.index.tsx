@@ -6,6 +6,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import { eraLabel } from "@/lib/era-labels";
 
 export const Route = createFileRoute("/encyclopedia/")({
   head: () => ({
@@ -263,7 +264,7 @@ function EncyclopediaHub() {
                       onClick={() => setEra(name)}
                       className="rounded-2xl border border-white/10 bg-surface px-3 py-2 text-right transition hover:border-gold/40"
                     >
-                      <span className="font-display block text-xs font-bold">{name}</span>
+                      <span className="font-display block text-xs font-bold">{eraLabel(name)}</span>
                       <span className="text-[10px] text-gold/80">{n} عنصر</span>
                     </button>
                   ))}

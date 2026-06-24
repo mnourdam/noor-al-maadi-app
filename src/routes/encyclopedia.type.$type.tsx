@@ -6,6 +6,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import { eraLabel } from "@/lib/era-labels";
 
 const SECTION_LABELS: Record<string, string> = {
   state: "الدول",
@@ -142,7 +143,7 @@ function TypeBrowsePage() {
           <div className="mt-3 flex flex-wrap gap-1.5">
             <Chip active={era === ""} onClick={() => setEra("")}>كل العصور</Chip>
             {eras.map((e) => (
-              <Chip key={e} active={era === e} onClick={() => setEra(e)}>{e}</Chip>
+              <Chip key={e} active={era === e} onClick={() => setEra(e)}>{eraLabel(e)}</Chip>
             ))}
           </div>
         )}
