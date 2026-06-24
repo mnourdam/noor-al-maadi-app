@@ -346,7 +346,12 @@ function CollectionPage() {
   const sectionStats = useMemo(() => {
     const out: Record<SectionId, { done: number; total: number }> = {} as any;
     for (const s of SECTIONS) {
-      const entities = supByType[s.type].data ?? [];
+      let entities = supByType[s.type].data ?? [];
+      if (s.type === "artifact") {
+        entities = entities.filter((e: any) =>
+          isArtifactVisible(e.slug, e.metadata, e.metadata?.legacy_id),
+        );
+      }
       const entityDone = entities.filter(e => isEntityUnlocked(s.type, e.slug, e.metadata)).length;
       const imported   = importedByType[s.id] ?? [];
       const importedDone = imported.filter(i => i.unlocked).length;
@@ -357,7 +362,7 @@ function CollectionPage() {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, importedByType, userCollection, importedUnlockSet, profile]);
+  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, importedByType, userCollection, importedUnlockSet, profile, campaignArtifactRefs]);
 
   const totalDone = Object.values(sectionStats).reduce((s, c) => s + c.done, 0);
   const totalAll  = Object.values(sectionStats).reduce((s, c) => s + c.total, 0);
