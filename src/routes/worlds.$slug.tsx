@@ -191,7 +191,9 @@ function WorldDetailPage() {
               <ArrowRight className="size-4 text-gold/70" />
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] text-muted-foreground">العالم السابق</p>
-                <p className="font-display truncate text-[12px] font-bold">{prevHub.glyph} {prevHub.slug}</p>
+                <p className="font-display text-[12px] font-bold leading-snug break-words">
+                  {prevHub.glyph} {titleBySlug.get(prevHub.slug) ?? ""}
+                </p>
               </div>
             </Link>
           ) : <div />}
@@ -200,12 +202,15 @@ function WorldDetailPage() {
               className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
               <div className="min-w-0 flex-1 text-left">
                 <p className="text-[10px] text-muted-foreground">العالم التالي</p>
-                <p className="font-display truncate text-[12px] font-bold">{nextHub.glyph} {nextHub.slug}</p>
+                <p className="font-display text-[12px] font-bold leading-snug break-words">
+                  {nextHub.glyph} {titleBySlug.get(nextHub.slug) ?? ""}
+                </p>
               </div>
               <ArrowLeft className="size-4 text-gold/70" />
             </Link>
           ) : <div />}
         </div>
+
       </div>
     </AppShell>
   );
