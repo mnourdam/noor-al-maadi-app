@@ -98,6 +98,9 @@ function AdminHub() {
             desc="استيراد JSON جماعي لكيانات الأطلس — يحفظ الصفوف كقيد مراجعة دون نشر." />
           <AdminCard to="/admin/atlas-review" icon={<MapPin className="h-5 w-5" />} title="مراجعة الأطلس الجماعية"
             desc="سحب وتأكيد ونشر كيانات المراجعة على الأطلس من شاشة واحدة." />
+          <AdminCard to="/admin/atlas-repair" icon={<ShieldCheck className="h-5 w-5" />} title="إصلاح روابط الأطلس"
+            desc="ربط دبابيس الأطلس بكيانات الموسوعة القياسية — اقتراح ومراجعة وإصلاح." />
+
 
           <AdminCard to="/admin/migration" icon={<Database className="h-5 w-5" />} title="ترحيل المحتوى القديم"
             desc="نسخ data.ts / cities.ts / packs إلى Supabase دون حذف." />
