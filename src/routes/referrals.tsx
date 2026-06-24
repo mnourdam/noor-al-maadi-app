@@ -8,6 +8,7 @@ import {
   advanceReferralStage, buildReferralLink, fetchPublicProfileById, listMyReferrals,
   REFERRAL_REWARDS, type PublicProfile, type ReferralRow,
 } from "@/lib/social";
+import { fetchMyReferralStats, type MyReferralStats } from "@/lib/referrals";
 import { levelFor } from "@/lib/app-constants";
 
 export const Route = createFileRoute("/referrals")({
@@ -17,14 +18,16 @@ export const Route = createFileRoute("/referrals")({
 
 function ReferralsPage() {
   const { user } = useAccount();
-  const { profile, addDinars, awardBadge, grantTitle, grantArtifact } = useProfile();
+  const { profile, awardBadge, grantTitle } = useProfile();
   const [code, setCode] = useState<string | null>(null);
   const [rows, setRows] = useState<{ row: ReferralRow; friend: PublicProfile | null }[]>([]);
+  const [serverStats, setServerStats] = useState<MyReferralStats | null>(null);
 
   useEffect(() => {
     if (!user) return;
     fetchPublicProfileById(user.id).then((p) => setCode(p?.referral_code ?? null));
     listMyReferrals(user.id).then(setRows);
+    fetchMyReferralStats().then(setServerStats).catch(() => {});
   }, [user]);
 
   const link = code ? buildReferralLink(code) : "";
@@ -39,14 +42,15 @@ function ReferralsPage() {
     }, 0),
   }), [rows]);
 
-  // Referee-side: advance own stages as profile grows.
+  // Referee-side: ping server so it grants/awards level-based rewards.
+  // The server is the single source of truth for dinars (signup +50, level-5 +100).
+  // Local-only effects (badges/titles/artifacts for stages 3 & 4) remain client-side.
   useEffect(() => {
     if (!user) return;
     (async () => {
       const lvl = levelFor(profile.points).level;
       if (lvl >= 5) {
-        const r = await advanceReferralStage(2, profile);
-        if (r.ok) { addDinars(REFERRAL_REWARDS.stage2.dinars); grantArtifact(REFERRAL_REWARDS.stage2.artifact); }
+        await advanceReferralStage(2, profile); // server pays +100 via grant_level5_reward (idempotent)
       }
       if (profile.campaignsCompleted.length >= 1) {
         const r = await advanceReferralStage(3, profile);
@@ -90,10 +94,12 @@ function ReferralsPage() {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <Box label="إجمالي" value={stats.total} />
-          <Box label="نشط" value={stats.active} />
-          <Box label="دينار" value={stats.rewards} />
+        <div className="mt-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
+          <Box label="دعوات" value={serverStats?.invited ?? stats.total} />
+          <Box label="انضموا" value={serverStats?.joined ?? 0} />
+          <Box label="مستوى 5" value={serverStats?.level5 ?? stats.active} />
+          <Box label="تحويل %" value={serverStats?.conversion_pct ?? 0} />
+          <Box label="إجمالي دنانير" value={serverStats?.total_dinars ?? stats.rewards} />
         </div>
 
         <div className="mt-5">

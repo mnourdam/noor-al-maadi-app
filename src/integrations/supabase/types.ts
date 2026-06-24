@@ -716,13 +716,71 @@ export type Database = {
           },
         ]
       }
+      referral_rewards: {
+        Row: {
+          created_at: string
+          dinars_amount: number
+          id: string
+          kind: string
+          notification_id: string | null
+          referred_id: string
+          referrer_id: string
+          reward_source: string
+        }
+        Insert: {
+          created_at?: string
+          dinars_amount: number
+          id?: string
+          kind: string
+          notification_id?: string | null
+          referred_id: string
+          referrer_id: string
+          reward_source: string
+        }
+        Update: {
+          created_at?: string
+          dinars_amount?: number
+          id?: string
+          kind?: string
+          notification_id?: string | null
+          referred_id?: string
+          referrer_id?: string
+          reward_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_rewards_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_rewards_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_rewards_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       referrals: {
         Row: {
           code: string
           created_at: string
           id: string
+          invited_at: string
+          level5_reward_at: string | null
           referred_id: string
           referrer_id: string
+          signup_reward_at: string | null
           stage: number
           stage1_at: string | null
           stage2_at: string | null
@@ -734,8 +792,11 @@ export type Database = {
           code: string
           created_at?: string
           id?: string
+          invited_at?: string
+          level5_reward_at?: string | null
           referred_id: string
           referrer_id: string
+          signup_reward_at?: string | null
           stage?: number
           stage1_at?: string | null
           stage2_at?: string | null
@@ -747,8 +808,11 @@ export type Database = {
           code?: string
           created_at?: string
           id?: string
+          invited_at?: string
+          level5_reward_at?: string | null
           referred_id?: string
           referrer_id?: string
+          signup_reward_at?: string | null
           stage?: number
           stage1_at?: string | null
           stage2_at?: string | null
@@ -920,6 +984,8 @@ export type Database = {
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       gen_referral_code: { Args: never; Returns: string }
       get_my_email: { Args: never; Returns: string }
+      grant_level5_reward: { Args: { p_referred_id: string }; Returns: string }
+      grant_signup_reward: { Args: { p_referred_id: string }; Returns: string }
       is_content_admin: { Args: never; Returns: boolean }
       log_admin_action: {
         Args: {
@@ -930,6 +996,8 @@ export type Database = {
         }
         Returns: string
       }
+      my_referral_stats: { Args: never; Returns: Json }
+      redeem_referral_code: { Args: { p_code: string }; Returns: Json }
       set_my_display_name: { Args: { p_name: string }; Returns: string }
       sync_my_public_stats: { Args: { p_stats: Json }; Returns: undefined }
       touch_my_last_active: { Args: never; Returns: undefined }
