@@ -14,6 +14,14 @@ import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notificati
 
 const STORAGE_KEY = "hakaya.profile.v2";
 
+/**
+ * Per-page dedup set for `loseHeartOnce`. Survives across re-renders /
+ * provider remounts inside a single tab but is intentionally NOT
+ * persisted — heart loss for the same attempt should only be skipped
+ * for the immediate rapid-tap window, not forever.
+ */
+const heartPenaltyDedup = new Set<string>();
+
 export interface AppSettings {
   ambienceEnabled: boolean;
   ambienceVolume: number; // 0..1
