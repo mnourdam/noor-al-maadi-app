@@ -78,7 +78,7 @@ function WorldDetailPage() {
               <Link key={h.slug} to="/worlds/$slug" params={{ slug: h.slug }}
                 className="rounded-2xl border border-gold/20 bg-black/30 p-3 text-right">
                 <p className="text-lg">{h.glyph}</p>
-                <p className="font-display text-[13px] font-bold">{h.slug}</p>
+                <p className="font-display text-[13px] font-bold">{titleBySlug.get(h.slug) ?? "—"}</p>
               </Link>
             ))}
           </div>
