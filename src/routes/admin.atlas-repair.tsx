@@ -175,6 +175,46 @@ function computeBulkPlan(
   return plan;
 }
 
+// ---- Bulk stub-creation plan --------------------------------------------
+
+type StubPlanItem = {
+  row: AtlasEntityRow;
+  entity_type: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+};
+
+function computeStubPlan(
+  issued: { row: AtlasEntityRow; issue: IssueKind }[],
+  enc: EncEntity[],
+): StubPlanItem[] {
+  const usedSlugs = new Set<string>();
+  for (const e of enc) usedSlugs.add(`${e.entity_type}::${normalizeEntitySlug(e.slug)}`);
+  const plan: StubPlanItem[] = [];
+  for (const { row, issue } of issued) {
+    if (issue !== "missing") continue;
+    // Skip if a strong canonical match exists — avoid overwriting strong matches
+    const cands = suggestCandidates(row, enc);
+    if (cands[0] && cands[0].score >= BULK_MIN_SCORE) continue;
+    const compat = KIND_TO_TYPES[row.kind] ?? ["landmark"];
+    const entity_type = compat[0];
+    const title = (row.name_ar ?? "").trim();
+    if (!title) continue;
+    const baseSlug = normalizeEntitySlug(row.slug) || normalizeEntitySlug(title);
+    if (!baseSlug) continue;
+    let slug = baseSlug;
+    let n = 1;
+    while (usedSlugs.has(`${entity_type}::${slug}`)) {
+      n++;
+      slug = `${baseSlug}-${n}`;
+    }
+    usedSlugs.add(`${entity_type}::${slug}`);
+    plan.push({ row, entity_type, slug, title, subtitle: row.name_en ?? null });
+  }
+  return plan;
+}
+
 // ---- Component -----------------------------------------------------------
 
 function AtlasRepairPage() {
