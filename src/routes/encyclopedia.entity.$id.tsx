@@ -15,7 +15,6 @@ import {
   groupRelatedByReason,
 } from "@/lib/relationship-graph";
 import { buildContextBlocks } from "@/lib/context-blocks";
-import { BookOpen } from "lucide-react";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
