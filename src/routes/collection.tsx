@@ -540,11 +540,14 @@ function CollectionPage() {
 
         {currentLoading && currentEntities.length === 0 && currentImported.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/15 p-6 text-center text-xs text-muted-foreground">
-            جارٍ تحميل الموسوعة…
+            جارٍ التحميل…
           </div>
         ) : currentEntities.length === 0 && currentImported.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/15 p-6 text-center text-xs text-muted-foreground">
-            لا توجد عناصر في هذه الفئة بعد
+          <div className="rounded-2xl border border-dashed border-gold/25 bg-surface/40 p-6 text-center">
+            <p className="font-display text-sm font-bold text-gold">لم تكتشف عناصر في هذه الفئة بعد</p>
+            <p className="mt-2 text-[11px] leading-6 text-muted-foreground">
+              تُفتح عناصر المتحف عند إكمال الحملات والتحقيقات والمكافآت. تصفّح الموسوعة الآن للاطلاع على المحتوى المتاح.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
