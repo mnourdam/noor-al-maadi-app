@@ -54,7 +54,7 @@ export interface InAppNotification {
   readAt?: number | null;
 }
 
-const INBOX_KEY = "irth.notifications.inbox.v1";
+export const INBOX_KEY = "irth.notifications.inbox.v1";
 const FIRED_KEY = "irth.notifications.fired.v1";
 const LAST_OPEN_KEY = "irth.lastOpenedAt";
 const MAX_INBOX = 50;
@@ -65,9 +65,14 @@ function read<T>(k: string, fallback: T): T {
   if (typeof localStorage === "undefined") return fallback;
   try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
 }
-function write<T>(k: string, v: T) {
-  if (typeof localStorage === "undefined") return;
-  try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore quota */ }
+function write<T>(k: string, v: T): boolean {
+  if (typeof localStorage === "undefined") return false;
+  try {
+    localStorage.setItem(k, JSON.stringify(v));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function isUnread(n: InAppNotification): boolean {
@@ -107,10 +112,11 @@ export function markAllRead(): void {
 }
 export function clearInbox(): void { write(INBOX_KEY, []); emitUpdated(); }
 
-function pushInbox(n: InAppNotification): void {
+export function pushInbox(n: InAppNotification): boolean {
   const list = [n, ...getInbox().filter((x) => x.id !== n.id)].slice(0, MAX_INBOX);
-  write(INBOX_KEY, list);
-  emitUpdated();
+  const ok = write(INBOX_KEY, list);
+  if (ok) emitUpdated();
+  return ok;
 }
 
 // ============== Permission + delivery ==============
@@ -123,7 +129,7 @@ export async function ensurePermission(): Promise<NotificationPermission> {
   return Notification.permission;
 }
 
-function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InAppNotification {
+function deliverWithStatus(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): { notification: InAppNotification; pushed: boolean } {
   const final: InAppNotification = {
     id: n.id ?? `${n.category}:${Date.now()}`,
     category: n.category,
@@ -134,11 +140,15 @@ function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InA
     read: false,
     readAt: null,
   };
-  pushInbox(final);
+  const pushed = pushInbox(final);
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
     try { new Notification(final.title, { body: final.body, tag: final.category, icon: "/favicon.ico" }); } catch { /* ignore */ }
   }
-  return final;
+  return { notification: final, pushed };
+}
+
+function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InAppNotification {
+  return deliverWithStatus(n).notification;
 }
 
 /** Public deliver — used by ad-hoc notifications (friend requests, etc.). */
@@ -146,6 +156,12 @@ export function deliverNotification(
   n: Omit<InAppNotification, "at" | "id"> & { id?: string },
 ): InAppNotification {
   return deliver(n);
+}
+
+export function deliverNotificationWithStatus(
+  n: Omit<InAppNotification, "at" | "id"> & { id?: string },
+): { notification: InAppNotification; pushed: boolean } {
+  return deliverWithStatus(n);
 }
 
 // ============== Scheduling guards (fire-once-per-day-ish) ==============
