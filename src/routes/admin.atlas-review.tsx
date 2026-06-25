@@ -16,11 +16,12 @@ import {
   type AtlasEntityKind, type AtlasEntityRow,
 } from "@/lib/atlas-entities";
 import {
-  ELIGIBLE_TYPE_LABEL_AR,
+  ensureAtlasDraftsForEncyclopedia,
   listNeedsPlacement,
-  placeEncyclopediaEntity,
+  placeAtlasDraft,
   type NeedsPlacementRow,
 } from "@/lib/atlas-needs-placement";
+
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
 import { geoToAps } from "@/lib/atlas/transform";
