@@ -139,8 +139,9 @@ export function AtlasStage({
       drag.current = null;
       return;
     }
-    // Weighted pan — 0.65× pointer delta feels controlled and map-like.
-    const PAN_GAIN = 0.65;
+    // Weighted pan — 0.95× pointer delta: responsive on mobile without
+    // overshooting like the original 1.0× free-drag.
+    const PAN_GAIN = 0.95;
     const dx = (e.clientX - drag.current.x) * PAN_GAIN;
     const dy = (e.clientY - drag.current.y) * PAN_GAIN;
     scheduleView({
