@@ -24,7 +24,7 @@ export function AndroidBackHandler() {
     (async () => {
       try {
         const { App } = await import("@capacitor/app");
-        const handle = await App.addListener("backButton", ({ canGoBack }) => {
+        const handle = await App.addListener("backButton", ({ canGoBack }: { canGoBack: boolean }) => {
           const path = window.location.pathname;
           // eslint-disable-next-line no-console
           console.log("[android:back] pressed", { path, canGoBack });
