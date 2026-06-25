@@ -34,10 +34,11 @@
 // ============================================================
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Lock, MapPin, Crown, Swords, Landmark, Users, Sparkles,
-  AlertTriangle, CalendarClock,
+  AlertTriangle, CalendarClock, Gem, ScrollText, Building2,
+  Trophy, Star, Award, Compass,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useProfile } from "@/lib/profile";
