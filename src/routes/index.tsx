@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Search, Map as MapIcon, ChevronLeft, Crown, Lock, Compass, Play,
   Hourglass, Calendar, Heart, Coins, Trophy, Package, BookOpen,
-  Swords, Sparkles, Bell, Gem, Target, Flame,
+  Swords, Sparkles, Bell, Gem, Target, Flame, Sunrise, Zap, Award,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   ERAS,
   levelFor, currentSeason,
+  ACHIEVEMENTS, evaluateAchievements,
 } from "@/lib/app-constants";
 import { useProfile } from "@/lib/profile";
 import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
@@ -19,10 +20,7 @@ import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collectio
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { listPublishedCampaigns } from "@/lib/campaignStorage";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
-import { listRegistry } from "@/lib/contentRegistryStorage";
-import { registryItemIcon, registryItemImageUrl } from "@/lib/importedUnlocks";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
-import type { ContentRegistryItem } from "@/types/contentRegistry";
 import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
 import heroDesertCaravan from "@/assets/hero-desert-caravan.jpg";
 import heroManuscriptLamp from "@/assets/hero-manuscript-lamp.jpg";
@@ -72,8 +70,6 @@ function Index() {
 
   useEffect(() => {
     setMounted(true);
-    // Guard: when signed in, wait for cloud profile pull to finish so we don't
-    // operate on stale local streak state and risk overwriting cloud progress.
     if (!user || lastSyncAt) {
       touchStreak();
     }
@@ -94,19 +90,15 @@ function Index() {
 
   const lvl = levelFor(profile.points);
 
-  // ===== Imported campaigns (admin/import = single source of truth) =====
+  // ===== Imported campaigns (single source of truth) =====
   const [importedCampaigns, setImportedCampaigns] = useState<ImportedCampaign[]>(() => {
     try { return listPublishedCampaigns(); } catch { return []; }
-  });
-  const [registryItems, setRegistryItems] = useState<ContentRegistryItem[]>(() => {
-    try { return listRegistry(); } catch { return []; }
   });
   useEffect(() => {
     import("@/lib/cloudSync")
       .then((m) => m.pullAllFromCloud())
       .then(() => {
         try { setImportedCampaigns(listPublishedCampaigns()); } catch {}
-        try { setRegistryItems(listRegistry()); } catch {}
       })
       .catch(() => {});
   }, []);
@@ -143,12 +135,6 @@ function Index() {
         Object.values(p.chapters).some((ch) => (ch.completedActivityIds?.length ?? 0) > 0);
       return { campaign: c, progress: p, hasStarted, isComplete: p.completed, completedChapters, nextChapter, nextActivity };
     });
-    // Priority (chronological):
-    //  1. an in-progress campaign (resume what you started)
-    //  2. otherwise the OLDEST unplayed/unfinished campaign
-    //  3. otherwise the oldest campaign overall.
-    // `enriched` already preserves the chronological order coming from
-    // listPublishedCampaigns(), so `.find` returns the earliest match.
     return (
       enriched.find((e) => e.hasStarted && !e.isComplete) ??
       enriched.find((e) => !e.isComplete) ??
@@ -156,24 +142,19 @@ function Index() {
     );
   }, [importedCampaigns, progressTick]);
 
-  // ===== Build hero slides =====
+  // ===== Hero slides =====
   const slides = useMemo<HeroSlide[]>(() => {
     const out: HeroSlide[] = [];
     if (campaignSel) {
       const { campaign, hasStarted, isComplete, completedChapters, nextChapter } = campaignSel;
       const total = campaign.chapters.length;
-      const ctaLabel = isComplete
-        ? "استعرض الحملة"
-        : hasStarted
-          ? "تابع الرحلة"
-          : "ابدأ الحملة";
+      const ctaLabel = isComplete ? "استعرض الحملة" : hasStarted ? "تابع الرحلة" : "ابدأ الحملة";
       const heroBg =
         (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) ||
         heroFortress;
-      const subtitle =
-        nextChapter && !isComplete
-          ? `الفصل ${nextChapter.order ?? completedChapters + 1} · ${nextChapter.title}`
-          : (campaign.subtitle ?? campaign.description ?? "تابع رحلتك في هذه الحملة.");
+      const subtitle = nextChapter && !isComplete
+        ? `الفصل ${nextChapter.order ?? completedChapters + 1} · ${nextChapter.title}`
+        : (campaign.subtitle ?? campaign.description ?? "تابع رحلتك في هذه الحملة.");
       out.push({
         kind: "campaign",
         bg: heroBg,
@@ -181,18 +162,15 @@ function Index() {
         title: campaign.title,
         subtitle,
         progress: { done: completedChapters, total },
-        cta: {
-          label: ctaLabel,
-          link: (
-            <Link
-              to="/campaigns/imported/$id"
-              params={{ id: campaign.id }}
-              className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
-            >
-              <Play className="size-4 fill-current" />{ctaLabel}
-            </Link>
-          ),
-        },
+        cta: { label: ctaLabel, link: (
+          <Link
+            to="/campaigns/imported/$id"
+            params={{ id: campaign.id }}
+            className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
+          >
+            <Play className="size-4 fill-current" />{ctaLabel}
+          </Link>
+        )},
       });
     }
     if (todayEvent) {
@@ -203,9 +181,8 @@ function Index() {
         eyebrow: `في مثل هذا اليوم · ${yr}`,
         title: todayEvent.title,
         subtitle: todayEvent.body,
-        cta: {
-          label: "اقرأ القصة",
-          link: <Link to={(todayEvent.deep_link ?? "/on-this-day") as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
+        cta: { label: "اقرأ القصة", link:
+          <Link to={(todayEvent.deep_link ?? "/on-this-day") as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
             <BookOpen className="size-4" />اقرأ القصة
           </Link>,
         },
@@ -214,29 +191,25 @@ function Index() {
     if (stats.recent.length > 0) {
       const r = stats.recent[0];
       out.push({
-        kind: "discovery",
-        bg: heroFortress,
+        kind: "discovery", bg: heroFortress,
         eyebrow: `آخر اكتشافاتك · ${r.kind}`,
         title: r.title,
         subtitle: r.subtitle ?? "افتح أرشيفك التاريخي واكتشف ما جمعته.",
         icon: r.icon,
-        cta: {
-          label: "اعرض في المتحف",
-          link: <Link to="/collection" className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
+        cta: { label: "اعرض في المتحف", link:
+          <Link to="/collection" className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
             <Gem className="size-4" />اعرض في المتحف
           </Link>,
         },
       });
     }
     out.push({
-      kind: "timeline",
-      bg: heroDesertCaravan,
+      kind: "timeline", bg: heroDesertCaravan,
       eyebrow: "الخط الزمني العظيم",
       title: "أكثر من 1400 سنة من التاريخ",
       subtitle: "تجوّل في العصور من البعثة حتى اليوم.",
-      cta: {
-        label: "ابدأ الرحلة الزمنية",
-        link: <Link to="/timeline" className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
+      cta: { label: "ابدأ الرحلة الزمنية", link:
+        <Link to="/timeline" className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
           <Hourglass className="size-4" />ابدأ الرحلة الزمنية
         </Link>,
       },
@@ -244,13 +217,12 @@ function Index() {
     return out;
   }, [campaignSel, todayEvent, stats.recent]);
 
-  // Carousel (auto-rotate + touch swipe + finger-following drag)
+  // Carousel
   const [slideIdx, setSlideIdx] = useState(0);
-  const [dragX, setDragX] = useState(0); // px offset while dragging
+  const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef<{ x: number; y: number; locked: "h" | "v" | null } | null>(null);
   const heroRef = useRef<HTMLDivElement | null>(null);
-  // RTL: in Arabic, swipe right (positive deltaX) should mean "next" (older direction)
   const isRTL = typeof document !== "undefined" && document.documentElement.dir === "rtl";
 
   useEffect(() => {
@@ -285,10 +257,8 @@ function Index() {
       s.locked = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
     }
     if (s.locked === "h") {
-      // prevent vertical scroll only when horizontally locked
       if (e.cancelable) e.preventDefault();
       const w = heroRef.current?.clientWidth ?? 320;
-      // clamp to ±60% of width for resistance
       const clamped = Math.max(-w * 0.6, Math.min(w * 0.6, dx));
       setDragX(clamped);
     }
@@ -299,7 +269,6 @@ function Index() {
     const w = heroRef.current?.clientWidth ?? 320;
     const threshold = Math.max(48, w * 0.18);
     if (s?.locked === "h" && Math.abs(dragX) > threshold) {
-      // In LTR: swipe left (dragX < 0) = next; in RTL: swipe right (dragX > 0) = next.
       const goNext = isRTL ? dragX > 0 : dragX < 0;
       if (goNext) next(); else prev();
     }
@@ -307,123 +276,190 @@ function Index() {
     setIsDragging(false);
   };
 
-  // ===== Stats strip =====
   const hearts = getEffectiveHearts(profile);
 
-  // ===== Today's Objective (imported campaign-driven) =====
-  const objective = useMemo(() => {
-    if (campaignSel && !campaignSel.isComplete && campaignSel.nextChapter) {
-      const { campaign, nextChapter, nextActivity } = campaignSel;
-      const xp = nextActivity?.xpReward ?? 10;
-      const dinars = nextActivity?.coinsReward ?? 5;
+  // ===== Today's Journey (dynamic recommendation) =====
+  type Recommendation = {
+    kind: "campaign" | "hearts" | "atlas" | "encyclopedia" | "today" | "timeline";
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    xp: number;
+    dinars: number;
+    icon: ReactNode;
+    link: ReactNode;
+  };
+  const recommendation = useMemo<Recommendation | null>(() => {
+    // Heart recovery loop has top priority when low.
+    if (hearts <= 1) {
       return {
-        title: nextActivity?.prompt?.trim() || nextChapter.title,
-        subtitle: nextActivity
-          ? `الفصل ${nextChapter.order ?? "?"} · ${nextChapter.title} — ${campaign.title}`
-          : `أكمل الفصل ${nextChapter.order ?? "?"} من ${campaign.title}`,
-        xp,
-        dinars,
-        rewardLabel: "تقدّم في الحملة",
+        kind: "hearts",
+        eyebrow: "استعد قواك",
+        title: "تحقيق سريع لاستعادة القلوب",
+        subtitle: "اكشف الخيوط واستعد قلوبك للعودة إلى الميدان.",
+        xp: 15, dinars: 8,
+        icon: <Heart className="size-4" />,
         link: (
-          <Link
-            to="/campaigns/imported/$id"
-            params={{ id: campaign.id }}
-            className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground"
-          >
-            <Play className="size-4 fill-current" />
-            {campaignSel.hasStarted ? "تابع الرحلة" : "ابدأ الحملة"}
+          <Link to="/investigations" className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+            <Search className="size-4" /> ابدأ تحقيقًا
           </Link>
         ),
       };
     }
-    if (campaignSel && campaignSel.isComplete) {
-      // Suggest a fresh published campaign if any
-      const fresh = importedCampaigns
-        .map((c) => ({ c, p: getCampaignProgress(c.id) }))
-        .find((x) => !x.p.completed);
-      if (fresh) {
-        return {
-          title: fresh.c.title,
-          subtitle: "ابدأ حملتك التالية",
-          xp: 10, dinars: 5, rewardLabel: "حملة جديدة",
-          link: (
-            <Link to="/campaigns/imported/$id" params={{ id: fresh.c.id }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
-              <Play className="size-4 fill-current" />ابدأ الحملة
-            </Link>
-          ),
-        };
-      }
+    if (campaignSel && !campaignSel.isComplete && campaignSel.nextChapter) {
+      const { campaign, nextChapter, nextActivity, hasStarted } = campaignSel;
+      const xp = nextActivity?.xpReward ?? 10;
+      const dinars = nextActivity?.coinsReward ?? 5;
+      return {
+        kind: "campaign",
+        eyebrow: hasStarted ? "تابع رحلتك" : "ابدأ رحلتك",
+        title: nextActivity?.prompt?.trim() || nextChapter.title,
+        subtitle: `الفصل ${nextChapter.order ?? "?"} · ${campaign.title}`,
+        xp, dinars,
+        icon: <Crown className="size-4" />,
+        link: (
+          <Link to="/campaigns/imported/$id" params={{ id: campaign.id }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+            <Play className="size-4 fill-current" />{hasStarted ? "تابع الرحلة" : "ابدأ الحملة"}
+          </Link>
+        ),
+      };
     }
     if (todayEvent) {
       return {
+        kind: "today",
+        eyebrow: "حدث اليوم",
         title: todayEvent.title,
         subtitle: "اقرأ حدث اليوم وانطلق في رحلتك.",
-        xp: 15, dinars: 5, rewardLabel: "معرفة جديدة",
-        link: <Link to={(todayEvent.deep_link ?? "/on-this-day") as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
-          <BookOpen className="size-4" />ابدأ الآن
-        </Link>,
+        xp: 15, dinars: 5,
+        icon: <Calendar className="size-4" />,
+        link: (
+          <Link to={(todayEvent.deep_link ?? "/on-this-day") as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+            <BookOpen className="size-4" />اقرأ القصة
+          </Link>
+        ),
       };
     }
-    return null;
-  }, [campaignSel, importedCampaigns, todayEvent]);
+    return {
+      kind: "encyclopedia",
+      eyebrow: "استكشف",
+      title: "اكتشف الموسوعة التاريخية",
+      subtitle: "شخصيات ودول ومدن تنتظر اكتشافها.",
+      xp: 10, dinars: 3,
+      icon: <Search className="size-4" />,
+      link: (
+        <Link to="/encyclopedia" className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+          <Search className="size-4" />استكشف
+        </Link>
+      ),
+    };
+  }, [hearts, campaignSel, todayEvent]);
 
-  // ===== Latest updates (newest content from admin/import) =====
-  type LatestUpdate = {
-    key: string;
-    kind: "حملة" | "شخصية" | "أثر" | "مدينة" | "معركة" | "علم" | "دولة" | "شارة" | "إنجاز" | "محتوى";
-    title: string;
-    subtitle?: string;
-    icon: string;
-    image: string | null;
-    to: string;
-    ts: number;
-  };
-  const REG_KIND: Record<string, LatestUpdate["kind"]> = {
-    figure: "شخصية", scholar: "علم", artifact: "أثر", city: "مدينة",
-    battle: "معركة", dynasty: "دولة", badge: "شارة", achievement: "إنجاز",
-  };
-  const latestUpdates = useMemo<LatestUpdate[]>(() => {
-    const items: LatestUpdate[] = [];
-    for (const c of importedCampaigns) {
-      const ts = Date.parse(c.updatedAt ?? c.createdAt ?? "") || 0;
-      items.push({
-        key: `c:${c.id}`,
-        kind: "حملة",
-        title: c.title?.trim() || "حملة جديدة",
-        subtitle: c.subtitle ?? c.description ?? c.historicalPeriod ?? undefined,
-        icon: "👑",
-        image: c.coverImage && /^(https?:|data:|\/)/i.test(c.coverImage) ? c.coverImage : null,
-        to: `/campaigns/imported/${c.id}`,
-        ts,
+  // ===== Almost There (nearby goals) =====
+  type Goal = { icon: ReactNode; label: string; remaining: number; unit: string; to: string };
+  const almostThere = useMemo<Goal[]>(() => {
+    const goals: Goal[] = [];
+    if (lvl.next && lvl.toNext > 0 && lvl.toNext <= 2000) {
+      goals.push({
+        icon: <Zap className="size-3.5" />,
+        label: `حتى ${lvl.next.title}`,
+        remaining: lvl.toNext,
+        unit: "نقطة خبرة",
+        to: "/profile",
       });
     }
-    for (const i of registryItems) {
-      const ts = Date.parse(i.updatedAt ?? i.createdAt ?? "") || 0;
-      const kind = REG_KIND[String(i.type).toLowerCase()] ?? "محتوى";
-      const title = i.name?.trim();
-      if (!title || !/[\u0600-\u06FF]/.test(title)) {
-        // Skip items without a valid Arabic display name.
-        // eslint-disable-next-line no-console
-        console.warn(`[home] skipping registry item without Arabic title: ${i.id}`);
-        continue;
+    if (campaignSel && !campaignSel.isComplete) {
+      const remaining = campaignSel.campaign.chapters.length - campaignSel.completedChapters;
+      if (remaining > 0 && remaining <= 5) {
+        goals.push({
+          icon: <Crown className="size-3.5" />,
+          label: `إنهاء «${campaignSel.campaign.title}»`,
+          remaining,
+          unit: remaining === 1 ? "فصل" : "فصول",
+          to: `/campaigns/imported/${campaignSel.campaign.id}`,
+        });
       }
-      items.push({
-        key: `r:${i.id}`,
-        kind,
-        title,
-        subtitle: kind,
-        icon: registryItemIcon(i),
-        image: registryItemImageUrl(i),
-        to: "/collection",
-        ts,
+    }
+    const evals = evaluateAchievements(profile);
+    const earnedMap = profile.achievementsEarned ?? {};
+    const nearest = evals
+      .filter((e) => !e.earned && !earnedMap[e.id])
+      .map((e) => {
+        const def = ACHIEVEMENTS.find((a) => a.id === e.id);
+        if (!def) return null;
+        const remaining = Math.max(0, def.goal - e.current);
+        return { def, remaining };
+      })
+      .filter((x): x is { def: typeof ACHIEVEMENTS[number]; remaining: number } => x !== null && x.remaining > 0)
+      .sort((a, b) => a.remaining - b.remaining)[0];
+    if (nearest && nearest.remaining <= 20) {
+      goals.push({
+        icon: <Award className="size-3.5" />,
+        label: `إنجاز «${nearest.def.name}»`,
+        remaining: nearest.remaining,
+        unit: "خطوة",
+        to: "/achievements",
       });
     }
-    return items.sort((a, b) => b.ts - a.ts).slice(0, 3);
-  }, [importedCampaigns, registryItems]);
+    return goals.slice(0, 3);
+  }, [lvl, campaignSel, profile]);
+
+  // ===== Recent Activity =====
+  type Activity = { key: string; icon: ReactNode; eyebrow: string; title: string; to: string };
+  const recentActivity = useMemo<Activity[]>(() => {
+    const acts: Activity[] = [];
+    if (stats.recent[0]) {
+      const r = stats.recent[0];
+      acts.push({
+        key: `disc:${r.key}`,
+        icon: <Gem className="size-3.5" />,
+        eyebrow: `اكتشاف · ${r.kind}`,
+        title: r.title,
+        to: "/collection",
+      });
+    }
+    const earnedMap = profile.achievementsEarned ?? {};
+    const earnedSorted = Object.entries(earnedMap)
+      .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0));
+    if (earnedSorted.length > 0) {
+      const def = ACHIEVEMENTS.find((a) => a.id === earnedSorted[0][0]);
+      if (def) {
+        acts.push({
+          key: `ach:${def.id}`,
+          icon: <Trophy className="size-3.5" />,
+          eyebrow: "إنجاز جديد",
+          title: def.name,
+          to: "/achievements",
+        });
+      }
+    }
+    if (campaignSel && campaignSel.hasStarted) {
+      acts.push({
+        key: `camp:${campaignSel.campaign.id}`,
+        icon: <Crown className="size-3.5" />,
+        eyebrow: campaignSel.isComplete ? "حملة مكتملة" : "حملة نشطة",
+        title: campaignSel.campaign.title,
+        to: `/campaigns/imported/${campaignSel.campaign.id}`,
+      });
+    }
+    if (profile.artifactsFound.length > 0) {
+      acts.push({
+        key: "museum",
+        icon: <Package className="size-3.5" />,
+        eyebrow: "متحفك",
+        title: `${profile.artifactsFound.length} أثرًا في خزانتك`,
+        to: "/collection",
+      });
+    }
+    return acts.slice(0, 4);
+  }, [stats.recent, profile.achievementsEarned, profile.artifactsFound.length, campaignSel]);
 
   return (
     <AppShell>
-      {/* ============ 1. DYNAMIC HERO CAROUSEL ============ */}
+      {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
+          Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,oklch(0.62_0.13_75/0.06),transparent_60%),radial-gradient(ellipse_at_bottom,oklch(0.4_0.06_260/0.05),transparent_55%)]" />
+
+      {/* ============ 1. ATMOSPHERIC HERO CAROUSEL ============ */}
       <section className="relative -mt-2 overflow-hidden">
         <div
           ref={heroRef}
@@ -445,7 +481,7 @@ function Index() {
           ))}
           <div className="ink-overlay absolute inset-0" />
           <div className="arabesque-layer" />
-          {Array.from({ length: 12 }).map((_, i) => (
+          {Array.from({ length: 10 }).map((_, i) => (
             <span key={i} className="ember" style={{
               left: `${(i * 73) % 100}%`,
               animationDelay: `${(i * 0.7) % 7}s`,
@@ -469,7 +505,7 @@ function Index() {
 
           {/* Slide content */}
           <div
-            className="absolute inset-x-0 bottom-0 z-10 px-6 pb-12"
+            className="absolute inset-x-0 bottom-0 z-10 px-6 pb-16"
             style={{
               transform: `translate3d(${dragX}px, 0, 0)`,
               transition: isDragging ? "none" : "transform 320ms cubic-bezier(.22,.61,.36,1)",
@@ -489,9 +525,6 @@ function Index() {
                   {slide.title}
                 </h1>
                 <p className="mt-3 line-clamp-3 text-sm text-white/75">{slide.subtitle}</p>
-                {slide.kind === "campaign" && slide.quote && (
-                  <p className="mt-2 line-clamp-2 text-[13px] italic text-white/55">{slide.quote}</p>
-                )}
                 {slide.kind === "campaign" && slide.progress && (
                   <div className="mt-5 flex items-center gap-3">
                     <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
@@ -511,9 +544,7 @@ function Index() {
                   <Lock className="size-3.5" />
                   <span className="tracking-[0.25em]">قريبًا · حملة جديدة</span>
                 </div>
-                <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white">
-                  حملة قادمة
-                </h1>
+                <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white">حملة قادمة</h1>
                 <p className="mt-3 line-clamp-3 text-sm text-white/75">
                   لقد أتممت كل الحملات الحالية. ترقّب الحملات القادمة قريبًا.
                 </p>
@@ -525,7 +556,6 @@ function Index() {
               </div>
             )}
 
-            {/* Dots */}
             {slides.length > 1 && (
               <div className="mt-6 flex items-center gap-1.5">
                 {slides.map((_, i) => (
@@ -539,17 +569,50 @@ function Index() {
               </div>
             )}
           </div>
+
+          {/* Bottom soft gradient bridge into next section (no hard cut). */}
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent via-background/60 to-background" />
+        </div>
+      </section>
+
+      {/* ============ 2. QUICK PROGRESS (hugs the hero) ============ */}
+      <section className="-mt-12 relative z-10 px-5 animate-fade-in">
+        <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 px-4 py-4 shadow-elegant">
+          <div className="arabesque-layer opacity-30" />
+          <div className="relative flex items-center gap-4">
+            <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-gold text-primary-foreground shadow-elegant">
+              <span className="font-display text-base font-extrabold">{lvl.level}</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] tracking-[0.2em] text-gold/80">المستوى {lvl.level}</p>
+              <p className="font-display text-sm font-bold leading-tight truncate">{lvl.title}</p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full bg-gradient-gold transition-[width] duration-700 ease-out"
+                  style={{ width: `${Math.round(lvl.progress * 100)}%` }}
+                />
+              </div>
+              {lvl.next ? (
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  {lvl.toNext.toLocaleString("en-US")} نقطة حتى{" "}
+                  <span className="text-gold">{lvl.next.title}</span>
+                </p>
+              ) : (
+                <p className="mt-1.5 text-[10px] text-gold">أعلى مستوى — أنت أسطورة التاريخ.</p>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ============ Unread notifications banner ============ */}
       {unread > 0 && (
-        <section className="mt-4 px-5">
+        <section className="mt-5 px-5 animate-fade-in">
           <div className="flex items-center justify-between gap-3 rounded-2xl border border-gold/40 bg-gold/10 p-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/20 text-gold">
+              <div className="relative grid size-10 shrink-0 place-items-center rounded-xl bg-gold/20 text-gold">
                 <Bell className="size-4" />
-                <span className="absolute -mt-6 -ms-6 grid min-w-[16px] h-[16px] place-items-center rounded-full bg-gradient-gold px-1 text-[9px] font-bold text-primary-foreground">
+                <span className="absolute -top-1 -right-1 grid min-w-[16px] h-[16px] place-items-center rounded-full bg-gradient-gold px-1 text-[9px] font-bold text-primary-foreground">
                   {formatBadgeCount(unread)}
                 </span>
               </div>
@@ -567,113 +630,154 @@ function Index() {
         </section>
       )}
 
-      {/* ============ 2. TODAY'S OBJECTIVE ============ */}
-      {objective && (
-        <section className="mt-6 px-5">
-          <SectionHeader icon={<Target className="size-3.5" />} eyebrow="هدفك اليوم" title="ابدأ من هنا" />
-          <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 p-5 shadow-elegant">
-            <div className="arabesque-layer" />
-            <div className="absolute -left-10 -top-10 size-40 rounded-full bg-gold/15 blur-3xl" />
-            <div className="relative">
-              <p className="text-[10px] tracking-[0.25em] text-gold">{objective.subtitle}</p>
-              <p className="font-display mt-1 text-lg font-bold leading-snug shimmer-text">{objective.title}</p>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
-                  <Sparkles className="size-3" /> {objective.xp} خبرة
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
-                  <Coins className="size-3" /> {objective.dinars} دينار
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-[11px] text-white/75">
-                  <Gem className="size-3" /> {objective.rewardLabel}
-                </span>
+      {/* ============ 3. TODAY'S JOURNEY (dynamic recommendation) ============ */}
+      {recommendation && (
+        <Reveal>
+          <section className="mt-6 px-5">
+            <SectionHeader icon={<Target className="size-3.5" />} eyebrow="رحلة اليوم" title="ابدأ من هنا" />
+            <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 p-5 shadow-elegant">
+              <div className="arabesque-layer" />
+              <div className="absolute -left-10 -top-10 size-40 rounded-full bg-gold/15 blur-3xl" />
+              <div className="relative">
+                <p className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.25em] text-gold">
+                  {recommendation.icon} {recommendation.eyebrow}
+                </p>
+                <p className="font-display mt-1 text-lg font-bold leading-snug shimmer-text">{recommendation.title}</p>
+                <p className="mt-1 text-[12px] text-white/65">{recommendation.subtitle}</p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
+                    <Sparkles className="size-3" /> {recommendation.xp} خبرة
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
+                    <Coins className="size-3" /> {recommendation.dinars} دينار
+                  </span>
+                </div>
+                <div className="mt-5">{recommendation.link}</div>
               </div>
-              <div className="mt-5">{objective.link}</div>
+            </div>
+          </section>
+        </Reveal>
+      )}
+
+      {/* ============ 4. CONTINUE JOURNEY — large premium CTA ============ */}
+      {campaignSel && !campaignSel.isComplete && campaignSel.nextChapter && (
+        <Reveal>
+          <ContinueJourneyCard sel={campaignSel} />
+        </Reveal>
+      )}
+
+      {/* ============ 5. STAT STRIP (compact) ============ */}
+      <Reveal>
+        <section className="mt-6 px-5">
+          <div className="parchment-dark relative overflow-hidden rounded-2xl border border-gold/20 px-3 py-3 shadow-elegant">
+            <div className="arabesque-layer opacity-40" />
+            <div className="relative -mx-1 flex items-stretch gap-1 overflow-x-auto no-scrollbar">
+              <Stat icon={<Heart className="size-3.5" />} label="القلوب" value={`${hearts}/${HEART_MAX}`} tone="rose" />
+              <Stat icon={<Coins className="size-3.5" />} label="دنانير" value={profile.dinars} tone="gold" />
+              <Stat icon={<Trophy className="size-3.5" />} label="مستوى" value={lvl.level} tone="gold" />
+              <Stat icon={<Package className="size-3.5" />} label="المتحف" value={stats.totalCollection} tone="emerald" />
+              <Stat icon={<BookOpen className="size-3.5" />} label="أحداث" value={stats.eventsDiscovered} tone="indigo" />
+              <Stat icon={<Swords className="size-3.5" />} label="معارك" value={stats.battlesCompleted} tone="ruby" />
             </div>
           </div>
         </section>
+      </Reveal>
+
+      {/* ============ 6. LATEST DISCOVERIES ============ */}
+      <Reveal>
+        <section className="mt-10 px-5">
+          <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
+          {stats.recent.length > 0 ? (
+            <div className="relative">
+              <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pe-12 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-end:3rem]">
+                {stats.recent.map((r) => <RecentCard key={r.key} item={r} />)}
+              </div>
+              {stats.recent.length > 2 && (
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-l from-background to-transparent" />
+              )}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Gem className="size-5 text-gold" />}
+              title="لم تبدأ رحلتك بعد…"
+              body="أكمل الفصول لتفتح شخصياتٍ وآثارًا وتظهر هنا."
+            />
+          )}
+        </section>
+      </Reveal>
+
+      {/* ============ 7. TODAY IN HISTORY ============ */}
+      {mounted && todayEvent && (
+        <Reveal>
+          <OnThisDayCalendarCard event={todayEvent} />
+        </Reveal>
       )}
 
-      {/* ============ 3. REAL PROGRESS STRIP ============ */}
-      <section className="mt-8 px-5">
-        <div className="parchment-dark relative overflow-hidden rounded-2xl border border-gold/20 px-3 py-3 shadow-elegant">
-          <div className="arabesque-layer opacity-40" />
-          <div className="relative -mx-1 flex items-stretch gap-1 overflow-x-auto no-scrollbar">
-            <Stat icon={<Heart className="size-3.5" />} label="القلوب" value={`${hearts}/${HEART_MAX}`} tone="rose" />
-            <Stat icon={<Coins className="size-3.5" />} label="دنانير" value={profile.dinars} tone="gold" />
-            <Stat icon={<Trophy className="size-3.5" />} label="مستوى" value={lvl.level} tone="gold" />
-            <Stat icon={<Package className="size-3.5" />} label="المتحف" value={stats.totalCollection} tone="emerald" />
-            <Stat icon={<BookOpen className="size-3.5" />} label="أحداث" value={stats.eventsDiscovered} tone="indigo" />
-            <Stat icon={<Swords className="size-3.5" />} label="معارك" value={stats.battlesCompleted} tone="ruby" />
-          </div>
-        </div>
-      </section>
+      {/* ============ 8. JOURNEY THROUGH TIME PREVIEW ============ */}
+      <Reveal>
+        <JourneyThroughTimeSection />
+      </Reveal>
 
-      {/* ============ 4. RECENTLY DISCOVERED ============ */}
-      <section className="mt-10 px-5">
-        <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
-        {stats.recent.length > 0 ? (
-          <div className="relative">
-            <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pe-12 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-end:3rem]">
-              {stats.recent.map((r) => <RecentCard key={r.key} item={r} />)}
+      {/* ============ 9. HISTORICAL WORLDS ============ */}
+      <Reveal>
+        <WorldsHomepageSection />
+      </Reveal>
+
+      {/* ============ 10. RECENT ACTIVITY ============ */}
+      {recentActivity.length > 0 && (
+        <Reveal>
+          <section className="mt-10 px-5">
+            <SectionHeader icon={<Sunrise className="size-3.5" />} eyebrow="آخر نشاطاتك" title="عودة إلى رحلتك" />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {recentActivity.map((a) => (
+                <Link
+                  key={a.key}
+                  to={a.to as "/"}
+                  className="group flex items-center gap-3 rounded-2xl border border-gold/20 bg-surface/60 p-3 transition hover:border-gold/50"
+                >
+                  <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">{a.icon}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] tracking-[0.2em] text-gold">{a.eyebrow}</p>
+                    <p className="font-display text-sm font-bold leading-tight line-clamp-1">{a.title}</p>
+                  </div>
+                  <ChevronLeft className="size-4 shrink-0 text-gold/50 group-hover:text-gold" />
+                </Link>
+              ))}
             </div>
-            {/* Subtle edge fade hints at more content (RTL: overflow on the left). */}
-            {stats.recent.length > 2 && (
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-l from-background to-transparent" />
-            )}
-          </div>
-        ) : (
-          <EmptyState
-            icon={<Gem className="size-5 text-gold" />}
-            title="لم تبدأ رحلتك بعد…"
-            body="أكمل الفصول لتفتح شخصياتٍ وآثارًا وتظهر هنا."
-          />
-        )}
-      </section>
+          </section>
+        </Reveal>
+      )}
 
-      {/* ============ EXPLORATION PATHS — removed from home for now.
-            Will return as Curated Exploration Paths (separate feature). ============ */}
-
-      {/* ============ 5. TODAY IN HISTORY ============ */}
-      {mounted && todayEvent && <OnThisDayCalendarCard event={todayEvent} />}
-
-      {/* ============ 6. (removed) duplicate timeline promo —
-            timeline is already linked from "عوالم إرث" below. ============ */}
-
-
-      {/* ============ 6b. HISTORICAL WORLDS ============ */}
-      <WorldsHomepageSection />
-
-      {/* ============ 7. NEW IN IRTH ============ */}
-      <section className="mt-10 px-5">
-        <SectionHeader icon={<Bell className="size-3.5" />} eyebrow="آخر التحديثات" title="جديد في إرث" />
-        {latestUpdates.length > 0 ? (
-          <div className="space-y-2">
-            {latestUpdates.map((u) => <UpdateRow key={u.key} item={u} />)}
-          </div>
-        ) : (
-          <EmptyState
-            icon={<Bell className="size-5 text-gold" />}
-            title="لا توجد تحديثات جديدة بعد"
-            body="ستظهر هنا الحملات والشخصيات والتحقيقات الجديدة فور إضافتها."
-          />
-        )}
-      </section>
-
-      {/* ============ 8. EXPLORE IRTH ============ */}
-      <section className="mt-10 mb-8 px-5">
-        <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشف" title="عوالم إرث" />
-        <div className="grid grid-cols-2 gap-3">
-          <WorldCard to="/campaigns" icon={<Crown className="size-5" />} title="الحملات" subtitle="رحلات تاريخية كبرى" />
-          <WorldCard to="/encyclopedia" icon={<Search className="size-5" />} title="الموسوعة" subtitle="ابحث وتعلّم" />
-          <WorldCard to="/map" icon={<MapIcon className="size-5" />} title="الأطلس الإسلامي" subtitle="خارطة العصور" />
-          <WorldCard to="/collection" icon={<Package className="size-5" />} title="المتحف" subtitle="أرشيفك ومقتنياتك" />
-          <WorldCard to="/worlds" icon={<Compass className="size-5" />} title="عوالم إرث" subtitle="استكشف الحضارات" />
-          <div className="col-span-2">
-            <WorldCard to="/timeline" icon={<Hourglass className="size-5" />} title="الخط الزمني العظيم" subtitle="أكثر من 1400 سنة من التاريخ" wide />
-          </div>
-        </div>
-      </section>
+      {/* ============ 11. ALMOST THERE ============ */}
+      {almostThere.length > 0 && (
+        <Reveal>
+          <section className="mt-10 mb-8 px-5">
+            <SectionHeader icon={<Flame className="size-3.5" />} eyebrow="على بُعد خطوات" title="أنت قريب جدًا…" />
+            <div className="space-y-2">
+              {almostThere.map((g, i) => (
+                <Link
+                  key={i}
+                  to={g.to as "/"}
+                  className="group flex items-center gap-3 rounded-2xl border border-gold/25 bg-gradient-to-l from-gold/10 to-transparent p-3 transition hover:border-gold/60"
+                >
+                  <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-elegant">
+                    {g.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-sm font-bold leading-tight line-clamp-1">{g.label}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      المتبقي{" "}
+                      <span className="font-display text-gold">{g.remaining.toLocaleString("en-US")}</span>{" "}
+                      {g.unit}
+                    </p>
+                  </div>
+                  <ChevronLeft className="size-4 shrink-0 text-gold/50 group-hover:text-gold" />
+                </Link>
+              ))}
+            </div>
+          </section>
+        </Reveal>
+      )}
 
       <OnboardingTour />
     </AppShell>
@@ -689,6 +793,37 @@ function SectionHeader({ icon, eyebrow, title }: { icon: React.ReactNode; eyebro
     <div className="mb-3">
       <div className="flex items-center gap-2 text-[10px] tracking-[0.3em] text-gold">{icon} {eyebrow}</div>
       <h2 className="font-display mt-1 text-lg font-bold">{title}</h2>
+    </div>
+  );
+}
+
+/** Lightweight intersection-observer fade-in wrapper. Hidden by default; once
+ *  in view it stays visible. One observer per Reveal — cheap on mobile. */
+function Reveal({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") { setShown(true); return; }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) { setShown(true); io.disconnect(); break; }
+        }
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0.05 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className={shown ? "animate-fade-in" : ""}
+      style={shown ? undefined : { opacity: 0, transform: "translateY(10px)" }}
+    >
+      {children}
     </div>
   );
 }
@@ -714,52 +849,14 @@ function RecentCard({ item }: { item: UnifiedUnlock }) {
   return (
     <Link
       to={item.to as "/"}
-      className="group relative w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-3 transition hover:border-gold/50"
+      className="group relative w-48 shrink-0 snap-start overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-3 transition hover:border-gold/50"
     >
-      <div className="absolute -left-6 -top-6 size-20 rounded-full bg-gold/10 blur-2xl" />
+      <div className="absolute -left-6 -top-6 size-24 rounded-full bg-gold/10 blur-2xl" />
       <div className="relative">
         <div className="text-2xl">{item.icon}</div>
         <p className="mt-2 text-[10px] tracking-[0.2em] text-gold">{item.kind}</p>
         <p className="font-display mt-0.5 text-sm font-bold leading-tight line-clamp-1">{item.title}</p>
         {item.subtitle && <p className="mt-1 line-clamp-2 text-[11px] text-white/60 leading-snug">{item.subtitle}</p>}
-      </div>
-    </Link>
-  );
-}
-
-function UpdateRow({ item }: { item: { kind: string; title: string; subtitle?: string; icon: string; image: string | null; to: string } }) {
-  return (
-    <Link
-      to={item.to as "/"}
-      className="group flex items-center gap-3 rounded-2xl border border-gold/20 bg-surface/60 p-3 transition hover:border-gold/50"
-    >
-      <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gold/10 text-xl text-gold">
-        {item.image ? <img src={item.image} alt="" className="size-full object-cover" /> : <span>{item.icon}</span>}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] tracking-[0.2em] text-gold">{item.kind}</p>
-        <p className="font-display text-sm font-bold leading-tight line-clamp-1">{item.title}</p>
-        {item.subtitle && <p className="mt-0.5 text-[11px] text-white/55 line-clamp-1">{item.subtitle}</p>}
-      </div>
-      <ChevronLeft className="size-4 shrink-0 text-gold/50 group-hover:text-gold" />
-    </Link>
-  );
-}
-
-function WorldCard({ to, icon, title, subtitle, wide }: { to: string; icon: React.ReactNode; title: string; subtitle: string; wide?: boolean }) {
-  return (
-    <Link
-      to={to as "/"}
-      className={`group relative block overflow-hidden rounded-2xl border border-gold/20 parchment-dark p-4 transition hover:border-gold/50 ${wide ? "min-h-[90px]" : "min-h-[120px]"}`}
-    >
-      <div className="arabesque-layer opacity-40" />
-      <div className={`relative flex ${wide ? "items-center gap-4" : "flex-col gap-3"}`}>
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold transition group-hover:bg-gold/25">{icon}</span>
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-[14px] font-bold leading-tight">{title}</p>
-          <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-white/60">{subtitle}</p>
-        </div>
-        <ChevronLeft className="size-4 shrink-0 text-gold/50 transition group-hover:text-gold" />
       </div>
     </Link>
   );
@@ -775,6 +872,97 @@ function EmptyState({ icon, title, body }: { icon: React.ReactNode; title: strin
   );
 }
 
+// ----- Continue Journey premium CTA -----
+function ContinueJourneyCard({ sel }: {
+  sel: {
+    campaign: ImportedCampaign;
+    completedChapters: number;
+    nextChapter: CampaignChapter | null;
+    hasStarted: boolean;
+    isComplete: boolean;
+  };
+}) {
+  const { campaign, completedChapters, nextChapter, hasStarted } = sel;
+  const total = campaign.chapters.length;
+  const pct = total > 0 ? Math.round((completedChapters / total) * 100) : 0;
+  const cover = (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) || heroFortress;
+  return (
+    <section className="mt-8 px-5">
+      <SectionHeader icon={<Crown className="size-3.5" />} eyebrow="حملتك النشطة" title="واصل رحلتك" />
+      <Link
+        to="/campaigns/imported/$id"
+        params={{ id: campaign.id }}
+        className="group relative block overflow-hidden rounded-3xl border border-gold/35 shadow-elegant"
+      >
+        <div className="relative h-48 w-full overflow-hidden">
+          <img src={cover} alt="" loading="lazy" decoding="async" className="size-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-transparent" />
+          <div className="arabesque-layer opacity-40" />
+          <div className="absolute -left-12 -top-12 size-40 rounded-full bg-gold/20 blur-3xl" />
+        </div>
+        <div className="parchment-dark relative -mt-14 px-5 pt-4 pb-5">
+          <p className="text-[10px] tracking-[0.25em] text-gold">
+            {hasStarted ? "تابع من حيث توقفت" : "ابدأ حملتك الأولى"}
+          </p>
+          <h3 className="font-display mt-1 text-xl font-bold leading-snug shimmer-text">{campaign.title}</h3>
+          {nextChapter && (
+            <p className="mt-1 text-[12px] text-white/70 line-clamp-2">
+              الفصل {nextChapter.order ?? completedChapters + 1} · {nextChapter.title}
+            </p>
+          )}
+          <div className="mt-4 flex items-center gap-3">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="font-display text-[11px] text-gold">{completedChapters}/{total}</span>
+          </div>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-2.5 text-[12px] font-bold text-primary-foreground shadow-elegant">
+            <Play className="size-3.5 fill-current" />
+            {hasStarted ? "تابع الرحلة" : "ابدأ الحملة"}
+          </div>
+        </div>
+      </Link>
+    </section>
+  );
+}
+
+// ----- Journey Through Time preview (links to /timeline) -----
+function JourneyThroughTimeSection() {
+  return (
+    <section className="mt-10 px-5">
+      <SectionHeader icon={<Hourglass className="size-3.5" />} eyebrow="رحلة عبر الزمن" title="عصور تنتظر اكتشافها" />
+      <Link
+        to="/timeline"
+        className="group relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark shadow-elegant"
+      >
+        <div className="relative h-28 w-full overflow-hidden">
+          <img src={heroCitySunrise} alt="" loading="lazy" decoding="async" className="size-full object-cover opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-background/40 to-background" />
+          <div className="arabesque-layer opacity-50" />
+        </div>
+        <div className="relative -mt-10 px-5 pb-5">
+          <p className="text-[10px] tracking-[0.25em] text-gold">من البعثة إلى اليوم</p>
+          <h3 className="font-display mt-1 text-base font-bold">1400 سنة في خط واحد</h3>
+          <div className="-mx-5 mt-4 flex gap-2 overflow-x-auto px-5 pb-1 no-scrollbar snap-x snap-mandatory">
+            {ERAS.map((e) => (
+              <div
+                key={e.id}
+                className="min-w-[140px] snap-start rounded-xl border border-gold/20 bg-surface/60 px-3 py-2"
+              >
+                <p className="text-[9px] tracking-[0.2em] text-gold">{e.years}</p>
+                <p className="font-display mt-0.5 text-[12px] font-bold leading-tight line-clamp-1">{e.name}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 inline-flex items-center gap-2 text-[12px] font-bold text-gold">
+            ابدأ الرحلة الزمنية <ChevronLeft className="size-3.5 transition group-hover:-translate-x-0.5" />
+          </div>
+        </div>
+      </Link>
+    </section>
+  );
+}
+
 // ----- Historical Worlds homepage section -----
 function WorldsHomepageSection() {
   const { data } = useQuery({
@@ -786,20 +974,21 @@ function WorldsHomepageSection() {
   if (worlds.length === 0) return null;
   return (
     <section className="mt-10 px-5">
-      <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشاف الحضارات" title="🌍 عوالم إرث" />
-      <div className="grid grid-cols-2 gap-3">
+      <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشاف الحضارات" title="عوالم إرث" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {worlds.map((w) => (
           <Link
             key={w.hub.slug}
             to="/worlds/$slug"
             params={{ slug: w.hub.slug }}
-            className="group relative overflow-hidden rounded-2xl border border-gold/25 parchment-dark p-4 transition hover:border-gold/55"
+            className="group relative block overflow-hidden rounded-3xl border border-gold/25 parchment-dark shadow-elegant transition hover:border-gold/55"
           >
-            <div className="absolute -left-6 -top-6 size-20 rounded-full bg-gold/15 blur-2xl" />
-            <div className="relative">
-              <div className="text-3xl">{w.hub.glyph}</div>
-              <p className="mt-2 text-[10px] tracking-[0.2em] text-gold">عالم #{w.hub.order}</p>
-              <p className="font-display mt-0.5 text-sm font-bold leading-tight line-clamp-1">{w.entity.title}</p>
+            <div className="absolute -left-6 -top-6 size-32 rounded-full bg-gold/15 blur-3xl" />
+            <div className="arabesque-layer opacity-30" />
+            <div className="relative p-5">
+              <div className="text-4xl">{w.hub.glyph}</div>
+              <p className="mt-3 text-[10px] tracking-[0.2em] text-gold">عالم #{w.hub.order}</p>
+              <p className="font-display mt-0.5 text-base font-bold leading-tight line-clamp-1">{w.entity.title}</p>
               <p className="mt-1 text-[10px] text-white/55">{w.relatedCount} كيان · {w.campaignsCount} حملة</p>
             </div>
           </Link>
@@ -829,7 +1018,7 @@ function OnThisDayCalendarCard({ event }: { event: TodayInHistoryEvent }) {
         className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark transition hover:border-gold/60"
       >
         <div className="relative h-32 w-full overflow-hidden">
-          <img src={heroManuscriptLamp} alt="" className="size-full object-cover opacity-50" />
+          <img src={heroManuscriptLamp} alt="" loading="lazy" decoding="async" className="size-full object-cover opacity-50" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-surface" />
         </div>
         <div className="arabesque-layer opacity-50" />
