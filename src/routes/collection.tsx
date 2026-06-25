@@ -693,9 +693,8 @@ function CollectionPage() {
 // `metadata.collectible === true` in the encyclopedia.
 // ============================================================
 function RecentUnlocks() {
-  type Recent = { key: string; icon: string; kind: string; title: string; subtitle: string };
+  type Recent = { key: string; type: string; kind: string; title: string; subtitle: string; rarity: Rarity };
   const ALLOWED_TYPES = new Set(["figure", "scholar", "artifact", "landmark", "city", "battle"]);
-  // state handled separately below via metadata.collectible.
 
   const supaArtifacts = useEncyclopediaSupabaseList("artifact");
   const supaLandmarks = useEncyclopediaSupabaseList("landmark");
@@ -734,10 +733,6 @@ function RecentUnlocks() {
           figure: "شخصية", scholar: "شخصية", artifact: "أثر",
           battle: "معركة", city: "مدينة", landmark: "معلم", state: "دولة",
         };
-        const iconFor = (t: string): string => ({
-          figure: "👤", scholar: "👤", artifact: "💎",
-          battle: "⚔️", city: "🌆", landmark: "🏛️", state: "📜",
-        } as Record<string, string>)[t] ?? "✨";
 
         const lookupEntity = (t: string, slug: string): any => {
           const probe = (m: { bySlug: Map<string, any> }) => m.bySlug.get(slug.toLowerCase());
@@ -751,26 +746,26 @@ function RecentUnlocks() {
         };
 
         const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);
-
         const list: Recent[] = [];
         for (const row of data as any[]) {
           const t = row.item_type;
           if (!ALLOWED_TYPES.has(t) && t !== "state") continue;
           const ent = lookupEntity(t, row.item_id);
-          // State requires explicit metadata.collectible === true.
           if (t === "state" && !(ent?.metadata?.collectible === true)) continue;
           const title = ent?.title ?? (hasArabic(row.item_id) ? row.item_id : null);
-          if (!title) continue; // Hide unresolved English slugs.
+          if (!title) continue;
           const subtitleParts: string[] = [];
-          if (ent?.metadata?.rarity) subtitleParts.push(ent.metadata.rarity);
           const src = campaignTitle(row.source_campaign_id);
           if (src) subtitleParts.push(src);
+          const r = (ent?.metadata?.rarity ?? "rare") as Rarity;
+          const rarity: Rarity = (["common","rare","epic","legendary"] as Rarity[]).includes(r) ? r : "rare";
           list.push({
             key: `sup-${t}-${row.item_id}`,
-            icon: iconFor(t),
+            type: t,
             kind: kindLabel[t] ?? t,
             title,
             subtitle: subtitleParts.join(" · ") || (kindLabel[t] ?? "—"),
+            rarity,
           });
           if (list.length >= 3) break;
         }
@@ -784,11 +779,21 @@ function RecentUnlocks() {
 
   const recents: Recent[] = supaRecents ?? [];
 
+  const iconFor = (t: string): LucideGlyph => {
+    if (t === "figure" || t === "scholar") return Users;
+    if (t === "artifact") return Gem;
+    if (t === "landmark") return Landmark;
+    if (t === "city") return Building2;
+    if (t === "battle") return Swords;
+    if (t === "state") return ScrollText;
+    return Sparkles;
+  };
+
   return (
-    <div className="mb-5 rounded-2xl border border-gold/20 bg-surface/70 p-4">
+    <div className="mb-5 overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-4">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[10px] tracking-[0.25em] text-gold">
-          <Sparkles className="size-3.5" /> آخر المقتنيات
+          <Sparkles className="size-3.5" /> آخر الكنوز
         </div>
         {recents.length > 0 && (
           <span className="text-[10px] text-muted-foreground">{recents.length} اكتشاف حديث</span>
@@ -799,17 +804,32 @@ function RecentUnlocks() {
           لا توجد مقتنيات بعد — ابدأ حملةً ليبدأ متحفك في النمو.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-2">
-          {recents.map((r) => (
-            <div key={r.key} className="flex items-center gap-2 rounded-xl border border-gold/20 bg-gradient-to-bl from-gold/10 via-surface to-transparent p-2.5">
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-black/40 text-lg ring-1 ring-gold/30">{r.icon}</div>
-              <div className="min-w-0">
-                <p className="text-[9px] tracking-widest text-gold/80">{r.kind}</p>
-                <p className="truncate font-display text-[12px] font-bold">{r.title}</p>
-                <p className="truncate text-[10px] text-muted-foreground">{r.subtitle}</p>
+        <div className="grid grid-cols-1 gap-2.5">
+          {recents.map((r) => {
+            const Icon = iconFor(r.type);
+            const meta = RARITY_META[r.rarity];
+            return (
+              <div key={r.key}
+                className={`relative flex items-center gap-3 overflow-hidden rounded-2xl border bg-gradient-to-bl from-gold/10 via-surface to-transparent p-3
+                  ${r.rarity === "legendary" ? "border-gold/40 " + meta.glow :
+                    r.rarity === "epic"      ? "border-fuchsia-400/30" :
+                    r.rarity === "rare"      ? "border-sky-400/30" :
+                                               "border-gold/20"}`}>
+                <div className={`pointer-events-none absolute inset-0 bg-gradient-to-bl ${meta.frame} opacity-50`} />
+                <div className="relative grid size-12 shrink-0 place-items-center rounded-xl bg-black/40 ring-1 ring-gold/30">
+                  <Icon className="size-6 text-gold" />
+                </div>
+                <div className="relative min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[9px] tracking-widest text-gold/80">{r.kind}</p>
+                    <span className={`rounded-full px-1.5 py-0.5 text-[8px] font-bold ${meta.chip}`}>{meta.label}</span>
+                  </div>
+                  <p className="mt-0.5 truncate font-display text-[13px] font-bold">{r.title}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{r.subtitle}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
