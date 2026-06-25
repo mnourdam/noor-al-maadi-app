@@ -35,6 +35,8 @@ function GamePlayPage() {
   const [stageIdx, setStageIdx] = useState(0);
   const [stageDone, setStageDone] = useState(false);
   const [finalScore, setFinalScore] = useState<number | null>(null);
+  // Permanently completed (discovered) — blocks replay. Null = unknown yet.
+  const [alreadyCompleted, setAlreadyCompleted] = useState<boolean | null>(null);
 
   // Attempts + fail flow
   const [wrongCount, setWrongCount] = useState(0);
