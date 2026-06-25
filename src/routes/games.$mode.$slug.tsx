@@ -121,7 +121,19 @@ function GamePlayPage() {
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
-  }, [game, isLast, stageIdx, addPoints, addDinars]);
+  }, [game, isLast, stageIdx, failed, stageDone, addPoints, addDinars]);
+
+  // Timeout pipeline: instant fail, lose one heart, no rewards.
+  const handleTimeout = useCallback(() => {
+    if (!game || game === "loading" || failed || stageDone) return;
+    sfx("timeout");
+    setFailReason("timeout");
+    setFailed(true);
+    const dedupKey = `game:${game.id}:stage:${stageIdx}:cycle:${retryNonce}:timeout`;
+    const heartsAfter = loseHeartOnce(dedupKey);
+    if (heartsAfter <= 0) setShowOutOfHearts(true);
+  }, [game, failed, stageDone, stageIdx, retryNonce, loseHeartOnce]);
+
 
 
   // Attempts pipeline: one wrong attempt at a time.
