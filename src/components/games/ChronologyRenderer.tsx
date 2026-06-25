@@ -89,7 +89,13 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
           <Hourglass className="h-3.5 w-3.5" />
           الخط الزمني
         </div>
-        {stage.prompt && <span className="text-[11px] text-slate-400">{stage.prompt}</span>}
+        <div className="flex items-center gap-2">
+          {stage.prompt && <span className="text-[11px] text-slate-400">{stage.prompt}</span>}
+          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
+            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
+          )}
+        </div>
+
       </div>
 
       <p className="mb-3 text-[11px] text-slate-500">
