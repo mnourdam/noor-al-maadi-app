@@ -716,3 +716,57 @@ function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
     </div>
   );
 }
+
+function DeletePlayerDialog({
+  target,
+  onClose,
+  onConfirm,
+}: {
+  target: AdminUserRow;
+  onClose: () => void;
+  onConfirm: () => Promise<void> | void;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" dir="rtl">
+      <div className="w-full max-w-md rounded-xl border border-rose-500/40 bg-slate-950 p-5 shadow-2xl">
+        <div className="flex items-start gap-3">
+          <div className="rounded-full border border-rose-500/40 bg-rose-500/10 p-2 text-rose-300">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-base font-semibold text-rose-200">حذف اللاعب؟</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              سيؤدي هذا إلى حذف اللاعب وجميع بياناته بشكل نهائي. لا يمكن التراجع عن هذه العملية.
+            </p>
+            <div className="mt-3 rounded border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-400">
+              <div className="text-slate-200">{target.display_name ?? "—"} <span className="text-slate-500">@{target.username}</span></div>
+              {target.email && <div dir="ltr" className="mt-0.5">{target.email}</div>}
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-800"><X className="h-4 w-4" /></button>
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+          >
+            إلغاء
+          </button>
+          <button
+            onClick={async () => {
+              setBusy(true);
+              try { await onConfirm(); } finally { setBusy(false); }
+            }}
+            disabled={busy}
+            className="inline-flex items-center gap-1 rounded border border-rose-500/50 bg-rose-500/15 px-3 py-1.5 text-sm font-medium text-rose-100 hover:bg-rose-500/25 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" /> {busy ? "جارٍ الحذف…" : "حذف نهائيًا"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
