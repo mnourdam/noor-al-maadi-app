@@ -22,7 +22,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function ConnectionsRenderer({ stage, onComplete }: Props) {
+export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   // pairIndex (i) is the source of truth for matching. Visual order on each side may differ.
   const lefts = useMemo(() => shuffle(stage.pairs.map((p, i) => ({ i, text: p.left }))), [stage]);
   const rights = useMemo(() => shuffle(stage.pairs.map((p, i) => ({ i, text: p.right }))), [stage]);
