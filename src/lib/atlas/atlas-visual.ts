@@ -65,6 +65,44 @@ export const WORLD_LABEL_AR: Record<string, string> = {
 };
 
 /**
+ * Historical periods — broader time periods that GROUP worlds.
+ * World ≠ Era. Era is the wider container; each era contains 1..N worlds.
+ * "era" tag on entities still encodes world membership (legacy); the period
+ * is derived from that world via WORLD_TO_PERIOD.
+ */
+export type HistoricalPeriodId =
+  | "prophetic-era"
+  | "rashidun-era"
+  | "umayyad-era"
+  | "islamic-golden-age"
+  | "islamic-middle-ages"
+  | "ottoman-era";
+
+export const HISTORICAL_PERIODS: {
+  id: HistoricalPeriodId;
+  label_ar: string;
+  worlds: string[];
+}[] = [
+  { id: "prophetic-era",       label_ar: "العهد النبوي",        worlds: ["prophetic"] },
+  { id: "rashidun-era",        label_ar: "الخلافة الراشدة",     worlds: ["rashidun"] },
+  { id: "umayyad-era",         label_ar: "العصر الأموي",        worlds: ["umayyad"] },
+  { id: "islamic-golden-age",  label_ar: "العصر الذهبي الإسلامي", worlds: ["abbasid", "andalus"] },
+  { id: "islamic-middle-ages", label_ar: "العصور الوسطى الإسلامية", worlds: ["seljuk", "zengid", "ayyubid-state", "mamluk-sultanate"] },
+  { id: "ottoman-era",         label_ar: "العصر العثماني",      worlds: ["ottoman"] },
+];
+
+export const WORLD_TO_PERIOD: Record<string, HistoricalPeriodId> = (() => {
+  const out: Record<string, HistoricalPeriodId> = {};
+  for (const p of HISTORICAL_PERIODS) for (const w of p.worlds) out[w] = p.id;
+  return out;
+})();
+
+export function periodForEntity(e: { era: string | null }): HistoricalPeriodId | null {
+  const w = worldForEntity(e);
+  return w ? WORLD_TO_PERIOD[w] ?? null : null;
+}
+
+/**
  * Chronological sort for Atlas rows.
  * year_start (Gregorian/Hijri unified — older = smaller) ascending; rows
  * without year fall to the end alphabetically by name_ar. Stable.
