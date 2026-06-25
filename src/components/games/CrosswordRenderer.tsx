@@ -74,7 +74,13 @@ export function CrosswordRenderer({
   stage, onComplete, onWrong, attemptsLeft, maxAttempts, onPaidHint,
 }: Props) {
 
-  const grid = useMemo(() => buildGrid(stage), [stage]);
+  const { cells: grid, conflicts } = useMemo(() => buildGrid(stage), [stage]);
+  const schemaIssues = useMemo(() => validateCrosswordStage(stage), [stage]);
+  const blockingIssues = useMemo(
+    () => [...conflicts, ...schemaIssues.map((i) => i.message)],
+    [conflicts, schemaIssues],
+  );
+
   const [entries, setEntries] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
   const [activeClue, setActiveClue] = useState<number | null>(null);
