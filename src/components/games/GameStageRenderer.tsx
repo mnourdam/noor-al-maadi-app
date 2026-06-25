@@ -4,6 +4,7 @@ import { WhoAmIRenderer } from "./WhoAmIRenderer";
 import { ConnectionsRenderer } from "./ConnectionsRenderer";
 import { MemoryRenderer } from "./MemoryRenderer";
 import { CrosswordRenderer } from "./CrosswordRenderer";
+import "./games-premium.css";
 
 interface Props {
   mode: GameMode;
