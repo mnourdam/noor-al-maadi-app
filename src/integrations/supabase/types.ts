@@ -1121,6 +1121,19 @@ export type Database = {
       }
       admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
       advance_referral_stage: { Args: { p_stage: number }; Returns: Json }
+      analytics_atlas: { Args: never; Returns: Json }
+      analytics_content_health: { Args: never; Returns: Json }
+      analytics_overview: { Args: never; Returns: Json }
+      analytics_system_health: { Args: never; Returns: Json }
+      analytics_timeseries: {
+        Args: {
+          p_bucket?: string
+          p_from: string
+          p_metric: string
+          p_to: string
+        }
+        Returns: Json
+      }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       current_user_capabilities: { Args: never; Returns: Json }
       ensure_atlas_drafts_for_encyclopedia: { Args: never; Returns: Json }
