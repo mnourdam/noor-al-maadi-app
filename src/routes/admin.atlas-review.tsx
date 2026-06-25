@@ -439,7 +439,7 @@ function AtlasReviewPage() {
           style={{ touchAction: "none" }}
           onPointerDown={onStageDown}
           onPointerMove={(e) => { onStageMove(e); onPinMove(e); }}
-          onPointerUp={(e) => { onStageUp(); onPinUp(e); }}
+          onPointerUp={(e) => { onStageUp(e); onPinUp(e); }}
         >
           <div
             data-role="stage"
