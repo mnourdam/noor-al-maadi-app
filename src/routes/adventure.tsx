@@ -51,7 +51,7 @@ function AdventurePage() {
 
             <div className="relative grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.4em] text-amber-300/80">قاعة المغامرات</p>
+                <p className="text-[11px] uppercase tracking-[0.4em] text-amber-300/80">قاعة التحديات</p>
                 <h1 className="mt-2 text-2xl font-bold leading-tight text-amber-100 sm:text-3xl">
                   ادخل المعرض — اختر تحدّيك وتابع حملتك.
                 </h1>
