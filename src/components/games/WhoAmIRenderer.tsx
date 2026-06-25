@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Lightbulb, Check, Sparkles } from "lucide-react";
+import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion } from "lucide-react";
 import type { WhoAmIStage } from "@/lib/games/types";
+import { sfx } from "./sfx";
 
 interface Props {
   stage: WhoAmIStage;
@@ -11,6 +12,8 @@ function normalize(s: string): string {
   return s.trim().toLowerCase().replace(/[ًٌٍَُِّْـ]/g, "").replace(/[إأآ]/g, "ا").replace(/[ى]/g, "ي").replace(/[ة]/g, "ه");
 }
 
+const POTENTIAL_BY_REVEAL = [100, 70, 50] as const;
+
 export function WhoAmIRenderer({ stage, onComplete }: Props) {
   const [revealed, setRevealed] = useState(1);
   const [guess, setGuess] = useState("");
@@ -20,61 +23,103 @@ export function WhoAmIRenderer({ stage, onComplete }: Props) {
   useEffect(() => { setRevealed(1); setGuess(""); setDone(false); setWrong(false); }, [stage]);
 
   const accepted = [stage.answer, ...(stage.acceptable ?? [])].map(normalize);
+  const potential = POTENTIAL_BY_REVEAL[Math.min(revealed, 3) - 1];
 
   const submit = () => {
     const g = normalize(guess);
     if (!g) return;
     if (accepted.some((a) => a === g || a.includes(g) || g.includes(a))) {
       setDone(true);
-      // 100 if guessed at hint 1, 70 at 2, 50 at 3
-      const score = revealed === 1 ? 100 : revealed === 2 ? 70 : 50;
+      sfx("correct");
+      sfx("gold_unlock");
+      const score = POTENTIAL_BY_REVEAL[Math.min(revealed, 3) - 1];
       onComplete(score);
     } else {
       setWrong(true);
+      sfx("wrong");
       setTimeout(() => setWrong(false), 800);
     }
   };
 
+  const revealMore = () => {
+    if (revealed < stage.hints.length) {
+      setRevealed(revealed + 1);
+      sfx("ink_write");
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="relative overflow-hidden irth-title-card p-5 sm:p-6">
+      {/* Dossier header */}
+      <div className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-amber-300/80">
+          <ScrollText className="h-3.5 w-3.5" />
+          ملف تاريخي
+        </div>
+        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
+          الإجابة الآن تمنحك {potential} خبرة
+        </span>
+      </div>
+
+      {/* Silhouette medallion */}
+      <div className="mb-6 flex justify-center">
+        <div className={`relative grid h-24 w-24 place-items-center rounded-full border border-amber-500/40 bg-gradient-to-br from-slate-900 to-slate-950 ${done ? "irth-unlock irth-gold-glow" : ""}`}>
+          {done ? (
+            <UserCircle2 className="h-14 w-14 text-amber-300" strokeWidth={1.2} />
+          ) : (
+            <ShieldQuestion className="h-12 w-12 text-amber-300/60" strokeWidth={1.2} />
+          )}
+        </div>
+      </div>
+
+      {/* Hints — revealed one by one */}
       <ul className="space-y-2">
         {stage.hints.slice(0, revealed).map((h, i) => (
-          <li key={i} className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-            <span className="grid h-6 w-6 place-items-center rounded-full bg-amber-500/20 text-xs font-bold text-amber-200">{i + 1}</span>
+          <li key={i} className="irth-reveal flex items-start gap-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.04] p-3"
+              style={{ animationDelay: `${i * 60}ms` }}>
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-amber-500/20 text-[11px] font-bold text-amber-200">{i + 1}</span>
             <span className="text-sm leading-7 text-slate-100">{h}</span>
           </li>
         ))}
       </ul>
 
-      {revealed < stage.hints.length && !done && (
-        <button onClick={() => setRevealed(revealed + 1)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
-          <Lightbulb className="h-3.5 w-3.5" /> تلميح آخر
-        </button>
+      {/* Reveal another / submit */}
+      {!done && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {revealed < stage.hints.length && (
+            <button onClick={revealMore}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 transition hover:bg-amber-500/10">
+              <Lightbulb className="h-3.5 w-3.5" /> اكشف تلميحًا آخر
+              <span className="text-amber-400/70">({revealed + 1}/{stage.hints.length})</span>
+            </button>
+          )}
+          <span className="ms-auto text-[11px] text-slate-500">تلميح {revealed} من {stage.hints.length}</span>
+        </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="mt-3 flex gap-2">
         <input
           dir="rtl"
           value={guess}
           onChange={(e) => setGuess(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           disabled={done}
-          placeholder="اكتب الإجابة…"
-          className={`flex-1 rounded-lg border bg-slate-950 p-3 text-sm text-slate-100 focus:outline-none ${
-            wrong ? "border-red-500/60 animate-pulse" : "border-slate-700 focus:border-amber-400"
+          placeholder="من هو/هي؟"
+          className={`flex-1 rounded-lg border bg-slate-950/80 p-3 text-sm text-slate-100 focus:outline-none ${
+            wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"
           } ${done ? "border-emerald-500/40" : ""}`}
         />
         <button onClick={submit} disabled={done}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50">
-          {done ? <><Sparkles className="h-4 w-4" /> صحيح</> : <><Check className="h-4 w-4" /> تحقق</>}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50">
+          {done ? <><Sparkles className="h-4 w-4" /> صحيح</> : <><Check className="h-4 w-4" /> أجب</>}
         </button>
       </div>
 
       {done && (
-        <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
-          الإجابة: <span className="font-bold">{stage.answer}</span>
-        </p>
+        <div className="irth-reveal mt-5 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-amber-500/5 p-4">
+          <p className="text-xs uppercase tracking-[0.25em] text-amber-300/80">الكشف الذهبي</p>
+          <p className="mt-1 text-xl font-bold text-amber-100">{stage.answer}</p>
+        </div>
       )}
     </div>
   );

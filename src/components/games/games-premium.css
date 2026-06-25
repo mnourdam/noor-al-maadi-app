@@ -1,0 +1,199 @@
+/* Premium gameplay aesthetic — CSS-only, GPU-friendly. */
+
+/* ---------- Atmosphere ---------- */
+.irth-parchment {
+  background:
+    radial-gradient(120% 80% at 20% 0%, rgba(251, 191, 36, 0.08), transparent 60%),
+    radial-gradient(120% 80% at 80% 100%, rgba(245, 158, 11, 0.06), transparent 60%),
+    linear-gradient(180deg, #fdf6e3 0%, #f4e7c3 100%);
+  color: #3b2a13;
+}
+.irth-parchment-dark {
+  background:
+    radial-gradient(120% 80% at 20% 0%, rgba(251, 191, 36, 0.10), transparent 60%),
+    radial-gradient(120% 80% at 80% 100%, rgba(245, 158, 11, 0.06), transparent 60%),
+    linear-gradient(180deg, #0b1220 0%, #060a13 100%);
+}
+.irth-arabesque::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(251, 191, 36, 0.06) 0 1px, transparent 2px),
+    radial-gradient(circle at 80% 60%, rgba(251, 191, 36, 0.04) 0 1px, transparent 2px);
+  background-size: 28px 28px, 36px 36px;
+  opacity: 0.6;
+}
+
+/* ---------- Title card ---------- */
+.irth-title-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  background:
+    radial-gradient(80% 100% at 50% 0%, rgba(251, 191, 36, 0.10), transparent 70%),
+    linear-gradient(180deg, rgba(11, 18, 32, 0.85), rgba(6, 10, 19, 0.85));
+}
+.irth-title-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 40%, rgba(251, 191, 36, 0.08) 50%, transparent 60%);
+  transform: translateX(-100%);
+  animation: irth-sheen 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes irth-sheen {
+  0%, 60% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ---------- Reveal ---------- */
+@keyframes irth-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.irth-reveal { animation: irth-fade-up 0.45s ease-out both; }
+
+/* ---------- Gold glow ---------- */
+@keyframes irth-gold-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.0); }
+  50%      { box-shadow: 0 0 24px 2px rgba(251, 191, 36, 0.35); }
+}
+.irth-gold-glow { animation: irth-gold-pulse 1.6s ease-in-out infinite; }
+
+@keyframes irth-gold-unlock {
+  0%   { transform: scale(0.92); opacity: 0; filter: brightness(0.7); }
+  60%  { transform: scale(1.04); opacity: 1; filter: brightness(1.4); }
+  100% { transform: scale(1);    opacity: 1; filter: brightness(1); }
+}
+.irth-unlock { animation: irth-gold-unlock 0.9s cubic-bezier(.2,.7,.2,1) both; }
+
+/* ---------- Shake (wrong) ---------- */
+@keyframes irth-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-4px); }
+  40%      { transform: translateX(4px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(3px); }
+}
+.irth-shake { animation: irth-shake 0.45s ease-in-out; }
+
+/* ---------- Snap (chronology) ---------- */
+@keyframes irth-snap {
+  0%   { transform: translateY(-6px); opacity: 0.6; }
+  60%  { transform: translateY(2px); }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.irth-snap { animation: irth-snap 0.35s cubic-bezier(.2,.8,.2,1); }
+
+/* ---------- Memory card flip ---------- */
+.irth-flip { perspective: 800px; }
+.irth-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.55s cubic-bezier(.2,.8,.2,1);
+  transform-style: preserve-3d;
+}
+.irth-flip.is-open .irth-flip-inner { transform: rotateY(180deg); }
+.irth-face {
+  position: absolute;
+  inset: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 10px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.irth-face-back {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(251, 191, 36, 0.18), transparent 60%),
+    repeating-linear-gradient(45deg, #2a1b08 0 6px, #1f1306 6px 12px);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+.irth-face-front {
+  transform: rotateY(180deg);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(251, 191, 36, 0.12), transparent 70%),
+    linear-gradient(180deg, #fdf6e3 0%, #f1e1b8 100%);
+  color: #3b2a13;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  padding: 8px;
+  text-align: center;
+  font-weight: 700;
+}
+.irth-face-front.is-solved {
+  box-shadow: inset 0 0 0 2px rgba(16, 185, 129, 0.55), 0 0 18px rgba(16, 185, 129, 0.25);
+}
+@keyframes irth-merge {
+  0%   { transform: rotateY(180deg) scale(1); }
+  50%  { transform: rotateY(180deg) scale(1.08); filter: brightness(1.6); }
+  100% { transform: rotateY(180deg) scale(1);    filter: brightness(1); }
+}
+.irth-merge .irth-flip-inner { animation: irth-merge 0.7s ease-out; }
+
+/* ---------- Ink (crossword) ---------- */
+@keyframes irth-ink {
+  0%   { color: transparent; text-shadow: 0 0 6px rgba(15, 23, 42, 0); }
+  60%  { color: #1f1306; text-shadow: 0 0 4px rgba(15, 23, 42, 0.4); }
+  100% { color: #1f1306; text-shadow: none; }
+}
+.irth-ink-cell input { transition: background 0.3s ease; }
+.irth-ink-cell.is-correct { background: linear-gradient(180deg, #fef3c7, #fde68a); }
+.irth-ink-cell.is-correct input { animation: irth-ink 0.6s ease both; font-family: "IBM Plex Sans Arabic", serif; }
+
+/* ---------- Thread (connections) ---------- */
+.irth-thread {
+  position: relative;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.85), transparent);
+  transform-origin: left center;
+  animation: irth-thread-draw 0.5s ease-out both;
+  border-radius: 2px;
+}
+@keyframes irth-thread-draw {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+.irth-thread.locked {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.3), rgba(251, 191, 36, 1), rgba(251, 191, 36, 0.3));
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.55);
+}
+.irth-thread.wrong { background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.8), transparent); animation: irth-thread-fade 0.6s ease-out forwards; }
+@keyframes irth-thread-fade {
+  0%   { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(0.85); }
+}
+
+/* ---------- Ember ---------- */
+@keyframes irth-ember {
+  0%   { transform: translateY(0) scale(1);   opacity: 0; }
+  20%  { opacity: 0.6; }
+  100% { transform: translateY(-60px) scale(0.6); opacity: 0; }
+}
+.irth-ember { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: rgba(251, 191, 36, 0.8); animation: irth-ember 3.5s linear infinite; }
+
+/* ---------- Progress rail ---------- */
+.irth-rail {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(251, 191, 36, 0.12);
+  overflow: hidden;
+}
+.irth-rail > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #fde68a, #f59e0b);
+  background-size: 200% 100%;
+  animation: irth-rail-shimmer 2.4s linear infinite;
+  transition: width 0.5s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes irth-rail-shimmer {
+  from { background-position: 0% 0; }
+  to   { background-position: 200% 0; }
+}
