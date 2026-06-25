@@ -25,24 +25,40 @@ interface CellInfo {
 
 function cellKey(r: number, c: number) { return `${r}-${c}`; }
 
-function buildGrid(stage: CrosswordStage): Map<string, CellInfo> {
+interface BuiltGrid {
+  cells: Map<string, CellInfo>;
+  conflicts: string[];
+}
+
+function buildGrid(stage: CrosswordStage): BuiltGrid {
   const map = new Map<string, CellInfo>();
+  const conflicts: string[] = [];
   stage.clues.forEach((clue, idx) => {
     for (let i = 0; i < clue.answer.length; i++) {
       const r = clue.direction === "down" ? clue.row + i : clue.row;
       const c = clue.direction === "across" ? clue.col + i : clue.col;
+      if (r < 0 || c < 0 || r >= stage.rows || c >= stage.cols) continue;
       const k = cellKey(r, c);
       const ch = clue.answer[i];
       const existing = map.get(k);
       if (existing) {
-        existing.clueIds.push(idx);
+        if (existing.expected !== ch) {
+          // CRITICAL: never mutate either answer. Record the conflict and stop.
+          const other = stage.clues[existing.clueIds[0]];
+          conflicts.push(
+            `تعارض في تقاطع الكلمات: الكلمة (${clue.answer}) لا توافق الكلمة (${other.answer}) عند الصف ${r} والعمود ${c}.`,
+          );
+          continue;
+        }
+        if (!existing.clueIds.includes(idx)) existing.clueIds.push(idx);
       } else {
         map.set(k, { expected: ch, clueIds: [idx] });
       }
     }
   });
-  return map;
+  return { cells: map, conflicts };
 }
+
 
 function clueCells(clue: CrosswordClue): { r: number; c: number }[] {
   const cells: { r: number; c: number }[] = [];
