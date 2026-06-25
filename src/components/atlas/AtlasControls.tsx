@@ -1,7 +1,10 @@
 // Phase 3 — Atlas controls.
 // Search + kind + era + world filters over published atlas_entities.
 // Kind chips show their pin color so the toolbar doubles as a legend.
-import { Search } from "lucide-react";
+// Collapsible: on mobile defaults to a compact bar (search + active-filter
+// summary + expand arrow); full controls revealed when expanded.
+import { useEffect, useState } from "react";
+import { ChevronDown, ChevronUp, RotateCcw, Search } from "lucide-react";
 import {
   KIND_LABEL_AR,
   type AtlasEntityKind,
