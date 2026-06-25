@@ -34,10 +34,11 @@
 // ============================================================
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
-  Lock, MapPin, Crown, Swords, Landmark, Users, Sparkles,
-  AlertTriangle, CalendarClock,
+  Lock, Swords, Landmark, Users, Sparkles,
+  AlertTriangle, CalendarClock, Gem, ScrollText, Building2,
+  Trophy, Star, Award, Compass,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useProfile } from "@/lib/profile";
@@ -67,32 +68,34 @@ export const Route = createFileRoute("/collection")({
 
 // ───── Rarity presentation ─────────────────────────────────────
 type Rarity = "common" | "rare" | "epic" | "legendary";
-const RARITY_META: Record<Rarity, { label: string; ring: string; chip: string; glow: string }> = {
-  common:    { label: "عادي",    ring: "ring-white/10",       chip: "bg-white/10 text-white/70",                glow: "" },
-  rare:      { label: "نادر",    ring: "ring-sky-400/40",     chip: "bg-sky-400/15 text-sky-200",               glow: "shadow-[0_0_24px_-8px_oklch(0.78_0.14_240/35%)]" },
-  epic:      { label: "ملحمي",   ring: "ring-fuchsia-400/45", chip: "bg-fuchsia-400/15 text-fuchsia-200",       glow: "shadow-[0_0_28px_-8px_oklch(0.7_0.2_320/40%)]" },
-  legendary: { label: "أسطوري",  ring: "ring-gold/60",        chip: "bg-gradient-gold text-primary-foreground", glow: "shadow-gold" },
+const RARITY_META: Record<Rarity, { label: string; ring: string; chip: string; glow: string; frame: string }> = {
+  common:    { label: "عادي",    ring: "ring-white/10",       chip: "bg-white/10 text-white/70",                glow: "",                                                       frame: "from-white/5 to-transparent" },
+  rare:      { label: "نادر",    ring: "ring-sky-400/40",     chip: "bg-sky-400/15 text-sky-200",               glow: "shadow-[0_0_28px_-8px_oklch(0.78_0.14_240/45%)]",        frame: "from-sky-400/15 via-sky-400/5 to-transparent" },
+  epic:      { label: "ملحمي",   ring: "ring-fuchsia-400/45", chip: "bg-fuchsia-400/15 text-fuchsia-200",       frame: "from-fuchsia-400/15 via-fuchsia-400/5 to-transparent",  glow: "shadow-[0_0_34px_-8px_oklch(0.7_0.2_320/50%)]" },
+  legendary: { label: "أسطوري",  ring: "ring-gold/60",        chip: "bg-gradient-gold text-primary-foreground", glow: "shadow-gold",                                            frame: "from-gold/25 via-gold/5 to-transparent" },
 };
 
 type RevealItem = CollectibleRevealItem;
 
 // ───── Museum sections ─────────────────────────────────────────
 type SectionId = "figures" | "artifacts" | "landmarks" | "cities" | "battles" | "events";
+type LucideGlyph = ComponentType<{ className?: string }>;
 interface SectionDef {
   id: SectionId;
   label: string;
-  icon: any;
-  type: string;            // matches encyclopedia_entities.entity_type
-  glyph: string;           // default emoji for locked/empty cards
-  registryTypes?: string[]; // imported-registry types merged into this tab
+  icon: LucideGlyph;            // section pill / bar icon
+  glyphIcon: LucideGlyph;       // visual glyph used inside cards & reveals
+  type: string;                 // matches encyclopedia_entities.entity_type
+  glyph: string;                // legacy emoji kept for back-compat in reveal payloads
+  registryTypes?: string[];     // imported-registry types merged into this tab
 }
 const SECTIONS: SectionDef[] = [
-  { id: "figures",   label: "شخصيات", icon: Users,          type: "figure",   glyph: "👤", registryTypes: ["figure", "scholar"] },
-  { id: "artifacts", label: "آثار",   icon: Crown,          type: "artifact", glyph: "🏺", registryTypes: ["artifact"] },
-  { id: "landmarks", label: "معالم",  icon: Landmark,       type: "landmark", glyph: "🏛️" },
-  { id: "cities",    label: "مدن",    icon: MapPin,         type: "city",     glyph: "🌆", registryTypes: ["city"] },
-  { id: "battles",   label: "معارك",  icon: Swords,         type: "battle",   glyph: "⚔️",  registryTypes: ["battle"] },
-  { id: "events",    label: "أحداث",  icon: CalendarClock,  type: "event",    glyph: "📜" },
+  { id: "figures",   label: "شخصيات", icon: Users,         glyphIcon: Users,        type: "figure",   glyph: "👤", registryTypes: ["figure", "scholar"] },
+  { id: "artifacts", label: "آثار",   icon: Gem,           glyphIcon: Gem,          type: "artifact", glyph: "🏺", registryTypes: ["artifact"] },
+  { id: "landmarks", label: "معالم",  icon: Landmark,      glyphIcon: Landmark,     type: "landmark", glyph: "🏛️" },
+  { id: "cities",    label: "مدن",    icon: Building2,     glyphIcon: Building2,    type: "city",     glyph: "🌆", registryTypes: ["city"] },
+  { id: "battles",   label: "معارك",  icon: Swords,        glyphIcon: Swords,       type: "battle",   glyph: "⚔️", registryTypes: ["battle"] },
+  { id: "events",    label: "أحداث",  icon: CalendarClock, glyphIcon: ScrollText,   type: "event",    glyph: "📜" },
 ];
 
 // ───── Supabase user_collection hook ───────────────────────────
@@ -145,26 +148,34 @@ function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick }: {
   return (
     <button
       onClick={onClick}
-      className={`group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-surface text-right transition-all duration-300 hover:-translate-y-0.5
-        ${unlocked ? `ring-1 ${meta.ring} ${meta.glow}` : "opacity-70"}`}
+      className={`group relative w-full overflow-hidden rounded-2xl border text-right transition-all duration-300 hover:-translate-y-0.5
+        ${unlocked
+          ? `${rarity === "legendary" ? "border-gold/40" : rarity === "epic" ? "border-fuchsia-400/30" : rarity === "rare" ? "border-sky-400/30" : "border-white/10"} bg-surface ring-1 ${meta.ring} ${meta.glow}`
+          : "border-white/10 bg-surface/70 opacity-75"}`}
     >
       {unlocked && (
-        <div className={`pointer-events-none absolute inset-0 opacity-60
-          ${rarity === "legendary" ? "bg-gradient-to-br from-gold/15 via-gold/0 to-transparent" :
-            rarity === "epic"      ? "bg-gradient-to-br from-fuchsia-400/15 via-fuchsia-400/0 to-transparent" :
-            rarity === "rare"      ? "bg-gradient-to-br from-sky-400/15 via-sky-400/0 to-transparent" :
-                                     "bg-gradient-to-br from-white/5 to-transparent"}`} />
+        <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${meta.frame} opacity-70`} />
+      )}
+      {unlocked && rarity === "legendary" && (
+        <div className="pointer-events-none absolute -inset-px rounded-2xl"
+          style={{ background: "radial-gradient(120% 60% at 50% -10%, oklch(0.82 0.14 82 / 0.35), transparent 60%)" }} />
       )}
       {!unlocked && (
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/40" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
       )}
       <div className="relative p-3">
         <div className="flex items-start justify-between gap-2">
-          <div className={`relative grid size-12 place-items-center overflow-hidden rounded-xl text-2xl
-            ${unlocked ? "bg-black/30 ring-1 ring-white/10" : "bg-black/50 ring-1 ring-white/5"}`}>
-            {unlocked ? icon : (
+          <div className={`relative grid size-12 place-items-center overflow-hidden rounded-xl
+            ${unlocked ? "bg-black/30 ring-1 ring-gold/20" : "bg-black/50 ring-1 ring-white/5"}`}>
+            {unlocked ? (
+              <span className="grid size-full place-items-center [&_svg]:size-6 [&_img]:size-full text-gold">
+                {icon}
+              </span>
+            ) : (
               <>
-                <span className="select-none text-2xl opacity-20 blur-[3px] grayscale">{icon}</span>
+                <span className="grid size-full place-items-center opacity-15 blur-[2px] grayscale [&_svg]:size-6">
+                  {icon}
+                </span>
                 <Lock className="absolute size-3.5 text-gold/70" />
               </>
             )}
@@ -445,13 +456,14 @@ function CollectionPage() {
   const openEntityReveal = (e: any, isOpen: boolean) => {
     const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
     const raw = `${current.type}:${e.slug}`;
+    const GlyphIcon = current.glyphIcon;
+    const revealIcon = <GlyphIcon className="size-10 text-gold" />;
     if (!isOpen) {
-      // Locked: never leak summary/details. Show locked preview only.
       const sourceCid = unlockSources.get(raw);
       const sourceTitle = sourceCid ? campaignTitleById.get(sourceCid) : undefined;
       setReveal({
         rarity,
-        icon: current.glyph,
+        icon: revealIcon,
         title: e.title ?? "مقتنى غامض",
         subtitle: current.label,
         lines: [],
@@ -464,7 +476,7 @@ function CollectionPage() {
     }
     setReveal({
       rarity,
-      icon: current.glyph,
+      icon: revealIcon,
       title: e.title ?? e.slug,
       subtitle: e.subtitle ?? current.label,
       lines: e.summary ? [e.summary] : ["عنصر من الموسوعة. افتحه لقراءة تفاصيله الكاملة."],
@@ -474,29 +486,109 @@ function CollectionPage() {
     });
   };
 
-
+  // ── Hero stats: rarity tally + latest unlock across all sections ──
+  const heroStats = useMemo(() => {
+    const tally: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
+    let latest: { title: string; section: SectionDef; ts: number } | null = null;
+    for (const s of SECTIONS) {
+      const list = supByType[s.type].data ?? [];
+      for (const e of list) {
+        const meta = (e.metadata as any) ?? {};
+        if (s.type === "artifact" && !isArtifactVisible(e.slug, meta, meta.legacy_id)) continue;
+        if (!isEntityUnlocked(s.type, e.slug, e.metadata)) continue;
+        const r = rarityFromMetadata(e.metadata, defaultRarity(s.type));
+        tally[r] += 1;
+        const ts = unlockedAtFor(s.type, e.slug, e.metadata);
+        if (ts && (!latest || ts > latest.ts) && e.title && /[\u0600-\u06FF]/.test(e.title)) {
+          latest = { title: e.title, section: s, ts };
+        }
+      }
+    }
+    return { tally, latest };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, userCollection, userUnlockedAt, importedUnlockSet, profile, campaignArtifactRefs]);
 
   return (
     <AppShell>
       <Screen title="المتحف">
-        {/* Prestige header */}
-        <div className="relative mb-4 overflow-hidden rounded-2xl border border-gold/20 bg-gradient-to-br from-gold/15 via-gold/5 to-transparent p-4">
-          <div className="pointer-events-none absolute inset-0 opacity-30" style={{
-            backgroundImage: "radial-gradient(circle at 15% 20%, oklch(0.82 0.14 82 / 0.4), transparent 35%), radial-gradient(circle at 85% 80%, oklch(0.82 0.14 82 / 0.25), transparent 40%)",
+        {/* ── Cinematic Museum Hero ───────────────────────────── */}
+        <div className="relative mb-5 overflow-hidden rounded-3xl border border-gold/25 bg-gradient-to-b from-[oklch(0.18_0.04_70)] via-surface to-background p-5 shadow-gold">
+          {/* Arabesque + warm lighting layers */}
+          <div className="pointer-events-none absolute inset-0 opacity-60" style={{
+            backgroundImage:
+              "radial-gradient(circle at 15% 0%, oklch(0.82 0.14 82 / 0.35), transparent 45%)," +
+              "radial-gradient(circle at 90% 100%, oklch(0.82 0.14 82 / 0.22), transparent 50%)",
           }} />
-          <div className="relative flex items-center justify-between">
-            <div>
-              <p className="text-[10px] tracking-[0.2em] text-gold/80">أرشيفك التاريخي</p>
-              <h1 className="font-display shimmer-text mt-1 text-2xl font-extrabold">إرثٌ يكبر معك</h1>
-              <p className="mt-1 text-[11px] text-muted-foreground">كلّ قطعةٍ مكتشفة تُضيف فصلًا لمتحفك الخاص.</p>
+          <div className="pointer-events-none absolute inset-0 opacity-[0.08]" style={{
+            backgroundImage:
+              "repeating-linear-gradient(45deg, oklch(0.82 0.14 82 / 0.6) 0 1px, transparent 1px 14px)," +
+              "repeating-linear-gradient(-45deg, oklch(0.82 0.14 82 / 0.5) 0 1px, transparent 1px 14px)",
+          }} />
+          <div className="pointer-events-none absolute -top-10 left-1/2 size-40 -translate-x-1/2 rounded-full bg-gold/15 blur-3xl" />
+
+          <div className="relative">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-[10px] tracking-[0.25em] text-gold/85">
+                  <Trophy className="size-3" /> أرشيفك التاريخي
+                </p>
+                <h1 className="font-display shimmer-text mt-1 text-2xl font-extrabold">المتحف الخاص بك</h1>
+                <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                  كلّ قطعةٍ مكتشفة تُضيف فصلًا لمتحفك الخاص.
+                </p>
+              </div>
+              <div className="shrink-0 text-center">
+                <p className="font-display text-4xl font-extrabold text-gold drop-shadow-[0_2px_10px_oklch(0.82_0.14_82/45%)]">{prestige}%</p>
+                <p className="text-[10px] text-muted-foreground">اكتمال المتحف</p>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="font-display text-3xl font-extrabold text-gold">{prestige}%</p>
-              <p className="text-[10px] text-muted-foreground">{totalDone}/{totalAll}</p>
+
+            <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-black/40 ring-1 ring-gold/20">
+              <div className="bg-gradient-gold h-full rounded-full transition-all duration-700" style={{ width: `${prestige}%` }} />
             </div>
-          </div>
-          <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-black/30">
-            <div className="bg-gradient-gold h-full rounded-full" style={{ width: `${prestige}%` }} />
+
+            {/* Stats grid */}
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-gold/15 bg-black/30 p-2.5 text-center">
+                <p className="font-display text-lg font-extrabold text-gold">{totalDone}</p>
+                <p className="text-[9px] tracking-wider text-muted-foreground">مقتنيات</p>
+              </div>
+              <div className="rounded-xl border border-gold/15 bg-black/30 p-2.5 text-center">
+                <p className="font-display text-lg font-extrabold text-gold">{totalAll - totalDone}</p>
+                <p className="text-[9px] tracking-wider text-muted-foreground">بانتظار الاكتشاف</p>
+              </div>
+              <div className="rounded-xl border border-gold/15 bg-black/30 p-2.5 text-center">
+                <p className="font-display text-lg font-extrabold text-gold">{SECTIONS.length}</p>
+                <p className="text-[9px] tracking-wider text-muted-foreground">قاعات عرض</p>
+              </div>
+            </div>
+
+            {/* Rarity tally */}
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {(["legendary", "epic", "rare", "common"] as Rarity[]).map(r => (
+                <span key={r} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${RARITY_META[r].chip}`}>
+                  {r === "legendary" ? <Star className="size-3" /> :
+                   r === "epic"      ? <Award className="size-3" /> :
+                   r === "rare"      ? <Sparkles className="size-3" /> :
+                                       <Compass className="size-3" />}
+                  {RARITY_META[r].label} · {heroStats.tally[r]}
+                </span>
+              ))}
+            </div>
+
+            {/* Latest unlock */}
+            {heroStats.latest && (
+              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-gold/25 bg-gradient-to-l from-gold/15 via-surface to-transparent p-3">
+                <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-black/40 ring-1 ring-gold/40">
+                  {(() => { const I = heroStats.latest.section.glyphIcon; return <I className="size-5 text-gold" />; })()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] tracking-[0.2em] text-gold/80">آخر مقتنى</p>
+                  <p className="truncate font-display text-sm font-bold">{heroStats.latest.title}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{heroStats.latest.section.label}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -516,20 +608,28 @@ function CollectionPage() {
           </div>
         )}
 
-
-        {/* Section pills */}
+        {/* Exhibition Halls — section pills with progress */}
+        <p className="mb-2 flex items-center gap-1.5 text-[10px] tracking-[0.25em] text-gold/80">
+          <Landmark className="size-3" /> قاعات العرض
+        </p>
         <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
           {SECTIONS.map(s => {
             const active = section === s.id;
             const Icon = s.icon;
             const c = sectionStats[s.id];
+            const pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
             return (
               <button key={s.id} onClick={() => setSection(s.id)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all
+                className={`relative flex shrink-0 flex-col items-start gap-1 overflow-hidden rounded-2xl border px-3 py-2 text-xs transition-all min-w-[110px]
                   ${active ? "border-gold/50 bg-gold/15 text-gold shadow-gold" : "border-white/10 bg-surface text-muted-foreground"}`}>
-                <Icon className="size-3.5" />
-                <span className="font-medium">{s.label}</span>
-                <span className="text-[10px] opacity-70">{c.done}/{c.total}</span>
+                <div className="flex items-center gap-1.5">
+                  <Icon className="size-3.5" />
+                  <span className="font-display font-bold">{s.label}</span>
+                </div>
+                <span className="text-[10px] opacity-70">{c.done}/{c.total} · {pct}%</span>
+                <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-black/40">
+                  <div className={`h-full ${active ? "bg-gradient-gold" : "bg-gold/40"}`} style={{ width: `${pct}%` }} />
+                </div>
               </button>
             );
           })}
@@ -553,12 +653,13 @@ function CollectionPage() {
           <div className="grid grid-cols-2 gap-3">
             {currentEntities.map(({ e, open }) => {
               const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
+              const GlyphIcon = current.glyphIcon;
               return (
                 <Card
                   key={`enc-${e.id ?? e.slug}`}
                   unlocked={open}
                   rarity={rarity}
-                  icon={current.glyph}
+                  icon={<GlyphIcon className="size-6" />}
                   title={e.title ?? e.slug}
                   subtitle={e.subtitle ?? current.label}
                   footer={e.summary?.slice(0, 80)}
@@ -592,9 +693,8 @@ function CollectionPage() {
 // `metadata.collectible === true` in the encyclopedia.
 // ============================================================
 function RecentUnlocks() {
-  type Recent = { key: string; icon: string; kind: string; title: string; subtitle: string };
+  type Recent = { key: string; type: string; kind: string; title: string; subtitle: string; rarity: Rarity };
   const ALLOWED_TYPES = new Set(["figure", "scholar", "artifact", "landmark", "city", "battle"]);
-  // state handled separately below via metadata.collectible.
 
   const supaArtifacts = useEncyclopediaSupabaseList("artifact");
   const supaLandmarks = useEncyclopediaSupabaseList("landmark");
@@ -633,10 +733,6 @@ function RecentUnlocks() {
           figure: "شخصية", scholar: "شخصية", artifact: "أثر",
           battle: "معركة", city: "مدينة", landmark: "معلم", state: "دولة",
         };
-        const iconFor = (t: string): string => ({
-          figure: "👤", scholar: "👤", artifact: "💎",
-          battle: "⚔️", city: "🌆", landmark: "🏛️", state: "📜",
-        } as Record<string, string>)[t] ?? "✨";
 
         const lookupEntity = (t: string, slug: string): any => {
           const probe = (m: { bySlug: Map<string, any> }) => m.bySlug.get(slug.toLowerCase());
@@ -650,26 +746,26 @@ function RecentUnlocks() {
         };
 
         const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);
-
         const list: Recent[] = [];
         for (const row of data as any[]) {
           const t = row.item_type;
           if (!ALLOWED_TYPES.has(t) && t !== "state") continue;
           const ent = lookupEntity(t, row.item_id);
-          // State requires explicit metadata.collectible === true.
           if (t === "state" && !(ent?.metadata?.collectible === true)) continue;
           const title = ent?.title ?? (hasArabic(row.item_id) ? row.item_id : null);
-          if (!title) continue; // Hide unresolved English slugs.
+          if (!title) continue;
           const subtitleParts: string[] = [];
-          if (ent?.metadata?.rarity) subtitleParts.push(ent.metadata.rarity);
           const src = campaignTitle(row.source_campaign_id);
           if (src) subtitleParts.push(src);
+          const r = (ent?.metadata?.rarity ?? "rare") as Rarity;
+          const rarity: Rarity = (["common","rare","epic","legendary"] as Rarity[]).includes(r) ? r : "rare";
           list.push({
             key: `sup-${t}-${row.item_id}`,
-            icon: iconFor(t),
+            type: t,
             kind: kindLabel[t] ?? t,
             title,
             subtitle: subtitleParts.join(" · ") || (kindLabel[t] ?? "—"),
+            rarity,
           });
           if (list.length >= 3) break;
         }
@@ -683,11 +779,21 @@ function RecentUnlocks() {
 
   const recents: Recent[] = supaRecents ?? [];
 
+  const iconFor = (t: string): LucideGlyph => {
+    if (t === "figure" || t === "scholar") return Users;
+    if (t === "artifact") return Gem;
+    if (t === "landmark") return Landmark;
+    if (t === "city") return Building2;
+    if (t === "battle") return Swords;
+    if (t === "state") return ScrollText;
+    return Sparkles;
+  };
+
   return (
-    <div className="mb-5 rounded-2xl border border-gold/20 bg-surface/70 p-4">
+    <div className="mb-5 overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-4">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[10px] tracking-[0.25em] text-gold">
-          <Sparkles className="size-3.5" /> آخر المقتنيات
+          <Sparkles className="size-3.5" /> آخر الكنوز
         </div>
         {recents.length > 0 && (
           <span className="text-[10px] text-muted-foreground">{recents.length} اكتشاف حديث</span>
@@ -698,17 +804,32 @@ function RecentUnlocks() {
           لا توجد مقتنيات بعد — ابدأ حملةً ليبدأ متحفك في النمو.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-2">
-          {recents.map((r) => (
-            <div key={r.key} className="flex items-center gap-2 rounded-xl border border-gold/20 bg-gradient-to-bl from-gold/10 via-surface to-transparent p-2.5">
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-black/40 text-lg ring-1 ring-gold/30">{r.icon}</div>
-              <div className="min-w-0">
-                <p className="text-[9px] tracking-widest text-gold/80">{r.kind}</p>
-                <p className="truncate font-display text-[12px] font-bold">{r.title}</p>
-                <p className="truncate text-[10px] text-muted-foreground">{r.subtitle}</p>
+        <div className="grid grid-cols-1 gap-2.5">
+          {recents.map((r) => {
+            const Icon = iconFor(r.type);
+            const meta = RARITY_META[r.rarity];
+            return (
+              <div key={r.key}
+                className={`relative flex items-center gap-3 overflow-hidden rounded-2xl border bg-gradient-to-bl from-gold/10 via-surface to-transparent p-3
+                  ${r.rarity === "legendary" ? "border-gold/40 " + meta.glow :
+                    r.rarity === "epic"      ? "border-fuchsia-400/30" :
+                    r.rarity === "rare"      ? "border-sky-400/30" :
+                                               "border-gold/20"}`}>
+                <div className={`pointer-events-none absolute inset-0 bg-gradient-to-bl ${meta.frame} opacity-50`} />
+                <div className="relative grid size-12 shrink-0 place-items-center rounded-xl bg-black/40 ring-1 ring-gold/30">
+                  <Icon className="size-6 text-gold" />
+                </div>
+                <div className="relative min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[9px] tracking-widest text-gold/80">{r.kind}</p>
+                    <span className={`rounded-full px-1.5 py-0.5 text-[8px] font-bold ${meta.chip}`}>{meta.label}</span>
+                  </div>
+                  <p className="mt-0.5 truncate font-display text-[13px] font-bold">{r.title}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{r.subtitle}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
