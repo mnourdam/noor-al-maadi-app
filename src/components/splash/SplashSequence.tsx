@@ -194,11 +194,9 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
 
         .splash-artwork-wrap {
           opacity: 0;
-          animation: splash-art-in 1000ms ease-out 500ms forwards,
-                     splash-art-out 900ms ease-in 2600ms forwards;
+          animation: splash-art-in 900ms ease-out 400ms forwards;
         }
         @keyframes splash-art-in  { to { opacity: 1; } }
-        @keyframes splash-art-out { to { opacity: 0.18; } }
 
         /* Base artwork — no animation here, framing class supplies the move.
            Slight oversize ensures every portrait screen is fully filled with
@@ -255,26 +253,21 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
           opacity: 0;
           animation: sp-haze-in 1400ms ease-out 700ms forwards;
         }
-        @keyframes sp-haze-in { to { opacity: 1; } }
+        .splash-logo {
+          opacity: 0;
+          animation: splash-logo-in 800ms ease-out 800ms forwards;
+        }
+        @keyframes splash-logo-in { from { opacity: 0; transform: translateY(8px); }
+                                    to   { opacity: 1; transform: translateY(0); } }
 
         .splash-quote {
           opacity: 0;
-          animation: splash-quote-in 700ms ease-out 800ms forwards,
-                     splash-quote-out 600ms ease-in 2200ms forwards;
+          animation: splash-quote-in 900ms ease-out 1100ms forwards;
         }
-        @keyframes splash-quote-in  { from { opacity: 0; transform: translateY(8px); }
-                                      to   { opacity: 1; transform: translateY(0); } }
-        @keyframes splash-quote-out { from { opacity: 1; transform: translateY(0); }
-                                      to   { opacity: 0; transform: translateY(-6px); } }
+        @keyframes splash-quote-in { from { opacity: 0; transform: translateY(8px); }
+                                     to   { opacity: 1; transform: translateY(0); } }
 
-        .splash-logo {
-          opacity: 0;
-          animation: splash-logo-in 900ms ease-out 2900ms forwards;
-        }
-        @keyframes splash-logo-in { from { opacity: 0; transform: translateY(6px); }
-                                    to   { opacity: 1; transform: translateY(0); } }
-
-        .splash-logo-img    { animation: splash-logo-glow 3.6s ease-in-out 3300ms infinite; }
+        .splash-logo-img { animation: splash-logo-glow 3.6s ease-in-out 1600ms infinite; }
         @keyframes splash-logo-glow {
           0%,100% { filter: drop-shadow(0 0 22px rgba(212,175,90,0.35)); }
           50%     { filter: drop-shadow(0 0 36px rgba(212,175,90,0.65)); }
