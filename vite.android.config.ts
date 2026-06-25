@@ -4,46 +4,12 @@
 // wrapper always installs the TanStack Start plugin, which performs a
 // multi-environment SSR build and emits `server/...` output that a Capacitor
 // WebView cannot run. Android needs one plain static SPA at `dist/android`.
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import path from "node:path";
-
-function androidHtmlPlugin(): Plugin {
-  return {
-    name: "irth-android-html",
-    enforce: "pre",
-    resolveId(id) {
-      return id === "\0irth-android-index.html" ? id : null;
-    },
-    load(id) {
-      if (id !== "\0irth-android-index.html") return null;
-      return `<!doctype html>
-<html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0b1424" />
-    <title>إرث — رحلة عبر التاريخ الإسلامي</title>
-    <script type="module" src="/src/android-client.tsx"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>`;
-    },
-    configureServer(server) {
-      server.middlewares.use((req, _res, next) => {
-        if (req.url === "/" || req.url === "/index.html") {
-          req.url = "/\0irth-android-index.html";
-        }
-        next();
-      });
-    },
-  };
-}
 
 export default defineConfig({
   appType: "spa",
@@ -79,11 +45,10 @@ export default defineConfig({
     emptyOutDir: true,
     manifest: true,
     rollupOptions: {
-      input: path.resolve(__dirname, "index.html"),
+      input: path.resolve(__dirname, "android-web/index.html"),
     },
   },
   plugins: [
-    androidHtmlPlugin(),
     tanstackRouter({ disableLogging: true }),
     tailwindcss(),
     react(),
