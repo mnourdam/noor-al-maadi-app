@@ -63,10 +63,16 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
           <ScrollText className="h-3.5 w-3.5" />
           ملف تاريخي
         </div>
-        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
-          الإجابة الآن تمنحك {potential} خبرة
-        </span>
+        <div className="flex items-center gap-2">
+          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
+            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
+          )}
+          <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
+            الإجابة الآن تمنحك {potential} خبرة
+          </span>
+        </div>
       </div>
+
 
       {/* Silhouette medallion */}
       <div className="mb-6 flex justify-center">
