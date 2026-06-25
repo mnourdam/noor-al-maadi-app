@@ -130,12 +130,13 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
       {artworkUrl ? (
         <div className="splash-artwork-wrap absolute inset-0">
           <div
-            className="splash-artwork absolute inset-0 bg-center bg-cover"
+            className={`splash-artwork splash-artwork--${framing} absolute inset-0 bg-center bg-cover`}
             style={{ backgroundImage: `url(${artworkUrl})` }}
           />
-          {/* Museum vignette + warm wash */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.55)_70%,rgba(0,0,0,0.85)_100%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,12,22,0.35)_0%,rgba(8,12,22,0.05)_45%,rgba(8,12,22,0.55)_100%)]" />
+          {/* Museum vignette + warm wash + soft atmospheric haze */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.45)_72%,rgba(0,0,0,0.82)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,12,22,0.30)_0%,rgba(8,12,22,0.05)_45%,rgba(8,12,22,0.55)_100%)]" />
+          <div className="splash-haze absolute inset-0" />
         </div>
       ) : null}
 
