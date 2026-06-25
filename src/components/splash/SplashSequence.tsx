@@ -30,8 +30,8 @@ import { playSplashSfx } from "./splashSfx";
 import { SplashLogoReveal } from "./SplashLogoReveal";
 
 const SESSION_FLAG = "irth.splash.played.v1";
-const MIN_DURATION_MS = 4000;
-const FADE_OUT_MS = 500;
+const MIN_DURATION_MS = 5000;
+const FADE_OUT_MS = 700;
 
 interface SplashSequenceProps {
   /** Optional readiness flag. Splash will wait past MIN_DURATION_MS until true. */
@@ -173,7 +173,7 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
       {/* Inline scoped keyframes — no animation libs, GPU-friendly props only */}
       <style>{`
         .splash-root { animation: splash-root-in 220ms ease-out both; }
-        .splash-root--out { animation: splash-root-out 600ms ease-in both; }
+        .splash-root--out { animation: splash-root-out 700ms ease-in both; }
         @keyframes splash-root-in { from { opacity: 0; } to { opacity: 1; } }
         @keyframes splash-root-out { from { opacity: 1; } to { opacity: 0; } }
 
@@ -194,7 +194,7 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
 
         .splash-artwork-wrap {
           opacity: 0;
-          animation: splash-art-in 900ms ease-out 400ms forwards;
+          animation: splash-art-in 900ms ease-out 300ms forwards;
         }
         @keyframes splash-art-in  { to { opacity: 1; } }
 
@@ -257,14 +257,14 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
 
         .splash-logo {
           opacity: 0;
-          animation: splash-logo-in 800ms ease-out 800ms forwards;
+          animation: splash-logo-in 900ms ease-out 800ms forwards;
         }
         @keyframes splash-logo-in { from { opacity: 0; transform: translateY(8px); }
                                     to   { opacity: 1; transform: translateY(0); } }
 
         .splash-quote {
           opacity: 0;
-          animation: splash-quote-in 900ms ease-out 1100ms forwards;
+          animation: splash-quote-in 1000ms ease-out 1200ms forwards;
         }
         @keyframes splash-quote-in { from { opacity: 0; transform: translateY(8px); }
                                      to   { opacity: 1; transform: translateY(0); } }
