@@ -6,9 +6,11 @@ import { getGameBySlug, type GameRow } from "@/lib/games/store";
 import { recordCompletion } from "@/lib/games/progress";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, GAME_MODES, type GameMode } from "@/lib/games/types";
 import { GameStageRenderer } from "@/components/games/GameStageRenderer";
+import { GameTimer } from "@/components/games/GameTimer";
 import { sfx } from "@/components/games/sfx";
 import { useProfile } from "@/lib/profile";
 import "@/components/games/games-premium.css";
+
 
 export const Route = createFileRoute("/games/$mode/$slug")({
   head: () => ({ meta: [{ title: "تحدّي تاريخي — إرث" }] }),
