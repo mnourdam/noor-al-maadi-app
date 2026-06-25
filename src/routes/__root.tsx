@@ -16,6 +16,7 @@ import { AccountProvider } from "../lib/account";
 import { FirstLaunchGate } from "../components/FirstLaunchGate";
 import { Toaster } from "../components/ui/sonner";
 import { AchievementWatcher } from "../components/AchievementWatcher";
+import { LevelUpWatcher } from "../components/LevelUpWatcher";
 
 function NotFoundComponent() {
   return (
@@ -221,6 +222,7 @@ function RootComponent() {
           <Outlet />
           <FirstLaunchGate />
           <AchievementWatcher />
+          <LevelUpWatcher />
           <Toaster position="top-center" richColors closeButton />
         </AccountProvider>
       </ProfileProvider>
