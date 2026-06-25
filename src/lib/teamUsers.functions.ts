@@ -72,3 +72,59 @@ export const createTeamUser = createServerFn({ method: "POST" })
 
     return { ok: true, user_id: userId };
   });
+
+const deletePlayerSchema = z.object({
+  user_id: z.string().uuid(),
+  reason: z.string().max(500).optional(),
+});
+
+export const deletePlayer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => deletePlayerSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertManager(context.supabase);
+
+    if (data.user_id === context.userId) {
+      throw new Error("لا يمكنك حذف حسابك الحالي.");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const uid = data.user_id;
+
+    // Audit BEFORE deletion (target row still exists for FK in audit log).
+    try {
+      await context.supabase.rpc("log_admin_action", {
+        p_action: "user.delete",
+        p_target: uid,
+        p_detail: { reason: data.reason ?? "" },
+        p_reason: data.reason ?? "",
+      });
+    } catch {
+      // non-fatal
+    }
+
+    // Explicitly purge player-linked rows (some tables may not cascade).
+    const byUserId = [
+      "game_progress",
+      "user_collection",
+      "user_campaign_progress",
+      "notification_deliveries",
+      "device_tokens",
+      "cloud_saves",
+      "user_roles",
+    ] as const;
+    for (const t of byUserId) {
+      await supabaseAdmin.from(t).delete().eq("user_id", uid);
+    }
+    await supabaseAdmin.from("notifications").delete().eq("target_user_id", uid);
+    await supabaseAdmin.from("friendships").delete().or(`user_a.eq.${uid},user_b.eq.${uid}`);
+    await supabaseAdmin.from("referral_rewards").delete().or(`referrer_id.eq.${uid},referred_id.eq.${uid}`);
+    await supabaseAdmin.from("referrals").delete().or(`referrer_id.eq.${uid},referred_id.eq.${uid}`);
+    await supabaseAdmin.from("profiles").delete().eq("id", uid);
+
+    // Finally remove the auth user.
+    const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(uid);
+    if (delErr) throw new Error(delErr.message);
+
+    return { ok: true };
+  });

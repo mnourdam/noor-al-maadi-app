@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Users, Search, Download, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, X, Coins, Sparkles, UserPlus, BadgeCheck } from "lucide-react";
+import { toast } from "sonner";
+import { Users, Search, Download, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, X, Coins, Sparkles, UserPlus, BadgeCheck, Trash2, AlertTriangle } from "lucide-react";
 import { AdminGate, useAdminGuard } from "@/lib/admin-guard";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { createTeamUser } from "@/lib/teamUsers.functions";
+import { createTeamUser, deletePlayer } from "@/lib/teamUsers.functions";
+import { supabase } from "@/integrations/supabase/client";
 import {
   adminListUsers,
   adminUserDetail,
@@ -20,6 +22,7 @@ import {
   type AccountStatus,
   type AppRole,
 } from "@/lib/adminUsers";
+
 
 
 export const Route = createFileRoute("/admin/users")({
@@ -126,8 +129,16 @@ function AdminUsers() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUserRow | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { caps } = useAdminGuard();
   const isManager = caps.is_manager;
+  const deletePlayerFn = useServerFn(deletePlayer);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
 
 
   const filters = useMemo(
@@ -252,15 +263,18 @@ function AdminUsers() {
                   <th className="px-3 py-2">إحالات</th>
                   <th className="px-3 py-2">آخر نشاط</th>
                   <th className="px-3 py-2">انضم</th>
+                  {isManager && <th className="px-3 py-2">إجراءات</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading && rows.length === 0 ? (
-                  <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
+                  <tr><td colSpan={isManager ? 13 : 12} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
+                  <tr><td colSpan={isManager ? 13 : 12} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
                 ) : (
-                  rows.map((r) => (
+                  rows.map((r) => {
+                    const isSelf = currentUserId === r.id;
+                    return (
                     <tr key={r.id} onClick={() => setSelectedId(r.id)} className="cursor-pointer border-t border-slate-800/70 hover:bg-slate-800/40">
                       <td className="px-3 py-2 font-medium text-slate-100">{r.display_name ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">@{r.username}</td>
@@ -275,12 +289,26 @@ function AdminUsers() {
                       <td className="px-3 py-2 text-slate-300">{r.referrals_count}</td>
                       <td className="px-3 py-2 text-xs text-slate-400" dir="ltr">{fmtDate(r.last_active)}</td>
                       <td className="px-3 py-2 text-xs text-slate-400" dir="ltr">{fmtDate(r.join_date)}</td>
+                      {isManager && (
+                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            disabled={isSelf}
+                            title={isSelf ? "لا يمكنك حذف حسابك الحالي" : "حذف نهائي"}
+                            onClick={() => setDeleteTarget(r)}
+                            className="inline-flex items-center gap-1 rounded border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-xs text-rose-200 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> حذف
+                          </button>
+                        </td>
+                      )}
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
+
           <div className="flex items-center justify-between gap-2 border-t border-slate-800 bg-slate-900/60 px-4 py-2 text-xs text-slate-400">
             <div>{pageStart}–{pageEnd} من {total}</div>
             <div className="flex items-center gap-2">
@@ -306,7 +334,28 @@ function AdminUsers() {
           onCreated={() => { setAddOpen(false); setReloadKey((k) => k + 1); }}
         />
       )}
+
+      {deleteTarget && isManager && (
+        <DeletePlayerDialog
+          target={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={async () => {
+            const target = deleteTarget;
+            try {
+              await deletePlayerFn({ data: { user_id: target.id } });
+              setRows((prev) => prev.filter((u) => u.id !== target.id));
+              setTotal((t) => Math.max(0, t - 1));
+              if (selectedId === target.id) setSelectedId(null);
+              setDeleteTarget(null);
+              toast.success(`تم حذف اللاعب ${target.display_name ?? target.username} نهائيًا.`);
+            } catch (e: any) {
+              toast.error("فشل حذف اللاعب: " + (e?.message ?? String(e)));
+            }
+          }}
+        />
+      )}
     </AdminLayout>
+
   );
 }
 
@@ -661,6 +710,60 @@ function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
           <button onClick={submit} disabled={busy}
             className="inline-flex items-center gap-1 rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50">
             {busy ? "جارٍ الإنشاء…" : "إنشاء المستخدم"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeletePlayerDialog({
+  target,
+  onClose,
+  onConfirm,
+}: {
+  target: AdminUserRow;
+  onClose: () => void;
+  onConfirm: () => Promise<void> | void;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" dir="rtl">
+      <div className="w-full max-w-md rounded-xl border border-rose-500/40 bg-slate-950 p-5 shadow-2xl">
+        <div className="flex items-start gap-3">
+          <div className="rounded-full border border-rose-500/40 bg-rose-500/10 p-2 text-rose-300">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-base font-semibold text-rose-200">حذف اللاعب؟</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              سيؤدي هذا إلى حذف اللاعب وجميع بياناته بشكل نهائي. لا يمكن التراجع عن هذه العملية.
+            </p>
+            <div className="mt-3 rounded border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-400">
+              <div className="text-slate-200">{target.display_name ?? "—"} <span className="text-slate-500">@{target.username}</span></div>
+              {target.email && <div dir="ltr" className="mt-0.5">{target.email}</div>}
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-800"><X className="h-4 w-4" /></button>
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+          >
+            إلغاء
+          </button>
+          <button
+            onClick={async () => {
+              setBusy(true);
+              try { await onConfirm(); } finally { setBusy(false); }
+            }}
+            disabled={busy}
+            className="inline-flex items-center gap-1 rounded border border-rose-500/50 bg-rose-500/15 px-3 py-1.5 text-sm font-medium text-rose-100 hover:bg-rose-500/25 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" /> {busy ? "جارٍ الحذف…" : "حذف نهائيًا"}
           </button>
         </div>
       </div>
