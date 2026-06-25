@@ -30,7 +30,8 @@ import { playSplashSfx } from "./splashSfx";
 import { SplashLogoReveal } from "./SplashLogoReveal";
 
 const SESSION_FLAG = "irth.splash.played.v1";
-const MIN_DURATION_MS = 3800;
+const MIN_DURATION_MS = 4000;
+const FADE_OUT_MS = 500;
 
 interface SplashSequenceProps {
   /** Optional readiness flag. Splash will wait past MIN_DURATION_MS until true. */
@@ -112,7 +113,7 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
     if (!minDoneRef.current) return;
     if (!ready) return;
     setPhase("fadeout");
-    window.setTimeout(() => setMounted(false), 600);
+    window.setTimeout(() => setMounted(false), FADE_OUT_MS);
   }
 
   if (!mounted) return null;
@@ -147,28 +148,26 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
         ))}
       </div>
 
-      {/* Layer 4 — Quote */}
+      {/* Layer 4 — Centered stack: Logo · Quote · Author */}
       <div className="absolute inset-0 flex items-center justify-center px-8" dir="rtl">
-        <div className="splash-quote max-w-xl text-center">
+        <div className="flex flex-col items-center text-center max-w-xl">
+          <div className="splash-logo">
+            <SplashLogoReveal />
+          </div>
           {quote ? (
-            <>
+            <div className="splash-quote mt-8 font-display">
               <p
-                className="font-display text-balance text-[22px] leading-[1.7] text-[#f4e3b8] sm:text-[26px]"
-                style={{ textShadow: "0 1px 18px rgba(0,0,0,0.55)" }}
+                className="text-balance text-[22px] leading-[1.85] text-[#f4e3b8] sm:text-[26px]"
+                style={{ textShadow: "0 1px 18px rgba(0,0,0,0.6)" }}
               >
                 «{quote.text}»
               </p>
               <p className="mt-4 text-[12px] tracking-[0.32em] text-[#d4af5a]/85">
                 — {quote.author}
               </p>
-            </>
+            </div>
           ) : null}
         </div>
-      </div>
-
-      {/* Layer 5 — Logo reveal */}
-      <div className="splash-logo absolute inset-0 flex items-center justify-center">
-        <SplashLogoReveal />
       </div>
 
       {/* Inline scoped keyframes — no animation libs, GPU-friendly props only */}
