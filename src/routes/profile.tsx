@@ -436,23 +436,6 @@ function OverviewTab({
           )}
         </div>
 
-        {/* Today's goal — daily streak */}
-        <div className="rounded-2xl border border-gold/25 bg-surface p-4">
-          <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.18em] text-gold/80">
-              <Flame className="size-3.5" /> هدف اليوم
-            </span>
-            <span className="text-[10px] text-muted-foreground">{profile.streak} يوم</span>
-          </div>
-          <p className="font-display mt-1 text-sm font-bold">حافظ على سلسلتك</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground leading-5">
-            افتح قصةً واحدة أو أكمِل تحقيقًا للحفاظ على لهبك.
-          </p>
-          <Link
-            to="/investigations"
-            className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 py-2 text-[11px] font-bold text-gold hover:bg-gold/15"
-          ><Search className="size-3.5" /> ابدأ تحقيقًا</Link>
-        </div>
       </div>
 
       {/* Investigations — heart recovery loop */}
