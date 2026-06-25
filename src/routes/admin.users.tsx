@@ -294,13 +294,22 @@ function AdminUsers() {
       {selectedId && (
         <UserDetailDrawer
           userId={selectedId}
+          isManager={isManager}
           onClose={() => setSelectedId(null)}
           onChanged={() => setReloadKey((k) => k + 1)}
+        />
+      )}
+
+      {addOpen && isManager && (
+        <AddUserModal
+          onClose={() => setAddOpen(false)}
+          onCreated={() => { setAddOpen(false); setReloadKey((k) => k + 1); }}
         />
       )}
     </AdminLayout>
   );
 }
+
 
 function UserDetailDrawer({ userId, onClose, onChanged }: { userId: string; onClose: () => void; onChanged: () => void }) {
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
