@@ -5,11 +5,16 @@ import {
 } from "lucide-react";
 import type { MemoryStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
+import { AttemptsChip } from "./AttemptsChip";
 
 interface Props {
   stage: MemoryStage;
   onComplete: (score: number) => void;
+  onWrong?: () => void;
+  attemptsLeft?: number;
+  maxAttempts?: number;
 }
+
 
 interface Card { id: number; pairId: number; label: string; }
 
