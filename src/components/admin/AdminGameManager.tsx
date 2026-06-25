@@ -259,12 +259,44 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
           {validationReport.length > 0 && (
             <ul className="mt-3 space-y-1 rounded-lg border border-slate-700 bg-slate-950/60 p-3 text-xs">
               {validationReport.map((line, i) => (
-                <li key={i} className={line.startsWith("✓") ? "text-emerald-300" : "text-red-300"}>
+                <li key={i} className={
+                  line.startsWith("✓") ? "text-emerald-300"
+                  : line.startsWith("⚠") ? "text-amber-300"
+                  : "text-red-300"
+                }>
                   {line}
                 </li>
               ))}
             </ul>
           )}
+          {unlockReport && (unlockReport.resolved.length > 0 || unlockReport.missing.length > 0) && (
+            <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+              <div className="mb-2 flex items-center gap-1.5 font-semibold text-amber-200">
+                <Landmark className="h-3.5 w-3.5" /> مقتنيات المتحف المرتبطة
+              </div>
+              {unlockReport.resolved.length > 0 && (
+                <ul className="mb-2 space-y-1">
+                  {unlockReport.resolved.map((r) => (
+                    <li key={`${r.type}:${r.slug}`} className="flex items-center justify-between gap-2 text-emerald-200/90">
+                      <span>✓ {r.title}</span>
+                      <span className="text-[10px] text-slate-400">{r.type}:{r.slug}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {unlockReport.missing.length > 0 && (
+                <ul className="space-y-1">
+                  {unlockReport.missing.map((m, i) => (
+                    <li key={i} className="text-red-300">✗ غير موجود: {m.raw}</li>
+                  ))}
+                </ul>
+              )}
+              {unlockReport.duplicates.length > 0 && (
+                <p className="mt-2 text-amber-300">⚠ تكرارات: {unlockReport.duplicates.join("، ")}</p>
+              )}
+            </div>
+          )}
+
         </section>
 
         {/* List */}
