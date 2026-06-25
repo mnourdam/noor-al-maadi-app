@@ -244,15 +244,68 @@ function Index() {
     return out;
   }, [campaignSel, todayEvent, stats.recent]);
 
-  // Carousel
+  // Carousel (auto-rotate + touch swipe + finger-following drag)
   const [slideIdx, setSlideIdx] = useState(0);
+  const [dragX, setDragX] = useState(0); // px offset while dragging
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef<{ x: number; y: number; locked: "h" | "v" | null } | null>(null);
+  const heroRef = useRef<HTMLDivElement | null>(null);
+  // RTL: in Arabic, swipe right (positive deltaX) should mean "next" (older direction)
+  const isRTL = typeof document !== "undefined" && document.documentElement.dir === "rtl";
+
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (slides.length <= 1 || isDragging) return;
     const id = setInterval(() => setSlideIdx((i) => (i + 1) % slides.length), 7000);
     return () => clearInterval(id);
-  }, [slides.length]);
+  }, [slides.length, isDragging]);
   useEffect(() => { if (slideIdx >= slides.length) setSlideIdx(0); }, [slides.length, slideIdx]);
   const slide = slides[Math.min(slideIdx, slides.length - 1)] ?? slides[0];
+
+  const goTo = (n: number) => {
+    if (slides.length === 0) return;
+    setSlideIdx(((n % slides.length) + slides.length) % slides.length);
+  };
+  const next = () => goTo(slideIdx + 1);
+  const prev = () => goTo(slideIdx - 1);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    dragStart.current = { x: t.clientX, y: t.clientY, locked: null };
+    setIsDragging(true);
+    setDragX(0);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const s = dragStart.current;
+    if (!s) return;
+    const t = e.touches[0];
+    const dx = t.clientX - s.x;
+    const dy = t.clientY - s.y;
+    if (!s.locked) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      s.locked = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+    }
+    if (s.locked === "h") {
+      // prevent vertical scroll only when horizontally locked
+      if (e.cancelable) e.preventDefault();
+      const w = heroRef.current?.clientWidth ?? 320;
+      // clamp to ±60% of width for resistance
+      const clamped = Math.max(-w * 0.6, Math.min(w * 0.6, dx));
+      setDragX(clamped);
+    }
+  };
+  const onTouchEnd = () => {
+    const s = dragStart.current;
+    dragStart.current = null;
+    const w = heroRef.current?.clientWidth ?? 320;
+    const threshold = Math.max(48, w * 0.18);
+    if (s?.locked === "h" && Math.abs(dragX) > threshold) {
+      // In LTR: swipe left (dragX < 0) = next; in RTL: swipe right (dragX > 0) = next.
+      const goNext = isRTL ? dragX > 0 : dragX < 0;
+      if (goNext) next(); else prev();
+    }
+    setDragX(0);
+    setIsDragging(false);
+  };
 
   // ===== Stats strip =====
   const hearts = getEffectiveHearts(profile);
