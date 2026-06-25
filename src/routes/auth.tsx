@@ -50,29 +50,59 @@ function AuthPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setError(null);
     setInfo(null);
     setBusy(true);
+    console.log("[android:auth] submit started", { mode });
+
+    // Hard timeout so the UI can never hang indefinitely (network drop,
+    // Capacitor WebView fetch stall, Supabase unreachable, etc.).
+    const TIMEOUT_MS = 15000;
+    let timedOut = false;
+    const timeoutPromise = new Promise<{ ok: false; error: string; __timeout: true }>((resolve) => {
+      setTimeout(() => {
+        timedOut = true;
+        resolve({ ok: false, error: "انتهت مهلة الاتصال. تحقق من الإنترنت وحاول مجدداً.", __timeout: true });
+      }, TIMEOUT_MS);
+    });
+
     try {
-      if (mode === "signup") {
-        // PR6: mirror the server-side normalization (`upper(trim(...))`)
-        // exactly so client validation never disagrees with the RPC.
-        const normalizedReferral = referralCode.trim().toUpperCase();
-        const r = await signUp({
-          email,
-          password,
-          username,
-          displayName: username,
-          referralCode: normalizedReferral || undefined,
-        });
-        if (!r.ok) { setError(r.error ?? "تعذر إنشاء الحساب"); return; }
-        if (r.error) { setInfo(r.error); return; } // verify email message
-        navigate({ to: "/profile" });
-      } else {
-        const r = await signIn(email, password);
-        if (!r.ok) { setError(r.error ?? "تعذر تسجيل الدخول"); return; }
-        navigate({ to: "/profile" });
+      // Offline guard — Capacitor exposes navigator.onLine reliably.
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        console.warn("[android:auth] offline");
+        setError("لا يوجد اتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.");
+        return;
       }
+      console.log("[android:auth] request sent");
+      let r: { ok: boolean; error?: string };
+      if (mode === "signup") {
+        const normalizedReferral = referralCode.trim().toUpperCase();
+        r = await Promise.race([
+          signUp({ email, password, username, displayName: username, referralCode: normalizedReferral || undefined }),
+          timeoutPromise,
+        ]);
+      } else {
+        r = await Promise.race([signIn(email, password), timeoutPromise]);
+      }
+      console.log("[android:auth] response received", { ok: r.ok, timedOut });
+
+      if (timedOut) {
+        console.warn("[android:auth] timeout");
+        setError(r.error ?? "انتهت مهلة الاتصال. حاول مجدداً.");
+        return;
+      }
+      if (!r.ok) {
+        console.warn("[android:auth] error", r.error);
+        setError(r.error ?? (mode === "signup" ? "تعذر إنشاء الحساب" : "تعذر تسجيل الدخول"));
+        return;
+      }
+      if (mode === "signup" && r.error) { setInfo(r.error); return; }
+      navigate({ to: "/profile" });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[android:auth] error", msg);
+      setError("حدث خطأ غير متوقع. تحقق من اتصال الإنترنت وحاول مجدداً.");
     } finally {
       setBusy(false);
     }
