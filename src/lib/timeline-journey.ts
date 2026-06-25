@@ -26,32 +26,58 @@ export type EraDef = {
   label: string;
   startCE: number;
   endCE: number;
+  /** One-line poetic description shown in the era hero band. */
+  description: string;
+  /** Tailwind gradient for era accent band. */
+  accent: string;
   /** Strings that may appear in metadata.era / metadata.bridges.era. */
   aliases: string[];
 };
 
 export const ERAS: EraDef[] = [
   { id: "pre_islam", label: "ما قبل الإسلام", startCE: -3000, endCE: 610,
+    description: "ممالك العرب وحضارات الجزيرة قبل البعثة.",
+    accent: "from-amber-300/25 via-amber-500/10 to-transparent",
     aliases: ["pre-islam", "preislam", "jahiliyya", "pre_islamic"] },
   { id: "prophetic", label: "العصر النبوي", startCE: 610, endCE: 632,
+    description: "نزول الوحي وبناء الأمة في مكة والمدينة.",
+    accent: "from-emerald-300/25 via-emerald-500/10 to-transparent",
     aliases: ["prophetic", "seerah", "nabawi"] },
   { id: "rashidun", label: "الخلافة الراشدة", startCE: 632, endCE: 661,
+    description: "خلفاء الهداية وفتوحات الأرض الأولى.",
+    accent: "from-yellow-300/25 via-yellow-500/10 to-transparent",
     aliases: ["rashidun", "rashidoon"] },
   { id: "umayyad", label: "الدولة الأموية", startCE: 661, endCE: 750,
+    description: "أمّةٌ تمتد من السند إلى الأندلس.",
+    accent: "from-sky-300/25 via-sky-500/10 to-transparent",
     aliases: ["umayyad", "umayyads"] },
   { id: "abbasid", label: "الدولة العباسية", startCE: 750, endCE: 1258,
+    description: "بغداد، والعلم، والعصر الذهبي.",
+    accent: "from-rose-300/25 via-rose-500/10 to-transparent",
     aliases: ["abbasid", "abbasids"] },
   { id: "andalus", label: "الأندلس", startCE: 711, endCE: 1492,
+    description: "قرطبة وغرناطة: علمٌ وعمران ونور.",
+    accent: "from-orange-300/25 via-orange-500/10 to-transparent",
     aliases: ["andalus", "al-andalus", "andalusi"] },
   { id: "seljuk", label: "الدولة السلجوقية", startCE: 1037, endCE: 1194,
+    description: "حُماةُ الخلافة في وجه الفرنجة والباطنية.",
+    accent: "from-indigo-300/25 via-indigo-500/10 to-transparent",
     aliases: ["seljuk", "seljuks", "seljuq"] },
   { id: "zengid", label: "الدولة الزنكية", startCE: 1127, endCE: 1250,
+    description: "نور الدين وتوحيد الشام لمقارعة الصليبيين.",
+    accent: "from-teal-300/25 via-teal-500/10 to-transparent",
     aliases: ["zengid", "zengids", "zankid"] },
   { id: "ayyubid", label: "الدولة الأيوبية", startCE: 1171, endCE: 1260,
+    description: "صلاح الدين وتحرير القدس.",
+    accent: "from-lime-300/25 via-lime-500/10 to-transparent",
     aliases: ["ayyubid", "ayyubids"] },
   { id: "mamluk", label: "دولة المماليك", startCE: 1250, endCE: 1517,
+    description: "كاسرو المغول وحُماةُ الحرمين.",
+    accent: "from-fuchsia-300/25 via-fuchsia-500/10 to-transparent",
     aliases: ["mamluk", "mamluks", "mamluke"] },
   { id: "ottoman", label: "الدولة العثمانية", startCE: 1299, endCE: 1924,
+    description: "خلافةُ ستة قرون من الأناضول إلى القسطنطينية.",
+    accent: "from-cyan-300/25 via-cyan-500/10 to-transparent",
     aliases: ["ottoman", "ottomans", "uthmani"] },
 ];
 
