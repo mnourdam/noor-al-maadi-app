@@ -30,7 +30,8 @@ import { playSplashSfx } from "./splashSfx";
 import { SplashLogoReveal } from "./SplashLogoReveal";
 
 const SESSION_FLAG = "irth.splash.played.v1";
-const MIN_DURATION_MS = 3800;
+const MIN_DURATION_MS = 4000;
+const FADE_OUT_MS = 500;
 
 interface SplashSequenceProps {
   /** Optional readiness flag. Splash will wait past MIN_DURATION_MS until true. */
@@ -112,7 +113,7 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
     if (!minDoneRef.current) return;
     if (!ready) return;
     setPhase("fadeout");
-    window.setTimeout(() => setMounted(false), 600);
+    window.setTimeout(() => setMounted(false), FADE_OUT_MS);
   }
 
   if (!mounted) return null;
@@ -147,28 +148,26 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
         ))}
       </div>
 
-      {/* Layer 4 — Quote */}
+      {/* Layer 4 — Centered stack: Logo · Quote · Author */}
       <div className="absolute inset-0 flex items-center justify-center px-8" dir="rtl">
-        <div className="splash-quote max-w-xl text-center">
+        <div className="flex flex-col items-center text-center max-w-xl">
+          <div className="splash-logo">
+            <SplashLogoReveal />
+          </div>
           {quote ? (
-            <>
+            <div className="splash-quote mt-8 font-display">
               <p
-                className="font-display text-balance text-[22px] leading-[1.7] text-[#f4e3b8] sm:text-[26px]"
-                style={{ textShadow: "0 1px 18px rgba(0,0,0,0.55)" }}
+                className="text-balance text-[22px] leading-[1.85] text-[#f4e3b8] sm:text-[26px]"
+                style={{ textShadow: "0 1px 18px rgba(0,0,0,0.6)" }}
               >
                 «{quote.text}»
               </p>
               <p className="mt-4 text-[12px] tracking-[0.32em] text-[#d4af5a]/85">
                 — {quote.author}
               </p>
-            </>
+            </div>
           ) : null}
         </div>
-      </div>
-
-      {/* Layer 5 — Logo reveal */}
-      <div className="splash-logo absolute inset-0 flex items-center justify-center">
-        <SplashLogoReveal />
       </div>
 
       {/* Inline scoped keyframes — no animation libs, GPU-friendly props only */}
@@ -195,11 +194,9 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
 
         .splash-artwork-wrap {
           opacity: 0;
-          animation: splash-art-in 1000ms ease-out 500ms forwards,
-                     splash-art-out 900ms ease-in 2600ms forwards;
+          animation: splash-art-in 900ms ease-out 400ms forwards;
         }
         @keyframes splash-art-in  { to { opacity: 1; } }
-        @keyframes splash-art-out { to { opacity: 0.18; } }
 
         /* Base artwork — no animation here, framing class supplies the move.
            Slight oversize ensures every portrait screen is fully filled with
@@ -258,24 +255,21 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
         }
         @keyframes sp-haze-in { to { opacity: 1; } }
 
-        .splash-quote {
-          opacity: 0;
-          animation: splash-quote-in 700ms ease-out 800ms forwards,
-                     splash-quote-out 600ms ease-in 2200ms forwards;
-        }
-        @keyframes splash-quote-in  { from { opacity: 0; transform: translateY(8px); }
-                                      to   { opacity: 1; transform: translateY(0); } }
-        @keyframes splash-quote-out { from { opacity: 1; transform: translateY(0); }
-                                      to   { opacity: 0; transform: translateY(-6px); } }
-
         .splash-logo {
           opacity: 0;
-          animation: splash-logo-in 900ms ease-out 2900ms forwards;
+          animation: splash-logo-in 800ms ease-out 800ms forwards;
         }
-        @keyframes splash-logo-in { from { opacity: 0; transform: translateY(6px); }
+        @keyframes splash-logo-in { from { opacity: 0; transform: translateY(8px); }
                                     to   { opacity: 1; transform: translateY(0); } }
 
-        .splash-logo-img    { animation: splash-logo-glow 3.6s ease-in-out 3300ms infinite; }
+        .splash-quote {
+          opacity: 0;
+          animation: splash-quote-in 900ms ease-out 1100ms forwards;
+        }
+        @keyframes splash-quote-in { from { opacity: 0; transform: translateY(8px); }
+                                     to   { opacity: 1; transform: translateY(0); } }
+
+        .splash-logo-img { animation: splash-logo-glow 3.6s ease-in-out 1600ms infinite; }
         @keyframes splash-logo-glow {
           0%,100% { filter: drop-shadow(0 0 22px rgba(212,175,90,0.35)); }
           50%     { filter: drop-shadow(0 0 36px rgba(212,175,90,0.65)); }
