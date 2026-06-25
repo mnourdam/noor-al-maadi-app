@@ -139,9 +139,10 @@ export function AtlasStage({
       drag.current = null;
       return;
     }
-    // Weighted pan — 0.95× pointer delta: responsive on mobile without
-    // overshooting like the original 1.0× free-drag.
-    const PAN_GAIN = 0.95;
+    // Pan gain — tuned to feel like Google/Apple Maps: slightly
+    // accelerated past 1:1 so finger drag covers ground naturally,
+    // while staying well below the old overly-sensitive free-drag.
+    const PAN_GAIN = 1.35;
     const dx = (e.clientX - drag.current.x) * PAN_GAIN;
     const dy = (e.clientY - drag.current.y) * PAN_GAIN;
     scheduleView({
