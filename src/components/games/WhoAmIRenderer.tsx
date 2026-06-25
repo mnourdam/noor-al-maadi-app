@@ -19,7 +19,7 @@ function normalize(s: string): string {
 
 const POTENTIAL_BY_REVEAL = [100, 70, 50] as const;
 
-export function WhoAmIRenderer({ stage, onComplete }: Props) {
+export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const [revealed, setRevealed] = useState(1);
   const [guess, setGuess] = useState("");
   const [done, setDone] = useState(false);
@@ -42,9 +42,11 @@ export function WhoAmIRenderer({ stage, onComplete }: Props) {
     } else {
       setWrong(true);
       sfx("wrong");
+      onWrong?.();
       setTimeout(() => setWrong(false), 800);
     }
   };
+
 
   const revealMore = () => {
     if (revealed < stage.hints.length) {
