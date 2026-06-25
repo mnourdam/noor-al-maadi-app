@@ -6,7 +6,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, Check, Eye, EyeOff, RefreshCw, Save, Search, ShieldCheck, Upload,
+  ArrowRight, Check, Eye, EyeOff, MapPin, RefreshCw, Save, Search, ShieldCheck, Upload,
 } from "lucide-react";
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,12 @@ import {
   listAllAtlasEntities, updateAtlasEntity,
   type AtlasEntityKind, type AtlasEntityRow,
 } from "@/lib/atlas-entities";
+import {
+  ELIGIBLE_TYPE_LABEL_AR,
+  listNeedsPlacement,
+  placeEncyclopediaEntity,
+  type NeedsPlacementRow,
+} from "@/lib/atlas-needs-placement";
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
 import { geoToAps } from "@/lib/atlas/transform";
