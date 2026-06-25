@@ -79,8 +79,10 @@ export function MemoryRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
         }, 650);
       } else {
         sfx("wrong");
+        onWrong?.();
         setTimeout(() => setOpen([]), 850);
       }
+
     }
   };
 
