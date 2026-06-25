@@ -15,6 +15,7 @@ import {
   groupRelatedByReason,
 } from "@/lib/relationship-graph";
 import { buildContextBlocks } from "@/lib/context-blocks";
+import { iconForType } from "@/lib/encyclopedia-icons";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
@@ -25,15 +26,6 @@ const TYPE_LABEL: Record<string, string> = {
   event: "حدث",
   landmark: "معلم",
   artifact: "أثر",
-};
-const SUPA_GLYPH: Record<string, string> = {
-  artifact: "🗝️",
-  figure: "🪶",
-  city: "🏙️",
-  battle: "⚔️",
-  state: "🏛️",
-  landmark: "🕌",
-  event: "📜",
 };
 
 export const Route = createFileRoute("/encyclopedia/entity/$id")({
@@ -139,10 +131,7 @@ function EntityPage() {
   const typeLabel = isScholar
     ? "عالم"
     : TYPE_LABEL[entity.entity_type] ?? entity.entity_type;
-  const glyph =
-    (typeof meta.glyph === "string" && (meta.glyph as string)) ||
-    SUPA_GLYPH[entity.entity_type] ||
-    "📜";
+  const HeroIcon = iconForType(isScholar ? "scholar" : entity.entity_type);
 
   return (
     <AppShell>
@@ -153,8 +142,8 @@ function EntityPage() {
 
         <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
           <div className="flex items-start gap-3">
-            <span className="grid size-14 place-items-center rounded-2xl bg-black/40 text-3xl ring-1 ring-white/10">
-              {glyph}
+            <span className="grid size-14 place-items-center rounded-2xl bg-black/40 ring-1 ring-white/10 text-gold">
+              <HeroIcon className="size-7" strokeWidth={1.4} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] tracking-[0.3em] text-gold/80">{typeLabel}</p>
@@ -243,26 +232,29 @@ function EntityPage() {
               <h2 className="font-display text-base font-bold">تابع الرحلة</h2>
             </div>
             <ol className="space-y-2">
-              {relatedQuery.data.slice(0, 3).map((n, i) => (
-                <li key={n.entity.id}>
-                  <Link
-                    to="/encyclopedia/entity/$id"
-                    params={{ id: n.entity.slug }}
-                    className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
-                  >
-                    <span className="grid size-10 place-items-center rounded-xl bg-black/40 text-xl ring-1 ring-white/10">
-                      {SUPA_GLYPH[n.entity.entity_type] ?? "📜"}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] tracking-[0.2em] text-gold/80">
-                        محطة {i + 1} · {TYPE_LABEL[n.entity.entity_type] ?? n.entity.entity_type}
-                      </p>
-                      <p className="font-display text-[13px] font-bold">{n.entity.title}</p>
-                    </div>
-                    <ChevronRight className="size-4 text-gold/60 group-hover:text-gold" />
-                  </Link>
-                </li>
-              ))}
+              {relatedQuery.data.slice(0, 3).map((n, i) => {
+                const NIcon = iconForType(n.entity.entity_type);
+                return (
+                  <li key={n.entity.id}>
+                    <Link
+                      to="/encyclopedia/entity/$id"
+                      params={{ id: n.entity.slug }}
+                      className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
+                    >
+                      <span className="grid size-10 place-items-center rounded-xl bg-black/40 ring-1 ring-white/10 text-gold/80">
+                        <NIcon className="size-5" strokeWidth={1.5} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] tracking-[0.2em] text-gold/80">
+                          محطة {i + 1} · {TYPE_LABEL[n.entity.entity_type] ?? n.entity.entity_type}
+                        </p>
+                        <p className="font-display text-[13px] font-bold">{n.entity.title}</p>
+                      </div>
+                      <ChevronRight className="size-4 text-gold/60 group-hover:text-gold" />
+                    </Link>
+                  </li>
+                );
+              })}
             </ol>
           </section>
         )}

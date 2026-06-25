@@ -1,19 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import { iconForType } from "@/lib/encyclopedia-icons";
 
 const CARD_CLASS =
   "group block rounded-2xl border border-white/10 bg-surface p-3 text-right transition hover:border-gold/40 hover:bg-surface-2";
-
-const GLYPHS: Record<string, string> = {
-  state: "🏛️",
-  figure: "🪶",
-  scholar: "📚",
-  battle: "⚔️",
-  city: "🏙️",
-  event: "📜",
-  landmark: "🕌",
-  artifact: "🗝️",
-};
 
 const TYPE_LABELS: Record<string, string> = {
   state: "دولة",
@@ -54,10 +44,7 @@ export function EncyclopediaCard({ entity }: { entity: SupabaseEncyclopediaEntit
   const isScholar = entity.entity_type === "figure" && kind === "scholar";
   const typeKey = isScholar ? "scholar" : entity.entity_type;
   const typeLabel = TYPE_LABELS[typeKey] ?? entity.entity_type;
-  const glyph =
-    (typeof meta.glyph === "string" && (meta.glyph as string)) ||
-    GLYPHS[typeKey] ||
-    "📜";
+  const Icon = iconForType(typeKey);
 
   const period =
     (typeof meta.period === "string" && (meta.period as string)) ||
@@ -70,8 +57,8 @@ export function EncyclopediaCard({ entity }: { entity: SupabaseEncyclopediaEntit
   const Inner = (
     <>
       <div className="flex items-center justify-between gap-2">
-        <span className="grid size-10 place-items-center rounded-xl bg-black/35 text-xl ring-1 ring-white/5">
-          {glyph}
+        <span className="grid size-10 place-items-center rounded-xl bg-black/35 ring-1 ring-white/5 text-gold/80">
+          <Icon className="size-5" strokeWidth={1.5} />
         </span>
         <span className="rounded-full bg-black/30 px-2 py-0.5 text-[9px] text-gold/80">
           {typeLabel}
