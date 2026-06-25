@@ -15,6 +15,7 @@ import {
   groupRelatedByReason,
 } from "@/lib/relationship-graph";
 import { buildContextBlocks } from "@/lib/context-blocks";
+import { iconForType } from "@/lib/encyclopedia-icons";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
@@ -25,15 +26,6 @@ const TYPE_LABEL: Record<string, string> = {
   event: "حدث",
   landmark: "معلم",
   artifact: "أثر",
-};
-const SUPA_GLYPH: Record<string, string> = {
-  artifact: "🗝️",
-  figure: "🪶",
-  city: "🏙️",
-  battle: "⚔️",
-  state: "🏛️",
-  landmark: "🕌",
-  event: "📜",
 };
 
 export const Route = createFileRoute("/encyclopedia/entity/$id")({
