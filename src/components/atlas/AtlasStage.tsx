@@ -55,39 +55,38 @@ export function AtlasStage({
     return () => ro.disconnect();
   }, []);
 
-  // Pan-bound computation that accounts for the raster's intrinsic aspect
-  // (xMidYMid slice). At scale 1 the SVG still fills the viewport but the
-  // raster may overflow on one axis — we allow panning into that overflow,
-  // so drag works immediately without requiring zoom-in first.
+  // Clamp in SVG USER UNITS (= viewBox units), since the <g> transform's
+  // translate(${tx}px, ${ty}px) is interpreted by the SVG/CSS engine in user
+  // units, not CSS pixels. Previously this was computed in CSS px, which
+  // shrank the effective pan range to ~10% of intent (you could only reach
+  // Levant ↔ Khorasan instead of the full raster).
+  //
+  // unitsPerPx = CSS px each viewBox unit occupies on screen (preserveAspect
+  // "slice" => max of width/height ratios).
+  // Visible viewBox window at scale=1 = (w / unitsPerPx) × (h / unitsPerPx).
+  // At zoom s the window shrinks to (visibleW/s) × (visibleH/s).
+  // Max translate (user units) so window stays inside the raster:
+  //   maxTx = (s * VB_W - visibleW) / 2, clamped to ≥ 0.
+  const unitsPerPxFor = useCallback((w: number, h: number) => {
+    return Math.max(w / VB_W, h / VB_H);
+  }, []);
+
   const clamp = useCallback((v: View, opts?: { relax?: boolean }): View => {
     const s = clampScalar(v.scale, MIN_SCALE, MAX_SCALE);
     const w = wrapSizeRef.current.w;
     const h = wrapSizeRef.current.h;
+    const unitsPerPx = unitsPerPxFor(w, h);
+    const visibleVbW = w / unitsPerPx;
+    const visibleVbH = h / unitsPerPx;
 
-    // Visible raster CSS extent at scale 1, given xMidYMid slice.
-    const viewportAspect = w / h;
-    let baseW: number, baseH: number;
-    if (viewportAspect > RASTER_ASPECT) {
-      // Raster filled to viewport width; overflows vertically.
-      baseW = w;
-      baseH = w / RASTER_ASPECT;
-    } else {
-      baseH = h;
-      baseW = h * RASTER_ASPECT;
-    }
+    let maxX = Math.max(0, (s * VB_W - visibleVbW) / 2);
+    let maxY = Math.max(0, (s * VB_H - visibleVbH) / 2);
 
-    const scaledW = baseW * s;
-    const scaledH = baseH * s;
-    // Allowed translate = how far the scaled raster can slide before the
-    // viewport edge passes the raster edge.
-    let maxX = Math.max(0, (scaledW - w) / 2);
-    let maxY = Math.max(0, (scaledH - h) / 2);
-
-    // During active gestures we relax the clamp by ~12% so the world point
-    // under the finger never snaps sideways. Reapplied tight on release.
+    // Relax slightly during active gestures so the world point under the
+    // finger never snaps; tight clamp reapplied on release.
     if (opts?.relax) {
-      maxX += w * 0.12;
-      maxY += h * 0.12;
+      maxX += VB_W * 0.04;
+      maxY += VB_H * 0.04;
     }
 
     return {
@@ -95,7 +94,7 @@ export function AtlasStage({
       tx: clampScalar(v.tx, -maxX, maxX),
       ty: clampScalar(v.ty, -maxY, maxY),
     };
-  }, []);
+  }, [unitsPerPxFor]);
 
   // rAF-coalesced view flush.
   const pendingView = useRef<View | null>(null);
@@ -139,23 +138,27 @@ export function AtlasStage({
       drag.current = null;
       return;
     }
-    // Pan gain — tuned to feel like Google/Apple Maps: slightly
-    // accelerated past 1:1 so finger drag covers ground naturally,
-    // while staying well below the old overly-sensitive free-drag.
-    const PAN_GAIN = 1.35;
-    const dx = (e.clientX - drag.current.x) * PAN_GAIN;
-    const dy = (e.clientY - drag.current.y) * PAN_GAIN;
+    // Pan in user units: 1 CSS px of finger movement ⇒ 1 CSS px of map
+    // movement on screen ⇒ (1 / unitsPerPx) user units of translate.
+    // PAN_GAIN keeps a slight Google/Apple-Maps-style acceleration.
+    const w = wrapSizeRef.current.w;
+    const h = wrapSizeRef.current.h;
+    const unitsPerPx = unitsPerPxFor(w, h);
+    const PAN_GAIN = 1.15;
+    const dx = ((e.clientX - drag.current.x) * PAN_GAIN) / unitsPerPx;
+    const dy = ((e.clientY - drag.current.y) * PAN_GAIN) / unitsPerPx;
     scheduleView({
       scale: viewRef.current.scale,
       tx: drag.current.tx + dx,
       ty: drag.current.ty + dy,
-    });
+    }, { relax: true });
   };
   const onPointerUp = () => {
     drag.current = null;
     // Re-clamp tightly on release.
     setView((v) => clamp(v));
   };
+
 
   // ── Wheel zoom (cursor-anchored) ──────────────────────────────────────
   useEffect(() => {
