@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search, Map as MapIcon, ChevronLeft, Crown, Lock, Compass, Play,
   Hourglass, Calendar, Heart, Coins, Trophy, Package, BookOpen,
