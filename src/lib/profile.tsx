@@ -289,16 +289,20 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       });
       return ok;
     },
-    claimSeason: (reward, title) => {
+    claimSeason: (reward, title, dinars, artifact) => {
       let ok = false;
       update((p) => {
         if (p.seasonClaimed) return p;
         ok = true;
-        return addPointsTo({
+        let np: ProfileState = {
           ...p,
           seasonClaimed: true,
           titlesEarned: title && !p.titlesEarned.includes(title) ? [...p.titlesEarned, title] : p.titlesEarned,
-        }, reward);
+          artifactsFound: artifact && !p.artifactsFound.includes(artifact) ? [...p.artifactsFound, artifact] : p.artifactsFound,
+        };
+        np = addPointsTo(np, reward);
+        if (dinars) np = addDinarsTo(np, dinars);
+        return np;
       });
       return ok;
     },
