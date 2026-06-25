@@ -143,6 +143,7 @@ function GamePlayPage() {
       const n = w + 1;
       if (n >= maxAttempts) {
         // Stage failed → lose exactly one heart for this attempt-cycle.
+        setFailReason("attempts");
         setFailed(true);
         const dedupKey = `game:${game.id}:stage:${stageIdx}:cycle:${retryNonce}`;
         const heartsAfter = loseHeartOnce(dedupKey);
