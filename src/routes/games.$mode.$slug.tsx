@@ -201,7 +201,7 @@ function GamePlayPage() {
             onClick={() => requestNavigate("/adventure")}
             className="inline-flex items-center gap-1 text-slate-400 hover:text-amber-300"
           >
-            <ChevronRight className="h-3.5 w-3.5" /> المغامرة
+            <ChevronRight className="h-3.5 w-3.5" /> قاعة التحديات
           </button>
           <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
             {MODE_LABELS_AR[game.mode]}
