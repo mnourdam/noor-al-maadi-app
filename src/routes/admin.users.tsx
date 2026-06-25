@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Users, Search, Download, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, X, Coins, Sparkles, UserPlus, BadgeCheck } from "lucide-react";
+import { toast } from "sonner";
+import { Users, Search, Download, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, X, Coins, Sparkles, UserPlus, BadgeCheck, Trash2, AlertTriangle } from "lucide-react";
 import { AdminGate, useAdminGuard } from "@/lib/admin-guard";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { createTeamUser } from "@/lib/teamUsers.functions";
+import { createTeamUser, deletePlayer } from "@/lib/teamUsers.functions";
+import { supabase } from "@/integrations/supabase/client";
 import {
   adminListUsers,
   adminUserDetail,
@@ -20,6 +22,7 @@ import {
   type AccountStatus,
   type AppRole,
 } from "@/lib/adminUsers";
+
 
 
 export const Route = createFileRoute("/admin/users")({
