@@ -18,6 +18,7 @@ import { Toaster } from "../components/ui/sonner";
 import { AchievementWatcher } from "../components/AchievementWatcher";
 import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
+import { AndroidBackHandler } from "../components/AndroidBackHandler";
 
 function NotFoundComponent() {
   return (
@@ -273,6 +274,7 @@ function RootComponent() {
           <LevelUpWatcher />
           <Toaster position="top-center" richColors closeButton />
           <SplashSequence />
+          <AndroidBackHandler />
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
