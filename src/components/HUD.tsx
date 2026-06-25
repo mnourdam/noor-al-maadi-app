@@ -34,7 +34,10 @@ export function HUD() {
   const next = msUntilNextHeart(profile, now);
 
   return (
-    <div className="sticky top-0 z-40 mx-auto w-full max-w-md px-3 pt-2">
+    <div
+      className="sticky top-0 z-40 mx-auto w-full max-w-md px-3 pt-2"
+      style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
+    >
       <div className="glass flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-background/70 px-3 py-1.5 backdrop-blur-md">
         <div className="flex items-center gap-0.5">
           {Array.from({ length: HEART_MAX }).map((_, i) => (
