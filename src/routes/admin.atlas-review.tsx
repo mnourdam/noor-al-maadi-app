@@ -198,10 +198,36 @@ function AtlasReviewPage() {
   };
   const onStageMove = (e: React.PointerEvent) => {
     if (!panRef.current) return;
-    setTx(panRef.current.tx + (e.clientX - panRef.current.x));
-    setTy(panRef.current.ty + (e.clientY - panRef.current.y));
+    const dx = e.clientX - panRef.current.x;
+    const dy = e.clientY - panRef.current.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) panRef.current.moved = true;
+    setTx(panRef.current.tx + dx);
+    setTy(panRef.current.ty + dy);
   };
-  const onStageUp = () => { panRef.current = null; };
+  const onStageUp = (e: React.PointerEvent) => {
+    const p = panRef.current;
+    panRef.current = null;
+    // Click-to-place: requires an active Needs Placement selection,
+    // a non-drag click, and a tap that started on the stage layer.
+    if (!p || p.moved) return;
+    if (!placementId) return;
+    const row = (needsRows ?? []).find((r) => r.id === placementId);
+    if (!row) return;
+    const aps = clientToAps(e.clientX, e.clientY);
+    if (aps.x < 0 || aps.y < 0 || aps.x > RASTER.width || aps.y > RASTER.height) return;
+    if (!confirm(`وضع "${row.title}" عند APS ${Math.round(aps.x)}, ${Math.round(aps.y)}؟`)) return;
+    setPlacing(true);
+    placeEncyclopediaEntity({ row, aps })
+      .then((created) => {
+        setRows((rs) => [created, ...rs]);
+        setNeedsRows((rs) => (rs ?? []).filter((r) => r.id !== row.id));
+        setPlacementId(null);
+        setFocusedId(created.id);
+      })
+      .catch((err: any) => alert(`فشل التموضع: ${err.message ?? err}`))
+      .finally(() => setPlacing(false));
+  };
+
 
   useEffect(() => {
     const el = wrapRef.current; if (!el) return;
