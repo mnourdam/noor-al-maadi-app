@@ -39,7 +39,9 @@ export interface AdminUserRow {
   account_type: AccountType;
   marketing_opt_in: boolean;
   referrals_count: number;
+  roles?: string[];
 }
+
 
 export interface AdminListUsersResult {
   rows: AdminUserRow[];
