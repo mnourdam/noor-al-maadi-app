@@ -398,22 +398,75 @@ function UserDetailDrawer({ userId, isManager, onClose, onChanged }: { userId: s
                 <KV label="تحقيقات مكتملة">{(detail.profile as any).investigations_completed ?? 0}</KV>
               </Section>
 
-              {/* Admin actions */}
-              <Section title="إجراءات إدارية">
-                <div className="col-span-2 flex flex-wrap gap-2">
-                  <ActionButton disabled={busy} onClick={() => adjust("xp")} icon={<Sparkles className="h-4 w-4" />} label="تعديل XP" />
-                  <ActionButton disabled={busy} onClick={() => adjust("dinars")} icon={<Coins className="h-4 w-4" />} label="تعديل الدنانير" />
-                  <ActionButton disabled title="القلوب مخزّنة محلياً على الجهاز ولا يمكن تعديلها عن بُعد حالياً." icon={<Coins className="h-4 w-4" />} label="تعديل القلوب (قريباً)" />
-                </div>
-                <div className="col-span-2 mt-2 flex flex-wrap gap-2">
-                  <ActionButton disabled={busy || detail.profile.account_status === "active"} onClick={() => changeStatus("active")} icon={<ShieldCheck className="h-4 w-4" />} label="تفعيل" tone="emerald" />
-                  <ActionButton disabled={busy || detail.profile.account_status === "suspended"} onClick={() => changeStatus("suspended")} icon={<ShieldAlert className="h-4 w-4" />} label="إيقاف" tone="amber" />
-                  <ActionButton disabled={busy || detail.profile.account_status === "disabled"} onClick={() => changeStatus("disabled")} icon={<ShieldOff className="h-4 w-4" />} label="تعطيل" tone="rose" />
-                </div>
-                <p className="col-span-2 mt-2 text-[11px] leading-5 text-slate-400">
-                  جميع التعديلات تُسجّل في سجل التدقيق مع المسؤول والسبب. لا تجري تعديلات SQL مباشرة على الإنتاج.
-                </p>
-              </Section>
+              {/* Roles (manager-only) */}
+              {isManager && (
+                <Section title="الأدوار">
+                  <div className="col-span-2 mb-2">
+                    <RolesChips roles={(detail as any).roles ?? []} />
+                  </div>
+                  <div className="col-span-2 flex flex-wrap gap-2">
+                    {(["editor","admin","owner"] as AppRole[]).map((role) => {
+                      const has = ((detail as any).roles ?? []).includes(role);
+                      return (
+                        <ActionButton
+                          key={role}
+                          disabled={busy}
+                          icon={<BadgeCheck className="h-4 w-4" />}
+                          label={has ? `إزالة ${ROLE_LABEL[role]}` : `منح ${ROLE_LABEL[role]}`}
+                          tone={has ? "rose" : "emerald"}
+                          onClick={async () => {
+                            const reason = window.prompt(`سبب ${has ? "إزالة" : "منح"} دور "${ROLE_LABEL[role]}":`, "") ?? "";
+                            setBusy(true);
+                            try {
+                              if (has) await adminRevokeRole(userId, role, reason);
+                              else     await adminAssignRole(userId, role, reason);
+                              setReloadKey((k) => k + 1);
+                              onChanged();
+                            } catch (e: any) {
+                              alert("فشل: " + (e?.message ?? String(e)));
+                            } finally { setBusy(false); }
+                          }}
+                        />
+                      );
+                    })}
+                    <ActionButton
+                      disabled={busy}
+                      icon={<ShieldOff className="h-4 w-4" />}
+                      label="إعادة إلى لاعب"
+                      onClick={async () => {
+                        if (!confirm("إزالة جميع الأدوار وإعادة المستخدم إلى لاعب عادي؟")) return;
+                        setBusy(true);
+                        try {
+                          await adminAssignRole(userId, "player", "downgrade to player");
+                          setReloadKey((k) => k + 1);
+                          onChanged();
+                        } catch (e: any) { alert("فشل: " + (e?.message ?? String(e))); }
+                        finally { setBusy(false); }
+                      }}
+                    />
+                  </div>
+                </Section>
+              )}
+
+              {/* Admin actions (manager-only) */}
+              {isManager && (
+                <Section title="إجراءات إدارية">
+                  <div className="col-span-2 flex flex-wrap gap-2">
+                    <ActionButton disabled={busy} onClick={() => adjust("xp")} icon={<Sparkles className="h-4 w-4" />} label="تعديل XP" />
+                    <ActionButton disabled={busy} onClick={() => adjust("dinars")} icon={<Coins className="h-4 w-4" />} label="تعديل الدنانير" />
+                    <ActionButton disabled title="القلوب مخزّنة محلياً على الجهاز ولا يمكن تعديلها عن بُعد حالياً." icon={<Coins className="h-4 w-4" />} label="تعديل القلوب (قريباً)" />
+                  </div>
+                  <div className="col-span-2 mt-2 flex flex-wrap gap-2">
+                    <ActionButton disabled={busy || detail.profile.account_status === "active"} onClick={() => changeStatus("active")} icon={<ShieldCheck className="h-4 w-4" />} label="تفعيل" tone="emerald" />
+                    <ActionButton disabled={busy || detail.profile.account_status === "suspended"} onClick={() => changeStatus("suspended")} icon={<ShieldAlert className="h-4 w-4" />} label="إيقاف" tone="amber" />
+                    <ActionButton disabled={busy || detail.profile.account_status === "disabled"} onClick={() => changeStatus("disabled")} icon={<ShieldOff className="h-4 w-4" />} label="تعطيل" tone="rose" />
+                  </div>
+                  <p className="col-span-2 mt-2 text-[11px] leading-5 text-slate-400">
+                    جميع التعديلات تُسجّل في سجل التدقيق مع المسؤول والسبب. لا تجري تعديلات SQL مباشرة على الإنتاج.
+                  </p>
+                </Section>
+              )}
+
 
               {/* Referrals */}
               <Section title="الإحالات">
