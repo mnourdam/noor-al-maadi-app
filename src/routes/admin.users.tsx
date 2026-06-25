@@ -43,10 +43,16 @@ const FILTERS: Array<{ key: UserFilter; label: string }> = [
   { key: "disabled", label: "معطّل" },
   { key: "guest", label: "ضيف" },
   { key: "registered", label: "مسجّل" },
+  { key: "editor", label: "محرّر" },
   { key: "admin", label: "مشرف" },
   { key: "has_referrals", label: "لديه إحالات" },
   { key: "no_referrals", label: "بدون إحالات" },
 ];
+
+const ROLE_LABEL: Record<AppRole, string> = {
+  owner: "مالك", admin: "مشرف", editor: "محرّر", player: "لاعب",
+};
+
 
 const PAGE_SIZE = 50;
 
