@@ -19,13 +19,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col pb-24">
+    <div
+      className="mx-auto flex min-h-screen w-full max-w-md flex-col"
+      style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+    >
       <HUD />
       <AudioInitializer />
       <FriendNotificationsPoller />
       <BackNavigationGuard />
       <div className="flex-1">{children}</div>
-      <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-3 pb-3">
+      <nav
+        className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-3"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      >
         <div className="glass shadow-elegant grid grid-cols-6 items-center gap-1 rounded-2xl border border-white/10 p-1.5">
           {tabs.map(({ to, label, icon: Icon }) => {
             const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
