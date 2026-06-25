@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Check, Sparkles, Feather, AlertTriangle, Lightbulb } from "lucide-react";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
+import { validateCrosswordStage } from "@/lib/games/crossword-validate";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
+
 
 interface Props {
   stage: CrosswordStage;
