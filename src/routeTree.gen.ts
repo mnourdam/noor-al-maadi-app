@@ -80,6 +80,7 @@ import { Route as AdminAtlasImportRouteImport } from './routes/admin.atlas-impor
 import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-entities'
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
 import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
@@ -449,6 +450,11 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   path: '/admin/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminGamesIndexRoute = AdminGamesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminGamesRoute,
+} as any)
 const EncyclopediaTypeTypeRoute = EncyclopediaTypeTypeRouteImport.update({
   id: '/type/$type',
   path: '/type/$type',
@@ -564,6 +570,7 @@ export interface FileRoutesByFullPath {
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
+  '/admin/games/': typeof AdminGamesIndexRoute
   '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
 }
@@ -609,7 +616,6 @@ export interface FileRoutesByTo {
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
   '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
-  '/admin/games': typeof AdminGamesRouteWithChildren
   '/admin/historical-hubs-audit': typeof AdminHistoricalHubsAuditRoute
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
@@ -642,6 +648,7 @@ export interface FileRoutesByTo {
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
+  '/admin/games': typeof AdminGamesIndexRoute
   '/campaigns/imported/$id': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
 }
@@ -723,6 +730,7 @@ export interface FileRoutesById {
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
+  '/admin/games/': typeof AdminGamesIndexRoute
   '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
 }
@@ -805,6 +813,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
+    | '/admin/games/'
     | '/campaigns/imported/$id/'
     | '/campaigns/imported/$id/chapter/$chapter'
   fileRoutesByTo: FileRoutesByTo
@@ -850,7 +859,6 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-audit'
     | '/admin/era-normalization'
     | '/admin/exploration-path-repair'
-    | '/admin/games'
     | '/admin/historical-hubs-audit'
     | '/admin/hub-builder'
     | '/admin/import'
@@ -883,6 +891,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
+    | '/admin/games'
     | '/campaigns/imported/$id'
     | '/campaigns/imported/$id/chapter/$chapter'
   id:
@@ -963,6 +972,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
+    | '/admin/games/'
     | '/campaigns/imported/$id/'
     | '/campaigns/imported/$id/chapter/$chapter'
   fileRoutesById: FileRoutesById
@@ -1538,6 +1548,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/games/': {
+      id: '/admin/games/'
+      path: '/'
+      fullPath: '/admin/games/'
+      preLoaderRoute: typeof AdminGamesIndexRouteImport
+      parentRoute: typeof AdminGamesRoute
+    }
     '/encyclopedia/type/$type': {
       id: '/encyclopedia/type/$type'
       path: '/type/$type'
@@ -1629,10 +1646,12 @@ const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
 
 interface AdminGamesRouteChildren {
   AdminGamesModeRoute: typeof AdminGamesModeRoute
+  AdminGamesIndexRoute: typeof AdminGamesIndexRoute
 }
 
 const AdminGamesRouteChildren: AdminGamesRouteChildren = {
   AdminGamesModeRoute: AdminGamesModeRoute,
+  AdminGamesIndexRoute: AdminGamesIndexRoute,
 }
 
 const AdminGamesRouteWithChildren = AdminGamesRoute._addFileChildren(
