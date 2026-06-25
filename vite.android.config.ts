@@ -18,7 +18,6 @@ export default defineConfig({
   publicDir: path.resolve(__dirname, "public"),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
       "@tanstack/react-start/server": path.resolve(
         __dirname,
         "./src/shims/tanstack-react-start-server.android.ts",
@@ -27,6 +26,7 @@ export default defineConfig({
         __dirname,
         "./src/shims/teamUsers.functions.android.ts",
       ),
+      "@": path.resolve(__dirname, "./src"),
     },
     dedupe: ["react", "react-dom", "@tanstack/react-query", "@tanstack/query-core"],
   },
