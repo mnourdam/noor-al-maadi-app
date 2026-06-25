@@ -96,6 +96,8 @@ function GamePlayPage() {
 
   const handleComplete = useCallback(async (score: number) => {
     if (!game || game === "loading") return;
+    // Timeout / attempts failure must block any reward pipeline.
+    if (failed || stageDone) return;
     setStageDone(true);
     if (isLast) {
       setFinalScore(score);
