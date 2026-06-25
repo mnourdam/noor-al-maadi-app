@@ -93,10 +93,16 @@ export function MemoryRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
           <Archive className="h-3.5 w-3.5" />
           خزانة الذاكرة
         </span>
-        <span className="text-slate-400 normal-case tracking-normal">
-          المحاولات: {moves} · المطابقات: {solved.size / 2}/{stage.pairs.length}
+        <span className="inline-flex items-center gap-3">
+          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
+            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
+          )}
+          <span className="text-slate-400 normal-case tracking-normal">
+            المطابقات: {solved.size / 2}/{stage.pairs.length}
+          </span>
         </span>
       </div>
+
 
       <p className="mb-3 text-[11px] text-slate-500">
         كل بطاقة دُرج في خزانة المتحف. افتح اثنين متشابهين ليندمجا في قطعة واحدة.
