@@ -219,13 +219,17 @@ function AtlasReviewPage() {
     if (aps.x < 0 || aps.y < 0 || aps.x > RASTER.width || aps.y > RASTER.height) return;
     if (!confirm(`وضع "${row.title}" عند APS ${Math.round(aps.x)}, ${Math.round(aps.y)}؟`)) return;
     setPlacing(true);
-    placeEncyclopediaEntity({ row, aps })
-      .then((created) => {
-        setRows((rs) => [created, ...rs]);
+    placeAtlasDraft({ atlasId: row.id, aps })
+      .then((updated: AtlasEntityRow) => {
+        setRows((rs) => {
+          const exists = rs.some((r) => r.id === updated.id);
+          return exists ? rs.map((r) => (r.id === updated.id ? updated : r)) : [updated, ...rs];
+        });
         setNeedsRows((rs) => (rs ?? []).filter((r) => r.id !== row.id));
         setPlacementId(null);
-        setFocusedId(created.id);
+        setFocusedId(updated.id);
       })
+
       .catch((err: any) => alert(`فشل التموضع: ${err.message ?? err}`))
       .finally(() => setPlacing(false));
   };
