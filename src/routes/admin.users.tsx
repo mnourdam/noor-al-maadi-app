@@ -85,16 +85,31 @@ function StatusBadge({ status }: { status: AccountStatus }) {
 function TypeBadge({ t }: { t: string }) {
   const map: Record<string, string> = {
     admin: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+    editor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
     registered: "bg-sky-500/15 text-sky-300 border-sky-500/30",
     guest: "bg-slate-500/15 text-slate-300 border-slate-500/30",
   };
-  const labels: Record<string, string> = { admin: "مشرف", registered: "مسجّل", guest: "ضيف" };
+  const labels: Record<string, string> = { admin: "مشرف", editor: "محرّر", registered: "مسجّل", guest: "ضيف" };
   return (
     <span className={`inline-block rounded border px-2 py-0.5 text-[11px] ${map[t] || map.guest}`}>
       {labels[t] ?? t}
     </span>
   );
 }
+
+function RolesChips({ roles }: { roles: string[] | undefined }) {
+  if (!roles || roles.length === 0) return <span className="text-[11px] text-slate-500">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {roles.map((r) => (
+        <span key={r} className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-200">
+          {ROLE_LABEL[r as AppRole] ?? r}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 
 function AdminUsers() {
   const [search, setSearch] = useState("");
