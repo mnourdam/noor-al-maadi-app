@@ -311,7 +311,7 @@ function AdminUsers() {
 }
 
 
-function UserDetailDrawer({ userId, onClose, onChanged }: { userId: string; onClose: () => void; onChanged: () => void }) {
+function UserDetailDrawer({ userId, isManager, onClose, onChanged }: { userId: string; isManager: boolean; onClose: () => void; onChanged: () => void }) {
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
