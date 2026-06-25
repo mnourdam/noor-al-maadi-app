@@ -80,6 +80,7 @@ function GamePlayPage() {
     setStageDone(false);
     setWrongCount(0);
     setFailed(false);
+    setFailReason("attempts");
   }, [stageIdx, retryNonce]);
 
   // Beforeunload protection while a stage is in progress
