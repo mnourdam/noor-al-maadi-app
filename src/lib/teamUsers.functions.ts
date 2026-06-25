@@ -67,7 +67,7 @@ export const createTeamUser = createServerFn({ method: "POST" })
       p_action: "user.create",
       p_target: userId,
       p_detail: { email: data.email, role: data.role, display_name: data.display_name },
-      p_reason: null,
+      p_reason: "",
     });
 
     return { ok: true, user_id: userId };
