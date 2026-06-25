@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Upload, Download, FileJson, RefreshCw, Eye, EyeOff, Archive,
-  Copy, Trash2, ChevronRight, CheckCircle2, AlertTriangle, X, ExternalLink,
+  Copy, Trash2, CheckCircle2, AlertTriangle, X, ExternalLink, Landmark,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,11 @@ import { validateGameJson } from "@/lib/games/schemas";
 import { EXAMPLE_GAMES } from "@/lib/games/examples";
 import { listGamesByMode, type GameRow } from "@/lib/games/store";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, type GameMode, type GameStatus } from "@/lib/games/types";
+import {
+  extractMuseumUnlocks,
+  validateMuseumUnlocks,
+  type UnlockValidationReport,
+} from "@/lib/games/museumUnlocks";
 
 interface Toast { kind: "ok" | "err"; msg: string }
 
@@ -22,6 +27,8 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
   const [toast, setToast] = useState<Toast | null>(null);
   const [importText, setImportText] = useState("");
   const [validationReport, setValidationReport] = useState<string[]>([]);
+  const [unlockReport, setUnlockReport] = useState<UnlockValidationReport | null>(null);
+
 
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
