@@ -245,6 +245,9 @@ export function AtlasStage({
   useEffect(() => () => cancelAnimations(), [cancelAnimations]);
 
   const inv = 1 / view.scale;
+  // Quantize label visibility into tiers so pins don't re-mount/unmount
+  // their <text> labels every frame as scale ticks during pan/pinch.
+  const labelTier = view.scale >= 3.0 ? 2 : view.scale >= 1.6 ? 1 : 0;
   const isInteracting = drag.current != null || pinch.current != null;
   const useTransition = !isInteracting;
 
