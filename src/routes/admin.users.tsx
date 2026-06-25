@@ -582,3 +582,88 @@ function ActionButton({
     </button>
   );
 }
+
+function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const createFn = useServerFn(createTeamUser);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [role, setRole] = useState<AppRole>("player");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    setError(null);
+    if (!email.trim() || !password || !displayName.trim()) {
+      setError("الرجاء تعبئة كل الحقول.");
+      return;
+    }
+    if (password.length < 8) { setError("كلمة المرور 8 محارف على الأقل."); return; }
+    setBusy(true);
+    try {
+      await createFn({ data: { email: email.trim(), password, display_name: displayName.trim(), role } });
+      onCreated();
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" dir="rtl">
+      <div className="w-full max-w-md rounded-xl border border-amber-500/30 bg-slate-950 p-5 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-amber-200">
+            <UserPlus className="h-5 w-5" /> إضافة مستخدم جديد
+          </h2>
+          <button onClick={onClose} className="rounded p-1 hover:bg-slate-800"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="mt-1 text-xs text-slate-400">
+          يُنشأ الحساب عبر وظيفة خادم آمنة. لا يُرسل المفتاح السرّي إلى المتصفح أبدًا.
+        </p>
+
+        <div className="mt-4 space-y-3 text-sm">
+          <label className="block">
+            <span className="mb-1 block text-xs text-slate-400">الاسم الظاهر</span>
+            <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={80}
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-500/60" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-slate-400">البريد</span>
+            <input dir="ltr" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255}
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-500/60" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-slate-400">كلمة المرور (8 محارف فأكثر)</span>
+            <input dir="ltr" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} maxLength={72}
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-500/60" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-slate-400">الدور</span>
+            <select value={role} onChange={(e) => setRole(e.target.value as AppRole)}
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-500/60">
+              <option value="player">لاعب</option>
+              <option value="editor">محرّر (وصول إلى أدوات المحتوى فقط)</option>
+              <option value="admin">مشرف (وصول كامل)</option>
+              <option value="owner">مالك</option>
+            </select>
+          </label>
+        </div>
+
+        {error && (
+          <div className="mt-3 rounded border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <button onClick={onClose} disabled={busy}
+            className="rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800 disabled:opacity-50">إلغاء</button>
+          <button onClick={submit} disabled={busy}
+            className="inline-flex items-center gap-1 rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50">
+            {busy ? "جارٍ الإنشاء…" : "إنشاء المستخدم"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
