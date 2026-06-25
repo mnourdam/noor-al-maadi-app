@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Upload, Download, FileJson, RefreshCw, Eye, EyeOff, Archive,
-  Copy, Trash2, ChevronRight, CheckCircle2, AlertTriangle, X, ExternalLink,
+  Copy, Trash2, CheckCircle2, AlertTriangle, X, ExternalLink, Landmark,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,11 @@ import { validateGameJson } from "@/lib/games/schemas";
 import { EXAMPLE_GAMES } from "@/lib/games/examples";
 import { listGamesByMode, type GameRow } from "@/lib/games/store";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, type GameMode, type GameStatus } from "@/lib/games/types";
+import {
+  extractMuseumUnlocks,
+  validateMuseumUnlocks,
+  type UnlockValidationReport,
+} from "@/lib/games/museumUnlocks";
 
 interface Toast { kind: "ok" | "err"; msg: string }
 
@@ -22,6 +27,8 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
   const [toast, setToast] = useState<Toast | null>(null);
   const [importText, setImportText] = useState("");
   const [validationReport, setValidationReport] = useState<string[]>([]);
+  const [unlockReport, setUnlockReport] = useState<UnlockValidationReport | null>(null);
+
 
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
@@ -53,19 +60,29 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
   };
 
   const exportGame = (g: GameRow) => {
-    const envelope = {
+    const meta = { ...(g.metadata ?? {}) } as Record<string, unknown>;
+    const museum = Array.isArray(meta.museum_unlocks)
+      ? (meta.museum_unlocks as string[])
+      : [];
+    // Don't double-encode museum unlocks: surface them under rewards and
+    // drop the metadata copy so re-imported envelopes stay canonical.
+    delete meta.museum_unlocks;
+    const envelope: Record<string, unknown> = {
       slug: g.slug,
       mode: g.mode,
       title: g.title,
       description: g.description ?? undefined,
       difficulty: g.difficulty,
       estimated_time: g.estimated_time,
-      xp: g.xp_reward,
-      coins: g.coin_reward,
       hearts_penalty: g.hearts_penalty,
       related_entities: g.related_entities ?? [],
-      metadata: g.metadata ?? {},
+      metadata: meta,
       stages: g.stages ?? [],
+      rewards: {
+        xp: g.xp_reward,
+        coins: g.coin_reward,
+        ...(museum.length ? { museum_unlocks: museum } : {}),
+      },
     };
     const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -78,6 +95,7 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
 
   const importJson = async () => {
     setValidationReport([]);
+    setUnlockReport(null);
     let parsed: unknown;
     try { parsed = JSON.parse(importText); }
     catch (e) {
@@ -90,6 +108,29 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
       return;
     }
     const v = result.value;
+    // Merge unified rewards block — rewards.* overrides top-level.
+    const xpReward = v.rewards?.xp ?? v.xp;
+    const coinReward = v.rewards?.coins ?? v.coins;
+    const museumUnlocks = extractMuseumUnlocks(v);
+
+    // Validate museum unlock targets exist in the encyclopedia.
+    let unlockReportLocal: UnlockValidationReport | null = null;
+    if (museumUnlocks.length) {
+      unlockReportLocal = await validateMuseumUnlocks(museumUnlocks);
+      setUnlockReport(unlockReportLocal);
+      if (unlockReportLocal.missing.length) {
+        setValidationReport([
+          `لا يمكن الاستيراد: ${unlockReportLocal.missing.length} مقتنى غير موجود في الموسوعة.`,
+          ...unlockReportLocal.missing.map((m) => `• ${m.raw}`),
+        ]);
+        return;
+      }
+    }
+
+    const mergedMeta = { ...(v.metadata ?? {}) } as Record<string, unknown>;
+    if (museumUnlocks.length) mergedMeta.museum_unlocks = museumUnlocks;
+    else delete mergedMeta.museum_unlocks;
+
     const payload = {
       slug: v.slug,
       mode: v.mode,
@@ -97,20 +138,28 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
       description: v.description ?? null,
       difficulty: v.difficulty,
       estimated_time: v.estimated_time,
-      xp_reward: v.xp,
-      coin_reward: v.coins,
+      xp_reward: xpReward,
+      coin_reward: coinReward,
       hearts_penalty: v.hearts_penalty,
       related_entities: v.related_entities,
-      metadata: v.metadata,
+      metadata: mergedMeta,
       stages: v.stages,
       status: "draft" as GameStatus,
     };
     const { error } = await supabase.from("games").upsert(payload as any, { onConflict: "slug" });
     if (error) { notify("err", error.message); return; }
-    setValidationReport([`✓ تم استيراد "${v.title}" كمسودة.`]);
+    const warnings: string[] = [`✓ تم استيراد "${v.title}" كمسودة.`];
+    if (unlockReportLocal?.duplicates.length) {
+      warnings.push(`⚠ مقتنيات مكررة تم توحيدها: ${unlockReportLocal.duplicates.join("، ")}`);
+    }
+    if (unlockReportLocal?.resolved.length) {
+      warnings.push(`✓ سيتم فتح ${unlockReportLocal.resolved.length} مقتنى عند أول إكمال.`);
+    }
+    setValidationReport(warnings);
     setImportText("");
     notify("ok", "تم الاستيراد بنجاح كمسودة.");
     void refresh();
+
   };
 
   const setStatus = async (g: GameRow, status: GameStatus) => {
@@ -210,12 +259,44 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
           {validationReport.length > 0 && (
             <ul className="mt-3 space-y-1 rounded-lg border border-slate-700 bg-slate-950/60 p-3 text-xs">
               {validationReport.map((line, i) => (
-                <li key={i} className={line.startsWith("✓") ? "text-emerald-300" : "text-red-300"}>
+                <li key={i} className={
+                  line.startsWith("✓") ? "text-emerald-300"
+                  : line.startsWith("⚠") ? "text-amber-300"
+                  : "text-red-300"
+                }>
                   {line}
                 </li>
               ))}
             </ul>
           )}
+          {unlockReport && (unlockReport.resolved.length > 0 || unlockReport.missing.length > 0) && (
+            <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+              <div className="mb-2 flex items-center gap-1.5 font-semibold text-amber-200">
+                <Landmark className="h-3.5 w-3.5" /> مقتنيات المتحف المرتبطة
+              </div>
+              {unlockReport.resolved.length > 0 && (
+                <ul className="mb-2 space-y-1">
+                  {unlockReport.resolved.map((r) => (
+                    <li key={`${r.type}:${r.slug}`} className="flex items-center justify-between gap-2 text-emerald-200/90">
+                      <span>✓ {r.title}</span>
+                      <span className="text-[10px] text-slate-400">{r.type}:{r.slug}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {unlockReport.missing.length > 0 && (
+                <ul className="space-y-1">
+                  {unlockReport.missing.map((m, i) => (
+                    <li key={i} className="text-red-300">✗ غير موجود: {m.raw}</li>
+                  ))}
+                </ul>
+              )}
+              {unlockReport.duplicates.length > 0 && (
+                <p className="mt-2 text-amber-300">⚠ تكرارات: {unlockReport.duplicates.join("، ")}</p>
+              )}
+            </div>
+          )}
+
         </section>
 
         {/* List */}

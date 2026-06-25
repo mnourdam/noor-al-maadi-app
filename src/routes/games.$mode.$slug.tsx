@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-r
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight, Coins, Star, Clock, Sparkles, ChevronLeft,
-  BookOpen, Compass, Trophy, Library, RotateCcw, Heart,
+  BookOpen, Compass, Trophy, Library, RotateCcw, Heart, Landmark,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { getGameBySlug, type GameRow } from "@/lib/games/store";
@@ -15,7 +15,11 @@ import { sfx } from "@/components/games/sfx";
 import { resolveMaxAttempts, resolveTimerSeconds } from "@/lib/games/timer";
 import { useProfile } from "@/lib/profile";
 import { OutOfHeartsModal } from "@/components/imported-campaign/OutOfHeartsModal";
+import { extractMuseumUnlocks, museumUnlocksToCollectionItems } from "@/lib/games/museumUnlocks";
+import { enqueueCollectionSync } from "@/lib/campaignLedger";
+import { audioManager } from "@/lib/audioManager";
 import "@/components/games/games-premium.css";
+
 
 export const Route = createFileRoute("/games/$mode/$slug")({
   head: () => ({ meta: [{ title: "تحدّي تاريخي — إرث" }] }),
@@ -37,6 +41,8 @@ function GamePlayPage() {
   const [failed, setFailed] = useState(false);
   const [retryNonce, setRetryNonce] = useState(0);
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
+  const [unlockToast, setUnlockToast] = useState<number>(0); // count of newly unlocked museum items
+
 
   // Exit confirmation
   const [exitOpen, setExitOpen] = useState(false);
@@ -95,11 +101,24 @@ function GamePlayPage() {
       if (firstTime) {
         if (game.xp_reward > 0) addPoints(game.xp_reward);
         if (game.coin_reward > 0) addDinars(game.coin_reward);
+        // Museum unlocks — reuse the Campaign pipeline (user_collection).
+        const unlockIds = extractMuseumUnlocks({
+          metadata: (game.metadata as Record<string, unknown> | null) ?? undefined,
+        });
+        if (unlockIds.length) {
+          const items = museumUnlocksToCollectionItems(unlockIds);
+          if (items.length) {
+            enqueueCollectionSync(items);
+            audioManager.playSfx("unlock-reward", { dedupeKey: `game-unlock:${game.id}` });
+            setUnlockToast(items.length);
+          }
+        }
       }
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
   }, [game, isLast, stageIdx, addPoints, addDinars]);
+
 
   // Attempts pipeline: one wrong attempt at a time.
   const handleWrong = useCallback(() => {
@@ -291,7 +310,15 @@ function GamePlayPage() {
               <div className="mt-2 grid w-full max-w-md grid-cols-2 gap-2">
                 <RewardChip icon={<Sparkles className="h-4 w-4" />} value={`+${game.xp_reward}`} label="خبرة" />
                 <RewardChip icon={<Coins className="h-4 w-4" />} value={`+${game.coin_reward}`} label="دينار" />
+                {unlockToast > 0 && (
+                  <div className="col-span-2 flex items-center justify-center gap-2 rounded-lg border border-amber-400/50 bg-amber-500/10 px-3 py-2 irth-gold-glow">
+                    <Landmark className="h-4 w-4 text-amber-300" />
+                    <span className="text-sm font-bold text-amber-100">مقتنى جديد!</span>
+                    <span className="text-[11px] text-slate-300">أُضيف {unlockToast} {unlockToast === 1 ? "أثرٌ" : "آثار"} إلى متحفك</span>
+                  </div>
+                )}
               </div>
+
 
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {relatedEntity && (
