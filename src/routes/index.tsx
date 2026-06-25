@@ -468,7 +468,13 @@ function Index() {
           </div>
 
           {/* Slide content */}
-          <div className="absolute inset-x-0 bottom-0 z-10 px-6 pb-12">
+          <div
+            className="absolute inset-x-0 bottom-0 z-10 px-6 pb-12"
+            style={{
+              transform: `translate3d(${dragX}px, 0, 0)`,
+              transition: isDragging ? "none" : "transform 320ms cubic-bezier(.22,.61,.36,1)",
+            }}
+          >
             {slide && (
               <div key={`slide-${slideIdx}`} className="animate-curtain max-w-xl">
                 <div className="flex items-center gap-2 text-[11px] text-gold">
