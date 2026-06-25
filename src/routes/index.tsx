@@ -425,7 +425,14 @@ function Index() {
     <AppShell>
       {/* ============ 1. DYNAMIC HERO CAROUSEL ============ */}
       <section className="relative -mt-2 overflow-hidden">
-        <div className="relative h-[78vh] min-h-[560px] w-full overflow-hidden">
+        <div
+          ref={heroRef}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
+          className="relative h-[78vh] min-h-[560px] w-full overflow-hidden touch-pan-y select-none"
+        >
           {slides.map((s, i) => (
             <img
               key={`${s.kind}-${i}`}
