@@ -7,42 +7,46 @@ import {
   type AtlasEntityKind,
   type AtlasEntityRow,
 } from "@/lib/atlas-entities";
-import { ERAS } from "@/lib/app-constants";
 import {
   KIND_COLOR,
   worldFacets,
   worldForEntity,
   WORLD_LABEL_AR,
+  HISTORICAL_PERIODS,
+  periodForEntity,
+  type HistoricalPeriodId,
 } from "@/lib/atlas/atlas-visual";
 
-const ERA_LABEL_AR: Record<string, string> = Object.fromEntries(
-  ERAS.map((e) => [e.id, e.name]),
+const PERIOD_LABEL: Record<string, string> = Object.fromEntries(
+  HISTORICAL_PERIODS.map((p) => [p.id, p.label_ar]),
 );
-
-function eraLabel(id: string): string {
-  return ERA_LABEL_AR[id] ?? id;
-}
 
 export type AtlasFacets = {
   kinds: { id: AtlasEntityKind; count: number }[];
-  eras: { id: string; label: string; count: number }[];
+  /** Historical periods (broader than worlds). */
+  eras: { id: HistoricalPeriodId; label: string; count: number }[];
   worlds: { id: string; count: number; glyph: string }[];
 };
 
 export function buildAtlasFacets(entities: AtlasEntityRow[]): AtlasFacets {
   const kindCounts = new Map<AtlasEntityKind, number>();
-  const eraCounts = new Map<string, number>();
+  const periodCounts = new Map<HistoricalPeriodId, number>();
   for (const e of entities) {
     kindCounts.set(e.kind, (kindCounts.get(e.kind) ?? 0) + 1);
-    if (e.era) eraCounts.set(e.era, (eraCounts.get(e.era) ?? 0) + 1);
+    const p = periodForEntity(e);
+    if (p) periodCounts.set(p, (periodCounts.get(p) ?? 0) + 1);
   }
+  const periodOrder = new Map(HISTORICAL_PERIODS.map((p, i) => [p.id, i]));
   return {
     kinds: Array.from(kindCounts.entries())
       .map(([id, count]) => ({ id, count }))
       .sort((a, b) => b.count - a.count),
-    eras: Array.from(eraCounts.entries())
-      .map(([id, count]) => ({ id, label: eraLabel(id), count }))
-      .sort((a, b) => b.count - a.count),
+    eras: Array.from(periodCounts.entries())
+      .map(([id, count]) => ({ id, label: PERIOD_LABEL[id] ?? id, count }))
+      .sort(
+        (a, b) =>
+          (periodOrder.get(a.id) ?? 99) - (periodOrder.get(b.id) ?? 99),
+      ),
     worlds: worldFacets(entities),
   };
 }
@@ -59,7 +63,7 @@ export function filterAtlasEntities(
   const q = filters.search.trim().toLowerCase();
   return entities.filter((e) => {
     if (filters.kind && e.kind !== filters.kind) return false;
-    if (filters.era && e.era !== filters.era) return false;
+    if (filters.era && periodForEntity(e) !== filters.era) return false;
     if (filters.world && worldForEntity(e) !== filters.world) return false;
     if (q) {
       const hay = `${e.name_ar} ${e.name_en ?? ""} ${e.slug}`.toLowerCase();
