@@ -32,34 +32,12 @@ export const ERAS: { id: Era; name: string; years: string; tagline: string }[] =
 ];
 
 // ============================================================
-// LEVELS — XP curve + helper
+// LEVELS — re-exported from the progression module (single source of truth).
+// Kept here for backward compatibility with existing imports.
 // ============================================================
-export interface LevelInfo { level: number; min: number; title: string; rank: string }
-export const LEVELS: LevelInfo[] = [
-  { level: 1, min: 0,    title: "رحّالة مبتدئ",  rank: "برونزي" },
-  { level: 2, min: 120,  title: "مستكشف",        rank: "برونزي" },
-  { level: 3, min: 280,  title: "راوي إرث",    rank: "فضّي"   },
-  { level: 4, min: 500,  title: "مؤرّخ",          rank: "فضّي"   },
-  { level: 5, min: 800,  title: "عالم تاريخ",     rank: "ذهبي"   },
-  { level: 6, min: 1200, title: "شيخ المؤرّخين", rank: "ذهبي"   },
-  { level: 7, min: 1700, title: "حكيم الأمّة",   rank: "بلاتيني" },
-  { level: 8, min: 2400, title: "إمام التاريخ",   rank: "بلاتيني" },
-  { level: 9, min: 3200, title: "سيّد إرث",   rank: "أسطوري" },
-  { level: 10, min: 4500, title: "أسطورة التاريخ", rank: "أسطوري" },
-];
+export { LEVELS, levelFor, MAX_LEVEL, RANK_TITLES } from "./progression";
+export type { LevelInfo, LevelLookup, LevelReward, LevelCosmetic, Rank, CosmeticKind } from "./progression";
 
-export function levelFor(points: number) {
-  let current = LEVELS[0];
-  let next: LevelInfo | null = LEVELS[1] ?? null;
-  for (let i = 0; i < LEVELS.length; i++) {
-    if (points >= LEVELS[i].min) {
-      current = LEVELS[i];
-      next = LEVELS[i + 1] ?? null;
-    }
-  }
-  const progress = next ? Math.min(1, (points - current.min) / (next.min - current.min)) : 1;
-  return { ...current, next, progress, toNext: next ? Math.max(0, next.min - points) : 0 };
-}
 
 // ============================================================
 // ACHIEVEMENTS — long-term goals (rendered with derived state)
