@@ -70,10 +70,15 @@ function ageLabel(iso?: string): string {
   return `قبل ${Math.round(h / 24)} يومًا`;
 }
 
+const MUSEUM_ENTITY_TYPES = new Set([
+  "figure", "artifact", "landmark", "city", "battle", "event",
+]);
+
 function OfflinePanel() {
   const [info, setInfo] = useState<Info | null>(null);
   const [bundledInfo, setBundledInfo] = useState<Info | null>(null);
   const [sizeBytes, setSizeBytes] = useState<number | null>(null);
+  const [museumCount, setMuseumCount] = useState<number>(0);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [report, setReport] = useState<ValidationReport | null>(null);
@@ -84,6 +89,8 @@ function OfflinePanel() {
     setInfo(v);
     const snap = await loadSnapshot();
     setSizeBytes(snap ? new Blob([JSON.stringify(snap)]).size : null);
+    const enc = (snap?.collections?.encyclopedia_entities ?? []) as Array<{ entity_type?: string }>;
+    setMuseumCount(enc.filter((e) => MUSEUM_ENTITY_TYPES.has(String(e?.entity_type))).length);
     const bundled = await loadBundledSnapshot();
     setBundledInfo(
       bundled
@@ -207,9 +214,17 @@ function OfflinePanel() {
                 <Total label="التحقيقات" value={totals.investigations ?? 0} />
                 <Total label="في مثل هذا اليوم" value={totals.today_in_history_events ?? 0} />
                 <Total label="الحقيقة اليومية" value={totals.daily_facts ?? 0} />
-                <Total label="سجل المتحف" value={totals.content_registry ?? 0} />
+                <Total label="المتحف (داخل الموسوعة)" value={museumCount} />
+                <Total label="سجل المتحف (قديم/اختياري)" value={totals.content_registry ?? 0} />
               </div>
+              <p className="text-[11px] text-slate-400">
+                المتحف يستهلك مباشرة من <code className="text-amber-200">encyclopedia_entities</code>
+                {" "}(الأنواع: شخصيات، آثار، معالم، مدن، معارك، أحداث). جدول
+                {" "}<code className="text-amber-200">content_registry</code> أصبح اختياريًا ولا يخزّن
+                نسخًا من المحتوى التاريخي.
+              </p>
             </>
+
           ) : (
             <p className="text-xs text-slate-400">لا توجد لقطة محلية بعد. اضغط «توليد لقطة».</p>
           )}
