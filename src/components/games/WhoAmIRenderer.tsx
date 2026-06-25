@@ -73,22 +73,22 @@ export function WhoAmIRenderer({ stage, onComplete }: Props) {
       </div>
 
       {/* Hints — revealed one by one */}
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {stage.hints.slice(0, revealed).map((h, i) => (
-          <li key={i} className="irth-reveal flex items-start gap-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.04] p-3"
+          <li key={i} className="irth-reveal flex items-start gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.05] p-4"
               style={{ animationDelay: `${i * 60}ms` }}>
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-amber-500/20 text-[11px] font-bold text-amber-200">{i + 1}</span>
-            <span className="text-sm leading-7 text-slate-100">{h}</span>
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-amber-500/20 text-[11px] font-bold text-amber-200">{i + 1}</span>
+            <span className="text-[15px] leading-8 text-slate-100">{h}</span>
           </li>
         ))}
       </ul>
 
-      {/* Reveal another / submit */}
+      {/* Reveal another */}
       {!done && (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-5 flex flex-wrap items-center gap-2">
           {revealed < stage.hints.length && (
             <button onClick={revealMore}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 transition hover:bg-amber-500/10">
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-2 text-xs text-amber-200 transition hover:bg-amber-500/10">
               <Lightbulb className="h-3.5 w-3.5" /> اكشف تلميحًا آخر
               <span className="text-amber-400/70">({revealed + 1}/{stage.hints.length})</span>
             </button>
@@ -97,23 +97,30 @@ export function WhoAmIRenderer({ stage, onComplete }: Props) {
         </div>
       )}
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <input
           dir="rtl"
           value={guess}
           onChange={(e) => setGuess(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           disabled={done}
-          placeholder="من هو/هي؟"
-          className={`flex-1 rounded-lg border bg-slate-950/80 p-3 text-sm text-slate-100 focus:outline-none ${
+          placeholder="اكتب اسم الشخصية…"
+          className={`flex-1 rounded-xl border bg-slate-950/80 px-4 py-3.5 text-base text-slate-100 placeholder:text-slate-500 focus:outline-none ${
             wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"
           } ${done ? "border-emerald-500/40" : ""}`}
         />
-        <button onClick={submit} disabled={done}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50">
-          {done ? <><Sparkles className="h-4 w-4" /> صحيح</> : <><Check className="h-4 w-4" /> أجب</>}
+        <button
+          onClick={submit}
+          disabled={done || guess.trim().length === 0}
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-6 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50 sm:min-w-[140px]"
+        >
+          {done ? <><Sparkles className="h-4 w-4" /> صحيح</> : <><Check className="h-4 w-4" /> تحقق</>}
         </button>
       </div>
+      {!done && guess.trim().length === 0 && (
+        <p className="mt-2 text-[11px] text-slate-500">اكتب تخمينك ثم اضغط تحقق.</p>
+      )}
+
 
       {done && (
         <div className="irth-reveal mt-5 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-amber-500/5 p-4">
