@@ -493,7 +493,8 @@ function CollectionPage() {
     for (const s of SECTIONS) {
       const list = supByType[s.type].data ?? [];
       for (const e of list) {
-        if (s.type === "artifact" && !isArtifactVisible(e.slug, e.metadata, e.metadata?.legacy_id)) continue;
+        const meta = (e.metadata as any) ?? {};
+        if (s.type === "artifact" && !isArtifactVisible(e.slug, meta, meta.legacy_id)) continue;
         if (!isEntityUnlocked(s.type, e.slug, e.metadata)) continue;
         const r = rarityFromMetadata(e.metadata, defaultRarity(s.type));
         tally[r] += 1;
