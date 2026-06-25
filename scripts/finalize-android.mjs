@@ -8,17 +8,14 @@
  *      inside the Android WebView regardless of how Capacitor serves them.
  *
  * Strategy:
- *   - If TanStack Start's SPA prerender already produced an index.html
- *     somewhere under dist/android, surface it at the root and rewrite
- *     absolute asset paths to relative.
- *   - Otherwise, synthesize a minimal SPA shell from Vite's manifest
- *     (`.vite/manifest.json`) using the discovered client entry chunk
- *     and its CSS imports.
+ *   - The Android build is a normal Vite SPA build. It must emit a root
+ *     index.html. This script only rewrites absolute asset URLs to relative
+ *     WebView-safe URLs and verifies the output shape before Capacitor sync.
  *
  * This runs as part of `npm run sync:android` so the developer never has to
  * hand-edit index.html.
  */
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync, copyFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, relative, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -46,72 +43,29 @@ function rewriteRelative(html) {
     .replace(/<base\s+href=["'][^"']*["']\s*\/?>(\s*)/i, "");
 }
 
-function findPrerenderedIndex() {
-  const candidates = walk(OUT_DIR).filter((p) => p.endsWith("index.html"));
-  if (candidates.length === 0) return null;
-  // Prefer root-level index.html if present, otherwise shallowest.
-  candidates.sort((a, b) => a.split(/[\\/]/).length - b.split(/[\\/]/).length);
-  return candidates[0];
-}
-
-function synthesizeFromManifest() {
-  const manifestPaths = [
-    join(OUT_DIR, ".vite", "manifest.json"),
-    join(OUT_DIR, "manifest.json"),
-  ];
-  const manifestPath = manifestPaths.find(existsSync);
-  if (!manifestPath) return false;
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-
-  // Find the entry chunk.
-  const entry = Object.values(manifest).find((e) => e && e.isEntry);
-  if (!entry) return false;
-
-  const cssLinks = (entry.css || [])
-    .map((href) => `    <link rel="stylesheet" href="./${href}">`)
-    .join("\n");
-
-  const html = `<!doctype html>
-<html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>إرث</title>
-${cssLinks}
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="./${entry.file}"></script>
-  </body>
-</html>
-`;
-  writeFileSync(TARGET, html, "utf8");
-  return true;
-}
-
 function main() {
   if (!existsSync(OUT_DIR)) {
     console.error(`[finalize-android] missing ${OUT_DIR}; did the vite build run?`);
     process.exit(1);
   }
 
-  const found = findPrerenderedIndex();
-  if (found && found !== TARGET) {
-    const html = rewriteRelative(readFileSync(found, "utf8"));
-    mkdirSync(dirname(TARGET), { recursive: true });
-    writeFileSync(TARGET, html, "utf8");
-    console.log(`[finalize-android] moved ${relative(ROOT, found)} -> ${relative(ROOT, TARGET)}`);
-  } else if (found === TARGET) {
-    const html = rewriteRelative(readFileSync(TARGET, "utf8"));
-    writeFileSync(TARGET, html, "utf8");
-    console.log(`[finalize-android] rewrote asset URLs in ${relative(ROOT, TARGET)}`);
-  } else {
-    console.log("[finalize-android] no prerendered index.html found; synthesizing from manifest...");
-    if (!synthesizeFromManifest()) {
-      console.error("[finalize-android] failed: no index.html and no vite manifest found in dist/android.");
-      process.exit(1);
+  if (!existsSync(TARGET)) {
+    const serverFiles = walk(join(OUT_DIR, "server"));
+    if (serverFiles.length > 0) {
+      console.error("[finalize-android] failed: Android build emitted TanStack Start server output instead of a static SPA root.");
+    } else {
+      console.error("[finalize-android] failed: dist/android/index.html was not emitted by Vite.");
     }
-    console.log(`[finalize-android] wrote ${relative(ROOT, TARGET)}`);
+    process.exit(1);
+  }
+
+  const html = rewriteRelative(readFileSync(TARGET, "utf8"));
+  writeFileSync(TARGET, html, "utf8");
+  console.log(`[finalize-android] verified ${relative(ROOT, TARGET)}`);
+
+  if (!existsSync(join(OUT_DIR, "assets"))) {
+    console.error("[finalize-android] failed: dist/android/assets is missing.");
+    process.exit(1);
   }
 
   // Sanity check
