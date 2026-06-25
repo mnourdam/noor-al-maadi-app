@@ -190,7 +190,10 @@ function ProfilePage() {
                 <div className="mt-3">
                   <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
                     <span className="inline-flex items-center gap-1 text-gold/80"><Sparkles className="size-3" /> الخبرة</span>
-                    <span className="font-display text-foreground/80">{Math.round(lvl.progress * 100)}%</span>
+                    <span className="font-display text-foreground/80">
+                      {profile.points.toLocaleString("en-US")}
+                      {lvl.next ? ` / ${lvl.next.min.toLocaleString("en-US")}` : " · أقصى مستوى"}
+                    </span>
                   </div>
                   <div className="relative h-2 overflow-hidden rounded-full bg-white/10">
                     <div
@@ -198,6 +201,13 @@ function ProfilePage() {
                       style={{ width: `${Math.round(lvl.progress * 100)}%` }}
                     />
                   </div>
+                  {lvl.next && (
+                    <p className="mt-1.5 text-[10px] text-muted-foreground">
+                      المتبقي <span className="font-display text-foreground/80">{lvl.toNext.toLocaleString("en-US")}</span> نقطة للوصول إلى
+                      {" "}<span className="text-gold">{lvl.next.title}</span>
+                      {" "}<span className="text-foreground/60">(م.{lvl.next.level})</span>
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
