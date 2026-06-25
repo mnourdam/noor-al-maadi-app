@@ -233,7 +233,7 @@ function GamePlayPage() {
               key={`${game.id}-${stageIdx}-${retryNonce}`}
               seconds={timerSeconds}
               paused={stageDone || failed}
-              onExpire={() => { sfx("timeout"); handleWrong(); }}
+              onExpire={handleTimeout}
             />
             <div className="hidden text-end text-[11px] text-slate-400 sm:block">
               <p>الوقت المتاح</p>
