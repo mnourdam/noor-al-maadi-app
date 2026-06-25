@@ -39,6 +39,7 @@ function GamePlayPage() {
   // Attempts + fail flow
   const [wrongCount, setWrongCount] = useState(0);
   const [failed, setFailed] = useState(false);
+  const [failReason, setFailReason] = useState<"attempts" | "timeout">("attempts");
   const [retryNonce, setRetryNonce] = useState(0);
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
   const [unlockToast, setUnlockToast] = useState<number>(0); // count of newly unlocked museum items
@@ -79,6 +80,7 @@ function GamePlayPage() {
     setStageDone(false);
     setWrongCount(0);
     setFailed(false);
+    setFailReason("attempts");
   }, [stageIdx, retryNonce]);
 
   // Beforeunload protection while a stage is in progress
@@ -94,6 +96,8 @@ function GamePlayPage() {
 
   const handleComplete = useCallback(async (score: number) => {
     if (!game || game === "loading") return;
+    // Timeout / attempts failure must block any reward pipeline.
+    if (failed || stageDone) return;
     setStageDone(true);
     if (isLast) {
       setFinalScore(score);
@@ -117,7 +121,19 @@ function GamePlayPage() {
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
-  }, [game, isLast, stageIdx, addPoints, addDinars]);
+  }, [game, isLast, stageIdx, failed, stageDone, addPoints, addDinars]);
+
+  // Timeout pipeline: instant fail, lose one heart, no rewards.
+  const handleTimeout = useCallback(() => {
+    if (!game || game === "loading" || failed || stageDone) return;
+    sfx("timeout");
+    setFailReason("timeout");
+    setFailed(true);
+    const dedupKey = `game:${game.id}:stage:${stageIdx}:cycle:${retryNonce}:timeout`;
+    const heartsAfter = loseHeartOnce(dedupKey);
+    if (heartsAfter <= 0) setShowOutOfHearts(true);
+  }, [game, failed, stageDone, stageIdx, retryNonce, loseHeartOnce]);
+
 
 
   // Attempts pipeline: one wrong attempt at a time.
@@ -127,6 +143,7 @@ function GamePlayPage() {
       const n = w + 1;
       if (n >= maxAttempts) {
         // Stage failed → lose exactly one heart for this attempt-cycle.
+        setFailReason("attempts");
         setFailed(true);
         const dedupKey = `game:${game.id}:stage:${stageIdx}:cycle:${retryNonce}`;
         const heartsAfter = loseHeartOnce(dedupKey);
@@ -216,7 +233,7 @@ function GamePlayPage() {
               key={`${game.id}-${stageIdx}-${retryNonce}`}
               seconds={timerSeconds}
               paused={stageDone || failed}
-              onExpire={() => { sfx("timeout"); handleWrong(); }}
+              onExpire={handleTimeout}
             />
             <div className="hidden text-end text-[11px] text-slate-400 sm:block">
               <p>الوقت المتاح</p>
@@ -259,8 +276,12 @@ function GamePlayPage() {
               <div className="grid h-14 w-14 place-items-center rounded-full border border-rose-400/40 bg-rose-500/15">
                 <Heart className="h-7 w-7 text-rose-300" />
               </div>
-              <p className="text-[11px] uppercase tracking-[0.35em] text-rose-200/80">لم تكتمل المرحلة هذه المرة</p>
-              <h2 className="text-lg font-bold text-rose-100">كنت قريبًا — جرّب مرّة أخرى</h2>
+              <p className="text-[11px] uppercase tracking-[0.35em] text-rose-200/80">
+                {failReason === "timeout" ? "انتهى الوقت" : "لم تكتمل المرحلة هذه المرة"}
+              </p>
+              <h2 className="text-lg font-bold text-rose-100">
+                {failReason === "timeout" ? "لم تُكمل التحدي في الوقت المحدد." : "كنت قريبًا — جرّب مرّة أخرى"}
+              </h2>
               <p className="max-w-sm text-xs leading-6 text-slate-300">
                 خسرت قلبًا واحدًا من هذه المحاولة. أعد المحاولة الآن أو عُد لاحقًا بقلوب جديدة.
               </p>
@@ -269,13 +290,13 @@ function GamePlayPage() {
                   onClick={retry}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400"
                 >
-                  <RotateCcw className="h-4 w-4" /> أعد المحاولة
+                  <RotateCcw className="h-4 w-4" /> إعادة المحاولة
                 </button>
                 <button
                   onClick={() => requestNavigate("/adventure")}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-amber-400"
                 >
-                  <Compass className="h-4 w-4" /> الخروج إلى المغامرة
+                  <Compass className="h-4 w-4" /> العودة للتحديات
                 </button>
               </div>
             </div>
