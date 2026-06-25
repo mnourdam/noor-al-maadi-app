@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Irth</string>
-    <string name="title_activity_main">Irth</string>
+    <string name="app_name">إرث</string>
+    <string name="title_activity_main">إرث</string>
     <string name="package_name">app.lovable.irth</string>
     <string name="custom_url_scheme">app.lovable.irth</string>
 </resources>
