@@ -51,7 +51,11 @@ export default defineConfig({
     },
   },
   plugins: [
-    tanstackRouter({ disableLogging: true }),
+    tanstackRouter({
+      target: "react",
+      enableRouteGeneration: false,
+      disableLogging: true,
+    }),
     tailwindcss(),
     react(),
     tsconfigPaths({ projects: ["./tsconfig.json"] }),
