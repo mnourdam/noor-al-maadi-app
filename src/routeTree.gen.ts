@@ -78,6 +78,7 @@ import { Route as AdminAtlasRepairRouteImport } from './routes/admin.atlas-repai
 import { Route as AdminAtlasImportRouteImport } from './routes/admin.atlas-import'
 import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-entities'
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
 import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
@@ -436,6 +437,11 @@ const AdminAtlasCalibrationRoute = AdminAtlasCalibrationRouteImport.update({
   path: '/admin/atlas-calibration',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/admin/analytics',
+  path: '/admin/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EncyclopediaTypeTypeRoute = EncyclopediaTypeTypeRouteImport.update({
   id: '/type/$type',
   path: '/type/$type',
@@ -492,6 +498,7 @@ export interface FileRoutesByFullPath {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
   '/admin/atlas-import': typeof AdminAtlasImportRoute
@@ -567,6 +574,7 @@ export interface FileRoutesByTo {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
   '/admin/atlas-import': typeof AdminAtlasImportRoute
@@ -645,6 +653,7 @@ export interface FileRoutesById {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
   '/admin/atlas-import': typeof AdminAtlasImportRoute
@@ -724,6 +733,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/admin/analytics'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
     | '/admin/atlas-import'
@@ -799,6 +809,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/admin/analytics'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
     | '/admin/atlas-import'
@@ -876,6 +887,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/admin/analytics'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
     | '/admin/atlas-import'
@@ -954,6 +966,7 @@ export interface RootRouteChildren {
   ShareCardRoute: typeof ShareCardRoute
   TermsRoute: typeof TermsRoute
   TimelineRoute: typeof TimelineRoute
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminAtlasCalibrationRoute: typeof AdminAtlasCalibrationRoute
   AdminAtlasEntitiesRoute: typeof AdminAtlasEntitiesRoute
   AdminAtlasImportRoute: typeof AdminAtlasImportRoute
@@ -1486,6 +1499,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAtlasCalibrationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/admin/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/encyclopedia/type/$type': {
       id: '/encyclopedia/type/$type'
       path: '/type/$type'
@@ -1591,6 +1611,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShareCardRoute: ShareCardRoute,
   TermsRoute: TermsRoute,
   TimelineRoute: TimelineRoute,
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminAtlasCalibrationRoute: AdminAtlasCalibrationRoute,
   AdminAtlasEntitiesRoute: AdminAtlasEntitiesRoute,
   AdminAtlasImportRoute: AdminAtlasImportRoute,
