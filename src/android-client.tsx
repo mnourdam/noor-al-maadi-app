@@ -41,6 +41,37 @@ if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
 }
 
+// Capacitor APK builds embed Supabase config at build time via Vite env vars.
+// If they are missing, surface a clear setup screen rather than crashing into
+// the TanStack error boundary (which would just say "This page didn't load").
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+if (!supabaseUrl || !supabaseKey) {
+  const missing = [
+    !supabaseUrl ? "VITE_SUPABASE_URL" : null,
+    !supabaseKey ? "VITE_SUPABASE_PUBLISHABLE_KEY" : null,
+  ].filter(Boolean).join(", ");
+  // eslint-disable-next-line no-console
+  console.error("[android:env-missing]", missing);
+  rootElement.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b1424;color:#f3f4f6;font-family:system-ui,sans-serif;padding:24px;text-align:center" dir="rtl">
+      <div style="max-width:420px">
+        <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;color:#d4a056">إعداد مطلوب</h1>
+        <p style="font-size:14px;line-height:1.7;opacity:.85;margin:0 0 16px">
+          هذا البناء المحلي لتطبيق أندرويد يحتاج إلى مفاتيح Supabase وقت البناء.
+        </p>
+        <p style="font-size:12px;line-height:1.7;opacity:.7;margin:0 0 16px;text-align:left;direction:ltr;background:#111c2f;padding:12px;border-radius:8px;font-family:ui-monospace,monospace">
+          # .env.local (project root)<br/>
+          VITE_SUPABASE_URL=...<br/>
+          VITE_SUPABASE_PUBLISHABLE_KEY=...
+        </p>
+        <p style="font-size:12px;opacity:.6;margin:0">المتغيرات المفقودة: ${missing}</p>
+      </div>
+    </div>`;
+  throw new Error("Stop mount: missing Supabase env for Android build.");
+}
+
+
 try {
   createRoot(rootElement).render(
     <StrictMode>

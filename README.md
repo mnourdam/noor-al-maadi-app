@@ -57,6 +57,23 @@ Produces `dist/android/index.html` plus hashed assets. This script is
 completely independent of `npm run build` — Lovable preview and deploy are
 not affected.
 
+#### Required env vars (local APK builds)
+
+Lovable Cloud only injects env vars inside the Lovable preview. For local
+APK builds the Vite Android config (`vite.android.config.ts`) reads
+`.env` / `.env.local` from the **project root** (`envDir`). Create
+`.env.local` with the project's Supabase publishable credentials:
+
+```
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-or-anon-key>
+```
+
+If these are missing at build time, the APK will boot to a clear "إعداد
+مطلوب" setup screen (not the generic error boundary) listing the missing
+variables.
+
+
 ### Sync the web bundle into the Android project
 
 ```bat
