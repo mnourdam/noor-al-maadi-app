@@ -256,9 +256,9 @@ function AdminUsers() {
               </thead>
               <tbody>
                 {loading && rows.length === 0 ? (
-                  <tr><td colSpan={11} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
+                  <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={11} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
+                  <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
                 ) : (
                   rows.map((r) => (
                     <tr key={r.id} onClick={() => setSelectedId(r.id)} className="cursor-pointer border-t border-slate-800/70 hover:bg-slate-800/40">
@@ -266,7 +266,9 @@ function AdminUsers() {
                       <td className="px-3 py-2 text-slate-300">@{r.username}</td>
                       <td className="px-3 py-2 text-xs text-slate-400" dir="ltr">{r.email ?? "—"}</td>
                       <td className="px-3 py-2"><TypeBadge t={r.account_type} /></td>
+                      <td className="px-3 py-2"><RolesChips roles={r.roles} /></td>
                       <td className="px-3 py-2"><StatusBadge status={r.account_status} /></td>
+
                       <td className="px-3 py-2 text-amber-300">{r.level}</td>
                       <td className="px-3 py-2 text-slate-300">{r.xp.toLocaleString("en-US")}</td>
                       <td className="px-3 py-2 text-emerald-300">{r.dinars.toLocaleString("en-US")}</td>
