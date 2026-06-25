@@ -28,10 +28,12 @@ import { Route as ContentAuditRouteImport } from './routes/content-audit'
 import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdventureRouteImport } from './routes/adventure'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorldsIndexRouteImport } from './routes/worlds.index'
+import { Route as GamesIndexRouteImport } from './routes/games.index'
 import { Route as EncyclopediaIndexRouteImport } from './routes/encyclopedia.index'
 import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -81,6 +83,7 @@ import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-ent
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
+import { Route as GamesModeSlugRouteImport } from './routes/games.$mode.$slug'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
 import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
@@ -184,6 +187,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdventureRoute = AdventureRouteImport.update({
+  id: '/adventure',
+  path: '/adventure',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AchievementsRoute = AchievementsRouteImport.update({
   id: '/achievements',
   path: '/achievements',
@@ -202,6 +210,11 @@ const IndexRoute = IndexRouteImport.update({
 const WorldsIndexRoute = WorldsIndexRouteImport.update({
   id: '/worlds/',
   path: '/worlds/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesIndexRoute = GamesIndexRouteImport.update({
+  id: '/games/',
+  path: '/games/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EncyclopediaIndexRoute = EncyclopediaIndexRouteImport.update({
@@ -455,6 +468,11 @@ const AdminGamesIndexRoute = AdminGamesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminGamesRoute,
 } as any)
+const GamesModeSlugRoute = GamesModeSlugRouteImport.update({
+  id: '/games/$mode/$slug',
+  path: '/games/$mode/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EncyclopediaTypeTypeRoute = EncyclopediaTypeTypeRouteImport.update({
   id: '/type/$type',
   path: '/type/$type',
@@ -497,6 +515,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
+  '/adventure': typeof AdventureRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
@@ -564,12 +583,14 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
+  '/games/': typeof GamesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
+  '/games/$mode/$slug': typeof GamesModeSlugRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
@@ -578,6 +599,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
+  '/adventure': typeof AdventureRoute
   '/auth': typeof AuthRoute
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
@@ -642,12 +664,14 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
+  '/games': typeof GamesIndexRoute
   '/worlds': typeof WorldsIndexRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
+  '/games/$mode/$slug': typeof GamesModeSlugRoute
   '/admin/games': typeof AdminGamesIndexRoute
   '/campaigns/imported/$id': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
@@ -657,6 +681,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
+  '/adventure': typeof AdventureRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
@@ -724,12 +749,14 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
+  '/games/': typeof GamesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
+  '/games/$mode/$slug': typeof GamesModeSlugRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
@@ -740,6 +767,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/achievements'
+    | '/adventure'
     | '/auth'
     | '/campaigns'
     | '/collection'
@@ -807,12 +835,14 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/campaigns/'
     | '/encyclopedia/'
+    | '/games/'
     | '/worlds/'
     | '/admin/games/$mode'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
+    | '/games/$mode/$slug'
     | '/admin/games/'
     | '/campaigns/imported/$id/'
     | '/campaigns/imported/$id/chapter/$chapter'
@@ -821,6 +851,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/achievements'
+    | '/adventure'
     | '/auth'
     | '/collection'
     | '/content-audit'
@@ -885,12 +916,14 @@ export interface FileRouteTypes {
     | '/admin'
     | '/campaigns'
     | '/encyclopedia'
+    | '/games'
     | '/worlds'
     | '/admin/games/$mode'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
+    | '/games/$mode/$slug'
     | '/admin/games'
     | '/campaigns/imported/$id'
     | '/campaigns/imported/$id/chapter/$chapter'
@@ -899,6 +932,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/achievements'
+    | '/adventure'
     | '/auth'
     | '/campaigns'
     | '/collection'
@@ -966,12 +1000,14 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/campaigns/'
     | '/encyclopedia/'
+    | '/games/'
     | '/worlds/'
     | '/admin/games/$mode'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
+    | '/games/$mode/$slug'
     | '/admin/games/'
     | '/campaigns/imported/$id/'
     | '/campaigns/imported/$id/chapter/$chapter'
@@ -981,6 +1017,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AchievementsRoute: typeof AchievementsRoute
+  AdventureRoute: typeof AdventureRoute
   AuthRoute: typeof AuthRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
   CollectionRoute: typeof CollectionRoute
@@ -1046,7 +1083,9 @@ export interface RootRouteChildren {
   UUsernameRoute: typeof UUsernameRoute
   WorldsSlugRoute: typeof WorldsSlugRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  GamesIndexRoute: typeof GamesIndexRoute
   WorldsIndexRoute: typeof WorldsIndexRoute
+  GamesModeSlugRoute: typeof GamesModeSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1184,6 +1223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/adventure': {
+      id: '/adventure'
+      path: '/adventure'
+      fullPath: '/adventure'
+      preLoaderRoute: typeof AdventureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/achievements': {
       id: '/achievements'
       path: '/achievements'
@@ -1210,6 +1256,13 @@ declare module '@tanstack/react-router' {
       path: '/worlds'
       fullPath: '/worlds/'
       preLoaderRoute: typeof WorldsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games/': {
+      id: '/games/'
+      path: '/games'
+      fullPath: '/games/'
+      preLoaderRoute: typeof GamesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/encyclopedia/': {
@@ -1555,6 +1608,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGamesIndexRouteImport
       parentRoute: typeof AdminGamesRoute
     }
+    '/games/$mode/$slug': {
+      id: '/games/$mode/$slug'
+      path: '/games/$mode/$slug'
+      fullPath: '/games/$mode/$slug'
+      preLoaderRoute: typeof GamesModeSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/encyclopedia/type/$type': {
       id: '/encyclopedia/type/$type'
       path: '/type/$type'
@@ -1662,6 +1722,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AchievementsRoute: AchievementsRoute,
+  AdventureRoute: AdventureRoute,
   AuthRoute: AuthRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
   CollectionRoute: CollectionRoute,
@@ -1727,7 +1788,9 @@ const rootRouteChildren: RootRouteChildren = {
   UUsernameRoute: UUsernameRoute,
   WorldsSlugRoute: WorldsSlugRoute,
   AdminIndexRoute: AdminIndexRoute,
+  GamesIndexRoute: GamesIndexRoute,
   WorldsIndexRoute: WorldsIndexRoute,
+  GamesModeSlugRoute: GamesModeSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
