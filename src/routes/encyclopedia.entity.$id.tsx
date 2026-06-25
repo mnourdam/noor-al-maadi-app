@@ -131,10 +131,7 @@ function EntityPage() {
   const typeLabel = isScholar
     ? "عالم"
     : TYPE_LABEL[entity.entity_type] ?? entity.entity_type;
-  const glyph =
-    (typeof meta.glyph === "string" && (meta.glyph as string)) ||
-    SUPA_GLYPH[entity.entity_type] ||
-    "📜";
+  const HeroIcon = iconForType(isScholar ? "scholar" : entity.entity_type);
 
   return (
     <AppShell>
@@ -145,8 +142,8 @@ function EntityPage() {
 
         <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
           <div className="flex items-start gap-3">
-            <span className="grid size-14 place-items-center rounded-2xl bg-black/40 text-3xl ring-1 ring-white/10">
-              {glyph}
+            <span className="grid size-14 place-items-center rounded-2xl bg-black/40 ring-1 ring-white/10 text-gold">
+              <HeroIcon className="size-7" strokeWidth={1.4} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] tracking-[0.3em] text-gold/80">{typeLabel}</p>
