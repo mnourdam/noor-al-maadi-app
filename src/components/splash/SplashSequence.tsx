@@ -25,7 +25,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { pickSplashQuote, type SplashQuote } from "./quoteProvider";
-import { pickSplashArtwork, preloadImage } from "./artworkProvider";
+import { pickSplashArtwork, preloadImage, type SplashFraming } from "./artworkProvider";
 import { playSplashSfx } from "./splashSfx";
 import { SplashLogoReveal } from "./SplashLogoReveal";
 
