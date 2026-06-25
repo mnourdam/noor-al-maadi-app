@@ -303,9 +303,10 @@ export function AtlasStage({
             entities={entities}
             selectedId={selectedId}
             inv={inv}
-            scale={view.scale}
+            labelTier={labelTier}
             onSelect={onSelect}
           />
+
         </g>
       </svg>
 
