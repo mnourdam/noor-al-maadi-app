@@ -1,0 +1,23 @@
+{
+  "snapshot_version": 2,
+  "generated_at": "1970-01-01T00:00:00.000Z",
+  "source": "bundled",
+  "content_counts": {
+    "encyclopedia_entities": 0,
+    "admin_campaigns": 0,
+    "investigations": 0,
+    "today_in_history_events": 0,
+    "daily_facts": 0,
+    "atlas_entities": 0,
+    "content_registry": 0
+  },
+  "collections": {
+    "encyclopedia_entities": [],
+    "admin_campaigns": [],
+    "investigations": [],
+    "today_in_history_events": [],
+    "daily_facts": [],
+    "atlas_entities": [],
+    "content_registry": []
+  }
+}

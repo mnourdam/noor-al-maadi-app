@@ -150,6 +150,10 @@ function RootComponent() {
     // PR3: bootstrap campaign-ledger sync flush (online + visibility events).
     import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
 
+    // Offline Core Content: hydrate from bundled snapshot on first launch,
+    // and refresh local cache from Supabase in the background when online.
+    import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
+
     // (registry → user_collection migration removed; user_collection is authoritative)
     const onOnline = () => {};
     window.addEventListener("online", onOnline);
