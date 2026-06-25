@@ -263,15 +263,18 @@ function AdminUsers() {
                   <th className="px-3 py-2">إحالات</th>
                   <th className="px-3 py-2">آخر نشاط</th>
                   <th className="px-3 py-2">انضم</th>
+                  {isManager && <th className="px-3 py-2">إجراءات</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading && rows.length === 0 ? (
-                  <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
+                  <tr><td colSpan={isManager ? 13 : 12} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
+                  <tr><td colSpan={isManager ? 13 : 12} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
                 ) : (
-                  rows.map((r) => (
+                  rows.map((r) => {
+                    const isSelf = currentUserId === r.id;
+                    return (
                     <tr key={r.id} onClick={() => setSelectedId(r.id)} className="cursor-pointer border-t border-slate-800/70 hover:bg-slate-800/40">
                       <td className="px-3 py-2 font-medium text-slate-100">{r.display_name ?? "—"}</td>
                       <td className="px-3 py-2 text-slate-300">@{r.username}</td>
@@ -286,12 +289,26 @@ function AdminUsers() {
                       <td className="px-3 py-2 text-slate-300">{r.referrals_count}</td>
                       <td className="px-3 py-2 text-xs text-slate-400" dir="ltr">{fmtDate(r.last_active)}</td>
                       <td className="px-3 py-2 text-xs text-slate-400" dir="ltr">{fmtDate(r.join_date)}</td>
+                      {isManager && (
+                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            disabled={isSelf}
+                            title={isSelf ? "لا يمكنك حذف حسابك الحالي" : "حذف نهائي"}
+                            onClick={() => setDeleteTarget(r)}
+                            className="inline-flex items-center gap-1 rounded border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-xs text-rose-200 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> حذف
+                          </button>
+                        </td>
+                      )}
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
+
           <div className="flex items-center justify-between gap-2 border-t border-slate-800 bg-slate-900/60 px-4 py-2 text-xs text-slate-400">
             <div>{pageStart}–{pageEnd} من {total}</div>
             <div className="flex items-center gap-2">
