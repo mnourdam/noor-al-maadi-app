@@ -52,7 +52,10 @@ function clueCells(clue: CrosswordClue): { r: number; c: number }[] {
   return cells;
 }
 
-export function CrosswordRenderer({ stage, onComplete }: Props) {
+export function CrosswordRenderer({
+  stage, onComplete, onWrong, attemptsLeft, maxAttempts, onPaidHint,
+}: Props) {
+
   const grid = useMemo(() => buildGrid(stage), [stage]);
   const [entries, setEntries] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
