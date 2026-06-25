@@ -334,7 +334,28 @@ function AdminUsers() {
           onCreated={() => { setAddOpen(false); setReloadKey((k) => k + 1); }}
         />
       )}
+
+      {deleteTarget && isManager && (
+        <DeletePlayerDialog
+          target={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={async () => {
+            const target = deleteTarget;
+            try {
+              await deletePlayerFn({ data: { user_id: target.id } });
+              setRows((prev) => prev.filter((u) => u.id !== target.id));
+              setTotal((t) => Math.max(0, t - 1));
+              if (selectedId === target.id) setSelectedId(null);
+              setDeleteTarget(null);
+              toast.success(`تم حذف اللاعب ${target.display_name ?? target.username} نهائيًا.`);
+            } catch (e: any) {
+              toast.error("فشل حذف اللاعب: " + (e?.message ?? String(e)));
+            }
+          }}
+        />
+      )}
     </AdminLayout>
+
   );
 }
 
