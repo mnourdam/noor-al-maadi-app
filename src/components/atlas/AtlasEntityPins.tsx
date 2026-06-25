@@ -96,6 +96,8 @@ const AtlasPin = memo(function AtlasPin({
   const { x, y } = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   if (x < 0 || x > VB_W || y < 0 || y > VB_H) return null;
+  const showPin = shouldShowPin(entity.kind, labelTier, active);
+  if (!showPin) return null;
   const r = (active ? 0.78 : 0.58) * inv * S;
   const color = KIND_COLOR[entity.kind] ?? "oklch(0.55 0.18 25)";
   const showLabel = shouldShowLabel(entity.kind, labelTier, active);
