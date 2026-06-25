@@ -35,8 +35,10 @@ export const ERAS: { id: Era; name: string; years: string; tagline: string }[] =
 // LEVELS — re-exported from the progression module (single source of truth).
 // Kept here for backward compatibility with existing imports.
 // ============================================================
+import { levelFor } from "./progression";
 export { LEVELS, levelFor, MAX_LEVEL, RANK_TITLES } from "./progression";
 export type { LevelInfo, LevelLookup, LevelReward, LevelCosmetic, Rank, CosmeticKind } from "./progression";
+
 
 
 // ============================================================
