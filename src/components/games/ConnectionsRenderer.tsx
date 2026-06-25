@@ -56,6 +56,8 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
       const flash = { l: pickedLeft, r: pickedRight };
       setWrongFlash(flash);
       sfx("wrong");
+      onWrong?.();
+
       const t = setTimeout(() => {
         setWrongFlash(null);
         setPickedLeft(null);
