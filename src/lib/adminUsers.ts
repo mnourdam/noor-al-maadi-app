@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type AccountStatus = "active" | "suspended" | "disabled";
-export type AccountType = "guest" | "registered" | "admin";
+export type AccountType = "guest" | "registered" | "editor" | "admin";
+export type AppRole = "owner" | "admin" | "editor" | "player";
 export type UserFilter =
   | ""
   | "active"
@@ -9,9 +10,11 @@ export type UserFilter =
   | "disabled"
   | "guest"
   | "registered"
+  | "editor"
   | "admin"
   | "has_referrals"
   | "no_referrals";
+
 
 export interface AdminUserRow {
   id: string;
