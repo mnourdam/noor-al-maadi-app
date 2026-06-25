@@ -189,3 +189,25 @@ export function downloadCsv(filename: string, csv: string) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// ---------- Role management (manager-only on the server) ----------
+
+export async function adminAssignRole(userId: string, role: AppRole, reason: string) {
+  const { data, error } = await supabase.rpc("admin_assign_role" as any, {
+    p_user_id: userId,
+    p_role: role,
+    p_reason: reason,
+  });
+  if (error) throw error;
+  return data as { ok: boolean; roles: string[] };
+}
+
+export async function adminRevokeRole(userId: string, role: AppRole, reason: string) {
+  const { data, error } = await supabase.rpc("admin_revoke_role" as any, {
+    p_user_id: userId,
+    p_role: role,
+    p_reason: reason,
+  });
+  if (error) throw error;
+  return data;
+}
