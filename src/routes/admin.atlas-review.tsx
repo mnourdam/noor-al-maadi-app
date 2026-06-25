@@ -62,6 +62,16 @@ function AtlasReviewPage() {
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
 
+  // Atlas Coverage — Needs Placement tab.
+  const [tab, setTab] = useState<"review" | "needs">("review");
+  const [needsRows, setNeedsRows] = useState<NeedsPlacementRow[] | null>(null);
+  const [needsLoading, setNeedsLoading] = useState(false);
+  const [needsError, setNeedsError] = useState<string | null>(null);
+  const [needsSearch, setNeedsSearch] = useState("");
+  const [needsType, setNeedsType] = useState<string>("all");
+  const [placementId, setPlacementId] = useState<string | null>(null);
+  const [placing, setPlacing] = useState(false);
+
   // Stage
   const wrapRef = useRef<HTMLDivElement>(null);
   const [wrapSize, setWrapSize] = useState({ w: 1, h: 1 });
@@ -76,6 +86,26 @@ function AtlasReviewPage() {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { reload(); }, [reload]);
+
+  const reloadNeeds = useCallback(async () => {
+    setNeedsLoading(true); setNeedsError(null);
+    try { setNeedsRows(await listNeedsPlacement()); }
+    catch (e: any) { setNeedsError(e.message ?? String(e)); }
+    finally { setNeedsLoading(false); }
+  }, []);
+  useEffect(() => {
+    if (tab === "needs" && needsRows == null) void reloadNeeds();
+  }, [tab, needsRows, reloadNeeds]);
+
+  const filteredNeeds = useMemo(() => {
+    const q = needsSearch.trim().toLowerCase();
+    return (needsRows ?? []).filter((r) => {
+      if (needsType !== "all" && r.entity_type !== needsType) return false;
+      if (q && !`${r.title} ${r.slug}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [needsRows, needsSearch, needsType]);
+
 
   useEffect(() => {
     const el = wrapRef.current; if (!el) return;
