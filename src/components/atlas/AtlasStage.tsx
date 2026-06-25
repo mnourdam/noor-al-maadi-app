@@ -9,13 +9,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
+import { ATLAS_VIEWBOX, ATLAS_ASPECT } from "@/lib/atlas/aps";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 50;
-const VB_W = 100;
-const VB_H = 60;
-const RASTER_ASPECT = VB_W / VB_H;
+// Phase 3 — viewBox is the raster's native pixel grid (APS). No distortion
+// between image and pins; both share one coordinate system.
+const VB_W = ATLAS_VIEWBOX.width;
+const VB_H = ATLAS_VIEWBOX.height;
+const RASTER_ASPECT = ATLAS_ASPECT;
 
 type View = { scale: number; tx: number; ty: number };
 const IDENTITY: View = { scale: 1, tx: 0, ty: 0 };
@@ -272,13 +275,16 @@ export function AtlasStage({
           transition: useTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
           willChange: "transform",
         }}>
+          {/* Image at native APS size; no aspect distortion. The outer
+              <svg preserveAspectRatio="xMidYMid slice"> letterboxes the
+              whole frame uniformly. Pins live in the same coord space. */}
           <image
             href={ATLAS_BASE_URL}
             x={0}
             y={0}
             width={VB_W}
             height={VB_H}
-            preserveAspectRatio="none"
+            preserveAspectRatio="xMidYMid slice"
             onLoad={() => setRasterLoaded(true)}
             style={{ imageRendering: "auto", opacity: rasterLoaded ? 1 : 0, transition: "opacity 200ms ease-out" }}
           />
@@ -292,8 +298,11 @@ export function AtlasStage({
         </g>
       </svg>
 
-      {/* Zoom controls */}
-      <div className="absolute right-4 bottom-4 flex flex-col gap-1.5">
+      {/* Zoom controls — lifted above the iOS home-bar / nav-bar. */}
+      <div
+        className="absolute right-4 flex flex-col gap-1.5"
+        style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
+      >
         <ZoomBtn label="+" onClick={() => { cancelAnimations(); setView((v) => clamp({ ...v, scale: v.scale * 1.25 })); }} />
         <ZoomBtn label="−" onClick={() => { cancelAnimations(); setView((v) => clamp({ ...v, scale: v.scale / 1.25 })); }} />
         <ZoomBtn label="⟲" onClick={() => { cancelAnimations(); setView(IDENTITY); }} />

@@ -1,13 +1,27 @@
-// Phase 0 — APS coordinate utilities.
+// Phase 3 — APS coordinate utilities.
 //
 // APS (Atlas Pixel Space): origin top-left of the v1 master, Y-down, integer
-// pixels of the 14192×7088 frozen raster. APS is the canonical storage space.
-// Everything else — viewBox positions, normalized (u,v), tile coords — is
-// derived. See docs/atlas/atlas-calibration-plan.md §1.
+// pixels of the 14192×7088 frozen raster. APS is the canonical storage space
+// AND the SVG viewBox we render into — eliminating any aspect-ratio drift
+// between the raster and the pins. The renderer letterboxes/crops via
+// `preserveAspectRatio` on the outer <svg>, never by stretching coords.
 import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
 
-/** Current SVG viewBox of the live atlas stage (see AtlasStage.tsx). */
-export const ATLAS_VIEWBOX = { width: 100, height: 60 } as const;
+/** SVG viewBox of the live atlas stage = the raster's intrinsic size. */
+export const ATLAS_VIEWBOX = {
+  width: ATLAS_V1_PIXEL_SIZE.width,
+  height: ATLAS_V1_PIXEL_SIZE.height,
+} as const;
+
+/** Aspect ratio (w/h) shared by raster and viewBox. */
+export const ATLAS_ASPECT = ATLAS_VIEWBOX.width / ATLAS_VIEWBOX.height;
+
+/**
+ * Reference scalar: pin sizes and stroke widths were originally tuned for a
+ * 100-unit-wide viewBox. Multiply by this to translate those tunings into
+ * the current APS-sized viewBox.
+ */
+export const APS_UNIT_SCALE = ATLAS_VIEWBOX.width / 100;
 
 export type ApsCoord = { x: number; y: number };
 export type ViewBoxCoord = { x: number; y: number };
@@ -30,27 +44,17 @@ export function normalizedToAps(n: NormalizedCoord): ApsCoord {
 }
 
 /**
- * APS → atlas viewBox position. The viewBox is 100×60 (display only); APS is
- * 14192×7088. Aspect ratios differ slightly (2.003 vs 1.667), so a strict
- * proportional mapping is used — the viewBox is the renderer's coordinate
- * frame, not a physical projection. Callers that need true aspect-correct
- * placement should use normalized coords + the renderer's `preserveAspectRatio`
- * behaviour.
+ * APS → atlas viewBox position. Since the viewBox is now the raster's own
+ * pixel grid, this is an identity transform — kept as a function for call-site
+ * clarity and so any future viewBox change is centralized here.
  */
 export function apsToViewBox(p: ApsCoord): ViewBoxCoord {
-  const n = apsToNormalized(p);
-  return {
-    x: n.u * ATLAS_VIEWBOX.width,
-    y: n.v * ATLAS_VIEWBOX.height,
-  };
+  return { x: p.x, y: p.y };
 }
 
 /** Atlas viewBox position → APS. Inverse of `apsToViewBox`. */
 export function viewBoxToAps(p: ViewBoxCoord): ApsCoord {
-  return normalizedToAps({
-    u: p.x / ATLAS_VIEWBOX.width,
-    v: p.y / ATLAS_VIEWBOX.height,
-  });
+  return { x: p.x, y: p.y };
 }
 
 /** Clamp an APS coord into the v1 raster bounds. */
