@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Sparkles, Layers } from "lucide-react";
+import {
+  Sparkles, Archive, Crown, Scroll, Sword, Landmark, BookOpen,
+  Compass, Feather, Gem, Star, Shield,
+} from "lucide-react";
 import type { MemoryStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
 
@@ -9,6 +12,8 @@ interface Props {
 }
 
 interface Card { id: number; pairId: number; label: string; }
+
+const ARTIFACT_ICONS = [Crown, Scroll, Sword, Landmark, BookOpen, Compass, Feather, Gem, Star, Shield];
 
 function shuffle<T>(arr: T[]): T[] {
   const a = arr.slice();
@@ -35,7 +40,9 @@ export function MemoryRenderer({ stage, onComplete }: Props) {
   const [moves, setMoves] = useState(0);
   const [done, setDone] = useState(false);
 
-  useEffect(() => { setOpen([]); setSolved(new Set()); setMerging(new Set()); setMoves(0); setDone(false); }, [stage]);
+  useEffect(() => {
+    setOpen([]); setSolved(new Set()); setMerging(new Set()); setMoves(0); setDone(false);
+  }, [stage]);
 
   const flip = (id: number) => {
     if (open.includes(id) || solved.has(id) || open.length === 2) return;
@@ -64,10 +71,10 @@ export function MemoryRenderer({ stage, onComplete }: Props) {
             const score = Math.max(40, Math.round(100 * optimal / Math.max(moves + 1, optimal)));
             onComplete(score);
           }
-        }, 600);
+        }, 650);
       } else {
         sfx("wrong");
-        setTimeout(() => setOpen([]), 800);
+        setTimeout(() => setOpen([]), 850);
       }
     }
   };
@@ -76,26 +83,45 @@ export function MemoryRenderer({ stage, onComplete }: Props) {
     <div className="relative irth-title-card overflow-hidden p-5">
       <div className="mb-4 flex items-center justify-between text-[11px] uppercase tracking-[0.3em]">
         <span className="inline-flex items-center gap-2 text-amber-300/80">
-          <Layers className="h-3.5 w-3.5" />
+          <Archive className="h-3.5 w-3.5" />
           خزانة الذاكرة
         </span>
-        <span className="text-slate-400">المحاولات: {moves}</span>
+        <span className="text-slate-400 normal-case tracking-normal">
+          المحاولات: {moves} · المطابقات: {solved.size / 2}/{stage.pairs.length}
+        </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {deck.map((c) => {
+      <p className="mb-3 text-[11px] text-slate-500">
+        كل بطاقة دُرج في خزانة المتحف. افتح اثنين متشابهين ليندمجا في قطعة واحدة.
+      </p>
+
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+        {deck.map((c, idx) => {
           const isOpen = open.includes(c.id) || solved.has(c.id);
           const isSolved = solved.has(c.id);
           const isMerging = merging.has(c.id);
+          const Icon = ARTIFACT_ICONS[c.pairId % ARTIFACT_ICONS.length];
           return (
-            <button key={c.id} onClick={() => flip(c.id)} disabled={isSolved}
-              className={`irth-flip aspect-[3/4] w-full ${isOpen ? "is-open" : ""} ${isMerging ? "irth-merge" : ""}`}>
-              <div className="irth-flip-inner">
-                <div className="irth-face irth-face-back">
-                  <span className="text-xs font-bold text-amber-300/70">إرث</span>
+            <button
+              key={c.id}
+              onClick={() => flip(c.id)}
+              disabled={isSolved}
+              aria-label={isOpen ? c.label : `درج رقم ${idx + 1}`}
+              className={`irth-drawer aspect-[3/4] w-full ${isOpen ? "is-open" : ""} ${isMerging ? "irth-merge" : ""}`}
+            >
+              <div className="irth-drawer-inner">
+                {/* Back — closed drawer */}
+                <div className="irth-face irth-drawer-back">
+                  <div className="irth-drawer-handle" aria-hidden />
+                  <span className="irth-drawer-num">{idx + 1}</span>
+                  <span className="irth-drawer-label">إرث</span>
                 </div>
-                <div className={`irth-face irth-face-front ${isSolved ? "is-solved" : ""}`}>
-                  <span className="text-[12px] leading-tight">{c.label}</span>
+                {/* Front — artifact tile */}
+                <div className={`irth-face irth-drawer-front ${isSolved ? "is-solved" : ""}`}>
+                  <span className="irth-drawer-icon">
+                    <Icon className="h-7 w-7" strokeWidth={1.4} />
+                  </span>
+                  <span className="irth-drawer-text">{c.label}</span>
                 </div>
               </div>
             </button>
@@ -106,7 +132,7 @@ export function MemoryRenderer({ stage, onComplete }: Props) {
       {done && (
         <div className="irth-reveal mt-4 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-amber-500/5 p-3 text-sm text-amber-100">
           <Sparkles className="h-4 w-4 text-amber-300" />
-          اكتملت الخزانة في {moves} محاولة.
+          اكتملت الخزانة في {moves} محاولة — كل القطع استقرّت في مكانها.
         </div>
       )}
     </div>
