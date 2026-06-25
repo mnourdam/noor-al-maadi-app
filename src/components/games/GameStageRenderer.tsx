@@ -6,18 +6,28 @@ import { MemoryRenderer } from "./MemoryRenderer";
 import { CrosswordRenderer } from "./CrosswordRenderer";
 import "./games-premium.css";
 
-interface Props {
-  mode: GameMode;
-  stage: any;
+export interface RendererCommonProps {
   onComplete: (score: number) => void;
+  /** Notify parent that a single attempt failed (for attempt tracking). */
+  onWrong?: () => void;
+  /** Remaining attempts (display only — counted by parent). */
+  attemptsLeft?: number;
+  maxAttempts?: number;
+  /** Crossword-only: try to spend dinars for a paid hint. Returns true on success. */
+  onPaidHint?: (cost: number) => boolean;
 }
 
-export function GameStageRenderer({ mode, stage, onComplete }: Props) {
+interface Props extends RendererCommonProps {
+  mode: GameMode;
+  stage: any;
+}
+
+export function GameStageRenderer({ mode, stage, ...rest }: Props) {
   switch (mode) {
-    case "chronology": return <ChronologyRenderer stage={stage} onComplete={onComplete} />;
-    case "who_am_i":   return <WhoAmIRenderer stage={stage} onComplete={onComplete} />;
-    case "connections":return <ConnectionsRenderer stage={stage} onComplete={onComplete} />;
-    case "memory":     return <MemoryRenderer stage={stage} onComplete={onComplete} />;
-    case "crossword":  return <CrosswordRenderer stage={stage} onComplete={onComplete} />;
+    case "chronology": return <ChronologyRenderer stage={stage} {...rest} />;
+    case "who_am_i":   return <WhoAmIRenderer stage={stage} {...rest} />;
+    case "connections":return <ConnectionsRenderer stage={stage} {...rest} />;
+    case "memory":     return <MemoryRenderer stage={stage} {...rest} />;
+    case "crossword":  return <CrosswordRenderer stage={stage} {...rest} />;
   }
 }
