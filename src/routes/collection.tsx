@@ -36,7 +36,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
-  Lock, MapPin, Crown, Swords, Landmark, Users, Sparkles,
+  Lock, Swords, Landmark, Users, Sparkles,
   AlertTriangle, CalendarClock, Gem, ScrollText, Building2,
   Trophy, Star, Award, Compass,
 } from "lucide-react";
