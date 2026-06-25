@@ -23,6 +23,10 @@ export default defineConfig({
         __dirname,
         "./src/shims/tanstack-react-start-server.android.ts",
       ),
+      "@/lib/teamUsers.functions": path.resolve(
+        __dirname,
+        "./src/shims/teamUsers.functions.android.ts",
+      ),
     },
     dedupe: ["react", "react-dom", "@tanstack/react-query", "@tanstack/query-core"],
   },
@@ -58,6 +62,6 @@ export default defineConfig({
     }),
     tailwindcss(),
     react(),
-    tsconfigPaths({ projects: ["./tsconfig.json"] }),
+    tsconfigPaths({ projects: [path.resolve(__dirname, "tsconfig.json")] }),
   ],
 });

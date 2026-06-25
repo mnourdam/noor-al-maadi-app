@@ -154,10 +154,12 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   await saveSnapshot(snap);
   // Best-effort: in dev sandboxes the server-fn writes public/offline-snapshot.json.
   // In production this throws and we silently ignore.
-  try {
-    const { writeBundledSnapshotFile } = await import("./offline-snapshot-write.functions");
-    await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
-  } catch { /* dev-only path; ignore in prod */ }
+  if (import.meta.env.DEV && typeof window === "undefined") {
+    try {
+      const { writeBundledSnapshotFile } = await import("./offline-snapshot-write.functions");
+      await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
+    } catch { /* dev-only path; ignore in prod */ }
+  }
   return snap;
 }
 
