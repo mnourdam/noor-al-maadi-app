@@ -577,7 +577,9 @@ function AtlasReviewPage() {
               width={RASTER.width} height={RASTER.height} draggable={false}
               alt="" style={{ display: "block", userSelect: "none" }} />
             {filtered.map((r) => {
+              if (r.aps_x == null || r.aps_y == null) return null;
               const pos = drafts[r.id] ?? { x: r.aps_x, y: r.aps_y };
+
               const focused = focusedId === r.id;
               const isSel = selected.has(r.id);
               const dirty = !!drafts[r.id] && (drafts[r.id].x !== r.aps_x || drafts[r.id].y !== r.aps_y);
