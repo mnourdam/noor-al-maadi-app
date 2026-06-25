@@ -60,19 +60,29 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
   };
 
   const exportGame = (g: GameRow) => {
-    const envelope = {
+    const meta = { ...(g.metadata ?? {}) } as Record<string, unknown>;
+    const museum = Array.isArray(meta.museum_unlocks)
+      ? (meta.museum_unlocks as string[])
+      : [];
+    // Don't double-encode museum unlocks: surface them under rewards and
+    // drop the metadata copy so re-imported envelopes stay canonical.
+    delete meta.museum_unlocks;
+    const envelope: Record<string, unknown> = {
       slug: g.slug,
       mode: g.mode,
       title: g.title,
       description: g.description ?? undefined,
       difficulty: g.difficulty,
       estimated_time: g.estimated_time,
-      xp: g.xp_reward,
-      coins: g.coin_reward,
       hearts_penalty: g.hearts_penalty,
       related_entities: g.related_entities ?? [],
-      metadata: g.metadata ?? {},
+      metadata: meta,
       stages: g.stages ?? [],
+      rewards: {
+        xp: g.xp_reward,
+        coins: g.coin_reward,
+        ...(museum.length ? { museum_unlocks: museum } : {}),
+      },
     };
     const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -85,6 +95,7 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
 
   const importJson = async () => {
     setValidationReport([]);
+    setUnlockReport(null);
     let parsed: unknown;
     try { parsed = JSON.parse(importText); }
     catch (e) {
@@ -97,6 +108,29 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
       return;
     }
     const v = result.value;
+    // Merge unified rewards block — rewards.* overrides top-level.
+    const xpReward = v.rewards?.xp ?? v.xp;
+    const coinReward = v.rewards?.coins ?? v.coins;
+    const museumUnlocks = extractMuseumUnlocks(v);
+
+    // Validate museum unlock targets exist in the encyclopedia.
+    let unlockReportLocal: UnlockValidationReport | null = null;
+    if (museumUnlocks.length) {
+      unlockReportLocal = await validateMuseumUnlocks(museumUnlocks);
+      setUnlockReport(unlockReportLocal);
+      if (unlockReportLocal.missing.length) {
+        setValidationReport([
+          `لا يمكن الاستيراد: ${unlockReportLocal.missing.length} مقتنى غير موجود في الموسوعة.`,
+          ...unlockReportLocal.missing.map((m) => `• ${m.raw}`),
+        ]);
+        return;
+      }
+    }
+
+    const mergedMeta = { ...(v.metadata ?? {}) } as Record<string, unknown>;
+    if (museumUnlocks.length) mergedMeta.museum_unlocks = museumUnlocks;
+    else delete mergedMeta.museum_unlocks;
+
     const payload = {
       slug: v.slug,
       mode: v.mode,
@@ -104,20 +138,28 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
       description: v.description ?? null,
       difficulty: v.difficulty,
       estimated_time: v.estimated_time,
-      xp_reward: v.xp,
-      coin_reward: v.coins,
+      xp_reward: xpReward,
+      coin_reward: coinReward,
       hearts_penalty: v.hearts_penalty,
       related_entities: v.related_entities,
-      metadata: v.metadata,
+      metadata: mergedMeta,
       stages: v.stages,
       status: "draft" as GameStatus,
     };
     const { error } = await supabase.from("games").upsert(payload as any, { onConflict: "slug" });
     if (error) { notify("err", error.message); return; }
-    setValidationReport([`✓ تم استيراد "${v.title}" كمسودة.`]);
+    const warnings: string[] = [`✓ تم استيراد "${v.title}" كمسودة.`];
+    if (unlockReportLocal?.duplicates.length) {
+      warnings.push(`⚠ مقتنيات مكررة تم توحيدها: ${unlockReportLocal.duplicates.join("، ")}`);
+    }
+    if (unlockReportLocal?.resolved.length) {
+      warnings.push(`✓ سيتم فتح ${unlockReportLocal.resolved.length} مقتنى عند أول إكمال.`);
+    }
+    setValidationReport(warnings);
     setImportText("");
     notify("ok", "تم الاستيراد بنجاح كمسودة.");
     void refresh();
+
   };
 
   const setStatus = async (g: GameRow, status: GameStatus) => {
