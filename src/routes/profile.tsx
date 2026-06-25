@@ -411,7 +411,7 @@ function OverviewTab({
         <ChevronLeft className="size-5 text-gold transition-transform group-hover:-translate-x-1" />
       </Link>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3">
         {/* Current season */}
         <div className="relative overflow-hidden rounded-2xl border border-gold/25 bg-surface p-4">
           <div className="flex items-center justify-between">
