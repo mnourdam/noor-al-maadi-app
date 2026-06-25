@@ -28,6 +28,7 @@ import heroFortress from "@/assets/hero-fortress.jpg";
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
+import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -658,6 +659,13 @@ function Index() {
           </section>
         </Reveal>
       )}
+
+      {/* ============ 3b. DAILY CHALLENGES (games) ============ */}
+      <Reveal>
+        <DailyChallengesSection />
+      </Reveal>
+
+
 
       {/* ============ 4. CONTINUE JOURNEY — large premium CTA ============ */}
       {campaignSel && !campaignSel.isComplete && campaignSel.nextChapter && (
