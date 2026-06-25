@@ -77,8 +77,10 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
       onComplete(100);
     } else if (!allRight) {
       sfx("wrong");
+      onWrong?.();
     }
   };
+
 
   return (
     <div className="relative irth-title-card overflow-hidden p-5">
