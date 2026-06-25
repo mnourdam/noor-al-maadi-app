@@ -183,7 +183,7 @@ function GamePlayPage() {
       <AppShell>
         <Screen title="هذه اللعبة غير متاحة">
           <p className="mb-3 text-sm text-slate-300">ربما لم تُنشر بعد أو تمت أرشفتها.</p>
-          <Link to="/adventure" className="text-amber-300 underline">عودة إلى المغامرة</Link>
+          <Link to="/adventure" className="text-amber-300 underline">عودة إلى قاعة التحديات</Link>
         </Screen>
       </AppShell>
     );
