@@ -190,19 +190,38 @@ export function CrosswordRenderer({
           <Feather className="h-3.5 w-3.5" />
           مخطوط الكلمات
         </span>
-        <span className="text-slate-400 normal-case tracking-normal text-[11px]">
-          {filledCells}/{totalCells} خانة
+        <span className="flex items-center gap-2 normal-case tracking-normal">
+          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
+            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
+          )}
+          <span className="text-slate-400 text-[11px]">
+            {filledCells}/{totalCells} خانة
+          </span>
         </span>
       </div>
 
       {activeClue !== null && (
-        <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
-          <span className="text-[11px] uppercase tracking-[0.25em] text-amber-300/80">
-            {stage.clues[activeClue].direction === "across" ? "أفقي" : "عمودي"} · {stage.clues[activeClue].number}
-          </span>
-          <p className="mt-1 leading-7">{stage.clues[activeClue].hint}</p>
+        <div className="mb-3 flex items-start justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+          <div className="flex-1">
+            <span className="text-[11px] uppercase tracking-[0.25em] text-amber-300/80">
+              {stage.clues[activeClue].direction === "across" ? "أفقي" : "عمودي"} · {stage.clues[activeClue].number}
+            </span>
+            <p className="mt-1 leading-7">{stage.clues[activeClue].hint}</p>
+          </div>
+          <button
+            type="button"
+            onClick={revealNextLetter}
+            disabled={done}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-400/50 bg-amber-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-amber-100 transition hover:bg-amber-500/25 disabled:opacity-40"
+            aria-label="كشف الحرف التالي"
+            title="يكشف أوّل حرف غير مكتشف من بداية الإجابة."
+          >
+            <Lightbulb className="h-3.5 w-3.5" />
+            كشف الحرف ({HINT_COST} دينار)
+          </button>
         </div>
       )}
+
 
       <div className="relative mb-4 overflow-x-auto rounded-xl irth-parchment p-3">
         <div className="absolute inset-0 pointer-events-none rounded-xl border border-amber-700/20" />
