@@ -11,6 +11,16 @@ const slug = z
 
 const relatedEntities = z.array(z.string().min(1)).default([]);
 
+const museumUnlocks = z.array(z.string().min(1).max(120)).max(20);
+
+const rewardsBlock = z
+  .object({
+    xp: z.number().int().min(0).max(10000).optional(),
+    coins: z.number().int().min(0).max(10000).optional(),
+    museum_unlocks: museumUnlocks.optional(),
+  })
+  .optional();
+
 const baseEnvelope = z.object({
   slug,
   title: z.string().min(1).max(160),
@@ -22,7 +32,13 @@ const baseEnvelope = z.object({
   hearts_penalty: z.number().int().min(0).max(5).default(1),
   related_entities: relatedEntities,
   metadata: z.record(z.unknown()).default({}),
+  // Optional unified rewards block — mirrors Campaign rewards. When present,
+  // overrides top-level xp/coins, and museum_unlocks feed the museum pipeline.
+  rewards: rewardsBlock,
+  // Convenience alias when authors don't want to nest under "rewards".
+  museum_unlocks: museumUnlocks.optional(),
 });
+
 
 // ---- Stage schemas ---------------------------------------------------------
 
