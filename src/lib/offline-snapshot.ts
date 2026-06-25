@@ -76,9 +76,14 @@ export const COLLECTIONS: CollectionDef[] = [
   { key: "atlas_entities", table: "atlas_entities",
     filter: (q) => q.eq("status", "published").eq("aps_verified", true), required: false,
     label: "خريطة الأطلس (موثّقة فقط)" },
+  // Legacy: museum content lives inside encyclopedia_entities (types:
+  // figure/artifact/landmark/city/battle/event). content_registry is kept
+  // for backwards-compatibility only — it does NOT duplicate encyclopedia
+  // rows and is expected to be empty on modern installs.
   { key: "content_registry", table: "content_registry",
     required: false,
-    label: "المتحف وسجل المحتوى" },
+    label: "سجل المتحف (قديم/اختياري — المتحف يقرأ من الموسوعة)" },
+
 ];
 
 async function fetchCollection(def: CollectionDef): Promise<any[]> {
