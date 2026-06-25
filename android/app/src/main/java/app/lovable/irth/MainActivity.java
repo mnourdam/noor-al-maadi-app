@@ -25,7 +25,7 @@ public class MainActivity extends BridgeActivity {
         // loop that freezes the WebView.
         if (!hasFocus) return;
         View decor = getWindow().getDecorView();
-        WindowInsetsCompat insets = WindowCompat.getRootWindowInsets(decor);
+        WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(decor);
         boolean imeVisible = insets != null && insets.isVisible(WindowInsetsCompat.Type.ime());
         if (!imeVisible) {
             applyImmersive();
