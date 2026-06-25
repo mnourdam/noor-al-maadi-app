@@ -449,11 +449,43 @@ function OverviewTab({
             افتح قصةً واحدة أو أكمِل تحقيقًا للحفاظ على لهبك.
           </p>
           <Link
-            to="/stories"
+            to="/investigations"
             className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 py-2 text-[11px] font-bold text-gold hover:bg-gold/15"
-          ><BookOpen className="size-3.5" /> ابدأ الآن</Link>
+          ><Search className="size-3.5" /> ابدأ تحقيقًا</Link>
         </div>
       </div>
+
+      {/* Investigations — heart recovery loop */}
+      <Link
+        to="/investigations"
+        className="group relative block overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-surface to-surface p-5 transition hover:border-gold/60"
+      >
+        <div className="arabesque-layer pointer-events-none absolute inset-0 opacity-20" aria-hidden />
+        <div className="relative flex items-start gap-4">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-gold text-primary-foreground shadow-lg">
+            <Search className="size-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-[10px] tracking-[0.18em] text-gold/80">
+              <Sparkles className="size-3" /> حلقة التعافي
+            </div>
+            <h3 className="font-display mt-1 text-base font-bold">تحقيقات تاريخية</h3>
+            <p className="mt-1 text-[12px] leading-6 text-muted-foreground">
+              اختبر ذكاءك، اكشف الخيوط، واستعد قلوبك عندما تحتاج.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-red-300"><Heart className="size-3" /> استعد القلوب</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-gold"><Zap className="size-3" /> XP</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-300"><Coins className="size-3" /> دنانير</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-300"><ScrollText className="size-3" /> خيوط جديدة</span>
+            </div>
+            <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-gradient-gold px-4 py-1.5 text-[11px] font-bold text-primary-foreground">
+              <Search className="size-3.5" /> ابدأ تحقيقًا
+              <ChevronLeft className="size-3.5 transition group-hover:-translate-x-0.5" />
+            </div>
+          </div>
+        </div>
+      </Link>
 
       {/* Latest achievement */}
       <div className="rounded-2xl border border-gold/25 bg-surface p-4">
