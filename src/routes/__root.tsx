@@ -222,6 +222,7 @@ function RootComponent() {
           <Outlet />
           <FirstLaunchGate />
           <AchievementWatcher />
+          <LevelUpWatcher />
           <Toaster position="top-center" richColors closeButton />
         </AccountProvider>
       </ProfileProvider>
