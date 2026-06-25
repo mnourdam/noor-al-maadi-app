@@ -1,19 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import { iconForType } from "@/lib/encyclopedia-icons";
 
 const CARD_CLASS =
   "group block rounded-2xl border border-white/10 bg-surface p-3 text-right transition hover:border-gold/40 hover:bg-surface-2";
-
-const GLYPHS: Record<string, string> = {
-  state: "🏛️",
-  figure: "🪶",
-  scholar: "📚",
-  battle: "⚔️",
-  city: "🏙️",
-  event: "📜",
-  landmark: "🕌",
-  artifact: "🗝️",
-};
 
 const TYPE_LABELS: Record<string, string> = {
   state: "دولة",
