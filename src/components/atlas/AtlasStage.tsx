@@ -245,9 +245,13 @@ export function AtlasStage({
   useEffect(() => () => cancelAnimations(), [cancelAnimations]);
 
   const inv = 1 / view.scale;
-  // Quantize label visibility into tiers so pins don't re-mount/unmount
-  // their <text> labels every frame as scale ticks during pan/pinch.
-  const labelTier = view.scale >= 3.0 ? 2 : view.scale >= 1.6 ? 1 : 0;
+  // Quantize zoom into 4 tiers so pins/labels don't re-mount every frame.
+  //   0 far    (states only)     scale < 1.6
+  //   1 medium (+major cities)   1.6  ≤ scale < 3
+  //   2 close  (+battles/events) 3    ≤ scale < 6
+  //   3 deep   (everything)      scale ≥ 6
+  const labelTier =
+    view.scale >= 6 ? 3 : view.scale >= 3 ? 2 : view.scale >= 1.6 ? 1 : 0;
   const isInteracting = drag.current != null || pinch.current != null;
   const useTransition = !isInteracting;
 

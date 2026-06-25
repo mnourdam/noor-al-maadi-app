@@ -14,19 +14,44 @@ const VB_H = ATLAS_VIEWBOX.height;
 // uniformly so they read at identical apparent size on the native APS grid.
 const S = APS_UNIT_SCALE;
 
-// Label decluttering tiers (quantized in AtlasStage; passed as labelTier):
-//  0 → labels only for very major kinds (region) + active pin
-//  1 → add place/battle (major cities, key battles)
-//  2 → show all labels
-const MAJOR_KINDS = new Set(["region"]);
-const SECONDARY_KINDS = new Set(["region", "place", "battle"]);
+// Zoom-tier visibility (quantized in AtlasStage; passed as labelTier 0..3).
+//
+//  tier 0 (far)    → states / regions only
+//  tier 1 (medium) → + major cities (place)
+//  tier 2 (close)  → + battles and events
+//  tier 3 (deep)   → + landmarks / artifacts / figures / route points
+//
+// Pins follow the same tier so the map stays scannable at low zoom; labels
+// are stricter than pins (label requires same tier or higher than the pin).
+// Major worlds/states are NEVER hidden at far zoom.
+const PIN_TIER: Record<string, number> = {
+  region:         0,
+  place:          1,
+  battle:         2,
+  event:          2,
+  figure_marker:  3,
+  artifact_site:  3,
+  route_point:    3,
+};
+const LABEL_TIER: Record<string, number> = {
+  region:         0,
+  place:          1,
+  battle:         2,
+  event:          2,
+  figure_marker:  3,
+  artifact_site:  3,
+  route_point:    3,
+};
 
+function shouldShowPin(kind: string, tier: number, active: boolean): boolean {
+  if (active) return true;
+  return tier >= (PIN_TIER[kind] ?? 0);
+}
 function shouldShowLabel(kind: string, tier: number, active: boolean): boolean {
   if (active) return true;
-  if (tier >= 2) return true;
-  if (tier >= 1) return SECONDARY_KINDS.has(kind);
-  return MAJOR_KINDS.has(kind);
+  return tier >= (LABEL_TIER[kind] ?? 99);
 }
+
 
 /** Inner SVG layer — rendered inside the AtlasStage transform group. */
 export function AtlasEntityPinsLayer({
@@ -71,6 +96,8 @@ const AtlasPin = memo(function AtlasPin({
   const { x, y } = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   if (x < 0 || x > VB_W || y < 0 || y > VB_H) return null;
+  const showPin = shouldShowPin(entity.kind, labelTier, active);
+  if (!showPin) return null;
   const r = (active ? 0.78 : 0.58) * inv * S;
   const color = KIND_COLOR[entity.kind] ?? "oklch(0.55 0.18 25)";
   const showLabel = shouldShowLabel(entity.kind, labelTier, active);

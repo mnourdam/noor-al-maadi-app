@@ -6,7 +6,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, Check, Eye, EyeOff, RefreshCw, Save, Search, ShieldCheck, Upload,
+  ArrowRight, Check, Eye, EyeOff, MapPin, RefreshCw, Save, Search, ShieldCheck, Upload,
 } from "lucide-react";
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,12 @@ import {
   listAllAtlasEntities, updateAtlasEntity,
   type AtlasEntityKind, type AtlasEntityRow,
 } from "@/lib/atlas-entities";
+import {
+  ELIGIBLE_TYPE_LABEL_AR,
+  listNeedsPlacement,
+  placeEncyclopediaEntity,
+  type NeedsPlacementRow,
+} from "@/lib/atlas-needs-placement";
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
 import { geoToAps } from "@/lib/atlas/transform";
@@ -56,6 +62,16 @@ function AtlasReviewPage() {
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
 
+  // Atlas Coverage — Needs Placement tab.
+  const [tab, setTab] = useState<"review" | "needs">("review");
+  const [needsRows, setNeedsRows] = useState<NeedsPlacementRow[] | null>(null);
+  const [needsLoading, setNeedsLoading] = useState(false);
+  const [needsError, setNeedsError] = useState<string | null>(null);
+  const [needsSearch, setNeedsSearch] = useState("");
+  const [needsType, setNeedsType] = useState<string>("all");
+  const [placementId, setPlacementId] = useState<string | null>(null);
+  const [placing, setPlacing] = useState(false);
+
   // Stage
   const wrapRef = useRef<HTMLDivElement>(null);
   const [wrapSize, setWrapSize] = useState({ w: 1, h: 1 });
@@ -70,6 +86,26 @@ function AtlasReviewPage() {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { reload(); }, [reload]);
+
+  const reloadNeeds = useCallback(async () => {
+    setNeedsLoading(true); setNeedsError(null);
+    try { setNeedsRows(await listNeedsPlacement()); }
+    catch (e: any) { setNeedsError(e.message ?? String(e)); }
+    finally { setNeedsLoading(false); }
+  }, []);
+  useEffect(() => {
+    if (tab === "needs" && needsRows == null) void reloadNeeds();
+  }, [tab, needsRows, reloadNeeds]);
+
+  const filteredNeeds = useMemo(() => {
+    const q = needsSearch.trim().toLowerCase();
+    return (needsRows ?? []).filter((r) => {
+      if (needsType !== "all" && r.entity_type !== needsType) return false;
+      if (q && !`${r.title} ${r.slug}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [needsRows, needsSearch, needsType]);
+
 
   useEffect(() => {
     const el = wrapRef.current; if (!el) return;
@@ -162,10 +198,36 @@ function AtlasReviewPage() {
   };
   const onStageMove = (e: React.PointerEvent) => {
     if (!panRef.current) return;
-    setTx(panRef.current.tx + (e.clientX - panRef.current.x));
-    setTy(panRef.current.ty + (e.clientY - panRef.current.y));
+    const dx = e.clientX - panRef.current.x;
+    const dy = e.clientY - panRef.current.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) panRef.current.moved = true;
+    setTx(panRef.current.tx + dx);
+    setTy(panRef.current.ty + dy);
   };
-  const onStageUp = () => { panRef.current = null; };
+  const onStageUp = (e: React.PointerEvent) => {
+    const p = panRef.current;
+    panRef.current = null;
+    // Click-to-place: requires an active Needs Placement selection,
+    // a non-drag click, and a tap that started on the stage layer.
+    if (!p || p.moved) return;
+    if (!placementId) return;
+    const row = (needsRows ?? []).find((r) => r.id === placementId);
+    if (!row) return;
+    const aps = clientToAps(e.clientX, e.clientY);
+    if (aps.x < 0 || aps.y < 0 || aps.x > RASTER.width || aps.y > RASTER.height) return;
+    if (!confirm(`وضع "${row.title}" عند APS ${Math.round(aps.x)}, ${Math.round(aps.y)}؟`)) return;
+    setPlacing(true);
+    placeEncyclopediaEntity({ row, aps })
+      .then((created) => {
+        setRows((rs) => [created, ...rs]);
+        setNeedsRows((rs) => (rs ?? []).filter((r) => r.id !== row.id));
+        setPlacementId(null);
+        setFocusedId(created.id);
+      })
+      .catch((err: any) => alert(`فشل التموضع: ${err.message ?? err}`))
+      .finally(() => setPlacing(false));
+  };
+
 
   useEffect(() => {
     const el = wrapRef.current; if (!el) return;
@@ -296,79 +358,178 @@ function AtlasReviewPage() {
       <div className="flex min-h-0 flex-1">
         {/* Side list */}
         <aside className="flex w-80 flex-col border-l border-stone-800 bg-stone-900/40">
-          {/* Filters */}
-          <div className="space-y-2 border-b border-stone-800 p-2">
-            <div className="flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1.5">
-              <Search className="size-3.5 opacity-60" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="بحث بالاسم أو slug..."
-                className="min-w-0 flex-1 bg-transparent text-[12px] outline-none" />
-            </div>
-            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-              <select value={kind} onChange={(e) => setKind(e.target.value as any)}
-                className="rounded border border-stone-700 bg-stone-950 px-2 py-1">
-                <option value="all">كل الأنواع</option>
-                {(["place","battle","artifact_site","region","event","figure_marker","route_point"] as AtlasEntityKind[]).map((k) => (
-                  <option key={k} value={k}>{KIND_LABEL_AR[k]}</option>
-                ))}
-              </select>
-              <select value={era} onChange={(e) => setEra(e.target.value)}
-                className="rounded border border-stone-700 bg-stone-950 px-2 py-1">
-                <option value="all">كل العصور</option>
-                {ERAS.map((er) => <option key={er.id} value={er.id}>{er.name}</option>)}
-              </select>
-              <select value={batch} onChange={(e) => setBatch(e.target.value)}
-                className="col-span-2 rounded border border-stone-700 bg-stone-950 px-2 py-1">
-                <option value="all">كل دفعات الاستيراد</option>
-                {batches.map((b) => <option key={b} value={b}>{b}</option>)}
-              </select>
-              <label className="col-span-2 flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1">
-                <input type="checkbox" checked={onlyUnverified} onChange={(e) => setOnlyUnverified(e.target.checked)} />
-                <span>غير مؤكّد فقط</span>
-              </label>
-            </div>
+          {/* Tab toggle: review pool ↔ needs placement pool. */}
+          <div className="flex border-b border-stone-800 bg-stone-900/60 text-[11px] font-bold">
+            <button
+              onClick={() => setTab("review")}
+              className={`flex-1 px-2 py-1.5 ${tab === "review" ? "bg-stone-800 text-amber-100" : "text-stone-400 hover:bg-stone-800/50"}`}
+            >
+              للمراجعة ({rows.length})
+            </button>
+            <button
+              onClick={() => setTab("needs")}
+              className={`flex-1 px-2 py-1.5 ${tab === "needs" ? "bg-stone-800 text-amber-100" : "text-stone-400 hover:bg-stone-800/50"}`}
+            >
+              تحتاج إلى تموضع{needsRows ? ` (${needsRows.length})` : ""}
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            {loading && <div className="p-3 text-[12px] text-stone-400">جاري التحميل…</div>}
-            {error && <div className="p-3 text-[12px] text-rose-300">{error}</div>}
-            {!loading && filtered.length === 0 && (
-              <div className="p-3 text-[12px] text-stone-400">لا توجد عناصر مطابقة.</div>
-            )}
-            <ul className="divide-y divide-stone-800/80">
-              {filtered.map((r) => {
-                const dirty = !!drafts[r.id] && (drafts[r.id].x !== r.aps_x || drafts[r.id].y !== r.aps_y);
-                const isSel = selected.has(r.id);
-                const cur = drafts[r.id] ?? { x: r.aps_x, y: r.aps_y };
-                return (
-                  <li key={r.id} className={`flex items-start gap-2 p-2 text-[12px] ${focusedId === r.id ? "bg-amber-500/10" : ""}`}>
-                    <input type="checkbox" checked={isSel} onChange={() => toggleSelect(r.id)} className="mt-1" />
-                    <button onClick={() => { setFocusedId(r.id); centerOn(r, cur, scale, wrapSize, setTx, setTy); }}
-                      className="min-w-0 flex-1 text-right">
-                      <div className="truncate font-bold text-amber-100">{r.name_ar}</div>
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-stone-400">
-                        <span>{KIND_LABEL_AR[r.kind]}</span>
-                        <span>· {eraLabel(r.era)}</span>
-                        <span>· APS {Math.round(cur.x)},{Math.round(cur.y)}</span>
-                        {dirty && <span className="text-amber-300">· غُيِّر</span>}
-                        <span>· {STATUS_LABEL_AR[r.status]}</span>
-                        {r.aps_verified && <span className="text-emerald-300">· مؤكّد</span>}
-                        {r.encyclopedia_entity_id
-                          ? <span className="text-sky-300">· موسوعة ✓</span>
-                          : <span className="text-stone-500">· بلا موسوعة</span>}
-                      </div>
-                    </button>
-                    <button disabled={!dirty || savingIds.has(r.id)} onClick={() => saveOne(r.id)}
-                      title="حفظ هذا العنصر"
-                      className="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-stone-950 hover:bg-amber-400 disabled:opacity-30">
-                      حفظ
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          {tab === "review" && (
+            <>
+              {/* Filters */}
+              <div className="space-y-2 border-b border-stone-800 p-2">
+                <div className="flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1.5">
+                  <Search className="size-3.5 opacity-60" />
+                  <input value={search} onChange={(e) => setSearch(e.target.value)}
+                    placeholder="بحث بالاسم أو slug..."
+                    className="min-w-0 flex-1 bg-transparent text-[12px] outline-none" />
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                  <select value={kind} onChange={(e) => setKind(e.target.value as any)}
+                    className="rounded border border-stone-700 bg-stone-950 px-2 py-1">
+                    <option value="all">كل الأنواع</option>
+                    {(["place","battle","artifact_site","region","event","figure_marker","route_point"] as AtlasEntityKind[]).map((k) => (
+                      <option key={k} value={k}>{KIND_LABEL_AR[k]}</option>
+                    ))}
+                  </select>
+                  <select value={era} onChange={(e) => setEra(e.target.value)}
+                    className="rounded border border-stone-700 bg-stone-950 px-2 py-1">
+                    <option value="all">كل العصور</option>
+                    {ERAS.map((er) => <option key={er.id} value={er.id}>{er.name}</option>)}
+                  </select>
+                  <select value={batch} onChange={(e) => setBatch(e.target.value)}
+                    className="col-span-2 rounded border border-stone-700 bg-stone-950 px-2 py-1">
+                    <option value="all">كل دفعات الاستيراد</option>
+                    {batches.map((b) => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                  <label className="col-span-2 flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1">
+                    <input type="checkbox" checked={onlyUnverified} onChange={(e) => setOnlyUnverified(e.target.checked)} />
+                    <span>غير مؤكّد فقط</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {loading && <div className="p-3 text-[12px] text-stone-400">جاري التحميل…</div>}
+                {error && <div className="p-3 text-[12px] text-rose-300">{error}</div>}
+                {!loading && filtered.length === 0 && (
+                  <div className="p-3 text-[12px] text-stone-400">لا توجد عناصر مطابقة.</div>
+                )}
+                <ul className="divide-y divide-stone-800/80">
+                  {filtered.map((r) => {
+                    const dirty = !!drafts[r.id] && (drafts[r.id].x !== r.aps_x || drafts[r.id].y !== r.aps_y);
+                    const isSel = selected.has(r.id);
+                    const cur = drafts[r.id] ?? { x: r.aps_x, y: r.aps_y };
+                    return (
+                      <li key={r.id} className={`flex items-start gap-2 p-2 text-[12px] ${focusedId === r.id ? "bg-amber-500/10" : ""}`}>
+                        <input type="checkbox" checked={isSel} onChange={() => toggleSelect(r.id)} className="mt-1" />
+                        <button onClick={() => { setFocusedId(r.id); centerOn(r, cur, scale, wrapSize, setTx, setTy); }}
+                          className="min-w-0 flex-1 text-right">
+                          <div className="truncate font-bold text-amber-100">{r.name_ar}</div>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-stone-400">
+                            <span>{KIND_LABEL_AR[r.kind]}</span>
+                            <span>· {eraLabel(r.era)}</span>
+                            <span>· APS {Math.round(cur.x)},{Math.round(cur.y)}</span>
+                            {dirty && <span className="text-amber-300">· غُيِّر</span>}
+                            <span>· {STATUS_LABEL_AR[r.status]}</span>
+                            {r.aps_verified && <span className="text-emerald-300">· مؤكّد</span>}
+                            {r.encyclopedia_entity_id
+                              ? <span className="text-sky-300">· موسوعة ✓</span>
+                              : <span className="text-stone-500">· بلا موسوعة</span>}
+                          </div>
+                        </button>
+                        <button disabled={!dirty || savingIds.has(r.id)} onClick={() => saveOne(r.id)}
+                          title="حفظ هذا العنصر"
+                          className="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-stone-950 hover:bg-amber-400 disabled:opacity-30">
+                          حفظ
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </>
+          )}
+
+          {tab === "needs" && (
+            <>
+              {/* Needs Placement filters + instructions */}
+              <div className="space-y-2 border-b border-stone-800 p-2">
+                <p className="text-[11px] leading-relaxed text-stone-400">
+                  كيانات الموسوعة المؤهلة دون موقع على الأطلس. اختر "ضع هنا" ثم انقر على الخريطة لتثبيت الموقع.
+                </p>
+                <div className="flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1.5">
+                  <Search className="size-3.5 opacity-60" />
+                  <input value={needsSearch} onChange={(e) => setNeedsSearch(e.target.value)}
+                    placeholder="بحث في عناصر بحاجة لتموضع..."
+                    className="min-w-0 flex-1 bg-transparent text-[12px] outline-none" />
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <select value={needsType} onChange={(e) => setNeedsType(e.target.value)}
+                    className="flex-1 rounded border border-stone-700 bg-stone-950 px-2 py-1">
+                    <option value="all">كل الأنواع</option>
+                    {(Object.keys(ELIGIBLE_TYPE_LABEL_AR) as Array<keyof typeof ELIGIBLE_TYPE_LABEL_AR>).map((t) => (
+                      <option key={t} value={t}>{ELIGIBLE_TYPE_LABEL_AR[t]}</option>
+                    ))}
+                  </select>
+                  <button onClick={reloadNeeds} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">
+                    <RefreshCw className="size-3.5" />
+                  </button>
+                </div>
+                {placementId && (
+                  <div className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-200">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate font-bold">
+                        وضع: {(needsRows ?? []).find((r) => r.id === placementId)?.title ?? "?"}
+                      </span>
+                      <button onClick={() => setPlacementId(null)} className="rounded bg-stone-800 px-2 py-0.5 text-[10px] hover:bg-stone-700">
+                        إلغاء
+                      </button>
+                    </div>
+                    <div className="mt-1 text-amber-200/70">انقر على الخريطة لتثبيت الموقع.</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {needsLoading && <div className="p-3 text-[12px] text-stone-400">جاري التحميل…</div>}
+                {needsError && <div className="p-3 text-[12px] text-rose-300">{needsError}</div>}
+                {!needsLoading && needsRows && filteredNeeds.length === 0 && (
+                  <div className="p-3 text-[12px] text-stone-400">لا توجد عناصر بحاجة لتموضع.</div>
+                )}
+                <ul className="divide-y divide-stone-800/80">
+                  {filteredNeeds.map((r) => {
+                    const isPlacing = placementId === r.id;
+                    return (
+                      <li key={r.id} className={`flex items-start gap-2 p-2 text-[12px] ${isPlacing ? "bg-amber-500/10" : ""}`}>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-bold text-amber-100">{r.title}</div>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-stone-400">
+                            <span>{ELIGIBLE_TYPE_LABEL_AR[r.entity_type]}</span>
+                            <span className="truncate">· {r.slug}</span>
+                          </div>
+                        </div>
+                        <button
+                          disabled={placing}
+                          onClick={() => setPlacementId(isPlacing ? null : r.id)}
+                          className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${
+                            isPlacing
+                              ? "bg-amber-500 text-stone-950 hover:bg-amber-400"
+                              : "border border-amber-500/40 text-amber-200 hover:bg-amber-500/10"
+                          }`}
+                        >
+                          <MapPin className="size-3" />
+                          {isPlacing ? "اختر موقع…" : "ضع هنا"}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </>
+          )}
         </aside>
+
 
         {/* Stage */}
         <main
@@ -377,7 +538,7 @@ function AtlasReviewPage() {
           style={{ touchAction: "none" }}
           onPointerDown={onStageDown}
           onPointerMove={(e) => { onStageMove(e); onPinMove(e); }}
-          onPointerUp={(e) => { onStageUp(); onPinUp(e); }}
+          onPointerUp={(e) => { onStageUp(e); onPinUp(e); }}
         >
           <div
             data-role="stage"

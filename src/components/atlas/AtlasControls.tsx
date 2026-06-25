@@ -1,7 +1,10 @@
 // Phase 3 — Atlas controls.
 // Search + kind + era + world filters over published atlas_entities.
 // Kind chips show their pin color so the toolbar doubles as a legend.
-import { Search } from "lucide-react";
+// Collapsible: on mobile defaults to a compact bar (search + active-filter
+// summary + expand arrow); full controls revealed when expanded.
+import { useEffect, useState } from "react";
+import { ChevronDown, ChevronUp, RotateCcw, Search } from "lucide-react";
 import {
   KIND_LABEL_AR,
   type AtlasEntityKind,
@@ -94,6 +97,30 @@ export function AtlasControls({
   onWorld: (w: string | null) => void;
   onSearch: (q: string) => void;
 }) {
+  // Default collapsed on narrow viewports (mobile/tablet), expanded on desktop.
+  const [expanded, setExpanded] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return window.innerWidth >= 768;
+  });
+  // If the user enters a search query on collapsed mobile, auto-expand
+  // once so the kind chips/world/era inputs are reachable, but only on
+  // the first transition.
+  useEffect(() => { /* placeholder for future auto-expand rules */ }, []);
+
+  const hasActiveFilter =
+    kind != null || era != null || world != null || search.trim() !== "";
+
+  const activeSummary = [
+    world ? `${WORLD_LABEL_AR[world] ?? world}` : null,
+    era ? PERIOD_LABEL[era] ?? era : null,
+    kind ? KIND_LABEL_AR[kind] : null,
+    search.trim() ? `"${search.trim()}"` : null,
+  ].filter(Boolean).join(" · ");
+
+  const resetAll = () => {
+    onKind(null); onEra(null); onWorld(null); onSearch("");
+  };
+
   return (
     <div className="pointer-events-auto absolute top-0 right-0 left-0 z-20 p-2 sm:p-4" dir="rtl"
       style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
@@ -104,8 +131,8 @@ export function AtlasControls({
             "linear-gradient(180deg, oklch(0.20 0.04 250 / 0.92), oklch(0.16 0.05 255 / 0.92))",
         }}
       >
-        {/* Row 1: search + world + era */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        {/* Compact row — always visible: search + (summary when collapsed) + toggle. */}
+        <div className="flex items-center gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-amber-400/30 bg-slate-950/40 px-3 py-1.5 text-amber-50">
             <Search className="size-4 shrink-0 opacity-60" />
             <input
@@ -116,60 +143,103 @@ export function AtlasControls({
             />
           </div>
 
-          {facets.worlds.length > 0 && (
-            <select
-              value={world ?? ""}
-              onChange={(e) => onWorld(e.target.value || null)}
-              aria-label="العالم"
-              className="w-full min-w-0 shrink rounded-full border border-amber-400/30 bg-slate-950/60 px-3 py-1.5 text-[12px] font-bold text-amber-100 outline-none sm:w-auto"
+          {!expanded && hasActiveFilter && (
+            <span
+              className="hidden max-w-[40%] truncate rounded-full border border-amber-400/30 bg-slate-950/50 px-2 py-1 text-[11px] font-bold text-amber-200 sm:inline-block"
+              title={activeSummary}
             >
-              <option value="">كل العوالم</option>
-              {facets.worlds.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.glyph} {WORLD_LABEL_AR[w.id] ?? w.id} ({w.count})
-                </option>
-              ))}
-            </select>
+              {activeSummary}
+            </span>
           )}
 
-          {facets.eras.length > 0 && (
-            <select
-              value={era ?? ""}
-              onChange={(e) => onEra(e.target.value || null)}
-              aria-label="الحقبة التاريخية"
-              className="w-full min-w-0 shrink rounded-full border border-amber-400/30 bg-slate-950/60 px-3 py-1.5 text-[12px] font-bold text-amber-100 outline-none sm:w-auto"
+          {hasActiveFilter && (
+            <button
+              onClick={resetAll}
+              aria-label="مسح الفلاتر"
+              className="grid size-8 shrink-0 place-items-center rounded-full border border-amber-400/30 bg-slate-950/60 text-amber-100 hover:bg-slate-900"
+              title="مسح الفلاتر"
             >
-              <option value="">كل الحقب</option>
-              {facets.eras.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.label} ({e.count})
-                </option>
-              ))}
-            </select>
+              <RotateCcw className="size-3.5" />
+            </button>
           )}
+
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            aria-label={expanded ? "طيّ الفلاتر" : "إظهار الفلاتر"}
+            aria-expanded={expanded}
+            className="grid size-8 shrink-0 place-items-center rounded-full border border-amber-400/30 bg-slate-950/60 text-amber-100 hover:bg-slate-900"
+          >
+            {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          </button>
         </div>
 
-        {/* Row 2: kind chips with color dot = legend */}
-        {facets.kinds.length > 0 && (
-          <div className="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <Chip active={kind === null} onClick={() => onKind(null)}>الكل</Chip>
-            {facets.kinds.map((k) => (
-              <Chip
-                key={k.id}
-                active={kind === k.id}
-                color={KIND_COLOR[k.id]}
-                onClick={() => onKind(kind === k.id ? null : k.id)}
-              >
-                {KIND_LABEL_AR[k.id]}
-                <span className="mx-1 text-amber-200/60">{k.count}</span>
-              </Chip>
-            ))}
+        {/* Collapsed mobile summary chip (full width, beneath search). */}
+        {!expanded && hasActiveFilter && (
+          <div className="truncate rounded-full bg-slate-950/40 px-2 py-1 text-[11px] font-bold text-amber-200 sm:hidden">
+            {activeSummary}
           </div>
+        )}
+
+        {/* Expanded sections: world + era selects, then kind chip row. */}
+        {expanded && (
+          <>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              {facets.worlds.length > 0 && (
+                <select
+                  value={world ?? ""}
+                  onChange={(e) => onWorld(e.target.value || null)}
+                  aria-label="العالم"
+                  className="w-full min-w-0 shrink rounded-full border border-amber-400/30 bg-slate-950/60 px-3 py-1.5 text-[12px] font-bold text-amber-100 outline-none sm:w-auto"
+                >
+                  <option value="">كل العوالم</option>
+                  {facets.worlds.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.glyph} {WORLD_LABEL_AR[w.id] ?? w.id} ({w.count})
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {facets.eras.length > 0 && (
+                <select
+                  value={era ?? ""}
+                  onChange={(e) => onEra(e.target.value || null)}
+                  aria-label="الحقبة التاريخية"
+                  className="w-full min-w-0 shrink rounded-full border border-amber-400/30 bg-slate-950/60 px-3 py-1.5 text-[12px] font-bold text-amber-100 outline-none sm:w-auto"
+                >
+                  <option value="">كل الحقب</option>
+                  {facets.eras.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.label} ({e.count})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {facets.kinds.length > 0 && (
+              <div className="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <Chip active={kind === null} onClick={() => onKind(null)}>الكل</Chip>
+                {facets.kinds.map((k) => (
+                  <Chip
+                    key={k.id}
+                    active={kind === k.id}
+                    color={KIND_COLOR[k.id]}
+                    onClick={() => onKind(kind === k.id ? null : k.id)}
+                  >
+                    {KIND_LABEL_AR[k.id]}
+                    <span className="mx-1 text-amber-200/60">{k.count}</span>
+                  </Chip>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
 }
+
 
 function Chip({
   active,
