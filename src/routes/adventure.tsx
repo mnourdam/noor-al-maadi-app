@@ -12,7 +12,7 @@ import "@/components/games/games-premium.css";
 export const Route = createFileRoute("/adventure")({
   head: () => ({
     meta: [
-      { title: "المغامرة — إرث" },
+      { title: "قاعة التحديات — إرث" },
       { name: "description", content: "بوابتك إلى الحملات والتحقيقات والتحديات التاريخية اليومية." },
     ],
   }),
