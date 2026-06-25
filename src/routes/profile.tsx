@@ -340,7 +340,7 @@ function ProfilePage() {
           <p className="mt-1 text-[10px] text-muted-foreground">{Math.min(profile.seasonPoints, CURRENT_SEASON.goalPoints)}/{CURRENT_SEASON.goalPoints}</p>
           {seasonReady && (
             <button
-              onClick={() => claimSeason(CURRENT_SEASON.reward.points, CURRENT_SEASON.reward.title)}
+              onClick={() => claimSeason(CURRENT_SEASON.reward.points, CURRENT_SEASON.reward.title, CURRENT_SEASON.reward.dinars, CURRENT_SEASON.reward.artifact)}
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground"
             ><Sparkles className="size-3.5" /> استلم مكافأة الموسم</button>
           )}

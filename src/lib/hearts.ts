@@ -92,8 +92,9 @@ export interface StreakMilestone {
 }
 
 export const STREAK_MILESTONES: StreakMilestone[] = [
-  { days: 3,   xp: 50,   dinars: 30,  label: "ثلاثة أيام متتالية" },
-  { days: 7,   xp: 100,  dinars: 60,  badge: "streak_week",      label: "أسبوع كامل" },
-  { days: 30,  xp: 300,  dinars: 200, artifact: "streak_chronicle", label: "شهر من الإصرار" },
-  { days: 100, xp: 1000, dinars: 500, title: "حافظ التاريخ",     label: "مئة يوم في رحاب التاريخ" },
+  { days: 3,   xp: 50,    dinars: 30,   label: "ثلاثة أيام متتالية" },
+  { days: 7,   xp: 100,   dinars: 60,   badge: "streak_week",          label: "أسبوع كامل" },
+  { days: 30,  xp: 300,   dinars: 200,  artifact: "streak_chronicle",  label: "شهر من الإصرار" },
+  { days: 100, xp: 1000,  dinars: 500,  title: "حافظ التاريخ",         label: "مئة يوم في رحاب التاريخ" },
+  { days: 365, xp: 10000, dinars: 3650, badge: "streak_year_guardian", artifact: "streak_year_chronicle", title: "حارس الإرث لعامٍ كامل", label: "سنة كاملة في حضرة التاريخ" },
 ];
