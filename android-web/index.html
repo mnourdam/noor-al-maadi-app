@@ -13,9 +13,51 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap" />
     <title>إرث — رحلة عبر التاريخ الإسلامي</title>
+    <style>
+      :root {
+        --safe-area-inset-top: 0px;
+        --safe-area-inset-right: 0px;
+        --safe-area-inset-bottom: 0px;
+        --safe-area-inset-left: 0px;
+      }
+    </style>
+    <script>
+      // Capacitor's SystemBars plugin injects:
+      //   document.documentElement.style.setProperty("--safe-area-inset-*", ...)
+      // It can fire before <html> is fully attached on some Android WebView
+      // versions, producing: "Cannot read properties of null (reading 'style')".
+      // The Capacitor catch handler already swallows the throw, but we also
+      // make sure stray errors never bubble up and block React mount.
+      (function () {
+        window.addEventListener("error", function (e) {
+          if (e && e.message && /safe area/i.test(e.message)) {
+            e.preventDefault();
+            e.stopImmediatePropagation && e.stopImmediatePropagation();
+          }
+        });
+        // Defensive shim: if some early call hits document.documentElement
+        // before the parser attached <html>, return a no-op style target.
+        try {
+          var realDesc = Object.getOwnPropertyDescriptor(
+            Document.prototype,
+            "documentElement"
+          );
+          if (realDesc && realDesc.get) {
+            var noop = { setProperty: function () {}, removeProperty: function () {} };
+            Object.defineProperty(Document.prototype, "documentElement", {
+              configurable: true,
+              get: function () {
+                var el = realDesc.get.call(this);
+                return el || { style: noop };
+              },
+            });
+          }
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/client.tsx"></script>
+    <script type="module" src="/src/android-client.tsx"></script>
   </body>
 </html>
