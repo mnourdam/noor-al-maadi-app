@@ -275,13 +275,16 @@ export function AtlasStage({
           transition: useTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
           willChange: "transform",
         }}>
+          {/* Image at native APS size; no aspect distortion. The outer
+              <svg preserveAspectRatio="xMidYMid slice"> letterboxes the
+              whole frame uniformly. Pins live in the same coord space. */}
           <image
             href={ATLAS_BASE_URL}
             x={0}
             y={0}
             width={VB_W}
             height={VB_H}
-            preserveAspectRatio="none"
+            preserveAspectRatio="xMidYMid slice"
             onLoad={() => setRasterLoaded(true)}
             style={{ imageRendering: "auto", opacity: rasterLoaded ? 1 : 0, transition: "opacity 200ms ease-out" }}
           />
