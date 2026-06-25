@@ -125,6 +125,10 @@ function AdminUsers() {
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [addOpen, setAddOpen] = useState(false);
+  const { caps } = useAdminGuard();
+  const isManager = caps.is_manager;
+
 
   const filters = useMemo(
     () => ({
