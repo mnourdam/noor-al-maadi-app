@@ -37,7 +37,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function ChronologyRenderer({ stage, onComplete }: Props) {
+export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const initial = useMemo(() => shuffle(stage.events.map((_, i) => i)), [stage]);
   const [order, setOrder] = useState<number[]>(initial);
   const [checked, setChecked] = useState<boolean[] | null>(null);
