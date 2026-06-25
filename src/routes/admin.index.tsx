@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users } from "lucide-react";
+import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -84,6 +84,8 @@ function AdminHub() {
             desc="استيراد JSON للموسوعة والحملات والإشعارات والمعلومات اليومية." />
           <AdminCard to="/admin/campaigns" icon={<Sword className="h-5 w-5" />} title="إدارة الحملات"
             desc="إدارة حملات إرث التاريخية." />
+          <AdminCard to="/admin/games" icon={<Gamepad2 className="h-5 w-5" />} title="إدارة الألعاب"
+            desc="إطار JSON للتحديات التاريخية: كلمات متقاطعة، ترتيب الأحداث، من أنا؟، الروابط، الذاكرة." />
           <AdminCard to="/admin/encyclopedia" icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
             desc="إدارة مدخلات الموسوعة (شخصيات، مدن، معارك...)." />
           <AdminCard to="/admin/encyclopedia-audit" icon={<ShieldCheck className="h-5 w-5" />} title="تدقيق توحيد الموسوعة"
