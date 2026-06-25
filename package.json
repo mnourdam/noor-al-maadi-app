@@ -10,8 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "build:android:web": "vite build --config vite.android.config.ts",
-    "sync:android": "npm run build:android:web && npx cap sync android",
+    "build:android:web": "vite build --config vite.android.config.ts && node scripts/finalize-android.mjs",
+    "sync:android": "npm run build:android:web && node scripts/copy-android-icon.mjs && npx cap sync android",
     "open:android": "npx cap open android",
     "apk:debug": "npm run sync:android && cd android && gradlew.bat assembleDebug"
   },
@@ -79,7 +79,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.4.1",
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "2.5.3",
+    "@lovable.dev/vite-tanstack-config": "2.6.2",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
