@@ -6,6 +6,7 @@ import { getGameBySlug, type GameRow } from "@/lib/games/store";
 import { recordCompletion } from "@/lib/games/progress";
 import { MODE_LABELS_AR, GAME_MODES, type GameMode } from "@/lib/games/types";
 import { GameStageRenderer } from "@/components/games/GameStageRenderer";
+import { useProfile } from "@/lib/profile";
 
 export const Route = createFileRoute("/games/$mode/$slug")({
   head: () => ({ meta: [{ title: "تحدّي تاريخي — إرث" }] }),
@@ -14,11 +15,13 @@ export const Route = createFileRoute("/games/$mode/$slug")({
 
 function GamePlayPage() {
   const { mode, slug } = useParams({ from: "/games/$mode/$slug" });
+  const { addPoints, addDinars } = useProfile();
   const [game, setGame] = useState<GameRow | null | "loading">("loading");
   const [stageIdx, setStageIdx] = useState(0);
   const [stageDone, setStageDone] = useState(false);
 
   useEffect(() => {
+    if (!slug) { setGame(null); return; }
     (async () => {
       const g = await getGameBySlug(slug);
       setGame(g);
@@ -28,23 +31,33 @@ function GamePlayPage() {
   if (game === "loading") {
     return <AppShell><Screen title="جارٍ التحميل…">…</Screen></AppShell>;
   }
-  if (!game || !GAME_MODES.includes(mode as GameMode)) {
+  if (!game || !GAME_MODES.includes(mode as GameMode) || game.mode !== mode || game.status !== "published") {
     return (
       <AppShell>
-        <Screen title="لم نعثر على اللعبة">
+        <Screen title="هذه اللعبة غير متاحة">
+          <p className="mb-3 text-sm text-slate-300">
+            ربما لم تُنشر بعد أو تمت أرشفتها.
+          </p>
           <Link to="/adventure" className="text-amber-300 underline">عودة إلى المغامرة</Link>
         </Screen>
       </AppShell>
     );
   }
 
-  const stages = (game.stages ?? []) as any[];
+  const rawStages = Array.isArray(game.stages) ? game.stages : [];
+  const stages = rawStages.filter((s): s is Record<string, unknown> => !!s && typeof s === "object");
   const stage = stages[stageIdx];
-  const isLast = stageIdx >= stages.length - 1;
+  const isLast = stages.length > 0 && stageIdx >= stages.length - 1;
 
-  const handleComplete = (score: number) => {
+  const handleComplete = async (score: number) => {
     setStageDone(true);
-    if (isLast) void recordCompletion(game.id, stageIdx, score);
+    if (isLast) {
+      const { firstTime } = await recordCompletion(game.id, stageIdx, score);
+      if (firstTime) {
+        if (game.xp_reward > 0) addPoints(game.xp_reward);
+        if (game.coin_reward > 0) addDinars(game.coin_reward);
+      }
+    }
   };
 
   const next = () => {
@@ -52,6 +65,7 @@ function GamePlayPage() {
     setStageIdx(stageIdx + 1);
     setStageDone(false);
   };
+
 
   return (
     <AppShell>
