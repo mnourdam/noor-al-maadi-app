@@ -30,7 +30,7 @@ function GamesIndex() {
       <Screen title="الألعاب التاريخية" subtitle="تحديات قصيرة تربطك بالتاريخ — اختر نمطًا للبدء">
         <div className="mb-4">
           <Link to="/adventure" className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-amber-300">
-            <ChevronLeft className="h-3.5 w-3.5" /> العودة إلى المغامرة
+            <ChevronLeft className="h-3.5 w-3.5" /> العودة إلى قاعة التحديات
           </Link>
         </div>
 
