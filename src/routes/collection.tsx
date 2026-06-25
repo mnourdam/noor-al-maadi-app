@@ -148,26 +148,34 @@ function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick }: {
   return (
     <button
       onClick={onClick}
-      className={`group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-surface text-right transition-all duration-300 hover:-translate-y-0.5
-        ${unlocked ? `ring-1 ${meta.ring} ${meta.glow}` : "opacity-70"}`}
+      className={`group relative w-full overflow-hidden rounded-2xl border text-right transition-all duration-300 hover:-translate-y-0.5
+        ${unlocked
+          ? `${rarity === "legendary" ? "border-gold/40" : rarity === "epic" ? "border-fuchsia-400/30" : rarity === "rare" ? "border-sky-400/30" : "border-white/10"} bg-surface ring-1 ${meta.ring} ${meta.glow}`
+          : "border-white/10 bg-surface/70 opacity-75"}`}
     >
       {unlocked && (
-        <div className={`pointer-events-none absolute inset-0 opacity-60
-          ${rarity === "legendary" ? "bg-gradient-to-br from-gold/15 via-gold/0 to-transparent" :
-            rarity === "epic"      ? "bg-gradient-to-br from-fuchsia-400/15 via-fuchsia-400/0 to-transparent" :
-            rarity === "rare"      ? "bg-gradient-to-br from-sky-400/15 via-sky-400/0 to-transparent" :
-                                     "bg-gradient-to-br from-white/5 to-transparent"}`} />
+        <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${meta.frame} opacity-70`} />
+      )}
+      {unlocked && rarity === "legendary" && (
+        <div className="pointer-events-none absolute -inset-px rounded-2xl"
+          style={{ background: "radial-gradient(120% 60% at 50% -10%, oklch(0.82 0.14 82 / 0.35), transparent 60%)" }} />
       )}
       {!unlocked && (
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/40" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
       )}
       <div className="relative p-3">
         <div className="flex items-start justify-between gap-2">
-          <div className={`relative grid size-12 place-items-center overflow-hidden rounded-xl text-2xl
-            ${unlocked ? "bg-black/30 ring-1 ring-white/10" : "bg-black/50 ring-1 ring-white/5"}`}>
-            {unlocked ? icon : (
+          <div className={`relative grid size-12 place-items-center overflow-hidden rounded-xl
+            ${unlocked ? "bg-black/30 ring-1 ring-gold/20" : "bg-black/50 ring-1 ring-white/5"}`}>
+            {unlocked ? (
+              <span className="grid size-full place-items-center [&_svg]:size-6 [&_img]:size-full text-gold">
+                {icon}
+              </span>
+            ) : (
               <>
-                <span className="select-none text-2xl opacity-20 blur-[3px] grayscale">{icon}</span>
+                <span className="grid size-full place-items-center opacity-15 blur-[2px] grayscale [&_svg]:size-6">
+                  {icon}
+                </span>
                 <Lock className="absolute size-3.5 text-gold/70" />
               </>
             )}
