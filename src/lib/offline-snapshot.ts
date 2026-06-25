@@ -119,17 +119,27 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
   const results = await Promise.all(COLLECTIONS.map((def) => fetchCollection(def)));
   const collections: Record<string, any[]> = {};
   const content_counts: Record<string, number> = {};
-  COLLECTIONS.forEach((def, i) => {
-    collections[def.key] = results[i];
-    content_counts[def.key] = results[i].length;
-  });
+  const collection_manifest = [] as { key: string; count: number; checksum?: string }[];
+  for (let i = 0; i < COLLECTIONS.length; i++) {
+    const def = COLLECTIONS[i];
+    const rows = results[i];
+    collections[def.key] = rows;
+    content_counts[def.key] = rows.length;
+    collection_manifest.push({
+      key: def.key,
+      count: rows.length,
+      checksum: await sha256Hex(canonicalJSON(rows)),
+    });
+  }
   const checksum = await sha256Hex(canonicalJSON(collections));
   return {
-    snapshot_version: SNAPSHOT_SCHEMA_VERSION,
+    snapshot_version: Date.now(),
+    schema_version: SNAPSHOT_SCHEMA_VERSION,
     generated_at: new Date().toISOString(),
     source: "live",
     content_counts,
     checksum,
+    collection_manifest,
     collections,
   };
 }
@@ -137,6 +147,12 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
 export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   const snap = await generateSnapshot();
   await saveSnapshot(snap);
+  // Best-effort: in dev sandboxes the server-fn writes public/offline-snapshot.json.
+  // In production this throws and we silently ignore.
+  try {
+    const { writeBundledSnapshotFile } = await import("./offline-snapshot-write.functions");
+    await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
+  } catch { /* dev-only path; ignore in prod */ }
   return snap;
 }
 

@@ -24,12 +24,27 @@ export type OfflineCollectionKey =
   | "atlas_entities"
   | "content_registry";
 
+/** Manifest entry — future-ready, allows incremental delta-sync per collection. */
+export interface CollectionManifestEntry {
+  key: string;
+  count: number;
+  checksum?: string;
+}
+
 export interface OfflineSnapshot {
+  /** Bumped each time a new snapshot is generated (data revision). */
   snapshot_version: number;
+  /** Bumped only when the structural schema of this file changes. */
+  schema_version: number;
   generated_at: string;
   source?: "live" | "bundled";
-  content_counts: Record<string, number>;
+  /** Aggregate checksum over all collections. */
   checksum?: string;
+  /** Map of collection name → row count. */
+  content_counts: Record<string, number>;
+  /** Per-collection manifest, ready for delta-sync without breaking runtime. */
+  collection_manifest?: CollectionManifestEntry[];
+  /** Actual row data. Runtime reads this directly. */
   collections: Record<string, any[]>;
 }
 
@@ -97,7 +112,13 @@ async function idbDelete(): Promise<void> {
 /** Normalize legacy v1 shape (flat keys) into v2. */
 function normalize(raw: any): OfflineSnapshot | null {
   if (!raw || typeof raw !== "object") return null;
-  if (raw.collections && raw.content_counts) return raw as OfflineSnapshot;
+  if (raw.collections && raw.content_counts) {
+    // Already v2-shaped; fill in schema_version if missing.
+    return {
+      schema_version: typeof raw.schema_version === "number" ? raw.schema_version : SNAPSHOT_SCHEMA_VERSION,
+      ...raw,
+    } as OfflineSnapshot;
+  }
   // Legacy flat v1
   const collections: Record<string, any[]> = {};
   const map: Record<string, string> = {
@@ -114,6 +135,7 @@ function normalize(raw: any): OfflineSnapshot | null {
   for (const [k, v] of Object.entries(collections)) counts[k] = (v as any[]).length;
   return {
     snapshot_version: typeof raw.version === "number" ? raw.version : 1,
+    schema_version: 1,
     generated_at: raw.generated_at ?? new Date(0).toISOString(),
     content_counts: counts,
     collections,
