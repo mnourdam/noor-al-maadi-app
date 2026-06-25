@@ -42,14 +42,57 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
+  // Surface the real error for native logs (Logcat on Android via Capacitor's
+  // Console plugin) so blank-screen / error-boundary cases are diagnosable.
+  // eslint-disable-next-line no-console
+  console.error("[root errorComponent]", error?.message, error?.stack ?? error);
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
+  const isCapacitor =
+    typeof window !== "undefined" &&
+    (Boolean((window as unknown as { Capacitor?: unknown }).Capacitor) ||
+      window.location.protocol === "capacitor:" ||
+      window.location.hostname === "localhost");
+
+  const goHome = () => {
+    try {
+      if (isCapacitor) {
+        // Hard reload to the app entry — router state may itself be broken.
+        window.location.replace("./index.html");
+        return;
+      }
+      void router.navigate({ to: "/" });
+    } catch {
+      window.location.reload();
+    }
+  };
+
+  const tryAgain = () => {
+    try {
+      reset();
+      void router.invalidate();
+    } catch {
+      window.location.reload();
+      return;
+    }
+    // Belt-and-braces: if the same error re-throws, force a full reload.
+    setTimeout(() => {
+      try {
+        if (document.querySelector("[data-irth-error-boundary]")) {
+          window.location.reload();
+        }
+      } catch { /* ignore */ }
+    }, 300);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div
+      data-irth-error-boundary
+      className="flex min-h-screen items-center justify-center bg-background px-4"
+    >
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           This page didn't load
@@ -57,22 +100,26 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
+        {error?.message ? (
+          <p className="mt-3 break-words text-[11px] leading-relaxed text-muted-foreground/70">
+            {error.message}
+          </p>
+        ) : null}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
+            type="button"
+            onClick={tryAgain}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Try again
           </button>
-          <a
-            href="/"
+          <button
+            type="button"
+            onClick={goHome}
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
             Go home
-          </a>
+          </button>
         </div>
       </div>
     </div>
