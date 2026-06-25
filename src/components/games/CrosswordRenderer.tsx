@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Check, Sparkles, Feather, AlertTriangle } from "lucide-react";
+import { Check, Sparkles, Feather, AlertTriangle, Lightbulb } from "lucide-react";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { sfx } from "./sfx";
+import { AttemptsChip } from "./AttemptsChip";
 
 interface Props {
   stage: CrosswordStage;
   onComplete: (score: number) => void;
+  onWrong?: () => void;
+  attemptsLeft?: number;
+  maxAttempts?: number;
+  onPaidHint?: (cost: number) => boolean;
 }
+
+const HINT_COST = 10;
+
 
 interface CellInfo {
   expected: string;
