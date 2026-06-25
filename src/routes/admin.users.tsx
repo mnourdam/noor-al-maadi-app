@@ -129,8 +129,16 @@ function AdminUsers() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUserRow | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { caps } = useAdminGuard();
   const isManager = caps.is_manager;
+  const deletePlayerFn = useServerFn(deletePlayer);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
 
 
   const filters = useMemo(
