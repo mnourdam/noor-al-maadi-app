@@ -1,0 +1,5 @@
+{
+  "$schema": "irth.splash.artworks.v1",
+  "_comment": "Add new artwork filenames (relative to /assets/splash/) here. They will automatically participate in the random selection on next launch — no code change required. Supported: .webp, .jpg, .png. Recommended: 1600x2400 portrait, <200KB, warm museum lighting.",
+  "artworks": []
+}
