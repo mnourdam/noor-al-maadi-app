@@ -253,6 +253,8 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
           opacity: 0;
           animation: sp-haze-in 1400ms ease-out 700ms forwards;
         }
+        @keyframes sp-haze-in { to { opacity: 1; } }
+
         .splash-logo {
           opacity: 0;
           animation: splash-logo-in 800ms ease-out 800ms forwards;
