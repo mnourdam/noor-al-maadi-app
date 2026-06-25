@@ -39,27 +39,31 @@ interface SplashSequenceProps {
 }
 
 export function SplashSequence({ ready = true }: SplashSequenceProps) {
-  // SSR-safe: never render on the server, and skip if we've already played
-  // this session (e.g. on client-side route navigations that re-mount root).
-  const [mounted, setMounted] = useState(false);
+  // Decide synchronously on first render whether to play. This avoids a frame
+  // where the home page is visible before the splash overlay mounts (which on
+  // Android caused: App UI → black → Splash → App).
+  const [mounted, setMounted] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      if (window.sessionStorage.getItem(SESSION_FLAG) === "1") return false;
+      window.sessionStorage.setItem(SESSION_FLAG, "1");
+    } catch { /* */ }
+    return true;
+  });
   const [phase, setPhase] = useState<"hidden" | "playing" | "fadeout">("hidden");
   const [artworkUrl, setArtworkUrl] = useState<string | null>(null);
   const [framing, setFraming] = useState<SplashFraming>("ken-burns");
   const [quote, setQuote] = useState<SplashQuote | null>(null);
   const minDoneRef = useRef(false);
 
-  // Decide on first client render whether to play.
+  // Remove the native boot overlay (android-web/index.html) once React has
+  // taken over rendering, so there's no double-fade or black flash.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    let alreadyPlayed = false;
-    try { alreadyPlayed = window.sessionStorage.getItem(SESSION_FLAG) === "1"; } catch { /* */ }
-    if (alreadyPlayed) {
-      setMounted(false);
-      return;
-    }
-    try { window.sessionStorage.setItem(SESSION_FLAG, "1"); } catch { /* */ }
-    setMounted(true);
-  }, []);
+    try {
+      const el = document.getElementById("irth-boot-splash");
+      if (el) el.parentNode?.removeChild(el);
+    } catch { /* */ }
+  }, [mounted]);
 
   // Bootstrap quote + artwork + sfx once we've decided to play.
   useEffect(() => {
