@@ -68,32 +68,34 @@ export const Route = createFileRoute("/collection")({
 
 // ───── Rarity presentation ─────────────────────────────────────
 type Rarity = "common" | "rare" | "epic" | "legendary";
-const RARITY_META: Record<Rarity, { label: string; ring: string; chip: string; glow: string }> = {
-  common:    { label: "عادي",    ring: "ring-white/10",       chip: "bg-white/10 text-white/70",                glow: "" },
-  rare:      { label: "نادر",    ring: "ring-sky-400/40",     chip: "bg-sky-400/15 text-sky-200",               glow: "shadow-[0_0_24px_-8px_oklch(0.78_0.14_240/35%)]" },
-  epic:      { label: "ملحمي",   ring: "ring-fuchsia-400/45", chip: "bg-fuchsia-400/15 text-fuchsia-200",       glow: "shadow-[0_0_28px_-8px_oklch(0.7_0.2_320/40%)]" },
-  legendary: { label: "أسطوري",  ring: "ring-gold/60",        chip: "bg-gradient-gold text-primary-foreground", glow: "shadow-gold" },
+const RARITY_META: Record<Rarity, { label: string; ring: string; chip: string; glow: string; frame: string }> = {
+  common:    { label: "عادي",    ring: "ring-white/10",       chip: "bg-white/10 text-white/70",                glow: "",                                                       frame: "from-white/5 to-transparent" },
+  rare:      { label: "نادر",    ring: "ring-sky-400/40",     chip: "bg-sky-400/15 text-sky-200",               glow: "shadow-[0_0_28px_-8px_oklch(0.78_0.14_240/45%)]",        frame: "from-sky-400/15 via-sky-400/5 to-transparent" },
+  epic:      { label: "ملحمي",   ring: "ring-fuchsia-400/45", chip: "bg-fuchsia-400/15 text-fuchsia-200",       frame: "from-fuchsia-400/15 via-fuchsia-400/5 to-transparent",  glow: "shadow-[0_0_34px_-8px_oklch(0.7_0.2_320/50%)]" },
+  legendary: { label: "أسطوري",  ring: "ring-gold/60",        chip: "bg-gradient-gold text-primary-foreground", glow: "shadow-gold",                                            frame: "from-gold/25 via-gold/5 to-transparent" },
 };
 
 type RevealItem = CollectibleRevealItem;
 
 // ───── Museum sections ─────────────────────────────────────────
 type SectionId = "figures" | "artifacts" | "landmarks" | "cities" | "battles" | "events";
+type LucideGlyph = ComponentType<{ className?: string }>;
 interface SectionDef {
   id: SectionId;
   label: string;
-  icon: any;
-  type: string;            // matches encyclopedia_entities.entity_type
-  glyph: string;           // default emoji for locked/empty cards
-  registryTypes?: string[]; // imported-registry types merged into this tab
+  icon: LucideGlyph;            // section pill / bar icon
+  glyphIcon: LucideGlyph;       // visual glyph used inside cards & reveals
+  type: string;                 // matches encyclopedia_entities.entity_type
+  glyph: string;                // legacy emoji kept for back-compat in reveal payloads
+  registryTypes?: string[];     // imported-registry types merged into this tab
 }
 const SECTIONS: SectionDef[] = [
-  { id: "figures",   label: "شخصيات", icon: Users,          type: "figure",   glyph: "👤", registryTypes: ["figure", "scholar"] },
-  { id: "artifacts", label: "آثار",   icon: Crown,          type: "artifact", glyph: "🏺", registryTypes: ["artifact"] },
-  { id: "landmarks", label: "معالم",  icon: Landmark,       type: "landmark", glyph: "🏛️" },
-  { id: "cities",    label: "مدن",    icon: MapPin,         type: "city",     glyph: "🌆", registryTypes: ["city"] },
-  { id: "battles",   label: "معارك",  icon: Swords,         type: "battle",   glyph: "⚔️",  registryTypes: ["battle"] },
-  { id: "events",    label: "أحداث",  icon: CalendarClock,  type: "event",    glyph: "📜" },
+  { id: "figures",   label: "شخصيات", icon: Users,         glyphIcon: Users,        type: "figure",   glyph: "👤", registryTypes: ["figure", "scholar"] },
+  { id: "artifacts", label: "آثار",   icon: Gem,           glyphIcon: Gem,          type: "artifact", glyph: "🏺", registryTypes: ["artifact"] },
+  { id: "landmarks", label: "معالم",  icon: Landmark,      glyphIcon: Landmark,     type: "landmark", glyph: "🏛️" },
+  { id: "cities",    label: "مدن",    icon: Building2,     glyphIcon: Building2,    type: "city",     glyph: "🌆", registryTypes: ["city"] },
+  { id: "battles",   label: "معارك",  icon: Swords,        glyphIcon: Swords,       type: "battle",   glyph: "⚔️", registryTypes: ["battle"] },
+  { id: "events",    label: "أحداث",  icon: CalendarClock, glyphIcon: ScrollText,   type: "event",    glyph: "📜" },
 ];
 
 // ───── Supabase user_collection hook ───────────────────────────
