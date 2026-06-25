@@ -496,6 +496,113 @@ export type Database = {
           },
         ]
       }
+      game_progress: {
+        Row: {
+          best_score: number
+          completed: boolean
+          created_at: string
+          game_id: string
+          id: string
+          last_played_at: string
+          stage_index: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          best_score?: number
+          completed?: boolean
+          created_at?: string
+          game_id: string
+          id?: string
+          last_played_at?: string
+          stage_index?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          best_score?: number
+          completed?: boolean
+          created_at?: string
+          game_id?: string
+          id?: string
+          last_played_at?: string
+          stage_index?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_progress_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      games: {
+        Row: {
+          coin_reward: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          difficulty: number
+          estimated_time: number
+          hearts_penalty: number
+          id: string
+          metadata: Json
+          mode: Database["public"]["Enums"]["game_mode"]
+          published_at: string | null
+          related_entities: Json
+          slug: string
+          stages: Json
+          status: Database["public"]["Enums"]["game_status"]
+          title: string
+          updated_at: string
+          xp_reward: number
+        }
+        Insert: {
+          coin_reward?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          difficulty?: number
+          estimated_time?: number
+          hearts_penalty?: number
+          id?: string
+          metadata?: Json
+          mode: Database["public"]["Enums"]["game_mode"]
+          published_at?: string | null
+          related_entities?: Json
+          slug: string
+          stages?: Json
+          status?: Database["public"]["Enums"]["game_status"]
+          title: string
+          updated_at?: string
+          xp_reward?: number
+        }
+        Update: {
+          coin_reward?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          difficulty?: number
+          estimated_time?: number
+          hearts_penalty?: number
+          id?: string
+          metadata?: Json
+          mode?: Database["public"]["Enums"]["game_mode"]
+          published_at?: string | null
+          related_entities?: Json
+          slug?: string
+          stages?: Json
+          status?: Database["public"]["Enums"]["game_status"]
+          title?: string
+          updated_at?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       investigations: {
         Row: {
           created_at: string
@@ -1217,6 +1324,13 @@ export type Database = {
         | "region"
         | "route_point"
       atlas_entity_status: "draft" | "review" | "published" | "retired"
+      game_mode:
+        | "crossword"
+        | "chronology"
+        | "who_am_i"
+        | "connections"
+        | "memory"
+      game_status: "draft" | "published" | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1355,6 +1469,14 @@ export const Constants = {
         "route_point",
       ],
       atlas_entity_status: ["draft", "review", "published", "retired"],
+      game_mode: [
+        "crossword",
+        "chronology",
+        "who_am_i",
+        "connections",
+        "memory",
+      ],
+      game_status: ["draft", "published", "archived"],
     },
   },
 } as const
