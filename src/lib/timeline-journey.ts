@@ -301,6 +301,14 @@ export function useTimelineJourney() {
             : typeof m.world === "string"
               ? m.world
               : null,
+        imageUrl:
+          (typeof m.hero_image === "string" && m.hero_image) ||
+          (typeof m.image_url === "string" && m.image_url) ||
+          (typeof m.image === "string" && m.image) ||
+          (typeof m.cover === "string" && m.cover) ||
+          (typeof m.cover_image === "string" && m.cover_image) ||
+          (typeof m.thumbnail === "string" && m.thumbnail) ||
+          null,
       });
     }
     out.sort((a, b) => {
