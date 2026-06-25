@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-r
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight, Coins, Star, Clock, Sparkles, ChevronLeft,
-  BookOpen, Compass, Trophy, Library, RotateCcw, Heart,
+  BookOpen, Compass, Trophy, Library, RotateCcw, Heart, Landmark,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { getGameBySlug, type GameRow } from "@/lib/games/store";
@@ -15,7 +15,11 @@ import { sfx } from "@/components/games/sfx";
 import { resolveMaxAttempts, resolveTimerSeconds } from "@/lib/games/timer";
 import { useProfile } from "@/lib/profile";
 import { OutOfHeartsModal } from "@/components/imported-campaign/OutOfHeartsModal";
+import { extractMuseumUnlocks, museumUnlocksToCollectionItems } from "@/lib/games/museumUnlocks";
+import { enqueueCollectionSync } from "@/lib/campaignLedger";
+import { audioManager } from "@/lib/audioManager";
 import "@/components/games/games-premium.css";
+
 
 export const Route = createFileRoute("/games/$mode/$slug")({
   head: () => ({ meta: [{ title: "تحدّي تاريخي — إرث" }] }),
