@@ -19,13 +19,14 @@ export const Route = createFileRoute("/adventure")({
   component: AdventurePage,
 });
 
-const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> = {
+const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   crossword: Feather,
   chronology: Hourglass,
   who_am_i: ScrollText,
   connections: Link2,
   memory: Archive,
 };
+
 
 function AdventurePage() {
   const [daily, setDaily] = useState<GameRow[]>([]);
