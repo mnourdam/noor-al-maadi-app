@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Grid3x3, Clock, HelpCircle, Link2, LayoutGrid, ChevronLeft, Star } from "lucide-react";
+import { Grid3x3, Clock, HelpCircle, Link2, LayoutGrid, ChevronLeft, Star, CheckCircle2, Lock } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { listPublishedGames, type GameRow } from "@/lib/games/store";
+import { listPublishedGames, fetchMyCompletedGameIds, type GameRow } from "@/lib/games/store";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, GAME_MODES, type GameMode } from "@/lib/games/types";
 
 export const Route = createFileRoute("/games/")({
@@ -20,9 +20,17 @@ const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> =
 
 function GamesIndex() {
   const [games, setGames] = useState<GameRow[] | null>(null);
+  const [completed, setCompleted] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    (async () => setGames(await listPublishedGames()))();
+    (async () => {
+      const [list, done] = await Promise.all([
+        listPublishedGames(),
+        fetchMyCompletedGameIds(),
+      ]);
+      setGames(list);
+      setCompleted(done);
+    })();
   }, []);
 
   return (
@@ -54,17 +62,39 @@ function GamesIndex() {
                   <p className="text-xs text-slate-500">قريبًا — لا توجد تحديات منشورة بعد.</p>
                 )}
                 <ul className="space-y-1">
-                  {inMode.slice(0, 4).map((g) => (
-                    <li key={g.id}>
-                      <Link to="/games/$mode/$slug" params={{ mode: g.mode, slug: g.slug }}
-                        className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-xs text-slate-200 hover:border-amber-400">
-                        <span className="truncate">{g.title}</span>
-                        <span className="inline-flex items-center gap-1 text-[10px] text-amber-300">
-                          <Star className="h-3 w-3" /> {g.difficulty}/5
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
+                  {inMode.slice(0, 4).map((g) => {
+                    const done = completed.has(g.id);
+                    if (done) {
+                      // Completed challenges are permanent discoveries — no replay.
+                      return (
+                        <li key={g.id}>
+                          <div
+                            aria-disabled="true"
+                            className="flex cursor-not-allowed items-center justify-between rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2 text-xs text-slate-300 opacity-80"
+                          >
+                            <span className="inline-flex min-w-0 items-center gap-1.5">
+                              <Lock className="h-3 w-3 shrink-0 text-emerald-300/80" />
+                              <span className="truncate line-through decoration-emerald-400/40">{g.title}</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300">
+                              <CheckCircle2 className="h-3 w-3" /> مكتمل ✓
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    }
+                    return (
+                      <li key={g.id}>
+                        <Link to="/games/$mode/$slug" params={{ mode: g.mode, slug: g.slug }}
+                          className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-xs text-slate-200 hover:border-amber-400">
+                          <span className="truncate">{g.title}</span>
+                          <span className="inline-flex items-center gap-1 text-[10px] text-amber-300">
+                            <Star className="h-3 w-3" /> {g.difficulty}/5
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             );
