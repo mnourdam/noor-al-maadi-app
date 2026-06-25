@@ -2,11 +2,16 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Link2 } from "lucide-react";
 import type { ConnectionsStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
+import { AttemptsChip } from "./AttemptsChip";
 
 interface Props {
   stage: ConnectionsStage;
   onComplete: (score: number) => void;
+  onWrong?: () => void;
+  attemptsLeft?: number;
+  maxAttempts?: number;
 }
+
 
 function shuffle<T>(arr: T[]): T[] {
   const a = arr.slice();
