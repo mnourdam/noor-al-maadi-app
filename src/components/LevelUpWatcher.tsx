@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Crown, Sparkles, Star, X, Coins, Shield } from "lucide-react";
 import { useProfile } from "@/lib/profile";
-import { levelFor, type LevelInfo } from "@/lib/progression";
+import { LEVELS, levelFor, type LevelInfo } from "@/lib/progression";
 
 const SEEN_KEY = "irth.levelup.seen";
 
@@ -21,28 +21,20 @@ export function LevelUpWatcher() {
   useEffect(() => {
     const lvl = levelFor(profile.points).level;
     if (baseline.current === null) {
-      // First observation after hydration — initialise baseline from the
-      // higher of (current derived level, last celebrated level).
       let seen = 0;
       try { seen = parseInt(localStorage.getItem(SEEN_KEY) ?? "0", 10) || 0; } catch { /* */ }
       baseline.current = Math.max(lvl, seen);
-      // Persist so a brand new player still records their starting level.
       try { localStorage.setItem(SEEN_KEY, String(baseline.current)); } catch { /* */ }
       return;
     }
     if (lvl > baseline.current) {
-      const newOnes: LevelInfo[] = [];
-      for (let l = baseline.current + 1; l <= lvl; l++) {
-        const info = levelFor(thresholdAt(l)).level === l ? levelFor(thresholdAt(l)) : null;
-        if (info) newOnes.push(info);
-      }
+      const newOnes = LEVELS.filter((l) => l.level > baseline.current! && l.level <= lvl);
       baseline.current = lvl;
       try { localStorage.setItem(SEEN_KEY, String(lvl)); } catch { /* */ }
       if (newOnes.length) setPending((q) => [...q, ...newOnes]);
     }
   }, [profile.points]);
 
-  // Promote queued level-ups to the active modal one at a time.
   useEffect(() => {
     if (!current && pending.length > 0) {
       setCurrent(pending[0]);
@@ -52,13 +44,6 @@ export function LevelUpWatcher() {
 
   if (!current) return null;
   return <LevelUpModal info={current} onClose={() => setCurrent(null)} />;
-}
-
-// Lookup the minimum XP for a level via the shared table (avoid duplicating).
-import { LEVELS } from "@/lib/progression";
-function thresholdAt(level: number): number {
-  const entry = LEVELS.find((l) => l.level === level);
-  return entry ? entry.min : 0;
 }
 
 function LevelUpModal({ info, onClose }: { info: LevelInfo; onClose: () => void }) {
