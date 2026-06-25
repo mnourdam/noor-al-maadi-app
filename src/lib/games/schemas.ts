@@ -1,5 +1,7 @@
 import { z } from "zod";
-import type { GameMode } from "./types";
+import type { CrosswordStage, GameMode } from "./types";
+import { validateCrosswordStage } from "./crossword-validate";
+
 
 const slug = z
   .string()
