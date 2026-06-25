@@ -136,10 +136,10 @@ export function AtlasControls({
             <select
               value={era ?? ""}
               onChange={(e) => onEra(e.target.value || null)}
-              aria-label="العصر"
+              aria-label="الحقبة التاريخية"
               className="w-full min-w-0 shrink rounded-full border border-amber-400/30 bg-slate-950/60 px-3 py-1.5 text-[12px] font-bold text-amber-100 outline-none sm:w-auto"
             >
-              <option value="">كل العصور</option>
+              <option value="">كل الحقب</option>
               {facets.eras.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.label} ({e.count})
