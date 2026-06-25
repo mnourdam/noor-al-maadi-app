@@ -93,7 +93,9 @@ const AtlasPin = memo(function AtlasPin({
   active: boolean;
   onSelect: (entity: AtlasEntityRow) => void;
 }) {
+  if (entity.aps_x == null || entity.aps_y == null) return null;
   const { x, y } = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
+
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   if (x < 0 || x > VB_W || y < 0 || y > VB_H) return null;
   const showPin = shouldShowPin(entity.kind, labelTier, active);

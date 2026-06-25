@@ -16,11 +16,12 @@ import {
   type AtlasEntityKind, type AtlasEntityRow,
 } from "@/lib/atlas-entities";
 import {
-  ELIGIBLE_TYPE_LABEL_AR,
+  ensureAtlasDraftsForEncyclopedia,
   listNeedsPlacement,
-  placeEncyclopediaEntity,
+  placeAtlasDraft,
   type NeedsPlacementRow,
 } from "@/lib/atlas-needs-placement";
+
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
 import { geoToAps } from "@/lib/atlas/transform";
@@ -100,7 +101,8 @@ function AtlasReviewPage() {
   const filteredNeeds = useMemo(() => {
     const q = needsSearch.trim().toLowerCase();
     return (needsRows ?? []).filter((r) => {
-      if (needsType !== "all" && r.entity_type !== needsType) return false;
+      if (needsType !== "all" && r.kind !== needsType) return false;
+
       if (q && !`${r.title} ${r.slug}`.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -217,13 +219,17 @@ function AtlasReviewPage() {
     if (aps.x < 0 || aps.y < 0 || aps.x > RASTER.width || aps.y > RASTER.height) return;
     if (!confirm(`وضع "${row.title}" عند APS ${Math.round(aps.x)}, ${Math.round(aps.y)}؟`)) return;
     setPlacing(true);
-    placeEncyclopediaEntity({ row, aps })
-      .then((created) => {
-        setRows((rs) => [created, ...rs]);
+    placeAtlasDraft({ atlasId: row.id, aps })
+      .then((updated: AtlasEntityRow) => {
+        setRows((rs) => {
+          const exists = rs.some((r) => r.id === updated.id);
+          return exists ? rs.map((r) => (r.id === updated.id ? updated : r)) : [updated, ...rs];
+        });
         setNeedsRows((rs) => (rs ?? []).filter((r) => r.id !== row.id));
         setPlacementId(null);
-        setFocusedId(created.id);
+        setFocusedId(updated.id);
       })
+
       .catch((err: any) => alert(`فشل التموضع: ${err.message ?? err}`))
       .finally(() => setPlacing(false));
   };
@@ -468,14 +474,31 @@ function AtlasReviewPage() {
                   <select value={needsType} onChange={(e) => setNeedsType(e.target.value)}
                     className="flex-1 rounded border border-stone-700 bg-stone-950 px-2 py-1">
                     <option value="all">كل الأنواع</option>
-                    {(Object.keys(ELIGIBLE_TYPE_LABEL_AR) as Array<keyof typeof ELIGIBLE_TYPE_LABEL_AR>).map((t) => (
-                      <option key={t} value={t}>{ELIGIBLE_TYPE_LABEL_AR[t]}</option>
+                    {(["region","place","battle","artifact_site","event"] as AtlasEntityKind[]).map((k) => (
+                      <option key={k} value={k}>{KIND_LABEL_AR[k]}</option>
                     ))}
                   </select>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const { inserted } = await ensureAtlasDraftsForEncyclopedia();
+                        alert(`تم إنشاء ${inserted} مسودة جديدة.`);
+                        await reloadNeeds();
+                        await reload();
+                      } catch (e: any) {
+                        alert(`فشل إنشاء المسودات: ${e.message ?? e}`);
+                      }
+                    }}
+                    title="إنشاء مسودات للموسوعة"
+                    className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-amber-200 hover:bg-amber-500/20"
+                  >
+                    توليد مسودات
+                  </button>
                   <button onClick={reloadNeeds} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">
                     <RefreshCw className="size-3.5" />
                   </button>
                 </div>
+
                 {placementId && (
                   <div className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-200">
                     <div className="flex items-center justify-between gap-2">
@@ -505,7 +528,7 @@ function AtlasReviewPage() {
                         <div className="min-w-0 flex-1">
                           <div className="truncate font-bold text-amber-100">{r.title}</div>
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-stone-400">
-                            <span>{ELIGIBLE_TYPE_LABEL_AR[r.entity_type]}</span>
+                            <span>{r.kind_label}</span>
                             <span className="truncate">· {r.slug}</span>
                           </div>
                         </div>
@@ -554,7 +577,9 @@ function AtlasReviewPage() {
               width={RASTER.width} height={RASTER.height} draggable={false}
               alt="" style={{ display: "block", userSelect: "none" }} />
             {filtered.map((r) => {
+              if (r.aps_x == null || r.aps_y == null) return null;
               const pos = drafts[r.id] ?? { x: r.aps_x, y: r.aps_y };
+
               const focused = focusedId === r.id;
               const isSel = selected.has(r.id);
               const dirty = !!drafts[r.id] && (drafts[r.id].x !== r.aps_x || drafts[r.id].y !== r.aps_y);
