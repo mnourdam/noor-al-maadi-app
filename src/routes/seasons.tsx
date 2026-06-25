@@ -41,7 +41,7 @@ function SeasonsPage() {
                 claimed={isActive ? profile.seasonClaimed : false}
                 onClaim={
                   isActive
-                    ? () => claimSeason(s.reward.points, s.reward.title)
+                    ? () => claimSeason(s.reward.points, s.reward.title, s.reward.dinars, s.reward.artifact)
                     : undefined
                 }
               />
