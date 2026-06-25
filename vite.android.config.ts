@@ -16,6 +16,10 @@ export default defineConfig({
   appType: "spa",
   base: "./",
   publicDir: path.resolve(__dirname, "public"),
+  // Load .env / .env.local from the project root, not from `android-web/`.
+  // Capacitor APK builds need VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY
+  // at build time — there is no Lovable Cloud env injection inside the APK.
+  envDir: path.resolve(__dirname, "."),
   resolve: {
     alias: {
       "@tanstack/react-start/server": path.resolve(
