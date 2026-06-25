@@ -474,14 +474,31 @@ function AtlasReviewPage() {
                   <select value={needsType} onChange={(e) => setNeedsType(e.target.value)}
                     className="flex-1 rounded border border-stone-700 bg-stone-950 px-2 py-1">
                     <option value="all">كل الأنواع</option>
-                    {(Object.keys(ELIGIBLE_TYPE_LABEL_AR) as Array<keyof typeof ELIGIBLE_TYPE_LABEL_AR>).map((t) => (
-                      <option key={t} value={t}>{ELIGIBLE_TYPE_LABEL_AR[t]}</option>
+                    {(["region","place","battle","artifact_site","event"] as AtlasEntityKind[]).map((k) => (
+                      <option key={k} value={k}>{KIND_LABEL_AR[k]}</option>
                     ))}
                   </select>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const { inserted } = await ensureAtlasDraftsForEncyclopedia();
+                        alert(`تم إنشاء ${inserted} مسودة جديدة.`);
+                        await reloadNeeds();
+                        await reload();
+                      } catch (e: any) {
+                        alert(`فشل إنشاء المسودات: ${e.message ?? e}`);
+                      }
+                    }}
+                    title="إنشاء مسودات للموسوعة"
+                    className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-amber-200 hover:bg-amber-500/20"
+                  >
+                    توليد مسودات
+                  </button>
                   <button onClick={reloadNeeds} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">
                     <RefreshCw className="size-3.5" />
                   </button>
                 </div>
+
                 {placementId && (
                   <div className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-200">
                     <div className="flex items-center justify-between gap-2">
