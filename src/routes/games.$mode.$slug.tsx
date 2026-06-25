@@ -53,7 +53,16 @@ function GamePlayPage() {
 
   useEffect(() => {
     if (!slug) { setGame(null); return; }
-    (async () => setGame(await getGameBySlug(slug)))();
+    (async () => {
+      const g = await getGameBySlug(slug);
+      setGame(g);
+      if (g) {
+        const p = await getMyProgress(g.id);
+        setAlreadyCompleted(!!p?.completed);
+      } else {
+        setAlreadyCompleted(false);
+      }
+    })();
   }, [slug]);
 
   const stages = useMemo(() => {
