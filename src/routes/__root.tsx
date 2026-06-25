@@ -225,6 +225,7 @@ function RootComponent() {
           <AchievementWatcher />
           <LevelUpWatcher />
           <Toaster position="top-center" richColors closeButton />
+          <SplashSequence />
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
