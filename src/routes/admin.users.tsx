@@ -181,10 +181,18 @@ function AdminUsers() {
           <button onClick={() => setReloadKey((k) => k + 1)} className="inline-flex items-center gap-1 rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">
             <RefreshCw className="h-4 w-4" /> تحديث
           </button>
-          <button onClick={handleExportCsv} className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/20">
-            <Download className="h-4 w-4" /> CSV
-          </button>
+          {isManager && (
+            <button onClick={() => setAddOpen(true)} className="inline-flex items-center gap-1 rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-500/20">
+              <UserPlus className="h-4 w-4" /> إضافة مستخدم
+            </button>
+          )}
+          {isManager && (
+            <button onClick={handleExportCsv} className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/20">
+              <Download className="h-4 w-4" /> CSV
+            </button>
+          )}
         </>
+
       }
     >
       <div className="mx-auto max-w-7xl space-y-6">
