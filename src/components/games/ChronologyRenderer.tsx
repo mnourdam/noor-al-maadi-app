@@ -22,7 +22,11 @@ import { CSS } from "@dnd-kit/utilities";
 interface Props {
   stage: ChronologyStage;
   onComplete: (score: number) => void;
+  onWrong?: () => void;
+  attemptsLeft?: number;
+  maxAttempts?: number;
 }
+
 
 function shuffle<T>(arr: T[]): T[] {
   const a = arr.slice();
