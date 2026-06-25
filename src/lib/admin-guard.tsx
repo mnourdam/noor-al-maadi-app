@@ -3,15 +3,26 @@ import { RefreshCw, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount } from "@/lib/account";
 
+// Bootstrap email — retained so the original owner is unblocked even before
+// the user_roles row is provisioned. The DB layer's is_user_manager() does
+// the same check so the email allowlist alone is never the deciding factor.
 export const ALLOWED_ADMIN_EMAILS = ["mnourdam@gmail.com"];
 export const normalizeEmail = (v: string | null | undefined) => v?.trim().toLowerCase() ?? "";
 const NORMALIZED = ALLOWED_ADMIN_EMAILS.map(normalizeEmail);
 
+export type AdminCapabilities = {
+  is_manager: boolean;
+  is_editor: boolean;
+  roles: string[];
+};
+
+const EMPTY_CAPS: AdminCapabilities = { is_manager: false, is_editor: false, roles: [] };
+
 export function useAdminGuard() {
   const { user: accountUser, loadingSession } = useAccount();
   const [checking, setChecking] = useState(true);
-  const [allowed, setAllowed] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const [caps, setCaps] = useState<AdminCapabilities>(EMPTY_CAPS);
 
   useEffect(() => {
     if (loadingSession) return;
@@ -22,13 +33,35 @@ export function useAdminGuard() {
       const u = data.user ?? accountUser ?? null;
       const e = u?.email ?? null;
       setEmail(e);
-      setAllowed(NORMALIZED.includes(normalizeEmail(e)));
+
+      if (!u) {
+        setCaps(EMPTY_CAPS);
+        setChecking(false);
+        return;
+      }
+
+      // Fetch role capabilities from the DB (security-definer RPC).
+      const { data: capsData } = await supabase.rpc(
+        "current_user_capabilities" as never,
+      );
+      if (!alive) return;
+      const c = (capsData as AdminCapabilities | null) ?? EMPTY_CAPS;
+
+      // Belt-and-braces: if the bootstrap email is signed in but the role
+      // RPC failed for any reason, still treat them as manager.
+      const bootstrap = NORMALIZED.includes(normalizeEmail(e));
+      setCaps({
+        is_manager: !!c.is_manager || bootstrap,
+        is_editor: !!c.is_editor || bootstrap,
+        roles: c.roles ?? [],
+      });
       setChecking(false);
     })();
     return () => { alive = false; };
   }, [accountUser, loadingSession]);
 
-  return { checking, allowed, email };
+  const allowed = caps.is_editor; // editor and above can reach the admin shell
+  return { checking, allowed, email, caps };
 }
 
 export function AdminGate({ children }: { children: ReactNode }) {
@@ -57,5 +90,19 @@ export function AdminGate({ children }: { children: ReactNode }) {
       </div>
     );
   }
+  return <>{children}</>;
+}
+
+/** Manager-only gate. Editors are blocked. */
+export function ManagerOnly({
+  children,
+  fallback = null,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+}) {
+  const { checking, caps } = useAdminGuard();
+  if (checking) return null;
+  if (!caps.is_manager) return <>{fallback}</>;
   return <>{children}</>;
 }

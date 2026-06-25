@@ -1004,6 +1004,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       public_profiles: {
@@ -1062,6 +1086,14 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_assign_role: {
+        Args: {
+          p_reason?: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: Json
+      }
       admin_list_users: {
         Args: {
           p_filter?: string
@@ -1075,6 +1107,14 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_revoke_role: {
+        Args: {
+          p_reason?: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: Json
+      }
       admin_set_account_status: {
         Args: { p_reason: string; p_status: string; p_user_id: string }
         Returns: Json
@@ -1082,6 +1122,7 @@ export type Database = {
       admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
       advance_referral_stage: { Args: { p_stage: number }; Returns: Json }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
+      current_user_capabilities: { Args: never; Returns: Json }
       ensure_atlas_drafts_for_encyclopedia: { Args: never; Returns: Json }
       gen_referral_code: { Args: never; Returns: string }
       get_my_email: { Args: never; Returns: string }
@@ -1127,7 +1168,16 @@ export type Database = {
       }
       grant_level5_reward: { Args: { p_referred_id: string }; Returns: string }
       grant_signup_reward: { Args: { p_referred_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_content_admin: { Args: never; Returns: boolean }
+      is_content_editor: { Args: never; Returns: boolean }
+      is_user_manager: { Args: never; Returns: boolean }
       log_admin_action: {
         Args: {
           p_action: string
@@ -1144,6 +1194,7 @@ export type Database = {
       touch_my_last_active: { Args: never; Returns: undefined }
     }
     Enums: {
+      app_role: "owner" | "admin" | "editor" | "player"
       atlas_entity_kind:
         | "place"
         | "battle"
@@ -1280,6 +1331,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["owner", "admin", "editor", "player"],
       atlas_entity_kind: [
         "place",
         "battle",

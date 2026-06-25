@@ -1,20 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Users, Search, Download, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, X, Coins, Sparkles } from "lucide-react";
-import { AdminGate } from "@/lib/admin-guard";
+import { Users, Search, Download, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, X, Coins, Sparkles, UserPlus, BadgeCheck } from "lucide-react";
+import { AdminGate, useAdminGuard } from "@/lib/admin-guard";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { createTeamUser } from "@/lib/teamUsers.functions";
 import {
   adminListUsers,
   adminUserDetail,
   adminAdjustBalance,
   adminSetAccountStatus,
+  adminAssignRole,
+  adminRevokeRole,
   buildUsersCsv,
   downloadCsv,
   type AdminUserRow,
   type AdminUserDetail,
   type UserFilter,
   type AccountStatus,
+  type AppRole,
 } from "@/lib/adminUsers";
+
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({
@@ -37,10 +43,16 @@ const FILTERS: Array<{ key: UserFilter; label: string }> = [
   { key: "disabled", label: "معطّل" },
   { key: "guest", label: "ضيف" },
   { key: "registered", label: "مسجّل" },
+  { key: "editor", label: "محرّر" },
   { key: "admin", label: "مشرف" },
   { key: "has_referrals", label: "لديه إحالات" },
   { key: "no_referrals", label: "بدون إحالات" },
 ];
+
+const ROLE_LABEL: Record<AppRole, string> = {
+  owner: "مالك", admin: "مشرف", editor: "محرّر", player: "لاعب",
+};
+
 
 const PAGE_SIZE = 50;
 
@@ -73,16 +85,31 @@ function StatusBadge({ status }: { status: AccountStatus }) {
 function TypeBadge({ t }: { t: string }) {
   const map: Record<string, string> = {
     admin: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+    editor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
     registered: "bg-sky-500/15 text-sky-300 border-sky-500/30",
     guest: "bg-slate-500/15 text-slate-300 border-slate-500/30",
   };
-  const labels: Record<string, string> = { admin: "مشرف", registered: "مسجّل", guest: "ضيف" };
+  const labels: Record<string, string> = { admin: "مشرف", editor: "محرّر", registered: "مسجّل", guest: "ضيف" };
   return (
     <span className={`inline-block rounded border px-2 py-0.5 text-[11px] ${map[t] || map.guest}`}>
       {labels[t] ?? t}
     </span>
   );
 }
+
+function RolesChips({ roles }: { roles: string[] | undefined }) {
+  if (!roles || roles.length === 0) return <span className="text-[11px] text-slate-500">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {roles.map((r) => (
+        <span key={r} className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-200">
+          {ROLE_LABEL[r as AppRole] ?? r}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 
 function AdminUsers() {
   const [search, setSearch] = useState("");
@@ -98,6 +125,10 @@ function AdminUsers() {
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [addOpen, setAddOpen] = useState(false);
+  const { caps } = useAdminGuard();
+  const isManager = caps.is_manager;
+
 
   const filters = useMemo(
     () => ({
@@ -150,10 +181,18 @@ function AdminUsers() {
           <button onClick={() => setReloadKey((k) => k + 1)} className="inline-flex items-center gap-1 rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800">
             <RefreshCw className="h-4 w-4" /> تحديث
           </button>
-          <button onClick={handleExportCsv} className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/20">
-            <Download className="h-4 w-4" /> CSV
-          </button>
+          {isManager && (
+            <button onClick={() => setAddOpen(true)} className="inline-flex items-center gap-1 rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-500/20">
+              <UserPlus className="h-4 w-4" /> إضافة مستخدم
+            </button>
+          )}
+          {isManager && (
+            <button onClick={handleExportCsv} className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/20">
+              <Download className="h-4 w-4" /> CSV
+            </button>
+          )}
         </>
+
       }
     >
       <div className="mx-auto max-w-7xl space-y-6">
@@ -204,7 +243,9 @@ function AdminUsers() {
                   <th className="px-3 py-2">المستخدم</th>
                   <th className="px-3 py-2">البريد</th>
                   <th className="px-3 py-2">النوع</th>
+                  <th className="px-3 py-2">الأدوار</th>
                   <th className="px-3 py-2">الحالة</th>
+
                   <th className="px-3 py-2">المستوى</th>
                   <th className="px-3 py-2">XP</th>
                   <th className="px-3 py-2">الدنانير</th>
@@ -215,9 +256,9 @@ function AdminUsers() {
               </thead>
               <tbody>
                 {loading && rows.length === 0 ? (
-                  <tr><td colSpan={11} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
+                  <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={11} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
+                  <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
                 ) : (
                   rows.map((r) => (
                     <tr key={r.id} onClick={() => setSelectedId(r.id)} className="cursor-pointer border-t border-slate-800/70 hover:bg-slate-800/40">
@@ -225,7 +266,9 @@ function AdminUsers() {
                       <td className="px-3 py-2 text-slate-300">@{r.username}</td>
                       <td className="px-3 py-2 text-xs text-slate-400" dir="ltr">{r.email ?? "—"}</td>
                       <td className="px-3 py-2"><TypeBadge t={r.account_type} /></td>
+                      <td className="px-3 py-2"><RolesChips roles={r.roles} /></td>
                       <td className="px-3 py-2"><StatusBadge status={r.account_status} /></td>
+
                       <td className="px-3 py-2 text-amber-300">{r.level}</td>
                       <td className="px-3 py-2 text-slate-300">{r.xp.toLocaleString("en-US")}</td>
                       <td className="px-3 py-2 text-emerald-300">{r.dinars.toLocaleString("en-US")}</td>
@@ -251,15 +294,24 @@ function AdminUsers() {
       {selectedId && (
         <UserDetailDrawer
           userId={selectedId}
+          isManager={isManager}
           onClose={() => setSelectedId(null)}
           onChanged={() => setReloadKey((k) => k + 1)}
+        />
+      )}
+
+      {addOpen && isManager && (
+        <AddUserModal
+          onClose={() => setAddOpen(false)}
+          onCreated={() => { setAddOpen(false); setReloadKey((k) => k + 1); }}
         />
       )}
     </AdminLayout>
   );
 }
 
-function UserDetailDrawer({ userId, onClose, onChanged }: { userId: string; onClose: () => void; onChanged: () => void }) {
+
+function UserDetailDrawer({ userId, isManager, onClose, onChanged }: { userId: string; isManager: boolean; onClose: () => void; onChanged: () => void }) {
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -346,22 +398,75 @@ function UserDetailDrawer({ userId, onClose, onChanged }: { userId: string; onCl
                 <KV label="تحقيقات مكتملة">{(detail.profile as any).investigations_completed ?? 0}</KV>
               </Section>
 
-              {/* Admin actions */}
-              <Section title="إجراءات إدارية">
-                <div className="col-span-2 flex flex-wrap gap-2">
-                  <ActionButton disabled={busy} onClick={() => adjust("xp")} icon={<Sparkles className="h-4 w-4" />} label="تعديل XP" />
-                  <ActionButton disabled={busy} onClick={() => adjust("dinars")} icon={<Coins className="h-4 w-4" />} label="تعديل الدنانير" />
-                  <ActionButton disabled title="القلوب مخزّنة محلياً على الجهاز ولا يمكن تعديلها عن بُعد حالياً." icon={<Coins className="h-4 w-4" />} label="تعديل القلوب (قريباً)" />
-                </div>
-                <div className="col-span-2 mt-2 flex flex-wrap gap-2">
-                  <ActionButton disabled={busy || detail.profile.account_status === "active"} onClick={() => changeStatus("active")} icon={<ShieldCheck className="h-4 w-4" />} label="تفعيل" tone="emerald" />
-                  <ActionButton disabled={busy || detail.profile.account_status === "suspended"} onClick={() => changeStatus("suspended")} icon={<ShieldAlert className="h-4 w-4" />} label="إيقاف" tone="amber" />
-                  <ActionButton disabled={busy || detail.profile.account_status === "disabled"} onClick={() => changeStatus("disabled")} icon={<ShieldOff className="h-4 w-4" />} label="تعطيل" tone="rose" />
-                </div>
-                <p className="col-span-2 mt-2 text-[11px] leading-5 text-slate-400">
-                  جميع التعديلات تُسجّل في سجل التدقيق مع المسؤول والسبب. لا تجري تعديلات SQL مباشرة على الإنتاج.
-                </p>
-              </Section>
+              {/* Roles (manager-only) */}
+              {isManager && (
+                <Section title="الأدوار">
+                  <div className="col-span-2 mb-2">
+                    <RolesChips roles={(detail as any).roles ?? []} />
+                  </div>
+                  <div className="col-span-2 flex flex-wrap gap-2">
+                    {(["editor","admin","owner"] as AppRole[]).map((role) => {
+                      const has = ((detail as any).roles ?? []).includes(role);
+                      return (
+                        <ActionButton
+                          key={role}
+                          disabled={busy}
+                          icon={<BadgeCheck className="h-4 w-4" />}
+                          label={has ? `إزالة ${ROLE_LABEL[role]}` : `منح ${ROLE_LABEL[role]}`}
+                          tone={has ? "rose" : "emerald"}
+                          onClick={async () => {
+                            const reason = window.prompt(`سبب ${has ? "إزالة" : "منح"} دور "${ROLE_LABEL[role]}":`, "") ?? "";
+                            setBusy(true);
+                            try {
+                              if (has) await adminRevokeRole(userId, role, reason);
+                              else     await adminAssignRole(userId, role, reason);
+                              setReloadKey((k) => k + 1);
+                              onChanged();
+                            } catch (e: any) {
+                              alert("فشل: " + (e?.message ?? String(e)));
+                            } finally { setBusy(false); }
+                          }}
+                        />
+                      );
+                    })}
+                    <ActionButton
+                      disabled={busy}
+                      icon={<ShieldOff className="h-4 w-4" />}
+                      label="إعادة إلى لاعب"
+                      onClick={async () => {
+                        if (!confirm("إزالة جميع الأدوار وإعادة المستخدم إلى لاعب عادي؟")) return;
+                        setBusy(true);
+                        try {
+                          await adminAssignRole(userId, "player", "downgrade to player");
+                          setReloadKey((k) => k + 1);
+                          onChanged();
+                        } catch (e: any) { alert("فشل: " + (e?.message ?? String(e))); }
+                        finally { setBusy(false); }
+                      }}
+                    />
+                  </div>
+                </Section>
+              )}
+
+              {/* Admin actions (manager-only) */}
+              {isManager && (
+                <Section title="إجراءات إدارية">
+                  <div className="col-span-2 flex flex-wrap gap-2">
+                    <ActionButton disabled={busy} onClick={() => adjust("xp")} icon={<Sparkles className="h-4 w-4" />} label="تعديل XP" />
+                    <ActionButton disabled={busy} onClick={() => adjust("dinars")} icon={<Coins className="h-4 w-4" />} label="تعديل الدنانير" />
+                    <ActionButton disabled title="القلوب مخزّنة محلياً على الجهاز ولا يمكن تعديلها عن بُعد حالياً." icon={<Coins className="h-4 w-4" />} label="تعديل القلوب (قريباً)" />
+                  </div>
+                  <div className="col-span-2 mt-2 flex flex-wrap gap-2">
+                    <ActionButton disabled={busy || detail.profile.account_status === "active"} onClick={() => changeStatus("active")} icon={<ShieldCheck className="h-4 w-4" />} label="تفعيل" tone="emerald" />
+                    <ActionButton disabled={busy || detail.profile.account_status === "suspended"} onClick={() => changeStatus("suspended")} icon={<ShieldAlert className="h-4 w-4" />} label="إيقاف" tone="amber" />
+                    <ActionButton disabled={busy || detail.profile.account_status === "disabled"} onClick={() => changeStatus("disabled")} icon={<ShieldOff className="h-4 w-4" />} label="تعطيل" tone="rose" />
+                  </div>
+                  <p className="col-span-2 mt-2 text-[11px] leading-5 text-slate-400">
+                    جميع التعديلات تُسجّل في سجل التدقيق مع المسؤول والسبب. لا تجري تعديلات SQL مباشرة على الإنتاج.
+                  </p>
+                </Section>
+              )}
+
 
               {/* Referrals */}
               <Section title="الإحالات">
@@ -475,5 +580,90 @@ function ActionButton({
     >
       {icon} {label}
     </button>
+  );
+}
+
+function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const createFn = useServerFn(createTeamUser);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [role, setRole] = useState<AppRole>("player");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    setError(null);
+    if (!email.trim() || !password || !displayName.trim()) {
+      setError("الرجاء تعبئة كل الحقول.");
+      return;
+    }
+    if (password.length < 8) { setError("كلمة المرور 8 محارف على الأقل."); return; }
+    setBusy(true);
+    try {
+      await createFn({ data: { email: email.trim(), password, display_name: displayName.trim(), role } });
+      onCreated();
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" dir="rtl">
+      <div className="w-full max-w-md rounded-xl border border-amber-500/30 bg-slate-950 p-5 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-amber-200">
+            <UserPlus className="h-5 w-5" /> إضافة مستخدم جديد
+          </h2>
+          <button onClick={onClose} className="rounded p-1 hover:bg-slate-800"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="mt-1 text-xs text-slate-400">
+          يُنشأ الحساب عبر وظيفة خادم آمنة. لا يُرسل المفتاح السرّي إلى المتصفح أبدًا.
+        </p>
+
+        <div className="mt-4 space-y-3 text-sm">
+          <label className="block">
+            <span className="mb-1 block text-xs text-slate-400">الاسم الظاهر</span>
+            <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={80}
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-500/60" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-slate-400">البريد</span>
+            <input dir="ltr" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255}
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-500/60" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-slate-400">كلمة المرور (8 محارف فأكثر)</span>
+            <input dir="ltr" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} maxLength={72}
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-500/60" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-slate-400">الدور</span>
+            <select value={role} onChange={(e) => setRole(e.target.value as AppRole)}
+              className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-500/60">
+              <option value="player">لاعب</option>
+              <option value="editor">محرّر (وصول إلى أدوات المحتوى فقط)</option>
+              <option value="admin">مشرف (وصول كامل)</option>
+              <option value="owner">مالك</option>
+            </select>
+          </label>
+        </div>
+
+        {error && (
+          <div className="mt-3 rounded border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <button onClick={onClose} disabled={busy}
+            className="rounded border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800 disabled:opacity-50">إلغاء</button>
+          <button onClick={submit} disabled={busy}
+            className="inline-flex items-center gap-1 rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50">
+            {busy ? "جارٍ الإنشاء…" : "إنشاء المستخدم"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
