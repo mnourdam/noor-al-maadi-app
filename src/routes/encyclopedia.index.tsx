@@ -581,7 +581,7 @@ function EncyclopediaHub() {
             <div className="h-6" />
           </>
         )}
-      </Screen>
+      </div>
     </AppShell>
   );
 }
