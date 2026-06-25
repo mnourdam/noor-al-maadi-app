@@ -58,6 +58,7 @@ import { Route as AdminInvestigationsRouteImport } from './routes/admin.investig
 import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminHubBuilderRouteImport } from './routes/admin.hub-builder'
 import { Route as AdminHistoricalHubsAuditRouteImport } from './routes/admin.historical-hubs-audit'
+import { Route as AdminGamesRouteImport } from './routes/admin.games'
 import { Route as AdminExplorationPathRepairRouteImport } from './routes/admin.exploration-path-repair'
 import { Route as AdminEraNormalizationRouteImport } from './routes/admin.era-normalization'
 import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
@@ -83,6 +84,7 @@ import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
 import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
+import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
 import { Route as CampaignsImportedIdIndexRouteImport } from './routes/campaigns.imported.$id.index'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
 
@@ -333,6 +335,11 @@ const AdminHistoricalHubsAuditRoute =
     path: '/admin/historical-hubs-audit',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminGamesRoute = AdminGamesRouteImport.update({
+  id: '/admin/games',
+  path: '/admin/games',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminExplorationPathRepairRoute =
   AdminExplorationPathRepairRouteImport.update({
     id: '/admin/exploration-path-repair',
@@ -462,6 +469,11 @@ const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
   path: '/entity/$id',
   getParentRoute: () => EncyclopediaRoute,
 } as any)
+const AdminGamesModeRoute = AdminGamesModeRouteImport.update({
+  id: '/$mode',
+  path: '/$mode',
+  getParentRoute: () => AdminGamesRoute,
+} as any)
 const CampaignsImportedIdIndexRoute =
   CampaignsImportedIdIndexRouteImport.update({
     id: '/imported/$id/',
@@ -519,6 +531,7 @@ export interface FileRoutesByFullPath {
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
   '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
+  '/admin/games': typeof AdminGamesRouteWithChildren
   '/admin/historical-hubs-audit': typeof AdminHistoricalHubsAuditRoute
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
@@ -546,6 +559,7 @@ export interface FileRoutesByFullPath {
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/worlds/': typeof WorldsIndexRoute
+  '/admin/games/$mode': typeof AdminGamesModeRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -595,6 +609,7 @@ export interface FileRoutesByTo {
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
   '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
+  '/admin/games': typeof AdminGamesRouteWithChildren
   '/admin/historical-hubs-audit': typeof AdminHistoricalHubsAuditRoute
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
@@ -622,6 +637,7 @@ export interface FileRoutesByTo {
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
   '/worlds': typeof WorldsIndexRoute
+  '/admin/games/$mode': typeof AdminGamesModeRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -674,6 +690,7 @@ export interface FileRoutesById {
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
   '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
+  '/admin/games': typeof AdminGamesRouteWithChildren
   '/admin/historical-hubs-audit': typeof AdminHistoricalHubsAuditRoute
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
@@ -701,6 +718,7 @@ export interface FileRoutesById {
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/worlds/': typeof WorldsIndexRoute
+  '/admin/games/$mode': typeof AdminGamesModeRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -754,6 +772,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-audit'
     | '/admin/era-normalization'
     | '/admin/exploration-path-repair'
+    | '/admin/games'
     | '/admin/historical-hubs-audit'
     | '/admin/hub-builder'
     | '/admin/import'
@@ -781,6 +800,7 @@ export interface FileRouteTypes {
     | '/campaigns/'
     | '/encyclopedia/'
     | '/worlds/'
+    | '/admin/games/$mode'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -830,6 +850,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-audit'
     | '/admin/era-normalization'
     | '/admin/exploration-path-repair'
+    | '/admin/games'
     | '/admin/historical-hubs-audit'
     | '/admin/hub-builder'
     | '/admin/import'
@@ -857,6 +878,7 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/encyclopedia'
     | '/worlds'
+    | '/admin/games/$mode'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -908,6 +930,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-audit'
     | '/admin/era-normalization'
     | '/admin/exploration-path-repair'
+    | '/admin/games'
     | '/admin/historical-hubs-audit'
     | '/admin/hub-builder'
     | '/admin/import'
@@ -935,6 +958,7 @@ export interface FileRouteTypes {
     | '/campaigns/'
     | '/encyclopedia/'
     | '/worlds/'
+    | '/admin/games/$mode'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -987,6 +1011,7 @@ export interface RootRouteChildren {
   AdminEncyclopediaAuditRoute: typeof AdminEncyclopediaAuditRoute
   AdminEraNormalizationRoute: typeof AdminEraNormalizationRoute
   AdminExplorationPathRepairRoute: typeof AdminExplorationPathRepairRoute
+  AdminGamesRoute: typeof AdminGamesRouteWithChildren
   AdminHistoricalHubsAuditRoute: typeof AdminHistoricalHubsAuditRoute
   AdminHubBuilderRoute: typeof AdminHubBuilderRoute
   AdminImportRoute: typeof AdminImportRoute
@@ -1359,6 +1384,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminHistoricalHubsAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/games': {
+      id: '/admin/games'
+      path: '/admin/games'
+      fullPath: '/admin/games'
+      preLoaderRoute: typeof AdminGamesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/exploration-path-repair': {
       id: '/admin/exploration-path-repair'
       path: '/admin/exploration-path-repair'
@@ -1534,6 +1566,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EncyclopediaEntityIdRouteImport
       parentRoute: typeof EncyclopediaRoute
     }
+    '/admin/games/$mode': {
+      id: '/admin/games/$mode'
+      path: '/$mode'
+      fullPath: '/admin/games/$mode'
+      preLoaderRoute: typeof AdminGamesModeRouteImport
+      parentRoute: typeof AdminGamesRoute
+    }
     '/campaigns/imported/$id/': {
       id: '/campaigns/imported/$id/'
       path: '/imported/$id'
@@ -1588,6 +1627,18 @@ const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
   EncyclopediaRouteChildren,
 )
 
+interface AdminGamesRouteChildren {
+  AdminGamesModeRoute: typeof AdminGamesModeRoute
+}
+
+const AdminGamesRouteChildren: AdminGamesRouteChildren = {
+  AdminGamesModeRoute: AdminGamesModeRoute,
+}
+
+const AdminGamesRouteWithChildren = AdminGamesRoute._addFileChildren(
+  AdminGamesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -1632,6 +1683,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminEncyclopediaAuditRoute: AdminEncyclopediaAuditRoute,
   AdminEraNormalizationRoute: AdminEraNormalizationRoute,
   AdminExplorationPathRepairRoute: AdminExplorationPathRepairRoute,
+  AdminGamesRoute: AdminGamesRouteWithChildren,
   AdminHistoricalHubsAuditRoute: AdminHistoricalHubsAuditRoute,
   AdminHubBuilderRoute: AdminHubBuilderRoute,
   AdminImportRoute: AdminImportRoute,
