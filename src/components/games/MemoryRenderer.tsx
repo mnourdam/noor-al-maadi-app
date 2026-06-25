@@ -29,7 +29,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function MemoryRenderer({ stage, onComplete }: Props) {
+export function MemoryRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const deck = useMemo<Card[]>(() => {
     const cards: Card[] = [];
     stage.pairs.forEach((p, i) => {
