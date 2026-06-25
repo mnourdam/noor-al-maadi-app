@@ -40,7 +40,7 @@ function AdventurePage() {
 
   return (
     <AppShell>
-      <Screen title="المغامرة" subtitle="بوابتك إلى التاريخ — قاعات وتحديات وحملات.">
+      <Screen title="قاعة التحديات" subtitle="بوابتك إلى التاريخ — قاعات وتحديات وحملات.">
         <div dir="rtl" className="space-y-10">
           {/* Museum hall hero */}
           <section className="relative overflow-hidden rounded-2xl border border-amber-500/30 irth-title-card p-6 sm:p-8">
