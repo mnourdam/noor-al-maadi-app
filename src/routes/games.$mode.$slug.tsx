@@ -41,6 +41,8 @@ function GamePlayPage() {
   const [failed, setFailed] = useState(false);
   const [retryNonce, setRetryNonce] = useState(0);
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
+  const [unlockToast, setUnlockToast] = useState<number>(0); // count of newly unlocked museum items
+
 
   // Exit confirmation
   const [exitOpen, setExitOpen] = useState(false);
