@@ -20,6 +20,32 @@
         --safe-area-inset-bottom: 0px;
         --safe-area-inset-left: 0px;
       }
+      /* Hide React tree until the cinematic splash is ready to take over.
+         Without this, the home page can briefly paint between the native
+         launch screen and the JS splash on slow cold-starts (App UI → black
+         → Splash → App). */
+      html.irth-booting #root { visibility: hidden; }
+      #irth-boot-splash {
+        position: fixed; inset: 0; z-index: 2147483647;
+        background:
+          radial-gradient(circle at 50% 50%,
+            rgba(212,175,90,0.28) 0%,
+            rgba(212,175,90,0.08) 28%,
+            rgba(5,8,15,0) 62%),
+          #05080f;
+        display: flex; align-items: center; justify-content: center;
+        transition: opacity 280ms ease-out;
+      }
+      #irth-boot-splash.is-out { opacity: 0; }
+      #irth-boot-splash img {
+        width: 96px; height: 96px;
+        filter: drop-shadow(0 0 22px rgba(212,175,90,0.5));
+        animation: irth-boot-pulse 2.2s ease-in-out infinite;
+      }
+      @keyframes irth-boot-pulse {
+        0%,100% { opacity: 0.85; transform: scale(1); }
+        50%     { opacity: 1;    transform: scale(1.05); }
+      }
     </style>
     <script>
       // Capacitor's SystemBars plugin injects:
