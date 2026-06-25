@@ -6,9 +6,11 @@ import { getGameBySlug, type GameRow } from "@/lib/games/store";
 import { recordCompletion } from "@/lib/games/progress";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, GAME_MODES, type GameMode } from "@/lib/games/types";
 import { GameStageRenderer } from "@/components/games/GameStageRenderer";
+import { GameTimer } from "@/components/games/GameTimer";
 import { sfx } from "@/components/games/sfx";
 import { useProfile } from "@/lib/profile";
 import "@/components/games/games-premium.css";
+
 
 export const Route = createFileRoute("/games/$mode/$slug")({
   head: () => ({ meta: [{ title: "تحدّي تاريخي — إرث" }] }),
@@ -106,16 +108,31 @@ function GamePlayPage() {
           </div>
         </header>
 
-        {/* Progress rail */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-slate-400">
-            <span>المرحلة {Math.min(stageIdx + 1, Math.max(stages.length, 1))} من {stages.length}</span>
-            <span>{progressPct}٪</span>
+        {/* Countdown timer (always visible) + progress rail */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <GameTimer
+              key={`${game.id}-${stageIdx}`}
+              seconds={Math.max(60, (game.estimated_time || 5) * 60)}
+              paused={stageDone}
+              onExpire={() => sfx("timeout")}
+            />
+            <div className="hidden text-end text-[11px] text-slate-400 sm:block">
+              <p>وقت مقترح للجولة</p>
+              <p className="text-amber-300/80">يستمر العدّ حتى انتهاء المرحلة</p>
+            </div>
           </div>
-          <div className="irth-rail" aria-label="تقدم اللعبة">
-            <span style={{ width: `${progressPct}%` }} />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] text-slate-400">
+              <span>المرحلة {Math.min(stageIdx + 1, Math.max(stages.length, 1))} من {stages.length}</span>
+              <span>{progressPct}٪</span>
+            </div>
+            <div className="irth-rail" aria-label="تقدم اللعبة">
+              <span style={{ width: `${progressPct}%` }} />
+            </div>
           </div>
         </div>
+
 
         {/* Stage */}
         {stage ? (

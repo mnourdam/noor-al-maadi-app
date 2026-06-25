@@ -9,7 +9,9 @@ export type GameSfxKind =
   | "timeline_snap"
   | "thread_connect"
   | "museum_unlock"
-  | "completion";
+  | "completion"
+  | "tick"
+  | "timeout";
 
 export function sfx(kind: GameSfxKind): void {
   if (typeof window === "undefined") return;
