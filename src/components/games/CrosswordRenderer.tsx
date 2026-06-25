@@ -150,8 +150,33 @@ export function CrosswordRenderer({
     } else {
       setFeedback({ kind: "err", msg: `لا تزال بعض الخانات غير صحيحة (${correct}/${totalCells}).` });
       sfx("wrong");
+      onWrong?.();
     }
   };
+
+  // ---- paid hint: reveal next unrevealed letter of the active clue ----
+  // Predictable behaviour: always the first remaining letter from the start.
+  const revealNextLetter = () => {
+    if (activeClue === null) return;
+    const clue = stage.clues[activeClue];
+    const cells = clueCells(clue);
+    const target = cells.find(({ r, c }) => {
+      const k = cellKey(r, c);
+      const exp = grid.get(k)?.expected;
+      return exp && (entries[k] ?? "") !== exp;
+    });
+    if (!target) return;
+    if (!onPaidHint || !onPaidHint(HINT_COST)) {
+      setFeedback({ kind: "err", msg: `تحتاج ${HINT_COST} دينارًا لكشف الحرف.` });
+      return;
+    }
+    const k = cellKey(target.r, target.c);
+    const ch = grid.get(k)!.expected;
+    setEntries((prev) => ({ ...prev, [k]: ch }));
+    sfx("ink_write");
+    focusCell(k);
+  };
+
 
   // ---- render ----
   const activeKeys = activeClue !== null
