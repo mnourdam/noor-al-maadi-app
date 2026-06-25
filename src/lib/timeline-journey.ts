@@ -113,6 +113,7 @@ export type JourneyEntry = {
   hasAtlas: boolean;
   campaignSlug: string | null;
   worldSlug: string | null;
+  imageUrl: string | null;
 };
 
 const TIMELINE_TYPES = new Set([
