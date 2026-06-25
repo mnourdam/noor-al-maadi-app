@@ -201,15 +201,62 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
         @keyframes splash-art-in  { to { opacity: 1; } }
         @keyframes splash-art-out { to { opacity: 0.18; } }
 
+        /* Base artwork — no animation here, framing class supplies the move.
+           Slight oversize ensures every portrait screen is fully filled with
+           a 16:9 source via object-fit: cover (background-size: cover). */
         .splash-artwork {
-          transform: scale(1.05);
-          animation: splash-kenburns 6s ease-out 500ms forwards;
+          transform: scale(1.14) translate3d(0,0,0);
           will-change: transform;
+          backface-visibility: hidden;
         }
-        @keyframes splash-kenburns {
-          from { transform: scale(1.05) translate3d(0,0,0); }
-          to   { transform: scale(1.16) translate3d(-1.5%, -1%, 0); }
+
+        /* Cinematic framings — each one is a different camera shot.
+           Durations are long (7s) and easing is calm so motion is barely
+           perceptible. GPU-only props (transform). */
+        .splash-artwork--zoom-in   { animation: sp-zoom-in   7s ease-out 500ms forwards; }
+        .splash-artwork--zoom-out  { animation: sp-zoom-out  7s ease-out 500ms forwards; }
+        .splash-artwork--pan-up    { animation: sp-pan-up    7s ease-out 500ms forwards; }
+        .splash-artwork--pan-down  { animation: sp-pan-down  7s ease-out 500ms forwards; }
+        .splash-artwork--pan-left  { animation: sp-pan-left  7s ease-out 500ms forwards; }
+        .splash-artwork--pan-right { animation: sp-pan-right 7s ease-out 500ms forwards; }
+        .splash-artwork--reveal-tl { animation: sp-reveal-tl 7s ease-out 500ms forwards; }
+        .splash-artwork--reveal-tr { animation: sp-reveal-tr 7s ease-out 500ms forwards; }
+        .splash-artwork--reveal-bl { animation: sp-reveal-bl 7s ease-out 500ms forwards; }
+        .splash-artwork--reveal-br { animation: sp-reveal-br 7s ease-out 500ms forwards; }
+        .splash-artwork--ken-burns { animation: sp-kenburns  7s ease-out 500ms forwards; }
+
+        @keyframes sp-zoom-in    { from { transform: scale(1.14) translate3d(0,0,0); }
+                                   to   { transform: scale(1.22) translate3d(0,0,0); } }
+        @keyframes sp-zoom-out   { from { transform: scale(1.22) translate3d(0,0,0); }
+                                   to   { transform: scale(1.14) translate3d(0,0,0); } }
+        @keyframes sp-pan-up     { from { transform: scale(1.18) translate3d(0, 2.5%, 0); }
+                                   to   { transform: scale(1.18) translate3d(0,-2.5%, 0); } }
+        @keyframes sp-pan-down   { from { transform: scale(1.18) translate3d(0,-2.5%, 0); }
+                                   to   { transform: scale(1.18) translate3d(0, 2.5%, 0); } }
+        @keyframes sp-pan-left   { from { transform: scale(1.18) translate3d( 2.5%,0,0); }
+                                   to   { transform: scale(1.18) translate3d(-2.5%,0,0); } }
+        @keyframes sp-pan-right  { from { transform: scale(1.18) translate3d(-2.5%,0,0); }
+                                   to   { transform: scale(1.18) translate3d( 2.5%,0,0); } }
+        @keyframes sp-reveal-tl  { from { transform: scale(1.24) translate3d( 2%, 2%,0); }
+                                   to   { transform: scale(1.14) translate3d(-1%,-1%,0); } }
+        @keyframes sp-reveal-tr  { from { transform: scale(1.24) translate3d(-2%, 2%,0); }
+                                   to   { transform: scale(1.14) translate3d( 1%,-1%,0); } }
+        @keyframes sp-reveal-bl  { from { transform: scale(1.24) translate3d( 2%,-2%,0); }
+                                   to   { transform: scale(1.14) translate3d(-1%, 1%,0); } }
+        @keyframes sp-reveal-br  { from { transform: scale(1.24) translate3d(-2%,-2%,0); }
+                                   to   { transform: scale(1.14) translate3d( 1%, 1%,0); } }
+        @keyframes sp-kenburns   { from { transform: scale(1.14) translate3d(0,0,0); }
+                                   to   { transform: scale(1.20) translate3d(-1.5%,-1%,0); } }
+
+        /* Soft atmospheric haze drifting across the artwork. */
+        .splash-haze {
+          background: radial-gradient(ellipse at 30% 40%, rgba(244,227,184,0.10), transparent 55%),
+                      radial-gradient(ellipse at 70% 65%, rgba(212,175,90,0.08), transparent 60%);
+          mix-blend-mode: screen;
+          opacity: 0;
+          animation: sp-haze-in 1400ms ease-out 700ms forwards;
         }
+        @keyframes sp-haze-in { to { opacity: 1; } }
 
         .splash-quote {
           opacity: 0;
