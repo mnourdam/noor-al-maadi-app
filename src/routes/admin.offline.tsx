@@ -70,10 +70,15 @@ function ageLabel(iso?: string): string {
   return `قبل ${Math.round(h / 24)} يومًا`;
 }
 
+const MUSEUM_ENTITY_TYPES = new Set([
+  "figure", "artifact", "landmark", "city", "battle", "event",
+]);
+
 function OfflinePanel() {
   const [info, setInfo] = useState<Info | null>(null);
   const [bundledInfo, setBundledInfo] = useState<Info | null>(null);
   const [sizeBytes, setSizeBytes] = useState<number | null>(null);
+  const [museumCount, setMuseumCount] = useState<number>(0);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [report, setReport] = useState<ValidationReport | null>(null);
@@ -84,6 +89,8 @@ function OfflinePanel() {
     setInfo(v);
     const snap = await loadSnapshot();
     setSizeBytes(snap ? new Blob([JSON.stringify(snap)]).size : null);
+    const enc = (snap?.collections?.encyclopedia_entities ?? []) as Array<{ entity_type?: string }>;
+    setMuseumCount(enc.filter((e) => MUSEUM_ENTITY_TYPES.has(String(e?.entity_type))).length);
     const bundled = await loadBundledSnapshot();
     setBundledInfo(
       bundled
