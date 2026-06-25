@@ -131,7 +131,7 @@ interface Ctx {
   unlockCharacter: (id: string) => void;
   unlockRegion: (id: string, cost: number) => boolean;
   claimDaily: (id: string, reward: number) => boolean;
-  claimSeason: (reward: number, title?: string) => boolean;
+  claimSeason: (reward: number, title?: string, dinars?: number, artifact?: string) => boolean;
   updateSettings: (patch: Partial<AppSettings>) => void;
   todayDailyIds: () => string[];
   setBio: (bio: string) => void;
