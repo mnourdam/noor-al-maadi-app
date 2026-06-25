@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, X, Sparkles, Hourglass, GripVertical, AlertTriangle } from "lucide-react";
 import type { ChronologyStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
+import { AttemptsChip } from "./AttemptsChip";
+
 import {
   DndContext,
   PointerSensor,
@@ -22,7 +24,11 @@ import { CSS } from "@dnd-kit/utilities";
 interface Props {
   stage: ChronologyStage;
   onComplete: (score: number) => void;
+  onWrong?: () => void;
+  attemptsLeft?: number;
+  maxAttempts?: number;
 }
+
 
 function shuffle<T>(arr: T[]): T[] {
   const a = arr.slice();
@@ -33,7 +39,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function ChronologyRenderer({ stage, onComplete }: Props) {
+export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const initial = useMemo(() => shuffle(stage.events.map((_, i) => i)), [stage]);
   const [order, setOrder] = useState<number[]>(initial);
   const [checked, setChecked] = useState<boolean[] | null>(null);
@@ -73,8 +79,10 @@ export function ChronologyRenderer({ stage, onComplete }: Props) {
       onComplete(100);
     } else if (!allRight) {
       sfx("wrong");
+      onWrong?.();
     }
   };
+
 
   return (
     <div className="relative irth-title-card overflow-hidden p-5">
@@ -83,7 +91,13 @@ export function ChronologyRenderer({ stage, onComplete }: Props) {
           <Hourglass className="h-3.5 w-3.5" />
           الخط الزمني
         </div>
-        {stage.prompt && <span className="text-[11px] text-slate-400">{stage.prompt}</span>}
+        <div className="flex items-center gap-2">
+          {stage.prompt && <span className="text-[11px] text-slate-400">{stage.prompt}</span>}
+          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
+            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
+          )}
+        </div>
+
       </div>
 
       <p className="mb-3 text-[11px] text-slate-500">

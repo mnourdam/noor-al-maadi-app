@@ -2,11 +2,16 @@ import { useEffect, useState } from "react";
 import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion } from "lucide-react";
 import type { WhoAmIStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
+import { AttemptsChip } from "./AttemptsChip";
 
 interface Props {
   stage: WhoAmIStage;
   onComplete: (score: number) => void;
+  onWrong?: () => void;
+  attemptsLeft?: number;
+  maxAttempts?: number;
 }
+
 
 function normalize(s: string): string {
   return s.trim().toLowerCase().replace(/[ًٌٍَُِّْـ]/g, "").replace(/[إأآ]/g, "ا").replace(/[ى]/g, "ي").replace(/[ة]/g, "ه");
@@ -14,7 +19,7 @@ function normalize(s: string): string {
 
 const POTENTIAL_BY_REVEAL = [100, 70, 50] as const;
 
-export function WhoAmIRenderer({ stage, onComplete }: Props) {
+export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const [revealed, setRevealed] = useState(1);
   const [guess, setGuess] = useState("");
   const [done, setDone] = useState(false);
@@ -37,9 +42,11 @@ export function WhoAmIRenderer({ stage, onComplete }: Props) {
     } else {
       setWrong(true);
       sfx("wrong");
+      onWrong?.();
       setTimeout(() => setWrong(false), 800);
     }
   };
+
 
   const revealMore = () => {
     if (revealed < stage.hints.length) {
@@ -56,10 +63,16 @@ export function WhoAmIRenderer({ stage, onComplete }: Props) {
           <ScrollText className="h-3.5 w-3.5" />
           ملف تاريخي
         </div>
-        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
-          الإجابة الآن تمنحك {potential} خبرة
-        </span>
+        <div className="flex items-center gap-2">
+          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
+            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
+          )}
+          <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
+            الإجابة الآن تمنحك {potential} خبرة
+          </span>
+        </div>
       </div>
+
 
       {/* Silhouette medallion */}
       <div className="mb-6 flex justify-center">

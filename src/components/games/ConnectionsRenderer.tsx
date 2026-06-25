@@ -2,11 +2,16 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Link2 } from "lucide-react";
 import type { ConnectionsStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
+import { AttemptsChip } from "./AttemptsChip";
 
 interface Props {
   stage: ConnectionsStage;
   onComplete: (score: number) => void;
+  onWrong?: () => void;
+  attemptsLeft?: number;
+  maxAttempts?: number;
 }
+
 
 function shuffle<T>(arr: T[]): T[] {
   const a = arr.slice();
@@ -17,7 +22,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function ConnectionsRenderer({ stage, onComplete }: Props) {
+export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   // pairIndex (i) is the source of truth for matching. Visual order on each side may differ.
   const lefts = useMemo(() => shuffle(stage.pairs.map((p, i) => ({ i, text: p.left }))), [stage]);
   const rights = useMemo(() => shuffle(stage.pairs.map((p, i) => ({ i, text: p.right }))), [stage]);
@@ -51,6 +56,8 @@ export function ConnectionsRenderer({ stage, onComplete }: Props) {
       const flash = { l: pickedLeft, r: pickedRight };
       setWrongFlash(flash);
       sfx("wrong");
+      onWrong?.();
+
       const t = setTimeout(() => {
         setWrongFlash(null);
         setPickedLeft(null);
@@ -130,7 +137,13 @@ export function ConnectionsRenderer({ stage, onComplete }: Props) {
           <Link2 className="h-3.5 w-3.5" />
           الخيوط التاريخية
         </div>
-        <span className="text-[11px] text-slate-400">{Object.keys(matched).length}/{stage.pairs.length}</span>
+        <div className="flex items-center gap-2">
+          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
+            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
+          )}
+          <span className="text-[11px] text-slate-400">{Object.keys(matched).length}/{stage.pairs.length}</span>
+        </div>
+
       </div>
 
       <p className="mb-3 text-[11px] text-slate-500">

@@ -5,11 +5,16 @@ import {
 } from "lucide-react";
 import type { MemoryStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
+import { AttemptsChip } from "./AttemptsChip";
 
 interface Props {
   stage: MemoryStage;
   onComplete: (score: number) => void;
+  onWrong?: () => void;
+  attemptsLeft?: number;
+  maxAttempts?: number;
 }
+
 
 interface Card { id: number; pairId: number; label: string; }
 
@@ -24,7 +29,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function MemoryRenderer({ stage, onComplete }: Props) {
+export function MemoryRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const deck = useMemo<Card[]>(() => {
     const cards: Card[] = [];
     stage.pairs.forEach((p, i) => {
@@ -74,8 +79,10 @@ export function MemoryRenderer({ stage, onComplete }: Props) {
         }, 650);
       } else {
         sfx("wrong");
+        onWrong?.();
         setTimeout(() => setOpen([]), 850);
       }
+
     }
   };
 
@@ -86,10 +93,16 @@ export function MemoryRenderer({ stage, onComplete }: Props) {
           <Archive className="h-3.5 w-3.5" />
           خزانة الذاكرة
         </span>
-        <span className="text-slate-400 normal-case tracking-normal">
-          المحاولات: {moves} · المطابقات: {solved.size / 2}/{stage.pairs.length}
+        <span className="inline-flex items-center gap-3">
+          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
+            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
+          )}
+          <span className="text-slate-400 normal-case tracking-normal">
+            المطابقات: {solved.size / 2}/{stage.pairs.length}
+          </span>
         </span>
       </div>
+
 
       <p className="mb-3 text-[11px] text-slate-500">
         كل بطاقة دُرج في خزانة المتحف. افتح اثنين متشابهين ليندمجا في قطعة واحدة.
