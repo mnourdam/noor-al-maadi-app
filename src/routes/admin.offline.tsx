@@ -214,9 +214,17 @@ function OfflinePanel() {
                 <Total label="التحقيقات" value={totals.investigations ?? 0} />
                 <Total label="في مثل هذا اليوم" value={totals.today_in_history_events ?? 0} />
                 <Total label="الحقيقة اليومية" value={totals.daily_facts ?? 0} />
-                <Total label="سجل المتحف" value={totals.content_registry ?? 0} />
+                <Total label="المتحف (داخل الموسوعة)" value={museumCount} />
+                <Total label="سجل المتحف (قديم/اختياري)" value={totals.content_registry ?? 0} />
               </div>
+              <p className="text-[11px] text-slate-400">
+                المتحف يستهلك مباشرة من <code className="text-amber-200">encyclopedia_entities</code>
+                {" "}(الأنواع: شخصيات، آثار، معالم، مدن، معارك، أحداث). جدول
+                {" "}<code className="text-amber-200">content_registry</code> أصبح اختياريًا ولا يخزّن
+                نسخًا من المحتوى التاريخي.
+              </p>
             </>
+
           ) : (
             <p className="text-xs text-slate-400">لا توجد لقطة محلية بعد. اضغط «توليد لقطة».</p>
           )}
