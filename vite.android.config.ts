@@ -12,8 +12,10 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import path from "node:path";
 
 export default defineConfig({
+  root: path.resolve(__dirname, "android-web"),
   appType: "spa",
   base: "./",
+  publicDir: path.resolve(__dirname, "public"),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -41,7 +43,7 @@ export default defineConfig({
   },
   css: { transformer: "lightningcss" },
   build: {
-    outDir: "dist/android",
+    outDir: path.resolve(__dirname, "dist/android"),
     emptyOutDir: true,
     manifest: true,
     rollupOptions: {
