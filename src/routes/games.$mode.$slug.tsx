@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-r
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight, Coins, Star, Clock, Sparkles, ChevronLeft,
-  BookOpen, Compass, Trophy, Library, RotateCcw, Heart, Landmark,
+  BookOpen, Compass, Trophy, Library, RotateCcw, Heart, Landmark, CheckCircle2,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { getGameBySlug, type GameRow } from "@/lib/games/store";
