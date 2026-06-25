@@ -197,7 +197,7 @@ export function evaluateAchievements(p: {
   const collection = p.artifactsFound.length + p.charactersUnlocked.length;
   const legendCombo = Math.min(p.storiesRead.length, 30) + Math.min(p.investigationsCompleted.length, 30) + Math.min(p.timelinesCompleted.length, 30);
   const legendMaster = Math.min(p.campaignsCompleted.length, 10) + Math.min(p.artifactsFound.length, 100) + Math.min(p.streak, 100);
-  const legendEternal = (lvl >= 10 ? 10 : 0) + Math.min(p.streak, 365);
+  const legendEternal = (lvl >= 50 ? 50 : Math.floor(lvl / 1)) + Math.min(p.streak, 365);
   const map: Record<string, number> = {
     // reading
     ach_read_5: p.storiesRead.length,
