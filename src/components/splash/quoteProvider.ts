@@ -21,8 +21,9 @@ async function loadQuotes(): Promise<SplashQuote[]> {
   try {
     const res = await fetch("/data/splash_quotes.json", { cache: "force-cache" });
     if (!res.ok) return [];
-    const json = (await res.json()) as { quotes?: SplashQuote[] };
-    cache = Array.isArray(json.quotes) ? json.quotes : [];
+    const json = (await res.json()) as SplashQuote[] | { quotes?: SplashQuote[] };
+    const list = Array.isArray(json) ? json : Array.isArray(json.quotes) ? json.quotes : [];
+    cache = list.filter((q) => q && typeof q.text === "string" && typeof q.author === "string");
     return cache;
   } catch {
     return [];
