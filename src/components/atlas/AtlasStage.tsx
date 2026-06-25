@@ -9,13 +9,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
+import { ATLAS_VIEWBOX, ATLAS_ASPECT } from "@/lib/atlas/aps";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 50;
-const VB_W = 100;
-const VB_H = 60;
-const RASTER_ASPECT = VB_W / VB_H;
+// Phase 3 — viewBox is the raster's native pixel grid (APS). No distortion
+// between image and pins; both share one coordinate system.
+const VB_W = ATLAS_VIEWBOX.width;
+const VB_H = ATLAS_VIEWBOX.height;
+const RASTER_ASPECT = ATLAS_ASPECT;
 
 type View = { scale: number; tx: number; ty: number };
 const IDENTITY: View = { scale: 1, tx: 0, ty: 0 };
