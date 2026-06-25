@@ -170,8 +170,10 @@ export function AtlasStage({
       const step = Math.min(0.18, Math.abs(e.deltaY) * 0.0015);
       const factor = e.deltaY < 0 ? 1 + step : 1 / (1 + step);
       const rect = el.getBoundingClientRect();
-      const px = e.clientX - rect.left - rect.width / 2;
-      const py = e.clientY - rect.top - rect.height / 2;
+      const unitsPerPx = unitsPerPxFor(rect.width, rect.height);
+      // Convert cursor offset from CSS px to user units to match tx/ty space.
+      const px = (e.clientX - rect.left - rect.width / 2) / unitsPerPx;
+      const py = (e.clientY - rect.top - rect.height / 2) / unitsPerPx;
       setView((v) => {
         const s = clampScalar(v.scale * factor, MIN_SCALE, MAX_SCALE);
         const k = s / v.scale;
@@ -180,7 +182,7 @@ export function AtlasStage({
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [clamp, cancelAnimations]);
+  }, [clamp, cancelAnimations, unitsPerPxFor]);
 
   // ── Pinch zoom + two-finger pan (Google-Maps-style anchor) ───────────
   useEffect(() => {
@@ -190,9 +192,10 @@ export function AtlasStage({
       if (e.touches.length < 2) return;
       cancelAnimations();
       const rect = el.getBoundingClientRect();
+      const unitsPerPx = unitsPerPxFor(rect.width, rect.height);
       const a = e.touches[0], b = e.touches[1];
-      const midX = (a.clientX + b.clientX) / 2 - rect.left - rect.width / 2;
-      const midY = (a.clientY + b.clientY) / 2 - rect.top - rect.height / 2;
+      const midX = ((a.clientX + b.clientX) / 2 - rect.left - rect.width / 2) / unitsPerPx;
+      const midY = ((a.clientY + b.clientY) / 2 - rect.top - rect.height / 2) / unitsPerPx;
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
       pinch.current = {
         dist: Math.max(1, dist),
@@ -207,24 +210,22 @@ export function AtlasStage({
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length < 2 || !pinch.current) return;
       const rect = el.getBoundingClientRect();
+      const unitsPerPx = unitsPerPxFor(rect.width, rect.height);
       const a = e.touches[0], b = e.touches[1];
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      const midX = (a.clientX + b.clientX) / 2 - rect.left - rect.width / 2;
-      const midY = (a.clientY + b.clientY) / 2 - rect.top - rect.height / 2;
+      const midX = ((a.clientX + b.clientX) / 2 - rect.left - rect.width / 2) / unitsPerPx;
+      const midY = ((a.clientY + b.clientY) / 2 - rect.top - rect.height / 2) / unitsPerPx;
       const ratio = dist / pinch.current.dist;
       const s = clampScalar(pinch.current.scale * ratio, MIN_SCALE, MAX_SCALE);
       const k = s / pinch.current.scale;
-      // Anchor the world point under the initial finger centroid under the
-      // current centroid. Tight clamp every frame — no drift on release.
       const tx = midX - (pinch.current.midX - pinch.current.tx) * k;
       const ty = midY - (pinch.current.midY - pinch.current.ty) * k;
-      scheduleView({ scale: s, tx, ty });
+      scheduleView({ scale: s, tx, ty }, { relax: true });
       e.preventDefault();
     };
     const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length < 2) {
         pinch.current = null;
-        // Settle tight clamp.
         setView((v) => clamp(v));
       }
     };
@@ -238,7 +239,8 @@ export function AtlasStage({
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [scheduleView, cancelAnimations, clamp]);
+  }, [scheduleView, cancelAnimations, clamp, unitsPerPxFor]);
+
 
   useEffect(() => () => cancelAnimations(), [cancelAnimations]);
 
