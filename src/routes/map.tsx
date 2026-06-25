@@ -1,10 +1,9 @@
 // عالم إرث — Phase 3: Cinematic World Atlas with deep-link URL state.
 import { createFileRoute } from "@tanstack/react-router";
-import { zodValidator, fallback } from "@tanstack/zod-adapter";
-import { z } from "zod";
 import { AtlasShell } from "@/components/atlas/AtlasShell";
+import type { AtlasEntityKind } from "@/lib/atlas-entities";
 
-const ATLAS_KINDS = [
+const ATLAS_KINDS = new Set<AtlasEntityKind>([
   "place",
   "battle",
   "event",
@@ -12,18 +11,31 @@ const ATLAS_KINDS = [
   "artifact_site",
   "region",
   "route_point",
-] as const;
+]);
 
-const mapSearchSchema = z.object({
-  focus: fallback(z.string().optional(), undefined),
-  kind: fallback(z.enum(ATLAS_KINDS).optional(), undefined),
-  era: fallback(z.string().optional(), undefined),
-  world: fallback(z.string().optional(), undefined),
-  q: fallback(z.string().optional(), undefined),
-});
+export type MapSearch = {
+  focus?: string;
+  kind?: AtlasEntityKind;
+  era?: string;
+  world?: string;
+  q?: string;
+};
+
+function str(v: unknown): string | undefined {
+  return typeof v === "string" && v.length > 0 ? v : undefined;
+}
 
 export const Route = createFileRoute("/map")({
-  validateSearch: zodValidator(mapSearchSchema),
+  validateSearch: (s: Record<string, unknown>): MapSearch => {
+    const k = str(s.kind);
+    return {
+      focus: str(s.focus),
+      kind: k && ATLAS_KINDS.has(k as AtlasEntityKind) ? (k as AtlasEntityKind) : undefined,
+      era: str(s.era),
+      world: str(s.world),
+      q: str(s.q),
+    };
+  },
   head: () => ({
     meta: [
       { title: "عالم إرث — أطلس التاريخ الإسلامي" },
