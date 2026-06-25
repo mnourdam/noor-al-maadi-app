@@ -298,8 +298,11 @@ export function AtlasStage({
         </g>
       </svg>
 
-      {/* Zoom controls */}
-      <div className="absolute right-4 bottom-4 flex flex-col gap-1.5">
+      {/* Zoom controls — lifted above the iOS home-bar / nav-bar. */}
+      <div
+        className="absolute right-4 flex flex-col gap-1.5"
+        style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
+      >
         <ZoomBtn label="+" onClick={() => { cancelAnimations(); setView((v) => clamp({ ...v, scale: v.scale * 1.25 })); }} />
         <ZoomBtn label="−" onClick={() => { cancelAnimations(); setView((v) => clamp({ ...v, scale: v.scale / 1.25 })); }} />
         <ZoomBtn label="⟲" onClick={() => { cancelAnimations(); setView(IDENTITY); }} />
