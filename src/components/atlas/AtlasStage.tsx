@@ -55,39 +55,38 @@ export function AtlasStage({
     return () => ro.disconnect();
   }, []);
 
-  // Pan-bound computation that accounts for the raster's intrinsic aspect
-  // (xMidYMid slice). At scale 1 the SVG still fills the viewport but the
-  // raster may overflow on one axis — we allow panning into that overflow,
-  // so drag works immediately without requiring zoom-in first.
+  // Clamp in SVG USER UNITS (= viewBox units), since the <g> transform's
+  // translate(${tx}px, ${ty}px) is interpreted by the SVG/CSS engine in user
+  // units, not CSS pixels. Previously this was computed in CSS px, which
+  // shrank the effective pan range to ~10% of intent (you could only reach
+  // Levant ↔ Khorasan instead of the full raster).
+  //
+  // unitsPerPx = CSS px each viewBox unit occupies on screen (preserveAspect
+  // "slice" => max of width/height ratios).
+  // Visible viewBox window at scale=1 = (w / unitsPerPx) × (h / unitsPerPx).
+  // At zoom s the window shrinks to (visibleW/s) × (visibleH/s).
+  // Max translate (user units) so window stays inside the raster:
+  //   maxTx = (s * VB_W - visibleW) / 2, clamped to ≥ 0.
+  const unitsPerPxFor = useCallback((w: number, h: number) => {
+    return Math.max(w / VB_W, h / VB_H);
+  }, []);
+
   const clamp = useCallback((v: View, opts?: { relax?: boolean }): View => {
     const s = clampScalar(v.scale, MIN_SCALE, MAX_SCALE);
     const w = wrapSizeRef.current.w;
     const h = wrapSizeRef.current.h;
+    const unitsPerPx = unitsPerPxFor(w, h);
+    const visibleVbW = w / unitsPerPx;
+    const visibleVbH = h / unitsPerPx;
 
-    // Visible raster CSS extent at scale 1, given xMidYMid slice.
-    const viewportAspect = w / h;
-    let baseW: number, baseH: number;
-    if (viewportAspect > RASTER_ASPECT) {
-      // Raster filled to viewport width; overflows vertically.
-      baseW = w;
-      baseH = w / RASTER_ASPECT;
-    } else {
-      baseH = h;
-      baseW = h * RASTER_ASPECT;
-    }
+    let maxX = Math.max(0, (s * VB_W - visibleVbW) / 2);
+    let maxY = Math.max(0, (s * VB_H - visibleVbH) / 2);
 
-    const scaledW = baseW * s;
-    const scaledH = baseH * s;
-    // Allowed translate = how far the scaled raster can slide before the
-    // viewport edge passes the raster edge.
-    let maxX = Math.max(0, (scaledW - w) / 2);
-    let maxY = Math.max(0, (scaledH - h) / 2);
-
-    // During active gestures we relax the clamp by ~12% so the world point
-    // under the finger never snaps sideways. Reapplied tight on release.
+    // Relax slightly during active gestures so the world point under the
+    // finger never snaps; tight clamp reapplied on release.
     if (opts?.relax) {
-      maxX += w * 0.12;
-      maxY += h * 0.12;
+      maxX += VB_W * 0.04;
+      maxY += VB_H * 0.04;
     }
 
     return {
@@ -95,7 +94,7 @@ export function AtlasStage({
       tx: clampScalar(v.tx, -maxX, maxX),
       ty: clampScalar(v.ty, -maxY, maxY),
     };
-  }, []);
+  }, [unitsPerPxFor]);
 
   // rAF-coalesced view flush.
   const pendingView = useRef<View | null>(null);
@@ -139,23 +138,27 @@ export function AtlasStage({
       drag.current = null;
       return;
     }
-    // Pan gain — tuned to feel like Google/Apple Maps: slightly
-    // accelerated past 1:1 so finger drag covers ground naturally,
-    // while staying well below the old overly-sensitive free-drag.
-    const PAN_GAIN = 1.35;
-    const dx = (e.clientX - drag.current.x) * PAN_GAIN;
-    const dy = (e.clientY - drag.current.y) * PAN_GAIN;
+    // Pan in user units: 1 CSS px of finger movement ⇒ 1 CSS px of map
+    // movement on screen ⇒ (1 / unitsPerPx) user units of translate.
+    // PAN_GAIN keeps a slight Google/Apple-Maps-style acceleration.
+    const w = wrapSizeRef.current.w;
+    const h = wrapSizeRef.current.h;
+    const unitsPerPx = unitsPerPxFor(w, h);
+    const PAN_GAIN = 1.15;
+    const dx = ((e.clientX - drag.current.x) * PAN_GAIN) / unitsPerPx;
+    const dy = ((e.clientY - drag.current.y) * PAN_GAIN) / unitsPerPx;
     scheduleView({
       scale: viewRef.current.scale,
       tx: drag.current.tx + dx,
       ty: drag.current.ty + dy,
-    });
+    }, { relax: true });
   };
   const onPointerUp = () => {
     drag.current = null;
     // Re-clamp tightly on release.
     setView((v) => clamp(v));
   };
+
 
   // ── Wheel zoom (cursor-anchored) ──────────────────────────────────────
   useEffect(() => {
@@ -167,8 +170,10 @@ export function AtlasStage({
       const step = Math.min(0.18, Math.abs(e.deltaY) * 0.0015);
       const factor = e.deltaY < 0 ? 1 + step : 1 / (1 + step);
       const rect = el.getBoundingClientRect();
-      const px = e.clientX - rect.left - rect.width / 2;
-      const py = e.clientY - rect.top - rect.height / 2;
+      const unitsPerPx = unitsPerPxFor(rect.width, rect.height);
+      // Convert cursor offset from CSS px to user units to match tx/ty space.
+      const px = (e.clientX - rect.left - rect.width / 2) / unitsPerPx;
+      const py = (e.clientY - rect.top - rect.height / 2) / unitsPerPx;
       setView((v) => {
         const s = clampScalar(v.scale * factor, MIN_SCALE, MAX_SCALE);
         const k = s / v.scale;
@@ -177,7 +182,7 @@ export function AtlasStage({
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [clamp, cancelAnimations]);
+  }, [clamp, cancelAnimations, unitsPerPxFor]);
 
   // ── Pinch zoom + two-finger pan (Google-Maps-style anchor) ───────────
   useEffect(() => {
@@ -187,9 +192,10 @@ export function AtlasStage({
       if (e.touches.length < 2) return;
       cancelAnimations();
       const rect = el.getBoundingClientRect();
+      const unitsPerPx = unitsPerPxFor(rect.width, rect.height);
       const a = e.touches[0], b = e.touches[1];
-      const midX = (a.clientX + b.clientX) / 2 - rect.left - rect.width / 2;
-      const midY = (a.clientY + b.clientY) / 2 - rect.top - rect.height / 2;
+      const midX = ((a.clientX + b.clientX) / 2 - rect.left - rect.width / 2) / unitsPerPx;
+      const midY = ((a.clientY + b.clientY) / 2 - rect.top - rect.height / 2) / unitsPerPx;
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
       pinch.current = {
         dist: Math.max(1, dist),
@@ -204,24 +210,22 @@ export function AtlasStage({
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length < 2 || !pinch.current) return;
       const rect = el.getBoundingClientRect();
+      const unitsPerPx = unitsPerPxFor(rect.width, rect.height);
       const a = e.touches[0], b = e.touches[1];
       const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      const midX = (a.clientX + b.clientX) / 2 - rect.left - rect.width / 2;
-      const midY = (a.clientY + b.clientY) / 2 - rect.top - rect.height / 2;
+      const midX = ((a.clientX + b.clientX) / 2 - rect.left - rect.width / 2) / unitsPerPx;
+      const midY = ((a.clientY + b.clientY) / 2 - rect.top - rect.height / 2) / unitsPerPx;
       const ratio = dist / pinch.current.dist;
       const s = clampScalar(pinch.current.scale * ratio, MIN_SCALE, MAX_SCALE);
       const k = s / pinch.current.scale;
-      // Anchor the world point under the initial finger centroid under the
-      // current centroid. Tight clamp every frame — no drift on release.
       const tx = midX - (pinch.current.midX - pinch.current.tx) * k;
       const ty = midY - (pinch.current.midY - pinch.current.ty) * k;
-      scheduleView({ scale: s, tx, ty });
+      scheduleView({ scale: s, tx, ty }, { relax: true });
       e.preventDefault();
     };
     const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length < 2) {
         pinch.current = null;
-        // Settle tight clamp.
         setView((v) => clamp(v));
       }
     };
@@ -235,11 +239,15 @@ export function AtlasStage({
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [scheduleView, cancelAnimations, clamp]);
+  }, [scheduleView, cancelAnimations, clamp, unitsPerPxFor]);
+
 
   useEffect(() => () => cancelAnimations(), [cancelAnimations]);
 
   const inv = 1 / view.scale;
+  // Quantize label visibility into tiers so pins don't re-mount/unmount
+  // their <text> labels every frame as scale ticks during pan/pinch.
+  const labelTier = view.scale >= 3.0 ? 2 : view.scale >= 1.6 ? 1 : 0;
   const isInteracting = drag.current != null || pinch.current != null;
   const useTransition = !isInteracting;
 
@@ -295,9 +303,10 @@ export function AtlasStage({
             entities={entities}
             selectedId={selectedId}
             inv={inv}
-            scale={view.scale}
+            labelTier={labelTier}
             onSelect={onSelect}
           />
+
         </g>
       </svg>
 

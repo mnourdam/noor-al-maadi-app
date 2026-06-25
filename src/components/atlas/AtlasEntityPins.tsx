@@ -14,17 +14,17 @@ const VB_H = ATLAS_VIEWBOX.height;
 // uniformly so they read at identical apparent size on the native APS grid.
 const S = APS_UNIT_SCALE;
 
-// Label decluttering tiers (by current view scale).
-//  scale < 1.6 → labels only for very major kinds (region) + active pin
-//  scale < 3.0 → add place/battle (major cities, key battles)
-//  scale ≥ 3.0 → show all labels
+// Label decluttering tiers (quantized in AtlasStage; passed as labelTier):
+//  0 → labels only for very major kinds (region) + active pin
+//  1 → add place/battle (major cities, key battles)
+//  2 → show all labels
 const MAJOR_KINDS = new Set(["region"]);
 const SECONDARY_KINDS = new Set(["region", "place", "battle"]);
 
-function shouldShowLabel(kind: string, scale: number, active: boolean): boolean {
+function shouldShowLabel(kind: string, tier: number, active: boolean): boolean {
   if (active) return true;
-  if (scale >= 3.0) return true;
-  if (scale >= 1.6) return SECONDARY_KINDS.has(kind);
+  if (tier >= 2) return true;
+  if (tier >= 1) return SECONDARY_KINDS.has(kind);
   return MAJOR_KINDS.has(kind);
 }
 
@@ -33,13 +33,13 @@ export function AtlasEntityPinsLayer({
   entities,
   selectedId,
   inv,
-  scale,
+  labelTier,
   onSelect,
 }: {
   entities: AtlasEntityRow[];
   selectedId: string | null;
   inv: number;
-  scale: number;
+  labelTier: number;
   onSelect: (entity: AtlasEntityRow) => void;
 }) {
   if (entities.length === 0) return null;
@@ -50,7 +50,7 @@ export function AtlasEntityPinsLayer({
           key={e.id}
           entity={e}
           inv={inv}
-          scale={scale}
+          labelTier={labelTier}
           active={selectedId === e.id}
           onSelect={onSelect}
         />
@@ -60,11 +60,11 @@ export function AtlasEntityPinsLayer({
 }
 
 const AtlasPin = memo(function AtlasPin({
-  entity, inv, scale, active, onSelect,
+  entity, inv, labelTier, active, onSelect,
 }: {
   entity: AtlasEntityRow;
   inv: number;
-  scale: number;
+  labelTier: number;
   active: boolean;
   onSelect: (entity: AtlasEntityRow) => void;
 }) {
@@ -73,7 +73,7 @@ const AtlasPin = memo(function AtlasPin({
   if (x < 0 || x > VB_W || y < 0 || y > VB_H) return null;
   const r = (active ? 0.78 : 0.58) * inv * S;
   const color = KIND_COLOR[entity.kind] ?? "oklch(0.55 0.18 25)";
-  const showLabel = shouldShowLabel(entity.kind, scale, active);
+  const showLabel = shouldShowLabel(entity.kind, labelTier, active);
   return (
     <g
       transform={`translate(${x} ${y})`}
