@@ -122,8 +122,13 @@ export function AtlasControls({
   };
 
   return (
-    <div className="pointer-events-auto absolute top-0 right-0 left-0 z-20 p-2 sm:p-4" dir="rtl"
-      style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
+    <div
+      className="pointer-events-auto absolute top-0 right-0 left-0 z-20 p-2 pl-24 sm:p-4 sm:pl-4"
+      dir="rtl"
+      style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
+    >
+
+
       <div
         className="mx-auto flex w-full max-w-3xl flex-col gap-2 rounded-2xl border border-amber-400/30 px-2.5 py-2 shadow-lg backdrop-blur sm:px-3"
         style={{
