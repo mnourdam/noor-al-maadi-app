@@ -1,20 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Users, Search, Download, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, X, Coins, Sparkles } from "lucide-react";
-import { AdminGate } from "@/lib/admin-guard";
+import { Users, Search, Download, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, X, Coins, Sparkles, UserPlus, BadgeCheck } from "lucide-react";
+import { AdminGate, useAdminGuard } from "@/lib/admin-guard";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { createTeamUser } from "@/lib/teamUsers.functions";
 import {
   adminListUsers,
   adminUserDetail,
   adminAdjustBalance,
   adminSetAccountStatus,
+  adminAssignRole,
+  adminRevokeRole,
   buildUsersCsv,
   downloadCsv,
   type AdminUserRow,
   type AdminUserDetail,
   type UserFilter,
   type AccountStatus,
+  type AppRole,
 } from "@/lib/adminUsers";
+
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({
