@@ -1,10 +1,38 @@
-// Phase 2 stabilization — Small, elegant atlas marker popover.
-// Replaces the old full-side sheet. Shows: kind chip, title, encyclopedia
-// summary (if linked), and ONE primary action: "اقرأ في الموسوعة".
-// No locate button, no admin metadata, no debug.
+// Phase 3 — Atlas detail viewer.
+// The Atlas does NOT store summaries. When an entity is linked to an
+// encyclopedia article (encyclopedia_entity_id), we fetch the live article
+// row and render title/subtitle/summary from THAT row — so any edit in
+// the encyclopedia propagates here without duplication.
+//
+// Layout: bottom sheet on mobile, floating popover at the bottom-right on
+// desktop. Safe-area padding so it never hides behind the home-bar.
 import { Link } from "@tanstack/react-router";
-import { BookOpen, X } from "lucide-react";
+import { BookOpen, Loader2, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { KIND_LABEL_AR, type AtlasEntityRow } from "@/lib/atlas-entities";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  ENCYCLOPEDIA_ENTITY_COLUMNS,
+  type SupabaseEncyclopediaEntity,
+} from "@/lib/encyclopedia-source";
+
+function useEncyclopediaEntity(id: string | null) {
+  return useQuery<SupabaseEncyclopediaEntity | null>({
+    queryKey: ["atlas-encyclopedia-entity", id],
+    enabled: !!id,
+    staleTime: 30_000,
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase
+        .from("encyclopedia_entities")
+        .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as SupabaseEncyclopediaEntity | null) ?? null;
+    },
+  });
+}
 
 export function AtlasEntityDetailPanel({
   entity,
@@ -13,6 +41,16 @@ export function AtlasEntityDetailPanel({
   entity: AtlasEntityRow;
   onClose: () => void;
 }) {
+  const encId = entity.encyclopedia_entity_id ?? null;
+  const { data: article, isLoading } = useEncyclopediaEntity(encId);
+
+  // Live values from the encyclopedia (source of truth) win. The Atlas
+  // row's own name/era are used only as a fallback while loading, or for
+  // unlinked entities.
+  const title = article?.title || entity.name_ar;
+  const subtitle = article?.subtitle ?? entity.name_en ?? null;
+  const summary = article?.summary ?? null;
+
   const era =
     entity.era ||
     (entity.year_start != null
@@ -21,23 +59,17 @@ export function AtlasEntityDetailPanel({
         : `${entity.year_start}م`
       : null);
 
-  const meta = (entity.metadata ?? {}) as Record<string, unknown>;
-  const summary =
-    (typeof meta.summary === "string" && meta.summary) ||
-    (typeof meta.note === "string" && meta.note) ||
-    null;
-
-  const encId = entity.encyclopedia_entity_id ?? null;
-
   return (
     <div
       dir="rtl"
       role="dialog"
-      aria-label={entity.name_ar}
-      className="pointer-events-auto absolute inset-x-3 bottom-3 z-30 mx-auto max-w-md
+      aria-label={title}
+      className="pointer-events-auto absolute inset-x-3 z-30 max-w-md
                  rounded-2xl border border-amber-400/30 text-amber-50 shadow-[0_18px_40px_rgba(0,0,0,0.55)]
-                 animate-in fade-in slide-in-from-bottom-2 duration-200 sm:left-1/2 sm:right-auto sm:-translate-x-1/2"
+                 animate-in fade-in slide-in-from-bottom-2 duration-200
+                 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:w-[22rem]"
       style={{
+        bottom: "max(0.75rem, env(safe-area-inset-bottom))",
         backgroundImage:
           "linear-gradient(180deg, oklch(0.22 0.04 252 / 0.96), oklch(0.16 0.05 255 / 0.96))",
       }}
@@ -56,14 +88,24 @@ export function AtlasEntityDetailPanel({
           {era && <span className="mx-1.5 opacity-60">·</span>}
           {era && <span className="font-normal tracking-normal">{era}</span>}
         </p>
-        <h2 className="mt-0.5 font-display text-lg font-bold leading-tight">{entity.name_ar}</h2>
-        {entity.name_en && (
-          <p dir="ltr" className="mt-0.5 font-mono text-[11px] text-amber-200/60">
-            {entity.name_en}
+        <h2 className="mt-0.5 font-display text-lg font-bold leading-tight">
+          {title}
+        </h2>
+        {subtitle && (
+          <p
+            dir={article?.subtitle ? "rtl" : "ltr"}
+            className="mt-0.5 text-[11px] text-amber-200/70"
+          >
+            {subtitle}
           </p>
         )}
 
-        {summary ? (
+        {isLoading && encId ? (
+          <p className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-amber-200/70">
+            <Loader2 className="size-3.5 animate-spin" />
+            تحميل المقالة...
+          </p>
+        ) : summary ? (
           <p className="mt-3 text-[13px] leading-relaxed text-amber-100/90 line-clamp-4">
             {summary}
           </p>
