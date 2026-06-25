@@ -17,6 +17,7 @@ import { FirstLaunchGate } from "../components/FirstLaunchGate";
 import { Toaster } from "../components/ui/sonner";
 import { AchievementWatcher } from "../components/AchievementWatcher";
 import { LevelUpWatcher } from "../components/LevelUpWatcher";
+import { SplashSequence } from "../components/splash/SplashSequence";
 
 function NotFoundComponent() {
   return (
@@ -224,6 +225,7 @@ function RootComponent() {
           <AchievementWatcher />
           <LevelUpWatcher />
           <Toaster position="top-center" richColors closeButton />
+          <SplashSequence />
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
