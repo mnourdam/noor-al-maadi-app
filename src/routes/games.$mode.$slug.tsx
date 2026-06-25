@@ -101,11 +101,24 @@ function GamePlayPage() {
       if (firstTime) {
         if (game.xp_reward > 0) addPoints(game.xp_reward);
         if (game.coin_reward > 0) addDinars(game.coin_reward);
+        // Museum unlocks — reuse the Campaign pipeline (user_collection).
+        const unlockIds = extractMuseumUnlocks({
+          metadata: (game.metadata as Record<string, unknown> | null) ?? undefined,
+        });
+        if (unlockIds.length) {
+          const items = museumUnlocksToCollectionItems(unlockIds);
+          if (items.length) {
+            enqueueCollectionSync(items);
+            audioManager.playSfx("unlock-reward", { dedupeKey: `game-unlock:${game.id}` });
+            setUnlockToast(items.length);
+          }
+        }
       }
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
   }, [game, isLast, stageIdx, addPoints, addDinars]);
+
 
   // Attempts pipeline: one wrong attempt at a time.
   const handleWrong = useCallback(() => {
