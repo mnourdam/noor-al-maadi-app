@@ -12,7 +12,7 @@ import "@/components/games/games-premium.css";
 export const Route = createFileRoute("/adventure")({
   head: () => ({
     meta: [
-      { title: "المغامرة — إرث" },
+      { title: "قاعة التحديات — إرث" },
       { name: "description", content: "بوابتك إلى الحملات والتحقيقات والتحديات التاريخية اليومية." },
     ],
   }),
@@ -40,7 +40,7 @@ function AdventurePage() {
 
   return (
     <AppShell>
-      <Screen title="المغامرة" subtitle="بوابتك إلى التاريخ — قاعات وتحديات وحملات.">
+      <Screen title="قاعة التحديات" subtitle="بوابتك إلى التاريخ — قاعات وتحديات وحملات.">
         <div dir="rtl" className="space-y-10">
           {/* Museum hall hero */}
           <section className="relative overflow-hidden rounded-2xl border border-amber-500/30 irth-title-card p-6 sm:p-8">
@@ -51,7 +51,7 @@ function AdventurePage() {
 
             <div className="relative grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.4em] text-amber-300/80">قاعة المغامرات</p>
+                <p className="text-[11px] uppercase tracking-[0.4em] text-amber-300/80">قاعة التحديات</p>
                 <h1 className="mt-2 text-2xl font-bold leading-tight text-amber-100 sm:text-3xl">
                   ادخل المعرض — اختر تحدّيك وتابع حملتك.
                 </h1>
