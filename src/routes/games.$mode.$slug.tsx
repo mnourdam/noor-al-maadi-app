@@ -39,6 +39,7 @@ function GamePlayPage() {
   // Attempts + fail flow
   const [wrongCount, setWrongCount] = useState(0);
   const [failed, setFailed] = useState(false);
+  const [failReason, setFailReason] = useState<"attempts" | "timeout">("attempts");
   const [retryNonce, setRetryNonce] = useState(0);
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
   const [unlockToast, setUnlockToast] = useState<number>(0); // count of newly unlocked museum items
