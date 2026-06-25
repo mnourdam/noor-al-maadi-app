@@ -112,7 +112,13 @@ async function idbDelete(): Promise<void> {
 /** Normalize legacy v1 shape (flat keys) into v2. */
 function normalize(raw: any): OfflineSnapshot | null {
   if (!raw || typeof raw !== "object") return null;
-  if (raw.collections && raw.content_counts) return raw as OfflineSnapshot;
+  if (raw.collections && raw.content_counts) {
+    // Already v2-shaped; fill in schema_version if missing.
+    return {
+      schema_version: typeof raw.schema_version === "number" ? raw.schema_version : SNAPSHOT_SCHEMA_VERSION,
+      ...raw,
+    } as OfflineSnapshot;
+  }
   // Legacy flat v1
   const collections: Record<string, any[]> = {};
   const map: Record<string, string> = {
@@ -129,6 +135,7 @@ function normalize(raw: any): OfflineSnapshot | null {
   for (const [k, v] of Object.entries(collections)) counts[k] = (v as any[]).length;
   return {
     snapshot_version: typeof raw.version === "number" ? raw.version : 1,
+    schema_version: 1,
     generated_at: raw.generated_at ?? new Date(0).toISOString(),
     content_counts: counts,
     collections,
