@@ -137,7 +137,13 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
           <Link2 className="h-3.5 w-3.5" />
           الخيوط التاريخية
         </div>
-        <span className="text-[11px] text-slate-400">{Object.keys(matched).length}/{stage.pairs.length}</span>
+        <div className="flex items-center gap-2">
+          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
+            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
+          )}
+          <span className="text-[11px] text-slate-400">{Object.keys(matched).length}/{stage.pairs.length}</span>
+        </div>
+
       </div>
 
       <p className="mb-3 text-[11px] text-slate-500">
