@@ -1,5 +1,7 @@
 import { z } from "zod";
-import type { GameMode } from "./types";
+import type { CrosswordStage, GameMode } from "./types";
+import { validateCrosswordStage } from "./crossword-validate";
+
 
 const slug = z
   .string()
@@ -34,12 +36,24 @@ const crosswordClue = z.object({
   related: z.string().optional(),
 });
 
-const crosswordStage = z.object({
-  title: z.string().optional(),
-  rows: z.number().int().min(3).max(25),
-  cols: z.number().int().min(3).max(25),
-  clues: z.array(crosswordClue).min(1).max(60),
-});
+const crosswordStage = z
+  .object({
+    title: z.string().optional(),
+    rows: z.number().int().min(3).max(25),
+    cols: z.number().int().min(3).max(25),
+    clues: z.array(crosswordClue).min(1).max(60),
+  })
+  .superRefine((stage, ctx) => {
+    const issues = validateCrosswordStage(stage as CrosswordStage);
+    for (const issue of issues) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: issue.path.split(/[.\[\]]/).filter(Boolean),
+        message: issue.message,
+      });
+    }
+  });
+
 
 const chronologyEvent = z.object({
   label: z.string().min(1).max(200),

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Check, Sparkles, Feather, AlertTriangle, Lightbulb } from "lucide-react";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
+import { validateCrosswordStage } from "@/lib/games/crossword-validate";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
+
 
 interface Props {
   stage: CrosswordStage;
@@ -23,24 +25,40 @@ interface CellInfo {
 
 function cellKey(r: number, c: number) { return `${r}-${c}`; }
 
-function buildGrid(stage: CrosswordStage): Map<string, CellInfo> {
+interface BuiltGrid {
+  cells: Map<string, CellInfo>;
+  conflicts: string[];
+}
+
+function buildGrid(stage: CrosswordStage): BuiltGrid {
   const map = new Map<string, CellInfo>();
+  const conflicts: string[] = [];
   stage.clues.forEach((clue, idx) => {
     for (let i = 0; i < clue.answer.length; i++) {
       const r = clue.direction === "down" ? clue.row + i : clue.row;
       const c = clue.direction === "across" ? clue.col + i : clue.col;
+      if (r < 0 || c < 0 || r >= stage.rows || c >= stage.cols) continue;
       const k = cellKey(r, c);
       const ch = clue.answer[i];
       const existing = map.get(k);
       if (existing) {
-        existing.clueIds.push(idx);
+        if (existing.expected !== ch) {
+          // CRITICAL: never mutate either answer. Record the conflict and stop.
+          const other = stage.clues[existing.clueIds[0]];
+          conflicts.push(
+            `تعارض في تقاطع الكلمات: الكلمة (${clue.answer}) لا توافق الكلمة (${other.answer}) عند الصف ${r} والعمود ${c}.`,
+          );
+          continue;
+        }
+        if (!existing.clueIds.includes(idx)) existing.clueIds.push(idx);
       } else {
         map.set(k, { expected: ch, clueIds: [idx] });
       }
     }
   });
-  return map;
+  return { cells: map, conflicts };
 }
+
 
 function clueCells(clue: CrosswordClue): { r: number; c: number }[] {
   const cells: { r: number; c: number }[] = [];
@@ -56,7 +74,13 @@ export function CrosswordRenderer({
   stage, onComplete, onWrong, attemptsLeft, maxAttempts, onPaidHint,
 }: Props) {
 
-  const grid = useMemo(() => buildGrid(stage), [stage]);
+  const { cells: grid, conflicts } = useMemo(() => buildGrid(stage), [stage]);
+  const schemaIssues = useMemo(() => validateCrosswordStage(stage), [stage]);
+  const blockingIssues = useMemo(
+    () => [...conflicts, ...schemaIssues.map((i) => i.message)],
+    [conflicts, schemaIssues],
+  );
+
   const [entries, setEntries] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
   const [activeClue, setActiveClue] = useState<number | null>(null);
@@ -183,7 +207,27 @@ export function CrosswordRenderer({
     ? new Set(clueCells(stage.clues[activeClue]).map((p) => cellKey(p.r, p.c)))
     : new Set<string>();
 
+  if (blockingIssues.length > 0) {
+    return (
+      <div className="relative irth-title-card overflow-hidden p-5">
+        <div className="flex items-start gap-3 rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-sm text-red-100">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
+          <div className="space-y-2 leading-7">
+            <p className="font-bold text-red-200">شبكة الكلمات غير صالحة — تعذّر عرضها.</p>
+            <ul className="list-disc space-y-1 pe-5 text-red-100/90">
+              {blockingIssues.map((m, i) => <li key={i}>{m}</li>)}
+            </ul>
+            <p className="text-[11px] text-red-200/70">
+              يرجى تصحيح المحتوى في لوحة الإدارة قبل النشر. لا يُسمح بتعديل الإجابات تلقائيًا.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
+
     <div className="relative irth-title-card overflow-hidden p-5">
       <div className="mb-4 flex items-center justify-between text-[11px] uppercase tracking-[0.3em]">
         <span className="inline-flex items-center gap-2 text-amber-300/80">
