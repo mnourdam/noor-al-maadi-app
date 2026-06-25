@@ -24,12 +24,27 @@ export type OfflineCollectionKey =
   | "atlas_entities"
   | "content_registry";
 
+/** Manifest entry — future-ready, allows incremental delta-sync per collection. */
+export interface CollectionManifestEntry {
+  key: string;
+  count: number;
+  checksum?: string;
+}
+
 export interface OfflineSnapshot {
+  /** Bumped each time a new snapshot is generated (data revision). */
   snapshot_version: number;
+  /** Bumped only when the structural schema of this file changes. */
+  schema_version: number;
   generated_at: string;
   source?: "live" | "bundled";
-  content_counts: Record<string, number>;
+  /** Aggregate checksum over all collections. */
   checksum?: string;
+  /** Map of collection name → row count. */
+  content_counts: Record<string, number>;
+  /** Per-collection manifest, ready for delta-sync without breaking runtime. */
+  collection_manifest?: CollectionManifestEntry[];
+  /** Actual row data. Runtime reads this directly. */
   collections: Record<string, any[]>;
 }
 
