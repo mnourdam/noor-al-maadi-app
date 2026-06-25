@@ -528,7 +528,7 @@ function AtlasReviewPage() {
                         <div className="min-w-0 flex-1">
                           <div className="truncate font-bold text-amber-100">{r.title}</div>
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-stone-400">
-                            <span>{ELIGIBLE_TYPE_LABEL_AR[r.entity_type]}</span>
+                            <span>{r.kind_label}</span>
                             <span className="truncate">· {r.slug}</span>
                           </div>
                         </div>
