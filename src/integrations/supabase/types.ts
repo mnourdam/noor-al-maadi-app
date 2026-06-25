@@ -82,8 +82,8 @@ export type Database = {
           aps_verified: boolean
           aps_verified_at: string | null
           aps_verified_by: string | null
-          aps_x: number
-          aps_y: number
+          aps_x: number | null
+          aps_y: number | null
           atlas_version: string
           created_at: string
           created_by: string | null
@@ -109,8 +109,8 @@ export type Database = {
           aps_verified?: boolean
           aps_verified_at?: string | null
           aps_verified_by?: string | null
-          aps_x: number
-          aps_y: number
+          aps_x?: number | null
+          aps_y?: number | null
           atlas_version?: string
           created_at?: string
           created_by?: string | null
@@ -136,8 +136,8 @@ export type Database = {
           aps_verified?: boolean
           aps_verified_at?: string | null
           aps_verified_by?: string | null
-          aps_x?: number
-          aps_y?: number
+          aps_x?: number | null
+          aps_y?: number | null
           atlas_version?: string
           created_at?: string
           created_by?: string | null
@@ -1082,6 +1082,7 @@ export type Database = {
       admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
       advance_referral_stage: { Args: { p_stage: number }; Returns: Json }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
+      ensure_atlas_drafts_for_encyclopedia: { Args: never; Returns: Json }
       gen_referral_code: { Args: never; Returns: string }
       get_my_email: { Args: never; Returns: string }
       get_my_profile: {
