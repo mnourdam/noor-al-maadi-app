@@ -660,6 +660,13 @@ function Index() {
         </Reveal>
       )}
 
+      {/* ============ 3b. DAILY CHALLENGES (games) ============ */}
+      <Reveal>
+        <DailyChallengesSection />
+      </Reveal>
+
+
+
       {/* ============ 4. CONTINUE JOURNEY — large premium CTA ============ */}
       {campaignSel && !campaignSel.isComplete && campaignSel.nextChapter && (
         <Reveal>
