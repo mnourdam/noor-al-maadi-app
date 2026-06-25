@@ -18,7 +18,7 @@ import { AtlasEntityDetailPanel } from "./AtlasEntityDetailPanel";
 import { usePublishedAtlasEntities } from "@/lib/atlas-entities-query";
 import type { AtlasEntityKind } from "@/lib/atlas-entities";
 import { sortAtlasEntitiesChronological } from "@/lib/atlas/atlas-visual";
-import { Route as MapRoute } from "@/routes/map";
+import { Route as MapRoute, type MapSearch } from "@/routes/map";
 
 export function AtlasShell() {
   const { data: entities = [], isLoading } = usePublishedAtlasEntities();
@@ -32,13 +32,16 @@ export function AtlasShell() {
   const q = search.q ?? "";
   const focus = search.focus ?? null;
 
-  const setSearchParam = <K extends keyof typeof search>(
+  const setSearchParam = <K extends keyof MapSearch>(
     key: K,
-    value: (typeof search)[K] | null,
+    value: MapSearch[K] | null,
   ) =>
     navigate({
       to: MapRoute.fullPath,
-      search: (prev) => ({ ...prev, [key]: value ?? undefined }),
+      search: (prev: MapSearch): MapSearch => ({
+        ...prev,
+        [key]: value ?? undefined,
+      }),
       replace: true,
     });
 
