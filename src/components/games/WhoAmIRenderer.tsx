@@ -2,11 +2,16 @@ import { useEffect, useState } from "react";
 import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion } from "lucide-react";
 import type { WhoAmIStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
+import { AttemptsChip } from "./AttemptsChip";
 
 interface Props {
   stage: WhoAmIStage;
   onComplete: (score: number) => void;
+  onWrong?: () => void;
+  attemptsLeft?: number;
+  maxAttempts?: number;
 }
+
 
 function normalize(s: string): string {
   return s.trim().toLowerCase().replace(/[ًٌٍَُِّْـ]/g, "").replace(/[إأآ]/g, "ا").replace(/[ى]/g, "ي").replace(/[ة]/g, "ه");
