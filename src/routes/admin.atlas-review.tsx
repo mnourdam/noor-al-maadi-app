@@ -101,7 +101,8 @@ function AtlasReviewPage() {
   const filteredNeeds = useMemo(() => {
     const q = needsSearch.trim().toLowerCase();
     return (needsRows ?? []).filter((r) => {
-      if (needsType !== "all" && r.entity_type !== needsType) return false;
+      if (needsType !== "all" && r.kind !== needsType) return false;
+
       if (q && !`${r.title} ${r.slug}`.toLowerCase().includes(q)) return false;
       return true;
     });
