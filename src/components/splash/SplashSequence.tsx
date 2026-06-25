@@ -43,6 +43,7 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
   const [mounted, setMounted] = useState(false);
   const [phase, setPhase] = useState<"hidden" | "playing" | "fadeout">("hidden");
   const [artworkUrl, setArtworkUrl] = useState<string | null>(null);
+  const [framing, setFraming] = useState<SplashFraming>("ken-burns");
   const [quote, setQuote] = useState<SplashQuote | null>(null);
   const minDoneRef = useRef(false);
 
@@ -73,10 +74,13 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
       if (cancelled) return;
       setQuote(pickedQuote);
       if (pickedArt.url) {
-        // Preload only the one selected artwork.
-        await preloadImage(pickedArt.url);
+        // Preload only the one selected artwork. Fall back gracefully on error.
+        const ok = await preloadImage(pickedArt.url);
         if (cancelled) return;
-        setArtworkUrl(pickedArt.url);
+        if (ok) {
+          setFraming(pickedArt.framing);
+          setArtworkUrl(pickedArt.url);
+        }
       }
       // Start SFX as the golden bloom begins (~200ms into the timeline).
       window.setTimeout(() => {
