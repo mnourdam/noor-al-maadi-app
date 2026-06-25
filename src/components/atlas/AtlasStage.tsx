@@ -294,6 +294,7 @@ export function AtlasStage({
             entities={entities}
             selectedId={selectedId}
             inv={inv}
+            scale={view.scale}
             onSelect={onSelect}
           />
         </g>
