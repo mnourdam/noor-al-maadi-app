@@ -63,6 +63,7 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
   useEffect(() => {
     if (!mounted) return;
     let cancelled = false;
+    let sfxCleanup: (() => void) | null = null;
 
     (async () => {
       const [pickedQuote, pickedArt] = await Promise.all([
@@ -77,11 +78,18 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
         if (cancelled) return;
         setArtworkUrl(pickedArt.url);
       }
-      playSplashSfx();
+      // Start SFX as the golden bloom begins (~200ms into the timeline).
+      window.setTimeout(() => {
+        if (cancelled) return;
+        sfxCleanup = playSplashSfx();
+      }, 200);
       setPhase("playing");
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      sfxCleanup?.();
+    };
   }, [mounted]);
 
   // Min-duration timer.
