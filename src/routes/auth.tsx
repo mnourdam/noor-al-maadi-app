@@ -199,7 +199,9 @@ function AuthPage() {
               disabled={busy}
               className="w-full rounded-xl bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-60"
             >
-              {busy ? "..." : mode === "signup" ? "إنشاء الحساب" : "تسجيل الدخول"}
+              {busy
+                ? (mode === "signup" ? "جاري إنشاء الحساب…" : "جاري تسجيل الدخول…")
+                : mode === "signup" ? "إنشاء الحساب" : "تسجيل الدخول"}
             </button>
           </form>
 
