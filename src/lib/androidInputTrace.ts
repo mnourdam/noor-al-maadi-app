@@ -14,6 +14,7 @@ declare global {
   interface Window {
     __IRTH_INPUT_TRACE__?: TraceEntry[];
     __irthInputTraceInstalled?: boolean;
+    __irthForceDumpInputTrace?: () => TraceEntry[];
   }
 }
 
@@ -33,6 +34,18 @@ export type TraceEntry = {
 };
 
 const MAX_ENTRIES = 2000;
+const FREEZE_STORAGE_KEY = "irth_input_trace_last_freeze";
+const INPUT_WINDOW_MS = 5_000;
+const FREEZE_THRESHOLD_MS = 500;
+
+export function hasStoredInputFreezeTrace(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return Boolean(window.localStorage.getItem(FREEZE_STORAGE_KEY));
+  } catch {
+    return false;
+  }
+}
 
 function isAndroid(): boolean {
   if (typeof window === "undefined") return false;
@@ -78,6 +91,21 @@ function push(entry: TraceEntry) {
   if (arr.length > MAX_ENTRIES) arr.splice(0, arr.length - MAX_ENTRIES);
 }
 
+function dumpTraceToConsoleAndStorage(reason: string): TraceEntry[] {
+  const arr = window.__IRTH_INPUT_TRACE__ ?? [];
+  const payload = JSON.stringify(arr, null, 2);
+  try {
+    window.localStorage.setItem(FREEZE_STORAGE_KEY, payload);
+  } catch { /* ignore */ }
+  // eslint-disable-next-line no-console
+  console.log("IRTH_INPUT_TRACE_JSON_START");
+  // eslint-disable-next-line no-console
+  console.log(payload);
+  // eslint-disable-next-line no-console
+  console.log("IRTH_INPUT_TRACE_JSON_END", reason);
+  return arr;
+}
+
 function log(kind: string, ev?: Event, data?: Record<string, unknown>) {
   try {
     const t = performance.now();
@@ -101,6 +129,24 @@ export function installAndroidInputTrace(): void {
   window.__IRTH_INPUT_TRACE__ = window.__IRTH_INPUT_TRACE__ ?? [];
 
   const opts: AddEventListenerOptions = { capture: true, passive: true };
+  let lastInputSignalAt = -Infinity;
+
+  const markInputSignal = () => {
+    lastInputSignalAt = performance.now();
+  };
+
+  const maybeDumpFreezeTrace = (kind: string, duration: number) => {
+    const now = performance.now();
+    if (duration <= FREEZE_THRESHOLD_MS) return;
+    if (now - lastInputSignalAt > INPUT_WINDOW_MS) return;
+    log("auto-freeze-dump", undefined, {
+      trigger: kind,
+      duration: Math.round(duration),
+      msAfterInputSignal: Math.round(now - lastInputSignalAt),
+    });
+    dumpTraceToConsoleAndStorage(`${kind}:${Math.round(duration)}ms`);
+  };
+
   const evs = [
     "focusin", "focusout",
     "beforeinput", "input",
@@ -110,7 +156,12 @@ export function installAndroidInputTrace(): void {
     "touchstart", "touchend",
   ];
   for (const name of evs) {
-    document.addEventListener(name, (ev) => log(name, ev), opts);
+    document.addEventListener(name, (ev) => {
+      if (name === "focusin" || name === "beforeinput" || name === "keydown" || name === "input") {
+        markInputSignal();
+      }
+      log(name, ev);
+    }, opts);
   }
 
   document.addEventListener("selectionchange", () => {
@@ -132,6 +183,7 @@ export function installAndroidInputTrace(): void {
             startTime: Math.round(entry.startTime),
             name: entry.name,
           });
+          maybeDumpFreezeTrace("longtask", entry.duration);
         }
       });
       try { obs.observe({ type: "longtask", buffered: true }); }
@@ -146,6 +198,7 @@ export function installAndroidInputTrace(): void {
     const gap = now - last;
     if (gap > 100) {
       log("frame-gap", undefined, { gap: Math.round(gap) });
+      maybeDumpFreezeTrace("frame-gap", gap);
     }
     last = now;
     requestAnimationFrame(tick);
@@ -163,7 +216,11 @@ export function installAndroidInputTrace(): void {
     console.log(JSON.stringify(window.__IRTH_INPUT_TRACE__, null, 2));
     return window.__IRTH_INPUT_TRACE__;
   };
+  window.__irthForceDumpInputTrace = () => dumpTraceToConsoleAndStorage("manual");
   (window as any).__irthClearInputTrace = () => {
     window.__IRTH_INPUT_TRACE__ = [];
+    try { window.localStorage.removeItem(FREEZE_STORAGE_KEY); } catch { /* ignore */ }
   };
 }
+
+export { FREEZE_STORAGE_KEY as IRTH_INPUT_TRACE_FREEZE_STORAGE_KEY };
