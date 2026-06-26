@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion } from "lucide-react";
 import type { WhoAmIStage } from "@/lib/games/types";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
+import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { sfx } from "./sfx";
+
 import { AttemptsChip } from "./AttemptsChip";
 
 interface Props {
