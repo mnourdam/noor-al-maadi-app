@@ -123,6 +123,9 @@ public class NativeDiagnosticsWebView extends CapacitorWebView {
     private static final class TracingInputConnection extends InputConnectionWrapper {
         TracingInputConnection(InputConnection target) {
             super(target, true);
+            trace("ime.wrapper.constructed", "baseClass=" + (target == null ? "null" : target.getClass().getName()));
+            Log.i("IRTH_NATIVE_TRACE", "ime.wrapper.constructed baseClass="
+                + (target == null ? "null" : target.getClass().getName()));
         }
 
         private long pre(String method, String args) {
