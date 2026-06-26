@@ -574,6 +574,64 @@ html.perf-lite .perf-list > * {
   contain-intrinsic-size: 96px;
 }
 
+/* Android WebView text-input safety: targeted only while native IME is active. */
+html.is-android body {
+  background-attachment: scroll;
+}
+
+html.is-android input,
+html.is-android textarea,
+html.is-android [data-android-safe-input="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  caret-color: var(--color-gold);
+  touch-action: manipulation;
+  transform: none !important;
+  will-change: auto !important;
+  content-visibility: visible !important;
+  contain: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.android-input-active .android-safe-input-host {
+  transform: none !important;
+  will-change: auto !important;
+  content-visibility: visible !important;
+  contain: none !important;
+  animation: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.android-input-active .glass,
+html.android-input-active [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.android-input-active .animate-reveal,
+html.android-input-active .irth-reveal,
+html.android-input-active .irth-title-card,
+html.android-input-active .parchment,
+html.android-input-active .parchment-dark,
+html.android-input-active .parchment-rail,
+html.android-input-active .map-parchment {
+  animation: none !important;
+  transform: none !important;
+  will-change: auto !important;
+  content-visibility: visible !important;
+  contain: none !important;
+}
+
+html.android-input-active .particle-field,
+html.android-input-active .particle-field::before,
+html.android-input-active .particle-field::after,
+html.android-input-active .arabesque-layer,
+html.android-input-active .fog-layer,
+html.android-input-active .ember {
+  display: none !important;
+}
+
 /* ============================================================
    Android ultra-stable mode — APK only.
    Stability beats visuals: no animation, no blur, no audio UI pressure,

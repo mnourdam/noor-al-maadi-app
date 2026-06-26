@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { ChevronRight, Search, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell, Screen } from "@/components/AppShell";
+import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
@@ -122,9 +123,14 @@ function TypeBrowsePage() {
 
         <div className="relative mt-4">
           <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gold/70" />
-          <input
+          <AndroidSafeInput
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onValueChange={setQuery}
+            commitMode="blur"
+            onEnter={setQuery}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder={`ابحث في ${SECTION_LABELS[type]}…`}
             className="w-full rounded-2xl border border-white/10 bg-surface py-3 pr-10 pl-10 text-right text-sm focus:border-gold/40 focus:outline-none"
             dir="rtl"

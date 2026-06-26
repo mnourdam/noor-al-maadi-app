@@ -7,8 +7,9 @@
 //   notifies the parent (so a heart can be deducted).
 // ============================================================
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Check, X, HelpCircle, Lightbulb } from "lucide-react";
+import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
 import type { CampaignActivity } from "@/types/campaign";
 
 export interface RendererProps {
@@ -372,13 +373,16 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
 // ---------- Fill in the Blank ----------
 function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [val, setVal] = useState("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
   const correct = String(activity.correctAnswer ?? "").trim().toLowerCase();
 
   const submit = () => {
     if (resolved) return;
-    const ok = correct.length > 0 && val.trim().toLowerCase() === correct;
+    const current = inputRef.current?.value ?? val;
+    setVal(current);
+    const ok = correct.length > 0 && current.trim().toLowerCase() === correct;
     if (ok) {
       setResolved(true);
       setFeedback("ok");
@@ -393,16 +397,21 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
     <div>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
-      <input
+      <AndroidSafeInput
+        ref={inputRef}
         value={val}
-        onChange={(e) => { setVal(e.target.value); setFeedback(null); }}
+        onValueChange={(next) => { setVal(next); setFeedback(null); }}
+        commitMode="blur"
         disabled={resolved}
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         placeholder="اكتب إجابتك…"
         className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
       />
       <HintRow hint={activity.hint} />
       {!resolved && (
-        <button onClick={submit} disabled={!val.trim()} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
+        <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
           تحقق
         </button>
       )}
@@ -421,10 +430,12 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 // ---------- Reflection ----------
 function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [val, setVal] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
 
   const submit = () => {
     if (resolved) return;
+    setVal(textareaRef.current?.value ?? val);
     setResolved(true);
     onResolve(true);
   };
@@ -433,16 +444,21 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
     <div>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
-      <textarea
+      <AndroidSafeTextarea
+        ref={textareaRef}
         value={val}
-        onChange={(e) => setVal(e.target.value)}
+        onValueChange={setVal}
+        commitMode="blur"
         disabled={resolved}
         rows={4}
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         placeholder="تأمّلك الشخصي…"
         className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
       />
       {!resolved && (
-        <button onClick={submit} disabled={val.trim().length < 3} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
+        <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
           سجّل تأمّلك
         </button>
       )}

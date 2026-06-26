@@ -12,6 +12,7 @@ import {
   Gem, CalendarDays, Sparkles, Layers,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { ERAS, useTimelineJourney, type EraDef, type EraId, type JourneyEntry } from "@/lib/timeline-journey";
 
 export const Route = createFileRoute("/timeline")({
@@ -183,9 +184,14 @@ function TimelinePage() {
 
           <div className="glass relative flex min-w-[180px] flex-1 items-center gap-2 rounded-full border border-white/15 px-3 py-1">
             <Search className="size-3.5 text-white/50" aria-hidden />
-            <input
+            <AndroidSafeInput
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onValueChange={setQuery}
+              commitMode="blur"
+              onEnter={setQuery}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder="ابحث في الرحلة…"
               aria-label="ابحث في الرحلة"
               dir="rtl"

@@ -21,12 +21,13 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 import { iconForType } from "@/lib/encyclopedia-icons";
-import { androidMark, isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
+import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/encyclopedia/")({
   head: () => ({
@@ -287,13 +288,16 @@ function EncyclopediaHubFull() {
             {/* Search */}
             <div className="relative mt-4">
               <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-gold/70" />
-              <input
+              <AndroidSafeInput
                 ref={inputRef}
                 value={query}
-                onChange={(e) => { recordAndroidAction("input:onChange:encyclopedia.search"); setQuery(e.target.value); }}
+                onValueChange={setQuery}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setTimeout(() => setFocused(false), 150)}
-                onKeyDown={(e) => { if (e.key === "Enter") submitRecent(query); }}
+                onEnter={() => submitRecent(query)}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder="ابحث في المكتبة… اسم، مدينة، معركة، عصر"
                 className="w-full rounded-2xl border border-gold/30 bg-surface/90 py-3.5 pr-11 pl-10 text-right text-sm text-foreground placeholder:text-muted-foreground/80 shadow-[0_0_0_1px_rgba(212,175,55,0.05),0_8px_30px_-12px_rgba(212,175,55,0.25)] focus:border-gold/60 focus:outline-none"
                 dir="rtl"
@@ -607,9 +611,12 @@ function AndroidStableEncyclopedia() {
           </p>
           <label className="mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-background px-3 py-2">
             <Search className="size-4 text-gold" />
-            <input
+            <AndroidSafeInput
               value={query}
-              onChange={(e) => { recordAndroidAction("input:onChange:encyclopedia.stable"); setQuery(e.target.value); }}
+              onValueChange={setQuery}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder="اختبر الكتابة هنا بثبات…"
               className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />

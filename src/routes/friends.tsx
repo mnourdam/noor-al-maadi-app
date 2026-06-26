@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Search, UserPlus, Check, X, Trash2, ChevronLeft, Users } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
+import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { useAccount } from "@/lib/account";
 import {
   acceptFriend, listFriendships, removeFriend, searchPlayers, sendFriendRequest,
@@ -39,12 +40,13 @@ function FriendsPage() {
     );
   }
 
-  async function doSearch() {
+  async function doSearch(nextQuery = q) {
     setBusy(true); setMsg(null);
     try {
-      const r = await searchPlayers(q, user!.id);
+      const clean = nextQuery.trim();
+      const r = await searchPlayers(clean, user!.id);
       setResults(r);
-      if (r.length === 0 && q.trim()) setMsg("لا يوجد مستخدمون مطابقون");
+      if (r.length === 0 && clean) setMsg("لا يوجد مستخدمون مطابقون");
     } catch {
       setMsg("تعذر تنفيذ البحث");
     } finally {
@@ -77,14 +79,18 @@ function FriendsPage() {
 
         <div className="flex items-center gap-2 rounded-2xl border border-gold/25 bg-surface p-2">
           <Search className="ms-1 size-4 text-gold" />
-          <input
+          <AndroidSafeInput
             value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && doSearch()}
+            onValueChange={setQ}
+            commitMode="blur"
+            onEnter={(next) => { setQ(next); doSearch(next); }}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             className="w-full bg-transparent text-sm outline-none"
             placeholder="اسم العرض أو اسم المستخدم"
           />
-          <button disabled={busy || !q.trim()} onClick={doSearch} className="rounded-xl bg-gradient-gold px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
+          <button disabled={busy || !q.trim()} onClick={() => doSearch()} className="rounded-xl bg-gradient-gold px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
             {busy ? "…" : "بحث"}
           </button>
         </div>

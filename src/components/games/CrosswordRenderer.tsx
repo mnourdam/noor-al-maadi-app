@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Check, Sparkles, Feather, AlertTriangle, Lightbulb } from "lucide-react";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
+import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
-import { isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
+import { isAndroidNativeApp, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 
 interface Props {
@@ -75,6 +76,7 @@ export function CrosswordRenderer({
   stage, onComplete, onWrong, attemptsLeft, maxAttempts, onPaidHint,
 }: Props) {
   const androidStable = isAndroidUltraStableMode();
+  const androidNative = isAndroidNativeApp();
 
   const { cells: grid, conflicts } = useMemo(() => buildGrid(stage), [stage]);
   const schemaIssues = useMemo(() => validateCrosswordStage(stage), [stage]);
@@ -102,10 +104,10 @@ export function CrosswordRenderer({
     const el = inputsRef.current[k];
     if (el) {
       el.focus();
-      el.select();
+      if (!androidNative) el.select();
     }
     setActiveCell(k);
-  }, [androidStable]);
+  }, [androidStable, androidNative]);
 
   const focusClue = useCallback((clueIdx: number) => {
     setActiveClue(clueIdx);
@@ -130,16 +132,19 @@ export function CrosswordRenderer({
     setFeedback(null);
     if (v) {
       sfx("ink_write");
-      if (!androidStable && activeClue !== null) advanceWithin(activeClue, k, 1);
+      if (!androidStable && !androidNative && activeClue !== null) advanceWithin(activeClue, k, 1);
     }
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, k: string) => {
+    if (androidNative && (e.key === "Backspace" || e.key.length === 1 || e.key === "Unidentified")) return;
     if (activeClue === null) return;
     const clue = stage.clues[activeClue];
     if (e.key === "Backspace") {
       if (entries[k]) {
         setEntries((prev) => ({ ...prev, [k]: "" }));
+        const el = inputsRef.current[k];
+        if (el) el.value = "";
       } else {
         advanceWithin(activeClue, k, -1);
       }
@@ -167,9 +172,19 @@ export function CrosswordRenderer({
   const totalCells = grid.size;
   const allFilled = filledCells >= totalCells;
 
+  const collectEntries = () => {
+    const latest = { ...entries };
+    for (const [k, el] of Object.entries(inputsRef.current)) {
+      if (el) latest[k] = (el.value || "").slice(-1);
+    }
+    return latest;
+  };
+
   const check = () => {
+    const latestEntries = collectEntries();
+    setEntries(latestEntries);
     let correct = 0;
-    grid.forEach((info, k) => { if ((entries[k] ?? "") === info.expected) correct++; });
+    grid.forEach((info, k) => { if ((latestEntries[k] ?? "") === info.expected) correct++; });
     const allRight = correct === totalCells;
     if (allRight && !done) {
       setDone(true);
@@ -316,15 +331,19 @@ export function CrosswordRenderer({
                 {clueNum !== undefined && (
                   <span className="absolute right-0.5 top-0 text-[8px] font-bold text-amber-800/80">{clueNum}</span>
                 )}
-                <input
+                <AndroidSafeInput
                   ref={(el) => { inputsRef.current[k] = el; }}
                   maxLength={1}
                   value={value}
-                  onChange={(e) => { recordAndroidAction("input:onChange:crossword.cell"); setCell(k, e.target.value); }}
+                  onValueChange={(next) => setCell(k, next)}
+                  commitMode="blur"
                   onKeyDown={(e) => onKeyDown(e, k)}
                   onFocus={() => { if (activeCell !== k) setActiveCell(k); }}
                   inputMode="text"
                   autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
                   className="h-full w-full bg-transparent text-center text-base font-bold uppercase focus:outline-none"
                 />
               </div>
@@ -355,7 +374,7 @@ export function CrosswordRenderer({
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           onClick={check}
-          disabled={done || !allFilled}
+          disabled={done}
           className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
         >
           {done ? <><Sparkles className="h-4 w-4" /> اكتمل المخطوط</> : <><Check className="h-4 w-4" /> تحقق</>}
