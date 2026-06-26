@@ -136,7 +136,8 @@ async function bootMainApp(root: HTMLElement) {
   applyPerfMode();
   // Mark Android so route/component code can branch on it cheaply.
   try {
-    if ((window as any).Capacitor?.isNativePlatform?.()) {
+    const disableFocusVisualToggles = !!(window as any).__IRTH_ANDROID_FOCUS_AB__?.disableFocusVisualToggles;
+    if (!disableFocusVisualToggles && (window as any).Capacitor?.isNativePlatform?.()) {
       document.documentElement.classList.add("is-android", "is-capacitor");
     }
   } catch { /* ignore */ }
