@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info,
   ChevronLeft, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin,
@@ -10,7 +10,7 @@ import {
 import { toWesternDigits } from "@/lib/formatNumber";
 import { useAudioSettings } from "@/hooks/useAudioSettings";
 import { AppShell, Screen } from "@/components/AppShell";
-import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
+import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import {
   ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, evaluateAchievements, levelFor,
   CURRENT_SEASON, SEASONS, ERAS,
@@ -65,6 +65,30 @@ const RARITY_STYLE: Record<AchievementRarity, { ring: string; chip: string; labe
 
 const TAB_STORAGE_KEY = "irth.profile.tab";
 
+const ANDROID_AUTH_MIN_INPUT_STYLE = {
+  display: "block",
+  width: "100%",
+  boxSizing: "border-box",
+  border: "1px solid #c9c9c9",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#111111",
+  font: "16px system-ui, sans-serif",
+  lineHeight: 1.4,
+  padding: "12px 14px",
+  outline: "none",
+  transform: "none",
+  filter: "none",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
+} satisfies CSSProperties;
+
+const ANDROID_AUTH_MIN_TEXTAREA_STYLE = {
+  ...ANDROID_AUTH_MIN_INPUT_STYLE,
+  minHeight: 110,
+  resize: "vertical",
+} satisfies CSSProperties;
+
 function ProfilePage() {
   const {
     profile, logout, updateSettings, claimSeason, setBio, setFavorites,
@@ -72,6 +96,7 @@ function ProfilePage() {
   } = useProfile();
   const { user, displayName: accountDisplayName, updateDisplayName, signOut } = useAccount();
   const displayName = user ? (accountDisplayName || "مستخدم إرث") : (profile.name || "ضيف");
+  const androidNative = isAndroidNativeApp();
 
   const [tab, setTab] = useState<TabId>("overview");
   useEffect(() => {
@@ -162,18 +187,32 @@ function ProfilePage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <AndroidSafeInput
-                      ref={nameInputRef}
-                      value={nameDraft}
-                      onValueChange={(next) => setNameDraft(next.slice(0, 60))}
-                      commitMode="blur"
-                      autoFocus
-                      autoComplete="name"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      placeholder="اسمك الظاهر"
-                      className="min-w-0 flex-1 rounded-lg border border-gold/30 bg-background px-2 py-1 text-sm outline-none focus:border-gold"
-                    />
+                    {androidNative ? (
+                      <input
+                        ref={nameInputRef}
+                        type="text"
+                        name="displayName"
+                        defaultValue={nameDraft}
+                        autoComplete="name"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        placeholder="اسمك الظاهر"
+                        style={{ ...ANDROID_AUTH_MIN_INPUT_STYLE, flex: 1, minWidth: 0 }}
+                      />
+                    ) : (
+                      <input
+                        ref={nameInputRef}
+                        value={nameDraft}
+                        onChange={(event) => setNameDraft(event.currentTarget.value.slice(0, 60))}
+                        autoFocus
+                        autoComplete="name"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        placeholder="اسمك الظاهر"
+                        className="min-w-0 flex-1 rounded-lg border border-gold/30 bg-background px-2 py-1 text-sm outline-none focus:border-gold"
+                      />
+                    )}
                     <button onClick={saveName} disabled={nameBusy} className="rounded-full bg-gradient-gold px-3 py-1 text-[10px] font-bold text-primary-foreground disabled:opacity-50">{nameBusy ? "..." : "حفظ"}</button>
                     <button onClick={() => { setEditingName(false); setNameMsg(null); }} className="rounded-full border border-white/15 px-3 py-1 text-[10px] text-muted-foreground hover:bg-white/5">إلغاء</button>
                   </div>
@@ -1014,6 +1053,7 @@ function SettingsTab({
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(profile.bio ?? "");
   const bioRef = useRef<HTMLTextAreaElement | null>(null);
+  const androidNative = isAndroidNativeApp();
   const prefs = profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS;
   const favState = ERAS.find((e) => e.id === profile.favoriteStateId);
 
@@ -1051,22 +1091,35 @@ function SettingsTab({
             {!editingBio ? (
               <button onClick={() => { setBioDraft(profile.bio ?? ""); setEditingBio(true); }} className="inline-flex items-center gap-1 rounded-full border border-gold/30 px-2 py-0.5 text-[10px] text-gold hover:bg-gold/10"><Pencil className="size-3" /> تعديل</button>
             ) : (
-              <button onClick={() => { const v = (bioRef.current?.value ?? bioDraft).trim(); setBio(v); setBioDraft(v); setEditingBio(false); }} className="inline-flex items-center gap-1 rounded-full bg-gradient-gold px-2 py-0.5 text-[10px] font-bold text-primary-foreground"><Check className="size-3" /> حفظ</button>
+              <button onClick={() => { const v = (bioRef.current?.value ?? bioDraft).trim().slice(0, 240); setBio(v); setBioDraft(v); setEditingBio(false); }} className="inline-flex items-center gap-1 rounded-full bg-gradient-gold px-2 py-0.5 text-[10px] font-bold text-primary-foreground"><Check className="size-3" /> حفظ</button>
             )}
           </div>
           {editingBio ? (
-            <AndroidSafeTextarea
-              ref={bioRef}
-              value={bioDraft}
-              onValueChange={(next) => setBioDraft(next.slice(0, 240))}
-              commitMode="blur"
-              rows={3}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="مثال: مهتم بتاريخ الشام والحروب الصليبية."
-              className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-background px-3 py-2 text-[12px] leading-6 outline-none focus:border-gold/40"
-            />
+            androidNative ? (
+              <textarea
+                ref={bioRef}
+                defaultValue={bioDraft}
+                rows={3}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="مثال: مهتم بتاريخ الشام والحروب الصليبية."
+                style={{ ...ANDROID_AUTH_MIN_TEXTAREA_STYLE, marginTop: 8 }}
+              />
+            ) : (
+              <textarea
+                ref={bioRef}
+                value={bioDraft}
+                onChange={(event) => setBioDraft(event.currentTarget.value.slice(0, 240))}
+                rows={3}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="مثال: مهتم بتاريخ الشام والحروب الصليبية."
+                className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-background px-3 py-2 text-[12px] leading-6 outline-none focus:border-gold/40"
+              />
+            )
           ) : (
             <p className="mt-2 text-[12px] leading-6 text-foreground/85">
               {profile.bio?.trim() ? profile.bio : <span className="italic text-muted-foreground">لم تكتب نبذةً بعد.</span>}

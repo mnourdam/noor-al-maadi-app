@@ -7,9 +7,10 @@
 //   notifies the parent (so a heart can be deducted).
 // ============================================================
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { Check, X, HelpCircle, Lightbulb } from "lucide-react";
 import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
+import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import type { CampaignActivity } from "@/types/campaign";
 
 export interface RendererProps {
@@ -20,6 +21,30 @@ export interface RendererProps {
 
 const FALLBACK_WRONG = "إجابة غير صحيحة، حاول مرة أخرى.";
 const FALLBACK_OK = "أحسنت، إجابة صحيحة.";
+
+const ANDROID_AUTH_MIN_INPUT_STYLE = {
+  display: "block",
+  width: "100%",
+  boxSizing: "border-box",
+  border: "1px solid #c9c9c9",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#111111",
+  font: "16px system-ui, sans-serif",
+  lineHeight: 1.4,
+  padding: "12px 14px",
+  outline: "none",
+  transform: "none",
+  filter: "none",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
+} satisfies CSSProperties;
+
+const ANDROID_AUTH_MIN_TEXTAREA_STYLE = {
+  ...ANDROID_AUTH_MIN_INPUT_STYLE,
+  minHeight: 120,
+  resize: "vertical",
+} satisfies CSSProperties;
 
 function FeedbackBanner({ kind, text }: { kind: "ok" | "err"; text?: string }) {
   if (!text) return null;
@@ -376,6 +401,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
+  const androidNative = isAndroidNativeApp();
   const correct = String(activity.correctAnswer ?? "").trim().toLowerCase();
 
   const submit = () => {
@@ -397,18 +423,34 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
     <div>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
-      <AndroidSafeInput
-        ref={inputRef}
-        value={val}
-        onValueChange={(next) => { setVal(next); setFeedback(null); }}
-        commitMode="blur"
-        disabled={resolved}
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-        placeholder="اكتب إجابتك…"
-        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
-      />
+      {androidNative ? (
+        <input
+          ref={inputRef}
+          type="text"
+          name="campaign-answer"
+          defaultValue={val}
+          disabled={resolved}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          placeholder="اكتب إجابتك…"
+          style={ANDROID_AUTH_MIN_INPUT_STYLE}
+        />
+      ) : (
+        <AndroidSafeInput
+          ref={inputRef}
+          value={val}
+          onValueChange={(next) => { setVal(next); setFeedback(null); }}
+          commitMode="blur"
+          disabled={resolved}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="اكتب إجابتك…"
+          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
+        />
+      )}
       <HintRow hint={activity.hint} />
       {!resolved && (
         <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
@@ -432,6 +474,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
   const [val, setVal] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const androidNative = isAndroidNativeApp();
 
   const submit = () => {
     if (resolved) return;
@@ -444,19 +487,35 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
     <div>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
-      <AndroidSafeTextarea
-        ref={textareaRef}
-        value={val}
-        onValueChange={setVal}
-        commitMode="blur"
-        disabled={resolved}
-        rows={4}
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-        placeholder="تأمّلك الشخصي…"
-        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
-      />
+      {androidNative ? (
+        <textarea
+          ref={textareaRef}
+          name="campaign-reflection"
+          defaultValue={val}
+          disabled={resolved}
+          rows={4}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          placeholder="تأمّلك الشخصي…"
+          style={ANDROID_AUTH_MIN_TEXTAREA_STYLE}
+        />
+      ) : (
+        <AndroidSafeTextarea
+          ref={textareaRef}
+          value={val}
+          onValueChange={setVal}
+          commitMode="blur"
+          disabled={resolved}
+          rows={4}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="تأمّلك الشخصي…"
+          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
+        />
+      )}
       {!resolved && (
         <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
           سجّل تأمّلك

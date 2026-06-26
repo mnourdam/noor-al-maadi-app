@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties } from "react";
 import { Check, Sparkles, Feather, AlertTriangle, Lightbulb } from "lucide-react";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
@@ -18,6 +18,24 @@ interface Props {
 }
 
 const HINT_COST = 10;
+
+const ANDROID_AUTH_MIN_INPUT_STYLE = {
+  display: "block",
+  width: "100%",
+  boxSizing: "border-box",
+  border: "1px solid #c9c9c9",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#111111",
+  font: "16px system-ui, sans-serif",
+  lineHeight: 1.4,
+  padding: "12px 14px",
+  outline: "none",
+  transform: "none",
+  filter: "none",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
+} satisfies CSSProperties;
 
 
 interface CellInfo {
@@ -72,6 +90,10 @@ function clueCells(clue: CrosswordClue): { r: number; c: number }[] {
   return cells;
 }
 
+function normalizeCrosswordText(s: string): string {
+  return s.trim().toLowerCase().replace(/[ًٌٍَُِّْـ\s]/g, "").replace(/[إأآ]/g, "ا").replace(/[ى]/g, "ي").replace(/[ة]/g, "ه");
+}
+
 export function CrosswordRenderer({
   stage, onComplete, onWrong, attemptsLeft, maxAttempts, onPaidHint,
 }: Props) {
@@ -91,9 +113,11 @@ export function CrosswordRenderer({
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<null | { kind: "ok" | "err"; msg: string }>(null);
   const inputsRef = useRef<Record<string, HTMLInputElement | null>>({});
+  const clueInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   useEffect(() => {
     setEntries({}); setDone(false); setActiveClue(null); setActiveCell(null); setFeedback(null);
+    clueInputRefs.current = {};
   }, [stage]);
 
   const focusCell = useCallback((k: string) => {
@@ -199,6 +223,32 @@ export function CrosswordRenderer({
     }
   };
 
+  const checkAndroidPlain = () => {
+    let correct = 0;
+    const latest: Record<string, string> = {};
+    stage.clues.forEach((clue, idx) => {
+      const raw = clueInputRefs.current[idx]?.value ?? "";
+      if (normalizeCrosswordText(raw) === normalizeCrosswordText(clue.answer)) correct++;
+      const chars = raw.trim();
+      clueCells(clue).forEach(({ r, c }, charIdx) => {
+        const ch = chars[charIdx];
+        if (ch) latest[cellKey(r, c)] = ch;
+      });
+    });
+    setEntries(latest);
+    if (correct === stage.clues.length && !done) {
+      setDone(true);
+      setFeedback({ kind: "ok", msg: "اكتمل المخطوط بدقة." });
+      sfx("correct");
+      sfx("gold_unlock");
+      onComplete(100);
+    } else {
+      setFeedback({ kind: "err", msg: `لا تزال بعض الإجابات غير صحيحة (${correct}/${stage.clues.length}).` });
+      sfx("wrong");
+      onWrong?.();
+    }
+  };
+
   // ---- paid hint: reveal next unrevealed letter of the active clue ----
   // Predictable behaviour: always the first remaining letter from the start.
   const revealNextLetter = () => {
@@ -242,6 +292,62 @@ export function CrosswordRenderer({
               يرجى تصحيح المحتوى في لوحة الإدارة قبل النشر. لا يُسمح بتعديل الإجابات تلقائيًا.
             </p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (androidNative) {
+    return (
+      <div className="relative irth-title-card overflow-hidden p-5" style={{ transform: "none", filter: "none", backdropFilter: "none" }}>
+        <div className="mb-4 flex items-center justify-between text-[11px] uppercase tracking-[0.3em]">
+          <span className="inline-flex items-center gap-2 text-amber-300/80">
+            <Feather className="h-3.5 w-3.5" />
+            مخطوط الكلمات
+          </span>
+          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
+            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
+          )}
+        </div>
+
+        <div className="space-y-3">
+          {stage.clues.map((clue, idx) => (
+            <label key={`${clue.direction}-${clue.number}`} className="block rounded-lg border border-amber-500/15 bg-slate-900/60 p-3">
+              <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-300/80">
+                {clue.direction === "across" ? "أفقي" : "عمودي"} · {clue.number}
+              </span>
+              <span className="mb-3 block text-sm leading-7 text-slate-200">{clue.hint}</span>
+              <input
+                ref={(el) => { clueInputRefs.current[idx] = el; }}
+                type="text"
+                name={`crossword-answer-${idx}`}
+                defaultValue=""
+                maxLength={clue.answer.length}
+                disabled={done}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="اكتب الإجابة…"
+                style={ANDROID_AUTH_MIN_INPUT_STYLE}
+              />
+            </label>
+          ))}
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button
+            onClick={checkAndroidPlain}
+            disabled={done}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+          >
+            {done ? <><Sparkles className="h-4 w-4" /> اكتمل المخطوط</> : <><Check className="h-4 w-4" /> تحقق</>}
+          </button>
+          {feedback && (
+            <span className={`text-xs ${feedback.kind === "ok" ? "text-emerald-300" : "text-red-300"}`}>
+              {feedback.msg}
+            </span>
+          )}
         </div>
       </div>
     );

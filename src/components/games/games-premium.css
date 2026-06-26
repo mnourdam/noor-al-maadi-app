@@ -146,6 +146,19 @@
 .irth-ink-cell.is-correct { background: linear-gradient(180deg, #fef3c7, #fde68a); }
 .irth-ink-cell.is-correct input { animation: irth-ink 0.6s ease both; font-family: "IBM Plex Sans Arabic", serif; }
 
+html.is-android .irth-title-card::after,
+html.is-android .irth-reveal,
+html.is-android .irth-gold-glow,
+html.is-android .irth-unlock,
+html.is-android .irth-shake,
+html.is-android .irth-ink-cell input,
+html.is-android .irth-ink-cell.is-correct input {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
 /* ---------- Thread (connections) ---------- */
 .irth-thread {
   position: relative;

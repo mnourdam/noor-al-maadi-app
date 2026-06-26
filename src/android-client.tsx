@@ -34,6 +34,10 @@ try {
 
 const rootElement = document.getElementById("root");
 
+function isAndroidProductionAuthPath(pathname = window.location.pathname) {
+  return pathname === "/auth" || pathname.endsWith("/auth");
+}
+
 if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
 }
@@ -46,7 +50,7 @@ if (isAndroidReactMinPath()) {
   // eslint-disable-next-line no-console
   console.info("[android-react-min] minimal React entry mounted", { path: window.location.pathname });
   createRoot(rootElement).render(<AndroidReactMinTest />);
-} else if (isAndroidAuthMinPath()) {
+} else if (isAndroidAuthMinPath() || isAndroidProductionAuthPath()) {
   try {
     document.documentElement.classList.remove("irth-booting");
     document.getElementById("irth-boot-splash")?.remove();
