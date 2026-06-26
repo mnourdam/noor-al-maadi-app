@@ -10,7 +10,9 @@
 import { useMemo, useRef, useState } from "react";
 import { Check, X, HelpCircle, Lightbulb } from "lucide-react";
 import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
+import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import type { CampaignActivity } from "@/types/campaign";
+
 
 export interface RendererProps {
   activity: CampaignActivity;
