@@ -166,10 +166,11 @@
      synchronous re-tile of the viewport-sized gradient every time the soft
      keyboard resizes the viewport, stalling the main thread on first focus.
      Override for mobile WebViews only. */
-  @supports (-webkit-touch-callout: none) {
-    body {
-      background-attachment: scroll !important;
-    }
+  /* Android WebView IME freeze fix: `background-attachment: fixed` forces a
+     synchronous re-tile of the viewport-sized gradient every time the soft
+     keyboard resizes the viewport, stalling the main thread on first focus. */
+  html.is-android body {
+    background-attachment: scroll !important;
   }
 
   html {
