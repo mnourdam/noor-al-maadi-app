@@ -85,10 +85,11 @@ if (!supabaseUrl || !supabaseKey) {
 
 
 try {
+  // NOTE: StrictMode intentionally omitted on Android — its double-invoke
+  // of effects/renders amplifies layout work in the WebView and makes inputs
+  // feel laggy. Web build still runs through TanStack Start's own pipeline.
   createRoot(rootElement).render(
-    <StrictMode>
-      <RouterProvider router={getRouter()} />
-    </StrictMode>,
+    <RouterProvider router={getRouter()} />,
   );
 } catch (err) {
   // eslint-disable-next-line no-console
