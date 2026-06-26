@@ -34,6 +34,15 @@
             android:windowSoftInputMode="adjustResize|stateHidden"
             android:exported="false" />
 
+        <receiver
+            android:name=".AndroidABFlagsReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="app.lovable.irth.SET_AB_FLAGS" />
+                <action android:name="app.lovable.irth.CLEAR_AB_FLAGS" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

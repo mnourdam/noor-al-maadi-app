@@ -16,9 +16,12 @@ import android.view.ViewTreeObserver;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebView;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.WebViewListener;
 import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  * DIAGNOSTIC BUILD:
@@ -34,6 +37,7 @@ public class MainActivity extends BridgeActivity {
     private static int createCount = 0;
     private int lastKeyboardVisible = -1;
     private int lastKeyboardHeight = -1;
+    private AndroidABFlags.Config startupABFlags;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -41,6 +45,8 @@ public class MainActivity extends BridgeActivity {
         Log.i("IRTH_NATIVE_TRACE", "MAIN_ACTIVITY_ON_CREATE_TRACE_ACTIVE");
         System.out.println("IRTH_NATIVE_TRACE MAIN_ACTIVITY_ON_CREATE_TRACE_ACTIVE");
         createCount++;
+        startupABFlags = AndroidABFlags.read(this, getIntent());
+        AndroidABFlags.logStartup("activity.onCreate", startupABFlags);
         boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         WebView.setWebContentsDebuggingEnabled(debuggable);
 
@@ -85,7 +91,19 @@ public class MainActivity extends BridgeActivity {
         // backButton listeners, and any other non-essential startup plugin.
         trace("capacitor.minimalLoad", "clearing generated Capacitor plugins before bridge load; core plugins remain only");
         bridgeBuilder.setPlugins(new ArrayList<>());
+        prepareWebViewBeforeBridgeLoad();
         super.load();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        startupABFlags = AndroidABFlags.read(this, intent);
+        AndroidABFlags.logStartup("activity.onNewIntent", startupABFlags);
+        WebView webView = bridge != null ? bridge.getWebView() : null;
+        if (webView != null) {
+            webView.evaluateJavascript(AndroidABFlags.bootstrapScript(startupABFlags), value -> trace("ab.flagsReinjected", "result=" + value));
+        }
     }
 
     @Override
@@ -167,6 +185,37 @@ public class MainActivity extends BridgeActivity {
         logWebViewState("configured");
     }
 
+    private void prepareWebViewBeforeBridgeLoad() {
+        WebView webView = findViewById(com.getcapacitor.android.R.id.webview);
+        if (webView == null) {
+            traceWarn("ab.prepareSkipped", "webView=null before bridge load");
+            return;
+        }
+
+        try {
+            webView.addJavascriptInterface(new NativeDiagnosticsBridge(), "IrthNativeDiagnostics");
+            trace("ab.nativeBridgeReady", "before bridge load");
+        } catch (Exception ex) {
+            traceWarn("ab.nativeBridgeFailed", String.valueOf(ex.getMessage()));
+        }
+
+        try {
+            if (startupABFlags == null) startupABFlags = AndroidABFlags.read(this, getIntent());
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                WebViewCompat.addDocumentStartJavaScript(
+                    webView,
+                    AndroidABFlags.bootstrapScript(startupABFlags),
+                    Collections.singleton("*")
+                );
+                trace("ab.documentStartInstalled", AndroidABFlags.simpleLine(startupABFlags));
+            } else {
+                traceWarn("ab.documentStartUnsupported", AndroidABFlags.simpleLine(startupABFlags));
+            }
+        } catch (Exception ex) {
+            traceWarn("ab.documentStartFailed", String.valueOf(ex.getMessage()));
+        }
+    }
+
     private class NativeDiagnosticsBridge {
         @JavascriptInterface
         public void openBareInputTest() {
@@ -179,6 +228,18 @@ public class MainActivity extends BridgeActivity {
         @JavascriptInterface
         public void logInputEvent(String eventName, String payload) {
             trace("bridge.jsInput." + sanitizeToken(eventName), sanitizePayload(payload));
+        }
+
+        @JavascriptInterface
+        public String getFocusABFlagsJson() {
+            if (startupABFlags == null) startupABFlags = AndroidABFlags.read(MainActivity.this, getIntent());
+            return AndroidABFlags.json(startupABFlags);
+        }
+
+        @JavascriptInterface
+        public String getFocusABFlagsLine() {
+            if (startupABFlags == null) startupABFlags = AndroidABFlags.read(MainActivity.this, getIntent());
+            return AndroidABFlags.simpleLine(startupABFlags);
         }
     }
 

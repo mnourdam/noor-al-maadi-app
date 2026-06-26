@@ -57,6 +57,30 @@ function parseStoredFlags(): Partial<AndroidFocusABFlags> {
   }
 }
 
+function coerceFlags(raw: unknown): Partial<AndroidFocusABFlags> {
+  if (!raw || typeof raw !== "object") return {};
+  const input = raw as Partial<Record<AndroidFocusABFlagKey, unknown>>;
+  const next: Partial<AndroidFocusABFlags> = {};
+  for (const key of Object.keys(DEFAULT_FLAGS) as AndroidFocusABFlagKey[]) {
+    if (typeof input[key] === "boolean") next[key] = input[key];
+  }
+  return next;
+}
+
+function parseNativeFlags(): Partial<AndroidFocusABFlags> {
+  try {
+    const nativeFlags = coerceFlags((window as any).__IRTH_ANDROID_NATIVE_AB_FLAGS__);
+    if (Object.keys(nativeFlags).length > 0) return nativeFlags;
+  } catch { /* ignore */ }
+  try {
+    const raw = window.localStorage.getItem("irth:android-focus-ab-native");
+    if (!raw) return {};
+    return coerceFlags(JSON.parse(raw));
+  } catch {
+    return {};
+  }
+}
+
 function persistFlags(flags: AndroidFocusABFlags) {
   try { window.localStorage.setItem(ANDROID_FOCUS_AB_STORAGE_KEY, JSON.stringify(flags)); } catch { /* ignore */ }
 }
@@ -66,7 +90,7 @@ export function readAndroidFocusABFlags(): AndroidFocusABFlags {
   const cached = (window as any).__IRTH_ANDROID_FOCUS_AB__ as AndroidFocusABFlags | undefined;
   if (cached) return cached;
 
-  const flags: AndroidFocusABFlags = { ...DEFAULT_FLAGS, ...parseStoredFlags() };
+  const flags: AndroidFocusABFlags = { ...DEFAULT_FLAGS, ...parseStoredFlags(), ...parseNativeFlags() };
   try {
     const url = new URL(window.location.href);
     let changed = false;
@@ -109,9 +133,16 @@ export function logAndroidFocusABFlags(reason = "flags") {
   } catch { /* ignore */ }
   try {
     (window as any).IrthNativeDiagnostics?.logInputEvent?.("focusAB.flags", JSON.stringify({ reason, route, flags }));
+    (window as any).IrthNativeDiagnostics?.logInputEvent?.("focusAB.flagsLine", formatABLine(flags));
   } catch { /* ignore */ }
   // eslint-disable-next-line no-console
+  console.info(formatABLine(flags));
+  // eslint-disable-next-line no-console
   console.info("IRTH_ANDROID_FOCUS_AB", { reason, route, flags });
+}
+
+function formatABLine(flags: AndroidFocusABFlags) {
+  return `IRTH_AB_FLAGS focus=${flags.disableGlobalFocusBlur} selection=${flags.disableSelectionChange} resize=${flags.disableKeyboardViewportResize} scroll=${flags.disableScrollIntoView} visual=${flags.disableFocusVisualToggles} campaignFocus=${flags.disableCampaignFocusLogic}`;
 }
 
 function targetName(target: EventTarget) {
