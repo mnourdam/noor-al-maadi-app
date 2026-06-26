@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Search, UserPlus, Check, X, Trash2, ChevronLeft, Users } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { AuthLink } from "@/components/AuthLink";
-import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
+import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { useAccount } from "@/lib/account";
 import {
   acceptFriend, listFriendships, removeFriend, searchPlayers, sendFriendRequest,
@@ -80,7 +80,7 @@ function FriendsPage() {
 
         <div className="flex items-center gap-2 rounded-2xl border border-gold/25 bg-surface p-2">
           <Search className="ms-1 size-4 text-gold" />
-          <AndroidSafeInput
+          <AndroidPlainTextInput
             value={q}
             onValueChange={setQ}
             commitMode="blur"

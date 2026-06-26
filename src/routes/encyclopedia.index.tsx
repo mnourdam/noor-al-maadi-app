@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
-import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
+import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
@@ -288,7 +288,7 @@ function EncyclopediaHubFull() {
             {/* Search */}
             <div className="relative mt-4">
               <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-gold/70" />
-              <AndroidSafeInput
+              <AndroidPlainTextInput
                 ref={inputRef}
                 value={query}
                 onValueChange={setQuery}
@@ -611,7 +611,7 @@ function AndroidStableEncyclopedia() {
           </p>
           <label className="mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-background px-3 py-2">
             <Search className="size-4 text-gold" />
-            <AndroidSafeInput
+            <AndroidPlainTextInput
               value={query}
               onValueChange={setQuery}
               autoComplete="off"
