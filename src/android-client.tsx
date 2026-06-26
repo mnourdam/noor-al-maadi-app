@@ -1,24 +1,7 @@
 import { createRoot } from "react-dom/client";
-import { RouterProvider } from "@tanstack/react-router";
 
-import { getRouter } from "./router";
-import { attachSupabaseAuth } from "./integrations/supabase/auth-attacher";
-import { installAndroidFreezeDiagnostics, androidMark } from "./lib/androidFreezeDiagnostics";
-import { applyPerfMode } from "./lib/perf-mode";
+import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import "./styles.css";
-
-installAndroidFreezeDiagnostics();
-// Flip the global perf-lite CSS class BEFORE first paint so heavy
-// animations / backdrop-filter / particles never run on Android WebView.
-applyPerfMode();
-// Mark Android so route/component code can branch on it cheaply.
-try {
-  if ((window as any).Capacitor?.isNativePlatform?.()) {
-    document.documentElement.classList.add("is-android", "is-capacitor");
-  }
-} catch { /* ignore */ }
-// eslint-disable-next-line no-console
-console.log("[android:perf] perf-lite applied", document.documentElement.className);
 
 // Surface uncaught errors to Logcat via Capacitor's Console plugin so blank /
 // error-boundary screens are diagnosable on real devices.
@@ -55,6 +38,45 @@ if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
 }
 
+if (isAndroidInputTestPath()) {
+  try {
+    window.__irthAndroidInputTest = true;
+    document.documentElement.classList.add("android-input-test-active");
+    document.documentElement.classList.remove("irth-booting");
+    document.getElementById("irth-boot-splash")?.remove();
+  } catch { /* ignore */ }
+  // eslint-disable-next-line no-console
+  console.info("[android-input-test] isolated Android entry mounted", { path: window.location.pathname });
+  createRoot(rootElement).render(<AndroidInputIsolationTest />);
+} else {
+  void bootMainApp(rootElement);
+}
+
+async function bootMainApp(root: HTMLElement) {
+  const [{ RouterProvider }, { getRouter }, { attachSupabaseAuth }, diagnostics, perf] = await Promise.all([
+    import("@tanstack/react-router"),
+    import("./router"),
+    import("./integrations/supabase/auth-attacher"),
+    import("./lib/androidFreezeDiagnostics"),
+    import("./lib/perf-mode"),
+  ]);
+
+  const { installAndroidFreezeDiagnostics, androidMark } = diagnostics;
+  const { applyPerfMode } = perf;
+
+  installAndroidFreezeDiagnostics();
+  // Flip the global perf-lite CSS class BEFORE first paint so heavy
+  // animations / backdrop-filter / particles never run on Android WebView.
+  applyPerfMode();
+  // Mark Android so route/component code can branch on it cheaply.
+  try {
+    if ((window as any).Capacitor?.isNativePlatform?.()) {
+      document.documentElement.classList.add("is-android", "is-capacitor");
+    }
+  } catch { /* ignore */ }
+  // eslint-disable-next-line no-console
+  console.log("[android:perf] perf-lite applied", document.documentElement.className);
+
 // Capacitor APK builds embed Supabase config at build time via Vite env vars.
 // If they are missing, surface a clear setup screen rather than crashing into
 // the TanStack error boundary (which would just say "This page didn't load").
@@ -67,7 +89,7 @@ if (!supabaseUrl || !supabaseKey) {
   ].filter(Boolean).join(", ");
   // eslint-disable-next-line no-console
   console.error("[android:env-missing]", missing);
-  rootElement.innerHTML = `
+  root.innerHTML = `
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b1424;color:#f3f4f6;font-family:system-ui,sans-serif;padding:24px;text-align:center" dir="rtl">
       <div style="max-width:420px">
         <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;color:#d4a056">إعداد مطلوب</h1>
@@ -92,14 +114,14 @@ try {
   // feel laggy. Web build still runs through TanStack Start's own pipeline.
   const router = getRouter();
   androidMark("react.mount.start", { route: window.location.pathname });
-  createRoot(rootElement).render(
+  createRoot(root).render(
     <RouterProvider router={router} />,
   );
   androidMark("react.mount.rendered", { route: window.location.pathname });
 } catch (err) {
   // eslint-disable-next-line no-console
   console.error("[android:mount-failed]", (err as Error)?.stack ?? err);
-  rootElement.innerHTML = `
+  root.innerHTML = `
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b1424;color:#f3f4f6;font-family:system-ui,sans-serif;padding:24px;text-align:center">
       <div style="max-width:360px">
         <h1 style="font-size:18px;font-weight:600;margin:0 0 8px">تعذّر تشغيل التطبيق</h1>
@@ -107,4 +129,5 @@ try {
         <button onclick="window.location.reload()" style="padding:10px 16px;border-radius:8px;background:#d4a056;color:#0b1424;font-weight:600;border:none">إعادة المحاولة</button>
       </div>
     </div>`;
+}
 }
