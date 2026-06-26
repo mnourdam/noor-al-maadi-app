@@ -28,14 +28,10 @@ function targetLength(target: EventTarget | null) {
 }
 
 function fieldListeners(field: string): Record<string, EventListener> {
+  // Per-keystroke logging through the Capacitor Console bridge was freezing the
+  // WebView. Keep only lightweight focus/blur diagnostics — never input/keydown.
   return {
     focus: (event: Event) => log("focus", { field, length: targetLength(event.target) }),
-    keydown: (event: Event) => log("keydown", { field, key: safeKey((event as KeyboardEvent).key || "unknown") }),
-    beforeinput: (event: Event) => log("beforeinput", { field, inputType: (event as InputEvent).inputType || "unknown", length: targetLength(event.target) }),
-    input: (event: Event) => log("input", { field, length: targetLength(event.target) }),
-    change: (event: Event) => log("change", { field, length: targetLength(event.target) }),
-    compositionstart: (_event: Event) => log("compositionstart", { field }),
-    compositionend: (event: Event) => log("compositionend", { field, length: targetLength(event.target) }),
     blur: (event: Event) => log("blur", { field, length: targetLength(event.target) }),
   };
 }
@@ -48,6 +44,7 @@ function attachNativeDiagnostics(el: HTMLInputElement | HTMLTextAreaElement | nu
     for (const [event, listener] of Object.entries(listeners)) el.removeEventListener(event, listener);
   };
 }
+
 
 const inputStyle: React.CSSProperties = {
   display: "block",
