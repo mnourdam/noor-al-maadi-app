@@ -2,7 +2,9 @@ package app.lovable.irth;
 
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -57,6 +59,7 @@ public class MainActivity extends BridgeActivity {
 
         super.onCreate(savedInstanceState);
         Log.i(TAG, "[android:ime] onCreate count=" + createCount + " softInputMode=adjustResize|stateHidden immersive=DISABLED edgeToEdge=DISABLED hardwareAccelerated=true webDebug=" + debuggable);
+        logWebViewProvider("main");
         configureWebViewForInputDiagnostics();
     }
 
@@ -145,7 +148,17 @@ public class MainActivity extends BridgeActivity {
             + " shown=" + webView.isShown()
             + " attached=" + webView.isAttachedToWindow()
             + " layerType=" + webView.getLayerType()
+            + " hardwareAccelerated=" + webView.isHardwareAccelerated()
             + " progress=" + webView.getProgress());
+    }
+
+    private void logWebViewProvider(String source) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            Log.i(TAG, "[android:webview] " + source + " provider=unavailable sdk=" + Build.VERSION.SDK_INT);
+            return;
+        }
+        PackageInfo info = WebView.getCurrentWebViewPackage();
+        Log.i(TAG, "[android:webview] " + source + " provider=" + (info == null ? "null" : info.packageName + " " + info.versionName));
     }
 
     private void logViewHierarchy() {

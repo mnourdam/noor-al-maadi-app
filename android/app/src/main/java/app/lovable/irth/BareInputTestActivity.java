@@ -1,7 +1,9 @@
 package app.lovable.irth;
 
 import android.annotation.SuppressLint;
+import android.content.pm.PackageInfo;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -33,6 +35,7 @@ public class BareInputTestActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "[android:bare-input] onCreate raw WebView activity softInputMode=adjustResize|stateHidden hardwareAccelerated=true");
+        logWebViewProvider();
 
         webView = new BareDiagnosticWebView(this);
         webView.setLayoutParams(new FrameLayout.LayoutParams(
@@ -64,6 +67,15 @@ public class BareInputTestActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         Log.i(TAG, "[android:bare-input] onResume webViewId=" + (webView == null ? "null" : System.identityHashCode(webView)));
+    }
+
+    private void logWebViewProvider() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            Log.i(TAG, "[android:bare-input] provider=unavailable sdk=" + Build.VERSION.SDK_INT);
+            return;
+        }
+        PackageInfo info = WebView.getCurrentWebViewPackage();
+        Log.i(TAG, "[android:bare-input] provider=" + (info == null ? "null" : info.packageName + " " + info.versionName));
     }
 
     @Override
