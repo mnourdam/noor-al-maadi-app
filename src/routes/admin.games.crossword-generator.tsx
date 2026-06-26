@@ -9,6 +9,7 @@ import {
   buildCrosswordEnvelope,
   validateCrosswordGame,
   normalizeArabicWord,
+  explainUnplaced,
   type WordHint,
 } from "@/lib/games/crossword-generator";
 import type { CrosswordStage } from "@/lib/games/types";
@@ -40,6 +41,8 @@ interface FormState {
   rows: number;
   cols: number;
   pairsText: string;
+  allowIsolated: boolean;
+  requireConnected: boolean;
 }
 
 const DEFAULTS: FormState = {
@@ -59,6 +62,8 @@ const DEFAULTS: FormState = {
   rows: 0,
   cols: 0,
   pairsText: "صلاح_الدين | قائد فتح القدس\nبغداد | عاصمة الخلافة العباسية\nالقاهرة | عاصمة مصر الفاطمية\nحطين | معركة فاصلة سنة 1187",
+  allowIsolated: true,
+  requireConnected: false,
 };
 
 function parsePairs(text: string): WordHint[] {
@@ -97,14 +102,21 @@ function CrosswordGeneratorPage() {
       rows: form.rows || undefined,
       cols: form.cols || undefined,
       seed: Date.now() & 0xffff,
+      allowIsolated: form.allowIsolated,
+      requireConnected: form.requireConnected,
     });
     if (!result.ok) {
-      setErrors([result.error, result.missing.length ? `كلمات لم توضع: ${result.missing.join("، ")}` : ""].filter(Boolean));
+      const lines = [
+        result.error,
+        `حُجم الشبكة المُجرَّب: ${result.attemptedSize}×${result.attemptedSize}`,
+        ...result.details.map((d) => `• ${explainUnplaced(d)}`),
+      ];
+      setErrors(lines);
       return;
     }
     setStage(result.stage);
     if (result.placed !== pairs.length) {
-      setWarning(`تم وضع ${result.placed} من أصل ${pairs.length} كلمة.`);
+      setWarning(`تم وضع ${result.placed} من أصل ${pairs.length} كلمة على شبكة ${result.gridSize}×${result.gridSize}.`);
     }
   };
 
@@ -205,6 +217,18 @@ function CrosswordGeneratorPage() {
                 rows={10}
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs leading-7 text-slate-200 focus:border-amber-400 focus:outline-none"
               />
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-300">
+              <label className="inline-flex items-center gap-1.5">
+                <input type="checkbox" checked={form.allowIsolated}
+                  onChange={(e) => update("allowIsolated", e.target.checked)} />
+                السماح بكلمات معزولة (احتياطي)
+              </label>
+              <label className="inline-flex items-center gap-1.5">
+                <input type="checkbox" checked={form.requireConnected}
+                  onChange={(e) => update("requireConnected", e.target.checked)} />
+                اشتراط شبكة متصلة بالكامل
+              </label>
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={handleGenerate}
