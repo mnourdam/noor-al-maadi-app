@@ -84,7 +84,6 @@ function mountNativeAndroidTextEntry(request: TextEntryRequest, onClose: () => v
     color: TEXT,
     fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
     overflowY: "auto",
-    WebkitOverflowScrolling: "touch",
     transform: "none",
     filter: "none",
     backdropFilter: "none",
@@ -93,6 +92,7 @@ function mountNativeAndroidTextEntry(request: TextEntryRequest, onClose: () => v
     alignItems: "center",
     justifyContent: "center",
   } satisfies Partial<CSSStyleDeclaration>);
+  overlay.style.setProperty("-webkit-overflow-scrolling", "touch");
 
   const styleTag = document.createElement("style");
   styleTag.textContent = `
