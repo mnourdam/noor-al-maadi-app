@@ -11,10 +11,13 @@ import { warmupAndroidInput } from "./lib/androidInputWarmup";
 // Install input/IME/frame tracing FIRST so it captures the very first
 // focus/keydown that may freeze the WebView. Pure instrumentation; no fixes.
 installAndroidInputTrace();
+const shouldShowStoredFreezeTrace = hasStoredInputFreezeTrace();
 
 // Prime the WebView's first focus / IME path so the very first text
 // input the user taps does not freeze. One-shot, no visible keyboard.
-warmupAndroidInput();
+if (!shouldShowStoredFreezeTrace) {
+  warmupAndroidInput();
+}
 
 
 // Surface uncaught errors to Logcat via Capacitor's Console plugin so blank /
@@ -54,7 +57,7 @@ if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
 }
 
-if (hasStoredInputFreezeTrace()) {
+if (shouldShowStoredFreezeTrace) {
   window.history.replaceState(null, "", "/debug/input-trace");
   try {
     document.documentElement.classList.remove("irth-booting");
