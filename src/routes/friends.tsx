@@ -85,6 +85,7 @@ function FriendsPage() {
             onValueChange={setQ}
             commitMode="blur"
             onEnter={(next) => { setQ(next); doSearch(next); }}
+            androidEntryKey="friends.search"
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}

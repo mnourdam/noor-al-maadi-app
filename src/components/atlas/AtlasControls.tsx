@@ -146,6 +146,7 @@ export function AtlasControls({
               onValueChange={onSearch}
               commitMode="blur"
               onEnter={onSearch}
+              androidEntryKey="atlas.search"
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}

@@ -189,6 +189,7 @@ function TimelinePage() {
               onValueChange={setQuery}
               commitMode="blur"
               onEnter={setQuery}
+              androidEntryKey="timeline.search"
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}

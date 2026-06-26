@@ -130,6 +130,7 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
           placeholder="اكتب اسم الشخصية…"
           modalTitle="من أنا؟"
           modalLabel="اكتب اسم الشخصية التاريخية ثم اضغط حفظ"
+          androidEntryKey={`game.whoAmI.${stage.answer}`}
           className={`flex-1 rounded-xl border bg-slate-950/80 px-4 py-3.5 text-base text-slate-100 placeholder:text-slate-500 focus:outline-none ${
             wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"
           } ${done ? "border-emerald-500/40" : ""}`}

@@ -312,6 +312,7 @@ export function CrosswordRenderer({
                 placeholder="اكتب الإجابة…"
                 modalTitle={`إجابة ${clue.direction === "across" ? "أفقية" : "عمودية"} ${clue.number}`}
                 modalLabel={clue.hint}
+                androidEntryKey={`game.crossword.clue.${clue.direction}.${clue.number}`}
                 className="block w-full rounded-lg border border-amber-500/25 bg-slate-950/75 px-3 py-3 text-base text-slate-100 placeholder:text-slate-500 outline-none focus:border-amber-400"
               />
             </label>
@@ -433,6 +434,7 @@ export function CrosswordRenderer({
                   autoCorrect="off"
                   autoCapitalize="characters"
                   spellCheck={false}
+                  androidEntryKey={`game.crossword.cell.${k}`}
                   className="h-full w-full bg-transparent text-center text-base font-bold uppercase focus:outline-none"
                 />
               </div>
