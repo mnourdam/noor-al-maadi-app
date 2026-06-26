@@ -117,26 +117,46 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
       )}
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <AndroidSafeInput
-          key={stage.answer}
-          ref={guessRef}
-          dir="rtl"
-          value={guess}
-          onValueChange={setGuess}
-          commitMode="blur"
-          onEnter={(next) => submit(next)}
-          disabled={done}
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="اكتب اسم الشخصية…"
-          modalTitle="من أنا؟"
-          modalLabel="اكتب اسم الشخصية التاريخية ثم اضغط حفظ"
-          androidEntryKey={`game.whoAmI.${stage.answer}`}
-          className={`flex-1 rounded-xl border bg-slate-950/80 px-4 py-3.5 text-base text-slate-100 placeholder:text-slate-500 focus:outline-none ${
-            wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"
-          } ${done ? "border-emerald-500/40" : ""}`}
-        />
+        {isAndroidNativeApp() ? (
+          <input
+            key={stage.answer}
+            ref={guessRef}
+            dir="rtl"
+            type="text"
+            defaultValue=""
+            disabled={done}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="اكتب اسم الشخصية…"
+            className={`flex-1 rounded-xl border bg-slate-950/80 px-4 py-3.5 text-base text-slate-100 placeholder:text-slate-500 focus:outline-none ${
+              wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"
+            } ${done ? "border-emerald-500/40" : ""}`}
+            style={{ transform: "none", filter: "none", backdropFilter: "none", transition: "none", animation: "none" }}
+          />
+        ) : (
+          <AndroidSafeInput
+            key={stage.answer}
+            ref={guessRef}
+            dir="rtl"
+            value={guess}
+            onValueChange={setGuess}
+            commitMode="blur"
+            onEnter={(next) => submit(next)}
+            disabled={done}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="اكتب اسم الشخصية…"
+            modalTitle="من أنا؟"
+            modalLabel="اكتب اسم الشخصية التاريخية ثم اضغط حفظ"
+            androidEntryKey={`game.whoAmI.${stage.answer}`}
+            className={`flex-1 rounded-xl border bg-slate-950/80 px-4 py-3.5 text-base text-slate-100 placeholder:text-slate-500 focus:outline-none ${
+              wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"
+            } ${done ? "border-emerald-500/40" : ""}`}
+          />
+        )}
+
         <button
           onClick={() => submit()}
           disabled={done}
