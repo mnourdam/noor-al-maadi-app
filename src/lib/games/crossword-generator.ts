@@ -168,10 +168,11 @@ function tryGenerate(
   rows: number,
   cols: number,
   rng: () => number,
-): { placed: PlacedRecord[]; missing: WordHint[] } {
+  allowIsolated: boolean,
+): { placed: PlacedRecord[]; missing: { item: WordHint; reason: UnplacedDetail["reason"] }[] } {
   const grid = makeGrid(rows, cols);
   const placed: PlacedRecord[] = [];
-  const missing: WordHint[] = [];
+  const missing: { item: WordHint; reason: UnplacedDetail["reason"] }[] = [];
 
   // Sort by length desc; shuffle ties for variety.
   const sorted = [...words].sort(
@@ -184,41 +185,65 @@ function tryGenerate(
   const firstRow = Math.floor(rows / 2);
   const firstCol = Math.max(0, Math.floor((cols - first.word.length) / 2));
   const firstCheck = canPlaceWord(grid, first.word, firstRow, firstCol, "across", true);
-  if (!firstCheck.ok) return { placed, missing: [first, ...sorted] };
+  if (!firstCheck.ok) {
+    return { placed, missing: [first, ...sorted].map((w) => ({ item: w, reason: "out_of_bounds" as const })) };
+  }
   placeWord(grid, first.word, firstRow, firstCol, "across");
   placed.push({ ...first, row: firstRow, col: firstCol, direction: "across" });
 
   for (const item of sorted) {
-    const candidates: { row: number; col: number; direction: Direction; score: number }[] = [];
+    type Cand = { row: number; col: number; direction: Direction; score: number };
+    const candidates: Cand[] = [];
+    let sawSharedLetter = false;
     for (let i = 0; i < item.word.length; i++) {
       const ch = item.word[i];
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (grid[r][c] !== ch) continue;
-          // Try across — this cell becomes item.word[i].
+          sawSharedLetter = true;
           {
-            const startR = r;
-            const startC = c - i;
-            const check = canPlaceWord(grid, item.word, startR, startC, "across");
-            if (check.ok) candidates.push({ row: startR, col: startC, direction: "across", score: check.intersections });
+            const check = canPlaceWord(grid, item.word, r, c - i, "across");
+            if (check.ok) candidates.push({ row: r, col: c - i, direction: "across", score: check.intersections });
           }
           {
-            const startR = r - i;
-            const startC = c;
-            const check = canPlaceWord(grid, item.word, startR, startC, "down");
-            if (check.ok) candidates.push({ row: startR, col: startC, direction: "down", score: check.intersections });
+            const check = canPlaceWord(grid, item.word, r - i, c, "down");
+            if (check.ok) candidates.push({ row: r - i, col: c, direction: "down", score: check.intersections });
           }
         }
       }
     }
-    if (candidates.length === 0) {
-      missing.push(item);
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.score - a.score || (rng() - 0.5));
+      const pick = candidates[0];
+      placeWord(grid, item.word, pick.row, pick.col, pick.direction);
+      placed.push({ ...item, row: pick.row, col: pick.col, direction: pick.direction });
       continue;
     }
-    candidates.sort((a, b) => b.score - a.score || (rng() - 0.5));
-    const pick = candidates[0];
-    placeWord(grid, item.word, pick.row, pick.col, pick.direction);
-    placed.push({ ...item, row: pick.row, col: pick.col, direction: pick.direction });
+
+    // Fallback: isolated placement (no intersection) in empty area.
+    if (allowIsolated) {
+      const isoCandidates: Cand[] = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          for (const dir of ["across", "down"] as Direction[]) {
+            const check = canPlaceWord(grid, item.word, r, c, dir, true);
+            if (check.ok) isoCandidates.push({ row: r, col: c, direction: dir, score: 0 });
+          }
+        }
+      }
+      if (isoCandidates.length > 0) {
+        // Pick a spot far from existing placements to avoid touching them.
+        isoCandidates.sort(() => rng() - 0.5);
+        const pick = isoCandidates[0];
+        placeWord(grid, item.word, pick.row, pick.col, pick.direction);
+        placed.push({ ...item, row: pick.row, col: pick.col, direction: pick.direction });
+        continue;
+      }
+      missing.push({ item, reason: sawSharedLetter ? "adjacency" : "no_space_left" });
+    } else {
+      missing.push({ item, reason: sawSharedLetter ? "letter_conflict" : "no_shared_letter" });
+    }
   }
   return { placed, missing };
 }
