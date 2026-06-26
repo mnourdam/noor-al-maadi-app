@@ -15,7 +15,7 @@
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:hardwareAccelerated="false"
+            android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize|stateHidden"
             android:exported="true">
 
@@ -25,6 +25,14 @@
             </intent-filter>
 
         </activity>
+
+        <activity
+            android:name=".BareInputTestActivity"
+            android:label="Bare WebView Input Test"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize|stateHidden"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

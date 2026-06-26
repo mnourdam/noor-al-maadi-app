@@ -1,5 +1,4 @@
 import type { CapacitorConfig } from "@capacitor/cli";
-import { KeyboardResize } from "@capacitor/keyboard";
 
 // Capacitor config for the Irth Android app.
 //
@@ -15,9 +14,11 @@ const config: CapacitorConfig = {
     captureInput: false,
   },
   plugins: {
-    Keyboard: {
-      resize: KeyboardResize.Native,
-      resizeOnFullScreen: false,
+    // Diagnostic native input build: keep Capacitor's core SystemBars plugin
+    // from installing inset/CSS listeners while we isolate WebView + IME input.
+    SystemBars: {
+      insetsHandling: "disable",
+      hidden: false,
     },
   },
   server: {

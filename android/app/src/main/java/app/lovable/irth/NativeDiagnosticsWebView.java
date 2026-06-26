@@ -7,12 +7,13 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
-import android.view.inputmethod.InputConnectionWrapper;
 import com.getcapacitor.CapacitorWebView;
 
 /**
  * Diagnostic-only WebView subclass for the Android IME freeze investigation.
- * It logs native input-connection activity without reading or printing text.
+ * It logs native input-connection creation without wrapping or mutating the
+ * connection. The previous wrapper logged every composing event, but for this
+ * investigation the WebView must remain as close as possible to stock behavior.
  */
 public class NativeDiagnosticsWebView extends CapacitorWebView {
     private static final String TAG = "IrthMainActivity";
@@ -37,32 +38,7 @@ public class NativeDiagnosticsWebView extends CapacitorWebView {
             + " imeOptions=" + outAttrs.imeOptions
             + " fieldId=" + outAttrs.fieldId);
 
-        if (base == null) return null;
-        return new InputConnectionWrapper(base, false) {
-            @Override
-            public boolean commitText(CharSequence text, int newCursorPosition) {
-                Log.i(TAG, "[android:ime] commitText length=" + (text == null ? 0 : text.length()) + " cursor=" + newCursorPosition);
-                return super.commitText(text, newCursorPosition);
-            }
-
-            @Override
-            public boolean setComposingText(CharSequence text, int newCursorPosition) {
-                Log.i(TAG, "[android:ime] setComposingText length=" + (text == null ? 0 : text.length()) + " cursor=" + newCursorPosition);
-                return super.setComposingText(text, newCursorPosition);
-            }
-
-            @Override
-            public boolean finishComposingText() {
-                Log.i(TAG, "[android:ime] finishComposingText");
-                return super.finishComposingText();
-            }
-
-            @Override
-            public boolean deleteSurroundingText(int beforeLength, int afterLength) {
-                Log.i(TAG, "[android:ime] deleteSurroundingText before=" + beforeLength + " after=" + afterLength);
-                return super.deleteSurroundingText(beforeLength, afterLength);
-            }
-        };
+        return base;
     }
 
     @Override
