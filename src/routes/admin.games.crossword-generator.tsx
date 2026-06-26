@@ -9,6 +9,7 @@ import {
   buildCrosswordEnvelope,
   validateCrosswordGame,
   normalizeArabicWord,
+  explainUnplaced,
   type WordHint,
 } from "@/lib/games/crossword-generator";
 import type { CrosswordStage } from "@/lib/games/types";
@@ -40,6 +41,8 @@ interface FormState {
   rows: number;
   cols: number;
   pairsText: string;
+  allowIsolated: boolean;
+  requireConnected: boolean;
 }
 
 const DEFAULTS: FormState = {
@@ -59,6 +62,8 @@ const DEFAULTS: FormState = {
   rows: 0,
   cols: 0,
   pairsText: "صلاح_الدين | قائد فتح القدس\nبغداد | عاصمة الخلافة العباسية\nالقاهرة | عاصمة مصر الفاطمية\nحطين | معركة فاصلة سنة 1187",
+  allowIsolated: true,
+  requireConnected: false,
 };
 
 function parsePairs(text: string): WordHint[] {
@@ -97,14 +102,21 @@ function CrosswordGeneratorPage() {
       rows: form.rows || undefined,
       cols: form.cols || undefined,
       seed: Date.now() & 0xffff,
+      allowIsolated: form.allowIsolated,
+      requireConnected: form.requireConnected,
     });
     if (!result.ok) {
-      setErrors([result.error, result.missing.length ? `كلمات لم توضع: ${result.missing.join("، ")}` : ""].filter(Boolean));
+      const lines = [
+        result.error,
+        `حُجم الشبكة المُجرَّب: ${result.attemptedSize}×${result.attemptedSize}`,
+        ...result.details.map((d) => `• ${explainUnplaced(d)}`),
+      ];
+      setErrors(lines);
       return;
     }
     setStage(result.stage);
     if (result.placed !== pairs.length) {
-      setWarning(`تم وضع ${result.placed} من أصل ${pairs.length} كلمة.`);
+      setWarning(`تم وضع ${result.placed} من أصل ${pairs.length} كلمة على شبكة ${result.gridSize}×${result.gridSize}.`);
     }
   };
 
