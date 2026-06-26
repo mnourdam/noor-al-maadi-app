@@ -93,15 +93,16 @@ export function AndroidInputIsolationTest() {
       innerWidth: window.innerWidth,
     });
 
+    // Removed document-level focusin/beforeinput/input capture loggers — they
+    // were firing per keystroke and freezing the WebView through the Capacitor
+    // Console bridge. Keep only coarse visibility/focus events.
     const globalListeners: Array<[EventTarget, string, EventListener, AddEventListenerOptions]> = [
       [document, "visibilitychange", () => log("document.visibilitychange", { hidden: document.hidden }), { passive: true }],
       [window, "focus", () => log("window.focus", { hasFocus: document.hasFocus() }), { passive: true }],
       [window, "blur", () => log("window.blur", { hasFocus: document.hasFocus() }), { passive: true }],
-      [document, "focusin", (event: Event) => log("document.focusin", { target: (event.target as HTMLElement | null)?.id || (event.target as HTMLElement | null)?.tagName, active: (document.activeElement as HTMLElement | null)?.id || (document.activeElement as HTMLElement | null)?.tagName }), { passive: true, capture: true }],
-      [document, "beforeinput", (event: Event) => log("document.beforeinput", { target: (event.target as HTMLElement | null)?.id || (event.target as HTMLElement | null)?.tagName, inputType: (event as InputEvent).inputType || "unknown", length: targetLength(event.target) }), { passive: true, capture: true }],
-      [document, "input", (event: Event) => log("document.input", { target: (event.target as HTMLElement | null)?.id || (event.target as HTMLElement | null)?.tagName, length: targetLength(event.target) }), { passive: true, capture: true }],
     ];
     for (const [target, event, listener, options] of globalListeners) target.addEventListener(event, listener, options);
+
 
     const host = plainHostRef.current;
     if (host) {
