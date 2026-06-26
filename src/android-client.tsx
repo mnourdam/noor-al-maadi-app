@@ -58,14 +58,6 @@ if (isAndroidReactMinPath()) {
   // eslint-disable-next-line no-console
   console.info("[android-auth-min] minimal auth entry mounted", { path: window.location.pathname });
   createRoot(rootElement).render(<AndroidAuthMinTest />);
-} else if (isAndroidTextEntryPath()) {
-  try {
-    document.documentElement.classList.remove("irth-booting");
-    document.getElementById("irth-boot-splash")?.remove();
-  } catch { /* ignore */ }
-  // eslint-disable-next-line no-console
-  console.info("[android-text-entry] standalone text entry mounted", { path: window.location.pathname });
-  createRoot(rootElement).render(<AndroidTextEntryPage />);
 } else if (isAndroidInputTestPath()) {
   try {
     window.__irthAndroidInputTest = true;
