@@ -2,14 +2,22 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
+import { AndroidAuthMinTest } from "@/components/AndroidAuthMinTest";
+import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
   validateSearch: (s: Record<string, unknown>) => ({ ref: typeof s.ref === "string" ? s.ref : undefined }),
-  component: AuthPage,
+  component: AuthRoute,
 });
 
 type Mode = "signin" | "signup";
+
+function AuthRoute() {
+  if (isAndroidNativeApp()) return <AndroidAuthMinTest />;
+  return <AuthPage />;
+}
+
 
 function AuthPage() {
   const navigate = useNavigate();
