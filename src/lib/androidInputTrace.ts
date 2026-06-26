@@ -135,10 +135,10 @@ export function installAndroidInputTrace(): void {
     lastInputSignalAt = performance.now();
   };
 
-  const maybeDumpFreezeTrace = (kind: string, duration: number) => {
+  const maybeDumpFreezeTrace = (kind: string, duration: number, startTime?: number) => {
     const now = performance.now();
     if (duration <= FREEZE_THRESHOLD_MS) return;
-    const freezeStartedAt = now - duration;
+    const freezeStartedAt = typeof startTime === "number" ? startTime : now - duration;
     const msAfterInputSignal = freezeStartedAt - lastInputSignalAt;
     if (msAfterInputSignal < 0 || msAfterInputSignal > INPUT_WINDOW_MS) return;
     log("auto-freeze-dump", undefined, {
@@ -185,7 +185,7 @@ export function installAndroidInputTrace(): void {
             startTime: Math.round(entry.startTime),
             name: entry.name,
           });
-          maybeDumpFreezeTrace("longtask", entry.duration);
+          maybeDumpFreezeTrace("longtask", entry.duration, entry.startTime);
         }
       });
       try { obs.observe({ type: "longtask", buffered: true }); }
