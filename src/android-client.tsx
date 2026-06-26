@@ -9,23 +9,40 @@ import { installAndroidFocusABSwitches } from "./lib/androidFocusAB";
 import { hasStoredInputFreezeTrace, installAndroidInputTrace } from "./lib/androidInputTrace";
 import { warmupAndroidInput } from "./lib/androidInputWarmup";
 
-// Install the Android focus/keyboard A/B switch before any app module can
-// register global focus, selection, viewport, or scroll handlers.
-installAndroidFocusABSwitches();
+// ============================================================
+// EMERGENCY DIAGNOSTIC BYPASS
+// ------------------------------------------------------------
+// When true, all Android-only diagnostic / focus / keyboard /
+// scroll side-effect layers are NOT installed. Core app (auth,
+// Supabase, routing, rendering, native inputs) is untouched.
+// Flip to `false` to restore diagnostics.
+// ============================================================
+const IRTH_ANDROID_DISABLE_ALL_SIDE_EFFECTS = true;
+(window as any).__IRTH_ANDROID_DISABLE_ALL_SIDE_EFFECTS__ = IRTH_ANDROID_DISABLE_ALL_SIDE_EFFECTS;
 
-// Install input/IME/frame tracing FIRST so it captures the very first
-// focus/keydown that may freeze the WebView. Pure instrumentation; no fixes.
-installAndroidInputTrace();
-const shouldShowStoredFreezeTrace = hasStoredInputFreezeTrace();
+if (!IRTH_ANDROID_DISABLE_ALL_SIDE_EFFECTS) {
+  // Install the Android focus/keyboard A/B switch before any app module can
+  // register global focus, selection, viewport, or scroll handlers.
+  installAndroidFocusABSwitches();
+
+  // Install input/IME/frame tracing FIRST so it captures the very first
+  // focus/keydown that may freeze the WebView. Pure instrumentation; no fixes.
+  installAndroidInputTrace();
+}
+
+const shouldShowStoredFreezeTrace = !IRTH_ANDROID_DISABLE_ALL_SIDE_EFFECTS && hasStoredInputFreezeTrace();
 
 // The old hidden-input warmup intentionally forced a synthetic first focus.
 // Keep it available only as an explicit debug opt-in because Samsung/WebView 149
 // can stall during the focus -> keyboard handoff before JS/input callbacks run.
-const androidInputWarmupOptIn = new URLSearchParams(window.location.search).get("irthInputWarmup") === "1"
-  || window.localStorage.getItem("irthInputWarmup") === "1";
+const androidInputWarmupOptIn = !IRTH_ANDROID_DISABLE_ALL_SIDE_EFFECTS && (
+  new URLSearchParams(window.location.search).get("irthInputWarmup") === "1"
+  || window.localStorage.getItem("irthInputWarmup") === "1"
+);
 if (!shouldShowStoredFreezeTrace && androidInputWarmupOptIn) {
   warmupAndroidInput();
 }
+
 
 
 // Surface uncaught errors to Logcat via Capacitor's Console plugin so blank /
