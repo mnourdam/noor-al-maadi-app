@@ -54,28 +54,14 @@ export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeIn
       ...props
     },
     ref,
-  ) => {
-    const handleChange = onValueChange
-      ? (event: React.ChangeEvent<HTMLInputElement>) => {
-          onValueChange(event.currentTarget.value);
-          onChange?.(event);
-        }
-      : onChange;
-
-    const handleKeyDown = onEnter
-      ? (event: React.KeyboardEvent<HTMLInputElement>) => {
-          onKeyDown?.(event);
-          if (!event.defaultPrevented && event.key === "Enter") onEnter(event.currentTarget.value);
-        }
-      : onKeyDown;
-
+    ) => {
     return (
       <AndroidTextEntryInput
         {...props}
         ref={ref}
         className={cn(className)}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
         onValueChange={onValueChange}
         onEnter={onEnter}
         modalTitle={modalTitle}
@@ -100,20 +86,13 @@ export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, Android
       ...props
     },
     ref,
-  ) => {
-    const handleChange = onValueChange
-      ? (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-          onValueChange(event.currentTarget.value);
-          onChange?.(event);
-        }
-      : onChange;
-
+    ) => {
     return (
       <AndroidTextEntryTextarea
         {...props}
         ref={ref}
         className={cn(className)}
-        onChange={handleChange}
+        onChange={onChange}
         onValueChange={onValueChange}
         modalTitle={modalTitle}
         modalLabel={modalLabel}

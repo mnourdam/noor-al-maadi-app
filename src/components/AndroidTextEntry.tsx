@@ -1,4 +1,5 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { cn } from "@/lib/utils";
@@ -56,8 +57,8 @@ export function AndroidTextEntryHost() {
     };
   }, []);
 
-  if (!request) return null;
-  return <AndroidTextEntryScreen request={request} onClose={() => setRequest(null)} />;
+  if (!request || typeof document === "undefined") return null;
+  return createPortal(<AndroidTextEntryScreen request={request} onClose={() => setRequest(null)} />, document.body);
 }
 
 function AndroidTextEntryScreen({ request, onClose }: { request: TextEntryRequest; onClose: () => void }) {
@@ -282,6 +283,33 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
 
     const android = isAndroidNativeApp();
     const currentValue = (typeof value === "string" ? value : localRef.current?.value ?? (typeof defaultValue === "string" ? defaultValue : ""));
+    const lastOpenAtRef = React.useRef(0);
+    const openEntry = React.useCallback(() => {
+      if (readOnly || disabled) return;
+      const now = Date.now();
+      if (now - lastOpenAtRef.current < 350) return;
+      lastOpenAtRef.current = now;
+      openAndroidTextEntry({
+        title: modalTitle ?? "إدخال النص",
+        label: modalLabel,
+        placeholder,
+        initialValue: currentValue,
+        multiline: false,
+        maxLength: props.maxLength,
+        inputMode: props.inputMode,
+        dir: props.dir as "rtl" | "ltr" | "auto" | undefined,
+        autoComplete: props.autoComplete,
+        onSave: (next) => {
+          if (localRef.current) localRef.current.value = next;
+          onValueChange?.(next);
+          if (onChange) {
+            const target = localRef.current;
+            if (target) onChange({ currentTarget: target, target } as React.ChangeEvent<HTMLInputElement>);
+          }
+          onEnter?.(next);
+        },
+      });
+    }, [currentValue, disabled, modalLabel, modalTitle, onChange, onEnter, onValueChange, placeholder, props.autoComplete, props.dir, props.inputMode, props.maxLength, readOnly]);
 
     if (android) {
       return (
@@ -294,32 +322,18 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
           placeholder={placeholder}
           className={className}
           style={style}
-          onFocus={(event) => {
-            event.currentTarget.blur();
-            if (readOnly || disabled) return;
-            openAndroidTextEntry({
-              title: modalTitle ?? "إدخال النص",
-              label: modalLabel,
-              placeholder,
-              initialValue: currentValue,
-              multiline: false,
-              maxLength: props.maxLength,
-              inputMode: props.inputMode,
-              dir: props.dir as "rtl" | "ltr" | "auto" | undefined,
-              autoComplete: props.autoComplete,
-              onSave: (next) => {
-                if (localRef.current) localRef.current.value = next;
-                onValueChange?.(next);
-                if (onChange) {
-                  const target = localRef.current;
-                  if (target) onChange({ currentTarget: target, target } as React.ChangeEvent<HTMLInputElement>);
-                }
-              },
-            });
-            onFocus?.(event);
+          onPointerDown={(event) => {
+            event.preventDefault();
+            openEntry();
           }}
           onClick={(event) => {
-            if (document.activeElement !== event.currentTarget) event.currentTarget.focus();
+            event.preventDefault();
+            openEntry();
+          }}
+          onFocus={(event) => {
+            event.currentTarget.blur();
+            openEntry();
+            onFocus?.(event);
           }}
           onKeyDown={(event) => {
             onKeyDown?.(event);
@@ -394,6 +408,32 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
 
     const android = isAndroidNativeApp();
     const currentValue = (typeof value === "string" ? value : localRef.current?.value ?? (typeof defaultValue === "string" ? defaultValue : ""));
+    const lastOpenAtRef = React.useRef(0);
+    const openEntry = React.useCallback(() => {
+      if (readOnly || disabled) return;
+      const now = Date.now();
+      if (now - lastOpenAtRef.current < 350) return;
+      lastOpenAtRef.current = now;
+      openAndroidTextEntry({
+        title: modalTitle ?? "إدخال النص",
+        label: modalLabel,
+        placeholder,
+        initialValue: currentValue,
+        multiline: true,
+        maxLength: props.maxLength,
+        dir: props.dir as "rtl" | "ltr" | "auto" | undefined,
+        autoComplete: props.autoComplete,
+        onSave: (next) => {
+          if (localRef.current) localRef.current.value = next;
+          onValueChange?.(next);
+          if (onChange) {
+            const target = localRef.current;
+            if (target) onChange({ currentTarget: target, target } as React.ChangeEvent<HTMLTextAreaElement>);
+          }
+          onEnter?.(next);
+        },
+      });
+    }, [currentValue, disabled, modalLabel, modalTitle, onChange, onEnter, onValueChange, placeholder, props.autoComplete, props.dir, props.maxLength, readOnly]);
 
     if (android) {
       return (
@@ -406,31 +446,18 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
           placeholder={placeholder}
           className={className}
           style={style}
-          onFocus={(event) => {
-            event.currentTarget.blur();
-            if (readOnly || disabled) return;
-            openAndroidTextEntry({
-              title: modalTitle ?? "إدخال النص",
-              label: modalLabel,
-              placeholder,
-              initialValue: currentValue,
-              multiline: true,
-              maxLength: props.maxLength,
-              dir: props.dir as "rtl" | "ltr" | "auto" | undefined,
-              autoComplete: props.autoComplete,
-              onSave: (next) => {
-                if (localRef.current) localRef.current.value = next;
-                onValueChange?.(next);
-                if (onChange) {
-                  const target = localRef.current;
-                  if (target) onChange({ currentTarget: target, target } as React.ChangeEvent<HTMLTextAreaElement>);
-                }
-              },
-            });
-            onFocus?.(event);
+          onPointerDown={(event) => {
+            event.preventDefault();
+            openEntry();
           }}
           onClick={(event) => {
-            if (document.activeElement !== event.currentTarget) event.currentTarget.focus();
+            event.preventDefault();
+            openEntry();
+          }}
+          onFocus={(event) => {
+            event.currentTarget.blur();
+            openEntry();
+            onFocus?.(event);
           }}
           onKeyDown={(event) => {
             onKeyDown?.(event);
