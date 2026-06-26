@@ -68,10 +68,8 @@ export function FirstLaunchGate() {
           </p>
 
           <div className="mt-5 space-y-2">
-            <Link
-              to="/auth"
+            <AuthLink
               onClick={() => {
-                // Pre-mark so /auth doesn't bounce us back into the gate.
                 try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
                 setOpen(false);
               }}
@@ -79,9 +77,8 @@ export function FirstLaunchGate() {
             >
               <LogIn className="size-5" />
               <span className="flex-1 text-right">تسجيل الدخول</span>
-            </Link>
-            <Link
-              to="/auth"
+            </AuthLink>
+            <AuthLink
               onClick={() => {
                 try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
                 setOpen(false);
@@ -90,7 +87,7 @@ export function FirstLaunchGate() {
             >
               <UserPlus className="size-5" />
               <span className="flex-1 text-right">إنشاء حساب</span>
-            </Link>
+            </AuthLink>
             <button
               onClick={chooseGuest}
               className="flex w-full items-center gap-3 rounded-2xl border border-white/15 bg-background/40 px-4 py-3 text-sm text-foreground"
