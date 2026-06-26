@@ -45,14 +45,14 @@ if (isAndroidInputTestPath()) {
 }
 
 async function bootMainApp(root: HTMLElement) {
+  await import("./styles.css");
   const [{ RouterProvider }, { getRouter }, { attachSupabaseAuth }, diagnostics, perf] = await Promise.all([
-    import("./styles.css"),
     import("@tanstack/react-router"),
     import("./router"),
     import("./integrations/supabase/auth-attacher"),
     import("./lib/androidFreezeDiagnostics"),
     import("./lib/perf-mode"),
-  ]).then(([, ...modules]) => modules);
+  ]);
 
   const { installAndroidFreezeDiagnostics, androidMark } = diagnostics;
   const { applyPerfMode } = perf;
