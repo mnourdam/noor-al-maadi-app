@@ -36,11 +36,13 @@ export function buildAndroidTextEntryFieldKey(stableKey: string) {
   return stableKey;
 }
 
-export function readAndroidTextEntryResultByFieldKey(_fieldKey: string): null {
+type StoredTextEntryResult = { value: string };
+
+export function readAndroidTextEntryResultByFieldKey(_fieldKey: string): StoredTextEntryResult | null {
   return null;
 }
 
-export function readAndroidTextEntryResult(_stableKey: string, _pathname?: string): null {
+export function readAndroidTextEntryResult(_stableKey: string, _pathname?: string): StoredTextEntryResult | null {
   return null;
 }
 
