@@ -1,5 +1,4 @@
 import * as React from "react";
-import { createPortal } from "react-dom";
 
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { cn } from "@/lib/utils";
@@ -57,8 +56,191 @@ export function AndroidTextEntryHost() {
     };
   }, []);
 
-  if (!request || typeof document === "undefined") return null;
-  return createPortal(<AndroidTextEntryScreen request={request} onClose={() => setRequest(null)} />, document.body);
+  React.useEffect(() => {
+    if (!request || typeof document === "undefined") return;
+    return mountNativeAndroidTextEntry(request, () => setRequest(null));
+  }, [request]);
+
+  return null;
+}
+
+function mountNativeAndroidTextEntry(request: TextEntryRequest, onClose: () => void) {
+  const previousOverflow = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+
+  const overlay = document.createElement("div");
+  overlay.dir = "rtl";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("data-irth-android-text-entry", "true");
+  Object.assign(overlay.style, {
+    position: "fixed",
+    inset: "0",
+    zIndex: "2147483647",
+    minHeight: "100vh",
+    boxSizing: "border-box",
+    padding: "max(28px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom))",
+    background: `radial-gradient(ellipse at top, #2a1d10 0%, ${INK} 62%, #050403 100%)`,
+    color: TEXT,
+    fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
+    transform: "none",
+    filter: "none",
+    backdropFilter: "none",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+  } satisfies Partial<CSSStyleDeclaration>);
+
+  const styleTag = document.createElement("style");
+  styleTag.textContent = `
+    [data-irth-android-text-entry],
+    [data-irth-android-text-entry] *,
+    [data-irth-android-text-entry] *::before,
+    [data-irth-android-text-entry] *::after {
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+      filter: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      contain: none !important;
+      content-visibility: visible !important;
+    }
+    [data-irth-android-text-entry] input,
+    [data-irth-android-text-entry] textarea {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      -webkit-text-size-adjust: 100% !important;
+    }
+    [data-irth-android-text-entry] input::placeholder,
+    [data-irth-android-text-entry] textarea::placeholder {
+      color: #6b5a44 !important;
+    }
+  `;
+
+  const wrap = document.createElement("div");
+  Object.assign(wrap.style, { width: "100%", maxWidth: "430px" });
+
+  const head = document.createElement("div");
+  Object.assign(head.style, { textAlign: "center", marginBottom: "24px" });
+
+  const logo = document.createElement("img");
+  logo.src = "/assets/splash/irth-logo.png";
+  logo.alt = "إرث";
+  logo.width = 64;
+  logo.height = 64;
+  Object.assign(logo.style, { display: "inline-block", marginBottom: "12px" });
+  logo.onerror = () => { logo.style.display = "none"; };
+
+  const title = document.createElement("h1");
+  title.id = "android-text-entry-title";
+  title.textContent = request.title;
+  Object.assign(title.style, { margin: "0", font: "800 24px system-ui, sans-serif", color: GOLD });
+
+  head.append(logo, title);
+  if (request.label) {
+    const label = document.createElement("p");
+    label.textContent = request.label;
+    Object.assign(label.style, { margin: "7px 0 0", color: "#9a8a6e", font: "13px/1.6 system-ui, sans-serif" });
+    head.append(label);
+  }
+
+  const card = document.createElement("div");
+  Object.assign(card.style, {
+    background: SURFACE,
+    border: `1px solid ${BORDER}`,
+    borderRadius: "16px",
+    padding: "22px",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,90,0.08)",
+  });
+
+  const field = request.multiline ? document.createElement("textarea") : document.createElement("input");
+  if (!request.multiline) {
+    (field as HTMLInputElement).type = "text";
+    if (request.inputMode) field.setAttribute("inputmode", request.inputMode);
+  } else {
+    (field as HTMLTextAreaElement).rows = 7;
+  }
+  field.setAttribute("autocomplete", request.autoComplete ?? "off");
+  field.setAttribute("autocorrect", "off");
+  field.setAttribute("autocapitalize", "none");
+  field.setAttribute("spellcheck", "false");
+  field.dir = request.dir ?? "rtl";
+  field.placeholder = request.placeholder ?? "";
+  field.value = request.initialValue;
+  if (typeof request.maxLength === "number" && request.maxLength > 0) field.maxLength = request.maxLength;
+  Object.assign(field.style, {
+    display: "block",
+    width: "100%",
+    boxSizing: "border-box",
+    border: `1px solid ${BORDER}`,
+    borderRadius: "10px",
+    background: SURFACE_2,
+    color: TEXT,
+    font: "16px system-ui, -apple-system, sans-serif",
+    lineHeight: "1.5",
+    padding: "14px 14px",
+    outline: "none",
+    transform: "none",
+    filter: "none",
+    backdropFilter: "none",
+    transition: "none",
+    animation: "none",
+    caretColor: GOLD,
+  });
+  if (request.multiline) Object.assign(field.style, { minHeight: "170px", resize: "vertical" });
+
+  const actions = document.createElement("div");
+  Object.assign(actions.style, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "18px" });
+
+  const saveButton = document.createElement("button");
+  saveButton.type = "button";
+  saveButton.textContent = "حفظ";
+  Object.assign(saveButton.style, primaryButtonStyle);
+
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.textContent = "إلغاء";
+  Object.assign(cancelButton.style, secondaryButtonStyle);
+
+  let removed = false;
+  const remove = () => {
+    if (removed) return;
+    removed = true;
+    saveButton.removeEventListener("click", save);
+    cancelButton.removeEventListener("click", cancel);
+    overlay.remove();
+    styleTag.remove();
+    document.body.style.overflow = previousOverflow;
+  };
+  const close = () => {
+    remove();
+    onClose();
+  };
+  function save() {
+    request.onSave(field.value);
+    close();
+  }
+  function cancel() {
+    request.onCancel?.();
+    close();
+  }
+
+  saveButton.addEventListener("click", save);
+  cancelButton.addEventListener("click", cancel);
+  actions.append(saveButton, cancelButton);
+  card.append(field, actions);
+  wrap.append(head, card);
+  overlay.append(wrap);
+  document.head.append(styleTag);
+  document.body.append(overlay);
+
+  window.setTimeout(() => field.focus({ preventScroll: true }), 80);
+
+  return remove;
 }
 
 function AndroidTextEntryScreen({ request, onClose }: { request: TextEntryRequest; onClose: () => void }) {
