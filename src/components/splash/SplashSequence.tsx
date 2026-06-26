@@ -28,6 +28,7 @@ import { pickSplashQuote, type SplashQuote } from "./quoteProvider";
 import { pickSplashArtwork, preloadImage, type SplashFraming } from "./artworkProvider";
 import { playSplashSfx } from "./splashSfx";
 import { SplashLogoReveal } from "./SplashLogoReveal";
+import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 const SESSION_FLAG = "irth.splash.played.v1";
 const MIN_DURATION_MS = 5000;
@@ -39,11 +40,13 @@ interface SplashSequenceProps {
 }
 
 export function SplashSequence({ ready = true }: SplashSequenceProps) {
+  const androidStable = isAndroidUltraStableMode();
   // Decide synchronously on first render whether to play. This avoids a frame
   // where the home page is visible before the splash overlay mounts (which on
   // Android caused: App UI → black → Splash → App).
   const [mounted, setMounted] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
+    if (isAndroidUltraStableMode()) return false;
     try {
       if (window.sessionStorage.getItem(SESSION_FLAG) === "1") return false;
       window.sessionStorage.setItem(SESSION_FLAG, "1");
@@ -63,7 +66,7 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
       const el = document.getElementById("irth-boot-splash");
       if (el) el.parentNode?.removeChild(el);
     } catch { /* */ }
-  }, [mounted]);
+  }, [mounted, androidStable]);
 
   // Bootstrap quote + artwork + sfx once we've decided to play.
   useEffect(() => {

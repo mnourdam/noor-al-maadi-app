@@ -3,6 +3,7 @@ import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion } f
 import type { WhoAmIStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
+import { recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
 interface Props {
   stage: WhoAmIStage;
@@ -114,7 +115,7 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
         <input
           dir="rtl"
           value={guess}
-          onChange={(e) => setGuess(e.target.value)}
+          onChange={(e) => { recordAndroidAction("input:onChange:whoami.guess"); setGuess(e.target.value); }}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           disabled={done}
           placeholder="اكتب اسم الشخصية…"

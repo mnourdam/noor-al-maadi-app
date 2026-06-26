@@ -3,6 +3,7 @@ import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import { listFriendships } from "@/lib/social";
 import { DEFAULT_NOTIFICATION_PREFS, INBOX_KEY, deliverNotificationWithStatus, getInbox, unreadCount } from "@/lib/notifications";
+import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 /**
  * Quietly polls the friendships table every 60s while signed in and emits
@@ -252,6 +253,7 @@ export async function runFriendNotificationPollerTick(
 export function FriendNotificationsPoller() {
   const { user } = useAccount();
   const { profile } = useProfile();
+  const androidStable = isAndroidUltraStableMode();
 
   useEffect(() => {
     setMounted(true);
@@ -259,6 +261,7 @@ export function FriendNotificationsPoller() {
   }, []);
 
   useEffect(() => {
+    if (androidStable) return;
     if (!user) return;
     const prefs = profile.settings?.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS;
     if (!prefs.master || prefs.friend === false) return;
@@ -281,7 +284,7 @@ export function FriendNotificationsPoller() {
       clearInterval(id);
       window.removeEventListener("focus", onFocus);
     };
-  }, [user, profile.settings?.notificationPrefs]);
+  }, [user, profile.settings?.notificationPrefs, androidStable]);
 
   return null;
 }

@@ -4,6 +4,7 @@ import { Mail, Lock, UserRound, ChevronLeft, Gift, Eye, EyeOff } from "lucide-re
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
+import { recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
@@ -140,7 +141,7 @@ function AuthPage() {
               <Field icon={<UserRound className="size-4" />} label="اسم المستخدم">
                 <input
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => { recordAndroidAction("input:onChange:auth.username"); setUsername(e.target.value); }}
                   required
                   minLength={3}
                   maxLength={30}
@@ -153,7 +154,7 @@ function AuthPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { recordAndroidAction("input:onChange:auth.email"); setEmail(e.target.value); }}
                 required
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 placeholder="you@example.com"
@@ -163,7 +164,7 @@ function AuthPage() {
               <input
                 type={showPwd ? "text" : "password"}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { recordAndroidAction("input:onChange:auth.password"); setPassword(e.target.value); }}
                 required
                 minLength={6}
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
@@ -182,7 +183,7 @@ function AuthPage() {
               <Field icon={<Gift className="size-4" />} label="رمز الإحالة (اختياري)">
                 <input
                   value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value.replace(/\s+/g, "").toUpperCase())}
+                  onChange={(e) => { recordAndroidAction("input:onChange:auth.referral"); setReferralCode(e.target.value.replace(/\s+/g, "").toUpperCase()); }}
                   onBlur={(e) => setReferralCode(e.target.value.trim().toUpperCase())}
                   maxLength={20}
                   className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"

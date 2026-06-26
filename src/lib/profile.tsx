@@ -11,6 +11,7 @@ function dailyMissionsForDate(_d: Date = new Date()): { id: string }[] {
 import { HEART_MAX, getEffectiveHearts, commitHearts, ACTIVITY_COOLDOWN_MS, activityKey, STREAK_MILESTONES, type HeartActivity, type StreakMilestone } from "./hearts";
 import { DEFAULT_AVATAR_ID } from "./avatars";
 import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notifications";
+import { androidMeasure, recordAndroidAction } from "./androidFreezeDiagnostics";
 
 const STORAGE_KEY = "hakaya.profile.v2";
 
@@ -196,10 +197,22 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch {}
+    const started = performance.now();
+    let raw = "";
+    try {
+      raw = JSON.stringify(profile);
+      localStorage.setItem(STORAGE_KEY, raw);
+    } catch {}
+    androidMeasure("profile.localStorage.write", started, { bytes: raw.length });
   }, [profile, hydrated]);
 
-  const update = useCallback((fn: (p: ProfileState) => ProfileState) => setProfile((p) => fn(p)), []);
+  const update = useCallback((fn: (p: ProfileState) => ProfileState) => setProfile((p) => {
+    const started = performance.now();
+    const next = fn(p);
+    if (next !== p) recordAndroidAction("profile.update");
+    androidMeasure("profile.update", started);
+    return next;
+  }), []);
 
   const awardBadge = useCallback((id: string) => {
     update((p) => (p.badges.includes(id) ? p : { ...p, badges: [...p.badges, id] }));

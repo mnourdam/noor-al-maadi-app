@@ -1,10 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Compass, Swords, Map, Library, User, BookOpen } from "lucide-react";
-import type { ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { HUD } from "./HUD";
 import { FriendNotificationsPoller } from "./FriendNotificationsPoller";
 import { BackNavigationGuard } from "./BackNavigationGuard";
 import { AudioInitializer } from "./AudioInitializer";
+import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 const tabs = [
   { to: "/", label: "المغامرة", icon: Compass },
@@ -15,42 +16,58 @@ const tabs = [
   { to: "/profile", label: "حسابي", icon: User },
 ] as const;
 
+const AppShellNestingContext = createContext(false);
+
 export function AppShell({ children }: { children: ReactNode }) {
+  androidMark("render:AppShell");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const androidStable = isAndroidUltraStableMode();
+  const nestedShell = useContext(AppShellNestingContext);
+
+  useEffect(() => {
+    androidMark("route.navigation.commit", { pathname });
+    androidMark("commit:AppShell", { pathname });
+  }, [pathname]);
+
+  if (androidStable && nestedShell) {
+    return <>{children}</>;
+  }
 
   return (
-    <div
-      className="mx-auto flex min-h-screen w-full max-w-md flex-col"
-      style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
-    >
-      <HUD />
-      <AudioInitializer />
-      <FriendNotificationsPoller />
-      <BackNavigationGuard />
-      <div className="flex-1">{children}</div>
-      <nav
-        className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-3"
-        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+    <AppShellNestingContext.Provider value={true}>
+      <div
+        className="mx-auto flex min-h-screen w-full max-w-md flex-col"
+        style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
       >
-        <div className="glass shadow-elegant grid grid-cols-6 items-center gap-1 rounded-2xl border border-white/10 p-1.5">
-          {tabs.map(({ to, label, icon: Icon }) => {
-            const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
-            return (
-              <Link
-                key={to}
-                to={to}
-                className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[10px] transition-all ${
-                  active ? "bg-gradient-gold text-primary-foreground shadow-gold" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Icon className="size-4" strokeWidth={active ? 2.5 : 1.8} />
-                <span className="font-medium">{label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-    </div>
+        <HUD />
+        {!androidStable && <AudioInitializer />}
+        {!androidStable && <FriendNotificationsPoller />}
+        {!androidStable && <BackNavigationGuard />}
+        <div className="flex-1">{children}</div>
+        <nav
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-3"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
+          <div className="glass shadow-elegant grid grid-cols-6 items-center gap-1 rounded-2xl border border-white/10 p-1.5">
+            {tabs.map(({ to, label, icon: Icon }) => {
+              const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[10px] transition-all ${
+                    active ? "bg-gradient-gold text-primary-foreground shadow-gold" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="size-4" strokeWidth={active ? 2.5 : 1.8} />
+                  <span className="font-medium">{label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    </AppShellNestingContext.Provider>
   );
 }
 

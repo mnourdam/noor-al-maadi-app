@@ -3,9 +3,11 @@ import { RouterProvider } from "@tanstack/react-router";
 
 import { getRouter } from "./router";
 import { attachSupabaseAuth } from "./integrations/supabase/auth-attacher";
+import { installAndroidFreezeDiagnostics, androidMark } from "./lib/androidFreezeDiagnostics";
 import { applyPerfMode } from "./lib/perf-mode";
 import "./styles.css";
 
+installAndroidFreezeDiagnostics();
 // Flip the global perf-lite CSS class BEFORE first paint so heavy
 // animations / backdrop-filter / particles never run on Android WebView.
 applyPerfMode();
@@ -88,9 +90,12 @@ try {
   // NOTE: StrictMode intentionally omitted on Android — its double-invoke
   // of effects/renders amplifies layout work in the WebView and makes inputs
   // feel laggy. Web build still runs through TanStack Start's own pipeline.
+  const router = getRouter();
+  androidMark("react.mount.start", { route: window.location.pathname });
   createRoot(rootElement).render(
-    <RouterProvider router={getRouter()} />,
+    <RouterProvider router={router} />,
   );
+  androidMark("react.mount.rendered", { route: window.location.pathname });
 } catch (err) {
   // eslint-disable-next-line no-console
   console.error("[android:mount-failed]", (err as Error)?.stack ?? err);

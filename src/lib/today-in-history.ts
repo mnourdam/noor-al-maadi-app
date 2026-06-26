@@ -12,6 +12,7 @@
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isAndroidUltraStableMode } from "./androidFreezeDiagnostics";
 
 export interface TodayInHistoryEvent {
   id: string;
@@ -64,6 +65,10 @@ export function useTodayInHistoryEvent(date?: Date) {
   }>({ loading: true, selected: null, others: [] });
 
   useEffect(() => {
+    if (isAndroidUltraStableMode()) {
+      setState({ loading: false, selected: null, others: [] });
+      return;
+    }
     let alive = true;
     fetchTodayInHistory(date).then((r) => {
       if (!alive) return;

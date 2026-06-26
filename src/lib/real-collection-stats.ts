@@ -18,6 +18,7 @@ import { useProfile } from "./profile";
 import { listRegistry } from "./contentRegistryStorage";
 import { displayName } from "./display-names";
 import { supabase } from "@/integrations/supabase/client";
+import { isAndroidUltraStableMode } from "./androidFreezeDiagnostics";
 
 /** Items whose Arabic title cannot be resolved are excluded from
  *  homepage rails. Their raw IDs are logged once so data owners can
@@ -81,6 +82,7 @@ function useSupabaseCollection() {
   const [slugTitles, setSlugTitles] = useState<Map<string, string>>(new Map());
   const [canonicalSlugFor, setCanonicalSlugFor] = useState<Map<string, string>>(new Map());
   useEffect(() => {
+    if (isAndroidUltraStableMode()) return;
     let cancelled = false;
     (async () => {
       try {

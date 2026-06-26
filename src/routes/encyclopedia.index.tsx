@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 import { iconForType } from "@/lib/encyclopedia-icons";
+import { androidMark, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/encyclopedia/")({
   head: () => ({
@@ -126,6 +127,7 @@ function pushRecent(key: string, value: string) {
 }
 
 function EncyclopediaHub() {
+  androidMark("render:Encyclopedia");
   const [query, setQuery] = useState("");
   const [era, setEra] = useState<string>("");
   const [showAllEras, setShowAllEras] = useState(false);
@@ -282,7 +284,7 @@ function EncyclopediaHub() {
               <input
                 ref={inputRef}
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => { recordAndroidAction("input:onChange:encyclopedia.search"); setQuery(e.target.value); }}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setTimeout(() => setFocused(false), 150)}
                 onKeyDown={(e) => { if (e.key === "Enter") submitRecent(query); }}

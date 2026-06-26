@@ -7,6 +7,7 @@ import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
+import { androidMark } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/campaigns/")({
   head: () => ({ meta: [{ title: "الحملات التاريخية" }] }),
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/campaigns/")({
 });
 
 function CampaignsHub() {
+  androidMark("render:Campaigns");
   useProfile();
   const { data: importedCampaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns", "published"],

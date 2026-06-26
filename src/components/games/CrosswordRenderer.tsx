@@ -4,6 +4,7 @@ import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
+import { recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
 
 interface Props {
@@ -314,7 +315,7 @@ export function CrosswordRenderer({
                   ref={(el) => { inputsRef.current[k] = el; }}
                   maxLength={1}
                   value={value}
-                  onChange={(e) => setCell(k, e.target.value)}
+                  onChange={(e) => { recordAndroidAction("input:onChange:crossword.cell"); setCell(k, e.target.value); }}
                   onKeyDown={(e) => onKeyDown(e, k)}
                   onFocus={() => setActiveCell(k)}
                   inputMode="text"

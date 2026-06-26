@@ -14,6 +14,7 @@ import {
 } from "./cloud-save";
 import { useProfile, type ProfileState } from "./profile";
 import { pushPublicStats, claimSignupReferral, REFERRAL_REWARDS } from "./social";
+import { androidMark, androidMeasure, isAndroidUltraStableMode, recordAndroidAction } from "./androidFreezeDiagnostics";
 
 interface AccountCtx {
   user: User | null;
@@ -34,6 +35,7 @@ const Ctx = createContext<AccountCtx | null>(null);
 const PUSH_DEBOUNCE_MS = 1500;
 
 export function AccountProvider({ children }: { children: ReactNode }) {
+  const androidStable = isAndroidUltraStableMode();
   const { profile, replaceProfile, addDinars, awardBadge, login } = useProfile();
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<AccountProfile | null>(null);
@@ -50,8 +52,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   // ============ Initial session + auth state listener ============
   useEffect(() => {
     let alive = true;
+    androidMark("account.session.start");
     supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
+      recordAndroidAction("account.session.resolved", { hasUser: !!data.session?.user });
       setUser(data.session?.user ?? null);
       setLoadingSession(false);
     });
@@ -75,6 +79,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     let cancelled = false;
     (async () => {
+      const started = performance.now();
+      androidMark("account.hydrate.start", { userId: user.id.slice(0, 8) });
       setSyncing(true);
       try {
         const [acc, save] = await Promise.all([
@@ -83,27 +89,33 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         ]);
         if (cancelled) return;
         setAccount(acc);
-        void touchLastActive(user.id);
+        if (!androidStable) void touchLastActive(user.id);
 
         // One-time signup referral rewards (idempotent server-side).
-        try {
-          const claim = await claimSignupReferral();
-          if (claim.ok) {
-            const flagKey = `irth.refclaim.${user.id}`;
-            if (!localStorage.getItem(flagKey)) {
-              addDinars(REFERRAL_REWARDS.newPlayer.dinars);
-              awardBadge(REFERRAL_REWARDS.newPlayer.badge);
-              localStorage.setItem(flagKey, "1");
+        if (!androidStable) {
+          try {
+            const claim = await claimSignupReferral();
+            if (claim.ok) {
+              const flagKey = `irth.refclaim.${user.id}`;
+              if (!localStorage.getItem(flagKey)) {
+                addDinars(REFERRAL_REWARDS.newPlayer.dinars);
+                awardBadge(REFERRAL_REWARDS.newPlayer.badge);
+                localStorage.setItem(flagKey, "1");
+              }
             }
-          }
-        } catch { /* ignore */ }
+          } catch { /* ignore */ }
+        }
 
         const localSnap = profileRef.current;
         if (!save) {
           // No cloud save yet — push current local progress as the seed.
-          await pushSave(user.id, localSnap);
-          autoPushEnabled.current = true;
-          setLastSyncAt(Date.now());
+          if (androidStable) {
+            autoPushEnabled.current = false;
+          } else {
+            await pushSave(user.id, localSnap);
+            autoPushEnabled.current = true;
+            setLastSyncAt(Date.now());
+          }
         } else {
           // Cloud is authoritative — silently restore the latest cloud save.
           // Manual sync is still available from the account settings.
@@ -122,7 +134,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         if (identityName) login(identityName);
 
         // One-time repair: if profile.display_name is empty/null/"ضيف", set it.
-        if (acc && (!acc.display_name || !acc.display_name.trim() || acc.display_name === "ضيف")) {
+        if (!androidStable && acc && (!acc.display_name || !acc.display_name.trim() || acc.display_name === "ضيف")) {
           const repair = (user.user_metadata?.display_name as string | undefined)
             || (user.user_metadata?.full_name as string | undefined)
             || acc.username
@@ -134,6 +146,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           } catch { /* ignore */ }
         }
       } finally {
+        androidMeasure("account.hydrate", started);
         if (!cancelled) setSyncing(false);
       }
     })();
@@ -141,11 +154,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, androidStable]);
 
   // ============ Debounced auto-push while signed in ============
   useEffect(() => {
     if (!user || !autoPushEnabled.current) return;
+    if (androidStable) return;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
       setSyncing(true);

@@ -11,6 +11,7 @@ import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import { ATLAS_VIEWBOX, ATLAS_ASPECT } from "@/lib/atlas/aps";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
+import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 50;
@@ -35,6 +36,8 @@ export function AtlasStage({
   selectedId: string | null;
   onSelect: (entity: AtlasEntityRow | null) => void;
 }) {
+  androidMark("render:AtlasStage");
+  const androidStable = isAndroidUltraStableMode();
   const wrapRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>(IDENTITY);
   const [rasterLoaded, setRasterLoaded] = useState(false);
@@ -253,7 +256,7 @@ export function AtlasStage({
   const labelTier =
     view.scale >= 6 ? 3 : view.scale >= 3 ? 2 : view.scale >= 1.6 ? 1 : 0;
   const isInteracting = drag.current != null || pinch.current != null;
-  const useTransition = !isInteracting;
+  const useTransition = !androidStable && !isInteracting;
 
   return (
     <div

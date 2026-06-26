@@ -5,9 +5,9 @@
 // encyclopedia_entities so an article edit propagates without DB duplication.
 //
 // URL state: ?focus, ?kind, ?era, ?world are deep-linkable.
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight, Loader2, Map as MapIcon } from "lucide-react";
 import { AtlasStage } from "./AtlasStage";
 import {
   AtlasControls,
@@ -19,8 +19,21 @@ import { usePublishedAtlasEntities } from "@/lib/atlas-entities-query";
 import type { AtlasEntityKind } from "@/lib/atlas-entities";
 import { sortAtlasEntitiesChronological } from "@/lib/atlas/atlas-visual";
 import { Route as MapRoute, type MapSearch } from "@/routes/map";
+import { androidMark, isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
 export function AtlasShell() {
+  androidMark("render:Atlas");
+  const androidStable = isAndroidUltraStableMode();
+  const [opened, setOpened] = useState(!androidStable);
+
+  if (!opened) {
+    return <AtlasStableGate onOpen={() => { recordAndroidAction("atlas.open.explicit"); setOpened(true); }} />;
+  }
+
+  return <AtlasShellInner />;
+}
+
+function AtlasShellInner() {
   const { data: entities = [], isLoading } = usePublishedAtlasEntities();
 
   // URL state — single source of truth for filters + selection.
@@ -117,6 +130,34 @@ export function AtlasShell() {
           onClose={() => setSearchParam("focus", null)}
         />
       )}
+    </div>
+  );
+}
+
+function AtlasStableGate({ onOpen }: { onOpen: () => void }) {
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center bg-background px-6 text-center" dir="rtl">
+      <Link
+        to="/"
+        className="absolute left-3 top-3 z-30 flex items-center gap-1 rounded-full border border-gold/30 bg-surface px-3 py-1.5 text-[12px] font-bold text-gold"
+        style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
+      >
+        <ChevronRight className="size-4" /> الرئيسية
+      </Link>
+      <div className="max-w-sm rounded-2xl border border-gold/20 bg-surface p-5 shadow-elegant">
+        <MapIcon className="mx-auto mb-3 size-9 text-gold" />
+        <h1 className="font-display text-xl font-bold text-foreground">الأطلس في الوضع المستقر</h1>
+        <p className="mt-2 text-sm leading-7 text-muted-foreground">
+          تم تأجيل تحميل الخريطة الثقيلة لحماية التصفح والكتابة داخل تطبيق أندرويد.
+        </p>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="mt-4 w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground"
+        >
+          فتح الأطلس
+        </button>
+      </div>
     </div>
   );
 }

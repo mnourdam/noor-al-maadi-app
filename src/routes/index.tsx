@@ -29,6 +29,7 @@ import heroFortress from "@/assets/hero-fortress.jpg";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
+import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -50,6 +51,8 @@ type HeroSlide =
   | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
 
 function Index() {
+  androidMark("render:Home");
+  const androidStable = isAndroidUltraStableMode();
   const { profile, touchStreak } = useProfile();
   const { account, user, lastSyncAt } = useAccount();
 
@@ -61,19 +64,22 @@ function Index() {
   useEffect(() => {
     const recount = () => setUnread(unreadCount());
     recount();
+    if (androidStable) return;
     window.addEventListener("irth:notifications:updated", recount);
     window.addEventListener("focus", recount);
     return () => {
       window.removeEventListener("irth:notifications:updated", recount);
       window.removeEventListener("focus", recount);
     };
-  }, []);
+  }, [androidStable]);
 
   useEffect(() => {
     setMounted(true);
+    androidMark("commit:Home");
     if (!user || lastSyncAt) {
       touchStreak();
     }
+    if (androidStable) return;
     const season = currentSeason();
     runDailyNotifications({
       prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
@@ -86,7 +92,7 @@ function Index() {
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [touchStreak, todayEvent?.id, user, lastSyncAt]);
+  }, [touchStreak, todayEvent?.id, user, lastSyncAt, androidStable]);
 
 
   const lvl = levelFor(profile.points);
@@ -96,19 +102,21 @@ function Index() {
     try { return listPublishedCampaigns(); } catch { return []; }
   });
   useEffect(() => {
+    if (androidStable) return;
     import("@/lib/cloudSync")
       .then((m) => m.pullAllFromCloud())
       .then(() => {
         try { setImportedCampaigns(listPublishedCampaigns()); } catch {}
       })
       .catch(() => {});
-  }, []);
+  }, [androidStable]);
   const [progressTick, setProgressTick] = useState(0);
   useEffect(() => {
+    if (androidStable) return;
     const onFocus = () => setProgressTick((t) => t + 1);
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, []);
+  }, [androidStable]);
 
   type CampaignSelection = {
     campaign: ImportedCampaign;
@@ -227,10 +235,10 @@ function Index() {
   const isRTL = typeof document !== "undefined" && document.documentElement.dir === "rtl";
 
   useEffect(() => {
-    if (slides.length <= 1 || isDragging) return;
+    if (androidStable || slides.length <= 1 || isDragging) return;
     const id = setInterval(() => setSlideIdx((i) => (i + 1) % slides.length), 7000);
     return () => clearInterval(id);
-  }, [slides.length, isDragging]);
+  }, [slides.length, isDragging, androidStable]);
   useEffect(() => { if (slideIdx >= slides.length) setSlideIdx(0); }, [slides.length, slideIdx]);
   const slide = slides[Math.min(slideIdx, slides.length - 1)] ?? slides[0];
 
