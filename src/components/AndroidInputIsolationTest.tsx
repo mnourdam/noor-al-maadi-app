@@ -238,6 +238,28 @@ export function AndroidInputIsolationTest() {
         Open raw Android WebView input test
       </button>
 
+      <button
+        type="button"
+        onClick={() => {
+          log("open-react-min-test");
+          window.location.href = "/android-react-min";
+        }}
+        style={{
+          display: "block",
+          width: "100%",
+          boxSizing: "border-box",
+          margin: "0 0 18px",
+          border: "1px solid #111111",
+          borderRadius: 6,
+          background: "#0f766e",
+          color: "#ffffff",
+          font: "700 16px system-ui, sans-serif",
+          padding: "12px 14px",
+        }}
+      >
+        Open React-minimal input test (no providers, no listeners)
+      </button>
+
       <QuietBisectButtons />
 
 
