@@ -1,3 +1,18 @@
+// Android freeze diagnostics — DEBUG ONLY.
+//
+// In normal APK builds we MUST NOT monkey-patch timers/storage/fetch or attach
+// capture-phase listeners to every input event. Those were the dominant cause
+// of input/keyboard freezes (every keystroke flowed through wrapped Storage +
+// overlay paints + Set bookkeeping).
+//
+// Heavy instrumentation only runs when a debug flag is explicitly enabled:
+//   • URL contains `?diag=android` (also persists into localStorage), OR
+//   • `localStorage.setItem('irth:android-debug', '1')` was set.
+//
+// In production we still expose `androidMark`, `androidMeasure`,
+// `recordAndroidAction`, and `isAndroidUltraStableMode` as no-ops so callers
+// across the codebase don't need to change.
+
 type AndroidFreezeState = {
   installed: boolean;
   route: string;
@@ -12,11 +27,15 @@ type AndroidFreezeState = {
   activeTimers: number;
   recentAction: string;
   lastLongTask: string;
+  lastFocusAt: number;
+  lastFocusTarget: string;
+  viewportResizeCount: number;
 };
 
 type DiagnosticWindow = Window & {
   __irthAndroidFreeze?: AndroidFreezeState;
   __irthAndroidFreezeInstalled?: boolean;
+  __irthAndroidDebugMode?: boolean;
   __irthAndroidOriginalTimers?: {
     setTimeout: typeof window.setTimeout;
     clearTimeout: typeof window.clearTimeout;
@@ -27,10 +46,9 @@ type DiagnosticWindow = Window & {
   __irthAndroidOriginalFetch?: typeof window.fetch;
 };
 
-type TimeoutId = number;
-type IntervalId = number;
-
+const DEBUG_FLAG_KEY = "irth:android-debug";
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+
 let lastOverlayPaintAt = 0;
 let overlayTimer: number | null = null;
 let lastViewportLogAt = 0;
@@ -53,9 +71,36 @@ export function isAndroidNativeApp(): boolean {
   }
 }
 
+/**
+ * True only when the developer has explicitly enabled the diagnostic overlay.
+ * Production APKs never trip this — restoring the normal Irth visual identity.
+ */
+export function isAndroidDebugMode(): boolean {
+  if (typeof window === "undefined") return false;
+  const w = window as DiagnosticWindow;
+  if (typeof w.__irthAndroidDebugMode === "boolean") return w.__irthAndroidDebugMode;
+  let on = false;
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("diag") === "android") {
+      on = true;
+      try { window.localStorage.setItem(DEBUG_FLAG_KEY, "1"); } catch { /* ignore */ }
+    }
+    if (!on) {
+      on = window.localStorage.getItem(DEBUG_FLAG_KEY) === "1";
+    }
+  } catch { /* ignore */ }
+  w.__irthAndroidDebugMode = on;
+  return on;
+}
+
+/**
+ * Legacy name kept so existing call sites compile. Now strictly means
+ * "diagnostic overlay enabled" — NOT "apply ugly stable-mode UI".
+ * Production = false → Irth identity is preserved.
+ */
 export function isAndroidUltraStableMode(): boolean {
-  if (typeof document === "undefined") return false;
-  return document.documentElement.classList.contains("android-ultra-stable");
+  return isAndroidDebugMode();
 }
 
 function getState(): AndroidFreezeState | null {
@@ -76,6 +121,9 @@ function getState(): AndroidFreezeState | null {
       activeTimers: 0,
       recentAction: "boot",
       lastLongTask: "none",
+      lastFocusAt: 0,
+      lastFocusTarget: "none",
+      viewportResizeCount: 0,
     };
   }
   return w.__irthAndroidFreeze;
@@ -98,7 +146,7 @@ function activeElementSummary(): string {
 }
 
 function logFreeze(label: string, detail: Record<string, unknown> = {}) {
-  if (!isAndroidNativeApp() && !isAndroidUltraStableMode()) return;
+  if (!isAndroidDebugMode()) return;
   const state = getState();
   // Never log field values; only structural diagnostics.
   // eslint-disable-next-line no-console
@@ -128,12 +176,14 @@ function paintOverlay() {
   const sinceInput = state.lastInputAt ? `${Math.max(0, Date.now() - state.lastInputAt)}ms` : "never";
   const sinceRoute = state.lastRouteAt ? `${Math.max(0, Date.now() - state.lastRouteAt)}ms` : "never";
   const sinceViewport = state.lastViewportAt ? `${Math.max(0, Date.now() - state.lastViewportAt)}ms` : "never";
+  const sinceFocus = state.lastFocusAt ? `${Math.max(0, Date.now() - state.lastFocusAt)}ms` : "never";
   el.textContent = [
     `route ${state.route}`,
     `fps ${state.fps} · delay ${Math.round(state.frameDelayMs)}ms`,
     `input ${state.lastInputType} · ${sinceInput}`,
+    `focus ${state.lastFocusTarget} · ${sinceFocus}`,
     `routeChange ${state.lastRouteEvent} · ${sinceRoute}`,
-    `viewport ${state.lastViewportEvent} · ${sinceViewport}`,
+    `viewport ${state.lastViewportEvent} · ${sinceViewport} · n=${state.viewportResizeCount}`,
     `timers ${state.activeTimers}`,
     `last ${state.recentAction}`,
     `long ${state.lastLongTask}`,
@@ -142,6 +192,7 @@ function paintOverlay() {
 }
 
 function updateOverlay() {
+  if (!isAndroidDebugMode()) return;
   if (typeof window === "undefined") return;
   const elapsed = Date.now() - lastOverlayPaintAt;
   if (elapsed >= 250) {
@@ -163,7 +214,7 @@ function logViewportEvent(event: string, detail: Record<string, unknown>) {
 }
 
 export function recordAndroidAction(action: string, detail?: Record<string, unknown>) {
-  if (!isAndroidUltraStableMode() && !isAndroidNativeApp()) return;
+  if (!isAndroidDebugMode()) return;
   const state = getState();
   if (!state) return;
   state.recentAction = action;
@@ -172,7 +223,7 @@ export function recordAndroidAction(action: string, detail?: Record<string, unkn
 }
 
 export function androidMark(name: string, detail?: Record<string, unknown>) {
-  if (!isAndroidUltraStableMode() && !isAndroidNativeApp()) return;
+  if (!isAndroidDebugMode()) return;
   const mark = `android:${name}`;
   try { performance.mark(mark); } catch { /* noop */ }
   const state = getState();
@@ -181,7 +232,7 @@ export function androidMark(name: string, detail?: Record<string, unknown>) {
 }
 
 export function androidMeasure(name: string, startedAt: number, detail?: Record<string, unknown>) {
-  if (!isAndroidUltraStableMode() && !isAndroidNativeApp()) return;
+  if (!isAndroidDebugMode()) return;
   const duration = now() - startedAt;
   try {
     performance.measure(`android:${name}`, { start: startedAt, end: now() });
@@ -199,15 +250,15 @@ function installTimerDiagnostics() {
     clearInterval: window.clearInterval.bind(window) as typeof window.clearInterval,
   };
   w.__irthAndroidOriginalTimers = original;
-  const activeTimeouts = new Set<TimeoutId>();
-  const activeIntervals = new Set<IntervalId>();
+  const activeTimeouts = new Set<number>();
+  const activeIntervals = new Set<number>();
   const sync = () => {
     const state = getState();
     if (state) state.activeTimers = activeTimeouts.size + activeIntervals.size;
   };
 
   window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
-    let id = 0 as TimeoutId;
+    let id = 0 as number;
     const wrapped = (...cbArgs: unknown[]) => {
       activeTimeouts.delete(id);
       sync();
@@ -225,7 +276,7 @@ function installTimerDiagnostics() {
     return id;
   }) as unknown as typeof window.setTimeout;
 
-  window.clearTimeout = ((id?: TimeoutId) => {
+  window.clearTimeout = ((id?: number) => {
     if (id !== undefined) activeTimeouts.delete(id);
     sync();
     return original.clearTimeout(id);
@@ -246,7 +297,7 @@ function installTimerDiagnostics() {
     return id;
   }) as unknown as typeof window.setInterval;
 
-  window.clearInterval = ((id?: IntervalId) => {
+  window.clearInterval = ((id?: number) => {
     if (id !== undefined) activeIntervals.delete(id);
     sync();
     return original.clearInterval(id);
@@ -336,20 +387,67 @@ function installRouteDiagnostics() {
 function installInputViewportDiagnostics() {
   const state = getState();
   if (!state) return;
-  const inputEvents = ["beforeinput", "input", "change", "keydown", "keyup", "compositionstart", "compositionend", "focusin", "focusout", "pointerdown", "click", "touchstart"] as const;
+
+  // Focused input-freeze instrumentation. Logs prefixed with
+  //   [android:focus] / [android:keyboard] / [android:input-freeze]
+  // and only ever attached when debug mode is on.
+  let focusStartedAt = 0;
+  let pendingFirstKey = false;
+  const isField = (el: EventTarget | null): el is HTMLElement => {
+    if (!el || !(el as HTMLElement).tagName) return false;
+    const tag = (el as HTMLElement).tagName.toLowerCase();
+    return tag === "input" || tag === "textarea" || (el as HTMLElement).isContentEditable;
+  };
+
+  const onFocusIn = (event: Event) => {
+    if (!isField(event.target)) return;
+    focusStartedAt = now();
+    pendingFirstKey = true;
+    state.lastFocusAt = Date.now();
+    state.lastFocusTarget = activeElementSummary();
+    // eslint-disable-next-line no-console
+    console.warn("[android:focus] start", { target: state.lastFocusTarget });
+  };
+  const onFocusOut = (event: Event) => {
+    if (!isField(event.target)) return;
+    const duration = Math.round(now() - focusStartedAt);
+    // eslint-disable-next-line no-console
+    console.warn("[android:focus] end", { duration, target: activeElementSummary() });
+  };
+  window.addEventListener("focusin", onFocusIn, { capture: true, passive: true });
+  window.addEventListener("focusout", onFocusOut, { capture: true, passive: true });
+
+  let lastKeyAt = 0;
+  const onBeforeInput = (event: Event) => {
+    if (!isField(event.target)) return;
+    lastKeyAt = now();
+    if (pendingFirstKey) {
+      pendingFirstKey = false;
+      // eslint-disable-next-line no-console
+      console.warn("[android:keyboard] first-keystroke", {
+        sinceFocus: Math.round(lastKeyAt - focusStartedAt),
+      });
+    }
+  };
   const onInput = (event: Event) => {
-    const target = event.target as HTMLElement | null;
+    if (!isField(event.target)) return;
+    const duration = Math.round(now() - lastKeyAt);
     state.lastInputAt = Date.now();
-    state.lastInputType = event.type;
-    state.recentAction = `${event.type}:${target?.tagName?.toLowerCase() ?? "unknown"}`;
+    state.lastInputType = "input";
+    if (duration > 50) {
+      // eslint-disable-next-line no-console
+      console.warn("[android:input-freeze] onChange slow", { duration });
+    }
     updateOverlay();
   };
-  for (const event of inputEvents) window.addEventListener(event, onInput, { capture: true, passive: true });
+  window.addEventListener("beforeinput", onBeforeInput, { capture: true, passive: true });
+  window.addEventListener("input", onInput, { capture: true, passive: true });
 
-  const viewportEvents = ["resize", "focus", "blur", "orientationchange", "keyboardWillShow", "keyboardDidShow", "keyboardWillHide", "keyboardDidHide"] as const;
+  const viewportEvents = ["resize", "orientationchange", "keyboardWillShow", "keyboardDidShow", "keyboardWillHide", "keyboardDidHide"] as const;
   const onViewport = (event: Event) => {
     state.lastViewportAt = Date.now();
     state.lastViewportEvent = event.type;
+    state.viewportResizeCount += 1;
     state.recentAction = `viewport:${event.type}`;
     logViewportEvent(event.type, { innerHeight: window.innerHeight, innerWidth: window.innerWidth });
     updateOverlay();
@@ -403,14 +501,25 @@ function installLongTaskDiagnostics() {
   requestAnimationFrame(loop);
 }
 
+/**
+ * Mark the document with safe Android perf classes (always) and, only when
+ * the debug flag is explicitly enabled, install heavy diagnostics + overlay.
+ */
 export function installAndroidFreezeDiagnostics() {
   if (typeof window === "undefined" || typeof document === "undefined") return false;
   if (!isAndroidNativeApp()) return false;
+
+  const html = document.documentElement;
+  // Safe, lightweight perf hints — keep the Irth identity intact.
+  html.classList.add("is-android", "is-capacitor", "perf-lite", "perf-no-motion");
+
+  if (!isAndroidDebugMode()) return false;
+
   const w = window as DiagnosticWindow;
   if (w.__irthAndroidFreezeInstalled) return true;
   w.__irthAndroidFreezeInstalled = true;
-  const html = document.documentElement;
-  html.classList.add("is-android", "is-capacitor", "perf-lite", "perf-no-motion", "android-ultra-stable");
+  // Only in debug mode do we apply the degraded "ultra-stable" CSS overrides.
+  html.classList.add("android-ultra-stable");
   const state = getState();
   if (state) state.installed = true;
   installTimerDiagnostics();
