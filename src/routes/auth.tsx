@@ -4,7 +4,7 @@ import { Mail, Lock, UserRound, ChevronLeft, Gift, Eye, EyeOff } from "lucide-re
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
-import { recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
