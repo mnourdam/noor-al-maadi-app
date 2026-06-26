@@ -838,7 +838,20 @@ function AndroidStableHome() {
           </div>
         </section>
 
+        {/* TEMP DIAGNOSTIC: Android input isolation test — remove once input freeze is resolved */}
+        <Link
+          to="/android-input-test"
+          className="mt-5 flex items-center justify-between rounded-2xl border-2 border-red-500/60 bg-red-500/10 p-4"
+        >
+          <span>
+            <span className="block font-bold text-red-200">Android Input Test</span>
+            <span className="mt-0.5 block text-[12px] text-red-300/80">Diagnostic only — isolated input page</span>
+          </span>
+          <ChevronLeft className="size-4 text-red-300" />
+        </Link>
+
         <section className="mt-5 grid gap-3">
+
           {[
             { to: "/campaigns", label: "الحملات", desc: "تابع الرحلات التاريخية" },
             { to: "/adventure", label: "التحديات", desc: "ألعاب وأسئلة تاريخية" },
