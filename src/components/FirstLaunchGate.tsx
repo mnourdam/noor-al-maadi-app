@@ -69,6 +69,7 @@ export function FirstLaunchGate() {
 
           <div className="mt-5 space-y-2">
             <AuthLink
+              mode="login"
               onClick={() => {
                 try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
                 setOpen(false);
@@ -79,6 +80,7 @@ export function FirstLaunchGate() {
               <span className="flex-1 text-right">تسجيل الدخول</span>
             </AuthLink>
             <AuthLink
+              mode="signup"
               onClick={() => {
                 try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
                 setOpen(false);
