@@ -273,14 +273,9 @@ export function AndroidInputIsolationTest() {
           spellCheck={false}
           defaultValue=""
           style={inputStyle}
-          onFocus={(event) => reactUncontrolled.focus(event.nativeEvent)}
-          onKeyDown={(event) => reactUncontrolled.keydown(event.nativeEvent)}
-          onBeforeInput={(event) => reactUncontrolled.beforeinput(event.nativeEvent)}
-          onInput={(event) => reactUncontrolled.input(event.nativeEvent)}
-          onChange={(event) => reactUncontrolled.change(event.nativeEvent)}
-          onCompositionStart={(event) => reactUncontrolled.compositionstart(event.nativeEvent)}
-          onCompositionEnd={(event) => reactUncontrolled.compositionend(event.nativeEvent)}
-          onBlur={(event) => reactUncontrolled.blur(event.nativeEvent)}
+          onFocus={(event) => reactUncontrolled.focus?.(event.nativeEvent)}
+          onBlur={(event) => reactUncontrolled.blur?.(event.nativeEvent)}
+
         />
       </div>
 
