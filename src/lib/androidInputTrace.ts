@@ -138,11 +138,13 @@ export function installAndroidInputTrace(): void {
   const maybeDumpFreezeTrace = (kind: string, duration: number) => {
     const now = performance.now();
     if (duration <= FREEZE_THRESHOLD_MS) return;
-    if (now - lastInputSignalAt > INPUT_WINDOW_MS) return;
+    const freezeStartedAt = now - duration;
+    const msAfterInputSignal = freezeStartedAt - lastInputSignalAt;
+    if (msAfterInputSignal < 0 || msAfterInputSignal > INPUT_WINDOW_MS) return;
     log("auto-freeze-dump", undefined, {
       trigger: kind,
       duration: Math.round(duration),
-      msAfterInputSignal: Math.round(now - lastInputSignalAt),
+      msAfterInputSignal: Math.round(msAfterInputSignal),
     });
     dumpTraceToConsoleAndStorage(`${kind}:${Math.round(duration)}ms`);
   };

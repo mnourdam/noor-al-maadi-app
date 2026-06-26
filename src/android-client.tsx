@@ -54,7 +54,7 @@ if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
 }
 
-if (hasStoredInputFreezeTrace() && !window.location.pathname.startsWith("/debug/input-trace")) {
+if (hasStoredInputFreezeTrace()) {
   window.history.replaceState(null, "", "/debug/input-trace");
   try {
     document.documentElement.classList.remove("irth-booting");
