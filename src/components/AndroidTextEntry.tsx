@@ -33,33 +33,34 @@ type AndroidTextEntryWindow = Window & {
 };
 
 let nextRequestId = 1;
+let activeTextEntryCleanup: (() => void) | undefined;
 
 export function openAndroidTextEntry(options: OpenOptions): boolean {
-  if (typeof window === "undefined" || !isAndroidNativeApp()) return false;
-  const opener = (window as AndroidTextEntryWindow).__irthOpenAndroidTextEntry;
-  if (!opener) return false;
-  opener(options);
+  return openNativeAndroidTextEntry(options);
+}
+
+function openNativeAndroidTextEntry(options: OpenOptions): boolean {
+  if (typeof window === "undefined" || typeof document === "undefined" || !isAndroidNativeApp()) return false;
+  activeTextEntryCleanup?.();
+  activeTextEntryCleanup = mountNativeAndroidTextEntry({ ...options, id: nextRequestId++ }, () => {
+    activeTextEntryCleanup = undefined;
+  });
   return true;
 }
 
 export function AndroidTextEntryHost() {
-  const [request, setRequest] = React.useState<TextEntryRequest | null>(null);
-
   React.useEffect(() => {
     if (!isAndroidNativeApp()) return;
     const w = window as AndroidTextEntryWindow;
     w.__irthOpenAndroidTextEntry = (options) => {
-      setRequest({ ...options, id: nextRequestId++ });
+      openNativeAndroidTextEntry(options);
     };
     return () => {
       if (w.__irthOpenAndroidTextEntry) delete w.__irthOpenAndroidTextEntry;
+      activeTextEntryCleanup?.();
+      activeTextEntryCleanup = undefined;
     };
   }, []);
-
-  React.useEffect(() => {
-    if (!request || typeof document === "undefined") return;
-    return mountNativeAndroidTextEntry(request, () => setRequest(null));
-  }, [request]);
 
   return null;
 }
@@ -241,164 +242,6 @@ function mountNativeAndroidTextEntry(request: TextEntryRequest, onClose: () => v
   window.setTimeout(() => field.focus({ preventScroll: true }), 80);
 
   return remove;
-}
-
-function AndroidTextEntryScreen({ request, onClose }: { request: TextEntryRequest; onClose: () => void }) {
-  const inputRef = React.useRef<HTMLInputElement | null>(null);
-  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
-
-  React.useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, []);
-
-  const save = () => {
-    const value = request.multiline ? (textareaRef.current?.value ?? "") : (inputRef.current?.value ?? "");
-    request.onSave(value);
-    onClose();
-  };
-
-  const cancel = () => {
-    request.onCancel?.();
-    onClose();
-  };
-
-  const sharedStyle: React.CSSProperties = {
-    display: "block",
-    width: "100%",
-    boxSizing: "border-box",
-    border: `1px solid ${BORDER}`,
-    borderRadius: 10,
-    background: SURFACE_2,
-    color: TEXT,
-    font: "16px system-ui, -apple-system, sans-serif",
-    lineHeight: 1.5,
-    padding: "14px 14px",
-    outline: "none",
-    transform: "none",
-    filter: "none",
-    backdropFilter: "none",
-    WebkitBackdropFilter: "none",
-    transition: "none",
-    animation: "none",
-    caretColor: GOLD,
-  };
-
-  return (
-    <div
-      dir="rtl"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="android-text-entry-title"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 2147483647,
-        minHeight: "100vh",
-        boxSizing: "border-box",
-        padding: "max(28px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom))",
-        background: `radial-gradient(ellipse at top, #2a1d10 0%, ${INK} 62%, #050403 100%)`,
-        color: TEXT,
-        fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
-        overflowY: "auto",
-        WebkitOverflowScrolling: "touch",
-        transform: "none",
-        filter: "none",
-        backdropFilter: "none",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <style>{`
-        [data-irth-android-text-entry] *,
-        [data-irth-android-text-entry] *::before,
-        [data-irth-android-text-entry] *::after {
-          animation: none !important;
-          transition: none !important;
-          transform: none !important;
-          filter: none !important;
-          backdrop-filter: none !important;
-          -webkit-backdrop-filter: none !important;
-          contain: none !important;
-          content-visibility: visible !important;
-        }
-        [data-irth-android-text-entry] input,
-        [data-irth-android-text-entry] textarea {
-          -webkit-user-select: text !important;
-          user-select: text !important;
-          -webkit-text-size-adjust: 100% !important;
-        }
-        [data-irth-android-text-entry] input::placeholder,
-        [data-irth-android-text-entry] textarea::placeholder {
-          color: #6b5a44 !important;
-        }
-      `}</style>
-
-      <div data-irth-android-text-entry style={{ width: "100%", maxWidth: 430 }}>
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <img
-            src="/assets/splash/irth-logo.png"
-            alt="إرث"
-            width={64}
-            height={64}
-            style={{ display: "inline-block", marginBottom: 12 }}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-          />
-          <h1 id="android-text-entry-title" style={{ margin: 0, font: "800 24px system-ui, sans-serif", color: GOLD }}>
-            {request.title}
-          </h1>
-          {request.label ? (
-            <p style={{ margin: "7px 0 0", color: "#9a8a6e", font: "13px/1.6 system-ui, sans-serif" }}>{request.label}</p>
-          ) : null}
-        </div>
-
-        <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 22, boxShadow: "0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,90,0.08)" }}>
-          {request.multiline ? (
-            <textarea
-              key={request.id}
-              ref={textareaRef}
-              defaultValue={request.initialValue}
-              rows={7}
-              maxLength={request.maxLength}
-              autoComplete={request.autoComplete ?? "off"}
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              placeholder={request.placeholder}
-              dir={request.dir ?? "rtl"}
-              style={{ ...sharedStyle, minHeight: 170, resize: "vertical" }}
-            />
-          ) : (
-            <input
-              key={request.id}
-              ref={inputRef}
-              type="text"
-              defaultValue={request.initialValue}
-              maxLength={request.maxLength}
-              inputMode={request.inputMode ?? "text"}
-              autoComplete={request.autoComplete ?? "off"}
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              placeholder={request.placeholder}
-              dir={request.dir ?? "rtl"}
-              style={sharedStyle}
-            />
-          )}
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 18 }}>
-            <button type="button" onClick={save} style={primaryButtonStyle}>حفظ</button>
-            <button type="button" onClick={cancel} style={secondaryButtonStyle}>إلغاء</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 const primaryButtonStyle: React.CSSProperties = {
