@@ -218,6 +218,18 @@ function CrosswordGeneratorPage() {
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs leading-7 text-slate-200 focus:border-amber-400 focus:outline-none"
               />
             </div>
+            <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-300">
+              <label className="inline-flex items-center gap-1.5">
+                <input type="checkbox" checked={form.allowIsolated}
+                  onChange={(e) => update("allowIsolated", e.target.checked)} />
+                السماح بكلمات معزولة (احتياطي)
+              </label>
+              <label className="inline-flex items-center gap-1.5">
+                <input type="checkbox" checked={form.requireConnected}
+                  onChange={(e) => update("requireConnected", e.target.checked)} />
+                اشتراط شبكة متصلة بالكامل
+              </label>
+            </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={handleGenerate}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400">
