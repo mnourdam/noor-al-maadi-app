@@ -258,6 +258,28 @@ export function AndroidInputIsolationTest() {
         Open React-minimal input test (no providers, no listeners)
       </button>
 
+      <button
+        type="button"
+        onClick={() => {
+          log("open-auth-min-test");
+          window.location.href = "/android-auth-min";
+        }}
+        style={{
+          display: "block",
+          width: "100%",
+          boxSizing: "border-box",
+          margin: "0 0 18px",
+          border: "1px solid #111111",
+          borderRadius: 6,
+          background: "#b91c1c",
+          color: "#ffffff",
+          font: "700 16px system-ui, sans-serif",
+          padding: "12px 14px",
+        }}
+      >
+        Open Android auth-min test (auth client only on submit)
+      </button>
+
       <QuietBisectButtons />
 
 
