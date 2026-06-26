@@ -62,6 +62,7 @@ export const AndroidPlainTextInput = React.forwardRef<HTMLInputElement, InputPro
       onBlur,
       onKeyDown,
       onEnter,
+      commitMode: _commitMode,
       value,
       defaultValue,
       style,
