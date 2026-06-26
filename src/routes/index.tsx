@@ -533,7 +533,7 @@ function HomeFull() {
         </Link>
       )}
 
-      {isAndroidApk && (
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
         <Link
           to={"/debug/native-input-min" as any}
           style={{
