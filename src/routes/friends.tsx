@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Search, UserPlus, Check, X, Trash2, ChevronLeft, Users } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
+import { AuthLink } from "@/components/AuthLink";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { useAccount } from "@/lib/account";
 import {
