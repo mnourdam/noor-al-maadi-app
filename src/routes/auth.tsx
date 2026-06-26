@@ -18,6 +18,7 @@ function AuthRoute() {
   return <AuthPage />;
 }
 
+
 function AuthPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();

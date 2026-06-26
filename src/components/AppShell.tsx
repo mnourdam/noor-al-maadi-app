@@ -5,7 +5,7 @@ import { HUD } from "./HUD";
 import { FriendNotificationsPoller } from "./FriendNotificationsPoller";
 import { BackNavigationGuard } from "./BackNavigationGuard";
 import { AudioInitializer } from "./AudioInitializer";
-import { androidMark, isAndroidNativeApp, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isSectionEnabled } from "@/lib/androidQuietMode";
 
 const tabs = [
@@ -23,7 +23,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   androidMark("render:AppShell");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const androidStable = isAndroidUltraStableMode();
-  const androidNative = isAndroidNativeApp();
   const nestedShell = useContext(AppShellNestingContext);
 
   useEffect(() => {
@@ -31,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     androidMark("commit:AppShell", { pathname });
   }, [pathname]);
 
-  if (nestedShell) {
+  if (androidStable && nestedShell) {
     return <>{children}</>;
   }
 
@@ -41,13 +40,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="mx-auto flex min-h-screen w-full max-w-md flex-col"
         style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
       >
-        {!androidNative && <HUD />}
-        {!androidNative && !androidStable && isSectionEnabled("audio") && <AudioInitializer />}
-        {!androidNative && !androidStable && isSectionEnabled("friendPoller") && <FriendNotificationsPoller />}
-        {!androidNative && !androidStable && isSectionEnabled("backNavGuard") && <BackNavigationGuard />}
+        <HUD />
+        {!androidStable && isSectionEnabled("audio") && <AudioInitializer />}
+        {!androidStable && isSectionEnabled("friendPoller") && <FriendNotificationsPoller />}
+        {!androidStable && isSectionEnabled("backNavGuard") && <BackNavigationGuard />}
         <div className="flex-1">{children}</div>
         <nav
-          className={androidNative ? "mx-auto mt-6 w-full max-w-md px-3" : "fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-3"}
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-3"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
           <div className="glass shadow-elegant grid grid-cols-6 items-center gap-1 rounded-2xl border border-white/10 p-1.5">

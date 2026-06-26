@@ -82,7 +82,7 @@ async function bootMainApp(root: HTMLElement) {
     import("./lib/perf-mode"),
   ]);
 
-  const { installAndroidFreezeDiagnostics, androidMark, isAndroidNativeApp } = diagnostics;
+  const { installAndroidFreezeDiagnostics, androidMark } = diagnostics;
   const { applyPerfMode } = perf;
 
   // TanStack Start normally injects this during its client boot. The Android
@@ -98,7 +98,7 @@ async function bootMainApp(root: HTMLElement) {
   applyPerfMode();
   // Mark Android so route/component code can branch on it cheaply.
   try {
-    if (isAndroidNativeApp()) {
+    if ((window as any).Capacitor?.isNativePlatform?.()) {
       document.documentElement.classList.add("is-android", "is-capacitor");
     }
   } catch { /* ignore */ }
