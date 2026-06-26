@@ -4,7 +4,7 @@ import { AndroidAuthMinTest, isAndroidAuthMinPath } from "./components/AndroidAu
 import { AndroidCampaignInputMinTest, isAndroidCampaignInputMinPath } from "./components/AndroidCampaignInputMinTest";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
-import { installAndroidInputTrace } from "./lib/androidInputTrace";
+import { hasStoredInputFreezeTrace, installAndroidInputTrace } from "./lib/androidInputTrace";
 import { warmupAndroidInput } from "./lib/androidInputWarmup";
 
 // Install input/IME/frame tracing FIRST so it captures the very first
@@ -53,7 +53,10 @@ if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
 }
 
-if (isAndroidReactMinPath()) {
+if (hasStoredInputFreezeTrace() && !window.location.pathname.startsWith("/debug/input-trace")) {
+  window.history.replaceState(null, "", "/debug/input-trace");
+  void bootMainApp(rootElement);
+} else if (isAndroidReactMinPath()) {
   try {
     document.documentElement.classList.remove("irth-booting");
     document.getElementById("irth-boot-splash")?.remove();
