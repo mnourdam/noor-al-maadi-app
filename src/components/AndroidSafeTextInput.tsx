@@ -1,206 +1,76 @@
 import * as React from "react";
 
-import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { cn } from "@/lib/utils";
 
-type CommitMode = "change" | "blur" | "manual";
+/**
+ * Android input freeze fix — phase 1.
+ *
+ * Earlier versions of this module wrapped <input>/<textarea> with focus/blur
+ * class toggles on <html>, ancestor class walking, useLayoutEffect value
+ * mirroring, composition handlers, and per-keystroke console.info logs
+ * through the Capacitor bridge. On the full Irth app path that combination
+ * caused the WebView to freeze after the first character on every shared
+ * input (login, profile name editor, campaign/puzzle answer fields).
+ *
+ * The minimal Android Auth-Min route (plain <input>, no wrappers, no
+ * listeners) typed normally and signed in successfully, which isolated the
+ * regression to this wrapper.
+ *
+ * Until we rebuild a proper Android-safe input, both exports below are pure
+ * passthroughs that forward props directly to a native <input>/<textarea>.
+ * `onValueChange` and `onEnter` are preserved as convenience callbacks
+ * because they are widely used in the codebase, but they fire from the
+ * standard change/keydown events with no extra state or side effects.
+ */
 
 type SharedSafeProps = {
-  value?: string | number | readonly string[];
   onValueChange?: (value: string) => void;
-  commitMode?: CommitMode;
+  /** Legacy/no-op props kept for backwards compatibility. */
+  commitMode?: "change" | "blur" | "manual";
   onEnter?: (value: string) => void;
   onCompositionStateChange?: (composing: boolean) => void;
   logName?: string;
 };
 
-type AndroidSafeInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "value"> & SharedSafeProps;
-type AndroidSafeTextareaProps = Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "value"> & SharedSafeProps;
-
-function stringifyValue(value: SharedSafeProps["value"]) {
-  if (Array.isArray(value)) return value.join(",");
-  if (value === undefined || value === null) return "";
-  return String(value);
-}
-
-function logTextInput(name: string | undefined, event: string, detail: Record<string, unknown> = {}) {
-  if (!isAndroidNativeApp()) return;
-  // Never log typed text; Logcat gets event order + lengths only.
-  // eslint-disable-next-line no-console
-  console.info("[android:text-input]", event, { field: name ?? "field", ...detail });
-}
-
-function setAndroidInputActive(active: boolean) {
-  if (typeof document === "undefined" || !isAndroidNativeApp()) return;
-  const html = document.documentElement;
-  if (active) {
-    html.classList.add("android-input-active");
-    return;
-  }
-  window.setTimeout(() => {
-    const el = document.activeElement as HTMLElement | null;
-    const stillTyping = !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
-    if (!stillTyping) html.classList.remove("android-input-active");
-  }, 0);
-}
-
-function markInputAncestors(el: HTMLElement | null, active: boolean) {
-  if (typeof document === "undefined" || !isAndroidNativeApp()) return;
-  document.querySelectorAll(".android-safe-input-host").forEach((node) => {
-    node.classList.remove("android-safe-input-host");
-  });
-  if (!active || !el) return;
-  let current = el.parentElement;
-  let depth = 0;
-  while (current && current !== document.body && depth < 6) {
-    current.classList.add("android-safe-input-host");
-    current = current.parentElement;
-    depth += 1;
-  }
-}
-
-function logKeyboardState(name: string | undefined) {
-  if (!isAndroidNativeApp() || typeof window === "undefined") return;
-  const vv = window.visualViewport;
-  const viewportHeight = vv?.height ?? window.innerHeight;
-  const layoutHeight = window.innerHeight;
-  const visible = viewportHeight < layoutHeight * 0.82;
-  logTextInput(name, "keyboard visible", {
-    visible,
-    viewportHeight: Math.round(viewportHeight),
-    innerHeight: Math.round(layoutHeight),
-  });
-}
-
-function composeRefs<T>(...refs: Array<React.Ref<T> | undefined>) {
-  return (node: T | null) => {
-    for (const ref of refs) {
-      if (!ref) continue;
-      if (typeof ref === "function") ref(node);
-      else (ref as React.MutableRefObject<T | null>).current = node;
-    }
-  };
-}
-
-function isTextInputType(type: React.InputHTMLAttributes<HTMLInputElement>["type"]) {
-  const t = String(type ?? "text").toLowerCase();
-  return !["button", "checkbox", "color", "file", "hidden", "image", "radio", "range", "reset", "submit"].includes(t);
-}
+type AndroidSafeInputProps = React.InputHTMLAttributes<HTMLInputElement> & SharedSafeProps;
+type AndroidSafeTextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & SharedSafeProps;
 
 export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeInputProps>(
   (
     {
-      value,
       onValueChange,
-      commitMode,
-      onEnter,
-      onCompositionStateChange,
       onChange,
-      onFocus,
-      onBlur,
       onKeyDown,
-      onCompositionStart,
-      onCompositionEnd,
+      onEnter,
+      commitMode: _commitMode,
+      onCompositionStateChange: _onCompositionStateChange,
+      logName: _logName,
       className,
-      logName,
-      defaultValue,
       ...props
     },
-    forwardedRef,
+    ref,
   ) => {
-    const android = isAndroidNativeApp();
-    const androidTextMode = android && isTextInputType(props.type);
-    const effectiveCommitMode: CommitMode = commitMode ?? (androidTextMode && onValueChange ? "blur" : "change");
-    const innerRef = React.useRef<HTMLInputElement | null>(null);
-    const composingRef = React.useRef(false);
-    const firstKeyRef = React.useRef(true);
-    const lastLengthRef = React.useRef(stringifyValue(value).length);
+    const handleChange = onValueChange
+      ? (event: React.ChangeEvent<HTMLInputElement>) => {
+          onValueChange(event.currentTarget.value);
+          onChange?.(event);
+        }
+      : onChange;
 
-    React.useLayoutEffect(() => {
-      if (!androidTextMode) return;
-      const el = innerRef.current;
-      if (!el || document.activeElement === el) return;
-      const next = stringifyValue(value);
-      if (el.value !== next) {
-        el.value = next;
-        lastLengthRef.current = next.length;
-      }
-    }, [androidTextMode, value]);
-
-    const commit = React.useCallback((next: string) => {
-      onValueChange?.(next);
-    }, [onValueChange]);
-
-    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const next = event.currentTarget.value;
-      logTextInput(logName, "onChange fired", { length: next.length, composing: composingRef.current });
-      if (next.length !== lastLengthRef.current) {
-        lastLengthRef.current = next.length;
-        logTextInput(logName, "value length changed", { length: next.length });
-      }
-      if (!androidTextMode || effectiveCommitMode === "change") commit(next);
-      if (!androidTextMode || effectiveCommitMode === "change") onChange?.(event);
-    };
-
-    const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
-      firstKeyRef.current = true;
-      logTextInput(logName, "focus", { length: event.currentTarget.value.length });
-      setAndroidInputActive(true);
-      markInputAncestors(event.currentTarget, true);
-      window.setTimeout(() => logKeyboardState(logName), 180);
-      onFocus?.(event);
-    };
-
-    const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
-      const next = event.currentTarget.value;
-      logTextInput(logName, "blur", { length: next.length });
-      setAndroidInputActive(false);
-      markInputAncestors(event.currentTarget, false);
-      if (androidTextMode && effectiveCommitMode !== "change") commit(next);
-      onBlur?.(event);
-    };
-
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (firstKeyRef.current) {
-        firstKeyRef.current = false;
-        logTextInput(logName, "first key received", { key: event.key, composing: composingRef.current });
-      }
-      onKeyDown?.(event);
-      if (!event.defaultPrevented && event.key === "Enter" && !composingRef.current) onEnter?.(event.currentTarget.value);
-    };
-
-    const handleCompositionStart = (event: React.CompositionEvent<HTMLInputElement>) => {
-      composingRef.current = true;
-      onCompositionStateChange?.(true);
-      logTextInput(logName, "composition start");
-      onCompositionStart?.(event);
-    };
-
-    const handleCompositionEnd = (event: React.CompositionEvent<HTMLInputElement>) => {
-      composingRef.current = false;
-      onCompositionStateChange?.(false);
-      logTextInput(logName, "composition end", { length: event.currentTarget.value.length });
-      if (!androidTextMode || effectiveCommitMode === "change") commit(event.currentTarget.value);
-      onCompositionEnd?.(event);
-    };
-
-    const valueProps = androidTextMode
-      ? (value !== undefined ? { defaultValue: stringifyValue(value) } : defaultValue !== undefined ? { defaultValue } : {})
-      : (value !== undefined ? { value } : defaultValue !== undefined ? { defaultValue } : {});
+    const handleKeyDown = onEnter
+      ? (event: React.KeyboardEvent<HTMLInputElement>) => {
+          onKeyDown?.(event);
+          if (!event.defaultPrevented && event.key === "Enter") onEnter(event.currentTarget.value);
+        }
+      : onKeyDown;
 
     return (
       <input
         {...props}
-        {...valueProps}
-        ref={composeRefs(innerRef, forwardedRef)}
-        data-android-safe-input={androidTextMode ? "true" : undefined}
-        className={cn("android-safe-input", className)}
+        ref={ref}
+        className={cn(className)}
         onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        onCompositionStart={handleCompositionStart}
-        onCompositionEnd={handleCompositionEnd}
       />
     );
   },
@@ -210,114 +80,29 @@ AndroidSafeInput.displayName = "AndroidSafeInput";
 export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, AndroidSafeTextareaProps>(
   (
     {
-      value,
       onValueChange,
-      commitMode,
-      onCompositionStateChange,
       onChange,
-      onFocus,
-      onBlur,
-      onKeyDown,
-      onCompositionStart,
-      onCompositionEnd,
+      commitMode: _commitMode,
+      onCompositionStateChange: _onCompositionStateChange,
+      logName: _logName,
       className,
-      logName,
-      defaultValue,
       ...props
     },
-    forwardedRef,
+    ref,
   ) => {
-    const android = isAndroidNativeApp();
-    const effectiveCommitMode: CommitMode = commitMode ?? (android && onValueChange ? "blur" : "change");
-    const innerRef = React.useRef<HTMLTextAreaElement | null>(null);
-    const composingRef = React.useRef(false);
-    const firstKeyRef = React.useRef(true);
-    const lastLengthRef = React.useRef(stringifyValue(value).length);
-
-    React.useLayoutEffect(() => {
-      if (!android) return;
-      const el = innerRef.current;
-      if (!el || document.activeElement === el) return;
-      const next = stringifyValue(value);
-      if (el.value !== next) {
-        el.value = next;
-        lastLengthRef.current = next.length;
-      }
-    }, [android, value]);
-
-    const commit = React.useCallback((next: string) => {
-      onValueChange?.(next);
-    }, [onValueChange]);
-
-    const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const next = event.currentTarget.value;
-      logTextInput(logName, "onChange fired", { length: next.length, composing: composingRef.current });
-      if (next.length !== lastLengthRef.current) {
-        lastLengthRef.current = next.length;
-        logTextInput(logName, "value length changed", { length: next.length });
-      }
-      if (!android || effectiveCommitMode === "change") commit(next);
-      if (!android || effectiveCommitMode === "change") onChange?.(event);
-    };
-
-    const handleFocus = (event: React.FocusEvent<HTMLTextAreaElement>) => {
-      firstKeyRef.current = true;
-      logTextInput(logName, "focus", { length: event.currentTarget.value.length });
-      setAndroidInputActive(true);
-      markInputAncestors(event.currentTarget, true);
-      window.setTimeout(() => logKeyboardState(logName), 180);
-      onFocus?.(event);
-    };
-
-    const handleBlur = (event: React.FocusEvent<HTMLTextAreaElement>) => {
-      const next = event.currentTarget.value;
-      logTextInput(logName, "blur", { length: next.length });
-      setAndroidInputActive(false);
-      markInputAncestors(event.currentTarget, false);
-      if (android && effectiveCommitMode !== "change") commit(next);
-      onBlur?.(event);
-    };
-
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (firstKeyRef.current) {
-        firstKeyRef.current = false;
-        logTextInput(logName, "first key received", { key: event.key, composing: composingRef.current });
-      }
-      onKeyDown?.(event);
-    };
-
-    const handleCompositionStart = (event: React.CompositionEvent<HTMLTextAreaElement>) => {
-      composingRef.current = true;
-      onCompositionStateChange?.(true);
-      logTextInput(logName, "composition start");
-      onCompositionStart?.(event);
-    };
-
-    const handleCompositionEnd = (event: React.CompositionEvent<HTMLTextAreaElement>) => {
-      composingRef.current = false;
-      onCompositionStateChange?.(false);
-      logTextInput(logName, "composition end", { length: event.currentTarget.value.length });
-      if (!android || effectiveCommitMode === "change") commit(event.currentTarget.value);
-      onCompositionEnd?.(event);
-    };
-
-    const valueProps = android
-      ? (value !== undefined ? { defaultValue: stringifyValue(value) } : defaultValue !== undefined ? { defaultValue } : {})
-      : (value !== undefined ? { value } : defaultValue !== undefined ? { defaultValue } : {});
+    const handleChange = onValueChange
+      ? (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+          onValueChange(event.currentTarget.value);
+          onChange?.(event);
+        }
+      : onChange;
 
     return (
       <textarea
         {...props}
-        {...valueProps}
-        ref={composeRefs(innerRef, forwardedRef)}
-        data-android-safe-input={android ? "true" : undefined}
-        className={cn("android-safe-input", className)}
+        ref={ref}
+        className={cn(className)}
         onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        onCompositionStart={handleCompositionStart}
-        onCompositionEnd={handleCompositionEnd}
       />
     );
   },
