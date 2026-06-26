@@ -2,18 +2,22 @@ import { createRoot } from "react-dom/client";
 
 import { AndroidAuthMinTest, isAndroidAuthMinPath } from "./components/AndroidAuthMinTest";
 import { AndroidCampaignInputMinTest, isAndroidCampaignInputMinPath } from "./components/AndroidCampaignInputMinTest";
+import { InputTraceDebugView } from "./components/InputTraceDebugView";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
-import { installAndroidInputTrace } from "./lib/androidInputTrace";
+import { hasStoredInputFreezeTrace, installAndroidInputTrace } from "./lib/androidInputTrace";
 import { warmupAndroidInput } from "./lib/androidInputWarmup";
 
 // Install input/IME/frame tracing FIRST so it captures the very first
 // focus/keydown that may freeze the WebView. Pure instrumentation; no fixes.
 installAndroidInputTrace();
+const shouldShowStoredFreezeTrace = hasStoredInputFreezeTrace();
 
 // Prime the WebView's first focus / IME path so the very first text
 // input the user taps does not freeze. One-shot, no visible keyboard.
-warmupAndroidInput();
+if (!shouldShowStoredFreezeTrace) {
+  warmupAndroidInput();
+}
 
 
 // Surface uncaught errors to Logcat via Capacitor's Console plugin so blank /
@@ -53,7 +57,14 @@ if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
 }
 
-if (isAndroidReactMinPath()) {
+if (shouldShowStoredFreezeTrace) {
+  window.history.replaceState(null, "", "/debug/input-trace");
+  try {
+    document.documentElement.classList.remove("irth-booting");
+    document.getElementById("irth-boot-splash")?.remove();
+  } catch { /* ignore */ }
+  createRoot(rootElement).render(<InputTraceDebugView />);
+} else if (isAndroidReactMinPath()) {
   try {
     document.documentElement.classList.remove("irth-booting");
     document.getElementById("irth-boot-splash")?.remove();
