@@ -69,10 +69,13 @@ function coerceFlags(raw: unknown): Partial<AndroidFocusABFlags> {
 
 function parseNativeFlags(): Partial<AndroidFocusABFlags> {
   try {
+    const source = String((window as any).__IRTH_ANDROID_NATIVE_AB_SOURCE__ ?? "defaults");
     const nativeFlags = coerceFlags((window as any).__IRTH_ANDROID_NATIVE_AB_FLAGS__);
-    if (Object.keys(nativeFlags).length > 0) return nativeFlags;
+    if (source !== "defaults" && Object.keys(nativeFlags).length > 0) return nativeFlags;
   } catch { /* ignore */ }
   try {
+    const source = window.localStorage.getItem("irth:android-focus-ab-native-source") || "defaults";
+    if (source === "defaults") return {};
     const raw = window.localStorage.getItem("irth:android-focus-ab-native");
     if (!raw) return {};
     return coerceFlags(JSON.parse(raw));

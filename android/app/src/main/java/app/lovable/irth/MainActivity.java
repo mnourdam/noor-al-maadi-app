@@ -241,6 +241,12 @@ public class MainActivity extends BridgeActivity {
             if (startupABFlags == null) startupABFlags = AndroidABFlags.read(MainActivity.this, getIntent());
             return AndroidABFlags.simpleLine(startupABFlags);
         }
+
+        @JavascriptInterface
+        public String getFocusABFlagsSource() {
+            if (startupABFlags == null) startupABFlags = AndroidABFlags.read(MainActivity.this, getIntent());
+            return startupABFlags.source;
+        }
     }
 
     private void logWebViewState(String source) {

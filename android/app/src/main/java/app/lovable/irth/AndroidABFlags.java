@@ -75,6 +75,7 @@ final class AndroidABFlags {
             + "window.__IRTH_ANDROID_NATIVE_AB_FLAGS__=flags;"
             + "window.__IRTH_ANDROID_NATIVE_AB_SOURCE__='" + escape(config.source) + "';"
             + "try{window.localStorage.setItem('irth:android-focus-ab-native',JSON.stringify(flags));}catch(_){}"
+            + "try{window.localStorage.setItem('irth:android-focus-ab-native-source','" + escape(config.source) + "');}catch(_){}"
             + "console.info('IRTH_AB_FLAGS " + escape(line) + "');"
             + "try{window.IrthNativeDiagnostics&&window.IrthNativeDiagnostics.logInputEvent&&window.IrthNativeDiagnostics.logInputEvent('focusAB.nativeBootFlags','" + escape(line) + "');}catch(_){}"
             + "}catch(e){try{console.error('IRTH_AB_FLAGS bootstrap failed',e&&e.message);}catch(_){}}})();";
