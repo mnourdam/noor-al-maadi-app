@@ -717,3 +717,36 @@ html .admin-lite table tbody {
   content-visibility: auto;
   contain-intrinsic-size: 96px;
 }
+
+/* ============================================================
+   /debug/react-bare-input-min — hard CSS reset isolation.
+   The class is added to <html> only while that route is mounted
+   (see src/routes/debug.react-bare-input-min.tsx). Purpose: prove
+   whether the Android input freeze comes from global app CSS or
+   from React/TanStack runtime behavior.
+   ============================================================ */
+html.react-bare-input-test,
+html.react-bare-input-test body,
+html.react-bare-input-test #root {
+  background: #111 !important;
+  background-image: none !important;
+  background-attachment: scroll !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  contain: none !important;
+  will-change: auto !important;
+  overscroll-behavior: auto !important;
+  touch-action: auto !important;
+  user-select: auto !important;
+  pointer-events: auto !important;
+  overflow: auto !important;
+  position: static !important;
+}
+
+html.react-bare-input-test input,
+html.react-bare-input-test textarea,
+html.react-bare-input-test button {
+  all: revert !important;
+  font: 16px sans-serif !important;
+}
