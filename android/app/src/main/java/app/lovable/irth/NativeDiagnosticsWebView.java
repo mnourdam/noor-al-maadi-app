@@ -57,8 +57,15 @@ public class NativeDiagnosticsWebView extends CapacitorWebView {
             + " fieldId=" + outAttrs.fieldId
             + " defaultIme=" + imeId);
 
-        if (base == null) return null;
-        return new TracingInputConnection(base);
+        if (base == null) {
+            trace("ime.wrapper.returning", "wrapped=false baseClass=null reason=base-null");
+            return null;
+        }
+        TracingInputConnection wrapped = new TracingInputConnection(base);
+        trace("ime.wrapper.returning", "wrapped=true baseClass=" + base.getClass().getName()
+            + " wrapperClass=" + wrapped.getClass().getName());
+        Log.i("IRTH_NATIVE_TRACE", "ime.wrapper.returning wrapped=true baseClass=" + base.getClass().getName());
+        return wrapped;
     }
 
     @Override
