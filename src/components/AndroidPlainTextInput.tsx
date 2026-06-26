@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 type Shared = {
   onValueChange?: (value: string) => void;
   onEnter?: (value: string) => void;
+  /** Accepted for API compatibility; commit always happens on blur/Enter on Android. */
+  commitMode?: "blur" | "change" | "enter";
 };
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & Shared;
