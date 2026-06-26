@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { AndroidTextEntryInput, AndroidTextEntryTextarea } from "@/components/AndroidTextEntry";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,6 +31,8 @@ type SharedSafeProps = {
   onEnter?: (value: string) => void;
   onCompositionStateChange?: (composing: boolean) => void;
   logName?: string;
+  modalTitle?: string;
+  modalLabel?: string;
 };
 
 type AndroidSafeInputProps = React.InputHTMLAttributes<HTMLInputElement> & SharedSafeProps;
@@ -45,6 +48,8 @@ export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeIn
       commitMode: _commitMode,
       onCompositionStateChange: _onCompositionStateChange,
       logName: _logName,
+      modalTitle,
+      modalLabel,
       className,
       ...props
     },
@@ -65,12 +70,16 @@ export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeIn
       : onKeyDown;
 
     return (
-      <input
+      <AndroidTextEntryInput
         {...props}
         ref={ref}
         className={cn(className)}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
+        onValueChange={onValueChange}
+        onEnter={onEnter}
+        modalTitle={modalTitle}
+        modalLabel={modalLabel}
       />
     );
   },
@@ -85,6 +94,8 @@ export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, Android
       commitMode: _commitMode,
       onCompositionStateChange: _onCompositionStateChange,
       logName: _logName,
+      modalTitle,
+      modalLabel,
       className,
       ...props
     },
@@ -98,11 +109,14 @@ export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, Android
       : onChange;
 
     return (
-      <textarea
+      <AndroidTextEntryTextarea
         {...props}
         ref={ref}
         className={cn(className)}
         onChange={handleChange}
+        onValueChange={onValueChange}
+        modalTitle={modalTitle}
+        modalLabel={modalLabel}
       />
     );
   },
