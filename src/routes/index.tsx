@@ -533,6 +533,28 @@ function HomeFull() {
         </Link>
       )}
 
+      {isAndroidApk && (
+        <Link
+          to={"/debug/native-input-min" as any}
+          style={{
+            display: "block",
+            margin: "12px",
+            padding: "20px",
+            background: "#1e3a8a",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #bfdbfe",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          NATIVE INPUT TEST
+        </Link>
+      )}
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
