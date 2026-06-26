@@ -181,7 +181,7 @@ public class MainActivity extends BridgeActivity {
             return;
         }
         trace("webview." + source,
-            + " id=" + System.identityHashCode(webView)
+              "id=" + System.identityHashCode(webView)
             + " url=" + webView.getUrl()
             + " hasFocus=" + webView.hasFocus()
             + " focusable=" + webView.isFocusable()
@@ -238,7 +238,7 @@ public class MainActivity extends BridgeActivity {
             + "function rect(el){try{if(!el||!el.getBoundingClientRect)return null;var r=el.getBoundingClientRect();return {x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)};}catch(_){return null;}}"
             + "function payload(name,e){return JSON.stringify({name:name,t:Math.round(performance.now()),route:location.pathname,target:tag(e&&e.target),active:tag(document.activeElement),length:len(e&&e.target),rect:rect(e&&e.target),hidden:document.hidden,hasFocus:document.hasFocus&&document.hasFocus()});}"
             + "function nativeLog(name,e){try{if(window.IrthNativeDiagnostics&&window.IrthNativeDiagnostics.logInputEvent){window.IrthNativeDiagnostics.logInputEvent(name,payload(name,e));}}catch(_){}}"
-            + "function log(name,e){nativeLog(name,e);try{console.info(p,name,{target:tag(e&&e.target),active:tag(document.activeElement),length:len(e&&e.target),rect:rect(e&&e.target),hidden:document.hidden,hasFocus:document.hasFocus&&document.hasFocus()});}catch(_){}}"
+            + "function log(name,e){nativeLog(name,e);try{console.info('IRTH_NATIVE_TRACE_JS',name,{target:tag(e&&e.target),active:tag(document.activeElement),length:len(e&&e.target),rect:rect(e&&e.target),hidden:document.hidden,hasFocus:document.hasFocus&&document.hasFocus()});}catch(_){}}"
             + "['visibilitychange','focus','blur'].forEach(function(n){window.addEventListener(n,function(e){log('window-'+n,e);},true);});"
             + "document.addEventListener('focusin',function(e){log('focusin',e);setTimeout(function(){log('focusin-stable',e);},250);},true);"
             + "['focusout','keydown','beforeinput','input','change','compositionstart','compositionend'].forEach(function(n){document.addEventListener(n,function(e){log(n,e);},true);});"

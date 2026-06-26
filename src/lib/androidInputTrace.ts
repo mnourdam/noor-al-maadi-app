@@ -15,6 +15,9 @@ declare global {
     __IRTH_INPUT_TRACE__?: TraceEntry[];
     __irthInputTraceInstalled?: boolean;
     __irthForceDumpInputTrace?: () => TraceEntry[];
+    IrthNativeDiagnostics?: {
+      logInputEvent?: (eventName: string, payload: string) => void;
+    };
   }
 }
 
@@ -91,6 +94,19 @@ function push(entry: TraceEntry) {
   if (arr.length > MAX_ENTRIES) arr.splice(0, arr.length - MAX_ENTRIES);
 }
 
+function nativeLog(kind: string, ev?: Event, data?: Record<string, unknown>) {
+  try {
+    window.IrthNativeDiagnostics?.logInputEvent?.(kind, JSON.stringify({
+      t: Math.round(performance.now()),
+      route: typeof location !== "undefined" ? location.pathname + location.hash : undefined,
+      target: ev ? describeTarget(ev.target) : undefined,
+      path: ev ? targetPath(ev) : undefined,
+      active: document.activeElement ? describeTarget(document.activeElement) : undefined,
+      data,
+    }));
+  } catch { /* native logging must never affect input */ }
+}
+
 function dumpTraceToConsoleAndStorage(reason: string): TraceEntry[] {
   const arr = window.__IRTH_INPUT_TRACE__ ?? [];
   const payload = JSON.stringify(arr, null, 2);
@@ -159,6 +175,9 @@ export function installAndroidInputTrace(): void {
   ];
   for (const name of evs) {
     document.addEventListener(name, (ev) => {
+      if (name === "focusin" || name === "beforeinput" || name === "keydown" || name === "input") {
+        nativeLog(name, ev);
+      }
       if (name === "focusin" || name === "beforeinput" || name === "keydown" || name === "input") {
         markInputSignal();
       }
