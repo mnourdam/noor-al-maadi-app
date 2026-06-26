@@ -6,6 +6,7 @@ import { FriendNotificationsPoller } from "./FriendNotificationsPoller";
 import { BackNavigationGuard } from "./BackNavigationGuard";
 import { AudioInitializer } from "./AudioInitializer";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { isSectionEnabled } from "@/lib/androidQuietMode";
 
 const tabs = [
   { to: "/", label: "المغامرة", icon: Compass },
