@@ -555,6 +555,36 @@ function HomeFull() {
         </Link>
       )}
 
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (window as any).Capacitor?.getPlatform?.() === "android" && (
+        <button
+          type="button"
+          onClick={() => {
+            const nativeBridge = (window as any).IrthNativeDiagnostics;
+            if (nativeBridge?.openStaticInputAssetTest) {
+              nativeBridge.openStaticInputAssetTest();
+            } else {
+              window.location.href = "/debug/native-input-min";
+            }
+          }}
+          style={{
+            display: "block",
+            width: "calc(100% - 24px)",
+            margin: "12px",
+            padding: "20px",
+            background: "#134e4a",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #99f6e4",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+          }}
+        >
+          STATIC WEBVIEW INPUT TEST
+        </button>
+      )}
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>Static Native Input Min</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #ffffff;
+        color: #111111;
+        font: 16px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        box-sizing: border-box;
+        min-height: 100vh;
+        padding: 24px 18px 48px;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: 24px;
+        line-height: 1.2;
+      }
+
+      label {
+        display: block;
+        margin: 18px 0 8px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      input,
+      textarea,
+      button {
+        box-sizing: border-box;
+        display: block;
+        width: 100%;
+        border: 1px solid #999999;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #111111;
+        font: 16px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        padding: 12px;
+      }
+
+      textarea {
+        min-height: 112px;
+        resize: vertical;
+      }
+
+      button {
+        margin-top: 22px;
+        background: #eeeeee;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Static Native Input Min</h1>
+
+      <label for="static-input">Plain input</label>
+      <input id="static-input" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" />
+
+      <label for="static-textarea">Plain textarea</label>
+      <textarea id="static-textarea" rows="4" autocomplete="off" autocapitalize="none" spellcheck="false"></textarea>
+
+      <button id="counter" type="button">Counter: 0</button>
+    </main>
+
+    <script>
+      (function () {
+        var count = 0;
+        var button = document.getElementById("counter");
+        button.addEventListener("click", function () {
+          count += 1;
+          button.textContent = "Counter: " + count;
+        });
+
+        console.info("IRTH_STATIC_NATIVE_INPUT_MIN_MOUNTED", {
+          href: location.href,
+          userAgent: navigator.userAgent
+        });
+
+        try {
+          if (window.IrthNativeDiagnostics && window.IrthNativeDiagnostics.logInputEvent) {
+            window.IrthNativeDiagnostics.logInputEvent(
+              "staticNativeInputMinMounted",
+              JSON.stringify({ href: location.href, ts: Date.now() })
+            );
+          }
+        } catch (_) {}
+      })();
+    </script>
+  </body>
+</html>
