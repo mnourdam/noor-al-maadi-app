@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion } from "lucide-react";
 import type { WhoAmIStage } from "@/lib/games/types";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
@@ -37,7 +37,7 @@ const ANDROID_AUTH_MIN_INPUT_STYLE = {
   filter: "none",
   backdropFilter: "none",
   WebkitBackdropFilter: "none",
-} satisfies React.CSSProperties;
+} satisfies CSSProperties;
 
 export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const androidNative = isAndroidNativeApp();

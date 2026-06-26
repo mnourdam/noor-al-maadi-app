@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 
 /**
  * Android input freeze fix — phase 1.
@@ -35,6 +36,30 @@ type SharedSafeProps = {
 type AndroidSafeInputProps = React.InputHTMLAttributes<HTMLInputElement> & SharedSafeProps;
 type AndroidSafeTextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & SharedSafeProps;
 
+const ANDROID_AUTH_MIN_INPUT_STYLE = {
+  display: "block",
+  width: "100%",
+  boxSizing: "border-box",
+  border: "1px solid #c9c9c9",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#111111",
+  font: "16px system-ui, sans-serif",
+  lineHeight: 1.4,
+  padding: "12px 14px",
+  outline: "none",
+  transform: "none",
+  filter: "none",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
+} satisfies React.CSSProperties;
+
+const ANDROID_AUTH_MIN_TEXTAREA_STYLE = {
+  ...ANDROID_AUTH_MIN_INPUT_STYLE,
+  minHeight: 120,
+  resize: "vertical",
+} satisfies React.CSSProperties;
+
 export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeInputProps>(
   (
     {
@@ -50,6 +75,32 @@ export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeIn
     },
     ref,
   ) => {
+    if (isAndroidNativeApp()) {
+      const {
+        value,
+        defaultValue,
+        style: _style,
+        onFocus: _onFocus,
+        onBlur: _onBlur,
+        onInput: _onInput,
+        onBeforeInput: _onBeforeInput,
+        onCompositionStart: _onCompositionStart,
+        onCompositionEnd: _onCompositionEnd,
+        ...plainProps
+      } = props;
+      return (
+        <input
+          {...plainProps}
+          ref={ref}
+          defaultValue={(defaultValue ?? value) as string | number | readonly string[] | undefined}
+          autoCorrect={plainProps.autoCorrect ?? "off"}
+          autoCapitalize={plainProps.autoCapitalize ?? "none"}
+          spellCheck={plainProps.spellCheck ?? false}
+          style={ANDROID_AUTH_MIN_INPUT_STYLE}
+        />
+      );
+    }
+
     const handleChange = onValueChange
       ? (event: React.ChangeEvent<HTMLInputElement>) => {
           onValueChange(event.currentTarget.value);
@@ -90,6 +141,32 @@ export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, Android
     },
     ref,
   ) => {
+    if (isAndroidNativeApp()) {
+      const {
+        value,
+        defaultValue,
+        style: _style,
+        onFocus: _onFocus,
+        onBlur: _onBlur,
+        onInput: _onInput,
+        onBeforeInput: _onBeforeInput,
+        onCompositionStart: _onCompositionStart,
+        onCompositionEnd: _onCompositionEnd,
+        ...plainProps
+      } = props;
+      return (
+        <textarea
+          {...plainProps}
+          ref={ref}
+          defaultValue={(defaultValue ?? value) as string | number | readonly string[] | undefined}
+          autoCorrect={plainProps.autoCorrect ?? "off"}
+          autoCapitalize={plainProps.autoCapitalize ?? "none"}
+          spellCheck={plainProps.spellCheck ?? false}
+          style={ANDROID_AUTH_MIN_TEXTAREA_STYLE}
+        />
+      );
+    }
+
     const handleChange = onValueChange
       ? (event: React.ChangeEvent<HTMLTextAreaElement>) => {
           onValueChange(event.currentTarget.value);

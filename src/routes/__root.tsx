@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -19,9 +20,10 @@ import { AchievementWatcher } from "../components/AchievementWatcher";
 import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
 import { AndroidBackHandler } from "../components/AndroidBackHandler";
-import { androidMark, isAndroidUltraStableMode } from "../lib/androidFreezeDiagnostics";
+import { androidMark, isAndroidNativeApp, isAndroidUltraStableMode } from "../lib/androidFreezeDiagnostics";
 import { isSectionEnabled, isAndroidQuietActive } from "../lib/androidQuietMode";
 import { AppShell } from "../components/AppShell";
+import { AndroidAuthMinTest } from "../components/AndroidAuthMinTest";
 
 function NotFoundComponent() {
   return (
@@ -191,7 +193,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const androidStable = isAndroidUltraStableMode();
+  const androidAuthRoute = isAndroidNativeApp() && (pathname === "/auth" || pathname.endsWith("/auth"));
   const capacitorMinimalDiagnostics =
     typeof window !== "undefined" &&
     Boolean((window as unknown as { __irthCapacitorMinimalMode?: boolean }).__irthCapacitorMinimalMode);
@@ -201,6 +205,11 @@ function RootComponent() {
     try { document.getElementById("irth-boot-splash")?.remove(); } catch { /* noop */ }
     // Apply Android/WebView/reduced-motion perf-mode class on <html>.
     import("../lib/perf-mode").then((m) => m.applyPerfMode()).catch(() => {});
+
+    if (androidAuthRoute) {
+      console.warn("[android:auth-min] root background work disabled");
+      return;
+    }
 
     if (capacitorMinimalDiagnostics) {
       console.warn("[android:cap-min] root background work disabled");
@@ -294,7 +303,11 @@ function RootComponent() {
       if (onVisible) document.removeEventListener("visibilitychange", onVisible);
     };
 
-  }, [androidStable, capacitorMinimalDiagnostics]);
+  }, [androidStable, capacitorMinimalDiagnostics, androidAuthRoute]);
+
+  if (androidAuthRoute) {
+    return <AndroidAuthMinTest />;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -574,32 +574,50 @@ html.perf-lite .perf-list > * {
   contain-intrinsic-size: 96px;
 }
 
-/* Android WebView text-input safety: targeted only while native IME is active. */
-html.is-android body {
-  background-attachment: scroll;
+/* Android emergency input quarantine.
+   Mirrors the proven /android-auth-min runtime: while in the APK, remove every
+   layout/compositing feature that can be invalidated by IME focus. This is
+   intentionally broader than AndroidSafeInput because the remaining freeze was
+   caused by ancestors/providers/CSS, not the input element itself. */
+html.is-android,
+html.is-android body,
+html.is-android #root {
+  min-height: 100% !important;
+  overflow: auto !important;
+  overscroll-behavior: auto !important;
+  touch-action: manipulation !important;
+  background-attachment: scroll !important;
+}
+
+html.is-android *,
+html.is-android *::before,
+html.is-android *::after {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  contain: none !important;
+  content-visibility: visible !important;
+  will-change: auto !important;
 }
 
 html.is-android input,
 html.is-android textarea,
+html.is-android [contenteditable="true"],
 html.is-android [data-android-safe-input="true"] {
-  -webkit-user-select: text;
-  user-select: text;
-  caret-color: var(--color-gold);
-  touch-action: manipulation;
-  transform: none !important;
-  will-change: auto !important;
-  content-visibility: visible !important;
-  contain: none !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-text-size-adjust: 100% !important;
+  caret-color: #111 !important;
+  touch-action: manipulation !important;
   -webkit-tap-highlight-color: transparent;
 }
 
-html.is-android input,
-html.is-android textarea {
-  animation: none !important;
-  transition: none !important;
-  filter: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+html.is-android *:focus,
+html.is-android *:focus-within {
+  outline-offset: 0;
 }
 
 /* ============================================================
