@@ -16,12 +16,9 @@ import android.view.ViewTreeObserver;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebView;
-import androidx.webkit.WebViewCompat;
-import androidx.webkit.WebViewFeature;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.WebViewListener;
 import java.util.ArrayList;
-import java.util.Collections;
 
 /**
  * DIAGNOSTIC BUILD:
@@ -201,21 +198,8 @@ public class MainActivity extends BridgeActivity {
             traceWarn("ab.nativeBridgeFailed", String.valueOf(ex.getMessage()));
         }
 
-        try {
-            if (startupABFlags == null) startupABFlags = AndroidABFlags.read(this, getIntent());
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-                WebViewCompat.addDocumentStartJavaScript(
-                    webView,
-                    AndroidABFlags.bootstrapScript(startupABFlags),
-                    Collections.singleton("*")
-                );
-                trace("ab.documentStartInstalled", AndroidABFlags.simpleLine(startupABFlags));
-            } else {
-                traceWarn("ab.documentStartUnsupported", AndroidABFlags.simpleLine(startupABFlags));
-            }
-        } catch (Exception ex) {
-            traceWarn("ab.documentStartFailed", String.valueOf(ex.getMessage()));
-        }
+        if (startupABFlags == null) startupABFlags = AndroidABFlags.read(this, getIntent());
+        trace("ab.preloadFlagsReady", AndroidABFlags.simpleLine(startupABFlags));
     }
 
     private class NativeDiagnosticsBridge {
