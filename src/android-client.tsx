@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { AndroidAuthMinTest, isAndroidAuthMinPath } from "./components/AndroidAuthMinTest";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
-import { AndroidTextEntryPage, isAndroidTextEntryPath } from "./components/AndroidTextEntryPage";
+
 
 // Surface uncaught errors to Logcat via Capacitor's Console plugin so blank /
 // error-boundary screens are diagnosable on real devices.
