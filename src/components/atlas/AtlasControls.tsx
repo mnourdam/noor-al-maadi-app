@@ -5,6 +5,7 @@
 // summary + expand arrow); full controls revealed when expanded.
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, RotateCcw, Search } from "lucide-react";
+import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import {
   KIND_LABEL_AR,
   type AtlasEntityKind,
@@ -140,9 +141,14 @@ export function AtlasControls({
         <div className="flex items-center gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-amber-400/30 bg-slate-950/40 px-3 py-1.5 text-amber-50">
             <Search className="size-4 shrink-0 opacity-60" />
-            <input
+            <AndroidSafeInput
               value={search}
-              onChange={(e) => onSearch(e.target.value)}
+              onValueChange={onSearch}
+              commitMode="blur"
+              onEnter={onSearch}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder="ابحث في الأطلس..."
               className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-amber-200/40"
             />

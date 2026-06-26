@@ -137,6 +137,7 @@ export function CrosswordRenderer({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, k: string) => {
+    if (androidNative && (e.key === "Backspace" || e.key.length === 1 || e.key === "Unidentified")) return;
     if (activeClue === null) return;
     const clue = stage.clues[activeClue];
     if (e.key === "Backspace") {
@@ -171,9 +172,19 @@ export function CrosswordRenderer({
   const totalCells = grid.size;
   const allFilled = filledCells >= totalCells;
 
+  const collectEntries = () => {
+    const latest = { ...entries };
+    for (const [k, el] of Object.entries(inputsRef.current)) {
+      if (el) latest[k] = (el.value || "").slice(-1);
+    }
+    return latest;
+  };
+
   const check = () => {
+    const latestEntries = collectEntries();
+    setEntries(latestEntries);
     let correct = 0;
-    grid.forEach((info, k) => { if ((entries[k] ?? "") === info.expected) correct++; });
+    grid.forEach((info, k) => { if ((latestEntries[k] ?? "") === info.expected) correct++; });
     const allRight = correct === totalCells;
     if (allRight && !done) {
       setDone(true);
@@ -325,6 +336,7 @@ export function CrosswordRenderer({
                   maxLength={1}
                   value={value}
                   onValueChange={(next) => setCell(k, next)}
+                  commitMode="blur"
                   onKeyDown={(e) => onKeyDown(e, k)}
                   onFocus={() => { if (activeCell !== k) setActiveCell(k); }}
                   inputMode="text"
@@ -362,7 +374,7 @@ export function CrosswordRenderer({
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           onClick={check}
-          disabled={done || !allFilled}
+          disabled={done}
           className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
         >
           {done ? <><Sparkles className="h-4 w-4" /> اكتمل المخطوط</> : <><Check className="h-4 w-4" /> تحقق</>}

@@ -44,6 +44,21 @@ function setAndroidInputActive(active: boolean) {
   }, 0);
 }
 
+function markInputAncestors(el: HTMLElement | null, active: boolean) {
+  if (typeof document === "undefined" || !isAndroidNativeApp()) return;
+  document.querySelectorAll(".android-safe-input-host").forEach((node) => {
+    node.classList.remove("android-safe-input-host");
+  });
+  if (!active || !el) return;
+  let current = el.parentElement;
+  let depth = 0;
+  while (current && current !== document.body && depth < 6) {
+    current.classList.add("android-safe-input-host");
+    current = current.parentElement;
+    depth += 1;
+  }
+}
+
 function logKeyboardState(name: string | undefined) {
   if (!isAndroidNativeApp() || typeof window === "undefined") return;
   const vv = window.visualViewport;
@@ -95,7 +110,7 @@ export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeIn
   ) => {
     const android = isAndroidNativeApp();
     const androidTextMode = android && isTextInputType(props.type);
-    const effectiveCommitMode: CommitMode = commitMode ?? (androidTextMode ? "blur" : "change");
+    const effectiveCommitMode: CommitMode = commitMode ?? (androidTextMode && onValueChange ? "blur" : "change");
     const innerRef = React.useRef<HTMLInputElement | null>(null);
     const composingRef = React.useRef(false);
     const firstKeyRef = React.useRef(true);
@@ -131,6 +146,7 @@ export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeIn
       firstKeyRef.current = true;
       logTextInput(logName, "focus", { length: event.currentTarget.value.length });
       setAndroidInputActive(true);
+      markInputAncestors(event.currentTarget, true);
       window.setTimeout(() => logKeyboardState(logName), 180);
       onFocus?.(event);
     };
@@ -139,6 +155,7 @@ export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeIn
       const next = event.currentTarget.value;
       logTextInput(logName, "blur", { length: next.length });
       setAndroidInputActive(false);
+      markInputAncestors(event.currentTarget, false);
       if (androidTextMode && effectiveCommitMode !== "change") commit(next);
       onBlur?.(event);
     };
@@ -211,7 +228,7 @@ export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, Android
     forwardedRef,
   ) => {
     const android = isAndroidNativeApp();
-    const effectiveCommitMode: CommitMode = commitMode ?? (android ? "blur" : "change");
+    const effectiveCommitMode: CommitMode = commitMode ?? (android && onValueChange ? "blur" : "change");
     const innerRef = React.useRef<HTMLTextAreaElement | null>(null);
     const composingRef = React.useRef(false);
     const firstKeyRef = React.useRef(true);
@@ -247,6 +264,7 @@ export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, Android
       firstKeyRef.current = true;
       logTextInput(logName, "focus", { length: event.currentTarget.value.length });
       setAndroidInputActive(true);
+      markInputAncestors(event.currentTarget, true);
       window.setTimeout(() => logKeyboardState(logName), 180);
       onFocus?.(event);
     };
@@ -255,6 +273,7 @@ export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, Android
       const next = event.currentTarget.value;
       logTextInput(logName, "blur", { length: next.length });
       setAndroidInputActive(false);
+      markInputAncestors(event.currentTarget, false);
       if (android && effectiveCommitMode !== "change") commit(next);
       onBlur?.(event);
     };

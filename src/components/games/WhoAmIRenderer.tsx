@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion } from "lucide-react";
 import type { WhoAmIStage } from "@/lib/games/types";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
@@ -23,6 +23,7 @@ const POTENTIAL_BY_REVEAL = [100, 70, 50] as const;
 export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const [revealed, setRevealed] = useState(1);
   const [guess, setGuess] = useState("");
+  const guessRef = useRef<HTMLInputElement | null>(null);
   const [done, setDone] = useState(false);
   const [wrong, setWrong] = useState(false);
 
@@ -31,8 +32,10 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
   const accepted = [stage.answer, ...(stage.acceptable ?? [])].map(normalize);
   const potential = POTENTIAL_BY_REVEAL[Math.min(revealed, 3) - 1];
 
-  const submit = () => {
-    const g = normalize(guess);
+  const submit = (raw?: string) => {
+    const current = raw ?? guessRef.current?.value ?? guess;
+    setGuess(current);
+    const g = normalize(current);
     if (!g) return;
     if (accepted.some((a) => a === g || a.includes(g) || g.includes(a))) {
       setDone(true);
@@ -113,10 +116,12 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <AndroidSafeInput
+          ref={guessRef}
           dir="rtl"
           value={guess}
           onValueChange={setGuess}
-          onEnter={submit}
+          commitMode="blur"
+          onEnter={(next) => submit(next)}
           disabled={done}
           autoComplete="off"
           autoCorrect="off"
@@ -127,8 +132,8 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
           } ${done ? "border-emerald-500/40" : ""}`}
         />
         <button
-          onClick={submit}
-          disabled={done || guess.trim().length === 0}
+          onClick={() => submit()}
+          disabled={done}
           className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-6 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50 sm:min-w-[140px]"
         >
           {done ? <><Sparkles className="h-4 w-4" /> صحيح</> : <><Check className="h-4 w-4" /> تحقق</>}

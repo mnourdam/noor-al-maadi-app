@@ -1,6 +1,6 @@
 // ============================================================
 
-import { androidMark, isAndroidUltraStableMode } from "./androidFreezeDiagnostics";
+import { androidMark, isAndroidNativeApp, isAndroidUltraStableMode } from "./androidFreezeDiagnostics";
 // audioManager.ts — Global audio singleton for Irth
 // ------------------------------------------------------------
 // - Subtle background ambience (looping)
@@ -131,7 +131,7 @@ function bindFirstInteraction() {
     window.removeEventListener("touchstart", onFirst);
   };
   window.addEventListener("pointerdown", onFirst, { once: true, passive: true });
-  window.addEventListener("keydown",     onFirst, { once: true });
+    if (!isAndroidNativeApp()) window.addEventListener("keydown", onFirst, { once: true });
   window.addEventListener("touchstart",  onFirst, { once: true, passive: true });
 }
 

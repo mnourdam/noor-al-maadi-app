@@ -388,60 +388,9 @@ function installInputViewportDiagnostics() {
   const state = getState();
   if (!state) return;
 
-  // Focused input-freeze instrumentation. Logs prefixed with
-  //   [android:focus] / [android:keyboard] / [android:input-freeze]
-  // and only ever attached when debug mode is on.
-  let focusStartedAt = 0;
-  let pendingFirstKey = false;
-  const isField = (el: EventTarget | null): el is HTMLElement => {
-    if (!el || !(el as HTMLElement).tagName) return false;
-    const tag = (el as HTMLElement).tagName.toLowerCase();
-    return tag === "input" || tag === "textarea" || (el as HTMLElement).isContentEditable;
-  };
-
-  const onFocusIn = (event: Event) => {
-    if (!isField(event.target)) return;
-    focusStartedAt = now();
-    pendingFirstKey = true;
-    state.lastFocusAt = Date.now();
-    state.lastFocusTarget = activeElementSummary();
-    // eslint-disable-next-line no-console
-    console.warn("[android:focus] start", { target: state.lastFocusTarget });
-  };
-  const onFocusOut = (event: Event) => {
-    if (!isField(event.target)) return;
-    const duration = Math.round(now() - focusStartedAt);
-    // eslint-disable-next-line no-console
-    console.warn("[android:focus] end", { duration, target: activeElementSummary() });
-  };
-  window.addEventListener("focusin", onFocusIn, { capture: true, passive: true });
-  window.addEventListener("focusout", onFocusOut, { capture: true, passive: true });
-
-  let lastKeyAt = 0;
-  const onBeforeInput = (event: Event) => {
-    if (!isField(event.target)) return;
-    lastKeyAt = now();
-    if (pendingFirstKey) {
-      pendingFirstKey = false;
-      // eslint-disable-next-line no-console
-      console.warn("[android:keyboard] first-keystroke", {
-        sinceFocus: Math.round(lastKeyAt - focusStartedAt),
-      });
-    }
-  };
-  const onInput = (event: Event) => {
-    if (!isField(event.target)) return;
-    const duration = Math.round(now() - lastKeyAt);
-    state.lastInputAt = Date.now();
-    state.lastInputType = "input";
-    if (duration > 50) {
-      // eslint-disable-next-line no-console
-      console.warn("[android:input-freeze] onChange slow", { duration });
-    }
-    updateOverlay();
-  };
-  window.addEventListener("beforeinput", onBeforeInput, { capture: true, passive: true });
-  window.addEventListener("input", onInput, { capture: true, passive: true });
+  // Do not attach global focus/key/input listeners on Android WebView.
+  // Text diagnostics are emitted only by AndroidSafeInput/AndroidSafeTextarea
+  // on the actual focused element, which avoids capture-phase IME interference.
 
   const viewportEvents = ["resize", "orientationchange", "keyboardWillShow", "keyboardDidShow", "keyboardWillHide", "keyboardDidHide"] as const;
   const onViewport = (event: Event) => {
