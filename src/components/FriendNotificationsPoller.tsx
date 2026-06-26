@@ -4,6 +4,7 @@ import { useProfile } from "@/lib/profile";
 import { listFriendships } from "@/lib/social";
 import { DEFAULT_NOTIFICATION_PREFS, INBOX_KEY, deliverNotificationWithStatus, getInbox, unreadCount } from "@/lib/notifications";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 /**
  * Quietly polls the friendships table every 60s while signed in and emits
@@ -254,6 +255,7 @@ export function FriendNotificationsPoller() {
   const { user } = useAccount();
   const { profile } = useProfile();
   const androidStable = isAndroidUltraStableMode();
+  const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
 
   useEffect(() => {
     setMounted(true);
@@ -278,13 +280,13 @@ export function FriendNotificationsPoller() {
     tick();
     const id = setInterval(tick, 60_000);
     const onFocus = () => tick();
-    window.addEventListener("focus", onFocus);
+    if (!disableGlobalFocusBlur) window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
       clearInterval(id);
-      window.removeEventListener("focus", onFocus);
+      if (!disableGlobalFocusBlur) window.removeEventListener("focus", onFocus);
     };
-  }, [user, profile.settings?.notificationPrefs, androidStable]);
+  }, [user, profile.settings?.notificationPrefs, androidStable, disableGlobalFocusBlur]);
 
   return null;
 }

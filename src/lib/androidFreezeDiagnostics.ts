@@ -387,12 +387,17 @@ function installRouteDiagnostics() {
 function installInputViewportDiagnostics() {
   const state = getState();
   if (!state) return;
+  const disableKeyboardViewportResize = (() => {
+    try { return !!(window as DiagnosticWindow & { __IRTH_ANDROID_FOCUS_AB__?: { disableKeyboardViewportResize?: boolean } }).__IRTH_ANDROID_FOCUS_AB__?.disableKeyboardViewportResize; }
+    catch { return false; }
+  })();
 
   // Do not attach global focus/key/input listeners on Android WebView.
   // Text diagnostics are emitted only by AndroidSafeInput/AndroidSafeTextarea
   // on the actual focused element, which avoids capture-phase IME interference.
 
   const viewportEvents = ["resize", "orientationchange", "keyboardWillShow", "keyboardDidShow", "keyboardWillHide", "keyboardDidHide"] as const;
+  if (disableKeyboardViewportResize) return;
   const onViewport = (event: Event) => {
     state.lastViewportAt = Date.now();
     state.lastViewportEvent = event.type;
@@ -459,8 +464,14 @@ export function installAndroidFreezeDiagnostics() {
   if (!isAndroidNativeApp()) return false;
 
   const html = document.documentElement;
+  const disableFocusVisualToggles = (() => {
+    try { return !!(window as DiagnosticWindow & { __IRTH_ANDROID_FOCUS_AB__?: { disableFocusVisualToggles?: boolean } }).__IRTH_ANDROID_FOCUS_AB__?.disableFocusVisualToggles; }
+    catch { return false; }
+  })();
   // Safe, lightweight perf hints — keep the Irth identity intact.
-  html.classList.add("is-android", "is-capacitor", "perf-lite", "perf-no-motion");
+  if (!disableFocusVisualToggles) {
+    html.classList.add("is-android", "is-capacitor", "perf-lite", "perf-no-motion");
+  }
 
   if (!isAndroidDebugMode()) return false;
 

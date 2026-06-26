@@ -5,8 +5,13 @@ import { AndroidCampaignInputMinTest, isAndroidCampaignInputMinPath } from "./co
 import { InputTraceDebugView } from "./components/InputTraceDebugView";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
+import { installAndroidFocusABSwitches } from "./lib/androidFocusAB";
 import { hasStoredInputFreezeTrace, installAndroidInputTrace } from "./lib/androidInputTrace";
 import { warmupAndroidInput } from "./lib/androidInputWarmup";
+
+// Install the Android focus/keyboard A/B switch before any app module can
+// register global focus, selection, viewport, or scroll handlers.
+installAndroidFocusABSwitches();
 
 // Install input/IME/frame tracing FIRST so it captures the very first
 // focus/keydown that may freeze the WebView. Pure instrumentation; no fixes.
@@ -131,7 +136,8 @@ async function bootMainApp(root: HTMLElement) {
   applyPerfMode();
   // Mark Android so route/component code can branch on it cheaply.
   try {
-    if ((window as any).Capacitor?.isNativePlatform?.()) {
+    const disableFocusVisualToggles = !!(window as any).__IRTH_ANDROID_FOCUS_AB__?.disableFocusVisualToggles;
+    if (!disableFocusVisualToggles && (window as any).Capacitor?.isNativePlatform?.()) {
       document.documentElement.classList.add("is-android", "is-capacitor");
     }
   } catch { /* ignore */ }

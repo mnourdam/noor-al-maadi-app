@@ -60,6 +60,7 @@ import { listCampaigns } from "@/lib/campaignStorage";
 
 import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
 import { classifyArtifact, fetchCampaignArtifactRefSet } from "@/lib/museumVisibility";
+import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 export const Route = createFileRoute("/collection")({
   head: () => ({ meta: [{ title: "المتحف · أرشيفك التاريخي" }] }),
@@ -102,6 +103,7 @@ const SECTIONS: SectionDef[] = [
 function useUserCollectionByType() {
   const [rows, setRows] = useState<Array<{ type: string; slug: string; unlockedAt: string | null }>>([]);
   const [refreshTick, setRefreshTick] = useState(0);
+  const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -119,9 +121,9 @@ function useUserCollectionByType() {
       } catch { /* noop */ }
     })();
     const bump = () => setRefreshTick(t => t + 1);
-    window.addEventListener("focus", bump);
-    return () => { cancelled = true; window.removeEventListener("focus", bump); };
-  }, [refreshTick]);
+    if (!disableGlobalFocusBlur) window.addEventListener("focus", bump);
+    return () => { cancelled = true; if (!disableGlobalFocusBlur) window.removeEventListener("focus", bump); };
+  }, [refreshTick, disableGlobalFocusBlur]);
   const byType = useMemo(() => {
     const m = new Map<string, Set<string>>();
     for (const r of rows) {
@@ -234,16 +236,17 @@ function CollectionPage() {
 
   // Re-pull cloud data once on mount so newly unlocked items show up.
   const [refreshTick, setRefreshTick] = useState(0);
+  const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
   useEffect(() => {
     pullAllFromCloud().then(() => setRefreshTick(t => t + 1)).catch(() => {});
     const bump = () => setRefreshTick(t => t + 1);
-    window.addEventListener("focus", bump);
+    if (!disableGlobalFocusBlur) window.addEventListener("focus", bump);
     window.addEventListener("storage", bump);
     return () => {
-      window.removeEventListener("focus", bump);
+      if (!disableGlobalFocusBlur) window.removeEventListener("focus", bump);
       window.removeEventListener("storage", bump);
     };
-  }, []);
+  }, [disableGlobalFocusBlur]);
 
   // ── Supabase entity lists (one per museum section) ──────────
   const supFigures   = useEncyclopediaSupabaseList("figure");

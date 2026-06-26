@@ -20,6 +20,7 @@ import {
 import { getActivePosition } from "@/lib/campaignLedger";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
+import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 export const Route = createFileRoute("/campaigns/imported/$id/")({
   head: () => ({ meta: [{ title: "حملة مستوردة — إرث" }] }),
@@ -51,11 +52,12 @@ function ImportedCampaignOverview() {
 
   // Progress tick — re-read from localStorage when window regains focus.
   const [tick, setTick] = useState(0);
+  const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
   useEffect(() => {
     const onFocus = () => setTick(t => t + 1);
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, []);
+    if (!disableGlobalFocusBlur) window.addEventListener("focus", onFocus);
+    return () => { if (!disableGlobalFocusBlur) window.removeEventListener("focus", onFocus); };
+  }, [disableGlobalFocusBlur]);
 
   const progress = useMemo(
     () => campaign ? getCampaignProgress(campaign.id) : null,

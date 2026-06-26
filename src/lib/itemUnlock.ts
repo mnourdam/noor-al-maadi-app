@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/lib/profile";
 import { getUnlockSourcesMap } from "@/lib/importedUnlocks";
+import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 import { listCampaigns } from "@/lib/campaignStorage";
 
@@ -49,6 +50,7 @@ export function useEntityUnlockState(
 ): UnlockState {
   const { profile } = useProfile();
   const [tick, setTick] = useState(0);
+  const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
   const [supaUnlocks, setSupaUnlocks] = useState<{
     byType: Map<string, Set<string>>;
     allSlugs: Set<string>;
@@ -93,9 +95,9 @@ export function useEntityUnlockState(
       }
     })();
     const bump = () => setTick((t) => t + 1);
-    window.addEventListener("focus", bump);
-    return () => { cancelled = true; window.removeEventListener("focus", bump); };
-  }, [tick, slug, type]);
+    if (!disableGlobalFocusBlur) window.addEventListener("focus", bump);
+    return () => { cancelled = true; if (!disableGlobalFocusBlur) window.removeEventListener("focus", bump); };
+  }, [tick, slug, type, disableGlobalFocusBlur]);
 
   // (registry localStorage unlocks are no longer an unlock authority)
   const registrySources = useMemo(() => getUnlockSourcesMap(), [tick]);

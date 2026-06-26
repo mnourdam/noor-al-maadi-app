@@ -6,6 +6,7 @@ import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
 import { isAndroidNativeApp, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 
 interface Props {
@@ -95,6 +96,7 @@ export function CrosswordRenderer({
   const [feedback, setFeedback] = useState<null | { kind: "ok" | "err"; msg: string }>(null);
   const inputsRef = useRef<Record<string, HTMLInputElement | null>>({});
   const clueInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
 
   useEffect(() => {
     setEntries({}); setDone(false); setActiveClue(null); setActiveCell(null); setFeedback(null);
@@ -102,6 +104,10 @@ export function CrosswordRenderer({
   }, [stage]);
 
   const focusCell = useCallback((k: string) => {
+    if (disableCampaignFocusLogic) {
+      setActiveCell(k);
+      return;
+    }
     if (androidStable) {
       setActiveCell(k);
       return;
@@ -112,7 +118,7 @@ export function CrosswordRenderer({
       if (!androidNative) el.select();
     }
     setActiveCell(k);
-  }, [androidStable, androidNative]);
+  }, [androidStable, androidNative, disableCampaignFocusLogic]);
 
   const focusClue = useCallback((clueIdx: number) => {
     setActiveClue(clueIdx);
@@ -137,7 +143,7 @@ export function CrosswordRenderer({
     setFeedback(null);
     if (v) {
       sfx("ink_write");
-      if (!androidStable && !androidNative && activeClue !== null) advanceWithin(activeClue, k, 1);
+      if (!disableCampaignFocusLogic && !androidStable && !androidNative && activeClue !== null) advanceWithin(activeClue, k, 1);
     }
   };
 

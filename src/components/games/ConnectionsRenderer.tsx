@@ -4,6 +4,7 @@ import type { ConnectionsStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
 import { isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
+import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 interface Props {
   stage: ConnectionsStage;
@@ -25,6 +26,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const androidStable = isAndroidUltraStableMode();
+  const disableKeyboardViewportResize = isAndroidFocusABDisabled("disableKeyboardViewportResize");
   // pairIndex (i) is the source of truth for matching. Visual order on each side may differ.
   const lefts = useMemo(() => shuffle(stage.pairs.map((p, i) => ({ i, text: p.left }))), [stage]);
   const rights = useMemo(() => shuffle(stage.pairs.map((p, i) => ({ i, text: p.right }))), [stage]);
@@ -129,11 +131,11 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
 
   useLayoutEffect(() => {
     recomputeLines();
-    if (androidStable) return;
+    if (androidStable || disableKeyboardViewportResize) return;
     const onResize = () => recomputeLines();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [matched, wrongFlash, lefts, rights, androidStable]); // eslint-disable-line
+  }, [matched, wrongFlash, lefts, rights, androidStable, disableKeyboardViewportResize]); // eslint-disable-line
 
   return (
     <div className="relative irth-title-card overflow-hidden p-5">

@@ -143,6 +143,7 @@ export function installAndroidInputTrace(): void {
   if (window.__irthInputTraceInstalled) return;
   window.__irthInputTraceInstalled = true;
   window.__IRTH_INPUT_TRACE__ = window.__IRTH_INPUT_TRACE__ ?? [];
+  const abFlags = (window as any).__IRTH_ANDROID_FOCUS_AB__ ?? null;
 
   const opts: AddEventListenerOptions = { capture: true, passive: true };
   let lastInputSignalAt = -Infinity;
@@ -166,7 +167,7 @@ export function installAndroidInputTrace(): void {
   };
 
   const evs = [
-    "focusin", "focusout",
+    ...(abFlags?.disableGlobalFocusBlur ? [] : ["focusin", "focusout"]),
     "beforeinput", "input",
     "keydown", "keyup",
     "compositionstart", "compositionupdate", "compositionend",
@@ -185,13 +186,15 @@ export function installAndroidInputTrace(): void {
     }, opts);
   }
 
-  document.addEventListener("selectionchange", () => {
-    const a = document.activeElement;
-    log("selectionchange", undefined, {
-      activeTag: a?.tagName,
-      activeId: (a as HTMLElement)?.id,
-    });
-  }, { passive: true });
+  if (!abFlags?.disableSelectionChange) {
+    document.addEventListener("selectionchange", () => {
+      const a = document.activeElement;
+      log("selectionchange", undefined, {
+        activeTag: a?.tagName,
+        activeId: (a as HTMLElement)?.id,
+      });
+    }, { passive: true });
+  }
 
   // Long Task observer
   try {
@@ -229,6 +232,7 @@ export function installAndroidInputTrace(): void {
   log("trace-installed", undefined, {
     ua: navigator.userAgent,
     dpr: window.devicePixelRatio,
+    androidFocusAB: abFlags,
   });
 
   // Console helpers
