@@ -49,7 +49,7 @@ if (isAndroidReactMinPath()) {
   // eslint-disable-next-line no-console
   console.info("[android-react-min] minimal React entry mounted", { path: window.location.pathname });
   createRoot(rootElement).render(<AndroidReactMinTest />);
-} else if (isAndroidAuthMinPath() || isAndroidProductionAuthPath()) {
+} else if (isAndroidAuthMinPath()) {
   try {
     document.documentElement.classList.remove("irth-booting");
     document.getElementById("irth-boot-splash")?.remove();
