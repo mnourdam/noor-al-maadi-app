@@ -4,7 +4,7 @@ import { Mail, Lock, UserRound, ChevronLeft, Gift, Eye, EyeOff } from "lucide-re
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
-import { recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
@@ -141,10 +141,14 @@ function AuthPage() {
               <Field icon={<UserRound className="size-4" />} label="اسم المستخدم">
                 <input
                   value={username}
-                  onChange={(e) => { recordAndroidAction("input:onChange:auth.username"); setUsername(e.target.value); }}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
                   minLength={3}
                   maxLength={30}
+                  autoComplete="username"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   placeholder="مثال: صلاح_الدين"
                 />
@@ -154,8 +158,13 @@ function AuthPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => { recordAndroidAction("input:onChange:auth.email"); setEmail(e.target.value); }}
+                onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                inputMode="email"
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 placeholder="you@example.com"
               />
@@ -164,9 +173,13 @@ function AuthPage() {
               <input
                 type={showPwd ? "text" : "password"}
                 value={password}
-                onChange={(e) => { recordAndroidAction("input:onChange:auth.password"); setPassword(e.target.value); }}
+                onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 placeholder="6 أحرف على الأقل"
               />
@@ -183,9 +196,13 @@ function AuthPage() {
               <Field icon={<Gift className="size-4" />} label="رمز الإحالة (اختياري)">
                 <input
                   value={referralCode}
-                  onChange={(e) => { recordAndroidAction("input:onChange:auth.referral"); setReferralCode(e.target.value.replace(/\s+/g, "").toUpperCase()); }}
-                  onBlur={(e) => setReferralCode(e.target.value.trim().toUpperCase())}
+                  onChange={(e) => setReferralCode(e.target.value)}
+                  onBlur={(e) => setReferralCode(e.target.value.replace(/\s+/g, "").toUpperCase())}
                   maxLength={20}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
                   className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   placeholder="IRTH-XXXXXX"
                 />

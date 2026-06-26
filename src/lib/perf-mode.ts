@@ -33,7 +33,10 @@ export function applyPerfMode() {
     html.classList.toggle("perf-lite", !!lite);
     if (reduceMotion) html.classList.add("perf-no-motion");
     if (isNativeAndroid) {
-      html.classList.add("is-android", "is-capacitor", "android-ultra-stable", "perf-lite", "perf-no-motion");
+      // Safe perf hints only — the degraded "android-ultra-stable" class is
+      // applied exclusively when the diagnostic flag is enabled, so the
+      // production APK keeps the full Irth visual identity.
+      html.classList.add("is-android", "is-capacitor", "perf-lite", "perf-no-motion");
     }
   } catch {
     // never throw from a perf hint
