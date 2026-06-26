@@ -64,6 +64,19 @@
       // make sure stray errors never bubble up and block React mount.
       (function () {
         try {
+          if (window.IrthNativeDiagnostics && window.IrthNativeDiagnostics.getFocusABFlagsJson) {
+            var abRaw = window.IrthNativeDiagnostics.getFocusABFlagsJson();
+            var abFlags = JSON.parse(abRaw || "{}");
+            var abSource = window.IrthNativeDiagnostics.getFocusABFlagsSource ? window.IrthNativeDiagnostics.getFocusABFlagsSource() : "native";
+            window.__IRTH_ANDROID_NATIVE_AB_FLAGS__ = abFlags;
+            window.__IRTH_ANDROID_NATIVE_AB_SOURCE__ = abSource;
+            try { window.localStorage.setItem("irth:android-focus-ab-native", JSON.stringify(abFlags)); } catch (_) {}
+            try { window.localStorage.setItem("irth:android-focus-ab-native-source", abSource); } catch (_) {}
+            var abLine = window.IrthNativeDiagnostics.getFocusABFlagsLine && window.IrthNativeDiagnostics.getFocusABFlagsLine();
+            if (abLine) console.info("IRTH_AB_FLAGS " + abLine);
+          }
+        } catch (_) {}
+        try {
           if (window.location.pathname === "/android-input-test" || window.location.pathname.endsWith("/android-input-test")) {
             document.documentElement.classList.add("android-input-test-boot");
             window.__irthAndroidInputTest = true;

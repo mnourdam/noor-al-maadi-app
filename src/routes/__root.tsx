@@ -22,7 +22,6 @@ import { AndroidBackHandler } from "../components/AndroidBackHandler";
 import { androidMark, isAndroidUltraStableMode } from "../lib/androidFreezeDiagnostics";
 import { isSectionEnabled, isAndroidQuietActive } from "../lib/androidQuietMode";
 import { AppShell } from "../components/AppShell";
-import { AndroidDebugFab } from "../components/AndroidDebugFab";
 
 function NotFoundComponent() {
   return (
@@ -309,7 +308,6 @@ function RootComponent() {
             <Toaster position="top-center" richColors closeButton />
             {!androidStable && isSectionEnabled("splash") && <SplashSequence />}
             {!capacitorMinimalDiagnostics && isSectionEnabled("backHandler") && <AndroidBackHandler />}
-            <AndroidDebugFab />
           </AccountProvider>
         </ProfileProvider>
       </QueryClientProvider>
