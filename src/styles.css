@@ -602,6 +602,18 @@ html.is-android textarea {
   -webkit-backdrop-filter: none !important;
 }
 
+html.irth-ab-no-focus-visuals input:focus,
+html.irth-ab-no-focus-visuals textarea:focus,
+html.irth-ab-no-focus-visuals [class*="focus:"]:focus,
+html.irth-ab-no-focus-visuals [class*="focus-visible:"]:focus-visible {
+  transition: none !important;
+  animation: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
 /* ============================================================
    Android ultra-stable mode — APK only.
    Stability beats visuals: no animation, no blur, no audio UI pressure,

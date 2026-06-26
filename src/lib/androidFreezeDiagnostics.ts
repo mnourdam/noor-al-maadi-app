@@ -459,8 +459,14 @@ export function installAndroidFreezeDiagnostics() {
   if (!isAndroidNativeApp()) return false;
 
   const html = document.documentElement;
+  const disableFocusVisualToggles = (() => {
+    try { return !!(window as DiagnosticWindow & { __IRTH_ANDROID_FOCUS_AB__?: { disableFocusVisualToggles?: boolean } }).__IRTH_ANDROID_FOCUS_AB__?.disableFocusVisualToggles; }
+    catch { return false; }
+  })();
   // Safe, lightweight perf hints — keep the Irth identity intact.
-  html.classList.add("is-android", "is-capacitor", "perf-lite", "perf-no-motion");
+  if (!disableFocusVisualToggles) {
+    html.classList.add("is-android", "is-capacitor", "perf-lite", "perf-no-motion");
+  }
 
   if (!isAndroidDebugMode()) return false;
 

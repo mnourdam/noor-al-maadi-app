@@ -13,6 +13,12 @@ export function applyPerfMode() {
   if (typeof window === "undefined" || typeof document === "undefined") return;
   const html = document.documentElement;
   try {
+    const disableFocusVisualToggles = (() => {
+      try { return !!(window as any).__IRTH_ANDROID_FOCUS_AB__?.disableFocusVisualToggles; }
+      catch { return false; }
+    })();
+    if (disableFocusVisualToggles) return;
+
     const ua = navigator.userAgent || "";
     const w: any = window;
 

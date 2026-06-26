@@ -5,8 +5,13 @@ import { AndroidCampaignInputMinTest, isAndroidCampaignInputMinPath } from "./co
 import { InputTraceDebugView } from "./components/InputTraceDebugView";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
+import { installAndroidFocusABSwitches } from "./lib/androidFocusAB";
 import { hasStoredInputFreezeTrace, installAndroidInputTrace } from "./lib/androidInputTrace";
 import { warmupAndroidInput } from "./lib/androidInputWarmup";
+
+// Install the Android focus/keyboard A/B switch before any app module can
+// register global focus, selection, viewport, or scroll handlers.
+installAndroidFocusABSwitches();
 
 // Install input/IME/frame tracing FIRST so it captures the very first
 // focus/keydown that may freeze the WebView. Pure instrumentation; no fixes.
