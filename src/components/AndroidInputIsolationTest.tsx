@@ -28,14 +28,10 @@ function targetLength(target: EventTarget | null) {
 }
 
 function fieldListeners(field: string): Record<string, EventListener> {
+  // Per-keystroke logging through the Capacitor Console bridge was freezing the
+  // WebView. Keep only lightweight focus/blur diagnostics — never input/keydown.
   return {
     focus: (event: Event) => log("focus", { field, length: targetLength(event.target) }),
-    keydown: (event: Event) => log("keydown", { field, key: safeKey((event as KeyboardEvent).key || "unknown") }),
-    beforeinput: (event: Event) => log("beforeinput", { field, inputType: (event as InputEvent).inputType || "unknown", length: targetLength(event.target) }),
-    input: (event: Event) => log("input", { field, length: targetLength(event.target) }),
-    change: (event: Event) => log("change", { field, length: targetLength(event.target) }),
-    compositionstart: (_event: Event) => log("compositionstart", { field }),
-    compositionend: (event: Event) => log("compositionend", { field, length: targetLength(event.target) }),
     blur: (event: Event) => log("blur", { field, length: targetLength(event.target) }),
   };
 }
@@ -48,6 +44,7 @@ function attachNativeDiagnostics(el: HTMLInputElement | HTMLTextAreaElement | nu
     for (const [event, listener] of Object.entries(listeners)) el.removeEventListener(event, listener);
   };
 }
+
 
 const inputStyle: React.CSSProperties = {
   display: "block",
@@ -96,15 +93,16 @@ export function AndroidInputIsolationTest() {
       innerWidth: window.innerWidth,
     });
 
+    // Removed document-level focusin/beforeinput/input capture loggers — they
+    // were firing per keystroke and freezing the WebView through the Capacitor
+    // Console bridge. Keep only coarse visibility/focus events.
     const globalListeners: Array<[EventTarget, string, EventListener, AddEventListenerOptions]> = [
       [document, "visibilitychange", () => log("document.visibilitychange", { hidden: document.hidden }), { passive: true }],
       [window, "focus", () => log("window.focus", { hasFocus: document.hasFocus() }), { passive: true }],
       [window, "blur", () => log("window.blur", { hasFocus: document.hasFocus() }), { passive: true }],
-      [document, "focusin", (event: Event) => log("document.focusin", { target: (event.target as HTMLElement | null)?.id || (event.target as HTMLElement | null)?.tagName, active: (document.activeElement as HTMLElement | null)?.id || (document.activeElement as HTMLElement | null)?.tagName }), { passive: true, capture: true }],
-      [document, "beforeinput", (event: Event) => log("document.beforeinput", { target: (event.target as HTMLElement | null)?.id || (event.target as HTMLElement | null)?.tagName, inputType: (event as InputEvent).inputType || "unknown", length: targetLength(event.target) }), { passive: true, capture: true }],
-      [document, "input", (event: Event) => log("document.input", { target: (event.target as HTMLElement | null)?.id || (event.target as HTMLElement | null)?.tagName, length: targetLength(event.target) }), { passive: true, capture: true }],
     ];
     for (const [target, event, listener, options] of globalListeners) target.addEventListener(event, listener, options);
+
 
     const host = plainHostRef.current;
     if (host) {
@@ -275,14 +273,9 @@ export function AndroidInputIsolationTest() {
           spellCheck={false}
           defaultValue=""
           style={inputStyle}
-          onFocus={(event) => reactUncontrolled.focus(event.nativeEvent)}
-          onKeyDown={(event) => reactUncontrolled.keydown(event.nativeEvent)}
-          onBeforeInput={(event) => reactUncontrolled.beforeinput(event.nativeEvent)}
-          onInput={(event) => reactUncontrolled.input(event.nativeEvent)}
-          onChange={(event) => reactUncontrolled.change(event.nativeEvent)}
-          onCompositionStart={(event) => reactUncontrolled.compositionstart(event.nativeEvent)}
-          onCompositionEnd={(event) => reactUncontrolled.compositionend(event.nativeEvent)}
-          onBlur={(event) => reactUncontrolled.blur(event.nativeEvent)}
+          onFocus={(event) => reactUncontrolled.focus?.(event.nativeEvent)}
+          onBlur={(event) => reactUncontrolled.blur?.(event.nativeEvent)}
+
         />
       </div>
 
@@ -297,17 +290,10 @@ export function AndroidInputIsolationTest() {
           spellCheck={false}
           value={controlled}
           style={inputStyle}
-          onFocus={(event) => reactControlled.focus(event.nativeEvent)}
-          onKeyDown={(event) => reactControlled.keydown(event.nativeEvent)}
-          onBeforeInput={(event) => reactControlled.beforeinput(event.nativeEvent)}
-          onInput={(event) => reactControlled.input(event.nativeEvent)}
-          onChange={(event) => {
-            setControlled(event.currentTarget.value);
-            reactControlled.change(event.nativeEvent);
-          }}
-          onCompositionStart={(event) => reactControlled.compositionstart(event.nativeEvent)}
-          onCompositionEnd={(event) => reactControlled.compositionend(event.nativeEvent)}
-          onBlur={(event) => reactControlled.blur(event.nativeEvent)}
+          onFocus={(event) => reactControlled.focus?.(event.nativeEvent)}
+          onChange={(event) => setControlled(event.currentTarget.value)}
+          onBlur={(event) => reactControlled.blur?.(event.nativeEvent)}
+
         />
       </div>
     </main>
