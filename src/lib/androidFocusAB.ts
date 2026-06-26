@@ -137,6 +137,7 @@ export function installAndroidFocusABSwitches() {
   if (!isAndroid()) return;
   const flags = readAndroidFocusABFlags();
   logAndroidFocusABFlags("boot");
+  window.setTimeout(() => logAndroidFocusABFlags("boot-delayed"), 750);
   if ((window as any).__irthAndroidFocusABInstalled) return;
   (window as any).__irthAndroidFocusABInstalled = true;
 
