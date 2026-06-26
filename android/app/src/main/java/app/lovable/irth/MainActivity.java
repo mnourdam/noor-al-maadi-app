@@ -63,7 +63,11 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void onPageLoaded(WebView webView) {
                 trace("webview.pageLoaded", "url=" + webView.getUrl() + " progress=" + webView.getProgress() + " id=" + System.identityHashCode(webView));
-                injectInputDiagnostics(webView);
+                if (isStaticNativeInputMinUrl(webView.getUrl())) {
+                    trace("webview.staticNativeInputMin", "plain asset loaded; skipping injected JS diagnostics");
+                } else {
+                    injectInputDiagnostics(webView);
+                }
             }
 
             @Override
@@ -212,6 +216,24 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public void openStaticInputAssetTest() {
+            runOnUiThread(() -> {
+                trace("bridge.openStaticInputAssetTest", "loading file:///android_asset/native-input-min.html in existing Capacitor WebView");
+                WebView webView = bridge != null ? bridge.getWebView() : null;
+                if (webView == null) {
+                    traceError("bridge.openStaticInputAssetTest", "webView=null");
+                    return;
+                }
+                try {
+                    webView.getSettings().setAllowFileAccess(true);
+                    webView.loadUrl("file:///android_asset/native-input-min.html");
+                } catch (Exception ex) {
+                    traceError("bridge.openStaticInputAssetTest", "failed=" + ex.getClass().getSimpleName() + ":" + ex.getMessage());
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void logInputEvent(String eventName, String payload) {
             trace("bridge.jsInput." + sanitizeToken(eventName), sanitizePayload(payload));
         }
@@ -306,6 +328,10 @@ public class MainActivity extends BridgeActivity {
             + "console.info(p,'installed',{url:location.href,active:tag(document.activeElement)});"
             + "})();";
         webView.evaluateJavascript(script, value -> trace("webview.diagnosticScriptInjected", "result=" + value));
+    }
+
+    private static boolean isStaticNativeInputMinUrl(String url) {
+        return url != null && url.contains("/native-input-min.html");
     }
 
     private void installKeyboardVisibilityLogger() {
