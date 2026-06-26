@@ -92,6 +92,7 @@ import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
 import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
+import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
 import { Route as CampaignsImportedIdIndexRouteImport } from './routes/campaigns.imported.$id.index'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
@@ -517,6 +518,12 @@ const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
   path: '/entity/$id',
   getParentRoute: () => EncyclopediaRoute,
 } as any)
+const AdminGamesCrosswordGeneratorRoute =
+  AdminGamesCrosswordGeneratorRouteImport.update({
+    id: '/crossword-generator',
+    path: '/crossword-generator',
+    getParentRoute: () => AdminGamesRoute,
+  } as any)
 const AdminGamesModeRoute = AdminGamesModeRouteImport.update({
   id: '/$mode',
   path: '/$mode',
@@ -614,6 +621,7 @@ export interface FileRoutesByFullPath {
   '/games/': typeof GamesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
+  '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -699,6 +707,7 @@ export interface FileRoutesByTo {
   '/games': typeof GamesIndexRoute
   '/worlds': typeof WorldsIndexRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
+  '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -788,6 +797,7 @@ export interface FileRoutesById {
   '/games/': typeof GamesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
+  '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -878,6 +888,7 @@ export interface FileRouteTypes {
     | '/games/'
     | '/worlds/'
     | '/admin/games/$mode'
+    | '/admin/games/crossword-generator'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -963,6 +974,7 @@ export interface FileRouteTypes {
     | '/games'
     | '/worlds'
     | '/admin/games/$mode'
+    | '/admin/games/crossword-generator'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -1051,6 +1063,7 @@ export interface FileRouteTypes {
     | '/games/'
     | '/worlds/'
     | '/admin/games/$mode'
+    | '/admin/games/crossword-generator'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -1723,6 +1736,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EncyclopediaEntityIdRouteImport
       parentRoute: typeof EncyclopediaRoute
     }
+    '/admin/games/crossword-generator': {
+      id: '/admin/games/crossword-generator'
+      path: '/crossword-generator'
+      fullPath: '/admin/games/crossword-generator'
+      preLoaderRoute: typeof AdminGamesCrosswordGeneratorRouteImport
+      parentRoute: typeof AdminGamesRoute
+    }
     '/admin/games/$mode': {
       id: '/admin/games/$mode'
       path: '/$mode'
@@ -1786,11 +1806,13 @@ const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
 
 interface AdminGamesRouteChildren {
   AdminGamesModeRoute: typeof AdminGamesModeRoute
+  AdminGamesCrosswordGeneratorRoute: typeof AdminGamesCrosswordGeneratorRoute
   AdminGamesIndexRoute: typeof AdminGamesIndexRoute
 }
 
 const AdminGamesRouteChildren: AdminGamesRouteChildren = {
   AdminGamesModeRoute: AdminGamesModeRoute,
+  AdminGamesCrosswordGeneratorRoute: AdminGamesCrosswordGeneratorRoute,
   AdminGamesIndexRoute: AdminGamesIndexRoute,
 }
 
