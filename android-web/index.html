@@ -7,6 +7,39 @@
     <meta name="theme-color" content="#0b1424" />
     <meta name="application-name" content="إرث" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <script>
+      // Capacitor input diagnostic: when the APK opens /android-input-test,
+      // stop the Irth app bundle before it mounts and replace the document with
+      // plain HTML controls. Capacitor's own WebView/bridge still exists, but
+      // React, app CSS, push setup, back handlers, splash JS, and custom app
+      // listeners are not loaded on this route.
+      (function () {
+        try {
+          var path = window.location.pathname || "";
+          if (path !== "/android-input-test" && !path.endsWith("/android-input-test")) return;
+          window.__irthAndroidInputTest = true;
+          window.__irthCapacitorMinimalMode = true;
+          var html = "<!doctype html><html><head>" +
+            "<meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>" +
+            "<title>Capacitor Plain Input Test</title>" +
+            "<style>html,body{margin:0;background:#fff;color:#111;font:16px system-ui,sans-serif}main{box-sizing:border-box;min-height:100vh;padding:24px 18px 48px}label{display:block;font-weight:700;font-size:13px;margin:18px 0 8px}input,textarea,button{box-sizing:border-box;width:100%;font:16px system-ui,sans-serif;padding:12px;border:1px solid #999;border-radius:6px;background:#fff;color:#111}button{margin-top:16px;background:#eee;font-weight:700}</style>" +
+            "</head><body><main>" +
+            "<h1>Capacitor Plain Input Test</h1>" +
+            "<p>Same Capacitor WebView, minimal native plugins, no React, no app CSS, no Irth bundle.</p>" +
+            "<label for='cap-plain-input'>Plain input</label><input id='cap-plain-input' type='text' autocomplete='off' autocapitalize='none' spellcheck='false'>" +
+            "<label for='cap-plain-textarea'>Plain textarea</label><textarea id='cap-plain-textarea' rows='4' autocomplete='off' autocapitalize='none' spellcheck='false'></textarea>" +
+            "<button type='button' onclick='try{IrthNativeDiagnostics.openBareInputTest()}catch(e){console.info(\"[android:cap-min] raw activity unavailable\",e&&e.message)}'>Open raw Android WebView input test</button>" +
+            "<button type='button' onclick='location.href=\"/\"'>Back to app</button>" +
+            "</main><script>(function(){var p=\"[android:cap-min-input]\";function tag(el){return el?((el.tagName||\"node\").toLowerCase()+(el.id?\"#\"+el.id:\"\")):\"none\"}function len(el){return el&&typeof el.value===\"string\"?el.value.length:null}function log(n,e){try{console.info(p,n,{target:tag(e&&e.target),active:tag(document.activeElement),length:len(e&&e.target),inputType:e&&e.inputType||undefined,hidden:document.hidden,hasFocus:document.hasFocus&&document.hasFocus()})}catch(_){}}console.info(p,\"mounted\",{url:location.href});[\"focusin\",\"focusout\",\"keydown\",\"beforeinput\",\"input\",\"change\",\"compositionstart\",\"compositionend\"].forEach(function(n){document.addEventListener(n,function(e){log(n,e)},true)});})();<\/script>" +
+            "</body></html>";
+          document.open();
+          document.write(html);
+          document.close();
+        } catch (e) {
+          console.error("[android:cap-min] plain html bootstrap failed", e);
+        }
+      })();
+    </script>
     <link rel="icon" type="image/png" href="./irth-icon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

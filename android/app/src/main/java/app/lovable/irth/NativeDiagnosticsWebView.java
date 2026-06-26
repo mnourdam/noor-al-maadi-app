@@ -3,8 +3,6 @@ package app.lovable.irth;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.KeyEvent;
-import android.view.MotionEvent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import com.getcapacitor.CapacitorWebView;
@@ -46,27 +44,5 @@ public class NativeDiagnosticsWebView extends CapacitorWebView {
         boolean result = super.onCheckIsTextEditor();
         Log.i(TAG, "[android:ime] onCheckIsTextEditor result=" + result + " hasFocus=" + hasFocus());
         return result;
-    }
-
-    @Override
-    protected void onFocusChanged(boolean focused, int direction, android.graphics.Rect previouslyFocusedRect) {
-        super.onFocusChanged(focused, direction, previouslyFocusedRect);
-        Log.i(TAG, "[android:webview] onFocusChanged focused=" + focused + " direction=" + direction);
-    }
-
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent event) {
-        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-            Log.i(TAG, "[android:webview] dispatchTouchEvent ACTION_DOWN hasFocus=" + hasFocus() + " x=" + Math.round(event.getX()) + " y=" + Math.round(event.getY()));
-        }
-        return super.dispatchTouchEvent(event);
-    }
-
-    @Override
-    public boolean dispatchKeyEvent(KeyEvent event) {
-        if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            Log.i(TAG, "[android:ime] dispatchKeyEvent keyCode=" + event.getKeyCode() + " unicode=" + (event.getUnicodeChar() > 0 ? "printable" : "none"));
-        }
-        return super.dispatchKeyEvent(event);
     }
 }

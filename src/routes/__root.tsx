@@ -191,12 +191,20 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const androidStable = isAndroidUltraStableMode();
+  const capacitorMinimalDiagnostics =
+    typeof window !== "undefined" &&
+    Boolean((window as unknown as { __irthCapacitorMinimalMode?: boolean }).__irthCapacitorMinimalMode);
 
   useEffect(() => {
     androidMark("root.effect.start");
     try { document.getElementById("irth-boot-splash")?.remove(); } catch { /* noop */ }
     // Apply Android/WebView/reduced-motion perf-mode class on <html>.
     import("../lib/perf-mode").then((m) => m.applyPerfMode()).catch(() => {});
+
+    if (capacitorMinimalDiagnostics) {
+      console.warn("[android:cap-min] root background work disabled");
+      return;
+    }
 
     if (androidStable) {
       console.warn("[android:freeze] ultra-stable root background work disabled");
@@ -272,7 +280,7 @@ function RootComponent() {
       document.removeEventListener("visibilitychange", onVisible);
     };
 
-  }, [androidStable]);
+  }, [androidStable, capacitorMinimalDiagnostics]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -284,7 +292,7 @@ function RootComponent() {
           {!androidStable && <LevelUpWatcher />}
           <Toaster position="top-center" richColors closeButton />
           {!androidStable && <SplashSequence />}
-          <AndroidBackHandler />
+          {!capacitorMinimalDiagnostics && <AndroidBackHandler />}
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
