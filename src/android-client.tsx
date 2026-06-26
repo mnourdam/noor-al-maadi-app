@@ -13,6 +13,11 @@ window.addEventListener("unhandledrejection", (e) => {
   console.error("[android:unhandledrejection]", (e?.reason as Error)?.stack ?? e?.reason);
 });
 
+try {
+  (window as unknown as { __irthCapacitorMinimalMode?: boolean }).__irthCapacitorMinimalMode = true;
+  console.info("[android:cap-min] enabled: app plugins/listeners disabled for input diagnosis");
+} catch { /* ignore */ }
+
 // Capacitor opens the app at `https://localhost/index.html` (or similar) when
 // `base: "./"` is used. TanStack Router's history would then see a pathname
 // that no route matches. Normalize to `/` before the router boots.

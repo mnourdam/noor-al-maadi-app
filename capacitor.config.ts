@@ -12,6 +12,11 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
     captureInput: false,
+    initialFocus: false,
+    useLegacyBridge: true,
+    resolveServiceWorkerRequests: false,
+    webContentsDebuggingEnabled: true,
+    includePlugins: [],
   },
   plugins: {
     // Diagnostic native input build: keep Capacitor's core SystemBars plugin

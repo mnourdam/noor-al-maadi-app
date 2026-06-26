@@ -17,6 +17,10 @@ export function AndroidBackHandler() {
   useEffect(() => {
     const cap = (window as unknown as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
     if (!cap || cap.getPlatform?.() !== "android") return;
+    if ((window as unknown as { __irthCapacitorMinimalMode?: boolean }).__irthCapacitorMinimalMode) {
+      console.log("[android:cap-min] AndroidBackHandler disabled");
+      return;
+    }
 
     let lastBackAt = 0;
     let listenerHandle: { remove: () => void } | undefined;
