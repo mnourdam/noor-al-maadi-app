@@ -194,8 +194,9 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const androidNative = isAndroidNativeApp();
   const androidStable = isAndroidUltraStableMode();
-  const androidAuthRoute = isAndroidNativeApp() && (pathname === "/auth" || pathname.endsWith("/auth"));
+  const androidAuthRoute = androidNative && (pathname === "/auth" || pathname.endsWith("/auth"));
   const capacitorMinimalDiagnostics =
     typeof window !== "undefined" &&
     Boolean((window as unknown as { __irthCapacitorMinimalMode?: boolean }).__irthCapacitorMinimalMode);
@@ -208,6 +209,11 @@ function RootComponent() {
 
     if (androidAuthRoute) {
       console.warn("[android:auth-min] root background work disabled");
+      return;
+    }
+
+    if (androidNative) {
+      console.warn("[android:input-safe] root background work disabled");
       return;
     }
 
@@ -303,7 +309,7 @@ function RootComponent() {
       if (onVisible) document.removeEventListener("visibilitychange", onVisible);
     };
 
-  }, [androidStable, capacitorMinimalDiagnostics, androidAuthRoute]);
+  }, [androidNative, androidStable, capacitorMinimalDiagnostics, androidAuthRoute]);
 
   if (androidAuthRoute) {
     return <AndroidAuthMinTest />;
@@ -314,12 +320,12 @@ function RootComponent() {
       <ProfileProvider>
         <AccountProvider>
           {androidStable ? <AppShell><Outlet /></AppShell> : <Outlet />}
-          {!androidStable && isSectionEnabled("firstLaunch") && <FirstLaunchGate />}
-          {!androidStable && isSectionEnabled("achievement") && <AchievementWatcher />}
-          {!androidStable && isSectionEnabled("levelUp") && <LevelUpWatcher />}
+          {!androidNative && !androidStable && isSectionEnabled("firstLaunch") && <FirstLaunchGate />}
+          {!androidNative && !androidStable && isSectionEnabled("achievement") && <AchievementWatcher />}
+          {!androidNative && !androidStable && isSectionEnabled("levelUp") && <LevelUpWatcher />}
           <Toaster position="top-center" richColors closeButton />
-          {!androidStable && isSectionEnabled("splash") && <SplashSequence />}
-          {!capacitorMinimalDiagnostics && isSectionEnabled("backHandler") && <AndroidBackHandler />}
+          {!androidNative && !androidStable && isSectionEnabled("splash") && <SplashSequence />}
+          {!androidNative && !capacitorMinimalDiagnostics && isSectionEnabled("backHandler") && <AndroidBackHandler />}
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
