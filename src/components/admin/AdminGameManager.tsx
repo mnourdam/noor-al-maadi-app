@@ -102,6 +102,10 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
       setValidationReport([`JSON غير صالح: ${(e as Error).message}`]);
       return;
     }
+    console.info("[crossword.trace] save.json-parsed", {
+      mode,
+      slug: (parsed as { slug?: unknown })?.slug,
+    });
     const result = validateGameJson(mode, parsed);
     if (!result.ok) {
       setValidationReport(result.errors);
@@ -146,6 +150,13 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
       stages: v.stages,
       status: "draft" as GameStatus,
     };
+    console.info("[crossword.trace] save.before-insert", {
+      jsonSlug: v.slug,
+      payloadSlug: payload.slug,
+      mode: payload.mode,
+      title: payload.title,
+      identical: v.slug === payload.slug,
+    });
     console.info("[games.import] INSERT", { slug: payload.slug, mode: payload.mode, title: payload.title });
     const { data: inserted, error } = await supabase
       .from("games")
@@ -160,6 +171,13 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
       notify("err", error.message);
       return;
     }
+    console.info("[crossword.trace] save.db-returned", {
+      jsonSlug: v.slug,
+      payloadSlug: payload.slug,
+      dbSlug: inserted?.slug,
+      id: inserted?.id,
+      allIdentical: v.slug === payload.slug && payload.slug === inserted?.slug,
+    });
     console.info("[games.import] inserted", inserted);
 
     const warnings: string[] = [`✓ تم استيراد "${v.title}" كمسودة.`];

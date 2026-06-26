@@ -66,6 +66,18 @@ const DEFAULTS: FormState = {
   requireConnected: false,
 };
 
+function createCrosswordSlug(): string {
+  const time = Date.now().toString(36);
+  const perf = Math.round(performance.now() * 1000).toString(36);
+  let random = Math.random().toString(36).slice(2, 8);
+  try {
+    const bytes = new Uint32Array(1);
+    crypto.getRandomValues(bytes);
+    random = bytes[0].toString(36).slice(0, 8);
+  } catch { /* Math.random fallback already set */ }
+  return `crossword-${time}-${perf}-${random}`;
+}
+
 function parsePairs(text: string): WordHint[] {
   return text
     .split(/\r?\n/)
@@ -82,12 +94,18 @@ function parsePairs(text: string): WordHint[] {
 function CrosswordGeneratorPage() {
   const [form, setForm] = useState<FormState>(DEFAULTS);
   const [stage, setStage] = useState<CrosswordStage | null>(null);
+  const [generatedSlug, setGeneratedSlug] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [warning, setWarning] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
+
+  const updateSlug = (v: string) => {
+    setGeneratedSlug(v);
+    update("slug", v);
+  };
 
   const handleGenerate = () => {
     setErrors([]);
@@ -114,11 +132,17 @@ function CrosswordGeneratorPage() {
       setErrors(lines);
       return;
     }
-    setStage(result.stage);
     // Always assign a fresh unique slug per generation so each save creates a
-    // new record (the import path upserts on slug). Users can still override.
-    const uniqueSlug = `crossword-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    // new record. Keep it in dedicated state so the JSON cannot briefly reuse
+    // the previous form slug while React batches stage/form updates.
+    const uniqueSlug = createCrosswordSlug();
+    console.info("[crossword.trace] generator.generated-slug", {
+      slug: uniqueSlug,
+      previousFormSlug: form.slug,
+    });
+    setGeneratedSlug(uniqueSlug);
     setForm((f) => ({ ...f, slug: uniqueSlug }));
+    setStage(result.stage);
     if (result.placed !== pairs.length) {
       setWarning(`تم وضع ${result.placed} من أصل ${pairs.length} كلمة على شبكة ${result.gridSize}×${result.gridSize}.`);
     }
@@ -127,8 +151,9 @@ function CrosswordGeneratorPage() {
 
   const envelope = useMemo(() => {
     if (!stage) return null;
-    return buildCrosswordEnvelope(stage, {
-      slug: form.slug,
+    const envelopeSlug = generatedSlug ?? form.slug;
+    const built = buildCrosswordEnvelope(stage, {
+      slug: envelopeSlug,
       title: form.title,
       description: form.description || undefined,
       difficulty: Math.min(5, Math.max(1, form.difficulty)),
@@ -142,7 +167,14 @@ function CrosswordGeneratorPage() {
       timer_seconds: form.timer_seconds,
       stage_title: form.stage_title || undefined,
     });
-  }, [stage, form]);
+    console.info("[crossword.trace] generator.json-object", {
+      slug: built.slug,
+      generatedSlug,
+      formSlug: form.slug,
+      identical: built.slug === generatedSlug || built.slug === form.slug,
+    });
+    return built;
+  }, [stage, form, generatedSlug]);
 
   const envelopeJson = useMemo(
     () => (envelope ? JSON.stringify(envelope, null, 2) : ""),
@@ -194,7 +226,7 @@ function CrosswordGeneratorPage() {
           <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
             <h2 className="text-sm font-semibold text-amber-200">المدخلات</h2>
             <div className="grid grid-cols-2 gap-2">
-              <Field label="المعرف (slug)" value={form.slug} onChange={(v) => update("slug", v)} />
+                <Field label="المعرف (slug)" value={form.slug} onChange={updateSlug} />
               <Field label="العنوان العام" value={form.title} onChange={(v) => update("title", v)} hint="عام — لا يكشف الإجابات" />
               <Field label="عنوان المرحلة (اختياري)" value={form.stage_title} onChange={(v) => update("stage_title", v)} />
               <Field label="الحقبة" value={form.era} onChange={(v) => update("era", v)} />
@@ -240,7 +272,7 @@ function CrosswordGeneratorPage() {
                 className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400">
                 <Wand2 className="h-3.5 w-3.5" /> توليد الشبكة
               </button>
-              <button onClick={() => setForm(DEFAULTS)}
+              <button onClick={() => { setGeneratedSlug(null); setForm(DEFAULTS); }}
                 className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400">
                 إعادة تعيين
               </button>
