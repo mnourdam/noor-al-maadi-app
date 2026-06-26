@@ -13,10 +13,11 @@ window.addEventListener("unhandledrejection", (e) => {
   console.error("[android:unhandledrejection]", (e?.reason as Error)?.stack ?? e?.reason);
 });
 
-try {
-  (window as unknown as { __irthCapacitorMinimalMode?: boolean }).__irthCapacitorMinimalMode = true;
-  console.info("[android:cap-min] enabled: app plugins/listeners disabled for input diagnosis");
-} catch { /* ignore */ }
+// NOTE: the previous brute-force `__irthCapacitorMinimalMode` flag is no
+// longer set here. We now bisect through `src/lib/androidQuietMode.ts` so
+// each suspect subsystem can be re-enabled individually from the console:
+//   __irthAndroidEnable("push,audio,...")   or   __irthAndroidEnable("all")
+console.info("[android:quiet] default = all global subsystems gated. Use __irthAndroidEnable('all') to restore.");
 
 // Capacitor opens the app at `https://localhost/index.html` (or similar) when
 // `base: "./"` is used. TanStack Router's history would then see a pathname
