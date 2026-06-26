@@ -79,6 +79,7 @@ export function useAdminGuard() {
         roles,
       };
 
+      try { (window as any).__irthLastUid = u.id; } catch { /* ignore */ }
       // eslint-disable-next-line no-console
       console.info("[admin-guard]", {
         uid: u.id,
