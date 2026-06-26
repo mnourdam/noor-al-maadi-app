@@ -1,5 +1,7 @@
 import * as React from "react";
 
+import type { CampaignActivity } from "@/types/campaign";
+
 const GOLD = "#d4af5a";
 const GOLD_SOFT = "#e8c878";
 const INK = "#0c0a07";
@@ -8,8 +10,57 @@ const SURFACE_2 = "#211812";
 const BORDER = "#3a2d20";
 const TEXT = "#f5ecd9";
 
+type Stage = "plain" | "container" | "renderer" | "checking" | "progress" | "rewards" | "ledger";
+
+type ActivityRendererComponent = React.ComponentType<{
+  activity: CampaignActivity;
+  onResolve: (correct: boolean) => void;
+  alreadyDone?: boolean;
+}>;
+
+const STAGES: Array<{ id: Stage; label: string; description: string }> = [
+  { id: "plain", label: "1 · Plain", description: "مدخلات فقط بلا حاوية الحملة." },
+  { id: "container", label: "2 · Container", description: "إضافة شكل حاوية النشاط فقط." },
+  { id: "renderer", label: "3 · Renderer", description: "تحميل ActivityRenderer فقط." },
+  { id: "checking", label: "4 · Checking", description: "التحقق المحلي من الإجابة فقط." },
+  { id: "progress", label: "5 · Progress", description: "محاكاة حفظ تقدّم محلي بسيط." },
+  { id: "rewards", label: "6 · Rewards", description: "محاكاة قلوب و XP ودنانير محلية." },
+  { id: "ledger", label: "7 · Ledger", description: "اختبار دفتر الحملات/المزامنة بشكل صريح عند الإرسال." },
+];
+
+const SAMPLE_FILL_ACTIVITY: CampaignActivity = {
+  id: "android-campaign-input-min-fill",
+  type: "fill_blank",
+  prompt: "ما المدينة التي اتخذها العباسيون عاصمة لهم؟",
+  contextText: "اختبار تشخيصي مستقل لحقل إجابة حملة.",
+  correctAnswer: "بغداد",
+  feedbackCorrect: "إجابة صحيحة.",
+  feedbackWrong: "تم التحقق من الإجابة دون تحديث أثناء الكتابة.",
+  hint: "مدينة مدوّرة على دجلة.",
+  xpReward: 10,
+  coinsReward: 5,
+  heartsPenalty: 1,
+};
+
 export function isAndroidCampaignInputMinPath(pathname = typeof window !== "undefined" ? window.location.pathname : "") {
   return pathname === "/android-campaign-input-min" || pathname.endsWith("/android-campaign-input-min");
+}
+
+function readStage(): Stage {
+  if (typeof window === "undefined") return "plain";
+  try {
+    const raw = new URLSearchParams(window.location.search).get("stage") as Stage | null;
+    return STAGES.some((stage) => stage.id === raw) ? raw! : "plain";
+  } catch {
+    return "plain";
+  }
+}
+
+function goToStage(stage: Stage) {
+  const url = new URL(window.location.href);
+  if (stage === "plain") url.searchParams.delete("stage");
+  else url.searchParams.set("stage", stage);
+  window.location.href = url.pathname + url.search + url.hash;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -41,7 +92,11 @@ const labelStyle: React.CSSProperties = {
 export function AndroidCampaignInputMinTest() {
   const fillBlankRef = React.useRef<HTMLInputElement | null>(null);
   const reflectionRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const stage = readStage();
   const [status, setStatus] = React.useState("");
+  const [renderer, setRenderer] = React.useState<ActivityRendererComponent | null>(null);
+  const [localProgress, setLocalProgress] = React.useState(0);
+  const [rewards, setRewards] = React.useState({ hearts: 5, xp: 0, coins: 0 });
 
   React.useEffect(() => {
     document.documentElement.classList.add("android-campaign-input-min-active");
@@ -50,13 +105,68 @@ export function AndroidCampaignInputMinTest() {
     return () => document.documentElement.classList.remove("android-campaign-input-min-active");
   }, []);
 
+  React.useEffect(() => {
+    if (stage !== "renderer" && stage !== "checking" && stage !== "progress" && stage !== "rewards" && stage !== "ledger") {
+      setRenderer(null);
+      return;
+    }
+    let cancelled = false;
+    import("@/components/imported-campaign/ActivityRenderer")
+      .then((module) => {
+        if (!cancelled) setRenderer(() => module.ActivityRenderer);
+      })
+      .catch((error) => {
+        if (!cancelled) setStatus(error instanceof Error ? error.message : "تعذّر تحميل ActivityRenderer.");
+      });
+    return () => { cancelled = true; };
+  }, [stage]);
+
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const answer = (fillBlankRef.current?.value ?? "").trim();
     const reflection = (reflectionRef.current?.value ?? "").trim();
     const answerState = answer.toLowerCase() === "بغداد" ? "إجابة صحيحة" : "تمت قراءة الإجابة";
+    if (stage === "progress" || stage === "rewards" || stage === "ledger") {
+      setLocalProgress((current) => current + 1);
+    }
+    if (stage === "rewards" || stage === "ledger") {
+      setRewards((current) => answer.toLowerCase() === "بغداد"
+        ? { ...current, xp: current.xp + 10, coins: current.coins + 5 }
+        : { ...current, hearts: Math.max(0, current.hearts - 1) });
+    }
+    if (stage === "ledger") {
+      try {
+        window.localStorage.setItem("irth.android.campaignInputMin.last", JSON.stringify({
+          at: Date.now(),
+          answerLength: answer.length,
+          reflectionLength: reflection.length,
+        }));
+      } catch { /* ignore diagnostic storage failures */ }
+    }
     setStatus(`${answerState} · التأمّل ${reflection.length > 0 ? "موجود" : "فارغ"}`);
   };
+
+  const handleRendererResolve = (correct: boolean) => {
+    if (stage === "progress" || stage === "rewards" || stage === "ledger") {
+      setLocalProgress((current) => current + 1);
+    }
+    if (stage === "rewards" || stage === "ledger") {
+      setRewards((current) => correct
+        ? { ...current, xp: current.xp + 10, coins: current.coins + 5 }
+        : { ...current, hearts: Math.max(0, current.hearts - 1) });
+    }
+    if (stage === "ledger") {
+      try {
+        window.localStorage.setItem("irth.android.campaignInputMin.renderer", JSON.stringify({ at: Date.now(), correct }));
+      } catch { /* ignore diagnostic storage failures */ }
+    }
+    setStatus(correct ? "ActivityRenderer: إجابة صحيحة" : "ActivityRenderer: إجابة غير صحيحة");
+  };
+
+  const activeStage = STAGES.find((item) => item.id === stage) ?? STAGES[0];
+  const showContainer = stage !== "plain";
+  const showRenderer = stage === "renderer" || stage === "checking" || stage === "progress" || stage === "rewards" || stage === "ledger";
+  const Panel = showContainer ? "section" : "div";
 
   return (
     <main
@@ -127,11 +237,41 @@ export function AndroidCampaignInputMinTest() {
             اختبار إدخال الحملات
           </h1>
           <p style={{ margin: "8px 0 0", color: "#9a8a6e", font: "13px system-ui, sans-serif", lineHeight: 1.7 }}>
-            صفحة مستقلة بلا غلاف التطبيق أو مزامنة أو صوت أو بيانات خارجية.
+            {activeStage.description}
           </p>
         </div>
 
-        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 14, background: SURFACE, padding: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, marginBottom: 16 }}>
+          {STAGES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => goToStage(item.id)}
+              style={{
+                border: `1px solid ${item.id === stage ? GOLD : BORDER}`,
+                borderRadius: 10,
+                background: item.id === stage ? "#2b2116" : SURFACE,
+                color: item.id === stage ? GOLD_SOFT : TEXT,
+                font: "700 12px system-ui, sans-serif",
+                padding: "10px 12px",
+                textAlign: "right",
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <Panel style={{ border: `1px solid ${BORDER}`, borderRadius: showContainer ? 18 : 14, background: SURFACE, padding: showContainer ? 18 : 16 }}>
+          {showContainer ? (
+            <div style={{ marginBottom: 14, borderBottom: `1px solid ${BORDER}`, paddingBottom: 12 }}>
+              <p style={{ margin: 0, color: GOLD_SOFT, font: "800 13px system-ui, sans-serif" }}>حاوية نشاط حملة</p>
+              <p style={{ margin: "6px 0 0", color: "#9a8a6e", font: "12px system-ui, sans-serif", lineHeight: 1.6 }}>
+                هذه الحاوية محلية داخل صفحة التشخيص وليست AppShell أو مسار الفصل الحقيقي.
+              </p>
+            </div>
+          ) : null}
+
           <div style={{ marginBottom: 16 }}>
             <label htmlFor="android-campaign-fillblank" style={labelStyle}>إجابة قصيرة</label>
             <input
@@ -186,7 +326,30 @@ export function AndroidCampaignInputMinTest() {
               {status}
             </p>
           ) : null}
-        </div>
+
+          {(stage === "progress" || stage === "rewards" || stage === "ledger") ? (
+            <div style={{ marginTop: 14, borderTop: `1px solid ${BORDER}`, paddingTop: 12, color: "#9a8a6e", font: "12px system-ui, sans-serif", lineHeight: 1.8 }}>
+              <div>Progress tick: {localProgress}</div>
+              {(stage === "rewards" || stage === "ledger") ? <div>Hearts: {rewards.hearts} · XP: {rewards.xp} · Coins: {rewards.coins}</div> : null}
+              {stage === "ledger" ? <div>Ledger: localStorage write on submit only</div> : null}
+            </div>
+          ) : null}
+        </Panel>
+
+        {showRenderer ? (
+          <section style={{ marginTop: 16, border: `1px solid ${BORDER}`, borderRadius: 18, background: SURFACE, padding: 18 }}>
+            <p style={{ margin: "0 0 12px", color: GOLD_SOFT, font: "800 13px system-ui, sans-serif" }}>
+              ActivityRenderer stage
+            </p>
+            {renderer ? React.createElement(renderer, {
+              activity: SAMPLE_FILL_ACTIVITY,
+              onResolve: handleRendererResolve,
+              alreadyDone: false,
+            }) : (
+              <p style={{ color: "#9a8a6e", font: "12px system-ui, sans-serif" }}>جارٍ تحميل ActivityRenderer…</p>
+            )}
+          </section>
+        ) : null}
       </form>
     </main>
   );
