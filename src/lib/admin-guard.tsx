@@ -102,7 +102,7 @@ export function useAdminGuard() {
 
 
 export function AdminGate({ children }: { children: ReactNode }) {
-  const { checking, allowed, email } = useAdminGuard();
+  const { checking, allowed, email, caps } = useAdminGuard();
   useEffect(() => {
     document.documentElement.classList.add("admin-lite");
     return () => document.documentElement.classList.remove("admin-lite");
@@ -115,6 +115,7 @@ export function AdminGate({ children }: { children: ReactNode }) {
     );
   }
   if (!allowed) {
+    const showDebug = NORMALIZED.includes(normalizeEmail(email));
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
         <div className="max-w-md rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
@@ -123,12 +124,18 @@ export function AdminGate({ children }: { children: ReactNode }) {
           <p className="mt-2 text-sm text-muted-foreground">
             {email ? `الحساب الحالي (${email}) لا يملك صلاحية الوصول.` : "يرجى تسجيل الدخول بحساب مشرف."}
           </p>
+          {showDebug && (
+            <pre dir="ltr" className="mt-4 max-h-64 overflow-auto rounded bg-black/40 p-3 text-left text-[10px] leading-4 text-amber-200">
+{JSON.stringify({ email, caps }, null, 2)}
+            </pre>
+          )}
         </div>
       </div>
     );
   }
   return <>{children}</>;
 }
+
 
 /** Manager-only gate. Editors are blocked. */
 export function ManagerOnly({
