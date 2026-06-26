@@ -34,9 +34,8 @@ try {
 
 const rootElement = document.getElementById("root");
 
-function isAndroidProductionAuthPath(pathname = window.location.pathname) {
-  return pathname === "/auth" || pathname.endsWith("/auth");
-}
+// Note: /auth is NOT intercepted here. On Android, login buttons use AuthLink
+// which navigates to the standalone /android-auth-min entry instead.
 
 if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
