@@ -31,6 +31,7 @@ function fieldListeners(field: string): Record<string, EventListener> {
   return {
     focus: (event: Event) => log("focus", { field, length: targetLength(event.target) }),
     keydown: (event: Event) => log("keydown", { field, key: safeKey((event as KeyboardEvent).key || "unknown") }),
+    beforeinput: (event: Event) => log("beforeinput", { field, inputType: (event as InputEvent).inputType || "unknown", length: targetLength(event.target) }),
     input: (event: Event) => log("input", { field, length: targetLength(event.target) }),
     change: (event: Event) => log("change", { field, length: targetLength(event.target) }),
     compositionstart: (_event: Event) => log("compositionstart", { field }),
@@ -95,6 +96,16 @@ export function AndroidInputIsolationTest() {
       innerWidth: window.innerWidth,
     });
 
+    const globalListeners: Array<[EventTarget, string, EventListener, AddEventListenerOptions]> = [
+      [document, "visibilitychange", () => log("document.visibilitychange", { hidden: document.hidden }), { passive: true }],
+      [window, "focus", () => log("window.focus", { hasFocus: document.hasFocus() }), { passive: true }],
+      [window, "blur", () => log("window.blur", { hasFocus: document.hasFocus() }), { passive: true }],
+      [document, "focusin", (event: Event) => log("document.focusin", { target: (event.target as HTMLElement | null)?.id || (event.target as HTMLElement | null)?.tagName, active: (document.activeElement as HTMLElement | null)?.id || (document.activeElement as HTMLElement | null)?.tagName }), { passive: true, capture: true }],
+      [document, "beforeinput", (event: Event) => log("document.beforeinput", { target: (event.target as HTMLElement | null)?.id || (event.target as HTMLElement | null)?.tagName, inputType: (event as InputEvent).inputType || "unknown", length: targetLength(event.target) }), { passive: true, capture: true }],
+      [document, "input", (event: Event) => log("document.input", { target: (event.target as HTMLElement | null)?.id || (event.target as HTMLElement | null)?.tagName, length: targetLength(event.target) }), { passive: true, capture: true }],
+    ];
+    for (const [target, event, listener, options] of globalListeners) target.addEventListener(event, listener, options);
+
     const host = plainHostRef.current;
     if (host) {
       host.innerHTML = `
@@ -119,6 +130,7 @@ export function AndroidInputIsolationTest() {
       window.__irthAndroidInputTest = false;
       document.documentElement.classList.remove("android-input-test-active");
       cleanups.forEach((cleanup) => cleanup());
+      for (const [target, event, listener, options] of globalListeners) target.removeEventListener(event, listener, options);
     };
   }, []);
 
@@ -177,6 +189,55 @@ export function AndroidInputIsolationTest() {
 
       <div ref={plainHostRef} />
 
+      <button
+        type="button"
+        onClick={() => {
+          log("open-native-html-test");
+          window.location.href = "/native-input-test.html";
+        }}
+        style={{
+          display: "block",
+          width: "100%",
+          boxSizing: "border-box",
+          margin: "0 0 18px",
+          border: "1px solid #111111",
+          borderRadius: 6,
+          background: "#eeeeee",
+          color: "#111111",
+          font: "700 16px system-ui, sans-serif",
+          padding: "12px 14px",
+        }}
+      >
+        Open bare native HTML input test
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          log("open-native-webview-activity-test");
+          const nativeDiagnostics = (window as unknown as { IrthNativeDiagnostics?: { openBareInputTest?: () => void } }).IrthNativeDiagnostics;
+          if (nativeDiagnostics?.openBareInputTest) {
+            nativeDiagnostics.openBareInputTest();
+          } else {
+            log("open-native-webview-activity-test unavailable");
+          }
+        }}
+        style={{
+          display: "block",
+          width: "100%",
+          boxSizing: "border-box",
+          margin: "0 0 18px",
+          border: "1px solid #111111",
+          borderRadius: 6,
+          background: "#111111",
+          color: "#ffffff",
+          font: "700 16px system-ui, sans-serif",
+          padding: "12px 14px",
+        }}
+      >
+        Open raw Android WebView input test
+      </button>
+
       <div style={groupStyle}>
         <label htmlFor="react-uncontrolled-input" style={labelStyle}>Uncontrolled React input</label>
         <input
@@ -191,6 +252,7 @@ export function AndroidInputIsolationTest() {
           style={inputStyle}
           onFocus={(event) => reactUncontrolled.focus(event.nativeEvent)}
           onKeyDown={(event) => reactUncontrolled.keydown(event.nativeEvent)}
+          onBeforeInput={(event) => reactUncontrolled.beforeinput(event.nativeEvent)}
           onInput={(event) => reactUncontrolled.input(event.nativeEvent)}
           onChange={(event) => reactUncontrolled.change(event.nativeEvent)}
           onCompositionStart={(event) => reactUncontrolled.compositionstart(event.nativeEvent)}
@@ -212,6 +274,7 @@ export function AndroidInputIsolationTest() {
           style={inputStyle}
           onFocus={(event) => reactControlled.focus(event.nativeEvent)}
           onKeyDown={(event) => reactControlled.keydown(event.nativeEvent)}
+          onBeforeInput={(event) => reactControlled.beforeinput(event.nativeEvent)}
           onInput={(event) => reactControlled.input(event.nativeEvent)}
           onChange={(event) => {
             setControlled(event.currentTarget.value);

@@ -11,6 +11,15 @@ const config: CapacitorConfig = {
   webDir: "dist/android",
   android: {
     allowMixedContent: false,
+    captureInput: false,
+  },
+  plugins: {
+    // Diagnostic native input build: keep Capacitor's core SystemBars plugin
+    // from installing inset/CSS listeners while we isolate WebView + IME input.
+    SystemBars: {
+      insetsHandling: "disable",
+      hidden: false,
+    },
   },
   server: {
     androidScheme: "https",
