@@ -4,7 +4,12 @@ import { AndroidAuthMinTest, isAndroidAuthMinPath } from "./components/AndroidAu
 import { AndroidCampaignInputMinTest, isAndroidCampaignInputMinPath } from "./components/AndroidCampaignInputMinTest";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
+import { installAndroidInputTrace } from "./lib/androidInputTrace";
 import { warmupAndroidInput } from "./lib/androidInputWarmup";
+
+// Install input/IME/frame tracing FIRST so it captures the very first
+// focus/keydown that may freeze the WebView. Pure instrumentation; no fixes.
+installAndroidInputTrace();
 
 // Prime the WebView's first focus / IME path so the very first text
 // input the user taps does not freeze. One-shot, no visible keyboard.
