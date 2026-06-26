@@ -78,14 +78,14 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         Log.i(TAG, "[android:webview] onResume activity resumed");
         logWebViewState("onResume");
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         Log.i(TAG, "[android:webview] onPause activity pausing");
         logWebViewState("onPause");
         super.onPause();
