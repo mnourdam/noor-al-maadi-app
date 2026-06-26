@@ -509,6 +509,28 @@ function HomeFull() {
       >
         ANDROID AUTH MIN
       </a>
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <Link
+          to={"/android-campaign-input-min" as any}
+          style={{
+            display: "block",
+            margin: "12px",
+            padding: "20px",
+            background: "#7c2d12",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #fed7aa",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          ANDROID CAMPAIGN INPUT TEST
+        </Link>
+      )}
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
@@ -896,6 +918,28 @@ function AndroidStableHome() {
         >
           ANDROID AUTH MIN
         </a>
+        {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+          <Link
+            to={"/android-campaign-input-min" as any}
+            style={{
+              display: "block",
+              marginBottom: "16px",
+              padding: "20px",
+              background: "#7c2d12",
+              color: "#ffffff",
+              fontWeight: 900,
+              fontSize: "18px",
+              textAlign: "center",
+              border: "3px solid #fed7aa",
+              borderRadius: "12px",
+              letterSpacing: "0.1em",
+              textDecoration: "none",
+            }}
+          >
+            ANDROID CAMPAIGN INPUT TEST
+          </Link>
+        )}
+
 
         <section className="rounded-3xl border border-gold/25 bg-surface p-5">
           <p className="text-[11px] tracking-[0.25em] text-gold/80">وضع أندرويد المستقر</p>
