@@ -20,28 +20,50 @@ export interface GeneratorOptions {
   maxGrid?: number;
   seed?: number;
   shuffle?: boolean;
+  /** Allow placing a word in an isolated area if no intersection is possible. Default: true. */
+  allowIsolated?: boolean;
+  /** Require every word to be connected to the main grid. Default: false. */
+  requireConnected?: boolean;
+}
+
+export interface UnplacedDetail {
+  word: string;
+  reason: "no_shared_letter" | "letter_conflict" | "out_of_bounds" | "adjacency" | "no_space_left";
 }
 
 export interface GeneratedCrossword {
   ok: true;
   stage: CrosswordStage;
   placed: number;
+  gridSize: number;
 }
 export interface GeneratorError {
   ok: false;
   error: string;
   placed: number;
   missing: string[];
+  details: UnplacedDetail[];
+  attemptedSize: number;
 }
 export type GeneratorResult = GeneratedCrossword | GeneratorError;
 
 const ARABIC_DIACRITICS = /[\u064B-\u065F\u0670\u06D6-\u06ED]/g;
 
+/**
+ * Normalize Arabic word for grid placement and matching.
+ * - strips tatweel and diacritics
+ * - removes whitespace and the convenience `_` separator (underscore = space)
+ * - unifies hamza variants: أ إ آ → ا (validator compares letters strictly,
+ *   so we must store the unified form in the stored answer too — otherwise
+ *   an intersection between أرقم and ابن would be flagged as a conflict).
+ *   ة and ى are left intact (validator does not normalize them).
+ */
 export function normalizeArabicWord(word: string): string {
   return (word ?? "")
     .replace(ARABIC_DIACRITICS, "")
-    .replace(/\s+/g, "")
-    .replace(/[ـ]/g, "") // tatweel
+    .replace(/[ـ]/g, "")
+    .replace(/[_\s]+/g, "")
+    .replace(/[أإآ]/g, "ا")
     .trim();
 }
 
