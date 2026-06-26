@@ -146,8 +146,22 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
       stages: v.stages,
       status: "draft" as GameStatus,
     };
-    const { error } = await supabase.from("games").upsert(payload as any, { onConflict: "slug" });
-    if (error) { notify("err", error.message); return; }
+    console.info("[games.import] INSERT", { slug: payload.slug, mode: payload.mode, title: payload.title });
+    const { data: inserted, error } = await supabase
+      .from("games")
+      .insert(payload as any)
+      .select("id, slug")
+      .single();
+    if (error) {
+      if ((error as any).code === "23505" || /duplicate|unique/i.test(error.message)) {
+        notify("err", `المعرف "${payload.slug}" مستخدم بالفعل. غيّر slug ثم أعد المحاولة.`);
+        return;
+      }
+      notify("err", error.message);
+      return;
+    }
+    console.info("[games.import] inserted", inserted);
+
     const warnings: string[] = [`✓ تم استيراد "${v.title}" كمسودة.`];
     if (unlockReportLocal?.duplicates.length) {
       warnings.push(`⚠ مقتنيات مكررة تم توحيدها: ${unlockReportLocal.duplicates.join("، ")}`);
