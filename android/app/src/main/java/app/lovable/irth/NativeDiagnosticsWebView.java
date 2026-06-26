@@ -57,8 +57,15 @@ public class NativeDiagnosticsWebView extends CapacitorWebView {
             + " fieldId=" + outAttrs.fieldId
             + " defaultIme=" + imeId);
 
-        if (base == null) return null;
-        return new TracingInputConnection(base);
+        if (base == null) {
+            trace("ime.wrapper.returning", "wrapped=false baseClass=null reason=base-null");
+            return null;
+        }
+        TracingInputConnection wrapped = new TracingInputConnection(base);
+        trace("ime.wrapper.returning", "wrapped=true baseClass=" + base.getClass().getName()
+            + " wrapperClass=" + wrapped.getClass().getName());
+        Log.i("IRTH_NATIVE_TRACE", "ime.wrapper.returning wrapped=true baseClass=" + base.getClass().getName());
+        return wrapped;
     }
 
     @Override
@@ -106,16 +113,21 @@ public class NativeDiagnosticsWebView extends CapacitorWebView {
     }
 
     private static void trace(String event, String message) {
-        Log.i(TAG, "IRTH_NATIVE_TRACE ts=" + System.currentTimeMillis()
+        String line = "IRTH_NATIVE_TRACE ts=" + System.currentTimeMillis()
             + " uptime=" + SystemClock.uptimeMillis()
             + " event=" + event
-            + " " + message);
+            + " " + message;
+        Log.i(TAG, line);
+        Log.i("IRTH_NATIVE_TRACE", line);
     }
 
     /** Wraps InputConnection to log every IME call with pre/post timestamps and watchdog. */
     private static final class TracingInputConnection extends InputConnectionWrapper {
         TracingInputConnection(InputConnection target) {
             super(target, true);
+            trace("ime.wrapper.constructed", "baseClass=" + (target == null ? "null" : target.getClass().getName()));
+            Log.i("IRTH_NATIVE_TRACE", "ime.wrapper.constructed baseClass="
+                + (target == null ? "null" : target.getClass().getName()));
         }
 
         private long pre(String method, String args) {
