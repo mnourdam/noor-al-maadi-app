@@ -49,6 +49,7 @@ import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
 import { Route as PlayChapterRouteImport } from './routes/play.chapter'
 import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
 import { Route as FigureIdRouteImport } from './routes/figure.$id'
+import { Route as DebugNativeInputMinRouteImport } from './routes/debug.native-input-min'
 import { Route as DebugInputTraceRouteImport } from './routes/debug.input-trace'
 import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
@@ -295,6 +296,11 @@ const InvestigationIdRoute = InvestigationIdRouteImport.update({
 const FigureIdRoute = FigureIdRouteImport.update({
   id: '/figure/$id',
   path: '/figure/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebugNativeInputMinRoute = DebugNativeInputMinRouteImport.update({
+  id: '/debug/native-input-min',
+  path: '/debug/native-input-min',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DebugInputTraceRoute = DebugInputTraceRouteImport.update({
@@ -606,6 +612,7 @@ export interface FileRoutesByFullPath {
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
   '/debug/input-trace': typeof DebugInputTraceRoute
+  '/debug/native-input-min': typeof DebugNativeInputMinRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -692,6 +699,7 @@ export interface FileRoutesByTo {
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
   '/debug/input-trace': typeof DebugInputTraceRoute
+  '/debug/native-input-min': typeof DebugNativeInputMinRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -782,6 +790,7 @@ export interface FileRoutesById {
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
   '/debug/input-trace': typeof DebugInputTraceRoute
+  '/debug/native-input-min': typeof DebugNativeInputMinRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -873,6 +882,7 @@ export interface FileRouteTypes {
     | '/city/$id'
     | '/compare/$id'
     | '/debug/input-trace'
+    | '/debug/native-input-min'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -959,6 +969,7 @@ export interface FileRouteTypes {
     | '/city/$id'
     | '/compare/$id'
     | '/debug/input-trace'
+    | '/debug/native-input-min'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -1048,6 +1059,7 @@ export interface FileRouteTypes {
     | '/city/$id'
     | '/compare/$id'
     | '/debug/input-trace'
+    | '/debug/native-input-min'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -1138,6 +1150,7 @@ export interface RootRouteChildren {
   CityIdRoute: typeof CityIdRoute
   CompareIdRoute: typeof CompareIdRoute
   DebugInputTraceRoute: typeof DebugInputTraceRoute
+  DebugNativeInputMinRoute: typeof DebugNativeInputMinRoute
   FigureIdRoute: typeof FigureIdRoute
   InvestigationIdRoute: typeof InvestigationIdRoute
   PlayChapterRoute: typeof PlayChapterRoute
@@ -1433,6 +1446,13 @@ declare module '@tanstack/react-router' {
       path: '/figure/$id'
       fullPath: '/figure/$id'
       preLoaderRoute: typeof FigureIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debug/native-input-min': {
+      id: '/debug/native-input-min'
+      path: '/debug/native-input-min'
+      fullPath: '/debug/native-input-min'
+      preLoaderRoute: typeof DebugNativeInputMinRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/debug/input-trace': {
@@ -1884,6 +1904,7 @@ const rootRouteChildren: RootRouteChildren = {
   CityIdRoute: CityIdRoute,
   CompareIdRoute: CompareIdRoute,
   DebugInputTraceRoute: DebugInputTraceRoute,
+  DebugNativeInputMinRoute: DebugNativeInputMinRoute,
   FigureIdRoute: FigureIdRoute,
   InvestigationIdRoute: InvestigationIdRoute,
   PlayChapterRoute: PlayChapterRoute,
