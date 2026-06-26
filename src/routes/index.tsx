@@ -490,8 +490,8 @@ function HomeFull() {
       >
         ANDROID INPUT TEST
       </Link>
-      <Link
-        to="/android-auth-min"
+      <a
+        href="/android-auth-min"
         style={{
           display: "block",
           margin: "12px",
@@ -508,7 +508,7 @@ function HomeFull() {
         }}
       >
         ANDROID AUTH MIN
-      </Link>
+      </a>
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
@@ -877,8 +877,8 @@ function AndroidStableHome() {
         >
           ANDROID INPUT TEST
         </Link>
-        <Link
-          to="/android-auth-min"
+        <a
+          href="/android-auth-min"
           style={{
             display: "block",
             marginBottom: "16px",
@@ -895,7 +895,7 @@ function AndroidStableHome() {
           }}
         >
           ANDROID AUTH MIN
-        </Link>
+        </a>
 
         <section className="rounded-3xl border border-gold/25 bg-surface p-5">
           <p className="text-[11px] tracking-[0.25em] text-gold/80">وضع أندرويد المستقر</p>
