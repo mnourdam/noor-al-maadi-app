@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 type Shared = {
   onValueChange?: (value: string) => void;
   onEnter?: (value: string) => void;
+  /** Accepted for API compatibility; commit always happens on blur/Enter on Android. */
+  commitMode?: "blur" | "change" | "enter";
 };
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & Shared;
@@ -60,6 +62,7 @@ export const AndroidPlainTextInput = React.forwardRef<HTMLInputElement, InputPro
       onBlur,
       onKeyDown,
       onEnter,
+      commitMode: _commitMode,
       value,
       defaultValue,
       style,
@@ -146,6 +149,7 @@ export const AndroidPlainTextarea = React.forwardRef<HTMLTextAreaElement, Textar
       onBlur,
       onKeyDown,
       onEnter,
+      commitMode: _commitMode,
       value,
       defaultValue,
       style,
