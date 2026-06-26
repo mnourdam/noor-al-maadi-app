@@ -22,6 +22,7 @@ import { AndroidBackHandler } from "../components/AndroidBackHandler";
 import { androidMark, isAndroidUltraStableMode } from "../lib/androidFreezeDiagnostics";
 import { isSectionEnabled, isAndroidQuietActive } from "../lib/androidQuietMode";
 import { AppShell } from "../components/AppShell";
+import { AndroidTextEntryHost } from "../components/AndroidTextEntry";
 
 function NotFoundComponent() {
   return (
@@ -304,6 +305,7 @@ function RootComponent() {
           {!androidStable && isSectionEnabled("firstLaunch") && <FirstLaunchGate />}
           {!androidStable && isSectionEnabled("achievement") && <AchievementWatcher />}
           {!androidStable && isSectionEnabled("levelUp") && <LevelUpWatcher />}
+          <AndroidTextEntryHost />
           <Toaster position="top-center" richColors closeButton />
           {!androidStable && isSectionEnabled("splash") && <SplashSequence />}
           {!capacitorMinimalDiagnostics && isSectionEnabled("backHandler") && <AndroidBackHandler />}
