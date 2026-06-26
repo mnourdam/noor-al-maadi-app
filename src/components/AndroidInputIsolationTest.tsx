@@ -291,3 +291,64 @@ export function AndroidInputIsolationTest() {
     </main>
   );
 }
+
+const BISECT_PRESETS: Array<{ label: string; value: string }> = [
+  { label: "Enable none (quiet)", value: "" },
+  { label: "Enable audio", value: "audio" },
+  { label: "Enable push", value: "push" },
+  { label: "Enable backHandler", value: "backHandler" },
+  { label: "Enable authListener", value: "authListener" },
+  { label: "Enable offlineSnapshot", value: "offlineSnapshot" },
+  { label: "Enable ALL", value: "all" },
+];
+
+function QuietBisectButtons() {
+  const apply = (value: string) => {
+    try {
+      if (value) window.localStorage.setItem("irth.android.enable", value);
+      else window.localStorage.removeItem("irth.android.enable");
+      log("quiet-bisect:set", { value: value || "(none)" });
+    } catch (err) {
+      log("quiet-bisect:set-failed", { message: (err as Error)?.message });
+    }
+    // Hard reload back to the app root so the new gate applies on boot.
+    window.location.replace("/");
+  };
+
+  const current = (() => {
+    try { return window.localStorage.getItem("irth.android.enable") || "(none)"; } catch { return "(none)"; }
+  })();
+
+  return (
+    <div style={{ margin: "8px 0 24px", padding: 14, border: "1px solid #c9c9c9", borderRadius: 8, background: "#fff" }}>
+      <div style={{ font: "700 13px system-ui, sans-serif", color: "#111", marginBottom: 4 }}>
+        Android quiet-mode bisection
+      </div>
+      <div style={{ font: "12px system-ui, sans-serif", color: "#555", marginBottom: 10 }}>
+        Current enable list: <code>{current}</code>. Tap a button to set it and reload to <code>/</code>.
+      </div>
+      {BISECT_PRESETS.map((p) => (
+        <button
+          key={p.label}
+          type="button"
+          onClick={() => apply(p.value)}
+          style={{
+            display: "block",
+            width: "100%",
+            boxSizing: "border-box",
+            margin: "0 0 8px",
+            border: "1px solid #111",
+            borderRadius: 6,
+            background: p.value === "all" ? "#b91c1c" : p.value === "" ? "#0f766e" : "#eee",
+            color: p.value === "all" || p.value === "" ? "#fff" : "#111",
+            font: "700 15px system-ui, sans-serif",
+            padding: "10px 12px",
+          }}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
