@@ -12,9 +12,11 @@ function InputTraceDebug() {
   const [copyMsg, setCopyMsg] = React.useState("");
 
   const refresh = React.useCallback(() => {
+    const stored = window.localStorage.getItem("irth_input_trace_last_freeze");
     const arr = (window as any).__IRTH_INPUT_TRACE__ ?? [];
-    setCount(arr.length);
-    setJson(JSON.stringify(arr, null, 2));
+    const nextJson = stored || JSON.stringify(arr, null, 2);
+    setCount(stored ? safeTraceCount(stored) : arr.length);
+    setJson(nextJson);
   }, []);
 
   React.useEffect(() => {
@@ -45,6 +47,7 @@ function InputTraceDebug() {
 
   const clear = () => {
     (window as any).__IRTH_INPUT_TRACE__ = [];
+    window.localStorage.removeItem("irth_input_trace_last_freeze");
     refresh();
   };
 
@@ -79,6 +82,15 @@ function InputTraceDebug() {
       />
     </div>
   );
+}
+
+function safeTraceCount(json: string): number {
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed.length : 0;
+  } catch {
+    return 0;
+  }
 }
 
 const btn: React.CSSProperties = {
