@@ -41,24 +41,39 @@ export function useAdminGuard() {
       }
 
       // Fetch role capabilities from the DB (security-definer RPC).
-      const { data: capsData } = await supabase.rpc(
+      const { data: capsData, error: capsError } = await supabase.rpc(
         "current_user_capabilities" as never,
       );
       if (!alive) return;
       const c = (capsData as AdminCapabilities | null) ?? EMPTY_CAPS;
 
-      // Belt-and-braces: if the bootstrap email is signed in but the role
-      // RPC failed for any reason, still treat them as manager.
+      // Belt-and-braces fallbacks so a transient RPC hiccup or schema cache
+      // miss doesn't lock a real admin/editor out of the panel:
+      //   1. bootstrap email override (matches DB-side is_user_manager)
+      //   2. roles array fallback (RPC returned roles even if flags didn't)
       const bootstrap = NORMALIZED.includes(normalizeEmail(e));
+      const roles = c.roles ?? [];
+      const hasManagerRole = roles.includes("owner") || roles.includes("admin");
+      const hasEditorRole = hasManagerRole || roles.includes("editor");
+
+      // eslint-disable-next-line no-console
+      console.info("[admin-guard]", {
+        email: e,
+        rpcError: capsError?.message ?? null,
+        caps: c,
+        bootstrap,
+      });
+
       setCaps({
-        is_manager: !!c.is_manager || bootstrap,
-        is_editor: !!c.is_editor || bootstrap,
-        roles: c.roles ?? [],
+        is_manager: !!c.is_manager || bootstrap || hasManagerRole,
+        is_editor: !!c.is_editor || bootstrap || hasEditorRole,
+        roles,
       });
       setChecking(false);
     })();
     return () => { alive = false; };
   }, [accountUser, loadingSession]);
+
 
   const allowed = caps.is_editor; // editor and above can reach the admin shell
   return { checking, allowed, email, caps };
