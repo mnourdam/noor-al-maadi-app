@@ -29,6 +29,7 @@ import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AndroidInputTestRouteImport } from './routes/android-input-test'
+import { Route as AndroidAuthMinRouteImport } from './routes/android-auth-min'
 import { Route as AdventureRouteImport } from './routes/adventure'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
@@ -191,6 +192,11 @@ const AuthRoute = AuthRouteImport.update({
 const AndroidInputTestRoute = AndroidInputTestRouteImport.update({
   id: '/android-input-test',
   path: '/android-input-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AndroidAuthMinRoute = AndroidAuthMinRouteImport.update({
+  id: '/android-auth-min',
+  path: '/android-auth-min',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdventureRoute = AdventureRouteImport.update({
@@ -522,6 +528,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
+  '/android-auth-min': typeof AndroidAuthMinRoute
   '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
@@ -607,6 +614,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
+  '/android-auth-min': typeof AndroidAuthMinRoute
   '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/collection': typeof CollectionRoute
@@ -690,6 +698,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
+  '/android-auth-min': typeof AndroidAuthMinRoute
   '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
@@ -777,6 +786,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/achievements'
     | '/adventure'
+    | '/android-auth-min'
     | '/android-input-test'
     | '/auth'
     | '/campaigns'
@@ -862,6 +872,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/achievements'
     | '/adventure'
+    | '/android-auth-min'
     | '/android-input-test'
     | '/auth'
     | '/collection'
@@ -944,6 +955,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/achievements'
     | '/adventure'
+    | '/android-auth-min'
     | '/android-input-test'
     | '/auth'
     | '/campaigns'
@@ -1030,6 +1042,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AchievementsRoute: typeof AchievementsRoute
   AdventureRoute: typeof AdventureRoute
+  AndroidAuthMinRoute: typeof AndroidAuthMinRoute
   AndroidInputTestRoute: typeof AndroidInputTestRoute
   AuthRoute: typeof AuthRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
@@ -1241,6 +1254,13 @@ declare module '@tanstack/react-router' {
       path: '/android-input-test'
       fullPath: '/android-input-test'
       preLoaderRoute: typeof AndroidInputTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/android-auth-min': {
+      id: '/android-auth-min'
+      path: '/android-auth-min'
+      fullPath: '/android-auth-min'
+      preLoaderRoute: typeof AndroidAuthMinRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/adventure': {
@@ -1743,6 +1763,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AchievementsRoute: AchievementsRoute,
   AdventureRoute: AdventureRoute,
+  AndroidAuthMinRoute: AndroidAuthMinRoute,
   AndroidInputTestRoute: AndroidInputTestRoute,
   AuthRoute: AuthRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
