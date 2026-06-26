@@ -25,13 +25,6 @@ try {
   }
 } catch { /* ignore */ }
 
-// TanStack Start normally injects this during its client boot. The Android
-// bundle is a plain SPA, so provide the only Start option the client-side
-// server-function stubs need: bearer-token attachment for RPC calls.
-(window as unknown as { __TSS_START_OPTIONS__?: unknown }).__TSS_START_OPTIONS__ = {
-  functionMiddleware: [attachSupabaseAuth],
-};
-
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
@@ -63,6 +56,13 @@ async function bootMainApp(root: HTMLElement) {
 
   const { installAndroidFreezeDiagnostics, androidMark } = diagnostics;
   const { applyPerfMode } = perf;
+
+  // TanStack Start normally injects this during its client boot. The Android
+  // bundle is a plain SPA, so provide the only Start option the client-side
+  // server-function stubs need: bearer-token attachment for RPC calls.
+  (window as unknown as { __TSS_START_OPTIONS__?: unknown }).__TSS_START_OPTIONS__ = {
+    functionMiddleware: [attachSupabaseAuth],
+  };
 
   installAndroidFreezeDiagnostics();
   // Flip the global perf-lite CSS class BEFORE first paint so heavy

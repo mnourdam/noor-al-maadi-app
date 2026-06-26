@@ -27,16 +27,16 @@ function targetLength(target: EventTarget | null) {
   return undefined;
 }
 
-function fieldListeners(field: string) {
+function fieldListeners(field: string): Record<string, EventListener> {
   return {
     focus: (event: Event) => log("focus", { field, length: targetLength(event.target) }),
     keydown: (event: Event) => log("keydown", { field, key: safeKey((event as KeyboardEvent).key || "unknown") }),
     input: (event: Event) => log("input", { field, length: targetLength(event.target) }),
     change: (event: Event) => log("change", { field, length: targetLength(event.target) }),
-    compositionstart: () => log("compositionstart", { field }),
+    compositionstart: (_event: Event) => log("compositionstart", { field }),
     compositionend: (event: Event) => log("compositionend", { field, length: targetLength(event.target) }),
     blur: (event: Event) => log("blur", { field, length: targetLength(event.target) }),
-  } satisfies Record<string, EventListener>;
+  };
 }
 
 function attachNativeDiagnostics(el: HTMLInputElement | HTMLTextAreaElement | null, field: string) {
