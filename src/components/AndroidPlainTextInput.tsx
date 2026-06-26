@@ -149,6 +149,7 @@ export const AndroidPlainTextarea = React.forwardRef<HTMLTextAreaElement, Textar
       onBlur,
       onKeyDown,
       onEnter,
+      commitMode: _commitMode,
       value,
       defaultValue,
       style,
