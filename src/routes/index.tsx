@@ -30,6 +30,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -67,17 +68,18 @@ function HomeFull() {
   const { selected: todayEvent } = useTodayInHistoryEvent();
   const stats = useRealCollectionStats();
   const [unread, setUnread] = useState(0);
+  const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
   useEffect(() => {
     const recount = () => setUnread(unreadCount());
     recount();
     if (androidStable) return;
     window.addEventListener("irth:notifications:updated", recount);
-    window.addEventListener("focus", recount);
+    if (!disableGlobalFocusBlur) window.addEventListener("focus", recount);
     return () => {
       window.removeEventListener("irth:notifications:updated", recount);
-      window.removeEventListener("focus", recount);
+      if (!disableGlobalFocusBlur) window.removeEventListener("focus", recount);
     };
-  }, [androidStable]);
+  }, [androidStable, disableGlobalFocusBlur]);
 
   useEffect(() => {
     setMounted(true);
@@ -120,9 +122,9 @@ function HomeFull() {
   useEffect(() => {
     if (androidStable) return;
     const onFocus = () => setProgressTick((t) => t + 1);
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [androidStable]);
+    if (!disableGlobalFocusBlur) window.addEventListener("focus", onFocus);
+    return () => { if (!disableGlobalFocusBlur) window.removeEventListener("focus", onFocus); };
+  }, [androidStable, disableGlobalFocusBlur]);
 
   type CampaignSelection = {
     campaign: ImportedCampaign;
