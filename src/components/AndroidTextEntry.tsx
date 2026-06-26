@@ -297,6 +297,7 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
     forwardedRef,
   ) => {
     const localRef = React.useRef<HTMLInputElement | null>(null);
+    const [internalValue, setInternalValue] = React.useState(() => (typeof defaultValue === "string" ? defaultValue : ""));
     const setRefs = React.useCallback((node: HTMLInputElement | null) => {
       localRef.current = node;
       if (typeof forwardedRef === "function") forwardedRef(node);
@@ -304,7 +305,7 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
     }, [forwardedRef]);
 
     const android = isAndroidNativeApp();
-    const currentValue = (typeof value === "string" ? value : localRef.current?.value ?? (typeof defaultValue === "string" ? defaultValue : ""));
+    const currentValue = (typeof value === "string" ? value : localRef.current?.value ?? internalValue);
     const lastOpenAtRef = React.useRef(0);
     const openEntry = React.useCallback(() => {
       if (readOnly || disabled) return;
@@ -323,6 +324,7 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
         autoComplete: props.autoComplete,
         onSave: (next) => {
           if (localRef.current) localRef.current.value = next;
+          setInternalValue(next);
           onValueChange?.(next);
           if (onChange) {
             const target = localRef.current;
@@ -330,14 +332,15 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
           }
         },
       });
-    }, [currentValue, disabled, modalLabel, modalTitle, onChange, onEnter, onValueChange, placeholder, props.autoComplete, props.dir, props.inputMode, props.maxLength, readOnly]);
+    }, [currentValue, disabled, modalLabel, modalTitle, onChange, onValueChange, placeholder, props.autoComplete, props.dir, props.inputMode, props.maxLength, readOnly]);
 
     if (android) {
       return (
         <input
           {...props}
           ref={setRefs}
-          value={currentValue}
+          value={typeof value === "string" ? currentValue : undefined}
+          defaultValue={typeof value === "string" ? undefined : currentValue}
           readOnly
           disabled={disabled}
           placeholder={placeholder}
@@ -421,6 +424,7 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
     forwardedRef,
   ) => {
     const localRef = React.useRef<HTMLTextAreaElement | null>(null);
+    const [internalValue, setInternalValue] = React.useState(() => (typeof defaultValue === "string" ? defaultValue : ""));
     const setRefs = React.useCallback((node: HTMLTextAreaElement | null) => {
       localRef.current = node;
       if (typeof forwardedRef === "function") forwardedRef(node);
@@ -428,7 +432,7 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
     }, [forwardedRef]);
 
     const android = isAndroidNativeApp();
-    const currentValue = (typeof value === "string" ? value : localRef.current?.value ?? (typeof defaultValue === "string" ? defaultValue : ""));
+    const currentValue = (typeof value === "string" ? value : localRef.current?.value ?? internalValue);
     const lastOpenAtRef = React.useRef(0);
     const openEntry = React.useCallback(() => {
       if (readOnly || disabled) return;
@@ -446,6 +450,7 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
         autoComplete: props.autoComplete,
         onSave: (next) => {
           if (localRef.current) localRef.current.value = next;
+          setInternalValue(next);
           onValueChange?.(next);
           if (onChange) {
             const target = localRef.current;
@@ -453,14 +458,15 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
           }
         },
       });
-    }, [currentValue, disabled, modalLabel, modalTitle, onChange, onEnter, onValueChange, placeholder, props.autoComplete, props.dir, props.maxLength, readOnly]);
+    }, [currentValue, disabled, modalLabel, modalTitle, onChange, onValueChange, placeholder, props.autoComplete, props.dir, props.maxLength, readOnly]);
 
     if (android) {
       return (
         <textarea
           {...props}
           ref={setRefs}
-          value={currentValue}
+          value={typeof value === "string" ? currentValue : undefined}
+          defaultValue={typeof value === "string" ? undefined : currentValue}
           readOnly
           disabled={disabled}
           placeholder={placeholder}
