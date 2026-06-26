@@ -5,6 +5,7 @@ import { useProfile } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart, formatHeartTimer } from "@/lib/hearts";
 import { unreadCount, formatBadgeCount } from "@/lib/notifications";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 /**
  * Compact top-of-screen HUD: hearts, dinars, streak.
@@ -15,6 +16,7 @@ export function HUD() {
   const [, force] = useState(0);
   const [unread, setUnread] = useState(0);
   const androidStable = isAndroidUltraStableMode();
+  const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
 
   useEffect(() => {
     // 1s tick so the MM:SS heart timer counts smoothly.
@@ -24,13 +26,13 @@ export function HUD() {
     if (androidStable) return;
     window.addEventListener("irth:notifications:updated", recount);
     const focus = () => recount();
-    window.addEventListener("focus", focus);
+    if (!disableGlobalFocusBlur) window.addEventListener("focus", focus);
     return () => {
       if (id) clearInterval(id);
       window.removeEventListener("irth:notifications:updated", recount);
-      window.removeEventListener("focus", focus);
+      if (!disableGlobalFocusBlur) window.removeEventListener("focus", focus);
     };
-  }, [androidStable]);
+  }, [androidStable, disableGlobalFocusBlur]);
 
   const now = Date.now();
   const hearts = getEffectiveHearts(profile, now);
