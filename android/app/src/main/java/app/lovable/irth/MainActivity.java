@@ -1,13 +1,14 @@
 package app.lovable.irth;
 
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
-import android.graphics.Color;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
-import android.webkit.WebSettings;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.WebViewListener;
@@ -22,9 +23,11 @@ import com.getcapacitor.WebViewListener;
  */
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "IrthMainActivity";
+    private static int createCount = 0;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        createCount++;
         boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         WebView.setWebContentsDebuggingEnabled(debuggable);
 
@@ -53,8 +56,15 @@ public class MainActivity extends BridgeActivity {
         });
 
         super.onCreate(savedInstanceState);
-        Log.i(TAG, "[android:ime] onCreate softInputMode=adjustResize|stateHidden immersive=DISABLED edgeToEdge=DISABLED hardwareAccelerated=false webDebug=" + debuggable);
+        Log.i(TAG, "[android:ime] onCreate count=" + createCount + " softInputMode=adjustResize|stateHidden immersive=DISABLED edgeToEdge=DISABLED hardwareAccelerated=true webDebug=" + debuggable);
         configureWebViewForInputDiagnostics();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        Log.i(TAG, "[android:ime] onConfigurationChanged keyboard=" + newConfig.keyboard + " keyboardHidden=" + newConfig.keyboardHidden + " hardKeyboardHidden=" + newConfig.hardKeyboardHidden + " orientation=" + newConfig.orientation);
+        logWebViewState("configurationChanged");
     }
 
     @Override
@@ -89,14 +99,12 @@ public class MainActivity extends BridgeActivity {
         webView.setFocusableInTouchMode(true);
         webView.setClickable(true);
         webView.setLongClickable(true);
-        webView.setBackgroundColor(Color.TRANSPARENT);
-        webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        webView.requestFocus(View.FOCUS_DOWN);
 
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setMediaPlaybackRequiresUserGesture(true);
+        try {
+            webView.addJavascriptInterface(new NativeDiagnosticsBridge(), "IrthNativeDiagnostics");
+        } catch (Exception ex) {
+            Log.w(TAG, "[android:webview] addJavascriptInterface failed: " + ex.getMessage());
+        }
 
         webView.setOnFocusChangeListener((view, hasFocus) -> {
             Log.i(TAG, "[android:webview] nativeFocus hasFocus=" + hasFocus + " view=" + view.getClass().getSimpleName() + " id=" + System.identityHashCode(view));
@@ -110,6 +118,16 @@ public class MainActivity extends BridgeActivity {
 
         logViewHierarchy();
         logWebViewState("configured");
+    }
+
+    private class NativeDiagnosticsBridge {
+        @JavascriptInterface
+        public void openBareInputTest() {
+            runOnUiThread(() -> {
+                Log.i(TAG, "[android:webview] openBareInputTest requested from WebView");
+                startActivity(new Intent(MainActivity.this, BareInputTestActivity.class));
+            });
+        }
     }
 
     private void logWebViewState(String source) {
@@ -137,9 +155,23 @@ public class MainActivity extends BridgeActivity {
             return;
         }
         Log.i(TAG, "[android:webview] hierarchy root=" + root.getClass().getName() + " children=" + root.getChildCount() + " clickable=" + root.isClickable() + " focusable=" + root.isFocusable());
-        for (int i = 0; i < root.getChildCount(); i++) {
-            View child = root.getChildAt(i);
-            Log.i(TAG, "[android:webview] hierarchy child[" + i + "]=" + child.getClass().getName() + " shown=" + child.isShown() + " clickable=" + child.isClickable() + " focusable=" + child.isFocusable());
+        logViewTree(root, "content", 0);
+    }
+
+    private void logViewTree(View view, String path, int depth) {
+        if (view == null || depth > 4) return;
+        Log.i(TAG, "[android:webview] hierarchy " + path
+            + " class=" + view.getClass().getName()
+            + " shown=" + view.isShown()
+            + " clickable=" + view.isClickable()
+            + " focusable=" + view.isFocusable()
+            + " focusableInTouch=" + view.isFocusableInTouchMode()
+            + " alpha=" + view.getAlpha()
+            + " width=" + view.getWidth()
+            + " height=" + view.getHeight());
+        if (!(view instanceof ViewGroup group)) return;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            logViewTree(group.getChildAt(i), path + "/" + i, depth + 1);
         }
     }
 
@@ -149,9 +181,11 @@ public class MainActivity extends BridgeActivity {
             + "var p='[android:web-input]';"
             + "function tag(el){if(!el)return 'none';return (el.tagName||'node').toLowerCase()+(el.id?'#'+el.id:'')+(el.type?'['+el.type+']':'');}"
             + "function len(el){return el&&typeof el.value==='string'?el.value.length:null;}"
-            + "function log(name,e){try{console.info(p,name,{target:tag(e&&e.target),active:tag(document.activeElement),length:len(e&&e.target),hidden:document.hidden,hasFocus:document.hasFocus&&document.hasFocus()});}catch(_){}}"
+            + "function rect(el){try{if(!el||!el.getBoundingClientRect)return null;var r=el.getBoundingClientRect();return {x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)};}catch(_){return null;}}"
+            + "function log(name,e){try{console.info(p,name,{target:tag(e&&e.target),active:tag(document.activeElement),length:len(e&&e.target),rect:rect(e&&e.target),hidden:document.hidden,hasFocus:document.hasFocus&&document.hasFocus()});}catch(_){}}"
             + "['visibilitychange','focus','blur'].forEach(function(n){window.addEventListener(n,function(e){log('window-'+n,e);},true);});"
-            + "['focusin','focusout','keydown','beforeinput','input','change','compositionstart','compositionend'].forEach(function(n){document.addEventListener(n,function(e){log(n,e);},true);});"
+            + "document.addEventListener('focusin',function(e){log('focusin',e);setTimeout(function(){log('focusin-stable',e);},250);},true);"
+            + "['focusout','keydown','beforeinput','input','change','compositionstart','compositionend'].forEach(function(n){document.addEventListener(n,function(e){log(n,e);},true);});"
             + "console.info(p,'installed',{url:location.href,active:tag(document.activeElement)});"
             + "})();";
         webView.evaluateJavascript(script, value -> Log.i(TAG, "[android:web-input] diagnosticScriptInjected result=" + value));
