@@ -162,6 +162,17 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Android WebView IME freeze fix: `background-attachment: fixed` forces a
+     synchronous re-tile of the viewport-sized gradient every time the soft
+     keyboard resizes the viewport. On real devices this stalls the main
+     thread for several seconds the first time any input is focused. Use a
+     scrolling background on Android instead — visually identical here
+     because the gradient covers the full body. */
+  html.is-android body,
+  html.is-capacitor body {
+    background-attachment: scroll;
+  }
+
   html {
     direction: rtl;
   }
