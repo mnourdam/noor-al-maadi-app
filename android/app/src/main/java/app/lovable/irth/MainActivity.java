@@ -95,10 +95,10 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
         AndroidABFlags.applyIntentToPrefs(this, intent);
         startupABFlags = AndroidABFlags.read(this, intent);
         AndroidABFlags.logStartup("activity.onNewIntent", startupABFlags);
+        super.onNewIntent(intent);
         WebView webView = bridge != null ? bridge.getWebView() : null;
         if (webView != null) {
             webView.evaluateJavascript(AndroidABFlags.bootstrapScript(startupABFlags), value -> trace("ab.flagsReinjected", "result=" + value));
