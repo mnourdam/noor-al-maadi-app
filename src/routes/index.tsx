@@ -509,6 +509,28 @@ function HomeFull() {
       >
         ANDROID AUTH MIN
       </a>
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <Link
+          to={"/android-campaign-input-min" as any}
+          style={{
+            display: "block",
+            margin: "12px",
+            padding: "20px",
+            background: "#7c2d12",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #fed7aa",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          ANDROID CAMPAIGN INPUT TEST
+        </Link>
+      )}
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
