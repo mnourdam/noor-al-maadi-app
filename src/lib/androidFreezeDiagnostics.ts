@@ -23,6 +23,8 @@ type DiagnosticWindow = Window & {
     setInterval: typeof window.setInterval;
     clearInterval: typeof window.clearInterval;
   };
+  __irthAndroidOriginalStorageSetItem?: Storage["setItem"];
+  __irthAndroidOriginalFetch?: typeof window.fetch;
 };
 
 type TimeoutId = number;
@@ -33,6 +35,8 @@ let lastOverlayPaintAt = 0;
 let overlayTimer: number | null = null;
 let lastViewportLogAt = 0;
 let lastFrameDelayLogAt = 0;
+let lastStorageLogAt = 0;
+let lastNetworkLogAt = 0;
 
 export function isAndroidNativeApp(): boolean {
   if (typeof window === "undefined") return false;
@@ -249,6 +253,60 @@ function installTimerDiagnostics() {
   }) as typeof window.clearInterval;
 }
 
+function installStorageDiagnostics() {
+  const w = window as DiagnosticWindow;
+  if (w.__irthAndroidOriginalStorageSetItem) return;
+  try {
+    const proto = Storage.prototype;
+    const original = proto.setItem;
+    w.__irthAndroidOriginalStorageSetItem = original;
+    proto.setItem = function (this: Storage, key: string, value: string) {
+      const started = now();
+      try {
+        return original.call(this, key, value);
+      } finally {
+        const duration = now() - started;
+        const t = Date.now();
+        if (duration > 50 || t - lastStorageLogAt > 3000) {
+          lastStorageLogAt = t;
+          logFreeze(duration > 50 ? "slow:storage.setItem" : "storage.setItem", {
+            key: key.slice(0, 80),
+            bytes: typeof value === "string" ? value.length : 0,
+            duration: Math.round(duration),
+          });
+        }
+      }
+    };
+  } catch { /* storage may be locked down */ }
+}
+
+function installNetworkDiagnostics() {
+  const w = window as DiagnosticWindow;
+  if (w.__irthAndroidOriginalFetch || typeof window.fetch !== "function") return;
+  const original = window.fetch.bind(window);
+  w.__irthAndroidOriginalFetch = original;
+  window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const started = now();
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    try {
+      const res = await original(input, init);
+      const duration = now() - started;
+      if (duration > 1000 || Date.now() - lastNetworkLogAt > 5000) {
+        lastNetworkLogAt = Date.now();
+        logFreeze(duration > 1000 ? "slow:fetch" : "fetch", {
+          url: url.slice(0, 120),
+          status: res.status,
+          duration: Math.round(duration),
+        });
+      }
+      return res;
+    } catch (error) {
+      logFreeze("fetch:error", { url: url.slice(0, 120), message: (error as Error)?.message ?? String(error) });
+      throw error;
+    }
+  }) as typeof window.fetch;
+}
+
 function installRouteDiagnostics() {
   const state = getState();
   if (!state) return;
@@ -356,6 +414,8 @@ export function installAndroidFreezeDiagnostics() {
   const state = getState();
   if (state) state.installed = true;
   installTimerDiagnostics();
+  installStorageDiagnostics();
+  installNetworkDiagnostics();
   installRouteDiagnostics();
   installInputViewportDiagnostics();
   installLongTaskDiagnostics();
