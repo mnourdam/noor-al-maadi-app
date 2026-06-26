@@ -29,6 +29,7 @@ import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AndroidInputTestRouteImport } from './routes/android-input-test'
+import { Route as AndroidCampaignInputMinRouteImport } from './routes/android-campaign-input-min'
 import { Route as AndroidAuthMinRouteImport } from './routes/android-auth-min'
 import { Route as AdventureRouteImport } from './routes/adventure'
 import { Route as AchievementsRouteImport } from './routes/achievements'
@@ -192,6 +193,11 @@ const AuthRoute = AuthRouteImport.update({
 const AndroidInputTestRoute = AndroidInputTestRouteImport.update({
   id: '/android-input-test',
   path: '/android-input-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AndroidCampaignInputMinRoute = AndroidCampaignInputMinRouteImport.update({
+  id: '/android-campaign-input-min',
+  path: '/android-campaign-input-min',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AndroidAuthMinRoute = AndroidAuthMinRouteImport.update({
@@ -529,6 +535,7 @@ export interface FileRoutesByFullPath {
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
   '/android-auth-min': typeof AndroidAuthMinRoute
+  '/android-campaign-input-min': typeof AndroidCampaignInputMinRoute
   '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
@@ -615,6 +622,7 @@ export interface FileRoutesByTo {
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
   '/android-auth-min': typeof AndroidAuthMinRoute
+  '/android-campaign-input-min': typeof AndroidCampaignInputMinRoute
   '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/collection': typeof CollectionRoute
@@ -699,6 +707,7 @@ export interface FileRoutesById {
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
   '/android-auth-min': typeof AndroidAuthMinRoute
+  '/android-campaign-input-min': typeof AndroidCampaignInputMinRoute
   '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
@@ -787,6 +796,7 @@ export interface FileRouteTypes {
     | '/achievements'
     | '/adventure'
     | '/android-auth-min'
+    | '/android-campaign-input-min'
     | '/android-input-test'
     | '/auth'
     | '/campaigns'
@@ -873,6 +883,7 @@ export interface FileRouteTypes {
     | '/achievements'
     | '/adventure'
     | '/android-auth-min'
+    | '/android-campaign-input-min'
     | '/android-input-test'
     | '/auth'
     | '/collection'
@@ -956,6 +967,7 @@ export interface FileRouteTypes {
     | '/achievements'
     | '/adventure'
     | '/android-auth-min'
+    | '/android-campaign-input-min'
     | '/android-input-test'
     | '/auth'
     | '/campaigns'
@@ -1043,6 +1055,7 @@ export interface RootRouteChildren {
   AchievementsRoute: typeof AchievementsRoute
   AdventureRoute: typeof AdventureRoute
   AndroidAuthMinRoute: typeof AndroidAuthMinRoute
+  AndroidCampaignInputMinRoute: typeof AndroidCampaignInputMinRoute
   AndroidInputTestRoute: typeof AndroidInputTestRoute
   AuthRoute: typeof AuthRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
@@ -1254,6 +1267,13 @@ declare module '@tanstack/react-router' {
       path: '/android-input-test'
       fullPath: '/android-input-test'
       preLoaderRoute: typeof AndroidInputTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/android-campaign-input-min': {
+      id: '/android-campaign-input-min'
+      path: '/android-campaign-input-min'
+      fullPath: '/android-campaign-input-min'
+      preLoaderRoute: typeof AndroidCampaignInputMinRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/android-auth-min': {
@@ -1764,6 +1784,7 @@ const rootRouteChildren: RootRouteChildren = {
   AchievementsRoute: AchievementsRoute,
   AdventureRoute: AdventureRoute,
   AndroidAuthMinRoute: AndroidAuthMinRoute,
+  AndroidCampaignInputMinRoute: AndroidCampaignInputMinRoute,
   AndroidInputTestRoute: AndroidInputTestRoute,
   AuthRoute: AuthRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
