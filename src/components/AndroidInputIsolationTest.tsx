@@ -294,7 +294,6 @@ export function AndroidInputIsolationTest() {
           onChange={(event) => setControlled(event.currentTarget.value)}
           onBlur={(event) => reactControlled.blur?.(event.nativeEvent)}
 
-          onBlur={(event) => reactControlled.blur(event.nativeEvent)}
         />
       </div>
     </main>
