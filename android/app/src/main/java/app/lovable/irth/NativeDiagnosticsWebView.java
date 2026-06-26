@@ -70,14 +70,14 @@ public class NativeDiagnosticsWebView extends CapacitorWebView {
 
     @Override
     public boolean onCheckIsTextEditor() {
-        // CRITICAL: Chromium WebView's IME path does NOT override this; the base View
-        // default is false. If we return that, InputMethodManager treats the WebView as
-        // a non-editor and never calls onCreateInputConnection(), so the soft keyboard
-        // never wires up to focused <input>/<textarea> elements. Returning true lets
-        // IMM request an InputConnection; WebView itself returns null from
-        // onCreateInputConnection when no editable DOM node is focused, so this is safe.
-        trace("ime.onCheckIsTextEditor", "result=true hasFocus=" + hasFocus() + " forced=true");
-        return true;
+        // Do not force WebView to always identify as a native text editor.
+        // On Samsung/WebView 149 this can stall during the focus -> keyboard handoff
+        // before Android ever calls onCreateInputConnection(), so our InputConnection
+        // wrapper never gets a chance to log. Chromium WebView owns DOM editability;
+        // keep the platform default and let WebView request IME only when it is ready.
+        boolean result = super.onCheckIsTextEditor();
+        trace("ime.onCheckIsTextEditor", "result=" + result + " hasFocus=" + hasFocus() + " forced=false");
+        return result;
     }
 
     @Override

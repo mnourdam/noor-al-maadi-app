@@ -13,9 +13,12 @@ import { warmupAndroidInput } from "./lib/androidInputWarmup";
 installAndroidInputTrace();
 const shouldShowStoredFreezeTrace = hasStoredInputFreezeTrace();
 
-// Prime the WebView's first focus / IME path so the very first text
-// input the user taps does not freeze. One-shot, no visible keyboard.
-if (!shouldShowStoredFreezeTrace) {
+// The old hidden-input warmup intentionally forced a synthetic first focus.
+// Keep it available only as an explicit debug opt-in because Samsung/WebView 149
+// can stall during the focus -> keyboard handoff before JS/input callbacks run.
+const androidInputWarmupOptIn = new URLSearchParams(window.location.search).get("irthInputWarmup") === "1"
+  || window.localStorage.getItem("irthInputWarmup") === "1";
+if (!shouldShowStoredFreezeTrace && androidInputWarmupOptIn) {
   warmupAndroidInput();
 }
 
