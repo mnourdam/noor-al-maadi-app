@@ -238,6 +238,9 @@ export function AndroidInputIsolationTest() {
         Open raw Android WebView input test
       </button>
 
+      <QuietBisectButtons />
+
+
       <div style={groupStyle}>
         <label htmlFor="react-uncontrolled-input" style={labelStyle}>Uncontrolled React input</label>
         <input
