@@ -585,6 +585,28 @@ function HomeFull() {
         </button>
       )}
 
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <Link
+          to={"/debug/react-bare-input-min" as any}
+          style={{
+            display: "block",
+            margin: "12px",
+            padding: "20px",
+            background: "#581c87",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #e9d5ff",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          REACT BARE INPUT TEST
+        </Link>
+      )}
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
