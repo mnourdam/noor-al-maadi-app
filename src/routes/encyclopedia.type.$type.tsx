@@ -128,6 +128,7 @@ function TypeBrowsePage() {
             onValueChange={setQuery}
             commitMode="blur"
             onEnter={setQuery}
+            androidEntryKey={`encyclopedia.type.${type}.search`}
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}

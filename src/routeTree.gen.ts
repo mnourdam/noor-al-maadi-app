@@ -28,6 +28,7 @@ import { Route as ContentAuditRouteImport } from './routes/content-audit'
 import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AndroidTextEntryRouteImport } from './routes/android-text-entry'
 import { Route as AndroidInputTestRouteImport } from './routes/android-input-test'
 import { Route as AndroidAuthMinRouteImport } from './routes/android-auth-min'
 import { Route as AdventureRouteImport } from './routes/adventure'
@@ -187,6 +188,11 @@ const CampaignsRoute = CampaignsRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AndroidTextEntryRoute = AndroidTextEntryRouteImport.update({
+  id: '/android-text-entry',
+  path: '/android-text-entry',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AndroidInputTestRoute = AndroidInputTestRouteImport.update({
@@ -530,6 +536,7 @@ export interface FileRoutesByFullPath {
   '/adventure': typeof AdventureRoute
   '/android-auth-min': typeof AndroidAuthMinRoute
   '/android-input-test': typeof AndroidInputTestRoute
+  '/android-text-entry': typeof AndroidTextEntryRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
@@ -616,6 +623,7 @@ export interface FileRoutesByTo {
   '/adventure': typeof AdventureRoute
   '/android-auth-min': typeof AndroidAuthMinRoute
   '/android-input-test': typeof AndroidInputTestRoute
+  '/android-text-entry': typeof AndroidTextEntryRoute
   '/auth': typeof AuthRoute
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
@@ -700,6 +708,7 @@ export interface FileRoutesById {
   '/adventure': typeof AdventureRoute
   '/android-auth-min': typeof AndroidAuthMinRoute
   '/android-input-test': typeof AndroidInputTestRoute
+  '/android-text-entry': typeof AndroidTextEntryRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
@@ -788,6 +797,7 @@ export interface FileRouteTypes {
     | '/adventure'
     | '/android-auth-min'
     | '/android-input-test'
+    | '/android-text-entry'
     | '/auth'
     | '/campaigns'
     | '/collection'
@@ -874,6 +884,7 @@ export interface FileRouteTypes {
     | '/adventure'
     | '/android-auth-min'
     | '/android-input-test'
+    | '/android-text-entry'
     | '/auth'
     | '/collection'
     | '/content-audit'
@@ -957,6 +968,7 @@ export interface FileRouteTypes {
     | '/adventure'
     | '/android-auth-min'
     | '/android-input-test'
+    | '/android-text-entry'
     | '/auth'
     | '/campaigns'
     | '/collection'
@@ -1044,6 +1056,7 @@ export interface RootRouteChildren {
   AdventureRoute: typeof AdventureRoute
   AndroidAuthMinRoute: typeof AndroidAuthMinRoute
   AndroidInputTestRoute: typeof AndroidInputTestRoute
+  AndroidTextEntryRoute: typeof AndroidTextEntryRoute
   AuthRoute: typeof AuthRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
   CollectionRoute: typeof CollectionRoute
@@ -1247,6 +1260,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/android-text-entry': {
+      id: '/android-text-entry'
+      path: '/android-text-entry'
+      fullPath: '/android-text-entry'
+      preLoaderRoute: typeof AndroidTextEntryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/android-input-test': {
@@ -1765,6 +1785,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdventureRoute: AdventureRoute,
   AndroidAuthMinRoute: AndroidAuthMinRoute,
   AndroidInputTestRoute: AndroidInputTestRoute,
+  AndroidTextEntryRoute: AndroidTextEntryRoute,
   AuthRoute: AuthRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
   CollectionRoute: CollectionRoute,
@@ -1837,13 +1858,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -33,6 +33,7 @@ type SharedSafeProps = {
   logName?: string;
   modalTitle?: string;
   modalLabel?: string;
+  androidEntryKey?: string;
 };
 
 type AndroidSafeInputProps = React.InputHTMLAttributes<HTMLInputElement> & SharedSafeProps;
@@ -50,6 +51,7 @@ export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeIn
       logName: _logName,
       modalTitle,
       modalLabel,
+      androidEntryKey,
       className,
       ...props
     },
@@ -66,6 +68,7 @@ export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeIn
         onEnter={onEnter}
         modalTitle={modalTitle}
         modalLabel={modalLabel}
+        androidEntryKey={androidEntryKey}
       />
     );
   },
@@ -82,6 +85,7 @@ export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, Android
       logName: _logName,
       modalTitle,
       modalLabel,
+      androidEntryKey,
       className,
       ...props
     },
@@ -96,6 +100,7 @@ export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, Android
         onValueChange={onValueChange}
         modalTitle={modalTitle}
         modalLabel={modalLabel}
+        androidEntryKey={androidEntryKey}
       />
     );
   },

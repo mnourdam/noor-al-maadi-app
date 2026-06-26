@@ -3,16 +3,12 @@ import * as React from "react";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { cn } from "@/lib/utils";
 
-const GOLD = "#d4af5a";
-const GOLD_SOFT = "#e8c878";
-const INK = "#0c0a07";
-const SURFACE = "#171210";
-const SURFACE_2 = "#1f1813";
-const BORDER = "#3a2d20";
-const TEXT = "#f5ecd9";
+const REQUEST_KEY = "irth:android-text-entry:request";
+const RESULT_PREFIX = "irth:android-text-entry:result:";
 
-type TextEntryRequest = {
-  id: number;
+type StoredTextEntryRequest = {
+  version: 1;
+  fieldKey: string;
   title: string;
   label?: string;
   placeholder?: string;
@@ -22,245 +18,14 @@ type TextEntryRequest = {
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   dir?: "rtl" | "ltr" | "auto";
   autoComplete?: string;
-  onSave: (value: string) => void;
-  onCancel?: () => void;
+  returnPath: string;
 };
 
-type OpenOptions = Omit<TextEntryRequest, "id">;
-
-type AndroidTextEntryWindow = Window & {
-  __irthOpenAndroidTextEntry?: (options: OpenOptions) => void;
-};
-
-let nextRequestId = 1;
-let activeTextEntryCleanup: (() => void) | undefined;
-
-export function openAndroidTextEntry(options: OpenOptions): boolean {
-  return openNativeAndroidTextEntry(options);
-}
-
-function openNativeAndroidTextEntry(options: OpenOptions): boolean {
-  if (typeof window === "undefined" || typeof document === "undefined" || !isAndroidNativeApp()) return false;
-  activeTextEntryCleanup?.();
-  activeTextEntryCleanup = mountNativeAndroidTextEntry({ ...options, id: nextRequestId++ }, () => {
-    activeTextEntryCleanup = undefined;
-  });
-  return true;
-}
-
-export function AndroidTextEntryHost() {
-  React.useEffect(() => {
-    if (!isAndroidNativeApp()) return;
-    const w = window as AndroidTextEntryWindow;
-    w.__irthOpenAndroidTextEntry = (options) => {
-      openNativeAndroidTextEntry(options);
-    };
-    return () => {
-      if (w.__irthOpenAndroidTextEntry) delete w.__irthOpenAndroidTextEntry;
-      activeTextEntryCleanup?.();
-      activeTextEntryCleanup = undefined;
-    };
-  }, []);
-
-  return null;
-}
-
-function mountNativeAndroidTextEntry(request: TextEntryRequest, onClose: () => void) {
-  const previousOverflow = document.body.style.overflow;
-  document.body.style.overflow = "hidden";
-
-  const overlay = document.createElement("div");
-  overlay.dir = "rtl";
-  overlay.setAttribute("role", "dialog");
-  overlay.setAttribute("aria-modal", "true");
-  overlay.setAttribute("data-irth-android-text-entry", "true");
-  Object.assign(overlay.style, {
-    position: "fixed",
-    inset: "0",
-    zIndex: "2147483647",
-    minHeight: "100vh",
-    boxSizing: "border-box",
-    padding: "max(28px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom))",
-    background: `radial-gradient(ellipse at top, #2a1d10 0%, ${INK} 62%, #050403 100%)`,
-    color: TEXT,
-    fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
-    overflowY: "auto",
-    transform: "none",
-    filter: "none",
-    backdropFilter: "none",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-  } satisfies Partial<CSSStyleDeclaration>);
-  overlay.style.setProperty("-webkit-overflow-scrolling", "touch");
-
-  const styleTag = document.createElement("style");
-  styleTag.textContent = `
-    [data-irth-android-text-entry],
-    [data-irth-android-text-entry] *,
-    [data-irth-android-text-entry] *::before,
-    [data-irth-android-text-entry] *::after {
-      animation: none !important;
-      transition: none !important;
-      transform: none !important;
-      filter: none !important;
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-      contain: none !important;
-      content-visibility: visible !important;
-    }
-    [data-irth-android-text-entry] input,
-    [data-irth-android-text-entry] textarea {
-      -webkit-user-select: text !important;
-      user-select: text !important;
-      -webkit-text-size-adjust: 100% !important;
-    }
-    [data-irth-android-text-entry] input::placeholder,
-    [data-irth-android-text-entry] textarea::placeholder {
-      color: #6b5a44 !important;
-    }
-  `;
-
-  const wrap = document.createElement("div");
-  Object.assign(wrap.style, { width: "100%", maxWidth: "430px" });
-
-  const head = document.createElement("div");
-  Object.assign(head.style, { textAlign: "center", marginBottom: "24px" });
-
-  const logo = document.createElement("img");
-  logo.src = "/assets/splash/irth-logo.png";
-  logo.alt = "إرث";
-  logo.width = 64;
-  logo.height = 64;
-  Object.assign(logo.style, { display: "inline-block", marginBottom: "12px" });
-  logo.onerror = () => { logo.style.display = "none"; };
-
-  const title = document.createElement("h1");
-  title.id = "android-text-entry-title";
-  title.textContent = request.title;
-  Object.assign(title.style, { margin: "0", font: "800 24px system-ui, sans-serif", color: GOLD });
-
-  head.append(logo, title);
-  if (request.label) {
-    const label = document.createElement("p");
-    label.textContent = request.label;
-    Object.assign(label.style, { margin: "7px 0 0", color: "#9a8a6e", font: "13px/1.6 system-ui, sans-serif" });
-    head.append(label);
-  }
-
-  const card = document.createElement("div");
-  Object.assign(card.style, {
-    background: SURFACE,
-    border: `1px solid ${BORDER}`,
-    borderRadius: "16px",
-    padding: "22px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,175,90,0.08)",
-  });
-
-  const field = request.multiline ? document.createElement("textarea") : document.createElement("input");
-  if (!request.multiline) {
-    (field as HTMLInputElement).type = "text";
-    if (request.inputMode) field.setAttribute("inputmode", request.inputMode);
-  } else {
-    (field as HTMLTextAreaElement).rows = 7;
-  }
-  field.setAttribute("autocomplete", request.autoComplete ?? "off");
-  field.setAttribute("autocorrect", "off");
-  field.setAttribute("autocapitalize", "none");
-  field.setAttribute("spellcheck", "false");
-  field.dir = request.dir ?? "rtl";
-  field.placeholder = request.placeholder ?? "";
-  field.value = request.initialValue;
-  if (typeof request.maxLength === "number" && request.maxLength > 0) field.maxLength = request.maxLength;
-  Object.assign(field.style, {
-    display: "block",
-    width: "100%",
-    boxSizing: "border-box",
-    border: `1px solid ${BORDER}`,
-    borderRadius: "10px",
-    background: SURFACE_2,
-    color: TEXT,
-    font: "16px system-ui, -apple-system, sans-serif",
-    lineHeight: "1.5",
-    padding: "14px 14px",
-    outline: "none",
-    transform: "none",
-    filter: "none",
-    backdropFilter: "none",
-    transition: "none",
-    animation: "none",
-    caretColor: GOLD,
-  });
-  if (request.multiline) Object.assign(field.style, { minHeight: "170px", resize: "vertical" });
-
-  const actions = document.createElement("div");
-  Object.assign(actions.style, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "18px" });
-
-  const saveButton = document.createElement("button");
-  saveButton.type = "button";
-  saveButton.textContent = "حفظ";
-  Object.assign(saveButton.style, primaryButtonStyle);
-
-  const cancelButton = document.createElement("button");
-  cancelButton.type = "button";
-  cancelButton.textContent = "إلغاء";
-  Object.assign(cancelButton.style, secondaryButtonStyle);
-
-  let removed = false;
-  const remove = () => {
-    if (removed) return;
-    removed = true;
-    saveButton.removeEventListener("click", save);
-    cancelButton.removeEventListener("click", cancel);
-    overlay.remove();
-    styleTag.remove();
-    document.body.style.overflow = previousOverflow;
-  };
-  const close = () => {
-    remove();
-    onClose();
-  };
-  function save() {
-    request.onSave(field.value);
-    close();
-  }
-  function cancel() {
-    request.onCancel?.();
-    close();
-  }
-
-  saveButton.addEventListener("click", save);
-  cancelButton.addEventListener("click", cancel);
-  actions.append(saveButton, cancelButton);
-  card.append(field, actions);
-  wrap.append(head, card);
-  overlay.append(wrap);
-  document.head.append(styleTag);
-  document.body.append(overlay);
-
-  window.setTimeout(() => field.focus({ preventScroll: true }), 80);
-
-  return remove;
-}
-
-const primaryButtonStyle: React.CSSProperties = {
-  border: `1px solid ${GOLD}`,
-  borderRadius: 10,
-  background: `linear-gradient(180deg, ${GOLD_SOFT} 0%, ${GOLD} 100%)`,
-  color: "#1a1208",
-  font: "800 15px system-ui, sans-serif",
-  padding: "13px 14px",
-  boxShadow: "0 6px 18px rgba(212,175,90,0.24)",
-};
-
-const secondaryButtonStyle: React.CSSProperties = {
-  border: `1px solid ${BORDER}`,
-  borderRadius: 10,
-  background: "transparent",
-  color: GOLD_SOFT,
-  font: "700 15px system-ui, sans-serif",
-  padding: "13px 14px",
+type StoredTextEntryResult = {
+  version: 1;
+  fieldKey: string;
+  value: string;
+  savedAt: number;
 };
 
 type Shared = {
@@ -269,10 +34,92 @@ type Shared = {
   commitMode?: "blur" | "change" | "enter";
   modalTitle?: string;
   modalLabel?: string;
+  androidEntryKey?: string;
 };
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & Shared;
 type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & Shared;
+
+function safePath() {
+  if (typeof window === "undefined") return "/";
+  return `${window.location.pathname || "/"}${window.location.search || ""}${window.location.hash || ""}`;
+}
+
+function toTextValue(value: unknown) {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  if (Array.isArray(value)) return value.join("");
+  return "";
+}
+
+function normalizeUseId(id: string) {
+  return id.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+export function buildAndroidTextEntryFieldKey(stableKey: string, pathname = typeof window !== "undefined" ? window.location.pathname : "/") {
+  return `${pathname || "/"}:${stableKey}`;
+}
+
+function makeFieldKey(kind: "input" | "textarea", reactId: string, props: {
+  androidEntryKey?: string;
+  id?: string;
+  name?: string;
+  placeholder?: string;
+  modalTitle?: string;
+  modalLabel?: string;
+}) {
+  if (props.androidEntryKey) return buildAndroidTextEntryFieldKey(props.androidEntryKey);
+  if (typeof window === "undefined") return `${kind}:${normalizeUseId(reactId)}`;
+  const explicit = props.name || props.id || props.modalTitle || props.modalLabel || props.placeholder || kind;
+  return `${window.location.pathname || "/"}:${kind}:${explicit}:${normalizeUseId(reactId)}`;
+}
+
+function resultKey(fieldKey: string) {
+  return `${RESULT_PREFIX}${fieldKey}`;
+}
+
+export function readAndroidTextEntryResultByFieldKey(fieldKey: string): StoredTextEntryResult | null {
+  if (typeof window === "undefined") return null;
+  const key = resultKey(fieldKey);
+  try {
+    const raw = window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key);
+    if (!raw) return null;
+    window.sessionStorage.removeItem(key);
+    window.localStorage.removeItem(key);
+    const parsed = JSON.parse(raw) as StoredTextEntryResult;
+    if (parsed?.version === 1 && parsed.fieldKey === fieldKey && typeof parsed.value === "string") return parsed;
+  } catch { /* ignore malformed handoff */ }
+  return null;
+}
+
+export function readAndroidTextEntryResult(stableKey: string, pathname = typeof window !== "undefined" ? window.location.pathname : "/") {
+  return readAndroidTextEntryResultByFieldKey(buildAndroidTextEntryFieldKey(stableKey, pathname));
+}
+
+function openStandaloneTextEntry(request: StoredTextEntryRequest): boolean {
+  if (typeof window === "undefined" || !isAndroidNativeApp()) return false;
+  try {
+    const raw = JSON.stringify(request);
+    window.sessionStorage.setItem(REQUEST_KEY, raw);
+    window.localStorage.setItem(REQUEST_KEY, raw);
+    window.location.href = "/android-text-entry";
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function triggerSyntheticChange<T extends HTMLInputElement | HTMLTextAreaElement>(
+  target: T | null,
+  handler: React.ChangeEventHandler<T> | undefined,
+) {
+  if (!target || !handler) return;
+  handler({ currentTarget: target, target } as React.ChangeEvent<T>);
+}
+
+export function AndroidTextEntryHost() {
+  return null;
+}
 
 export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputProps>(
   (
@@ -285,6 +132,7 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
       commitMode: _commitMode,
       modalTitle,
       modalLabel,
+      androidEntryKey,
       value,
       defaultValue,
       className,
@@ -296,23 +144,44 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
     },
     forwardedRef,
   ) => {
+    const reactId = React.useId();
+    const fieldKey = React.useMemo(
+      () => makeFieldKey("input", reactId, { androidEntryKey, id: props.id, name: props.name, placeholder, modalTitle, modalLabel }),
+      [androidEntryKey, modalLabel, modalTitle, placeholder, props.id, props.name, reactId],
+    );
     const localRef = React.useRef<HTMLInputElement | null>(null);
-    const [internalValue, setInternalValue] = React.useState(() => (typeof defaultValue === "string" ? defaultValue : ""));
+    const [internalValue, setInternalValue] = React.useState(() => toTextValue(defaultValue));
+    const lastOpenAtRef = React.useRef(0);
+    const android = isAndroidNativeApp();
+
     const setRefs = React.useCallback((node: HTMLInputElement | null) => {
       localRef.current = node;
       if (typeof forwardedRef === "function") forwardedRef(node);
       else if (forwardedRef) (forwardedRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
     }, [forwardedRef]);
 
-    const android = isAndroidNativeApp();
-    const currentValue = (typeof value === "string" ? value : localRef.current?.value ?? internalValue);
-    const lastOpenAtRef = React.useRef(0);
+    const applyValue = React.useCallback((next: string) => {
+      if (localRef.current) localRef.current.value = next;
+      setInternalValue(next);
+      onValueChange?.(next);
+      triggerSyntheticChange(localRef.current, onChange);
+    }, [onChange, onValueChange]);
+
+    React.useEffect(() => {
+      if (!android) return;
+      const result = readAndroidTextEntryResultByFieldKey(fieldKey);
+      if (result) applyValue(result.value);
+    }, [android, applyValue, fieldKey]);
+
+    const currentValue = toTextValue(typeof value !== "undefined" ? value : localRef.current?.value ?? internalValue);
     const openEntry = React.useCallback(() => {
       if (readOnly || disabled) return;
       const now = Date.now();
-      if (now - lastOpenAtRef.current < 350) return;
+      if (now - lastOpenAtRef.current < 500) return;
       lastOpenAtRef.current = now;
-      openAndroidTextEntry({
+      openStandaloneTextEntry({
+        version: 1,
+        fieldKey,
         title: modalTitle ?? "إدخال النص",
         label: modalLabel,
         placeholder,
@@ -322,43 +191,25 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
         inputMode: props.inputMode,
         dir: props.dir as "rtl" | "ltr" | "auto" | undefined,
         autoComplete: props.autoComplete,
-        onSave: (next) => {
-          if (localRef.current) localRef.current.value = next;
-          setInternalValue(next);
-          onValueChange?.(next);
-          if (onChange) {
-            const target = localRef.current;
-            if (target) onChange({ currentTarget: target, target } as React.ChangeEvent<HTMLInputElement>);
-          }
-        },
+        returnPath: safePath(),
       });
-    }, [currentValue, disabled, modalLabel, modalTitle, onChange, onValueChange, placeholder, props.autoComplete, props.dir, props.inputMode, props.maxLength, readOnly]);
+    }, [currentValue, disabled, fieldKey, modalLabel, modalTitle, placeholder, props.autoComplete, props.dir, props.inputMode, props.maxLength, readOnly]);
 
     if (android) {
       return (
         <input
           {...props}
           ref={setRefs}
-          value={typeof value === "string" ? currentValue : undefined}
-          defaultValue={typeof value === "string" ? undefined : currentValue}
+          value={typeof value !== "undefined" ? currentValue : undefined}
+          defaultValue={typeof value !== "undefined" ? undefined : currentValue}
           readOnly
           disabled={disabled}
           placeholder={placeholder}
           className={className}
           style={style}
-          onPointerDown={(event) => {
-            event.preventDefault();
-            openEntry();
-          }}
-          onClick={(event) => {
-            event.preventDefault();
-            openEntry();
-          }}
-          onFocus={(event) => {
-            event.currentTarget.blur();
-            openEntry();
-            onFocus?.(event);
-          }}
+          onPointerDown={(event) => { event.preventDefault(); openEntry(); }}
+          onClick={(event) => { event.preventDefault(); openEntry(); }}
+          onFocus={(event) => { event.currentTarget.blur(); openEntry(); onFocus?.(event); }}
           onKeyDown={(event) => {
             onKeyDown?.(event);
             if (!event.defaultPrevented && event.key === "Enter") onEnter?.(currentValue);
@@ -373,7 +224,6 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
           onChange?.(event);
         }
       : onChange;
-
     const handleKeyDown = onEnter
       ? (event: React.KeyboardEvent<HTMLInputElement>) => {
           onKeyDown?.(event);
@@ -412,6 +262,7 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
       commitMode: _commitMode,
       modalTitle,
       modalLabel,
+      androidEntryKey,
       value,
       defaultValue,
       className,
@@ -423,23 +274,44 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
     },
     forwardedRef,
   ) => {
+    const reactId = React.useId();
+    const fieldKey = React.useMemo(
+      () => makeFieldKey("textarea", reactId, { androidEntryKey, id: props.id, name: props.name, placeholder, modalTitle, modalLabel }),
+      [androidEntryKey, modalLabel, modalTitle, placeholder, props.id, props.name, reactId],
+    );
     const localRef = React.useRef<HTMLTextAreaElement | null>(null);
-    const [internalValue, setInternalValue] = React.useState(() => (typeof defaultValue === "string" ? defaultValue : ""));
+    const [internalValue, setInternalValue] = React.useState(() => toTextValue(defaultValue));
+    const lastOpenAtRef = React.useRef(0);
+    const android = isAndroidNativeApp();
+
     const setRefs = React.useCallback((node: HTMLTextAreaElement | null) => {
       localRef.current = node;
       if (typeof forwardedRef === "function") forwardedRef(node);
       else if (forwardedRef) (forwardedRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
     }, [forwardedRef]);
 
-    const android = isAndroidNativeApp();
-    const currentValue = (typeof value === "string" ? value : localRef.current?.value ?? internalValue);
-    const lastOpenAtRef = React.useRef(0);
+    const applyValue = React.useCallback((next: string) => {
+      if (localRef.current) localRef.current.value = next;
+      setInternalValue(next);
+      onValueChange?.(next);
+      triggerSyntheticChange(localRef.current, onChange);
+    }, [onChange, onValueChange]);
+
+    React.useEffect(() => {
+      if (!android) return;
+      const result = readAndroidTextEntryResultByFieldKey(fieldKey);
+      if (result) applyValue(result.value);
+    }, [android, applyValue, fieldKey]);
+
+    const currentValue = toTextValue(typeof value !== "undefined" ? value : localRef.current?.value ?? internalValue);
     const openEntry = React.useCallback(() => {
       if (readOnly || disabled) return;
       const now = Date.now();
-      if (now - lastOpenAtRef.current < 350) return;
+      if (now - lastOpenAtRef.current < 500) return;
       lastOpenAtRef.current = now;
-      openAndroidTextEntry({
+      openStandaloneTextEntry({
+        version: 1,
+        fieldKey,
         title: modalTitle ?? "إدخال النص",
         label: modalLabel,
         placeholder,
@@ -448,43 +320,25 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
         maxLength: props.maxLength,
         dir: props.dir as "rtl" | "ltr" | "auto" | undefined,
         autoComplete: props.autoComplete,
-        onSave: (next) => {
-          if (localRef.current) localRef.current.value = next;
-          setInternalValue(next);
-          onValueChange?.(next);
-          if (onChange) {
-            const target = localRef.current;
-            if (target) onChange({ currentTarget: target, target } as React.ChangeEvent<HTMLTextAreaElement>);
-          }
-        },
+        returnPath: safePath(),
       });
-    }, [currentValue, disabled, modalLabel, modalTitle, onChange, onValueChange, placeholder, props.autoComplete, props.dir, props.maxLength, readOnly]);
+    }, [currentValue, disabled, fieldKey, modalLabel, modalTitle, placeholder, props.autoComplete, props.dir, props.maxLength, readOnly]);
 
     if (android) {
       return (
         <textarea
           {...props}
           ref={setRefs}
-          value={typeof value === "string" ? currentValue : undefined}
-          defaultValue={typeof value === "string" ? undefined : currentValue}
+          value={typeof value !== "undefined" ? currentValue : undefined}
+          defaultValue={typeof value !== "undefined" ? undefined : currentValue}
           readOnly
           disabled={disabled}
           placeholder={placeholder}
           className={className}
           style={style}
-          onPointerDown={(event) => {
-            event.preventDefault();
-            openEntry();
-          }}
-          onClick={(event) => {
-            event.preventDefault();
-            openEntry();
-          }}
-          onFocus={(event) => {
-            event.currentTarget.blur();
-            openEntry();
-            onFocus?.(event);
-          }}
+          onPointerDown={(event) => { event.preventDefault(); openEntry(); }}
+          onClick={(event) => { event.preventDefault(); openEntry(); }}
+          onFocus={(event) => { event.currentTarget.blur(); openEntry(); onFocus?.(event); }}
           onKeyDown={(event) => {
             onKeyDown?.(event);
             if (!event.defaultPrevented && event.key === "Enter" && (event.ctrlKey || event.metaKey)) onEnter?.(currentValue);
@@ -519,3 +373,7 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
   },
 );
 AndroidTextEntryTextarea.displayName = "AndroidTextEntryTextarea";
+
+export const ANDROID_TEXT_ENTRY_REQUEST_KEY = REQUEST_KEY;
+export const ANDROID_TEXT_ENTRY_RESULT_PREFIX = RESULT_PREFIX;
+export type { StoredTextEntryRequest, StoredTextEntryResult };

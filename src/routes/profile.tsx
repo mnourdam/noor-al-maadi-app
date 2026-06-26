@@ -26,7 +26,7 @@ import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 import { useAccount } from "@/lib/account";
 import { clearLocalPlayerProgress } from "@/lib/resetProgress";
 import { fetchMyReferralStats, buildReferralShareUrl, shareReferral, type MyReferralStats } from "@/lib/referrals";
-import { AndroidTextEntryInput, AndroidTextEntryTextarea } from "@/components/AndroidTextEntry";
+import { AndroidTextEntryInput, AndroidTextEntryTextarea, readAndroidTextEntryResult } from "@/components/AndroidTextEntry";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
@@ -68,7 +68,7 @@ const TAB_STORAGE_KEY = "irth.profile.tab";
 
 function ProfilePage() {
   const {
-    profile, logout, updateSettings, claimSeason, setBio, setFavorites,
+    profile, login, logout, updateSettings, claimSeason, setBio, setFavorites,
     claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs,
   } = useProfile();
   const { user, displayName: accountDisplayName, updateDisplayName, signOut } = useAccount();
@@ -127,6 +127,25 @@ function ProfilePage() {
     setTimeout(() => setNameMsg(null), 2000);
   }
 
+  useEffect(() => {
+    if (!androidNative) return;
+    const result = readAndroidTextEntryResult("profile.displayName", "/profile");
+    if (!result) return;
+    const v = result.value.trim().slice(0, 60);
+    if (v.length < 2) { setNameMsg({ ok: false, text: "الاسم قصير جداً" }); return; }
+    setNameDraft(v);
+    setNameBusy(true); setNameMsg(null);
+    void (async () => {
+      const r = user ? await updateDisplayName(v) : { ok: true as const };
+      if (!user) login(v);
+      setNameBusy(false);
+      if (!r.ok) { setNameMsg({ ok: false, text: r.error ?? "تعذّر حفظ الاسم" }); return; }
+      setNameMsg({ ok: true, text: "تم حفظ الاسم" });
+      setEditingName(false);
+      setTimeout(() => setNameMsg(null), 2000);
+    })();
+  }, [androidNative, login, updateDisplayName, user]);
+
   return (
     <AppShell>
       <Screen title="حسابي" subtitle="رحلتك التاريخية">
@@ -176,6 +195,7 @@ function ProfilePage() {
                       placeholder="اسمك الظاهر"
                       modalTitle="تعديل الاسم"
                       modalLabel="اكتب الاسم الذي سيظهر في ملفك"
+                      androidEntryKey="profile.displayName"
                       className="min-w-0 flex-1 rounded-lg border border-gold/30 bg-background px-2 py-1 text-sm outline-none focus:border-gold"
                     />
                     <button onClick={saveName} disabled={nameBusy} className="rounded-full bg-gradient-gold px-3 py-1 text-[10px] font-bold text-primary-foreground disabled:opacity-50">{nameBusy ? "..." : "حفظ"}</button>
@@ -1021,6 +1041,16 @@ function SettingsTab({
   const prefs = profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS;
   const favState = ERAS.find((e) => e.id === profile.favoriteStateId);
 
+  useEffect(() => {
+    if (!isAndroidNativeApp()) return;
+    const result = readAndroidTextEntryResult("profile.bio", "/profile");
+    if (!result) return;
+    const v = result.value.trim().slice(0, 240);
+    setBio(v);
+    setBioDraft(v);
+    setEditingBio(false);
+  }, [setBio]);
+
   return (
     <div className="space-y-5">
       {/* Account */}
@@ -1071,6 +1101,7 @@ function SettingsTab({
               placeholder="مثال: مهتم بتاريخ الشام والحروب الصليبية."
               modalTitle="نبذة عني"
               modalLabel="اكتب نبذة قصيرة عن اهتماماتك التاريخية"
+              androidEntryKey="profile.bio"
               className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-background px-3 py-2 text-[12px] leading-6 outline-none focus:border-gold/40"
             />
           ) : (

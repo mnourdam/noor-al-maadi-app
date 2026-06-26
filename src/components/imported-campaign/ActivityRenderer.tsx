@@ -409,6 +409,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
         placeholder="اكتب إجابتك…"
         modalTitle="إجابة النشاط"
         modalLabel="اكتب إجابتك ثم اضغط حفظ"
+        androidEntryKey={`campaign.fillBlank.${activity.id}`}
         className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
       />
       <HintRow hint={activity.hint} />
@@ -459,6 +460,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
         placeholder="تأمّلك الشخصي…"
         modalTitle="تأمّل النشاط"
         modalLabel="اكتب تأملك ثم اضغط حفظ"
+        androidEntryKey={`campaign.reflection.${activity.id}`}
         className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
       />
       {!resolved && (

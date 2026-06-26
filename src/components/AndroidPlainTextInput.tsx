@@ -24,6 +24,7 @@ type Shared = {
   commitMode?: "blur" | "change" | "enter";
   modalTitle?: string;
   modalLabel?: string;
+  androidEntryKey?: string;
 };
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & Shared;
