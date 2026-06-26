@@ -42,6 +42,17 @@ const SAMPLE_FILL_ACTIVITY: CampaignActivity = {
   heartsPenalty: 1,
 };
 
+const SAMPLE_REFLECTION_ACTIVITY: CampaignActivity = {
+  id: "android-campaign-input-min-reflection",
+  type: "reflection_prompt",
+  prompt: "اكتب تأمّلًا قصيرًا عن دور المدن العلمية في حفظ المعرفة.",
+  contextText: "اختبار ActivityRenderer دون تحقق من إجابة صحيحة/خاطئة.",
+  feedbackCorrect: "تم تسجيل التأمّل محليًا.",
+  xpReward: 10,
+  coinsReward: 5,
+  heartsPenalty: 1,
+};
+
 export function isAndroidCampaignInputMinPath(pathname = typeof window !== "undefined" ? window.location.pathname : "") {
   return pathname === "/android-campaign-input-min" || pathname.endsWith("/android-campaign-input-min");
 }
@@ -166,6 +177,7 @@ export function AndroidCampaignInputMinTest() {
   const activeStage = STAGES.find((item) => item.id === stage) ?? STAGES[0];
   const showContainer = stage !== "plain";
   const showRenderer = stage === "renderer" || stage === "checking" || stage === "progress" || stage === "rewards" || stage === "ledger";
+  const rendererActivity = stage === "renderer" ? SAMPLE_REFLECTION_ACTIVITY : SAMPLE_FILL_ACTIVITY;
   const Panel = showContainer ? "section" : "div";
 
   return (
@@ -342,7 +354,7 @@ export function AndroidCampaignInputMinTest() {
               ActivityRenderer stage
             </p>
             {renderer ? React.createElement(renderer, {
-              activity: SAMPLE_FILL_ACTIVITY,
+              activity: rendererActivity,
               onResolve: handleRendererResolve,
               alreadyDone: false,
             }) : (
