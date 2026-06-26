@@ -1,11 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Mail, Lock, UserRound, ChevronLeft, Gift, Eye, EyeOff } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
-import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { useAccount } from "@/lib/account";
-
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
@@ -20,38 +16,15 @@ function AuthPage() {
   const search = Route.useSearch();
   const { signIn, signUp, user } = useAccount();
   const [mode, setMode] = useState<Mode>(search.ref ? "signup" : "signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
-  const [referralCode, setReferralCode] = useState(search.ref ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [showPwd, setShowPwd] = useState(false);
-  const refs = useRef({
-    email: null as HTMLInputElement | null,
-    password: null as HTMLInputElement | null,
-    username: null as HTMLInputElement | null,
-    referral: null as HTMLInputElement | null,
-  });
 
-  useEffect(() => { if (search.ref) setReferralCode(search.ref); }, [search.ref]);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const referralRef = useRef<HTMLInputElement>(null);
 
-  // Email verification redirect — Supabase appends `#access_token=...&type=signup`
-  // and the client auto-detects the session. We just surface a friendly toast
-  // and let the auth listener handle the navigation below.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const hash = window.location.hash || "";
-    if (hash.includes("type=signup") || hash.includes("type=recovery") || hash.includes("type=magiclink")) {
-      setInfo("تم تأكيد البريد الإلكتروني بنجاح. جارٍ تسجيل الدخول…");
-      // Clean the URL so a refresh doesn't keep showing the message.
-      try { window.history.replaceState({}, "", window.location.pathname + window.location.search); } catch { /* ignore */ }
-    }
-  }, []);
-
-  // Already signed in → kick to profile (covers both manual login and the
-  // post-verification auto sign-in).
   useEffect(() => {
     if (user) navigate({ to: "/profile" });
   }, [user, navigate]);
@@ -62,54 +35,24 @@ function AuthPage() {
     setError(null);
     setInfo(null);
     setBusy(true);
-    console.log("[android:auth] submit started", { mode });
 
-    const currentEmail = (refs.current.email?.value ?? email).trim();
-    const currentPassword = refs.current.password?.value ?? password;
-    const currentUsername = (refs.current.username?.value ?? username).trim();
-    const currentReferral = (refs.current.referral?.value ?? referralCode).trim().toUpperCase();
-    setEmail(currentEmail);
-    setPassword(currentPassword);
-    setUsername(currentUsername);
-    setReferralCode(currentReferral);
-
-    // Hard timeout so the UI can never hang indefinitely (network drop,
-    // Capacitor WebView fetch stall, Supabase unreachable, etc.).
-    const TIMEOUT_MS = 15000;
-    let timedOut = false;
-    const timeoutPromise = new Promise<{ ok: false; error: string; __timeout: true }>((resolve) => {
-      setTimeout(() => {
-        timedOut = true;
-        resolve({ ok: false, error: "انتهت مهلة الاتصال. تحقق من الإنترنت وحاول مجدداً.", __timeout: true });
-      }, TIMEOUT_MS);
-    });
+    const email = (emailRef.current?.value ?? "").trim();
+    const password = passwordRef.current?.value ?? "";
+    const username = (usernameRef.current?.value ?? "").trim();
+    const referral = (referralRef.current?.value ?? "").trim().toUpperCase();
 
     try {
-      // Offline guard — Capacitor exposes navigator.onLine reliably.
       if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        console.warn("[android:auth] offline");
         setError("لا يوجد اتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.");
         return;
       }
-      console.log("[android:auth] request sent");
       let r: { ok: boolean; error?: string };
       if (mode === "signup") {
-        r = await Promise.race([
-          signUp({ email: currentEmail, password: currentPassword, username: currentUsername, displayName: currentUsername, referralCode: currentReferral || undefined }),
-          timeoutPromise,
-        ]);
+        r = await signUp({ email, password, username, displayName: username, referralCode: referral || undefined });
       } else {
-        r = await Promise.race([signIn(currentEmail, currentPassword), timeoutPromise]);
-      }
-      console.log("[android:auth] response received", { ok: r.ok, timedOut });
-
-      if (timedOut) {
-        console.warn("[android:auth] timeout");
-        setError(r.error ?? "انتهت مهلة الاتصال. حاول مجدداً.");
-        return;
+        r = await signIn(email, password);
       }
       if (!r.ok) {
-        console.warn("[android:auth] error", r.error);
         setError(r.error ?? (mode === "signup" ? "تعذر إنشاء الحساب" : "تعذر تسجيل الدخول"));
         return;
       }
@@ -117,13 +60,22 @@ function AuthPage() {
       navigate({ to: "/profile" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[android:auth] error", msg);
-      setError("حدث خطأ غير متوقع. تحقق من اتصال الإنترنت وحاول مجدداً.");
+      setError(msg || "حدث خطأ غير متوقع.");
     } finally {
       setBusy(false);
     }
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "12px 14px",
+    fontSize: 16,
+    borderRadius: 12,
+    border: "1px solid rgba(255,255,255,0.15)",
+    background: "rgba(0,0,0,0.35)",
+    color: "white",
+    outline: "none",
+  };
 
   return (
     <AppShell>
@@ -132,9 +84,7 @@ function AuthPage() {
         subtitle="احفظ تقدمك على جميع أجهزتك"
       >
         <div className="mb-3">
-          <Link to="/profile" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="size-4" /> رجوع
-          </Link>
+          <Link to="/profile" className="text-sm text-muted-foreground hover:text-foreground">رجوع</Link>
         </div>
 
         <div className="rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
@@ -151,14 +101,15 @@ function AuthPage() {
             >حساب جديد</button>
           </div>
 
-          <form onSubmit={submit} className="space-y-3">
+          <form onSubmit={submit} className="space-y-3" autoComplete="on">
             {mode === "signup" && (
-              <Field icon={<UserRound className="size-4" />} label="اسم المستخدم">
-                <AndroidSafeInput
-                  ref={(el) => { refs.current.username = el; }}
-                  value={username}
-                  onValueChange={setUsername}
-                  commitMode="blur"
+              <label className="block">
+                <span className="mb-1 block text-[11px] text-muted-foreground">اسم المستخدم</span>
+                <input
+                  ref={usernameRef}
+                  type="text"
+                  name="username"
+                  defaultValue={search.ref ? "" : ""}
                   required
                   minLength={3}
                   maxLength={30}
@@ -166,74 +117,60 @@ function AuthPage() {
                   autoCorrect="off"
                   autoCapitalize="none"
                   spellCheck={false}
-                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  style={inputStyle}
                   placeholder="مثال: صلاح_الدين"
                 />
-              </Field>
+              </label>
             )}
-            <Field icon={<Mail className="size-4" />} label="البريد الإلكتروني">
-              <AndroidSafeInput
-                ref={(el) => { refs.current.email = el; }}
+            <label className="block">
+              <span className="mb-1 block text-[11px] text-muted-foreground">البريد الإلكتروني</span>
+              <input
+                ref={emailRef}
                 type="email"
-                value={email}
-                onValueChange={setEmail}
-                commitMode="blur"
+                name="email"
                 required
                 autoComplete="email"
                 autoCorrect="off"
                 autoCapitalize="none"
                 spellCheck={false}
                 inputMode="email"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                style={inputStyle}
                 placeholder="you@example.com"
               />
-            </Field>
-            <Field icon={<Lock className="size-4" />} label="كلمة المرور">
-              <AndroidSafeInput
-                ref={(el) => { refs.current.password = el; }}
-                type={showPwd ? "text" : "password"}
-                value={password}
-                onValueChange={setPassword}
-                commitMode="blur"
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] text-muted-foreground">كلمة المرور</span>
+              <input
+                ref={passwordRef}
+                type="password"
+                name="password"
                 required
                 minLength={6}
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 autoCorrect="off"
                 autoCapitalize="none"
                 spellCheck={false}
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                style={inputStyle}
                 placeholder="6 أحرف على الأقل"
               />
-              <button
-                type="button"
-                onClick={() => setShowPwd((s) => !s)}
-                aria-label={showPwd ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
-                className="text-muted-foreground hover:text-gold"
-              >
-                {showPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
-            </Field>
+            </label>
             {mode === "signup" && (
-              <Field icon={<Gift className="size-4" />} label="رمز الإحالة (اختياري)">
-                <AndroidSafeInput
-                  ref={(el) => { refs.current.referral = el; }}
-                  value={referralCode}
-                  onValueChange={setReferralCode}
-                  commitMode="blur"
-                  onBlur={(e) => {
-                    const normalized = e.currentTarget.value.replace(/\s+/g, "").toUpperCase();
-                    e.currentTarget.value = normalized;
-                    setReferralCode(normalized);
-                  }}
+              <label className="block">
+                <span className="mb-1 block text-[11px] text-muted-foreground">رمز الإحالة (اختياري)</span>
+                <input
+                  ref={referralRef}
+                  type="text"
+                  name="referral"
+                  defaultValue={search.ref ?? ""}
                   maxLength={20}
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="characters"
                   spellCheck={false}
-                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  style={inputStyle}
                   placeholder="IRTH-XXXXXX"
                 />
-              </Field>
+              </label>
             )}
 
             {error && <p className="text-xs text-rose-300">{error}</p>}
@@ -251,22 +188,10 @@ function AuthPage() {
           </form>
 
           <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground">
-            بإنشاء حساب فإنك توافق على مزامنة تقدمك بأمان في السحابة. سندعم Google قريباً.
+            بإنشاء حساب فإنك توافق على مزامنة تقدمك بأمان في السحابة.
           </p>
         </div>
       </Screen>
     </AppShell>
-  );
-}
-
-function Field({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[11px] text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-background/60 px-3 py-2">
-        <span className="text-gold">{icon}</span>
-        {children}
-      </div>
-    </label>
   );
 }
