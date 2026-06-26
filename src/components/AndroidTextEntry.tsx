@@ -306,7 +306,6 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
             const target = localRef.current;
             if (target) onChange({ currentTarget: target, target } as React.ChangeEvent<HTMLInputElement>);
           }
-          onEnter?.(next);
         },
       });
     }, [currentValue, disabled, modalLabel, modalTitle, onChange, onEnter, onValueChange, placeholder, props.autoComplete, props.dir, props.inputMode, props.maxLength, readOnly]);
@@ -430,7 +429,6 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
             const target = localRef.current;
             if (target) onChange({ currentTarget: target, target } as React.ChangeEvent<HTMLTextAreaElement>);
           }
-          onEnter?.(next);
         },
       });
     }, [currentValue, disabled, modalLabel, modalTitle, onChange, onEnter, onValueChange, placeholder, props.autoComplete, props.dir, props.maxLength, readOnly]);
