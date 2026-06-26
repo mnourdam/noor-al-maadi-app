@@ -34,7 +34,7 @@ function FriendsPage() {
     return (
       <AppShell>
         <Screen title="الأصدقاء" subtitle="سجّل دخولك لاكتشاف الأصدقاء">
-          <Link to="/auth" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-4 py-2 text-sm font-bold text-primary-foreground shadow-gold">تسجيل الدخول</Link>
+          <AuthLink className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-4 py-2 text-sm font-bold text-primary-foreground shadow-gold">تسجيل الدخول</AuthLink>
         </Screen>
       </AppShell>
     );
