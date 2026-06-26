@@ -212,73 +212,86 @@ function RootComponent() {
       return;
     }
 
-    // One-time localStorage cleanup for legacy unlock ids that no longer
-    // resolve to a canonical encyclopedia entity.
-    import("../lib/orphanUnlocksMigration").then((m) => m.migrateOrphanUnlocks()).catch(() => {});
+    if (isAndroidQuietActive()) {
+      console.warn(
+        "[android:quiet] root background subsystems gated. Use __irthAndroidEnable('all') to re-enable.",
+      );
+    }
 
-    // PR3: bootstrap campaign-ledger sync flush (online + visibility events).
-    import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
+    if (isSectionEnabled("orphanUnlocks")) {
+      import("../lib/orphanUnlocksMigration").then((m) => m.migrateOrphanUnlocks()).catch(() => {});
+    }
 
-    // Offline Core Content: hydrate from bundled snapshot on first launch,
-    // and refresh local cache from Supabase in the background when online.
-    import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
+    if (isSectionEnabled("ledger")) {
+      import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
+    }
 
-    // (registry → user_collection migration removed; user_collection is authoritative)
+    if (isSectionEnabled("offlineSnapshot")) {
+      import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
+    }
+
     const onOnline = () => {};
     window.addEventListener("online", onOnline);
 
+    if (isSectionEnabled("orientationLock")) {
+      type LockableOrientation = ScreenOrientation & {
+        lock?: (orientation: "portrait" | "landscape" | "any") => Promise<void>;
+      };
+      const so = (typeof screen !== "undefined" ? (screen.orientation as LockableOrientation | undefined) : undefined);
+      so?.lock?.("portrait").catch(() => {});
+    }
 
-
-    // Lock orientation to portrait on supported platforms (Android / Capacitor / installed PWA).
-    // Browsers that don't allow this silently reject — that's fine.
-    type LockableOrientation = ScreenOrientation & {
-      lock?: (orientation: "portrait" | "landscape" | "any") => Promise<void>;
-    };
-    const so = (typeof screen !== "undefined" ? (screen.orientation as LockableOrientation | undefined) : undefined);
-    so?.lock?.("portrait").catch(() => {});
-
-    // Initialize FCM push notifications (Android-native only; no-op on web).
-    console.log("[push] root effect reached");
     let unsub: (() => void) | undefined;
-    import("../lib/pushNotifications")
-      .then(async (m) => {
-        await m.initPushNotifications();
-        // Flush any token captured before the user was signed in.
-        m.flushPendingDeviceToken().catch(() => {});
-        const { supabase } = await import("../integrations/supabase/client");
-        const { data } = supabase.auth.onAuthStateChange((event) => {
-          if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+    if (isSectionEnabled("push") || isSectionEnabled("authListener")) {
+      console.log("[push] root effect reached");
+      import("../lib/pushNotifications")
+        .then(async (m) => {
+          if (isSectionEnabled("push")) {
+            await m.initPushNotifications();
             m.flushPendingDeviceToken().catch(() => {});
-            // PR3: drain any queued campaign sync ops now that we have a session.
-            import("../lib/campaignLedger").then((l) => {
-              void l.flushPending();
-              if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
-            }).catch(() => {});
           }
-        });
-        unsub = () => data.subscription.unsubscribe();
-      })
-      .catch((err) => console.error("[push] dynamic import failed:", err));
-    // Heartbeat: touch last_active when the tab becomes visible, throttled to
-    // once every 5 minutes per session. Powers "active now / today / week".
-    let lastTouch = 0;
-    const touchActive = async () => {
-      const now = Date.now();
-      if (now - lastTouch < 5 * 60 * 1000) return;
-      lastTouch = now;
-      try {
-        const { touchMyLastActive } = await import("../lib/adminUsers");
-        await touchMyLastActive();
-      } catch { /* silent */ }
-    };
-    const onVisible = () => { if (document.visibilityState === "visible") void touchActive(); };
-    document.addEventListener("visibilitychange", onVisible);
-    void touchActive();
+          if (isSectionEnabled("authListener")) {
+            const { supabase } = await import("../integrations/supabase/client");
+            const { data } = supabase.auth.onAuthStateChange((event) => {
+              if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+                if (isSectionEnabled("push")) {
+                  m.flushPendingDeviceToken().catch(() => {});
+                }
+                if (isSectionEnabled("ledger")) {
+                  import("../lib/campaignLedger").then((l) => {
+                    void l.flushPending();
+                    if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
+                  }).catch(() => {});
+                }
+              }
+            });
+            unsub = () => data.subscription.unsubscribe();
+          }
+        })
+        .catch((err) => console.error("[push] dynamic import failed:", err));
+    }
+
+    let onVisible: (() => void) | undefined;
+    if (isSectionEnabled("heartbeat")) {
+      let lastTouch = 0;
+      const touchActive = async () => {
+        const now = Date.now();
+        if (now - lastTouch < 5 * 60 * 1000) return;
+        lastTouch = now;
+        try {
+          const { touchMyLastActive } = await import("../lib/adminUsers");
+          await touchMyLastActive();
+        } catch { /* silent */ }
+      };
+      onVisible = () => { if (document.visibilityState === "visible") void touchActive(); };
+      document.addEventListener("visibilitychange", onVisible);
+      void touchActive();
+    }
 
     return () => {
       unsub?.();
       window.removeEventListener("online", onOnline);
-      document.removeEventListener("visibilitychange", onVisible);
+      if (onVisible) document.removeEventListener("visibilitychange", onVisible);
     };
 
   }, [androidStable, capacitorMinimalDiagnostics]);
@@ -288,12 +301,12 @@ function RootComponent() {
       <ProfileProvider>
         <AccountProvider>
           {androidStable ? <AppShell><Outlet /></AppShell> : <Outlet />}
-          {!androidStable && <FirstLaunchGate />}
-          {!androidStable && <AchievementWatcher />}
-          {!androidStable && <LevelUpWatcher />}
+          {!androidStable && isSectionEnabled("firstLaunch") && <FirstLaunchGate />}
+          {!androidStable && isSectionEnabled("achievement") && <AchievementWatcher />}
+          {!androidStable && isSectionEnabled("levelUp") && <LevelUpWatcher />}
           <Toaster position="top-center" richColors closeButton />
-          {!androidStable && <SplashSequence />}
-          {!capacitorMinimalDiagnostics && <AndroidBackHandler />}
+          {!androidStable && isSectionEnabled("splash") && <SplashSequence />}
+          {!capacitorMinimalDiagnostics && isSectionEnabled("backHandler") && <AndroidBackHandler />}
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
