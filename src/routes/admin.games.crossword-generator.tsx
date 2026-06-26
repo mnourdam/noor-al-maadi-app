@@ -115,10 +115,15 @@ function CrosswordGeneratorPage() {
       return;
     }
     setStage(result.stage);
+    // Always assign a fresh unique slug per generation so each save creates a
+    // new record (the import path upserts on slug). Users can still override.
+    const uniqueSlug = `crossword-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    setForm((f) => ({ ...f, slug: uniqueSlug }));
     if (result.placed !== pairs.length) {
       setWarning(`تم وضع ${result.placed} من أصل ${pairs.length} كلمة على شبكة ${result.gridSize}×${result.gridSize}.`);
     }
   };
+
 
   const envelope = useMemo(() => {
     if (!stage) return null;
