@@ -207,9 +207,9 @@ export const AndroidTextEntryInput = React.forwardRef<HTMLInputElement, InputPro
           placeholder={placeholder}
           className={className}
           style={style}
-          onPointerDown={(event) => { event.preventDefault(); openEntry(); }}
-          onClick={(event) => { event.preventDefault(); openEntry(); }}
-          onFocus={(event) => { event.currentTarget.blur(); openEntry(); onFocus?.(event); }}
+          onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); openEntry(); }}
+          onClick={(event) => { event.preventDefault(); event.stopPropagation(); openEntry(); }}
+          onFocus={(event) => { event.currentTarget.blur(); event.stopPropagation(); openEntry(); onFocus?.(event); }}
           onKeyDown={(event) => {
             onKeyDown?.(event);
             if (!event.defaultPrevented && event.key === "Enter") onEnter?.(currentValue);
@@ -336,9 +336,9 @@ export const AndroidTextEntryTextarea = React.forwardRef<HTMLTextAreaElement, Te
           placeholder={placeholder}
           className={className}
           style={style}
-          onPointerDown={(event) => { event.preventDefault(); openEntry(); }}
-          onClick={(event) => { event.preventDefault(); openEntry(); }}
-          onFocus={(event) => { event.currentTarget.blur(); openEntry(); onFocus?.(event); }}
+          onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); openEntry(); }}
+          onClick={(event) => { event.preventDefault(); event.stopPropagation(); openEntry(); }}
+          onFocus={(event) => { event.currentTarget.blur(); event.stopPropagation(); openEntry(); onFocus?.(event); }}
           onKeyDown={(event) => {
             onKeyDown?.(event);
             if (!event.defaultPrevented && event.key === "Enter" && (event.ctrlKey || event.metaKey)) onEnter?.(currentValue);
