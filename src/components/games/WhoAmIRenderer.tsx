@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion } from "lucide-react";
 import type { WhoAmIStage } from "@/lib/games/types";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
+import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
 
@@ -20,7 +21,26 @@ function normalize(s: string): string {
 
 const POTENTIAL_BY_REVEAL = [100, 70, 50] as const;
 
+const ANDROID_AUTH_MIN_INPUT_STYLE = {
+  display: "block",
+  width: "100%",
+  boxSizing: "border-box",
+  border: "1px solid #c9c9c9",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#111111",
+  font: "16px system-ui, sans-serif",
+  lineHeight: 1.4,
+  padding: "12px 14px",
+  outline: "none",
+  transform: "none",
+  filter: "none",
+  backdropFilter: "none",
+  WebkitBackdropFilter: "none",
+} satisfies CSSProperties;
+
 export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
+  const androidNative = isAndroidNativeApp();
   const [revealed, setRevealed] = useState(1);
   const [guess, setGuess] = useState("");
   const guessRef = useRef<HTMLInputElement | null>(null);
@@ -115,22 +135,40 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
       )}
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <AndroidSafeInput
-          ref={guessRef}
-          dir="rtl"
-          value={guess}
-          onValueChange={setGuess}
-          commitMode="blur"
-          onEnter={(next) => submit(next)}
-          disabled={done}
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="اكتب اسم الشخصية…"
-          className={`flex-1 rounded-xl border bg-slate-950/80 px-4 py-3.5 text-base text-slate-100 placeholder:text-slate-500 focus:outline-none ${
-            wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"
-          } ${done ? "border-emerald-500/40" : ""}`}
-        />
+        {androidNative ? (
+          <input
+            key={stage.answer}
+            ref={guessRef}
+            dir="rtl"
+            type="text"
+            name="who-am-i-answer"
+            defaultValue=""
+            disabled={done}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            placeholder="اكتب اسم الشخصية…"
+            style={{ ...ANDROID_AUTH_MIN_INPUT_STYLE, flex: 1 }}
+          />
+        ) : (
+          <AndroidSafeInput
+            ref={guessRef}
+            dir="rtl"
+            value={guess}
+            onValueChange={setGuess}
+            commitMode="blur"
+            onEnter={(next) => submit(next)}
+            disabled={done}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="اكتب اسم الشخصية…"
+            className={`flex-1 rounded-xl border bg-slate-950/80 px-4 py-3.5 text-base text-slate-100 placeholder:text-slate-500 focus:outline-none ${
+              wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"
+            } ${done ? "border-emerald-500/40" : ""}`}
+          />
+        )}
         <button
           onClick={() => submit()}
           disabled={done}
@@ -139,7 +177,7 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
           {done ? <><Sparkles className="h-4 w-4" /> صحيح</> : <><Check className="h-4 w-4" /> تحقق</>}
         </button>
       </div>
-      {!done && guess.trim().length === 0 && (
+      {!done && !androidNative && guess.trim().length === 0 && (
         <p className="mt-2 text-[11px] text-slate-500">اكتب تخمينك ثم اضغط تحقق.</p>
       )}
 

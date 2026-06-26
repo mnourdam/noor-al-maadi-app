@@ -34,6 +34,10 @@ try {
 
 const rootElement = document.getElementById("root");
 
+function isAndroidProductionAuthPath(pathname = window.location.pathname) {
+  return pathname === "/auth" || pathname.endsWith("/auth");
+}
+
 if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
 }
@@ -46,7 +50,7 @@ if (isAndroidReactMinPath()) {
   // eslint-disable-next-line no-console
   console.info("[android-react-min] minimal React entry mounted", { path: window.location.pathname });
   createRoot(rootElement).render(<AndroidReactMinTest />);
-} else if (isAndroidAuthMinPath()) {
+} else if (isAndroidAuthMinPath() || isAndroidProductionAuthPath()) {
   try {
     document.documentElement.classList.remove("irth-booting");
     document.getElementById("irth-boot-splash")?.remove();
@@ -78,7 +82,7 @@ async function bootMainApp(root: HTMLElement) {
     import("./lib/perf-mode"),
   ]);
 
-  const { installAndroidFreezeDiagnostics, androidMark } = diagnostics;
+  const { installAndroidFreezeDiagnostics, androidMark, isAndroidNativeApp } = diagnostics;
   const { applyPerfMode } = perf;
 
   // TanStack Start normally injects this during its client boot. The Android
@@ -94,7 +98,7 @@ async function bootMainApp(root: HTMLElement) {
   applyPerfMode();
   // Mark Android so route/component code can branch on it cheaply.
   try {
-    if ((window as any).Capacitor?.isNativePlatform?.()) {
+    if (isAndroidNativeApp()) {
       document.documentElement.classList.add("is-android", "is-capacitor");
     }
   } catch { /* ignore */ }

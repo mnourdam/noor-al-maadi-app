@@ -59,13 +59,21 @@ let lastNetworkLogAt = 0;
 export function isAndroidNativeApp(): boolean {
   if (typeof window === "undefined") return false;
   try {
+    if (document.documentElement.classList.contains("is-android")) return true;
     const cap = (window as unknown as {
       Capacitor?: {
         isNativePlatform?: () => boolean;
         getPlatform?: () => string;
       };
     }).Capacitor;
-    return !!cap?.isNativePlatform?.() && cap?.getPlatform?.() === "android";
+    if (!!cap?.isNativePlatform?.() && cap?.getPlatform?.() === "android") return true;
+    // Some diagnostic/minimal Capacitor builds expose the Android WebView before
+    // the bridge object is ready. Keep Android-only branches active for the APK
+    // SPA by recognizing the embedded localhost WebView runtime.
+    const ua = navigator.userAgent || "";
+    const isAndroidWebView = /Android/i.test(ua) && /; wv\)|Version\/\d+\.\d+ Chrome\//i.test(ua);
+    const isEmbeddedLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    return isAndroidWebView && isEmbeddedLocalhost;
   } catch {
     return false;
   }
