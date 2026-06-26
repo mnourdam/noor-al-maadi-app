@@ -53,10 +53,11 @@ export function AtlasStage({
     const update = () =>
       setWrapSize({ w: el.clientWidth || 1, h: el.clientHeight || 1 });
     update();
+    if (androidStable) return;
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [androidStable]);
 
   // Clamp in SVG USER UNITS (= viewBox units), since the <g> transform's
   // translate(${tx}px, ${ty}px) is interpreted by the SVG/CSS engine in user
@@ -166,7 +167,7 @@ export function AtlasStage({
   // ── Wheel zoom (cursor-anchored) ──────────────────────────────────────
   useEffect(() => {
     const el = wrapRef.current;
-    if (!el) return;
+    if (!el || androidStable) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       cancelAnimations();
@@ -185,12 +186,12 @@ export function AtlasStage({
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [clamp, cancelAnimations, unitsPerPxFor]);
+  }, [clamp, cancelAnimations, unitsPerPxFor, androidStable]);
 
   // ── Pinch zoom + two-finger pan (Google-Maps-style anchor) ───────────
   useEffect(() => {
     const el = wrapRef.current;
-    if (!el) return;
+    if (!el || androidStable) return;
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length < 2) return;
       cancelAnimations();
@@ -242,7 +243,7 @@ export function AtlasStage({
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [scheduleView, cancelAnimations, clamp, unitsPerPxFor]);
+  }, [scheduleView, cancelAnimations, clamp, unitsPerPxFor, androidStable]);
 
 
   useEffect(() => () => cancelAnimations(), [cancelAnimations]);
@@ -303,7 +304,7 @@ export function AtlasStage({
             height={VB_H}
             preserveAspectRatio="xMidYMid slice"
             onLoad={() => setRasterLoaded(true)}
-            style={{ imageRendering: "auto", opacity: rasterLoaded ? 1 : 0, transition: "opacity 200ms ease-out" }}
+            style={{ imageRendering: "auto", opacity: rasterLoaded ? 1 : 0, transition: androidStable ? "none" : "opacity 200ms ease-out" }}
           />
 
           <AtlasEntityPinsLayer
