@@ -147,7 +147,9 @@ async function bootMainApp(root: HTMLElement) {
     functionMiddleware: [attachSupabaseAuth],
   };
 
-  installAndroidFreezeDiagnostics();
+  if (!IRTH_ANDROID_DISABLE_ALL_SIDE_EFFECTS) {
+    installAndroidFreezeDiagnostics();
+  }
   // Flip the global perf-lite CSS class BEFORE first paint so heavy
   // animations / backdrop-filter / particles never run on Android WebView.
   applyPerfMode();
