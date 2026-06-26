@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from "@capacitor/cli";
+import { KeyboardResize } from "@capacitor/keyboard";
 
 // Capacitor config for the Irth Android app.
 //
@@ -11,6 +12,13 @@ const config: CapacitorConfig = {
   webDir: "dist/android",
   android: {
     allowMixedContent: false,
+    captureInput: false,
+  },
+  plugins: {
+    Keyboard: {
+      resize: KeyboardResize.Native,
+      resizeOnFullScreen: false,
+    },
   },
   server: {
     androidScheme: "https",
