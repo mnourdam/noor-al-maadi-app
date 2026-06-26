@@ -280,6 +280,28 @@ export function AndroidInputIsolationTest() {
         Open Android auth-min test (auth client only on submit)
       </button>
 
+      <button
+        type="button"
+        onClick={() => {
+          log("open-campaign-input-min-test");
+          window.location.href = "/android-campaign-input-min";
+        }}
+        style={{
+          display: "block",
+          width: "100%",
+          boxSizing: "border-box",
+          margin: "0 0 18px",
+          border: "1px solid #111111",
+          borderRadius: 6,
+          background: "#92400e",
+          color: "#ffffff",
+          font: "700 16px system-ui, sans-serif",
+          padding: "12px 14px",
+        }}
+      >
+        Open campaign input-min test
+      </button>
+
       <QuietBisectButtons />
 
 
