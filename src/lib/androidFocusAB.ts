@@ -164,7 +164,7 @@ export function installAndroidFocusABSwitches() {
   }
 
   if (flags.disableScrollIntoView) {
-    Element.prototype.scrollIntoView = function noopScrollIntoView() {
+    Element.prototype.scrollIntoView = function noopScrollIntoView(this: Element) {
       try {
         (window as any).IrthNativeDiagnostics?.logInputEvent?.("focusAB.blockScrollIntoView", JSON.stringify({ tag: this.tagName, id: this.id || undefined }));
       } catch { /* ignore */ }
