@@ -22,6 +22,7 @@ import { AndroidBackHandler } from "../components/AndroidBackHandler";
 import { androidMark, isAndroidUltraStableMode } from "../lib/androidFreezeDiagnostics";
 import { isSectionEnabled, isAndroidQuietActive } from "../lib/androidQuietMode";
 import { AppShell } from "../components/AppShell";
+import { AndroidTextEntryHost } from "../components/AndroidTextEntry";
 
 function NotFoundComponent() {
   return (
@@ -297,18 +298,21 @@ function RootComponent() {
   }, [androidStable, capacitorMinimalDiagnostics]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ProfileProvider>
-        <AccountProvider>
-          {androidStable ? <AppShell><Outlet /></AppShell> : <Outlet />}
-          {!androidStable && isSectionEnabled("firstLaunch") && <FirstLaunchGate />}
-          {!androidStable && isSectionEnabled("achievement") && <AchievementWatcher />}
-          {!androidStable && isSectionEnabled("levelUp") && <LevelUpWatcher />}
-          <Toaster position="top-center" richColors closeButton />
-          {!androidStable && isSectionEnabled("splash") && <SplashSequence />}
-          {!capacitorMinimalDiagnostics && isSectionEnabled("backHandler") && <AndroidBackHandler />}
-        </AccountProvider>
-      </ProfileProvider>
-    </QueryClientProvider>
+    <>
+      <AndroidTextEntryHost />
+      <QueryClientProvider client={queryClient}>
+        <ProfileProvider>
+          <AccountProvider>
+            {androidStable ? <AppShell><Outlet /></AppShell> : <Outlet />}
+            {!androidStable && isSectionEnabled("firstLaunch") && <FirstLaunchGate />}
+            {!androidStable && isSectionEnabled("achievement") && <AchievementWatcher />}
+            {!androidStable && isSectionEnabled("levelUp") && <LevelUpWatcher />}
+            <Toaster position="top-center" richColors closeButton />
+            {!androidStable && isSectionEnabled("splash") && <SplashSequence />}
+            {!capacitorMinimalDiagnostics && isSectionEnabled("backHandler") && <AndroidBackHandler />}
+          </AccountProvider>
+        </ProfileProvider>
+      </QueryClientProvider>
+    </>
   );
 }

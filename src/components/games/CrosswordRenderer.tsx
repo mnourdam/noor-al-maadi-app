@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Check, Sparkles, Feather, AlertTriangle, Lightbulb } from "lucide-react";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
@@ -18,25 +18,6 @@ interface Props {
 }
 
 const HINT_COST = 10;
-
-const ANDROID_AUTH_MIN_INPUT_STYLE = {
-  display: "block",
-  width: "100%",
-  boxSizing: "border-box",
-  border: "1px solid #c9c9c9",
-  borderRadius: 6,
-  background: "#ffffff",
-  color: "#111111",
-  font: "16px system-ui, sans-serif",
-  lineHeight: 1.4,
-  padding: "12px 14px",
-  outline: "none",
-  transform: "none",
-  filter: "none",
-  backdropFilter: "none",
-  WebkitBackdropFilter: "none",
-} satisfies CSSProperties;
-
 
 interface CellInfo {
   expected: string;
@@ -317,7 +298,7 @@ export function CrosswordRenderer({
                 {clue.direction === "across" ? "أفقي" : "عمودي"} · {clue.number}
               </span>
               <span className="mb-3 block text-sm leading-7 text-slate-200">{clue.hint}</span>
-              <input
+              <AndroidSafeInput
                 ref={(el) => { clueInputRefs.current[idx] = el; }}
                 type="text"
                 name={`crossword-answer-${idx}`}
@@ -329,7 +310,9 @@ export function CrosswordRenderer({
                 autoCapitalize="none"
                 spellCheck={false}
                 placeholder="اكتب الإجابة…"
-                style={ANDROID_AUTH_MIN_INPUT_STYLE}
+                modalTitle={`إجابة ${clue.direction === "across" ? "أفقية" : "عمودية"} ${clue.number}`}
+                modalLabel={clue.hint}
+                className="block w-full rounded-lg border border-amber-500/25 bg-slate-950/75 px-3 py-3 text-base text-slate-100 placeholder:text-slate-500 outline-none focus:border-amber-400"
               />
             </label>
           ))}

@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { AndroidTextEntryInput, AndroidTextEntryTextarea } from "@/components/AndroidTextEntry";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,6 +31,8 @@ type SharedSafeProps = {
   onEnter?: (value: string) => void;
   onCompositionStateChange?: (composing: boolean) => void;
   logName?: string;
+  modalTitle?: string;
+  modalLabel?: string;
 };
 
 type AndroidSafeInputProps = React.InputHTMLAttributes<HTMLInputElement> & SharedSafeProps;
@@ -45,32 +48,24 @@ export const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeIn
       commitMode: _commitMode,
       onCompositionStateChange: _onCompositionStateChange,
       logName: _logName,
+      modalTitle,
+      modalLabel,
       className,
       ...props
     },
     ref,
-  ) => {
-    const handleChange = onValueChange
-      ? (event: React.ChangeEvent<HTMLInputElement>) => {
-          onValueChange(event.currentTarget.value);
-          onChange?.(event);
-        }
-      : onChange;
-
-    const handleKeyDown = onEnter
-      ? (event: React.KeyboardEvent<HTMLInputElement>) => {
-          onKeyDown?.(event);
-          if (!event.defaultPrevented && event.key === "Enter") onEnter(event.currentTarget.value);
-        }
-      : onKeyDown;
-
+    ) => {
     return (
-      <input
+      <AndroidTextEntryInput
         {...props}
         ref={ref}
         className={cn(className)}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        onValueChange={onValueChange}
+        onEnter={onEnter}
+        modalTitle={modalTitle}
+        modalLabel={modalLabel}
       />
     );
   },
@@ -85,24 +80,22 @@ export const AndroidSafeTextarea = React.forwardRef<HTMLTextAreaElement, Android
       commitMode: _commitMode,
       onCompositionStateChange: _onCompositionStateChange,
       logName: _logName,
+      modalTitle,
+      modalLabel,
       className,
       ...props
     },
     ref,
-  ) => {
-    const handleChange = onValueChange
-      ? (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-          onValueChange(event.currentTarget.value);
-          onChange?.(event);
-        }
-      : onChange;
-
+    ) => {
     return (
-      <textarea
+      <AndroidTextEntryTextarea
         {...props}
         ref={ref}
         className={cn(className)}
-        onChange={handleChange}
+        onChange={onChange}
+        onValueChange={onValueChange}
+        modalTitle={modalTitle}
+        modalLabel={modalLabel}
       />
     );
   },

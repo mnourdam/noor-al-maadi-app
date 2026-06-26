@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info,
   ChevronLeft, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin,
@@ -26,6 +26,7 @@ import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 import { useAccount } from "@/lib/account";
 import { clearLocalPlayerProgress } from "@/lib/resetProgress";
 import { fetchMyReferralStats, buildReferralShareUrl, shareReferral, type MyReferralStats } from "@/lib/referrals";
+import { AndroidTextEntryInput, AndroidTextEntryTextarea } from "@/components/AndroidTextEntry";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
@@ -64,30 +65,6 @@ const RARITY_STYLE: Record<AchievementRarity, { ring: string; chip: string; labe
 };
 
 const TAB_STORAGE_KEY = "irth.profile.tab";
-
-const ANDROID_AUTH_MIN_INPUT_STYLE = {
-  display: "block",
-  width: "100%",
-  boxSizing: "border-box",
-  border: "1px solid #c9c9c9",
-  borderRadius: 6,
-  background: "#ffffff",
-  color: "#111111",
-  font: "16px system-ui, sans-serif",
-  lineHeight: 1.4,
-  padding: "12px 14px",
-  outline: "none",
-  transform: "none",
-  filter: "none",
-  backdropFilter: "none",
-  WebkitBackdropFilter: "none",
-} satisfies CSSProperties;
-
-const ANDROID_AUTH_MIN_TEXTAREA_STYLE = {
-  ...ANDROID_AUTH_MIN_INPUT_STYLE,
-  minHeight: 110,
-  resize: "vertical",
-} satisfies CSSProperties;
 
 function ProfilePage() {
   const {
@@ -187,32 +164,20 @@ function ProfilePage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    {androidNative ? (
-                      <input
-                        ref={nameInputRef}
-                        type="text"
-                        name="displayName"
-                        defaultValue={nameDraft}
-                        autoComplete="name"
-                        autoCorrect="off"
-                        autoCapitalize="none"
-                        spellCheck={false}
-                        placeholder="اسمك الظاهر"
-                        style={{ ...ANDROID_AUTH_MIN_INPUT_STYLE, flex: 1, minWidth: 0 }}
-                      />
-                    ) : (
-                      <input
-                        ref={nameInputRef}
-                        value={nameDraft}
-                        onChange={(event) => setNameDraft(event.currentTarget.value.slice(0, 60))}
-                        autoFocus
-                        autoComplete="name"
-                        autoCorrect="off"
-                        spellCheck={false}
-                        placeholder="اسمك الظاهر"
-                        className="min-w-0 flex-1 rounded-lg border border-gold/30 bg-background px-2 py-1 text-sm outline-none focus:border-gold"
-                      />
-                    )}
+                    <AndroidTextEntryInput
+                      ref={nameInputRef}
+                      value={nameDraft}
+                      onValueChange={(next) => setNameDraft(next.slice(0, 60))}
+                      autoFocus={!androidNative}
+                      autoComplete="name"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      maxLength={60}
+                      placeholder="اسمك الظاهر"
+                      modalTitle="تعديل الاسم"
+                      modalLabel="اكتب الاسم الذي سيظهر في ملفك"
+                      className="min-w-0 flex-1 rounded-lg border border-gold/30 bg-background px-2 py-1 text-sm outline-none focus:border-gold"
+                    />
                     <button onClick={saveName} disabled={nameBusy} className="rounded-full bg-gradient-gold px-3 py-1 text-[10px] font-bold text-primary-foreground disabled:opacity-50">{nameBusy ? "..." : "حفظ"}</button>
                     <button onClick={() => { setEditingName(false); setNameMsg(null); }} className="rounded-full border border-white/15 px-3 py-1 text-[10px] text-muted-foreground hover:bg-white/5">إلغاء</button>
                   </div>
@@ -1053,7 +1018,6 @@ function SettingsTab({
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(profile.bio ?? "");
   const bioRef = useRef<HTMLTextAreaElement | null>(null);
-  const androidNative = isAndroidNativeApp();
   const prefs = profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS;
   const favState = ERAS.find((e) => e.id === profile.favoriteStateId);
 
@@ -1095,31 +1059,20 @@ function SettingsTab({
             )}
           </div>
           {editingBio ? (
-            androidNative ? (
-              <textarea
-                ref={bioRef}
-                defaultValue={bioDraft}
-                rows={3}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                placeholder="مثال: مهتم بتاريخ الشام والحروب الصليبية."
-                style={{ ...ANDROID_AUTH_MIN_TEXTAREA_STYLE, marginTop: 8 }}
-              />
-            ) : (
-              <textarea
-                ref={bioRef}
-                value={bioDraft}
-                onChange={(event) => setBioDraft(event.currentTarget.value.slice(0, 240))}
-                rows={3}
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="مثال: مهتم بتاريخ الشام والحروب الصليبية."
-                className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-background px-3 py-2 text-[12px] leading-6 outline-none focus:border-gold/40"
-              />
-            )
+            <AndroidTextEntryTextarea
+              ref={bioRef}
+              value={bioDraft}
+              onValueChange={(next) => setBioDraft(next.slice(0, 240))}
+              rows={3}
+              maxLength={240}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="مثال: مهتم بتاريخ الشام والحروب الصليبية."
+              modalTitle="نبذة عني"
+              modalLabel="اكتب نبذة قصيرة عن اهتماماتك التاريخية"
+              className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-background px-3 py-2 text-[12px] leading-6 outline-none focus:border-gold/40"
+            />
           ) : (
             <p className="mt-2 text-[12px] leading-6 text-foreground/85">
               {profile.bio?.trim() ? profile.bio : <span className="italic text-muted-foreground">لم تكتب نبذةً بعد.</span>}
