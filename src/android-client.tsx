@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 
 import { AndroidAuthMinTest, isAndroidAuthMinPath } from "./components/AndroidAuthMinTest";
 import { AndroidCampaignInputMinTest, isAndroidCampaignInputMinPath } from "./components/AndroidCampaignInputMinTest";
+import { InputTraceDebugView } from "./components/InputTraceDebugView";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
 import { hasStoredInputFreezeTrace, installAndroidInputTrace } from "./lib/androidInputTrace";
@@ -55,7 +56,11 @@ if (!rootElement) {
 
 if (hasStoredInputFreezeTrace() && !window.location.pathname.startsWith("/debug/input-trace")) {
   window.history.replaceState(null, "", "/debug/input-trace");
-  void bootMainApp(rootElement);
+  try {
+    document.documentElement.classList.remove("irth-booting");
+    document.getElementById("irth-boot-splash")?.remove();
+  } catch { /* ignore */ }
+  createRoot(rootElement).render(<InputTraceDebugView />);
 } else if (isAndroidReactMinPath()) {
   try {
     document.documentElement.classList.remove("irth-booting");
