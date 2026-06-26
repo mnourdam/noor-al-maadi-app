@@ -45,6 +45,7 @@ public class MainActivity extends BridgeActivity {
         Log.i("IRTH_NATIVE_TRACE", "MAIN_ACTIVITY_ON_CREATE_TRACE_ACTIVE");
         System.out.println("IRTH_NATIVE_TRACE MAIN_ACTIVITY_ON_CREATE_TRACE_ACTIVE");
         createCount++;
+        AndroidABFlags.applyIntentToPrefs(this, getIntent());
         startupABFlags = AndroidABFlags.read(this, getIntent());
         AndroidABFlags.logStartup("activity.onCreate", startupABFlags);
         boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
@@ -98,6 +99,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        AndroidABFlags.applyIntentToPrefs(this, intent);
         startupABFlags = AndroidABFlags.read(this, intent);
         AndroidABFlags.logStartup("activity.onNewIntent", startupABFlags);
         WebView webView = bridge != null ? bridge.getWebView() : null;
