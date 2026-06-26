@@ -37,9 +37,13 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        Log.d("IRTH_NATIVE_TRACE", "MAIN_ACTIVITY_ON_CREATE_TRACE_ACTIVE");
+        Log.i("IRTH_NATIVE_TRACE", "MAIN_ACTIVITY_ON_CREATE_TRACE_ACTIVE");
+        System.out.println("IRTH_NATIVE_TRACE MAIN_ACTIVITY_ON_CREATE_TRACE_ACTIVE");
         createCount++;
         boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         WebView.setWebContentsDebuggingEnabled(debuggable);
+
 
         bridgeBuilder.addWebViewListener(new WebViewListener() {
             @Override
@@ -100,10 +104,14 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onResume() {
+        Log.d("IRTH_NATIVE_TRACE", "MAIN_ACTIVITY_ON_RESUME_TRACE_ACTIVE");
+        Log.i("IRTH_NATIVE_TRACE", "MAIN_ACTIVITY_ON_RESUME_TRACE_ACTIVE");
+        System.out.println("IRTH_NATIVE_TRACE MAIN_ACTIVITY_ON_RESUME_TRACE_ACTIVE");
         super.onResume();
         trace("activity.onResume", "activity resumed");
         logWebViewState("onResume");
     }
+
 
     @Override
     public void onPause() {
