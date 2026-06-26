@@ -490,6 +490,25 @@ function HomeFull() {
       >
         ANDROID INPUT TEST
       </Link>
+      <Link
+        to="/android-auth-min"
+        style={{
+          display: "block",
+          margin: "12px",
+          padding: "20px",
+          background: "#b91c1c",
+          color: "#ffffff",
+          fontWeight: 900,
+          fontSize: "18px",
+          textAlign: "center",
+          border: "3px solid #fecaca",
+          borderRadius: "12px",
+          letterSpacing: "0.1em",
+          textDecoration: "none",
+        }}
+      >
+        ANDROID AUTH MIN
+      </Link>
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
@@ -857,6 +876,25 @@ function AndroidStableHome() {
           }}
         >
           ANDROID INPUT TEST
+        </Link>
+        <Link
+          to="/android-auth-min"
+          style={{
+            display: "block",
+            marginBottom: "16px",
+            padding: "20px",
+            background: "#b91c1c",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #fecaca",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          ANDROID AUTH MIN
         </Link>
 
         <section className="rounded-3xl border border-gold/25 bg-surface p-5">
