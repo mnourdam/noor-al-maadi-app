@@ -53,11 +53,14 @@ type HeroSlide =
 function Index() {
   androidMark("render:Home");
   const androidStable = isAndroidUltraStableMode();
+  if (androidStable) return <AndroidStableHome />;
+  return <HomeFull />;
+}
+
+function HomeFull() {
   const { profile, touchStreak } = useProfile();
   const { account, user, lastSyncAt } = useAccount();
-  if (androidStable) {
-    return <AndroidStableHome profileName={account?.username ?? profile.name} points={profile.points} dinars={profile.dinars} />;
-  }
+  const androidStable = false;
 
   const displayName = account?.username ?? (user ? profile.name : profile.name);
   const [mounted, setMounted] = useState(false);
