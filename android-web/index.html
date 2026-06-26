@@ -25,6 +25,8 @@
          launch screen and the JS splash on slow cold-starts (App UI → black
          → Splash → App). */
       html.irth-booting #root { visibility: hidden; }
+      html.android-input-test-boot #root { visibility: visible !important; }
+      html.android-input-test-boot #irth-boot-splash { display: none !important; }
       #irth-boot-splash {
         position: fixed; inset: 0; z-index: 2147483647;
         background:
@@ -55,6 +57,13 @@
       // The Capacitor catch handler already swallows the throw, but we also
       // make sure stray errors never bubble up and block React mount.
       (function () {
+        try {
+          if (window.location.pathname === "/android-input-test" || window.location.pathname.endsWith("/android-input-test")) {
+            document.documentElement.classList.add("android-input-test-boot");
+            window.__irthAndroidInputTest = true;
+            console.info("[android-input-test] boot html isolation path detected");
+          }
+        } catch (_) {}
         window.addEventListener("error", function (e) {
           if (e && e.message && /safe area/i.test(e.message)) {
             e.preventDefault();
@@ -86,7 +95,9 @@
     <script>
       // Mark the document as booting so #root stays invisible until the JS
       // splash mounts and removes the boot overlay.
-      document.documentElement.classList.add("irth-booting");
+      if (!document.documentElement.classList.contains("android-input-test-boot")) {
+        document.documentElement.classList.add("irth-booting");
+      }
     </script>
     <div id="irth-boot-splash">
       <img src="./irth-icon.png" alt="" aria-hidden="true" />
@@ -95,22 +106,30 @@
     <script>
       // Safety net: never let the boot overlay stay forever if the JS splash
       // fails to mount. After 8s, fade it out and reveal #root.
-      window.setTimeout(function () {
-        var el = document.getElementById("irth-boot-splash");
-        if (!el) return;
-        el.classList.add("is-out");
-        document.documentElement.classList.remove("irth-booting");
-        window.setTimeout(function () { try { el.parentNode && el.parentNode.removeChild(el); } catch (_) {} }, 320);
-      }, 8000);
-      // Observe removal: as soon as React's SplashSequence removes the boot
-      // overlay, also drop the booting class so #root becomes visible.
-      var mo = new MutationObserver(function () {
-        if (!document.getElementById("irth-boot-splash")) {
+      if (document.documentElement.classList.contains("android-input-test-boot")) {
+        try {
+          var testSplash = document.getElementById("irth-boot-splash");
+          testSplash && testSplash.parentNode && testSplash.parentNode.removeChild(testSplash);
           document.documentElement.classList.remove("irth-booting");
-          mo.disconnect();
-        }
-      });
-      mo.observe(document.body, { childList: true });
+        } catch (_) {}
+      } else {
+        window.setTimeout(function () {
+          var el = document.getElementById("irth-boot-splash");
+          if (!el) return;
+          el.classList.add("is-out");
+          document.documentElement.classList.remove("irth-booting");
+          window.setTimeout(function () { try { el.parentNode && el.parentNode.removeChild(el); } catch (_) {} }, 320);
+        }, 8000);
+        // Observe removal: as soon as React's SplashSequence removes the boot
+        // overlay, also drop the booting class so #root becomes visible.
+        var mo = new MutationObserver(function () {
+          if (!document.getElementById("irth-boot-splash")) {
+            document.documentElement.classList.remove("irth-booting");
+            mo.disconnect();
+          }
+        });
+        mo.observe(document.body, { childList: true });
+      }
     </script>
     <script type="module" src="../src/android-client.tsx"></script>
   </body>

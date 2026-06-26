@@ -28,6 +28,7 @@ import { Route as ContentAuditRouteImport } from './routes/content-audit'
 import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AndroidInputTestRouteImport } from './routes/android-input-test'
 import { Route as AdventureRouteImport } from './routes/adventure'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
@@ -185,6 +186,11 @@ const CampaignsRoute = CampaignsRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AndroidInputTestRoute = AndroidInputTestRouteImport.update({
+  id: '/android-input-test',
+  path: '/android-input-test',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdventureRoute = AdventureRouteImport.update({
@@ -516,6 +522,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
+  '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
@@ -600,6 +607,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
+  '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
@@ -682,6 +690,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
+  '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
@@ -768,6 +777,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/achievements'
     | '/adventure'
+    | '/android-input-test'
     | '/auth'
     | '/campaigns'
     | '/collection'
@@ -852,6 +862,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/achievements'
     | '/adventure'
+    | '/android-input-test'
     | '/auth'
     | '/collection'
     | '/content-audit'
@@ -933,6 +944,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/achievements'
     | '/adventure'
+    | '/android-input-test'
     | '/auth'
     | '/campaigns'
     | '/collection'
@@ -1018,6 +1030,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AchievementsRoute: typeof AchievementsRoute
   AdventureRoute: typeof AdventureRoute
+  AndroidInputTestRoute: typeof AndroidInputTestRoute
   AuthRoute: typeof AuthRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
   CollectionRoute: typeof CollectionRoute
@@ -1221,6 +1234,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/android-input-test': {
+      id: '/android-input-test'
+      path: '/android-input-test'
+      fullPath: '/android-input-test'
+      preLoaderRoute: typeof AndroidInputTestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/adventure': {
@@ -1723,6 +1743,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AchievementsRoute: AchievementsRoute,
   AdventureRoute: AdventureRoute,
+  AndroidInputTestRoute: AndroidInputTestRoute,
   AuthRoute: AuthRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
   CollectionRoute: CollectionRoute,
@@ -1795,13 +1816,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
