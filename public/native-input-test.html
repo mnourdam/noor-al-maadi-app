@@ -14,6 +14,8 @@
     <label for="native-textarea">Plain textarea</label>
     <textarea id="native-textarea" rows="4" autocomplete="off" autocapitalize="none" spellcheck="false"></textarea>
     <br><br>
+    <button type="button" id="raw-webview-button">Open raw Android WebView input test</button>
+    <br><br>
     <button type="button" onclick="location.href='/'">Back</button>
     <script>
       (function () {
@@ -37,6 +39,14 @@
           } catch (_) {}
         }
         console.info(prefix, "mounted", { url: location.href, userAgent: /Android/i.test(navigator.userAgent) ? "Android" : "non-Android" });
+        document.getElementById("raw-webview-button").addEventListener("click", function () {
+          console.info(prefix, "open-raw-webview-activity");
+          if (window.IrthNativeDiagnostics && window.IrthNativeDiagnostics.openBareInputTest) {
+            window.IrthNativeDiagnostics.openBareInputTest();
+          } else {
+            console.info(prefix, "open-raw-webview-activity unavailable");
+          }
+        });
         ["focusin", "focusout", "keydown", "beforeinput", "input", "change", "compositionstart", "compositionend"].forEach(function (eventName) {
           document.addEventListener(eventName, function (event) { log(eventName, event); }, true);
         });

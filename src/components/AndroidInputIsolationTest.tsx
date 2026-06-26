@@ -211,6 +211,33 @@ export function AndroidInputIsolationTest() {
         Open bare native HTML input test
       </button>
 
+      <button
+        type="button"
+        onClick={() => {
+          log("open-native-webview-activity-test");
+          const nativeDiagnostics = (window as unknown as { IrthNativeDiagnostics?: { openBareInputTest?: () => void } }).IrthNativeDiagnostics;
+          if (nativeDiagnostics?.openBareInputTest) {
+            nativeDiagnostics.openBareInputTest();
+          } else {
+            log("open-native-webview-activity-test unavailable");
+          }
+        }}
+        style={{
+          display: "block",
+          width: "100%",
+          boxSizing: "border-box",
+          margin: "0 0 18px",
+          border: "1px solid #111111",
+          borderRadius: 6,
+          background: "#111111",
+          color: "#ffffff",
+          font: "700 16px system-ui, sans-serif",
+          padding: "12px 14px",
+        }}
+      >
+        Open raw Android WebView input test
+      </button>
+
       <div style={groupStyle}>
         <label htmlFor="react-uncontrolled-input" style={labelStyle}>Uncontrolled React input</label>
         <input
