@@ -4,6 +4,11 @@ import { AndroidAuthMinTest, isAndroidAuthMinPath } from "./components/AndroidAu
 import { AndroidCampaignInputMinTest, isAndroidCampaignInputMinPath } from "./components/AndroidCampaignInputMinTest";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
+import { warmupAndroidInput } from "./lib/androidInputWarmup";
+
+// Prime the WebView's first focus / IME path so the very first text
+// input the user taps does not freeze. One-shot, no visible keyboard.
+warmupAndroidInput();
 
 
 // Surface uncaught errors to Logcat via Capacitor's Console plugin so blank /
