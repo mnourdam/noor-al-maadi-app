@@ -34,9 +34,8 @@ try {
 
 const rootElement = document.getElementById("root");
 
-function isAndroidProductionAuthPath(pathname = window.location.pathname) {
-  return pathname === "/auth" || pathname.endsWith("/auth");
-}
+// Note: /auth is NOT intercepted here. On Android, login buttons use AuthLink
+// which navigates to the standalone /android-auth-min entry instead.
 
 if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
@@ -50,7 +49,7 @@ if (isAndroidReactMinPath()) {
   // eslint-disable-next-line no-console
   console.info("[android-react-min] minimal React entry mounted", { path: window.location.pathname });
   createRoot(rootElement).render(<AndroidReactMinTest />);
-} else if (isAndroidAuthMinPath() || isAndroidProductionAuthPath()) {
+} else if (isAndroidAuthMinPath()) {
   try {
     document.documentElement.classList.remove("irth-booting");
     document.getElementById("irth-boot-splash")?.remove();

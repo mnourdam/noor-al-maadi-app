@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Share2, Gift, ChevronLeft, Trophy } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
+import { AuthLink } from "@/components/AuthLink";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import {
@@ -69,7 +70,7 @@ function ReferralsPage() {
     return (
       <AppShell>
         <Screen title="حَمَلة الإرث" subtitle="سجّل دخولك للحصول على رمزك">
-          <Link to="/auth" className="mt-4 inline-flex rounded-xl bg-gradient-gold px-4 py-2 text-sm font-bold text-primary-foreground shadow-gold">دخول</Link>
+          <AuthLink className="mt-4 inline-flex rounded-xl bg-gradient-gold px-4 py-2 text-sm font-bold text-primary-foreground shadow-gold">دخول</AuthLink>
         </Screen>
       </AppShell>
     );

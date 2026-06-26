@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Cloud, CloudOff, LogIn, LogOut, RefreshCw, ShieldCheck, UserPlus, Shield, FileText, Lock } from "lucide-react";
 import { useAccount } from "@/lib/account";
+import { AuthLink } from "@/components/AuthLink";
 
 function timeAgo(ts: number | null): string {
   if (!ts) return "—";
@@ -49,12 +50,12 @@ export function AccountSection() {
       <div className="mt-4 grid grid-cols-2 gap-2">
         {isGuest ? (
           <>
-            <Link to="/auth" className="col-span-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-gold py-2 text-sm font-bold text-primary-foreground shadow-gold">
+            <AuthLink className="col-span-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-gold py-2 text-sm font-bold text-primary-foreground shadow-gold">
               <UserPlus className="size-4" /> إنشاء حساب
-            </Link>
-            <Link to="/auth" className="col-span-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/15 py-2 text-sm">
+            </AuthLink>
+            <AuthLink className="col-span-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/15 py-2 text-sm">
               <LogIn className="size-4" /> تسجيل الدخول
-            </Link>
+            </AuthLink>
           </>
         ) : (
           <>

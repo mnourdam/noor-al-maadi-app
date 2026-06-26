@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Search, UserPlus, Check, X, Trash2, ChevronLeft, Users } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
+import { AuthLink } from "@/components/AuthLink";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { useAccount } from "@/lib/account";
 import {
@@ -34,7 +35,7 @@ function FriendsPage() {
     return (
       <AppShell>
         <Screen title="الأصدقاء" subtitle="سجّل دخولك لاكتشاف الأصدقاء">
-          <Link to="/auth" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-4 py-2 text-sm font-bold text-primary-foreground shadow-gold">تسجيل الدخول</Link>
+          <AuthLink className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-4 py-2 text-sm font-bold text-primary-foreground shadow-gold">تسجيل الدخول</AuthLink>
         </Screen>
       </AppShell>
     );
