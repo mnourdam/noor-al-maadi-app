@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Cloud, CloudOff, LogIn, LogOut, RefreshCw, ShieldCheck, UserPlus, Shield, FileText, Lock } from "lucide-react";
 import { useAccount } from "@/lib/account";
+import { AuthLink } from "@/components/AuthLink";
 
 function timeAgo(ts: number | null): string {
   if (!ts) return "—";
