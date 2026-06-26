@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Mail, Lock, UserRound, ChevronLeft, Gift, Eye, EyeOff } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { AppShell, Screen } from "@/components/AppShell";
+import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { useAccount } from "@/lib/account";
 
 
@@ -27,6 +28,12 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [showPwd, setShowPwd] = useState(false);
+  const refs = useRef({
+    email: null as HTMLInputElement | null,
+    password: null as HTMLInputElement | null,
+    username: null as HTMLInputElement | null,
+    referral: null as HTMLInputElement | null,
+  });
 
   useEffect(() => { if (search.ref) setReferralCode(search.ref); }, [search.ref]);
 
@@ -57,6 +64,15 @@ function AuthPage() {
     setBusy(true);
     console.log("[android:auth] submit started", { mode });
 
+    const currentEmail = (refs.current.email?.value ?? email).trim();
+    const currentPassword = refs.current.password?.value ?? password;
+    const currentUsername = (refs.current.username?.value ?? username).trim();
+    const currentReferral = (refs.current.referral?.value ?? referralCode).trim().toUpperCase();
+    setEmail(currentEmail);
+    setPassword(currentPassword);
+    setUsername(currentUsername);
+    setReferralCode(currentReferral);
+
     // Hard timeout so the UI can never hang indefinitely (network drop,
     // Capacitor WebView fetch stall, Supabase unreachable, etc.).
     const TIMEOUT_MS = 15000;
@@ -78,13 +94,12 @@ function AuthPage() {
       console.log("[android:auth] request sent");
       let r: { ok: boolean; error?: string };
       if (mode === "signup") {
-        const normalizedReferral = referralCode.trim().toUpperCase();
         r = await Promise.race([
-          signUp({ email, password, username, displayName: username, referralCode: normalizedReferral || undefined }),
+          signUp({ email: currentEmail, password: currentPassword, username: currentUsername, displayName: currentUsername, referralCode: currentReferral || undefined }),
           timeoutPromise,
         ]);
       } else {
-        r = await Promise.race([signIn(email, password), timeoutPromise]);
+        r = await Promise.race([signIn(currentEmail, currentPassword), timeoutPromise]);
       }
       console.log("[android:auth] response received", { ok: r.ok, timedOut });
 
@@ -139,9 +154,11 @@ function AuthPage() {
           <form onSubmit={submit} className="space-y-3">
             {mode === "signup" && (
               <Field icon={<UserRound className="size-4" />} label="اسم المستخدم">
-                <input
+                <AndroidSafeInput
+                  ref={(el) => { refs.current.username = el; }}
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onValueChange={setUsername}
+                  commitMode="blur"
                   required
                   minLength={3}
                   maxLength={30}
@@ -155,10 +172,12 @@ function AuthPage() {
               </Field>
             )}
             <Field icon={<Mail className="size-4" />} label="البريد الإلكتروني">
-              <input
+              <AndroidSafeInput
+                ref={(el) => { refs.current.email = el; }}
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onValueChange={setEmail}
+                commitMode="blur"
                 required
                 autoComplete="email"
                 autoCorrect="off"
@@ -170,10 +189,12 @@ function AuthPage() {
               />
             </Field>
             <Field icon={<Lock className="size-4" />} label="كلمة المرور">
-              <input
+              <AndroidSafeInput
+                ref={(el) => { refs.current.password = el; }}
                 type={showPwd ? "text" : "password"}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onValueChange={setPassword}
+                commitMode="blur"
                 required
                 minLength={6}
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
@@ -194,10 +215,16 @@ function AuthPage() {
             </Field>
             {mode === "signup" && (
               <Field icon={<Gift className="size-4" />} label="رمز الإحالة (اختياري)">
-                <input
+                <AndroidSafeInput
+                  ref={(el) => { refs.current.referral = el; }}
                   value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value)}
-                  onBlur={(e) => setReferralCode(e.target.value.replace(/\s+/g, "").toUpperCase())}
+                  onValueChange={setReferralCode}
+                  commitMode="blur"
+                  onBlur={(e) => {
+                    const normalized = e.currentTarget.value.replace(/\s+/g, "").toUpperCase();
+                    e.currentTarget.value = normalized;
+                    setReferralCode(normalized);
+                  }}
                   maxLength={20}
                   autoComplete="off"
                   autoCorrect="off"

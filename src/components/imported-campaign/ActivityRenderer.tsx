@@ -9,6 +9,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, X, HelpCircle, Lightbulb } from "lucide-react";
+import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
 import type { CampaignActivity } from "@/types/campaign";
 
 export interface RendererProps {
@@ -393,10 +394,13 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
     <div>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
-      <input
+      <AndroidSafeInput
         value={val}
-        onChange={(e) => { setVal(e.target.value); setFeedback(null); }}
+        onValueChange={(next) => { setVal(next); setFeedback(null); }}
         disabled={resolved}
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         placeholder="اكتب إجابتك…"
         className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
       />
@@ -433,11 +437,14 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
     <div>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
-      <textarea
+      <AndroidSafeTextarea
         value={val}
-        onChange={(e) => setVal(e.target.value)}
+        onValueChange={setVal}
         disabled={resolved}
         rows={4}
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         placeholder="تأمّلك الشخصي…"
         className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
       />

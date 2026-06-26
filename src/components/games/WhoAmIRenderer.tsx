@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion } from "lucide-react";
 import type { WhoAmIStage } from "@/lib/games/types";
+import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
-import { recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
 interface Props {
   stage: WhoAmIStage;
@@ -112,12 +112,15 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
       )}
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <input
+        <AndroidSafeInput
           dir="rtl"
           value={guess}
-          onChange={(e) => { recordAndroidAction("input:onChange:whoami.guess"); setGuess(e.target.value); }}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
+          onValueChange={setGuess}
+          onEnter={submit}
           disabled={done}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           placeholder="اكتب اسم الشخصية…"
           className={`flex-1 rounded-xl border bg-slate-950/80 px-4 py-3.5 text-base text-slate-100 placeholder:text-slate-500 focus:outline-none ${
             wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"

@@ -100,7 +100,7 @@ export function isAndroidDebugMode(): boolean {
  * Production = false → Irth identity is preserved.
  */
 export function isAndroidUltraStableMode(): boolean {
-  return isAndroidDebugMode();
+  return false;
 }
 
 function getState(): AndroidFreezeState | null {
@@ -518,15 +518,12 @@ export function installAndroidFreezeDiagnostics() {
   const w = window as DiagnosticWindow;
   if (w.__irthAndroidFreezeInstalled) return true;
   w.__irthAndroidFreezeInstalled = true;
-  // Only in debug mode do we apply the degraded "ultra-stable" CSS overrides.
-  html.classList.add("android-ultra-stable");
   const state = getState();
   if (state) state.installed = true;
   installTimerDiagnostics();
   installStorageDiagnostics();
   installNetworkDiagnostics();
   installRouteDiagnostics();
-  installInputViewportDiagnostics();
   installLongTaskDiagnostics();
   window.setTimeout(() => {
     try { document.getElementById("irth-boot-splash")?.remove(); } catch { /* noop */ }

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info,
   ChevronLeft, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin,
@@ -10,6 +10,7 @@ import {
 import { toWesternDigits } from "@/lib/formatNumber";
 import { useAudioSettings } from "@/hooks/useAudioSettings";
 import { AppShell, Screen } from "@/components/AppShell";
+import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
 import {
   ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, evaluateAchievements, levelFor,
   CURRENT_SEASON, SEASONS, ERAS,
@@ -85,6 +86,7 @@ function ProfilePage() {
   const [pickingAvatar, setPickingAvatar] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(displayName === "ضيف" ? "" : displayName);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
   const [nameBusy, setNameBusy] = useState(false);
   const [nameMsg, setNameMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -111,7 +113,8 @@ function ProfilePage() {
   }, [profile.lastActiveDay, profile.streak]);
 
   async function saveName() {
-    const v = nameDraft.trim();
+    const v = (nameInputRef.current?.value ?? nameDraft).trim();
+    setNameDraft(v);
     if (v.length < 2) { setNameMsg({ ok: false, text: "الاسم قصير جداً" }); return; }
     setNameBusy(true); setNameMsg(null);
     const r = user ? await updateDisplayName(v) : { ok: true as const };
@@ -159,10 +162,15 @@ function ProfilePage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <input
+                    <AndroidSafeInput
+                      ref={nameInputRef}
                       value={nameDraft}
-                      onChange={(e) => setNameDraft(e.target.value.slice(0, 60))}
+                      onValueChange={(next) => setNameDraft(next.slice(0, 60))}
+                      commitMode="blur"
                       autoFocus
+                      autoComplete="name"
+                      autoCorrect="off"
+                      spellCheck={false}
                       placeholder="اسمك الظاهر"
                       className="min-w-0 flex-1 rounded-lg border border-gold/30 bg-background px-2 py-1 text-sm outline-none focus:border-gold"
                     />
@@ -1005,6 +1013,7 @@ function SettingsTab({
 }) {
   const [editingBio, setEditingBio] = useState(false);
   const [bioDraft, setBioDraft] = useState(profile.bio ?? "");
+  const bioRef = useRef<HTMLTextAreaElement | null>(null);
   const prefs = profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS;
   const favState = ERAS.find((e) => e.id === profile.favoriteStateId);
 
@@ -1042,14 +1051,19 @@ function SettingsTab({
             {!editingBio ? (
               <button onClick={() => { setBioDraft(profile.bio ?? ""); setEditingBio(true); }} className="inline-flex items-center gap-1 rounded-full border border-gold/30 px-2 py-0.5 text-[10px] text-gold hover:bg-gold/10"><Pencil className="size-3" /> تعديل</button>
             ) : (
-              <button onClick={() => { setBio(bioDraft.trim()); setEditingBio(false); }} className="inline-flex items-center gap-1 rounded-full bg-gradient-gold px-2 py-0.5 text-[10px] font-bold text-primary-foreground"><Check className="size-3" /> حفظ</button>
+              <button onClick={() => { const v = (bioRef.current?.value ?? bioDraft).trim(); setBio(v); setBioDraft(v); setEditingBio(false); }} className="inline-flex items-center gap-1 rounded-full bg-gradient-gold px-2 py-0.5 text-[10px] font-bold text-primary-foreground"><Check className="size-3" /> حفظ</button>
             )}
           </div>
           {editingBio ? (
-            <textarea
+            <AndroidSafeTextarea
+              ref={bioRef}
               value={bioDraft}
-              onChange={(e) => setBioDraft(e.target.value.slice(0, 240))}
+              onValueChange={(next) => setBioDraft(next.slice(0, 240))}
+              commitMode="blur"
               rows={3}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder="مثال: مهتم بتاريخ الشام والحروب الصليبية."
               className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-background px-3 py-2 text-[12px] leading-6 outline-none focus:border-gold/40"
             />
