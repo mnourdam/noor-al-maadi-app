@@ -206,9 +206,6 @@ function AndroidTextEntryScreen({ request, onClose }: { request: TextEntryReques
               placeholder={request.placeholder}
               dir={request.dir ?? "rtl"}
               style={sharedStyle}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") save();
-              }}
             />
           )}
 
