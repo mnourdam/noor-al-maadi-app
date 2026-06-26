@@ -462,7 +462,7 @@ export function buildCrosswordEnvelope(
     ? { title: input.stage_title, ...stage }
     : stage;
 
-  return {
+  const envelope = {
     slug: input.slug,
     mode: "crossword",
     title: input.title,
@@ -475,6 +475,14 @@ export function buildCrosswordEnvelope(
     stages: [finalStage],
     rewards: { xp: input.xp, coins: input.coins },
   };
+
+  console.info("[crossword.trace] generator.return-json", {
+    slug: envelope.slug,
+    title: envelope.title,
+    stageCount: envelope.stages.length,
+  });
+
+  return envelope;
 }
 
 export function validateCrosswordGame(
