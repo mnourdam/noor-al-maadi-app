@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Share2, Gift, ChevronLeft, Trophy } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
+import { AuthLink } from "@/components/AuthLink";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import {
