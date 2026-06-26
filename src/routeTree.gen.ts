@@ -49,6 +49,7 @@ import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
 import { Route as PlayChapterRouteImport } from './routes/play.chapter'
 import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
 import { Route as FigureIdRouteImport } from './routes/figure.$id'
+import { Route as DebugReactBareInputMinRouteImport } from './routes/debug.react-bare-input-min'
 import { Route as DebugNativeInputMinRouteImport } from './routes/debug.native-input-min'
 import { Route as DebugInputTraceRouteImport } from './routes/debug.input-trace'
 import { Route as CompareIdRouteImport } from './routes/compare.$id'
@@ -296,6 +297,11 @@ const InvestigationIdRoute = InvestigationIdRouteImport.update({
 const FigureIdRoute = FigureIdRouteImport.update({
   id: '/figure/$id',
   path: '/figure/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebugReactBareInputMinRoute = DebugReactBareInputMinRouteImport.update({
+  id: '/debug/react-bare-input-min',
+  path: '/debug/react-bare-input-min',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DebugNativeInputMinRoute = DebugNativeInputMinRouteImport.update({
@@ -613,6 +619,7 @@ export interface FileRoutesByFullPath {
   '/compare/$id': typeof CompareIdRoute
   '/debug/input-trace': typeof DebugInputTraceRoute
   '/debug/native-input-min': typeof DebugNativeInputMinRoute
+  '/debug/react-bare-input-min': typeof DebugReactBareInputMinRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -700,6 +707,7 @@ export interface FileRoutesByTo {
   '/compare/$id': typeof CompareIdRoute
   '/debug/input-trace': typeof DebugInputTraceRoute
   '/debug/native-input-min': typeof DebugNativeInputMinRoute
+  '/debug/react-bare-input-min': typeof DebugReactBareInputMinRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -791,6 +799,7 @@ export interface FileRoutesById {
   '/compare/$id': typeof CompareIdRoute
   '/debug/input-trace': typeof DebugInputTraceRoute
   '/debug/native-input-min': typeof DebugNativeInputMinRoute
+  '/debug/react-bare-input-min': typeof DebugReactBareInputMinRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -883,6 +892,7 @@ export interface FileRouteTypes {
     | '/compare/$id'
     | '/debug/input-trace'
     | '/debug/native-input-min'
+    | '/debug/react-bare-input-min'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -970,6 +980,7 @@ export interface FileRouteTypes {
     | '/compare/$id'
     | '/debug/input-trace'
     | '/debug/native-input-min'
+    | '/debug/react-bare-input-min'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -1060,6 +1071,7 @@ export interface FileRouteTypes {
     | '/compare/$id'
     | '/debug/input-trace'
     | '/debug/native-input-min'
+    | '/debug/react-bare-input-min'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -1151,6 +1163,7 @@ export interface RootRouteChildren {
   CompareIdRoute: typeof CompareIdRoute
   DebugInputTraceRoute: typeof DebugInputTraceRoute
   DebugNativeInputMinRoute: typeof DebugNativeInputMinRoute
+  DebugReactBareInputMinRoute: typeof DebugReactBareInputMinRoute
   FigureIdRoute: typeof FigureIdRoute
   InvestigationIdRoute: typeof InvestigationIdRoute
   PlayChapterRoute: typeof PlayChapterRoute
@@ -1446,6 +1459,13 @@ declare module '@tanstack/react-router' {
       path: '/figure/$id'
       fullPath: '/figure/$id'
       preLoaderRoute: typeof FigureIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debug/react-bare-input-min': {
+      id: '/debug/react-bare-input-min'
+      path: '/debug/react-bare-input-min'
+      fullPath: '/debug/react-bare-input-min'
+      preLoaderRoute: typeof DebugReactBareInputMinRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/debug/native-input-min': {
@@ -1905,6 +1925,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompareIdRoute: CompareIdRoute,
   DebugInputTraceRoute: DebugInputTraceRoute,
   DebugNativeInputMinRoute: DebugNativeInputMinRoute,
+  DebugReactBareInputMinRoute: DebugReactBareInputMinRoute,
   FigureIdRoute: FigureIdRoute,
   InvestigationIdRoute: InvestigationIdRoute,
   PlayChapterRoute: PlayChapterRoute,
