@@ -11,6 +11,7 @@ import { useMemo, useRef, useState } from "react";
 import { Check, X, HelpCircle, Lightbulb } from "lucide-react";
 import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
+import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import type { CampaignActivity } from "@/types/campaign";
 
 
@@ -376,6 +377,7 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
 function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [val, setVal] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
   const correct = String(activity.correctAnswer ?? "").trim().toLowerCase();
@@ -410,6 +412,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
           spellCheck={false}
           placeholder="اكتب إجابتك…"
           className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
+          data-irth-ab-campaign-focus-disabled={disableCampaignFocusLogic ? "true" : undefined}
           style={{ transform: "none", filter: "none", backdropFilter: "none", transition: "none", animation: "none" }}
         />
       ) : (
@@ -426,6 +429,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
           modalTitle="إجابة النشاط"
           modalLabel="اكتب إجابتك ثم اضغط حفظ"
           androidEntryKey={`campaign.fillBlank.${activity.id}`}
+          data-irth-ab-campaign-focus-disabled={disableCampaignFocusLogic ? "true" : undefined}
           className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
         />
       )}
@@ -452,6 +456,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [val, setVal] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
   const [resolved, setResolved] = useState(alreadyDone ?? false);
 
   const submit = () => {
@@ -476,6 +481,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
           spellCheck={false}
           placeholder="تأمّلك الشخصي…"
           className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
+          data-irth-ab-campaign-focus-disabled={disableCampaignFocusLogic ? "true" : undefined}
           style={{ transform: "none", filter: "none", backdropFilter: "none", transition: "none", animation: "none" }}
         />
       ) : (
@@ -493,6 +499,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
           modalTitle="تأمّل النشاط"
           modalLabel="اكتب تأملك ثم اضغط حفظ"
           androidEntryKey={`campaign.reflection.${activity.id}`}
+          data-irth-ab-campaign-focus-disabled={disableCampaignFocusLogic ? "true" : undefined}
           className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
         />
       )}
