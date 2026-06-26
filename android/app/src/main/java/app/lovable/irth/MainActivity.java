@@ -14,6 +14,7 @@ import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.WebViewListener;
+import java.util.ArrayList;
 
 /**
  * DIAGNOSTIC BUILD:
@@ -61,6 +62,18 @@ public class MainActivity extends BridgeActivity {
         Log.i(TAG, "[android:ime] onCreate count=" + createCount + " softInputMode=adjustResize|stateHidden immersive=DISABLED edgeToEdge=DISABLED hardwareAccelerated=true webDebug=" + debuggable);
         logWebViewProvider("main");
         configureWebViewForInputDiagnostics();
+    }
+
+    @Override
+    protected void load() {
+        // Capacitor-minimal diagnostic mode: BridgeActivity still creates the
+        // normal Capacitor WebView and core bridge, but we explicitly discard
+        // every generated app plugin class loaded from capacitor.plugins.json.
+        // This isolates input handling from PushNotifications, @capacitor/app
+        // backButton listeners, and any other non-essential startup plugin.
+        Log.i(TAG, "[android:cap-min] clearing generated Capacitor plugins before bridge load; core plugins remain only");
+        bridgeBuilder.setPlugins(new ArrayList<>());
+        super.load();
     }
 
     @Override
