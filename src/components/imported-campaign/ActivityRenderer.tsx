@@ -10,7 +10,9 @@
 import { useMemo, useRef, useState } from "react";
 import { Check, X, HelpCircle, Lightbulb } from "lucide-react";
 import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
+import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import type { CampaignActivity } from "@/types/campaign";
+
 
 export interface RendererProps {
   activity: CampaignActivity;
@@ -397,21 +399,37 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
     <div>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
-      <AndroidSafeInput
-        ref={inputRef}
-        value={val}
-        onValueChange={(next) => { setVal(next); setFeedback(null); }}
-        commitMode="blur"
-        disabled={resolved}
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-        placeholder="اكتب إجابتك…"
-        modalTitle="إجابة النشاط"
-        modalLabel="اكتب إجابتك ثم اضغط حفظ"
-        androidEntryKey={`campaign.fillBlank.${activity.id}`}
-        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
-      />
+      {isAndroidNativeApp() ? (
+        <input
+          ref={inputRef}
+          type="text"
+          defaultValue=""
+          disabled={resolved}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="اكتب إجابتك…"
+          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
+          style={{ transform: "none", filter: "none", backdropFilter: "none", transition: "none", animation: "none" }}
+        />
+      ) : (
+        <AndroidSafeInput
+          ref={inputRef}
+          value={val}
+          onValueChange={(next) => { setVal(next); setFeedback(null); }}
+          commitMode="blur"
+          disabled={resolved}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="اكتب إجابتك…"
+          modalTitle="إجابة النشاط"
+          modalLabel="اكتب إجابتك ثم اضغط حفظ"
+          androidEntryKey={`campaign.fillBlank.${activity.id}`}
+          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
+        />
+      )}
+
       <HintRow hint={activity.hint} />
       {!resolved && (
         <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
@@ -447,22 +465,38 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
     <div>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
-      <AndroidSafeTextarea
-        ref={textareaRef}
-        value={val}
-        onValueChange={setVal}
-        commitMode="blur"
-        disabled={resolved}
-        rows={4}
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-        placeholder="تأمّلك الشخصي…"
-        modalTitle="تأمّل النشاط"
-        modalLabel="اكتب تأملك ثم اضغط حفظ"
-        androidEntryKey={`campaign.reflection.${activity.id}`}
-        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
-      />
+      {isAndroidNativeApp() ? (
+        <textarea
+          ref={textareaRef}
+          defaultValue=""
+          disabled={resolved}
+          rows={4}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="تأمّلك الشخصي…"
+          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
+          style={{ transform: "none", filter: "none", backdropFilter: "none", transition: "none", animation: "none" }}
+        />
+      ) : (
+        <AndroidSafeTextarea
+          ref={textareaRef}
+          value={val}
+          onValueChange={setVal}
+          commitMode="blur"
+          disabled={resolved}
+          rows={4}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="تأمّلك الشخصي…"
+          modalTitle="تأمّل النشاط"
+          modalLabel="اكتب تأملك ثم اضغط حفظ"
+          androidEntryKey={`campaign.reflection.${activity.id}`}
+          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
+        />
+      )}
+
       {!resolved && (
         <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
           سجّل تأمّلك
