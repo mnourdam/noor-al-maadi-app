@@ -470,9 +470,31 @@ function HomeFull() {
 
   return (
     <AppShell>
+      {/* TEMP DIAGNOSTIC: Android input isolation test — remove once input freeze is resolved */}
+      <Link
+        to="/android-input-test"
+        style={{
+          display: "block",
+          margin: "12px",
+          padding: "20px",
+          background: "#dc2626",
+          color: "#ffffff",
+          fontWeight: 900,
+          fontSize: "18px",
+          textAlign: "center",
+          border: "3px solid #fca5a5",
+          borderRadius: "12px",
+          letterSpacing: "0.1em",
+          textDecoration: "none",
+        }}
+      >
+        ANDROID INPUT TEST
+      </Link>
+
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,oklch(0.62_0.13_75/0.06),transparent_60%),radial-gradient(ellipse_at_bottom,oklch(0.4_0.06_260/0.05),transparent_55%)]" />
+
 
       {/* ============ 1. ATMOSPHERIC HERO CAROUSEL ============ */}
       <section className="relative -mt-2 overflow-hidden">
