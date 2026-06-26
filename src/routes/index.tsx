@@ -806,7 +806,12 @@ function HomeFull() {
   );
 }
 
-function AndroidStableHome({ profileName, points, dinars }: { profileName: string; points: number; dinars: number }) {
+function AndroidStableHome() {
+  const { profile } = useProfile();
+  const { account } = useAccount();
+  const profileName = account?.username ?? profile.name;
+  const points = profile.points;
+  const dinars = profile.dinars;
   const lvl = levelFor(points);
   return (
     <AppShell>
