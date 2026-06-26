@@ -113,10 +113,12 @@ public class NativeDiagnosticsWebView extends CapacitorWebView {
     }
 
     private static void trace(String event, String message) {
-        Log.i(TAG, "IRTH_NATIVE_TRACE ts=" + System.currentTimeMillis()
+        String line = "IRTH_NATIVE_TRACE ts=" + System.currentTimeMillis()
             + " uptime=" + SystemClock.uptimeMillis()
             + " event=" + event
-            + " " + message);
+            + " " + message;
+        Log.i(TAG, line);
+        Log.i("IRTH_NATIVE_TRACE", line);
     }
 
     /** Wraps InputConnection to log every IME call with pre/post timestamps and watchdog. */
