@@ -1,7 +1,6 @@
 import { createRoot } from "react-dom/client";
 
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
-import "./styles.css";
 
 // Surface uncaught errors to Logcat via Capacitor's Console plugin so blank /
 // error-boundary screens are diagnosable on real devices.
@@ -47,12 +46,13 @@ if (isAndroidInputTestPath()) {
 
 async function bootMainApp(root: HTMLElement) {
   const [{ RouterProvider }, { getRouter }, { attachSupabaseAuth }, diagnostics, perf] = await Promise.all([
+    import("./styles.css"),
     import("@tanstack/react-router"),
     import("./router"),
     import("./integrations/supabase/auth-attacher"),
     import("./lib/androidFreezeDiagnostics"),
     import("./lib/perf-mode"),
-  ]);
+  ]).then(([, ...modules]) => modules);
 
   const { installAndroidFreezeDiagnostics, androidMark } = diagnostics;
   const { applyPerfMode } = perf;
