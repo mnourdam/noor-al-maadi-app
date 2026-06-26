@@ -18,6 +18,7 @@ import { OutOfHeartsModal } from "@/components/imported-campaign/OutOfHeartsModa
 import { extractMuseumUnlocks, museumUnlocksToCollectionItems } from "@/lib/games/museumUnlocks";
 import { enqueueCollectionSync } from "@/lib/campaignLedger";
 import { audioManager } from "@/lib/audioManager";
+import { androidMark } from "@/lib/androidFreezeDiagnostics";
 import "@/components/games/games-premium.css";
 
 
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/games/$mode/$slug")({
 });
 
 function GamePlayPage() {
+  androidMark("render:GamePlay");
   const { mode, slug } = useParams({ from: "/games/$mode/$slug" });
   const navigate = useNavigate();
   const { addPoints, addDinars, spendDinars, loseHeartOnce, hasHearts } = useProfile();

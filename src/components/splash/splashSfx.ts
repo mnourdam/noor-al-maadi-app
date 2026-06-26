@@ -14,6 +14,7 @@
 // ============================================================
 
 import { audioManager } from "@/lib/audioManager";
+import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 const SFX_URL = "/audio/splash-startup.mp3";
 
@@ -27,6 +28,7 @@ export interface PlaySplashSfxOptions {
 
 /** Returns a cleanup function that stops + releases the audio. */
 export function playSplashSfx(opts: PlaySplashSfxOptions = {}): () => void {
+  if (isAndroidUltraStableMode()) return () => { /* noop */ };
   if (played) return () => { /* noop */ };
   played = true;
 

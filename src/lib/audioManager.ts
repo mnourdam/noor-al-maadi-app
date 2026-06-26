@@ -1,4 +1,6 @@
 // ============================================================
+
+import { androidMark, isAndroidUltraStableMode } from "./androidFreezeDiagnostics";
 // audioManager.ts — Global audio singleton for Irth
 // ------------------------------------------------------------
 // - Subtle background ambience (looping)
@@ -137,6 +139,12 @@ function bindFirstInteraction() {
 export const audioManager = {
   init() {
     if (typeof window === "undefined") return;
+    androidMark("audio.init");
+    if (isAndroidUltraStableMode()) {
+      audioManager.dispose();
+      console.warn("[android:freeze] audio disabled in ultra-stable mode");
+      return;
+    }
     bindFirstInteraction();
     // try immediately in case the user already interacted (e.g. SPA nav)
     applyAmbienceState();
@@ -165,6 +173,8 @@ export const audioManager = {
   /** Play a one-shot effect. Safe: no-op if disabled or asset missing. */
   playSfx(name: SfxName, opts?: { dedupeKey?: string; dedupeMs?: number }) {
     if (typeof window === "undefined") return;
+    androidMark("audio.sfx", { name });
+    if (isAndroidUltraStableMode()) return;
     if (!settings.soundEnabled || !settings.sfxEnabled) return;
     if (sfxFailed.has(name)) return;
 
@@ -196,6 +206,7 @@ export const audioManager = {
 
   /** Cleanup — useful for hot reload / tests. */
   dispose() {
+    androidMark("audio.dispose");
     if (ambience) {
       try { ambience.pause(); } catch {/*ignore*/}
       ambience = null;

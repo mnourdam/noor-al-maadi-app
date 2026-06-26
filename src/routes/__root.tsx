@@ -19,6 +19,8 @@ import { AchievementWatcher } from "../components/AchievementWatcher";
 import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
 import { AndroidBackHandler } from "../components/AndroidBackHandler";
+import { androidMark, isAndroidUltraStableMode } from "../lib/androidFreezeDiagnostics";
+import { AppShell } from "../components/AppShell";
 
 function NotFoundComponent() {
   return (
@@ -188,10 +190,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const androidStable = isAndroidUltraStableMode();
 
   useEffect(() => {
+    androidMark("root.effect.start");
+    try { document.getElementById("irth-boot-splash")?.remove(); } catch { /* noop */ }
     // Apply Android/WebView/reduced-motion perf-mode class on <html>.
     import("../lib/perf-mode").then((m) => m.applyPerfMode()).catch(() => {});
+
+    if (androidStable) {
+      console.warn("[android:freeze] ultra-stable root background work disabled");
+      return;
+    }
 
     // One-time localStorage cleanup for legacy unlock ids that no longer
     // resolve to a canonical encyclopedia entity.
@@ -262,18 +272,18 @@ function RootComponent() {
       document.removeEventListener("visibilitychange", onVisible);
     };
 
-  }, []);
+  }, [androidStable]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <ProfileProvider>
         <AccountProvider>
-          <Outlet />
-          <FirstLaunchGate />
-          <AchievementWatcher />
-          <LevelUpWatcher />
+          {androidStable ? <AppShell><Outlet /></AppShell> : <Outlet />}
+          {!androidStable && <FirstLaunchGate />}
+          {!androidStable && <AchievementWatcher />}
+          {!androidStable && <LevelUpWatcher />}
           <Toaster position="top-center" richColors closeButton />
-          <SplashSequence />
+          {!androidStable && <SplashSequence />}
           <AndroidBackHandler />
         </AccountProvider>
       </ProfileProvider>

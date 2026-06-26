@@ -3,6 +3,7 @@ import { Sparkles, Link2 } from "lucide-react";
 import type { ConnectionsStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
+import { isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
 interface Props {
   stage: ConnectionsStage;
@@ -23,6 +24,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
+  const androidStable = isAndroidUltraStableMode();
   // pairIndex (i) is the source of truth for matching. Visual order on each side may differ.
   const lefts = useMemo(() => shuffle(stage.pairs.map((p, i) => ({ i, text: p.left }))), [stage]);
   const rights = useMemo(() => shuffle(stage.pairs.map((p, i) => ({ i, text: p.right }))), [stage]);
@@ -68,10 +70,12 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
   }, [pickedLeft, pickedRight]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPickLeft = (pairIdx: number) => {
+    recordAndroidAction("game.connections.pickLeft");
     if (pairIdx in matched) return;
     setPickedLeft((cur) => (cur === pairIdx ? null : pairIdx));
   };
   const onPickRight = (pairIdx: number) => {
+    recordAndroidAction("game.connections.pickRight");
     if (Object.values(matched).includes(pairIdx)) return;
     setPickedRight((cur) => (cur === pairIdx ? null : pairIdx));
   };
@@ -125,10 +129,11 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
 
   useLayoutEffect(() => {
     recomputeLines();
+    if (androidStable) return;
     const onResize = () => recomputeLines();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [matched, wrongFlash, lefts, rights]); // eslint-disable-line
+  }, [matched, wrongFlash, lefts, rights, androidStable]); // eslint-disable-line
 
   return (
     <div className="relative irth-title-card overflow-hidden p-5">

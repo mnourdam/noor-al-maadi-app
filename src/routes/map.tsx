@@ -2,6 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AtlasShell } from "@/components/atlas/AtlasShell";
 import type { AtlasEntityKind } from "@/lib/atlas-entities";
+import { androidMark } from "@/lib/androidFreezeDiagnostics";
 
 const ATLAS_KINDS = new Set<AtlasEntityKind>([
   "place",
@@ -46,5 +47,6 @@ export const Route = createFileRoute("/map")({
 });
 
 function WorldMapPage() {
+  androidMark("render:AtlasRoute");
   return <AtlasShell />;
 }

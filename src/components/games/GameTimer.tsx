@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Timer } from "lucide-react";
+import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 interface Props {
   /** total seconds */
@@ -21,6 +22,8 @@ type Tone = "green" | "gold" | "red";
  * Color transitions subtly: Green → Gold → Red (final 20%).
  */
 export function GameTimer({ seconds, paused, onExpire }: Props) {
+  androidMark("render:GameTimer");
+  const androidStable = isAndroidUltraStableMode();
   const [remaining, setRemaining] = useState(seconds);
   const expiredRef = useRef(false);
 
@@ -30,6 +33,7 @@ export function GameTimer({ seconds, paused, onExpire }: Props) {
   }, [seconds]);
 
   useEffect(() => {
+    if (androidStable) return;
     if (paused) return;
     const id = window.setInterval(() => {
       setRemaining((r) => {
@@ -44,7 +48,7 @@ export function GameTimer({ seconds, paused, onExpire }: Props) {
       });
     }, 1000);
     return () => window.clearInterval(id);
-  }, [paused, onExpire]);
+  }, [paused, onExpire, androidStable]);
 
   const m = Math.floor(remaining / 60);
   const s = remaining % 60;

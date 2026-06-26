@@ -17,6 +17,7 @@ export function applyPerfMode() {
     const w: any = window;
 
     const isCapacitor = !!w.Capacitor?.isNativePlatform?.();
+    const isNativeAndroid = isCapacitor && w.Capacitor?.getPlatform?.() === "android";
     const isAndroid = /Android/i.test(ua);
     const smallScreen = window.matchMedia("(max-width: 480px)").matches;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -31,6 +32,9 @@ export function applyPerfMode() {
 
     html.classList.toggle("perf-lite", !!lite);
     if (reduceMotion) html.classList.add("perf-no-motion");
+    if (isNativeAndroid) {
+      html.classList.add("is-android", "is-capacitor", "android-ultra-stable", "perf-lite", "perf-no-motion");
+    }
   } catch {
     // never throw from a perf hint
   }

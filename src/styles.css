@@ -574,6 +574,81 @@ html.perf-lite .perf-list > * {
   contain-intrinsic-size: 96px;
 }
 
+/* ============================================================
+   Android ultra-stable mode — APK only.
+   Stability beats visuals: no animation, no blur, no audio UI pressure,
+   no expensive compositing, static backgrounds, minimal transitions.
+   ============================================================ */
+html.android-ultra-stable,
+html.android-ultra-stable body {
+  background: oklch(0.18 0.04 260) !important;
+  background-image: none !important;
+  background-attachment: scroll !important;
+  overscroll-behavior: none;
+}
+
+html.android-ultra-stable *,
+html.android-ultra-stable *::before,
+html.android-ultra-stable *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.android-ultra-stable .glass,
+html.android-ultra-stable [class*="backdrop-"],
+html.android-ultra-stable [class*="blur-"],
+html.android-ultra-stable [class*="shadow-"],
+html.android-ultra-stable .shadow-elegant,
+html.android-ultra-stable .shadow-gold {
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+html.android-ultra-stable .particle-field,
+html.android-ultra-stable .particle-field::before,
+html.android-ultra-stable .particle-field::after,
+html.android-ultra-stable .ember,
+html.android-ultra-stable .fog-layer,
+html.android-ultra-stable .arabesque-layer,
+html.android-ultra-stable .arabesque-bg,
+html.android-ultra-stable .calligraphy-watermark,
+html.android-ultra-stable .splash-particles,
+html.android-ultra-stable .splash-haze {
+  display: none !important;
+}
+
+html.android-ultra-stable img,
+html.android-ultra-stable svg,
+html.android-ultra-stable canvas,
+html.android-ultra-stable video {
+  transform: none !important;
+}
+
+html.android-ultra-stable .android-freeze-overlay {
+  position: fixed;
+  inset-inline-start: max(8px, env(safe-area-inset-left));
+  bottom: max(88px, calc(env(safe-area-inset-bottom) + 84px));
+  z-index: 2147483647;
+  max-width: min(360px, calc(100vw - 16px));
+  white-space: pre-wrap;
+  pointer-events: none;
+  border: 1px solid oklch(0.82 0.14 82 / 45%);
+  border-radius: 8px;
+  background: oklch(0.1 0.03 260 / 92%);
+  color: oklch(0.92 0.08 82);
+  padding: 8px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: left;
+  direction: ltr;
+}
+
 /* Admin pages: always lighter, regardless of device */
 html .admin-lite .glass,
 html .admin-lite [class*="backdrop-blur"] {

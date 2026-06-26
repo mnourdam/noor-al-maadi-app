@@ -4,6 +4,7 @@ import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
+import { isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
 
 interface Props {
@@ -73,6 +74,7 @@ function clueCells(clue: CrosswordClue): { r: number; c: number }[] {
 export function CrosswordRenderer({
   stage, onComplete, onWrong, attemptsLeft, maxAttempts, onPaidHint,
 }: Props) {
+  const androidStable = isAndroidUltraStableMode();
 
   const { cells: grid, conflicts } = useMemo(() => buildGrid(stage), [stage]);
   const schemaIssues = useMemo(() => validateCrosswordStage(stage), [stage]);
@@ -93,13 +95,17 @@ export function CrosswordRenderer({
   }, [stage]);
 
   const focusCell = useCallback((k: string) => {
+    if (androidStable) {
+      setActiveCell(k);
+      return;
+    }
     const el = inputsRef.current[k];
     if (el) {
       el.focus();
       el.select();
     }
     setActiveCell(k);
-  }, []);
+  }, [androidStable]);
 
   const focusClue = useCallback((clueIdx: number) => {
     setActiveClue(clueIdx);
@@ -124,7 +130,7 @@ export function CrosswordRenderer({
     setFeedback(null);
     if (v) {
       sfx("ink_write");
-      if (activeClue !== null) advanceWithin(activeClue, k, 1);
+      if (!androidStable && activeClue !== null) advanceWithin(activeClue, k, 1);
     }
   };
 
@@ -314,9 +320,9 @@ export function CrosswordRenderer({
                   ref={(el) => { inputsRef.current[k] = el; }}
                   maxLength={1}
                   value={value}
-                  onChange={(e) => setCell(k, e.target.value)}
+                  onChange={(e) => { recordAndroidAction("input:onChange:crossword.cell"); setCell(k, e.target.value); }}
                   onKeyDown={(e) => onKeyDown(e, k)}
-                  onFocus={() => setActiveCell(k)}
+                  onFocus={() => { if (activeCell !== k) setActiveCell(k); }}
                   inputMode="text"
                   autoComplete="off"
                   className="h-full w-full bg-transparent text-center text-base font-bold uppercase focus:outline-none"

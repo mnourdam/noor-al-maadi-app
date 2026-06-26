@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart, formatHeartTimer } from "@/lib/hearts";
 import { unreadCount, formatBadgeCount } from "@/lib/notifications";
+import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 /**
  * Compact top-of-screen HUD: hearts, dinars, streak.
@@ -13,21 +14,23 @@ export function HUD() {
   const { profile } = useProfile();
   const [, force] = useState(0);
   const [unread, setUnread] = useState(0);
+  const androidStable = isAndroidUltraStableMode();
 
   useEffect(() => {
     // 1s tick so the MM:SS heart timer counts smoothly.
-    const id = setInterval(() => force((n) => n + 1), 1_000);
+    const id = androidStable ? null : setInterval(() => force((n) => n + 1), 1_000);
     const recount = () => setUnread(unreadCount());
     recount();
+    if (androidStable) return;
     window.addEventListener("irth:notifications:updated", recount);
     const focus = () => recount();
     window.addEventListener("focus", focus);
     return () => {
-      clearInterval(id);
+      if (id) clearInterval(id);
       window.removeEventListener("irth:notifications:updated", recount);
       window.removeEventListener("focus", focus);
     };
-  }, []);
+  }, [androidStable]);
 
   const now = Date.now();
   const hearts = getEffectiveHearts(profile, now);

@@ -2,6 +2,7 @@
 // user audio settings are respected. Completion sound plays once per session
 // of the same game (deduped) and never overlaps itself.
 import { audioManager, type SfxName } from "@/lib/audioManager";
+import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 export type GameSfxKind =
   | "card_flip"
@@ -34,6 +35,7 @@ const DEDUPE_MS: Partial<Record<GameSfxKind, number>> = {
 
 export function sfx(kind: GameSfxKind, scopeKey?: string): void {
   if (typeof window === "undefined") return;
+  if (isAndroidUltraStableMode()) return;
   // Allow custom listeners (visual hooks, haptics, etc.)
   try {
     window.dispatchEvent(new CustomEvent("irth:sfx", { detail: { kind, scopeKey } }));

@@ -29,6 +29,7 @@ import heroFortress from "@/assets/hero-fortress.jpg";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
+import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -50,8 +51,16 @@ type HeroSlide =
   | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
 
 function Index() {
+  androidMark("render:Home");
+  const androidStable = isAndroidUltraStableMode();
+  if (androidStable) return <AndroidStableHome />;
+  return <HomeFull />;
+}
+
+function HomeFull() {
   const { profile, touchStreak } = useProfile();
   const { account, user, lastSyncAt } = useAccount();
+  const androidStable = false;
 
   const displayName = account?.username ?? (user ? profile.name : profile.name);
   const [mounted, setMounted] = useState(false);
@@ -61,19 +70,22 @@ function Index() {
   useEffect(() => {
     const recount = () => setUnread(unreadCount());
     recount();
+    if (androidStable) return;
     window.addEventListener("irth:notifications:updated", recount);
     window.addEventListener("focus", recount);
     return () => {
       window.removeEventListener("irth:notifications:updated", recount);
       window.removeEventListener("focus", recount);
     };
-  }, []);
+  }, [androidStable]);
 
   useEffect(() => {
     setMounted(true);
+    androidMark("commit:Home");
     if (!user || lastSyncAt) {
       touchStreak();
     }
+    if (androidStable) return;
     const season = currentSeason();
     runDailyNotifications({
       prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
@@ -86,7 +98,7 @@ function Index() {
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [touchStreak, todayEvent?.id, user, lastSyncAt]);
+  }, [touchStreak, todayEvent?.id, user, lastSyncAt, androidStable]);
 
 
   const lvl = levelFor(profile.points);
@@ -96,19 +108,21 @@ function Index() {
     try { return listPublishedCampaigns(); } catch { return []; }
   });
   useEffect(() => {
+    if (androidStable) return;
     import("@/lib/cloudSync")
       .then((m) => m.pullAllFromCloud())
       .then(() => {
         try { setImportedCampaigns(listPublishedCampaigns()); } catch {}
       })
       .catch(() => {});
-  }, []);
+  }, [androidStable]);
   const [progressTick, setProgressTick] = useState(0);
   useEffect(() => {
+    if (androidStable) return;
     const onFocus = () => setProgressTick((t) => t + 1);
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, []);
+  }, [androidStable]);
 
   type CampaignSelection = {
     campaign: ImportedCampaign;
@@ -227,10 +241,10 @@ function Index() {
   const isRTL = typeof document !== "undefined" && document.documentElement.dir === "rtl";
 
   useEffect(() => {
-    if (slides.length <= 1 || isDragging) return;
+    if (androidStable || slides.length <= 1 || isDragging) return;
     const id = setInterval(() => setSlideIdx((i) => (i + 1) % slides.length), 7000);
     return () => clearInterval(id);
-  }, [slides.length, isDragging]);
+  }, [slides.length, isDragging, androidStable]);
   useEffect(() => { if (slideIdx >= slides.length) setSlideIdx(0); }, [slides.length, slideIdx]);
   const slide = slides[Math.min(slideIdx, slides.length - 1)] ?? slides[0];
 
@@ -788,6 +802,60 @@ function Index() {
       )}
 
       <OnboardingTour />
+    </AppShell>
+  );
+}
+
+function AndroidStableHome() {
+  const { profile } = useProfile();
+  const { account } = useAccount();
+  const profileName = account?.username ?? profile.name;
+  const points = profile.points;
+  const dinars = profile.dinars;
+  const lvl = levelFor(points);
+  return (
+    <AppShell>
+      <main className="px-5 pt-6">
+        <section className="rounded-3xl border border-gold/25 bg-surface p-5">
+          <p className="text-[11px] tracking-[0.25em] text-gold/80">وضع أندرويد المستقر</p>
+          <h1 className="font-display mt-2 text-2xl font-bold text-foreground">مرحبًا، {profileName}</h1>
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            تم تعطيل المؤثرات الثقيلة مؤقتًا لضمان ثبات التصفح والكتابة داخل التطبيق.
+          </p>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-2xl border border-white/10 bg-background p-3">
+              <p className="text-lg font-bold text-gold">{lvl.level}</p>
+              <p className="text-[10px] text-muted-foreground">المستوى</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-background p-3">
+              <p className="text-lg font-bold text-gold">{points.toLocaleString("en-US")}</p>
+              <p className="text-[10px] text-muted-foreground">XP</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-background p-3">
+              <p className="text-lg font-bold text-gold">{dinars.toLocaleString("en-US")}</p>
+              <p className="text-[10px] text-muted-foreground">دينار</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-5 grid gap-3">
+          {[
+            { to: "/campaigns", label: "الحملات", desc: "تابع الرحلات التاريخية" },
+            { to: "/adventure", label: "التحديات", desc: "ألعاب وأسئلة تاريخية" },
+            { to: "/encyclopedia", label: "الموسوعة", desc: "بحث سريع ومستقر" },
+            { to: "/map", label: "الأطلس", desc: "يفتح فقط عند الطلب" },
+            { to: "/profile", label: "الحساب", desc: "تقدمك ومكافآتك" },
+          ].map((item) => (
+            <Link key={item.to} to={item.to} className="flex items-center justify-between rounded-2xl border border-white/10 bg-surface p-4">
+              <span>
+                <span className="block font-bold text-foreground">{item.label}</span>
+                <span className="mt-0.5 block text-[12px] text-muted-foreground">{item.desc}</span>
+              </span>
+              <ChevronLeft className="size-4 text-gold" />
+            </Link>
+          ))}
+        </section>
+      </main>
     </AppShell>
   );
 }

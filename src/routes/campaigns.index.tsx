@@ -7,6 +7,7 @@ import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
+import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/campaigns/")({
   head: () => ({ meta: [{ title: "الحملات التاريخية" }] }),
@@ -14,6 +15,12 @@ export const Route = createFileRoute("/campaigns/")({
 });
 
 function CampaignsHub() {
+  androidMark("render:Campaigns");
+  if (isAndroidUltraStableMode()) return <AndroidStableCampaigns />;
+  return <CampaignsHubFull />;
+}
+
+function CampaignsHubFull() {
   useProfile();
   const { data: importedCampaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns", "published"],
@@ -41,6 +48,30 @@ function CampaignsHub() {
             <p className="font-display text-base font-bold text-gold">لا توجد حملات منشورة حاليًا.</p>
           </div>
         )}
+      </Screen>
+    </AppShell>
+  );
+}
+
+function AndroidStableCampaigns() {
+  return (
+    <AppShell>
+      <Screen title="الحملات" subtitle="وضع أندرويد المستقر">
+        <div className="rounded-3xl border border-gold/25 bg-surface p-5">
+          <Swords className="mb-3 size-8 text-gold" />
+          <h2 className="font-display text-xl font-bold text-foreground">الحملات في الوضع المستقر</h2>
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            تم إيقاف تحميل قائمة الحملات الثقيلة تلقائيًا داخل APK أثناء التشخيص. يمكنك فتح التحديات اليومية أو الموسوعة أثناء اختبار الثبات.
+          </p>
+          <div className="mt-4 grid gap-2">
+            <Link to="/adventure" className="flex items-center justify-between rounded-2xl border border-white/10 bg-background p-4 text-sm font-bold text-foreground">
+              التحديات <ArrowLeft className="size-4 text-gold" />
+            </Link>
+            <Link to="/" className="flex items-center justify-between rounded-2xl border border-white/10 bg-background p-4 text-sm font-bold text-foreground">
+              الرئيسية <ArrowLeft className="size-4 text-gold" />
+            </Link>
+          </div>
+        </div>
       </Screen>
     </AppShell>
   );

@@ -11,6 +11,7 @@ import {
 } from "@/lib/games/store";
 import { MODE_LABELS_AR, type GameMode } from "@/lib/games/types";
 import { extractMuseumUnlocks } from "@/lib/games/museumUnlocks";
+import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   crossword: Feather,
@@ -115,10 +116,12 @@ function ChallengeCard({
 }
 
 export function DailyChallengesSection() {
+  const androidStable = isAndroidUltraStableMode();
   const [picks, setPicks] = useState<GameRow[] | null>(null);
   const [allCompleted, setAllCompleted] = useState(false);
 
   useEffect(() => {
+    if (androidStable) return;
     let cancelled = false;
     (async () => {
       const completed = await fetchMyCompletedGameIds();
@@ -132,7 +135,7 @@ export function DailyChallengesSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [androidStable]);
 
   // Hide entirely while loading or when there is no published content.
   if (picks === null) return null;

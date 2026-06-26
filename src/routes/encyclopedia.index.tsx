@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 import { iconForType } from "@/lib/encyclopedia-icons";
+import { androidMark, isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/encyclopedia/")({
   head: () => ({
@@ -126,6 +127,13 @@ function pushRecent(key: string, value: string) {
 }
 
 function EncyclopediaHub() {
+  androidMark("render:Encyclopedia");
+  if (isAndroidUltraStableMode()) return <AndroidStableEncyclopedia />;
+
+  return <EncyclopediaHubFull />;
+}
+
+function EncyclopediaHubFull() {
   const [query, setQuery] = useState("");
   const [era, setEra] = useState<string>("");
   const [showAllEras, setShowAllEras] = useState(false);
@@ -282,7 +290,7 @@ function EncyclopediaHub() {
               <input
                 ref={inputRef}
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => { recordAndroidAction("input:onChange:encyclopedia.search"); setQuery(e.target.value); }}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setTimeout(() => setFocused(false), 150)}
                 onKeyDown={(e) => { if (e.key === "Enter") submitRecent(query); }}
@@ -582,6 +590,46 @@ function EncyclopediaHub() {
           </>
         )}
       </div>
+    </AppShell>
+  );
+}
+
+function AndroidStableEncyclopedia() {
+  const [query, setQuery] = useState("");
+  return (
+    <AppShell>
+      <main className="px-5 pt-8">
+        <section className="rounded-3xl border border-gold/25 bg-surface p-5">
+          <p className="text-[11px] tracking-[0.25em] text-gold/80">المكتبة الكبرى</p>
+          <h1 className="font-display mt-2 text-2xl font-bold text-foreground">الموسوعة في الوضع المستقر</h1>
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            تم تعطيل التحميل الشامل والبطاقات السينمائية مؤقتًا في APK لضمان ثبات التصفح والكتابة.
+          </p>
+          <label className="mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-background px-3 py-2">
+            <Search className="size-4 text-gold" />
+            <input
+              value={query}
+              onChange={(e) => { recordAndroidAction("input:onChange:encyclopedia.stable"); setQuery(e.target.value); }}
+              placeholder="اختبر الكتابة هنا بثبات…"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+          </label>
+        </section>
+        <section className="mt-5 grid gap-3">
+          {CATEGORIES.map(({ key, label, caption, icon: Icon }) => (
+            <Link key={key} to="/encyclopedia/type/$type" params={{ type: key }} className="flex items-center justify-between rounded-2xl border border-white/10 bg-surface p-4">
+              <span className="flex items-center gap-3">
+                <span className="grid size-9 place-items-center rounded-xl bg-gold/10 text-gold"><Icon className="size-4" /></span>
+                <span>
+                  <span className="block font-bold text-foreground">{label}</span>
+                  <span className="block text-[12px] text-muted-foreground">{caption}</span>
+                </span>
+              </span>
+              <ChevronLeft className="size-4 text-gold" />
+            </Link>
+          ))}
+        </section>
+      </main>
     </AppShell>
   );
 }
