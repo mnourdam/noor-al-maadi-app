@@ -1,10 +1,22 @@
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 
 import { getRouter } from "./router";
 import { attachSupabaseAuth } from "./integrations/supabase/auth-attacher";
+import { applyPerfMode } from "./lib/perf-mode";
 import "./styles.css";
+
+// Flip the global perf-lite CSS class BEFORE first paint so heavy
+// animations / backdrop-filter / particles never run on Android WebView.
+applyPerfMode();
+// Mark Android so route/component code can branch on it cheaply.
+try {
+  if ((window as any).Capacitor?.isNativePlatform?.()) {
+    document.documentElement.classList.add("is-android", "is-capacitor");
+  }
+} catch { /* ignore */ }
+// eslint-disable-next-line no-console
+console.log("[android:perf] perf-lite applied", document.documentElement.className);
 
 // Surface uncaught errors to Logcat via Capacitor's Console plugin so blank /
 // error-boundary screens are diagnosable on real devices.
