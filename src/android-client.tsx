@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
+import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
 
 // Surface uncaught errors to Logcat via Capacitor's Console plugin so blank /
 // error-boundary screens are diagnosable on real devices.
@@ -36,7 +37,15 @@ if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
 }
 
-if (isAndroidInputTestPath()) {
+if (isAndroidReactMinPath()) {
+  try {
+    document.documentElement.classList.remove("irth-booting");
+    document.getElementById("irth-boot-splash")?.remove();
+  } catch { /* ignore */ }
+  // eslint-disable-next-line no-console
+  console.info("[android-react-min] minimal React entry mounted", { path: window.location.pathname });
+  createRoot(rootElement).render(<AndroidReactMinTest />);
+} else if (isAndroidInputTestPath()) {
   try {
     window.__irthAndroidInputTest = true;
     document.documentElement.classList.add("android-input-test-active");
