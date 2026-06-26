@@ -838,6 +838,27 @@ function AndroidStableHome() {
   return (
     <AppShell>
       <main className="px-5 pt-6">
+        {/* TEMP DIAGNOSTIC: Android input isolation test — remove once input freeze is resolved */}
+        <Link
+          to="/android-input-test"
+          style={{
+            display: "block",
+            marginBottom: "16px",
+            padding: "20px",
+            background: "#dc2626",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #fca5a5",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          ANDROID INPUT TEST
+        </Link>
+
         <section className="rounded-3xl border border-gold/25 bg-surface p-5">
           <p className="text-[11px] tracking-[0.25em] text-gold/80">وضع أندرويد المستقر</p>
           <h1 className="font-display mt-2 text-2xl font-bold text-foreground">مرحبًا، {profileName}</h1>
@@ -860,17 +881,6 @@ function AndroidStableHome() {
           </div>
         </section>
 
-        {/* TEMP DIAGNOSTIC: Android input isolation test — remove once input freeze is resolved */}
-        <Link
-          to="/android-input-test"
-          className="mt-5 flex items-center justify-between rounded-2xl border-2 border-red-500/60 bg-red-500/10 p-4"
-        >
-          <span>
-            <span className="block font-bold text-red-200">Android Input Test</span>
-            <span className="mt-0.5 block text-[12px] text-red-300/80">Diagnostic only — isolated input page</span>
-          </span>
-          <ChevronLeft className="size-4 text-red-300" />
-        </Link>
 
         <section className="mt-5 grid gap-3">
 
