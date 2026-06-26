@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/debug/react-bare-input-min")({
   component: BareInputMin,
@@ -10,6 +10,14 @@ export const Route = createFileRoute("/debug/react-bare-input-min")({
 // Logcat marker on mount so we can correlate with native traces.
 function BareInputMin() {
   const [count, setCount] = useState(0);
+
+  // Toggle a hard-reset class on <html> only while this route is mounted.
+  // Matching CSS lives in src/styles.css under `.react-bare-input-test`.
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.add("react-bare-input-test");
+    return () => { html.classList.remove("react-bare-input-test"); };
+  }, []);
 
   if (typeof window !== "undefined" && !(window as unknown as { __irthReactBareMounted?: boolean }).__irthReactBareMounted) {
     (window as unknown as { __irthReactBareMounted?: boolean }).__irthReactBareMounted = true;
