@@ -1,7 +1,48 @@
 import { QueryClient } from "@tanstack/react-query";
-import { createRouter } from "@tanstack/react-router";
+import { createRouter, Link } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { isAndroidUltraStableMode } from "./lib/androidFreezeDiagnostics";
+
+function DefaultRouteError({ reset }: { error: Error; reset: () => void }) {
+  return (
+    <div dir="rtl" className="mx-auto max-w-md px-4 py-12 text-center">
+      <h2 className="text-base font-semibold text-slate-100">تعذر تحميل هذا القسم</h2>
+      <p className="mt-2 text-sm text-slate-400">حدث خطأ غير متوقع. حاول مرة أخرى.</p>
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => { try { reset(); } catch { window.location.reload(); } }}
+          className="inline-flex min-h-10 items-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400"
+        >
+          إعادة المحاولة
+        </button>
+        <Link
+          to="/"
+          className="inline-flex min-h-10 items-center rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-medium text-slate-100 hover:border-amber-400"
+        >
+          العودة للرئيسية
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function DefaultRouteNotFound() {
+  return (
+    <div dir="rtl" className="mx-auto max-w-md px-4 py-12 text-center">
+      <h2 className="text-base font-semibold text-slate-100">هذا المحتوى غير متاح</h2>
+      <p className="mt-2 text-sm text-slate-400">ربما تم نقله أو إزالته.</p>
+      <div className="mt-5">
+        <Link
+          to="/"
+          className="inline-flex min-h-10 items-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400"
+        >
+          العودة للرئيسية
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 export const getRouter = () => {
   const androidStable = isAndroidUltraStableMode();
@@ -24,7 +65,10 @@ export const getRouter = () => {
     context: { queryClient },
     scrollRestoration: !androidStable,
     defaultPreloadStaleTime: 0,
+    defaultErrorComponent: DefaultRouteError,
+    defaultNotFoundComponent: DefaultRouteNotFound,
   });
 
   return router;
 };
+
