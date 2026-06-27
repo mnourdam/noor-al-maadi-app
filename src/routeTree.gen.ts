@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ShareCardRouteImport } from './routes/share-card'
@@ -102,6 +103,11 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
 
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TimelineRoute = TimelineRouteImport.update({
   id: '/timeline',
   path: '/timeline',
@@ -600,6 +606,7 @@ export interface FileRoutesByFullPath {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
@@ -692,6 +699,7 @@ export interface FileRoutesByTo {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
@@ -786,6 +794,7 @@ export interface FileRoutesById {
   '/share-card': typeof ShareCardRoute
   '/terms': typeof TermsRoute
   '/timeline': typeof TimelineRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
@@ -882,6 +891,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/unsubscribe'
     | '/admin/analytics'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
@@ -974,6 +984,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/unsubscribe'
     | '/admin/analytics'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
@@ -1067,6 +1078,7 @@ export interface FileRouteTypes {
     | '/share-card'
     | '/terms'
     | '/timeline'
+    | '/unsubscribe'
     | '/admin/analytics'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
@@ -1162,6 +1174,7 @@ export interface RootRouteChildren {
   ShareCardRoute: typeof ShareCardRoute
   TermsRoute: typeof TermsRoute
   TimelineRoute: typeof TimelineRoute
+  UnsubscribeRoute: typeof UnsubscribeRoute
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminAtlasCalibrationRoute: typeof AdminAtlasCalibrationRoute
   AdminAtlasEntitiesRoute: typeof AdminAtlasEntitiesRoute
@@ -1222,6 +1235,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/timeline': {
       id: '/timeline'
       path: '/timeline'
@@ -1957,6 +1977,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShareCardRoute: ShareCardRoute,
   TermsRoute: TermsRoute,
   TimelineRoute: TimelineRoute,
+  UnsubscribeRoute: UnsubscribeRoute,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminAtlasCalibrationRoute: AdminAtlasCalibrationRoute,
   AdminAtlasEntitiesRoute: AdminAtlasEntitiesRoute,
