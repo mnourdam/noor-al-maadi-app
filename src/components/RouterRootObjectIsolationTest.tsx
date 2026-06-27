@@ -17,7 +17,7 @@
 // the full route tree size and from A/B branch splitting.
 // ============================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Outlet,
   RouterProvider,
