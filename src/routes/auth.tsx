@@ -51,7 +51,7 @@ function AuthPage() {
       if (mode === "forgot") {
         if (!email) { setError("أدخل بريدك الإلكتروني"); return; }
         const redirectTo = typeof window !== "undefined"
-          ? `${window.location.origin}/reset-password`
+          ? `${window.location.origin}/auth/callback?type=recovery`
           : undefined;
         const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
         if (resetErr) { setError(resetErr.message); return; }

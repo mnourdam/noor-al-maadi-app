@@ -50,6 +50,7 @@ import { Route as FigureIdRouteImport } from './routes/figure.$id'
 import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AdminWorldMembershipReviewRouteImport } from './routes/admin.world-membership-review'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
@@ -299,6 +300,11 @@ const BattleIdRoute = BattleIdRouteImport.update({
   path: '/battle/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AdminWorldMembershipReviewRoute =
   AdminWorldMembershipReviewRouteImport.update({
     id: '/admin/world-membership-review',
@@ -529,7 +535,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
@@ -582,6 +588,7 @@ export interface FileRoutesByFullPath {
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/world-membership-review': typeof AdminWorldMembershipReviewRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
@@ -615,7 +622,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
   '/friends': typeof FriendsRoute
@@ -665,6 +672,7 @@ export interface FileRoutesByTo {
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/world-membership-review': typeof AdminWorldMembershipReviewRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
@@ -699,7 +707,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
@@ -752,6 +760,7 @@ export interface FileRoutesById {
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/world-membership-review': typeof AdminWorldMembershipReviewRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
@@ -840,6 +849,7 @@ export interface FileRouteTypes {
     | '/admin/offline'
     | '/admin/users'
     | '/admin/world-membership-review'
+    | '/auth/callback'
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
@@ -923,6 +933,7 @@ export interface FileRouteTypes {
     | '/admin/offline'
     | '/admin/users'
     | '/admin/world-membership-review'
+    | '/auth/callback'
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
@@ -1009,6 +1020,7 @@ export interface FileRouteTypes {
     | '/admin/offline'
     | '/admin/users'
     | '/admin/world-membership-review'
+    | '/auth/callback'
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
@@ -1043,7 +1055,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AchievementsRoute: typeof AchievementsRoute
   AdventureRoute: typeof AdventureRoute
-  AuthRoute: typeof AuthRoute
+  AuthRoute: typeof AuthRouteWithChildren
   CampaignsRoute: typeof CampaignsRouteWithChildren
   CollectionRoute: typeof CollectionRoute
   ContentAuditRoute: typeof ContentAuditRoute
@@ -1403,6 +1415,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BattleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/admin/world-membership-review': {
       id: '/admin/world-membership-review'
       path: '/admin/world-membership-review'
@@ -1707,6 +1726,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthRouteChildren {
+  AuthCallbackRoute: typeof AuthCallbackRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthCallbackRoute: AuthCallbackRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 interface CampaignsRouteChildren {
   CampaignsIndexRoute: typeof CampaignsIndexRoute
   CampaignsImportedIdIndexRoute: typeof CampaignsImportedIdIndexRoute
@@ -1765,7 +1794,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AchievementsRoute: AchievementsRoute,
   AdventureRoute: AdventureRoute,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
   CampaignsRoute: CampaignsRouteWithChildren,
   CollectionRoute: CollectionRoute,
   ContentAuditRoute: ContentAuditRoute,
