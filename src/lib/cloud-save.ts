@@ -114,7 +114,7 @@ export async function pushSave(userId: string, profile: ProfileState): Promise<b
 
 export async function signUpWithEmail(args: { email: string; password: string; username: string; referralCode?: string; displayName?: string }) {
   const { email, password, username, referralCode, displayName } = args;
-  const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
+  const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
   const name = (displayName ?? username).trim();
   return supabase.auth.signUp({
     email,
