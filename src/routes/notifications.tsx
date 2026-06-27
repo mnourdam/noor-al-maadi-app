@@ -1,197 +1,246 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
-import { Bell, Trash2, ChevronLeft, Calendar, Crown, Compass, Sparkles, MailOpen, UserPlus, CheckCheck } from "lucide-react";
+import { Trash2, ChevronLeft, MailOpen, CheckCheck, Image as ImageIcon } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
+import { resolveCategory } from "@/lib/notifications/categories";
+import { resolveDeepLink, type NotificationPayload } from "@/lib/notifications/deepLink";
 import {
-  clearInbox, getInbox, markAllRead, markRead, isUnread, type InAppNotification,
-} from "@/lib/notifications";
+  fetchMyNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteMyNotification,
+  clearMyNotifications,
+  subscribeToMyNotifications,
+  type ServerNotification,
+} from "@/lib/notifications/server";
 
 export const Route = createFileRoute("/notifications")({
-  head: () => ({ meta: [{ title: "الإشعارات" }] }),
-  component: NotificationsPage,
+  head: () => ({ meta: [{ title: "مركز الإشعارات — إرث" }] }),
+  component: NotificationsCenter,
 });
 
-const CAT_ICON = {
-  daily: Calendar,
-  reengagement: Compass,
-  season: Sparkles,
-  campaign: Crown,
-  friend: UserPlus,
-} as const;
+type Bucket = "today" | "yesterday" | "earlier";
 
-const CAT_LABEL = {
-  daily: "اليوم في التاريخ",
-  reengagement: "تذكير",
-  season: "الموسم",
-  campaign: "الحملات",
-  friend: "الأصدقاء",
-} as const;
+function bucketOf(iso: string): Bucket {
+  const d = new Date(iso);
+  const today = new Date();
+  const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const startYesterday = startToday - 86_400_000;
+  const t = d.getTime();
+  if (t >= startToday) return "today";
+  if (t >= startYesterday) return "yesterday";
+  return "earlier";
+}
 
-function NotificationsPage() {
-  const [list, setList] = useState<InAppNotification[]>([]);
-  const [persistError, setPersistError] = useState<string | null>(null);
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return "الآن";
+  if (min < 60) return `قبل ${min} د`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `قبل ${hr} س`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `قبل ${day} ي`;
+  return new Date(iso).toLocaleDateString("ar", { month: "short", day: "numeric" });
+}
 
-  const refresh = useCallback(() => setList(getInbox()), []);
+function NotificationsCenter() {
+  const router = useRouter();
+  const [rows, setRows] = useState<ServerNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    const list = await fetchMyNotifications(150);
+    setRows(list);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    refresh();
-    window.addEventListener("irth:notifications:updated", refresh);
-    return () => window.removeEventListener("irth:notifications:updated", refresh);
+    void refresh();
+    const unsub = subscribeToMyNotifications(() => { void refresh(); });
+    const onLocal = () => { void refresh(); };
+    window.addEventListener("irth:notifications:updated", onLocal);
+    return () => {
+      unsub();
+      window.removeEventListener("irth:notifications:updated", onLocal);
+    };
   }, [refresh]);
 
-  const unread = list.filter(isUnread).sort((a, b) => b.at - a.at);
-  const read = list.filter((n) => !isUnread(n)).sort((a, b) => b.at - a.at);
-
-  // PR5: optimistic mark-as-read with rollback on storage failure.
-  const onOpen = (id: string) => {
-    const snapshot = list;
-    const optimistic = list.map((n) =>
-      n.id === id && isUnread(n) ? { ...n, read: true, readAt: Date.now() } : n,
-    );
-    setList(optimistic);
-    const ok = markRead(id);
-    if (!ok) {
-      setList(snapshot);
-      setPersistError("تعذّر حفظ حالة القراءة. حاول مرة أخرى.");
-      setTimeout(() => setPersistError(null), 3000);
+  const open = async (n: ServerNotification) => {
+    if (!n.read_at) {
+      setRows((cur) => cur.map((r) => (r.id === n.id ? { ...r, read_at: new Date().toISOString() } : r)));
+      void markNotificationRead(n.id);
+    }
+    const to = resolveDeepLink({
+      type: n.type, category: n.category, deep_link: n.deep_link,
+      payload: n.payload as NotificationPayload,
+    });
+    try {
+      await router.navigate({ to: to as "/" });
+    } catch {
+      window.location.href = to;
     }
   };
 
-  const onMarkAllRead = () => {
-    const snapshot = list;
-    const now = Date.now();
-    setList(list.map((n) => ({ ...n, read: true, readAt: n.readAt ?? now })));
-    const ok = markAllRead();
-    if (!ok) {
-      setList(snapshot);
-      setPersistError("تعذّر حفظ حالة القراءة. حاول مرة أخرى.");
-      setTimeout(() => setPersistError(null), 3000);
-    }
+  const remove = async (id: string) => {
+    setRows((cur) => cur.filter((r) => r.id !== id));
+    await deleteMyNotification(id);
   };
 
+  const markAll = async () => {
+    const now = new Date().toISOString();
+    setRows((cur) => cur.map((r) => ({ ...r, read_at: r.read_at ?? now })));
+    await markAllNotificationsRead();
+    setFeedback("تم تحديد كل الإشعارات كمقروءة.");
+    setTimeout(() => setFeedback(null), 2500);
+  };
+
+  const clearAll = async () => {
+    if (!window.confirm("مسح كل الإشعارات من المركز؟")) return;
+    setRows([]);
+    await clearMyNotifications();
+  };
+
+  const unreadTotal = rows.filter((r) => !r.read_at).length;
+  const groups: Record<Bucket, ServerNotification[]> = { today: [], yesterday: [], earlier: [] };
+  for (const r of rows) groups[bucketOf(r.created_at)].push(r);
 
   return (
     <AppShell>
-      <Screen title="الإشعارات" subtitle="آخر تنبيهاتك التاريخية">
-        {persistError && (
-          <div className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-200">
-            {persistError}
+      <Screen title="مركز الإشعارات" subtitle="كل تنبيهاتك في مكان واحد، تبقى محفوظة حتى تحذفها">
+        {feedback && (
+          <div className="mb-3 rounded-2xl border border-gold/30 bg-gold/10 px-3 py-2 text-[12px] text-gold">
+            {feedback}
           </div>
         )}
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <Link to="/profile" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <Link to="/profile" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ChevronLeft className="size-4" /> الحساب
           </Link>
           <div className="flex items-center gap-2">
-            {unread.length > 0 && (
-              <button
-                onClick={onMarkAllRead}
-                className="inline-flex items-center gap-1 rounded-full border border-gold/40 px-3 py-1 text-[11px] text-gold hover:bg-gold/10"
-              >
+            {unreadTotal > 0 && (
+              <button onClick={markAll} className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/5 px-3 py-1.5 text-[11px] text-gold transition hover:bg-gold/10">
                 <CheckCheck className="size-3.5" /> تحديد الكل كمقروء
               </button>
             )}
-
-            {list.length > 0 && (
-              <button
-                onClick={() => { clearInbox(); }}
-                className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-[11px] text-muted-foreground hover:text-rose-300"
-              >
+            {rows.length > 0 && (
+              <button onClick={clearAll} className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-muted-foreground transition hover:border-rose-400/40 hover:text-rose-300">
                 <Trash2 className="size-3.5" /> مسح الكل
               </button>
             )}
           </div>
         </div>
 
-        {list.length === 0 ? (
-          <div className="rounded-3xl border border-gold/25 bg-surface p-8 text-center">
-            <div className="mx-auto grid size-14 place-items-center rounded-full bg-gold/10 text-gold"><MailOpen className="size-6" /></div>
-            <p className="font-display mt-3 text-base font-bold">لا توجد إشعارات حتى الآن</p>
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              ستصلك تنبيهات يومية عن أحداث التاريخ والحملات الجديدة والمواسم.
+        {loading ? (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-20 animate-pulse rounded-2xl border border-white/5 bg-surface/40" />
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="rounded-3xl border border-gold/25 bg-surface p-10 text-center">
+            <div className="mx-auto grid size-16 place-items-center rounded-full bg-gold/10 text-gold ring-1 ring-gold/30">
+              <MailOpen className="size-7" />
+            </div>
+            <p className="font-display mt-4 text-base font-bold">لا توجد إشعارات</p>
+            <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+              ستظهر هنا كل التنبيهات: الحملات الجديدة، الموسوعة، التحقيقات، المكافآت، وما يحدث في مثل هذا اليوم.
             </p>
           </div>
         ) : (
-          <>
-            <Section
-              heading="غير مقروءة"
-              count={unread.length}
-              items={unread}
-              onOpen={onOpen}
-              emptyText="لا توجد إشعارات غير مقروءة."
-            />
-            <Section
-              heading="تمت قراءتها"
-              count={read.length}
-              items={read}
-              onOpen={onOpen}
-              emptyText=""
-              muted
-            />
-          </>
+          <div className="space-y-6">
+            <Group label="اليوم"     items={groups.today}     onOpen={open} onRemove={remove} />
+            <Group label="الأمس"    items={groups.yesterday} onOpen={open} onRemove={remove} />
+            <Group label="سابقاً"    items={groups.earlier}   onOpen={open} onRemove={remove} />
+          </div>
         )}
       </Screen>
     </AppShell>
   );
 }
 
-function Section({
-  heading, count, items, onOpen, emptyText, muted,
+function Group({
+  label, items, onOpen, onRemove,
 }: {
-  heading: string;
-  count: number;
-  items: InAppNotification[];
-  onOpen: (id: string) => void;
-  emptyText: string;
-  muted?: boolean;
+  label: string;
+  items: ServerNotification[];
+  onOpen: (n: ServerNotification) => void;
+  onRemove: (id: string) => void;
 }) {
-  if (items.length === 0 && !emptyText) return null;
+  if (items.length === 0) return null;
   return (
-    <section className="mt-4">
+    <section>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="font-display text-sm font-bold text-gold">{heading}</h2>
-        <span className="text-[11px] text-muted-foreground">{count}</span>
+        <h2 className="font-display text-sm font-bold text-gold">{label}</h2>
+        <span className="text-[11px] text-muted-foreground">{items.length}</span>
       </div>
-      {items.length === 0 ? (
-        <p className="rounded-2xl border border-white/10 bg-surface/60 p-3 text-center text-[12px] text-muted-foreground">
-          {emptyText}
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {items.map((n) => {
-            const Icon = CAT_ICON[n.category] ?? Bell;
-            const unread = isUnread(n);
-            return (
-              <li key={n.id}>
-                <Link
-                  to={(n.href ?? "/") as "/"}
-                  onClick={() => onOpen(n.id)}
-                  className={`flex items-start gap-3 rounded-2xl border p-3 transition hover:border-gold/40 ${
-                    unread
-                      ? "border-gold/40 bg-gold/5"
-                      : `border-white/10 bg-surface ${muted ? "opacity-80" : ""}`
-                  }`}
-                >
-                  <div className="relative grid size-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">
-                    <Icon className="size-4" />
-                    {unread && (
-                      <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-gradient-gold" aria-label="غير مقروء" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-display truncate text-sm font-bold">{n.title}</p>
-                      <span className="shrink-0 text-[10px] text-muted-foreground">{CAT_LABEL[n.category]}</span>
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-[12px] text-muted-foreground">{n.body}</p>
-                    <p className="mt-1 text-[10px] text-gold/70">{new Date(n.at).toLocaleString("en-US")}</p>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <ul className="space-y-2">
+        {items.map((n) => (
+          <Row key={n.id} n={n} onOpen={onOpen} onRemove={onRemove} />
+        ))}
+      </ul>
     </section>
   );
 }
+
+function Row({
+  n, onOpen, onRemove,
+}: {
+  n: ServerNotification;
+  onOpen: (n: ServerNotification) => void;
+  onRemove: (id: string) => void;
+}) {
+  const cat = resolveCategory(n.category ?? n.type);
+  const Icon = cat.icon;
+  const unread = !n.read_at;
+  const isHigh = n.priority === "high";
+
+  return (
+    <li>
+      <div
+        className={[
+          "group relative flex items-stretch gap-3 overflow-hidden rounded-2xl border p-3 transition",
+          unread
+            ? "border-gold/40 bg-gradient-to-br from-gold/8 via-background/60 to-background/40"
+            : "border-white/10 bg-surface/60 hover:border-white/20",
+        ].join(" ")}
+      >
+        {isHigh && <span className="absolute inset-y-0 right-0 w-[3px] bg-gradient-to-b from-gold via-amber-300 to-gold" />}
+        <button onClick={() => onOpen(n)} className="flex flex-1 items-start gap-3 text-right">
+          {n.image_url ? (
+            <img src={n.image_url} alt="" className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-gold/20" loading="lazy" />
+          ) : (
+            <div className={`grid size-14 shrink-0 place-items-center rounded-xl ${cat.accentBg} ring-1 ring-white/10`}>
+              <Icon className={`size-5 ${cat.accent}`} strokeWidth={1.7} />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate font-display text-sm font-bold text-foreground">{n.title}</p>
+              {unread && <span className="size-2 shrink-0 rounded-full bg-gradient-gold" aria-label="غير مقروء" />}
+            </div>
+            <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-muted-foreground">{n.body}</p>
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+              <span className={`inline-flex items-center gap-1 ${cat.accent}`}>
+                <Icon className="size-3" /> {cat.label}
+              </span>
+              <span>{relativeTime(n.created_at)}</span>
+            </div>
+          </div>
+        </button>
+        <button
+          onClick={() => onRemove(n.id)}
+          aria-label="حذف"
+          className="grid size-7 shrink-0 place-items-center self-start rounded-full text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:bg-rose-500/10 hover:text-rose-300"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      </div>
+    </li>
+  );
+}
+
+// Re-export the bucket icon so tree-shaking knows it's referenced.
+export const _ICON_REF = ImageIcon;
