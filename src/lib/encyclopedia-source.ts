@@ -272,13 +272,13 @@ export function useEncyclopediaSupabaseEntityById(rawId: string) {
         if (error) {
           if (typeof console !== "undefined")
             console.warn("[encyclopedia-source] id fetch failed", error.message);
-          return null;
+          return await cachedEncyclopediaById(id);
         }
-        return (data as SupabaseEncyclopediaEntity | null) ?? null;
+        return ((data as SupabaseEncyclopediaEntity | null) ?? null) ?? (await cachedEncyclopediaById(id));
       } catch (e) {
         if (typeof console !== "undefined")
           console.warn("[encyclopedia-source] id fetch crashed", e);
-        return null;
+        return await cachedEncyclopediaById(id);
       }
     },
   });
