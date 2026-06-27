@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
@@ -9,7 +10,7 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "forgot";
 
 
 function AuthPage() {
@@ -47,6 +48,16 @@ function AuthPage() {
         setError("لا يوجد اتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.");
         return;
       }
+      if (mode === "forgot") {
+        if (!email) { setError("أدخل بريدك الإلكتروني"); return; }
+        const redirectTo = typeof window !== "undefined"
+          ? `${window.location.origin}/reset-password`
+          : undefined;
+        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+        if (resetErr) { setError(resetErr.message); return; }
+        setInfo("أرسلنا رابط إعادة تعيين كلمة المرور إلى بريدك. تحقّق من صندوق الوارد ومجلد الرسائل غير المرغوب فيها.");
+        return;
+      }
       let r: { ok: boolean; error?: string };
       if (mode === "signup") {
         r = await signUp({ email, password, username, displayName: username, referralCode: referral || undefined });
@@ -81,26 +92,28 @@ function AuthPage() {
   return (
     <AppShell>
       <Screen
-        title={mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول"}
-        subtitle="احفظ تقدمك على جميع أجهزتك"
+        title={mode === "signup" ? "إنشاء حساب" : mode === "forgot" ? "استعادة كلمة المرور" : "تسجيل الدخول"}
+        subtitle={mode === "forgot" ? "سنرسل رابط إعادة التعيين إلى بريدك" : "احفظ تقدمك على جميع أجهزتك"}
       >
         <div className="mb-3">
           <Link to="/profile" className="text-sm text-muted-foreground hover:text-foreground">رجوع</Link>
         </div>
 
         <div className="rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
-          <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/10 p-1">
-            <button
-              type="button"
-              onClick={() => setMode("signin")}
-              className={`rounded-lg py-2 text-sm transition ${mode === "signin" ? "bg-gradient-gold text-primary-foreground shadow-gold" : "text-muted-foreground"}`}
-            >دخول</button>
-            <button
-              type="button"
-              onClick={() => setMode("signup")}
-              className={`rounded-lg py-2 text-sm transition ${mode === "signup" ? "bg-gradient-gold text-primary-foreground shadow-gold" : "text-muted-foreground"}`}
-            >حساب جديد</button>
-          </div>
+          {mode !== "forgot" && (
+            <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/10 p-1">
+              <button
+                type="button"
+                onClick={() => { setMode("signin"); setError(null); setInfo(null); }}
+                className={`rounded-lg py-2 text-sm transition ${mode === "signin" ? "bg-gradient-gold text-primary-foreground shadow-gold" : "text-muted-foreground"}`}
+              >دخول</button>
+              <button
+                type="button"
+                onClick={() => { setMode("signup"); setError(null); setInfo(null); }}
+                className={`rounded-lg py-2 text-sm transition ${mode === "signup" ? "bg-gradient-gold text-primary-foreground shadow-gold" : "text-muted-foreground"}`}
+              >حساب جديد</button>
+            </div>
+          )}
 
           <form onSubmit={submit} className="space-y-3" autoComplete="on">
             {mode === "signup" && (
@@ -139,22 +152,24 @@ function AuthPage() {
                 placeholder="you@example.com"
               />
             </label>
-            <label className="block">
-              <span className="mb-1 block text-[11px] text-muted-foreground">كلمة المرور</span>
-              <input
-                ref={passwordRef}
-                type="password"
-                name="password"
-                required
-                minLength={6}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                style={inputStyle}
-                placeholder="6 أحرف على الأقل"
-              />
-            </label>
+            {mode !== "forgot" && (
+              <label className="block">
+                <span className="mb-1 block text-[11px] text-muted-foreground">كلمة المرور</span>
+                <input
+                  ref={passwordRef}
+                  type="password"
+                  name="password"
+                  required
+                  minLength={6}
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  style={inputStyle}
+                  placeholder="6 أحرف على الأقل"
+                />
+              </label>
+            )}
             {mode === "signup" && (
               <label className="block">
                 <span className="mb-1 block text-[11px] text-muted-foreground">رمز الإحالة (اختياري)</span>
@@ -183,10 +198,30 @@ function AuthPage() {
               className="w-full rounded-xl bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-60"
             >
               {busy
-                ? (mode === "signup" ? "جاري إنشاء الحساب…" : "جاري تسجيل الدخول…")
-                : mode === "signup" ? "إنشاء الحساب" : "تسجيل الدخول"}
+                ? (mode === "signup" ? "جاري إنشاء الحساب…" : mode === "forgot" ? "جاري الإرسال…" : "جاري تسجيل الدخول…")
+                : mode === "signup" ? "إنشاء الحساب" : mode === "forgot" ? "إرسال رابط الاستعادة" : "تسجيل الدخول"}
             </button>
+
+            {mode === "signin" && (
+              <button
+                type="button"
+                onClick={() => { setMode("forgot"); setError(null); setInfo(null); }}
+                className="block w-full text-center text-[12px] text-gold hover:underline"
+              >
+                هل نسيت كلمة المرور؟
+              </button>
+            )}
+            {mode === "forgot" && (
+              <button
+                type="button"
+                onClick={() => { setMode("signin"); setError(null); setInfo(null); }}
+                className="block w-full text-center text-[12px] text-muted-foreground hover:text-foreground"
+              >
+                العودة لتسجيل الدخول
+              </button>
+            )}
           </form>
+
 
           <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground">
             بإنشاء حساب فإنك توافق على مزامنة تقدمك بأمان في السحابة.

@@ -36,7 +36,7 @@ const PUSH_DEBOUNCE_MS = 1500;
 
 export function AccountProvider({ children }: { children: ReactNode }) {
   const androidStable = isAndroidUltraStableMode();
-  const { profile, replaceProfile, addDinars, awardBadge, login } = useProfile();
+  const { profile, replaceProfile, addDinars, awardBadge, login, resetProfile } = useProfile();
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<AccountProfile | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -48,6 +48,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const profileRef = useRef(profile);
   profileRef.current = profile;
+  const resetProfileRef = useRef(resetProfile);
+  resetProfileRef.current = resetProfile;
 
   // ============ Initial session + auth state listener ============
   useEffect(() => {
@@ -66,6 +68,18 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         autoPushEnabled.current = false;
         setAccount(null);
         setLastSyncAt(null);
+        // Clear cached profile (XP, dinars, hearts, name) so UI returns to guest state.
+        try { resetProfileRef.current?.(); } catch { /* ignore */ }
+        try {
+          if (typeof localStorage !== "undefined") {
+            // Strip any user-scoped keys that survive the profile reset.
+            for (const k of Object.keys(localStorage)) {
+              if (k.startsWith("irth.refclaim.") || k.startsWith("sb-") && k.endsWith("-auth-token")) {
+                if (k.startsWith("irth.refclaim.")) localStorage.removeItem(k);
+              }
+            }
+          }
+        } catch { /* ignore */ }
       }
     });
     return () => {
@@ -200,6 +214,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     autoPushEnabled.current = false;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     await cloudSignOut();
+    setUser(null);
+    setAccount(null);
+    setLastSyncAt(null);
+    try { resetProfileRef.current?.(); } catch { /* ignore */ }
   }, []);
 
   const syncNow = useCallback(async () => {
