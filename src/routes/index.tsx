@@ -713,10 +713,10 @@ function HomeFull() {
 
       {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
         <a
-          href="/index.html?__irth_router_struct=1&branch=__root__&half=a"
+          href="/index.html?__irth_router_root_iso=1&mode=real-root-bare"
           onClick={(e) => {
             e.preventDefault();
-            window.location.href = "/index.html?__irth_router_struct=1&branch=__root__&half=a";
+            window.location.href = "/index.html?__irth_router_root_iso=1&mode=real-root-bare";
           }}
           style={{
             display: "block",
@@ -733,16 +733,16 @@ function HomeFull() {
             textDecoration: "none",
           }}
         >
-          ROUTER STRUCTURE ROOT A
+          GENERATED ROOT + BARE ROUTE
         </a>
       )}
 
       {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
         <a
-          href="/index.html?__irth_router_struct=1&branch=__root__&half=b"
+          href="/index.html?__irth_router_root_iso=1&mode=min-root-real-child&child=0"
           onClick={(e) => {
             e.preventDefault();
-            window.location.href = "/index.html?__irth_router_struct=1&branch=__root__&half=b";
+            window.location.href = "/index.html?__irth_router_root_iso=1&mode=min-root-real-child&child=0";
           }}
           style={{
             display: "block",
@@ -759,7 +759,7 @@ function HomeFull() {
             textDecoration: "none",
           }}
         >
-          ROUTER STRUCTURE ROOT B
+          MIN ROOT + REAL CHILD 0
         </a>
       )}
 
