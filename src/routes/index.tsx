@@ -659,6 +659,57 @@ function HomeFull() {
         </a>
       )}
 
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <>
+          <a
+            href="/index.html?__irth_router_bisect=1&from=0&to=44"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = "/index.html?__irth_router_bisect=1&from=0&to=44";
+            }}
+            style={{
+              display: "block",
+              margin: "12px",
+              padding: "20px",
+              background: "#7c2d12",
+              color: "#ffffff",
+              fontWeight: 900,
+              fontSize: "18px",
+              textAlign: "center",
+              border: "3px solid #fdba74",
+              borderRadius: "12px",
+              letterSpacing: "0.1em",
+              textDecoration: "none",
+            }}
+          >
+            ROUTER BISECT A (routes 0–44)
+          </a>
+          <a
+            href="/index.html?__irth_router_bisect=1&from=45&to=89"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = "/index.html?__irth_router_bisect=1&from=45&to=89";
+            }}
+            style={{
+              display: "block",
+              margin: "12px",
+              padding: "20px",
+              background: "#9a3412",
+              color: "#ffffff",
+              fontWeight: 900,
+              fontSize: "18px",
+              textAlign: "center",
+              border: "3px solid #fdba74",
+              borderRadius: "12px",
+              letterSpacing: "0.1em",
+              textDecoration: "none",
+            }}
+          >
+            ROUTER BISECT B (routes 45–89)
+          </a>
+        </>
+      )}
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
