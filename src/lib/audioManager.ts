@@ -259,6 +259,14 @@ export const audioManager = {
     }
   },
 
+  /** Play a synthesized error tone (no asset needed). Respects audio settings. */
+  playError() {
+    if (typeof window === "undefined") return;
+    if (isAndroidUltraStableMode()) return;
+    if (!settings.soundEnabled || !settings.sfxEnabled) return;
+    playSynthError();
+  },
+
   /** Cleanup — useful for hot reload / tests. */
   dispose() {
     androidMark("audio.dispose");
