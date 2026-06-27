@@ -101,11 +101,15 @@ const AtlasPin = memo(function AtlasPin({
   if (x < 0 || x > VB_W || y < 0 || y > VB_H) return null;
   const showPin = shouldShowPin(entity.kind, labelTier, active);
   if (!showPin) return null;
-  // Glyph half-extent (in user units). Selected markers scale up subtly.
-  const size = (active ? 1.55 : 1.2) * inv * S;
+  // Glyph half-extent (in user units). Smaller, refined — atlas is the hero.
+  const size = (active ? 1.15 : 0.85) * inv * S;
   const color = KIND_COLOR[entity.kind] ?? "oklch(0.55 0.18 25)";
+  // Darker shade of the fill for an engraved rim — never harsh black.
+  const rim = color.replace(
+    /oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/,
+    (_m, l, c, h) => `oklch(${Math.max(0.18, Number(l) - 0.22).toFixed(2)} ${c} ${h})`,
+  );
   const showLabel = shouldShowLabel(entity.kind, labelTier, active);
-  const glowR = size * 2.2;
   return (
     <g
       transform={`translate(${x} ${y})`}
@@ -122,28 +126,25 @@ const AtlasPin = memo(function AtlasPin({
       {/* Soft golden glow — only on selection. No SVG filters (Android perf). */}
       {active && (
         <>
-          <circle r={glowR} fill="oklch(0.86 0.18 82)" opacity={0.18} />
-          <circle r={glowR * 0.65} fill="oklch(0.92 0.16 82)" opacity={0.25} />
+          <circle r={size * 2.4} fill="oklch(0.86 0.16 82)" opacity={0.14} />
+          <circle r={size * 1.55} fill="oklch(0.92 0.14 82)" opacity={0.22} />
         </>
       )}
-      {/* Parchment backing disc keeps icons legible on any terrain. */}
-      <circle
-        r={size * 1.15}
-        fill="oklch(0.96 0.05 82)"
-        stroke={active ? "oklch(0.78 0.18 82)" : "oklch(0.18 0.04 60)"}
-        strokeWidth={(active ? 0.28 : 0.18) * inv * S}
-        opacity={0.96}
-      />
-      <AtlasKindGlyph kind={entity.kind} size={size * 0.78} fill={color} />
+      {/* Engraved shadow pass — same glyph offset down, very low opacity.
+          Gives a tactile "pressed into parchment" feel without SVG filters. */}
+      <g transform={`translate(0 ${size * 0.18})`} opacity={0.22}>
+        <AtlasKindGlyph kind={entity.kind} size={size} fill={rim} stroke={rim} />
+      </g>
+      <AtlasKindGlyph kind={entity.kind} size={size} fill={color} stroke={rim} />
       {showLabel && (
         <text
-          y={-size * 1.45}
+          y={-size * 1.6}
           textAnchor="middle"
-          fontSize={1.4 * inv * S}
-          fontWeight={800}
-          fill="oklch(0.97 0.08 82)"
-          stroke="oklch(0.13 0.05 255)"
-          strokeWidth={0.22 * inv * S}
+          fontSize={1.3 * inv * S}
+          fontWeight={700}
+          fill="oklch(0.94 0.06 78)"
+          stroke="oklch(0.18 0.04 60)"
+          strokeWidth={0.2 * inv * S}
           paintOrder="stroke"
           style={{ fontFamily: "var(--font-display)" }}
         >
