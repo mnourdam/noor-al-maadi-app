@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -260,7 +260,13 @@ function findRegisteredParent(patterns: string[], path: string): string | null {
 
 export function AndroidBackHandler() {
   const router = useRouter();
+  const latestRouterPathname = useRouterState({ select: (state) => normalizePath(state.location.pathname || "/") });
+  const latestRouterPathnameRef = useRef(latestRouterPathname);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    latestRouterPathnameRef.current = latestRouterPathname;
+  }, [latestRouterPathname]);
 
   useEffect(() => {
     const cap = (window as unknown as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
@@ -274,7 +280,7 @@ export function AndroidBackHandler() {
         const handle = await App.addListener("backButton", async () => {
           const actualWindowPathname = window.location.pathname || "/";
           const windowRoutePathname = getWindowRoutePathname();
-          const routerPathname = getRouterPathname(router);
+          const routerPathname = latestRouterPathnameRef.current !== "/" ? latestRouterPathnameRef.current : getRouterPathname(router);
           const matchedPathname = getDeepestMatchedPathname(router);
           const path = pickCurrentPath(windowRoutePathname, routerPathname, matchedPathname);
           const matchedRouteIds = getMatchedRouteIds(router);
