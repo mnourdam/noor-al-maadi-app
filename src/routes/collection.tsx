@@ -765,6 +765,7 @@ function RecentUnlocks() {
           list.push({
             key: `sup-${t}-${row.item_id}`,
             type: t,
+            slug: ent?.slug ?? row.item_id,
             kind: kindLabel[t] ?? t,
             title,
             subtitle: subtitleParts.join(" · ") || (kindLabel[t] ?? "—"),
