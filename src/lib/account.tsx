@@ -214,6 +214,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     autoPushEnabled.current = false;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     await cloudSignOut();
+    setUser(null);
+    setAccount(null);
+    setLastSyncAt(null);
+    try { resetProfileRef.current?.(); } catch { /* ignore */ }
   }, []);
 
   const syncNow = useCallback(async () => {
