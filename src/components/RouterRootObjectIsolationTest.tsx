@@ -25,6 +25,8 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  HeadContent,
+  Scripts,
 } from "@tanstack/react-router";
 import { QueryClient } from "@tanstack/react-query";
 
