@@ -340,10 +340,18 @@ function ImportedCampaignOverview() {
   );
 }
 
-function Pill({ label }: { label: string }) {
+function RewardPill({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <span className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-gold">
-      {label}
+    <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-gold">
+      {icon} {label}
+    </span>
+  );
+}
+
+function RewardChip({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md border border-gold/25 bg-black/30 px-1.5 py-0.5 text-gold/90">
+      {icon} {label}
     </span>
   );
 }
