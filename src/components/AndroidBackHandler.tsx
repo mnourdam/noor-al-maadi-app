@@ -64,33 +64,35 @@ export function AndroidBackHandler() {
         const handle = await App.addListener("backButton", async () => {
           const path = normalizePath(window.location.pathname || "/");
           const parent = parentOf(path);
-          console.log("[android:back] current path=", path);
-          console.log("[android:back] computed parent path=", parent);
+          console.log("[android:back] pathname=", path, "parentPath=", parent);
           if (!parent) {
-            console.log("[android:back] action=confirm-exit");
+            console.log("[android:back] method=confirm-exit (no parent)");
             setConfirmOpen(true);
             return;
           }
 
           if (parent === path) {
-            console.warn("[android:back] action=skip-same-path", { path, parent });
+            console.warn("[android:back] method=skip (parent === pathname)", { path });
             return;
           }
 
-          console.log("[android:back] action=navigate->", parent);
+          // Use router.history.push — works with raw URLs, unlike
+          // router.navigate({to}) which expects route templates ($params).
           try {
-            await router.navigate({ to: parent });
-            const afterRouterPath = normalizePath(window.location.pathname || "/");
-            if (afterRouterPath === path) {
-              console.warn("[android:back] router stayed on same path, using history fallback", {
-                path,
-                parent,
-              });
-              window.history.pushState(null, "", parent);
-              dispatchRouterPopState();
-            }
+            console.log("[android:back] method=router.history.push ->", parent);
+            router.history.push(parent);
+            setTimeout(() => {
+              const after = normalizePath(window.location.pathname || "/");
+              if (after === path) {
+                console.warn("[android:back] method=popstate-fallback (history.push no-op) ->", parent);
+                window.history.pushState(null, "", parent);
+                dispatchRouterPopState();
+              } else {
+                console.log("[android:back] navigated. now=", after);
+              }
+            }, 50);
           } catch (e) {
-            console.warn("[android:back] router.navigate failed, falling back", e);
+            console.warn("[android:back] method=popstate-fallback (history.push threw)", e);
             window.history.pushState(null, "", parent);
             dispatchRouterPopState();
           }
