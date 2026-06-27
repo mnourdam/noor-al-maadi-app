@@ -100,11 +100,25 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
       params={{ id: c.id }}
       className={`shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
         isComplete
-          ? "border-emerald-400/40 opacity-80 hover:opacity-100"
+          ? "border-emerald-400/60 ring-1 ring-emerald-400/30 shadow-[0_18px_50px_-25px_rgba(16,185,129,0.55)]"
           : "border-gold/40 hover:border-gold/60"
       }`}
     >
       <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
+      {isComplete && (
+        <>
+          {/* corner ribbon */}
+          <div className="pointer-events-none absolute -right-12 top-5 z-10 rotate-45 bg-gradient-to-l from-emerald-500 to-emerald-400 px-12 py-1 text-[10px] font-extrabold tracking-[0.35em] text-emerald-950 shadow-md">
+            مكتملة
+          </div>
+          {/* large floating check seal */}
+          <div className="pointer-events-none absolute bottom-4 left-4 z-10 grid size-14 place-items-center rounded-full border-2 border-emerald-300/70 bg-emerald-500/20 backdrop-blur-sm shadow-[0_0_30px_-5px_rgba(16,185,129,0.6)]">
+            <CheckCircle2 className="size-8 text-emerald-200" strokeWidth={2.2} />
+          </div>
+          {/* subtle emerald wash so it reads as "done" without dimming the card */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-emerald-500/10 via-transparent to-transparent" />
+        </>
+      )}
       <div className="relative">
         <div className="flex items-center justify-between gap-2 text-[10px] tracking-widest text-gold">
           <span className="inline-flex items-center gap-1.5">
@@ -114,11 +128,6 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
           {c.historicalPeriod && (
             <span className="rounded-full border border-gold/40 bg-black/30 px-2 py-0.5 text-[10px] text-gold">
               {c.historicalPeriod}
-            </span>
-          )}
-          {isComplete && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-200">
-              <CheckCircle2 className="size-3" /> مكتملة
             </span>
           )}
         </div>

@@ -300,6 +300,69 @@ async function runIncompleteCampaignReminder(admin: any, baseUrl: string, servic
   return { job: jobKey, sent, failed, skipped, total_candidates: pairs.size, results: dryRun ? results : undefined };
 }
 
+// ---------- Job 5: streak about to break reminder ----------
+// Sends a single reminder when:
+//   - profile.streak > 0
+//   - profile.last_active is before today's UTC date (i.e. no activity today)
+//   - user has at least one enabled device token
+//   - max one reminder per UTC day per user
+async function runStreakReminder(admin: any, baseUrl: string, serviceKey: string, dryRun: boolean) {
+  const jobKey = "streak_reminder";
+  const runDate = todayISODate();
+  const startOfToday = new Date(`${runDate}T00:00:00.000Z`).toISOString();
+
+  const { data: profiles, error } = await admin
+    .from("profiles")
+    .select("id, streak, last_active")
+    .gt("streak", 0)
+    .lt("last_active", startOfToday)
+    .limit(2000);
+  if (error) return { job: jobKey, error: error.message };
+
+  const candidateIds = (profiles ?? []).map((p: any) => p.id);
+  if (candidateIds.length === 0) return { job: jobKey, sent: 0, skipped: "no_candidates" };
+
+  const { data: tokens } = await admin
+    .from("device_tokens")
+    .select("user_id")
+    .eq("enabled", true)
+    .in("user_id", candidateIds);
+  const tokenSet = new Set((tokens ?? []).map((t: any) => t.user_id));
+
+  let sent = 0, skipped = 0, failed = 0;
+  const results: any[] = [];
+
+  for (const p of profiles ?? []) {
+    if (!tokenSet.has(p.id)) { skipped++; continue; }
+    const perKey = `${jobKey}:${p.id}`;
+    // Hard dedup: not more than once per UTC day per user
+    if (await alreadyRan(admin, perKey, runDate)) { skipped++; continue; }
+
+    if (dryRun) { results.push({ user_id: p.id, streak: p.streak, would_send: true }); continue; }
+
+    const send = await invokeSendNotification(baseUrl, serviceKey, {
+      title: "سلسلتك على وشك الانقطاع",
+      body: "أكمل أي فصل أو تحدٍ اليوم للحفاظ على حماستك.",
+      type: "streak_reminder",
+      target_type: "user",
+      target_user_id: p.id,
+      deep_link: "/",
+    });
+
+    await recordRun(
+      admin, perKey, runDate,
+      send.ok ? "success" : "failed",
+      send.body?.notification_id ?? null,
+      { streak: p.streak, send },
+    );
+
+    if (send.ok) sent++; else failed++;
+    results.push({ user_id: p.id, ok: send.ok });
+  }
+
+  return { job: jobKey, sent, failed, skipped, total_candidates: profiles?.length ?? 0, results: dryRun ? results : undefined };
+}
+
 // ---------- Handler ----------
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -315,7 +378,7 @@ Deno.serve(async (req) => {
     const dryRun: boolean = !!body.dry_run;
     const jobs: string[] = Array.isArray(body.jobs) && body.jobs.length > 0
       ? body.jobs
-      : ["today_in_history", "daily_fact", "inactive_user", "incomplete_campaign"];
+      : ["today_in_history", "daily_fact", "inactive_user", "incomplete_campaign", "streak_reminder"];
 
     const results: Record<string, any> = {};
 
@@ -327,6 +390,8 @@ Deno.serve(async (req) => {
       results.inactive_user = await runInactiveUserReminder(admin, supabaseUrl, serviceKey, dryRun);
     if (jobs.includes("incomplete_campaign"))
       results.incomplete_campaign = await runIncompleteCampaignReminder(admin, supabaseUrl, serviceKey, dryRun);
+    if (jobs.includes("streak_reminder"))
+      results.streak_reminder = await runStreakReminder(admin, supabaseUrl, serviceKey, dryRun);
 
     console.log("[run-automatic-notifications] done", JSON.stringify(results));
     return jsonResponse({ ok: true, dry_run: dryRun, results });

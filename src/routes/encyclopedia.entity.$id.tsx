@@ -255,7 +255,7 @@ function EntityPage() {
                 <span className="absolute -top-3 right-6 inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-background px-3 py-1 text-[10px] tracking-[0.32em] text-gold/85">
                   مقدمة الدوسيه
                 </span>
-                <p className="text-[15px] leading-[2.1] text-foreground/95 first-letter:font-display first-letter:text-[42px] first-letter:font-bold first-letter:text-gold first-letter:leading-[1] first-letter:me-2 first-letter:float-start">
+                <p className="text-[15px] leading-[2.1] text-foreground/95">
                   {entity.summary}
                 </p>
               </article>

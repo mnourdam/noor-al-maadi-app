@@ -24,14 +24,7 @@ export function EncyclopediaOverview({ overview }: { overview?: string }) {
         <div className="pointer-events-none absolute -bottom-32 -right-20 size-72 rounded-full bg-gold/5 blur-3xl" />
         <div className="relative space-y-4">
           {paragraphs.map((p, i) => (
-            <p
-              key={i}
-              className={`text-[15px] leading-[2] text-foreground/95 ${
-                i === 0
-                  ? "first-letter:font-display first-letter:text-[42px] first-letter:font-bold first-letter:text-gold first-letter:leading-[1] first-letter:me-2 first-letter:float-start"
-                  : ""
-              }`}
-            >
+            <p key={i} className="text-[15px] leading-[2] text-foreground/95">
               {p}
             </p>
           ))}

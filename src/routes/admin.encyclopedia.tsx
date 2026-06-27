@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
+import { normalizeArabicName } from "@/lib/arabic-normalize";
 
 export const Route = createFileRoute("/admin/encyclopedia")({
   head: () => ({
@@ -352,6 +353,31 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     }
 
     setBusy(true);
+
+    // Duplicate-protection gate (LC1 Item 6): when creating a NEW entity, look
+    // up existing entities of the same type whose normalized title collides
+    // (strips diacritics + honorifics like رضي الله عنه / صلى الله عليه وسلم).
+    // Admin must confirm before a duplicate row is created. Editing existing
+    // rows or changing slug bypasses this check — those flows are handled by
+    // /admin/canonical-duplicates.
+    if (isNew) {
+      const nt = normalizeArabicName(form.title);
+      const { data: existing } = await supabase
+        .from("encyclopedia_entities" as any)
+        .select("id,title,slug")
+        .eq("entity_type", form.entity_type)
+        .limit(500);
+      const dup = (existing as any[] | null)?.find(
+        (r) => normalizeArabicName(r.title) === nt && r.slug !== form.slug.trim(),
+      );
+      if (dup) {
+        const ok = window.confirm(
+          `يوجد مدخل بنفس الاسم بعد التطبيع:\n• ${dup.title} (${dup.slug})\n\nأنشئ المدخل الجديد على أي حال؟ (يُنصح بالربط من /admin/canonical-duplicates بدلاً من الإنشاء.)`,
+        );
+        if (!ok) { setBusy(false); return; }
+      }
+    }
+
     const payload = {
       entity_type: form.entity_type,
       slug: form.slug.trim(),

@@ -334,8 +334,11 @@ export function CrosswordRenderer({
       <div className="relative mb-4 overflow-x-auto rounded-xl irth-parchment p-3">
         <div className="absolute inset-0 pointer-events-none rounded-xl border border-amber-700/20" />
         <div
-          className="relative inline-grid gap-[2px]"
-          style={{ gridTemplateColumns: `repeat(${stage.cols}, minmax(0, 1fr))` }}
+          className="relative inline-grid gap-[3px]"
+          style={{
+            gridTemplateColumns: `repeat(${stage.cols}, 36px)`,
+            gridAutoRows: "36px",
+          }}
         >
           {Array.from({ length: stage.rows * stage.cols }).map((_, idx) => {
             const r = Math.floor(idx / stage.cols);
@@ -344,7 +347,7 @@ export function CrosswordRenderer({
             const info = grid.get(k);
             const clueNum = stage.clues.find((cl) => cl.row === r && cl.col === c)?.number;
             if (!info) {
-              return <div key={k} className="aspect-square w-9 rounded-sm bg-amber-900/30" />;
+              return <div key={k} className="h-9 w-9 rounded-sm bg-amber-900/30" />;
             }
             const value = entries[k] ?? "";
             const isCorrect = value && value === info.expected;
@@ -366,7 +369,7 @@ export function CrosswordRenderer({
                   setActiveClue(pick);
                   focusCell(k);
                 }}
-                className={`irth-ink-cell relative aspect-square w-9 rounded-sm border bg-[#fdf6e3] text-slate-950
+                className={`irth-ink-cell relative h-9 w-9 rounded-sm border bg-[#fdf6e3] text-slate-950
                   ${isCorrect ? "is-correct" : ""}
                   ${isActiveCell ? "ring-2 ring-amber-500 border-amber-500" : isActiveClue ? "border-amber-400/70 bg-amber-100/80" : "border-amber-700/30"}
                 `}
