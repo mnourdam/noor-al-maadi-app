@@ -94,9 +94,10 @@ export function unreadCount(): number {
 /** Format unread count for badge: 0 hides, 1-99 number, 100+ → "99+". */
 export function formatBadgeCount(n: number): string {
   if (n <= 0) return "";
-  if (n >= 100) return "99+";
+  if (n > 9) return "9+";
   return String(n);
 }
+
 export function markRead(id: string): boolean {
   const now = Date.now();
   const current = getInbox();

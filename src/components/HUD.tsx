@@ -21,21 +21,29 @@ export function HUD() {
 
   useEffect(() => {
     const id = androidStable ? null : setInterval(() => force((n) => n + 1), 1_000);
+    let serverAuthoritative = false;
     const recount = async () => {
-      // Prefer the server count; fall back to local cache for guests/offline.
+      // Server is source of truth. Local cache is only used before the first
+      // successful server fetch (guest/offline cold-start).
       try {
         const n = await fetchMyUnreadCount();
-        setUnread(n || unreadCount());
+        serverAuthoritative = true;
+        setUnread(n);
       } catch {
-        setUnread(unreadCount());
+        if (!serverAuthoritative) setUnread(unreadCount());
       }
     };
     void recount();
     const unsubRealtime = subscribeToMyNotifications(() => { void recount(); });
-    if (androidStable) {
-      return () => { unsubRealtime(); };
-    }
+    // Always listen for the in-app update event — it's how foreground pushes,
+    // mark-read, dismiss, and delete actions sync the badge across the app.
     window.addEventListener("irth:notifications:updated", recount);
+    if (androidStable) {
+      return () => {
+        window.removeEventListener("irth:notifications:updated", recount);
+        unsubRealtime();
+      };
+    }
     const focus = () => { void recount(); };
     if (!disableGlobalFocusBlur) window.addEventListener("focus", focus);
     return () => {
@@ -45,6 +53,7 @@ export function HUD() {
       unsubRealtime();
     };
   }, [androidStable, disableGlobalFocusBlur]);
+
 
   const now = Date.now();
   const hearts = getEffectiveHearts(profile, now);
