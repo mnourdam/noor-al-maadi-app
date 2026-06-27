@@ -539,6 +539,30 @@ function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   );
 }
 
+// ---------- Beta: skipped reflection ----------
+// Reflection prompts are temporarily hidden behind VITE_BETA_HIDE_REFLECTIONS
+// (default ON for beta). The infrastructure stays — long-term we convert these
+// into an optional "مذكرة المؤرخ" historian journal. We never block chapter
+// completion: the activity auto-resolves so progression continues normally.
+function ReflectionSkippedRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
+  const [resolved, setResolved] = useState(alreadyDone ?? false);
+  useEffect(() => {
+    if (!resolved) { setResolved(true); onResolve(true); }
+  }, [resolved, onResolve]);
+  return (
+    <div>
+      <ContextBlock text={activity.contextText} />
+      <PromptBlock activity={activity} />
+      <p className="mt-2 rounded-xl border border-amber-300/20 bg-amber-500/[0.06] px-3 py-2 text-[11px] leading-6 text-amber-200/85">
+        مذكرة المؤرخ — تأمّل اختياري سيُتاح قريبًا في صفحة الملف.
+      </p>
+    </div>
+  );
+}
+
+const HIDE_REFLECTIONS =
+  (import.meta.env.VITE_BETA_HIDE_REFLECTIONS ?? "true").toString() === "true";
+
 // ---------- Dispatcher ----------
 export function ActivityRenderer(props: RendererProps) {
   const { activity } = props;
@@ -550,7 +574,9 @@ export function ActivityRenderer(props: RendererProps) {
     case "decision_choice":       return <DecisionRenderer {...props} />;
     case "match_pairs":           return <MatchPairsRenderer {...props} />;
     case "fill_blank":            return <FillBlankRenderer {...props} />;
-    case "reflection_prompt":     return <ReflectionRenderer {...props} />;
+    case "reflection_prompt":     return HIDE_REFLECTIONS
+                                    ? <ReflectionSkippedRenderer {...props} />
+                                    : <ReflectionRenderer {...props} />;
     default:                      return <FallbackRenderer {...props} />;
   }
 }
