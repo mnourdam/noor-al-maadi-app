@@ -607,6 +607,32 @@ function HomeFull() {
         </Link>
       )}
 
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <a
+          href="/debug/react-direct-input-min"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.href = "/debug/react-direct-input-min";
+          }}
+          style={{
+            display: "block",
+            margin: "12px",
+            padding: "20px",
+            background: "#0f766e",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #5eead4",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          REACT DIRECT INPUT TEST
+        </a>
+      )}
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
