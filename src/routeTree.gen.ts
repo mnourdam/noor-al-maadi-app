@@ -67,6 +67,7 @@ import { Route as AdminHistoricalHubsAuditRouteImport } from './routes/admin.his
 import { Route as AdminGamesRouteImport } from './routes/admin.games'
 import { Route as AdminExplorationPathRepairRouteImport } from './routes/admin.exploration-path-repair'
 import { Route as AdminEraNormalizationRouteImport } from './routes/admin.era-normalization'
+import { Route as AdminEncyclopediaCleanupRouteImport } from './routes/admin.encyclopedia-cleanup'
 import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
 import { Route as AdminCrossHubLinksRouteImport } from './routes/admin.cross-hub-links'
@@ -96,6 +97,10 @@ import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.pa
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
 import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
+import { Route as AdminEncyclopediaCleanupReviewRouteImport } from './routes/admin.encyclopedia-cleanup.review'
+import { Route as AdminEncyclopediaCleanupRedirectsRouteImport } from './routes/admin.encyclopedia-cleanup.redirects'
+import { Route as AdminEncyclopediaCleanupIntegrityRouteImport } from './routes/admin.encyclopedia-cleanup.integrity'
+import { Route as AdminEncyclopediaCleanupImportPreviewRouteImport } from './routes/admin.encyclopedia-cleanup.import-preview'
 import { Route as CampaignsImportedIdIndexRouteImport } from './routes/campaigns.imported.$id.index'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -397,6 +402,12 @@ const AdminEraNormalizationRoute = AdminEraNormalizationRouteImport.update({
   path: '/admin/era-normalization',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEncyclopediaCleanupRoute =
+  AdminEncyclopediaCleanupRouteImport.update({
+    id: '/admin/encyclopedia-cleanup',
+    path: '/admin/encyclopedia-cleanup',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminEncyclopediaAuditRoute = AdminEncyclopediaAuditRouteImport.update({
   id: '/admin/encyclopedia-audit',
   path: '/admin/encyclopedia-audit',
@@ -502,9 +513,9 @@ const AdminGamesIndexRoute = AdminGamesIndexRouteImport.update({
 } as any)
 const AdminEncyclopediaCleanupIndexRoute =
   AdminEncyclopediaCleanupIndexRouteImport.update({
-    id: '/admin/encyclopedia-cleanup/',
-    path: '/admin/encyclopedia-cleanup/',
-    getParentRoute: () => rootRouteImport,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
@@ -547,6 +558,30 @@ const AdminGamesModeRoute = AdminGamesModeRouteImport.update({
   path: '/$mode',
   getParentRoute: () => AdminGamesRoute,
 } as any)
+const AdminEncyclopediaCleanupReviewRoute =
+  AdminEncyclopediaCleanupReviewRouteImport.update({
+    id: '/review',
+    path: '/review',
+    getParentRoute: () => AdminEncyclopediaCleanupRoute,
+  } as any)
+const AdminEncyclopediaCleanupRedirectsRoute =
+  AdminEncyclopediaCleanupRedirectsRouteImport.update({
+    id: '/redirects',
+    path: '/redirects',
+    getParentRoute: () => AdminEncyclopediaCleanupRoute,
+  } as any)
+const AdminEncyclopediaCleanupIntegrityRoute =
+  AdminEncyclopediaCleanupIntegrityRouteImport.update({
+    id: '/integrity',
+    path: '/integrity',
+    getParentRoute: () => AdminEncyclopediaCleanupRoute,
+  } as any)
+const AdminEncyclopediaCleanupImportPreviewRoute =
+  AdminEncyclopediaCleanupImportPreviewRouteImport.update({
+    id: '/import-preview',
+    path: '/import-preview',
+    getParentRoute: () => AdminEncyclopediaCleanupRoute,
+  } as any)
 const CampaignsImportedIdIndexRoute =
   CampaignsImportedIdIndexRouteImport.update({
     id: '/imported/$id/',
@@ -633,6 +668,7 @@ export interface FileRoutesByFullPath {
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
+  '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupRouteWithChildren
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
   '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
   '/admin/games': typeof AdminGamesRouteWithChildren
@@ -666,6 +702,10 @@ export interface FileRoutesByFullPath {
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/games/': typeof GamesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
+  '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
+  '/admin/encyclopedia-cleanup/integrity': typeof AdminEncyclopediaCleanupIntegrityRoute
+  '/admin/encyclopedia-cleanup/redirects': typeof AdminEncyclopediaCleanupRedirectsRoute
+  '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -759,6 +799,10 @@ export interface FileRoutesByTo {
   '/encyclopedia': typeof EncyclopediaIndexRoute
   '/games': typeof GamesIndexRoute
   '/worlds': typeof WorldsIndexRoute
+  '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
+  '/admin/encyclopedia-cleanup/integrity': typeof AdminEncyclopediaCleanupIntegrityRoute
+  '/admin/encyclopedia-cleanup/redirects': typeof AdminEncyclopediaCleanupRedirectsRoute
+  '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -823,6 +867,7 @@ export interface FileRoutesById {
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
+  '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupRouteWithChildren
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
   '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
   '/admin/games': typeof AdminGamesRouteWithChildren
@@ -856,6 +901,10 @@ export interface FileRoutesById {
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/games/': typeof GamesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
+  '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
+  '/admin/encyclopedia-cleanup/integrity': typeof AdminEncyclopediaCleanupIntegrityRoute
+  '/admin/encyclopedia-cleanup/redirects': typeof AdminEncyclopediaCleanupRedirectsRoute
+  '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -921,6 +970,7 @@ export interface FileRouteTypes {
     | '/admin/cross-hub-links'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
+    | '/admin/encyclopedia-cleanup'
     | '/admin/era-normalization'
     | '/admin/exploration-path-repair'
     | '/admin/games'
@@ -954,6 +1004,10 @@ export interface FileRouteTypes {
     | '/encyclopedia/'
     | '/games/'
     | '/worlds/'
+    | '/admin/encyclopedia-cleanup/import-preview'
+    | '/admin/encyclopedia-cleanup/integrity'
+    | '/admin/encyclopedia-cleanup/redirects'
+    | '/admin/encyclopedia-cleanup/review'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/encyclopedia/entity/$id'
@@ -1047,6 +1101,10 @@ export interface FileRouteTypes {
     | '/encyclopedia'
     | '/games'
     | '/worlds'
+    | '/admin/encyclopedia-cleanup/import-preview'
+    | '/admin/encyclopedia-cleanup/integrity'
+    | '/admin/encyclopedia-cleanup/redirects'
+    | '/admin/encyclopedia-cleanup/review'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/encyclopedia/entity/$id'
@@ -1110,6 +1168,7 @@ export interface FileRouteTypes {
     | '/admin/cross-hub-links'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
+    | '/admin/encyclopedia-cleanup'
     | '/admin/era-normalization'
     | '/admin/exploration-path-repair'
     | '/admin/games'
@@ -1143,6 +1202,10 @@ export interface FileRouteTypes {
     | '/encyclopedia/'
     | '/games/'
     | '/worlds/'
+    | '/admin/encyclopedia-cleanup/import-preview'
+    | '/admin/encyclopedia-cleanup/integrity'
+    | '/admin/encyclopedia-cleanup/redirects'
+    | '/admin/encyclopedia-cleanup/review'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/encyclopedia/entity/$id'
@@ -1207,6 +1270,7 @@ export interface RootRouteChildren {
   AdminCrossHubLinksRoute: typeof AdminCrossHubLinksRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
   AdminEncyclopediaAuditRoute: typeof AdminEncyclopediaAuditRoute
+  AdminEncyclopediaCleanupRoute: typeof AdminEncyclopediaCleanupRouteWithChildren
   AdminEraNormalizationRoute: typeof AdminEraNormalizationRoute
   AdminExplorationPathRepairRoute: typeof AdminExplorationPathRepairRoute
   AdminGamesRoute: typeof AdminGamesRouteWithChildren
@@ -1239,7 +1303,6 @@ export interface RootRouteChildren {
   WorldsIndexRoute: typeof WorldsIndexRoute
   GamesModeSlugRoute: typeof GamesModeSlugRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
-  AdminEncyclopediaCleanupIndexRoute: typeof AdminEncyclopediaCleanupIndexRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -1655,6 +1718,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEraNormalizationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/encyclopedia-cleanup': {
+      id: '/admin/encyclopedia-cleanup'
+      path: '/admin/encyclopedia-cleanup'
+      fullPath: '/admin/encyclopedia-cleanup'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/encyclopedia-audit': {
       id: '/admin/encyclopedia-audit'
       path: '/admin/encyclopedia-audit'
@@ -1797,10 +1867,10 @@ declare module '@tanstack/react-router' {
     }
     '/admin/encyclopedia-cleanup/': {
       id: '/admin/encyclopedia-cleanup/'
-      path: '/admin/encyclopedia-cleanup'
+      path: '/'
       fullPath: '/admin/encyclopedia-cleanup/'
       preLoaderRoute: typeof AdminEncyclopediaCleanupIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminEncyclopediaCleanupRoute
     }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
@@ -1857,6 +1927,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/games/$mode'
       preLoaderRoute: typeof AdminGamesModeRouteImport
       parentRoute: typeof AdminGamesRoute
+    }
+    '/admin/encyclopedia-cleanup/review': {
+      id: '/admin/encyclopedia-cleanup/review'
+      path: '/review'
+      fullPath: '/admin/encyclopedia-cleanup/review'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupReviewRouteImport
+      parentRoute: typeof AdminEncyclopediaCleanupRoute
+    }
+    '/admin/encyclopedia-cleanup/redirects': {
+      id: '/admin/encyclopedia-cleanup/redirects'
+      path: '/redirects'
+      fullPath: '/admin/encyclopedia-cleanup/redirects'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupRedirectsRouteImport
+      parentRoute: typeof AdminEncyclopediaCleanupRoute
+    }
+    '/admin/encyclopedia-cleanup/integrity': {
+      id: '/admin/encyclopedia-cleanup/integrity'
+      path: '/integrity'
+      fullPath: '/admin/encyclopedia-cleanup/integrity'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupIntegrityRouteImport
+      parentRoute: typeof AdminEncyclopediaCleanupRoute
+    }
+    '/admin/encyclopedia-cleanup/import-preview': {
+      id: '/admin/encyclopedia-cleanup/import-preview'
+      path: '/import-preview'
+      fullPath: '/admin/encyclopedia-cleanup/import-preview'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupImportPreviewRouteImport
+      parentRoute: typeof AdminEncyclopediaCleanupRoute
     }
     '/campaigns/imported/$id/': {
       id: '/campaigns/imported/$id/'
@@ -1957,6 +2055,31 @@ const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
   EncyclopediaRouteChildren,
 )
 
+interface AdminEncyclopediaCleanupRouteChildren {
+  AdminEncyclopediaCleanupImportPreviewRoute: typeof AdminEncyclopediaCleanupImportPreviewRoute
+  AdminEncyclopediaCleanupIntegrityRoute: typeof AdminEncyclopediaCleanupIntegrityRoute
+  AdminEncyclopediaCleanupRedirectsRoute: typeof AdminEncyclopediaCleanupRedirectsRoute
+  AdminEncyclopediaCleanupReviewRoute: typeof AdminEncyclopediaCleanupReviewRoute
+  AdminEncyclopediaCleanupIndexRoute: typeof AdminEncyclopediaCleanupIndexRoute
+}
+
+const AdminEncyclopediaCleanupRouteChildren: AdminEncyclopediaCleanupRouteChildren =
+  {
+    AdminEncyclopediaCleanupImportPreviewRoute:
+      AdminEncyclopediaCleanupImportPreviewRoute,
+    AdminEncyclopediaCleanupIntegrityRoute:
+      AdminEncyclopediaCleanupIntegrityRoute,
+    AdminEncyclopediaCleanupRedirectsRoute:
+      AdminEncyclopediaCleanupRedirectsRoute,
+    AdminEncyclopediaCleanupReviewRoute: AdminEncyclopediaCleanupReviewRoute,
+    AdminEncyclopediaCleanupIndexRoute: AdminEncyclopediaCleanupIndexRoute,
+  }
+
+const AdminEncyclopediaCleanupRouteWithChildren =
+  AdminEncyclopediaCleanupRoute._addFileChildren(
+    AdminEncyclopediaCleanupRouteChildren,
+  )
+
 interface AdminGamesRouteChildren {
   AdminGamesModeRoute: typeof AdminGamesModeRoute
   AdminGamesCrosswordGeneratorRoute: typeof AdminGamesCrosswordGeneratorRoute
@@ -2018,6 +2141,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminCrossHubLinksRoute: AdminCrossHubLinksRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
   AdminEncyclopediaAuditRoute: AdminEncyclopediaAuditRoute,
+  AdminEncyclopediaCleanupRoute: AdminEncyclopediaCleanupRouteWithChildren,
   AdminEraNormalizationRoute: AdminEraNormalizationRoute,
   AdminExplorationPathRepairRoute: AdminExplorationPathRepairRoute,
   AdminGamesRoute: AdminGamesRouteWithChildren,
@@ -2050,7 +2174,6 @@ const rootRouteChildren: RootRouteChildren = {
   WorldsIndexRoute: WorldsIndexRoute,
   GamesModeSlugRoute: GamesModeSlugRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
-  AdminEncyclopediaCleanupIndexRoute: AdminEncyclopediaCleanupIndexRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,

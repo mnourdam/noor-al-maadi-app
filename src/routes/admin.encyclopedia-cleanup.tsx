@@ -22,13 +22,13 @@ export const Route = createFileRoute("/admin/encyclopedia-cleanup")({
   ),
 });
 
-const TABS = [
+const TABS: { to: string; label: string; icon: any; exact?: boolean }[] = [
   { to: "/admin/encyclopedia-cleanup", label: "الورشة", icon: BookOpenCheck, exact: true },
   { to: "/admin/encyclopedia-cleanup/review", label: "مراجعة جماعية", icon: GitCompareArrows },
   { to: "/admin/encyclopedia-cleanup/redirects", label: "التحويلات", icon: Workflow },
   { to: "/admin/encyclopedia-cleanup/integrity", label: "العلاقات", icon: Network },
   { to: "/admin/encyclopedia-cleanup/import-preview", label: "معاينة استيراد", icon: ScanSearch },
-] as const;
+];
 
 function CleanupLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
