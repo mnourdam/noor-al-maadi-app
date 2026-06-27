@@ -248,7 +248,13 @@ type CleanPiece =
   | "rootShell"
   | "boundaries"
   | "fonts"
-  | "rs1" | "rs2" | "rs3" | "rs4" | "rs5" | "rs6" | "rs7" | "rs8";
+  | "rs1" | "rs2" | "rs3" | "rs4" | "rs5" | "rs6" | "rs7" | "rs8"
+  | "rs2-html-only"
+  | "rs2-html-lang-only"
+  | "rs2-html-dir-only"
+  | "rs2-body-only"
+  | "rs2-body-class-only"
+  | "rs2-html-body-data-only";
 
 function OriginalRootShell({ children }: { children: ReactNode }) {
   // Mirrors the real __root.tsx RootShell exactly.
@@ -271,6 +277,24 @@ function RS1_Fragment({ children }: { children: ReactNode }) {
 }
 function RS2_HtmlBody({ children }: { children: ReactNode }) {
   return <html><body>{children}</body></html>;
+}
+function RS2Delta_HtmlOnly({ children }: { children: ReactNode }) {
+  return <html>{children}</html>;
+}
+function RS2Delta_HtmlLangOnly({ children }: { children: ReactNode }) {
+  return <html lang="ar">{children}</html>;
+}
+function RS2Delta_HtmlDirOnly({ children }: { children: ReactNode }) {
+  return <html dir="rtl">{children}</html>;
+}
+function RS2Delta_BodyOnly({ children }: { children: ReactNode }) {
+  return <body>{children}</body>;
+}
+function RS2Delta_BodyClassOnly({ children }: { children: ReactNode }) {
+  return <body className="irth-rs2-body-class-only">{children}</body>;
+}
+function RS2Delta_HtmlBodyDataOnly({ children }: { children: ReactNode }) {
+  return <html data-irth-rs2-html-only="1"><body data-irth-rs2-body-only="1">{children}</body></html>;
 }
 function RS3_Lang({ children }: { children: ReactNode }) {
   return <html lang="ar"><body>{children}</body></html>;
@@ -408,6 +432,12 @@ function prepareCleanRootRealChildren(root: AnyRoute, originalChildren: AnyRoute
         break;
       case "rs1": root.options.shellComponent = RS1_Fragment; break;
       case "rs2": root.options.shellComponent = RS2_HtmlBody; break;
+      case "rs2-html-only": root.options.shellComponent = RS2Delta_HtmlOnly; break;
+      case "rs2-html-lang-only": root.options.shellComponent = RS2Delta_HtmlLangOnly; break;
+      case "rs2-html-dir-only": root.options.shellComponent = RS2Delta_HtmlDirOnly; break;
+      case "rs2-body-only": root.options.shellComponent = RS2Delta_BodyOnly; break;
+      case "rs2-body-class-only": root.options.shellComponent = RS2Delta_BodyClassOnly; break;
+      case "rs2-html-body-data-only": root.options.shellComponent = RS2Delta_HtmlBodyDataOnly; break;
       case "rs3": root.options.shellComponent = RS3_Lang; break;
       case "rs4": root.options.shellComponent = RS4_Dir; break;
       case "rs5": root.options.shellComponent = RS5_LangDir; break;
