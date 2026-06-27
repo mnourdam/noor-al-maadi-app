@@ -282,6 +282,9 @@ function prepareCleanRootRealChildren(root: AnyRoute, originalChildren: AnyRoute
     selectedChildIndex: -1,
     minimalRoot: null,
   };
+}
+
+
 
 export function RouterRootObjectIsolationTest() {
   const [mounted, setMounted] = useState(false);
