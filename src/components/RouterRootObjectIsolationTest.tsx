@@ -45,7 +45,7 @@ type AnyRoute = {
   _addFileChildren?: (children: AnyRoute[] | Record<string, AnyRoute>) => AnyRoute;
 };
 
-type IsolationMode = "real-root-bare" | "min-root-real-child";
+type IsolationMode = "real-root-bare" | "min-root-real-child" | "clean-root-real-children";
 
 type IsolationSummary = {
   mode: IsolationMode;
