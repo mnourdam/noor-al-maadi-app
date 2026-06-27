@@ -20,6 +20,8 @@ import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
 import { AndroidBackHandler } from "../components/AndroidBackHandler";
 import { InAppBanner } from "../components/notifications/InAppBanner";
+import { useIsOffline } from "../components/fallbacks";
+import { WifiOff } from "lucide-react";
 
 
 
