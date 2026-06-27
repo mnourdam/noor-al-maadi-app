@@ -85,6 +85,17 @@ function getRouterPathname(router: ReturnType<typeof useRouter>): string {
   return normalizePath(pathname || "/");
 }
 
+function getWindowRoutePathname(): string {
+  const pathname = normalizePath(window.location.pathname || "/");
+  if (pathname !== "/") return pathname;
+
+  // Defensive: some Android/WebView launches can keep the real app route in
+  // the hash while pathname remains `/`. Use it only as a route source when it
+  // clearly contains an absolute app path.
+  const hashPath = window.location.hash.startsWith("#/") ? window.location.hash.slice(1) : "";
+  return hashPath ? normalizePath(hashPath) : pathname;
+}
+
 function getMatchedRouteIds(router: ReturnType<typeof useRouter>): string[] {
   const matches = (router as unknown as { state?: { matches?: Array<{ routeId?: string; id?: string }> } }).state?.matches;
   if (!Array.isArray(matches)) return [];
@@ -119,12 +130,46 @@ function resolveParent(patterns: string[], pathname: string): string | null {
   const clean = normalizePath(pathname);
   if (isRootPath(clean)) return null;
 
+  const mappedParent = resolveKnownSemanticParent(patterns, clean);
+  if (mappedParent) return mappedParent;
+
   const registeredParent = findRegisteredParent(patterns, clean);
   if (registeredParent) return registeredParent;
 
   const fallbackParent = immediateParent(clean);
   if (!fallbackParent) return "/";
   return isRegistered(patterns, fallbackParent) ? fallbackParent : "/";
+}
+
+function resolveKnownSemanticParent(patterns: string[], pathname: string): string | null {
+  const parts = normalizePath(pathname).split("/").filter(Boolean);
+  if (parts[0] === "figure" && parts.length > 1) return registeredOrRoot(patterns, "/encyclopedia/type/figure");
+  if (parts[0] === "city" && parts.length > 1) return registeredOrRoot(patterns, "/encyclopedia/type/city");
+  if (parts[0] === "battle" && parts.length > 1) return registeredOrRoot(patterns, "/encyclopedia/type/battle");
+  if (parts[0] === "investigation" && parts.length > 1) return registeredOrRoot(patterns, "/investigations");
+
+  if (parts[0] === "encyclopedia" && parts.length > 2) {
+    if (["entity", "state", "path", "type"].includes(parts[1])) return "/encyclopedia";
+    const sectionToType: Record<string, string> = {
+      figures: "figure",
+      scholars: "figure",
+      battles: "battle",
+      cities: "city",
+      states: "state",
+      events: "event",
+      artifacts: "artifact",
+      landmarks: "landmark",
+    };
+    const type = sectionToType[parts[1]];
+    if (type) return registeredOrRoot(patterns, `/encyclopedia/type/${type}`);
+  }
+
+  return null;
+}
+
+function registeredOrRoot(patterns: string[], pathname: string): string {
+  const clean = normalizePath(pathname);
+  return isRegistered(patterns, clean) ? clean : "/";
 }
 
 function closeExitDialog(setConfirmOpen: (open: boolean) => void) {
@@ -205,9 +250,10 @@ export function AndroidBackHandler() {
         const { App } = await import("@capacitor/app");
         const handle = await App.addListener("backButton", async () => {
           const actualWindowPathname = normalizePath(window.location.pathname || "/");
+          const windowRoutePathname = getWindowRoutePathname();
           const routerPathname = getRouterPathname(router);
           const matchedPathname = getDeepestMatchedPathname(router);
-          const path = pickCurrentPath(actualWindowPathname, routerPathname, matchedPathname);
+          const path = pickCurrentPath(windowRoutePathname, routerPathname, matchedPathname);
           const matchedRouteIds = getMatchedRouteIds(router);
           const patterns = getRegisteredPatterns(router);
           const parent = resolveParent(patterns, path);
@@ -257,7 +303,7 @@ export function AndroidBackHandler() {
   }, [router]);
 
   return (
-    <AlertDialog open={confirmOpen} onOpenChange={(open) => closeExitDialog(setConfirmOpen.bind(null, open))}>
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
       <AlertDialogContent dir="rtl" className="border-amber-500/30">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-amber-100">هل تريد الخروج من التطبيق؟</AlertDialogTitle>
