@@ -26,6 +26,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
+import { QueryClient } from "@tanstack/react-query";
 
 import { routeTree } from "../routeTree.gen";
 
@@ -145,6 +146,7 @@ function prepareRealRootBare(root: AnyRoute, originalChildren: AnyRoute[]) {
 
   const router = createRouter({
     routeTree,
+    context: { queryClient: new QueryClient() },
     history: createMemoryHistory({ initialEntries: [TEST_PATH] }),
     scrollRestoration: false,
     defaultPreload: false,
