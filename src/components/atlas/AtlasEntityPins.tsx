@@ -75,6 +75,14 @@ export function AtlasEntityPinsLayer({
   disableGlow?: boolean;
 }) {
   if (entities.length === 0) return null;
+  // Label clutter cap: if too many pins are eligible for labels at this
+  // tier, demote everything below region/place so the map stays readable.
+  let labelEligible = 0;
+  for (const e of entities) {
+    if (e.aps_x == null || e.aps_y == null) continue;
+    if (labelTier >= (LABEL_TIER[e.kind] ?? 99)) labelEligible++;
+  }
+  const labelCap = labelEligible > 28;
   return (
     <g className="layer-atlas-entities">
       {entities.map((e) => (
@@ -87,6 +95,7 @@ export function AtlasEntityPinsLayer({
           onSelect={onSelect}
           cullBounds={cullBounds}
           disableGlow={disableGlow}
+          labelCap={labelCap}
         />
       ))}
     </g>
