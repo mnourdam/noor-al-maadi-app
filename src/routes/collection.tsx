@@ -813,8 +813,11 @@ function RecentUnlocks() {
             const Icon = iconFor(r.type);
             const meta = RARITY_META[r.rarity];
             return (
-              <div key={r.key}
-                className={`relative flex items-center gap-3 overflow-hidden rounded-2xl border bg-gradient-to-bl from-gold/10 via-surface to-transparent p-3
+              <Link
+                key={r.key}
+                to="/encyclopedia/entity/$id"
+                params={{ id: r.slug }}
+                className={`relative flex items-center gap-3 overflow-hidden rounded-2xl border bg-gradient-to-bl from-gold/10 via-surface to-transparent p-3 transition hover:border-gold/60
                   ${r.rarity === "legendary" ? "border-gold/40 " + meta.glow :
                     r.rarity === "epic"      ? "border-fuchsia-400/30" :
                     r.rarity === "rare"      ? "border-sky-400/30" :
@@ -831,7 +834,7 @@ function RecentUnlocks() {
                   <p className="mt-0.5 truncate font-display text-[13px] font-bold">{r.title}</p>
                   <p className="truncate text-[10px] text-muted-foreground">{r.subtitle}</p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
