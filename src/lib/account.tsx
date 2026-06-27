@@ -220,7 +220,28 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     };
   }, [profile, user, androidStable]);
 
-  // ============ Realtime: reconcile admin edits to public.profiles ============
+  // ============ Re-sync when network returns ============
+  // pushSave is the only writer to cloud_saves and runs on a debounce
+  // when local state changes. If rewards were earned offline and no
+  // further mutations happen after reconnect, the queue would sit idle.
+  // On 'online', force one push so offline-earned XP/dinars/hearts/
+  // streak land server-side without waiting for the next gameplay event.
+  useEffect(() => {
+    if (!user) return;
+    const onOnline = () => {
+      if (!autoPushEnabled.current) return;
+      setSyncing(true);
+      pushSave(user.id, profileRef.current)
+        .then((ok) => { if (ok) setLastSyncAt(Date.now()); })
+        .then(() => pushPublicStats(user.id, profileRef.current))
+        .catch(() => { /* ignore */ })
+        .finally(() => setSyncing(false));
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [user]);
+
+
   // Server `profiles` row is authoritative for xp/dinars/hearts/streak. If an
   // admin adjusts a balance (or any other server-side mutation occurs), mirror
   // it into the local profile so the player sees the new value immediately —

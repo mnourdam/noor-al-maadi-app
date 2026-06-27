@@ -14,6 +14,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  cachedEncyclopediaById,
+  cachedEncyclopediaBySlug,
+  cachedEncyclopediaByType,
+} from "./offline-fallback";
 
 export type SupabaseEncyclopediaEntity = {
   id: string;
@@ -110,13 +115,14 @@ export function useEncyclopediaSupabaseEntity(
         if (error) {
           if (typeof console !== "undefined")
             console.warn("[encyclopedia-source] fetch failed", error.message);
-          return null;
+          return (await cachedEncyclopediaBySlug(slug, entityType)) as SupabaseEncyclopediaEntity | null;
         }
-        return (data as SupabaseEncyclopediaEntity | null) ?? null;
+        if (!data) return (await cachedEncyclopediaBySlug(slug, entityType)) as SupabaseEncyclopediaEntity | null;
+        return data as SupabaseEncyclopediaEntity;
       } catch (e) {
         if (typeof console !== "undefined")
           console.warn("[encyclopedia-source] fetch crashed", e);
-        return null;
+        return (await cachedEncyclopediaBySlug(slug, entityType)) as SupabaseEncyclopediaEntity | null;
       }
     },
   });
@@ -266,13 +272,13 @@ export function useEncyclopediaSupabaseEntityById(rawId: string) {
         if (error) {
           if (typeof console !== "undefined")
             console.warn("[encyclopedia-source] id fetch failed", error.message);
-          return null;
+          return await cachedEncyclopediaById(id);
         }
-        return (data as SupabaseEncyclopediaEntity | null) ?? null;
+        return (data as SupabaseEncyclopediaEntity | null) ?? (await cachedEncyclopediaById(id));
       } catch (e) {
         if (typeof console !== "undefined")
           console.warn("[encyclopedia-source] id fetch crashed", e);
-        return null;
+        return await cachedEncyclopediaById(id);
       }
     },
   });
@@ -299,13 +305,14 @@ export function useEncyclopediaSupabaseEntityBySlug(rawId: string) {
         if (error) {
           if (typeof console !== "undefined")
             console.warn("[encyclopedia-source] slug fetch failed", error.message);
-          return null;
+          return await cachedEncyclopediaBySlug(slug);
         }
-        return pickCanonicalEntity((data as SupabaseEncyclopediaEntity[]) ?? []);
+        const picked = pickCanonicalEntity((data as SupabaseEncyclopediaEntity[]) ?? []);
+        return picked ?? (await cachedEncyclopediaBySlug(slug));
       } catch (e) {
         if (typeof console !== "undefined")
           console.warn("[encyclopedia-source] slug fetch crashed", e);
-        return null;
+        return await cachedEncyclopediaBySlug(slug);
       }
     },
   });
@@ -332,13 +339,14 @@ export function useEncyclopediaSupabaseList(entityType: string) {
         if (error) {
           if (typeof console !== "undefined")
             console.warn("[encyclopedia-source] list failed", error.message);
-          return [];
+          return await cachedEncyclopediaByType(entityType);
         }
-        return (data as SupabaseEncyclopediaEntity[] | null) ?? [];
+        const rows = (data as SupabaseEncyclopediaEntity[] | null) ?? [];
+        return rows.length > 0 ? rows : await cachedEncyclopediaByType(entityType);
       } catch (e) {
         if (typeof console !== "undefined")
           console.warn("[encyclopedia-source] list crashed", e);
-        return [];
+        return await cachedEncyclopediaByType(entityType);
       }
     },
   });

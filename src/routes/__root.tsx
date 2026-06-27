@@ -20,6 +20,8 @@ import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
 import { AndroidBackHandler } from "../components/AndroidBackHandler";
 import { InAppBanner } from "../components/notifications/InAppBanner";
+import { useIsOffline } from "../components/fallbacks";
+import { WifiOff } from "lucide-react";
 
 
 
@@ -236,7 +238,12 @@ function RootComponent() {
     import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
     import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
 
-    const onOnline = () => {};
+    const onOnline = () => {
+      // Reconcile when network returns: flush queued progress/rewards and
+      // refresh the offline snapshot so cached content stays current.
+      import("../lib/campaignLedger").then((l) => l.flushPending()).catch(() => {});
+      import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
+    };
     window.addEventListener("online", onOnline);
 
     type LockableOrientation = ScreenOrientation & {
@@ -300,9 +307,24 @@ function RootComponent() {
           <SplashSequence />
           <AndroidBackHandler />
           <InAppBanner />
+          <GlobalOfflinePill />
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
+  );
+}
+
+function GlobalOfflinePill() {
+  const offline = useIsOffline();
+  if (!offline) return null;
+  return (
+    <div
+      dir="rtl"
+      className="fixed bottom-4 left-1/2 z-[60] -translate-x-1/2 rounded-full border border-amber-500/40 bg-amber-950/80 px-3 py-1.5 text-[11px] font-medium text-amber-100 shadow-lg backdrop-blur-sm flex items-center gap-1.5 pointer-events-none"
+    >
+      <WifiOff className="h-3.5 w-3.5" />
+      <span>وضع غير متصل — يتم عرض المحتوى المحفوظ</span>
+    </div>
   );
 }
 
