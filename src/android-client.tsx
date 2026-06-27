@@ -101,6 +101,16 @@ if (isDirectInputMinPath()) {
   // eslint-disable-next-line no-console
   console.info("IRTH_ROUTER_MIN_BOOT", { path: window.location.pathname });
   createRoot(rootElement).render(<RouterMinTest />);
+} else if (isRouterBisectPath()) {
+  try {
+    document.documentElement.classList.remove("irth-booting");
+    document.getElementById("irth-boot-splash")?.remove();
+  } catch { /* ignore */ }
+  // eslint-disable-next-line no-console
+  console.info("IRTH_ROUTER_BISECT_BOOT", { search: window.location.search });
+  loadBisectModules().finally(() => {
+    createRoot(rootElement).render(<RouterBisectTest />);
+  });
 } else if (shouldShowStoredFreezeTrace) {
   window.history.replaceState(null, "", "/debug/input-trace");
   try {
