@@ -1,5 +1,4 @@
 import * as React from 'react'
-
 import {
   Body,
   Button,
@@ -7,10 +6,11 @@ import {
   Head,
   Heading,
   Html,
-  Link,
+  Img,
   Preview,
   Text,
 } from '@react-email/components'
+import { BRAND, styles } from './_brand'
 
 interface SignupEmailProps {
   siteName: string
@@ -19,37 +19,38 @@ interface SignupEmailProps {
   confirmationUrl: string
 }
 
-export const SignupEmail = ({
-  siteName,
-  siteUrl,
-  recipient,
-  confirmationUrl,
-}: SignupEmailProps) => (
-  <Html lang="en" dir="ltr">
+export const SignupEmail = ({ confirmationUrl }: SignupEmailProps) => (
+  <Html lang="ar" dir="rtl">
     <Head />
-    <Preview>Confirm your email for {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
-        <Text style={text}>
-          Thanks for signing up for{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          !
+    <Preview>أكّد بريدك الإلكتروني للانضمام إلى إرث</Preview>
+    <Body style={styles.main}>
+      <Container style={styles.card}>
+        <div style={styles.header}>
+          <Img src={BRAND.logoUrl} alt="إرث" style={styles.logo} />
+          <Heading style={styles.brand}>{BRAND.brandName}</Heading>
+          <Text style={styles.tagline}>رحلة عبر التاريخ الإسلامي</Text>
+        </div>
+
+        <Heading style={styles.h1}>أهلًا بك في إرث</Heading>
+        <Text style={styles.text}>
+          شكرًا لانضمامك إلينا. لتفعيل حسابك وبدء رحلتك بين الشخصيات والدول
+          والمعارك، يرجى تأكيد بريدك الإلكتروني بالضغط على الزر أدناه.
         </Text>
-        <Text style={text}>
-          Please confirm your email address (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
-          ) by clicking the button below:
+
+        <div style={styles.buttonWrap}>
+          <Button style={styles.button} href={confirmationUrl}>
+            تأكيد البريد الإلكتروني
+          </Button>
+        </div>
+
+        <Text style={styles.fallbackLabel}>
+          أو انسخ الرابط التالي والصقه في متصفحك:
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Verify Email
-        </Button>
-        <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
+        <Text style={styles.fallbackUrl}>{confirmationUrl}</Text>
+
+        <Text style={styles.footer}>
+          إن لم تقم بإنشاء حساب في إرث، يمكنك تجاهل هذه الرسالة بأمان.
+          <br />© {new Date().getFullYear()} {BRAND.brandName} — {BRAND.brandNameLatin}
         </Text>
       </Container>
     </Body>
@@ -57,28 +58,3 @@ export const SignupEmail = ({
 )
 
 export default SignupEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
