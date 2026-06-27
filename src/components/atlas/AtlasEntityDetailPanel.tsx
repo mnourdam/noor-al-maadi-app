@@ -37,12 +37,15 @@ function useEncyclopediaEntity(id: string | null) {
 export function AtlasEntityDetailPanel({
   entity,
   onClose,
+  onCenter,
 }: {
   entity: AtlasEntityRow;
   onClose: () => void;
+  onCenter?: () => void;
 }) {
   const encId = entity.encyclopedia_entity_id ?? null;
   const { data: article, isLoading } = useEncyclopediaEntity(encId);
+  const hasCoords = entity.aps_x != null && entity.aps_y != null;
 
   // Live values from the encyclopedia (source of truth) win. The Atlas
   // row's own name/era are used only as a fallback while loading, or for
