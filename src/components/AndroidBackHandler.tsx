@@ -29,23 +29,62 @@ function normalizePath(path: string): string {
   return withLeadingSlash.replace(/\/+$/, "") || "/";
 }
 
-function parentOf(path: string): string | null {
+function immediateParent(path: string): string | null {
   const clean = normalizePath(path);
-  if (clean === "/" || clean === "/home") return null;
-
+  if (clean === "/") return null;
   const parts = clean.split("/").filter(Boolean);
   if (parts.length <= 1) return "/";
-
-  const parent = `/${parts.slice(0, -1).join("/")}`;
-  return normalizePath(parent);
+  return normalizePath(`/${parts.slice(0, -1).join("/")}`);
 }
 
-function dispatchRouterPopState() {
-  try {
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  } catch {
-    window.dispatchEvent(new Event("popstate"));
+/**
+ * Build set of registered route path patterns from the router. Patterns may
+ * include `$param` placeholders (e.g. `/encyclopedia/figures/$slug`).
+ */
+function getRegisteredPatterns(router: ReturnType<typeof useRouter>): string[] {
+  const flat = (router as unknown as { flatRoutes?: Array<{ fullPath?: string; path?: string }> }).flatRoutes;
+  if (!Array.isArray(flat)) return [];
+  const set = new Set<string>();
+  for (const r of flat) {
+    const p = r.fullPath || r.path;
+    if (typeof p === "string" && p.startsWith("/")) {
+      set.add(p.replace(/\/+$/, "") || "/");
+    }
   }
+  return Array.from(set);
+}
+
+function patternMatches(pattern: string, pathname: string): boolean {
+  const pp = pattern.split("/").filter(Boolean);
+  const ap = pathname.split("/").filter(Boolean);
+  // Allow splat
+  const lastIsSplat = pp[pp.length - 1] === "$";
+  if (!lastIsSplat && pp.length !== ap.length) return false;
+  if (lastIsSplat && ap.length < pp.length - 1) return false;
+  for (let i = 0; i < pp.length; i++) {
+    const seg = pp[i];
+    if (seg === "$") return true; // splat consumes rest
+    if (seg.startsWith("$")) continue; // dynamic
+    if (seg !== ap[i]) return false;
+  }
+  return true;
+}
+
+function isRegistered(patterns: string[], pathname: string): boolean {
+  if (pathname === "/") return true;
+  return patterns.some((p) => patternMatches(p, pathname));
+}
+
+/** Walk parents until we find one registered with the router, or reach "/". */
+function findRegisteredParent(patterns: string[], path: string): string | null {
+  let current = immediateParent(path);
+  let guard = 0;
+  while (current && guard++ < 20) {
+    if (isRegistered(patterns, current)) return current;
+    if (current === "/") return "/";
+    current = immediateParent(current);
+  }
+  return null;
 }
 
 export function AndroidBackHandler() {
@@ -63,38 +102,26 @@ export function AndroidBackHandler() {
         const { App } = await import("@capacitor/app");
         const handle = await App.addListener("backButton", async () => {
           const path = normalizePath(window.location.pathname || "/");
-          const parent = parentOf(path);
-          console.log("[android:back] pathname=", path, "parentPath=", parent);
-          if (!parent) {
-            console.log("[android:back] method=confirm-exit (no parent)");
+          const patterns = getRegisteredPatterns(router);
+          const parent = findRegisteredParent(patterns, path);
+          console.log("[android:back] pathname=", path, "parentPath=", parent, "patternsCount=", patterns.length);
+
+          if (path === "/" || parent === null) {
+            console.log("[android:back] method=confirm-exit");
             setConfirmOpen(true);
             return;
           }
-
           if (parent === path) {
-            console.warn("[android:back] method=skip (parent === pathname)", { path });
+            console.warn("[android:back] method=skip (parent === pathname)");
             return;
           }
 
-          // Use router.history.push — works with raw URLs, unlike
-          // router.navigate({to}) which expects route templates ($params).
+          console.log("[android:back] method=router.navigate ->", parent);
           try {
-            console.log("[android:back] method=router.history.push ->", parent);
-            router.history.push(parent);
-            setTimeout(() => {
-              const after = normalizePath(window.location.pathname || "/");
-              if (after === path) {
-                console.warn("[android:back] method=popstate-fallback (history.push no-op) ->", parent);
-                window.history.pushState(null, "", parent);
-                dispatchRouterPopState();
-              } else {
-                console.log("[android:back] navigated. now=", after);
-              }
-            }, 50);
+            await router.navigate({ to: parent as never, replace: false });
           } catch (e) {
-            console.warn("[android:back] method=popstate-fallback (history.push threw)", e);
-            window.history.pushState(null, "", parent);
-            dispatchRouterPopState();
+            console.warn("[android:back] navigate threw, fallback history.push", e);
+            router.history.push(parent);
           }
         });
         listenerHandle = handle;
