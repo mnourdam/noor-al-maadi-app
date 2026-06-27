@@ -244,6 +244,56 @@ function ProfilePage() {
                 )}
                 {nameMsg && <p className={`mt-1 text-[10px] ${nameMsg.ok ? "text-emerald-300" : "text-rose-300"}`}>{nameMsg.text}</p>}
 
+                {/* Username editor */}
+                {user && (
+                  <div className="mt-1.5">
+                    {!editingUsername ? (
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span className="truncate">@{currentUsername || "—"}</span>
+                        <button
+                          onClick={() => { setUsernameDraft(currentUsername); setEditingUsername(true); setUsernameMsg(null); }}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-gold/30 px-2 py-0.5 text-[10px] text-gold hover:bg-gold/10"
+                          aria-label="تعديل اسم المستخدم"
+                        ><Pencil className="size-3" /> اسم المستخدم</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-muted-foreground">@</span>
+                          <AndroidTextEntryInput
+                            value={usernameDraft}
+                            onValueChange={(next) => setUsernameDraft(next.slice(0, 24))}
+                            autoComplete="username"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            maxLength={24}
+                            placeholder="username"
+                            modalTitle="تعديل اسم المستخدم"
+                            modalLabel="يستخدم في البحث وعنوان الملف الشخصي"
+                            androidEntryKey="profile.username"
+                            className="min-w-0 flex-1 rounded-lg border border-gold/30 bg-background px-2 py-1 text-sm outline-none focus:border-gold"
+                          />
+                          <button
+                            onClick={saveUsername}
+                            disabled={usernameBusy || usernameAvail === "taken" || usernameAvail === "invalid" || usernameAvail === "checking" || !usernameDraft.trim() || usernameDraft.trim() === currentUsername}
+                            className="rounded-full bg-gradient-gold px-3 py-1 text-[10px] font-bold text-primary-foreground disabled:opacity-50"
+                          >{usernameBusy ? "..." : "حفظ"}</button>
+                          <button onClick={() => { setEditingUsername(false); setUsernameMsg(null); }} className="rounded-full border border-white/15 px-3 py-1 text-[10px] text-muted-foreground hover:bg-white/5">إلغاء</button>
+                        </div>
+                        <p className="mt-1 text-[10px]">
+                          {usernameAvail === "checking" && <span className="text-muted-foreground">جاري التحقق…</span>}
+                          {usernameAvail === "free"     && <span className="inline-flex items-center gap-1 text-emerald-300"><Check className="size-3" /> متاح</span>}
+                          {usernameAvail === "taken"    && <span className="text-rose-300">مستخدم بالفعل</span>}
+                          {usernameAvail === "invalid"  && <span className="text-rose-300">حروف غير مسموح بها أو طول غير صالح (٣–٢٤)</span>}
+                          {!usernameAvail               && <span className="text-muted-foreground">٣–٢٤ حرفاً. حروف، أرقام و . _ -</span>}
+                        </p>
+                      </div>
+                    )}
+                    {usernameMsg && <p className={`mt-1 text-[10px] ${usernameMsg.ok ? "text-emerald-300" : "text-rose-300"}`}>{usernameMsg.text}</p>}
+                  </div>
+                )}
+
+
                 <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
                   <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-gold">
                     <Crown className="size-3" /> {lvl.title}
