@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { AndroidAuthMinTest, isAndroidAuthMinPath } from "./components/AndroidAuthMinTest";
 import { AndroidCampaignInputMinTest, isAndroidCampaignInputMinPath } from "./components/AndroidCampaignInputMinTest";
 import { DirectInputMin, isDirectInputMinPath } from "./components/DirectInputMin";
+import { RouterMinTest, isRouterMinPath } from "./components/RouterMinTest";
 import { InputTraceDebugView } from "./components/InputTraceDebugView";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
