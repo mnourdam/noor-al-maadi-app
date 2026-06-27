@@ -47,13 +47,23 @@ export function AndroidBackHandler() {
         const handle = await App.addListener("backButton", () => {
           const path = window.location.pathname || "/";
           const parent = parentOf(path);
+          console.log("[android:back] path=", path, "parent=", parent);
           if (!parent) {
+            console.log("[android:back] action=confirm-exit");
             setConfirmOpen(true);
             return;
           }
-          try { router.navigate({ to: parent }); } catch { window.location.assign(parent); }
+          console.log("[android:back] action=navigate->", parent);
+          try {
+            router.navigate({ to: parent });
+          } catch (e) {
+            console.warn("[android:back] router.navigate failed, falling back", e);
+            window.history.pushState({}, "", parent);
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }
         });
         listenerHandle = handle;
+        console.log("[android:back] listener registered");
       } catch (err) {
         console.error("[android:back] failed to register", err);
       }
