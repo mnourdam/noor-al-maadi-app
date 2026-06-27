@@ -104,7 +104,7 @@ export function AtlasEntityPinsLayer({
 
 
 const AtlasPin = memo(function AtlasPin({
-  entity, inv, labelTier, active, onSelect, cullBounds, disableGlow,
+  entity, inv, labelTier, active, onSelect, cullBounds, disableGlow, labelCap,
 }: {
   entity: AtlasEntityRow;
   inv: number;
@@ -113,6 +113,7 @@ const AtlasPin = memo(function AtlasPin({
   onSelect: (entity: AtlasEntityRow) => void;
   cullBounds?: { minX: number; maxX: number; minY: number; maxY: number } | null;
   disableGlow?: boolean;
+  labelCap?: boolean;
 }) {
   if (entity.aps_x == null || entity.aps_y == null) return null;
   const { x, y } = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
