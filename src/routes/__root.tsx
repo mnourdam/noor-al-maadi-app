@@ -276,6 +276,7 @@ function RootComponent() {
           <Toaster position="top-center" richColors closeButton />
           <SplashSequence />
           <AndroidBackHandler />
+          <InAppBanner />
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
