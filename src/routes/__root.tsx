@@ -25,19 +25,19 @@ import { InAppBanner } from "../components/notifications/InAppBanner";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div dir="rtl" className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <h1 className="text-7xl font-bold text-foreground">٤٠٤</h1>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">الصفحة غير موجودة</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          هذه الصفحة غير متاحة أو ربما تم نقلها.
         </p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            العودة للرئيسية
           </Link>
         </div>
       </div>
@@ -46,8 +46,7 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  // Surface the real error for native logs (Logcat on Android via Capacitor's
-  // Console plugin) so blank-screen / error-boundary cases are diagnosable.
+  // Log technical detail for native/Logcat / dev tools only — never shown to player.
   // eslint-disable-next-line no-console
   console.error("[root errorComponent]", error?.message, error?.stack ?? error);
   const router = useRouter();
@@ -64,7 +63,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const goHome = () => {
     try {
       if (isCapacitor) {
-        // Hard reload to the app entry — router state may itself be broken.
         window.location.replace("./index.html");
         return;
       }
@@ -82,7 +80,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
       window.location.reload();
       return;
     }
-    // Belt-and-braces: if the same error re-throws, force a full reload.
     setTimeout(() => {
       try {
         if (document.querySelector("[data-irth-error-boundary]")) {
@@ -94,35 +91,31 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
   return (
     <div
+      dir="rtl"
       data-irth-error-boundary
       className="flex min-h-screen items-center justify-center bg-background px-4"
     >
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          تعذر تحميل هذه الصفحة
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          حدث خطأ غير متوقع. يمكنك إعادة المحاولة أو العودة إلى الرئيسية.
         </p>
-        {error?.message ? (
-          <p className="mt-3 break-words text-[11px] leading-relaxed text-muted-foreground/70">
-            {error.message}
-          </p>
-        ) : null}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             type="button"
             onClick={tryAgain}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            إعادة المحاولة
           </button>
           <button
             type="button"
             onClick={goHome}
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            العودة للرئيسية
           </button>
         </div>
       </div>
@@ -212,6 +205,33 @@ function RootComponent() {
     // Apply Android/WebView/reduced-motion perf-mode class on <html>.
     import("../lib/perf-mode").then((m) => m.applyPerfMode()).catch(() => {});
 
+    // Global resilience: never let unhandled promise rejections or window
+    // errors bubble up to a raw screen. Log technical detail; swallow UI.
+    const onRejection = (ev: PromiseRejectionEvent) => {
+      try {
+        // eslint-disable-next-line no-console
+        console.error("[unhandledrejection]", ev.reason);
+        reportLovableError(
+          ev.reason instanceof Error ? ev.reason : new Error(String(ev.reason ?? "unknown")),
+          { boundary: "window_unhandledrejection" }
+        );
+      } catch { /* noop */ }
+      // Prevent default Capacitor/WebView surfacing.
+      ev.preventDefault?.();
+    };
+    const onWindowError = (ev: ErrorEvent) => {
+      try {
+        // eslint-disable-next-line no-console
+        console.error("[window.onerror]", ev.message, ev.error);
+        if (ev.error instanceof Error) {
+          reportLovableError(ev.error, { boundary: "window_onerror" });
+        }
+      } catch { /* noop */ }
+    };
+    window.addEventListener("unhandledrejection", onRejection);
+    window.addEventListener("error", onWindowError);
+
+
     import("../lib/orphanUnlocksMigration").then((m) => m.migrateOrphanUnlocks()).catch(() => {});
     import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
     import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
@@ -261,9 +281,12 @@ function RootComponent() {
     return () => {
       unsub?.();
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("unhandledrejection", onRejection);
+      window.removeEventListener("error", onWindowError);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
+
 
   return (
     <QueryClientProvider client={queryClient}>
