@@ -69,7 +69,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         setAccount(null);
         setLastSyncAt(null);
         // Clear cached profile (XP, dinars, hearts, name) so UI returns to guest state.
-        try { resetProfile(); } catch { /* ignore */ }
+        try { resetProfileRef.current?.(); } catch { /* ignore */ }
         try {
           if (typeof localStorage !== "undefined") {
             // Strip any user-scoped keys that survive the profile reset.
