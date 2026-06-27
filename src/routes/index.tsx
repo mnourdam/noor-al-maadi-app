@@ -789,6 +789,44 @@ function HomeFull() {
         </a>
       )}
 
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <>
+          {([
+            ["headContent", "CLEAN ROOT + HEADCONTENT"],
+            ["scripts", "CLEAN ROOT + SCRIPTS"],
+            ["head", "CLEAN ROOT + ORIGINAL HEAD()"],
+            ["rootShell", "CLEAN ROOT + ROOTSHELL"],
+            ["boundaries", "CLEAN ROOT + BOUNDARIES"],
+            ["fonts", "CLEAN ROOT + GOOGLE FONTS"],
+          ] as const).map(([piece, label]) => {
+            const href = `/index.html?__irth_router_root_iso=1&mode=clean-root-real-children&piece=${piece}`;
+            return (
+              <a
+                key={piece}
+                href={href}
+                onClick={(e) => { e.preventDefault(); window.location.href = href; }}
+                style={{
+                  display: "block",
+                  margin: "8px 12px",
+                  padding: "14px",
+                  background: "#0f172a",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  fontSize: "14px",
+                  textAlign: "center",
+                  border: "2px solid #14b8a6",
+                  borderRadius: "10px",
+                  letterSpacing: "0.08em",
+                  textDecoration: "none",
+                }}
+              >
+                {label}
+              </a>
+            );
+          })}
+        </>
+      )}
+
 
 
 
