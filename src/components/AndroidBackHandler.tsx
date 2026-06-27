@@ -12,14 +12,25 @@ import {
 } from "@/components/ui/alert-dialog";
 
 /**
- * Android hardware/system back button handler.
+ * Android hardware back behavior:
+ *   /encyclopedia/figures/123  → /encyclopedia/figures
+ *   /encyclopedia/figures      → /encyclopedia
+ *   /encyclopedia              → /
+ *   /                          → Irth exit confirmation
  *
- * - If there is in-app history (router or native), go back one step.
- * - Else if not on "/", navigate to "/".
- * - Else show an Irth-styled exit confirmation dialog (نعم / لا).
- *
- * No-op on web.
+ * We always compute a parent path from the current URL rather than relying on
+ * `canGoBack` / router history, which is unreliable on Capacitor WebView when
+ * the user lands on a deep route via a notification, deep link, or reload.
  */
+
+function parentOf(path: string): string | null {
+  const clean = path.replace(/\/+$/, "") || "/";
+  if (clean === "/" || clean === "") return null;
+  const idx = clean.lastIndexOf("/");
+  if (idx <= 0) return "/";
+  return clean.slice(0, idx) || "/";
+}
+
 export function AndroidBackHandler() {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -33,19 +44,14 @@ export function AndroidBackHandler() {
     (async () => {
       try {
         const { App } = await import("@capacitor/app");
-        const handle = await App.addListener("backButton", ({ canGoBack }: { canGoBack: boolean }) => {
-          const path = window.location.pathname;
-
-          // Prefer real router history; fall back to native canGoBack.
-          if (canGoBack || window.history.length > 1) {
-            try { router.history.back(); } catch { window.history.back(); }
+        const handle = await App.addListener("backButton", () => {
+          const path = window.location.pathname || "/";
+          const parent = parentOf(path);
+          if (!parent) {
+            setConfirmOpen(true);
             return;
           }
-          if (path !== "/" && path !== "/index.html") {
-            void router.navigate({ to: "/" });
-            return;
-          }
-          setConfirmOpen(true);
+          try { router.navigate({ to: parent }); } catch { window.location.assign(parent); }
         });
         listenerHandle = handle;
       } catch (err) {

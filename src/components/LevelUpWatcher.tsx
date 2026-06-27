@@ -6,11 +6,15 @@ import { LEVELS, levelFor, type LevelInfo } from "@/lib/progression";
 const SEEN_KEY = "irth.levelup.seen";
 
 /**
- * Watches profile.points and shows a premium celebration whenever the
- * derived level increases. State is hydration-safe: the first observed
- * level after mount is treated as the baseline (no celebration on app
- * open), and the highest celebrated level is persisted so the modal
- * never replays for the same level after a reload.
+ * Shows a premium celebration ONLY for genuine, incremental level-ups.
+ *
+ * Rules:
+ *  - On first mount, baseline = max(currentLevel, persistedSeen). No toast.
+ *  - On any level change of more than +1 (cloud sync / login restore / admin
+ *    grant), silently re-baseline. No toast spam.
+ *  - On exactly +1 increase, queue one celebration.
+ *  - Persisted seen level always tracks max(seen, currentLevel) so the dialog
+ *    can never replay past levels after a reload or re-login.
  */
 export function LevelUpWatcher() {
   const { profile } = useProfile();
@@ -20,19 +24,30 @@ export function LevelUpWatcher() {
 
   useEffect(() => {
     const lvl = levelFor(profile.points).level;
+    let seen = 0;
+    try { seen = parseInt(localStorage.getItem(SEEN_KEY) ?? "0", 10) || 0; } catch { /* */ }
+
     if (baseline.current === null) {
-      let seen = 0;
-      try { seen = parseInt(localStorage.getItem(SEEN_KEY) ?? "0", 10) || 0; } catch { /* */ }
       baseline.current = Math.max(lvl, seen);
       try { localStorage.setItem(SEEN_KEY, String(baseline.current)); } catch { /* */ }
       return;
     }
-    if (lvl > baseline.current) {
-      const newOnes = LEVELS.filter((l) => l.level > baseline.current! && l.level <= lvl);
-      baseline.current = lvl;
-      try { localStorage.setItem(SEEN_KEY, String(lvl)); } catch { /* */ }
-      if (newOnes.length) setPending((q) => [...q, ...newOnes]);
+
+    if (lvl <= baseline.current) return;
+
+    // Multi-level jumps come from cloud sync / login restore / admin grant —
+    // never from a single in-app action. Re-baseline silently.
+    if (lvl - baseline.current > 1 || lvl <= seen) {
+      baseline.current = Math.max(lvl, seen);
+      try { localStorage.setItem(SEEN_KEY, String(baseline.current)); } catch { /* */ }
+      return;
     }
+
+    // Genuine single-step level-up.
+    const next = LEVELS.find((l) => l.level === lvl);
+    baseline.current = lvl;
+    try { localStorage.setItem(SEEN_KEY, String(lvl)); } catch { /* */ }
+    if (next) setPending((q) => [...q, next]);
   }, [profile.points]);
 
   useEffect(() => {
