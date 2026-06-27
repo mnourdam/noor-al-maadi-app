@@ -334,8 +334,11 @@ export function CrosswordRenderer({
       <div className="relative mb-4 overflow-x-auto rounded-xl irth-parchment p-3">
         <div className="absolute inset-0 pointer-events-none rounded-xl border border-amber-700/20" />
         <div
-          className="relative inline-grid gap-[2px]"
-          style={{ gridTemplateColumns: `repeat(${stage.cols}, minmax(0, 1fr))` }}
+          className="relative inline-grid gap-[3px]"
+          style={{
+            gridTemplateColumns: `repeat(${stage.cols}, 36px)`,
+            gridAutoRows: "36px",
+          }}
         >
           {Array.from({ length: stage.rows * stage.cols }).map((_, idx) => {
             const r = Math.floor(idx / stage.cols);
