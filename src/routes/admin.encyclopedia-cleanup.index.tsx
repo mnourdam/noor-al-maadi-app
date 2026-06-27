@@ -889,3 +889,54 @@ function MergeDialog({ source, rows, onClose, onConfirm }: {
     </div>
   );
 }
+
+// ------------------------------------------------------------
+// Missing-content dashboard strip
+// ------------------------------------------------------------
+function MissingContentStrip({ rows, atlasLinks, campaignSlugs, dupIds, onFilter }: {
+  rows: EntityRow[];
+  atlasLinks: Map<string, number>;
+  campaignSlugs: Map<string, number>;
+  dupIds: Set<string>;
+  onFilter: (k: FilterKey) => void;
+}) {
+  const stats = useMemo(() => {
+    let empty = 0, weak = 0, noImage = 0, noSources = 0, noOverview = 0, noAtlas = 0, noCamp = 0;
+    for (const r of rows) {
+      const isOrphan = !(atlasLinks.get(r.id) || campaignSlugs.get(r.id));
+      const q = classifyQuality(r, dupIds.has(r.id), isOrphan);
+      if (q === "empty") empty++;
+      if (q === "weak") weak++;
+      if (!hasImage(r.metadata)) noImage++;
+      if (!hasSources(r.metadata, r.body)) noSources++;
+      if ((r.summary ?? "").trim().length < 20) noOverview++;
+      if (!(atlasLinks.get(r.id) ?? 0)) noAtlas++;
+      if (!(campaignSlugs.get(r.id) ?? 0)) noCamp++;
+    }
+    return { empty, weak, noImage, noSources, noOverview, noAtlas, noCamp };
+  }, [rows, atlasLinks, campaignSlugs, dupIds]);
+
+  const cards: { label: string; value: number; filter: FilterKey; tone: string }[] = [
+    { label: "كيانات فارغة",        value: stats.empty,      filter: "empty",       tone: "border-rose-500/40 bg-rose-500/5 text-rose-200" },
+    { label: "كيانات ضعيفة",        value: stats.weak,       filter: "weak",        tone: "border-amber-500/40 bg-amber-500/5 text-amber-200" },
+    { label: "بدون صورة",           value: stats.noImage,    filter: "no-image",    tone: "border-fuchsia-500/40 bg-fuchsia-500/5 text-fuchsia-200" },
+    { label: "بدون مصادر",          value: stats.noSources,  filter: "no-sources",  tone: "border-sky-500/40 bg-sky-500/5 text-sky-200" },
+    { label: "بدون ملخص",           value: stats.noOverview, filter: "no-overview", tone: "border-amber-500/40 bg-amber-500/5 text-amber-200" },
+    { label: "بدون رابط أطلس",      value: stats.noAtlas,    filter: "no-atlas",    tone: "border-emerald-500/40 bg-emerald-500/5 text-emerald-200" },
+    { label: "بدون مرجع في الحملات", value: stats.noCamp,     filter: "no-campaign", tone: "border-slate-600/60 bg-slate-900/40 text-slate-200" },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
+      {cards.map((c) => (
+        <button key={c.label} onClick={() => onFilter(c.filter)}
+          className={`rounded-xl border px-3 py-2 text-start transition hover:brightness-110 ${c.tone}`}>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[11px] opacity-80">{c.label}</span>
+            <span className="text-lg font-bold tabular-nums">{c.value}</span>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
