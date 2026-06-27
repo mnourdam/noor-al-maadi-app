@@ -197,10 +197,32 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setProfile({ ...initial, ...JSON.parse(raw), settings: { ...initial.settings, ...(JSON.parse(raw).settings ?? {}) } });
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        let merged: ProfileState = {
+          ...initial,
+          ...parsed,
+          settings: { ...initial.settings, ...(parsed.settings ?? {}) },
+        };
+        // Passive streak expiry: if the player missed an entire calendar day
+        // since their last active day, the streak must reset to 0 — even if
+        // they don't open a screen that calls touchStreak immediately. This
+        // keeps the HUD honest the moment the app boots.
+        const last = merged.lastActiveDay;
+        if (last && typeof last === "string") {
+          const today = todayKey();
+          const y = new Date(); y.setDate(y.getDate() - 1);
+          const yesterday = todayKey(y);
+          if (last !== today && last !== yesterday && merged.streak > 0) {
+            merged = { ...merged, streak: 0 };
+          }
+        }
+        setProfile(merged);
+      }
     } catch {}
     setHydrated(true);
   }, []);
+
 
   useEffect(() => {
     if (!hydrated) return;
@@ -479,10 +501,35 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         next = { ...next, dinars: Math.max(0, stats.dinars) };
         changed = true;
       }
-      if (typeof stats.streak === "number" && stats.streak !== p.streak) {
-        next = { ...next, streak: Math.max(0, stats.streak) };
-        changed = true;
+      if (typeof stats.streak === "number") {
+        // Streak source-of-truth rule: the *day boundary* is anchored locally
+        // by `lastActiveDay`, but the *count* lives on the server too. If we
+        // already incremented today (lastActiveDay === today), never accept a
+        // server value lower than local — that would be the server's stale
+        // pre-increment row echoed back via Realtime. We still accept upward
+        // corrections (e.g. admin grants). If the day boundary is older, the
+        // server number is authoritative.
+        const target = Math.max(0, Math.floor(stats.streak));
+        const activeToday = p.lastActiveDay === todayKey();
+        const nextStreak = activeToday ? Math.max(p.streak, target) : target;
+        if (nextStreak !== p.streak) {
+          next = { ...next, streak: nextStreak };
+          changed = true;
+        }
+        // If the server reports a positive streak but the local day anchor
+        // is missing (fresh install / cleared storage), seed lastActiveDay
+        // to yesterday so the next touchStreak today extends the chain
+        // (+1) instead of resetting it to 1.
+        if (!activeToday && nextStreak > 0 && !p.lastActiveDay) {
+          const y = new Date(); y.setDate(y.getDate() - 1);
+          next = { ...next, lastActiveDay: todayKey(y) };
+          changed = true;
+        }
       }
+
+
+
+
       if (typeof stats.hearts === "number") {
         const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
         const eff = getEffectiveHearts(p, now);
