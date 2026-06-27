@@ -247,7 +247,8 @@ type CleanPiece =
   | "head"
   | "rootShell"
   | "boundaries"
-  | "fonts";
+  | "fonts"
+  | "rs1" | "rs2" | "rs3" | "rs4" | "rs5" | "rs6" | "rs7" | "rs8";
 
 function OriginalRootShell({ children }: { children: ReactNode }) {
   // Mirrors the real __root.tsx RootShell exactly.
@@ -262,6 +263,37 @@ function OriginalRootShell({ children }: { children: ReactNode }) {
       </body>
     </html>
   );
+}
+
+// ---- RootShell internal bisect pieces ----
+function RS1_Fragment({ children }: { children: ReactNode }) {
+  return <>{children}</>;
+}
+function RS2_HtmlBody({ children }: { children: ReactNode }) {
+  return <html><body>{children}</body></html>;
+}
+function RS3_Lang({ children }: { children: ReactNode }) {
+  return <html lang="ar"><body>{children}</body></html>;
+}
+function RS4_Dir({ children }: { children: ReactNode }) {
+  return <html dir="rtl"><body>{children}</body></html>;
+}
+function RS5_LangDir({ children }: { children: ReactNode }) {
+  return <html lang="ar" dir="rtl"><body>{children}</body></html>;
+}
+function RS6_EmptyHead({ children }: { children: ReactNode }) {
+  return <html lang="ar" dir="rtl"><head /><body>{children}</body></html>;
+}
+function RS7_HeadContent({ children }: { children: ReactNode }) {
+  return (
+    <html lang="ar" dir="rtl">
+      <head><HeadContent /></head>
+      <body>{children}</body>
+    </html>
+  );
+}
+function RS8_Full({ children }: { children: ReactNode }) {
+  return <OriginalRootShell>{children}</OriginalRootShell>;
 }
 
 function HeadContentShell({ children }: { children: ReactNode }) {
