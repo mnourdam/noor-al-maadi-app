@@ -291,7 +291,11 @@ export function RouterRootObjectIsolationTest() {
 
   const { router, summary } = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    const mode = (params.get("mode") === "min-root-real-child" ? "min-root-real-child" : "real-root-bare") satisfies IsolationMode;
+    const rawMode = params.get("mode");
+    const mode: IsolationMode =
+      rawMode === "min-root-real-child" ? "min-root-real-child"
+      : rawMode === "clean-root-real-children" ? "clean-root-real-children"
+      : "real-root-bare";
     const generatedRoot = routeTree as unknown as AnyRoute;
     const originalChildren = Array.isArray(generatedRoot.children) ? [...generatedRoot.children] : [];
 
@@ -299,7 +303,9 @@ export function RouterRootObjectIsolationTest() {
 
     const prepared = mode === "min-root-real-child"
       ? prepareMinRootRealChild(originalChildren, params)
-      : prepareRealRootBare(generatedRoot, originalChildren);
+      : mode === "clean-root-real-children"
+        ? prepareCleanRootRealChildren(generatedRoot, originalChildren)
+        : prepareRealRootBare(generatedRoot, originalChildren);
 
     const registeredRouteCount = Object.keys((prepared.router as unknown as { routesById?: Record<string, unknown> }).routesById ?? {}).length;
     const summary: IsolationSummary = {
