@@ -647,6 +647,10 @@ function ResultRow({ row, quality, atlas, camps, active, onOpen }: {
   const meta = QUALITY_META[quality];
   const bodyLen = (row.summary ?? "").length + bodyText(row.body).length;
   const archived = row.metadata?.archived === true || row.enabled === false;
+  const score = scoreEntity({
+    summary: row.summary, body: row.body, metadata: row.metadata,
+    atlasLinks: atlas, campaignRefs: camps,
+  });
   return (
     <button onClick={onOpen}
       className={`w-full rounded-lg border px-3 py-2 text-start transition ${
@@ -659,7 +663,10 @@ function ResultRow({ row, quality, atlas, camps, active, onOpen }: {
             {TYPE_LABEL[row.entity_type] ?? row.entity_type} · {row.slug}
           </p>
         </div>
-        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${meta.tone}`}>{meta.label}</span>
+        <div className="flex shrink-0 items-center gap-1">
+          <span className={`rounded-full border px-2 py-0.5 text-[10px] tabular-nums ${scoreColor(score)}`}>{score}%</span>
+          <span className={`rounded-full border px-2 py-0.5 text-[10px] ${meta.tone}`}>{meta.label}</span>
+        </div>
       </div>
       <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] text-slate-400">
         <Chip>{bodyLen} حرف</Chip>
