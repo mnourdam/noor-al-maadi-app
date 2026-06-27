@@ -101,9 +101,11 @@ const AtlasPin = memo(function AtlasPin({
   if (x < 0 || x > VB_W || y < 0 || y > VB_H) return null;
   const showPin = shouldShowPin(entity.kind, labelTier, active);
   if (!showPin) return null;
-  const r = (active ? 0.78 : 0.58) * inv * S;
+  // Glyph half-extent (in user units). Selected markers scale up subtly.
+  const size = (active ? 1.55 : 1.2) * inv * S;
   const color = KIND_COLOR[entity.kind] ?? "oklch(0.55 0.18 25)";
   const showLabel = shouldShowLabel(entity.kind, labelTier, active);
+  const glowR = size * 2.2;
   return (
     <g
       transform={`translate(${x} ${y})`}
@@ -113,24 +115,35 @@ const AtlasPin = memo(function AtlasPin({
         e.stopPropagation();
         onSelect(entity);
       }}
+      style={{
+        transition: "transform 180ms cubic-bezier(0.22, 1, 0.36, 1)",
+      }}
     >
-      <circle r={r + 0.22 * inv * S} fill="oklch(0.13 0.05 255)" opacity={0.55} />
+      {/* Soft golden glow — only on selection. No SVG filters (Android perf). */}
+      {active && (
+        <>
+          <circle r={glowR} fill="oklch(0.86 0.18 82)" opacity={0.18} />
+          <circle r={glowR * 0.65} fill="oklch(0.92 0.16 82)" opacity={0.25} />
+        </>
+      )}
+      {/* Parchment backing disc keeps icons legible on any terrain. */}
       <circle
-        r={r}
-        fill={active ? "oklch(0.82 0.18 75)" : color}
-        stroke="oklch(0.97 0.06 82)"
-        strokeWidth={(active ? 0.22 : 0.14) * inv * S}
+        r={size * 1.15}
+        fill="oklch(0.96 0.05 82)"
+        stroke={active ? "oklch(0.78 0.18 82)" : "oklch(0.18 0.04 60)"}
+        strokeWidth={(active ? 0.28 : 0.18) * inv * S}
+        opacity={0.96}
       />
-      <circle r={r * 0.35} fill="oklch(0.97 0.06 82)" />
+      <AtlasKindGlyph kind={entity.kind} size={size * 0.78} fill={color} />
       {showLabel && (
         <text
-          y={-r - 0.5 * inv * S}
+          y={-size * 1.45}
           textAnchor="middle"
           fontSize={1.4 * inv * S}
           fontWeight={800}
           fill="oklch(0.97 0.08 82)"
           stroke="oklch(0.13 0.05 255)"
-          strokeWidth={0.18 * inv * S}
+          strokeWidth={0.22 * inv * S}
           paintOrder="stroke"
           style={{ fontFamily: "var(--font-display)" }}
         >
