@@ -197,10 +197,32 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setProfile({ ...initial, ...JSON.parse(raw), settings: { ...initial.settings, ...(JSON.parse(raw).settings ?? {}) } });
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        let merged: ProfileState = {
+          ...initial,
+          ...parsed,
+          settings: { ...initial.settings, ...(parsed.settings ?? {}) },
+        };
+        // Passive streak expiry: if the player missed an entire calendar day
+        // since their last active day, the streak must reset to 0 — even if
+        // they don't open a screen that calls touchStreak immediately. This
+        // keeps the HUD honest the moment the app boots.
+        const last = merged.lastActiveDay;
+        if (last && typeof last === "string") {
+          const today = todayKey();
+          const y = new Date(); y.setDate(y.getDate() - 1);
+          const yesterday = todayKey(y);
+          if (last !== today && last !== yesterday && merged.streak > 0) {
+            merged = { ...merged, streak: 0 };
+          }
+        }
+        setProfile(merged);
+      }
     } catch {}
     setHydrated(true);
   }, []);
+
 
   useEffect(() => {
     if (!hydrated) return;
