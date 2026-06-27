@@ -115,13 +115,14 @@ export function useEncyclopediaSupabaseEntity(
         if (error) {
           if (typeof console !== "undefined")
             console.warn("[encyclopedia-source] fetch failed", error.message);
-          return null;
+          return (await cachedEncyclopediaBySlug(slug, entityType)) as SupabaseEncyclopediaEntity | null;
         }
-        return (data as SupabaseEncyclopediaEntity | null) ?? null;
+        if (!data) return (await cachedEncyclopediaBySlug(slug, entityType)) as SupabaseEncyclopediaEntity | null;
+        return data as SupabaseEncyclopediaEntity;
       } catch (e) {
         if (typeof console !== "undefined")
           console.warn("[encyclopedia-source] fetch crashed", e);
-        return null;
+        return (await cachedEncyclopediaBySlug(slug, entityType)) as SupabaseEncyclopediaEntity | null;
       }
     },
   });
