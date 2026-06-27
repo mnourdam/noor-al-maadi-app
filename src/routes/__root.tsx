@@ -189,7 +189,23 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function shouldBypassRootForReactBareInputTest() {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+
+  const isReactBareInputRoute = window.location.pathname === "/debug/react-bare-input-min";
+  const isAndroidRuntime =
+    /android/i.test(navigator.userAgent) ||
+    Boolean((window as unknown as { Capacitor?: unknown }).Capacitor) ||
+    window.location.protocol === "capacitor:";
+
+  return isReactBareInputRoute && isAndroidRuntime;
+}
+
 function RootComponent() {
+  if (shouldBypassRootForReactBareInputTest()) {
+    return <Outlet />;
+  }
+
   const { queryClient } = Route.useRouteContext();
   const androidStable = isAndroidUltraStableMode();
   const capacitorMinimalDiagnostics =
