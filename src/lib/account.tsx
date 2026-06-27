@@ -48,6 +48,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const profileRef = useRef(profile);
   profileRef.current = profile;
+  const resetProfileRef = useRef(resetProfile);
+  resetProfileRef.current = resetProfile;
 
   // ============ Initial session + auth state listener ============
   useEffect(() => {
