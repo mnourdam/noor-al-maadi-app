@@ -67,6 +67,7 @@ import { Route as AdminHistoricalHubsAuditRouteImport } from './routes/admin.his
 import { Route as AdminGamesRouteImport } from './routes/admin.games'
 import { Route as AdminExplorationPathRepairRouteImport } from './routes/admin.exploration-path-repair'
 import { Route as AdminEraNormalizationRouteImport } from './routes/admin.era-normalization'
+import { Route as AdminEncyclopediaCleanupRouteImport } from './routes/admin.encyclopedia-cleanup'
 import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
 import { Route as AdminCrossHubLinksRouteImport } from './routes/admin.cross-hub-links'
@@ -396,6 +397,12 @@ const AdminEraNormalizationRoute = AdminEraNormalizationRouteImport.update({
   path: '/admin/era-normalization',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEncyclopediaCleanupRoute =
+  AdminEncyclopediaCleanupRouteImport.update({
+    id: '/admin/encyclopedia-cleanup',
+    path: '/admin/encyclopedia-cleanup',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminEncyclopediaAuditRoute = AdminEncyclopediaAuditRouteImport.update({
   id: '/admin/encyclopedia-audit',
   path: '/admin/encyclopedia-audit',
@@ -626,6 +633,7 @@ export interface FileRoutesByFullPath {
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
+  '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
   '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
   '/admin/games': typeof AdminGamesRouteWithChildren
@@ -719,6 +727,7 @@ export interface FileRoutesByTo {
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
+  '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
   '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
   '/admin/historical-hubs-audit': typeof AdminHistoricalHubsAuditRoute
@@ -814,6 +823,7 @@ export interface FileRoutesById {
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
+  '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupRoute
   '/admin/era-normalization': typeof AdminEraNormalizationRoute
   '/admin/exploration-path-repair': typeof AdminExplorationPathRepairRoute
   '/admin/games': typeof AdminGamesRouteWithChildren
@@ -911,6 +921,7 @@ export interface FileRouteTypes {
     | '/admin/cross-hub-links'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
+    | '/admin/encyclopedia-cleanup'
     | '/admin/era-normalization'
     | '/admin/exploration-path-repair'
     | '/admin/games'
@@ -1004,6 +1015,7 @@ export interface FileRouteTypes {
     | '/admin/cross-hub-links'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
+    | '/admin/encyclopedia-cleanup'
     | '/admin/era-normalization'
     | '/admin/exploration-path-repair'
     | '/admin/historical-hubs-audit'
@@ -1098,6 +1110,7 @@ export interface FileRouteTypes {
     | '/admin/cross-hub-links'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
+    | '/admin/encyclopedia-cleanup'
     | '/admin/era-normalization'
     | '/admin/exploration-path-repair'
     | '/admin/games'
@@ -1194,6 +1207,7 @@ export interface RootRouteChildren {
   AdminCrossHubLinksRoute: typeof AdminCrossHubLinksRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
   AdminEncyclopediaAuditRoute: typeof AdminEncyclopediaAuditRoute
+  AdminEncyclopediaCleanupRoute: typeof AdminEncyclopediaCleanupRoute
   AdminEraNormalizationRoute: typeof AdminEraNormalizationRoute
   AdminExplorationPathRepairRoute: typeof AdminExplorationPathRepairRoute
   AdminGamesRoute: typeof AdminGamesRouteWithChildren
@@ -1641,6 +1655,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEraNormalizationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/encyclopedia-cleanup': {
+      id: '/admin/encyclopedia-cleanup'
+      path: '/admin/encyclopedia-cleanup'
+      fullPath: '/admin/encyclopedia-cleanup'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/encyclopedia-audit': {
       id: '/admin/encyclopedia-audit'
       path: '/admin/encyclopedia-audit'
@@ -1997,6 +2018,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminCrossHubLinksRoute: AdminCrossHubLinksRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
   AdminEncyclopediaAuditRoute: AdminEncyclopediaAuditRoute,
+  AdminEncyclopediaCleanupRoute: AdminEncyclopediaCleanupRoute,
   AdminEraNormalizationRoute: AdminEraNormalizationRoute,
   AdminExplorationPathRepairRoute: AdminExplorationPathRepairRoute,
   AdminGamesRoute: AdminGamesRouteWithChildren,

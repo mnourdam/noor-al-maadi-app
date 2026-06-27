@@ -160,7 +160,7 @@ function CleanupWorkshop() {
         .order("updated_at", { ascending: false })
         .limit(2000);
       if (error) throw error;
-      setRows((data ?? []) as EntityRow[]);
+      setRows((data ?? []) as unknown as EntityRow[]);
 
       // Linkage maps (best-effort).
       try {
@@ -168,7 +168,7 @@ function CleanupWorkshop() {
           .from("atlas_entities" as any)
           .select("encyclopedia_entity_id");
         const am = new Map<string, number>();
-        for (const r of (a ?? []) as { encyclopedia_entity_id: string | null }[]) {
+        for (const r of (a ?? []) as unknown as { encyclopedia_entity_id: string | null }[]) {
           if (!r.encyclopedia_entity_id) continue;
           am.set(r.encyclopedia_entity_id, (am.get(r.encyclopedia_entity_id) ?? 0) + 1);
         }
@@ -180,7 +180,7 @@ function CleanupWorkshop() {
         const cm = new Map<string, number>();
         const blob = JSON.stringify((c ?? []) as unknown);
         // Count slug occurrences cheaply.
-        for (const row of (data ?? []) as EntityRow[]) {
+        for (const row of (data ?? []) as unknown as EntityRow[]) {
           if (!row.slug) continue;
           const safe = row.slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
           const re = new RegExp(`[:"\\/]${safe}(?=[^a-z0-9-]|$)`, "g");
@@ -426,7 +426,7 @@ function CleanupWorkshop() {
         const { data: camps } = await supabase.from("admin_campaigns" as any).select("id,data");
         const safe = dup.slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const re = new RegExp(`(:|"|/)${safe}(?=[^a-z0-9-]|$)`, "g");
-        for (const c of (camps ?? []) as { id: string; data: any }[]) {
+        for (const c of (camps ?? []) as unknown as { id: string; data: any }[]) {
           const s = JSON.stringify(c.data);
           const next = s.replace(re, `$1${canonical.slug}`);
           if (next !== s) {
