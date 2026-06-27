@@ -763,6 +763,34 @@ function HomeFull() {
         </a>
       )}
 
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <a
+          href="/index.html?__irth_router_root_iso=1&mode=clean-root-real-children"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.href = "/index.html?__irth_router_root_iso=1&mode=clean-root-real-children";
+          }}
+          style={{
+            display: "block",
+            margin: "12px",
+            padding: "20px",
+            background: "#064e3b",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #34d399",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          CLEAN ROOT + REAL CHILDREN
+        </a>
+      )}
+
+
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
