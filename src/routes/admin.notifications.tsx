@@ -183,6 +183,42 @@ function Composer() {
     }
   };
 
+  const deleteOne = async (id: string) => {
+    if (!confirm("حذف هذا الإشعار نهائيًا؟")) return;
+    const prev = recent;
+    setRecent((rs) => rs.filter((r) => r.id !== id));
+    const { error } = await supabase.from("notifications" as any).delete().eq("id", id);
+    if (error) {
+      setRecent(prev);
+      setFeedback(`فشل الحذف: ${error.message}`);
+    } else {
+      setFeedback("تم حذف الإشعار.");
+    }
+  };
+
+  const cleanupOldOrTest = async () => {
+    const target = recent.filter((n) => {
+      if (n.status === "draft" || n.status === "failed") return true;
+      const isTest = /test|تجربة|اختبار/i.test(`${n.title} ${n.body}`);
+      const ageDays = (Date.now() - new Date(n.created_at).getTime()) / 86400000;
+      return isTest || ageDays > 30;
+    });
+    if (target.length === 0) {
+      setFeedback("لا توجد إشعارات للحذف (مسودة/فاشلة/قديمة/تجريبية).");
+      return;
+    }
+    if (!confirm(`سيُحذف ${target.length} إشعارًا (مسودات، فاشلة، تجريبية، أو أقدم من ٣٠ يومًا). متابعة؟`)) return;
+    const ids = target.map((n) => n.id);
+    const { error } = await supabase.from("notifications" as any).delete().in("id", ids);
+    if (error) {
+      setFeedback(`فشل الحذف الجماعي: ${error.message}`);
+    } else {
+      setFeedback(`تم حذف ${ids.length} إشعارًا.`);
+      await loadRecent();
+    }
+  };
+
+
   return (
     <div dir="rtl" className="min-h-screen bg-background px-4 py-8 text-foreground">
       <div className="mx-auto max-w-3xl space-y-6">
