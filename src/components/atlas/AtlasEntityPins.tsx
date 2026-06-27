@@ -95,21 +95,30 @@ export function AtlasEntityPinsLayer({
 
 
 const AtlasPin = memo(function AtlasPin({
-  entity, inv, labelTier, active, onSelect,
+  entity, inv, labelTier, active, onSelect, cullBounds, disableGlow,
 }: {
   entity: AtlasEntityRow;
   inv: number;
   labelTier: number;
   active: boolean;
   onSelect: (entity: AtlasEntityRow) => void;
+  cullBounds?: { minX: number; maxX: number; minY: number; maxY: number } | null;
+  disableGlow?: boolean;
 }) {
   if (entity.aps_x == null || entity.aps_y == null) return null;
   const { x, y } = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
 
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   if (x < 0 || x > VB_W || y < 0 || y > VB_H) return null;
+  // Offscreen culling — keep the active pin even when out of view.
+  if (!active && cullBounds) {
+    if (x < cullBounds.minX || x > cullBounds.maxX || y < cullBounds.minY || y > cullBounds.maxY) {
+      return null;
+    }
+  }
   const showPin = shouldShowPin(entity.kind, labelTier, active);
   if (!showPin) return null;
+
   // Glyph half-extent (in user units). Smaller, refined — atlas is the hero.
   const size = (active ? 1.15 : 0.85) * inv * S;
   const color = KIND_COLOR[entity.kind] ?? "oklch(0.55 0.18 25)";
