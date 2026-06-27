@@ -369,7 +369,7 @@ export function CrosswordRenderer({
                   setActiveClue(pick);
                   focusCell(k);
                 }}
-                className={`irth-ink-cell relative aspect-square w-9 rounded-sm border bg-[#fdf6e3] text-slate-950
+                className={`irth-ink-cell relative h-9 w-9 rounded-sm border bg-[#fdf6e3] text-slate-950
                   ${isCorrect ? "is-correct" : ""}
                   ${isActiveCell ? "ring-2 ring-amber-500 border-amber-500" : isActiveClue ? "border-amber-400/70 bg-amber-100/80" : "border-amber-700/30"}
                 `}
