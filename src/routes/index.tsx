@@ -685,6 +685,32 @@ function HomeFull() {
         </a>
       )}
 
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <a
+          href="/index.html?__irth_router_real_stripped=1"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.href = "/index.html?__irth_router_real_stripped=1";
+          }}
+          style={{
+            display: "block",
+            margin: "12px",
+            padding: "20px",
+            background: "#064e3b",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #6ee7b7",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          ROUTER REAL TREE STRIPPED TEST
+        </a>
+      )}
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
