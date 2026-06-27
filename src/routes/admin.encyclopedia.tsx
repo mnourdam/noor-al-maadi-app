@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
+import { normalizeArabicName } from "@/lib/arabic-normalize";
 
 export const Route = createFileRoute("/admin/encyclopedia")({
   head: () => ({
