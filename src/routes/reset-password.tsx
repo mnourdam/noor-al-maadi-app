@@ -69,7 +69,7 @@ function ResetPasswordPage() {
               <p className="text-rose-300">
                 الرابط غير صالح أو انتهت صلاحيته. الرجاء طلب رابط جديد.
               </p>
-              <Link to="/auth" className="block text-center text-gold hover:underline">
+              <Link to="/auth" search={{ ref: undefined }} className="block text-center text-gold hover:underline">
                 العودة لصفحة تسجيل الدخول
               </Link>
             </div>
