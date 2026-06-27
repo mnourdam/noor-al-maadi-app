@@ -77,6 +77,24 @@ function getRegisteredPatterns(router: ReturnType<typeof useRouter>): string[] {
   Object.values(routerAny.routesById ?? {}).forEach((route) => visitRoute(route));
   visitRoute(routerAny.routeTree);
 
+  // Keep Android back safe even if TanStack internals change shape in the
+  // bundled WebView runtime. These are real app route patterns from src/routes.
+  [
+    "/",
+    "/adventure",
+    "/campaigns",
+    "/campaigns/imported/$id",
+    "/collection",
+    "/encyclopedia",
+    "/encyclopedia/entity/$id",
+    "/encyclopedia/path/$id",
+    "/encyclopedia/state/$id",
+    "/encyclopedia/type/$type",
+    "/games/$mode/$slug",
+    "/investigations",
+    "/profile",
+  ].forEach(addPath);
+
   return Array.from(set);
 }
 
