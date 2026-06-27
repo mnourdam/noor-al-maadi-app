@@ -35,7 +35,7 @@ import {
   entityNameKeys, normalizeArabicName, normalizeSlugKey,
 } from "@/lib/arabic-normalize";
 
-export const Route = createFileRoute("/admin/encyclopedia-cleanup")({
+export const Route = createFileRoute("/admin/encyclopedia-cleanup/")({
   head: () => ({
     meta: [
       { title: "تنظيف الموسوعة — إرث" },
