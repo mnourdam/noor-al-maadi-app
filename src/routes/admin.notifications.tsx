@@ -83,13 +83,18 @@ function AdminNotificationsPage() {
   return <Composer />;
 }
 
-function Composer({ debugBlock }: { debugBlock: ReactNode }) {
+function Composer() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [type, setType] = useState<NotificationType>("manual");
+  const [category, setCategory] = useState<NotificationCategoryKey>("admin");
+  const [priority, setPriority] = useState<Priority>("normal");
+  const [icon, setIcon] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [targetType, setTargetType] = useState<TargetType>("all");
   const [targetUserId, setTargetUserId] = useState("");
   const [deepLink, setDeepLink] = useState("");
+  const [payloadText, setPayloadText] = useState("");
   const [scheduled, setScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [busy, setBusy] = useState(false);
@@ -109,14 +114,27 @@ function Composer({ debugBlock }: { debugBlock: ReactNode }) {
     loadRecent();
   }, [loadRecent]);
 
-  const buildPayload = () => ({
-    title: title.trim(),
-    body: body.trim(),
-    type,
-    target_type: targetType,
-    target_user_id: targetType === "user" ? targetUserId.trim() || null : null,
-    deep_link: deepLink.trim() || null,
-  });
+  const buildPayload = () => {
+    let payload: Record<string, unknown> = {};
+    if (payloadText.trim()) {
+      try { payload = JSON.parse(payloadText); }
+      catch { throw new Error("payload JSON غير صالح"); }
+    }
+    return {
+      title: title.trim(),
+      body: body.trim(),
+      type,
+      category,
+      priority,
+      sender: "admin" as const,
+      icon: icon.trim() || null,
+      image_url: imageUrl.trim() || null,
+      target_type: targetType,
+      target_user_id: targetType === "user" ? targetUserId.trim() || null : null,
+      deep_link: deepLink.trim() || null,
+      payload,
+    };
+  };
 
   const createDraft = async () => {
     if (!title.trim() || !body.trim()) {
