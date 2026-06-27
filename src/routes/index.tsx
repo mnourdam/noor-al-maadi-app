@@ -152,7 +152,7 @@ function HomeFull() {
     if (campaignSel) {
       const { campaign, hasStarted, isComplete, completedChapters, nextChapter } = campaignSel;
       const total = campaign.chapters.length;
-      const ctaLabel = isComplete ? "استعرض الحملة" : hasStarted ? "تابع الرحلة" : "ابدأ الحملة";
+      const ctaLabel = isComplete ? "استعرض الحملة" : hasStarted ? "أكمل رحلتك" : "ابدأ رحلتك";
       const heroBg =
         (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) ||
         heroFortress;
@@ -162,7 +162,8 @@ function HomeFull() {
       out.push({
         kind: "campaign",
         bg: heroBg,
-        eyebrow: hasStarted ? "حملتك النشطة" : "حملة جديدة بانتظارك",
+        eyebrow: isComplete ? "حملتك المكتملة" : hasStarted ? "أكمل رحلتك من حيث توقفت" : "ابدأ رحلتك الآن",
+
         title: campaign.title,
         subtitle,
         progress: { done: completedChapters, total },
