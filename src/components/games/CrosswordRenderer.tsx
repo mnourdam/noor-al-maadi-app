@@ -284,65 +284,6 @@ export function CrosswordRenderer({
     );
   }
 
-  if (androidNative) {
-    return (
-      <div className="relative irth-title-card overflow-hidden p-5" style={{ transform: "none", filter: "none", backdropFilter: "none" }}>
-        <div className="mb-4 flex items-center justify-between text-[11px] uppercase tracking-[0.3em]">
-          <span className="inline-flex items-center gap-2 text-amber-300/80">
-            <Feather className="h-3.5 w-3.5" />
-            مخطوط الكلمات
-          </span>
-          {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
-            <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
-          )}
-        </div>
-
-        <div className="space-y-3">
-          {stage.clues.map((clue, idx) => (
-            <label key={`${clue.direction}-${clue.number}`} className="block rounded-lg border border-amber-500/15 bg-slate-900/60 p-3">
-              <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-300/80">
-                {clue.direction === "across" ? "أفقي" : "عمودي"} · {clue.number}
-              </span>
-              <span className="mb-3 block text-sm leading-7 text-slate-200">{clue.hint}</span>
-              <AndroidSafeInput
-                ref={(el) => { clueInputRefs.current[idx] = el; }}
-                type="text"
-                name={`crossword-answer-${idx}`}
-                defaultValue=""
-                maxLength={clue.answer.length}
-                disabled={done}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                placeholder="اكتب الإجابة…"
-                modalTitle={`إجابة ${clue.direction === "across" ? "أفقية" : "عمودية"} ${clue.number}`}
-                modalLabel={clue.hint}
-                androidEntryKey={`game.crossword.clue.${clue.direction}.${clue.number}`}
-                className="block w-full rounded-lg border border-amber-500/25 bg-slate-950/75 px-3 py-3 text-base text-slate-100 placeholder:text-slate-500 outline-none focus:border-amber-400"
-              />
-            </label>
-          ))}
-        </div>
-
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button
-            onClick={checkAndroidPlain}
-            disabled={done}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
-          >
-            {done ? <><Sparkles className="h-4 w-4" /> اكتمل المخطوط</> : <><Check className="h-4 w-4" /> تحقق</>}
-          </button>
-          {feedback && (
-            <span className={`text-xs ${feedback.kind === "ok" ? "text-emerald-300" : "text-red-300"}`}>
-              {feedback.msg}
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
 
     <div className="relative irth-title-card overflow-hidden p-5">

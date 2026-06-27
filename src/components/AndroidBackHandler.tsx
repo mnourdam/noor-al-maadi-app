@@ -1,26 +1,33 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 /**
  * Android hardware/system back button handler.
  *
- * - If there is in-app history, go back one step.
+ * - If there is in-app history (router or native), go back one step.
  * - Else if not on "/", navigate to "/".
- * - Else require a second press within 2s to exit the app.
+ * - Else show an Irth-styled exit confirmation dialog (نعم / لا).
  *
- * No-op on web (web back button is browser-native).
+ * No-op on web.
  */
 export function AndroidBackHandler() {
   const router = useRouter();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     const cap = (window as unknown as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
     if (!cap || cap.getPlatform?.() !== "android") return;
 
-
-
-    let lastBackAt = 0;
     let listenerHandle: { remove: () => void } | undefined;
 
     (async () => {
@@ -28,34 +35,17 @@ export function AndroidBackHandler() {
         const { App } = await import("@capacitor/app");
         const handle = await App.addListener("backButton", ({ canGoBack }: { canGoBack: boolean }) => {
           const path = window.location.pathname;
-          // eslint-disable-next-line no-console
-          console.log("[android:back] pressed", { path, canGoBack });
 
-          // Prefer router history; fall back to canGoBack from native.
-          const histLen = router.history.length;
-          if (histLen > 1) {
-            console.log("[android:back] router.history.back()");
-            router.history.back();
-            return;
-          }
-          if (canGoBack) {
-            console.log("[android:back] window.history.back()");
-            window.history.back();
+          // Prefer real router history; fall back to native canGoBack.
+          if (canGoBack || window.history.length > 1) {
+            try { router.history.back(); } catch { window.history.back(); }
             return;
           }
           if (path !== "/" && path !== "/index.html") {
-            console.log("[android:back] navigate -> /");
             void router.navigate({ to: "/" });
             return;
           }
-          const now = Date.now();
-          if (now - lastBackAt < 2000) {
-            console.log("[android:back] exit");
-            App.exitApp();
-            return;
-          }
-          lastBackAt = now;
-          toast("اضغط مرة أخرى للخروج");
+          setConfirmOpen(true);
         });
         listenerHandle = handle;
       } catch (err) {
@@ -68,5 +58,30 @@ export function AndroidBackHandler() {
     };
   }, [router]);
 
-  return null;
+  return (
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialogContent dir="rtl" className="border-amber-500/30">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-amber-100">هل تريد الخروج من التطبيق؟</AlertDialogTitle>
+          <AlertDialogDescription className="leading-7 text-slate-300">
+            ستُحفظ آخر رحلة لك، ويمكنك العودة في أي وقت.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="border-slate-700">لا</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={async () => {
+              try {
+                const { App } = await import("@capacitor/app");
+                App.exitApp();
+              } catch { /* ignore */ }
+            }}
+            className="bg-amber-500 text-slate-950 hover:bg-amber-400"
+          >
+            نعم
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
