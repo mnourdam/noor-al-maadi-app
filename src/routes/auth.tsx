@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
@@ -9,7 +10,7 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "forgot";
 
 
 function AuthPage() {
