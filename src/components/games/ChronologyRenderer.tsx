@@ -126,7 +126,7 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
         <button
           onClick={check}
           disabled={done}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+          className="inline-flex min-h-12 items-center gap-1.5 rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
         >
           {done ? <><Sparkles className="h-4 w-4" /> اكتمل التسلسل</> : <><Check className="h-4 w-4" /> تحقق</>}
         </button>
