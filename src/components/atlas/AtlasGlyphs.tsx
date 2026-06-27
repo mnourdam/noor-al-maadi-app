@@ -1,27 +1,33 @@
 // Premium per-kind SVG glyphs for Atlas markers.
-// All glyphs are designed in a centered ~3.2x3.2 unit box (so a `size` prop
-// controls visual radius). Pure paths — no filters, no JS animation — to keep
-// the Android perf budget intact. Stroke widths scale with the marker so they
-// stay crisp at every zoom level.
+// Engraved-on-parchment aesthetic: each glyph is a single metallic fill with
+// a darker rim stroke (derived from the fill, never harsh black) so it reads
+// as part of the manuscript rather than a sticker.
+//
+// All glyphs are designed in a centered ~3.2x3.2 unit box; the `size` prop
+// controls visual half-extent. Pure paths — no SVG filters, no JS animation —
+// to keep the Android perf budget intact.
 import type { AtlasEntityKind } from "@/lib/atlas-entities";
 
-const INK = "oklch(0.16 0.04 60)";
-const PARCHMENT = "oklch(0.94 0.05 82)";
+const PARCHMENT = "oklch(0.92 0.04 82)";
 
 export function AtlasKindGlyph({
   kind,
   size,
   fill,
+  stroke,
 }: {
   kind: AtlasEntityKind;
   /** Half-extent in user units (≈ marker radius). */
   size: number;
-  /** Primary fill (per-kind palette color). */
+  /** Primary metallic fill (per-kind palette). */
   fill: string;
+  /** Rim stroke — pass a darker shade of the fill for an engraved feel. */
+  stroke: string;
 }) {
-  const sw = size * 0.18; // stroke scaled with glyph
+  const sw = size * 0.11; // refined rim — never heavy
+  const INK = stroke;
   const common = {
-    stroke: INK,
+    stroke,
     strokeWidth: sw,
     strokeLinejoin: "round" as const,
     strokeLinecap: "round" as const,

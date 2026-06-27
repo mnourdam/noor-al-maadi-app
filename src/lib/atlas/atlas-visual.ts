@@ -20,14 +20,16 @@ export function worldForEntity(e: { era: string | null }): string | null {
 }
 
 /** Stable color per atlas-entity kind. Used by pins AND the legend. */
+// Aged historical palette — muted metallic / earth tones.
+// Designed to read on parchment without competing with it.
 export const KIND_COLOR: Record<AtlasEntityKind, string> = {
-  region:         "oklch(0.78 0.16 82)",   // gold — states / empires
-  place:          "oklch(0.62 0.16 245)",  // blue — cities
-  battle:         "oklch(0.55 0.22 22)",   // crimson — battles
-  event:          "oklch(0.52 0.10 60)",   // brown / parchment — events
-  figure_marker:  "oklch(0.58 0.14 150)",  // green — landmarks / figures
-  artifact_site:  "oklch(0.62 0.12 55)",   // bronze — artifacts
-  route_point:    "oklch(0.42 0.18 25)",   // dark red — campaigns
+  region:         "oklch(0.66 0.11 78)",   // aged gold — states / empires
+  place:          "oklch(0.45 0.05 240)",  // iron blue — cities
+  battle:         "oklch(0.42 0.14 25)",   // burgundy — battles
+  event:          "oklch(0.48 0.06 60)",   // parchment brown — events
+  figure_marker:  "oklch(0.42 0.08 145)",  // dark green — landmarks
+  artifact_site:  "oklch(0.52 0.09 55)",   // bronze — artifacts
+  route_point:    "oklch(0.36 0.11 22)",   // dark burgundy — campaigns
 };
 
 export function worldFacets(entities: AtlasEntityRow[]) {
