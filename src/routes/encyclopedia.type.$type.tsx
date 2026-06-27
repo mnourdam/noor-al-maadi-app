@@ -41,6 +41,7 @@ export const Route = createFileRoute("/encyclopedia/type/$type")({
   },
   beforeLoad: ({ params }) => {
     if (!VALID.has(params.type)) throw notFound();
+    return undefined as never;
   },
   component: TypeBrowsePage,
   notFoundComponent: () => (
