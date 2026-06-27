@@ -5,7 +5,7 @@
 // encyclopedia_entities so an article edit propagates without DB duplication.
 //
 // URL state: ?focus, ?kind, ?era, ?world are deep-linkable.
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Loader2, Map as MapIcon } from "lucide-react";
 import { AtlasStage } from "./AtlasStage";
@@ -16,8 +16,9 @@ import {
 } from "./AtlasControls";
 import { AtlasEntityDetailPanel } from "./AtlasEntityDetailPanel";
 import { usePublishedAtlasEntities } from "@/lib/atlas-entities-query";
-import type { AtlasEntityKind } from "@/lib/atlas-entities";
+import type { AtlasEntityKind, AtlasEntityRow } from "@/lib/atlas-entities";
 import { sortAtlasEntitiesChronological } from "@/lib/atlas/atlas-visual";
+import { pickBestAtlasMatch, type AtlasSearchHit } from "@/lib/atlas/atlas-search";
 import { Route as MapRoute, type MapSearch } from "@/routes/map";
 import { androidMark, isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
