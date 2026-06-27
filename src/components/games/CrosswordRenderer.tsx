@@ -143,12 +143,18 @@ export function CrosswordRenderer({
     setFeedback(null);
     if (v) {
       sfx("ink_write");
-      if (!disableCampaignFocusLogic && !androidStable && !androidNative && activeClue !== null) advanceWithin(activeClue, k, 1);
+      // Auto-advance to the next cell after any letter (incl. Arabic IME).
+      if (!disableCampaignFocusLogic && !androidStable && activeClue !== null) {
+        advanceWithin(activeClue, k, 1);
+      }
     }
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, k: string) => {
-    if (androidNative && (e.key === "Backspace" || e.key.length === 1 || e.key === "Unidentified")) return;
+    // On Android native the keystream is unreliable for letters, but
+    // Backspace is consistent — let it through so the user can step back.
+    if (androidNative && e.key !== "Backspace" && (e.key.length === 1 || e.key === "Unidentified")) return;
+
     if (activeClue === null) return;
     const clue = stage.clues[activeClue];
     if (e.key === "Backspace") {
