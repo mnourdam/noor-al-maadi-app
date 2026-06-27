@@ -19,9 +19,8 @@ import { AchievementWatcher } from "../components/AchievementWatcher";
 import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
 import { AndroidBackHandler } from "../components/AndroidBackHandler";
-import { androidMark, isAndroidUltraStableMode } from "../lib/androidFreezeDiagnostics";
-import { isSectionEnabled, isAndroidQuietActive } from "../lib/androidQuietMode";
-import { AppShell } from "../components/AppShell";
+
+
 
 function NotFoundComponent() {
   return (
