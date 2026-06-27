@@ -588,94 +588,18 @@ function HomeFull() {
         </div>
       </section>
 
-      {/* ============ 1.5 START-HERE STRIP — clear next-step CTA ============ */}
-      {campaignSel && !campaignSel.isComplete && (
-        <section className="relative z-20 mt-5 px-5 animate-fade-in">
-          <Link
-            to="/campaigns/imported/$id"
-            params={{ id: campaignSel.campaign.id }}
-            className="parchment-dark group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-gold/40 px-4 py-3 shadow-elegant transition hover:border-gold/70"
-          >
-            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
-              <Play className="size-4 fill-current" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] tracking-[0.25em] text-gold/90">
-                {campaignSel.hasStarted ? "أكمل رحلتك" : "ابدأ رحلتك"}
-              </p>
-              <p className="font-display text-sm font-bold leading-tight text-white truncate">
-                {campaignSel.nextChapter
-                  ? `الفصل ${campaignSel.nextChapter.order ?? campaignSel.completedChapters + 1} · ${campaignSel.nextChapter.title}`
-                  : campaignSel.campaign.title}
-              </p>
-            </div>
-            <ChevronLeft className="size-4 shrink-0 text-gold transition-transform group-hover:-translate-x-0.5" />
-          </Link>
-        </section>
+      {/* ============ 2. CONTINUE / START JOURNEY — primary action ============ */}
+      {campaignSel && !campaignSel.isComplete && campaignSel.nextChapter && (
+        <Reveal>
+          <ContinueJourneyCard sel={campaignSel} />
+        </Reveal>
       )}
 
-
-      {/* ============ 2. QUICK PROGRESS ============ */}
-      <section className="mt-5 relative z-10 px-5 animate-fade-in">
-
-        <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 px-4 py-4 shadow-elegant">
-          <div className="arabesque-layer opacity-30" />
-          <div className="relative flex items-center gap-4">
-            <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-gold text-primary-foreground shadow-elegant">
-              <span className="font-display text-base font-extrabold">{lvl.level}</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] tracking-[0.2em] text-gold/80">المستوى {lvl.level}</p>
-              <p className="font-display text-sm font-bold leading-tight truncate">{lvl.title}</p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full bg-gradient-gold transition-[width] duration-700 ease-out"
-                  style={{ width: `${Math.round(lvl.progress * 100)}%` }}
-                />
-              </div>
-              {lvl.next ? (
-                <p className="mt-1.5 text-[10px] text-muted-foreground">
-                  {lvl.toNext.toLocaleString("en-US")} نقطة حتى{" "}
-                  <span className="text-gold">{lvl.next.title}</span>
-                </p>
-              ) : (
-                <p className="mt-1.5 text-[10px] text-gold">أعلى مستوى — أنت أسطورة التاريخ.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============ Unread notifications banner ============ */}
-      {unread > 0 && (
-        <section className="mt-5 px-5 animate-fade-in">
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-gold/40 bg-gold/10 p-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="relative grid size-10 shrink-0 place-items-center rounded-xl bg-gold/20 text-gold">
-                <Bell className="size-4" />
-                <span className="absolute -top-1 -right-1 grid min-w-[16px] h-[16px] place-items-center rounded-full bg-gradient-gold px-1 text-[9px] font-bold text-primary-foreground">
-                  {formatBadgeCount(unread)}
-                </span>
-              </div>
-              <p className="font-display truncate text-sm font-bold text-gold">
-                لديك {unread.toLocaleString("en-US")} {unread === 1 ? "إشعار جديد" : "إشعارات جديدة"}
-              </p>
-            </div>
-            <Link
-              to="/notifications"
-              className="shrink-0 rounded-full bg-gradient-gold px-3 py-1.5 text-[11px] font-bold text-primary-foreground hover:opacity-90"
-            >
-              عرض الإشعارات
-            </Link>
-          </div>
-        </section>
-      )}
-
-      {/* ============ 3. TODAY'S JOURNEY (dynamic recommendation) ============ */}
+      {/* ============ 3. DAILY GOAL — today's objective + reward ============ */}
       {recommendation && (
         <Reveal>
-          <section className="mt-6 px-5">
-            <SectionHeader icon={<Target className="size-3.5" />} eyebrow="رحلة اليوم" title="ابدأ من هنا" />
+          <section className="mt-12 px-5">
+            <SectionHeader icon={<Target className="size-3.5" />} eyebrow="هدف اليوم" title="ابدأ من هنا" />
             <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 p-5 shadow-elegant">
               <div className="arabesque-layer" />
               <div className="absolute -left-10 -top-10 size-40 rounded-full bg-gold/15 blur-3xl" />
@@ -705,35 +629,9 @@ function HomeFull() {
         <DailyChallengesSection />
       </Reveal>
 
-
-
-      {/* ============ 4. CONTINUE JOURNEY — large premium CTA ============ */}
-      {campaignSel && !campaignSel.isComplete && campaignSel.nextChapter && (
-        <Reveal>
-          <ContinueJourneyCard sel={campaignSel} />
-        </Reveal>
-      )}
-
-      {/* ============ 5. STAT STRIP (compact) ============ */}
+      {/* ============ 4. LATEST DISCOVERIES ============ */}
       <Reveal>
-        <section className="mt-6 px-5">
-          <div className="parchment-dark relative overflow-hidden rounded-2xl border border-gold/20 px-3 py-3 shadow-elegant">
-            <div className="arabesque-layer opacity-40" />
-            <div className="relative -mx-1 flex items-stretch gap-1 overflow-x-auto no-scrollbar">
-              <Stat icon={<Heart className="size-3.5" />} label="القلوب" value={`${hearts}/${HEART_MAX}`} tone="rose" />
-              <Stat icon={<Coins className="size-3.5" />} label="دنانير" value={profile.dinars} tone="gold" />
-              <Stat icon={<Trophy className="size-3.5" />} label="مستوى" value={lvl.level} tone="gold" />
-              <Stat icon={<Package className="size-3.5" />} label="المتحف" value={stats.totalCollection} tone="emerald" />
-              <Stat icon={<BookOpen className="size-3.5" />} label="أحداث" value={stats.eventsDiscovered} tone="indigo" />
-              <Stat icon={<Swords className="size-3.5" />} label="معارك" value={stats.battlesCompleted} tone="ruby" />
-            </div>
-          </div>
-        </section>
-      </Reveal>
-
-      {/* ============ 6. LATEST DISCOVERIES ============ */}
-      <Reveal>
-        <section className="mt-10 px-5">
+        <section className="mt-12 px-5">
           <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
           {stats.recent.length > 0 ? (
             <div className="relative">
@@ -754,27 +652,22 @@ function HomeFull() {
         </section>
       </Reveal>
 
-      {/* ============ 7. TODAY IN HISTORY ============ */}
+      {/* ============ 5. TODAY IN HISTORY ============ */}
       {mounted && todayEvent && (
         <Reveal>
           <OnThisDayCalendarCard event={todayEvent} />
         </Reveal>
       )}
 
-      {/* ============ 8. JOURNEY THROUGH TIME PREVIEW ============ */}
+      {/* ============ 6. GREAT TIMELINE ============ */}
       <Reveal>
         <JourneyThroughTimeSection />
       </Reveal>
 
-      {/* ============ 9. HISTORICAL WORLDS ============ */}
-      <Reveal>
-        <WorldsHomepageSection />
-      </Reveal>
-
-      {/* ============ 10. RECENT ACTIVITY ============ */}
+      {/* ============ 7. WHAT'S NEW — recent activity ============ */}
       {recentActivity.length > 0 && (
         <Reveal>
-          <section className="mt-10 px-5">
+          <section className="mt-12 px-5">
             <SectionHeader icon={<Sunrise className="size-3.5" />} eyebrow="آخر نشاطاتك" title="عودة إلى رحلتك" />
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {recentActivity.map((a) => (
@@ -796,10 +689,86 @@ function HomeFull() {
         </Reveal>
       )}
 
-      {/* ============ 11. ALMOST THERE ============ */}
+      {/* ============ 8. WORLDS OF IRTH ============ */}
+      <Reveal>
+        <WorldsHomepageSection />
+      </Reveal>
+
+      {/* ============ Secondary: Notifications banner ============ */}
+      {unread > 0 && (
+        <section className="mt-12 px-5 animate-fade-in">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-gold/40 bg-gold/10 p-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative grid size-10 shrink-0 place-items-center rounded-xl bg-gold/20 text-gold">
+                <Bell className="size-4" />
+                <span className="absolute -top-1 -right-1 grid min-w-[16px] h-[16px] place-items-center rounded-full bg-gradient-gold px-1 text-[9px] font-bold text-primary-foreground">
+                  {formatBadgeCount(unread)}
+                </span>
+              </div>
+              <p className="font-display truncate text-sm font-bold text-gold">
+                لديك {unread.toLocaleString("en-US")} {unread === 1 ? "إشعار جديد" : "إشعارات جديدة"}
+              </p>
+            </div>
+            <Link
+              to="/notifications"
+              className="shrink-0 rounded-full bg-gradient-gold px-3 py-1.5 text-[11px] font-bold text-primary-foreground hover:opacity-90"
+            >
+              عرض الإشعارات
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* ============ Secondary: Level & quick stats ============ */}
+      <section className="mt-12 relative z-10 px-5 animate-fade-in">
+        <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 px-4 py-4 shadow-elegant">
+          <div className="arabesque-layer opacity-30" />
+          <div className="relative flex items-center gap-4">
+            <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-gold text-primary-foreground shadow-elegant">
+              <span className="font-display text-base font-extrabold">{lvl.level}</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] tracking-[0.2em] text-gold/80">المستوى {lvl.level}</p>
+              <p className="font-display text-sm font-bold leading-tight truncate">{lvl.title}</p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full bg-gradient-gold transition-[width] duration-700 ease-out"
+                  style={{ width: `${Math.round(lvl.progress * 100)}%` }}
+                />
+              </div>
+              {lvl.next ? (
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  {lvl.toNext.toLocaleString("en-US")} نقطة حتى{" "}
+                  <span className="text-gold">{lvl.next.title}</span>
+                </p>
+              ) : (
+                <p className="mt-1.5 text-[10px] text-gold">أعلى مستوى — أنت أسطورة التاريخ.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <Reveal>
+        <section className="mt-6 px-5">
+          <div className="parchment-dark relative overflow-hidden rounded-2xl border border-gold/20 px-3 py-3 shadow-elegant">
+            <div className="arabesque-layer opacity-40" />
+            <div className="relative -mx-1 flex items-stretch gap-1 overflow-x-auto no-scrollbar">
+              <Stat icon={<Heart className="size-3.5" />} label="القلوب" value={`${hearts}/${HEART_MAX}`} tone="rose" />
+              <Stat icon={<Coins className="size-3.5" />} label="دنانير" value={profile.dinars} tone="gold" />
+              <Stat icon={<Trophy className="size-3.5" />} label="مستوى" value={lvl.level} tone="gold" />
+              <Stat icon={<Package className="size-3.5" />} label="المتحف" value={stats.totalCollection} tone="emerald" />
+              <Stat icon={<BookOpen className="size-3.5" />} label="أحداث" value={stats.eventsDiscovered} tone="indigo" />
+              <Stat icon={<Swords className="size-3.5" />} label="معارك" value={stats.battlesCompleted} tone="ruby" />
+            </div>
+          </div>
+        </section>
+      </Reveal>
+
+      {/* ============ Secondary: Almost There ============ */}
       {almostThere.length > 0 && (
         <Reveal>
-          <section className="mt-10 mb-8 px-5">
+          <section className="mt-12 mb-8 px-5">
             <SectionHeader icon={<Flame className="size-3.5" />} eyebrow="على بُعد خطوات" title="أنت قريب جدًا…" />
             <div className="space-y-2">
               {almostThere.map((g, i) => (
