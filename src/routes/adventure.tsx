@@ -184,18 +184,3 @@ function DailyCard({ game }: { game: GameRow }) {
   );
 }
 
-function ModeHall({ mode }: { mode: GameMode }) {
-  const Icon = MODE_ICON[mode];
-  return (
-    <Link to="/games"
-      className="group relative flex items-start gap-3 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-amber-400/60">
-      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300">
-        <Icon className="h-5 w-5" strokeWidth={1.5} />
-      </div>
-      <div className="flex-1">
-        <h3 className="text-sm font-bold text-amber-100 group-hover:text-amber-200">{MODE_LABELS_AR[mode]}</h3>
-        <p className="mt-1 text-xs leading-6 text-slate-400">{MODE_TAGLINES_AR[mode]}</p>
-      </div>
-    </Link>
-  );
-}
