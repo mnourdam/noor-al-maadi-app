@@ -183,8 +183,22 @@ export async function runFriendNotificationPollerTick(
       const isAccepted = f.direction === "accepted" && f.row.status === "accepted" && f.row.requester === userId;
       if (!isIncoming && !isAccepted) continue;
 
-      const notificationId = isIncoming ? `friend_request:${f.row.id}` : `friend_request_accepted:${f.row.id}`;
-      const blockedBySeen = isIncoming ? seen.incoming.includes(f.row.id) : seen.accepted.includes(f.row.id);
+      // Incoming friend requests are now delivered via the server-side
+      // notifications pipeline (send-notification → notifications row +
+      // realtime + FCM). The poller only handles the "your request was
+      // accepted" path, which is not yet covered server-side.
+      if (isIncoming) {
+        // Mark as seen so we don't backfill duplicate inbox entries from
+        // historical pending rows that pre-dated the server pipeline.
+        if (!seen.incoming.includes(f.row.id)) {
+          nextIncoming.add(f.row.id);
+          changedSeen = true;
+        }
+        continue;
+      }
+
+      const notificationId = `friend_request_accepted:${f.row.id}`;
+      const blockedBySeen = seen.accepted.includes(f.row.id);
       const rowDebug: FriendNotificationRowDebug = {
         rowId: f.row.id,
         status: f.row.status,
@@ -206,13 +220,7 @@ export async function runFriendNotificationPollerTick(
         rowDebug.deliverNotificationCalled = true;
         diag.deliverNotificationCalledIds.push(notificationId);
         try {
-          const result = deliverNotificationWithStatus(isIncoming ? {
-            id: notificationId,
-            category: "friend",
-            title: "طلب صداقة جديد",
-            body: `أرسل إليك ${name} طلب صداقة`,
-            href: "/friends?tab=requests",
-          } : {
+          const result = deliverNotificationWithStatus({
             id: notificationId,
             category: "friend",
             title: "تم قبول طلب الصداقة",
@@ -221,8 +229,7 @@ export async function runFriendNotificationPollerTick(
           });
           rowDebug.deliveredToInbox = result.pushed && getInbox().some((n) => n.id === notificationId);
           if (rowDebug.deliveredToInbox) {
-            if (isIncoming) nextIncoming.add(f.row.id);
-            else nextAccepted.add(f.row.id);
+            nextAccepted.add(f.row.id);
             changedSeen = true;
           } else {
             rowDebug.error = "deliverNotification returned, but notification id was not found in inbox";
@@ -234,6 +241,7 @@ export async function runFriendNotificationPollerTick(
 
       diag.rows.push(rowDebug);
     }
+
 
     if (changedSeen) {
       const ok = writeSeen({ incoming: Array.from(nextIncoming), accepted: Array.from(nextAccepted) });

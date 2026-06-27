@@ -10,6 +10,8 @@ import {
   signUpWithEmail,
   touchLastActive,
   updateDisplayName as cloudUpdateDisplayName,
+  updateUsername as cloudUpdateUsername,
+  isUsernameAvailable as cloudIsUsernameAvailable,
   type AccountProfile,
 } from "./cloud-save";
 import { useProfile, type ProfileState } from "./profile";
@@ -28,6 +30,8 @@ interface AccountCtx {
   signOut: () => Promise<void>;
   syncNow: () => Promise<boolean>;
   updateDisplayName: (name: string) => Promise<{ ok: boolean; error?: string }>;
+  updateUsername: (username: string) => Promise<{ ok: boolean; error?: string; value?: string }>;
+  isUsernameAvailable: (username: string) => Promise<boolean>;
 }
 
 const Ctx = createContext<AccountCtx | null>(null);
@@ -379,6 +383,19 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, [login]);
 
+  const updateUsernameFn = useCallback<AccountCtx["updateUsername"]>(async (username) => {
+    const r = await cloudUpdateUsername(username);
+    if (!r.ok) return { ok: false, error: r.error };
+    if (r.value) {
+      setAccount((prev) => prev ? { ...prev, username: r.value! } : prev);
+    }
+    return { ok: true, value: r.value };
+  }, []);
+
+  const isUsernameAvailableFn = useCallback<AccountCtx["isUsernameAvailable"]>(async (username) => {
+    return cloudIsUsernameAvailable(username);
+  }, []);
+
   const displayName = useMemo(() => {
     const resolved = account?.display_name?.trim()
       || (user?.user_metadata?.display_name as string | undefined)?.trim()
@@ -402,7 +419,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     signOut: signOutFn,
     syncNow,
     updateDisplayName: updateDisplayNameFn,
-  }), [user, account, displayName, loadingSession, syncing, lastSyncAt, signUp, signIn, signOutFn, syncNow, updateDisplayNameFn]);
+    updateUsername: updateUsernameFn,
+    isUsernameAvailable: isUsernameAvailableFn,
+  }), [user, account, displayName, loadingSession, syncing, lastSyncAt, signUp, signIn, signOutFn, syncNow, updateDisplayNameFn, updateUsernameFn, isUsernameAvailableFn]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

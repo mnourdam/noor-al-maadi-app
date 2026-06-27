@@ -81,6 +81,52 @@ export async function updateDisplayName(name: string): Promise<{ ok: boolean; va
   return { ok: true, value: (data as string) ?? clean };
 }
 
+/**
+ * Validate (client-side) and persist a new username. Returns friendly
+ * Arabic errors. The server is the source of truth — the same checks run
+ * in `public.set_my_username` and the response message maps known codes
+ * back to user-friendly Arabic.
+ */
+const USERNAME_PATTERN = /^[A-Za-z0-9_.\-\u0600-\u06FF]+$/;
+
+export function validateUsernameLocal(value: string): { ok: boolean; error?: string; clean?: string } {
+  const clean = value.trim();
+  if (!clean) return { ok: false, error: "اسم المستخدم لا يمكن أن يكون فارغاً" };
+  if (clean.length < 3) return { ok: false, error: "اسم المستخدم قصير جداً (٣ أحرف على الأقل)" };
+  if (clean.length > 24) return { ok: false, error: "اسم المستخدم طويل جداً (٢٤ حرفاً كحد أقصى)" };
+  if (!USERNAME_PATTERN.test(clean)) return { ok: false, error: "حروف غير مسموح بها — استخدم الحروف والأرقام و . _ -" };
+  return { ok: true, clean };
+}
+
+export async function isUsernameAvailable(value: string): Promise<boolean> {
+  const v = validateUsernameLocal(value);
+  if (!v.ok || !v.clean) return false;
+  const { data, error } = await db.rpc("is_username_available", { p_username: v.clean });
+  if (error) return false;
+  return data === true;
+}
+
+export async function updateUsername(value: string): Promise<{ ok: boolean; value?: string; error?: string }> {
+  const v = validateUsernameLocal(value);
+  if (!v.ok || !v.clean) return { ok: false, error: v.error };
+  const { data, error } = await db.rpc("set_my_username", { p_username: v.clean });
+  if (error) {
+    const code = String(error.message ?? "");
+    const map: Record<string, string> = {
+      username_taken: "اسم المستخدم مستخدم بالفعل",
+      username_too_short: "اسم المستخدم قصير جداً",
+      username_too_long: "اسم المستخدم طويل جداً",
+      username_invalid_chars: "حروف غير مسموح بها",
+      empty_username: "اسم المستخدم فارغ",
+      unauthenticated: "يجب تسجيل الدخول",
+    };
+    const friendly = Object.entries(map).find(([k]) => code.includes(k))?.[1];
+    return { ok: false, error: friendly ?? "تعذّر تغيير اسم المستخدم" };
+  }
+  return { ok: true, value: (data as string) ?? v.clean };
+}
+
+
 export async function touchLastActive(userId: string): Promise<void> {
   await db.from("profiles").update({ last_active: new Date().toISOString() }).eq("id", userId);
 }
