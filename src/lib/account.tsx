@@ -36,7 +36,7 @@ const PUSH_DEBOUNCE_MS = 1500;
 
 export function AccountProvider({ children }: { children: ReactNode }) {
   const androidStable = isAndroidUltraStableMode();
-  const { profile, replaceProfile, addDinars, awardBadge, login } = useProfile();
+  const { profile, replaceProfile, addDinars, awardBadge, login, resetProfile } = useProfile();
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<AccountProfile | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
