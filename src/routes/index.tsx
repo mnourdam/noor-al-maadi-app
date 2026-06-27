@@ -633,6 +633,32 @@ function HomeFull() {
         </a>
       )}
 
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <a
+          href="/index.html?__irth_router_min=1"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.href = "/index.html?__irth_router_min=1";
+          }}
+          style={{
+            display: "block",
+            margin: "12px",
+            padding: "20px",
+            background: "#1d4ed8",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #93c5fd",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          ROUTER MIN TEST
+        </a>
+      )}
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
