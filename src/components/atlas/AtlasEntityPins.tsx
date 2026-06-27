@@ -61,12 +61,18 @@ export function AtlasEntityPinsLayer({
   inv,
   labelTier,
   onSelect,
+  cullBounds,
+  disableGlow,
 }: {
   entities: AtlasEntityRow[];
   selectedId: string | null;
   inv: number;
   labelTier: number;
   onSelect: (entity: AtlasEntityRow) => void;
+  /** Visible world rect in viewBox units; pins outside are skipped. */
+  cullBounds?: { minX: number; maxX: number; minY: number; maxY: number } | null;
+  /** Drop golden glow halos (Android perf). */
+  disableGlow?: boolean;
 }) {
   if (entities.length === 0) return null;
   return (
@@ -79,11 +85,14 @@ export function AtlasEntityPinsLayer({
           labelTier={labelTier}
           active={selectedId === e.id}
           onSelect={onSelect}
+          cullBounds={cullBounds}
+          disableGlow={disableGlow}
         />
       ))}
     </g>
   );
 }
+
 
 const AtlasPin = memo(function AtlasPin({
   entity, inv, labelTier, active, onSelect,
