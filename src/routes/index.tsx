@@ -609,10 +609,10 @@ function HomeFull() {
 
       {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
         <a
-          href="/debug/react-direct-input-min"
+          href="/index.html?__irth_direct_input=1"
           onClick={(e) => {
             e.preventDefault();
-            window.location.href = "/debug/react-direct-input-min";
+            window.location.href = "/index.html?__irth_direct_input=1";
           }}
           style={{
             display: "block",
