@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,8 @@ import {
 function normalizePath(path: string): string {
   const withoutQuery = path.split(/[?#]/)[0] || "/";
   const withLeadingSlash = withoutQuery.startsWith("/") ? withoutQuery : `/${withoutQuery}`;
-  return withLeadingSlash.replace(/\/+$/, "") || "/";
+  const withoutIndex = withLeadingSlash === "/index.html" ? "/" : withLeadingSlash;
+  return withoutIndex.replace(/\/+$/, "") || "/";
 }
 
 function immediateParent(path: string): string | null {
@@ -42,16 +43,186 @@ function immediateParent(path: string): string | null {
  * include `$param` placeholders (e.g. `/encyclopedia/figures/$slug`).
  */
 function getRegisteredPatterns(router: ReturnType<typeof useRouter>): string[] {
-  const flat = (router as unknown as { flatRoutes?: Array<{ fullPath?: string; path?: string }> }).flatRoutes;
-  if (!Array.isArray(flat)) return [];
+  const routerAny = router as unknown as {
+    flatRoutes?: Array<Record<string, unknown>>;
+    routesById?: Record<string, Record<string, unknown>>;
+    routesByPath?: Record<string, Record<string, unknown>>;
+    routeTree?: Record<string, unknown>;
+  };
   const set = new Set<string>();
-  for (const r of flat) {
-    const p = r.fullPath || r.path;
-    if (typeof p === "string" && p.startsWith("/")) {
-      set.add(p.replace(/\/+$/, "") || "/");
+
+  const addPath = (path: unknown) => {
+    if (typeof path === "string" && path.startsWith("/")) {
+      set.add(normalizePath(path));
     }
-  }
+  };
+
+  const visitRoute = (route: Record<string, unknown> | undefined) => {
+    if (!route) return;
+    addPath(route.fullPath);
+    addPath(route.id);
+    addPath(route.path);
+
+    const children = route.children;
+    if (Array.isArray(children)) {
+      for (const child of children) visitRoute(child as Record<string, unknown>);
+    } else if (children && typeof children === "object") {
+      for (const child of Object.values(children)) visitRoute(child as Record<string, unknown>);
+    }
+  };
+
+  routerAny.flatRoutes?.forEach((route) => visitRoute(route));
+  Object.keys(routerAny.routesByPath ?? {}).forEach(addPath);
+  Object.values(routerAny.routesByPath ?? {}).forEach((route) => visitRoute(route));
+  Object.values(routerAny.routesById ?? {}).forEach((route) => visitRoute(route));
+  visitRoute(routerAny.routeTree);
+
+  // Keep Android back safe even if TanStack internals change shape in the
+  // bundled WebView runtime. These are real app route patterns from src/routes.
+  [
+    "/",
+    "/adventure",
+    "/campaigns",
+    "/campaigns/imported/$id",
+    "/collection",
+    "/encyclopedia",
+    "/encyclopedia/entity/$id",
+    "/encyclopedia/path/$id",
+    "/encyclopedia/state/$id",
+    "/encyclopedia/type/$type",
+    "/games/$mode/$slug",
+    "/investigations",
+    "/profile",
+  ].forEach(addPath);
+
   return Array.from(set);
+}
+
+function getRouterPathname(router: ReturnType<typeof useRouter>): string {
+  const location = (router as unknown as { state?: { location?: { pathname?: string; href?: string } } }).state?.location;
+  const pathname = normalizePath(location?.pathname || "/");
+  if (pathname !== "/") return pathname;
+
+  const hrefPath = location?.href?.split(/[?#]/)[0];
+  return hrefPath ? normalizePath(hrefPath) : pathname;
+}
+
+function getWindowRoutePathname(): string {
+  const pathname = normalizePath(window.location.pathname || "/");
+  if (pathname !== "/") return pathname;
+
+  // Defensive: some Android/WebView launches can keep the real app route in
+  // the hash while pathname remains `/`. Use it only as a route source when it
+  // clearly contains an absolute app path.
+  const hashPath = window.location.hash.startsWith("#/") ? window.location.hash.slice(1) : "";
+  return hashPath ? normalizePath(hashPath) : pathname;
+}
+
+function getMatchedRouteIds(router: ReturnType<typeof useRouter>): string[] {
+  const matches = (router as unknown as { state?: { matches?: Array<{ routeId?: string; id?: string }> } }).state?.matches;
+  if (!Array.isArray(matches)) return [];
+  return matches.map((match) => String(match.routeId ?? match.id ?? "")).filter(Boolean);
+}
+
+function getDeepestMatchedPathname(router: ReturnType<typeof useRouter>): string {
+  const matches = (router as unknown as {
+    state?: { matches?: Array<{ pathname?: string; routeId?: string; id?: string }> };
+  }).state?.matches;
+  const deepest = Array.isArray(matches) ? matches[matches.length - 1] : undefined;
+  const pathname = deepest?.pathname;
+  const normalizedPathname = pathname ? normalizePath(pathname) : "/";
+
+  const routeId = deepest?.routeId ?? deepest?.id;
+  if (normalizedPathname !== "/") return normalizedPathname;
+  return typeof routeId === "string" && routeId.startsWith("/") ? normalizePath(routeId) : "/";
+}
+
+function pickCurrentPath(windowPath: string, routerPath: string, matchedPath: string): string {
+  if (windowPath !== "/") return windowPath;
+  if (routerPath !== "/") return routerPath;
+  if (matchedPath !== "/") return matchedPath;
+  return "/";
+}
+
+function isRootPath(pathname: string): boolean {
+  const clean = normalizePath(pathname);
+  return clean === "/";
+}
+
+function resolveParent(patterns: string[], pathname: string): string | null {
+  const clean = normalizePath(pathname);
+  if (isRootPath(clean)) return null;
+
+  const mappedParent = resolveKnownSemanticParent(patterns, clean);
+  if (mappedParent) return mappedParent;
+
+  const registeredParent = findRegisteredParent(patterns, clean);
+  if (registeredParent) return registeredParent;
+
+  const fallbackParent = immediateParent(clean);
+  if (!fallbackParent) return "/";
+  return isRegistered(patterns, fallbackParent) ? fallbackParent : "/";
+}
+
+function resolveKnownSemanticParent(patterns: string[], pathname: string): string | null {
+  const parts = normalizePath(pathname).split("/").filter(Boolean);
+  if (parts[0] === "figure" && parts.length > 1) return registeredOrRoot(patterns, "/encyclopedia/type/figure");
+  if (parts[0] === "city" && parts.length > 1) return registeredOrRoot(patterns, "/encyclopedia/type/city");
+  if (parts[0] === "battle" && parts.length > 1) return registeredOrRoot(patterns, "/encyclopedia/type/battle");
+  if (parts[0] === "investigation" && parts.length > 1) return registeredOrRoot(patterns, "/investigations");
+
+  if (parts[0] === "encyclopedia" && parts.length > 2) {
+    if (["entity", "state", "path", "type"].includes(parts[1])) return "/encyclopedia";
+    const sectionToType: Record<string, string> = {
+      figures: "figure",
+      scholars: "figure",
+      battles: "battle",
+      cities: "city",
+      states: "state",
+      events: "event",
+      artifacts: "artifact",
+      landmarks: "landmark",
+    };
+    const type = sectionToType[parts[1]];
+    if (type) return registeredOrRoot(patterns, `/encyclopedia/type/${type}`);
+  }
+
+  return null;
+}
+
+function registeredOrRoot(patterns: string[], pathname: string): string {
+  const clean = normalizePath(pathname);
+  return isRegistered(patterns, clean) ? clean : "/";
+}
+
+function closeExitDialog(setConfirmOpen: (open: boolean) => void) {
+  setConfirmOpen(false);
+}
+
+function logBackDecision(details: {
+  actualWindowPathname: string;
+  routerPathname: string;
+  normalizedPathname: string;
+  matchedRouteIds: string[];
+  computedParentRoute: string | null;
+  isRootRoute: boolean;
+}) {
+  console.log("[android:back] decision", details);
+}
+
+function assertCleanRegisteredParent(patterns: string[], parent: string): boolean {
+  const cleanParent = normalizePath(parent);
+  return cleanParent === parent && isRegistered(patterns, cleanParent);
+}
+
+async function pushRegisteredParent(router: ReturnType<typeof useRouter>, patterns: string[], parent: string) {
+  if (!assertCleanRegisteredParent(patterns, parent)) {
+    console.warn("[android:back] blocked unregistered parent", { parent });
+    return;
+  }
+
+  console.log("[android:back] pushRegisteredParent=", parent);
+  router.history.push(parent);
 }
 
 function patternMatches(pattern: string, pathname: string): boolean {
@@ -89,7 +260,13 @@ function findRegisteredParent(patterns: string[], path: string): string | null {
 
 export function AndroidBackHandler() {
   const router = useRouter();
+  const latestRouterPathname = useRouterState({ select: (state) => normalizePath(state.location.pathname || "/") });
+  const latestRouterPathnameRef = useRef(latestRouterPathname);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    latestRouterPathnameRef.current = latestRouterPathname;
+  }, [latestRouterPathname]);
 
   useEffect(() => {
     const cap = (window as unknown as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
@@ -101,27 +278,47 @@ export function AndroidBackHandler() {
       try {
         const { App } = await import("@capacitor/app");
         const handle = await App.addListener("backButton", async () => {
-          const path = normalizePath(window.location.pathname || "/");
+          const actualWindowPathname = window.location.pathname || "/";
+          const windowRoutePathname = getWindowRoutePathname();
+          const routerPathname = getRouterPathname(router);
+          const latestObservedRouterPathname = latestRouterPathnameRef.current;
+          const effectiveRouterPathname = latestObservedRouterPathname !== "/" ? latestObservedRouterPathname : routerPathname;
+          const matchedPathname = getDeepestMatchedPathname(router);
+          const path = pickCurrentPath(windowRoutePathname, effectiveRouterPathname, matchedPathname);
+          const matchedRouteIds = getMatchedRouteIds(router);
           const patterns = getRegisteredPatterns(router);
-          const parent = findRegisteredParent(patterns, path);
-          console.log("[android:back] pathname=", path, "parentPath=", parent, "patternsCount=", patterns.length);
+          const parent = resolveParent(patterns, path);
+          const isRootRoute = isRootPath(path);
 
-          if (path === "/" || parent === null) {
+          logBackDecision({
+            actualWindowPathname,
+            routerPathname,
+            normalizedPathname: path,
+            matchedRouteIds,
+            computedParentRoute: parent,
+            isRootRoute,
+          });
+
+          if (isRootRoute) {
             console.log("[android:back] method=confirm-exit");
             setConfirmOpen(true);
             return;
           }
-          if (parent === path) {
-            console.warn("[android:back] method=skip (parent === pathname)");
+
+          if (!parent) {
+            console.warn("[android:back] method=skip (no parent for non-root path)");
             return;
           }
 
-          console.log("[android:back] method=router.navigate ->", parent);
+          if (normalizePath(parent) === path) {
+            console.warn("[android:back] method=skip (parent === normalizedPathname)");
+            return;
+          }
+
           try {
-            await router.navigate({ to: parent as never, replace: false });
+            await pushRegisteredParent(router, patterns, parent);
           } catch (e) {
-            console.warn("[android:back] navigate threw, fallback history.push", e);
-            router.history.push(parent);
+            console.warn("[android:back] navigation failed", { parent, error: e });
           }
         });
         listenerHandle = handle;
@@ -146,7 +343,7 @@ export function AndroidBackHandler() {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="border-slate-700">لا</AlertDialogCancel>
+          <AlertDialogCancel onClick={() => closeExitDialog(setConfirmOpen)} className="border-slate-700">لا</AlertDialogCancel>
           <AlertDialogAction
             onClick={async () => {
               try {
