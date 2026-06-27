@@ -7,6 +7,7 @@ import { RouterMinTest, isRouterMinPath } from "./components/RouterMinTest";
 import { RouterBisectTest, isRouterBisectPath, loadBisectModules } from "./components/RouterBisectTest";
 import { RouterRealTreeTest, isRouterRealTreePath } from "./components/RouterRealTreeTest";
 import { RouterRealTreeStrippedTest, isRouterRealTreeStrippedPath } from "./components/RouterRealTreeStrippedTest";
+import { RouterStructuralBisectTest, isRouterStructuralBisectPath } from "./components/RouterStructuralBisectTest";
 import { InputTraceDebugView } from "./components/InputTraceDebugView";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
@@ -129,6 +130,14 @@ if (isDirectInputMinPath()) {
   // eslint-disable-next-line no-console
   console.info("IRTH_ROUTER_REAL_STRIPPED_BOOT", { search: window.location.search });
   createRoot(rootElement).render(<RouterRealTreeStrippedTest />);
+} else if (isRouterStructuralBisectPath()) {
+  try {
+    document.documentElement.classList.remove("irth-booting");
+    document.getElementById("irth-boot-splash")?.remove();
+  } catch { /* ignore */ }
+  // eslint-disable-next-line no-console
+  console.info("IRTH_ROUTER_STRUCT_BISECT_BOOT", { search: window.location.search });
+  createRoot(rootElement).render(<RouterStructuralBisectTest />);
 } else if (shouldShowStoredFreezeTrace) {
   window.history.replaceState(null, "", "/debug/input-trace");
   try {
