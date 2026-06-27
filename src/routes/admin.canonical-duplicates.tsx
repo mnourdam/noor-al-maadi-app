@@ -16,6 +16,7 @@ import { ChevronRight, ShieldCheck, Loader2, AlertTriangle, Crown, EyeOff, Link2
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { entityRichness } from "@/lib/encyclopedia-source";
+import { normalizeArabicName, normalizeSlugKey } from "@/lib/arabic-normalize";
 
 export const Route = createFileRoute("/admin/canonical-duplicates")({
   head: () => ({
