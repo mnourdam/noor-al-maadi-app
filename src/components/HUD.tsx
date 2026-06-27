@@ -61,13 +61,38 @@ export function HUD() {
   const hearts = getEffectiveHearts(profile, now);
   const next = msUntilNextHeart(profile, now);
 
+  // ----- Live stat bump animations -----
+  const prevRef = useRef({ dinars: profile.dinars, points: profile.points, hearts });
+  const [bump, setBump] = useState<Record<BumpKey, number>>({ dinars: 0, points: 0, hearts: 0 });
+  const [heartShake, setHeartShake] = useState(0);
+
+  useEffect(() => {
+    const prev = prevRef.current;
+    const next: Partial<Record<BumpKey, number>> = {};
+    if (profile.dinars > prev.dinars) next.dinars = Date.now();
+    if (profile.points > prev.points) next.points = Date.now();
+    if (hearts > prev.hearts) next.hearts = Date.now();
+    if (hearts < prev.hearts) setHeartShake((n) => n + 1);
+    prevRef.current = { dinars: profile.dinars, points: profile.points, hearts };
+    if (Object.keys(next).length) setBump((b) => ({ ...b, ...next }));
+  }, [profile.dinars, profile.points, hearts]);
+
+  useEffect(() => {
+    const onLost = () => setHeartShake((n) => n + 1);
+    window.addEventListener("irth:heart-lost", onLost);
+    return () => window.removeEventListener("irth:heart-lost", onLost);
+  }, []);
+
+  const bumpCls = (key: BumpKey) =>
+    bump[key] && Date.now() - bump[key] < 700 ? "hud-bump" : "";
+
   return (
     <div
       className="sticky top-0 z-40 mx-auto w-full max-w-md px-3 pt-2"
       style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
     >
       <div className="glass flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-background/70 px-3 py-1.5 backdrop-blur-md">
-        <div className="flex items-center gap-0.5">
+        <div key={heartShake} className={`flex items-center gap-0.5 ${heartShake ? "hud-shake" : ""}`}>
           {Array.from({ length: HEART_MAX }).map((_, i) => (
             <Heart
               key={i}
@@ -82,10 +107,10 @@ export function HUD() {
           )}
         </div>
         <div className="flex items-center gap-3 text-[11px]">
-          <span className="inline-flex items-center gap-1 text-gold">
+          <span className={`inline-flex items-center gap-1 text-gold ${bumpCls("dinars")}`}>
             <Coins className="size-3.5" /> {profile.dinars.toLocaleString("en-US")}
           </span>
-          <span className="inline-flex items-center gap-1 text-amber-200">
+          <span className={`inline-flex items-center gap-1 text-amber-200 ${bumpCls("points")}`}>
             <Star className="size-3.5" /> {profile.points.toLocaleString("en-US")}
           </span>
           <span className="inline-flex items-center gap-1 text-orange-400">
