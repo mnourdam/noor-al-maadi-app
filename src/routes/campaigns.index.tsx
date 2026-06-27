@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords } from "lucide-react";
+import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, CheckCircle2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useProfile } from "@/lib/profile";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
+import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
@@ -88,11 +89,20 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
   const xp = fr?.xp;
   const coins = fr?.coins;
 
+  const progress = getCampaignProgress(c.id);
+  const isComplete =
+    c.chapters.length > 0 &&
+    (progress.completed || c.chapters.every((ch) => progress.chapters[ch.id]?.completed));
+
   return (
     <Link
       to="/campaigns/imported/$id"
       params={{ id: c.id }}
-      className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition hover:border-gold/60"
+      className={`shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
+        isComplete
+          ? "border-emerald-400/40 opacity-80 hover:opacity-100"
+          : "border-gold/40 hover:border-gold/60"
+      }`}
     >
       <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
       <div className="relative">
@@ -104,6 +114,11 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
           {c.historicalPeriod && (
             <span className="rounded-full border border-gold/40 bg-black/30 px-2 py-0.5 text-[10px] text-gold">
               {c.historicalPeriod}
+            </span>
+          )}
+          {isComplete && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-200">
+              <CheckCircle2 className="size-3" /> مكتملة
             </span>
           )}
         </div>
