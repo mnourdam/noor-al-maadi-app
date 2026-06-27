@@ -135,6 +135,60 @@ function bindFirstInteraction() {
   window.addEventListener("touchstart",  onFirst, { once: true, passive: true });
 }
 
+// ---------- App lifecycle (background/foreground) ----------
+let lifecycleBound = false;
+function bindLifecycle() {
+  if (lifecycleBound || typeof window === "undefined") return;
+  lifecycleBound = true;
+  const onHidden = () => {
+    if (ambience) { try { ambience.pause(); } catch {/*ignore*/} }
+  };
+  const onVisible = () => {
+    // Only resume if the user has it enabled and previously interacted.
+    if (ambienceShouldPlay()) applyAmbienceState();
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") onHidden();
+    else onVisible();
+  });
+  window.addEventListener("pagehide", onHidden);
+  window.addEventListener("blur", onHidden);
+  window.addEventListener("focus", onVisible);
+}
+
+// ---------- Synthesized error tone (no asset needed) ----------
+let audioCtx: AudioContext | null = null;
+function getAudioCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (audioCtx) return audioCtx;
+  try {
+    const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+    if (!Ctor) return null;
+    audioCtx = new Ctor();
+    return audioCtx;
+  } catch { return null; }
+}
+
+function playSynthError() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(110, now + 0.22);
+    const peak = 0.18 * settings.masterVolume * settings.sfxVolume;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  } catch {/*ignore*/}
+}
+
 // ---------- Public API ----------
 export const audioManager = {
   init() {
@@ -146,6 +200,7 @@ export const audioManager = {
       return;
     }
     bindFirstInteraction();
+    bindLifecycle();
     // try immediately in case the user already interacted (e.g. SPA nav)
     applyAmbienceState();
   },
@@ -202,6 +257,14 @@ export const audioManager = {
     } catch {
       sfxFailed.add(name);
     }
+  },
+
+  /** Play a synthesized error tone (no asset needed). Respects audio settings. */
+  playError() {
+    if (typeof window === "undefined") return;
+    if (isAndroidUltraStableMode()) return;
+    if (!settings.soundEnabled || !settings.sfxEnabled) return;
+    playSynthError();
   },
 
   /** Cleanup — useful for hot reload / tests. */

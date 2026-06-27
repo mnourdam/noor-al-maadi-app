@@ -5,6 +5,7 @@ import {
   quizQuestionKey, chapterQuizKey, isQuestionAnsweredCorrectly,
 } from "@/lib/quiz-engine";
 import { useProfile } from "@/lib/profile";
+import { sfx } from "@/components/games/sfx";
 
 interface Props {
   campaignId: string;
@@ -49,12 +50,14 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
     if (!hasHearts()) return;
     setRevealed(true);
     if (picked === q.correctIndex) {
+      sfx("correct", `quiz:${campaignId}:${chapterId}:${quiz.id}:${q.id}`);
       completeMission(quizQuestionKey(campaignId, chapterId, quiz.id, q.id), q.xp);
       if (q.badgeId) awardBadge(q.badgeId);
       q.unlock?.characters?.forEach(unlockCharacter);
       q.unlock?.artifacts?.forEach(findArtifact);
       q.unlock?.states?.forEach(unlockEra);
     } else {
+      sfx("wrong", `quiz:${campaignId}:${chapterId}:${quiz.id}:${q.id}`);
       // Idempotent: same key won't decrement twice if React fires submit
       // twice for the same question/attempt.
       loseHeartOnce(`quiz:${campaignId}:${chapterId}:${quiz.id}:${q.id}`);

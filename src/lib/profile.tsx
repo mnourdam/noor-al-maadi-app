@@ -349,6 +349,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         result = next;
         return { ...p, ...commitHearts(p, next, now) };
       });
+      if (typeof window !== "undefined") {
+        try { window.dispatchEvent(new CustomEvent("irth:heart-lost", { detail: { hearts: result } })); } catch {}
+      }
       return result;
     },
     loseHeartOnce: (attemptKey: string) => {
@@ -357,7 +360,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         return getEffectiveHearts(profile);
       }
       heartPenaltyDedup.add(attemptKey);
-      // Cap the dedup set so it can't grow forever during a long session.
       if (heartPenaltyDedup.size > 500) {
         const first = heartPenaltyDedup.values().next().value;
         if (first) heartPenaltyDedup.delete(first);
@@ -370,6 +372,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         result = next;
         return { ...p, ...commitHearts(p, next, now) };
       });
+      if (typeof window !== "undefined") {
+        try { window.dispatchEvent(new CustomEvent("irth:heart-lost", { detail: { hearts: result } })); } catch {}
+      }
       return result;
     },
     hasHearts: () => getEffectiveHearts(profile) > 0,
