@@ -215,7 +215,14 @@ function GamePlayPage() {
   // Wait until the progress fetch resolves so we don't briefly mount the
   // playable UI for a completed game (which would also restart the timer).
   if (alreadyCompleted === null) {
-    return <AppShell><Screen title="جارٍ التحميل…">…</Screen></AppShell>;
+    return (
+      <AppShell>
+        <div dir="rtl" className="mx-auto max-w-3xl space-y-4 px-4 py-6">
+          <div className="h-36 animate-pulse rounded-2xl border border-emerald-500/15 bg-slate-900/40" />
+          <div className="h-56 animate-pulse rounded-2xl border border-amber-500/15 bg-slate-900/30" />
+        </div>
+      </AppShell>
+    );
   }
   if (alreadyCompleted) {
     const relatedEntityDone = game.related_entities?.[0];
