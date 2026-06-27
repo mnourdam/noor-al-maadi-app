@@ -175,7 +175,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+function isAndroidCapacitorRuntime() {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  return (
+    /android/i.test(navigator.userAgent) ||
+    Boolean((window as unknown as { Capacitor?: unknown }).Capacitor) ||
+    window.location.protocol === "capacitor:"
+  );
+}
+
 function RootShell({ children }: { children: ReactNode }) {
+  // On Android/Capacitor, rendering <html>/<body> from React freezes the
+  // WebView text-focus handoff. The native index.html already provides the
+  // document shell, so we render children directly.
+  if (isAndroidCapacitorRuntime()) {
+    return <>{children}</>;
+  }
   return (
     <html lang="ar" dir="rtl">
       <head>
