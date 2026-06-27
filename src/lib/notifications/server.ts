@@ -166,25 +166,43 @@ export async function setMyPreferences(prefs: NotificationPreferences): Promise<
  */
 export function subscribeToMyNotifications(onChange: () => void): () => void {
   let alive = true;
-  let channel: ReturnType<typeof supabase.channel> | null = null;
+  const channels: Array<ReturnType<typeof supabase.channel>> = [];
 
   (async () => {
     const { data } = await supabase.auth.getUser();
     const uid = data.user?.id;
     if (!alive || !uid) return;
-    channel = supabase
-      .channel(`notif-deliveries-${uid}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notification_deliveries", filter: `user_id=eq.${uid}` },
-        () => onChange(),
-      )
-      .subscribe();
+
+    // Per-user deliveries (read/dismissed/deleted state).
+    channels.push(
+      supabase
+        .channel(`notif-deliveries-${uid}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "notification_deliveries", filter: `user_id=eq.${uid}` },
+          () => onChange(),
+        )
+        .subscribe(),
+    );
+
+    // Notifications inserts: catches both direct (target_user_id=uid) and
+    // broadcast/all rows that have no per-user delivery row yet. RLS
+    // ensures the user only sees rows they are allowed to read.
+    channels.push(
+      supabase
+        .channel(`notif-inserts-${uid}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications" },
+          () => onChange(),
+        )
+        .subscribe(),
+    );
   })();
 
   return () => {
     alive = false;
-    if (channel) supabase.removeChannel(channel);
+    for (const c of channels) supabase.removeChannel(c);
   };
 }
 
