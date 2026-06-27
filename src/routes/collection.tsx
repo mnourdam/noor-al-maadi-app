@@ -33,7 +33,7 @@
 //      placeholder fake cards.
 // ============================================================
 
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Lock, Swords, Landmark, Users, Sparkles,
