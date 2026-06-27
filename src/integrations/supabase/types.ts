@@ -1478,6 +1478,7 @@ export type Database = {
       is_content_admin: { Args: never; Returns: boolean }
       is_content_editor: { Args: never; Returns: boolean }
       is_user_manager: { Args: never; Returns: boolean }
+      is_username_available: { Args: { p_username: string }; Returns: boolean }
       list_my_notifications: {
         Args: { p_before?: string; p_limit?: number }
         Returns: Json
@@ -1525,6 +1526,7 @@ export type Database = {
         Args: { p_categories: Json }
         Returns: undefined
       }
+      set_my_username: { Args: { p_username: string }; Returns: string }
       sync_my_public_stats: { Args: { p_stats: Json }; Returns: undefined }
       touch_my_last_active: { Args: never; Returns: undefined }
     }
