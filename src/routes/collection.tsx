@@ -696,7 +696,7 @@ function CollectionPage() {
 // `metadata.collectible === true` in the encyclopedia.
 // ============================================================
 function RecentUnlocks() {
-  type Recent = { key: string; type: string; kind: string; title: string; subtitle: string; rarity: Rarity };
+  type Recent = { key: string; type: string; slug: string; kind: string; title: string; subtitle: string; rarity: Rarity };
   const ALLOWED_TYPES = new Set(["figure", "scholar", "artifact", "landmark", "city", "battle"]);
 
   const supaArtifacts = useEncyclopediaSupabaseList("artifact");
