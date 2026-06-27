@@ -112,6 +112,14 @@ if (isDirectInputMinPath()) {
   loadBisectModules().finally(() => {
     createRoot(rootElement).render(<RouterBisectTest />);
   });
+} else if (isRouterRealTreePath()) {
+  try {
+    document.documentElement.classList.remove("irth-booting");
+    document.getElementById("irth-boot-splash")?.remove();
+  } catch { /* ignore */ }
+  // eslint-disable-next-line no-console
+  console.info("IRTH_ROUTER_REAL_TREE_BOOT", { search: window.location.search });
+  createRoot(rootElement).render(<RouterRealTreeTest />);
 } else if (shouldShowStoredFreezeTrace) {
   window.history.replaceState(null, "", "/debug/input-trace");
   try {
