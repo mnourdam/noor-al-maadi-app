@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { Bell, Send, Save, RefreshCw, ShieldAlert, Zap, CalendarClock, UserMinus, Flag, BookOpen } from "lucide-react";
+import { Bell, Send, Save, RefreshCw, ShieldAlert, Zap, CalendarClock, UserMinus, Flag, BookOpen, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminGuard } from "@/lib/admin-guard";
 import { ALL_CATEGORY_KEYS, NOTIFICATION_CATEGORIES, type NotificationCategoryKey } from "@/lib/notifications/categories";
