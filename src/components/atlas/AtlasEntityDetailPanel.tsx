@@ -7,7 +7,7 @@
 // Layout: bottom sheet on mobile, floating popover at the bottom-right on
 // desktop. Safe-area padding so it never hides behind the home-bar.
 import { Link } from "@tanstack/react-router";
-import { BookOpen, Loader2, X } from "lucide-react";
+import { BookOpen, Crosshair, Loader2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { KIND_LABEL_AR, type AtlasEntityRow } from "@/lib/atlas-entities";
 import { supabase } from "@/integrations/supabase/client";
