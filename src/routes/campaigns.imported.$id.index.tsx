@@ -11,6 +11,7 @@ import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-rout
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight, Lock, Check, Crown, Trophy, Scroll, BookOpen, Sparkles,
+  Clock, Tag, Coins, Zap, Gift, Package, Play, ChevronLeft,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { fetchCampaignByIdOrSlug } from "@/lib/supabaseCampaigns";
