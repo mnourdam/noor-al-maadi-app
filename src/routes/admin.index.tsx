@@ -92,6 +92,8 @@ function AdminHub() {
             desc="مكررات slug/عناوين/legacy_id، صفوف ضعيفة، تعطيل آمن." />
           <AdminCard to="/admin/canonical-duplicates" icon={<ShieldCheck className="h-5 w-5" />} title="حل المكررات القياسية"
             desc="كشف الكيانات المكررة، تعيين قياسي، إخفاء ناعم وإعادة توجيه الأطلس والحملات." />
+          <AdminCard to="/admin/encyclopedia-cleanup" icon={<Landmark className="h-5 w-5" />} title="ورشة تنظيف الموسوعة"
+            desc="بحث ذكي، محرر JSON، كشف مكررات، دمج آمن، تحويلات slug، أرشفة وتسجيل تدقيق." />
           <AdminCard to="/admin/content-cleanup" icon={<ShieldCheck className="h-5 w-5" />} title="تنظيف المحتوى (دفعي)"
             desc="أرشفة المكررات وإعادة ربط الأطلس بالقياسي — معاينة قبل التنفيذ." />
           <AdminCard to="/admin/exploration-path-repair" icon={<Compass className="h-5 w-5" />} title="إصلاح مسارات الاستكشاف"
