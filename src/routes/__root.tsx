@@ -281,9 +281,12 @@ function RootComponent() {
     return () => {
       unsub?.();
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("unhandledrejection", onRejection);
+      window.removeEventListener("error", onWindowError);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
+
 
   return (
     <QueryClientProvider client={queryClient}>
