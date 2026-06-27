@@ -4,8 +4,9 @@
 // Collapsible: on mobile defaults to a compact bar (search + active-filter
 // summary + expand arrow); full controls revealed when expanded.
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, RotateCcw, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, MapPin, RotateCcw, Search, SearchX } from "lucide-react";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
+import type { AtlasSearchHit } from "@/lib/atlas/atlas-search";
 import {
   KIND_LABEL_AR,
   type AtlasEntityKind,
