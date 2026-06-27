@@ -154,7 +154,7 @@ export function AtlasControls({
               value={search}
               onValueChange={onSearch}
               commitMode="blur"
-              onEnter={onSearch}
+              onEnter={(v) => (onSubmitSearch ?? onSearch)(v)}
               androidEntryKey="atlas.search"
               autoComplete="off"
               autoCorrect="off"
@@ -162,6 +162,17 @@ export function AtlasControls({
               placeholder="ابحث في الأطلس..."
               className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-amber-200/40"
             />
+            {onSubmitSearch && (
+              <button
+                type="button"
+                onClick={() => onSubmitSearch(search)}
+                aria-label="انتقل إلى النتيجة"
+                className="grid size-7 shrink-0 place-items-center rounded-full bg-amber-400 text-slate-950 hover:bg-amber-300"
+                title="انتقل"
+              >
+                <MapPin className="size-3.5" />
+              </button>
+            )}
           </div>
 
           {!expanded && hasActiveFilter && (
@@ -194,12 +205,42 @@ export function AtlasControls({
           </button>
         </div>
 
+        {/* Suggestions / no-match (only shown after an explicit submit). */}
+        {suggestions.length > 0 && (
+          <div className="flex flex-col gap-1 rounded-xl border border-amber-400/20 bg-slate-950/60 p-1.5">
+            <div className="px-2 py-0.5 text-[10px] font-bold text-amber-200/80">
+              {suggestions.length === 1 ? "هل تقصد:" : "اقتراحات قريبة:"}
+            </div>
+            {suggestions.map((h) => (
+              <button
+                key={h.entity.id}
+                type="button"
+                onClick={() => onPickSuggestion?.(h)}
+                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-right text-[12px] text-amber-50 hover:bg-amber-400/10"
+              >
+                <MapPin className="size-3.5 shrink-0 text-amber-300" />
+                <span className="truncate font-bold">{h.entity.name_ar}</span>
+                {h.entity.name_en && (
+                  <span className="ml-auto truncate text-[10px] text-amber-200/60">{h.entity.name_en}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+        {noMatch && (
+          <div className="flex items-center gap-2 rounded-xl border border-amber-400/20 bg-slate-950/60 px-3 py-2 text-[12px] text-amber-100">
+            <SearchX className="size-4 text-amber-300" />
+            لا توجد نتائج بهذا الاسم
+          </div>
+        )}
+
         {/* Collapsed mobile summary chip (full width, beneath search). */}
         {!expanded && hasActiveFilter && (
           <div className="truncate rounded-full bg-slate-950/40 px-2 py-1 text-[11px] font-bold text-amber-200 sm:hidden">
             {activeSummary}
           </div>
         )}
+
 
         {/* Expanded sections: world + era selects, then kind chip row. */}
         {expanded && (
