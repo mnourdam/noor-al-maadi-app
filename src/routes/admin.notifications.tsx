@@ -194,7 +194,7 @@ function Composer() {
           </Link>
           <Link to="/admin" className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">لوحة الإدارة</Link>
         </header>
-        {debugBlock}
+        
 
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold">إنشاء إشعار جديد</h2>
