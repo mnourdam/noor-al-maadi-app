@@ -54,33 +54,28 @@ type HeroSlide =
 function HomeFull() {
   const { profile, touchStreak } = useProfile();
   const { account, user, lastSyncAt } = useAccount();
-  const androidStable = false;
 
   const displayName = account?.username ?? (user ? profile.name : profile.name);
   const [mounted, setMounted] = useState(false);
   const { selected: todayEvent } = useTodayInHistoryEvent();
   const stats = useRealCollectionStats();
   const [unread, setUnread] = useState(0);
-  const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
   useEffect(() => {
     const recount = () => setUnread(unreadCount());
     recount();
-    if (androidStable) return;
     window.addEventListener("irth:notifications:updated", recount);
-    if (!disableGlobalFocusBlur) window.addEventListener("focus", recount);
+    window.addEventListener("focus", recount);
     return () => {
       window.removeEventListener("irth:notifications:updated", recount);
-      if (!disableGlobalFocusBlur) window.removeEventListener("focus", recount);
+      window.removeEventListener("focus", recount);
     };
-  }, [androidStable, disableGlobalFocusBlur]);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-    androidMark("commit:Home");
     if (!user || lastSyncAt) {
       touchStreak();
     }
-    if (androidStable) return;
     const season = currentSeason();
     runDailyNotifications({
       prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
@@ -93,7 +88,7 @@ function HomeFull() {
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [touchStreak, todayEvent?.id, user, lastSyncAt, androidStable]);
+  }, [touchStreak, todayEvent?.id, user, lastSyncAt]);
 
 
   const lvl = levelFor(profile.points);
@@ -103,21 +98,20 @@ function HomeFull() {
     try { return listPublishedCampaigns(); } catch { return []; }
   });
   useEffect(() => {
-    if (androidStable) return;
     import("@/lib/cloudSync")
       .then((m) => m.pullAllFromCloud())
       .then(() => {
         try { setImportedCampaigns(listPublishedCampaigns()); } catch {}
       })
       .catch(() => {});
-  }, [androidStable]);
+  }, []);
   const [progressTick, setProgressTick] = useState(0);
   useEffect(() => {
-    if (androidStable) return;
     const onFocus = () => setProgressTick((t) => t + 1);
-    if (!disableGlobalFocusBlur) window.addEventListener("focus", onFocus);
-    return () => { if (!disableGlobalFocusBlur) window.removeEventListener("focus", onFocus); };
-  }, [androidStable, disableGlobalFocusBlur]);
+    window.addEventListener("focus", onFocus);
+    return () => { window.removeEventListener("focus", onFocus); };
+  }, []);
+
 
   type CampaignSelection = {
     campaign: ImportedCampaign;
