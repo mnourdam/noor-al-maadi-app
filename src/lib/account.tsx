@@ -198,6 +198,28 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       const name = (displayName ?? u).trim();
       try { await cloudUpdateDisplayName(name); } catch { /* ignore */ }
     }
+
+    // BETA: when VITE_BETA_AUTO_CONFIRM_USERS=true, accounts are auto-confirmed
+    // server-side and we send a branded welcome email instead of a verification
+    // link. Toggle the env flag off (and re-disable auto-confirm in Cloud)
+    // to restore the normal verification flow without any code change.
+    const autoConfirm = import.meta.env.VITE_BETA_AUTO_CONFIRM_USERS === "true";
+    if (autoConfirm && data.session?.user) {
+      const name = (displayName ?? u).trim();
+      try {
+        const { sendTransactionalEmail } = await import("@/lib/email/send");
+        await sendTransactionalEmail({
+          templateName: "welcome-beta",
+          recipientEmail: email.trim(),
+          idempotencyKey: `welcome-beta-${data.session.user.id}`,
+          templateData: { displayName: name },
+        });
+      } catch (err) {
+        console.warn("[account] welcome email failed", err);
+      }
+      return { ok: true };
+    }
+
     if (!data.session) {
       return { ok: true, error: "تحقق من بريدك لتأكيد الحساب." };
     }
