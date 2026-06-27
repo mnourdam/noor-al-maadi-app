@@ -590,7 +590,7 @@ function HomeFull() {
 
       {/* ============ 1.5 START-HERE STRIP — clear next-step CTA ============ */}
       {campaignSel && !campaignSel.isComplete && (
-        <section className="relative z-20 -mt-6 px-5 animate-fade-in">
+        <section className="relative z-20 mt-5 px-5 animate-fade-in">
           <Link
             to="/campaigns/imported/$id"
             params={{ id: campaignSel.campaign.id }}
@@ -615,8 +615,9 @@ function HomeFull() {
       )}
 
 
-      {/* ============ 2. QUICK PROGRESS (hugs the hero) ============ */}
-      <section className="-mt-12 relative z-10 px-5 animate-fade-in">
+      {/* ============ 2. QUICK PROGRESS ============ */}
+      <section className="mt-5 relative z-10 px-5 animate-fade-in">
+
         <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 px-4 py-4 shadow-elegant">
           <div className="arabesque-layer opacity-30" />
           <div className="relative flex items-center gap-4">
