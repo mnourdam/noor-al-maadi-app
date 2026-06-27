@@ -24,9 +24,10 @@ export function androidMark(_name: string, _detail?: AndroidMarkDetail): void {
   /* no-op in production */
 }
 
-export function androidMeasure<T>(_name: string, fn: () => T): T {
-  return fn();
+export function androidMeasure(_name: string, _startedAt?: number, _detail?: AndroidMarkDetail): void {
+  /* no-op in production */
 }
+
 
 export function recordAndroidAction(_name: string, _detail?: AndroidMarkDetail): void {
   /* no-op in production */
