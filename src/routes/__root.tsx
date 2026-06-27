@@ -205,6 +205,33 @@ function RootComponent() {
     // Apply Android/WebView/reduced-motion perf-mode class on <html>.
     import("../lib/perf-mode").then((m) => m.applyPerfMode()).catch(() => {});
 
+    // Global resilience: never let unhandled promise rejections or window
+    // errors bubble up to a raw screen. Log technical detail; swallow UI.
+    const onRejection = (ev: PromiseRejectionEvent) => {
+      try {
+        // eslint-disable-next-line no-console
+        console.error("[unhandledrejection]", ev.reason);
+        reportLovableError(
+          ev.reason instanceof Error ? ev.reason : new Error(String(ev.reason ?? "unknown")),
+          { boundary: "window_unhandledrejection" }
+        );
+      } catch { /* noop */ }
+      // Prevent default Capacitor/WebView surfacing.
+      ev.preventDefault?.();
+    };
+    const onWindowError = (ev: ErrorEvent) => {
+      try {
+        // eslint-disable-next-line no-console
+        console.error("[window.onerror]", ev.message, ev.error);
+        if (ev.error instanceof Error) {
+          reportLovableError(ev.error, { boundary: "window_onerror" });
+        }
+      } catch { /* noop */ }
+    };
+    window.addEventListener("unhandledrejection", onRejection);
+    window.addEventListener("error", onWindowError);
+
+
     import("../lib/orphanUnlocksMigration").then((m) => m.migrateOrphanUnlocks()).catch(() => {});
     import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
     import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
