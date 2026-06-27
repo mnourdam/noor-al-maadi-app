@@ -431,7 +431,7 @@ export function RouterRootObjectIsolationTest() {
     const prepared = mode === "min-root-real-child"
       ? prepareMinRootRealChild(originalChildren, params)
       : mode === "clean-root-real-children"
-        ? prepareCleanRootRealChildren(generatedRoot, originalChildren)
+        ? prepareCleanRootRealChildren(generatedRoot, originalChildren, params)
         : prepareRealRootBare(generatedRoot, originalChildren);
 
     const registeredRouteCount = Object.keys((prepared.router as unknown as { routesById?: Record<string, unknown> }).routesById ?? {}).length;
