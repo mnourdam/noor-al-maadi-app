@@ -292,7 +292,7 @@ export function RouterStructuralBisectTest() {
   const [mounted, setMounted] = useState(false);
 
   const { router, queryClient, summary } = useMemo(() => {
-    const summary = applyStructuralSubset(routeTree as AnyRoute);
+    const summary = applyStructuralSubset(routeTree as unknown as AnyRoute);
     const queryClient = new QueryClient();
     const router = createRouter({
       routeTree,
