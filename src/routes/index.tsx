@@ -230,10 +230,11 @@ function HomeFull() {
   const isRTL = typeof document !== "undefined" && document.documentElement.dir === "rtl";
 
   useEffect(() => {
-    if (androidStable || slides.length <= 1 || isDragging) return;
+    if (slides.length <= 1 || isDragging) return;
     const id = setInterval(() => setSlideIdx((i) => (i + 1) % slides.length), 7000);
     return () => clearInterval(id);
-  }, [slides.length, isDragging, androidStable]);
+  }, [slides.length, isDragging]);
+
   useEffect(() => { if (slideIdx >= slides.length) setSlideIdx(0); }, [slides.length, slideIdx]);
   const slide = slides[Math.min(slideIdx, slides.length - 1)] ?? slides[0];
 
