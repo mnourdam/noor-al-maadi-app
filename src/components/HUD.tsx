@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
@@ -7,6 +7,8 @@ import { unreadCount, formatBadgeCount } from "@/lib/notifications";
 import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
+
+type BumpKey = "dinars" | "points" | "hearts";
 
 /**
  * Compact top-of-screen HUD: hearts, dinars, streak.
