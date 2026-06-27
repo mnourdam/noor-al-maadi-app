@@ -88,6 +88,10 @@ export function AtlasControls({
   onEra,
   onWorld,
   onSearch,
+  onSubmitSearch,
+  suggestions = [],
+  noMatch = false,
+  onPickSuggestion,
 }: {
   facets: AtlasFacets;
   kind: AtlasEntityKind | null;
@@ -98,6 +102,10 @@ export function AtlasControls({
   onEra: (e: string | null) => void;
   onWorld: (w: string | null) => void;
   onSearch: (q: string) => void;
+  onSubmitSearch?: (q: string) => void;
+  suggestions?: AtlasSearchHit[];
+  noMatch?: boolean;
+  onPickSuggestion?: (hit: AtlasSearchHit) => void;
 }) {
   // Default collapsed on narrow viewports (mobile/tablet), expanded on desktop.
   const [expanded, setExpanded] = useState<boolean>(() => {
