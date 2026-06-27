@@ -274,7 +274,7 @@ export function useEncyclopediaSupabaseEntityById(rawId: string) {
             console.warn("[encyclopedia-source] id fetch failed", error.message);
           return await cachedEncyclopediaById(id);
         }
-        return ((data as SupabaseEncyclopediaEntity | null) ?? null) ?? (await cachedEncyclopediaById(id));
+        return (data as SupabaseEncyclopediaEntity | null) ?? (await cachedEncyclopediaById(id));
       } catch (e) {
         if (typeof console !== "undefined")
           console.warn("[encyclopedia-source] id fetch crashed", e);
