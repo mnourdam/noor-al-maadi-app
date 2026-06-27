@@ -4,6 +4,7 @@ import { AndroidAuthMinTest, isAndroidAuthMinPath } from "./components/AndroidAu
 import { AndroidCampaignInputMinTest, isAndroidCampaignInputMinPath } from "./components/AndroidCampaignInputMinTest";
 import { DirectInputMin, isDirectInputMinPath } from "./components/DirectInputMin";
 import { RouterMinTest, isRouterMinPath } from "./components/RouterMinTest";
+import { RouterBisectTest, isRouterBisectPath, loadBisectModules } from "./components/RouterBisectTest";
 import { InputTraceDebugView } from "./components/InputTraceDebugView";
 import { AndroidInputIsolationTest, isAndroidInputTestPath } from "./components/AndroidInputIsolationTest";
 import { AndroidReactMinTest, isAndroidReactMinPath } from "./components/AndroidReactMinTest";
