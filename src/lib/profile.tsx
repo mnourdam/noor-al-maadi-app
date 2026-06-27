@@ -161,11 +161,18 @@ interface Ctx {
   // Cloud-save integration
   replaceProfile: (next: ProfileState) => void;
   resetProfile: () => void;
+  /**
+   * Merge authoritative server-side stats (admin edits, cloud reconciliation)
+   * into the local profile WITHOUT discarding local-only fields. Mirrors
+   * server `profiles` columns onto the local snapshot.
+   */
+  applyServerStats: (stats: { xp?: number | null; dinars?: number | null; hearts?: number | null; streak?: number | null }) => void;
   // Social v1
   grantTitle: (title: string) => void;
   grantArtifact: (id: string) => void;
   markAchievementEarned: (id: string) => boolean; // returns true if it was newly marked
 }
+
 
 const ProfileContext = createContext<Ctx | null>(null);
 
@@ -455,6 +462,32 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       settings: { ...initial.settings, ...(next.settings ?? {}) },
     }),
     resetProfile: () => setProfile(initial),
+    applyServerStats: (stats) => update((p) => {
+      const now = Date.now();
+      let next = p;
+      let changed = false;
+      if (typeof stats.xp === "number" && stats.xp !== p.points) {
+        next = { ...next, points: Math.max(0, stats.xp) };
+        changed = true;
+      }
+      if (typeof stats.dinars === "number" && stats.dinars !== (p.dinars ?? 0)) {
+        next = { ...next, dinars: Math.max(0, stats.dinars) };
+        changed = true;
+      }
+      if (typeof stats.streak === "number" && stats.streak !== p.streak) {
+        next = { ...next, streak: Math.max(0, stats.streak) };
+        changed = true;
+      }
+      if (typeof stats.hearts === "number") {
+        const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
+        const eff = getEffectiveHearts(p, now);
+        if (target !== eff) {
+          next = { ...next, ...commitHearts(p, target, now) };
+          changed = true;
+        }
+      }
+      return changed ? next : p;
+    }),
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
     grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
     markAchievementEarned: (id) => {

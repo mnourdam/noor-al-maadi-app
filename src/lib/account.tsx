@@ -36,7 +36,7 @@ const PUSH_DEBOUNCE_MS = 1500;
 
 export function AccountProvider({ children }: { children: ReactNode }) {
   const androidStable = isAndroidUltraStableMode();
-  const { profile, replaceProfile, addDinars, awardBadge, login, resetProfile } = useProfile();
+  const { profile, replaceProfile, applyServerStats, addDinars, awardBadge, login, resetProfile } = useProfile();
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<AccountProfile | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -186,6 +186,55 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (pushTimer.current) clearTimeout(pushTimer.current);
     };
   }, [profile, user]);
+
+  // ============ Realtime: reconcile admin edits to public.profiles ============
+  // Server `profiles` row is authoritative for xp/dinars/hearts/streak. If an
+  // admin adjusts a balance (or any other server-side mutation occurs), mirror
+  // it into the local profile so the player sees the new value immediately —
+  // no logout, no manual refresh.
+  useEffect(() => {
+    if (!user) return;
+    const uid = user.id;
+    let cancelled = false;
+
+    // Cold-start reconciliation: pull the current authoritative row once.
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc("get_my_profile");
+        if (cancelled || error || !data) return;
+        const row = data as { xp?: number; dinars?: number; hearts?: number; streak?: number };
+        applyServerStats({
+          xp: row.xp ?? null,
+          dinars: row.dinars ?? null,
+          hearts: row.hearts ?? null,
+          streak: row.streak ?? null,
+        });
+      } catch { /* ignore */ }
+    })();
+
+    const channel = supabase
+      .channel(`profile-sync-${uid}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${uid}` },
+        (payload) => {
+          const row = (payload.new ?? {}) as { xp?: number; dinars?: number; hearts?: number; streak?: number };
+          applyServerStats({
+            xp: row.xp ?? null,
+            dinars: row.dinars ?? null,
+            hearts: row.hearts ?? null,
+            streak: row.streak ?? null,
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, applyServerStats]);
+
 
   const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, displayName, referralCode }) => {
     const u = username.trim();
