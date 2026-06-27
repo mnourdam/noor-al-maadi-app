@@ -60,6 +60,13 @@ export async function loadBisectModules(): Promise<void> {
   const entries = Object.entries(routeModules).sort(([a], [b]) =>
     a.localeCompare(b),
   );
+  // Log the full sorted index <-> filename mapping so Logcat can resolve
+  // any from/to range back to a real file.
+  // eslint-disable-next-line no-console
+  console.log(
+    "IRTH_ROUTER_BISECT_INDEX",
+    entries.map(([p], i) => `${i}:${p.split("/").pop()}`).join(","),
+  );
   const { from, to, only } = parseRange();
   let selected: typeof entries;
   if (only && only.length > 0) {
