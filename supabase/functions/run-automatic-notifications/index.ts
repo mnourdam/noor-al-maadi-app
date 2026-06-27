@@ -378,7 +378,7 @@ Deno.serve(async (req) => {
     const dryRun: boolean = !!body.dry_run;
     const jobs: string[] = Array.isArray(body.jobs) && body.jobs.length > 0
       ? body.jobs
-      : ["today_in_history", "daily_fact", "inactive_user", "incomplete_campaign"];
+      : ["today_in_history", "daily_fact", "inactive_user", "incomplete_campaign", "streak_reminder"];
 
     const results: Record<string, any> = {};
 
@@ -390,6 +390,8 @@ Deno.serve(async (req) => {
       results.inactive_user = await runInactiveUserReminder(admin, supabaseUrl, serviceKey, dryRun);
     if (jobs.includes("incomplete_campaign"))
       results.incomplete_campaign = await runIncompleteCampaignReminder(admin, supabaseUrl, serviceKey, dryRun);
+    if (jobs.includes("streak_reminder"))
+      results.streak_reminder = await runStreakReminder(admin, supabaseUrl, serviceKey, dryRun);
 
     console.log("[run-automatic-notifications] done", JSON.stringify(results));
     return jsonResponse({ ok: true, dry_run: dryRun, results });
