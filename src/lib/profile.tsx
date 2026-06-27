@@ -516,7 +516,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           next = { ...next, streak: nextStreak };
           changed = true;
         }
-      }
+        // If the server reports a positive streak but the local day anchor
+        // is missing (fresh install / cleared storage), seed lastActiveDay
+        // to yesterday so the next touchStreak today extends the chain
+        // (+1) instead of resetting it to 1.
+        if (!activeToday && nextStreak > 0 && !p.lastActiveDay) {
+          const y = new Date(); y.setDate(y.getDate() - 1);
+          next = { ...next, lastActiveDay: todayKey(y) };
+          changed = true;
+        }
+
 
       if (typeof stats.hearts === "number") {
         const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
