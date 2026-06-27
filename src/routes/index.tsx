@@ -200,9 +200,9 @@ function HomeFull() {
         title: r.title,
         subtitle: r.subtitle ?? "افتح أرشيفك التاريخي واكتشف ما جمعته.",
         icon: r.icon,
-        cta: { label: "اعرض في المتحف", link:
-          <Link to="/collection" className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
-            <Gem className="size-4" />اعرض في المتحف
+        cta: { label: "افتح البطاقة", link:
+          <Link to={(r.to ?? "/collection") as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
+            <Gem className="size-4" />افتح البطاقة
           </Link>,
         },
       });
@@ -419,7 +419,7 @@ function HomeFull() {
         icon: <Gem className="size-3.5" />,
         eyebrow: `اكتشاف · ${r.kind}`,
         title: r.title,
-        to: "/collection",
+        to: r.to ?? "/collection",
       });
     }
     const earnedMap = profile.achievementsEarned ?? {};
