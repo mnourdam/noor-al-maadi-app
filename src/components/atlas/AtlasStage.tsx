@@ -251,6 +251,19 @@ export function AtlasStage({
 
   useEffect(() => () => cancelAnimations(), [cancelAnimations]);
 
+  // ── Imperative focus: pan/zoom to an APS point smoothly ───────────────
+  useEffect(() => {
+    if (!focusAps) return;
+    cancelAnimations();
+    const minS = focusAps.minScale ?? 4;
+    setView((v) => {
+      const s = Math.max(v.scale, minS);
+      const tx = s * (VB_W / 2 - focusAps.x);
+      const ty = s * (VB_H / 2 - focusAps.y);
+      return clamp({ scale: s, tx, ty });
+    });
+  }, [focusAps, clamp, cancelAnimations]);
+
   const inv = 1 / view.scale;
   // Quantize zoom into 4 tiers so pins/labels don't re-mount every frame.
   //   0 far    (states only)     scale < 1.6
