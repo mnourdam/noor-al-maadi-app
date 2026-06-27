@@ -798,6 +798,14 @@ function HomeFull() {
             ["rootShell", "CLEAN ROOT + ROOTSHELL"],
             ["boundaries", "CLEAN ROOT + BOUNDARIES"],
             ["fonts", "CLEAN ROOT + GOOGLE FONTS"],
+            ["rs1", "RS1: FRAGMENT ONLY"],
+            ["rs2", "RS2: HTML+BODY (no lang/dir/head)"],
+            ["rs3", "RS3: + lang=ar"],
+            ["rs4", "RS4: + dir=rtl"],
+            ["rs5", "RS5: + lang+dir"],
+            ["rs6", "RS6: + EMPTY <head>"],
+            ["rs7", "RS7: + <HeadContent/>"],
+            ["rs8", "RS8: FULL ORIGINAL ROOTSHELL"],
           ] as const).map(([piece, label]) => {
             const href = `/index.html?__irth_router_root_iso=1&mode=clean-root-real-children&piece=${piece}`;
             return (
