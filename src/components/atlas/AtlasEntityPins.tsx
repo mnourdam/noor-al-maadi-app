@@ -142,17 +142,19 @@ const AtlasPin = memo(function AtlasPin({
       }}
     >
       {/* Soft golden glow — only on selection. No SVG filters (Android perf). */}
-      {active && (
+      {active && !disableGlow && (
         <>
           <circle r={size * 2.4} fill="oklch(0.86 0.16 82)" opacity={0.14} />
           <circle r={size * 1.55} fill="oklch(0.92 0.14 82)" opacity={0.22} />
         </>
       )}
-      {/* Engraved shadow pass — same glyph offset down, very low opacity.
-          Gives a tactile "pressed into parchment" feel without SVG filters. */}
-      <g transform={`translate(0 ${size * 0.18})`} opacity={0.22}>
-        <AtlasKindGlyph kind={entity.kind} size={size} fill={rim} stroke={rim} />
-      </g>
+      {/* Engraved shadow pass — same glyph offset down, very low opacity. */}
+      {!disableGlow && (
+        <g transform={`translate(0 ${size * 0.18})`} opacity={0.22}>
+          <AtlasKindGlyph kind={entity.kind} size={size} fill={rim} stroke={rim} />
+        </g>
+      )}
+
       <AtlasKindGlyph kind={entity.kind} size={size} fill={color} stroke={rim} />
       {showLabel && (
         <text
