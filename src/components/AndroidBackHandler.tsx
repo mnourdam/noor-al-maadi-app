@@ -30,14 +30,6 @@ function normalizePath(path: string): string {
   return withoutIndex.replace(/\/+$/, "") || "/";
 }
 
-function immediateParent(path: string): string | null {
-  const clean = normalizePath(path);
-  if (clean === "/") return null;
-  const parts = clean.split("/").filter(Boolean);
-  if (parts.length <= 1) return "/";
-  return normalizePath(`/${parts.slice(0, -1).join("/")}`);
-}
-
 /**
  * Build set of registered route path patterns from the router. Patterns may
  * include `$param` placeholders (e.g. `/encyclopedia/figures/$slug`).
@@ -57,17 +49,38 @@ function getRegisteredPatterns(router: ReturnType<typeof useRouter>): string[] {
     }
   };
 
-  const visitRoute = (route: Record<string, unknown> | undefined) => {
+  const joinChildPath = (parentPath: string | undefined, childPath: unknown): string | null => {
+    if (typeof childPath !== "string" || !childPath || childPath === "__root__") return null;
+    const cleanChild = normalizePath(childPath);
+    const cleanParent = parentPath ? normalizePath(parentPath) : "/";
+    if (cleanParent === "/") return cleanChild;
+    if (cleanChild === "/") return cleanParent;
+    if (cleanChild === cleanParent || cleanChild.startsWith(`${cleanParent}/`)) return cleanChild;
+    return normalizePath(`${cleanParent}/${cleanChild.replace(/^\/+/, "")}`);
+  };
+
+  const visitRoute = (route: Record<string, unknown> | undefined, parentPath?: string) => {
     if (!route) return;
     addPath(route.fullPath);
     addPath(route.id);
     addPath(route.path);
 
+    const joinedFromPath = joinChildPath(parentPath, route.path);
+    const joinedFromId = joinChildPath(parentPath, route.id);
+    if (joinedFromPath) set.add(joinedFromPath);
+    if (joinedFromId) set.add(joinedFromId);
+
+    const currentPath =
+      (typeof route.fullPath === "string" && route.fullPath.startsWith("/") ? normalizePath(route.fullPath) : null) ??
+      joinedFromPath ??
+      joinedFromId ??
+      parentPath;
+
     const children = route.children;
     if (Array.isArray(children)) {
-      for (const child of children) visitRoute(child as Record<string, unknown>);
+      for (const child of children) visitRoute(child as Record<string, unknown>, currentPath);
     } else if (children && typeof children === "object") {
-      for (const child of Object.values(children)) visitRoute(child as Record<string, unknown>);
+      for (const child of Object.values(children)) visitRoute(child as Record<string, unknown>, currentPath);
     }
   };
 
@@ -149,50 +162,39 @@ function isRootPath(pathname: string): boolean {
   return clean === "/";
 }
 
-function resolveParent(patterns: string[], pathname: string): string | null {
+function getCandidateParents(pathname: string): string[] {
   const clean = normalizePath(pathname);
-  if (isRootPath(clean)) return null;
+  if (isRootPath(clean)) return [];
 
-  const mappedParent = resolveKnownSemanticParent(patterns, clean);
-  if (mappedParent) return mappedParent;
-
-  const registeredParent = findRegisteredParent(patterns, clean);
-  if (registeredParent) return registeredParent;
-
-  const fallbackParent = immediateParent(clean);
-  if (!fallbackParent) return "/";
-  return isRegistered(patterns, fallbackParent) ? fallbackParent : "/";
-}
-
-function resolveKnownSemanticParent(patterns: string[], pathname: string): string | null {
-  const parts = normalizePath(pathname).split("/").filter(Boolean);
-  if (parts[0] === "figure" && parts.length > 1) return registeredOrRoot(patterns, "/encyclopedia/type/figure");
-  if (parts[0] === "city" && parts.length > 1) return registeredOrRoot(patterns, "/encyclopedia/type/city");
-  if (parts[0] === "battle" && parts.length > 1) return registeredOrRoot(patterns, "/encyclopedia/type/battle");
-  if (parts[0] === "investigation" && parts.length > 1) return registeredOrRoot(patterns, "/investigations");
-
-  if (parts[0] === "encyclopedia" && parts.length > 2) {
-    if (["entity", "state", "path", "type"].includes(parts[1])) return "/encyclopedia";
-    const sectionToType: Record<string, string> = {
-      figures: "figure",
-      scholars: "figure",
-      battles: "battle",
-      cities: "city",
-      states: "state",
-      events: "event",
-      artifacts: "artifact",
-      landmarks: "landmark",
-    };
-    const type = sectionToType[parts[1]];
-    if (type) return registeredOrRoot(patterns, `/encyclopedia/type/${type}`);
+  const parts = clean.split("/").filter(Boolean);
+  const candidates: string[] = [];
+  for (let length = parts.length - 1; length >= 0; length -= 1) {
+    candidates.push(length === 0 ? "/" : normalizePath(`/${parts.slice(0, length).join("/")}`));
   }
 
-  return null;
+  return Array.from(new Set(candidates));
 }
 
-function registeredOrRoot(patterns: string[], pathname: string): string {
+function resolveParent(patterns: string[], pathname: string): {
+  candidateParents: string[];
+  registeredMatches: string[];
+  selectedParent: string | null;
+} {
   const clean = normalizePath(pathname);
-  return isRegistered(patterns, clean) ? clean : "/";
+  if (isRootPath(clean)) {
+    return { candidateParents: [], registeredMatches: [], selectedParent: null };
+  }
+
+  // Segment parents first: /a/b/c → /a/b → /a → /
+  // Only after building the full list do we verify against registered routes.
+  const candidateParents = getCandidateParents(clean);
+  const registeredMatches = candidateParents.filter((candidate) => isRegistered(patterns, candidate));
+
+  return {
+    candidateParents,
+    registeredMatches,
+    selectedParent: registeredMatches[0] ?? candidateParents[candidateParents.length - 1] ?? "/",
+  };
 }
 
 function closeExitDialog(setConfirmOpen: (open: boolean) => void) {
@@ -200,11 +202,15 @@ function closeExitDialog(setConfirmOpen: (open: boolean) => void) {
 }
 
 function logBackDecision(details: {
+  currentPath: string;
   actualWindowPathname: string;
   routerPathname: string;
   normalizedPathname: string;
   matchedRouteIds: string[];
+  candidateParents: string[];
+  registeredMatches: string[];
   computedParentRoute: string | null;
+  selectedParent: string | null;
   isRootRoute: boolean;
 }) {
   console.log("[android:back] decision", details);
@@ -246,18 +252,6 @@ function isRegistered(patterns: string[], pathname: string): boolean {
   return patterns.some((p) => patternMatches(p, pathname));
 }
 
-/** Walk parents until we find one registered with the router, or reach "/". */
-function findRegisteredParent(patterns: string[], path: string): string | null {
-  let current = immediateParent(path);
-  let guard = 0;
-  while (current && guard++ < 20) {
-    if (isRegistered(patterns, current)) return current;
-    if (current === "/") return "/";
-    current = immediateParent(current);
-  }
-  return null;
-}
-
 export function AndroidBackHandler() {
   const router = useRouter();
   const latestRouterPathname = useRouterState({ select: (state) => normalizePath(state.location.pathname || "/") });
@@ -287,15 +281,20 @@ export function AndroidBackHandler() {
           const path = pickCurrentPath(windowRoutePathname, effectiveRouterPathname, matchedPathname);
           const matchedRouteIds = getMatchedRouteIds(router);
           const patterns = getRegisteredPatterns(router);
-          const parent = resolveParent(patterns, path);
+          const parentResolution = resolveParent(patterns, path);
+          const parent = parentResolution.selectedParent;
           const isRootRoute = isRootPath(path);
 
           logBackDecision({
+            currentPath: path,
             actualWindowPathname,
             routerPathname,
             normalizedPathname: path,
             matchedRouteIds,
+            candidateParents: parentResolution.candidateParents,
+            registeredMatches: parentResolution.registeredMatches,
             computedParentRoute: parent,
+            selectedParent: parent,
             isRootRoute,
           });
 
