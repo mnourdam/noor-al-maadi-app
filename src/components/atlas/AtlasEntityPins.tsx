@@ -61,12 +61,18 @@ export function AtlasEntityPinsLayer({
   inv,
   labelTier,
   onSelect,
+  cullBounds,
+  disableGlow,
 }: {
   entities: AtlasEntityRow[];
   selectedId: string | null;
   inv: number;
   labelTier: number;
   onSelect: (entity: AtlasEntityRow) => void;
+  /** Visible world rect in viewBox units; pins outside are skipped. */
+  cullBounds?: { minX: number; maxX: number; minY: number; maxY: number } | null;
+  /** Drop golden glow halos (Android perf). */
+  disableGlow?: boolean;
 }) {
   if (entities.length === 0) return null;
   return (
@@ -79,28 +85,40 @@ export function AtlasEntityPinsLayer({
           labelTier={labelTier}
           active={selectedId === e.id}
           onSelect={onSelect}
+          cullBounds={cullBounds}
+          disableGlow={disableGlow}
         />
       ))}
     </g>
   );
 }
 
+
 const AtlasPin = memo(function AtlasPin({
-  entity, inv, labelTier, active, onSelect,
+  entity, inv, labelTier, active, onSelect, cullBounds, disableGlow,
 }: {
   entity: AtlasEntityRow;
   inv: number;
   labelTier: number;
   active: boolean;
   onSelect: (entity: AtlasEntityRow) => void;
+  cullBounds?: { minX: number; maxX: number; minY: number; maxY: number } | null;
+  disableGlow?: boolean;
 }) {
   if (entity.aps_x == null || entity.aps_y == null) return null;
   const { x, y } = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
 
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   if (x < 0 || x > VB_W || y < 0 || y > VB_H) return null;
+  // Offscreen culling — keep the active pin even when out of view.
+  if (!active && cullBounds) {
+    if (x < cullBounds.minX || x > cullBounds.maxX || y < cullBounds.minY || y > cullBounds.maxY) {
+      return null;
+    }
+  }
   const showPin = shouldShowPin(entity.kind, labelTier, active);
   if (!showPin) return null;
+
   // Glyph half-extent (in user units). Smaller, refined — atlas is the hero.
   const size = (active ? 1.15 : 0.85) * inv * S;
   const color = KIND_COLOR[entity.kind] ?? "oklch(0.55 0.18 25)";
@@ -124,17 +142,19 @@ const AtlasPin = memo(function AtlasPin({
       }}
     >
       {/* Soft golden glow — only on selection. No SVG filters (Android perf). */}
-      {active && (
+      {active && !disableGlow && (
         <>
           <circle r={size * 2.4} fill="oklch(0.86 0.16 82)" opacity={0.14} />
           <circle r={size * 1.55} fill="oklch(0.92 0.14 82)" opacity={0.22} />
         </>
       )}
-      {/* Engraved shadow pass — same glyph offset down, very low opacity.
-          Gives a tactile "pressed into parchment" feel without SVG filters. */}
-      <g transform={`translate(0 ${size * 0.18})`} opacity={0.22}>
-        <AtlasKindGlyph kind={entity.kind} size={size} fill={rim} stroke={rim} />
-      </g>
+      {/* Engraved shadow pass — same glyph offset down, very low opacity. */}
+      {!disableGlow && (
+        <g transform={`translate(0 ${size * 0.18})`} opacity={0.22}>
+          <AtlasKindGlyph kind={entity.kind} size={size} fill={rim} stroke={rim} />
+        </g>
+      )}
+
       <AtlasKindGlyph kind={entity.kind} size={size} fill={color} stroke={rim} />
       {showLabel && (
         <text

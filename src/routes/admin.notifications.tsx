@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { Bell, Send, Save, RefreshCw, ShieldAlert, Zap, CalendarClock, UserMinus, Flag, BookOpen } from "lucide-react";
+import { Bell, Send, Save, RefreshCw, ShieldAlert, Zap, CalendarClock, UserMinus, Flag, BookOpen, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminGuard } from "@/lib/admin-guard";
 import { ALL_CATEGORY_KEYS, NOTIFICATION_CATEGORIES, type NotificationCategoryKey } from "@/lib/notifications/categories";
@@ -182,6 +182,42 @@ function Composer() {
       setBusy(false);
     }
   };
+
+  const deleteOne = async (id: string) => {
+    if (!confirm("حذف هذا الإشعار نهائيًا؟")) return;
+    const prev = recent;
+    setRecent((rs) => rs.filter((r) => r.id !== id));
+    const { error } = await supabase.from("notifications" as any).delete().eq("id", id);
+    if (error) {
+      setRecent(prev);
+      setFeedback(`فشل الحذف: ${error.message}`);
+    } else {
+      setFeedback("تم حذف الإشعار.");
+    }
+  };
+
+  const cleanupOldOrTest = async () => {
+    const target = recent.filter((n) => {
+      if (n.status === "draft" || n.status === "failed") return true;
+      const isTest = /test|تجربة|اختبار/i.test(`${n.title} ${n.body}`);
+      const ageDays = (Date.now() - new Date(n.created_at).getTime()) / 86400000;
+      return isTest || ageDays > 30;
+    });
+    if (target.length === 0) {
+      setFeedback("لا توجد إشعارات للحذف (مسودة/فاشلة/قديمة/تجريبية).");
+      return;
+    }
+    if (!confirm(`سيُحذف ${target.length} إشعارًا (مسودات، فاشلة، تجريبية، أو أقدم من ٣٠ يومًا). متابعة؟`)) return;
+    const ids = target.map((n) => n.id);
+    const { error } = await supabase.from("notifications" as any).delete().in("id", ids);
+    if (error) {
+      setFeedback(`فشل الحذف الجماعي: ${error.message}`);
+    } else {
+      setFeedback(`تم حذف ${ids.length} إشعارًا.`);
+      await loadRecent();
+    }
+  };
+
 
   return (
     <div dir="rtl" className="min-h-screen bg-background px-4 py-8 text-foreground">
@@ -384,15 +420,25 @@ function Composer() {
         </section>
 
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">آخر الإشعارات</h2>
-            <button
-              onClick={loadRecent}
-              className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1 text-xs hover:bg-accent"
-            >
-              <RefreshCw className="h-3 w-3" />
-              تحديث
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={cleanupOldOrTest}
+                className="inline-flex items-center gap-1 rounded-md border border-destructive/40 px-3 py-1 text-xs text-destructive hover:bg-destructive/10"
+                title="حذف المسودات، الفاشلة، التجريبية، وما أقدم من ٣٠ يومًا"
+              >
+                <Trash2 className="h-3 w-3" />
+                تنظيف القديم/التجريبي
+              </button>
+              <button
+                onClick={loadRecent}
+                className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1 text-xs hover:bg-accent"
+              >
+                <RefreshCw className="h-3 w-3" />
+                تحديث
+              </button>
+            </div>
           </div>
 
           {recent.length === 0 ? (
@@ -413,23 +459,34 @@ function Composer() {
                         )}
                       </div>
                     </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
-                        n.status === "sent"
-                          ? "bg-green-500/15 text-green-500"
-                          : n.status === "failed"
-                          ? "bg-destructive/15 text-destructive"
-                          : n.status === "scheduled"
-                          ? "bg-blue-500/15 text-blue-500"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {n.status}
-                    </span>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs ${
+                          n.status === "sent"
+                            ? "bg-green-500/15 text-green-500"
+                            : n.status === "failed"
+                            ? "bg-destructive/15 text-destructive"
+                            : n.status === "scheduled"
+                            ? "bg-blue-500/15 text-blue-500"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {n.status}
+                      </span>
+                      <button
+                        onClick={() => deleteOne(n.id)}
+                        className="inline-flex items-center gap-1 rounded-md border border-destructive/40 px-2 py-0.5 text-[11px] text-destructive hover:bg-destructive/10"
+                        aria-label="حذف الإشعار"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        حذف
+                      </button>
+                    </div>
                   </div>
                 </li>
               ))}
             </ul>
+
           )}
         </section>
 
