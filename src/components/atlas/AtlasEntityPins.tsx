@@ -137,7 +137,8 @@ const AtlasPin = memo(function AtlasPin({
     /oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/,
     (_m, l, c, h) => `oklch(${Math.max(0.18, Number(l) - 0.22).toFixed(2)} ${c} ${h})`,
   );
-  const showLabel = shouldShowLabel(entity.kind, labelTier, active);
+  const labelAllowedByCap = !labelCap || active || entity.kind === "region" || entity.kind === "place";
+  const showLabel = shouldShowLabel(entity.kind, labelTier, active) && labelAllowedByCap;
   return (
     <g
       transform={`translate(${x} ${y})`}
