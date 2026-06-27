@@ -68,6 +68,13 @@ export function AndroidBackHandler() {
     } else {
       internalDepthRef.current += 1;
     }
+    // Encyclopedia breadcrumb — remember the last "listing" we visited so a
+    // cold-start back press from an entity page can land on Figures/Cities/etc.
+    try {
+      if (currentPathname === "/encyclopedia" || currentPathname.startsWith("/encyclopedia/type/")) {
+        sessionStorage.setItem("irth.encyclopedia.parent", currentPathname);
+      }
+    } catch { /* ignore */ }
   }, [currentPathname]);
 
   useEffect(() => {
@@ -84,11 +91,13 @@ export function AndroidBackHandler() {
           const depth = internalDepthRef.current;
 
           // Priority 1: in-app history → replay previous screen.
-          // Only when depth > 0; otherwise router.history.back() would pop
-          // past the WebView entry and exit the app unexpectedly.
           if (depth > 0) {
             console.log("[android:back] history-back", { path, depth });
             popInFlightRef.current = true;
+            // Safety: if the pathname effect never fires (same-route nav,
+            // intercepted pop) clear the flag after a short window so the
+            // next press doesn't decrement spuriously.
+            setTimeout(() => { popInFlightRef.current = false; }, 800);
             try {
               router.history.back();
               return;
@@ -100,12 +109,24 @@ export function AndroidBackHandler() {
 
           // Priority 2: cold-start / deep link → URL hierarchy fallback.
           if (!isRootPath(path)) {
+            // Encyclopedia-specific: from an entity page, prefer the last
+            // visited type listing (Figures/Cities/etc.) over the bare
+            // /encyclopedia/entity parent — that path is not a real page.
+            if (path.startsWith("/encyclopedia/entity/") || path.startsWith("/encyclopedia/state/")) {
+              let parent = "/encyclopedia";
+              try {
+                const remembered = sessionStorage.getItem("irth.encyclopedia.parent");
+                if (remembered && remembered !== path) parent = remembered;
+              } catch { /* ignore */ }
+              console.log("[android:back] encyclopedia-fallback", { path, parent });
+              try { router.history.push(parent); return; }
+              catch (e) { console.warn("[android:back] enc fallback failed", e); }
+            }
+
             const parents = getCandidateParents(path);
             const parent = parents[0] ?? "/";
             console.log("[android:back] url-hierarchy-fallback", { path, parent });
             try {
-              // This is a forward navigation, NOT a pop — let the effect
-              // increment depth normally so subsequent backs work.
               router.history.push(parent);
               return;
             } catch (e) {

@@ -35,30 +35,41 @@ export function LevelUpWatcher() {
 
     if (lvl <= baseline.current) return;
 
-    // Multi-level jumps come from cloud sync / login restore / admin grant —
-    // never from a single in-app action. Re-baseline silently.
     if (lvl - baseline.current > 1 || lvl <= seen) {
       baseline.current = Math.max(lvl, seen);
       try { localStorage.setItem(SEEN_KEY, String(baseline.current)); } catch { /* */ }
       return;
     }
 
-    // Genuine single-step level-up.
     const next = LEVELS.find((l) => l.level === lvl);
     baseline.current = lvl;
     try { localStorage.setItem(SEEN_KEY, String(lvl)); } catch { /* */ }
-    if (next) setPending((q) => [...q, next]);
-  }, [profile.points]);
+    if (next) {
+      // Dedupe — never queue the same level twice or one already showing.
+      setPending((q) => {
+        if (current?.level === next.level) return q;
+        if (q.some((p) => p.level === next.level)) return q;
+        return [...q, next];
+      });
+    }
+  }, [profile.points, current]);
 
   useEffect(() => {
     if (!current && pending.length > 0) {
-      setCurrent(pending[0]);
+      const head = pending[0];
+      setCurrent(head);
       setPending((q) => q.slice(1));
+      try { window.dispatchEvent(new CustomEvent("irth:level-up", { detail: { level: head.level } })); } catch { /* */ }
     }
   }, [current, pending]);
 
+  const close = () => {
+    // Always clear, even if React batches a duplicate close.
+    setCurrent(null);
+  };
+
   if (!current) return null;
-  return <LevelUpModal info={current} onClose={() => setCurrent(null)} />;
+  return <LevelUpModal key={current.level} info={current} onClose={close} />;
 }
 
 function LevelUpModal({ info, onClose }: { info: LevelInfo; onClose: () => void }) {

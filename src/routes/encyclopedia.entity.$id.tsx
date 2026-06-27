@@ -18,6 +18,7 @@ import {
   isUuid,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
+import { cachedEncyclopediaById, cachedEncyclopediaBySlug } from "@/lib/offline-fallback";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import {
@@ -85,33 +86,47 @@ function EntityPage() {
     staleTime: 60_000,
     queryFn: async () => {
       const fetchById = async (eid: string) => {
-        const r = await supabase.from("encyclopedia_entities").select("*").eq("id", eid).maybeSingle();
-        return (r.data ?? null) as SupabaseEncyclopediaEntity | null;
+        try {
+          const r = await supabase.from("encyclopedia_entities").select("*").eq("id", eid).maybeSingle();
+          return (r.data ?? null) as SupabaseEncyclopediaEntity | null;
+        } catch {
+          return null;
+        }
       };
       const followCanonical = async (row: SupabaseEncyclopediaEntity | null) => {
         if (!row) return null;
         const meta = (row.metadata && typeof row.metadata === "object") ? row.metadata as any : {};
         const cid = typeof meta.canonical_id === "string" ? meta.canonical_id : null;
         if (cid && cid !== row.id) {
-          const canon = await fetchById(cid);
+          const canon = (await fetchById(cid)) ?? (await cachedEncyclopediaById(cid));
           if (canon && canon.enabled) return canon;
         }
         return row.enabled ? row : null;
       };
 
       let primary: SupabaseEncyclopediaEntity | null = null;
-      if (isUuid(id)) {
-        primary = await fetchById(id);
-      } else {
-        const res = await supabase.from("encyclopedia_entities").select("*").eq("slug", id);
-        const rows = (res.data ?? []) as SupabaseEncyclopediaEntity[];
-        primary = rows[0] ?? null;
-        if (!primary) {
-          const alias = await supabase
-            .from("encyclopedia_entities").select("*")
-            .or(`metadata.cs.{"aliases":["${id}"]},metadata.cs.{"legacy_id":"${id}"}`).limit(1);
-          primary = ((alias.data ?? [])[0] ?? null) as SupabaseEncyclopediaEntity | null;
+      try {
+        if (isUuid(id)) {
+          primary = await fetchById(id);
+        } else {
+          const res = await supabase.from("encyclopedia_entities").select("*").eq("slug", id);
+          const rows = (res.data ?? []) as SupabaseEncyclopediaEntity[];
+          primary = rows[0] ?? null;
+          if (!primary) {
+            const alias = await supabase
+              .from("encyclopedia_entities").select("*")
+              .or(`metadata.cs.{"aliases":["${id}"]},metadata.cs.{"legacy_id":"${id}"}`).limit(1);
+            primary = ((alias.data ?? [])[0] ?? null) as SupabaseEncyclopediaEntity | null;
+          }
         }
+      } catch {
+        primary = null;
+      }
+      // Offline / failure fallback — read from the bundled or synced snapshot.
+      if (!primary) {
+        primary = isUuid(id)
+          ? await cachedEncyclopediaById(id)
+          : (await cachedEncyclopediaBySlug(id)) ?? (await cachedEncyclopediaById(id));
       }
       return followCanonical(primary);
     },

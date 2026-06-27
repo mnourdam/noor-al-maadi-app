@@ -235,8 +235,43 @@ export async function sendFriendRequest(meId: string, otherId: string): Promise<
 }
 
 export async function acceptFriend(id: string): Promise<boolean> {
+  // Read the row first so we know who the original requester was.
+  const { data: existing } = await db
+    .from("friendships")
+    .select("id,requester,user_a,user_b,status")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await db.from("friendships").update({ status: "accepted" }).eq("id", id);
-  return !error;
+  if (error) return false;
+
+  // Notify the original requester (in-app banner + center entry + FCM push).
+  try {
+    const row = existing as { requester?: string; user_a?: string; user_b?: string } | null;
+    const requester = row?.requester ?? null;
+    if (requester) {
+      const { data: sess } = await db.auth.getSession();
+      const meId = sess.session?.user?.id ?? null;
+      if (meId && requester !== meId) {
+        const me = await fetchPublicProfileById(meId);
+        const myName = me?.display_name?.trim() || me?.username || "صديقك";
+        await db.functions.invoke("send-notification", {
+          body: {
+            title: "تم قبول طلب الصداقة",
+            body: `تم قبول طلب صداقتك من ${myName}`,
+            type: "friend_accepted",
+            target_type: "user",
+            target_user_id: requester,
+            deep_link: "/friends",
+          },
+        });
+      }
+    }
+  } catch {
+    // Best-effort only — acceptance still succeeded.
+  }
+
+  return true;
 }
 
 export async function removeFriend(id: string): Promise<boolean> {
