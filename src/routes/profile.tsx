@@ -71,7 +71,7 @@ function ProfilePage() {
     profile, login, logout, updateSettings, claimSeason, setBio, setFavorites,
     claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs,
   } = useProfile();
-  const { user, displayName: accountDisplayName, updateDisplayName, signOut } = useAccount();
+  const { user, account, displayName: accountDisplayName, updateDisplayName, updateUsername, isUsernameAvailable, signOut } = useAccount();
   const displayName = user ? (accountDisplayName || "مستخدم إرث") : (profile.name || "ضيف");
   const androidNative = isAndroidNativeApp();
 
