@@ -48,7 +48,7 @@ function CleanupLayout() {
               return (
                 <Link
                   key={t.to}
-                  to={t.to}
+                  to={t.to as any}
                   className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
                     active
                       ? "border-amber-400/60 bg-amber-500/15 text-amber-100"
