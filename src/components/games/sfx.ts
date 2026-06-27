@@ -42,6 +42,10 @@ export function sfx(kind: GameSfxKind, scopeKey?: string): void {
   } catch {
     /* noop */
   }
+  if (kind === "wrong") {
+    audioManager.playError();
+    return;
+  }
   const name = MAP[kind];
   if (!name) return;
   const dedupeKey = `game:${kind}:${scopeKey ?? "global"}`;
