@@ -29,8 +29,6 @@ import heroFortress from "@/assets/hero-fortress.jpg";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
-import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
-import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,7 +37,7 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "ادخل عالمًا تفاعليًا واسعًا من الشخصيات والدول والمعارك والمدن والأحداث في التاريخ الإسلامي." },
     ],
   }),
-  component: Index,
+  component: HomeFull,
 });
 
 // ============================================================
@@ -51,12 +49,7 @@ type HeroSlide =
   | { kind: "discovery"; bg: string; eyebrow: string; title: string; subtitle: string; icon: string; cta: { label: string; link: React.ReactNode } }
   | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
 
-function Index() {
-  androidMark("render:Home");
-  const androidStable = isAndroidUltraStableMode();
-  if (androidStable) return <AndroidStableHome />;
-  return <HomeFull />;
-}
+
 
 function HomeFull() {
   const { profile, touchStreak } = useProfile();
