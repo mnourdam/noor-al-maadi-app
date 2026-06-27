@@ -30,6 +30,14 @@ export default defineConfig({
         __dirname,
         "./src/shims/teamUsers.functions.android.ts",
       ),
+      "@lovable.dev/webhooks-js": path.resolve(
+        __dirname,
+        "./src/shims/lovable-server-pkgs.android.ts",
+      ),
+      "@lovable.dev/email-js": path.resolve(
+        __dirname,
+        "./src/shims/lovable-server-pkgs.android.ts",
+      ),
       "@": path.resolve(__dirname, "./src"),
     },
     dedupe: ["react", "react-dom", "@tanstack/react-query", "@tanstack/query-core"],
