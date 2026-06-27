@@ -588,6 +588,33 @@ function HomeFull() {
         </div>
       </section>
 
+      {/* ============ 1.5 START-HERE STRIP — clear next-step CTA ============ */}
+      {campaignSel && !campaignSel.isComplete && (
+        <section className="relative z-20 -mt-6 px-5 animate-fade-in">
+          <Link
+            to="/campaigns/imported/$id"
+            params={{ id: campaignSel.campaign.id }}
+            className="parchment-dark group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-gold/40 px-4 py-3 shadow-elegant transition hover:border-gold/70"
+          >
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
+              <Play className="size-4 fill-current" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] tracking-[0.25em] text-gold/90">
+                {campaignSel.hasStarted ? "أكمل رحلتك" : "ابدأ رحلتك"}
+              </p>
+              <p className="font-display text-sm font-bold leading-tight text-white truncate">
+                {campaignSel.nextChapter
+                  ? `الفصل ${campaignSel.nextChapter.order ?? campaignSel.completedChapters + 1} · ${campaignSel.nextChapter.title}`
+                  : campaignSel.campaign.title}
+              </p>
+            </div>
+            <ChevronLeft className="size-4 shrink-0 text-gold transition-transform group-hover:-translate-x-0.5" />
+          </Link>
+        </section>
+      )}
+
+
       {/* ============ 2. QUICK PROGRESS (hugs the hero) ============ */}
       <section className="-mt-12 relative z-10 px-5 animate-fade-in">
         <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 px-4 py-4 shadow-elegant">
