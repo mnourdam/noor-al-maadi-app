@@ -50,6 +50,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   profileRef.current = profile;
   const resetProfileRef = useRef(resetProfile);
   resetProfileRef.current = resetProfile;
+  // Timestamp of the most recent local profile mutation that has not yet
+  // been pushed to the server. Realtime UPDATE events that arrive within
+  // REALTIME_GUARD_MS of this stamp are ignored, because the server row
+  // they carry is older than our local state and would otherwise overwrite
+  // a just-earned reward or a just-lost heart with a stale value.
+  const lastLocalChangeRef = useRef(0);
+  const prevProfileSigRef = useRef<string>("");
+
 
   // ============ Initial session + auth state listener ============
   useEffect(() => {
