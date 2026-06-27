@@ -248,6 +248,11 @@ function CleanupWorkshop() {
         case "stub":  if (quality !== "empty" && quality !== "weak") return false; break;
         case "duplicate": if (!dupIds.has(r.id)) return false; break;
         case "archived":  if (!archived) return false; break;
+        case "no-image":    if (hasImage(r.metadata)) return false; break;
+        case "no-sources":  if (hasSources(r.metadata, r.body)) return false; break;
+        case "no-overview": if ((r.summary ?? "").trim().length >= 20) return false; break;
+        case "no-atlas":    if ((atlasLinks.get(r.id) ?? 0) > 0) return false; break;
+        case "no-campaign": if ((campaignSlugs.get(r.id) ?? 0) > 0) return false; break;
         default: if (r.entity_type !== filter) return false;
       }
 
