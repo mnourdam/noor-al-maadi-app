@@ -161,11 +161,18 @@ interface Ctx {
   // Cloud-save integration
   replaceProfile: (next: ProfileState) => void;
   resetProfile: () => void;
+  /**
+   * Merge authoritative server-side stats (admin edits, cloud reconciliation)
+   * into the local profile WITHOUT discarding local-only fields. Mirrors
+   * server `profiles` columns onto the local snapshot.
+   */
+  applyServerStats: (stats: { xp?: number | null; dinars?: number | null; hearts?: number | null; streak?: number | null }) => void;
   // Social v1
   grantTitle: (title: string) => void;
   grantArtifact: (id: string) => void;
   markAchievementEarned: (id: string) => boolean; // returns true if it was newly marked
 }
+
 
 const ProfileContext = createContext<Ctx | null>(null);
 
