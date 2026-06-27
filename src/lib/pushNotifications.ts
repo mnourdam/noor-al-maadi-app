@@ -13,6 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 let initialized = false;
 let pendingToken: string | null = null;
 
+function safeParse(raw: string | undefined | null): Record<string, unknown> {
+  if (!raw) return {};
+  try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
+}
+
 const PENDING_TOKEN_KEY = "irth.pendingFcmToken";
 
 function readPending(): string | null {
