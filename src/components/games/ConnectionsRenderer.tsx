@@ -226,7 +226,7 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
                   ref={(el) => { rightRefs.current[r.i] = el; }}
                   onClick={() => onPickRight(r.i)}
                   disabled={isMatched}
-                  className={`w-full rounded-lg border p-3 text-right text-sm transition ${
+                  className={`w-full min-h-12 rounded-lg border p-3 text-right text-sm leading-7 transition ${
                     isMatched ? "border-amber-500/50 bg-amber-500/10 text-amber-100"
                       : isPicked ? "border-amber-400 bg-amber-500/20 text-amber-100"
                       : isWrong ? "border-red-500/60 bg-red-500/10 irth-shake"
