@@ -11,6 +11,7 @@ import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-rout
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight, Lock, Check, Crown, Trophy, Scroll, BookOpen, Sparkles,
+  Clock, Tag, Coins, Zap, Gift, Package, Play, ChevronLeft,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { fetchCampaignByIdOrSlug } from "@/lib/supabaseCampaigns";
@@ -74,7 +75,11 @@ function ImportedCampaignOverview() {
   const completedCount = progress
     ? chapters.filter(ch => progress.chapters[ch.id]?.completed).length
     : 0;
+  const currentChapterId = chapters.find(
+    ch => !progress?.chapters[ch.id]?.completed && isChapterUnlocked(campaign, ch),
+  )?.id;
   const finalRewards = campaign.finalRewards;
+  const hasStarted = completedCount > 0 || Boolean(progress && Object.keys(progress.chapters).length);
 
   return (
     <AppShell>
@@ -105,41 +110,57 @@ function ImportedCampaignOverview() {
               )}
               <div className="mt-4 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
                 {campaign.estimatedDuration && (
-                  <span className="rounded-full bg-white/5 px-2 py-1">⏱ {campaign.estimatedDuration}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1">
+                    <Clock className="size-3" /> {campaign.estimatedDuration}
+                  </span>
                 )}
-                <span className="rounded-full bg-white/5 px-2 py-1">
-                  📜 {chapters.length.toLocaleString("en-US")} فصول
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1">
+                  <Scroll className="size-3" /> {chapters.length.toLocaleString("en-US")} فصول
                 </span>
                 {campaign.tags?.slice(0, 3).map(t => (
-                  <span key={t} className="rounded-full bg-white/5 px-2 py-1">#{t}</span>
+                  <span key={t} className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1">
+                    <Tag className="size-3" /> {t}
+                  </span>
                 ))}
               </div>
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full bg-gradient-gold transition-all duration-700" style={{ width: `${percent}%` }} />
+              {/* Progress block — explicit hierarchy */}
+              <div className="mt-5">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-[10px] tracking-[0.25em] text-gold/80">تقدّمك</p>
+                    <p className="font-display mt-0.5 text-sm font-bold text-white">
+                      <span className="text-gold">{completedCount.toLocaleString("en-US")}</span>
+                      <span className="text-white/50"> / {chapters.length.toLocaleString("en-US")} فصل</span>
+                    </p>
+                  </div>
+                  <p className="font-display text-2xl font-extrabold text-gold leading-none">{percent}<span className="text-sm">٪</span></p>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full bg-gradient-gold transition-all duration-700" style={{ width: `${percent}%` }} />
+                </div>
               </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                {completedCount}/{chapters.length} فصلًا · {percent}٪
-              </p>
-              {/* PR3: resume button — last active chapter for this campaign. */}
+              {/* Resume / Start CTA */}
               {(() => {
                 const active = getActivePosition();
                 const resumeChId = active?.campaignId === campaign.id
                   ? active.chapterId
-                  : chapters.find(ch => !progress?.chapters[ch.id]?.completed && isChapterUnlocked(campaign, ch))?.id;
+                  : currentChapterId;
                 if (!resumeChId || progress?.completed) return null;
                 return (
                   <Link
                     to="/campaigns/imported/$id/chapter/$chapter"
                     params={{ id: campaign.id, chapter: resumeChId }}
-                    className="mt-4 inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold px-4 py-2 text-sm font-bold text-primary-foreground shadow-gold"
+                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-gold px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-gold"
                   >
-                    {completedCount === 0 ? "ابدأ الرحلة" : "متابعة من حيث توقفت"}
+                    <Play className="size-4 fill-current" />
+                    {hasStarted ? "متابعة" : "ابدأ الرحلة"}
                   </Link>
                 );
               })()}
             </div>
           </div>
         </div>
+
 
         <div className="px-5">
           {/* REWARDS PREVIEW (final) — unlock IDs resolved to Arabic titles. */}
@@ -150,10 +171,10 @@ function ImportedCampaignOverview() {
                 <p className="font-display text-sm font-bold text-gold">جوائز ختام الحملة</p>
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                {finalRewards.xp ? <Pill label={`+${finalRewards.xp} XP`} /> : null}
-                {finalRewards.coins ? <Pill label={`+${finalRewards.coins} دينار`} /> : null}
-                {finalRewards.badgeId ? <Pill label={`🏅 ${displayBadgeName(finalRewards.badgeId)}`} /> : null}
-                {finalRewards.artifactId ? <Pill label={`🗡️ ${displayArtifactName(finalRewards.artifactId)}`} /> : null}
+                {finalRewards.xp ? <RewardPill icon={<Zap className="size-3" />} label={`+${finalRewards.xp} خبرة`} /> : null}
+                {finalRewards.coins ? <RewardPill icon={<Coins className="size-3" />} label={`+${finalRewards.coins} دينار`} /> : null}
+                {finalRewards.badgeId ? <RewardPill icon={<Trophy className="size-3" />} label={displayBadgeName(finalRewards.badgeId)} /> : null}
+                {finalRewards.artifactId ? <RewardPill icon={<Gift className="size-3" />} label={displayArtifactName(finalRewards.artifactId)} /> : null}
               </div>
               {(finalRewards.unlocks?.length ?? 0) > 0 && (
                 <div className="mt-3">
@@ -164,7 +185,7 @@ function ImportedCampaignOverview() {
           )}
 
           {/* CHAPTERS */}
-          <div className="mt-8 flex items-center gap-3">
+          <div className="mt-10 flex items-center gap-3">
             <Scroll className="size-4 text-gold" />
             <h3 className="font-display text-base font-bold">فصول الرحلة</h3>
             <span className="ms-auto text-[11px] text-muted-foreground">
@@ -183,26 +204,42 @@ function ImportedCampaignOverview() {
                 const chProgress = progress?.chapters[ch.id];
                 const done = Boolean(chProgress?.completed);
                 const unlocked = isChapterUnlocked(campaign, ch);
+                const isCurrent = ch.id === currentChapterId;
+                const xp = ch.rewards?.xp ?? 0;
+                const coins = ch.rewards?.coins ?? 0;
+                const unlocksCount = ch.rewards?.unlocks?.length ?? 0;
                 return (
                   <div key={ch.id} className="animate-reveal">
                     <div className="flex items-start gap-3">
-                      <div className={`grid size-9 shrink-0 place-items-center rounded-full border ${
+                      <div className={`grid size-9 shrink-0 place-items-center rounded-full border transition ${
                         done ? "border-gold/60 bg-gradient-gold text-primary-foreground"
+                        : isCurrent ? "border-gold bg-gold/20 text-gold shadow-[0_0_18px_-2px_oklch(0.78_0.13_85/0.55)] ring-2 ring-gold/40"
                         : unlocked ? "border-gold/40 bg-gold/10 text-gold"
                         : "border-white/10 bg-black/30 text-muted-foreground"
                       }`}>
-                        {done ? <Check className="size-4" /> : <span className="text-sm">{(i + 1).toLocaleString("en-US")}</span>}
+                        {done ? <Check className="size-4" /> : <span className="text-sm font-bold">{(i + 1).toLocaleString("en-US")}</span>}
                       </div>
                       <div className="flex-1 pt-1">
-                        <p className="text-[10px] tracking-widest text-gold/70">
-                          الفصل {(i + 1).toLocaleString("en-US")}
-                          {ch.rewards?.xp ? ` · +${ch.rewards.xp} نقطة` : ""}
-                        </p>
-                        <h4 className={`font-display text-base font-bold ${!unlocked ? "text-muted-foreground" : ""}`}>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[10px] tracking-widest text-gold/70">
+                            الفصل {(i + 1).toLocaleString("en-US")}
+                          </p>
+                          {isCurrent && (
+                            <span className="rounded-full bg-gold/20 px-2 py-0.5 text-[9px] font-bold text-gold ring-1 ring-gold/40">
+                              الحالي
+                            </span>
+                          )}
+                          {done && (
+                            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-bold text-emerald-300 ring-1 ring-emerald-500/30">
+                              مكتمل
+                            </span>
+                          )}
+                        </div>
+                        <h4 className={`font-display text-base font-bold ${!unlocked ? "text-muted-foreground" : ""} ${done ? "opacity-80" : ""}`}>
                           {ch.title}
                         </h4>
                         {ch.subtitle && (
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">{ch.subtitle}</p>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-1">{ch.subtitle}</p>
                         )}
                       </div>
                     </div>
@@ -218,17 +255,29 @@ function ImportedCampaignOverview() {
                         <Link
                           to="/campaigns/imported/$id/chapter/$chapter"
                           params={{ id: campaign.id, chapter: ch.id }}
-                          className="parchment-dark group relative block overflow-hidden rounded-2xl border border-gold/30 p-4 transition hover:border-gold/60"
+                          className={`parchment-dark group relative block overflow-hidden rounded-2xl border p-4 transition ${
+                            isCurrent
+                              ? "border-gold/70 shadow-[0_0_24px_-6px_oklch(0.78_0.13_85/0.5)] hover:border-gold"
+                              : "border-gold/25 hover:border-gold/55"
+                          } ${done ? "opacity-90" : ""}`}
                         >
                           {ch.introText && (
-                            <p className="line-clamp-3 text-[12px] leading-relaxed text-foreground/90">
+                            <p className="line-clamp-2 text-[12px] leading-relaxed text-foreground/85">
                               {ch.introText}
                             </p>
                           )}
+                          {/* Reward chips */}
+                          {(xp > 0 || coins > 0 || unlocksCount > 0) && (
+                            <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[10px]">
+                              {xp > 0 && <RewardChip icon={<Zap className="size-3" />} label={`+${xp}`} />}
+                              {coins > 0 && <RewardChip icon={<Coins className="size-3" />} label={`+${coins}`} />}
+                              {unlocksCount > 0 && <RewardChip icon={<Package className="size-3" />} label={`${unlocksCount} مكافأة`} />}
+                            </div>
+                          )}
                           <div className="mt-3 flex items-center justify-between text-[11px]">
-                            <span className="flex items-center gap-1 text-gold">
-                              <BookOpen className="size-3.5" />
-                              {done ? "أعد القراءة" : "ابدأ الفصل"}
+                            <span className="inline-flex items-center gap-1.5 font-bold text-gold">
+                              {done ? <BookOpen className="size-3.5" /> : <Play className="size-3.5 fill-current" />}
+                              {done ? "أعد القراءة" : isCurrent ? "تابع الفصل" : "ابدأ الفصل"}
                             </span>
                             <span className="text-muted-foreground">
                               {ch.activities.length.toLocaleString("en-US")} نشاط
@@ -243,27 +292,66 @@ function ImportedCampaignOverview() {
             </div>
           )}
 
-          {/* COMPLETION STATE */}
+          {/* COMPLETION STATE — premium */}
           {chapters.length > 0 && progress?.completed && (
-            <div className="mt-8 rounded-2xl border border-gold/40 bg-gold/10 p-4 text-center">
-              <Sparkles className="mx-auto size-6 text-gold" />
-              <p className="font-display mt-2 text-base font-bold text-gold">أتممتَ هذه الحملة</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                +{progress.totalXp} XP · +{progress.totalCoins} دينار
-                {progress.unlockedRegistryIds.length ? ` · ${progress.unlockedRegistryIds.length} عنصر سجل جاهز للفتح في المتحف` : ""}
-              </p>
+            <div className="mt-10 relative overflow-hidden rounded-3xl border border-gold/50 bg-gradient-to-br from-amber-900/30 via-surface to-stone-900/40 p-6 shadow-elegant">
+              <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/25 blur-3xl" />
+              <div className="relative text-center">
+                <div className="mx-auto grid size-14 place-items-center rounded-full bg-gradient-gold text-primary-foreground shadow-gold">
+                  <Trophy className="size-6" />
+                </div>
+                <p className="mt-3 text-[10px] tracking-[0.3em] text-gold/80">إنجاز مكتمل</p>
+                <p className="font-display mt-1 text-xl font-bold text-gold shimmer-text">أتممتَ هذه الحملة</p>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px]">
+                  <RewardPill icon={<Zap className="size-3" />} label={`+${progress.totalXp.toLocaleString("en-US")} خبرة`} />
+                  <RewardPill icon={<Coins className="size-3" />} label={`+${progress.totalCoins.toLocaleString("en-US")} دينار`} />
+                  {progress.unlockedRegistryIds.length > 0 && (
+                    <RewardPill icon={<Package className="size-3" />} label={`${progress.unlockedRegistryIds.length} عنصر مكتشف`} />
+                  )}
+                </div>
+                {/* Cross-module navigation */}
+                <div className="mt-5 grid grid-cols-3 gap-2">
+                  <Link to="/collection" className="group flex flex-col items-center gap-1 rounded-2xl border border-gold/30 bg-black/30 p-3 transition hover:border-gold/60">
+                    <Package className="size-4 text-gold" />
+                    <span className="text-[10px] text-white/80">المتحف</span>
+                  </Link>
+                  <Link to="/encyclopedia" className="group flex flex-col items-center gap-1 rounded-2xl border border-gold/30 bg-black/30 p-3 transition hover:border-gold/60">
+                    <BookOpen className="size-4 text-gold" />
+                    <span className="text-[10px] text-white/80">الموسوعة</span>
+                  </Link>
+                  <Link to="/campaigns" className="group flex flex-col items-center gap-1 rounded-2xl border border-gold/30 bg-black/30 p-3 transition hover:border-gold/60">
+                    <Crown className="size-4 text-gold" />
+                    <span className="text-[10px] text-white/80">حملة تالية</span>
+                  </Link>
+                </div>
+                <Link
+                  to="/campaigns"
+                  className="mt-4 inline-flex items-center justify-center gap-1 text-[11px] font-bold text-gold hover:text-gold/80"
+                >
+                  استكشف رحلات تاريخية جديدة <ChevronLeft className="size-3" />
+                </Link>
+              </div>
             </div>
           )}
         </div>
+
       </div>
     </AppShell>
   );
 }
 
-function Pill({ label }: { label: string }) {
+function RewardPill({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <span className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-gold">
-      {label}
+    <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-gold">
+      {icon} {label}
+    </span>
+  );
+}
+
+function RewardChip({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md border border-gold/25 bg-black/30 px-1.5 py-0.5 text-gold/90">
+      {icon} {label}
     </span>
   );
 }
