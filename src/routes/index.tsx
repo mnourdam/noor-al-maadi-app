@@ -711,6 +711,58 @@ function HomeFull() {
         </a>
       )}
 
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <a
+          href="/index.html?__irth_router_struct=1&branch=__root__&half=a"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.href = "/index.html?__irth_router_struct=1&branch=__root__&half=a";
+          }}
+          style={{
+            display: "block",
+            margin: "12px",
+            padding: "20px",
+            background: "#111827",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #facc15",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          ROUTER STRUCTURE ROOT A
+        </a>
+      )}
+
+      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
+        <a
+          href="/index.html?__irth_router_struct=1&branch=__root__&half=b"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.href = "/index.html?__irth_router_struct=1&branch=__root__&half=b";
+          }}
+          style={{
+            display: "block",
+            margin: "12px",
+            padding: "20px",
+            background: "#1f2937",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: "18px",
+            textAlign: "center",
+            border: "3px solid #f59e0b",
+            borderRadius: "12px",
+            letterSpacing: "0.1em",
+            textDecoration: "none",
+          }}
+        >
+          ROUTER STRUCTURE ROOT B
+        </a>
+      )}
+
 
       {/* Page-wide atmosphere: a single fixed parchment fog behind everything.
           Mobile-safe — no background-attachment:fixed; absolutely positioned. */}
