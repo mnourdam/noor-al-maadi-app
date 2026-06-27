@@ -89,11 +89,20 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
   const xp = fr?.xp;
   const coins = fr?.coins;
 
+  const progress = getCampaignProgress(c.id);
+  const isComplete =
+    c.chapters.length > 0 &&
+    (progress.completed || c.chapters.every((ch) => progress.chapters[ch.id]?.completed));
+
   return (
     <Link
       to="/campaigns/imported/$id"
       params={{ id: c.id }}
-      className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition hover:border-gold/60"
+      className={`shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
+        isComplete
+          ? "border-emerald-400/40 opacity-80 hover:opacity-100"
+          : "border-gold/40 hover:border-gold/60"
+      }`}
     >
       <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
       <div className="relative">
