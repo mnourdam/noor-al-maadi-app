@@ -236,7 +236,12 @@ function RootComponent() {
     import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
     import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
 
-    const onOnline = () => {};
+    const onOnline = () => {
+      // Reconcile when network returns: flush queued progress/rewards and
+      // refresh the offline snapshot so cached content stays current.
+      import("../lib/campaignLedger").then((l) => l.flushPending()).catch(() => {});
+      import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
+    };
     window.addEventListener("online", onOnline);
 
     type LockableOrientation = ScreenOrientation & {
