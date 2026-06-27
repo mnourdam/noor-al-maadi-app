@@ -273,6 +273,70 @@ function Composer() {
               />
             </div>
 
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium">الفئة</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as NotificationCategoryKey)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  {ALL_CATEGORY_KEYS.map((k) => (
+                    <option key={k} value={k}>{NOTIFICATION_CATEGORIES[k].label} — {k}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">الأولوية</label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as Priority)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  <option value="low">منخفضة</option>
+                  <option value="normal">عادية</option>
+                  <option value="high">عالية</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">أيقونة (Lucide)</label>
+                <input
+                  value={icon}
+                  onChange={(e) => setIcon(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs"
+                  placeholder="bell, flag, book-open …"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">رابط الصورة (اختياري)</label>
+              <input
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs"
+                placeholder="https://…/cover.jpg"
+              />
+              {imageUrl && (
+                <img src={imageUrl} alt="" className="mt-2 h-24 w-full rounded-md object-cover ring-1 ring-border" />
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">payload (JSON اختياري)</label>
+              <textarea
+                value={payloadText}
+                onChange={(e) => setPayloadText(e.target.value)}
+                rows={3}
+                dir="ltr"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-[11px]"
+                placeholder='{"campaignId":"prophetic-mission","entitySlug":"makkah"}'
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                يُستخدم لروابط عميقة قائمة على البيانات: campaignId / entitySlug / artifactId / achievementId.
+              </p>
+            </div>
+
             <div className="rounded-md border border-border p-3">
               <label className="flex items-center gap-2 text-sm">
                 <input
