@@ -419,7 +419,7 @@ function HomeFull() {
         icon: <Gem className="size-3.5" />,
         eyebrow: `اكتشاف · ${r.kind}`,
         title: r.title,
-        to: "/collection",
+        to: r.to ?? "/collection",
       });
     }
     const earnedMap = profile.achievementsEarned ?? {};
