@@ -75,6 +75,14 @@ export function AtlasEntityPinsLayer({
   disableGlow?: boolean;
 }) {
   if (entities.length === 0) return null;
+  // Label clutter cap: if too many pins are eligible for labels at this
+  // tier, demote everything below region/place so the map stays readable.
+  let labelEligible = 0;
+  for (const e of entities) {
+    if (e.aps_x == null || e.aps_y == null) continue;
+    if (labelTier >= (LABEL_TIER[e.kind] ?? 99)) labelEligible++;
+  }
+  const labelCap = labelEligible > 28;
   return (
     <g className="layer-atlas-entities">
       {entities.map((e) => (
@@ -87,6 +95,7 @@ export function AtlasEntityPinsLayer({
           onSelect={onSelect}
           cullBounds={cullBounds}
           disableGlow={disableGlow}
+          labelCap={labelCap}
         />
       ))}
     </g>
@@ -95,7 +104,7 @@ export function AtlasEntityPinsLayer({
 
 
 const AtlasPin = memo(function AtlasPin({
-  entity, inv, labelTier, active, onSelect, cullBounds, disableGlow,
+  entity, inv, labelTier, active, onSelect, cullBounds, disableGlow, labelCap,
 }: {
   entity: AtlasEntityRow;
   inv: number;
@@ -104,6 +113,7 @@ const AtlasPin = memo(function AtlasPin({
   onSelect: (entity: AtlasEntityRow) => void;
   cullBounds?: { minX: number; maxX: number; minY: number; maxY: number } | null;
   disableGlow?: boolean;
+  labelCap?: boolean;
 }) {
   if (entity.aps_x == null || entity.aps_y == null) return null;
   const { x, y } = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
@@ -127,7 +137,8 @@ const AtlasPin = memo(function AtlasPin({
     /oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/,
     (_m, l, c, h) => `oklch(${Math.max(0.18, Number(l) - 0.22).toFixed(2)} ${c} ${h})`,
   );
-  const showLabel = shouldShowLabel(entity.kind, labelTier, active);
+  const labelAllowedByCap = !labelCap || active || entity.kind === "region" || entity.kind === "place";
+  const showLabel = shouldShowLabel(entity.kind, labelTier, active) && labelAllowedByCap;
   return (
     <g
       transform={`translate(${x} ${y})`}

@@ -186,6 +186,12 @@ function AtlasShellInner() {
         <AtlasEntityDetailPanel
           entity={selected}
           onClose={() => setSearchParam("focus", null)}
+          onCenter={() => {
+            if (typeof selected.aps_x === "number" && typeof selected.aps_y === "number") {
+              focusAtlasRef.current += 1;
+              setFocusAps({ x: selected.aps_x, y: selected.aps_y, minScale: 6, nonce: focusAtlasRef.current });
+            }
+          }}
         />
       )}
     </div>

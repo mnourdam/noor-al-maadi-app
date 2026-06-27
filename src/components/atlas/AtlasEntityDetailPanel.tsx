@@ -7,7 +7,7 @@
 // Layout: bottom sheet on mobile, floating popover at the bottom-right on
 // desktop. Safe-area padding so it never hides behind the home-bar.
 import { Link } from "@tanstack/react-router";
-import { BookOpen, Loader2, X } from "lucide-react";
+import { BookOpen, Crosshair, Loader2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { KIND_LABEL_AR, type AtlasEntityRow } from "@/lib/atlas-entities";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,12 +37,15 @@ function useEncyclopediaEntity(id: string | null) {
 export function AtlasEntityDetailPanel({
   entity,
   onClose,
+  onCenter,
 }: {
   entity: AtlasEntityRow;
   onClose: () => void;
+  onCenter?: () => void;
 }) {
   const encId = entity.encyclopedia_entity_id ?? null;
   const { data: article, isLoading } = useEncyclopediaEntity(encId);
+  const hasCoords = entity.aps_x != null && entity.aps_y != null;
 
   // Live values from the encyclopedia (source of truth) win. The Atlas
   // row's own name/era are used only as a fallback while loading, or for
@@ -115,7 +118,7 @@ export function AtlasEntityDetailPanel({
           </p>
         ) : null}
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col gap-2">
           {encId ? (
             <Link
               to="/encyclopedia/entity/$id"
@@ -128,6 +131,15 @@ export function AtlasEntityDetailPanel({
             <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-amber-400/30 bg-slate-900/60 px-4 py-2 text-[12px] font-medium text-amber-100/70">
               <BookOpen className="size-4" /> المقالة قادمة قريباً
             </span>
+          )}
+          {hasCoords && onCenter && (
+            <button
+              type="button"
+              onClick={onCenter}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-amber-400/30 bg-slate-950/60 px-4 py-2 text-[12px] font-medium text-amber-100 hover:bg-slate-900"
+            >
+              <Crosshair className="size-4" /> توسيط على الخريطة
+            </button>
           )}
         </div>
       </div>
