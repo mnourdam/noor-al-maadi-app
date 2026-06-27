@@ -305,13 +305,14 @@ export function useEncyclopediaSupabaseEntityBySlug(rawId: string) {
         if (error) {
           if (typeof console !== "undefined")
             console.warn("[encyclopedia-source] slug fetch failed", error.message);
-          return null;
+          return await cachedEncyclopediaBySlug(slug);
         }
-        return pickCanonicalEntity((data as SupabaseEncyclopediaEntity[]) ?? []);
+        const picked = pickCanonicalEntity((data as SupabaseEncyclopediaEntity[]) ?? []);
+        return picked ?? (await cachedEncyclopediaBySlug(slug));
       } catch (e) {
         if (typeof console !== "undefined")
           console.warn("[encyclopedia-source] slug fetch crashed", e);
-        return null;
+        return await cachedEncyclopediaBySlug(slug);
       }
     },
   });
