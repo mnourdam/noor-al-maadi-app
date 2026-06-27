@@ -50,7 +50,7 @@ function getRegisteredPatterns(router: ReturnType<typeof useRouter>): string[] {
   };
 
   const joinChildPath = (parentPath: string | undefined, childPath: unknown): string | null => {
-    if (typeof childPath !== "string" || !childPath.startsWith("/")) return null;
+    if (typeof childPath !== "string" || !childPath || childPath === "__root__") return null;
     const cleanChild = normalizePath(childPath);
     const cleanParent = parentPath ? normalizePath(parentPath) : "/";
     if (cleanParent === "/") return cleanChild;
