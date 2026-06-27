@@ -81,8 +81,12 @@ function getRegisteredPatterns(router: ReturnType<typeof useRouter>): string[] {
 }
 
 function getRouterPathname(router: ReturnType<typeof useRouter>): string {
-  const pathname = (router as unknown as { state?: { location?: { pathname?: string } } }).state?.location?.pathname;
-  return normalizePath(pathname || "/");
+  const location = (router as unknown as { state?: { location?: { pathname?: string; href?: string } } }).state?.location;
+  const pathname = normalizePath(location?.pathname || "/");
+  if (pathname !== "/") return pathname;
+
+  const hrefPath = location?.href?.split(/[?#]/)[0];
+  return hrefPath ? normalizePath(hrefPath) : pathname;
 }
 
 function getWindowRoutePathname(): string {
@@ -108,9 +112,10 @@ function getDeepestMatchedPathname(router: ReturnType<typeof useRouter>): string
   }).state?.matches;
   const deepest = Array.isArray(matches) ? matches[matches.length - 1] : undefined;
   const pathname = deepest?.pathname;
-  if (pathname) return normalizePath(pathname);
+  const normalizedPathname = pathname ? normalizePath(pathname) : "/";
 
   const routeId = deepest?.routeId ?? deepest?.id;
+  if (normalizedPathname !== "/") return normalizedPathname;
   return typeof routeId === "string" && routeId.startsWith("/") ? normalizePath(routeId) : "/";
 }
 
