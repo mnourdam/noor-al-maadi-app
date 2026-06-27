@@ -249,7 +249,7 @@ export function AndroidBackHandler() {
       try {
         const { App } = await import("@capacitor/app");
         const handle = await App.addListener("backButton", async () => {
-          const actualWindowPathname = normalizePath(window.location.pathname || "/");
+          const actualWindowPathname = window.location.pathname || "/";
           const windowRoutePathname = getWindowRoutePathname();
           const routerPathname = getRouterPathname(router);
           const matchedPathname = getDeepestMatchedPathname(router);
