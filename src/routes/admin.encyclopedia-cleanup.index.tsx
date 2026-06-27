@@ -27,7 +27,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle, Archive, BookOpen, CheckCircle2, Copy, Download,
   FileWarning, Filter, GitMerge, Loader2, RefreshCw, Save,
-  Search, Sparkles, Trash2, X,
+  Search, Shield, Sparkles, Trash2, X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
