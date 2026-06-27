@@ -96,14 +96,13 @@ export function OnboardingTour() {
             {i === 0 ? "تخطّي" : "السابق"}
           </button>
           {last ? (
-            <Link
-              to={step.href as "/"}
+            <button
               onClick={() => finish(true)}
               className="inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-gold py-2.5 text-xs font-bold text-primary-foreground shadow-gold"
             >
-              ابدأ الآن
+              ابدأ رحلتي
               <ChevronLeft className="size-4" />
-            </Link>
+            </button>
           ) : (
             <button
               onClick={() => setI(i + 1)}
