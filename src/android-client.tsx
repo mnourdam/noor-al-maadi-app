@@ -83,7 +83,15 @@ if (!rootElement) {
   throw new Error("Android app root element #root was not found.");
 }
 
-if (shouldShowStoredFreezeTrace) {
+if (isDirectInputMinPath()) {
+  try {
+    document.documentElement.classList.remove("irth-booting");
+    document.getElementById("irth-boot-splash")?.remove();
+  } catch { /* ignore */ }
+  // eslint-disable-next-line no-console
+  console.info("[react-direct-input-min] direct React entry mounted (no router/providers)", { path: window.location.pathname });
+  createRoot(rootElement).render(<DirectInputMin />);
+} else if (shouldShowStoredFreezeTrace) {
   window.history.replaceState(null, "", "/debug/input-trace");
   try {
     document.documentElement.classList.remove("irth-booting");
