@@ -66,7 +66,8 @@ type EntityRow = {
 type Quality = "good" | "weak" | "empty" | "duplicate" | "orphaned";
 type FilterKey =
   | "all" | "figure" | "city" | "landmark" | "battle" | "event"
-  | "artifact" | "state" | "empty" | "weak" | "duplicate" | "stub" | "archived";
+  | "artifact" | "state" | "empty" | "weak" | "duplicate" | "stub" | "archived"
+  | "no-image" | "no-sources" | "no-overview" | "no-atlas" | "no-campaign";
 
 // ------------------------------------------------------------
 // Helpers
