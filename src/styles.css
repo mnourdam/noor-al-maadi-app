@@ -175,6 +175,16 @@
 
   html {
     direction: rtl;
+    /* Solid fallback so fast scrolling / overscroll never reveals a white
+       frame behind the body's gradient (Encyclopedia long-list flash). */
+    background-color: oklch(0.16 0.02 80);
+  }
+
+  /* Same fallback for the scroll container so iOS / Android WebView don't
+     flash the default white page background while scroll-snapping virtualized
+     lists. */
+  :root, html, body {
+    background-color: oklch(0.16 0.02 80);
   }
 
   h1, h2, h3, h4, .font-display {
