@@ -5,6 +5,7 @@ import {
   quizQuestionKey, chapterQuizKey, isQuestionAnsweredCorrectly,
 } from "@/lib/quiz-engine";
 import { useProfile } from "@/lib/profile";
+import { sfx } from "@/components/games/sfx";
 
 interface Props {
   campaignId: string;
