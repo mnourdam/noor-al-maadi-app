@@ -19,9 +19,8 @@ import { AchievementWatcher } from "../components/AchievementWatcher";
 import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
 import { AndroidBackHandler } from "../components/AndroidBackHandler";
-import { androidMark, isAndroidUltraStableMode } from "../lib/androidFreezeDiagnostics";
-import { isSectionEnabled, isAndroidQuietActive } from "../lib/androidQuietMode";
-import { AppShell } from "../components/AppShell";
+
+
 
 function NotFoundComponent() {
   return (
@@ -204,144 +203,81 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-function shouldBypassRootForReactBareInputTest() {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
-
-  const isReactBareInputRoute = window.location.pathname === "/debug/react-bare-input-min";
-  const isAndroidRuntime =
-    /android/i.test(navigator.userAgent) ||
-    Boolean((window as unknown as { Capacitor?: unknown }).Capacitor) ||
-    window.location.protocol === "capacitor:";
-
-  return isReactBareInputRoute && isAndroidRuntime;
-}
-
 function RootComponent() {
-  if (shouldBypassRootForReactBareInputTest()) {
-    return <Outlet />;
-  }
-
   const { queryClient } = Route.useRouteContext();
-  const androidStable = isAndroidUltraStableMode();
-  const capacitorMinimalDiagnostics =
-    typeof window !== "undefined" &&
-    Boolean((window as unknown as { __irthCapacitorMinimalMode?: boolean }).__irthCapacitorMinimalMode);
 
   useEffect(() => {
-    androidMark("root.effect.start");
     try { document.getElementById("irth-boot-splash")?.remove(); } catch { /* noop */ }
     // Apply Android/WebView/reduced-motion perf-mode class on <html>.
     import("../lib/perf-mode").then((m) => m.applyPerfMode()).catch(() => {});
 
-    if (capacitorMinimalDiagnostics) {
-      console.warn("[android:cap-min] root background work disabled");
-      return;
-    }
-
-    if (androidStable) {
-      console.warn("[android:freeze] ultra-stable root background work disabled");
-      return;
-    }
-
-    if (isAndroidQuietActive()) {
-      console.warn(
-        "[android:quiet] root background subsystems gated. Use __irthAndroidEnable('all') to re-enable.",
-      );
-    }
-
-    if (isSectionEnabled("orphanUnlocks")) {
-      import("../lib/orphanUnlocksMigration").then((m) => m.migrateOrphanUnlocks()).catch(() => {});
-    }
-
-    if (isSectionEnabled("ledger")) {
-      import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
-    }
-
-    if (isSectionEnabled("offlineSnapshot")) {
-      import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
-    }
+    import("../lib/orphanUnlocksMigration").then((m) => m.migrateOrphanUnlocks()).catch(() => {});
+    import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
+    import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
 
     const onOnline = () => {};
     window.addEventListener("online", onOnline);
 
-    if (isSectionEnabled("orientationLock")) {
-      type LockableOrientation = ScreenOrientation & {
-        lock?: (orientation: "portrait" | "landscape" | "any") => Promise<void>;
-      };
-      const so = (typeof screen !== "undefined" ? (screen.orientation as LockableOrientation | undefined) : undefined);
-      so?.lock?.("portrait").catch(() => {});
-    }
+    type LockableOrientation = ScreenOrientation & {
+      lock?: (orientation: "portrait" | "landscape" | "any") => Promise<void>;
+    };
+    const so = (typeof screen !== "undefined" ? (screen.orientation as LockableOrientation | undefined) : undefined);
+    so?.lock?.("portrait").catch(() => {});
 
     let unsub: (() => void) | undefined;
-    if (isSectionEnabled("push") || isSectionEnabled("authListener")) {
-      console.log("[push] root effect reached");
-      import("../lib/pushNotifications")
-        .then(async (m) => {
-          if (isSectionEnabled("push")) {
-            await m.initPushNotifications();
+    import("../lib/pushNotifications")
+      .then(async (m) => {
+        await m.initPushNotifications();
+        m.flushPendingDeviceToken().catch(() => {});
+        const { supabase } = await import("../integrations/supabase/client");
+        const { data } = supabase.auth.onAuthStateChange((event) => {
+          if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
             m.flushPendingDeviceToken().catch(() => {});
+            import("../lib/campaignLedger").then((l) => {
+              void l.flushPending();
+              if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
+            }).catch(() => {});
           }
-          if (isSectionEnabled("authListener")) {
-            const { supabase } = await import("../integrations/supabase/client");
-            const { data } = supabase.auth.onAuthStateChange((event) => {
-              if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-                if (isSectionEnabled("push")) {
-                  m.flushPendingDeviceToken().catch(() => {});
-                }
-                if (isSectionEnabled("ledger")) {
-                  import("../lib/campaignLedger").then((l) => {
-                    void l.flushPending();
-                    if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
-                  }).catch(() => {});
-                }
-              }
-            });
-            unsub = () => data.subscription.unsubscribe();
-          }
-        })
-        .catch((err) => console.error("[push] dynamic import failed:", err));
-    }
+        });
+        unsub = () => data.subscription.unsubscribe();
+      })
+      .catch((err) => console.error("[push] dynamic import failed:", err));
 
-    let onVisible: (() => void) | undefined;
-    if (isSectionEnabled("heartbeat")) {
-      let lastTouch = 0;
-      const touchActive = async () => {
-        const now = Date.now();
-        if (now - lastTouch < 5 * 60 * 1000) return;
-        lastTouch = now;
-        try {
-          const { touchMyLastActive } = await import("../lib/adminUsers");
-          await touchMyLastActive();
-        } catch { /* silent */ }
-      };
-      onVisible = () => { if (document.visibilityState === "visible") void touchActive(); };
-      document.addEventListener("visibilitychange", onVisible);
-      void touchActive();
-    }
+    let lastTouch = 0;
+    const touchActive = async () => {
+      const now = Date.now();
+      if (now - lastTouch < 5 * 60 * 1000) return;
+      lastTouch = now;
+      try {
+        const { touchMyLastActive } = await import("../lib/adminUsers");
+        await touchMyLastActive();
+      } catch { /* silent */ }
+    };
+    const onVisible = () => { if (document.visibilityState === "visible") void touchActive(); };
+    document.addEventListener("visibilitychange", onVisible);
+    void touchActive();
 
     return () => {
       unsub?.();
       window.removeEventListener("online", onOnline);
-      if (onVisible) document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-
-  }, [androidStable, capacitorMinimalDiagnostics]);
+  }, []);
 
   return (
-    <>
-      <QueryClientProvider client={queryClient}>
-        <ProfileProvider>
-          <AccountProvider>
-            {androidStable ? <AppShell><Outlet /></AppShell> : <Outlet />}
-            {!androidStable && isSectionEnabled("firstLaunch") && <FirstLaunchGate />}
-            {!androidStable && isSectionEnabled("achievement") && <AchievementWatcher />}
-            {!androidStable && isSectionEnabled("levelUp") && <LevelUpWatcher />}
-            <Toaster position="top-center" richColors closeButton />
-            {!androidStable && isSectionEnabled("splash") && <SplashSequence />}
-            {!capacitorMinimalDiagnostics && isSectionEnabled("backHandler") && <AndroidBackHandler />}
-          </AccountProvider>
-        </ProfileProvider>
-      </QueryClientProvider>
-    </>
+    <QueryClientProvider client={queryClient}>
+      <ProfileProvider>
+        <AccountProvider>
+          <Outlet />
+          <FirstLaunchGate />
+          <AchievementWatcher />
+          <LevelUpWatcher />
+          <Toaster position="top-center" richColors closeButton />
+          <SplashSequence />
+          <AndroidBackHandler />
+        </AccountProvider>
+      </ProfileProvider>
+    </QueryClientProvider>
   );
 }
+

@@ -28,9 +28,6 @@ import { Route as ContentAuditRouteImport } from './routes/content-audit'
 import { Route as CollectionRouteImport } from './routes/collection'
 import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AndroidInputTestRouteImport } from './routes/android-input-test'
-import { Route as AndroidCampaignInputMinRouteImport } from './routes/android-campaign-input-min'
-import { Route as AndroidAuthMinRouteImport } from './routes/android-auth-min'
 import { Route as AdventureRouteImport } from './routes/adventure'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
@@ -49,9 +46,6 @@ import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
 import { Route as PlayChapterRouteImport } from './routes/play.chapter'
 import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
 import { Route as FigureIdRouteImport } from './routes/figure.$id'
-import { Route as DebugReactBareInputMinRouteImport } from './routes/debug.react-bare-input-min'
-import { Route as DebugNativeInputMinRouteImport } from './routes/debug.native-input-min'
-import { Route as DebugInputTraceRouteImport } from './routes/debug.input-trace'
 import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
@@ -194,21 +188,6 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AndroidInputTestRoute = AndroidInputTestRouteImport.update({
-  id: '/android-input-test',
-  path: '/android-input-test',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AndroidCampaignInputMinRoute = AndroidCampaignInputMinRouteImport.update({
-  id: '/android-campaign-input-min',
-  path: '/android-campaign-input-min',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AndroidAuthMinRoute = AndroidAuthMinRouteImport.update({
-  id: '/android-auth-min',
-  path: '/android-auth-min',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdventureRoute = AdventureRouteImport.update({
   id: '/adventure',
   path: '/adventure',
@@ -297,21 +276,6 @@ const InvestigationIdRoute = InvestigationIdRouteImport.update({
 const FigureIdRoute = FigureIdRouteImport.update({
   id: '/figure/$id',
   path: '/figure/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DebugReactBareInputMinRoute = DebugReactBareInputMinRouteImport.update({
-  id: '/debug/react-bare-input-min',
-  path: '/debug/react-bare-input-min',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DebugNativeInputMinRoute = DebugNativeInputMinRouteImport.update({
-  id: '/debug/native-input-min',
-  path: '/debug/native-input-min',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DebugInputTraceRoute = DebugInputTraceRouteImport.update({
-  id: '/debug/input-trace',
-  path: '/debug/input-trace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompareIdRoute = CompareIdRouteImport.update({
@@ -559,9 +523,6 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
-  '/android-auth-min': typeof AndroidAuthMinRoute
-  '/android-campaign-input-min': typeof AndroidCampaignInputMinRoute
-  '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
@@ -617,9 +578,6 @@ export interface FileRoutesByFullPath {
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
-  '/debug/input-trace': typeof DebugInputTraceRoute
-  '/debug/native-input-min': typeof DebugNativeInputMinRoute
-  '/debug/react-bare-input-min': typeof DebugReactBareInputMinRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -650,9 +608,6 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
-  '/android-auth-min': typeof AndroidAuthMinRoute
-  '/android-campaign-input-min': typeof AndroidCampaignInputMinRoute
-  '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/collection': typeof CollectionRoute
   '/content-audit': typeof ContentAuditRoute
@@ -705,9 +660,6 @@ export interface FileRoutesByTo {
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
-  '/debug/input-trace': typeof DebugInputTraceRoute
-  '/debug/native-input-min': typeof DebugNativeInputMinRoute
-  '/debug/react-bare-input-min': typeof DebugReactBareInputMinRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -739,9 +691,6 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
-  '/android-auth-min': typeof AndroidAuthMinRoute
-  '/android-campaign-input-min': typeof AndroidCampaignInputMinRoute
-  '/android-input-test': typeof AndroidInputTestRoute
   '/auth': typeof AuthRoute
   '/campaigns': typeof CampaignsRouteWithChildren
   '/collection': typeof CollectionRoute
@@ -797,9 +746,6 @@ export interface FileRoutesById {
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
-  '/debug/input-trace': typeof DebugInputTraceRoute
-  '/debug/native-input-min': typeof DebugNativeInputMinRoute
-  '/debug/react-bare-input-min': typeof DebugReactBareInputMinRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -832,9 +778,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/achievements'
     | '/adventure'
-    | '/android-auth-min'
-    | '/android-campaign-input-min'
-    | '/android-input-test'
     | '/auth'
     | '/campaigns'
     | '/collection'
@@ -890,9 +833,6 @@ export interface FileRouteTypes {
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
-    | '/debug/input-trace'
-    | '/debug/native-input-min'
-    | '/debug/react-bare-input-min'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -923,9 +863,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/achievements'
     | '/adventure'
-    | '/android-auth-min'
-    | '/android-campaign-input-min'
-    | '/android-input-test'
     | '/auth'
     | '/collection'
     | '/content-audit'
@@ -978,9 +915,6 @@ export interface FileRouteTypes {
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
-    | '/debug/input-trace'
-    | '/debug/native-input-min'
-    | '/debug/react-bare-input-min'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -1011,9 +945,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/achievements'
     | '/adventure'
-    | '/android-auth-min'
-    | '/android-campaign-input-min'
-    | '/android-input-test'
     | '/auth'
     | '/campaigns'
     | '/collection'
@@ -1069,9 +1000,6 @@ export interface FileRouteTypes {
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
-    | '/debug/input-trace'
-    | '/debug/native-input-min'
-    | '/debug/react-bare-input-min'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -1103,9 +1031,6 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AchievementsRoute: typeof AchievementsRoute
   AdventureRoute: typeof AdventureRoute
-  AndroidAuthMinRoute: typeof AndroidAuthMinRoute
-  AndroidCampaignInputMinRoute: typeof AndroidCampaignInputMinRoute
-  AndroidInputTestRoute: typeof AndroidInputTestRoute
   AuthRoute: typeof AuthRoute
   CampaignsRoute: typeof CampaignsRouteWithChildren
   CollectionRoute: typeof CollectionRoute
@@ -1161,9 +1086,6 @@ export interface RootRouteChildren {
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
   CompareIdRoute: typeof CompareIdRoute
-  DebugInputTraceRoute: typeof DebugInputTraceRoute
-  DebugNativeInputMinRoute: typeof DebugNativeInputMinRoute
-  DebugReactBareInputMinRoute: typeof DebugReactBareInputMinRoute
   FigureIdRoute: typeof FigureIdRoute
   InvestigationIdRoute: typeof InvestigationIdRoute
   PlayChapterRoute: typeof PlayChapterRoute
@@ -1314,27 +1236,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/android-input-test': {
-      id: '/android-input-test'
-      path: '/android-input-test'
-      fullPath: '/android-input-test'
-      preLoaderRoute: typeof AndroidInputTestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/android-campaign-input-min': {
-      id: '/android-campaign-input-min'
-      path: '/android-campaign-input-min'
-      fullPath: '/android-campaign-input-min'
-      preLoaderRoute: typeof AndroidCampaignInputMinRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/android-auth-min': {
-      id: '/android-auth-min'
-      path: '/android-auth-min'
-      fullPath: '/android-auth-min'
-      preLoaderRoute: typeof AndroidAuthMinRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/adventure': {
       id: '/adventure'
       path: '/adventure'
@@ -1459,27 +1360,6 @@ declare module '@tanstack/react-router' {
       path: '/figure/$id'
       fullPath: '/figure/$id'
       preLoaderRoute: typeof FigureIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/debug/react-bare-input-min': {
-      id: '/debug/react-bare-input-min'
-      path: '/debug/react-bare-input-min'
-      fullPath: '/debug/react-bare-input-min'
-      preLoaderRoute: typeof DebugReactBareInputMinRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/debug/native-input-min': {
-      id: '/debug/native-input-min'
-      path: '/debug/native-input-min'
-      fullPath: '/debug/native-input-min'
-      preLoaderRoute: typeof DebugNativeInputMinRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/debug/input-trace': {
-      id: '/debug/input-trace'
-      path: '/debug/input-trace'
-      fullPath: '/debug/input-trace'
-      preLoaderRoute: typeof DebugInputTraceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compare/$id': {
@@ -1865,9 +1745,6 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AchievementsRoute: AchievementsRoute,
   AdventureRoute: AdventureRoute,
-  AndroidAuthMinRoute: AndroidAuthMinRoute,
-  AndroidCampaignInputMinRoute: AndroidCampaignInputMinRoute,
-  AndroidInputTestRoute: AndroidInputTestRoute,
   AuthRoute: AuthRoute,
   CampaignsRoute: CampaignsRouteWithChildren,
   CollectionRoute: CollectionRoute,
@@ -1923,9 +1800,6 @@ const rootRouteChildren: RootRouteChildren = {
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
   CompareIdRoute: CompareIdRoute,
-  DebugInputTraceRoute: DebugInputTraceRoute,
-  DebugNativeInputMinRoute: DebugNativeInputMinRoute,
-  DebugReactBareInputMinRoute: DebugReactBareInputMinRoute,
   FigureIdRoute: FigureIdRoute,
   InvestigationIdRoute: InvestigationIdRoute,
   PlayChapterRoute: PlayChapterRoute,

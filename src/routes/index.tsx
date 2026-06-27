@@ -29,8 +29,6 @@ import heroFortress from "@/assets/hero-fortress.jpg";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
-import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
-import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,7 +37,7 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "ادخل عالمًا تفاعليًا واسعًا من الشخصيات والدول والمعارك والمدن والأحداث في التاريخ الإسلامي." },
     ],
   }),
-  component: Index,
+  component: HomeFull,
 });
 
 // ============================================================
@@ -51,43 +49,33 @@ type HeroSlide =
   | { kind: "discovery"; bg: string; eyebrow: string; title: string; subtitle: string; icon: string; cta: { label: string; link: React.ReactNode } }
   | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
 
-function Index() {
-  androidMark("render:Home");
-  const androidStable = isAndroidUltraStableMode();
-  if (androidStable) return <AndroidStableHome />;
-  return <HomeFull />;
-}
+
 
 function HomeFull() {
   const { profile, touchStreak } = useProfile();
   const { account, user, lastSyncAt } = useAccount();
-  const androidStable = false;
 
   const displayName = account?.username ?? (user ? profile.name : profile.name);
   const [mounted, setMounted] = useState(false);
   const { selected: todayEvent } = useTodayInHistoryEvent();
   const stats = useRealCollectionStats();
   const [unread, setUnread] = useState(0);
-  const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
   useEffect(() => {
     const recount = () => setUnread(unreadCount());
     recount();
-    if (androidStable) return;
     window.addEventListener("irth:notifications:updated", recount);
-    if (!disableGlobalFocusBlur) window.addEventListener("focus", recount);
+    window.addEventListener("focus", recount);
     return () => {
       window.removeEventListener("irth:notifications:updated", recount);
-      if (!disableGlobalFocusBlur) window.removeEventListener("focus", recount);
+      window.removeEventListener("focus", recount);
     };
-  }, [androidStable, disableGlobalFocusBlur]);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-    androidMark("commit:Home");
     if (!user || lastSyncAt) {
       touchStreak();
     }
-    if (androidStable) return;
     const season = currentSeason();
     runDailyNotifications({
       prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
@@ -100,7 +88,7 @@ function HomeFull() {
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [touchStreak, todayEvent?.id, user, lastSyncAt, androidStable]);
+  }, [touchStreak, todayEvent?.id, user, lastSyncAt]);
 
 
   const lvl = levelFor(profile.points);
@@ -110,21 +98,20 @@ function HomeFull() {
     try { return listPublishedCampaigns(); } catch { return []; }
   });
   useEffect(() => {
-    if (androidStable) return;
     import("@/lib/cloudSync")
       .then((m) => m.pullAllFromCloud())
       .then(() => {
         try { setImportedCampaigns(listPublishedCampaigns()); } catch {}
       })
       .catch(() => {});
-  }, [androidStable]);
+  }, []);
   const [progressTick, setProgressTick] = useState(0);
   useEffect(() => {
-    if (androidStable) return;
     const onFocus = () => setProgressTick((t) => t + 1);
-    if (!disableGlobalFocusBlur) window.addEventListener("focus", onFocus);
-    return () => { if (!disableGlobalFocusBlur) window.removeEventListener("focus", onFocus); };
-  }, [androidStable, disableGlobalFocusBlur]);
+    window.addEventListener("focus", onFocus);
+    return () => { window.removeEventListener("focus", onFocus); };
+  }, []);
+
 
   type CampaignSelection = {
     campaign: ImportedCampaign;
@@ -243,10 +230,11 @@ function HomeFull() {
   const isRTL = typeof document !== "undefined" && document.documentElement.dir === "rtl";
 
   useEffect(() => {
-    if (androidStable || slides.length <= 1 || isDragging) return;
+    if (slides.length <= 1 || isDragging) return;
     const id = setInterval(() => setSlideIdx((i) => (i + 1) % slides.length), 7000);
     return () => clearInterval(id);
-  }, [slides.length, isDragging, androidStable]);
+  }, [slides.length, isDragging]);
+
   useEffect(() => { if (slideIdx >= slides.length) setSlideIdx(0); }, [slides.length, slideIdx]);
   const slide = slides[Math.min(slideIdx, slides.length - 1)] ?? slides[0];
 
@@ -472,374 +460,8 @@ function HomeFull() {
 
   return (
     <AppShell>
-      {/* TEMP DIAGNOSTIC: Android input isolation test — remove once input freeze is resolved */}
-      <Link
-        to="/android-input-test"
-        style={{
-          display: "block",
-          margin: "12px",
-          padding: "20px",
-          background: "#dc2626",
-          color: "#ffffff",
-          fontWeight: 900,
-          fontSize: "18px",
-          textAlign: "center",
-          border: "3px solid #fca5a5",
-          borderRadius: "12px",
-          letterSpacing: "0.1em",
-          textDecoration: "none",
-        }}
-      >
-        ANDROID INPUT TEST
-      </Link>
-      <a
-        href="/android-auth-min"
-        style={{
-          display: "block",
-          margin: "12px",
-          padding: "20px",
-          background: "#b91c1c",
-          color: "#ffffff",
-          fontWeight: 900,
-          fontSize: "18px",
-          textAlign: "center",
-          border: "3px solid #fecaca",
-          borderRadius: "12px",
-          letterSpacing: "0.1em",
-          textDecoration: "none",
-        }}
-      >
-        ANDROID AUTH MIN
-      </a>
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <Link
-          to={"/android-campaign-input-min" as any}
-          style={{
-            display: "block",
-            margin: "12px",
-            padding: "20px",
-            background: "#7c2d12",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #fed7aa",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          ANDROID CAMPAIGN INPUT TEST
-        </Link>
-      )}
 
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <Link
-          to={"/debug/native-input-min" as any}
-          style={{
-            display: "block",
-            margin: "12px",
-            padding: "20px",
-            background: "#1e3a8a",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #bfdbfe",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          NATIVE INPUT TEST
-        </Link>
-      )}
 
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (window as any).Capacitor?.getPlatform?.() === "android" && (
-        <button
-          type="button"
-          onClick={() => {
-            const nativeBridge = (window as any).IrthNativeDiagnostics;
-            if (nativeBridge?.openStaticInputAssetTest) {
-              nativeBridge.openStaticInputAssetTest();
-            } else {
-              window.location.href = "/debug/native-input-min";
-            }
-          }}
-          style={{
-            display: "block",
-            width: "calc(100% - 24px)",
-            margin: "12px",
-            padding: "20px",
-            background: "#134e4a",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #99f6e4",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-          }}
-        >
-          STATIC WEBVIEW INPUT TEST
-        </button>
-      )}
-
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <Link
-          to={"/debug/react-bare-input-min" as any}
-          style={{
-            display: "block",
-            margin: "12px",
-            padding: "20px",
-            background: "#581c87",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #e9d5ff",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          REACT BARE INPUT TEST
-        </Link>
-      )}
-
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <a
-          href="/index.html?__irth_direct_input=1"
-          onClick={(e) => {
-            e.preventDefault();
-            window.location.href = "/index.html?__irth_direct_input=1";
-          }}
-          style={{
-            display: "block",
-            margin: "12px",
-            padding: "20px",
-            background: "#0f766e",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #5eead4",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          REACT DIRECT INPUT TEST
-        </a>
-      )}
-
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <a
-          href="/index.html?__irth_router_min=1"
-          onClick={(e) => {
-            e.preventDefault();
-            window.location.href = "/index.html?__irth_router_min=1";
-          }}
-          style={{
-            display: "block",
-            margin: "12px",
-            padding: "20px",
-            background: "#1d4ed8",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #93c5fd",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          ROUTER MIN TEST
-        </a>
-      )}
-
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <a
-          href="/index.html?__irth_router_real=1"
-          onClick={(e) => {
-            e.preventDefault();
-            window.location.href = "/index.html?__irth_router_real=1";
-          }}
-          style={{
-            display: "block",
-            margin: "12px",
-            padding: "20px",
-            background: "#7c2d12",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #fdba74",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          ROUTER REAL TREE TEST
-        </a>
-      )}
-
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <a
-          href="/index.html?__irth_router_real_stripped=1"
-          onClick={(e) => {
-            e.preventDefault();
-            window.location.href = "/index.html?__irth_router_real_stripped=1";
-          }}
-          style={{
-            display: "block",
-            margin: "12px",
-            padding: "20px",
-            background: "#064e3b",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #6ee7b7",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          ROUTER REAL TREE STRIPPED TEST
-        </a>
-      )}
-
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <a
-          href="/index.html?__irth_router_root_iso=1&mode=real-root-bare"
-          onClick={(e) => {
-            e.preventDefault();
-            window.location.href = "/index.html?__irth_router_root_iso=1&mode=real-root-bare";
-          }}
-          style={{
-            display: "block",
-            margin: "12px",
-            padding: "20px",
-            background: "#111827",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #facc15",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          GENERATED ROOT + BARE ROUTE
-        </a>
-      )}
-
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <a
-          href="/index.html?__irth_router_root_iso=1&mode=min-root-real-child&child=0"
-          onClick={(e) => {
-            e.preventDefault();
-            window.location.href = "/index.html?__irth_router_root_iso=1&mode=min-root-real-child&child=0";
-          }}
-          style={{
-            display: "block",
-            margin: "12px",
-            padding: "20px",
-            background: "#1f2937",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #f59e0b",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          MIN ROOT + REAL CHILD 0
-        </a>
-      )}
-
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <a
-          href="/index.html?__irth_router_root_iso=1&mode=clean-root-real-children"
-          onClick={(e) => {
-            e.preventDefault();
-            window.location.href = "/index.html?__irth_router_root_iso=1&mode=clean-root-real-children";
-          }}
-          style={{
-            display: "block",
-            margin: "12px",
-            padding: "20px",
-            background: "#064e3b",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #34d399",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          CLEAN ROOT + REAL CHILDREN
-        </a>
-      )}
-
-      {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-        <>
-          {([
-            ["headContent", "CLEAN ROOT + HEADCONTENT"],
-            ["scripts", "CLEAN ROOT + SCRIPTS"],
-            ["head", "CLEAN ROOT + ORIGINAL HEAD()"],
-            ["rootShell", "CLEAN ROOT + ROOTSHELL"],
-            ["boundaries", "CLEAN ROOT + BOUNDARIES"],
-            ["fonts", "CLEAN ROOT + GOOGLE FONTS"],
-            ["rs1", "RS1: FRAGMENT ONLY"],
-            ["rs2", "RS2: HTML+BODY (no lang/dir/head)"],
-            ["rs2-html-only", "RS2Δ: <html> ONLY"],
-            ["rs2-html-lang-only", "RS2Δ: <html lang> ONLY"],
-            ["rs2-html-dir-only", "RS2Δ: <html dir> ONLY"],
-            ["rs2-body-only", "RS2Δ: <body> ONLY"],
-            ["rs2-body-class-only", "RS2Δ: <body class> ONLY"],
-            ["rs2-html-body-data-only", "RS2Δ: HTML+BODY DATA ATTRS"],
-            ["rs3", "RS3: + lang=ar"],
-            ["rs4", "RS4: + dir=rtl"],
-            ["rs5", "RS5: + lang+dir"],
-            ["rs6", "RS6: + EMPTY <head>"],
-            ["rs7", "RS7: + <HeadContent/>"],
-            ["rs8", "RS8: FULL ORIGINAL ROOTSHELL"],
-          ] as const).map(([piece, label]) => {
-            const href = `/index.html?__irth_router_root_iso=1&mode=clean-root-real-children&piece=${piece}`;
-            return (
-              <a
-                key={piece}
-                href={href}
-                onClick={(e) => { e.preventDefault(); window.location.href = href; }}
-                style={{
-                  display: "block",
-                  margin: "8px 12px",
-                  padding: "14px",
-                  background: "#0f172a",
-                  color: "#ffffff",
-                  fontWeight: 800,
-                  fontSize: "14px",
-                  textAlign: "center",
-                  border: "2px solid #14b8a6",
-                  borderRadius: "10px",
-                  letterSpacing: "0.08em",
-                  textDecoration: "none",
-                }}
-              >
-                {label}
-              </a>
-            );
-          })}
-        </>
-      )}
 
 
 
@@ -1181,123 +803,8 @@ function HomeFull() {
   );
 }
 
-function AndroidStableHome() {
-  const { profile } = useProfile();
-  const { account } = useAccount();
-  const profileName = account?.username ?? profile.name;
-  const points = profile.points;
-  const dinars = profile.dinars;
-  const lvl = levelFor(points);
-  return (
-    <AppShell>
-      <main className="px-5 pt-6">
-        {/* TEMP DIAGNOSTIC: Android input isolation test — remove once input freeze is resolved */}
-        <Link
-          to="/android-input-test"
-          style={{
-            display: "block",
-            marginBottom: "16px",
-            padding: "20px",
-            background: "#dc2626",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #fca5a5",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          ANDROID INPUT TEST
-        </Link>
-        <a
-          href="/android-auth-min"
-          style={{
-            display: "block",
-            marginBottom: "16px",
-            padding: "20px",
-            background: "#b91c1c",
-            color: "#ffffff",
-            fontWeight: 900,
-            fontSize: "18px",
-            textAlign: "center",
-            border: "3px solid #fecaca",
-            borderRadius: "12px",
-            letterSpacing: "0.1em",
-            textDecoration: "none",
-          }}
-        >
-          ANDROID AUTH MIN
-        </a>
-        {typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() && (
-          <Link
-            to={"/android-campaign-input-min" as any}
-            style={{
-              display: "block",
-              marginBottom: "16px",
-              padding: "20px",
-              background: "#7c2d12",
-              color: "#ffffff",
-              fontWeight: 900,
-              fontSize: "18px",
-              textAlign: "center",
-              border: "3px solid #fed7aa",
-              borderRadius: "12px",
-              letterSpacing: "0.1em",
-              textDecoration: "none",
-            }}
-          >
-            ANDROID CAMPAIGN INPUT TEST
-          </Link>
-        )}
 
 
-        <section className="rounded-3xl border border-gold/25 bg-surface p-5">
-          <p className="text-[11px] tracking-[0.25em] text-gold/80">وضع أندرويد المستقر</p>
-          <h1 className="font-display mt-2 text-2xl font-bold text-foreground">مرحبًا، {profileName}</h1>
-          <p className="mt-2 text-sm leading-7 text-muted-foreground">
-            تم تعطيل المؤثرات الثقيلة مؤقتًا لضمان ثبات التصفح والكتابة داخل التطبيق.
-          </p>
-          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-2xl border border-white/10 bg-background p-3">
-              <p className="text-lg font-bold text-gold">{lvl.level}</p>
-              <p className="text-[10px] text-muted-foreground">المستوى</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-background p-3">
-              <p className="text-lg font-bold text-gold">{points.toLocaleString("en-US")}</p>
-              <p className="text-[10px] text-muted-foreground">XP</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-background p-3">
-              <p className="text-lg font-bold text-gold">{dinars.toLocaleString("en-US")}</p>
-              <p className="text-[10px] text-muted-foreground">دينار</p>
-            </div>
-          </div>
-        </section>
-
-
-        <section className="mt-5 grid gap-3">
-
-          {[
-            { to: "/campaigns", label: "الحملات", desc: "تابع الرحلات التاريخية" },
-            { to: "/adventure", label: "التحديات", desc: "ألعاب وأسئلة تاريخية" },
-            { to: "/encyclopedia", label: "الموسوعة", desc: "بحث سريع ومستقر" },
-            { to: "/map", label: "الأطلس", desc: "يفتح فقط عند الطلب" },
-            { to: "/profile", label: "الحساب", desc: "تقدمك ومكافآتك" },
-          ].map((item) => (
-            <Link key={item.to} to={item.to} className="flex items-center justify-between rounded-2xl border border-white/10 bg-surface p-4">
-              <span>
-                <span className="block font-bold text-foreground">{item.label}</span>
-                <span className="mt-0.5 block text-[12px] text-muted-foreground">{item.desc}</span>
-              </span>
-              <ChevronLeft className="size-4 text-gold" />
-            </Link>
-          ))}
-        </section>
-      </main>
-    </AppShell>
-  );
-}
 
 // ============================================================
 // Small home components
