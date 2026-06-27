@@ -23,12 +23,29 @@ import {
  * the user lands on a deep route via a notification, deep link, or reload.
  */
 
+function normalizePath(path: string): string {
+  const withoutQuery = path.split(/[?#]/)[0] || "/";
+  const withLeadingSlash = withoutQuery.startsWith("/") ? withoutQuery : `/${withoutQuery}`;
+  return withLeadingSlash.replace(/\/+$/, "") || "/";
+}
+
 function parentOf(path: string): string | null {
-  const clean = path.replace(/\/+$/, "") || "/";
-  if (clean === "/" || clean === "") return null;
-  const idx = clean.lastIndexOf("/");
-  if (idx <= 0) return "/";
-  return clean.slice(0, idx) || "/";
+  const clean = normalizePath(path);
+  if (clean === "/" || clean === "/home") return null;
+
+  const parts = clean.split("/").filter(Boolean);
+  if (parts.length <= 1) return "/";
+
+  const parent = `/${parts.slice(0, -1).join("/")}`;
+  return normalizePath(parent);
+}
+
+function dispatchRouterPopState() {
+  try {
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  } catch {
+    window.dispatchEvent(new Event("popstate"));
+  }
 }
 
 export function AndroidBackHandler() {
@@ -44,22 +61,38 @@ export function AndroidBackHandler() {
     (async () => {
       try {
         const { App } = await import("@capacitor/app");
-        const handle = await App.addListener("backButton", () => {
-          const path = window.location.pathname || "/";
+        const handle = await App.addListener("backButton", async () => {
+          const path = normalizePath(window.location.pathname || "/");
           const parent = parentOf(path);
-          console.log("[android:back] path=", path, "parent=", parent);
+          console.log("[android:back] current path=", path);
+          console.log("[android:back] computed parent path=", parent);
           if (!parent) {
             console.log("[android:back] action=confirm-exit");
             setConfirmOpen(true);
             return;
           }
+
+          if (parent === path) {
+            console.warn("[android:back] action=skip-same-path", { path, parent });
+            return;
+          }
+
           console.log("[android:back] action=navigate->", parent);
           try {
-            router.navigate({ to: parent });
+            await router.navigate({ to: parent });
+            const afterRouterPath = normalizePath(window.location.pathname || "/");
+            if (afterRouterPath === path) {
+              console.warn("[android:back] router stayed on same path, using history fallback", {
+                path,
+                parent,
+              });
+              window.history.pushState(null, "", parent);
+              dispatchRouterPopState();
+            }
           } catch (e) {
             console.warn("[android:back] router.navigate failed, falling back", e);
-            window.history.pushState({}, "", parent);
-            window.dispatchEvent(new PopStateEvent("popstate"));
+            window.history.pushState(null, "", parent);
+            dispatchRouterPopState();
           }
         });
         listenerHandle = handle;
