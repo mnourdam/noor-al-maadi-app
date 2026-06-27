@@ -501,10 +501,23 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         next = { ...next, dinars: Math.max(0, stats.dinars) };
         changed = true;
       }
-      if (typeof stats.streak === "number" && stats.streak !== p.streak) {
-        next = { ...next, streak: Math.max(0, stats.streak) };
-        changed = true;
+      if (typeof stats.streak === "number") {
+        // Streak source-of-truth rule: the *day boundary* is anchored locally
+        // by `lastActiveDay`, but the *count* lives on the server too. If we
+        // already incremented today (lastActiveDay === today), never accept a
+        // server value lower than local — that would be the server's stale
+        // pre-increment row echoed back via Realtime. We still accept upward
+        // corrections (e.g. admin grants). If the day boundary is older, the
+        // server number is authoritative.
+        const target = Math.max(0, Math.floor(stats.streak));
+        const activeToday = p.lastActiveDay === todayKey();
+        const nextStreak = activeToday ? Math.max(p.streak, target) : target;
+        if (nextStreak !== p.streak) {
+          next = { ...next, streak: nextStreak };
+          changed = true;
+        }
       }
+
       if (typeof stats.hearts === "number") {
         const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
         const eff = getEffectiveHearts(p, now);
