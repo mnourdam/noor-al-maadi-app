@@ -55,11 +55,18 @@ export function AndroidBackHandler() {
   // 0 means we are still on the entry route — no usable in-app history.
   const internalDepthRef = useRef(0);
   const lastPathnameRef = useRef(currentPathname);
+  // True when the next pathname change is the result of our own back press,
+  // so the depth counter decrements instead of incrementing.
+  const popInFlightRef = useRef(false);
 
   useEffect(() => {
-    if (currentPathname !== lastPathnameRef.current) {
+    if (currentPathname === lastPathnameRef.current) return;
+    lastPathnameRef.current = currentPathname;
+    if (popInFlightRef.current) {
+      popInFlightRef.current = false;
+      internalDepthRef.current = Math.max(0, internalDepthRef.current - 1);
+    } else {
       internalDepthRef.current += 1;
-      lastPathnameRef.current = currentPathname;
     }
   }, [currentPathname]);
 
@@ -77,15 +84,17 @@ export function AndroidBackHandler() {
           const depth = internalDepthRef.current;
 
           // Priority 1: in-app history → replay previous screen.
+          // Only when depth > 0; otherwise router.history.back() would pop
+          // past the WebView entry and exit the app unexpectedly.
           if (depth > 0) {
             console.log("[android:back] history-back", { path, depth });
-            internalDepthRef.current = Math.max(0, depth - 1);
+            popInFlightRef.current = true;
             try {
               router.history.back();
               return;
             } catch (e) {
               console.warn("[android:back] router.history.back failed, falling back", e);
-              internalDepthRef.current = depth; // restore
+              popInFlightRef.current = false;
             }
           }
 
@@ -95,6 +104,8 @@ export function AndroidBackHandler() {
             const parent = parents[0] ?? "/";
             console.log("[android:back] url-hierarchy-fallback", { path, parent });
             try {
+              // This is a forward navigation, NOT a pop — let the effect
+              // increment depth normally so subsequent backs work.
               router.history.push(parent);
               return;
             } catch (e) {
