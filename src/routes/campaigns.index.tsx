@@ -116,6 +116,11 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
               {c.historicalPeriod}
             </span>
           )}
+          {isComplete && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-200">
+              <CheckCircle2 className="size-3" /> مكتملة
+            </span>
+          )}
         </div>
         <h2 className="font-display mt-2 text-2xl font-bold shimmer-text">{c.title}</h2>
         {c.subtitle && <p className="mt-1 text-sm text-gold/80">{c.subtitle}</p>}
