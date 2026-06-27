@@ -632,7 +632,7 @@ function OverviewTab({
             <p className="text-[10px] tracking-[0.18em] text-gold/80">آخر اكتشاف</p>
             <p className="font-display truncate text-sm font-bold">{recentDiscovery}</p>
           </div>
-          <Link to="/museum" className="text-gold"><ChevronLeft className="size-4" /></Link>
+          <Link to="/collection" className="text-gold"><ChevronLeft className="size-4" /></Link>
         </div>
       )}
     </div>
