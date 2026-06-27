@@ -45,20 +45,12 @@ type Row = {
 type Atlas = { id: string; slug: string; encyclopedia_entity_id: string | null };
 type Campaign = { id: string; title: string; data: any };
 
-// Normalize Arabic title: strip tatweel, diacritics, common ال prefix, "معركة"/"غزوة" prefix, punctuation.
-const AR_DIACRITICS = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g;
-const BATTLE_PREFIXES = ["معركة ", "غزوة ", "موقعة ", "وقعة "];
-function normTitle(t: string): string {
-  let s = (t || "").trim().replace(AR_DIACRITICS, "");
-  s = s.replace(/[إأآا]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/ؤ/g, "و").replace(/ئ/g, "ي");
-  s = s.replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
-  for (const p of BATTLE_PREFIXES) if (s.startsWith(p)) s = s.slice(p.length);
-  if (s.startsWith("ال") && s.length > 4) s = s.slice(2);
-  return s;
-}
-function normSlug(s: string): string {
-  return (s || "").toLowerCase().replace(/^(battle-of-|battle-|the-)/, "").replace(/[^a-z0-9]+/g, "");
-}
+// Normalization is centralized in src/lib/arabic-normalize.ts so the same
+// matching keys are used by canonical-duplicates, the admin create form, and
+// any future import pipeline. Strips diacritics, honorifics (رضي الله عنه /
+// رحمه الله / صلى الله عليه وسلم), battle prefixes, and folds alef variants.
+const normTitle = normalizeArabicName;
+const normSlug = normalizeSlugKey;
 function eraOf(r: Row): string {
   const m = r.metadata as any;
   return String(m?.era ?? "").trim();
