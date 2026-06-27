@@ -18,6 +18,7 @@ import {
   isUuid,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
+import { cachedEncyclopediaById, cachedEncyclopediaBySlug } from "@/lib/offline-fallback";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import {
