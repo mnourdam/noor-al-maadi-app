@@ -116,10 +116,8 @@ export async function initPushNotifications(): Promise<void> {
   if (initialized) return;
   initialized = true;
 
-  if (typeof window !== "undefined" && (window as unknown as { __irthCapacitorMinimalMode?: boolean }).__irthCapacitorMinimalMode) {
-    console.log("[android:cap-min] push notifications disabled");
-    return;
-  }
+
+
 
   try {
     const { Capacitor } = await import("@capacitor/core");
