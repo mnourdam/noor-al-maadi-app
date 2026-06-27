@@ -21,13 +21,13 @@ export function worldForEntity(e: { era: string | null }): string | null {
 
 /** Stable color per atlas-entity kind. Used by pins AND the legend. */
 export const KIND_COLOR: Record<AtlasEntityKind, string> = {
-  place:          "oklch(0.62 0.18 30)",   // terracotta
-  battle:         "oklch(0.58 0.22 18)",   // crimson
-  event:          "oklch(0.70 0.16 75)",   // amber
-  figure_marker:  "oklch(0.66 0.16 285)",  // violet
-  artifact_site:  "oklch(0.68 0.14 165)",  // teal
-  region:         "oklch(0.55 0.10 250)",  // slate-indigo
-  route_point:    "oklch(0.72 0.12 110)",  // olive
+  region:         "oklch(0.78 0.16 82)",   // gold — states / empires
+  place:          "oklch(0.62 0.16 245)",  // blue — cities
+  battle:         "oklch(0.55 0.22 22)",   // crimson — battles
+  event:          "oklch(0.52 0.10 60)",   // brown / parchment — events
+  figure_marker:  "oklch(0.58 0.14 150)",  // green — landmarks / figures
+  artifact_site:  "oklch(0.62 0.12 55)",   // bronze — artifacts
+  route_point:    "oklch(0.42 0.18 25)",   // dark red — campaigns
 };
 
 export function worldFacets(entities: AtlasEntityRow[]) {
