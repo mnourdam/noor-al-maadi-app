@@ -20,7 +20,7 @@ export function AuthLink({ children, className, ref, mode, onClick }: Props) {
   return (
     <Link
       to="/auth"
-      search={ref ? { ref } : (mode === "signup" ? { ref: undefined } : undefined)}
+      search={{ ref: ref ?? undefined }}
       className={className}
       onClick={onClick}
     >
