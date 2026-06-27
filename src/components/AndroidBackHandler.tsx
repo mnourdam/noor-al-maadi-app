@@ -30,14 +30,6 @@ function normalizePath(path: string): string {
   return withoutIndex.replace(/\/+$/, "") || "/";
 }
 
-function immediateParent(path: string): string | null {
-  const clean = normalizePath(path);
-  if (clean === "/") return null;
-  const parts = clean.split("/").filter(Boolean);
-  if (parts.length <= 1) return "/";
-  return normalizePath(`/${parts.slice(0, -1).join("/")}`);
-}
-
 /**
  * Build set of registered route path patterns from the router. Patterns may
  * include `$param` placeholders (e.g. `/encyclopedia/figures/$slug`).
