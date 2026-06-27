@@ -48,6 +48,16 @@ function AuthPage() {
         setError("لا يوجد اتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.");
         return;
       }
+      if (mode === "forgot") {
+        if (!email) { setError("أدخل بريدك الإلكتروني"); return; }
+        const redirectTo = typeof window !== "undefined"
+          ? `${window.location.origin}/reset-password`
+          : undefined;
+        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+        if (resetErr) { setError(resetErr.message); return; }
+        setInfo("أرسلنا رابط إعادة تعيين كلمة المرور إلى بريدك. تحقّق من صندوق الوارد ومجلد الرسائل غير المرغوب فيها.");
+        return;
+      }
       let r: { ok: boolean; error?: string };
       if (mode === "signup") {
         r = await signUp({ email, password, username, displayName: username, referralCode: referral || undefined });
