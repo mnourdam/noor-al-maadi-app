@@ -27,13 +27,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle, Archive, BookOpen, CheckCircle2, Copy, Download,
   FileWarning, Filter, GitMerge, Loader2, RefreshCw, Save,
-  Search, Shield, Sparkles, Trash2, X,
+  Search, Sparkles, Trash2, X,
 } from "lucide-react";
-import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
 import {
   entityNameKeys, normalizeArabicName, normalizeSlugKey,
 } from "@/lib/arabic-normalize";
+import { scoreEntity, scoreColor } from "@/lib/encyclopedia-quality";
 
 export const Route = createFileRoute("/admin/encyclopedia-cleanup/")({
   head: () => ({
@@ -42,7 +42,7 @@ export const Route = createFileRoute("/admin/encyclopedia-cleanup/")({
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
-  component: () => <AdminGate><CleanupWorkshop /></AdminGate>,
+  component: CleanupWorkshop,
 });
 
 // ------------------------------------------------------------
