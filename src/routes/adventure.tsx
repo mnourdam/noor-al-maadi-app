@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  Compass, Sword, Search, Sparkles, Clock, Coins, Star, ChevronLeft, Play,
-  Crown, Hourglass, Link2, Archive, Feather, ScrollText,
+  Compass, Sword, Search, Sparkles, Clock, Coins, Star, Play,
+  Crown, Hourglass, Link2, Archive, Feather, ScrollText, Moon,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { fetchDailyFeaturedGames, type GameRow } from "@/lib/games/store";
-import { MODE_LABELS_AR, GAME_MODES, MODE_TAGLINES_AR, type GameMode } from "@/lib/games/types";
+import { MODE_LABELS_AR, type GameMode } from "@/lib/games/types";
 import "@/components/games/games-premium.css";
 
 export const Route = createFileRoute("/adventure")({
@@ -40,9 +40,40 @@ function AdventurePage() {
 
   return (
     <AppShell>
-      <Screen title="قاعة التحديات" subtitle="بوابتك إلى التاريخ — قاعات وتحديات وحملات.">
+      <Screen title="قاعة التحديات" subtitle="تحدّيان مختاران بعناية كل يوم.">
         <div dir="rtl" className="space-y-10">
-          {/* Museum hall hero */}
+          {/* Spotlight challenge */}
+          <section>
+            <SectionHeader icon={<Sparkles className="h-4 w-4" />} title="تحدّي اليوم" hint="يتجدّد كل صباح" />
+            {!spotlight ? (
+              <p className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
+                لم تُنشر تحديات بعد. تابع قريبًا.
+              </p>
+            ) : (
+              <SpotlightCard game={spotlight} />
+            )}
+          </section>
+
+          {/* Secondary featured */}
+          {second && (
+            <section>
+              <SectionHeader icon={<Compass className="h-4 w-4" />} title="تحدٍّ مرافق" hint="مختار بعناية" />
+              <DailyCard game={second} />
+            </section>
+          )}
+
+          {/* Teaser — no more challenges today */}
+          <section>
+            <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-950 via-slate-900/60 to-slate-950 p-6 text-center">
+              <Moon className="mx-auto h-7 w-7 text-amber-300/80" strokeWidth={1.3} />
+              <p className="mt-3 text-sm leading-7 text-amber-100/90">
+                هذه تحديات اليوم. تُفتح تحديات جديدة عند بزوغ فجر الغد إن شاء الله.
+              </p>
+              <div className="mx-auto mt-3 h-px w-40 bg-gradient-to-l from-transparent via-amber-500/40 to-transparent" />
+            </div>
+          </section>
+
+          {/* Museum hall — moved to bottom */}
           <section className="relative overflow-hidden rounded-2xl border border-amber-500/30 irth-title-card p-6 sm:p-8">
             <span className="irth-ember" style={{ left: "10%", animationDelay: "0s" }} />
             <span className="irth-ember" style={{ left: "32%", animationDelay: "1.1s" }} />
@@ -51,12 +82,12 @@ function AdventurePage() {
 
             <div className="relative grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.4em] text-amber-300/80">قاعة التحديات</p>
-                <h1 className="mt-2 text-2xl font-bold leading-tight text-amber-100 sm:text-3xl">
-                  ادخل المعرض — اختر تحدّيك وتابع حملتك.
-                </h1>
+                <p className="text-[11px] uppercase tracking-[0.4em] text-amber-300/80">ادخل المعرض</p>
+                <h2 className="mt-2 text-xl font-bold leading-tight text-amber-100 sm:text-2xl">
+                  تابع حملتك أو ابدأ تحقيقًا تاريخيًا جديدًا.
+                </h2>
                 <p className="mt-2 max-w-prose text-sm leading-7 text-slate-300">
-                  كل تحدٍّ هنا مرتبط بقاعة في الموسوعة. كل انتصار يضيف قطعة إلى متحفك.
+                  كل انتصار يضيف قطعة إلى متحفك ويفتح قاعة جديدة في الموسوعة.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link to="/campaigns"
@@ -74,40 +105,6 @@ function AdventurePage() {
                   <Crown className="h-12 w-12 text-amber-300" strokeWidth={1.2} />
                 </div>
               </div>
-            </div>
-          </section>
-
-          {/* Spotlight challenge */}
-          <section>
-            <SectionHeader icon={<Sparkles className="h-4 w-4" />} title="تحدّي اليوم" hint="يتجدّد كل صباح" />
-            {!spotlight ? (
-              <p className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
-                لم تُنشر تحديات بعد. تابع قريبًا — يضيفها فريق التحرير عبر الاستيراد.
-              </p>
-            ) : (
-              <SpotlightCard game={spotlight} />
-            )}
-          </section>
-
-          {/* Secondary featured */}
-          {second && (
-            <section>
-              <SectionHeader icon={<Compass className="h-4 w-4" />} title="تحدٍّ مرافق" hint="مختار بعناية" />
-              <DailyCard game={second} />
-            </section>
-          )}
-
-          {/* Gallery of modes */}
-          <section>
-            <SectionHeader icon={<Crown className="h-4 w-4" />} title="قاعات التحديات" hint="خمسة أنماط من اللعب" />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {GAME_MODES.map((m) => <ModeHall key={m} mode={m} />)}
-            </div>
-            <div className="mt-4">
-              <Link to="/games"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
-                عرض كل التحديات <ChevronLeft className="h-3.5 w-3.5" />
-              </Link>
             </div>
           </section>
         </div>
