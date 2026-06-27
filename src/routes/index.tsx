@@ -907,7 +907,7 @@ function ContinueJourneyCard({ sel }: {
   const pct = total > 0 ? Math.round((completedChapters / total) * 100) : 0;
   const cover = (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) || heroFortress;
   return (
-    <section className="mt-8 px-5">
+    <section className="mt-12 px-5">
       <SectionHeader icon={<Crown className="size-3.5" />} eyebrow="حملتك النشطة" title="واصل رحلتك" />
       <Link
         to="/campaigns/imported/$id"
@@ -949,7 +949,7 @@ function ContinueJourneyCard({ sel }: {
 // ----- Journey Through Time preview (links to /timeline) -----
 function JourneyThroughTimeSection() {
   return (
-    <section className="mt-10 px-5">
+    <section className="mt-12 px-5">
       <SectionHeader icon={<Hourglass className="size-3.5" />} eyebrow="رحلة عبر الزمن" title="عصور تنتظر اكتشافها" />
       <Link
         to="/timeline"
@@ -993,7 +993,7 @@ function WorldsHomepageSection() {
   const worlds = (data ?? []).slice(0, 4);
   if (worlds.length === 0) return null;
   return (
-    <section className="mt-10 px-5">
+    <section className="mt-12 px-5">
       <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشاف الحضارات" title="عوالم إرث" />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {worlds.map((w) => (
@@ -1031,7 +1031,7 @@ function OnThisDayCalendarCard({ event }: { event: TodayInHistoryEvent }) {
   if (event.hijri_year) yearBits.push(`${event.hijri_year} هـ`);
   if (event.gregorian_year) yearBits.push(`${event.gregorian_year} م`);
   return (
-    <section className="mt-10 px-5">
+    <section className="mt-12 px-5">
       <SectionHeader icon={<Calendar className="size-3.5" />} eyebrow="في مثل هذا اليوم" title="حدث من تاريخنا" />
       <Link
         to={href as "/"}
