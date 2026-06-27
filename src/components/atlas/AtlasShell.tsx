@@ -82,6 +82,51 @@ function AtlasShellInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, focus]);
 
+  // ── Search navigation ────────────────────────────────────────────────
+  const [suggestions, setSuggestions] = useState<AtlasSearchHit[]>([]);
+  const [noMatch, setNoMatch] = useState(false);
+  const [fallbackMsg, setFallbackMsg] = useState<string | null>(null);
+  const focusAtlasRef = useRef(0);
+  const [focusAps, setFocusAps] = useState<{ x: number; y: number; minScale?: number; nonce: number } | null>(null);
+
+  const navigateToEntity = useCallback((e: AtlasEntityRow) => {
+    setSuggestions([]); setNoMatch(false);
+    setSearchParam("focus", e.id);
+    if (typeof e.aps_x === "number" && typeof e.aps_y === "number") {
+      focusAtlasRef.current += 1;
+      setFocusAps({ x: e.aps_x, y: e.aps_y, minScale: 5, nonce: focusAtlasRef.current });
+      setFallbackMsg(null);
+    } else {
+      setFallbackMsg("هذا العنصر موجود في الموسوعة لكنه غير محدد على الخريطة بعد");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const submitSearch = useCallback((raw: string) => {
+    const query = raw.trim();
+    setSearchParam("q", query || null);
+    if (!query) { setSuggestions([]); setNoMatch(false); return; }
+    const { exact, suggestions: sugg } = pickBestAtlasMatch(entities, query);
+    if (exact) { navigateToEntity(exact.entity); return; }
+    if (sugg.length > 0) { setSuggestions(sugg); setNoMatch(false); return; }
+    setSuggestions([]); setNoMatch(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entities, navigateToEntity]);
+
+  // Clear suggestions when the user clears the query
+  useEffect(() => {
+    if (!q) { setSuggestions([]); setNoMatch(false); }
+  }, [q]);
+
+  // When the focused entity changes (e.g., via URL or pin click), pan to it.
+  useEffect(() => {
+    if (!selected) return;
+    if (typeof selected.aps_x === "number" && typeof selected.aps_y === "number") {
+      focusAtlasRef.current += 1;
+      setFocusAps({ x: selected.aps_x, y: selected.aps_y, minScale: 5, nonce: focusAtlasRef.current });
+    }
+  }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="fixed inset-0 z-40 bg-slate-950" dir="rtl">
       <Link
@@ -96,6 +141,7 @@ function AtlasShellInner() {
         entities={visible}
         selectedId={focus}
         onSelect={(e) => setSearchParam("focus", e?.id ?? null)}
+        focusAps={focusAps}
       />
 
       <AtlasControls
@@ -108,6 +154,10 @@ function AtlasShellInner() {
         onEra={(v) => setSearchParam("era", v)}
         onWorld={(v) => setSearchParam("world", v)}
         onSearch={(v) => setSearchParam("q", v || null)}
+        onSubmitSearch={submitSearch}
+        suggestions={suggestions}
+        noMatch={noMatch}
+        onPickSuggestion={(h) => navigateToEntity(h.entity)}
       />
 
       {isLoading && (
@@ -116,6 +166,13 @@ function AtlasShellInner() {
             <Loader2 className="ml-2 inline size-3.5 animate-spin" />
             جاري تحميل الأطلس...
           </div>
+        </div>
+      )}
+
+      {fallbackMsg && (
+        <div className="pointer-events-auto absolute bottom-24 left-1/2 z-30 -translate-x-1/2 rounded-full border border-amber-400/30 bg-slate-950/85 px-4 py-2 text-[12px] text-amber-100 shadow-lg">
+          {fallbackMsg}
+          <button onClick={() => setFallbackMsg(null)} className="mr-2 text-amber-300/70 hover:text-amber-100">×</button>
         </div>
       )}
 
