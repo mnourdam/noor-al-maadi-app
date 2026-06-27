@@ -525,6 +525,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           next = { ...next, lastActiveDay: todayKey(y) };
           changed = true;
         }
+      }
+
+
 
 
       if (typeof stats.hearts === "number") {
