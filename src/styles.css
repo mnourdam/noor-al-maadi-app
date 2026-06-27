@@ -185,6 +185,10 @@
      lists. */
   :root, html, body {
     background-color: oklch(0.16 0.02 80);
+    /* Prevent overscroll rubber-band from exposing the white chrome behind
+       the WebView during fast list scrolls (LC1 Item 9). */
+    overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
   }
 
   h1, h2, h3, h4, .font-display {
