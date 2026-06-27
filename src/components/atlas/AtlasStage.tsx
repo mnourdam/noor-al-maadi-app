@@ -266,14 +266,28 @@ export function AtlasStage({
 
   const inv = 1 / view.scale;
   // Quantize zoom into 4 tiers so pins/labels don't re-mount every frame.
-  //   0 far    (states only)     scale < 1.6
-  //   1 medium (+major cities)   1.6  ≤ scale < 3
-  //   2 close  (+battles/events) 3    ≤ scale < 6
-  //   3 deep   (everything)      scale ≥ 6
   const labelTier =
     view.scale >= 6 ? 3 : view.scale >= 3 ? 2 : view.scale >= 1.6 ? 1 : 0;
   const isInteracting = drag.current != null || pinch.current != null;
   const useTransition = !androidStable && !isInteracting;
+
+  // Visible world rect in viewBox units → used to cull offscreen markers.
+  const _upx = unitsPerPxFor(wrapSize.w, wrapSize.h);
+  const _visW = (wrapSize.w / _upx) / view.scale;
+  const _visH = (wrapSize.h / _upx) / view.scale;
+  const _cx = VB_W / 2 - view.tx / view.scale;
+  const _cy = VB_H / 2 - view.ty / view.scale;
+  // Generous margin so pins entering view don't pop in late.
+  const _mx = _visW * 0.15;
+  const _my = _visH * 0.15;
+  const cullBounds = {
+    minX: _cx - _visW / 2 - _mx,
+    maxX: _cx + _visW / 2 + _mx,
+    minY: _cy - _visH / 2 - _my,
+    maxY: _cy + _visH / 2 + _my,
+  };
+
+
 
   return (
     <div
