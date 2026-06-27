@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords } from "lucide-react";
+import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, CheckCircle2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useProfile } from "@/lib/profile";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
+import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
