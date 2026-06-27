@@ -406,6 +406,14 @@ function prepareCleanRootRealChildren(root: AnyRoute, originalChildren: AnyRoute
         root.options.shellComponent = HeadContentShell;
         root.options.head = FONTS_ONLY_HEAD;
         break;
+      case "rs1": root.options.shellComponent = RS1_Fragment; break;
+      case "rs2": root.options.shellComponent = RS2_HtmlBody; break;
+      case "rs3": root.options.shellComponent = RS3_Lang; break;
+      case "rs4": root.options.shellComponent = RS4_Dir; break;
+      case "rs5": root.options.shellComponent = RS5_LangDir; break;
+      case "rs6": root.options.shellComponent = RS6_EmptyHead; break;
+      case "rs7": root.options.shellComponent = RS7_HeadContent; break;
+      case "rs8": root.options.shellComponent = RS8_Full; break;
       case "none":
       default:
         break;
