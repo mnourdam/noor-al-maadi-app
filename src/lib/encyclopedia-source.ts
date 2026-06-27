@@ -339,13 +339,14 @@ export function useEncyclopediaSupabaseList(entityType: string) {
         if (error) {
           if (typeof console !== "undefined")
             console.warn("[encyclopedia-source] list failed", error.message);
-          return [];
+          return await cachedEncyclopediaByType(entityType);
         }
-        return (data as SupabaseEncyclopediaEntity[] | null) ?? [];
+        const rows = (data as SupabaseEncyclopediaEntity[] | null) ?? [];
+        return rows.length > 0 ? rows : await cachedEncyclopediaByType(entityType);
       } catch (e) {
         if (typeof console !== "undefined")
           console.warn("[encyclopedia-source] list crashed", e);
-        return [];
+        return await cachedEncyclopediaByType(entityType);
       }
     },
   });
