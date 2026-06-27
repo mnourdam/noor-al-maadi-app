@@ -738,9 +738,14 @@ export type Database = {
       notification_deliveries: {
         Row: {
           created_at: string
+          deleted_at: string | null
+          delivered_at: string | null
+          dismissed_at: string | null
           error: string | null
           id: string
           notification_id: string
+          opened_at: string | null
+          read_at: string | null
           sent_at: string | null
           status: string
           token: string
@@ -748,9 +753,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          delivered_at?: string | null
+          dismissed_at?: string | null
           error?: string | null
           id?: string
           notification_id: string
+          opened_at?: string | null
+          read_at?: string | null
           sent_at?: string | null
           status?: string
           token: string
@@ -758,9 +768,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          delivered_at?: string | null
+          dismissed_at?: string | null
           error?: string | null
           id?: string
           notification_id?: string
+          opened_at?: string | null
+          read_at?: string | null
           sent_at?: string | null
           status?: string
           token?: string
@@ -776,15 +791,41 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          categories: Json
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          categories?: Json
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          categories?: Json
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string
+          category: string | null
           created_at: string
           created_by: string | null
           deep_link: string | null
+          icon: string | null
           id: string
           image_url: string | null
+          payload: Json
+          priority: string
           scheduled_at: string | null
+          sender: string
           sent_at: string | null
           status: string
           target_type: string
@@ -795,12 +836,17 @@ export type Database = {
         }
         Insert: {
           body: string
+          category?: string | null
           created_at?: string
           created_by?: string | null
           deep_link?: string | null
+          icon?: string | null
           id?: string
           image_url?: string | null
+          payload?: Json
+          priority?: string
           scheduled_at?: string | null
+          sender?: string
           sent_at?: string | null
           status?: string
           target_type?: string
@@ -811,12 +857,17 @@ export type Database = {
         }
         Update: {
           body?: string
+          category?: string | null
           created_at?: string
           created_by?: string | null
           deep_link?: string | null
+          icon?: string | null
           id?: string
           image_url?: string | null
+          payload?: Json
+          priority?: string
           scheduled_at?: string | null
+          sender?: string
           sent_at?: string | null
           status?: string
           target_type?: string
@@ -1353,18 +1404,28 @@ export type Database = {
         Returns: Json
       }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
+      clear_my_notifications: { Args: never; Returns: undefined }
       current_user_capabilities: { Args: never; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
+      }
+      delete_my_notification: {
+        Args: { p_notification_id: string }
+        Returns: undefined
       }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
       ensure_atlas_drafts_for_encyclopedia: { Args: never; Returns: Json }
+      ensure_my_delivery: {
+        Args: { p_notification_id: string }
+        Returns: string
+      }
       gen_referral_code: { Args: never; Returns: string }
       get_my_email: { Args: never; Returns: string }
+      get_my_notification_preferences: { Args: never; Returns: Json }
       get_my_profile: {
         Args: never
         Returns: {
@@ -1417,6 +1478,10 @@ export type Database = {
       is_content_admin: { Args: never; Returns: boolean }
       is_content_editor: { Args: never; Returns: boolean }
       is_user_manager: { Args: never; Returns: boolean }
+      list_my_notifications: {
+        Args: { p_before?: string; p_limit?: number }
+        Returns: Json
+      }
       log_admin_action: {
         Args: {
           p_action: string
@@ -1425,6 +1490,11 @@ export type Database = {
           p_target: string
         }
         Returns: string
+      }
+      mark_all_notifications_read: { Args: never; Returns: undefined }
+      mark_notification_read: {
+        Args: { p_notification_id: string }
+        Returns: undefined
       }
       move_to_dlq: {
         Args: {
@@ -1436,6 +1506,7 @@ export type Database = {
         Returns: number
       }
       my_referral_stats: { Args: never; Returns: Json }
+      my_unread_notification_count: { Args: never; Returns: number }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -1444,8 +1515,16 @@ export type Database = {
           read_ct: number
         }[]
       }
+      record_notification_dismissed: {
+        Args: { p_notification_id: string }
+        Returns: undefined
+      }
       redeem_referral_code: { Args: { p_code: string }; Returns: Json }
       set_my_display_name: { Args: { p_name: string }; Returns: string }
+      set_my_notification_preferences: {
+        Args: { p_categories: Json }
+        Returns: undefined
+      }
       sync_my_public_stats: { Args: { p_stats: Json }; Returns: undefined }
       touch_my_last_active: { Args: never; Returns: undefined }
     }
