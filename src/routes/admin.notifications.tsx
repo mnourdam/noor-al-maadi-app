@@ -420,15 +420,25 @@ function Composer() {
         </section>
 
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">آخر الإشعارات</h2>
-            <button
-              onClick={loadRecent}
-              className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1 text-xs hover:bg-accent"
-            >
-              <RefreshCw className="h-3 w-3" />
-              تحديث
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={cleanupOldOrTest}
+                className="inline-flex items-center gap-1 rounded-md border border-destructive/40 px-3 py-1 text-xs text-destructive hover:bg-destructive/10"
+                title="حذف المسودات، الفاشلة، التجريبية، وما أقدم من ٣٠ يومًا"
+              >
+                <Trash2 className="h-3 w-3" />
+                تنظيف القديم/التجريبي
+              </button>
+              <button
+                onClick={loadRecent}
+                className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1 text-xs hover:bg-accent"
+              >
+                <RefreshCw className="h-3 w-3" />
+                تحديث
+              </button>
+            </div>
           </div>
 
           {recent.length === 0 ? (
@@ -449,23 +459,34 @@ function Composer() {
                         )}
                       </div>
                     </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
-                        n.status === "sent"
-                          ? "bg-green-500/15 text-green-500"
-                          : n.status === "failed"
-                          ? "bg-destructive/15 text-destructive"
-                          : n.status === "scheduled"
-                          ? "bg-blue-500/15 text-blue-500"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {n.status}
-                    </span>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs ${
+                          n.status === "sent"
+                            ? "bg-green-500/15 text-green-500"
+                            : n.status === "failed"
+                            ? "bg-destructive/15 text-destructive"
+                            : n.status === "scheduled"
+                            ? "bg-blue-500/15 text-blue-500"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {n.status}
+                      </span>
+                      <button
+                        onClick={() => deleteOne(n.id)}
+                        className="inline-flex items-center gap-1 rounded-md border border-destructive/40 px-2 py-0.5 text-[11px] text-destructive hover:bg-destructive/10"
+                        aria-label="حذف الإشعار"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        حذف
+                      </button>
+                    </div>
                   </div>
                 </li>
               ))}
             </ul>
+
           )}
         </section>
 
