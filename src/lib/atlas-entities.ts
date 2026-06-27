@@ -46,14 +46,25 @@ export const STATUS_LABEL_AR: Record<AtlasEntityStatus, string> = {
 
 /** Public read: only published + verified rows (RLS enforces this for anon/auth). */
 export async function listPublishedAtlasEntities(): Promise<AtlasEntityRow[]> {
-  const { data, error } = await supabase
-    .from("atlas_entities")
-    .select("*")
-    .eq("status", "published")
-    .eq("aps_verified", true)
-    .limit(2000);
-  if (error) throw error;
-  return data ?? [];
+  try {
+    const { data, error } = await supabase
+      .from("atlas_entities")
+      .select("*")
+      .eq("status", "published")
+      .eq("aps_verified", true)
+      .limit(2000);
+    if (error) throw error;
+    if (data && data.length > 0) return data;
+  } catch (e) {
+    if (typeof console !== "undefined") console.warn("[atlas-entities] live read failed, using snapshot:", e);
+  }
+  // Offline / failure fallback: serve from the bundled/cached snapshot.
+  try {
+    const { cachedAtlasEntities } = await import("./offline-fallback");
+    return (await cachedAtlasEntities()) as AtlasEntityRow[];
+  } catch {
+    return [];
+  }
 }
 
 /** Admin read: every row regardless of status (RLS admin policy must allow). */
