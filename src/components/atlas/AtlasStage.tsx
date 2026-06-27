@@ -343,7 +343,10 @@ export function AtlasStage({
             inv={inv}
             labelTier={labelTier}
             onSelect={onSelect}
+            cullBounds={cullBounds}
+            disableGlow={androidStable}
           />
+
 
         </g>
       </svg>
