@@ -95,6 +95,46 @@ function ProfilePage() {
   const [resetting, setResetting] = useState(false);
   const [achDetail, setAchDetail] = useState<AchievementDef | null>(null);
 
+  // ===== Username editing =====
+  const currentUsername = account?.username ?? "";
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [usernameDraft, setUsernameDraft] = useState(currentUsername);
+  const [usernameBusy, setUsernameBusy] = useState(false);
+  const [usernameMsg, setUsernameMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [usernameAvail, setUsernameAvail] = useState<null | "checking" | "free" | "taken" | "invalid">(null);
+
+  useEffect(() => { if (!editingUsername) setUsernameDraft(currentUsername); }, [currentUsername, editingUsername]);
+
+  // Debounced availability check.
+  useEffect(() => {
+    if (!editingUsername) { setUsernameAvail(null); return; }
+    const v = usernameDraft.trim();
+    if (!v || v === currentUsername) { setUsernameAvail(null); return; }
+    if (!/^[A-Za-z0-9_.\-\u0600-\u06FF]+$/.test(v) || v.length < 3 || v.length > 24) {
+      setUsernameAvail("invalid"); return;
+    }
+    setUsernameAvail("checking");
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const ok = await isUsernameAvailable(v);
+      if (!cancelled) setUsernameAvail(ok ? "free" : "taken");
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [usernameDraft, editingUsername, currentUsername, isUsernameAvailable]);
+
+  async function saveUsername() {
+    const v = usernameDraft.trim();
+    if (!v) { setUsernameMsg({ ok: false, text: "اسم المستخدم فارغ" }); return; }
+    setUsernameBusy(true); setUsernameMsg(null);
+    const r = await updateUsername(v);
+    setUsernameBusy(false);
+    if (!r.ok) { setUsernameMsg({ ok: false, text: r.error ?? "تعذّر تغيير اسم المستخدم" }); return; }
+    setUsernameMsg({ ok: true, text: "تم تغيير اسم المستخدم" });
+    setEditingUsername(false);
+    setTimeout(() => setUsernameMsg(null), 2200);
+  }
+
+
   const lvl = levelFor(profile.points);
   const achievements = evaluateAchievements(profile);
   const achMap = useMemo(() => new Map(achievements.map((a) => [a.id, a])), [achievements]);
