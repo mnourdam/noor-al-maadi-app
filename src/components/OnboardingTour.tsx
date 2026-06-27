@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+// Removed: Link import (no longer auto-navigating away from onboarding).
 import { Swords, BookOpen, Map as MapIcon, Calendar, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 const STORAGE_KEY = "irth.onboarded.v1";
