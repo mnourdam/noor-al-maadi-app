@@ -280,9 +280,11 @@ export function AndroidBackHandler() {
         const handle = await App.addListener("backButton", async () => {
           const actualWindowPathname = window.location.pathname || "/";
           const windowRoutePathname = getWindowRoutePathname();
-          const routerPathname = latestRouterPathnameRef.current !== "/" ? latestRouterPathnameRef.current : getRouterPathname(router);
+          const routerPathname = getRouterPathname(router);
+          const latestObservedRouterPathname = latestRouterPathnameRef.current;
+          const effectiveRouterPathname = latestObservedRouterPathname !== "/" ? latestObservedRouterPathname : routerPathname;
           const matchedPathname = getDeepestMatchedPathname(router);
-          const path = pickCurrentPath(windowRoutePathname, routerPathname, matchedPathname);
+          const path = pickCurrentPath(windowRoutePathname, effectiveRouterPathname, matchedPathname);
           const matchedRouteIds = getMatchedRouteIds(router);
           const patterns = getRegisteredPatterns(router);
           const parent = resolveParent(patterns, path);
