@@ -25,6 +25,8 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  HeadContent,
+  Scripts,
 } from "@tanstack/react-router";
 import { QueryClient } from "@tanstack/react-query";
 
@@ -238,11 +240,107 @@ function CleanShell({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function prepareCleanRootRealChildren(root: AnyRoute, originalChildren: AnyRoute[]) {
-  // Replace ONLY the generated root route's options with clean values.
-  // Keep root.children intact so all real routes are still reachable.
+type CleanPiece =
+  | "none"
+  | "headContent"
+  | "scripts"
+  | "head"
+  | "rootShell"
+  | "boundaries"
+  | "fonts";
+
+function OriginalRootShell({ children }: { children: ReactNode }) {
+  // Mirrors the real __root.tsx RootShell exactly.
+  return (
+    <html lang="ar" dir="rtl">
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
+function HeadContentShell({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <HeadContent />
+      {children}
+    </>
+  );
+}
+
+function ScriptsShell({ children }: { children: ReactNode }) {
+  return (
+    <>
+      {children}
+      <Scripts />
+    </>
+  );
+}
+
+const ORIGINAL_HEAD = () => ({
+  meta: [
+    { charSet: "utf-8" },
+    { name: "viewport", content: "width=device-width, initial-scale=1" },
+    { title: "إرث — رحلة عبر التاريخ الإسلامي" },
+    { name: "description", content: "إرث هو عالم تاريخي تفاعلي." },
+    { name: "theme-color", content: "#0b1424" },
+    { property: "og:title", content: "إرث" },
+    { property: "og:image", content: "/irth-icon.png" },
+  ],
+  links: [
+    { rel: "icon", type: "image/png", href: "/irth-icon.png" },
+    { rel: "manifest", href: "/manifest.webmanifest" },
+    { rel: "preconnect", href: "https://fonts.googleapis.com" },
+    { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+    {
+      rel: "stylesheet",
+      href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap",
+    },
+  ],
+});
+
+const FONTS_ONLY_HEAD = () => ({
+  meta: [],
+  links: [
+    { rel: "preconnect", href: "https://fonts.googleapis.com" },
+    { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+    {
+      rel: "stylesheet",
+      href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap",
+    },
+  ],
+});
+
+function OriginalNotFound() {
+  return (
+    <div style={{ padding: 24, fontFamily: "system-ui" }}>
+      <h1>404</h1>
+      <p>Page not found</p>
+    </div>
+  );
+}
+
+function OriginalError({ error }: { error: Error }) {
+  return (
+    <div style={{ padding: 24, fontFamily: "system-ui", color: "#b91c1c" }}>
+      <h1>This page didn't load</h1>
+      <p style={{ fontSize: 12 }}>{error?.message}</p>
+    </div>
+  );
+}
+
+function prepareCleanRootRealChildren(root: AnyRoute, originalChildren: AnyRoute[], params: URLSearchParams) {
+  const piece = (params.get("piece") as CleanPiece) || "none";
+
   if (root.options) {
     root.options.component = RootOutletOnly;
+
+    // Defaults: clean shell, empty head, simple boundaries.
     root.options.shellComponent = CleanShell;
     root.options.head = () => ({ meta: [], links: [], scripts: [] });
     root.options.notFoundComponent = () => <div style={{ padding: 24 }}>not found</div>;
@@ -252,7 +350,35 @@ function prepareCleanRootRealChildren(root: AnyRoute, originalChildren: AnyRoute
         <pre style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>{error?.stack ?? error?.message}</pre>
       </div>
     );
-    // Drop loader/beforeLoad/context defaults that might run global effects.
+
+    // Selectively restore ONE piece.
+    switch (piece) {
+      case "headContent":
+        root.options.shellComponent = HeadContentShell;
+        break;
+      case "scripts":
+        root.options.shellComponent = ScriptsShell;
+        break;
+      case "head":
+        root.options.shellComponent = HeadContentShell;
+        root.options.head = ORIGINAL_HEAD;
+        break;
+      case "rootShell":
+        root.options.shellComponent = OriginalRootShell;
+        break;
+      case "boundaries":
+        root.options.notFoundComponent = OriginalNotFound;
+        root.options.errorComponent = OriginalError;
+        break;
+      case "fonts":
+        root.options.shellComponent = HeadContentShell;
+        root.options.head = FONTS_ONLY_HEAD;
+        break;
+      case "none":
+      default:
+        break;
+    }
+
     delete (root.options as Record<string, unknown>).loader;
     delete (root.options as Record<string, unknown>).beforeLoad;
     delete (root.options as Record<string, unknown>).onEnter;
@@ -264,6 +390,7 @@ function prepareCleanRootRealChildren(root: AnyRoute, originalChildren: AnyRoute
   console.log("IRTH_ROOT_ISO_CLEAN_ROOT_REAL_CHILDREN_PREP", {
     root: describeRoute(root),
     childCount: originalChildren.length,
+    piece,
   });
 
   const router = createRouter({
@@ -304,7 +431,7 @@ export function RouterRootObjectIsolationTest() {
     const prepared = mode === "min-root-real-child"
       ? prepareMinRootRealChild(originalChildren, params)
       : mode === "clean-root-real-children"
-        ? prepareCleanRootRealChildren(generatedRoot, originalChildren)
+        ? prepareCleanRootRealChildren(generatedRoot, originalChildren, params)
         : prepareRealRootBare(generatedRoot, originalChildren);
 
     const registeredRouteCount = Object.keys((prepared.router as unknown as { routesById?: Record<string, unknown> }).routesById ?? {}).length;
