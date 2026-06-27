@@ -232,6 +232,57 @@ function prepareMinRootRealChild(originalChildren: AnyRoute[], params: URLSearch
   };
 }
 
+function CleanShell({ children }: { children: ReactNode }) {
+  // Minimal shell: no <HeadContent />, no <Scripts />, no remote font link,
+  // no html/body wrapper styles, no providers. Just renders children.
+  return <>{children}</>;
+}
+
+function prepareCleanRootRealChildren(root: AnyRoute, originalChildren: AnyRoute[]) {
+  // Replace ONLY the generated root route's options with clean values.
+  // Keep root.children intact so all real routes are still reachable.
+  if (root.options) {
+    root.options.component = RootOutletOnly;
+    root.options.shellComponent = CleanShell;
+    root.options.head = () => ({ meta: [], links: [], scripts: [] });
+    root.options.notFoundComponent = () => <div style={{ padding: 24 }}>not found</div>;
+    root.options.errorComponent = ({ error }: { error: Error }) => (
+      <div style={{ padding: 24, color: "#b91c1c", fontFamily: "system-ui" }}>
+        <h1 style={{ fontWeight: 700 }}>clean-root error</h1>
+        <pre style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>{error?.stack ?? error?.message}</pre>
+      </div>
+    );
+    // Drop loader/beforeLoad/context defaults that might run global effects.
+    delete (root.options as Record<string, unknown>).loader;
+    delete (root.options as Record<string, unknown>).beforeLoad;
+    delete (root.options as Record<string, unknown>).onEnter;
+    delete (root.options as Record<string, unknown>).onLeave;
+    delete (root.options as Record<string, unknown>).onStay;
+  }
+
+  // eslint-disable-next-line no-console
+  console.log("IRTH_ROOT_ISO_CLEAN_ROOT_REAL_CHILDREN_PREP", {
+    root: describeRoute(root),
+    childCount: originalChildren.length,
+  });
+
+  const router = createRouter({
+    routeTree,
+    context: { queryClient: new QueryClient() },
+    history: createMemoryHistory({ initialEntries: [TEST_PATH] }),
+    scrollRestoration: false,
+    defaultPreload: false,
+    defaultPreloadStaleTime: 0,
+  });
+
+  return {
+    router,
+    initialPath: TEST_PATH,
+    selectedChild: null,
+    selectedChildIndex: -1,
+    minimalRoot: null,
+  };
+
 export function RouterRootObjectIsolationTest() {
   const [mounted, setMounted] = useState(false);
 
