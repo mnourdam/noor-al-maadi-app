@@ -31,10 +31,13 @@ export function AtlasStage({
   entities,
   selectedId,
   onSelect,
+  focusAps,
 }: {
   entities: AtlasEntityRow[];
   selectedId: string | null;
   onSelect: (entity: AtlasEntityRow | null) => void;
+  /** When set, the stage smoothly pans/zooms so this APS point is centered. */
+  focusAps?: { x: number; y: number; minScale?: number } | null;
 }) {
   androidMark("render:AtlasStage");
   const androidStable = isAndroidUltraStableMode();
