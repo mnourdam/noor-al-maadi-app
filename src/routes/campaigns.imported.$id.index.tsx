@@ -75,7 +75,11 @@ function ImportedCampaignOverview() {
   const completedCount = progress
     ? chapters.filter(ch => progress.chapters[ch.id]?.completed).length
     : 0;
+  const currentChapterId = chapters.find(
+    ch => !progress?.chapters[ch.id]?.completed && isChapterUnlocked(campaign, ch),
+  )?.id;
   const finalRewards = campaign.finalRewards;
+  const hasStarted = completedCount > 0 || Boolean(progress && Object.keys(progress.chapters).length);
 
   return (
     <AppShell>
