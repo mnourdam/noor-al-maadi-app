@@ -118,7 +118,7 @@ export function AtlasEntityDetailPanel({
           </p>
         ) : null}
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col gap-2">
           {encId ? (
             <Link
               to="/encyclopedia/entity/$id"
@@ -131,6 +131,15 @@ export function AtlasEntityDetailPanel({
             <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-amber-400/30 bg-slate-900/60 px-4 py-2 text-[12px] font-medium text-amber-100/70">
               <BookOpen className="size-4" /> المقالة قادمة قريباً
             </span>
+          )}
+          {hasCoords && onCenter && (
+            <button
+              type="button"
+              onClick={onCenter}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-amber-400/30 bg-slate-950/60 px-4 py-2 text-[12px] font-medium text-amber-100 hover:bg-slate-900"
+            >
+              <Crosshair className="size-4" /> توسيط على الخريطة
+            </button>
           )}
         </div>
       </div>
