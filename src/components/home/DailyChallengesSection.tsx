@@ -137,9 +137,11 @@ export function DailyChallengesSection() {
     };
   }, [androidStable]);
 
-  // Hide entirely while loading or when there is no published content.
+  // Hide entirely while loading, when no content, or when the player has
+  // already completed today's pool. (Challenge Hall keeps its own completed state.)
   if (picks === null) return null;
-  if (!picks.length && !allCompleted) return null;
+  if (allCompleted) return null;
+  if (!picks.length) return null;
 
   return (
     <section className="mt-6 px-5">
