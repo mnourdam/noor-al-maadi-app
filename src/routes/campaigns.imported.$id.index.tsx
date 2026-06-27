@@ -110,41 +110,57 @@ function ImportedCampaignOverview() {
               )}
               <div className="mt-4 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
                 {campaign.estimatedDuration && (
-                  <span className="rounded-full bg-white/5 px-2 py-1">⏱ {campaign.estimatedDuration}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1">
+                    <Clock className="size-3" /> {campaign.estimatedDuration}
+                  </span>
                 )}
-                <span className="rounded-full bg-white/5 px-2 py-1">
-                  📜 {chapters.length.toLocaleString("en-US")} فصول
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1">
+                  <Scroll className="size-3" /> {chapters.length.toLocaleString("en-US")} فصول
                 </span>
                 {campaign.tags?.slice(0, 3).map(t => (
-                  <span key={t} className="rounded-full bg-white/5 px-2 py-1">#{t}</span>
+                  <span key={t} className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1">
+                    <Tag className="size-3" /> {t}
+                  </span>
                 ))}
               </div>
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full bg-gradient-gold transition-all duration-700" style={{ width: `${percent}%` }} />
+              {/* Progress block — explicit hierarchy */}
+              <div className="mt-5">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-[10px] tracking-[0.25em] text-gold/80">تقدّمك</p>
+                    <p className="font-display mt-0.5 text-sm font-bold text-white">
+                      <span className="text-gold">{completedCount.toLocaleString("en-US")}</span>
+                      <span className="text-white/50"> / {chapters.length.toLocaleString("en-US")} فصل</span>
+                    </p>
+                  </div>
+                  <p className="font-display text-2xl font-extrabold text-gold leading-none">{percent}<span className="text-sm">٪</span></p>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full bg-gradient-gold transition-all duration-700" style={{ width: `${percent}%` }} />
+                </div>
               </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                {completedCount}/{chapters.length} فصلًا · {percent}٪
-              </p>
-              {/* PR3: resume button — last active chapter for this campaign. */}
+              {/* Resume / Start CTA */}
               {(() => {
                 const active = getActivePosition();
                 const resumeChId = active?.campaignId === campaign.id
                   ? active.chapterId
-                  : chapters.find(ch => !progress?.chapters[ch.id]?.completed && isChapterUnlocked(campaign, ch))?.id;
+                  : currentChapterId;
                 if (!resumeChId || progress?.completed) return null;
                 return (
                   <Link
                     to="/campaigns/imported/$id/chapter/$chapter"
                     params={{ id: campaign.id, chapter: resumeChId }}
-                    className="mt-4 inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold px-4 py-2 text-sm font-bold text-primary-foreground shadow-gold"
+                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-gold px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-gold"
                   >
-                    {completedCount === 0 ? "ابدأ الرحلة" : "متابعة من حيث توقفت"}
+                    <Play className="size-4 fill-current" />
+                    {hasStarted ? "متابعة" : "ابدأ الرحلة"}
                   </Link>
                 );
               })()}
             </div>
           </div>
         </div>
+
 
         <div className="px-5">
           {/* REWARDS PREVIEW (final) — unlock IDs resolved to Arabic titles. */}
