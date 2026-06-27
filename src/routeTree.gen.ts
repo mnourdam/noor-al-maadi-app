@@ -93,6 +93,7 @@ import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.
 import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
 import { Route as CampaignsImportedIdIndexRouteImport } from './routes/campaigns.imported.$id.index'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
 
 const TimelineRoute = TimelineRouteImport.update({
@@ -523,6 +524,12 @@ const CampaignsImportedIdIndexRoute =
     path: '/imported/$id/',
     getParentRoute: () => CampaignsRoute,
   } as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CampaignsImportedIdChapterChapterRoute =
   CampaignsImportedIdChapterChapterRouteImport.update({
     id: '/imported/$id/chapter/$chapter',
@@ -614,6 +621,7 @@ export interface FileRoutesByFullPath {
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/games/$mode/$slug': typeof GamesModeSlugRoute
   '/admin/games/': typeof AdminGamesIndexRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
 }
@@ -698,6 +706,7 @@ export interface FileRoutesByTo {
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/games/$mode/$slug': typeof GamesModeSlugRoute
   '/admin/games': typeof AdminGamesIndexRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/campaigns/imported/$id': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
 }
@@ -786,6 +795,7 @@ export interface FileRoutesById {
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/games/$mode/$slug': typeof GamesModeSlugRoute
   '/admin/games/': typeof AdminGamesIndexRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
 }
@@ -875,6 +885,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/type/$type'
     | '/games/$mode/$slug'
     | '/admin/games/'
+    | '/lovable/email/queue/process'
     | '/campaigns/imported/$id/'
     | '/campaigns/imported/$id/chapter/$chapter'
   fileRoutesByTo: FileRoutesByTo
@@ -959,6 +970,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/type/$type'
     | '/games/$mode/$slug'
     | '/admin/games'
+    | '/lovable/email/queue/process'
     | '/campaigns/imported/$id'
     | '/campaigns/imported/$id/chapter/$chapter'
   id:
@@ -1046,6 +1058,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/type/$type'
     | '/games/$mode/$slug'
     | '/admin/games/'
+    | '/lovable/email/queue/process'
     | '/campaigns/imported/$id/'
     | '/campaigns/imported/$id/chapter/$chapter'
   fileRoutesById: FileRoutesById
@@ -1124,6 +1137,7 @@ export interface RootRouteChildren {
   GamesIndexRoute: typeof GamesIndexRoute
   WorldsIndexRoute: typeof WorldsIndexRoute
   GamesModeSlugRoute: typeof GamesModeSlugRoute
+  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1716,6 +1730,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CampaignsImportedIdIndexRouteImport
       parentRoute: typeof CampaignsRoute
     }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/campaigns/imported/$id/chapter/$chapter': {
       id: '/campaigns/imported/$id/chapter/$chapter'
       path: '/imported/$id/chapter/$chapter'
@@ -1863,6 +1884,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesIndexRoute: GamesIndexRoute,
   WorldsIndexRoute: WorldsIndexRoute,
   GamesModeSlugRoute: GamesModeSlugRoute,
+  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
