@@ -209,6 +209,28 @@ export async function sendFriendRequest(meId: string, otherId: string): Promise<
     .from("friendships")
     .insert({ user_a: a, user_b: b, requester: meId, status: "pending" });
   if (error) return { ok: false, error: error.message };
+
+  // Best-effort: notify the recipient via the existing notifications pipeline
+  // (in-app banner + notification center entry + FCM push). Failure here must
+  // not block the request itself.
+  try {
+    const me = await fetchPublicProfileById(meId);
+    const senderName = me?.display_name?.trim() || me?.username || "صديق جديد";
+    await db.functions.invoke("send-notification", {
+      body: {
+        title: "طلب صداقة جديد",
+        body: `أرسل إليك ${senderName} طلب صداقة`,
+        type: "friend_request",
+        target_type: "user",
+        target_user_id: otherId,
+        deep_link: "/friends?tab=requests",
+      },
+    });
+  } catch {
+    // Silently ignore; the friendship row is the source of truth and the
+    // recipient's poller will surface the request on next tick.
+  }
+
   return { ok: true };
 }
 
