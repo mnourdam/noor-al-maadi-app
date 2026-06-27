@@ -92,6 +92,14 @@ if (isDirectInputMinPath()) {
   // eslint-disable-next-line no-console
   console.info("[react-direct-input-min] direct React entry mounted (no router/providers)", { path: window.location.pathname });
   createRoot(rootElement).render(<DirectInputMin />);
+} else if (isRouterMinPath()) {
+  try {
+    document.documentElement.classList.remove("irth-booting");
+    document.getElementById("irth-boot-splash")?.remove();
+  } catch { /* ignore */ }
+  // eslint-disable-next-line no-console
+  console.info("IRTH_ROUTER_MIN_BOOT", { path: window.location.pathname });
+  createRoot(rootElement).render(<RouterMinTest />);
 } else if (shouldShowStoredFreezeTrace) {
   window.history.replaceState(null, "", "/debug/input-trace");
   try {
