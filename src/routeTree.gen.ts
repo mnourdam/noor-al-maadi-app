@@ -47,6 +47,7 @@ import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
 import { Route as PlayChapterRouteImport } from './routes/play.chapter'
 import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
 import { Route as FigureIdRouteImport } from './routes/figure.$id'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
 import { Route as BattleIdRouteImport } from './routes/battle.$id'
@@ -85,6 +86,7 @@ import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-ent
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
+import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as GamesModeSlugRouteImport } from './routes/games.$mode.$slug'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
@@ -93,6 +95,8 @@ import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.
 import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
 import { Route as CampaignsImportedIdIndexRouteImport } from './routes/campaigns.imported.$id.index'
+import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -286,6 +290,11 @@ const InvestigationIdRoute = InvestigationIdRouteImport.update({
 const FigureIdRoute = FigureIdRouteImport.update({
   id: '/figure/$id',
   path: '/figure/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompareIdRoute = CompareIdRouteImport.update({
@@ -484,6 +493,11 @@ const AdminGamesIndexRoute = AdminGamesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminGamesRoute,
 } as any)
+const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
+  id: '/lovable/email/suppression',
+  path: '/lovable/email/suppression',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GamesModeSlugRoute = GamesModeSlugRouteImport.update({
   id: '/games/$mode/$slug',
   path: '/games/$mode/$slug',
@@ -525,6 +539,18 @@ const CampaignsImportedIdIndexRoute =
     id: '/imported/$id/',
     path: '/imported/$id/',
     getParentRoute: () => CampaignsRoute,
+  } as any)
+const LovableEmailTransactionalSendRoute =
+  LovableEmailTransactionalSendRouteImport.update({
+    id: '/lovable/email/transactional/send',
+    path: '/lovable/email/transactional/send',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
@@ -611,6 +637,7 @@ export interface FileRoutesByFullPath {
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -632,10 +659,13 @@ export interface FileRoutesByFullPath {
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/games/$mode/$slug': typeof GamesModeSlugRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
 }
@@ -698,6 +728,7 @@ export interface FileRoutesByTo {
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -719,10 +750,13 @@ export interface FileRoutesByTo {
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/games/$mode/$slug': typeof GamesModeSlugRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/games': typeof AdminGamesIndexRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/campaigns/imported/$id': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
 }
@@ -789,6 +823,7 @@ export interface FileRoutesById {
   '/battle/$id': typeof BattleIdRoute
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -810,10 +845,13 @@ export interface FileRoutesById {
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/games/$mode/$slug': typeof GamesModeSlugRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/campaigns/imported/$id/': typeof CampaignsImportedIdIndexRoute
   '/campaigns/imported/$id/chapter/$chapter': typeof CampaignsImportedIdChapterChapterRoute
 }
@@ -881,6 +919,7 @@ export interface FileRouteTypes {
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
+    | '/email/unsubscribe'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -902,10 +941,13 @@ export interface FileRouteTypes {
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/games/$mode/$slug'
+    | '/lovable/email/suppression'
     | '/admin/games/'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
     | '/campaigns/imported/$id/'
     | '/campaigns/imported/$id/chapter/$chapter'
   fileRoutesByTo: FileRoutesByTo
@@ -968,6 +1010,7 @@ export interface FileRouteTypes {
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
+    | '/email/unsubscribe'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -989,10 +1032,13 @@ export interface FileRouteTypes {
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/games/$mode/$slug'
+    | '/lovable/email/suppression'
     | '/admin/games'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
     | '/campaigns/imported/$id'
     | '/campaigns/imported/$id/chapter/$chapter'
   id:
@@ -1058,6 +1104,7 @@ export interface FileRouteTypes {
     | '/battle/$id'
     | '/city/$id'
     | '/compare/$id'
+    | '/email/unsubscribe'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -1079,10 +1126,13 @@ export interface FileRouteTypes {
     | '/encyclopedia/state/$id'
     | '/encyclopedia/type/$type'
     | '/games/$mode/$slug'
+    | '/lovable/email/suppression'
     | '/admin/games/'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
     | '/campaigns/imported/$id/'
     | '/campaigns/imported/$id/chapter/$chapter'
   fileRoutesById: FileRoutesById
@@ -1148,6 +1198,7 @@ export interface RootRouteChildren {
   BattleIdRoute: typeof BattleIdRoute
   CityIdRoute: typeof CityIdRoute
   CompareIdRoute: typeof CompareIdRoute
+  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   FigureIdRoute: typeof FigureIdRoute
   InvestigationIdRoute: typeof InvestigationIdRoute
   PlayChapterRoute: typeof PlayChapterRoute
@@ -1161,9 +1212,12 @@ export interface RootRouteChildren {
   GamesIndexRoute: typeof GamesIndexRoute
   WorldsIndexRoute: typeof WorldsIndexRoute
   GamesModeSlugRoute: typeof GamesModeSlugRoute
+  LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
+  LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1434,6 +1488,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FigureIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/compare/$id': {
       id: '/compare/$id'
       path: '/compare/$id'
@@ -1700,6 +1761,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGamesIndexRouteImport
       parentRoute: typeof AdminGamesRoute
     }
+    '/lovable/email/suppression': {
+      id: '/lovable/email/suppression'
+      path: '/lovable/email/suppression'
+      fullPath: '/lovable/email/suppression'
+      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/games/$mode/$slug': {
       id: '/games/$mode/$slug'
       path: '/games/$mode/$slug'
@@ -1755,6 +1823,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/campaigns/imported/$id/'
       preLoaderRoute: typeof CampaignsImportedIdIndexRouteImport
       parentRoute: typeof CampaignsRoute
+    }
+    '/lovable/email/transactional/send': {
+      id: '/lovable/email/transactional/send'
+      path: '/lovable/email/transactional/send'
+      fullPath: '/lovable/email/transactional/send'
+      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
@@ -1911,6 +1993,7 @@ const rootRouteChildren: RootRouteChildren = {
   BattleIdRoute: BattleIdRoute,
   CityIdRoute: CityIdRoute,
   CompareIdRoute: CompareIdRoute,
+  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   FigureIdRoute: FigureIdRoute,
   InvestigationIdRoute: InvestigationIdRoute,
   PlayChapterRoute: PlayChapterRoute,
@@ -1924,9 +2007,12 @@ const rootRouteChildren: RootRouteChildren = {
   GamesIndexRoute: GamesIndexRoute,
   WorldsIndexRoute: WorldsIndexRoute,
   GamesModeSlugRoute: GamesModeSlugRoute,
+  LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
+  LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
