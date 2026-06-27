@@ -7,6 +7,7 @@ import { memo } from "react";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import { apsToViewBox, ATLAS_VIEWBOX, APS_UNIT_SCALE } from "@/lib/atlas/aps";
 import { KIND_COLOR } from "@/lib/atlas/atlas-visual";
+import { AtlasKindGlyph } from "./AtlasGlyphs";
 
 const VB_W = ATLAS_VIEWBOX.width;
 const VB_H = ATLAS_VIEWBOX.height;
