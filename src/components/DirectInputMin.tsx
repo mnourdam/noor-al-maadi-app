@@ -17,9 +17,13 @@ export function isDirectInputMinPath(): boolean {
 
 export function DirectInputMin() {
   const [count, setCount] = useState(0);
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log("IRTH_REACT_DIRECT_INPUT_MIN_MOUNTED", { path: window.location.pathname, search: window.location.search });
+  }, []);
   return (
     <div style={{ padding: 24, fontFamily: "system-ui, sans-serif", color: "#111", background: "#fff", minHeight: "100vh" }}>
-      <h1 style={{ fontSize: 20, marginBottom: 16 }}>Direct React Input Min</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 8, color: "#0f766e" }}>REACT DIRECT INPUT MIN READY</h1>
       <p style={{ fontSize: 12, opacity: 0.6, marginBottom: 16 }}>
         No router, no providers, no app shell. Pure ReactDOM.createRoot.
       </p>
