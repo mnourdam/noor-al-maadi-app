@@ -1,18 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Bell, Send, Save, RefreshCw, ShieldAlert, Zap, CalendarClock, UserMinus, Flag, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAccount } from "@/lib/account";
+import { useAdminGuard } from "@/lib/admin-guard";
+import { ALL_CATEGORY_KEYS, NOTIFICATION_CATEGORIES, type NotificationCategoryKey } from "@/lib/notifications/categories";
 
 // ============================================================
-// /admin/notifications — Admin notification composer
-// Protected by a hardcoded allowed-email list (placeholder).
+// /admin/notifications — Admin notification composer.
+// Guarded by the role system (is_manager) instead of a hardcoded
+// email list so additional admins can be granted access without code
+// changes.
 // ============================================================
-
-const ALLOWED_ADMIN_EMAILS = ["mnourdam@gmail.com"];
-const normalizeEmail = (value: string | null | undefined) => value?.trim().toLowerCase() ?? "";
-const NORMALIZED_ALLOWED_ADMIN_EMAILS = ALLOWED_ADMIN_EMAILS.map(normalizeEmail);
 
 export const Route = createFileRoute("/admin/notifications")({
   head: () => ({
@@ -33,15 +31,19 @@ type NotificationType =
   | "system_update";
 
 type TargetType = "all" | "user";
+type Priority = "low" | "normal" | "high";
 
 interface NotificationRow {
   id: string;
   title: string;
   body: string;
   type: string;
+  category: string | null;
   target_type: string;
   target_user_id: string | null;
   deep_link: string | null;
+  image_url: string | null;
+  priority: string | null;
   status: string;
   scheduled_at: string | null;
   sent_at: string | null;
@@ -49,46 +51,12 @@ interface NotificationRow {
 }
 
 function AdminNotificationsPage() {
-  const { user: accountUser, loadingSession } = useAccount();
-  const [checking, setChecking] = useState(true);
-  const [allowed, setAllowed] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
+  const { checking, caps, email } = useAdminGuard();
 
   useEffect(() => {
     document.documentElement.classList.add("admin-lite");
     return () => document.documentElement.classList.remove("admin-lite");
   }, []);
-
-  useEffect(() => {
-    if (loadingSession) return;
-    let alive = true;
-    (async () => {
-      const [{ data: sessionData }, { data: userData }] = await Promise.all([
-        supabase.auth.getSession(),
-        supabase.auth.getUser(),
-      ]);
-      if (!alive) return;
-      const sessionUser = sessionData.session?.user ?? null;
-      const currentUser = userData.user ?? accountUser ?? sessionUser;
-      const currentUserId = currentUser?.id ?? null;
-      const currentEmail = currentUser?.email ?? null;
-      const isAdmin = NORMALIZED_ALLOWED_ADMIN_EMAILS.includes(normalizeEmail(currentEmail));
-      console.log("[admin notifications] current user id:", currentUserId);
-      console.log("[admin notifications] current email:", currentEmail);
-      console.log("[admin notifications] allowed emails:", ALLOWED_ADMIN_EMAILS);
-      console.log("[admin notifications] isAdmin:", isAdmin);
-      setUserId(currentUserId);
-      setEmail(currentEmail);
-      setAllowed(isAdmin);
-      setChecking(false);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [accountUser, loadingSession]);
-
-  const debugBlock = <AdminDebugBlock userId={userId} email={email} isAdmin={allowed} />;
 
   if (checking) {
     return (
@@ -98,7 +66,7 @@ function AdminNotificationsPage() {
     );
   }
 
-  if (!allowed) {
+  if (!caps.is_manager) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
         <div className="max-w-md rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
@@ -107,24 +75,12 @@ function AdminNotificationsPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             {email ? `الحساب الحالي (${email}) لا يملك صلاحية الوصول.` : "يرجى تسجيل الدخول بحساب مشرف."}
           </p>
-          {debugBlock}
         </div>
       </div>
     );
   }
 
-  return <Composer debugBlock={debugBlock} />;
-}
-
-function AdminDebugBlock({ userId, email, isAdmin }: { userId: string | null; email: string | null; isAdmin: boolean }) {
-  return (
-    <div dir="ltr" className="mt-4 rounded-md border border-border bg-background p-3 text-left text-xs text-foreground">
-      <div className="font-semibold">Temporary admin debug</div>
-      <div>current user id: {userId ?? "null"}</div>
-      <div>current email: {email ?? "null"}</div>
-      <div>isAdmin result: {String(isAdmin)}</div>
-    </div>
-  );
+  return <Composer />;
 }
 
 function Composer({ debugBlock }: { debugBlock: ReactNode }) {
