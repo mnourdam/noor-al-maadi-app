@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart, formatHeartTimer } from "@/lib/hearts";
 import { unreadCount, formatBadgeCount } from "@/lib/notifications";
+import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
@@ -19,18 +20,29 @@ export function HUD() {
   const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
 
   useEffect(() => {
-    // 1s tick so the MM:SS heart timer counts smoothly.
     const id = androidStable ? null : setInterval(() => force((n) => n + 1), 1_000);
-    const recount = () => setUnread(unreadCount());
-    recount();
-    if (androidStable) return;
+    const recount = async () => {
+      // Prefer the server count; fall back to local cache for guests/offline.
+      try {
+        const n = await fetchMyUnreadCount();
+        setUnread(n || unreadCount());
+      } catch {
+        setUnread(unreadCount());
+      }
+    };
+    void recount();
+    const unsubRealtime = subscribeToMyNotifications(() => { void recount(); });
+    if (androidStable) {
+      return () => { unsubRealtime(); };
+    }
     window.addEventListener("irth:notifications:updated", recount);
-    const focus = () => recount();
+    const focus = () => { void recount(); };
     if (!disableGlobalFocusBlur) window.addEventListener("focus", focus);
     return () => {
       if (id) clearInterval(id);
       window.removeEventListener("irth:notifications:updated", recount);
       if (!disableGlobalFocusBlur) window.removeEventListener("focus", focus);
+      unsubRealtime();
     };
   }, [androidStable, disableGlobalFocusBlur]);
 

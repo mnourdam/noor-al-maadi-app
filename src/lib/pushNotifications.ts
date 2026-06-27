@@ -13,6 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 let initialized = false;
 let pendingToken: string | null = null;
 
+function safeParse(raw: string | undefined | null): Record<string, unknown> {
+  if (!raw) return {};
+  try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
+}
+
 const PENDING_TOKEN_KEY = "irth.pendingFcmToken";
 
 function readPending(): string | null {
@@ -165,6 +170,29 @@ export async function initPushNotifications(): Promise<void> {
       "pushNotificationReceived",
       (notification) => {
         console.log("[push] 📩 received:", notification);
+        // Foreground arrival: surface the cinematic in-app banner. The
+        // Notification Center copy is created server-side by the
+        // send-notification function so the bell badge updates via the
+        // realtime subscription as well.
+        try {
+          const data = (notification.data ?? {}) as Record<string, string>;
+          const notifId = data.notification_id || data.id;
+          if (!notifId) return;
+          const detail = {
+            id: notifId,
+            title: notification.title ?? data.title ?? "إشعار",
+            body: notification.body ?? data.body ?? "",
+            type: data.type ?? null,
+            category: data.category ?? data.type ?? null,
+            image_url: data.image_url ?? data.image ?? null,
+            deep_link: data.deep_link ?? null,
+            payload: safeParse(data.payload),
+          };
+          window.dispatchEvent(new CustomEvent("irth:notifications:banner", { detail }));
+          window.dispatchEvent(new CustomEvent("irth:notifications:updated"));
+        } catch (err) {
+          console.warn("[push] banner dispatch failed", err);
+        }
       },
     );
 
@@ -172,6 +200,27 @@ export async function initPushNotifications(): Promise<void> {
       "pushNotificationActionPerformed",
       (action) => {
         console.log("[push] 👆 action performed:", action);
+        // Background tap: deep-link into the right screen.
+        try {
+          const data = (action.notification?.data ?? {}) as Record<string, string>;
+          const notifId = data.notification_id || data.id;
+          import("@/lib/notifications/server").then(({ markNotificationRead }) => {
+            if (notifId) void markNotificationRead(notifId);
+          });
+          import("@/lib/notifications/deepLink").then(({ resolveDeepLink }) => {
+            const to = resolveDeepLink({
+              type: data.type ?? null,
+              category: data.category ?? data.type ?? null,
+              deep_link: data.deep_link ?? null,
+              payload: safeParse(data.payload),
+            });
+            if (typeof window !== "undefined") {
+              window.location.href = to;
+            }
+          });
+        } catch (err) {
+          console.warn("[push] deep-link failed", err);
+        }
       },
     );
 

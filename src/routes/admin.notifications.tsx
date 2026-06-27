@@ -1,18 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Bell, Send, Save, RefreshCw, ShieldAlert, Zap, CalendarClock, UserMinus, Flag, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAccount } from "@/lib/account";
+import { useAdminGuard } from "@/lib/admin-guard";
+import { ALL_CATEGORY_KEYS, NOTIFICATION_CATEGORIES, type NotificationCategoryKey } from "@/lib/notifications/categories";
 
 // ============================================================
-// /admin/notifications — Admin notification composer
-// Protected by a hardcoded allowed-email list (placeholder).
+// /admin/notifications — Admin notification composer.
+// Guarded by the role system (is_manager) instead of a hardcoded
+// email list so additional admins can be granted access without code
+// changes.
 // ============================================================
-
-const ALLOWED_ADMIN_EMAILS = ["mnourdam@gmail.com"];
-const normalizeEmail = (value: string | null | undefined) => value?.trim().toLowerCase() ?? "";
-const NORMALIZED_ALLOWED_ADMIN_EMAILS = ALLOWED_ADMIN_EMAILS.map(normalizeEmail);
 
 export const Route = createFileRoute("/admin/notifications")({
   head: () => ({
@@ -33,15 +31,19 @@ type NotificationType =
   | "system_update";
 
 type TargetType = "all" | "user";
+type Priority = "low" | "normal" | "high";
 
 interface NotificationRow {
   id: string;
   title: string;
   body: string;
   type: string;
+  category: string | null;
   target_type: string;
   target_user_id: string | null;
   deep_link: string | null;
+  image_url: string | null;
+  priority: string | null;
   status: string;
   scheduled_at: string | null;
   sent_at: string | null;
@@ -49,46 +51,12 @@ interface NotificationRow {
 }
 
 function AdminNotificationsPage() {
-  const { user: accountUser, loadingSession } = useAccount();
-  const [checking, setChecking] = useState(true);
-  const [allowed, setAllowed] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
+  const { checking, caps, email } = useAdminGuard();
 
   useEffect(() => {
     document.documentElement.classList.add("admin-lite");
     return () => document.documentElement.classList.remove("admin-lite");
   }, []);
-
-  useEffect(() => {
-    if (loadingSession) return;
-    let alive = true;
-    (async () => {
-      const [{ data: sessionData }, { data: userData }] = await Promise.all([
-        supabase.auth.getSession(),
-        supabase.auth.getUser(),
-      ]);
-      if (!alive) return;
-      const sessionUser = sessionData.session?.user ?? null;
-      const currentUser = userData.user ?? accountUser ?? sessionUser;
-      const currentUserId = currentUser?.id ?? null;
-      const currentEmail = currentUser?.email ?? null;
-      const isAdmin = NORMALIZED_ALLOWED_ADMIN_EMAILS.includes(normalizeEmail(currentEmail));
-      console.log("[admin notifications] current user id:", currentUserId);
-      console.log("[admin notifications] current email:", currentEmail);
-      console.log("[admin notifications] allowed emails:", ALLOWED_ADMIN_EMAILS);
-      console.log("[admin notifications] isAdmin:", isAdmin);
-      setUserId(currentUserId);
-      setEmail(currentEmail);
-      setAllowed(isAdmin);
-      setChecking(false);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [accountUser, loadingSession]);
-
-  const debugBlock = <AdminDebugBlock userId={userId} email={email} isAdmin={allowed} />;
 
   if (checking) {
     return (
@@ -98,7 +66,7 @@ function AdminNotificationsPage() {
     );
   }
 
-  if (!allowed) {
+  if (!caps.is_manager) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
         <div className="max-w-md rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
@@ -107,33 +75,26 @@ function AdminNotificationsPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             {email ? `الحساب الحالي (${email}) لا يملك صلاحية الوصول.` : "يرجى تسجيل الدخول بحساب مشرف."}
           </p>
-          {debugBlock}
         </div>
       </div>
     );
   }
 
-  return <Composer debugBlock={debugBlock} />;
+  return <Composer />;
 }
 
-function AdminDebugBlock({ userId, email, isAdmin }: { userId: string | null; email: string | null; isAdmin: boolean }) {
-  return (
-    <div dir="ltr" className="mt-4 rounded-md border border-border bg-background p-3 text-left text-xs text-foreground">
-      <div className="font-semibold">Temporary admin debug</div>
-      <div>current user id: {userId ?? "null"}</div>
-      <div>current email: {email ?? "null"}</div>
-      <div>isAdmin result: {String(isAdmin)}</div>
-    </div>
-  );
-}
-
-function Composer({ debugBlock }: { debugBlock: ReactNode }) {
+function Composer() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [type, setType] = useState<NotificationType>("manual");
+  const [category, setCategory] = useState<NotificationCategoryKey>("admin");
+  const [priority, setPriority] = useState<Priority>("normal");
+  const [icon, setIcon] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [targetType, setTargetType] = useState<TargetType>("all");
   const [targetUserId, setTargetUserId] = useState("");
   const [deepLink, setDeepLink] = useState("");
+  const [payloadText, setPayloadText] = useState("");
   const [scheduled, setScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [busy, setBusy] = useState(false);
@@ -153,14 +114,27 @@ function Composer({ debugBlock }: { debugBlock: ReactNode }) {
     loadRecent();
   }, [loadRecent]);
 
-  const buildPayload = () => ({
-    title: title.trim(),
-    body: body.trim(),
-    type,
-    target_type: targetType,
-    target_user_id: targetType === "user" ? targetUserId.trim() || null : null,
-    deep_link: deepLink.trim() || null,
-  });
+  const buildPayload = () => {
+    let payload: Record<string, unknown> = {};
+    if (payloadText.trim()) {
+      try { payload = JSON.parse(payloadText); }
+      catch { throw new Error("payload JSON غير صالح"); }
+    }
+    return {
+      title: title.trim(),
+      body: body.trim(),
+      type,
+      category,
+      priority,
+      sender: "admin" as const,
+      icon: icon.trim() || null,
+      image_url: imageUrl.trim() || null,
+      target_type: targetType,
+      target_user_id: targetType === "user" ? targetUserId.trim() || null : null,
+      deep_link: deepLink.trim() || null,
+      payload,
+    };
+  };
 
   const createDraft = async () => {
     if (!title.trim() || !body.trim()) {
@@ -220,7 +194,7 @@ function Composer({ debugBlock }: { debugBlock: ReactNode }) {
           </Link>
           <Link to="/admin" className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">لوحة الإدارة</Link>
         </header>
-        {debugBlock}
+        
 
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold">إنشاء إشعار جديد</h2>
@@ -297,6 +271,70 @@ function Composer({ debugBlock }: { debugBlock: ReactNode }) {
                 className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs"
                 placeholder="/campaigns/prophetic-mission"
               />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium">الفئة</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as NotificationCategoryKey)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  {ALL_CATEGORY_KEYS.map((k) => (
+                    <option key={k} value={k}>{NOTIFICATION_CATEGORIES[k].label} — {k}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">الأولوية</label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as Priority)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  <option value="low">منخفضة</option>
+                  <option value="normal">عادية</option>
+                  <option value="high">عالية</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">أيقونة (Lucide)</label>
+                <input
+                  value={icon}
+                  onChange={(e) => setIcon(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs"
+                  placeholder="bell, flag, book-open …"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">رابط الصورة (اختياري)</label>
+              <input
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs"
+                placeholder="https://…/cover.jpg"
+              />
+              {imageUrl && (
+                <img src={imageUrl} alt="" className="mt-2 h-24 w-full rounded-md object-cover ring-1 ring-border" />
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">payload (JSON اختياري)</label>
+              <textarea
+                value={payloadText}
+                onChange={(e) => setPayloadText(e.target.value)}
+                rows={3}
+                dir="ltr"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-[11px]"
+                placeholder='{"campaignId":"prophetic-mission","entitySlug":"makkah"}'
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                يُستخدم لروابط عميقة قائمة على البيانات: campaignId / entitySlug / artifactId / achievementId.
+              </p>
             </div>
 
             <div className="rounded-md border border-border p-3">
