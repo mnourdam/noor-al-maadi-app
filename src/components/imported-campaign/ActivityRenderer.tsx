@@ -7,7 +7,7 @@
 //   notifies the parent (so a heart can be deducted).
 // ============================================================
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, X, HelpCircle, Lightbulb } from "lucide-react";
 import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
