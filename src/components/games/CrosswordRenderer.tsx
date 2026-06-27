@@ -347,7 +347,7 @@ export function CrosswordRenderer({
             const info = grid.get(k);
             const clueNum = stage.clues.find((cl) => cl.row === r && cl.col === c)?.number;
             if (!info) {
-              return <div key={k} className="aspect-square w-9 rounded-sm bg-amber-900/30" />;
+              return <div key={k} className="h-9 w-9 rounded-sm bg-amber-900/30" />;
             }
             const value = entries[k] ?? "";
             const isCorrect = value && value === info.expected;
