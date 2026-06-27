@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const DIRECT_INPUT_MIN_PATH = "/debug/react-direct-input-min";
+const DIRECT_INPUT_MIN_QUERY = "__irth_direct_input";
 
 export function isDirectInputMinPath(): boolean {
   try {
-    return window.location.pathname === DIRECT_INPUT_MIN_PATH;
+    if (window.location.pathname === DIRECT_INPUT_MIN_PATH) return true;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get(DIRECT_INPUT_MIN_QUERY) === "1") return true;
+    if (window.location.hash.includes(DIRECT_INPUT_MIN_QUERY)) return true;
+    return false;
   } catch {
     return false;
   }
