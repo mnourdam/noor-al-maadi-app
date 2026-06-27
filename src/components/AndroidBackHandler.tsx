@@ -49,17 +49,38 @@ function getRegisteredPatterns(router: ReturnType<typeof useRouter>): string[] {
     }
   };
 
-  const visitRoute = (route: Record<string, unknown> | undefined) => {
+  const joinChildPath = (parentPath: string | undefined, childPath: unknown): string | null => {
+    if (typeof childPath !== "string" || !childPath.startsWith("/")) return null;
+    const cleanChild = normalizePath(childPath);
+    const cleanParent = parentPath ? normalizePath(parentPath) : "/";
+    if (cleanParent === "/") return cleanChild;
+    if (cleanChild === "/") return cleanParent;
+    if (cleanChild === cleanParent || cleanChild.startsWith(`${cleanParent}/`)) return cleanChild;
+    return normalizePath(`${cleanParent}/${cleanChild.replace(/^\/+/, "")}`);
+  };
+
+  const visitRoute = (route: Record<string, unknown> | undefined, parentPath?: string) => {
     if (!route) return;
     addPath(route.fullPath);
     addPath(route.id);
     addPath(route.path);
 
+    const joinedFromPath = joinChildPath(parentPath, route.path);
+    const joinedFromId = joinChildPath(parentPath, route.id);
+    if (joinedFromPath) set.add(joinedFromPath);
+    if (joinedFromId) set.add(joinedFromId);
+
+    const currentPath =
+      (typeof route.fullPath === "string" && route.fullPath.startsWith("/") ? normalizePath(route.fullPath) : null) ??
+      joinedFromPath ??
+      joinedFromId ??
+      parentPath;
+
     const children = route.children;
     if (Array.isArray(children)) {
-      for (const child of children) visitRoute(child as Record<string, unknown>);
+      for (const child of children) visitRoute(child as Record<string, unknown>, currentPath);
     } else if (children && typeof children === "object") {
-      for (const child of Object.values(children)) visitRoute(child as Record<string, unknown>);
+      for (const child of Object.values(children)) visitRoute(child as Record<string, unknown>, currentPath);
     }
   };
 
