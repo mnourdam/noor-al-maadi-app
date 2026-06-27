@@ -106,12 +106,18 @@ export function derivePublicStats(p: ProfileState) {
   const lvl = levelFor(p.points);
   const have = p.charactersUnlocked.length + p.artifactsFound.length;
   const discovery = Math.min(100, have);
+  // Use the committed hearts value (not the effective regenerated one) so the
+  // server stores the same source-of-truth the client uses. Regeneration is
+  // derived on read on both sides; pushing the effective value would
+  // mis-anchor the timer.
+  const hearts = Math.max(0, Math.min(5, Math.floor(p.hearts ?? 5)));
   return {
     bio: p.bio ?? "",
     title: p.titlesEarned?.[p.titlesEarned.length - 1] ?? lvl.title,
     level: lvl.level,
     xp: p.points,
     dinars: p.dinars ?? 0,
+    hearts,
     streak: p.streak,
     campaigns_completed: p.campaignsCompleted.length,
     artifacts_collected: p.artifactsFound.length,
@@ -121,6 +127,7 @@ export function derivePublicStats(p: ProfileState) {
     avatar_id: p.avatarId || null,
   };
 }
+
 
 export async function pushPublicStats(userId: string, p: ProfileState): Promise<void> {
   const stats = derivePublicStats(p);

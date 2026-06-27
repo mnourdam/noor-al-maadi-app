@@ -50,6 +50,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   profileRef.current = profile;
   const resetProfileRef = useRef(resetProfile);
   resetProfileRef.current = resetProfile;
+  // Timestamp of the most recent local profile mutation that has not yet
+  // been pushed to the server. Realtime UPDATE events that arrive within
+  // REALTIME_GUARD_MS of this stamp are ignored, because the server row
+  // they carry is older than our local state and would otherwise overwrite
+  // a just-earned reward or a just-lost heart with a stale value.
+  const lastLocalChangeRef = useRef(0);
+  const prevProfileSigRef = useRef<string>("");
+
 
   // ============ Initial session + auth state listener ============
   useEffect(() => {
@@ -170,6 +178,25 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, androidStable]);
 
+  // ============ Track local profile mutations (stat-only signature) ============
+  // Only the fields the server reflects matter for the realtime guard. We
+  // ignore unrelated profile mutations (e.g. opening a story) so we don't
+  // suppress legitimate server-side updates.
+  useEffect(() => {
+    const sig = [
+      profile.points,
+      profile.dinars,
+      profile.hearts,
+      profile.streak,
+      profile.campaignsCompleted.length,
+      profile.artifactsFound.length,
+    ].join("|");
+    if (prevProfileSigRef.current && prevProfileSigRef.current !== sig) {
+      lastLocalChangeRef.current = Date.now();
+    }
+    prevProfileSigRef.current = sig;
+  }, [profile.points, profile.dinars, profile.hearts, profile.streak, profile.campaignsCompleted.length, profile.artifactsFound.length]);
+
   // ============ Debounced auto-push while signed in ============
   useEffect(() => {
     if (!user || !autoPushEnabled.current) return;
@@ -180,18 +207,28 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       pushSave(user.id, profileRef.current)
         .then((ok) => { if (ok) setLastSyncAt(Date.now()); })
         .then(() => pushPublicStats(user.id, profileRef.current))
+        .then(() => {
+          // The push itself triggered the profiles UPDATE; the realtime echo
+          // will carry the value we just sent, which matches local — safe to
+          // release the guard so future admin edits apply immediately.
+          lastLocalChangeRef.current = 0;
+        })
         .finally(() => setSyncing(false));
     }, PUSH_DEBOUNCE_MS);
     return () => {
       if (pushTimer.current) clearTimeout(pushTimer.current);
     };
-  }, [profile, user]);
+  }, [profile, user, androidStable]);
 
   // ============ Realtime: reconcile admin edits to public.profiles ============
   // Server `profiles` row is authoritative for xp/dinars/hearts/streak. If an
   // admin adjusts a balance (or any other server-side mutation occurs), mirror
   // it into the local profile so the player sees the new value immediately —
-  // no logout, no manual refresh.
+  // no logout, no manual refresh. While local has unpushed changes (within
+  // REALTIME_GUARD_MS of the last local mutation), suppress the apply: the
+  // incoming row is older than local state and would clobber a freshly
+  // earned reward or a just-lost heart.
+  const REALTIME_GUARD_MS = 4000;
   useEffect(() => {
     if (!user) return;
     const uid = user.id;
@@ -202,6 +239,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       try {
         const { data, error } = await supabase.rpc("get_my_profile");
         if (cancelled || error || !data) return;
+        // Skip if local has unpushed gameplay changes that just happened.
+        if (Date.now() - lastLocalChangeRef.current < REALTIME_GUARD_MS) return;
         const row = data as { xp?: number; dinars?: number; hearts?: number; streak?: number };
         applyServerStats({
           xp: row.xp ?? null,
@@ -218,6 +257,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${uid}` },
         (payload) => {
+          if (Date.now() - lastLocalChangeRef.current < REALTIME_GUARD_MS) {
+            // Local has unpushed changes — the broadcast row is stale.
+            return;
+          }
           const row = (payload.new ?? {}) as { xp?: number; dinars?: number; hearts?: number; streak?: number };
           applyServerStats({
             xp: row.xp ?? null,
@@ -234,6 +277,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [user?.id, applyServerStats]);
+
+
 
 
   const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, displayName, referralCode }) => {
