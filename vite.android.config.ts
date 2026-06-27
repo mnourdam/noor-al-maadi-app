@@ -67,6 +67,43 @@ export default defineConfig({
     },
   },
   plugins: [
+    // Stub out server-only Lovable email/webhook route modules. These TanStack
+    // server route handlers run only on Lovable Cloud (web deployment) and
+    // import server-only packages like `@lovable.dev/webhooks-js` and
+    // `@lovable.dev/email-js`. They are referenced by the generated route
+    // tree, so the Android SPA bundle pulls them in even though their
+    // handlers never execute inside the Capacitor WebView. Replace each one
+    // with an inert createFileRoute() at resolve time so Rolldown never has
+    // to load the original source (and therefore never sees those imports).
+    {
+      name: "irth-android-stub-server-routes",
+      enforce: "pre" as const,
+      resolveId(source, importer) {
+        if (!importer) return null;
+        const normalized = source.replace(/\\/g, "/");
+        if (
+          normalized.includes("/routes/lovable/email/suppression") ||
+          normalized.includes("/routes/lovable/email/auth/webhook") ||
+          normalized.includes("/routes/lovable/email/queue/process") ||
+          normalized.includes("/routes/lovable/email/transactional/send") ||
+          normalized.includes("/routes/lovable/email/transactional/preview") ||
+          normalized.includes("/routes/lovable/email/auth/preview")
+        ) {
+          // Derive the route path from the source specifier so each stub
+          // registers a unique TanStack file route id.
+          const match = normalized.match(/\/routes(\/lovable\/email\/[^?]+)/);
+          const routePath = match ? match[1].replace(/\.(t|j)sx?$/, "") : "/lovable/email/_stub";
+          return `\0irth-android-stub:${routePath}`;
+        }
+        return null;
+      },
+      load(id) {
+        if (!id.startsWith("\0irth-android-stub:")) return null;
+        const routePath = id.slice("\0irth-android-stub:".length);
+        return `import { createFileRoute } from "@tanstack/react-router";\n` +
+          `export const Route = createFileRoute(${JSON.stringify(routePath)})({});\n`;
+      },
+    },
     tanstackRouter({
       target: "react",
       enableRouteGeneration: false,
