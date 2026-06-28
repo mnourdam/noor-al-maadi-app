@@ -26,9 +26,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle, Archive, ArrowUpRight, BookOpen, CheckCircle2, Copy, CornerDownRight,
-  Download, Eye, FileWarning, Filter, GitMerge, Loader2, Pencil, RefreshCw, Save,
+  Download, Eye, FileWarning, Filter, Loader2, Pencil, RefreshCw, RotateCcw, Save,
   Search, Shield, Sparkles, Trash2, X,
 } from "lucide-react";
+
 import { EncyclopediaEntityPreview } from "@/components/admin/EncyclopediaEntityPreview";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -120,10 +121,33 @@ const QUALITY_META: Record<Quality, { label: string; tone: string }> = {
   orphaned:    { label: "يتيم",      tone: "bg-slate-500/10 text-slate-300 border-slate-500/30" },
 };
 
+// Single-badge state, computed per row. Priority: redirect > archive > duplicate > quality > approved.
+type PrimaryState = "redirected" | "archived" | "duplicate" | "empty" | "weak" | "approved";
+
+function primaryState(r: EntityRow, isDup: boolean, quality: Quality): PrimaryState {
+  const meta: any = r.metadata || {};
+  if (typeof meta.canonical_id === "string" && meta.canonical_id) return "redirected";
+  if (meta.archived === true || r.enabled === false) return "archived";
+  if (isDup) return "duplicate";
+  if (quality === "empty") return "empty";
+  if (quality === "weak") return "weak";
+  return "approved";
+}
+
+const STATE_META: Record<PrimaryState, { label: string; tone: string }> = {
+  approved:   { label: "معتمد",       tone: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30" },
+  archived:   { label: "مؤرشف",       tone: "bg-amber-500/10 text-amber-300 border-amber-500/30" },
+  redirected: { label: "محوّل",        tone: "bg-sky-500/10 text-sky-300 border-sky-500/30" },
+  duplicate:  { label: "مكرر محتمل",  tone: "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/30" },
+  empty:      { label: "فارغ",        tone: "bg-rose-500/10 text-rose-300 border-rose-500/30" },
+  weak:       { label: "ضعيف",        tone: "bg-amber-500/10 text-amber-300 border-amber-500/30" },
+};
+
 const TYPE_LABEL: Record<string, string> = {
   figure: "شخصية", city: "مدينة", landmark: "معلم", battle: "معركة",
   event: "حدث", artifact: "أثر", state: "دولة",
 };
+
 
 async function logAudit(action: string, detail: Record<string, unknown>, reason?: string) {
   try {
@@ -516,7 +540,7 @@ function CleanupWorkshop() {
   };
 
   // ------------------------------------------------------------
-  // Archive
+  // Archive — hide from players, keep restorable
   // ------------------------------------------------------------
   const archiveEntity = async (r: EntityRow) => {
     if (!confirm(`أرشفة «${r.title}»؟ لن تظهر للزوّار لكنها قابلة للاستعادة.`)) return;
@@ -532,6 +556,31 @@ function CleanupWorkshop() {
     } catch (e: any) { setToast("فشل: " + (e?.message || e)); }
     finally { setBusy(null); }
   };
+
+  // ------------------------------------------------------------
+  // Approve — restore an archived/redirected entity to live state
+  // ------------------------------------------------------------
+  const approveEntity = async (r: EntityRow) => {
+    setBusy(r.id);
+    try {
+      const meta: any = { ...(r.metadata || {}) };
+      delete meta.archived;
+      delete meta.archived_at;
+      delete meta.hidden_duplicate;
+      delete meta.hidden_at;
+      delete meta.canonical_id;
+      delete meta.canonical_slug;
+      meta.canonical = true;
+      const { error } = await supabase.from("encyclopedia_entities" as any)
+        .update({ metadata: meta, enabled: true }).eq("id", r.id);
+      if (error) throw error;
+      await logAudit("encyclopedia.approve", { id: r.id, slug: r.slug });
+      setToast("تم الاعتماد — الكيان ظاهر للاعبين");
+      await refresh();
+    } catch (e: any) { setToast("فشل الاعتماد: " + (e?.message || e)); }
+    finally { setBusy(null); }
+  };
+
 
   // ------------------------------------------------------------
   // Delete (only if no references)
@@ -692,11 +741,15 @@ function CleanupWorkshop() {
             {filtered.map((r) => {
               const isOrphan = !(atlasLinks.get(r.id) || campaignSlugs.get(r.id));
               const q = classifyQuality(r, dupIds.has(r.id), isOrphan);
+              const state = primaryState(r, dupIds.has(r.id), q);
+              const cid = typeof r.metadata?.canonical_id === "string" ? r.metadata.canonical_id : null;
+              const canonicalTitle = cid ? (rows.find((x) => x.id === cid)?.title ?? null) : null;
               return (
                 <ResultRow
                   key={r.id}
                   row={r}
-                  quality={q}
+                  state={state}
+                  canonicalTitle={canonicalTitle}
                   atlas={atlasLinks.get(r.id) ?? 0}
                   camps={campaignSlugs.get(r.id) ?? 0}
                   active={selectedId === r.id}
@@ -704,6 +757,7 @@ function CleanupWorkshop() {
                 />
               );
             })}
+
           </div>
 
           {/* Editor */}
@@ -720,10 +774,12 @@ function CleanupWorkshop() {
                 allRows={rows}
                 busy={busy === selected.id}
                 onSave={(patch) => saveEntity(selected.id, patch)}
+                onApprove={() => approveEntity(selected)}
                 onArchive={() => archiveEntity(selected)}
                 onDelete={() => deleteEntity(selected)}
                 onOpenMerge={() => setMergeFor(selected)}
                 onJumpTo={(id) => setSelectedId(id)}
+
                 duplicates={
                   // Suggest other rows that share normalized title within the same type.
                   rows.filter((x) => x.id !== selected.id
@@ -856,17 +912,20 @@ function Toolbar({ q, setQ, filter, setFilter }: {
 // ------------------------------------------------------------
 // Result row
 // ------------------------------------------------------------
-function ResultRow({ row, quality, atlas, camps, active, onOpen }: {
-  row: EntityRow; quality: Quality; atlas: number; camps: number;
+function ResultRow({ row, state, canonicalTitle, atlas, camps, active, onOpen }: {
+  row: EntityRow; state: PrimaryState; canonicalTitle: string | null;
+  atlas: number; camps: number;
   active: boolean; onOpen: () => void;
 }) {
-  const meta = QUALITY_META[quality];
+  const sm = STATE_META[state];
   const bodyLen = (row.summary ?? "").length + bodyText(row.body).length;
-  const archived = row.metadata?.archived === true || row.enabled === false;
   const score = scoreEntity({
     summary: row.summary, body: row.body, metadata: row.metadata,
     atlasLinks: atlas, campaignRefs: camps,
   });
+  const stateLabel = state === "redirected" && canonicalTitle
+    ? `محوّل → ${canonicalTitle}`
+    : sm.label;
   return (
     <button onClick={onOpen}
       className={`w-full rounded-lg border px-3 py-2 text-start transition ${
@@ -881,22 +940,20 @@ function ResultRow({ row, quality, atlas, camps, active, onOpen }: {
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <span className={`rounded-full border px-2 py-0.5 text-[10px] tabular-nums ${scoreColor(score)}`}>{score}%</span>
-          <span className={`rounded-full border px-2 py-0.5 text-[10px] ${meta.tone}`}>{meta.label}</span>
+          <span className={`rounded-full border px-2 py-0.5 text-[10px] max-w-[160px] truncate ${sm.tone}`} title={stateLabel}>
+            {stateLabel}
+          </span>
         </div>
       </div>
       <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] text-slate-400">
         <Chip>{bodyLen} حرف</Chip>
-        {hasSections(row.body) && <Chip>أقسام</Chip>}
-        {hasSources(row.metadata, row.body) && <Chip>مصادر</Chip>}
-        {hasImage(row.metadata) && <Chip>صورة</Chip>}
         {atlas > 0 && <Chip tone="ok">أطلس×{atlas}</Chip>}
         {camps > 0 && <Chip tone="ok">حملات×{camps}</Chip>}
-        {typeof row.metadata?.canonical_id === "string" && <Chip tone="ok">↪ محوّل</Chip>}
-        {archived && <Chip tone="warn">مؤرشف</Chip>}
       </div>
     </button>
   );
 }
+
 
 function Chip({ children, tone }: { children: React.ReactNode; tone?: "ok" | "warn" }) {
   const cls = tone === "ok"
@@ -910,13 +967,15 @@ function Chip({ children, tone }: { children: React.ReactNode; tone?: "ok" | "wa
 // ------------------------------------------------------------
 // Editor (JSON pane + structured controls)
 // ------------------------------------------------------------
-function Editor({ row, allRows, busy, onSave, onArchive, onDelete, onOpenMerge, onJumpTo, duplicates, atlasCount, campaignCount }: {
+function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, onOpenMerge, onJumpTo, duplicates, atlasCount, campaignCount }: {
   row: EntityRow; allRows: EntityRow[]; busy: boolean;
   onSave: (patch: Partial<EntityRow>) => void;
+  onApprove: () => void;
   onArchive: () => void; onDelete: () => void; onOpenMerge: () => void;
   onJumpTo: (id: string) => void;
   duplicates: EntityRow[]; atlasCount: number; campaignCount: number;
 }) {
+
   const [title, setTitle] = useState(row.title);
   const [slug, setSlug] = useState(row.slug);
   const [subtitle, setSubtitle] = useState(row.subtitle ?? "");
@@ -1036,8 +1095,15 @@ function Editor({ row, allRows, busy, onSave, onArchive, onDelete, onOpenMerge, 
     </div>
   );
 
+  // Compute current state for the action banner.
+  const meta: any = row.metadata || {};
+  const isRedirected = typeof meta.canonical_id === "string" && !!meta.canonical_id;
+  const isArchived = !isRedirected && (meta.archived === true || row.enabled === false);
+  const isLive = !isRedirected && !isArchived;
+
   return (
     <div className="space-y-3 rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
+      {/* Header: id + secondary actions (save / delete) */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/40 pb-3">
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <BookOpen className="size-3.5" />
@@ -1046,31 +1112,62 @@ function Editor({ row, allRows, busy, onSave, onArchive, onDelete, onOpenMerge, 
             className="rounded p-1 hover:bg-slate-800" title="نسخ id">
             <Copy className="size-3" />
           </button>
+          <span className={`ms-2 rounded-full border px-2 py-0.5 text-[10px] ${
+            isRedirected ? "border-sky-500/40 bg-sky-500/10 text-sky-200"
+            : isArchived ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+          }`}>
+            {isRedirected ? "محوّل" : isArchived ? "مؤرشف" : "معتمد"}
+          </span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <button onClick={onOpenMerge}
-            className="inline-flex items-center gap-1 rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-500/20"
-            title="اختر كياناً معتمداً ليصبح هذا تحويلة إليه">
-            <CornerDownRight className="size-3.5" /> تحويل إلى المعتمد
-          </button>
-          <button onClick={onOpenMerge}
-            className="inline-flex items-center gap-1 rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-500/20">
-            <GitMerge className="size-3.5" /> دمج
-          </button>
-          <button onClick={onArchive} disabled={busy}
-            className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-200 hover:bg-amber-500/20 disabled:opacity-50">
-            <Archive className="size-3.5" /> أرشفة
+          <button onClick={save} disabled={busy}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-600/60 bg-slate-800/60 px-2 py-1 text-xs text-slate-100 hover:bg-slate-700/60 disabled:opacity-50"
+            title="حفظ تعديلات JSON/الحقول">
+            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} حفظ
           </button>
           <button onClick={onDelete} disabled={busy}
-            className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs text-rose-200 hover:bg-rose-500/20 disabled:opacity-50">
+            className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs text-rose-200 hover:bg-rose-500/20 disabled:opacity-50"
+            title="حذف نهائي — لا يمكن التراجع">
             <Trash2 className="size-3.5" /> حذف
-          </button>
-          <button onClick={save} disabled={busy}
-            className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50">
-            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} حفظ
           </button>
         </div>
       </div>
+
+      {/* Three primary state actions */}
+      <div className="grid grid-cols-3 gap-2">
+        <button onClick={onApprove} disabled={busy || isLive}
+          title="إظهار الكيان للاعبين — يلغي الأرشفة أو التحويل"
+          className={`flex flex-col items-center justify-center gap-1 rounded-lg border px-3 py-3 text-xs transition ${
+            isLive
+              ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-200/70 cursor-default"
+              : "border-emerald-500/50 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
+          } disabled:opacity-60`}>
+          {isLive ? <CheckCircle2 className="size-4" /> : <RotateCcw className="size-4" />}
+          <span className="font-semibold">اعتماد</span>
+          <span className="text-[10px] opacity-80">{isLive ? "ظاهر للاعبين" : "استعادة وإظهار"}</span>
+        </button>
+        <button onClick={onArchive} disabled={busy || isArchived}
+          title="إخفاء من اللاعبين دون تحويل — قابل للاستعادة"
+          className={`flex flex-col items-center justify-center gap-1 rounded-lg border px-3 py-3 text-xs transition ${
+            isArchived
+              ? "border-amber-500/30 bg-amber-500/5 text-amber-200/70 cursor-default"
+              : "border-amber-500/50 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25"
+          } disabled:opacity-60`}>
+          <Archive className="size-4" />
+          <span className="font-semibold">أرشفة</span>
+          <span className="text-[10px] opacity-80">{isArchived ? "مخفي حالياً" : "إخفاء بدون تحويل"}</span>
+        </button>
+        <button onClick={onOpenMerge} disabled={busy}
+          title="اختر الكيان المعتمد ليصبح هذا تحويلة إليه"
+          className="flex flex-col items-center justify-center gap-1 rounded-lg border border-sky-500/50 bg-sky-500/15 px-3 py-3 text-xs text-sky-100 transition hover:bg-sky-500/25 disabled:opacity-60">
+          <CornerDownRight className="size-4" />
+          <span className="font-semibold">تحويل</span>
+          <span className="text-[10px] opacity-80">{isRedirected ? "تغيير الهدف" : "ربط مع كيان معتمد"}</span>
+        </button>
+      </div>
+
+
 
       {(() => {
         const cid = typeof row.metadata?.canonical_id === "string" ? row.metadata.canonical_id : null;
