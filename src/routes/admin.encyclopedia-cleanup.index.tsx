@@ -912,17 +912,20 @@ function Toolbar({ q, setQ, filter, setFilter }: {
 // ------------------------------------------------------------
 // Result row
 // ------------------------------------------------------------
-function ResultRow({ row, quality, atlas, camps, active, onOpen }: {
-  row: EntityRow; quality: Quality; atlas: number; camps: number;
+function ResultRow({ row, state, canonicalTitle, atlas, camps, active, onOpen }: {
+  row: EntityRow; state: PrimaryState; canonicalTitle: string | null;
+  atlas: number; camps: number;
   active: boolean; onOpen: () => void;
 }) {
-  const meta = QUALITY_META[quality];
+  const sm = STATE_META[state];
   const bodyLen = (row.summary ?? "").length + bodyText(row.body).length;
-  const archived = row.metadata?.archived === true || row.enabled === false;
   const score = scoreEntity({
     summary: row.summary, body: row.body, metadata: row.metadata,
     atlasLinks: atlas, campaignRefs: camps,
   });
+  const stateLabel = state === "redirected" && canonicalTitle
+    ? `محوّل → ${canonicalTitle}`
+    : sm.label;
   return (
     <button onClick={onOpen}
       className={`w-full rounded-lg border px-3 py-2 text-start transition ${
@@ -937,22 +940,20 @@ function ResultRow({ row, quality, atlas, camps, active, onOpen }: {
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <span className={`rounded-full border px-2 py-0.5 text-[10px] tabular-nums ${scoreColor(score)}`}>{score}%</span>
-          <span className={`rounded-full border px-2 py-0.5 text-[10px] ${meta.tone}`}>{meta.label}</span>
+          <span className={`rounded-full border px-2 py-0.5 text-[10px] max-w-[160px] truncate ${sm.tone}`} title={stateLabel}>
+            {stateLabel}
+          </span>
         </div>
       </div>
       <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] text-slate-400">
         <Chip>{bodyLen} حرف</Chip>
-        {hasSections(row.body) && <Chip>أقسام</Chip>}
-        {hasSources(row.metadata, row.body) && <Chip>مصادر</Chip>}
-        {hasImage(row.metadata) && <Chip>صورة</Chip>}
         {atlas > 0 && <Chip tone="ok">أطلس×{atlas}</Chip>}
         {camps > 0 && <Chip tone="ok">حملات×{camps}</Chip>}
-        {typeof row.metadata?.canonical_id === "string" && <Chip tone="ok">↪ محوّل</Chip>}
-        {archived && <Chip tone="warn">مؤرشف</Chip>}
       </div>
     </button>
   );
 }
+
 
 function Chip({ children, tone }: { children: React.ReactNode; tone?: "ok" | "warn" }) {
   const cls = tone === "ok"
