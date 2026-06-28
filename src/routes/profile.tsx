@@ -19,6 +19,7 @@ import {
 import { useProfile } from "@/lib/profile";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
 import { AccountSection } from "@/components/AccountSection";
+import { CommunityHubSection } from "@/components/CommunityHubSection";
 import { Avatar } from "@/components/Avatar";
 import { AvatarPicker } from "@/components/AvatarPicker";
 import { DEFAULT_NOTIFICATION_PREFS, ensurePermission } from "@/lib/notifications";
@@ -1147,6 +1148,11 @@ function SettingsTab({
       <SettingsGroup title="الحساب" icon={IdCard}>
         <AccountSection />
       </SettingsGroup>
+
+      {/* Community hub — premium social entry point */}
+      <CommunityHubSection />
+
+
 
       {/* Identity card */}
       <SettingsGroup title="بطاقة الهوية التاريخية" icon={IdCard}>

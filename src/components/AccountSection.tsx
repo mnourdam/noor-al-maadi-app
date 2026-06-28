@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Cloud, CloudOff, LogIn, LogOut, RefreshCw, ShieldCheck, UserPlus, Shield, FileText, Lock, Users, UserPlus2, BarChart3, GitCompareArrows } from "lucide-react";
+import { Cloud, CloudOff, LogIn, LogOut, RefreshCw, ShieldCheck, UserPlus, Shield, FileText, Lock } from "lucide-react";
 import { useAccount } from "@/lib/account";
 import { AuthLink } from "@/components/AuthLink";
 
@@ -88,27 +88,8 @@ export function AccountSection() {
         </Link>
       </div>
 
-      {!isGuest && (
-        <div className="mt-4 rounded-2xl border border-gold/20 bg-background/40 p-3">
-          <Link to="/friends" className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-2 text-sm font-bold text-foreground">
-              <Users className="size-4 text-gold" /> الأصدقاء واللوحات
-            </span>
-            <span className="text-[11px] text-muted-foreground">عرض</span>
-          </Link>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <Link to="/friends" className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 py-2 text-[11px] text-muted-foreground hover:text-foreground">
-              <UserPlus2 className="size-3.5 text-gold" /> إضافة
-            </Link>
-            <Link to="/friends" className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 py-2 text-[11px] text-muted-foreground hover:text-foreground">
-              <BarChart3 className="size-3.5 text-gold" /> اللوحة
-            </Link>
-            <Link to="/friends" className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 py-2 text-[11px] text-muted-foreground hover:text-foreground">
-              <GitCompareArrows className="size-3.5 text-gold" /> مقارنة
-            </Link>
-          </div>
-        </div>
-      )}
+
+
 
     </section>
   );
