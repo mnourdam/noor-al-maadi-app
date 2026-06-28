@@ -156,13 +156,25 @@ function CleanupWorkshop() {
   const refresh = async () => {
     setLoading(true); setErr(null);
     try {
-      const { data, error } = await supabase
-        .from("encyclopedia_entities" as any)
-        .select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled,updated_at,timeline_year,timeline_category")
-        .order("updated_at", { ascending: false })
-        .limit(2000);
-      if (error) throw error;
-      setRows((data ?? []) as unknown as EntityRow[]);
+      // PostgREST caps a single response at ~1000 rows regardless of .limit(),
+      // so we MUST page through every row. The cleanup workshop is the source
+      // of truth for the entire encyclopedia — including archived/disabled.
+      const PAGE = 1000;
+      const all: EntityRow[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from("encyclopedia_entities" as any)
+          .select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled,updated_at,timeline_year,timeline_category")
+          .order("updated_at", { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as unknown as EntityRow[];
+        all.push(...batch);
+        if (batch.length < PAGE) break;
+        if (all.length > 20000) break; // safety guard
+      }
+      const data = all;
+      setRows(all);
 
       // Linkage maps (best-effort).
       try {
