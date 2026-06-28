@@ -291,7 +291,7 @@ Deno.serve(async (req) => {
     // recipient loses the in-app banner / bell badge / center entry.
 
 
-    console.log(`[send-notification] done notif=${notif.id} sent=${sent} failed=${failed}`);
+    console.log(`[send-notification][v2] done notif=${notif.id} sent=${sent} failed=${failed} status=${notif.status}`);
 
     return jsonResponse({
       ok: true,
