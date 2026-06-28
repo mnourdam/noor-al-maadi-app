@@ -24,7 +24,7 @@ import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 
 export const Route = createFileRoute("/campaigns/imported/$id/")({
-  head: () => ({ meta: [{ title: "حملة مستوردة — إرث" }] }),
+  head: () => ({ meta: [{ title: "حملة تاريخية — إرث" }] }),
   component: ImportedCampaignOverview,
   notFoundComponent: () => (
     <AppShell>
