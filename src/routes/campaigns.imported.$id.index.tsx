@@ -94,7 +94,7 @@ function ImportedCampaignOverview() {
             <div className="relative">
               <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold">
                 <Crown className="size-3.5" />
-                {campaign.historicalPeriod ?? "حملة مستوردة"}
+                {campaign.historicalPeriod ?? "حملة تاريخية"}
                 {campaign.difficulty && <>· {DIFFICULTY_LABEL[campaign.difficulty]}</>}
               </div>
               <h1 className="font-display mt-2 text-2xl font-bold leading-snug shimmer-text">
