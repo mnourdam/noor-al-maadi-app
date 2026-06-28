@@ -353,8 +353,8 @@ async function runStreakReminder(admin: any, baseUrl: string, serviceKey: string
     if (dryRun) { results.push({ user_id: p.id, streak: p.streak, would_send: true }); continue; }
 
     const send = await invokeSendNotification(baseUrl, serviceKey, {
-      title: "سلسلتك على وشك الانقطاع",
-      body: "أكمل أي فصل أو تحدٍ اليوم للحفاظ على حماستك.",
+      title: "لا تدع الحماسة تنطفئ",
+      body: "أكمل أي فصل أو تحدٍ اليوم للحفاظ على سلسلة إنجازاتك.",
       type: "streak_reminder",
       target_type: "user",
       target_user_id: p.id,
@@ -373,6 +373,153 @@ async function runStreakReminder(admin: any, baseUrl: string, serviceKey: string
   }
 
   return { job: jobKey, sent, failed, skipped, total_candidates: profiles?.length ?? 0, results: dryRun ? results : undefined };
+}
+
+// ---------- Job 6: hearts fully regenerated ----------
+// Sends one notification per regeneration cycle. Cycle bookkeeping is stored in
+// `details.hearts` on the latest run row:
+//   • If hearts=5 now AND last run did not record hearts=5 → send (cycle close).
+//   • If hearts<5 now AND last run recorded hearts=5 → insert a silent
+//     watermark row so the next full→5 transition is eligible again.
+async function runHeartsFullReminder(admin: any, baseUrl: string, serviceKey: string, dryRun: boolean) {
+  const jobKey = "hearts_full";
+  const runDate = todayISODate();
+
+  const { data: profiles, error } = await admin
+    .from("profiles")
+    .select("id, hearts")
+    .limit(5000);
+  if (error) return { job: jobKey, error: error.message };
+
+  const candidateIds = (profiles ?? []).map((p: any) => p.id);
+  if (candidateIds.length === 0) return { job: jobKey, sent: 0, skipped: "no_users" };
+
+  const { data: tokens } = await admin
+    .from("device_tokens")
+    .select("user_id")
+    .eq("enabled", true)
+    .in("user_id", candidateIds);
+  const tokenSet = new Set((tokens ?? []).map((t: any) => t.user_id));
+
+  let sent = 0, skipped = 0, failed = 0, watermarks = 0;
+  const results: any[] = [];
+
+  for (const p of profiles ?? []) {
+    if (!tokenSet.has(p.id)) { skipped++; continue; }
+    const perKey = `${jobKey}:${p.id}`;
+    const { data: prior } = await admin
+      .from("automatic_notification_runs")
+      .select("id, details")
+      .eq("job_key", perKey)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const lastHearts = prior?.[0]?.details?.hearts ?? null;
+    const fullNow = (p.hearts ?? 5) >= 5;
+
+    if (!fullNow) {
+      // Reset watermark exactly once when transitioning from full → not-full.
+      if (lastHearts === 5) {
+        if (!dryRun) {
+          await recordRun(admin, perKey, runDate, "watermark", null, { hearts: p.hearts });
+          watermarks++;
+        }
+      } else {
+        skipped++;
+      }
+      continue;
+    }
+
+    // hearts now full
+    if (lastHearts === 5) { skipped++; continue; } // already announced
+    if (dryRun) { results.push({ user_id: p.id, would_send: true }); continue; }
+
+    const send = await invokeSendNotification(baseUrl, serviceKey, {
+      title: "قلوبك اكتملت",
+      body: "أصبحت مستعدًا لمواصلة رحلتك التاريخية.",
+      type: "hearts_full",
+      target_type: "user",
+      target_user_id: p.id,
+      deep_link: "/",
+    });
+
+    await recordRun(
+      admin, perKey, runDate,
+      send.ok ? "success" : "failed",
+      send.body?.notification_id ?? null,
+      { hearts: 5, send },
+    );
+
+    if (send.ok) sent++; else failed++;
+    results.push({ user_id: p.id, ok: send.ok });
+  }
+
+  return { job: jobKey, sent, failed, skipped, watermarks, total_candidates: profiles?.length ?? 0, results: dryRun ? results : undefined };
+}
+
+// ---------- Job 7: daily challenge reminder ----------
+// Sent at most once per day per user, only when:
+//   - at least one published game exists today
+//   - the user has NOT recorded any completed game progress today (UTC)
+async function runDailyChallengeReminder(admin: any, baseUrl: string, serviceKey: string, dryRun: boolean) {
+  const jobKey = "daily_challenge";
+  const runDate = todayISODate();
+  const startOfToday = new Date(`${runDate}T00:00:00.000Z`).toISOString();
+
+  const { count: publishedGames } = await admin
+    .from("games")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "published");
+  if (!publishedGames || publishedGames < 1) {
+    return { job: jobKey, sent: 0, skipped: "no_published_games" };
+  }
+
+  // Users with at least one enabled token are the candidate pool.
+  const { data: tokens } = await admin
+    .from("device_tokens")
+    .select("user_id")
+    .eq("enabled", true);
+  const userIds = Array.from(new Set((tokens ?? []).map((t: any) => t.user_id)));
+  if (userIds.length === 0) return { job: jobKey, sent: 0, skipped: "no_token_users" };
+
+  // Today's completed-game-progress per user (any completion counts).
+  const { data: doneRows } = await admin
+    .from("game_progress")
+    .select("user_id")
+    .eq("completed", true)
+    .gte("last_played_at", startOfToday)
+    .in("user_id", userIds);
+  const finishedToday = new Set((doneRows ?? []).map((r: any) => r.user_id));
+
+  let sent = 0, skipped = 0, failed = 0;
+  const results: any[] = [];
+
+  for (const userId of userIds) {
+    if (finishedToday.has(userId)) { skipped++; continue; }
+    const perKey = `${jobKey}:${userId}`;
+    if (await alreadyRan(admin, perKey, runDate)) { skipped++; continue; }
+    if (dryRun) { results.push({ user_id: userId, would_send: true }); continue; }
+
+    const send = await invokeSendNotification(baseUrl, serviceKey, {
+      title: "تحديات اليوم بانتظارك",
+      body: "اكسب المزيد من الخبرة والدنانير بإكمال تحديات اليوم.",
+      type: "daily_challenge",
+      target_type: "user",
+      target_user_id: userId,
+      deep_link: "/adventure",
+    });
+
+    await recordRun(
+      admin, perKey, runDate,
+      send.ok ? "success" : "failed",
+      send.body?.notification_id ?? null,
+      { send },
+    );
+
+    if (send.ok) sent++; else failed++;
+    results.push({ user_id: userId, ok: send.ok });
+  }
+
+  return { job: jobKey, sent, failed, skipped, total_candidates: userIds.length, results: dryRun ? results : undefined };
 }
 
 // ---------- Handler ----------
