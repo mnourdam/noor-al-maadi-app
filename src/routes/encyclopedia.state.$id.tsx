@@ -159,8 +159,13 @@ function StatePage() {
   return (
     <AppShell>
       <div className="px-5 pt-8">
-        <Link to="/encyclopedia" className="inline-flex items-center gap-1 text-[11px] text-gold/80 hover:text-gold">
-          <ChevronRight className="size-3.5" /> الموسوعة
+        {/* Step up to the States listing rather than the encyclopedia root. */}
+        <Link
+          to="/encyclopedia/type/$type"
+          params={{ type: "state" } as any}
+          className="inline-flex items-center gap-1 text-[11px] text-gold/80 hover:text-gold"
+        >
+          <ChevronRight className="size-3.5" /> الدول
         </Link>
 
         <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
