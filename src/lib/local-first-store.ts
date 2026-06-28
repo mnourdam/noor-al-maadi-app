@@ -174,20 +174,63 @@ export function isLocalReady(): boolean { return _ready; }
 
 // ---------- Synchronous lookups (fast path for initialData) ----------
 
+function richnessScore(e: Row | null | undefined): number {
+  if (!e) return -1;
+  let s = 0;
+  const b = e.body as Record<string, unknown> | null | undefined;
+  if (b && typeof b === "object") {
+    if (Array.isArray((b as any).sections)) s += (b as any).sections.length * 4;
+    if (Array.isArray((b as any).timeline)) s += (b as any).timeline.length * 3;
+    if (Array.isArray((b as any).facts)) s += (b as any).facts.length;
+    if (Array.isArray((b as any).sources)) s += (b as any).sources.length;
+    if (typeof (b as any).overview === "string")
+      s += Math.min(5, Math.floor(((b as any).overview as string).length / 200));
+    if (typeof (b as any).introduction === "string")
+      s += Math.min(5, Math.floor(((b as any).introduction as string).length / 200));
+  } else if (typeof b === "string" && b.length > 20) {
+    s += Math.min(10, Math.floor(b.length / 200));
+  }
+  if (typeof e.summary === "string" && e.summary.trim().length > 0) s += 1;
+  if (typeof e.subtitle === "string" && e.subtitle.trim().length > 0) s += 1;
+  return s;
+}
+
+function pickRichest(list: Row[], preferType?: string | null): Row | null {
+  if (!list || list.length === 0) return null;
+  return [...list].sort((a, b) => {
+    const ra = richnessScore(a), rb = richnessScore(b);
+    if (ra !== rb) return rb - ra;
+    if (preferType) {
+      const at = a.entity_type === preferType ? 1 : 0;
+      const bt = b.entity_type === preferType ? 1 : 0;
+      if (at !== bt) return bt - at;
+    }
+    return 0;
+  })[0] ?? null;
+}
+
 export function localEncyclopediaById(id: string): Row | null {
   if (!id) return null;
-  return encyclopediaById.get(id) ?? encyclopediaByAlias.get(id) ?? encyclopediaByLegacyId.get(id) ?? null;
+  const direct = encyclopediaById.get(id) ?? encyclopediaByAlias.get(id) ?? encyclopediaByLegacyId.get(id) ?? null;
+  if (!direct) return null;
+  // If the direct hit is a stub but a richer sibling exists under the same
+  // slug, prefer the richer one so the player doesn't see an empty page.
+  if (richnessScore(direct) > 1) return direct;
+  if (direct.slug) {
+    const richer = pickRichest(encyclopediaBySlug.get(direct.slug) ?? [direct]);
+    if (richer && richnessScore(richer) > richnessScore(direct)) return richer;
+  }
+  return direct;
 }
 
 export function localEncyclopediaBySlug(slug: string, type?: string | null): Row | null {
   if (!slug) return null;
   if (type) {
     const hit = encyclopediaByTypeSlug.get(`${type}::${slug}`);
-    if (hit) return hit;
+    if (hit && richnessScore(hit) > 1) return hit;
   }
   const list = encyclopediaBySlug.get(slug);
-  if (!list || list.length === 0) return null;
-  return list[0];
+  return pickRichest(list ?? [], type ?? null);
 }
 
 export function localEncyclopediaByType(type: string): Row[] {
