@@ -48,11 +48,9 @@ const SFX_URLS: Record<SfxName, string> = {
   "error":              errorSfxAsset.url,
 };
 
-// Per-SFX volume trim so a new asset can be mixed to match the perceived
-// loudness of the existing UI sounds without changing global settings.
-const SFX_VOLUME_SCALE: Partial<Record<SfxName, number>> = {
-  error: 0.7,
-};
+// Per-SFX volume trim. Intentionally empty for "error" so the uploaded
+// asset plays bit-for-bit at the same level as other UI SFX.
+const SFX_VOLUME_SCALE: Partial<Record<SfxName, number>> = {};
 
 
 // ---------- Settings persistence ----------
@@ -272,18 +270,23 @@ export const audioManager = {
   },
 
   /**
-   * Play the heart-loss / wrong-answer cue. Uses the bundled CDN asset and
-   * falls back to a synthesized tone if the file is unavailable. Deduped so
-   * rapid wrong answers never overlap.
+   * Play the heart-loss / wrong-answer cue. Plays the uploaded error.mp3
+   * asset exactly as-is, via the same playback path as other UI SFX.
+   * No WebAudio processing, no pitch/EQ/filter, no synthesized layer.
+   * The synth fallback is intentionally disabled — silence is preferred
+   * over a tone that doesn't match the uploaded asset.
    */
   playError() {
     if (typeof window === "undefined") return;
     if (isAndroidUltraStableMode()) return;
     if (!settings.soundEnabled || !settings.sfxEnabled) return;
     if (sfxFailed.has("error")) {
-      playSynthError();
+      // eslint-disable-next-line no-console
+      console.warn("[audio] error sfx unavailable — skipping (synth fallback disabled)");
       return;
     }
+    // eslint-disable-next-line no-console
+    console.log("[audio] Playing uploaded error.mp3", SFX_URLS.error);
     audioManager.playSfx("error", { dedupeKey: "sfx:error", dedupeMs: 220 });
   },
 
