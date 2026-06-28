@@ -41,7 +41,7 @@ import {
   Trophy, Star, Award, Compass,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { BackLink } from "@/components/BackLink";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { useProfile } from "@/lib/profile";
 
 import {
@@ -515,7 +515,12 @@ function CollectionPage() {
   return (
     <AppShell>
       <div className="px-5 pt-6">
-        <BackLink to="/" label="الرئيسية" />
+        <Breadcrumbs
+          items={[
+            { label: "الرئيسية", to: "/" },
+            { label: "المتحف" },
+          ]}
+        />
       </div>
       <Screen title="المتحف">
         {/* ── Cinematic Museum Hero ───────────────────────────── */}

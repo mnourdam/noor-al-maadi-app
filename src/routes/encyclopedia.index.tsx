@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
-import { BackLink } from "@/components/BackLink";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -251,7 +251,13 @@ function EncyclopediaHubFull() {
   return (
     <AppShell>
       <div className="px-5 pt-2">
-        <BackLink to="/" label="الرئيسية" className="mb-2" />
+        <Breadcrumbs
+          className="mb-2"
+          items={[
+            { label: "الرئيسية", to: "/" },
+            { label: "الموسوعة" },
+          ]}
+        />
         {/* Cinematic Hero */}
         <section className="relative -mx-5 -mt-2 overflow-hidden border-b border-gold/15 bg-gradient-to-b from-gold/[0.08] via-background to-background px-5 pb-6 pt-8">
           <div
