@@ -19,6 +19,12 @@ import {
   cachedEncyclopediaBySlug,
   cachedEncyclopediaByType,
 } from "./offline-fallback";
+import {
+  localEncyclopediaById,
+  localEncyclopediaBySlug,
+  localEncyclopediaByType,
+  localEncyclopediaSlugCandidates,
+} from "./local-first-store";
 
 export type SupabaseEncyclopediaEntity = {
   id: string;
@@ -103,6 +109,11 @@ export function useEncyclopediaSupabaseEntity(
     enabled,
     staleTime: 60_000,
     retry: 1,
+    // Local-first: render the cached row instantly so the player sees real
+    // content offline; the network fetch below refreshes in the background.
+    initialData: () =>
+      (localEncyclopediaBySlug(slug, entityType) as SupabaseEncyclopediaEntity | null) ?? undefined,
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
       try {
         const { data, error } = await supabase
@@ -204,6 +215,12 @@ export function useEncyclopediaCanonicalEntity(
     enabled: !!slug,
     staleTime: 60_000,
     retry: 1,
+    initialData: () => {
+      const cands = localEncyclopediaSlugCandidates(slug) as SupabaseEncyclopediaEntity[];
+      const picked = pickCanonicalEntity(cands, hintedType ?? null);
+      return picked ?? undefined;
+    },
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
       try {
         const candidates: SupabaseEncyclopediaEntity[] = [];
@@ -261,6 +278,9 @@ export function useEncyclopediaSupabaseEntityById(rawId: string) {
     enabled,
     staleTime: 60_000,
     retry: 1,
+    initialData: () =>
+      (localEncyclopediaById(id) as SupabaseEncyclopediaEntity | null) ?? undefined,
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
       try {
         const { data, error } = await supabase
@@ -295,6 +315,12 @@ export function useEncyclopediaSupabaseEntityBySlug(rawId: string) {
     enabled: !!slug,
     staleTime: 60_000,
     retry: 1,
+    initialData: () => {
+      const cands = localEncyclopediaSlugCandidates(slug) as SupabaseEncyclopediaEntity[];
+      const picked = pickCanonicalEntity(cands);
+      return picked ?? undefined;
+    },
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
       try {
         const { data, error } = await supabase
@@ -329,6 +355,11 @@ export function useEncyclopediaSupabaseList(entityType: string) {
     enabled,
     staleTime: 60_000,
     retry: 1,
+    initialData: () => {
+      const rows = localEncyclopediaByType(entityType) as SupabaseEncyclopediaEntity[];
+      return rows.length > 0 ? rows : undefined;
+    },
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
       try {
         const { data, error } = await supabase

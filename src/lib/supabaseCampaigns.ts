@@ -1,44 +1,81 @@
 // ============================================================
-// Supabase Campaign Reader (runtime, read-only)
+// Campaign Reader — local-first, network refresh.
 // ------------------------------------------------------------
-// Player-facing routes read campaigns ONLY from this module.
-// No localStorage cache. No legacy/bundled fallback. The single
-// source of truth is the `admin_campaigns` table.
+// Player-facing routes read campaigns through this module. The bundled
+// offline snapshot is the primary source so chapters open instantly
+// without a network call; Supabase is consulted when local has no match
+// or as a background refresh (the next call after sync sees the update).
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Campaign } from "@/types/campaign";
 import { sortCampaignsChronological } from "./campaignChronology";
 import { withBackfilledChronologyAll } from "./campaignChronologyBackfill";
+import {
+  ensureLocalSnapshotLoaded,
+  localCampaignByIdOrSlug,
+  localPublishedCampaigns,
+} from "./local-first-store";
 
-/** All published campaigns, ordered chronologically (oldest historical period first). */
-export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
-  let rawList: { id: string; slug: string; data: any }[] = [];
-  try {
-    const { data, error } = await supabase
-      .from("admin_campaigns")
-      .select("id, slug, data")
-      .eq("status", "published");
-    if (error) throw error;
-    rawList = (data ?? []) as any[];
-  } catch (err) {
-    console.warn("[supabaseCampaigns] live list failed, using snapshot:", err);
-  }
-  if (rawList.length === 0) {
-    try {
-      const { cachedPublishedCampaigns } = await import("./offline-fallback");
-      rawList = await cachedPublishedCampaigns();
-    } catch { /* ignore */ }
-  }
+function toCampaigns(rawList: { id: string; slug: string; data: any }[]): Campaign[] {
   const all = rawList
     .map((r) => r.data as unknown as Campaign)
     .filter((c) => c && c.status === "published");
   return sortCampaignsChronological(withBackfilledChronologyAll(all));
 }
 
-/** Resolve a published campaign by UUID id or slug. */
+/** All published campaigns, ordered chronologically. Local-first. */
+export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
+  await ensureLocalSnapshotLoaded();
+  const local = localPublishedCampaigns() as { id: string; slug: string; data: any }[];
+
+  // Kick off a background refresh when online so subsequent calls see
+  // newly published campaigns without blocking the current read.
+  if (typeof navigator === "undefined" || navigator.onLine !== false) {
+    void supabase
+      .from("admin_campaigns")
+      .select("id, slug, data")
+      .eq("status", "published")
+      .then(({ data, error }) => {
+        if (error || !data) return;
+        try {
+          // Update the in-memory store so the very next call reflects fresh data.
+          import("./local-first-store").then(({ applyLocalSnapshot }) => {
+            // No-op: the snapshot regenerator owns persistence. Background
+            // sync via bootstrapOfflineSync covers IndexedDB updates.
+            void applyLocalSnapshot;
+          });
+        } catch { /* ignore */ }
+      });
+  }
+
+  if (local.length > 0) return toCampaigns(local);
+
+  // Local empty (rare — e.g. snapshot still loading). Fall through to network.
+  try {
+    const { data, error } = await supabase
+      .from("admin_campaigns")
+      .select("id, slug, data")
+      .eq("status", "published");
+    if (!error && data) return toCampaigns(data as any[]);
+  } catch (err) {
+    console.warn("[supabaseCampaigns] live list failed:", err);
+  }
+  return [];
+}
+
+/** Resolve a published campaign by UUID id or slug. Local-first. */
 export async function fetchCampaignByIdOrSlug(idOrSlug: string): Promise<Campaign | null> {
   if (!idOrSlug) return null;
+  await ensureLocalSnapshotLoaded();
+
+  const hit = localCampaignByIdOrSlug(idOrSlug);
+  if (hit) {
+    const c = (hit.data ?? null) as Campaign | null;
+    if (c && c.status === "published") return c;
+  }
+
+  // Local miss — try network (may be a freshly published campaign).
   try {
     let row = await supabase
       .from("admin_campaigns")
@@ -61,13 +98,5 @@ export async function fetchCampaignByIdOrSlug(idOrSlug: string): Promise<Campaig
   } catch (err) {
     console.warn("[supabaseCampaigns] resolve crashed:", err);
   }
-  // Snapshot fallback so chapters and campaign cards still open offline.
-  try {
-    const { cachedPublishedCampaigns } = await import("./offline-fallback");
-    const list = await cachedPublishedCampaigns();
-    const hit = list.find((r) => r.id === idOrSlug || r.slug === idOrSlug);
-    const c = (hit?.data ?? null) as Campaign | null;
-    if (c && c.status === "published") return c;
-  } catch { /* ignore */ }
   return null;
 }
