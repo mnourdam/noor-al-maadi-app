@@ -278,6 +278,9 @@ export function useEncyclopediaSupabaseEntityById(rawId: string) {
     enabled,
     staleTime: 60_000,
     retry: 1,
+    initialData: () =>
+      (localEncyclopediaById(id) as SupabaseEncyclopediaEntity | null) ?? undefined,
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
       try {
         const { data, error } = await supabase
