@@ -1,17 +1,18 @@
 // Automatic notification engine for Irth.
 //
-// Runs four automatic notification jobs:
-//   1) today_in_history     - one event matching today's month/day
-//   2) daily_fact           - rotates one enabled fact per day
-//   3) inactive_user        - users inactive for 3+ days (per-user, once per 3d)
-//   4) incomplete_campaign  - users with unlocked/in_progress campaigns (per-user/campaign, once per 2d)
+// Runs the retention notification jobs (all reuse `send-notification` so FCM,
+// in-app delivery, bell badge, and notification center stay one pipeline):
+//   1) today_in_history     — one push per active event matching today's date
+//   2) daily_fact           — rotates one enabled fact per day
+//   3) comeback_24h         — inactive ≥24h, one reminder per inactivity period
+//   4) hearts_full          — hearts regenerated from <5 to 5, one per cycle
+//   5) streak_reminder      — streak alive, no activity today (cron near EoD)
+//   6) daily_challenge      — published games + no game completed today
+//   7) incomplete_campaign  — legacy reminder, kept for parity
 //
 // Body (optional):  { jobs?: string[], dry_run?: boolean }
 //
-// Deployment: meant to be called daily by Supabase Cron, but can be triggered
-// manually from /admin/notifications.
-//
-// All sends reuse the `send-notification` function so FCM logic stays in one place.
+// Dedup is enforced via the `automatic_notification_runs` table.
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
