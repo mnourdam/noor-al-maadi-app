@@ -31,8 +31,23 @@ export async function cachedEncyclopediaBySlug(
     (r) => r?.enabled !== false && r?.slug === slug &&
       (!entityType || r?.entity_type === entityType),
   );
-  if (matches.length > 0) return matches[0];
-  return null;
+  if (matches.length === 0) return null;
+  // Pick the richest record so a stub duplicate never wins over a full one.
+  const score = (e: SupabaseEncyclopediaEntity) => {
+    let s = 0;
+    const b: any = e.body;
+    if (b && typeof b === "object") {
+      if (Array.isArray(b.sections)) s += b.sections.length * 4;
+      if (Array.isArray(b.timeline)) s += b.timeline.length * 3;
+      if (Array.isArray(b.facts)) s += b.facts.length;
+      if (Array.isArray(b.sources)) s += b.sources.length;
+      if (typeof b.overview === "string") s += Math.min(5, Math.floor(b.overview.length / 200));
+    }
+    if (e.summary) s += 1;
+    if (e.subtitle) s += 1;
+    return s;
+  };
+  return [...matches].sort((a, b) => score(b) - score(a))[0] ?? null;
 }
 
 export async function cachedEncyclopediaById(
