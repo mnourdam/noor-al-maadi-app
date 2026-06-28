@@ -537,7 +537,15 @@ Deno.serve(async (req) => {
     const dryRun: boolean = !!body.dry_run;
     const jobs: string[] = Array.isArray(body.jobs) && body.jobs.length > 0
       ? body.jobs
-      : ["today_in_history", "daily_fact", "inactive_user", "incomplete_campaign", "streak_reminder"];
+      : [
+          "today_in_history",
+          "daily_fact",
+          "comeback_24h",
+          "hearts_full",
+          "streak_reminder",
+          "daily_challenge",
+          "incomplete_campaign",
+        ];
 
     const results: Record<string, any> = {};
 
@@ -545,12 +553,16 @@ Deno.serve(async (req) => {
       results.today_in_history = await runTodayInHistory(admin, supabaseUrl, serviceKey, dryRun);
     if (jobs.includes("daily_fact"))
       results.daily_fact = await runDailyFact(admin, supabaseUrl, serviceKey, dryRun);
-    if (jobs.includes("inactive_user"))
-      results.inactive_user = await runInactiveUserReminder(admin, supabaseUrl, serviceKey, dryRun);
-    if (jobs.includes("incomplete_campaign"))
-      results.incomplete_campaign = await runIncompleteCampaignReminder(admin, supabaseUrl, serviceKey, dryRun);
+    if (jobs.includes("comeback_24h") || jobs.includes("inactive_user"))
+      results.comeback_24h = await runComebackReminder(admin, supabaseUrl, serviceKey, dryRun);
+    if (jobs.includes("hearts_full"))
+      results.hearts_full = await runHeartsFullReminder(admin, supabaseUrl, serviceKey, dryRun);
     if (jobs.includes("streak_reminder"))
       results.streak_reminder = await runStreakReminder(admin, supabaseUrl, serviceKey, dryRun);
+    if (jobs.includes("daily_challenge"))
+      results.daily_challenge = await runDailyChallengeReminder(admin, supabaseUrl, serviceKey, dryRun);
+    if (jobs.includes("incomplete_campaign"))
+      results.incomplete_campaign = await runIncompleteCampaignReminder(admin, supabaseUrl, serviceKey, dryRun);
 
     console.log("[run-automatic-notifications] done", JSON.stringify(results));
     return jsonResponse({ ok: true, dry_run: dryRun, results });
