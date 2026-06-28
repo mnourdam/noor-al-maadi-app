@@ -17,9 +17,11 @@ import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import {
   isUuid,
+  pickCanonicalEntity,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
 import { cachedEncyclopediaById, cachedEncyclopediaBySlug } from "@/lib/offline-fallback";
+import { localEncyclopediaById, localEncyclopediaBySlug } from "@/lib/local-first-store";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import {
