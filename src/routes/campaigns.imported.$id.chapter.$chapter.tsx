@@ -253,7 +253,7 @@ function ImportedChapterPlayer() {
               <ArrowRight className="size-3.5" /> {campaign.title}
             </Link>
             <span className="text-[10px] text-muted-foreground">
-              {camProgress?.completed ? "حملة مكتملة" : "حملة مستوردة"}
+              {camProgress?.completed ? "حملة مكتملة" : "حملة تاريخية"}
             </span>
           </div>
         </div>
