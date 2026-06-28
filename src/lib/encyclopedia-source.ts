@@ -355,6 +355,11 @@ export function useEncyclopediaSupabaseList(entityType: string) {
     enabled,
     staleTime: 60_000,
     retry: 1,
+    initialData: () => {
+      const rows = localEncyclopediaByType(entityType) as SupabaseEncyclopediaEntity[];
+      return rows.length > 0 ? rows : undefined;
+    },
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
       try {
         const { data, error } = await supabase
