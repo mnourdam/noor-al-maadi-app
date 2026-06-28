@@ -250,6 +250,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           });
         }
         setProfile(merged);
+      }
+    } catch {}
+    setHydrated(true);
+  }, []);
+
+
 
 
 
