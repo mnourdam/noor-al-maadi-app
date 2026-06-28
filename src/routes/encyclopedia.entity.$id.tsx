@@ -230,7 +230,7 @@ function EntityPage() {
             return parent ? (
               <BackLink
                 to="/encyclopedia/type/$type"
-                params={{ type: parent.typeSlug }}
+                params={{ type: parent.typeSlug } as any}
                 label={parent.label}
               />
             ) : (
