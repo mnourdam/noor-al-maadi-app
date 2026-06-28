@@ -5,6 +5,30 @@ function todayKey(d: Date = new Date()): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+/**
+ * Day-anchored streak validation. Single source of truth used at hydrate,
+ * server-sync, and any HUD read. A stored streak number is NEVER trusted
+ * on its own — it must be reconciled against `lastActiveDay`.
+ *   - safe:      played today
+ *   - at-risk:   played yesterday, will expire at next midnight if idle
+ *   - expired:   missed a full day (or never played) → streak forced to 0
+ */
+export type StreakStatus = "safe" | "at-risk" | "expired";
+export function deriveStreak(
+  storedStreak: number,
+  lastActiveDay: string | null | undefined,
+  now: Date = new Date(),
+): { streak: number; status: StreakStatus } {
+  const today = todayKey(now);
+  const y = new Date(now); y.setDate(y.getDate() - 1);
+  const yesterday = todayKey(y);
+  const stored = Math.max(0, Math.floor(storedStreak || 0));
+  if (lastActiveDay === today) return { streak: stored, status: "safe" };
+  if (lastActiveDay === yesterday) return { streak: stored, status: "at-risk" };
+  return { streak: 0, status: "expired" };
+}
+
 function dailyMissionsForDate(_d: Date = new Date()): { id: string }[] {
   return [];
 }
