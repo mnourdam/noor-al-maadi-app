@@ -1095,8 +1095,15 @@ function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, on
     </div>
   );
 
+  // Compute current state for the action banner.
+  const meta: any = row.metadata || {};
+  const isRedirected = typeof meta.canonical_id === "string" && !!meta.canonical_id;
+  const isArchived = !isRedirected && (meta.archived === true || row.enabled === false);
+  const isLive = !isRedirected && !isArchived;
+
   return (
     <div className="space-y-3 rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
+      {/* Header: id + secondary actions (save / delete) */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/40 pb-3">
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <BookOpen className="size-3.5" />
@@ -1105,31 +1112,62 @@ function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, on
             className="rounded p-1 hover:bg-slate-800" title="نسخ id">
             <Copy className="size-3" />
           </button>
+          <span className={`ms-2 rounded-full border px-2 py-0.5 text-[10px] ${
+            isRedirected ? "border-sky-500/40 bg-sky-500/10 text-sky-200"
+            : isArchived ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+          }`}>
+            {isRedirected ? "محوّل" : isArchived ? "مؤرشف" : "معتمد"}
+          </span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <button onClick={onOpenMerge}
-            className="inline-flex items-center gap-1 rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-500/20"
-            title="اختر كياناً معتمداً ليصبح هذا تحويلة إليه">
-            <CornerDownRight className="size-3.5" /> تحويل إلى المعتمد
-          </button>
-          <button onClick={onOpenMerge}
-            className="inline-flex items-center gap-1 rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-500/20">
-            <GitMerge className="size-3.5" /> دمج
-          </button>
-          <button onClick={onArchive} disabled={busy}
-            className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-200 hover:bg-amber-500/20 disabled:opacity-50">
-            <Archive className="size-3.5" /> أرشفة
+          <button onClick={save} disabled={busy}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-600/60 bg-slate-800/60 px-2 py-1 text-xs text-slate-100 hover:bg-slate-700/60 disabled:opacity-50"
+            title="حفظ تعديلات JSON/الحقول">
+            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} حفظ
           </button>
           <button onClick={onDelete} disabled={busy}
-            className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs text-rose-200 hover:bg-rose-500/20 disabled:opacity-50">
+            className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs text-rose-200 hover:bg-rose-500/20 disabled:opacity-50"
+            title="حذف نهائي — لا يمكن التراجع">
             <Trash2 className="size-3.5" /> حذف
-          </button>
-          <button onClick={save} disabled={busy}
-            className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50">
-            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} حفظ
           </button>
         </div>
       </div>
+
+      {/* Three primary state actions */}
+      <div className="grid grid-cols-3 gap-2">
+        <button onClick={onApprove} disabled={busy || isLive}
+          title="إظهار الكيان للاعبين — يلغي الأرشفة أو التحويل"
+          className={`flex flex-col items-center justify-center gap-1 rounded-lg border px-3 py-3 text-xs transition ${
+            isLive
+              ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-200/70 cursor-default"
+              : "border-emerald-500/50 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
+          } disabled:opacity-60`}>
+          {isLive ? <CheckCircle2 className="size-4" /> : <RotateCcw className="size-4" />}
+          <span className="font-semibold">اعتماد</span>
+          <span className="text-[10px] opacity-80">{isLive ? "ظاهر للاعبين" : "استعادة وإظهار"}</span>
+        </button>
+        <button onClick={onArchive} disabled={busy || isArchived}
+          title="إخفاء من اللاعبين دون تحويل — قابل للاستعادة"
+          className={`flex flex-col items-center justify-center gap-1 rounded-lg border px-3 py-3 text-xs transition ${
+            isArchived
+              ? "border-amber-500/30 bg-amber-500/5 text-amber-200/70 cursor-default"
+              : "border-amber-500/50 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25"
+          } disabled:opacity-60`}>
+          <Archive className="size-4" />
+          <span className="font-semibold">أرشفة</span>
+          <span className="text-[10px] opacity-80">{isArchived ? "مخفي حالياً" : "إخفاء بدون تحويل"}</span>
+        </button>
+        <button onClick={onOpenMerge} disabled={busy}
+          title="اختر الكيان المعتمد ليصبح هذا تحويلة إليه"
+          className="flex flex-col items-center justify-center gap-1 rounded-lg border border-sky-500/50 bg-sky-500/15 px-3 py-3 text-xs text-sky-100 transition hover:bg-sky-500/25 disabled:opacity-60">
+          <CornerDownRight className="size-4" />
+          <span className="font-semibold">تحويل</span>
+          <span className="text-[10px] opacity-80">{isRedirected ? "تغيير الهدف" : "ربط مع كيان معتمد"}</span>
+        </button>
+      </div>
+
+
 
       {(() => {
         const cid = typeof row.metadata?.canonical_id === "string" ? row.metadata.canonical_id : null;
