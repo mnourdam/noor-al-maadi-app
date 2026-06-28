@@ -257,6 +257,20 @@ export function localEncyclopediaSlugCandidates(slug: string): Row[] {
   return encyclopediaBySlug.get(slug) ?? [];
 }
 
+/**
+ * Return every row that represents the same historical entity (same type +
+ * normalized Arabic title) as `entity`. Includes `entity` itself.
+ * Sub-millisecond — backed by an in-memory Map built at boot.
+ */
+export function localEncyclopediaSameNameSiblings(entity: {
+  entity_type?: string; title?: string;
+} | null | undefined): Row[] {
+  if (!entity?.entity_type || !entity?.title) return [];
+  const key = `${entity.entity_type}::${normalizeArabicName(entity.title)}`;
+  if (key.endsWith("::")) return [];
+  return encyclopediaByNormName.get(key) ?? [];
+}
+
 export function localEncyclopediaAll(): Row[] { return encyclopediaAll; }
 
 export function localAtlasEntities(): Row[] { return atlasPublished; }
