@@ -25,8 +25,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle, Archive, ArrowUpRight, BookOpen, CheckCircle2, Copy, Download, Eye,
-  FileWarning, Filter, GitMerge, Loader2, Pencil, RefreshCw, Save,
+  AlertTriangle, Archive, ArrowUpRight, BookOpen, CheckCircle2, Copy, CornerDownRight,
+  Download, Eye, FileWarning, Filter, GitMerge, Loader2, Pencil, RefreshCw, Save,
   Search, Shield, Sparkles, Trash2, X,
 } from "lucide-react";
 import { EncyclopediaEntityPreview } from "@/components/admin/EncyclopediaEntityPreview";
@@ -717,11 +717,13 @@ function CleanupWorkshop() {
               <Editor
                 key={selected.id}
                 row={selected}
+                allRows={rows}
                 busy={busy === selected.id}
                 onSave={(patch) => saveEntity(selected.id, patch)}
                 onArchive={() => archiveEntity(selected)}
                 onDelete={() => deleteEntity(selected)}
                 onOpenMerge={() => setMergeFor(selected)}
+                onJumpTo={(id) => setSelectedId(id)}
                 duplicates={
                   // Suggest other rows that share normalized title within the same type.
                   rows.filter((x) => x.id !== selected.id
@@ -889,6 +891,7 @@ function ResultRow({ row, quality, atlas, camps, active, onOpen }: {
         {hasImage(row.metadata) && <Chip>صورة</Chip>}
         {atlas > 0 && <Chip tone="ok">أطلس×{atlas}</Chip>}
         {camps > 0 && <Chip tone="ok">حملات×{camps}</Chip>}
+        {typeof row.metadata?.canonical_id === "string" && <Chip tone="ok">↪ محوّل</Chip>}
         {archived && <Chip tone="warn">مؤرشف</Chip>}
       </div>
     </button>
@@ -907,10 +910,11 @@ function Chip({ children, tone }: { children: React.ReactNode; tone?: "ok" | "wa
 // ------------------------------------------------------------
 // Editor (JSON pane + structured controls)
 // ------------------------------------------------------------
-function Editor({ row, busy, onSave, onArchive, onDelete, onOpenMerge, duplicates, atlasCount, campaignCount }: {
-  row: EntityRow; busy: boolean;
+function Editor({ row, allRows, busy, onSave, onArchive, onDelete, onOpenMerge, onJumpTo, duplicates, atlasCount, campaignCount }: {
+  row: EntityRow; allRows: EntityRow[]; busy: boolean;
   onSave: (patch: Partial<EntityRow>) => void;
   onArchive: () => void; onDelete: () => void; onOpenMerge: () => void;
+  onJumpTo: (id: string) => void;
   duplicates: EntityRow[]; atlasCount: number; campaignCount: number;
 }) {
   const [title, setTitle] = useState(row.title);
@@ -1045,6 +1049,11 @@ function Editor({ row, busy, onSave, onArchive, onDelete, onOpenMerge, duplicate
         </div>
         <div className="flex flex-wrap gap-1.5">
           <button onClick={onOpenMerge}
+            className="inline-flex items-center gap-1 rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-500/20"
+            title="اختر كياناً معتمداً ليصبح هذا تحويلة إليه">
+            <CornerDownRight className="size-3.5" /> تحويل إلى المعتمد
+          </button>
+          <button onClick={onOpenMerge}
             className="inline-flex items-center gap-1 rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-500/20">
             <GitMerge className="size-3.5" /> دمج
           </button>
@@ -1062,6 +1071,39 @@ function Editor({ row, busy, onSave, onArchive, onDelete, onOpenMerge, duplicate
           </button>
         </div>
       </div>
+
+      {(() => {
+        const cid = typeof row.metadata?.canonical_id === "string" ? row.metadata.canonical_id : null;
+        if (!cid) return null;
+        const target = allRows.find((x) => x.id === cid);
+        const cslug = target?.slug ?? (typeof row.metadata?.canonical_slug === "string" ? row.metadata.canonical_slug : null);
+        return (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 p-2 text-xs text-emerald-100">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <CornerDownRight className="size-3.5 shrink-0" />
+              <span className="truncate">
+                محوّل إلى:{" "}
+                <span className="font-semibold">{target?.title ?? cslug ?? cid}</span>
+                {cslug && <span dir="ltr" className="ms-1 font-mono text-[10px] text-emerald-200/80">({cslug})</span>}
+              </span>
+            </div>
+            <div className="flex gap-1.5 shrink-0">
+              {target && (
+                <button onClick={() => onJumpTo(target.id)}
+                  className="inline-flex items-center gap-1 rounded-md border border-emerald-400/50 bg-emerald-500/15 px-2 py-1 text-[11px] text-emerald-100 hover:bg-emerald-500/25">
+                  <Pencil className="size-3" /> فتح للتحرير
+                </button>
+              )}
+              {cslug && (
+                <Link to="/encyclopedia/entity/$id" params={{ id: cslug }} target="_blank"
+                  className="inline-flex items-center gap-1 rounded-md border border-emerald-400/50 bg-emerald-500/15 px-2 py-1 text-[11px] text-emerald-100 hover:bg-emerald-500/25">
+                  <ArrowUpRight className="size-3" /> فتح الكيان المعتمد
+                </Link>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {duplicates.length > 0 && (
         <div className="rounded-md border border-fuchsia-500/30 bg-fuchsia-500/5 p-2 text-xs text-fuchsia-200">
@@ -1171,7 +1213,7 @@ function MergeDialog({ source, rows, onClose, onConfirm }: {
         className="w-full max-w-2xl rounded-xl border border-slate-700 bg-slate-950 p-5 text-slate-100">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-lg font-bold text-amber-200">
-            <GitMerge className="size-5" /> دمج داخل كيان قياسي
+            <CornerDownRight className="size-5" /> تحويل إلى الكيان المعتمد
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-100">
             <X className="size-5" />
