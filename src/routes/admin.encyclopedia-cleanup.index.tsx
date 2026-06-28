@@ -25,7 +25,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle, Archive, BookOpen, CheckCircle2, Copy, Download,
+  AlertTriangle, Archive, ArrowUpRight, BookOpen, CheckCircle2, Copy, Download,
   FileWarning, Filter, GitMerge, Loader2, RefreshCw, Save,
   Search, Shield, Sparkles, Trash2, X,
 } from "lucide-react";
@@ -34,6 +34,7 @@ import {
   entityNameKeys, normalizeArabicName, normalizeSlugKey,
 } from "@/lib/arabic-normalize";
 import { scoreEntity, scoreColor } from "@/lib/encyclopedia-quality";
+import { findRicherDuplicate, richness } from "@/lib/encyclopedia-canonical";
 
 export const Route = createFileRoute("/admin/encyclopedia-cleanup/")({
   head: () => ({
