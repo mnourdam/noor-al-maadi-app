@@ -351,7 +351,7 @@ function HomeFull() {
         ),
       };
     }
-    if (todayEvent) {
+    if (todayEvent && todayEvent.deep_link) {
       return {
         kind: "today",
         eyebrow: "حدث اليوم",
@@ -360,7 +360,7 @@ function HomeFull() {
         xp: 15, dinars: 5,
         icon: <Calendar className="size-4" />,
         link: (
-          <Link to={(todayEvent.deep_link ?? "/on-this-day") as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+          <Link to={todayEvent.deep_link as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
             <BookOpen className="size-4" />اقرأ القصة
           </Link>
         ),
