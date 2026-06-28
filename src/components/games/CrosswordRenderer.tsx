@@ -336,28 +336,26 @@ export function CrosswordRenderer({
           <span className="text-slate-400 text-[11px]">
             {filledCells}/{totalCells} خانة
           </span>
+          <button
+            type="button"
+            onClick={openHelp}
+            disabled={done}
+            aria-label="مساعدة"
+            title="مساعدة"
+            className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-gradient-to-b from-amber-500/25 to-amber-600/10 px-3 py-1.5 text-[11px] font-bold text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.15)_inset] transition hover:from-amber-500/35 hover:to-amber-600/20 disabled:opacity-40"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+            مساعدة
+          </button>
         </span>
       </div>
 
       {activeClue !== null && (
-        <div className="mb-3 flex items-start justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
-          <div className="flex-1">
-            <span className="text-[11px] uppercase tracking-[0.25em] text-amber-300/80">
-              {stage.clues[activeClue].direction === "across" ? "أفقي" : "عمودي"} · {stage.clues[activeClue].number}
-            </span>
-            <p className="mt-1 leading-7">{stage.clues[activeClue].hint}</p>
-          </div>
-          <button
-            type="button"
-            onClick={revealNextLetter}
-            disabled={done}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-400/50 bg-amber-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-amber-100 transition hover:bg-amber-500/25 disabled:opacity-40"
-            aria-label="كشف الحرف التالي"
-            title="يكشف أوّل حرف غير مكتشف من بداية الإجابة."
-          >
-            <Lightbulb className="h-3.5 w-3.5" />
-            كشف الحرف ({HINT_COST} دينار)
-          </button>
+        <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+          <span className="text-[11px] uppercase tracking-[0.25em] text-amber-300/80">
+            {stage.clues[activeClue].direction === "across" ? "أفقي" : "عمودي"} · {stage.clues[activeClue].number}
+          </span>
+          <p className="mt-1 leading-7">{stage.clues[activeClue].hint}</p>
         </div>
       )}
 
