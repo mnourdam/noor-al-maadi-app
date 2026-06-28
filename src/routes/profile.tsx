@@ -1148,6 +1148,11 @@ function SettingsTab({
         <AccountSection />
       </SettingsGroup>
 
+      {/* Community hub — premium social entry point */}
+      <CommunityHubSection />
+
+
+
       {/* Identity card */}
       <SettingsGroup title="بطاقة الهوية التاريخية" icon={IdCard}>
         <div className="grid grid-cols-2 gap-2 text-[11px]">
