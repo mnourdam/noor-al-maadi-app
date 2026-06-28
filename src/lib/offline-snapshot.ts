@@ -230,6 +230,14 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
         local = bundled;
       }
     }
+    // Hydrate the in-memory local-first index immediately so player routes
+    // can read content synchronously on first paint, even without network.
+    try {
+      const { applyLocalSnapshot, ensureLocalSnapshotLoaded } = await import("./local-first-store");
+      if (local) applyLocalSnapshot(local);
+      else await ensureLocalSnapshotLoaded();
+    } catch { /* ignore */ }
+
 
     const online = typeof navigator === "undefined" || navigator.onLine !== false;
     if (!online) return;
