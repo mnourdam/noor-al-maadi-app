@@ -99,6 +99,9 @@ export function CrosswordRenderer({
   const [activeClue, setActiveClue] = useState<number | null>(null);
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<null | { kind: "ok" | "err"; msg: string }>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [insufficientOpen, setInsufficientOpen] = useState(false);
+  const { profile } = useProfile();
   const inputsRef = useRef<Record<string, HTMLInputElement | null>>({});
   const clueInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
