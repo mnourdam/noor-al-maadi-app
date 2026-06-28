@@ -165,16 +165,26 @@ function HomeFull() {
     );
   }, [importedCampaigns, progressTick]);
 
+  // ===== Hero background pool =====
+  // Deterministic initial value for SSR/first paint, randomized on mount.
+  // The pool auto-includes any file dropped under src/assets/hero/.
+  const [heroBgs, setHeroBgs] = useState<string[]>(() => defaultHeroImages(3));
+  useEffect(() => {
+    const picks = pickHeroImages(3);
+    if (picks.length > 0) setHeroBgs(picks);
+  }, []);
+
   // ===== Hero slides =====
   const slides = useMemo<HeroSlide[]>(() => {
     const out: HeroSlide[] = [];
+    const bgAt = (i: number) => heroBgs[i % Math.max(heroBgs.length, 1)] ?? heroBgs[0] ?? "";
     if (campaignSel) {
       const { campaign, hasStarted, isComplete, completedChapters, nextChapter } = campaignSel;
       const total = campaign.chapters.length;
       const ctaLabel = isComplete ? "استعرض الحملة" : hasStarted ? "أكمل رحلتك" : "ابدأ رحلتك";
       const heroBg =
         (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) ||
-        heroFortress;
+        bgAt(0);
       const subtitle = nextChapter && !isComplete
         ? `الفصل ${nextChapter.order ?? completedChapters + 1} · ${nextChapter.title}`
         : (campaign.subtitle ?? campaign.description ?? "تابع رحلتك في هذه الحملة.");
@@ -201,7 +211,7 @@ function HomeFull() {
       const yr = todayEvent.hijri_year ? `${todayEvent.hijri_year} هـ` : (todayEvent.gregorian_year ? `${todayEvent.gregorian_year} م` : "في مثل هذا اليوم");
       out.push({
         kind: "history",
-        bg: heroManuscriptLamp,
+        bg: bgAt(1),
         eyebrow: `في مثل هذا اليوم · ${yr}`,
         title: todayEvent.title,
         subtitle: todayEvent.body,
@@ -210,7 +220,7 @@ function HomeFull() {
     if (stats.recent.length > 0) {
       const r = stats.recent[0];
       out.push({
-        kind: "discovery", bg: heroFortress,
+        kind: "discovery", bg: bgAt(2),
         eyebrow: `آخر اكتشافاتك · ${r.kind}`,
         title: r.title,
         subtitle: r.subtitle ?? "افتح أرشيفك التاريخي واكتشف ما جمعته.",
@@ -223,7 +233,7 @@ function HomeFull() {
       });
     }
     out.push({
-      kind: "timeline", bg: heroDesertCaravan,
+      kind: "timeline", bg: bgAt(2),
       eyebrow: "الخط الزمني العظيم",
       title: "أكثر من 1400 سنة من التاريخ",
       subtitle: "تجوّل في العصور من البعثة حتى اليوم.",
@@ -234,7 +244,7 @@ function HomeFull() {
       },
     });
     return out;
-  }, [campaignSel, todayEvent, stats.recent]);
+  }, [campaignSel, todayEvent, stats.recent, heroBgs]);
 
   // Carousel
   const [slideIdx, setSlideIdx] = useState(0);
