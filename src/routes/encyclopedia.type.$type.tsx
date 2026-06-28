@@ -70,14 +70,21 @@ function TypeBrowsePage() {
     queryKey: ["encyclopedia", "type", type],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("encyclopedia_entities")
-        .select("id,slug,entity_type,title,subtitle,summary,metadata")
-        .eq("enabled", true)
-        .eq("entity_type", type)
-        .order("title");
-      if (error) throw error;
-      return (data ?? []) as SupabaseEncyclopediaEntity[];
+      try {
+        const { data, error } = await supabase
+          .from("encyclopedia_entities")
+          .select("id,slug,entity_type,title,subtitle,summary,metadata")
+          .eq("enabled", true)
+          .eq("entity_type", type)
+          .order("title");
+        if (error) throw error;
+        const rows = (data ?? []) as SupabaseEncyclopediaEntity[];
+        if (rows.length > 0) return rows;
+      } catch (e) {
+        if (typeof console !== "undefined")
+          console.warn("[encyclopedia.type] online fetch failed, using snapshot", e);
+      }
+      return (await cachedEncyclopediaByType(type)) as SupabaseEncyclopediaEntity[];
     },
   });
 
