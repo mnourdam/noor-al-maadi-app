@@ -250,28 +250,51 @@ export function CrosswordRenderer({
     }
   };
 
-  // ---- paid hint: reveal next unrevealed letter of the active clue ----
-  // Predictable behaviour: always the first remaining letter from the start.
-  const revealNextLetter = () => {
-    if (activeClue === null) return;
-    const clue = stage.clues[activeClue];
-    const cells = clueCells(clue);
-    const target = cells.find(({ r, c }) => {
-      const k = cellKey(r, c);
-      const exp = grid.get(k)?.expected;
-      return exp && (entries[k] ?? "") !== exp;
-    });
+  // ---- paid hint: reveal next unrevealed letter ----
+  // Prefer the active clue if it has unrevealed letters; otherwise pick the
+  // first unsolved clue. Never reveals an already visible letter.
+  const findRevealTarget = (): { k: string; ch: string } | null => {
+    const order: number[] = [];
+    if (activeClue !== null) order.push(activeClue);
+    stage.clues.forEach((_, idx) => { if (!order.includes(idx)) order.push(idx); });
+    for (const idx of order) {
+      const cells = clueCells(stage.clues[idx]);
+      const target = cells.find(({ r, c }) => {
+        const k = cellKey(r, c);
+        const exp = grid.get(k)?.expected;
+        return exp && (entries[k] ?? "") !== exp;
+      });
+      if (target) {
+        const k = cellKey(target.r, target.c);
+        return { k, ch: grid.get(k)!.expected };
+      }
+    }
+    return null;
+  };
+
+  const playerDinars = profile?.dinars ?? 0;
+
+  const openHelp = () => {
+    if (done) return;
+    setHelpOpen(true);
+  };
+
+  const requestRevealLetter = () => {
+    setHelpOpen(false);
+    if (done) return;
+    const target = findRevealTarget();
     if (!target) return;
-    if (!onPaidHint || !onPaidHint(HINT_COST)) {
-      setFeedback({ kind: "err", msg: `تحتاج ${HINT_COST} دينارًا لكشف الحرف.` });
+    if (playerDinars < HINT_COST || !onPaidHint || !onPaidHint(HINT_COST)) {
+      setInsufficientOpen(true);
       return;
     }
-    const k = cellKey(target.r, target.c);
-    const ch = grid.get(k)!.expected;
-    setEntries((prev) => ({ ...prev, [k]: ch }));
+    setEntries((prev) => ({ ...prev, [target.k]: target.ch }));
     sfx("ink_write");
-    focusCell(k);
+    sfx("correct");
+    focusCell(target.k);
+    toast.success(`تم كشف حرف مقابل ${HINT_COST} دنانير.`);
   };
+
 
 
   // ---- render ----
