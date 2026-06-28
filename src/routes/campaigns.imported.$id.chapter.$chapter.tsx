@@ -260,7 +260,7 @@ function ImportedChapterPlayer() {
 
         <div className="mx-auto max-w-2xl px-5 pt-4">
           <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold/80">
-            <Scroll className="size-3.5" /> فصل من حملة مستوردة
+            <Scroll className="size-3.5" /> فصل من الحملة
           </div>
           <h1 className="font-display mt-1 text-2xl font-bold shimmer-text">{chapter.title}</h1>
           {chapter.subtitle && <p className="mt-1 text-sm text-gold/80">{chapter.subtitle}</p>}
