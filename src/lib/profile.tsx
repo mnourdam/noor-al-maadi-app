@@ -531,13 +531,21 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
 
       if (typeof stats.hearts === "number") {
+        // The server stores only the last *committed* hearts value — it has
+        // no notion of elapsed-time regeneration. Compare against the local
+        // committed `p.hearts` (NOT the effective regen-aware value); if
+        // they match, the server is just echoing what we already have and
+        // we MUST preserve the local `heartsAt` anchor so an in-flight
+        // regeneration timer keeps ticking across launches and realtime
+        // syncs. Only apply a true admin-side change.
         const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
-        const eff = getEffectiveHearts(p, now);
-        if (target !== eff) {
+        const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
+        if (target !== localCommitted) {
           next = { ...next, ...commitHearts(p, target, now) };
           changed = true;
         }
       }
+
       return changed ? next : p;
     }),
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
