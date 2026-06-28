@@ -18,6 +18,7 @@
  */
 import { loadBundledSnapshot } from "./offline-snapshot";
 import { loadSnapshot, type OfflineSnapshot } from "./offline-storage";
+import { normalizeArabicName } from "./arabic-normalize";
 
 type Row = Record<string, any>;
 
