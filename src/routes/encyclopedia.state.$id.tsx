@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import { cachedEncyclopediaBySlug, cachedEncyclopediaList } from "@/lib/offline-fallback";
 
 const SECTION_LABELS: Record<string, string> = {
   figure: "الشخصيات",
@@ -58,22 +59,38 @@ function StatePage() {
     queryKey: ["encyclopedia", "state", id],
     staleTime: 60_000,
     queryFn: async () => {
-      const bySlug = await supabase
-        .from("encyclopedia_entities")
-        .select("*")
-        .eq("enabled", true)
-        .eq("entity_type", "state")
-        .eq("slug", id)
-        .maybeSingle();
-      if (bySlug.data) return bySlug.data as SupabaseEncyclopediaEntity;
-      const byEra = await supabase
-        .from("encyclopedia_entities")
-        .select("*")
-        .eq("enabled", true)
-        .eq("entity_type", "state")
-        .contains("metadata", { era: id })
-        .limit(1);
-      return ((byEra.data ?? [])[0] ?? null) as SupabaseEncyclopediaEntity | null;
+      try {
+        const bySlug = await supabase
+          .from("encyclopedia_entities")
+          .select("*")
+          .eq("enabled", true)
+          .eq("entity_type", "state")
+          .eq("slug", id)
+          .maybeSingle();
+        if (bySlug.data) return bySlug.data as SupabaseEncyclopediaEntity;
+        const byEra = await supabase
+          .from("encyclopedia_entities")
+          .select("*")
+          .eq("enabled", true)
+          .eq("entity_type", "state")
+          .contains("metadata", { era: id })
+          .limit(1);
+        const row = ((byEra.data ?? [])[0] ?? null) as SupabaseEncyclopediaEntity | null;
+        if (row) return row;
+      } catch (e) {
+        if (typeof console !== "undefined")
+          console.warn("[encyclopedia.state] online fetch failed, using snapshot", e);
+      }
+      // Offline fallback: by slug, then by metadata.era.
+      const bySlug = await cachedEncyclopediaBySlug(id, "state");
+      if (bySlug) return bySlug as SupabaseEncyclopediaEntity;
+      const all = await cachedEncyclopediaList();
+      return (all.find(
+        (r) =>
+          r?.enabled !== false &&
+          r?.entity_type === "state" &&
+          (r as any)?.metadata?.era === id,
+      ) ?? null) as SupabaseEncyclopediaEntity | null;
     },
   });
 
@@ -85,14 +102,27 @@ function StatePage() {
     enabled: !!era,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("encyclopedia_entities")
-        .select("id,slug,entity_type,title,subtitle,summary,metadata")
-        .eq("enabled", true)
-        .contains("metadata", { era })
-        .neq("entity_type", "state");
-      if (error) throw error;
-      return (data ?? []) as SupabaseEncyclopediaEntity[];
+      try {
+        const { data, error } = await supabase
+          .from("encyclopedia_entities")
+          .select("id,slug,entity_type,title,subtitle,summary,metadata")
+          .eq("enabled", true)
+          .contains("metadata", { era })
+          .neq("entity_type", "state");
+        if (error) throw error;
+        const rows = (data ?? []) as SupabaseEncyclopediaEntity[];
+        if (rows.length > 0) return rows;
+      } catch (e) {
+        if (typeof console !== "undefined")
+          console.warn("[encyclopedia.state-related] using snapshot", e);
+      }
+      const all = await cachedEncyclopediaList();
+      return all.filter(
+        (r) =>
+          r?.enabled !== false &&
+          r?.entity_type !== "state" &&
+          (r as any)?.metadata?.era === era,
+      ) as SupabaseEncyclopediaEntity[];
     },
   });
 
