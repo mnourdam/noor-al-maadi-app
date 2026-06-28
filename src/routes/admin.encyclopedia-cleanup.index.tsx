@@ -517,7 +517,7 @@ function CleanupWorkshop() {
   };
 
   // ------------------------------------------------------------
-  // Archive
+  // Archive — hide from players, keep restorable
   // ------------------------------------------------------------
   const archiveEntity = async (r: EntityRow) => {
     if (!confirm(`أرشفة «${r.title}»؟ لن تظهر للزوّار لكنها قابلة للاستعادة.`)) return;
@@ -533,6 +533,31 @@ function CleanupWorkshop() {
     } catch (e: any) { setToast("فشل: " + (e?.message || e)); }
     finally { setBusy(null); }
   };
+
+  // ------------------------------------------------------------
+  // Approve — restore an archived/redirected entity to live state
+  // ------------------------------------------------------------
+  const approveEntity = async (r: EntityRow) => {
+    setBusy(r.id);
+    try {
+      const meta: any = { ...(r.metadata || {}) };
+      delete meta.archived;
+      delete meta.archived_at;
+      delete meta.hidden_duplicate;
+      delete meta.hidden_at;
+      delete meta.canonical_id;
+      delete meta.canonical_slug;
+      meta.canonical = true;
+      const { error } = await supabase.from("encyclopedia_entities" as any)
+        .update({ metadata: meta, enabled: true }).eq("id", r.id);
+      if (error) throw error;
+      await logAudit("encyclopedia.approve", { id: r.id, slug: r.slug });
+      setToast("تم الاعتماد — الكيان ظاهر للاعبين");
+      await refresh();
+    } catch (e: any) { setToast("فشل الاعتماد: " + (e?.message || e)); }
+    finally { setBusy(null); }
+  };
+
 
   // ------------------------------------------------------------
   // Delete (only if no references)
