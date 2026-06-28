@@ -198,17 +198,20 @@ function HomeFull() {
     }
     if (todayEvent) {
       const yr = todayEvent.hijri_year ? `${todayEvent.hijri_year} هـ` : (todayEvent.gregorian_year ? `${todayEvent.gregorian_year} م` : "في مثل هذا اليوم");
+      const hasLink = !!todayEvent.deep_link;
       out.push({
         kind: "history",
         bg: heroManuscriptLamp,
         eyebrow: `في مثل هذا اليوم · ${yr}`,
         title: todayEvent.title,
         subtitle: todayEvent.body,
-        cta: { label: "اقرأ القصة", link:
-          <Link to={(todayEvent.deep_link ?? "/on-this-day") as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
-            <BookOpen className="size-4" />اقرأ القصة
-          </Link>,
-        },
+        cta: hasLink
+          ? { label: "اقرأ القصة", link:
+              <Link to={todayEvent.deep_link as "/"} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
+                <BookOpen className="size-4" />اقرأ القصة
+              </Link>,
+            }
+          : undefined,
       });
     }
     if (stats.recent.length > 0) {
