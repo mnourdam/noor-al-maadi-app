@@ -106,7 +106,9 @@ function EntityPage() {
       const local = (isUuid(id)
         ? localEncyclopediaById(id)
         : localEncyclopediaBySlug(id)) as SupabaseEncyclopediaEntity | null;
-      return local ?? undefined;
+      if (!local) return undefined;
+      const canon = resolveCanonicalLocal(local as any) as SupabaseEncyclopediaEntity | null;
+      return canon ?? local;
     },
     initialDataUpdatedAt: 0,
     queryFn: async () => {
