@@ -14,6 +14,7 @@ import {
 import { useProfile } from "@/lib/profile";
 import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
 import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS, unreadCount, formatBadgeCount } from "@/lib/notifications";
+import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
 import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
@@ -61,15 +62,32 @@ function HomeFull() {
   const stats = useRealCollectionStats();
   const [unread, setUnread] = useState(0);
   useEffect(() => {
-    const recount = () => setUnread(unreadCount());
-    recount();
-    window.addEventListener("irth:notifications:updated", recount);
-    window.addEventListener("focus", recount);
+    let serverAuthoritative = false;
+    let cancelled = false;
+    const recount = async () => {
+      try {
+        const n = await fetchMyUnreadCount();
+        if (cancelled) return;
+        serverAuthoritative = true;
+        setUnread(n);
+      } catch {
+        if (cancelled) return;
+        if (!serverAuthoritative) setUnread(unreadCount());
+      }
+    };
+    void recount();
+    const unsubRealtime = subscribeToMyNotifications(() => { void recount(); });
+    const onLocal = () => { void recount(); };
+    window.addEventListener("irth:notifications:updated", onLocal);
+    window.addEventListener("focus", onLocal);
     return () => {
-      window.removeEventListener("irth:notifications:updated", recount);
-      window.removeEventListener("focus", recount);
+      cancelled = true;
+      window.removeEventListener("irth:notifications:updated", onLocal);
+      window.removeEventListener("focus", onLocal);
+      unsubRealtime();
     };
   }, []);
+
 
   useEffect(() => {
     setMounted(true);
