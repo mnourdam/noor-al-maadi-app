@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Check, Sparkles, Feather, AlertTriangle, Lightbulb } from "lucide-react";
+import { Check, Sparkles, Feather, AlertTriangle, Lightbulb, HelpCircle, Coins, X } from "lucide-react";
+import { toast } from "sonner";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
@@ -7,6 +8,10 @@ import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
 import { isAndroidNativeApp, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
+import { useProfile } from "@/lib/profile";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 
 
 interface Props {
@@ -94,6 +99,9 @@ export function CrosswordRenderer({
   const [activeClue, setActiveClue] = useState<number | null>(null);
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<null | { kind: "ok" | "err"; msg: string }>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [insufficientOpen, setInsufficientOpen] = useState(false);
+  const { profile } = useProfile();
   const inputsRef = useRef<Record<string, HTMLInputElement | null>>({});
   const clueInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
@@ -242,28 +250,51 @@ export function CrosswordRenderer({
     }
   };
 
-  // ---- paid hint: reveal next unrevealed letter of the active clue ----
-  // Predictable behaviour: always the first remaining letter from the start.
-  const revealNextLetter = () => {
-    if (activeClue === null) return;
-    const clue = stage.clues[activeClue];
-    const cells = clueCells(clue);
-    const target = cells.find(({ r, c }) => {
-      const k = cellKey(r, c);
-      const exp = grid.get(k)?.expected;
-      return exp && (entries[k] ?? "") !== exp;
-    });
+  // ---- paid hint: reveal next unrevealed letter ----
+  // Prefer the active clue if it has unrevealed letters; otherwise pick the
+  // first unsolved clue. Never reveals an already visible letter.
+  const findRevealTarget = (): { k: string; ch: string } | null => {
+    const order: number[] = [];
+    if (activeClue !== null) order.push(activeClue);
+    stage.clues.forEach((_, idx) => { if (!order.includes(idx)) order.push(idx); });
+    for (const idx of order) {
+      const cells = clueCells(stage.clues[idx]);
+      const target = cells.find(({ r, c }) => {
+        const k = cellKey(r, c);
+        const exp = grid.get(k)?.expected;
+        return exp && (entries[k] ?? "") !== exp;
+      });
+      if (target) {
+        const k = cellKey(target.r, target.c);
+        return { k, ch: grid.get(k)!.expected };
+      }
+    }
+    return null;
+  };
+
+  const playerDinars = profile?.dinars ?? 0;
+
+  const openHelp = () => {
+    if (done) return;
+    setHelpOpen(true);
+  };
+
+  const requestRevealLetter = () => {
+    setHelpOpen(false);
+    if (done) return;
+    const target = findRevealTarget();
     if (!target) return;
-    if (!onPaidHint || !onPaidHint(HINT_COST)) {
-      setFeedback({ kind: "err", msg: `تحتاج ${HINT_COST} دينارًا لكشف الحرف.` });
+    if (playerDinars < HINT_COST || !onPaidHint || !onPaidHint(HINT_COST)) {
+      setInsufficientOpen(true);
       return;
     }
-    const k = cellKey(target.r, target.c);
-    const ch = grid.get(k)!.expected;
-    setEntries((prev) => ({ ...prev, [k]: ch }));
+    setEntries((prev) => ({ ...prev, [target.k]: target.ch }));
     sfx("ink_write");
-    focusCell(k);
+    sfx("correct");
+    focusCell(target.k);
+    toast.success(`تم كشف حرف مقابل ${HINT_COST} دنانير.`);
   };
+
 
 
   // ---- render ----
@@ -305,28 +336,26 @@ export function CrosswordRenderer({
           <span className="text-slate-400 text-[11px]">
             {filledCells}/{totalCells} خانة
           </span>
+          <button
+            type="button"
+            onClick={openHelp}
+            disabled={done}
+            aria-label="مساعدة"
+            title="مساعدة"
+            className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-gradient-to-b from-amber-500/25 to-amber-600/10 px-3 py-1.5 text-[11px] font-bold text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.15)_inset] transition hover:from-amber-500/35 hover:to-amber-600/20 disabled:opacity-40"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+            مساعدة
+          </button>
         </span>
       </div>
 
       {activeClue !== null && (
-        <div className="mb-3 flex items-start justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
-          <div className="flex-1">
-            <span className="text-[11px] uppercase tracking-[0.25em] text-amber-300/80">
-              {stage.clues[activeClue].direction === "across" ? "أفقي" : "عمودي"} · {stage.clues[activeClue].number}
-            </span>
-            <p className="mt-1 leading-7">{stage.clues[activeClue].hint}</p>
-          </div>
-          <button
-            type="button"
-            onClick={revealNextLetter}
-            disabled={done}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-400/50 bg-amber-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-amber-100 transition hover:bg-amber-500/25 disabled:opacity-40"
-            aria-label="كشف الحرف التالي"
-            title="يكشف أوّل حرف غير مكتشف من بداية الإجابة."
-          >
-            <Lightbulb className="h-3.5 w-3.5" />
-            كشف الحرف ({HINT_COST} دينار)
-          </button>
+        <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+          <span className="text-[11px] uppercase tracking-[0.25em] text-amber-300/80">
+            {stage.clues[activeClue].direction === "across" ? "أفقي" : "عمودي"} · {stage.clues[activeClue].number}
+          </span>
+          <p className="mt-1 leading-7">{stage.clues[activeClue].hint}</p>
         </div>
       )}
 
@@ -438,6 +467,68 @@ export function CrosswordRenderer({
           </span>
         )}
       </div>
+
+      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+        <DialogContent dir="rtl" className="max-w-sm border-amber-500/30 bg-gradient-to-b from-slate-950 to-slate-900 text-amber-50">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-200">
+              <HelpCircle className="h-5 w-5 text-amber-300" />
+              المساعدة
+            </DialogTitle>
+            <DialogDescription className="text-amber-100/80 leading-7">
+              يمكنك كشف حرف واحد مقابل {HINT_COST} دنانير.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90">
+            <span className="inline-flex items-center gap-1.5">
+              <Coins className="h-3.5 w-3.5 text-amber-300" />
+              رصيدك
+            </span>
+            <span className="font-bold">{playerDinars} دينار</span>
+          </div>
+          <DialogFooter className="mt-3 flex-col gap-2 sm:flex-row-reverse sm:justify-start">
+            <button
+              type="button"
+              onClick={requestRevealLetter}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 sm:w-auto"
+            >
+              <Lightbulb className="h-4 w-4" />
+              كشف حرف ({HINT_COST} دنانير)
+            </button>
+            <button
+              type="button"
+              onClick={() => setHelpOpen(false)}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-transparent px-4 py-2.5 text-sm font-semibold text-amber-100 transition hover:bg-amber-500/10 sm:w-auto"
+            >
+              <X className="h-4 w-4" />
+              إلغاء
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={insufficientOpen} onOpenChange={setInsufficientOpen}>
+        <DialogContent dir="rtl" className="max-w-sm border-amber-500/30 bg-gradient-to-b from-slate-950 to-slate-900 text-amber-50">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-200">
+              <Coins className="h-5 w-5 text-amber-300" />
+              لا توجد دنانير كافية
+            </DialogTitle>
+            <DialogDescription className="text-amber-100/80 leading-7">
+              تحتاج إلى {HINT_COST} دنانير لكشف حرف واحد.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-3">
+            <button
+              type="button"
+              onClick={() => setInsufficientOpen(false)}
+              className="inline-flex w-full items-center justify-center rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400"
+            >
+              حسنًا
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
