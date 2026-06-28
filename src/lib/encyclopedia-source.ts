@@ -215,6 +215,12 @@ export function useEncyclopediaCanonicalEntity(
     enabled: !!slug,
     staleTime: 60_000,
     retry: 1,
+    initialData: () => {
+      const cands = localEncyclopediaSlugCandidates(slug) as SupabaseEncyclopediaEntity[];
+      const picked = pickCanonicalEntity(cands, hintedType ?? null);
+      return picked ?? undefined;
+    },
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
       try {
         const candidates: SupabaseEncyclopediaEntity[] = [];
