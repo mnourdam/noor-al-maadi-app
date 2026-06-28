@@ -57,6 +57,7 @@ function indexEncyclopedia(rows: Row[]) {
   encyclopediaByType.clear();
   encyclopediaByAlias.clear();
   encyclopediaByLegacyId.clear();
+  encyclopediaByNormName.clear();
   encyclopediaAll = rows.filter((r) => r && r.enabled !== false);
   for (const r of encyclopediaAll) {
     if (r.id) encyclopediaById.set(r.id, r);
@@ -70,6 +71,15 @@ function indexEncyclopedia(rows: Row[]) {
       const list = encyclopediaByType.get(r.entity_type) ?? [];
       list.push(r);
       encyclopediaByType.set(r.entity_type, list);
+    }
+    // Normalized-name index (same-historical-entity grouping).
+    if (r.entity_type && typeof r.title === "string" && r.title.trim().length > 0) {
+      const key = `${r.entity_type}::${normalizeArabicName(r.title)}`;
+      if (!key.endsWith("::")) {
+        const list = encyclopediaByNormName.get(key) ?? [];
+        list.push(r);
+        encyclopediaByNormName.set(key, list);
+      }
     }
     const meta = r.metadata as Record<string, any> | null | undefined;
     if (meta && typeof meta === "object") {
