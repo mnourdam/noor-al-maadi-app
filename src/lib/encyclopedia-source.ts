@@ -19,6 +19,12 @@ import {
   cachedEncyclopediaBySlug,
   cachedEncyclopediaByType,
 } from "./offline-fallback";
+import {
+  localEncyclopediaById,
+  localEncyclopediaBySlug,
+  localEncyclopediaByType,
+  localEncyclopediaSlugCandidates,
+} from "./local-first-store";
 
 export type SupabaseEncyclopediaEntity = {
   id: string;
