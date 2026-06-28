@@ -44,16 +44,30 @@ export async function fetchTodayInHistory(
   date: Date = new Date(),
 ): Promise<{ selected: TodayInHistoryEvent | null; others: TodayInHistoryEvent[] }> {
   const { month, day } = todayMonthDay(date);
-  const { data, error } = await supabase
-    .from("today_in_history_events" as any)
-    .select("*")
-    .eq("enabled", true)
-    .eq("month", month)
-    .eq("day", day)
-    .order("created_at", { ascending: true });
-  if (error || !data || data.length === 0) return { selected: null, others: [] };
-  const rows = data as unknown as TodayInHistoryEvent[];
-  return { selected: rows[0], others: rows.slice(1) };
+  // Local-first: read today's events from the bundled offline snapshot
+  // so the card works without network. Refresh from Supabase only when the
+  // snapshot has nothing for this date.
+  try {
+    const { ensureLocalSnapshotLoaded, localTihForMonthDay } = await import("./local-first-store");
+    await ensureLocalSnapshotLoaded();
+    const local = localTihForMonthDay(month, day) as unknown as TodayInHistoryEvent[];
+    if (local.length > 0) return { selected: local[0], others: local.slice(1) };
+  } catch { /* ignore */ }
+
+  try {
+    const { data, error } = await supabase
+      .from("today_in_history_events" as any)
+      .select("*")
+      .eq("enabled", true)
+      .eq("month", month)
+      .eq("day", day)
+      .order("created_at", { ascending: true });
+    if (error || !data || data.length === 0) return { selected: null, others: [] };
+    const rows = data as unknown as TodayInHistoryEvent[];
+    return { selected: rows[0], others: rows.slice(1) };
+  } catch {
+    return { selected: null, others: [] };
+  }
 }
 
 /** React hook wrapping fetchTodayInHistory. */
