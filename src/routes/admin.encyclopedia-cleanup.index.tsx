@@ -760,9 +760,10 @@ function CleanupWorkshop() {
 // ------------------------------------------------------------
 // Header
 // ------------------------------------------------------------
-function Header({ onRefresh, onExport, loading, rowCount, dupCount }: {
-  onRefresh: () => void; onExport: () => void; loading: boolean;
-  rowCount: number; dupCount: number;
+function Header({ onRefresh, onExport, onExportFullJson, onExportFullCsv, loading, rowCount, dupCount }: {
+  onRefresh: () => void; onExport: () => void;
+  onExportFullJson: () => void; onExportFullCsv: () => void;
+  loading: boolean; rowCount: number; dupCount: number;
 }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-500/20 pb-4">
@@ -776,10 +777,21 @@ function Header({ onRefresh, onExport, loading, rowCount, dupCount }: {
           </p>
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
+        <button onClick={onExportFullJson} disabled={loading || rowCount === 0}
+          title="تصدير الدفعة الكاملة (كل الكيانات، مجمّعة حسب الفئة) كملف JSON"
+          className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50">
+          <Download className="size-3.5" /> تصدير JSON شامل
+        </button>
+        <button onClick={onExportFullCsv} disabled={loading || rowCount === 0}
+          title="تصدير الدفعة الكاملة كملف CSV (صف لكل كيان × فئة)"
+          className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50">
+          <Download className="size-3.5" /> تصدير CSV شامل
+        </button>
         <button onClick={onExport}
+          title="تصدير النتائج الظاهرة فقط (بعد الفلترة)"
           className="inline-flex items-center gap-1.5 rounded-md border border-slate-600/50 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800/60">
-          <Download className="size-3.5" /> تصدير CSV
+          <Download className="size-3.5" /> تصدير النتائج المعروضة
         </button>
         <button onClick={onRefresh} disabled={loading}
           className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/20 disabled:opacity-50">
