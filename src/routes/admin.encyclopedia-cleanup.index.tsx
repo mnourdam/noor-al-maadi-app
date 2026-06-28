@@ -909,10 +909,11 @@ function Chip({ children, tone }: { children: React.ReactNode; tone?: "ok" | "wa
 // ------------------------------------------------------------
 // Editor (JSON pane + structured controls)
 // ------------------------------------------------------------
-function Editor({ row, busy, onSave, onArchive, onDelete, onOpenMerge, duplicates, atlasCount, campaignCount }: {
-  row: EntityRow; busy: boolean;
+function Editor({ row, allRows, busy, onSave, onArchive, onDelete, onOpenMerge, onJumpTo, duplicates, atlasCount, campaignCount }: {
+  row: EntityRow; allRows: EntityRow[]; busy: boolean;
   onSave: (patch: Partial<EntityRow>) => void;
   onArchive: () => void; onDelete: () => void; onOpenMerge: () => void;
+  onJumpTo: (id: string) => void;
   duplicates: EntityRow[]; atlasCount: number; campaignCount: number;
 }) {
   const [title, setTitle] = useState(row.title);
