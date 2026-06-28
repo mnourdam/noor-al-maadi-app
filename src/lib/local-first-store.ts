@@ -177,18 +177,19 @@ export function isLocalReady(): boolean { return _ready; }
 function richnessScore(e: Row | null | undefined): number {
   if (!e) return -1;
   let s = 0;
-  const b = e.body as Record<string, unknown> | null | undefined;
+  const b = e.body as unknown;
   if (b && typeof b === "object") {
-    if (Array.isArray((b as any).sections)) s += (b as any).sections.length * 4;
-    if (Array.isArray((b as any).timeline)) s += (b as any).timeline.length * 3;
-    if (Array.isArray((b as any).facts)) s += (b as any).facts.length;
-    if (Array.isArray((b as any).sources)) s += (b as any).sources.length;
-    if (typeof (b as any).overview === "string")
-      s += Math.min(5, Math.floor(((b as any).overview as string).length / 200));
-    if (typeof (b as any).introduction === "string")
-      s += Math.min(5, Math.floor(((b as any).introduction as string).length / 200));
-  } else if (typeof b === "string" && b.length > 20) {
-    s += Math.min(10, Math.floor(b.length / 200));
+    const bb = b as Record<string, unknown>;
+    if (Array.isArray(bb.sections)) s += (bb.sections as unknown[]).length * 4;
+    if (Array.isArray(bb.timeline)) s += (bb.timeline as unknown[]).length * 3;
+    if (Array.isArray(bb.facts)) s += (bb.facts as unknown[]).length;
+    if (Array.isArray(bb.sources)) s += (bb.sources as unknown[]).length;
+    if (typeof bb.overview === "string")
+      s += Math.min(5, Math.floor((bb.overview as string).length / 200));
+    if (typeof bb.introduction === "string")
+      s += Math.min(5, Math.floor((bb.introduction as string).length / 200));
+  } else if (typeof b === "string" && (b as string).length > 20) {
+    s += Math.min(10, Math.floor((b as string).length / 200));
   }
   if (typeof e.summary === "string" && e.summary.trim().length > 0) s += 1;
   if (typeof e.subtitle === "string" && e.subtitle.trim().length > 0) s += 1;
