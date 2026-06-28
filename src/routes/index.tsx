@@ -564,9 +564,11 @@ function HomeFull() {
                     <span className="text-[11px] text-white/70">{slide.progress.done}/{slide.progress.total} فصل</span>
                   </div>
                 )}
-                <div className="mt-6 flex items-center gap-3">
-                  {slide.cta.link}
-                </div>
+                {slide.cta && (
+                  <div className="mt-6 flex items-center gap-3">
+                    {slide.cta.link}
+                  </div>
+                )}
               </div>
             )}
             {!slide && (
