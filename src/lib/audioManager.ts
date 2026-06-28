@@ -10,11 +10,14 @@ import { androidMark, isAndroidNativeApp, isAndroidUltraStableMode } from "./and
 // - Fails silently if audio files are missing
 // ============================================================
 
+import errorSfxAsset from "@/assets/audio-error.mp3.asset.json";
+
 export type SfxName =
   | "success"
   | "chapter-complete"
   | "campaign-complete"
-  | "unlock-reward";
+  | "unlock-reward"
+  | "error";
 
 export interface AudioSettings {
   soundEnabled: boolean;
@@ -42,7 +45,15 @@ const SFX_URLS: Record<SfxName, string> = {
   "chapter-complete":   "/audio/chapter-complete.mp3",
   "campaign-complete":  "/audio/campaign-complete.mp3",
   "unlock-reward":      "/audio/unlock-reward.mp3",
+  "error":              errorSfxAsset.url,
 };
+
+// Per-SFX volume trim so a new asset can be mixed to match the perceived
+// loudness of the existing UI sounds without changing global settings.
+const SFX_VOLUME_SCALE: Partial<Record<SfxName, number>> = {
+  error: 0.7,
+};
+
 
 // ---------- Settings persistence ----------
 function readSettings(): AudioSettings {
