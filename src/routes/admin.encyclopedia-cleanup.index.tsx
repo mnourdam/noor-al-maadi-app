@@ -25,8 +25,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle, Archive, ArrowUpRight, BookOpen, CheckCircle2, Copy, Download, Eye,
-  FileWarning, Filter, GitMerge, Loader2, Pencil, RefreshCw, Save,
+  AlertTriangle, Archive, ArrowUpRight, BookOpen, CheckCircle2, Copy, CornerDownRight,
+  Download, Eye, FileWarning, Filter, GitMerge, Loader2, Pencil, RefreshCw, Save,
   Search, Shield, Sparkles, Trash2, X,
 } from "lucide-react";
 import { EncyclopediaEntityPreview } from "@/components/admin/EncyclopediaEntityPreview";
