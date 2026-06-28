@@ -152,8 +152,12 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
 export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   const snap = await generateSnapshot();
   await saveSnapshot(snap);
-  // Best-effort: in dev sandboxes the server-fn writes public/offline-snapshot.json.
-  // In production this throws and we silently ignore.
+  // Keep the in-memory local-first index in sync with the freshly persisted
+  // snapshot so subsequent route reads see the new content immediately.
+  try {
+    const { applyLocalSnapshot } = await import("./local-first-store");
+    applyLocalSnapshot(snap);
+  } catch { /* ignore */ }
   if (import.meta.env.DEV && typeof window === "undefined") {
     try {
       const { writeBundledSnapshotFile } = await import("./offline-snapshot-write.functions");
