@@ -315,6 +315,12 @@ export function useEncyclopediaSupabaseEntityBySlug(rawId: string) {
     enabled: !!slug,
     staleTime: 60_000,
     retry: 1,
+    initialData: () => {
+      const cands = localEncyclopediaSlugCandidates(slug) as SupabaseEncyclopediaEntity[];
+      const picked = pickCanonicalEntity(cands);
+      return picked ?? undefined;
+    },
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
       try {
         const { data, error } = await supabase
