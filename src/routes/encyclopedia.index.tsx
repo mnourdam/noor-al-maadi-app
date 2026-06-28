@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
-import { BackLink } from "@/components/BackLink";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
