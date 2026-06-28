@@ -61,15 +61,32 @@ function HomeFull() {
   const stats = useRealCollectionStats();
   const [unread, setUnread] = useState(0);
   useEffect(() => {
-    const recount = () => setUnread(unreadCount());
-    recount();
-    window.addEventListener("irth:notifications:updated", recount);
-    window.addEventListener("focus", recount);
+    let serverAuthoritative = false;
+    let cancelled = false;
+    const recount = async () => {
+      try {
+        const n = await fetchMyUnreadCount();
+        if (cancelled) return;
+        serverAuthoritative = true;
+        setUnread(n);
+      } catch {
+        if (cancelled) return;
+        if (!serverAuthoritative) setUnread(unreadCount());
+      }
+    };
+    void recount();
+    const unsubRealtime = subscribeToMyNotifications(() => { void recount(); });
+    const onLocal = () => { void recount(); };
+    window.addEventListener("irth:notifications:updated", onLocal);
+    window.addEventListener("focus", onLocal);
     return () => {
-      window.removeEventListener("irth:notifications:updated", recount);
-      window.removeEventListener("focus", recount);
+      cancelled = true;
+      window.removeEventListener("irth:notifications:updated", onLocal);
+      window.removeEventListener("focus", onLocal);
+      unsubRealtime();
     };
   }, []);
+
 
   useEffect(() => {
     setMounted(true);
