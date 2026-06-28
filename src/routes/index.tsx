@@ -1049,41 +1049,54 @@ function WorldsHomepageSection() {
 
 // ----- Today in History card -----
 function OnThisDayCalendarCard({ event }: { event: TodayInHistoryEvent }) {
-  const href = event.deep_link ?? "/on-this-day";
+  const href = event.deep_link ?? null;
   const yearBits: string[] = [];
   if (event.hijri_year) yearBits.push(`${event.hijri_year} هـ`);
   if (event.gregorian_year) yearBits.push(`${event.gregorian_year} م`);
-  return (
-    <section className="mt-12 px-5">
-      <SectionHeader icon={<Calendar className="size-3.5" />} eyebrow="في مثل هذا اليوم" title="حدث من تاريخنا" />
-      <Link
-        to={href as "/"}
-        className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark transition hover:border-gold/60"
-      >
-        <div className="relative h-32 w-full overflow-hidden">
-          <img src={heroManuscriptLamp} alt="" loading="lazy" decoding="async" className="size-full object-cover opacity-50" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-surface" />
+  const inner = (
+    <>
+      <div className="relative h-32 w-full overflow-hidden">
+        <img src={heroManuscriptLamp} alt="" loading="lazy" decoding="async" className="size-full object-cover opacity-50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-surface" />
+      </div>
+      <div className="arabesque-layer opacity-50" />
+      <div className="absolute -left-10 -top-10 size-32 rounded-full bg-gold/15 blur-3xl" />
+      <div className="relative flex gap-4 p-5 pt-0 -mt-10">
+        <div className="shrink-0 rounded-2xl border border-gold/40 bg-black/60 px-3 py-2 text-center backdrop-blur-sm">
+          <div className="text-[9px] tracking-[0.2em] text-gold/80">يوم</div>
+          <div className="font-display text-2xl font-bold text-gold leading-none mt-1">{new Date().getDate()}</div>
+          <div className="text-[9px] text-white/55 mt-1">{new Date().toLocaleDateString("ar", { month: "short" })}</div>
         </div>
-        <div className="arabesque-layer opacity-50" />
-        <div className="absolute -left-10 -top-10 size-32 rounded-full bg-gold/15 blur-3xl" />
-        <div className="relative flex gap-4 p-5 pt-0 -mt-10">
-          <div className="shrink-0 rounded-2xl border border-gold/40 bg-black/60 px-3 py-2 text-center backdrop-blur-sm">
-            <div className="text-[9px] tracking-[0.2em] text-gold/80">يوم</div>
-            <div className="font-display text-2xl font-bold text-gold leading-none mt-1">{new Date().getDate()}</div>
-            <div className="text-[9px] text-white/55 mt-1">{new Date().toLocaleDateString("ar", { month: "short" })}</div>
-          </div>
-          <div className="min-w-0 flex-1 pt-1">
-            {yearBits.length > 0 && (
-              <p className="text-[10px] tracking-[0.25em] text-gold">{yearBits.join(" · ")}</p>
-            )}
-            <h3 className="font-display mt-1 text-base font-bold leading-snug">{event.title}</h3>
-            <p className="mt-2 line-clamp-3 text-[12px] text-white/65 leading-relaxed">{event.body}</p>
+        <div className="min-w-0 flex-1 pt-1">
+          {yearBits.length > 0 && (
+            <p className="text-[10px] tracking-[0.25em] text-gold">{yearBits.join(" · ")}</p>
+          )}
+          <h3 className="font-display mt-1 text-base font-bold leading-snug">{event.title}</h3>
+          <p className="mt-2 line-clamp-3 text-[12px] text-white/65 leading-relaxed">{event.body}</p>
+          {href && (
             <div className="mt-3 flex items-center justify-end text-[11px]">
               <span className="flex items-center gap-1 text-gold">اقرأ المزيد <ChevronLeft className="size-3" /></span>
             </div>
-          </div>
+          )}
         </div>
-      </Link>
+      </div>
+    </>
+  );
+  return (
+    <section className="mt-12 px-5">
+      <SectionHeader icon={<Calendar className="size-3.5" />} eyebrow="في مثل هذا اليوم" title="حدث من تاريخنا" />
+      {href ? (
+        <Link
+          to={href as "/"}
+          className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark transition hover:border-gold/60"
+        >
+          {inner}
+        </Link>
+      ) : (
+        <div className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark">
+          {inner}
+        </div>
+      )}
     </section>
   );
 }
