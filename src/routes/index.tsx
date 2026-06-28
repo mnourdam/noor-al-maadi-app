@@ -46,7 +46,7 @@ export const Route = createFileRoute("/")({
 // ============================================================
 type HeroSlide =
   | { kind: "campaign"; bg: string; eyebrow: string; title: string; subtitle: string; quote?: string; progress?: { done: number; total: number }; cta: { label: string; link: React.ReactNode } }
-  | { kind: "history"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } }
+  | { kind: "history"; bg: string; eyebrow: string; title: string; subtitle: string; cta?: { label: string; link: React.ReactNode } }
   | { kind: "discovery"; bg: string; eyebrow: string; title: string; subtitle: string; icon: string; cta: { label: string; link: React.ReactNode } }
   | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
 
