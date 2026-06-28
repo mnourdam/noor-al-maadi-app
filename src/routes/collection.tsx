@@ -515,7 +515,12 @@ function CollectionPage() {
   return (
     <AppShell>
       <div className="px-5 pt-6">
-        <BackLink to="/" label="الرئيسية" />
+        <Breadcrumbs
+          items={[
+            { label: "الرئيسية", to: "/" },
+            { label: "المتحف" },
+          ]}
+        />
       </div>
       <Screen title="المتحف">
         {/* ── Cinematic Museum Hero ───────────────────────────── */}
