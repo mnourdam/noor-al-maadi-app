@@ -274,14 +274,22 @@ Deno.serve(async (req) => {
       } else {
         failed++;
         console.warn(`[send-notification] token failed: ${result.error}`);
+        // Auto-disable permanently-invalid tokens so they don't keep failing.
+        if (
+          result.error &&
+          (result.error.includes("UNREGISTERED") ||
+            result.error.includes("INVALID_ARGUMENT") ||
+            result.error.includes("registration-token-not-registered"))
+        ) {
+          await admin.from("device_tokens").update({ enabled: false }).eq("token", row.token);
+        }
       }
     }
 
-    const finalStatus = sent > 0 ? "sent" : "failed";
-    await admin
-      .from("notifications")
-      .update({ status: finalStatus, sent_at: new Date().toISOString() })
-      .eq("id", notif.id);
+    // notification.status was already set to 'sent' on insert — push is
+    // best-effort and must not flip the row back to 'failed', otherwise the
+    // recipient loses the in-app banner / bell badge / center entry.
+
 
     console.log(`[send-notification] done notif=${notif.id} sent=${sent} failed=${failed}`);
 
