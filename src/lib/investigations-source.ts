@@ -57,7 +57,7 @@ export function countQuestions(steps: InvestigationStep[]): number {
   return steps.filter((s) => s.type === "question" || s.type === "decision").length;
 }
 
-/** Hook: enabled investigations list (Supabase). */
+/** Hook: enabled investigations list — local-first, network refresh. */
 export function useSupabaseInvestigations() {
   const [rows, setRows] = useState<InvestigationRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,28 +65,41 @@ export function useSupabaseInvestigations() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("investigations" as any)
-        .select("*")
-        .eq("enabled", true)
-        .order("updated_at", { ascending: false });
-      if (cancelled) return;
-      if (error) {
-        setError(error.message);
-        setRows([]);
-        return;
+      try {
+        const { ensureLocalSnapshotLoaded, localInvestigations } = await import("./local-first-store");
+        await ensureLocalSnapshotLoaded();
+        const local = localInvestigations() as unknown as InvestigationRow[];
+        if (!cancelled && local.length > 0) setRows(local);
+      } catch { /* ignore */ }
+
+      try {
+        const { data, error } = await supabase
+          .from("investigations" as any)
+          .select("*")
+          .eq("enabled", true)
+          .order("updated_at", { ascending: false });
+        if (cancelled) return;
+        if (error) {
+          // Keep any local rows already set; only surface the error when we have nothing.
+          setRows((prev) => prev ?? []);
+          if (!rows) setError(error.message);
+          return;
+        }
+        setRows((data ?? []) as unknown as InvestigationRow[]);
+      } catch {
+        setRows((prev) => prev ?? []);
       }
-      setRows((data ?? []) as unknown as InvestigationRow[]);
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { rows, error };
 }
 
-/** Hook: fetch single investigation by slug. */
+/** Hook: fetch single investigation by slug — local-first, network refresh. */
 export function useSupabaseInvestigation(slug: string | undefined) {
   const [row, setRow] = useState<InvestigationRow | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -98,22 +111,35 @@ export function useSupabaseInvestigation(slug: string | undefined) {
     }
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("investigations" as any)
-        .select("*")
-        .eq("slug", slug)
-        .maybeSingle();
-      if (cancelled) return;
-      if (error) {
-        setError(error.message);
-        setRow(null);
-        return;
+      try {
+        const { ensureLocalSnapshotLoaded, localInvestigationBySlug } = await import("./local-first-store");
+        await ensureLocalSnapshotLoaded();
+        const local = localInvestigationBySlug(slug) as unknown as InvestigationRow | null;
+        if (!cancelled && local) setRow(local);
+      } catch { /* ignore */ }
+
+      try {
+        const { data, error } = await supabase
+          .from("investigations" as any)
+          .select("*")
+          .eq("slug", slug)
+          .maybeSingle();
+        if (cancelled) return;
+        if (error) {
+          setRow((prev) => prev ?? null);
+          if (!row) setError(error.message);
+          return;
+        }
+        if (data) setRow(data as unknown as InvestigationRow);
+        else setRow((prev) => prev ?? null);
+      } catch {
+        setRow((prev) => prev ?? null);
       }
-      setRow((data ?? null) as unknown as InvestigationRow | null);
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   return { row, error };
