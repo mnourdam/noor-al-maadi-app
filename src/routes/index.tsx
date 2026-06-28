@@ -30,6 +30,7 @@ import heroFortress from "@/assets/hero-fortress.jpg";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
+import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
 
 export const Route = createFileRoute("/")({
   head: () => ({
