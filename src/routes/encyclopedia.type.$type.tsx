@@ -112,12 +112,13 @@ function TypeBrowsePage() {
   return (
     <AppShell>
       <div className="px-5 pt-8">
-        <Link
-          to="/encyclopedia"
-          className="inline-flex items-center gap-1 text-[11px] text-gold/80 hover:text-gold"
-        >
-          <ChevronRight className="size-3.5" /> الموسوعة
-        </Link>
+        <Breadcrumbs
+          items={[
+            { label: "الرئيسية", to: "/" },
+            { label: "الموسوعة", to: "/encyclopedia" },
+            { label: SECTION_LABELS[type] },
+          ]}
+        />
         <div className="mt-3 flex items-center gap-3">
           <span className="grid size-12 place-items-center rounded-2xl bg-black/35 text-2xl ring-1 ring-white/5">
             {SECTION_GLYPHS[type]}
