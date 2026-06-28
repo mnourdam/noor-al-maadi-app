@@ -222,13 +222,21 @@ function EntityPage() {
         />
 
         <div className="relative px-5 pt-6 pb-12">
-          {/* Back link */}
-          <Link
-            to="/encyclopedia"
-            className="inline-flex items-center gap-1 text-[11px] tracking-[0.18em] text-gold/85 transition hover:text-gold"
-          >
-            <ChevronRight className="size-3.5" /> الموسوعة
-          </Link>
+          {/* Back link — steps up to the entity's type listing
+              (e.g. a figure detail returns to "الشخصيات"), falling back
+              to the encyclopedia root for unmapped types. */}
+          {(() => {
+            const parent = TYPE_PARENT[isScholar ? "scholar" : entity.entity_type];
+            return parent ? (
+              <BackLink
+                to="/encyclopedia/type/$type"
+                params={{ type: parent.typeSlug }}
+                label={parent.label}
+              />
+            ) : (
+              <BackLink to="/encyclopedia" label="الموسوعة" />
+            );
+          })()}
 
           {/* ───────── Cinematic Hero ───────── */}
           <header className="mt-4 relative overflow-hidden rounded-[28px] border border-gold/25 bg-gradient-to-br from-[#1a1f2e] via-[#10131c] to-black p-6 shadow-[0_30px_80px_-40px_rgba(212,175,90,0.45)]">
