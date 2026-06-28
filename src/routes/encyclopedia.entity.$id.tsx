@@ -222,7 +222,7 @@ function EntityPage() {
 
   const chips: { icon: typeof Calendar; label: string }[] = [];
   if (period) chips.push({ icon: ScrollText, label: period });
-  if (era)    chips.push({ icon: Sparkles,   label: era });
+  if (era)    chips.push({ icon: Sparkles,   label: eraLabel(era) });
   if (date)   chips.push({ icon: Calendar,   label: date });
   if (location) chips.push({ icon: MapPin,   label: location });
   if (region) chips.push({ icon: Tag,        label: region });
