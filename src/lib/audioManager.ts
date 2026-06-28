@@ -254,9 +254,10 @@ export const audioManager = {
     }
 
     const url = SFX_URLS[name];
+    const scale = SFX_VOLUME_SCALE[name] ?? 1;
     try {
       const a = new Audio(url);
-      a.volume = settings.masterVolume * settings.sfxVolume;
+      a.volume = Math.max(0, Math.min(1, settings.masterVolume * settings.sfxVolume * scale));
       a.addEventListener("error", () => {
         sfxFailed.add(name);
         warnOnce(`sfx missing or unplayable: ${url}`);
@@ -270,12 +271,20 @@ export const audioManager = {
     }
   },
 
-  /** Play a synthesized error tone (no asset needed). Respects audio settings. */
+  /**
+   * Play the heart-loss / wrong-answer cue. Uses the bundled CDN asset and
+   * falls back to a synthesized tone if the file is unavailable. Deduped so
+   * rapid wrong answers never overlap.
+   */
   playError() {
     if (typeof window === "undefined") return;
     if (isAndroidUltraStableMode()) return;
     if (!settings.soundEnabled || !settings.sfxEnabled) return;
-    playSynthError();
+    if (sfxFailed.has("error")) {
+      playSynthError();
+      return;
+    }
+    audioManager.playSfx("error", { dedupeKey: "sfx:error", dedupeMs: 220 });
   },
 
   /** Cleanup — useful for hot reload / tests. */
@@ -287,3 +296,4 @@ export const audioManager = {
     }
   },
 };
+
