@@ -13,7 +13,7 @@ const tabs = [
   { to: "/campaigns", label: "الحملات", icon: Swords },
   { to: "/encyclopedia", label: "الموسوعة", icon: BookOpen },
   { to: "/map", label: "الخارطة", icon: Map },
-  { to: "/collection", label: "مجموعتي", icon: Library },
+  { to: "/collection", label: "الخزائن", icon: Library },
   { to: "/profile", label: "حسابي", icon: User },
 ] as const;
 
