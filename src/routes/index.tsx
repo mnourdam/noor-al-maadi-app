@@ -98,7 +98,7 @@ function HomeFull() {
     runDailyNotifications({
       prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
       today: todayEvent
-        ? { title: todayEvent.title, teaser: todayEvent.body, href: todayEvent.deep_link ?? "/on-this-day" }
+        ? { title: todayEvent.title, teaser: todayEvent.body, href: "/on-this-day" }
         : null,
       season: {
         name: season.name, tagline: season.tagline,
