@@ -31,6 +31,7 @@ import {
 } from "@/lib/relationship-graph";
 import { buildContextBlocks } from "@/lib/context-blocks";
 import { iconForType } from "@/lib/encyclopedia-icons";
+import { eraLabel } from "@/lib/era-labels";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
