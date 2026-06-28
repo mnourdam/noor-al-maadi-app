@@ -121,10 +121,33 @@ const QUALITY_META: Record<Quality, { label: string; tone: string }> = {
   orphaned:    { label: "يتيم",      tone: "bg-slate-500/10 text-slate-300 border-slate-500/30" },
 };
 
+// Single-badge state, computed per row. Priority: redirect > archive > duplicate > quality > approved.
+type PrimaryState = "redirected" | "archived" | "duplicate" | "empty" | "weak" | "approved";
+
+function primaryState(r: EntityRow, isDup: boolean, quality: Quality): PrimaryState {
+  const meta: any = r.metadata || {};
+  if (typeof meta.canonical_id === "string" && meta.canonical_id) return "redirected";
+  if (meta.archived === true || r.enabled === false) return "archived";
+  if (isDup) return "duplicate";
+  if (quality === "empty") return "empty";
+  if (quality === "weak") return "weak";
+  return "approved";
+}
+
+const STATE_META: Record<PrimaryState, { label: string; tone: string }> = {
+  approved:   { label: "معتمد",       tone: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30" },
+  archived:   { label: "مؤرشف",       tone: "bg-amber-500/10 text-amber-300 border-amber-500/30" },
+  redirected: { label: "محوّل",        tone: "bg-sky-500/10 text-sky-300 border-sky-500/30" },
+  duplicate:  { label: "مكرر محتمل",  tone: "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/30" },
+  empty:      { label: "فارغ",        tone: "bg-rose-500/10 text-rose-300 border-rose-500/30" },
+  weak:       { label: "ضعيف",        tone: "bg-amber-500/10 text-amber-300 border-amber-500/30" },
+};
+
 const TYPE_LABEL: Record<string, string> = {
   figure: "شخصية", city: "مدينة", landmark: "معلم", battle: "معركة",
   event: "حدث", artifact: "أثر", state: "دولة",
 };
+
 
 async function logAudit(action: string, detail: Record<string, unknown>, reason?: string) {
   try {
