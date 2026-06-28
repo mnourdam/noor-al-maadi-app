@@ -305,9 +305,6 @@ function EntityPage() {
                 </div>
               )}
 
-              <span className="mt-4 inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
-                <Database className="size-2.5" /> أرشيف موثّق
-              </span>
             </div>
           </header>
 
