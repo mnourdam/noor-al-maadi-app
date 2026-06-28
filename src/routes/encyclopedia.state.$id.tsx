@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import { cachedEncyclopediaBySlug, cachedEncyclopediaList } from "@/lib/offline-fallback";
 
 const SECTION_LABELS: Record<string, string> = {
   figure: "الشخصيات",
