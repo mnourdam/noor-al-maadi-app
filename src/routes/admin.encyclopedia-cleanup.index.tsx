@@ -773,6 +773,30 @@ function Editor({ row, busy, onSave, onArchive, onDelete, onOpenMerge, duplicate
           مكرر محتمل ({duplicates.length}): يتشاركون نفس الاسم القياسي. افتح «دمج» لاختيار القياسي.
         </div>
       )}
+      {(() => {
+        const richer = findRicherDuplicate(row as any, duplicates as any);
+        if (!richer) return null;
+        return (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-200">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="size-3.5" />
+              <span>
+                هذا العنصر له نسخة أغنى:&nbsp;
+                <span dir="ltr" className="font-mono">{richer.slug}</span>
+                &nbsp;(درجة {richness(richer as any)} مقابل {richness(row as any)}).
+              </span>
+            </div>
+            <Link
+              to="/encyclopedia/entity/$id"
+              params={{ id: richer.slug }}
+              target="_blank"
+              className="inline-flex items-center gap-1 rounded-md border border-amber-400/50 bg-amber-500/15 px-2 py-1 text-xs text-amber-100 hover:bg-amber-500/25"
+            >
+              <ArrowUpRight className="size-3.5" /> افتح القانوني
+            </Link>
+          </div>
+        );
+      })()}
       {(atlasCount > 0 || campaignCount > 0) && (
         <div className="rounded-md border border-sky-500/30 bg-sky-500/5 p-2 text-xs text-sky-200">
           مرتبط بـ {atlasCount} نقطة أطلس و{campaignCount} مرجع في الحملات.
