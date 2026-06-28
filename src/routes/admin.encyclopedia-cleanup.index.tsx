@@ -287,7 +287,7 @@ function CleanupWorkshop() {
   );
 
   // ------------------------------------------------------------
-  // CSV export
+  // CSV export (currently filtered view — quick triage)
   // ------------------------------------------------------------
   const exportCsv = () => {
     const cols = ["id","type","slug","title","quality","atlas_links","campaign_refs","enabled","updated_at"];
@@ -311,6 +311,192 @@ function CleanupWorkshop() {
     const a = document.createElement("a");
     a.href = url; a.download = `encyclopedia-cleanup-${Date.now()}.csv`; a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // ------------------------------------------------------------
+  // Full cleanup dataset export — JSON + CSV.
+  // Operates on the FULL loaded set (rows), not the filtered view.
+  // Groups entities by cleanup category. Read-only.
+  // ------------------------------------------------------------
+  const buildFullExport = () => {
+    // Pick canonical per duplicate group (richest wins).
+    const groupCanonical = new Map<string, EntityRow>();
+    for (const [key, ids] of dupGroups.entries()) {
+      const members = ids
+        .map((id) => rows.find((r) => r.id === id))
+        .filter((x): x is EntityRow => !!x);
+      if (members.length === 0) continue;
+      let best = members[0];
+      let bestScore = richness(best as any);
+      for (const m of members.slice(1)) {
+        const s = richness(m as any);
+        if (s > bestScore) { best = m; bestScore = s; }
+      }
+      groupCanonical.set(key, best);
+    }
+    const idToGroupKey = new Map<string, string>();
+    for (const [key, ids] of dupGroups.entries()) {
+      for (const id of ids) idToGroupKey.set(id, key);
+    }
+
+    const enrich = (r: EntityRow) => {
+      const atlas = atlasLinks.get(r.id) ?? 0;
+      const camps = campaignSlugs.get(r.id) ?? 0;
+      const isOrphan = !(atlas || camps);
+      const quality = classifyQuality(r, dupIds.has(r.id), isOrphan);
+      const score = scoreEntity({
+        summary: r.summary, body: r.body, metadata: r.metadata,
+        atlasLinks: atlas, campaignRefs: camps,
+      });
+      const bucket = score >= 80 ? "green" : score >= 50 ? "yellow" : "red";
+      const meta: any = r.metadata || {};
+      const archived = meta.archived === true || r.enabled === false;
+      const bodyLen = bodyText(r.body).length;
+      const aliases: string[] = Array.isArray(meta.aliases) ? meta.aliases : [];
+      let canonical_id: string | null = typeof meta.canonical_id === "string" ? meta.canonical_id : null;
+      let canonical_slug: string | null = null;
+      if (canonical_id) {
+        canonical_slug = rows.find((x) => x.id === canonical_id)?.slug ?? null;
+      } else {
+        const key = idToGroupKey.get(r.id);
+        if (key) {
+          const win = groupCanonical.get(key);
+          if (win && win.id !== r.id) { canonical_id = win.id; canonical_slug = win.slug; }
+        }
+      }
+      return {
+        id: r.id,
+        title: r.title,
+        slug: r.slug,
+        entity_type: r.entity_type,
+        subtitle: r.subtitle,
+        summary: r.summary,
+        body_length: bodyLen,
+        has_body: bodyLen > 0,
+        has_sections: hasSections(r.body),
+        has_sources: hasSources(r.metadata, r.body),
+        has_image: hasImage(r.metadata),
+        has_atlas_link: atlas > 0,
+        has_campaign_reference: camps > 0,
+        atlas_links: atlas,
+        campaign_references: camps,
+        quality_score: score,
+        quality_bucket: bucket,
+        quality_label: quality,
+        duplicate_risk: dupIds.has(r.id),
+        canonical_id,
+        canonical_slug,
+        archived,
+        enabled: r.enabled,
+        aliases,
+        era: meta.era ?? meta.period ?? null,
+        world: meta.world ?? meta.world_slug ?? null,
+        state: meta.state ?? meta.state_slug ?? null,
+        timeline_year: r.timeline_year,
+        timeline_category: r.timeline_category,
+        created_at: meta.created_at ?? null,
+        updated_at: r.updated_at,
+      };
+    };
+
+    const categorize = (e: ReturnType<typeof enrich>): string[] => {
+      const cats: string[] = [];
+      if (e.quality_label === "empty") cats.push("empty");
+      if (e.quality_label === "weak") cats.push("weak");
+      if (!e.has_image) cats.push("missing_image");
+      if (!e.has_sources) cats.push("missing_sources");
+      if (!e.summary || e.summary.trim().length < 20) cats.push("missing_overview");
+      if (!e.has_atlas_link) cats.push("missing_atlas");
+      if (!e.has_campaign_reference) cats.push("missing_campaign_reference");
+      if (e.duplicate_risk) cats.push("duplicates");
+      if (e.archived) cats.push("archived");
+      return cats;
+    };
+
+    const enriched = rows.map(enrich);
+    const tagged = enriched.map((e) => ({ ...e, categories: categorize(e) }));
+
+    const groups: Record<string, typeof enriched> = {
+      empty: [], weak: [], missing_image: [], missing_sources: [],
+      missing_overview: [], missing_atlas: [], missing_campaign_reference: [],
+      duplicates: [], archived: [], all: enriched,
+    };
+    for (const e of tagged) {
+      for (const c of e.categories) {
+        if (groups[c]) groups[c].push(e);
+      }
+    }
+    const totals: Record<string, number> = { all: enriched.length };
+    for (const k of Object.keys(groups)) if (k !== "all") totals[k] = groups[k].length;
+
+    return { tagged, groups, totals };
+  };
+
+  const downloadBlob = (data: BlobPart, mime: string, name: string) => {
+    const blob = new Blob([data], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const todayStamp = () => new Date().toISOString().slice(0, 10);
+
+  const exportFullJson = () => {
+    try {
+      const { groups, totals } = buildFullExport();
+      const payload = { generated_at: new Date().toISOString(), totals, groups };
+      downloadBlob(
+        JSON.stringify(payload, null, 2),
+        "application/json;charset=utf-8",
+        `irth-encyclopedia-cleanup-${todayStamp()}.json`,
+      );
+      setToast(`تم تصدير ${totals.all} كيان كـ JSON`);
+    } catch (e: any) {
+      setToast("فشل التصدير: " + (e?.message || e));
+    }
+  };
+
+  const exportFullCsv = () => {
+    try {
+      const { tagged } = buildFullExport();
+      const cols = [
+        "category","id","title","slug","entity_type","subtitle","summary",
+        "body_length","has_body","has_sections","has_sources","has_image",
+        "has_atlas_link","has_campaign_reference","quality_score","quality_bucket",
+        "duplicate_risk","canonical_id","canonical_slug","archived","enabled",
+        "aliases","era","world","state","created_at","updated_at",
+      ];
+      const esc = (v: unknown): string => {
+        if (v == null) return "";
+        const s = Array.isArray(v) ? v.join(" | ") : String(v);
+        if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+      };
+      const lines = [cols.join(",")];
+      for (const e of tagged) {
+        const cats = e.categories.length ? e.categories : ["uncategorized"];
+        for (const cat of cats) {
+          lines.push([
+            esc(cat), e.id, esc(e.title), esc(e.slug), esc(e.entity_type),
+            esc(e.subtitle), esc(e.summary), e.body_length, e.has_body, e.has_sections,
+            e.has_sources, e.has_image, e.has_atlas_link, e.has_campaign_reference,
+            e.quality_score, esc(e.quality_bucket), e.duplicate_risk,
+            esc(e.canonical_id), esc(e.canonical_slug), e.archived, e.enabled,
+            esc(e.aliases), esc(e.era), esc(e.world), esc(e.state),
+            esc(e.created_at), esc(e.updated_at),
+          ].join(","));
+        }
+      }
+      downloadBlob(
+        "\uFEFF" + lines.join("\n"),
+        "text/csv;charset=utf-8",
+        `irth-encyclopedia-cleanup-${todayStamp()}.csv`,
+      );
+      setToast(`تم تصدير ${tagged.length} كيان كـ CSV`);
+    } catch (e: any) {
+      setToast("فشل التصدير: " + (e?.message || e));
+    }
   };
 
   // ------------------------------------------------------------
