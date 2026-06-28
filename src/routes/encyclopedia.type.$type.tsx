@@ -7,6 +7,7 @@ import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import { cachedEncyclopediaByType } from "@/lib/offline-fallback";
 import { eraLabel } from "@/lib/era-labels";
 
 const SECTION_LABELS: Record<string, string> = {
