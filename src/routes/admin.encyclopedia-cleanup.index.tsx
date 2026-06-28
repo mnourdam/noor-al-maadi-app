@@ -741,11 +741,15 @@ function CleanupWorkshop() {
             {filtered.map((r) => {
               const isOrphan = !(atlasLinks.get(r.id) || campaignSlugs.get(r.id));
               const q = classifyQuality(r, dupIds.has(r.id), isOrphan);
+              const state = primaryState(r, dupIds.has(r.id), q);
+              const cid = typeof r.metadata?.canonical_id === "string" ? r.metadata.canonical_id : null;
+              const canonicalTitle = cid ? (rows.find((x) => x.id === cid)?.title ?? null) : null;
               return (
                 <ResultRow
                   key={r.id}
                   row={r}
-                  quality={q}
+                  state={state}
+                  canonicalTitle={canonicalTitle}
                   atlas={atlasLinks.get(r.id) ?? 0}
                   camps={campaignSlugs.get(r.id) ?? 0}
                   active={selectedId === r.id}
@@ -753,6 +757,7 @@ function CleanupWorkshop() {
                 />
               );
             })}
+
           </div>
 
           {/* Editor */}
