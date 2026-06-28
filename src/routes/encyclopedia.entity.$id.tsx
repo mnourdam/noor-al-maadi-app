@@ -40,6 +40,18 @@ const TYPE_LABEL: Record<string, string> = {
   artifact: "أثر",
 };
 
+// Plural labels + parent-route slugs for the in-app breadcrumb so a detail
+// page steps up to its direct type listing (e.g. Al-Shirazi → الشخصيات).
+// Types not present here fall back to the encyclopedia root.
+const TYPE_PARENT: Record<string, { label: string; typeSlug: string }> = {
+  figure:   { label: "الشخصيات", typeSlug: "figure" },
+  scholar:  { label: "الشخصيات", typeSlug: "figure" },
+  state:    { label: "الدول",    typeSlug: "state" },
+  city:     { label: "المدن",    typeSlug: "city" },
+  battle:   { label: "المعارك",  typeSlug: "battle" },
+  landmark: { label: "المعالم",  typeSlug: "landmark" },
+};
+
 export const Route = createFileRoute("/encyclopedia/entity/$id")({
   head: ({ params }) => ({
     meta: [
