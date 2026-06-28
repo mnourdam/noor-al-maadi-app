@@ -891,6 +891,7 @@ function ResultRow({ row, quality, atlas, camps, active, onOpen }: {
         {hasImage(row.metadata) && <Chip>صورة</Chip>}
         {atlas > 0 && <Chip tone="ok">أطلس×{atlas}</Chip>}
         {camps > 0 && <Chip tone="ok">حملات×{camps}</Chip>}
+        {typeof row.metadata?.canonical_id === "string" && <Chip tone="ok">↪ محوّل</Chip>}
         {archived && <Chip tone="warn">مؤرشف</Chip>}
       </div>
     </button>
