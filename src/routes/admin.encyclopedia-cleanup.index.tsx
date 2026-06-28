@@ -715,11 +715,31 @@ function Editor({ row, busy, onSave, onArchive, onDelete, onOpenMerge, duplicate
 }) {
   const [title, setTitle] = useState(row.title);
   const [slug, setSlug] = useState(row.slug);
+  const [subtitle, setSubtitle] = useState(row.subtitle ?? "");
   const [summary, setSummary] = useState(row.summary ?? "");
   const [bodyText, setBodyText] = useState(() => JSON.stringify(row.body ?? {}, null, 2));
   const [metaText, setMetaText] = useState(() => JSON.stringify(row.metadata ?? {}, null, 2));
   const [bodyErr, setBodyErr] = useState<string | null>(null);
   const [metaErr, setMetaErr] = useState<string | null>(null);
+  const [view, setView] = useState<"edit" | "preview">("edit");
+
+  // Live preview: keep the last successfully-parsed body/metadata so a
+  // mid-keystroke invalid JSON state doesn't blank the preview.
+  const [lastBody, setLastBody] = useState<any>(row.body ?? {});
+  const [lastMeta, setLastMeta] = useState<any>(row.metadata ?? {});
+  const [previewStale, setPreviewStale] = useState(false);
+
+  useEffect(() => {
+    try {
+      const b = JSON.parse(bodyText);
+      if (b && typeof b === "object" && !Array.isArray(b)) setLastBody(b);
+    } catch { setPreviewStale(true); return; }
+    try {
+      const m = JSON.parse(metaText);
+      if (m && typeof m === "object" && !Array.isArray(m)) setLastMeta(m);
+      setPreviewStale(false);
+    } catch { setPreviewStale(true); }
+  }, [bodyText, metaText]);
 
   const titleRef = useRef(title);
   titleRef.current = title;
@@ -741,13 +761,76 @@ function Editor({ row, busy, onSave, onArchive, onDelete, onOpenMerge, duplicate
     if (!/^[a-z0-9-]+$/.test(slug)) {
       setMetaErr("slug غير صالح (حروف صغيرة وأرقام وشرطات فقط)"); return null;
     }
-    return { title: title.trim(), slug, summary: summary.trim() || null, body, metadata };
+    return {
+      title: title.trim(),
+      slug,
+      subtitle: subtitle.trim() || null,
+      summary: summary.trim() || null,
+      body,
+      metadata,
+    };
   };
 
   const save = () => {
     const patch = validate();
     if (patch) onSave(patch);
   };
+
+  const previewEntity = {
+    entity_type: row.entity_type,
+    title: title || row.title,
+    subtitle: subtitle || row.subtitle,
+    summary,
+    body: lastBody,
+    metadata: lastMeta,
+  };
+
+  const editorPane = (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="العنوان">
+          <input value={title} onChange={(e) => setTitle(e.target.value)}
+            className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm" />
+        </Field>
+        <Field label="slug">
+          <input value={slug} onChange={(e) => setSlug(e.target.value)} dir="ltr"
+            className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-sm" />
+        </Field>
+      </div>
+      <Field label="عنوان فرعي">
+        <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)}
+          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm" />
+      </Field>
+      <Field label="ملخص">
+        <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3}
+          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm" />
+      </Field>
+      <Field label="body (JSON)">
+        <textarea value={bodyText} onChange={(e) => setBodyText(e.target.value)} rows={10} dir="ltr"
+          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-[11px] leading-5" />
+        {bodyErr && <p className="mt-1 text-[11px] text-rose-300"><FileWarning className="me-1 inline size-3" />{bodyErr}</p>}
+      </Field>
+      <Field label="metadata (JSON)">
+        <textarea value={metaText} onChange={(e) => setMetaText(e.target.value)} rows={8} dir="ltr"
+          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-[11px] leading-5" />
+        {metaErr && <p className="mt-1 text-[11px] text-rose-300"><FileWarning className="me-1 inline size-3" />{metaErr}</p>}
+      </Field>
+    </div>
+  );
+
+  const previewPane = (
+    <div className="space-y-2">
+      {previewStale && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
+          <AlertTriangle className="me-1 inline size-3.5" />
+          صيغة JSON غير صحيحة — سيتم عرض آخر نسخة صالحة.
+        </div>
+      )}
+      <div className="max-h-[80vh] overflow-y-auto rounded-xl border border-slate-700/60 bg-black/40">
+        <EncyclopediaEntityPreview entity={previewEntity} />
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-3 rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
@@ -816,31 +899,30 @@ function Editor({ row, busy, onSave, onArchive, onDelete, onOpenMerge, duplicate
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="العنوان">
-          <input value={title} onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm" />
-        </Field>
-        <Field label="slug">
-          <input value={slug} onChange={(e) => setSlug(e.target.value)} dir="ltr"
-            className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-sm" />
-        </Field>
+      {/* Tabs — visible on small screens. On lg+ both panes show side-by-side. */}
+      <div className="flex items-center gap-1 lg:hidden">
+        <button onClick={() => setView("edit")}
+          className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs transition ${
+            view === "edit"
+              ? "border-amber-400/60 bg-amber-500/15 text-amber-100"
+              : "border-slate-700/60 bg-slate-900/40 text-slate-300 hover:bg-slate-800/60"
+          }`}>
+          <Pencil className="size-3.5" /> تحرير
+        </button>
+        <button onClick={() => setView("preview")}
+          className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs transition ${
+            view === "preview"
+              ? "border-amber-400/60 bg-amber-500/15 text-amber-100"
+              : "border-slate-700/60 bg-slate-900/40 text-slate-300 hover:bg-slate-800/60"
+          }`}>
+          <Eye className="size-3.5" /> معاينة
+        </button>
       </div>
-      <Field label="ملخص">
-        <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3}
-          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm" />
-      </Field>
 
-      <Field label="body (JSON)">
-        <textarea value={bodyText} onChange={(e) => setBodyText(e.target.value)} rows={10} dir="ltr"
-          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-[11px] leading-5" />
-        {bodyErr && <p className="mt-1 text-[11px] text-rose-300"><FileWarning className="me-1 inline size-3" />{bodyErr}</p>}
-      </Field>
-      <Field label="metadata (JSON)">
-        <textarea value={metaText} onChange={(e) => setMetaText(e.target.value)} rows={8} dir="ltr"
-          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-[11px] leading-5" />
-        {metaErr && <p className="mt-1 text-[11px] text-rose-300"><FileWarning className="me-1 inline size-3" />{metaErr}</p>}
-      </Field>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className={view === "edit" ? "" : "hidden lg:block"}>{editorPane}</div>
+        <div className={view === "preview" ? "" : "hidden lg:block"}>{previewPane}</div>
+      </div>
 
       {Array.isArray(row.metadata?.redirect_from) && row.metadata.redirect_from.length > 0 && (
         <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2 text-xs text-emerald-200">
