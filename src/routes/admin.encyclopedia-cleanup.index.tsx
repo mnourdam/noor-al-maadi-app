@@ -662,7 +662,9 @@ function CleanupWorkshop() {
   return (
     <div dir="rtl" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-6 text-slate-100">
       <div className="mx-auto max-w-7xl space-y-5">
-        <Header onRefresh={refresh} onExport={exportCsv} loading={loading}
+        <Header onRefresh={refresh} onExport={exportCsv}
+                onExportFullJson={exportFullJson} onExportFullCsv={exportFullCsv}
+                loading={loading}
                 rowCount={rows.length} dupCount={dupIds.size} />
 
         {err && (
