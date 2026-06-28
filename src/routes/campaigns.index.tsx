@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, CheckCircle2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
+import { BackLink } from "@/components/BackLink";
 import { useProfile } from "@/lib/profile";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
@@ -30,6 +31,9 @@ function CampaignsHubFull() {
 
   return (
     <AppShell>
+      <div className="px-5 pt-6">
+        <BackLink to="/" label="الرئيسية" />
+      </div>
       <Screen title="الحملات" subtitle="رحلاتٌ مصمَّمة تأخذك عبر العصور">
         {isLoading && (
           <div className="px-2 py-10 text-center text-sm text-muted-foreground">جاري التحميل…</div>

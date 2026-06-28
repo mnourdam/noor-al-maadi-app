@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { BackLink } from "@/components/BackLink";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -37,6 +38,18 @@ const TYPE_LABEL: Record<string, string> = {
   event: "حدث",
   landmark: "معلم",
   artifact: "أثر",
+};
+
+// Plural labels + parent-route slugs for the in-app breadcrumb so a detail
+// page steps up to its direct type listing (e.g. Al-Shirazi → الشخصيات).
+// Types not present here fall back to the encyclopedia root.
+const TYPE_PARENT: Record<string, { label: string; typeSlug: string }> = {
+  figure:   { label: "الشخصيات", typeSlug: "figure" },
+  scholar:  { label: "الشخصيات", typeSlug: "figure" },
+  state:    { label: "الدول",    typeSlug: "state" },
+  city:     { label: "المدن",    typeSlug: "city" },
+  battle:   { label: "المعارك",  typeSlug: "battle" },
+  landmark: { label: "المعالم",  typeSlug: "landmark" },
 };
 
 export const Route = createFileRoute("/encyclopedia/entity/$id")({
@@ -209,13 +222,21 @@ function EntityPage() {
         />
 
         <div className="relative px-5 pt-6 pb-12">
-          {/* Back link */}
-          <Link
-            to="/encyclopedia"
-            className="inline-flex items-center gap-1 text-[11px] tracking-[0.18em] text-gold/85 transition hover:text-gold"
-          >
-            <ChevronRight className="size-3.5" /> الموسوعة
-          </Link>
+          {/* Back link — steps up to the entity's type listing
+              (e.g. a figure detail returns to "الشخصيات"), falling back
+              to the encyclopedia root for unmapped types. */}
+          {(() => {
+            const parent = TYPE_PARENT[isScholar ? "scholar" : entity.entity_type];
+            return parent ? (
+              <BackLink
+                to="/encyclopedia/type/$type"
+                params={{ type: parent.typeSlug } as any}
+                label={parent.label}
+              />
+            ) : (
+              <BackLink to="/encyclopedia" label="الموسوعة" />
+            );
+          })()}
 
           {/* ───────── Cinematic Hero ───────── */}
           <header className="mt-4 relative overflow-hidden rounded-[28px] border border-gold/25 bg-gradient-to-br from-[#1a1f2e] via-[#10131c] to-black p-6 shadow-[0_30px_80px_-40px_rgba(212,175,90,0.45)]">

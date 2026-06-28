@@ -41,6 +41,7 @@ import {
   Trophy, Star, Award, Compass,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
+import { BackLink } from "@/components/BackLink";
 import { useProfile } from "@/lib/profile";
 
 import {
@@ -513,6 +514,9 @@ function CollectionPage() {
 
   return (
     <AppShell>
+      <div className="px-5 pt-6">
+        <BackLink to="/" label="الرئيسية" />
+      </div>
       <Screen title="المتحف">
         {/* ── Cinematic Museum Hero ───────────────────────────── */}
         <div className="relative mb-5 overflow-hidden rounded-3xl border border-gold/25 bg-gradient-to-b from-[oklch(0.18_0.04_70)] via-surface to-background p-5 shadow-gold">
