@@ -101,30 +101,35 @@ async function runTodayInHistory(admin: any, baseUrl: string, serviceKey: string
     .eq("enabled", true)
     .eq("month", month)
     .eq("day", day)
-    .order("created_at", { ascending: true })
-    .limit(1);
+    .order("created_at", { ascending: true });
 
   if (error) return { job: jobKey, error: error.message };
-  const event = events?.[0];
-  if (!event) return { job: jobKey, skipped: "no_event_for_today" };
+  if (!events || events.length === 0) return { job: jobKey, skipped: "no_event_for_today" };
 
-  if (dryRun) return { job: jobKey, would_send: event };
+  if (dryRun) return { job: jobKey, would_send: events };
 
-  const send = await invokeSendNotification(baseUrl, serviceKey, {
-    title: event.title,
-    body: event.body,
-    type: "today_in_history",
-    target_type: "all",
-    deep_link: event.deep_link ?? null,
-  });
+  const sends: any[] = [];
+  for (const event of events) {
+    const summary = String(event.body ?? "").trim();
+    const body = summary ? `${event.title} — ${summary}` : String(event.title);
+    const send = await invokeSendNotification(baseUrl, serviceKey, {
+      title: "في مثل هذا اليوم",
+      body,
+      type: "today_in_history",
+      target_type: "all",
+      deep_link: event.deep_link ?? "/on-this-day",
+    });
+    sends.push({ event_id: event.id, ok: send.ok, notification_id: send.body?.notification_id ?? null });
+  }
 
+  const allOk = sends.every((s) => s.ok);
   await recordRun(
     admin, jobKey, runDate,
-    send.ok ? "success" : "failed",
-    send.body?.notification_id ?? null,
-    { event_id: event.id, send },
+    allOk ? "success" : "failed",
+    sends.find((s) => s.notification_id)?.notification_id ?? null,
+    { sends },
   );
-  return { job: jobKey, sent: send.ok, notification_id: send.body?.notification_id ?? null };
+  return { job: jobKey, sent: allOk, count: sends.length, sends };
 }
 
 // ---------- Job 2: daily fact ----------
