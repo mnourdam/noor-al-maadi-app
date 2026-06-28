@@ -48,11 +48,9 @@ const SFX_URLS: Record<SfxName, string> = {
   "error":              errorSfxAsset.url,
 };
 
-// Per-SFX volume trim so a new asset can be mixed to match the perceived
-// loudness of the existing UI sounds without changing global settings.
-const SFX_VOLUME_SCALE: Partial<Record<SfxName, number>> = {
-  error: 0.7,
-};
+// Per-SFX volume trim. Intentionally empty for "error" so the uploaded
+// asset plays bit-for-bit at the same level as other UI SFX.
+const SFX_VOLUME_SCALE: Partial<Record<SfxName, number>> = {};
 
 
 // ---------- Settings persistence ----------
