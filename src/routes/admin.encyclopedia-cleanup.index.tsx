@@ -1213,7 +1213,7 @@ function MergeDialog({ source, rows, onClose, onConfirm }: {
         className="w-full max-w-2xl rounded-xl border border-slate-700 bg-slate-950 p-5 text-slate-100">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-lg font-bold text-amber-200">
-            <GitMerge className="size-5" /> دمج داخل كيان قياسي
+            <CornerDownRight className="size-5" /> تحويل إلى الكيان المعتمد
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-100">
             <X className="size-5" />
