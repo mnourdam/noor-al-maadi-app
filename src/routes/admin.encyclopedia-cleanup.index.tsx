@@ -1048,6 +1048,11 @@ function Editor({ row, allRows, busy, onSave, onArchive, onDelete, onOpenMerge, 
         </div>
         <div className="flex flex-wrap gap-1.5">
           <button onClick={onOpenMerge}
+            className="inline-flex items-center gap-1 rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-500/20"
+            title="اختر كياناً معتمداً ليصبح هذا تحويلة إليه">
+            <CornerDownRight className="size-3.5" /> تحويل إلى المعتمد
+          </button>
+          <button onClick={onOpenMerge}
             className="inline-flex items-center gap-1 rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-500/20">
             <GitMerge className="size-3.5" /> دمج
           </button>
@@ -1065,6 +1070,39 @@ function Editor({ row, allRows, busy, onSave, onArchive, onDelete, onOpenMerge, 
           </button>
         </div>
       </div>
+
+      {(() => {
+        const cid = typeof row.metadata?.canonical_id === "string" ? row.metadata.canonical_id : null;
+        if (!cid) return null;
+        const target = allRows.find((x) => x.id === cid);
+        const cslug = target?.slug ?? (typeof row.metadata?.canonical_slug === "string" ? row.metadata.canonical_slug : null);
+        return (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 p-2 text-xs text-emerald-100">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <CornerDownRight className="size-3.5 shrink-0" />
+              <span className="truncate">
+                محوّل إلى:{" "}
+                <span className="font-semibold">{target?.title ?? cslug ?? cid}</span>
+                {cslug && <span dir="ltr" className="ms-1 font-mono text-[10px] text-emerald-200/80">({cslug})</span>}
+              </span>
+            </div>
+            <div className="flex gap-1.5 shrink-0">
+              {target && (
+                <button onClick={() => onJumpTo(target.id)}
+                  className="inline-flex items-center gap-1 rounded-md border border-emerald-400/50 bg-emerald-500/15 px-2 py-1 text-[11px] text-emerald-100 hover:bg-emerald-500/25">
+                  <Pencil className="size-3" /> فتح للتحرير
+                </button>
+              )}
+              {cslug && (
+                <Link to="/encyclopedia/entity/$id" params={{ id: cslug }} target="_blank"
+                  className="inline-flex items-center gap-1 rounded-md border border-emerald-400/50 bg-emerald-500/15 px-2 py-1 text-[11px] text-emerald-100 hover:bg-emerald-500/25">
+                  <ArrowUpRight className="size-3" /> فتح الكيان المعتمد
+                </Link>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {duplicates.length > 0 && (
         <div className="rounded-md border border-fuchsia-500/30 bg-fuchsia-500/5 p-2 text-xs text-fuchsia-200">
