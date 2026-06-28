@@ -176,19 +176,20 @@ async function runDailyFact(admin: any, baseUrl: string, serviceKey: string, dry
   return { job: jobKey, sent: send.ok, notification_id: send.body?.notification_id ?? null };
 }
 
-// ---------- Job 3: inactive user reminder ----------
-async function runInactiveUserReminder(admin: any, baseUrl: string, serviceKey: string, dryRun: boolean) {
-  const jobKey = "inactive_user";
+// ---------- Job 3: come-back reminder (24h inactivity) ----------
+// Sends exactly one reminder per inactivity period. We dedup by storing the
+// observed `last_active` in details — when the user returns, last_active
+// changes, so a future inactivity period is eligible for a fresh reminder.
+async function runComebackReminder(admin: any, baseUrl: string, serviceKey: string, dryRun: boolean) {
+  const jobKey = "comeback_24h";
   const runDate = todayISODate();
-  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  // Find candidate user_ids: users whose profile.last_active is older than 3d
-  // AND who have at least one enabled device token.
   const { data: profiles, error: pErr } = await admin
     .from("profiles")
     .select("id, last_active")
     .lt("last_active", cutoff)
-    .limit(500);
+    .limit(2000);
   if (pErr) return { job: jobKey, error: pErr.message };
 
   const candidateIds = (profiles ?? []).map((p: any) => p.id);
@@ -199,44 +200,49 @@ async function runInactiveUserReminder(admin: any, baseUrl: string, serviceKey: 
     .select("user_id")
     .eq("enabled", true)
     .in("user_id", candidateIds);
-  const usersWithTokens = Array.from(new Set((tokens ?? []).map((t: any) => t.user_id)));
+  const tokenSet = new Set((tokens ?? []).map((t: any) => t.user_id));
 
   let sent = 0, skipped = 0, failed = 0;
   const results: any[] = [];
 
-  for (const userId of usersWithTokens) {
-    const perUserKey = `${jobKey}:${userId}`;
-    // Dedup: not more than once every 3 days
-    const { data: recentRun } = await admin
-      .from("automatic_notification_runs")
-      .select("id, created_at")
-      .eq("job_key", perUserKey)
-      .gte("created_at", new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString())
-      .maybeSingle();
-    if (recentRun) { skipped++; continue; }
+  for (const p of profiles ?? []) {
+    if (!tokenSet.has(p.id)) { skipped++; continue; }
+    const perUserKey = `${jobKey}:${p.id}`;
 
-    if (dryRun) { results.push({ userId, would_send: true }); continue; }
+    // Dedup: if any prior run recorded the same `last_active`, we already
+    // notified for this inactivity period.
+    const { data: prior } = await admin
+      .from("automatic_notification_runs")
+      .select("id, details")
+      .eq("job_key", perUserKey)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const lastSeen = prior?.[0]?.details?.last_active ?? null;
+    if (lastSeen && lastSeen === p.last_active) { skipped++; continue; }
+
+    if (dryRun) { results.push({ user_id: p.id, would_send: true }); continue; }
 
     const send = await invokeSendNotification(baseUrl, serviceKey, {
-      title: "رحلتك في إرث تنتظرك",
-      body: "عد اليوم واكتشف فصلًا جديدًا من التاريخ.",
-      type: "return_reminder",
+      title: "اشتقنا لعودتك",
+      body: "رحلتك التاريخية بانتظارك… أكمل من حيث توقفت واكتشف المزيد.",
+      type: "comeback_24h",
       target_type: "user",
-      target_user_id: userId,
+      target_user_id: p.id,
+      deep_link: "/",
     });
 
     await recordRun(
       admin, perUserKey, runDate,
       send.ok ? "success" : "failed",
       send.body?.notification_id ?? null,
-      { send },
+      { last_active: p.last_active, send },
     );
 
     if (send.ok) sent++; else failed++;
-    results.push({ userId, ok: send.ok });
+    results.push({ user_id: p.id, ok: send.ok });
   }
 
-  return { job: jobKey, sent, failed, skipped, total_candidates: usersWithTokens.length, results: dryRun ? results : undefined };
+  return { job: jobKey, sent, failed, skipped, total_candidates: profiles?.length ?? 0, results: dryRun ? results : undefined };
 }
 
 // ---------- Job 4: incomplete campaign reminder ----------
