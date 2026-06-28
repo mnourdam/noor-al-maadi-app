@@ -74,19 +74,27 @@ function useAllEncyclopedia() {
     queryFn: async () => {
       const PAGE = 1000;
       const rows: SupabaseEncyclopediaEntity[] = [];
-      for (let from = 0; ; from += PAGE) {
-        const { data, error } = await supabase
-          .from("encyclopedia_entities")
-          .select("id,slug,entity_type,title,subtitle,summary,metadata,created_at,updated_at")
-          .eq("enabled", true)
-          .order("title")
-          .range(from, from + PAGE - 1);
-        if (error) throw error;
-        const batch = (data ?? []) as SupabaseEncyclopediaEntity[];
-        rows.push(...batch);
-        if (batch.length < PAGE) break;
+      try {
+        for (let from = 0; ; from += PAGE) {
+          const { data, error } = await supabase
+            .from("encyclopedia_entities")
+            .select("id,slug,entity_type,title,subtitle,summary,metadata,created_at,updated_at")
+            .eq("enabled", true)
+            .order("title")
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          const batch = (data ?? []) as SupabaseEncyclopediaEntity[];
+          rows.push(...batch);
+          if (batch.length < PAGE) break;
+        }
+        if (rows.length > 0) return rows;
+      } catch (e) {
+        if (typeof console !== "undefined")
+          console.warn("[encyclopedia.index] online fetch failed, using snapshot", e);
       }
-      return rows;
+      // Offline / failure fallback — use bundled / synced snapshot so
+      // stats, search and category counts keep working without network.
+      return (await cachedEncyclopediaList()) as SupabaseEncyclopediaEntity[];
     },
   });
 }
