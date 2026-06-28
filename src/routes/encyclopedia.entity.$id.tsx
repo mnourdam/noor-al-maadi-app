@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ChevronRight,
-  Database,
   Network,
   Compass,
   Sparkles,
@@ -31,6 +30,7 @@ import {
 } from "@/lib/relationship-graph";
 import { buildContextBlocks } from "@/lib/context-blocks";
 import { iconForType } from "@/lib/encyclopedia-icons";
+import { eraLabel } from "@/lib/era-labels";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
@@ -221,7 +221,7 @@ function EntityPage() {
 
   const chips: { icon: typeof Calendar; label: string }[] = [];
   if (period) chips.push({ icon: ScrollText, label: period });
-  if (era)    chips.push({ icon: Sparkles,   label: era });
+  if (era)    chips.push({ icon: Sparkles,   label: eraLabel(era) });
   if (date)   chips.push({ icon: Calendar,   label: date });
   if (location) chips.push({ icon: MapPin,   label: location });
   if (region) chips.push({ icon: Tag,        label: region });
@@ -304,9 +304,6 @@ function EntityPage() {
                 </div>
               )}
 
-              <span className="mt-4 inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
-                <Database className="size-2.5" /> أرشيف موثّق
-              </span>
             </div>
           </header>
 
