@@ -537,30 +537,40 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         changed = true;
       }
       if (typeof stats.streak === "number") {
-        // Streak source-of-truth rule: the *day boundary* is anchored locally
-        // by `lastActiveDay`, but the *count* lives on the server too. If we
-        // already incremented today (lastActiveDay === today), never accept a
-        // server value lower than local — that would be the server's stale
-        // pre-increment row echoed back via Realtime. We still accept upward
-        // corrections (e.g. admin grants). If the day boundary is older, the
-        // server number is authoritative.
+        // Streak is day-anchored locally. Server value is NEVER trusted
+        // on its own — if local `lastActiveDay` says the streak has
+        // expired (player missed a full day), force 0 regardless of
+        // what the server echoes. Otherwise:
+        //   - safe (played today):    keep max(local, server) so admin
+        //                             grants raise it but stale realtime
+        //                             echoes can't lower it.
+        //   - at-risk (yesterday):    accept server value.
         const target = Math.max(0, Math.floor(stats.streak));
-        const activeToday = p.lastActiveDay === todayKey();
-        const nextStreak = activeToday ? Math.max(p.streak, target) : target;
+        const derived = deriveStreak(p.streak, p.lastActiveDay);
+        let nextStreak: number;
+        if (derived.status === "expired") {
+          nextStreak = 0;
+        } else if (derived.status === "safe") {
+          nextStreak = Math.max(p.streak, target);
+        } else {
+          nextStreak = target;
+        }
+        if (import.meta.env.DEV) {
+          console.debug("[streak] applyServerStats", {
+            today: todayKey(),
+            lastActiveDay: p.lastActiveDay,
+            storedStreak: p.streak,
+            serverStreak: target,
+            computedStreak: nextStreak,
+            reason: derived.status,
+          });
+        }
         if (nextStreak !== p.streak) {
           next = { ...next, streak: nextStreak };
           changed = true;
         }
-        // If the server reports a positive streak but the local day anchor
-        // is missing (fresh install / cleared storage), seed lastActiveDay
-        // to yesterday so the next touchStreak today extends the chain
-        // (+1) instead of resetting it to 1.
-        if (!activeToday && nextStreak > 0 && !p.lastActiveDay) {
-          const y = new Date(); y.setDate(y.getDate() - 1);
-          next = { ...next, lastActiveDay: todayKey(y) };
-          changed = true;
-        }
       }
+
 
 
 
