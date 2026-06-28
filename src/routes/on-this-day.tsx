@@ -51,14 +51,9 @@ function yearLabel(e: TodayInHistoryEvent): string {
   return parts.join(" / ");
 }
 
-function maybeLink(href: string | null, inner: React.ReactNode) {
-  if (!href) return <>{inner}</>;
-  return <a href={href}>{inner}</a>;
-}
-
 function TodayCard({ entry }: { entry: TodayInHistoryEvent }) {
-  const inner = (
-    <div className="shadow-elegant relative overflow-hidden rounded-3xl border border-gold/30 bg-surface p-6 transition hover:border-gold/60">
+  return (
+    <div className="shadow-elegant relative overflow-hidden rounded-3xl border border-gold/30 bg-surface p-6">
       <div className="absolute -right-10 -top-10 size-40 rounded-full bg-gold/20 blur-3xl" />
       <div className="relative">
         <div className="flex items-center gap-2 text-xs text-gold">
@@ -70,21 +65,17 @@ function TodayCard({ entry }: { entry: TodayInHistoryEvent }) {
       </div>
     </div>
   );
-  return maybeLink(entry.deep_link, inner);
 }
 
 function EntryRow({ entry }: { entry: TodayInHistoryEvent }) {
-  const card = (
-    <div className="rounded-2xl border border-white/10 bg-surface p-4 transition hover:border-gold/40">
-      {yearLabel(entry) && <p className="text-xs text-gold">{yearLabel(entry)}</p>}
-      <p className="font-display mt-1 text-sm font-bold">{entry.title}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{entry.body}</p>
-    </div>
-  );
   return (
     <li className="relative">
       <span className="absolute -right-[27px] top-1.5 size-3 rounded-full border-2 border-background bg-gold" />
-      {maybeLink(entry.deep_link, card)}
+      <div className="rounded-2xl border border-white/10 bg-surface p-4">
+        {yearLabel(entry) && <p className="text-xs text-gold">{yearLabel(entry)}</p>}
+        <p className="font-display mt-1 text-sm font-bold">{entry.title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{entry.body}</p>
+      </div>
     </li>
   );
 }
