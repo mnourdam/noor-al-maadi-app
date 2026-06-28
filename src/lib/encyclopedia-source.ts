@@ -109,6 +109,11 @@ export function useEncyclopediaSupabaseEntity(
     enabled,
     staleTime: 60_000,
     retry: 1,
+    // Local-first: render the cached row instantly so the player sees real
+    // content offline; the network fetch below refreshes in the background.
+    initialData: () =>
+      (localEncyclopediaBySlug(slug, entityType) as SupabaseEncyclopediaEntity | null) ?? undefined,
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
       try {
         const { data, error } = await supabase
