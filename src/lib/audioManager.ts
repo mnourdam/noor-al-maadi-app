@@ -10,11 +10,14 @@ import { androidMark, isAndroidNativeApp, isAndroidUltraStableMode } from "./and
 // - Fails silently if audio files are missing
 // ============================================================
 
+import errorSfxAsset from "@/assets/audio-error.mp3.asset.json";
+
 export type SfxName =
   | "success"
   | "chapter-complete"
   | "campaign-complete"
-  | "unlock-reward";
+  | "unlock-reward"
+  | "error";
 
 export interface AudioSettings {
   soundEnabled: boolean;
@@ -42,7 +45,15 @@ const SFX_URLS: Record<SfxName, string> = {
   "chapter-complete":   "/audio/chapter-complete.mp3",
   "campaign-complete":  "/audio/campaign-complete.mp3",
   "unlock-reward":      "/audio/unlock-reward.mp3",
+  "error":              errorSfxAsset.url,
 };
+
+// Per-SFX volume trim so a new asset can be mixed to match the perceived
+// loudness of the existing UI sounds without changing global settings.
+const SFX_VOLUME_SCALE: Partial<Record<SfxName, number>> = {
+  error: 0.7,
+};
+
 
 // ---------- Settings persistence ----------
 function readSettings(): AudioSettings {
@@ -243,9 +254,10 @@ export const audioManager = {
     }
 
     const url = SFX_URLS[name];
+    const scale = SFX_VOLUME_SCALE[name] ?? 1;
     try {
       const a = new Audio(url);
-      a.volume = settings.masterVolume * settings.sfxVolume;
+      a.volume = Math.max(0, Math.min(1, settings.masterVolume * settings.sfxVolume * scale));
       a.addEventListener("error", () => {
         sfxFailed.add(name);
         warnOnce(`sfx missing or unplayable: ${url}`);
@@ -259,12 +271,20 @@ export const audioManager = {
     }
   },
 
-  /** Play a synthesized error tone (no asset needed). Respects audio settings. */
+  /**
+   * Play the heart-loss / wrong-answer cue. Uses the bundled CDN asset and
+   * falls back to a synthesized tone if the file is unavailable. Deduped so
+   * rapid wrong answers never overlap.
+   */
   playError() {
     if (typeof window === "undefined") return;
     if (isAndroidUltraStableMode()) return;
     if (!settings.soundEnabled || !settings.sfxEnabled) return;
-    playSynthError();
+    if (sfxFailed.has("error")) {
+      playSynthError();
+      return;
+    }
+    audioManager.playSfx("error", { dedupeKey: "sfx:error", dedupeMs: 220 });
   },
 
   /** Cleanup — useful for hot reload / tests. */
@@ -276,3 +296,4 @@ export const audioManager = {
     }
   },
 };
+
