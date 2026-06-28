@@ -17,9 +17,11 @@ import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import {
   isUuid,
+  pickCanonicalEntity,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
 import { cachedEncyclopediaById, cachedEncyclopediaBySlug } from "@/lib/offline-fallback";
+import { localEncyclopediaById, localEncyclopediaBySlug } from "@/lib/local-first-store";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import {
@@ -97,6 +99,15 @@ function EntityPage() {
   const query = useQuery({
     queryKey: ["encyclopedia", "entity", id],
     staleTime: 60_000,
+    // Local-first: render the bundled snapshot synchronously so offline /
+    // cold-start players see real content immediately, not "جارٍ التحميل…".
+    initialData: () => {
+      const local = (isUuid(id)
+        ? localEncyclopediaById(id)
+        : localEncyclopediaBySlug(id)) as SupabaseEncyclopediaEntity | null;
+      return local ?? undefined;
+    },
+    initialDataUpdatedAt: 0,
     queryFn: async () => {
       const fetchById = async (eid: string) => {
         try {
@@ -122,9 +133,11 @@ function EntityPage() {
         if (isUuid(id)) {
           primary = await fetchById(id);
         } else {
-          const res = await supabase.from("encyclopedia_entities").select("*").eq("slug", id);
+          const res = await supabase.from("encyclopedia_entities").select("*").eq("slug", id).eq("enabled", true);
           const rows = (res.data ?? []) as SupabaseEncyclopediaEntity[];
-          primary = rows[0] ?? null;
+          // Pick richest among same-slug rows so the player never lands on a
+          // stub when a fuller sibling exists.
+          primary = pickCanonicalEntity(rows);
           if (!primary) {
             const alias = await supabase
               .from("encyclopedia_entities").select("*")
@@ -138,8 +151,10 @@ function EntityPage() {
       // Offline / failure fallback — read from the bundled or synced snapshot.
       if (!primary) {
         primary = isUuid(id)
-          ? await cachedEncyclopediaById(id)
-          : (await cachedEncyclopediaBySlug(id)) ?? (await cachedEncyclopediaById(id));
+          ? (localEncyclopediaById(id) as SupabaseEncyclopediaEntity | null) ?? await cachedEncyclopediaById(id)
+          : (localEncyclopediaBySlug(id) as SupabaseEncyclopediaEntity | null)
+            ?? (await cachedEncyclopediaBySlug(id))
+            ?? (await cachedEncyclopediaById(id));
       }
       return followCanonical(primary);
     },
