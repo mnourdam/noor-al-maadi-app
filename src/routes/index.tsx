@@ -14,6 +14,7 @@ import {
 import { useProfile } from "@/lib/profile";
 import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
 import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS, unreadCount, formatBadgeCount } from "@/lib/notifications";
+import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
 import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
