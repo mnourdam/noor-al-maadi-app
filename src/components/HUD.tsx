@@ -7,6 +7,8 @@ import { unreadCount, formatBadgeCount } from "@/lib/notifications";
 import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HeartsPopover, DinarsPopover, XPPopover, StreakPopover } from "./HUDStatPopovers";
 
 type BumpKey = "dinars" | "points" | "hearts";
 
