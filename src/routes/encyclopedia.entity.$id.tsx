@@ -157,7 +157,12 @@ function EntityPage() {
             ?? (await cachedEncyclopediaBySlug(id))
             ?? (await cachedEncyclopediaById(id));
       }
-      return followCanonical(primary);
+      const followed = await followCanonical(primary);
+      // Final guard — if the chosen row is empty but a richer same-name
+      // sibling exists in the local store, transparently switch to it so
+      // the player never sees a blank duplicate.
+      const escalated = resolveCanonicalLocal(followed as any) as SupabaseEncyclopediaEntity | null;
+      return escalated ?? followed;
     },
   });
 
