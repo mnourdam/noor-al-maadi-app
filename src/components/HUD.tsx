@@ -94,30 +94,79 @@ export function HUD() {
       style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
     >
       <div className="glass flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-background/70 px-3 py-1.5 backdrop-blur-md">
-        <div key={heartShake} className={`flex items-center gap-0.5 ${heartShake ? "hud-shake" : ""}`}>
-          {Array.from({ length: HEART_MAX }).map((_, i) => (
-            <Heart
-              key={i}
-              className={`size-3.5 ${i < hearts ? "fill-red-500 text-red-500" : "text-white/20"}`}
-              strokeWidth={1.8}
-            />
-          ))}
-          {hearts < HEART_MAX && (
-            <span className="ms-1 text-[10px] tabular-nums text-muted-foreground" aria-label="القلب التالي خلال">
-              {formatHeartTimer(next)}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3 text-[11px]">
-          <span className={`inline-flex items-center gap-1 text-gold ${bumpCls("dinars")}`}>
-            <Coins className="size-3.5" /> {profile.dinars.toLocaleString("en-US")}
-          </span>
-          <span className={`inline-flex items-center gap-1 text-amber-200 ${bumpCls("points")}`}>
-            <Star className="size-3.5" /> {profile.points.toLocaleString("en-US")}
-          </span>
-          <span className="inline-flex items-center gap-1 text-orange-400">
-            <Flame className="size-3.5" /> {profile.streak.toLocaleString("en-US")}
-          </span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="القلوب"
+              key={heartShake}
+              className={`flex items-center gap-0.5 rounded-lg px-1 py-1 -mx-1 -my-1 transition hover:bg-white/5 active:bg-white/10 ${heartShake ? "hud-shake" : ""}`}
+            >
+              {Array.from({ length: HEART_MAX }).map((_, i) => (
+                <Heart
+                  key={i}
+                  className={`size-3.5 ${i < hearts ? "fill-red-500 text-red-500" : "text-white/20"}`}
+                  strokeWidth={1.8}
+                />
+              ))}
+              {hearts < HEART_MAX && (
+                <span className="ms-1 text-[10px] tabular-nums text-muted-foreground" aria-label="القلب التالي خلال">
+                  {formatHeartTimer(next)}
+                </span>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+            <HeartsPopover profile={profile} />
+          </PopoverContent>
+        </Popover>
+
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="الدنانير"
+                className={`inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-gold transition hover:bg-white/5 active:bg-white/10 ${bumpCls("dinars")}`}
+              >
+                <Coins className="size-3.5" /> {profile.dinars.toLocaleString("en-US")}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+              <DinarsPopover profile={profile} />
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="الخبرة"
+                className={`inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-amber-200 transition hover:bg-white/5 active:bg-white/10 ${bumpCls("points")}`}
+              >
+                <Star className="size-3.5" /> {profile.points.toLocaleString("en-US")}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+              <XPPopover profile={profile} />
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="الحماسة"
+                className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-orange-400 transition hover:bg-white/5 active:bg-white/10"
+              >
+                <Flame className="size-3.5" /> {profile.streak.toLocaleString("en-US")}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+              <StreakPopover profile={profile} />
+            </PopoverContent>
+          </Popover>
+
           <Link to="/notifications" className="relative inline-flex items-center text-muted-foreground hover:text-gold" aria-label="الإشعارات">
             <Bell className="size-4" />
             {unread > 0 && (
