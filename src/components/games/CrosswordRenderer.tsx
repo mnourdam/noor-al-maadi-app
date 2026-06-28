@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Check, Sparkles, Feather, AlertTriangle, Lightbulb } from "lucide-react";
+import { Check, Sparkles, Feather, AlertTriangle, Lightbulb, HelpCircle, Coins, X } from "lucide-react";
+import { toast } from "sonner";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
@@ -7,6 +8,10 @@ import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
 import { isAndroidNativeApp, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
+import { useProfile } from "@/lib/profile";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 
 
 interface Props {
