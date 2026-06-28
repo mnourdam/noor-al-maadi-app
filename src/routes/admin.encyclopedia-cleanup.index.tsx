@@ -717,11 +717,13 @@ function CleanupWorkshop() {
               <Editor
                 key={selected.id}
                 row={selected}
+                allRows={rows}
                 busy={busy === selected.id}
                 onSave={(patch) => saveEntity(selected.id, patch)}
                 onArchive={() => archiveEntity(selected)}
                 onDelete={() => deleteEntity(selected)}
                 onOpenMerge={() => setMergeFor(selected)}
+                onJumpTo={(id) => setSelectedId(id)}
                 duplicates={
                   // Suggest other rows that share normalized title within the same type.
                   rows.filter((x) => x.id !== selected.id
