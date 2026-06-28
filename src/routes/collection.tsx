@@ -41,7 +41,7 @@ import {
   Trophy, Star, Award, Compass,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { BackLink } from "@/components/BackLink";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { useProfile } from "@/lib/profile";
 
 import {
