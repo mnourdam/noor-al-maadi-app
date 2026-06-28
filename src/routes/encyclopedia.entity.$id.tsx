@@ -22,6 +22,7 @@ import {
 } from "@/lib/encyclopedia-source";
 import { cachedEncyclopediaById, cachedEncyclopediaBySlug } from "@/lib/offline-fallback";
 import { localEncyclopediaById, localEncyclopediaBySlug } from "@/lib/local-first-store";
+import { resolveCanonicalLocal } from "@/lib/encyclopedia-canonical";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import {
