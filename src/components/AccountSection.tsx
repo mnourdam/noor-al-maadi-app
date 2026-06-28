@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Cloud, CloudOff, LogIn, LogOut, RefreshCw, ShieldCheck, UserPlus, Shield, FileText, Lock, Users, UserPlus2, BarChart3, GitCompareArrows } from "lucide-react";
+import { Cloud, CloudOff, LogIn, LogOut, RefreshCw, ShieldCheck, UserPlus, Shield, FileText, Lock } from "lucide-react";
 import { useAccount } from "@/lib/account";
 import { AuthLink } from "@/components/AuthLink";
 
