@@ -32,6 +32,10 @@ const encyclopediaByTypeSlug = new Map<string, Row>(); // `${type}::${slug}` →
 const encyclopediaByType = new Map<string, Row[]>();
 const encyclopediaByAlias = new Map<string, Row>();
 const encyclopediaByLegacyId = new Map<string, Row>();
+// `${type}::${normalizedTitle}` → list of rows that share the same historical
+// identity. Powers the canonical resolver so empty duplicates are never shown
+// when a richer sibling exists.
+const encyclopediaByNormName = new Map<string, Row[]>();
 let encyclopediaAll: Row[] = [];
 
 const atlasPublished: Row[] = [];
