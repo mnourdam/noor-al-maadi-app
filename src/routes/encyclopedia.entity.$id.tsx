@@ -222,20 +222,23 @@ function EntityPage() {
         />
 
         <div className="relative px-5 pt-6 pb-12">
-          {/* Back link — steps up to the entity's type listing
-              (e.g. a figure detail returns to "الشخصيات"), falling back
-              to the encyclopedia root for unmapped types. */}
+          {/* Breadcrumb trail — collapses to (parent › current) on narrow
+              screens, expands to the full hierarchy on ≥sm. */}
           {(() => {
             const parent = TYPE_PARENT[isScholar ? "scholar" : entity.entity_type];
-            return parent ? (
-              <BackLink
-                to="/encyclopedia/type/$type"
-                params={{ type: parent.typeSlug } as any}
-                label={parent.label}
-              />
-            ) : (
-              <BackLink to="/encyclopedia" label="الموسوعة" />
-            );
+            const trail = [
+              { label: "الرئيسية", to: "/" as const },
+              { label: "الموسوعة", to: "/encyclopedia" as const },
+              ...(parent
+                ? [{
+                    label: parent.label,
+                    to: "/encyclopedia/type/$type" as const,
+                    params: { type: parent.typeSlug } as any,
+                  }]
+                : []),
+              { label: entity.title },
+            ];
+            return <Breadcrumbs items={trail} />;
           })()}
 
           {/* ───────── Cinematic Hero ───────── */}
