@@ -18,6 +18,7 @@
  */
 import { loadBundledSnapshot } from "./offline-snapshot";
 import { loadSnapshot, type OfflineSnapshot } from "./offline-storage";
+import { normalizeArabicName } from "./arabic-normalize";
 
 type Row = Record<string, any>;
 
@@ -31,6 +32,10 @@ const encyclopediaByTypeSlug = new Map<string, Row>(); // `${type}::${slug}` →
 const encyclopediaByType = new Map<string, Row[]>();
 const encyclopediaByAlias = new Map<string, Row>();
 const encyclopediaByLegacyId = new Map<string, Row>();
+// `${type}::${normalizedTitle}` → list of rows that share the same historical
+// identity. Powers the canonical resolver so empty duplicates are never shown
+// when a richer sibling exists.
+const encyclopediaByNormName = new Map<string, Row[]>();
 let encyclopediaAll: Row[] = [];
 
 const atlasPublished: Row[] = [];
@@ -52,6 +57,7 @@ function indexEncyclopedia(rows: Row[]) {
   encyclopediaByType.clear();
   encyclopediaByAlias.clear();
   encyclopediaByLegacyId.clear();
+  encyclopediaByNormName.clear();
   encyclopediaAll = rows.filter((r) => r && r.enabled !== false);
   for (const r of encyclopediaAll) {
     if (r.id) encyclopediaById.set(r.id, r);
@@ -65,6 +71,15 @@ function indexEncyclopedia(rows: Row[]) {
       const list = encyclopediaByType.get(r.entity_type) ?? [];
       list.push(r);
       encyclopediaByType.set(r.entity_type, list);
+    }
+    // Normalized-name index (same-historical-entity grouping).
+    if (r.entity_type && typeof r.title === "string" && r.title.trim().length > 0) {
+      const key = `${r.entity_type}::${normalizeArabicName(r.title)}`;
+      if (!key.endsWith("::")) {
+        const list = encyclopediaByNormName.get(key) ?? [];
+        list.push(r);
+        encyclopediaByNormName.set(key, list);
+      }
     }
     const meta = r.metadata as Record<string, any> | null | undefined;
     if (meta && typeof meta === "object") {
@@ -240,6 +255,20 @@ export function localEncyclopediaByType(type: string): Row[] {
 
 export function localEncyclopediaSlugCandidates(slug: string): Row[] {
   return encyclopediaBySlug.get(slug) ?? [];
+}
+
+/**
+ * Return every row that represents the same historical entity (same type +
+ * normalized Arabic title) as `entity`. Includes `entity` itself.
+ * Sub-millisecond — backed by an in-memory Map built at boot.
+ */
+export function localEncyclopediaSameNameSiblings(entity: {
+  entity_type?: string; title?: string;
+} | null | undefined): Row[] {
+  if (!entity?.entity_type || !entity?.title) return [];
+  const key = `${entity.entity_type}::${normalizeArabicName(entity.title)}`;
+  if (key.endsWith("::")) return [];
+  return encyclopediaByNormName.get(key) ?? [];
 }
 
 export function localEncyclopediaAll(): Row[] { return encyclopediaAll; }

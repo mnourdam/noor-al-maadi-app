@@ -22,6 +22,7 @@ import {
 } from "@/lib/encyclopedia-source";
 import { cachedEncyclopediaById, cachedEncyclopediaBySlug } from "@/lib/offline-fallback";
 import { localEncyclopediaById, localEncyclopediaBySlug } from "@/lib/local-first-store";
+import { resolveCanonicalLocal } from "@/lib/encyclopedia-canonical";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import {
@@ -105,7 +106,9 @@ function EntityPage() {
       const local = (isUuid(id)
         ? localEncyclopediaById(id)
         : localEncyclopediaBySlug(id)) as SupabaseEncyclopediaEntity | null;
-      return local ?? undefined;
+      if (!local) return undefined;
+      const canon = resolveCanonicalLocal(local as any) as SupabaseEncyclopediaEntity | null;
+      return canon ?? local;
     },
     initialDataUpdatedAt: 0,
     queryFn: async () => {
@@ -156,7 +159,12 @@ function EntityPage() {
             ?? (await cachedEncyclopediaBySlug(id))
             ?? (await cachedEncyclopediaById(id));
       }
-      return followCanonical(primary);
+      const followed = await followCanonical(primary);
+      // Final guard — if the chosen row is empty but a richer same-name
+      // sibling exists in the local store, transparently switch to it so
+      // the player never sees a blank duplicate.
+      const escalated = resolveCanonicalLocal(followed as any) as SupabaseEncyclopediaEntity | null;
+      return escalated ?? followed;
     },
   });
 
