@@ -195,7 +195,12 @@ Deno.serve(async (req) => {
         target_user_id: body.target_user_id ?? null,
         deep_link: body.deep_link ?? null,
         image_url: body.image_url ?? null,
-        status: "draft",
+        // Mark as sent immediately. Push delivery is best-effort; in-app
+        // visibility (banner, bell badge, notification center, realtime
+        // listeners) MUST work even when the user has no FCM token or the
+        // token is stale, otherwise the notification is silently dropped.
+        status: "sent",
+        sent_at: new Date().toISOString(),
       };
       const { data, error } = await admin
         .from("notifications")
@@ -210,11 +215,15 @@ Deno.serve(async (req) => {
       notificationId = notif.id;
     }
 
-    // Mark sending
-    await admin
-      .from("notifications")
-      .update({ status: "sending" })
-      .eq("id", notif.id);
+    // Ensure the notification is marked as sent before attempting push so
+    // realtime listeners can surface it regardless of FCM outcome.
+    if (notif.status !== "sent") {
+      await admin
+        .from("notifications")
+        .update({ status: "sent", sent_at: notif.sent_at ?? new Date().toISOString() })
+        .eq("id", notif.id);
+      notif.status = "sent";
+    }
 
     // Load tokens
     let tokensQuery = admin
@@ -265,16 +274,24 @@ Deno.serve(async (req) => {
       } else {
         failed++;
         console.warn(`[send-notification] token failed: ${result.error}`);
+        // Auto-disable permanently-invalid tokens so they don't keep failing.
+        if (
+          result.error &&
+          (result.error.includes("UNREGISTERED") ||
+            result.error.includes("INVALID_ARGUMENT") ||
+            result.error.includes("registration-token-not-registered"))
+        ) {
+          await admin.from("device_tokens").update({ enabled: false }).eq("token", row.token);
+        }
       }
     }
 
-    const finalStatus = sent > 0 ? "sent" : "failed";
-    await admin
-      .from("notifications")
-      .update({ status: finalStatus, sent_at: new Date().toISOString() })
-      .eq("id", notif.id);
+    // notification.status was already set to 'sent' on insert — push is
+    // best-effort and must not flip the row back to 'failed', otherwise the
+    // recipient loses the in-app banner / bell badge / center entry.
 
-    console.log(`[send-notification] done notif=${notif.id} sent=${sent} failed=${failed}`);
+
+    console.log(`[send-notification][v2] done notif=${notif.id} sent=${sent} failed=${failed} status=${notif.status}`);
 
     return jsonResponse({
       ok: true,

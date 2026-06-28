@@ -262,7 +262,7 @@ export async function acceptFriend(id: string): Promise<boolean> {
             type: "friend_accepted",
             target_type: "user",
             target_user_id: requester,
-            deep_link: "/friends",
+            deep_link: "/friends?tab=requests",
           },
         });
       }
