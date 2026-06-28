@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ChevronRight,
-  Database,
   Network,
   Compass,
   Sparkles,
