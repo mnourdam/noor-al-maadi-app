@@ -53,7 +53,7 @@ type HeroSlide =
 
 
 function HomeFull() {
-  const { profile, touchStreak } = useProfile();
+  const { profile } = useProfile();
   const { account, user, lastSyncAt } = useAccount();
 
   const displayName = account?.username ?? (user ? profile.name : profile.name);
