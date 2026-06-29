@@ -22,7 +22,7 @@ const FEATURES = [
   { icon: Compass, label: "المعارك" },
   { icon: Landmark, label: "المدن" },
   { icon: Library, label: "المتحف والمقتنيات" },
-  { icon: ScrollText, label: "الخط الزمني" },
+  
   { icon: GitBranch, label: "شبكة العلاقات التاريخية" },
 ];
 
