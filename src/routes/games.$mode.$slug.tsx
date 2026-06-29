@@ -128,6 +128,8 @@ function GamePlayPage() {
       if (firstTime) {
         if (game.xp_reward > 0) addPoints(game.xp_reward);
         if (game.coin_reward > 0) addDinars(game.coin_reward);
+        // Qualifying streak activity: completing a mini-game / daily challenge.
+        touchStreak();
         // Museum unlocks — reuse the Campaign pipeline (user_collection).
         const unlockIds = extractMuseumUnlocks({
           metadata: (game.metadata as Record<string, unknown> | null) ?? undefined,
@@ -144,7 +146,7 @@ function GamePlayPage() {
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
-  }, [game, isLast, stageIdx, failed, stageDone, addPoints, addDinars]);
+  }, [game, isLast, stageIdx, failed, stageDone, addPoints, addDinars, touchStreak]);
 
   // Timeout pipeline: instant fail, lose one heart, no rewards.
   const handleTimeout = useCallback(() => {
