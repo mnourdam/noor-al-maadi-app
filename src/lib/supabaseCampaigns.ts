@@ -114,3 +114,32 @@ export async function fetchCampaignByIdOrSlug(idOrSlug: string): Promise<Campaig
   }
   return null;
 }
+
+/**
+ * Full ordered timeline feed: era dividers interleaved with campaigns
+ * in their shared chronological position. Local-first, identical to the
+ * admin Campaign Ordering Workshop sequence.
+ */
+export async function fetchPublishedFeed(): Promise<{
+  items: FeedItem[];
+  sections: EraSection[];
+  dividers: CampaignDivider[];
+  campaigns: Campaign[];
+}> {
+  await ensureLocalSnapshotLoaded();
+  let local = localPublishedCampaigns() as { id: string; slug: string; data: any }[];
+  if (local.length === 0) {
+    try {
+      const { data, error } = await supabase
+        .from("admin_campaigns")
+        .select("id, slug, data")
+        .eq("status", "published");
+      if (!error && data) local = data as any[];
+    } catch { /* ignore */ }
+  }
+  const campaigns = toCampaigns(local);
+  const dividers = toDividers(local);
+  const items = buildFeed(campaigns, dividers);
+  const sections = groupFeedIntoSections(items);
+  return { items, sections, dividers, campaigns };
+}
