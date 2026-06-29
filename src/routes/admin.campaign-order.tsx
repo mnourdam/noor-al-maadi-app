@@ -425,6 +425,16 @@ function CampaignOrderPage() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300">
               <RefreshCw className="h-3.5 w-3.5" /> تحديث
             </button>
+            <button onClick={exportJson} disabled={loading || rows.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/15 disabled:opacity-40"
+              title="تصدير الترتيب الكامل بصيغة JSON">
+              <FileJson className="h-3.5 w-3.5" /> تصدير JSON
+            </button>
+            <button onClick={exportCsv} disabled={loading || rows.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/15 disabled:opacity-40"
+              title="تصدير الترتيب الكامل بصيغة CSV">
+              <FileSpreadsheet className="h-3.5 w-3.5" /> تصدير CSV
+            </button>
             <button onClick={applyAutoOrder}
               className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20"
               title="إعادة بناء الترتيب الزمني لكل الحملات (يتجاوز الترتيب اليدوي)">
