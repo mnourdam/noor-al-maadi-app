@@ -841,3 +841,84 @@ html.perf-lite .section-flow { background: none; }
   .section-flow > section + div::before { background: none; }
 }
 
+/* ============================================================
+   Motion Primitives — LC1 premium polish
+   GPU-only (transform / opacity). Short, calm, intentional.
+   All disabled under prefers-reduced-motion via global guard above.
+   ============================================================ */
+
+@keyframes irth-page-enter {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes irth-card-enter {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes irth-dialog-enter {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes irth-toast-enter {
+  from { opacity: 0; transform: translate3d(0, -6px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes irth-reward-float {
+  0%   { opacity: 0; transform: translate3d(0, 4px, 0) scale(0.96); }
+  15%  { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  100% { opacity: 0; transform: translate3d(0, -28px, 0) scale(1); }
+}
+@keyframes irth-gold-glow-once {
+  0%   { box-shadow: 0 0 0 0 oklch(0.82 0.14 82 / 0); }
+  40%  { box-shadow: 0 0 18px 2px oklch(0.82 0.14 82 / 0.55); }
+  100% { box-shadow: 0 0 0 0 oklch(0.82 0.14 82 / 0); }
+}
+@keyframes irth-skel-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.motion-page         { animation: irth-page-enter 200ms cubic-bezier(.2,.7,.2,1) both; }
+.motion-card         { animation: irth-card-enter 180ms cubic-bezier(.2,.7,.2,1) both; }
+.motion-card-stagger > * {
+  animation: irth-card-enter 180ms cubic-bezier(.2,.7,.2,1) both;
+  animation-delay: calc(var(--i, 0) * 25ms);
+}
+.motion-dialog       { animation: irth-dialog-enter 180ms cubic-bezier(.2,.7,.2,1) both; }
+.motion-toast        { animation: irth-toast-enter 180ms cubic-bezier(.2,.7,.2,1) both; }
+.motion-reward-float { animation: irth-reward-float 900ms cubic-bezier(.2,.7,.2,1) both; pointer-events: none; }
+.motion-unlock-glow  { animation: irth-gold-glow-once 1100ms ease-out both; }
+
+/* Tap micro-feedback: 1.0 → 0.97 → 1.0 ~100ms */
+.motion-tap { transition: transform 100ms cubic-bezier(.2,.7,.2,1); will-change: transform; }
+.motion-tap:active { transform: scale(0.97); }
+
+/* Skeleton shimmer — low contrast, GPU-friendly */
+.motion-skel {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-foreground) 6%, transparent) 0%,
+      color-mix(in oklab, var(--color-foreground) 12%, transparent) 50%,
+      color-mix(in oklab, var(--color-foreground) 6%, transparent) 100%
+    );
+  background-size: 200% 100%;
+  animation: irth-skel-shimmer 1400ms linear infinite;
+}
+
+/* Bottom-nav active item: tiny calm pop, GPU only */
+.motion-nav-active { transition: transform 180ms cubic-bezier(.2,.7,.2,1); transform: scale(1.04); }
+
+/* Reveal-on-scroll: hidden until .is-in is added by IntersectionObserver */
+.motion-reveal { opacity: 0; transform: translate3d(0, 8px, 0); transition: opacity 220ms cubic-bezier(.2,.7,.2,1), transform 220ms cubic-bezier(.2,.7,.2,1); will-change: opacity, transform; }
+.motion-reveal.is-in { opacity: 1; transform: translate3d(0, 0, 0); }
+
+/* Number rolling — purely cosmetic; the count is updated in JS */
+.motion-num { transition: color 180ms ease-out; }
+
+/* Perf-lite: simplify but keep enter transitions for feel of life */
+html.perf-lite .motion-card-stagger > * { animation-delay: 0ms !important; }
+html.perf-lite .motion-skel { animation: none !important; background: color-mix(in oklab, var(--color-foreground) 8%, transparent); }
+html.perf-lite .motion-reward-float { animation-duration: 600ms !important; }
+html.perf-lite .motion-unlock-glow { animation-duration: 700ms !important; box-shadow: 0 0 10px 1px oklch(0.82 0.14 82 / 0.4) !important; }
+
