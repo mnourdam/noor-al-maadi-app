@@ -3,7 +3,7 @@ import { Coins, HelpCircle, X } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { useGameHelp } from "./GameHelpContext";
+import { useGameHelp, type HelpOption } from "./GameHelpContext";
 
 interface Props {
   open: boolean;
@@ -11,6 +11,8 @@ interface Props {
   dinars: number;
   /** Deduct `cost` dinars. Returns true on success. */
   spendDinars: (cost: number) => boolean;
+  /** Always-on options provided by the host (e.g. the timer "+2 min"). */
+  builtinOptions?: HelpOption[];
 }
 
 /**
@@ -18,9 +20,9 @@ interface Props {
  * option registered through GameHelpContext; opens an "insufficient dinars"
  * sub-dialog when the player cannot afford a chosen option.
  */
-export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars }: Props) {
+export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builtinOptions = [] }: Props) {
   const ctx = useGameHelp();
-  const options = ctx?.options ?? [];
+  const options: HelpOption[] = [...builtinOptions, ...(ctx?.options ?? [])];
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [pendingCost, setPendingCost] = useState<number>(0);
 
