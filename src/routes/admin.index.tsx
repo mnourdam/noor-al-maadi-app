@@ -84,6 +84,8 @@ function AdminHub() {
             desc="استيراد JSON للموسوعة والحملات والإشعارات والمعلومات اليومية." />
           <AdminCard to="/admin/campaigns" icon={<Sword className="h-5 w-5" />} title="إدارة الحملات"
             desc="إدارة حملات إرث التاريخية." />
+          <AdminCard to="/admin/campaign-order" icon={<Sword className="h-5 w-5" />} title="ترتيب الحملات"
+            desc="تحكّم بالترتيب الزمني الذي يراه اللاعبون في صفحة الحملات." />
           <AdminCard to="/admin/games" icon={<Gamepad2 className="h-5 w-5" />} title="إدارة الألعاب"
             desc="إطار JSON للتحديات التاريخية: كلمات متقاطعة، ترتيب الأحداث، من أنا؟، الروابط، الذاكرة." />
           <AdminCard to="/admin/encyclopedia" icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
