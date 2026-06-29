@@ -179,6 +179,8 @@ function ImportedChapterPlayer() {
     // Chapter completion rewards — claimed once via ledger.
     if (newlyChapter) {
       audioManager.playSfx("chapter-complete", { dedupeKey: `ch:${chapter!.id}` });
+      // Qualifying streak activity: completing a campaign chapter.
+      touchStreak();
       const chDelta = claimChapterReward(campaign!, chapter!);
       if (chDelta.granted) {
         if (chDelta.xp > 0)    addPoints(chDelta.xp);
