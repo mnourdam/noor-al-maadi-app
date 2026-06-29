@@ -1,6 +1,7 @@
 // ============================================================
 
 import { androidMark, isAndroidNativeApp, isAndroidUltraStableMode } from "./androidFreezeDiagnostics";
+import { deviceAllowsAudio, initAndroidSilentMode } from "./androidSilentMode";
 // audioManager.ts — Global audio singleton for Irth
 // ------------------------------------------------------------
 // - Subtle background ambience (looping)
