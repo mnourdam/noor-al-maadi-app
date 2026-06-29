@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
 import { supabase } from "@/integrations/supabase/client";
-import { isCapacitorNative, signInWithGoogleNative } from "@/lib/native-auth";
+// Google native sign-in helper preserved at "@/lib/native-auth" for future LC re-enable.
 import { PasswordField } from "@/components/ui/PasswordField";
 
 export const Route = createFileRoute("/auth")({
@@ -102,57 +102,9 @@ function AuthPage() {
         </div>
 
         <div className="rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
-          {mode !== "forgot" && (
-            <>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={async () => {
-                  if (busy) return;
-                  setError(null); setInfo(null); setBusy(true);
-                  try {
-                    // Android (Capacitor) → Chrome Custom Tab via @capacitor/browser.
-                    // Web/preview → direct Supabase Google OAuth as well.
-                    if (isCapacitorNative()) {
-                      const r = await signInWithGoogleNative();
-                      if (!r.ok) setError(r.error ?? "تعذر تسجيل الدخول عبر Google");
-                      // The deep-link listener finalizes the session and routes home.
-                      return;
-                    }
-                    const redirectTo = typeof window !== "undefined"
-                      ? `${window.location.origin}/auth/callback`
-                      : undefined;
-                    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-                      provider: "google",
-                      options: { redirectTo },
-                    });
-                    if (oauthError) {
-                      setError(oauthError.message || "تعذر تسجيل الدخول عبر Google");
-                      return;
-                    }
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : "تعذر تسجيل الدخول عبر Google");
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-                className="mb-3 flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white py-3 text-sm font-bold text-[#1f1f1f] shadow-sm transition hover:bg-white/90 disabled:opacity-60"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
-                  <path fill="#4285F4" d="M21.6 12.227c0-.709-.064-1.39-.182-2.045H12v3.868h5.382a4.6 4.6 0 0 1-1.995 3.018v2.51h3.232c1.891-1.742 2.981-4.305 2.981-7.351Z"/>
-                  <path fill="#34A853" d="M12 22c2.7 0 4.964-.895 6.619-2.422l-3.232-2.51c-.896.6-2.041.955-3.387.955-2.605 0-4.81-1.76-5.597-4.124H3.064v2.59A9.997 9.997 0 0 0 12 22Z"/>
-                  <path fill="#FBBC05" d="M6.403 13.899A6.006 6.006 0 0 1 6.09 12c0-.66.114-1.302.314-1.899V7.51H3.064A9.997 9.997 0 0 0 2 12c0 1.614.386 3.14 1.064 4.49l3.339-2.591Z"/>
-                  <path fill="#EA4335" d="M12 5.977c1.469 0 2.787.505 3.823 1.496l2.868-2.868C16.96 2.99 14.696 2 12 2A9.997 9.997 0 0 0 3.064 7.51L6.403 10.1C7.19 7.737 9.395 5.977 12 5.977Z"/>
-                </svg>
-                <span>المتابعة باستخدام Google</span>
-              </button>
-              <div className="my-3 flex items-center gap-3 text-[11px] text-muted-foreground">
-                <div className="h-px flex-1 bg-white/10" />
-                <span>أو</span>
-                <div className="h-px flex-1 bg-white/10" />
-              </div>
-            </>
-          )}
+          {/* Google Sign-In intentionally hidden for LC1. Implementation preserved in
+              src/lib/native-auth.ts and src/routes/auth.callback.tsx for future re-enable. */}
+
 
           {mode !== "forgot" && (
             <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/10 p-1">
