@@ -36,7 +36,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   master: true,
   daily: true,
   reengagement: true,
-  season: true,
+  season: false, // LC1: season notifications disabled by default (feature hidden post-beta).
   campaign: true,
   friend: true,
 };

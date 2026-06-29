@@ -40,7 +40,8 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", label: "نظرة", icon: LayoutGrid },
   { id: "progress", label: "التقدم", icon: TrendingUp },
   { id: "achievements", label: "الإنجازات", icon: Medal },
-  { id: "seasons", label: "المواسم", icon: ScrollText },
+  // Seasons tab hidden for LC1 — feature deferred post-beta. Renderer kept intact.
+  // { id: "seasons", label: "المواسم", icon: ScrollText },
   { id: "referrals", label: "الإحالات", icon: Users2 },
   { id: "settings", label: "الإعدادات", icon: SettingsIcon },
 ];
@@ -551,7 +552,7 @@ function OverviewTab({
             <span className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.18em] text-gold/80">
               <ScrollText className="size-3.5" /> الموسم الحالي
             </span>
-            <Link to="/seasons" className="text-[10px] text-gold hover:underline">تفاصيل</Link>
+            {/* /seasons link hidden for LC1 — feature deferred post-beta. */}
           </div>
           <p className="font-display mt-1 text-sm font-bold">{CURRENT_SEASON.name}</p>
           <p className="line-clamp-2 mt-0.5 text-[11px] text-muted-foreground leading-5">{CURRENT_SEASON.tagline}</p>
