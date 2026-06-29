@@ -5,6 +5,7 @@ import { useAccount } from "@/lib/account";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { isCapacitorNative, signInWithGoogleNative } from "@/lib/native-auth";
+import { PasswordField } from "@/components/ui/PasswordField";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
