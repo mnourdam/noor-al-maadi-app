@@ -76,7 +76,7 @@ export const GameTimer = forwardRef<GameTimerHandle, Props>(function GameTimer(
 
   const m = Math.floor(remaining / 60);
   const s = remaining % 60;
-  const pct = Math.max(0, Math.min(100, (remaining / Math.max(seconds, 1)) * 100));
+  const pct = Math.max(0, Math.min(100, (remaining / Math.max(baseSeconds, 1)) * 100));
 
   // Tri-color tone — subtle, no flashing.
   const tone: Tone = pct <= 20 ? "red" : pct <= 50 ? "gold" : "green";
