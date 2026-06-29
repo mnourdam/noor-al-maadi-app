@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Trash2, ChevronLeft, MailOpen, CheckCheck, Image as ImageIcon } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { resolveCategory } from "@/lib/notifications/categories";
-import { resolveDeepLink, type NotificationPayload } from "@/lib/notifications/deepLink";
+import { resolveDeepLink, isInformationalNotification, type NotificationPayload } from "@/lib/notifications/deepLink";
 import {
   fetchMyNotifications,
   markNotificationRead,
