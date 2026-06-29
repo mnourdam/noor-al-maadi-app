@@ -395,12 +395,14 @@ function CampaignOrderPage() {
         )}
 
         <footer className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-xs leading-loose text-slate-400">
-          <p className="mb-1 text-amber-200">كيف يعمل هذا الترتيب؟</p>
+          <p className="mb-1 text-amber-200">سياسة الترتيب</p>
           <ul className="list-disc ps-5">
-            <li>الحقل: <code className="text-slate-200">admin_campaigns.data.chronological_order</code> (عدد متسلسل بخطوة 10).</li>
-            <li>الحالة: <code className="text-slate-200">data.order_status</code> = manual / auto / review.</li>
-            <li>القارئ في تطبيق اللاعب يفضّل هذا الحقل عبر <code className="text-slate-200">campaignSortKey</code>، ثم <code className="text-slate-200">sort_year</code>، ثم تحليل <code className="text-slate-200">historicalPeriod</code>.</li>
-            <li>اللقطة دون اتصال (offline snapshot) تشمل نفس حقل <code className="text-slate-200">data</code>، فيُحفظ الترتيب تلقائياً.</li>
+            <li><span className="text-amber-200">الترتيب اليدوي هو المرجع.</span> كل سحب أو نقل تقوم به يُحفظ كـ <code className="text-slate-200">manual</code> ولن يُغيَّر تلقائياً.</li>
+            <li>استيراد حملة جديدة <span className="text-amber-200">لن يُعيد ترتيب أي حملة موجودة</span>. يُحسب فقط أفضل موقع مقترح للحملة الجديدة. عند عدم اليقين تُعلَّم <code className="text-slate-200">مراجعة الترتيب</code>.</li>
+            <li>إعادة استيراد حملة موجودة تحافظ على <code className="text-slate-200">chronological_order</code> و <code className="text-slate-200">order_status</code> المحفوظَين.</li>
+            <li>زر <span className="text-emerald-200">إعادة الترتيب التلقائي</span> هو الإجراء الوحيد الذي يعيد بناء الترتيب لكل الحملات وفق الخوارزمية التاريخية، وهو إجراء صريح فقط.</li>
+            <li>التخزين: <code className="text-slate-200">admin_campaigns.data.chronological_order</code> (بخطوة 10) و <code className="text-slate-200">data.order_status</code>.</li>
+            <li>اللقطة دون اتصال تشمل نفس حقل <code className="text-slate-200">data</code> فيُحفظ الترتيب تلقائياً.</li>
           </ul>
         </footer>
       </div>
