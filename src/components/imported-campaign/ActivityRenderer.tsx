@@ -200,24 +200,40 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
 }
 
 // ---------- True / False ----------
+// Same learning-after-failure flow as Multiple Choice: 1st wrong stays open,
+// 2nd wrong reveals the answer and surfaces "متابعة".
 function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const [revealed, setRevealed] = useState(false);
+  const [wrongCount, setWrongCount] = useState(0);
+  const [wrongPick, setWrongPick] = useState<boolean | null>(null);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
   const correct = typeof activity.correctAnswer === "boolean"
     ? activity.correctAnswer
     : String(activity.correctAnswer).toLowerCase() === "true";
 
+  const locked = resolved || revealed;
+
   const submit = (val: boolean) => {
-    if (resolved) return;
+    if (locked) return;
     if (val === correct) {
       setResolved(true);
       setFeedback("ok");
       onResolve(true);
-    } else {
-      // Wrong: allow retry, do not lock, do not reveal correct.
-      setFeedback("err");
-      onResolve(false);
+      return;
     }
+    const nextWrong = wrongCount + 1;
+    setWrongCount(nextWrong);
+    setWrongPick(val);
+    setFeedback("err");
+    if (nextWrong >= 2) setRevealed(true);
+    onResolve(false);
+  };
+
+  const continueAfterReveal = () => {
+    if (!revealed || resolved) return;
+    setResolved(true);
+    onResolve(true, { viaReveal: true });
   };
 
   return (
@@ -226,14 +242,16 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
       <PromptBlock activity={activity} />
       <div className="grid grid-cols-2 gap-2">
         {[true, false].map((val) => {
-          const isCorrect = resolved && val === correct;
+          const isCorrectChoice = (resolved || revealed) && val === correct;
+          const isWrongChoice = revealed && val !== correct && wrongPick === val;
           return (
             <button
               key={String(val)}
-              disabled={resolved}
+              disabled={locked}
               onClick={() => submit(val)}
               className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
-                isCorrect ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
+                isCorrectChoice ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
+                : isWrongChoice ? "border-red-400/70 bg-red-500/15 text-red-100"
                 : "border-white/10 bg-black/30 hover:border-gold/40"
               }`}
             >
@@ -248,8 +266,18 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
           kind={feedback}
           text={feedback === "ok"
             ? (activity.feedbackCorrect ?? FALLBACK_OK)
-            : (activity.feedbackWrong ?? FALLBACK_WRONG)}
+            : revealed
+              ? "هذه هي الإجابة الصحيحة. تابع لرحلتك."
+              : (activity.feedbackWrong ?? FALLBACK_WRONG)}
         />
+      )}
+      {revealed && !resolved && (
+        <button
+          onClick={continueAfterReveal}
+          className="mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
+        >
+          متابعة
+        </button>
       )}
     </div>
   );
