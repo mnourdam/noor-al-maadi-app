@@ -361,7 +361,7 @@ function ImportedChapterPlayer() {
                 </div>
 
                 {/* PR2: wrong-answer banner — no Next button, must retry. */}
-                {currentAck !== "correct" && wrongAttempts > 0 && !heartsDepleted && (
+                {currentAck !== "correct" && wrongAttempts === 1 && !heartsDepleted && (
                   <div className="mt-3 flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
                     <XIcon className="size-3.5" />
                     <span className="flex-1">إجابة غير صحيحة. خسرتَ قلبًا — حاول مرة أخرى.</span>
