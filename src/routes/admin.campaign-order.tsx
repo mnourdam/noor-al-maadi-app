@@ -19,7 +19,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Sword, RefreshCw, Save, Wand2, GripVertical, ArrowUp, ArrowDown,
-  AlertTriangle, CheckCircle2, X, ChevronRight,
+  AlertTriangle, CheckCircle2, X, ChevronRight, FileJson, FileSpreadsheet,
 } from "lucide-react";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
@@ -57,6 +57,8 @@ interface Row {
   title: string;
   status: Status;
   data: any;
+  createdAt: string | null;
+  updatedAt: string | null;
   // Derived
   era: string;
   worldSlug: string;
@@ -124,6 +126,8 @@ function toRow(c: any): Row {
     title: c.title ?? "",
     status: c.status,
     data: d,
+    createdAt: c.created_at ?? null,
+    updatedAt: c.updated_at ?? null,
     era,
     worldSlug: String(d.worldSlug ?? inferred?.worldSlug ?? ""),
     period: String(d.historicalPeriod ?? d.period ?? ""),
@@ -176,7 +180,7 @@ function CampaignOrderPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("admin_campaigns" as any)
-      .select("id, slug, title, status, data")
+      .select("id, slug, title, status, data, created_at, updated_at")
       .limit(2000);
     if (error) { setErr(error.message); setLoading(false); return; }
     const list = ((data ?? []) as any[]).map(toRow);
