@@ -3,13 +3,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight, Coins, Star, Clock, Sparkles, ChevronLeft,
   BookOpen, Compass, Trophy, Library, RotateCcw, Heart, Landmark, CheckCircle2,
+  HelpCircle, Hourglass,
 } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell, Screen } from "@/components/AppShell";
 import { getGameBySlug, type GameRow } from "@/lib/games/store";
 import { recordCompletion, getMyProgress } from "@/lib/games/progress";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, GAME_MODES, type GameMode } from "@/lib/games/types";
 import { GameStageRenderer } from "@/components/games/GameStageRenderer";
-import { GameTimer } from "@/components/games/GameTimer";
+import { GameTimer, type GameTimerHandle } from "@/components/games/GameTimer";
+import { GameHelpProvider } from "@/components/games/help/GameHelpContext";
+import { GameHelpDialog } from "@/components/games/help/GameHelpDialog";
 import { ExitConfirmDialog } from "@/components/games/ExitConfirmDialog";
 import { sfx } from "@/components/games/sfx";
 import { resolveMaxAttempts, resolveTimerSeconds } from "@/lib/games/timer";
@@ -48,6 +52,12 @@ function GamePlayPage() {
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
   const [unlockToast, setUnlockToast] = useState<number>(0); // count of newly unlocked museum items
 
+  // Unified Help system — single button/dialog used by every mini-game.
+  const [helpOpen, setHelpOpen] = useState(false);
+  const timerRef = useRef<GameTimerHandle | null>(null);
+  const playerDinars = useProfile().profile?.dinars ?? 0;
+  const TIME_BONUS_COST = 10;
+  const TIME_BONUS_SECONDS = 120;
 
   // Exit confirmation
   const [exitOpen, setExitOpen] = useState(false);
@@ -168,6 +178,24 @@ function GamePlayPage() {
 
   const onPaidHint = useCallback((cost: number) => spendDinars(cost), [spendDinars]);
 
+  // Built-in help option available in every timed mini-game.
+  const helpBuiltins = useMemo(() => [{
+    id: "add_time",
+    icon: <Hourglass className="h-4 w-4" />,
+    label: "شراء دقيقتين إضافيتين",
+    description: "أضف دقيقتين إلى الوقت المتبقي لمواصلة التحدّي.",
+    cost: TIME_BONUS_COST,
+    getAvailable: () => !stageDone && !failed,
+    perform: ({ pay }: { pay: () => boolean }) => {
+      if (stageDone || failed) return false;
+      if (!pay()) return false;
+      timerRef.current?.addSeconds(TIME_BONUS_SECONDS);
+      sfx("gold_unlock", "help-add-time");
+      toast.success("تمت إضافة دقيقتين مقابل 10 دنانير.");
+      return true;
+    },
+  }], [stageDone, failed]);
+
   const next = () => {
     if (isLast) return;
     setStageIdx((i) => i + 1);
@@ -280,7 +308,16 @@ function GamePlayPage() {
 
   return (
     <AppShell>
+     <GameHelpProvider>
       <div dir="rtl" className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+        <GameHelpDialog
+          open={helpOpen}
+          onOpenChange={setHelpOpen}
+          dinars={playerDinars}
+          spendDinars={spendDinars}
+          builtinOptions={helpBuiltins}
+        />
+
         {/* Breadcrumb with exit guard */}
         <div className="flex items-center justify-between text-xs">
           <button
@@ -313,20 +350,29 @@ function GamePlayPage() {
           </div>
         </header>
 
-        {/* Countdown timer (always visible) + progress rail */}
+        {/* Countdown timer + unified Help button + progress rail */}
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <GameTimer
+              ref={timerRef}
               key={`${game.id}-${stageIdx}-${retryNonce}`}
               seconds={timerSeconds}
               paused={stageDone || failed}
               onExpire={handleTimeout}
             />
-            <div className="hidden text-end text-[11px] text-slate-400 sm:block">
-              <p>الوقت المتاح</p>
-              <p className="text-amber-300/80">يستمر العدّ حتى انتهاء المرحلة</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              disabled={stageDone || failed}
+              aria-label="مساعدة"
+              title="مساعدة"
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-gradient-to-b from-amber-500/25 to-amber-600/10 px-3 py-1.5 text-[11px] font-bold text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.15)_inset] transition hover:from-amber-500/35 hover:to-amber-600/20 disabled:opacity-40"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              مساعدة
+            </button>
           </div>
+
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[11px] text-slate-400">
               <span>المرحلة {Math.min(stageIdx + 1, Math.max(stages.length, 1))} من {stages.length}</span>
@@ -461,6 +507,7 @@ function GamePlayPage() {
       />
 
       <OutOfHeartsModal open={showOutOfHearts} onClose={() => setShowOutOfHearts(false)} />
+     </GameHelpProvider>
     </AppShell>
   );
 }
