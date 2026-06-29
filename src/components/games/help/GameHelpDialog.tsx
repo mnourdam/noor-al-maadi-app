@@ -22,7 +22,12 @@ interface Props {
  */
 export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builtinOptions = [] }: Props) {
   const ctx = useGameHelp();
-  const options: HelpOption[] = [...builtinOptions, ...(ctx?.options ?? [])];
+  let options: HelpOption[] = [];
+  try {
+    options = [...builtinOptions, ...(ctx?.options ?? [])];
+  } catch {
+    options = [...builtinOptions];
+  }
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [pendingCost, setPendingCost] = useState<number>(0);
 
