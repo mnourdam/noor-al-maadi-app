@@ -783,3 +783,61 @@ html.react-bare-input-test button {
 @media (prefers-reduced-motion: reduce) {
   .hud-bump, .hud-shake { animation: none; }
 }
+
+/* ============================================================
+ * Section Flow — seamless cinematic transitions between sections.
+ * Applied via .section-flow on the main content column. Cards stay
+ * visually distinct; only the *background* and *gaps* feather.
+ * ============================================================ */
+.section-flow {
+  position: relative;
+  background:
+    radial-gradient(120% 700px at 50% 4%,  color-mix(in oklab, var(--color-gold) 6%, transparent), transparent 70%),
+    radial-gradient(140% 900px at 50% 38%, color-mix(in oklab, var(--color-gold) 3%, transparent), transparent 72%),
+    radial-gradient(140% 900px at 50% 72%, color-mix(in oklab, oklch(0.62 0.22 30) 4%, transparent), transparent 72%),
+    radial-gradient(160% 800px at 50% 100%, color-mix(in oklab, var(--color-gold) 4%, transparent), transparent 75%);
+  background-attachment: local;
+}
+/* Soften the hard horizontal "cut" between stacked sections without
+ * collapsing the cards inside them. We feather a thin gold seam across
+ * each section boundary using a pseudo element on every section that
+ * directly follows another section. */
+.section-flow > section + section,
+.section-flow > div + section,
+.section-flow > section + div {
+  position: relative;
+}
+.section-flow > section + section::before,
+.section-flow > div + section::before,
+.section-flow > section + div::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: -2.75rem;
+  height: 5.5rem;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in oklab, var(--color-gold) 5%, transparent) 50%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 35%, black 65%, transparent);
+          mask-image: linear-gradient(to bottom, transparent, black 35%, black 65%, transparent);
+}
+/* Keep children above the seam glow. */
+.section-flow > section > * { position: relative; z-index: 1; }
+/* Tighten the rhythm a touch so the fade carries the transition. */
+.section-flow > section.mt-12 { margin-top: 2.25rem; }
+.section-flow > section.mt-8  { margin-top: 1.75rem; }
+
+/* Android quiet mode keeps the page lighter — drop the radial bg layers
+ * but keep the seam feather so transitions still feel continuous. */
+html.perf-lite .section-flow { background: none; }
+@media (prefers-reduced-motion: reduce) {
+  .section-flow > section + section::before,
+  .section-flow > div + section::before,
+  .section-flow > section + div::before { background: none; }
+}
+
