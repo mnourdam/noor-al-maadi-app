@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { RefreshCw, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount } from "@/lib/account";
+import { PasswordField } from "@/components/ui/PasswordField";
 
 // Bootstrap email — retained so the original owner is unblocked even before
 // the user_roles row is provisioned. The DB layer's is_user_manager() does
