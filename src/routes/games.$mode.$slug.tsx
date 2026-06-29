@@ -52,6 +52,12 @@ function GamePlayPage() {
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
   const [unlockToast, setUnlockToast] = useState<number>(0); // count of newly unlocked museum items
 
+  // Unified Help system — single button/dialog used by every mini-game.
+  const [helpOpen, setHelpOpen] = useState(false);
+  const timerRef = useRef<GameTimerHandle | null>(null);
+  const playerDinars = useProfile().profile?.dinars ?? 0;
+  const TIME_BONUS_COST = 10;
+  const TIME_BONUS_SECONDS = 120;
 
   // Exit confirmation
   const [exitOpen, setExitOpen] = useState(false);
