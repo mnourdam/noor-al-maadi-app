@@ -417,6 +417,15 @@ function CollectionPage() {
     });
   }, [rawMissingUnlockIds, allLoadedEntities]);
 
+  useEffect(() => {
+    if (missingUnlockIds.length > 0 && typeof console !== "undefined") {
+      console.warn(
+        "[museum] unresolved unlock ids (hidden from players):",
+        missingUnlockIds,
+      );
+    }
+  }, [missingUnlockIds]);
+
 
   // ── Render section ──────────────────────────────────────────
   const current = SECTIONS.find(s => s.id === section)!;
