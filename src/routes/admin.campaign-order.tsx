@@ -253,6 +253,97 @@ function CampaignOrderPage() {
     });
   };
 
+  // ---- Export ----
+
+  // Build a flat snapshot of EVERY campaign in the exact order currently
+  // displayed (and persisted via Save). Position is 1-based — the same
+  // sequence the player app sees through campaignSortKey().
+  const buildExportRecords = () => {
+    return rows.map((r, i) => {
+      const d = r.data ?? {};
+      return {
+        chronological_order: typeof r.currentOrder === "number" ? r.currentOrder : (i + 1) * 10,
+        display_position: i + 1,
+        title: r.title,
+        slug: r.slug ?? "",
+        era: r.era ?? "",
+        era_label: ERA_LABELS[r.era] ?? "",
+        world: r.worldSlug ?? "",
+        period: r.period ?? "",
+        sort_year: pickNumber(d.sort_year, d.sortYear) ?? null,
+        start_year: pickNumber(d.start_year, d.startYear) ?? null,
+        end_year: pickNumber(d.end_year, d.endYear) ?? null,
+        order_status: r.orderStatus,
+        published: r.status === "published",
+        status: r.status,
+        chapter_count: r.chapters,
+        order_updated_at: d.order_updated_at ?? null,
+        created_at: r.createdAt,
+        updated_at: r.updatedAt,
+        id: r.id,
+      };
+    });
+  };
+
+  const downloadFile = (filename: string, mime: string, body: string) => {
+    const blob = new Blob([body], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const today = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  };
+
+  const exportJson = () => {
+    const records = buildExportRecords();
+    const payload = {
+      generated_at: new Date().toISOString(),
+      total_campaigns: records.length,
+      campaigns: records,
+    };
+    downloadFile(
+      `irth-campaign-order-${today()}.json`,
+      "application/json;charset=utf-8",
+      JSON.stringify(payload, null, 2),
+    );
+    notify("ok", `تم تصدير ${records.length} حملة (JSON).`);
+  };
+
+  const exportCsv = () => {
+    const records = buildExportRecords();
+    if (records.length === 0) { notify("err", "لا توجد حملات للتصدير."); return; }
+    const headers = Object.keys(records[0]);
+    const escape = (v: unknown) => {
+      if (v === null || v === undefined) return "";
+      const s = typeof v === "string" ? v : String(v);
+      // RFC 4180: wrap in quotes if contains comma, quote, newline; double inner quotes.
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const lines = [headers.join(",")];
+    for (const r of records) {
+      lines.push(headers.map((h) => escape((r as any)[h])).join(","));
+    }
+    // BOM so Excel opens UTF-8 Arabic correctly.
+    downloadFile(
+      `irth-campaign-order-${today()}.csv`,
+      "text/csv;charset=utf-8",
+      "\ufeff" + lines.join("\r\n"),
+    );
+    notify("ok", `تم تصدير ${records.length} حملة (CSV).`);
+  };
+
   // ---- Auto-order ----
 
   const applyAutoOrder = () => {
