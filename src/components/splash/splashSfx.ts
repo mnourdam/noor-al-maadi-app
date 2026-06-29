@@ -15,6 +15,7 @@
 
 import { audioManager } from "@/lib/audioManager";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { deviceAllowsAudio } from "@/lib/androidSilentMode";
 
 const SFX_URL = "/audio/splash-startup.mp3";
 
