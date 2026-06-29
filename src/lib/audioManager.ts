@@ -111,7 +111,7 @@ function ensureAmbience() {
 }
 
 function ambienceShouldPlay(): boolean {
-  return settings.soundEnabled && settings.ambienceEnabled && hasInteracted;
+  return settings.soundEnabled && settings.ambienceEnabled && hasInteracted && deviceAllowsAudio();
 }
 
 function applyAmbienceState() {
@@ -211,6 +211,7 @@ export const audioManager = {
     }
     bindFirstInteraction();
     bindLifecycle();
+    initAndroidSilentMode();
     // try immediately in case the user already interacted (e.g. SPA nav)
     applyAmbienceState();
   },
@@ -241,6 +242,7 @@ export const audioManager = {
     androidMark("audio.sfx", { name });
     if (isAndroidUltraStableMode()) return;
     if (!settings.soundEnabled || !settings.sfxEnabled) return;
+    if (!deviceAllowsAudio()) return;
     if (sfxFailed.has(name)) return;
 
     // Dedupe so the same activity doesn't fire twice
