@@ -31,6 +31,12 @@ import { SplashLogoReveal } from "./SplashLogoReveal";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 const SESSION_FLAG = "irth.splash.played.v1";
+// Persistent "recently warm" heartbeat — when the app was active within this
+// window, treat the next mount as a warm resume (no splash). Covers the case
+// where Android destroys the WebView/process while the user briefly switches
+// apps: the player should still come back to where they left off.
+const WARM_RESUME_KEY = "irth.lastActive.v1";
+const WARM_RESUME_WINDOW_MS = 30 * 60 * 1000;
 const MIN_DURATION_MS = 5000;
 const FADE_OUT_MS = 700;
 
@@ -48,7 +54,15 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
     if (typeof window === "undefined") return false;
     if (isAndroidUltraStableMode()) return false;
     try {
+      // Already played in this WebView session → never replay.
       if (window.sessionStorage.getItem(SESSION_FLAG) === "1") return false;
+      // Warm resume (process may have been killed by OS but user just stepped
+      // away for a moment) → skip the cinematic opening.
+      const last = Number(window.localStorage.getItem(WARM_RESUME_KEY) || "0");
+      if (last && Date.now() - last < WARM_RESUME_WINDOW_MS) {
+        window.sessionStorage.setItem(SESSION_FLAG, "1");
+        return false;
+      }
       window.sessionStorage.setItem(SESSION_FLAG, "1");
     } catch { /* */ }
     return true;
