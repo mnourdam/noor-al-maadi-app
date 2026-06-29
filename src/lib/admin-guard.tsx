@@ -189,8 +189,7 @@ function AdminLoginForm() {
         </div>
         <div>
           <label className="block text-xs text-slate-300">كلمة المرور</label>
-          <input
-            type="password"
+          <PasswordField
             required
             autoComplete="current-password"
             dir="ltr"
