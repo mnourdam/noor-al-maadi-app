@@ -285,12 +285,51 @@ function RootComponent() {
     document.addEventListener("visibilitychange", onVisible);
     void touchActive();
 
+    // ---------- Warm-resume heartbeat ----------
+    // Persist a "last active" timestamp so a quick background→foreground hop
+    // (even one that destroys the WebView) is treated as a resume, not a
+    // cold launch. SplashSequence reads this key to skip the cinematic
+    // opening within a 30-minute window.
+    const WARM_KEY = "irth.lastActive.v1";
+    const beat = () => { try { localStorage.setItem(WARM_KEY, String(Date.now())); } catch { /* */ } };
+    beat();
+    const beatInterval = window.setInterval(beat, 15_000);
+    const onAnyVis = () => beat();
+    document.addEventListener("visibilitychange", onAnyVis);
+    window.addEventListener("pagehide", beat);
+    window.addEventListener("blur", beat);
+
+    // Capacitor App lifecycle: refresh light things on resume; do NOT rebuild
+    // the UI or re-run bootstrap. Heavy modules already loaded stay loaded.
+    let removeAppStateSub: (() => void) | undefined;
+    try {
+      const cap = (window as unknown as {
+        Capacitor?: { isNativePlatform?: () => boolean; Plugins?: { App?: { addListener?: (e: string, cb: (s: { isActive: boolean }) => void) => Promise<{ remove: () => void }> } } };
+      }).Capacitor;
+      if (cap?.isNativePlatform?.() && cap.Plugins?.App?.addListener) {
+        void cap.Plugins.App.addListener("appStateChange", (state) => {
+          if (state.isActive) {
+            // Resumed — just freshen the heartbeat and light caches.
+            beat();
+            import("../lib/campaignLedger").then((l) => l.flushPending()).catch(() => {});
+          } else {
+            beat();
+          }
+        }).then((sub) => { removeAppStateSub = sub.remove; });
+      }
+    } catch { /* ignore */ }
+
     return () => {
       unsub?.();
       window.removeEventListener("online", onOnline);
       window.removeEventListener("unhandledrejection", onRejection);
       window.removeEventListener("error", onWindowError);
       document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("visibilitychange", onAnyVis);
+      window.removeEventListener("pagehide", beat);
+      window.removeEventListener("blur", beat);
+      window.clearInterval(beatInterval);
+      removeAppStateSub?.();
     };
   }, []);
 
