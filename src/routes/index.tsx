@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
-  ERAS,
   levelFor, currentSeason,
   ACHIEVEMENTS, evaluateAchievements,
 } from "@/lib/app-constants";
