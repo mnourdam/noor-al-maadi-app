@@ -161,9 +161,10 @@ export function HUD() {
               <button
                 type="button"
                 aria-label="الحماسة"
-                className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-orange-400 transition hover:bg-white/5 active:bg-white/10"
+                className="motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-orange-400 transition hover:bg-white/5 active:bg-white/10"
               >
-                <Flame className="size-3.5" /> {profile.streak.toLocaleString("en-US")}
+                <Flame className="size-3.5" /> <AnimatedNumber value={profile.streak} />
+
               </button>
             </PopoverTrigger>
             <PopoverContent align="end" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
