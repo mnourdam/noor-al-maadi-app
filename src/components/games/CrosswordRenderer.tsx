@@ -8,7 +8,7 @@ import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
 import { isAndroidNativeApp, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
-import { useRegisterHelpOption } from "./help/GameHelpContext";
+import { setCrosswordHelpBridge } from "./crossword-help-bridge";
 
 
 interface Props {
@@ -266,31 +266,34 @@ export function CrosswordRenderer({
     return null;
   };
 
-  // Register the "reveal letter" option in the unified Help dialog hosted
-  // by the game route. The dialog deducts dinars via `pay()` and handles
-  // the "insufficient funds" UI.
-  useRegisterHelpOption(
-    "reveal_letter",
-    done ? null : {
-      icon: <Lightbulb className="h-4 w-4" />,
-      label: "كشف حرف",
-      description: "كشف حرف واحد من كلمة لم تُحلَّ بعد.",
-      cost: HINT_COST,
-      getAvailable: () => !done && findRevealTarget() !== null,
-      perform: ({ pay }) => {
-        if (done) return false;
-        const target = findRevealTarget();
-        if (!target) return false;
-        if (!pay()) return false;
-        setEntries((prev) => ({ ...prev, [target.k]: target.ch }));
-        sfx("ink_write");
-        sfx("correct");
-        focusCell(target.k);
-        toast.success(`تم كشف حرف مقابل ${HINT_COST} دنانير.`);
-        return true;
+  // Expose imperative actions to the host's local Crossword help dialog.
+  // No context, no spec getters — just plain functions. The host handles
+  // dinars/insufficient UI; this renderer only mutates puzzle state.
+  // Use refs so the bridge closures always see fresh state without
+  // re-registering on every keystroke.
+  const findRevealRef = useRef(findRevealTarget);
+  findRevealRef.current = findRevealTarget;
+  const doneRef = useRef(done);
+  doneRef.current = done;
+  useEffect(() => {
+    setCrosswordHelpBridge({
+      hasUnrevealed: () => {
+        try { return !doneRef.current && findRevealRef.current() !== null; } catch { return false; }
       },
-    },
-  );
+      revealOne: () => {
+        try {
+          if (doneRef.current) return false;
+          const target = findRevealRef.current();
+          if (!target) return false;
+          setEntries((prev) => ({ ...prev, [target.k]: target.ch }));
+          sfx("ink_write");
+          focusCell(target.k);
+          return true;
+        } catch { return false; }
+      },
+    });
+    return () => setCrosswordHelpBridge(null);
+  }, [focusCell]);
 
 
 
