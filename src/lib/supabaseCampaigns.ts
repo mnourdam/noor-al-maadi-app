@@ -16,12 +16,26 @@ import {
   localCampaignByIdOrSlug,
   localPublishedCampaigns,
 } from "./local-first-store";
+import {
+  buildFeed,
+  groupFeedIntoSections,
+  isDividerData,
+  type CampaignDivider,
+  type EraSection,
+  type FeedItem,
+} from "./campaignDividers";
 
 function toCampaigns(rawList: { id: string; slug: string; data: any }[]): Campaign[] {
   const all = rawList
     .map((r) => r.data as unknown as Campaign)
-    .filter((c) => c && c.status === "published");
+    .filter((c) => c && !isDividerData(c) && c.status === "published");
   return sortCampaignsChronological(withBackfilledChronologyAll(all));
+}
+
+function toDividers(rawList: { id: string; slug: string; data: any }[]): CampaignDivider[] {
+  return rawList
+    .filter((r) => isDividerData(r?.data))
+    .map((r) => ({ ...(r.data as CampaignDivider), id: r.id }));
 }
 
 /** All published campaigns, ordered chronologically. Local-first. */
@@ -70,7 +84,7 @@ export async function fetchCampaignByIdOrSlug(idOrSlug: string): Promise<Campaig
   await ensureLocalSnapshotLoaded();
 
   const hit = localCampaignByIdOrSlug(idOrSlug);
-  if (hit) {
+  if (hit && !isDividerData(hit.data)) {
     const c = (hit.data ?? null) as Campaign | null;
     if (c && c.status === "published") return c;
   }
@@ -99,4 +113,33 @@ export async function fetchCampaignByIdOrSlug(idOrSlug: string): Promise<Campaig
     console.warn("[supabaseCampaigns] resolve crashed:", err);
   }
   return null;
+}
+
+/**
+ * Full ordered timeline feed: era dividers interleaved with campaigns
+ * in their shared chronological position. Local-first, identical to the
+ * admin Campaign Ordering Workshop sequence.
+ */
+export async function fetchPublishedFeed(): Promise<{
+  items: FeedItem[];
+  sections: EraSection[];
+  dividers: CampaignDivider[];
+  campaigns: Campaign[];
+}> {
+  await ensureLocalSnapshotLoaded();
+  let local = localPublishedCampaigns() as { id: string; slug: string; data: any }[];
+  if (local.length === 0) {
+    try {
+      const { data, error } = await supabase
+        .from("admin_campaigns")
+        .select("id, slug, data")
+        .eq("status", "published");
+      if (!error && data) local = data as any[];
+    } catch { /* ignore */ }
+  }
+  const campaigns = toCampaigns(local);
+  const dividers = toDividers(local);
+  const items = buildFeed(campaigns, dividers);
+  const sections = groupFeedIntoSections(items);
+  return { items, sections, dividers, campaigns };
 }

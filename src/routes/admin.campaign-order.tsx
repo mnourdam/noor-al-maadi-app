@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Sword, RefreshCw, Save, Wand2, GripVertical, ArrowUp, ArrowDown,
   AlertTriangle, CheckCircle2, X, ChevronRight, FileJson, FileSpreadsheet,
+  ScrollText, Plus, Trash2, Pencil,
 } from "lucide-react";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
@@ -35,6 +36,7 @@ import { AdminGate } from "@/lib/admin-guard";
 import { parseHistoricalPeriodYear } from "@/lib/campaignChronology";
 import { withBackfilledChronology } from "@/lib/campaignChronologyBackfill";
 import { inferWorldFromMetadata } from "@/lib/contentIntegrity";
+import { isDividerData } from "@/lib/campaignDividers";
 
 export const Route = createFileRoute("/admin/campaign-order")({
   head: () => ({
@@ -66,6 +68,10 @@ interface Row {
   chapters: number;
   currentOrder: number | null;
   orderStatus: OrderStatus;
+  /** True when this row is an era divider, not a playable campaign. */
+  isDivider: boolean;
+  /** Optional subtitle (dividers only). */
+  subtitle?: string;
 }
 
 const ERA_LABELS: Record<string, string> = {
@@ -109,6 +115,25 @@ function deriveOrderStatus(d: any, era: string): OrderStatus {
 
 function toRow(c: any): Row {
   const d = c.data ?? {};
+  if (isDividerData(d)) {
+    return {
+      id: c.id,
+      slug: c.slug ?? null,
+      title: String(d.title ?? c.title ?? "عصر جديد"),
+      status: (c.status ?? "published") as Status,
+      data: d,
+      createdAt: c.created_at ?? null,
+      updatedAt: c.updated_at ?? null,
+      era: String(d.era ?? ""),
+      worldSlug: "",
+      period: "",
+      chapters: 0,
+      currentOrder: pickNumber(d.chronological_order),
+      orderStatus: "manual",
+      isDivider: true,
+      subtitle: typeof d.subtitle === "string" ? d.subtitle : undefined,
+    };
+  }
   const inferred = inferWorldFromMetadata({
     title: c.title,
     subtitle: d.subtitle,
@@ -134,6 +159,7 @@ function toRow(c: any): Row {
     chapters: chapterCount(d),
     currentOrder: pickNumber(d.chronological_order, d.chronologicalOrder),
     orderStatus: deriveOrderStatus(d, era),
+    isDivider: false,
   };
 }
 
@@ -362,6 +388,73 @@ function CampaignOrderPage() {
     notify("ok", "تم إعادة بناء الترتيب الزمني. اضغط حفظ لتثبيته.");
   };
 
+  // ---- Divider CRUD ----
+  //
+  // Dividers are stored as `admin_campaigns` rows where `data.kind === "divider"`.
+  // They participate in chronological ordering exactly like campaigns; the player
+  // app treats them purely as section headers. We never auto-create them from
+  // imports — the admin must add them explicitly here.
+
+  const promptText = (label: string, initial = ""): string | null => {
+    if (typeof window === "undefined") return null;
+    const v = window.prompt(label, initial);
+    if (v == null) return null;
+    const t = v.trim();
+    return t.length ? t : null;
+  };
+
+  const createDivider = async () => {
+    const title = promptText("عنوان الفاصل (مثال: العصر النبوي)");
+    if (!title) return;
+    const subtitle = promptText("نص فرعي اختياري", "") ?? "";
+    const id = `div_${Date.now().toString(36)}`;
+    const data: any = {
+      kind: "divider",
+      title,
+      subtitle: subtitle || undefined,
+      chronological_order: 0,
+      order_status: "manual",
+      order_updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase
+      .from("admin_campaigns" as any)
+      .insert({ id, slug: id, title, status: "published", data });
+    if (error) { notify("err", `تعذّر إنشاء الفاصل: ${error.message}`); return; }
+    notify("ok", "تم إنشاء الفاصل. اسحبه إلى موقعه المناسب ثم احفظ.");
+    await refresh();
+  };
+
+  const renameDivider = async (row: Row) => {
+    const title = promptText("عنوان الفاصل", row.title);
+    if (!title) return;
+    const subtitle = promptText("نص فرعي اختياري", row.subtitle ?? "") ?? "";
+    const nextData = {
+      ...(row.data ?? {}),
+      kind: "divider",
+      title,
+      subtitle: subtitle || undefined,
+    };
+    const { error } = await supabase
+      .from("admin_campaigns" as any)
+      .update({ title, data: nextData, updated_at: new Date().toISOString() })
+      .eq("id", row.id);
+    if (error) { notify("err", `تعذّر التعديل: ${error.message}`); return; }
+    notify("ok", "تم تعديل الفاصل.");
+    await refresh();
+  };
+
+  const deleteDivider = async (row: Row) => {
+    const ok = typeof window !== "undefined"
+      ? window.confirm(`حذف الفاصل "${row.title}"؟ لن تُحذف أي حملة.`)
+      : true;
+    if (!ok) return;
+    const { error } = await supabase.from("admin_campaigns" as any).delete().eq("id", row.id);
+    if (error) { notify("err", `تعذّر الحذف: ${error.message}`); return; }
+    notify("ok", "تم حذف الفاصل.");
+    await refresh();
+  };
+
+
   // ---- Save ----
 
   const save = async () => {
@@ -440,6 +533,11 @@ function CampaignOrderPage() {
               title="إعادة بناء الترتيب الزمني لكل الحملات (يتجاوز الترتيب اليدوي)">
               <Wand2 className="h-3.5 w-3.5" /> إعادة الترتيب التلقائي
             </button>
+            <button onClick={createDivider}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/15"
+              title="إضافة فاصل عصر جديد">
+              <Plus className="h-3.5 w-3.5" /> إضافة فاصل عصر
+            </button>
             <button onClick={save} disabled={saving || dirtyIds.size === 0}
               className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40">
               <Save className="h-3.5 w-3.5" /> حفظ ({dirtyIds.size})
@@ -487,6 +585,8 @@ function CampaignOrderPage() {
                     onMoveUp={() => moveBy(r.id, -1)}
                     onMoveDown={() => moveBy(r.id, +1)}
                     onMoveRelative={(anchor, pos) => moveRelative(r.id, anchor, pos)}
+                    onRenameDivider={() => renameDivider(r)}
+                    onDeleteDivider={() => deleteDivider(r)}
                   />
                 ))}
                 {visible.length === 0 && (
@@ -538,15 +638,68 @@ interface SortableRowProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onMoveRelative: (anchorId: string, pos: "before" | "after") => void;
+  onRenameDivider?: () => void;
+  onDeleteDivider?: () => void;
 }
 
-function SortableRow({ row, index, visibleIndex, dirty, siblings, onMoveUp, onMoveDown, onMoveRelative }: SortableRowProps) {
+function SortableRow({
+  row, index: _index, visibleIndex, dirty, siblings, onMoveUp, onMoveDown,
+  onMoveRelative, onRenameDivider, onDeleteDivider,
+}: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row.id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   } as React.CSSProperties;
+
+  // Divider rows render as elegant era headers, visually distinct from campaigns
+  // but still draggable so the admin can position them in the timeline.
+  if (row.isDivider) {
+    return (
+      <li ref={setNodeRef} style={style}
+        className={`flex flex-wrap items-center gap-3 rounded-xl border bg-gradient-to-l from-amber-950/40 via-slate-900/70 to-amber-950/40 p-3 ${
+          dirty ? "border-amber-400/80" : "border-amber-500/40"
+        }`}>
+        <button {...attributes} {...listeners}
+          aria-label="سحب لإعادة الترتيب"
+          className="cursor-grab touch-none rounded p-1 text-amber-300/70 hover:bg-amber-500/10 hover:text-amber-200">
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <div className="w-10 text-center text-sm font-mono text-amber-300/70">{visibleIndex + 1}</div>
+        <ScrollText className="h-5 w-5 text-amber-300" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">فاصل عصر</span>
+            <h3 className="truncate text-sm font-bold text-amber-100">{row.title}</h3>
+          </div>
+          {row.subtitle && <p className="mt-0.5 text-[11px] text-amber-200/60">{row.subtitle}</p>}
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={onMoveUp} aria-label="تحريك للأعلى"
+            className="rounded border border-slate-700 p-1 text-slate-300 hover:border-amber-400 hover:text-amber-300">
+            <ArrowUp className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={onMoveDown} aria-label="تحريك للأسفل"
+            className="rounded border border-slate-700 p-1 text-slate-300 hover:border-amber-400 hover:text-amber-300">
+            <ArrowDown className="h-3.5 w-3.5" />
+          </button>
+          {onRenameDivider && (
+            <button onClick={onRenameDivider} aria-label="إعادة تسمية الفاصل"
+              className="rounded border border-slate-700 p-1 text-slate-300 hover:border-amber-400 hover:text-amber-300">
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {onDeleteDivider && (
+            <button onClick={onDeleteDivider} aria-label="حذف الفاصل"
+              className="rounded border border-rose-500/40 p-1 text-rose-300 hover:bg-rose-500/10">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </li>
+    );
+  }
 
   const eraLabel = ERA_LABELS[row.era] ?? row.era;
   const badge = row.orderStatus === "manual" ? { t: "مرتب يدوياً", c: "border-amber-400/40 bg-amber-500/10 text-amber-200" }
@@ -597,6 +750,7 @@ function SortableRow({ row, index, visibleIndex, dirty, siblings, onMoveUp, onMo
     </li>
   );
 }
+
 
 function RelativeMover({ row, siblings, onMoveRelative }: { row: Row; siblings: Row[]; onMoveRelative: SortableRowProps["onMoveRelative"] }) {
   const [open, setOpen] = useState(false);
