@@ -3,13 +3,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight, Coins, Star, Clock, Sparkles, ChevronLeft,
   BookOpen, Compass, Trophy, Library, RotateCcw, Heart, Landmark, CheckCircle2,
+  HelpCircle, Hourglass,
 } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell, Screen } from "@/components/AppShell";
 import { getGameBySlug, type GameRow } from "@/lib/games/store";
 import { recordCompletion, getMyProgress } from "@/lib/games/progress";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, GAME_MODES, type GameMode } from "@/lib/games/types";
 import { GameStageRenderer } from "@/components/games/GameStageRenderer";
-import { GameTimer } from "@/components/games/GameTimer";
+import { GameTimer, type GameTimerHandle } from "@/components/games/GameTimer";
+import { GameHelpProvider } from "@/components/games/help/GameHelpContext";
+import { GameHelpDialog } from "@/components/games/help/GameHelpDialog";
 import { ExitConfirmDialog } from "@/components/games/ExitConfirmDialog";
 import { sfx } from "@/components/games/sfx";
 import { resolveMaxAttempts, resolveTimerSeconds } from "@/lib/games/timer";
