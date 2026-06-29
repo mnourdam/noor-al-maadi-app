@@ -115,6 +115,25 @@ function deriveOrderStatus(d: any, era: string): OrderStatus {
 
 function toRow(c: any): Row {
   const d = c.data ?? {};
+  if (isDividerData(d)) {
+    return {
+      id: c.id,
+      slug: c.slug ?? null,
+      title: String(d.title ?? c.title ?? "عصر جديد"),
+      status: (c.status ?? "published") as Status,
+      data: d,
+      createdAt: c.created_at ?? null,
+      updatedAt: c.updated_at ?? null,
+      era: String(d.era ?? ""),
+      worldSlug: "",
+      period: "",
+      chapters: 0,
+      currentOrder: pickNumber(d.chronological_order),
+      orderStatus: "manual",
+      isDivider: true,
+      subtitle: typeof d.subtitle === "string" ? d.subtitle : undefined,
+    };
+  }
   const inferred = inferWorldFromMetadata({
     title: c.title,
     subtitle: d.subtitle,
@@ -140,6 +159,7 @@ function toRow(c: any): Row {
     chapters: chapterCount(d),
     currentOrder: pickNumber(d.chronological_order, d.chronologicalOrder),
     orderStatus: deriveOrderStatus(d, era),
+    isDivider: false,
   };
 }
 
