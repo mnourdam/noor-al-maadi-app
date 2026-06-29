@@ -336,17 +336,7 @@ export function CrosswordRenderer({
           <span className="text-slate-400 text-[11px]">
             {filledCells}/{totalCells} خانة
           </span>
-          <button
-            type="button"
-            onClick={openHelp}
-            disabled={done}
-            aria-label="مساعدة"
-            title="مساعدة"
-            className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-gradient-to-b from-amber-500/25 to-amber-600/10 px-3 py-1.5 text-[11px] font-bold text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.15)_inset] transition hover:from-amber-500/35 hover:to-amber-600/20 disabled:opacity-40"
-          >
-            <HelpCircle className="h-3.5 w-3.5" />
-            مساعدة
-          </button>
+          {/* Unified Help button now lives in the game host (next to the timer). */}
         </span>
       </div>
 
