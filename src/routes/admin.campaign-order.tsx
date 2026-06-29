@@ -331,8 +331,9 @@ function CampaignOrderPage() {
               <RefreshCw className="h-3.5 w-3.5" /> تحديث
             </button>
             <button onClick={applyAutoOrder}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20">
-              <Wand2 className="h-3.5 w-3.5" /> ترتيب زمني تلقائي
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20"
+              title="إعادة بناء الترتيب الزمني لكل الحملات (يتجاوز الترتيب اليدوي)">
+              <Wand2 className="h-3.5 w-3.5" /> إعادة الترتيب التلقائي
             </button>
             <button onClick={save} disabled={saving || dirtyIds.size === 0}
               className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40">
