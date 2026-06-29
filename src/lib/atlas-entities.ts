@@ -20,6 +20,27 @@ export const ATLAS_ENTITY_KINDS: AtlasEntityKind[] = [
   "route_point",
 ];
 
+// ─── LC1 player Atlas surface ─────────────────────────────────────────
+// For Launch Candidate 1 the player-facing Atlas only renders three
+// entity families: regions/states/empires, places/cities, and battles.
+// Events, artifacts, figure markers, and route points stay in the
+// database (imports continue, encyclopedia/museum still surface them)
+// but are filtered out at the query layer so the map stays light and
+// fast on Android. Re-enable by widening this set.
+export const LC1_ATLAS_VISIBLE_KINDS: ReadonlySet<AtlasEntityKind> = new Set<AtlasEntityKind>([
+  "region",
+  "place",
+  "battle",
+]);
+
+export function isLc1VisibleAtlasKind(kind: AtlasEntityKind | string | null | undefined): boolean {
+  return !!kind && LC1_ATLAS_VISIBLE_KINDS.has(kind as AtlasEntityKind);
+}
+
+export function filterLc1AtlasRows<T extends { kind: AtlasEntityKind | string }>(rows: T[]): T[] {
+  return rows.filter((r) => isLc1VisibleAtlasKind(r.kind));
+}
+
 export const ATLAS_ENTITY_STATUSES: AtlasEntityStatus[] = [
   "draft",
   "review",
