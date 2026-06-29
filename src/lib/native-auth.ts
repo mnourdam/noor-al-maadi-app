@@ -17,12 +17,6 @@ import { Capacitor } from "@capacitor/core";
 const NATIVE_REDIRECT_URL =
   "https://irth-develop.lovable.app/auth/callback?native=1";
 
-// Important: native Google sign-in must use the Lovable OAuth broker, not the
-// raw backend /auth/v1/authorize endpoint. The raw backend provider can be
-// disabled or missing a project-local OAuth secret while the broker has the
-// managed Google credentials. Using the broker also matches the published web
-// flow and avoids the APK error: "Unsupported provider: missing OAuth secret".
-const NATIVE_OAUTH_BROKER_URL = "https://irth-develop.lovable.app/~oauth/initiate";
 const NATIVE_OAUTH_STATE_KEY = "irth-native-oauth-state";
 
 // Custom scheme registered in AndroidManifest.xml (intent-filter on
@@ -47,19 +41,24 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
 
     const state = generateNativeOAuthState();
     try { window.sessionStorage.setItem(NATIVE_OAUTH_STATE_KEY, state); } catch { /* ignore */ }
-    const params = new URLSearchParams({
-      provider: "google",
-      redirect_uri: NATIVE_REDIRECT_URL,
-      state,
-    });
-    const oauthUrl = `${NATIVE_OAUTH_BROKER_URL}?${params.toString()}`;
 
-    // Required QA signal: this must be a Lovable broker URL, never the raw
-    // backend `/auth/v1/authorize` URL that lacks Google OAuth credentials.
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: NATIVE_REDIRECT_URL,
+        skipBrowserRedirect: true,
+        queryParams: { state },
+      },
+    });
+
+    if (error) return { ok: false, error: error.message };
+    const oauthUrl = data.url;
+    if (!oauthUrl) return { ok: false, error: "Missing Google OAuth URL" };
+
+    // Required QA signal: with direct backend Google OAuth this may be the
+    // backend `/auth/v1/authorize` URL, but the provider must be configured
+    // with Google credentials so it opens Google normally.
     console.info(`Google OAuth URL: ${oauthUrl}`);
-    if (oauthUrl.includes(".supabase.co/auth/v1/authorize")) {
-      return { ok: false, error: "Invalid Google OAuth endpoint" };
-    }
 
     await Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" });
     return { ok: true };
