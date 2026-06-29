@@ -120,16 +120,14 @@ export async function fetchMyCompletedGameIds(): Promise<Set<string>> {
 }
 
 /**
- * Pick daily challenges for the Home screen.
+ * Pick daily challenges for the Home / Adventure screens.
  *
  * Selection rules (in order):
- *   1. Only games not completed by this player (when `excludeIds` provided).
- *   2. Stable deterministic order per UTC day (same picks across reloads).
- *   3. Prefer different game modes.
- *   4. Falls back to whatever exists if fewer than `count` candidates.
- *
- * Returns `{ picks, allCompleted }` so callers can render a completion state
- * when every published game has been finished.
+ *   1. Stable per UTC day — same picks across reloads, same for all players.
+ *   2. ALWAYS from distinct game modes (sample without replacement on mode).
+ *   3. If fewer modes exist than `count`, returns fewer picks (never duplicates a mode).
+ *   4. Completed games still appear — callers render a "completed" badge instead
+ *      of hiding the card, so the player sees today's pair until the daily reset.
  */
 export interface DailyChallengeSelection {
   picks: GameRow[];
@@ -139,38 +137,40 @@ export interface DailyChallengeSelection {
 
 export async function selectDailyChallenges(
   count = 2,
-  opts: { excludeIds?: Set<string> } = {},
+  opts: { completedIds?: Set<string> } = {},
 ): Promise<DailyChallengeSelection> {
   const published = await listPublishedGames();
   const totalPublished = published.length;
   if (!totalPublished) {
     return { picks: [], allCompleted: false, totalPublished: 0 };
   }
-  const excluded = opts.excludeIds ?? new Set<string>();
-  const eligible = published.filter((g) => !excluded.has(g.id));
-  const allCompleted = eligible.length === 0 && totalPublished > 0;
-  const pool = eligible.length ? eligible : [];
-  if (!pool.length) {
-    return { picks: [], allCompleted, totalPublished };
+
+  // Group by mode so we can sample without replacement on game type.
+  const byMode = new Map<GameMode, GameRow[]>();
+  for (const g of published) {
+    const arr = byMode.get(g.mode) ?? [];
+    arr.push(g);
+    byMode.set(g.mode, arr);
   }
-  // Stable per-day ordering by hashing (slug + daily seed).
-  const ordered = [...pool].sort(
-    (a, b) => dayHash(a.slug) - dayHash(b.slug),
+
+  // Deterministic mode order per day, then deterministic pick within each mode.
+  const modes = [...byMode.keys()].sort(
+    (a, b) => dayHash(`mode:${a}`) - dayHash(`mode:${b}`),
   );
+
   const picks: GameRow[] = [];
-  const usedModes = new Set<GameMode>();
-  // Pass 1: prefer distinct modes.
-  for (const g of ordered) {
+  for (const m of modes) {
     if (picks.length >= count) break;
-    if (usedModes.has(g.mode)) continue;
-    picks.push(g);
-    usedModes.add(g.mode);
+    const games = byMode.get(m)!;
+    const chosen = [...games].sort(
+      (a, b) => dayHash(a.slug) - dayHash(b.slug),
+    )[0];
+    if (chosen) picks.push(chosen);
   }
-  // Pass 2: fill remaining slots ignoring mode preference.
-  for (const g of ordered) {
-    if (picks.length >= count) break;
-    if (picks.includes(g)) continue;
-    picks.push(g);
-  }
+
+  const completed = opts.completedIds ?? new Set<string>();
+  const allCompleted =
+    picks.length > 0 && picks.every((g) => completed.has(g.id));
+
   return { picks, allCompleted, totalPublished };
 }
