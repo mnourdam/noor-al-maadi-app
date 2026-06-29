@@ -16,12 +16,26 @@ import {
   localCampaignByIdOrSlug,
   localPublishedCampaigns,
 } from "./local-first-store";
+import {
+  buildFeed,
+  groupFeedIntoSections,
+  isDividerData,
+  type CampaignDivider,
+  type EraSection,
+  type FeedItem,
+} from "./campaignDividers";
 
 function toCampaigns(rawList: { id: string; slug: string; data: any }[]): Campaign[] {
   const all = rawList
     .map((r) => r.data as unknown as Campaign)
-    .filter((c) => c && c.status === "published");
+    .filter((c) => c && !isDividerData(c) && c.status === "published");
   return sortCampaignsChronological(withBackfilledChronologyAll(all));
+}
+
+function toDividers(rawList: { id: string; slug: string; data: any }[]): CampaignDivider[] {
+  return rawList
+    .filter((r) => isDividerData(r?.data))
+    .map((r) => ({ ...(r.data as CampaignDivider), id: r.id }));
 }
 
 /** All published campaigns, ordered chronologically. Local-first. */
