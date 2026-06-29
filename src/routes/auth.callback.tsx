@@ -10,6 +10,7 @@ type SearchParams = {
   error?: string;
   error_code?: string;
   error_description?: string;
+  native?: string;
 };
 
 export const Route = createFileRoute("/auth/callback")({
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/auth/callback")({
     error: typeof s.error === "string" ? s.error : undefined,
     error_code: typeof s.error_code === "string" ? s.error_code : undefined,
     error_description: typeof s.error_description === "string" ? s.error_description : undefined,
+    native: typeof s.native === "string" ? s.native : undefined,
   }),
   component: AuthCallbackPage,
 });
