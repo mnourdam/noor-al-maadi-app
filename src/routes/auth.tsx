@@ -111,6 +111,14 @@ function AuthPage() {
                   if (busy) return;
                   setError(null); setInfo(null); setBusy(true);
                   try {
+                    // Android (Capacitor) → Chrome Custom Tab via @capacitor/browser.
+                    // Web/preview → keep the existing Lovable broker flow.
+                    if (isCapacitorNative()) {
+                      const r = await signInWithGoogleNative();
+                      if (!r.ok) setError(r.error ?? "تعذر تسجيل الدخول عبر Google");
+                      // The deep-link listener finalizes the session and routes home.
+                      return;
+                    }
                     const redirect_uri = typeof window !== "undefined"
                       ? `${window.location.origin}/auth/callback`
                       : undefined;
