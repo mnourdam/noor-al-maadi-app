@@ -388,6 +388,73 @@ function CampaignOrderPage() {
     notify("ok", "تم إعادة بناء الترتيب الزمني. اضغط حفظ لتثبيته.");
   };
 
+  // ---- Divider CRUD ----
+  //
+  // Dividers are stored as `admin_campaigns` rows where `data.kind === "divider"`.
+  // They participate in chronological ordering exactly like campaigns; the player
+  // app treats them purely as section headers. We never auto-create them from
+  // imports — the admin must add them explicitly here.
+
+  const promptText = (label: string, initial = ""): string | null => {
+    if (typeof window === "undefined") return null;
+    const v = window.prompt(label, initial);
+    if (v == null) return null;
+    const t = v.trim();
+    return t.length ? t : null;
+  };
+
+  const createDivider = async () => {
+    const title = promptText("عنوان الفاصل (مثال: العصر النبوي)");
+    if (!title) return;
+    const subtitle = promptText("نص فرعي اختياري", "") ?? "";
+    const id = `div_${Date.now().toString(36)}`;
+    const data: any = {
+      kind: "divider",
+      title,
+      subtitle: subtitle || undefined,
+      chronological_order: 0,
+      order_status: "manual",
+      order_updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase
+      .from("admin_campaigns" as any)
+      .insert({ id, slug: id, title, status: "published", data });
+    if (error) { notify("err", `تعذّر إنشاء الفاصل: ${error.message}`); return; }
+    notify("ok", "تم إنشاء الفاصل. اسحبه إلى موقعه المناسب ثم احفظ.");
+    await refresh();
+  };
+
+  const renameDivider = async (row: Row) => {
+    const title = promptText("عنوان الفاصل", row.title);
+    if (!title) return;
+    const subtitle = promptText("نص فرعي اختياري", row.subtitle ?? "") ?? "";
+    const nextData = {
+      ...(row.data ?? {}),
+      kind: "divider",
+      title,
+      subtitle: subtitle || undefined,
+    };
+    const { error } = await supabase
+      .from("admin_campaigns" as any)
+      .update({ title, data: nextData, updated_at: new Date().toISOString() })
+      .eq("id", row.id);
+    if (error) { notify("err", `تعذّر التعديل: ${error.message}`); return; }
+    notify("ok", "تم تعديل الفاصل.");
+    await refresh();
+  };
+
+  const deleteDivider = async (row: Row) => {
+    const ok = typeof window !== "undefined"
+      ? window.confirm(`حذف الفاصل "${row.title}"؟ لن تُحذف أي حملة.`)
+      : true;
+    if (!ok) return;
+    const { error } = await supabase.from("admin_campaigns" as any).delete().eq("id", row.id);
+    if (error) { notify("err", `تعذّر الحذف: ${error.message}`); return; }
+    notify("ok", "تم حذف الفاصل.");
+    await refresh();
+  };
+
+
   // ---- Save ----
 
   const save = async () => {
