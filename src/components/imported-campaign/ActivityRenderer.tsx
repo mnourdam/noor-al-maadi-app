@@ -15,9 +15,22 @@ import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import type { CampaignActivity } from "@/types/campaign";
 
 
+export interface ResolveMeta {
+  /** True when the answer was revealed after 2 wrong attempts (learning path). */
+  viaReveal?: boolean;
+}
+
 export interface RendererProps {
   activity: CampaignActivity;
-  onResolve: (correct: boolean) => void;
+  /**
+   * Notifies the parent of an answer attempt.
+   * - `correct=true`  → activity is resolved (parent advances + rewards).
+   * - `correct=false` → wrong attempt (parent deducts a heart).
+   * - `meta.viaReveal=true` paired with `correct=true` means the player is
+   *   advancing via the "متابعة" button after the answer was auto-revealed,
+   *   so the parent should apply the minimum reward tier.
+   */
+  onResolve: (correct: boolean, meta?: ResolveMeta) => void;
   alreadyDone?: boolean;
 }
 
@@ -68,11 +81,19 @@ function HintRow({ hint }: { hint?: string }) {
   );
 }
 
+
 // ---------- Multiple Choice / Reading-then-question ----------
+// Learning-after-failure flow:
+//   1st wrong → keep open, show "حاول مرة أخرى" (heart consumed by parent).
+//   2nd wrong → reveal correct answer, highlight wrong picks, lock the
+//   question, surface a "متابعة" button. The player learns the correct
+//   answer before moving on; parent applies the minimum reward tier.
 function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [picked, setPicked] = useState<number | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const [revealed, setRevealed] = useState(false);
   const [wrongPicks, setWrongPicks] = useState<Set<number>>(new Set());
+  const [wrongCount, setWrongCount] = useState(0);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
   const options = activity.options ?? [];
 
@@ -82,20 +103,37 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
     ? activity.correctAnswer
     : options.findIndex(o => o === String(activity.correctAnswer));
 
+  const locked = resolved || revealed;
+
   const submit = () => {
-    if (picked === null || resolved) return;
+    if (picked === null || locked) return;
     const isCorrect = picked === correctIndex;
     if (isCorrect) {
       setResolved(true);
       setFeedback("ok");
       onResolve(true);
-    } else {
-      // Wrong: mark this option as tried, allow retry, do NOT reveal correct.
-      setWrongPicks(prev => new Set(prev).add(picked));
+      return;
+    }
+    // Wrong answer.
+    const nextWrong = wrongCount + 1;
+    setWrongPicks(prev => new Set(prev).add(picked));
+    setWrongCount(nextWrong);
+    setPicked(null);
+    if (nextWrong >= 2) {
+      // Second strike → reveal & lock. Parent still deducts the heart.
+      setRevealed(true);
       setFeedback("err");
-      setPicked(null);
+      onResolve(false);
+    } else {
+      setFeedback("err");
       onResolve(false);
     }
+  };
+
+  const continueAfterReveal = () => {
+    if (!revealed || resolved) return;
+    setResolved(true);
+    onResolve(true, { viaReveal: true });
   };
 
   return (
@@ -105,16 +143,21 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
       <div className="space-y-2">
         {options.map((opt, i) => {
           const isPicked  = picked === i;
-          const isAnswer  = resolved && i === correctIndex;
-          const isWrong   = wrongPicks.has(i) && !resolved;
+          const isAnswer  = (resolved || revealed) && i === correctIndex;
+          // Once revealed, show ALL wrong picks in red. Pre-reveal, only the
+          // most recent wrong pick stays disabled.
+          const isWrong   = wrongPicks.has(i) && i !== correctIndex;
+          const wrongStyle = isWrong && (revealed
+            ? "border-red-400/70 bg-red-500/15 text-red-100"
+            : "border-red-400/50 bg-red-500/10 text-red-200/70 line-through opacity-60");
           return (
             <button
               key={`${i}-${opt}`}
-              disabled={resolved || isWrong}
+              disabled={locked || isWrong}
               onClick={() => { setPicked(i); setFeedback(null); }}
               className={`w-full rounded-xl border px-3 py-2 text-right text-[12px] transition ${
                 isAnswer ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
-                : isWrong ? "border-red-400/50 bg-red-500/10 text-red-200/70 line-through opacity-60"
+                : isWrong ? wrongStyle
                 : isPicked ? "border-gold/60 bg-gold/10 text-foreground"
                 : "border-white/10 bg-black/30 text-foreground/90 hover:border-gold/40"
               }`}
@@ -125,7 +168,7 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
         })}
       </div>
       <HintRow hint={activity.hint} />
-      {!resolved && (
+      {!locked && (
         <button
           onClick={submit}
           disabled={picked === null}
@@ -139,32 +182,58 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
           kind={feedback}
           text={feedback === "ok"
             ? (activity.feedbackCorrect ?? FALLBACK_OK)
-            : (activity.feedbackWrong ?? FALLBACK_WRONG)}
+            : revealed
+              ? "هذه هي الإجابة الصحيحة. تابع لرحلتك."
+              : (activity.feedbackWrong ?? FALLBACK_WRONG)}
         />
+      )}
+      {revealed && !resolved && (
+        <button
+          onClick={continueAfterReveal}
+          className="mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
+        >
+          متابعة
+        </button>
       )}
     </div>
   );
 }
 
 // ---------- True / False ----------
+// Same learning-after-failure flow as Multiple Choice: 1st wrong stays open,
+// 2nd wrong reveals the answer and surfaces "متابعة".
 function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const [revealed, setRevealed] = useState(false);
+  const [wrongCount, setWrongCount] = useState(0);
+  const [wrongPick, setWrongPick] = useState<boolean | null>(null);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
   const correct = typeof activity.correctAnswer === "boolean"
     ? activity.correctAnswer
     : String(activity.correctAnswer).toLowerCase() === "true";
 
+  const locked = resolved || revealed;
+
   const submit = (val: boolean) => {
-    if (resolved) return;
+    if (locked) return;
     if (val === correct) {
       setResolved(true);
       setFeedback("ok");
       onResolve(true);
-    } else {
-      // Wrong: allow retry, do not lock, do not reveal correct.
-      setFeedback("err");
-      onResolve(false);
+      return;
     }
+    const nextWrong = wrongCount + 1;
+    setWrongCount(nextWrong);
+    setWrongPick(val);
+    setFeedback("err");
+    if (nextWrong >= 2) setRevealed(true);
+    onResolve(false);
+  };
+
+  const continueAfterReveal = () => {
+    if (!revealed || resolved) return;
+    setResolved(true);
+    onResolve(true, { viaReveal: true });
   };
 
   return (
@@ -173,14 +242,16 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
       <PromptBlock activity={activity} />
       <div className="grid grid-cols-2 gap-2">
         {[true, false].map((val) => {
-          const isCorrect = resolved && val === correct;
+          const isCorrectChoice = (resolved || revealed) && val === correct;
+          const isWrongChoice = revealed && val !== correct && wrongPick === val;
           return (
             <button
               key={String(val)}
-              disabled={resolved}
+              disabled={locked}
               onClick={() => submit(val)}
               className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
-                isCorrect ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
+                isCorrectChoice ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
+                : isWrongChoice ? "border-red-400/70 bg-red-500/15 text-red-100"
                 : "border-white/10 bg-black/30 hover:border-gold/40"
               }`}
             >
@@ -195,8 +266,18 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
           kind={feedback}
           text={feedback === "ok"
             ? (activity.feedbackCorrect ?? FALLBACK_OK)
-            : (activity.feedbackWrong ?? FALLBACK_WRONG)}
+            : revealed
+              ? "هذه هي الإجابة الصحيحة. تابع لرحلتك."
+              : (activity.feedbackWrong ?? FALLBACK_WRONG)}
         />
+      )}
+      {revealed && !resolved && (
+        <button
+          onClick={continueAfterReveal}
+          className="mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
+        >
+          متابعة
+        </button>
       )}
     </div>
   );
