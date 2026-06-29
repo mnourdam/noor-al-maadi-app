@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { isCapacitorNative, signInWithGoogleNative } from "@/lib/native-auth";
 import { PasswordField } from "@/components/ui/PasswordField";
 
@@ -113,23 +112,24 @@ function AuthPage() {
                   setError(null); setInfo(null); setBusy(true);
                   try {
                     // Android (Capacitor) → Chrome Custom Tab via @capacitor/browser.
-                    // Web/preview → keep the existing Lovable broker flow.
+                    // Web/preview → direct Supabase Google OAuth as well.
                     if (isCapacitorNative()) {
                       const r = await signInWithGoogleNative();
                       if (!r.ok) setError(r.error ?? "تعذر تسجيل الدخول عبر Google");
                       // The deep-link listener finalizes the session and routes home.
                       return;
                     }
-                    const redirect_uri = typeof window !== "undefined"
+                    const redirectTo = typeof window !== "undefined"
                       ? `${window.location.origin}/auth/callback`
                       : undefined;
-                    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri });
-                    if (result.error) {
-                      setError(result.error instanceof Error ? result.error.message : "تعذر تسجيل الدخول عبر Google");
+                    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                      provider: "google",
+                      options: { redirectTo },
+                    });
+                    if (oauthError) {
+                      setError(oauthError.message || "تعذر تسجيل الدخول عبر Google");
                       return;
                     }
-                    if (result.redirected) return;
-                    navigate({ to: "/profile" });
                   } catch (e) {
                     setError(e instanceof Error ? e.message : "تعذر تسجيل الدخول عبر Google");
                   } finally {
