@@ -39,6 +39,12 @@ export interface NotificationLike {
  */
 export function resolveDeepLink(n: NotificationLike): string {
   const payload = (n.payload ?? {}) as NotificationPayload;
+  const cat0 = (n.category ?? n.type ?? "").toLowerCase();
+
+  // Today-in-history entries are reminder-only — always send to Home's section,
+  // never to a (possibly missing) entity/story page.
+  if (cat0 === "today_in_history" || payload.todayEventId) return "/#today-in-history";
+
 
   // 1. Explicit URL in payload wins over raw deep_link string.
   if (typeof payload.url === "string" && payload.url.startsWith("/")) {
@@ -52,7 +58,7 @@ export function resolveDeepLink(n: NotificationLike): string {
   if (payload.artifactId)   return `/collection?artifact=${payload.artifactId}`;
   if (payload.achievementId) return `/achievements?id=${payload.achievementId}`;
   if (payload.investigationId) return `/investigations/${payload.investigationId}`;
-  if (payload.todayEventId) return `/today`;
+  if (payload.todayEventId) return `/#today-in-history`;
 
   // 3. Raw deep_link from the legacy schema.
   if (n.deep_link && n.deep_link.startsWith("/")) return n.deep_link;
@@ -66,7 +72,7 @@ export function resolveDeepLink(n: NotificationLike): string {
     case "achievement":      return "/achievements";
     case "reward":           return "/profile";
     case "museum":           return "/collection";
-    case "today_in_history": return "/today";
+    case "today_in_history": return "/#today-in-history";
     case "daily_reminder":   return "/";
     case "friend":           return "/friends";
     default:                 return "/notifications";

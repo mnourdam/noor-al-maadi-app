@@ -134,10 +134,11 @@ export function InAppBanner() {
     clearTimer();
     void markNotificationRead(current.id);
     const to = resolveDeepLink(current);
+    const [path, hashPart] = to.split("#");
     setLeaving(true);
     window.setTimeout(() => {
       dequeue();
-      router.navigate({ to: to as "/" }).catch(() => {
+      router.navigate({ to: (path || "/") as "/", hash: hashPart || undefined }).catch(() => {
         if (typeof window !== "undefined") window.location.href = to;
       });
     }, 200);

@@ -109,6 +109,28 @@ function HomeFull() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [touchStreak, todayEvent?.id, user, lastSyncAt]);
 
+  // Scroll to (and briefly highlight) the "في مثل هذا اليوم" section when a
+  // Today-in-History notification opens Home with the #today-in-history hash.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!mounted || !todayEvent) return;
+    const focus = () => {
+      if (window.location.hash !== "#today-in-history") return;
+      const el = document.getElementById("today-in-history");
+      if (!el) return;
+      window.setTimeout(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        el.classList.add("ring-2", "ring-gold/70", "rounded-3xl", "transition-shadow");
+        window.setTimeout(() => {
+          el.classList.remove("ring-2", "ring-gold/70");
+        }, 1800);
+      }, 80);
+    };
+    focus();
+    window.addEventListener("hashchange", focus);
+    return () => window.removeEventListener("hashchange", focus);
+  }, [mounted, todayEvent?.id]);
+
 
   const lvl = levelFor(profile.points);
 
@@ -666,7 +688,9 @@ function HomeFull() {
       {/* ============ 5. TODAY IN HISTORY ============ */}
       {mounted && todayEvent && (
         <Reveal>
-          <OnThisDayCalendarCard event={todayEvent} />
+          <div id="today-in-history" className="scroll-mt-24">
+            <OnThisDayCalendarCard event={todayEvent} />
+          </div>
         </Reveal>
       )}
 

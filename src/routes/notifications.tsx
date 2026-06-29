@@ -76,8 +76,9 @@ function NotificationsCenter() {
       type: n.type, category: n.category, deep_link: n.deep_link,
       payload: n.payload as NotificationPayload,
     });
+    const [path, hashPart] = to.split("#");
     try {
-      await router.navigate({ to: to as "/" });
+      await router.navigate({ to: (path || "/") as "/", hash: hashPart || undefined });
     } catch {
       window.location.href = to;
     }
