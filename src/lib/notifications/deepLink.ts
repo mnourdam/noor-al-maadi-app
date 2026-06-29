@@ -52,7 +52,7 @@ export function resolveDeepLink(n: NotificationLike): string {
   if (payload.artifactId)   return `/collection?artifact=${payload.artifactId}`;
   if (payload.achievementId) return `/achievements?id=${payload.achievementId}`;
   if (payload.investigationId) return `/investigations/${payload.investigationId}`;
-  if (payload.todayEventId) return `/today`;
+  if (payload.todayEventId) return `/#today-in-history`;
 
   // 3. Raw deep_link from the legacy schema.
   if (n.deep_link && n.deep_link.startsWith("/")) return n.deep_link;
@@ -66,7 +66,7 @@ export function resolveDeepLink(n: NotificationLike): string {
     case "achievement":      return "/achievements";
     case "reward":           return "/profile";
     case "museum":           return "/collection";
-    case "today_in_history": return "/today";
+    case "today_in_history": return "/#today-in-history";
     case "daily_reminder":   return "/";
     case "friend":           return "/friends";
     default:                 return "/notifications";

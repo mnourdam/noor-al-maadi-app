@@ -666,7 +666,9 @@ function HomeFull() {
       {/* ============ 5. TODAY IN HISTORY ============ */}
       {mounted && todayEvent && (
         <Reveal>
-          <OnThisDayCalendarCard event={todayEvent} />
+          <div id="today-in-history" className="scroll-mt-24">
+            <OnThisDayCalendarCard event={todayEvent} />
+          </div>
         </Reveal>
       )}
 
