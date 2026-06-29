@@ -328,8 +328,26 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       return { ...p, streak, lastActiveDay: today };
     }),
     awardBadge,
-    completeInvestigation: (id, reward) => update((p) => p.investigationsCompleted.includes(id) ? p
-      : addDinarsTo(addPointsTo({ ...p, investigationsCompleted: [...p.investigationsCompleted, id] }, reward), dinarsForReward(reward))),
+    completeInvestigation: (id, reward) => update((p) => {
+      if (p.investigationsCompleted.includes(id)) return p;
+      // Qualifying streak activity: investigation completion.
+      const today = todayKey();
+      let streak = p.streak;
+      let lastActiveDay = p.lastActiveDay;
+      if (lastActiveDay !== today) {
+        const y = new Date(); y.setDate(y.getDate() - 1);
+        const yesterday = todayKey(y);
+        streak = lastActiveDay === yesterday ? streak + 1 : 1;
+        lastActiveDay = today;
+      }
+      return addDinarsTo(
+        addPointsTo(
+          { ...p, investigationsCompleted: [...p.investigationsCompleted, id], streak, lastActiveDay },
+          reward,
+        ),
+        dinarsForReward(reward),
+      );
+    }),
     completeTimeline: (id, reward) => update((p) => p.timelinesCompleted.includes(id) ? p
       : addDinarsTo(addPointsTo({ ...p, timelinesCompleted: [...p.timelinesCompleted, id] }, reward), dinarsForReward(reward))),
     completeDecision: (id, reward) => update((p) => p.decisionsCompleted.includes(id) ? p
