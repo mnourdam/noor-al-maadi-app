@@ -107,6 +107,10 @@ function AdminCampaignsPage() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300">
               <RefreshCw className="h-3.5 w-3.5" /> تحديث
             </button>
+            <Link to="/admin/campaign-order"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/20">
+              ترتيب الحملات
+            </Link>
             <Link to="/admin/import" search={{ type: "campaigns" } as any}
               className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400">
               <Upload className="h-3.5 w-3.5" /> استيراد حملة JSON
