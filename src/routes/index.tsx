@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
-  ERAS,
   levelFor, currentSeason,
   ACHIEVEMENTS, evaluateAchievements,
 } from "@/lib/app-constants";
@@ -254,17 +253,7 @@ function HomeFull() {
         },
       });
     }
-    out.push({
-      kind: "timeline", bg: bgAt(2),
-      eyebrow: "الخط الزمني العظيم",
-      title: "أكثر من 1400 سنة من التاريخ",
-      subtitle: "تجوّل في العصور من البعثة حتى اليوم.",
-      cta: { label: "ابدأ الرحلة الزمنية", link:
-        <Link to="/timeline" className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground">
-          <Hourglass className="size-4" />ابدأ الرحلة الزمنية
-        </Link>,
-      },
-    });
+    // LC1 scope cut: Timeline Journey hero slide hidden until content audit completes.
     return out;
   }, [campaignSel, todayEvent, stats.recent, heroBgs]);
 
@@ -694,10 +683,7 @@ function HomeFull() {
         </Reveal>
       )}
 
-      {/* ============ 6. GREAT TIMELINE ============ */}
-      <Reveal>
-        <JourneyThroughTimeSection />
-      </Reveal>
+      {/* ============ 6. GREAT TIMELINE — hidden for LC1 (content audit in progress) ============ */}
 
       {/* ============ 7. WHAT'S NEW — recent activity ============ */}
       {recentActivity.length > 0 && (
@@ -981,42 +967,9 @@ function ContinueJourneyCard({ sel }: {
   );
 }
 
-// ----- Journey Through Time preview (links to /timeline) -----
-function JourneyThroughTimeSection() {
-  return (
-    <section className="mt-12 px-5">
-      <SectionHeader icon={<Hourglass className="size-3.5" />} eyebrow="رحلة عبر الزمن" title="عصور تنتظر اكتشافها" />
-      <Link
-        to="/timeline"
-        className="group relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark shadow-elegant"
-      >
-        <div className="relative h-28 w-full overflow-hidden">
-          <img src={heroCitySunrise} alt="" loading="lazy" decoding="async" className="size-full object-cover opacity-60" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-background/40 to-background" />
-          <div className="arabesque-layer opacity-50" />
-        </div>
-        <div className="relative -mt-10 px-5 pb-5">
-          <p className="text-[10px] tracking-[0.25em] text-gold">من البعثة إلى اليوم</p>
-          <h3 className="font-display mt-1 text-base font-bold">1400 سنة في خط واحد</h3>
-          <div className="-mx-5 mt-4 flex gap-2 overflow-x-auto px-5 pb-1 no-scrollbar snap-x snap-mandatory">
-            {ERAS.map((e) => (
-              <div
-                key={e.id}
-                className="min-w-[140px] snap-start rounded-xl border border-gold/20 bg-surface/60 px-3 py-2"
-              >
-                <p className="text-[9px] tracking-[0.2em] text-gold">{e.years}</p>
-                <p className="font-display mt-0.5 text-[12px] font-bold leading-tight line-clamp-1">{e.name}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 inline-flex items-center gap-2 text-[12px] font-bold text-gold">
-            ابدأ الرحلة الزمنية <ChevronLeft className="size-3.5 transition group-hover:-translate-x-0.5" />
-          </div>
-        </div>
-      </Link>
-    </section>
-  );
-}
+// ----- Journey Through Time preview — removed from player UI for LC1. -----
+// Kept intentionally absent; restore alongside encyclopedia / era / chronology
+// audits before re-enabling the section.
 
 // ----- Historical Worlds homepage section -----
 function WorldsHomepageSection() {
