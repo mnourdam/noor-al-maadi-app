@@ -6,6 +6,7 @@ import { AdminGate } from "@/lib/admin-guard";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { validateCampaign } from "@/lib/campaignStorage";
 import { inferWorldFromMetadata, runCampaignIntegrity, summarizeIntegrity, type CampaignIntegrityReport } from "@/lib/contentIntegrity";
+import { withBackfilledChronology } from "@/lib/campaignChronologyBackfill";
 import type { Campaign } from "@/types/campaign";
 
 
@@ -177,13 +178,63 @@ function CampaignImporter() {
       const rowErrs: string[] = [];
       const reports: CampaignIntegrityReport[] = [];
 
-      // Pre-fetch existing ids to differentiate insert vs update.
+      // Pre-fetch existing rows WITH their saved order so we can
+      //   (a) preserve manual/saved chronological_order on overwrite, and
+      //   (b) compute a suggested insertion point for new campaigns
+      //       WITHOUT renumbering any existing row.
       const ids = validCampaigns.map(c => c.id);
       const { data: existing } = await supabase
         .from("admin_campaigns" as any)
-        .select("id")
+        .select("id, data")
         .in("id", ids);
-      const existingIds = new Set((((existing as unknown) ?? []) as Array<{ id: string }>).map(r => r.id));
+      const existingById = new Map<string, any>(
+        (((existing as unknown) ?? []) as Array<{ id: string; data: any }>).map(r => [r.id, r.data ?? {}]),
+      );
+      const existingIds = new Set(existingById.keys());
+
+      // For new-row insertion-point math: load every other campaign's
+      // saved order + backfill key. Existing orders are never modified —
+      // we only choose a free numeric slot between neighbors.
+      const { data: allRows } = await supabase
+        .from("admin_campaigns" as any)
+        .select("id, data")
+        .limit(2000);
+      const corpus = (((allRows as unknown) ?? []) as Array<{ id: string; data: any }>)
+        .map(r => {
+          const d = r.data ?? {};
+          const order = typeof d.chronological_order === "number" ? d.chronological_order : null;
+          const bf = withBackfilledChronology({ ...(d as Campaign), id: r.id, title: d.title ?? "" });
+          const bfKey = typeof bf.chronological_order === "number" ? bf.chronological_order : null;
+          return { id: r.id, order, bfKey };
+        })
+        .filter(r => r.order != null) as Array<{ id: string; order: number; bfKey: number | null }>;
+      corpus.sort((a, b) => a.order - b.order);
+      let maxOrder = corpus.reduce((m, r) => Math.max(m, r.order), 0);
+
+      const suggestSlot = (key: number | null): { order: number; status: "auto" | "review" } => {
+        if (key == null || corpus.length === 0) {
+          maxOrder += 10;
+          return { order: maxOrder, status: "review" };
+        }
+        // Find the last existing row whose bfKey <= new key.
+        let after = -1;
+        for (let i = 0; i < corpus.length; i++) {
+          if (corpus[i].bfKey != null && (corpus[i].bfKey as number) <= key) after = i;
+        }
+        if (after < 0) {
+          const first = corpus[0].order;
+          return { order: first - 5, status: "auto" };
+        }
+        if (after >= corpus.length - 1) {
+          maxOrder += 10;
+          return { order: maxOrder, status: "auto" };
+        }
+        const a = corpus[after].order;
+        const b = corpus[after + 1].order;
+        // Need a gap; if neighbors are adjacent integers we still slot a float.
+        const mid = (a + b) / 2;
+        return { order: mid, status: a === b ? "review" : "auto" };
+      };
 
       for (const c of validCampaigns) {
         const exists = existingIds.has(c.id);
@@ -199,11 +250,43 @@ function CampaignImporter() {
         }
 
         const status = publishOnImport ? "published" : (exists ? undefined : "draft");
+
+        // ----- Ordering policy -----
+        // EXISTING row: ALWAYS preserve the saved chronological_order
+        //   and order_status. Manual order is authoritative; re-import
+        //   never reshuffles the campaign library.
+        // NEW row: compute a suggested slot from backfill key without
+        //   touching any other row. Mark "review" when uncertain.
+        let chronoOrder: number | undefined;
+        let orderStatus: "manual" | "auto" | "review" | undefined;
+        if (exists) {
+          const prev = existingById.get(c.id) ?? {};
+          chronoOrder = typeof prev.chronological_order === "number" ? prev.chronological_order : undefined;
+          orderStatus = prev.order_status === "manual" || prev.order_status === "auto" || prev.order_status === "review"
+            ? prev.order_status : undefined;
+        } else {
+          const bf = withBackfilledChronology(enriched);
+          const key = typeof bf.chronological_order === "number" ? bf.chronological_order : null;
+          const slot = suggestSlot(key);
+          chronoOrder = slot.order;
+          orderStatus = slot.status;
+          // Insert into corpus so subsequent new rows respect this one too.
+          corpus.push({ id: enriched.id, order: chronoOrder, bfKey: key });
+          corpus.sort((a, b) => a.order - b.order);
+        }
+
+        const dataPayload: any = {
+          ...enriched,
+          status: publishOnImport ? "published" : (enriched.status ?? "draft"),
+        };
+        if (typeof chronoOrder === "number") dataPayload.chronological_order = chronoOrder;
+        if (orderStatus) dataPayload.order_status = orderStatus;
+
         const row: any = {
           id: enriched.id,
           slug: enriched.slug ?? null,
           title: enriched.title,
-          data: { ...enriched, status: publishOnImport ? "published" : (enriched.status ?? "draft") },
+          data: dataPayload,
           updated_at: new Date().toISOString(),
         };
         if (status) row.status = status;
