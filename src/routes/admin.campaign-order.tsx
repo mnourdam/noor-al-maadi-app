@@ -638,15 +638,68 @@ interface SortableRowProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onMoveRelative: (anchorId: string, pos: "before" | "after") => void;
+  onRenameDivider?: () => void;
+  onDeleteDivider?: () => void;
 }
 
-function SortableRow({ row, index, visibleIndex, dirty, siblings, onMoveUp, onMoveDown, onMoveRelative }: SortableRowProps) {
+function SortableRow({
+  row, index: _index, visibleIndex, dirty, siblings, onMoveUp, onMoveDown,
+  onMoveRelative, onRenameDivider, onDeleteDivider,
+}: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row.id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   } as React.CSSProperties;
+
+  // Divider rows render as elegant era headers, visually distinct from campaigns
+  // but still draggable so the admin can position them in the timeline.
+  if (row.isDivider) {
+    return (
+      <li ref={setNodeRef} style={style}
+        className={`flex flex-wrap items-center gap-3 rounded-xl border bg-gradient-to-l from-amber-950/40 via-slate-900/70 to-amber-950/40 p-3 ${
+          dirty ? "border-amber-400/80" : "border-amber-500/40"
+        }`}>
+        <button {...attributes} {...listeners}
+          aria-label="سحب لإعادة الترتيب"
+          className="cursor-grab touch-none rounded p-1 text-amber-300/70 hover:bg-amber-500/10 hover:text-amber-200">
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <div className="w-10 text-center text-sm font-mono text-amber-300/70">{visibleIndex + 1}</div>
+        <ScrollText className="h-5 w-5 text-amber-300" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">فاصل عصر</span>
+            <h3 className="truncate text-sm font-bold text-amber-100">{row.title}</h3>
+          </div>
+          {row.subtitle && <p className="mt-0.5 text-[11px] text-amber-200/60">{row.subtitle}</p>}
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={onMoveUp} aria-label="تحريك للأعلى"
+            className="rounded border border-slate-700 p-1 text-slate-300 hover:border-amber-400 hover:text-amber-300">
+            <ArrowUp className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={onMoveDown} aria-label="تحريك للأسفل"
+            className="rounded border border-slate-700 p-1 text-slate-300 hover:border-amber-400 hover:text-amber-300">
+            <ArrowDown className="h-3.5 w-3.5" />
+          </button>
+          {onRenameDivider && (
+            <button onClick={onRenameDivider} aria-label="إعادة تسمية الفاصل"
+              className="rounded border border-slate-700 p-1 text-slate-300 hover:border-amber-400 hover:text-amber-300">
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {onDeleteDivider && (
+            <button onClick={onDeleteDivider} aria-label="حذف الفاصل"
+              className="rounded border border-rose-500/40 p-1 text-rose-300 hover:bg-rose-500/10">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </li>
+    );
+  }
 
   const eraLabel = ERA_LABELS[row.era] ?? row.era;
   const badge = row.orderStatus === "manual" ? { t: "مرتب يدوياً", c: "border-amber-400/40 bg-amber-500/10 text-amber-200" }
@@ -697,6 +750,7 @@ function SortableRow({ row, index, visibleIndex, dirty, siblings, onMoveUp, onMo
     </li>
   );
 }
+
 
 function RelativeMover({ row, siblings, onMoveRelative }: { row: Row; siblings: Row[]; onMoveRelative: SortableRowProps["onMoveRelative"] }) {
   const [open, setOpen] = useState(false);
