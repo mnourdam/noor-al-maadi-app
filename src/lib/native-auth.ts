@@ -8,6 +8,7 @@
 // app's own Supabase client (auto-refresh + FCM registration keep working).
 
 import { supabase } from "@/integrations/supabase/client";
+import { Capacitor } from "@capacitor/core";
 
 // Published web callback that bounces back to the custom scheme. Must be
 // allow-listed in Supabase auth redirect URLs (the lovable.app domain is
@@ -32,6 +33,7 @@ export const NATIVE_DEEP_LINK_PATH = "/callback";
 
 export function isCapacitorNative(): boolean {
   try {
+    if (Capacitor.isNativePlatform()) return true;
     const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
     return Boolean(cap?.isNativePlatform?.());
   } catch {
@@ -50,8 +52,16 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
       redirect_uri: NATIVE_REDIRECT_URL,
       state,
     });
+    const oauthUrl = `${NATIVE_OAUTH_BROKER_URL}?${params.toString()}`;
 
-    await Browser.open({ url: `${NATIVE_OAUTH_BROKER_URL}?${params.toString()}`, presentationStyle: "fullscreen" });
+    // Required QA signal: this must be a Lovable broker URL, never the raw
+    // backend `/auth/v1/authorize` URL that lacks Google OAuth credentials.
+    console.info(`Google OAuth URL: ${oauthUrl}`);
+    if (oauthUrl.includes(".supabase.co/auth/v1/authorize")) {
+      return { ok: false, error: "Invalid Google OAuth endpoint" };
+    }
+
+    await Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
