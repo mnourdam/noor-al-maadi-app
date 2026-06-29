@@ -10,6 +10,7 @@ type SearchParams = {
   error?: string;
   error_code?: string;
   error_description?: string;
+  native?: string;
 };
 
 export const Route = createFileRoute("/auth/callback")({
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/auth/callback")({
     error: typeof s.error === "string" ? s.error : undefined,
     error_code: typeof s.error_code === "string" ? s.error_code : undefined,
     error_description: typeof s.error_description === "string" ? s.error_description : undefined,
+    native: typeof s.native === "string" ? s.native : undefined,
   }),
   component: AuthCallbackPage,
 });
@@ -48,6 +50,16 @@ function AuthCallbackPage() {
   useEffect(() => {
     let alive = true;
     (async () => {
+      // Native Capacitor hand-off: redirect every param (code, error, hash) to
+      // the app's custom scheme. The app's deep-link listener finishes the
+      // PKCE exchange inside the WebView so the session lives there.
+      if (search.native === "1" && typeof window !== "undefined") {
+        const qs = window.location.search || "";
+        const hash = window.location.hash || "";
+        const target = `app.lovable.irth://auth/callback${qs}${hash}`;
+        window.location.replace(target);
+        return;
+      }
       const hashParams = parseHashParams();
       const errCode = search.error_code || hashParams.error_code || search.error || hashParams.error;
       const errDesc = search.error_description || hashParams.error_description;
