@@ -16,7 +16,7 @@ import {
 } from "./AtlasControls";
 import { AtlasEntityDetailPanel } from "./AtlasEntityDetailPanel";
 import { usePublishedAtlasEntities } from "@/lib/atlas-entities-query";
-import type { AtlasEntityKind, AtlasEntityRow } from "@/lib/atlas-entities";
+import { isLc1VisibleAtlasKind, type AtlasEntityKind, type AtlasEntityRow } from "@/lib/atlas-entities";
 import { sortAtlasEntitiesChronological } from "@/lib/atlas/atlas-visual";
 import { pickBestAtlasMatch, type AtlasSearchHit } from "@/lib/atlas/atlas-search";
 import { Route as MapRoute, type MapSearch } from "@/routes/map";
