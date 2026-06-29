@@ -1,0 +1,521 @@
+// ============================================================
+// Admin Campaign Ordering Workshop — /admin/campaign-order
+// ------------------------------------------------------------
+// Controls the exact order in which campaigns appear to players.
+// Storage: persists `chronological_order` and `order_status`
+// inside the existing `admin_campaigns.data` JSONB blob (no
+// schema change required). Player-facing reads already prefer
+// `chronological_order` via campaignSortKey() and the offline
+// snapshot serializes the same `data` payload, so saved order
+// flows to every surface (Campaigns hub, Profile, offline mode).
+//
+// Order_status values:
+//   - "manual": admin-curated, untouched by auto passes
+//   - "auto":   derived from era/year backfill
+//   - "review": no era and no year — needs admin attention
+// ============================================================
+
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Sword, RefreshCw, Save, Wand2, GripVertical, ArrowUp, ArrowDown,
+  AlertTriangle, CheckCircle2, X, ChevronRight,
+} from "lucide-react";
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates,
+  useSortable, verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { supabase } from "@/integrations/supabase/client";
+import { AdminGate } from "@/lib/admin-guard";
+import { parseHistoricalPeriodYear } from "@/lib/campaignChronology";
+import { withBackfilledChronology } from "@/lib/campaignChronologyBackfill";
+import { inferWorldFromMetadata } from "@/lib/contentIntegrity";
+
+export const Route = createFileRoute("/admin/campaign-order")({
+  head: () => ({
+    meta: [
+      { title: "ترتيب الحملات — إرث" },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
+  component: () => <AdminGate><CampaignOrderPage /></AdminGate>,
+});
+
+// ---------- Types ----------
+
+type Status = "draft" | "published" | "archived";
+type OrderStatus = "manual" | "auto" | "review";
+
+interface Row {
+  id: string;
+  slug: string | null;
+  title: string;
+  status: Status;
+  data: any;
+  // Derived
+  era: string;
+  worldSlug: string;
+  period: string;
+  chapters: number;
+  currentOrder: number | null;
+  orderStatus: OrderStatus;
+}
+
+const ERA_LABELS: Record<string, string> = {
+  prophetic: "السيرة النبوية",
+  rashidun: "الخلافة الراشدة",
+  umayyad: "الدولة الأموية",
+  andalus: "الأندلس",
+  abbasid: "الدولة العباسية",
+  fatimid: "الدولة الفاطمية",
+  seljuk: "السلاجقة",
+  crusades: "الحروب الصليبية",
+  zengid: "الزنكيون",
+  ayyubid: "الأيوبيون",
+  mongols: "المغول",
+  mamluk: "المماليك",
+  ottoman: "الدولة العثمانية",
+  modern: "الحقبة المعاصرة",
+  "": "— غير محدد —",
+};
+
+function chapterCount(d: any): number {
+  return Array.isArray(d?.chapters) ? d.chapters.length : 0;
+}
+
+function pickNumber(...vals: any[]): number | null {
+  for (const v of vals) {
+    const n = typeof v === "string" ? Number(v) : v;
+    if (typeof n === "number" && Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function deriveOrderStatus(d: any, era: string): OrderStatus {
+  if (d?.order_status === "manual") return "manual";
+  if (d?.order_status === "auto") return "auto";
+  if (typeof d?.chronological_order === "number") return "manual";
+  const parsed = parseHistoricalPeriodYear(d?.historicalPeriod ?? d?.period);
+  if (!era && typeof d?.sort_year !== "number" && parsed == null) return "review";
+  return "auto";
+}
+
+function toRow(c: any): Row {
+  const d = c.data ?? {};
+  const inferred = inferWorldFromMetadata({
+    title: c.title,
+    subtitle: d.subtitle,
+    historicalPeriod: d.historicalPeriod ?? d.period,
+    tags: d.tags,
+    category: d.category,
+    description: d.description,
+    worldSlug: d.worldSlug,
+    era: d.era,
+  });
+  const era = String(d.era ?? inferred?.era ?? "");
+  return {
+    id: c.id,
+    slug: c.slug,
+    title: c.title ?? "",
+    status: c.status,
+    data: d,
+    era,
+    worldSlug: String(d.worldSlug ?? inferred?.worldSlug ?? ""),
+    period: String(d.historicalPeriod ?? d.period ?? ""),
+    chapters: chapterCount(d),
+    currentOrder: pickNumber(d.chronological_order, d.chronologicalOrder),
+    orderStatus: deriveOrderStatus(d, era),
+  };
+}
+
+// Sort by backfilled chronology (era base + year offset) so the initial
+// view already approximates the historical timeline.
+function initialSort(rows: Row[]): Row[] {
+  const keyed = rows.map((r) => {
+    const c: any = {
+      chronological_order: r.currentOrder ?? undefined,
+      sort_year: pickNumber(r.data?.sort_year, r.data?.sortYear) ?? undefined,
+      historicalPeriod: r.period,
+      era: r.era || undefined,
+      worldSlug: r.worldSlug || undefined,
+    };
+    const bf = withBackfilledChronology(c);
+    return { r, key: typeof bf.chronological_order === "number" ? bf.chronological_order : Number.POSITIVE_INFINITY };
+  });
+  keyed.sort((a, b) => {
+    if (a.key !== b.key) return a.key - b.key;
+    return a.r.title.localeCompare(b.r.title, "ar");
+  });
+  return keyed.map((k) => k.r);
+}
+
+// ---------- Page ----------
+
+interface Toast { kind: "ok" | "err"; msg: string }
+
+function CampaignOrderPage() {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [filter, setFilter] = useState<"all" | "published" | "draft" | "review">("all");
+  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  const notify = (kind: Toast["kind"], msg: string) => {
+    setToast({ kind, msg });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const refresh = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("admin_campaigns" as any)
+      .select("id, slug, title, status, data")
+      .limit(2000);
+    if (error) { setErr(error.message); setLoading(false); return; }
+    const list = ((data ?? []) as any[]).map(toRow);
+    setRows(initialSort(list));
+    setDirtyIds(new Set());
+    setErr(null);
+    setLoading(false);
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  const visible = useMemo(() => {
+    if (filter === "all") return rows;
+    if (filter === "review") return rows.filter((r) => r.orderStatus === "review");
+    return rows.filter((r) => r.status === filter);
+  }, [rows, filter]);
+
+  const markDirty = (ids: string[]) => {
+    setDirtyIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  // ---- Reorder helpers ----
+
+  const moveBy = (id: string, delta: number) => {
+    setRows((prev) => {
+      const idx = prev.findIndex((r) => r.id === id);
+      if (idx < 0) return prev;
+      const target = Math.max(0, Math.min(prev.length - 1, idx + delta));
+      if (target === idx) return prev;
+      const next = arrayMove(prev, idx, target);
+      markDirty(next.map((r) => r.id));
+      return next;
+    });
+  };
+
+  const moveRelative = (id: string, anchorId: string, position: "before" | "after") => {
+    if (id === anchorId) return;
+    setRows((prev) => {
+      const from = prev.findIndex((r) => r.id === id);
+      const aIdx = prev.findIndex((r) => r.id === anchorId);
+      if (from < 0 || aIdx < 0) return prev;
+      const without = [...prev.slice(0, from), ...prev.slice(from + 1)];
+      const anchorIdx = without.findIndex((r) => r.id === anchorId);
+      const insertAt = position === "before" ? anchorIdx : anchorIdx + 1;
+      const next = [...without.slice(0, insertAt), prev[from], ...without.slice(insertAt)];
+      markDirty(next.map((r) => r.id));
+      return next;
+    });
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setRows((prev) => {
+      const oldIndex = prev.findIndex((r) => r.id === active.id);
+      const newIndex = prev.findIndex((r) => r.id === over.id);
+      if (oldIndex < 0 || newIndex < 0) return prev;
+      const next = arrayMove(prev, oldIndex, newIndex);
+      markDirty(next.map((r) => r.id));
+      return next;
+    });
+  };
+
+  // ---- Auto-order ----
+
+  const applyAutoOrder = () => {
+    setRows((prev) => {
+      const next = initialSort(prev);
+      // Mark all non-manual rows as auto. (Manual rows keep their saved manual status.)
+      const updated = next.map((r) => r.orderStatus === "manual" ? r : { ...r, orderStatus: "auto" as OrderStatus });
+      markDirty(updated.map((r) => r.id));
+      return updated;
+    });
+    notify("ok", "تم تطبيق الترتيب الزمني الافتراضي. اضغط حفظ لتثبيته.");
+  };
+
+  // ---- Save ----
+
+  const save = async () => {
+    if (saving) return;
+    if (dirtyIds.size === 0) { notify("ok", "لا توجد تغييرات للحفظ."); return; }
+    setSaving(true);
+    const ts = new Date().toISOString();
+    const errs: string[] = [];
+    // Assign sequential chronological_order to every row in current display order.
+    // Step of 10 leaves room for future inserts.
+    let saved = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!dirtyIds.has(r.id)) continue;
+      const newOrder = (i + 1) * 10;
+      const nextStatus: OrderStatus = r.orderStatus === "review" ? "review" : (r.orderStatus === "auto" ? "auto" : "manual");
+      const nextData = {
+        ...(r.data ?? {}),
+        chronological_order: newOrder,
+        order_status: nextStatus,
+        order_updated_at: ts,
+      };
+      const { error } = await supabase
+        .from("admin_campaigns" as any)
+        .update({ data: nextData, updated_at: ts })
+        .eq("id", r.id);
+      if (error) errs.push(`${r.title}: ${error.message}`);
+      else saved++;
+    }
+    setSaving(false);
+    if (errs.length) {
+      notify("err", `حفظ جزئي (${saved}). أخطاء: ${errs.slice(0, 2).join(" / ")}`);
+    } else {
+      notify("ok", `تم حفظ ترتيب ${saved} حملة.`);
+    }
+    await refresh();
+  };
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-slate-100">
+      <div className="mx-auto max-w-5xl space-y-5">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-500/20 pb-4">
+          <div className="flex items-center gap-3">
+            <Sword className="h-7 w-7 text-amber-400" />
+            <div>
+              <h1 className="text-2xl font-bold text-amber-100">ترتيب الحملات</h1>
+              <p className="text-sm text-slate-400">تحكّم بالترتيب الذي يراه اللاعبون في صفحة الحملات.</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/admin/campaigns" className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300">
+              <ChevronRight className="inline h-3.5 w-3.5" /> إدارة الحملات
+            </Link>
+            <button onClick={refresh}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300">
+              <RefreshCw className="h-3.5 w-3.5" /> تحديث
+            </button>
+            <button onClick={applyAutoOrder}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20">
+              <Wand2 className="h-3.5 w-3.5" /> ترتيب زمني تلقائي
+            </button>
+            <button onClick={save} disabled={saving || dirtyIds.size === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40">
+              <Save className="h-3.5 w-3.5" /> حفظ ({dirtyIds.size})
+            </button>
+          </div>
+        </header>
+
+        {err && (
+          <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+            تعذّر التحميل: {err}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {(["all", "published", "draft", "review"] as const).map((f) => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`rounded-full border px-3 py-1 ${filter === f ? "border-amber-400 bg-amber-500/10 text-amber-200" : "border-slate-700 text-slate-400 hover:border-slate-500"}`}>
+              {f === "all" ? `الكل (${rows.length})`
+                : f === "published" ? `منشور (${rows.filter(r => r.status === "published").length})`
+                : f === "draft" ? `مسودة (${rows.filter(r => r.status === "draft").length})`
+                : `مراجعة الترتيب (${rows.filter(r => r.orderStatus === "review").length})`}
+            </button>
+          ))}
+          <span className="ms-auto text-slate-500">
+            التخزين: <code className="text-slate-300">admin_campaigns.data.chronological_order</code>
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-8 text-center text-sm text-slate-400">
+            جاري التحميل…
+          </div>
+        ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={visible.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+              <ol className="space-y-2">
+                {visible.map((r, idx) => (
+                  <SortableRow
+                    key={r.id}
+                    row={r}
+                    index={rows.indexOf(r)}
+                    visibleIndex={idx}
+                    dirty={dirtyIds.has(r.id)}
+                    siblings={rows}
+                    onMoveUp={() => moveBy(r.id, -1)}
+                    onMoveDown={() => moveBy(r.id, +1)}
+                    onMoveRelative={(anchor, pos) => moveRelative(r.id, anchor, pos)}
+                  />
+                ))}
+                {visible.length === 0 && (
+                  <li className="rounded-xl border border-slate-800 bg-slate-900/40 p-6 text-center text-sm text-slate-500">
+                    لا توجد حملات بهذا الفلتر.
+                  </li>
+                )}
+              </ol>
+            </SortableContext>
+          </DndContext>
+        )}
+
+        <footer className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-xs leading-loose text-slate-400">
+          <p className="mb-1 text-amber-200">كيف يعمل هذا الترتيب؟</p>
+          <ul className="list-disc ps-5">
+            <li>الحقل: <code className="text-slate-200">admin_campaigns.data.chronological_order</code> (عدد متسلسل بخطوة 10).</li>
+            <li>الحالة: <code className="text-slate-200">data.order_status</code> = manual / auto / review.</li>
+            <li>القارئ في تطبيق اللاعب يفضّل هذا الحقل عبر <code className="text-slate-200">campaignSortKey</code>، ثم <code className="text-slate-200">sort_year</code>، ثم تحليل <code className="text-slate-200">historicalPeriod</code>.</li>
+            <li>اللقطة دون اتصال (offline snapshot) تشمل نفس حقل <code className="text-slate-200">data</code>، فيُحفظ الترتيب تلقائياً.</li>
+          </ul>
+        </footer>
+      </div>
+
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 rounded-lg border px-4 py-2 text-sm shadow-lg ${
+          toast.kind === "ok" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : "border-red-500/40 bg-red-500/10 text-red-200"
+        }`}>
+          <div className="flex items-center gap-2">
+            {toast.kind === "ok" ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+            <span>{toast.msg}</span>
+            <button onClick={() => setToast(null)} className="ms-2 opacity-70 hover:opacity-100"><X className="h-3.5 w-3.5" /></button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Row ----------
+
+interface SortableRowProps {
+  row: Row;
+  index: number;
+  visibleIndex: number;
+  dirty: boolean;
+  siblings: Row[];
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onMoveRelative: (anchorId: string, pos: "before" | "after") => void;
+}
+
+function SortableRow({ row, index, visibleIndex, dirty, siblings, onMoveUp, onMoveDown, onMoveRelative }: SortableRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  } as React.CSSProperties;
+
+  const eraLabel = ERA_LABELS[row.era] ?? row.era;
+  const badge = row.orderStatus === "manual" ? { t: "مرتب يدوياً", c: "border-amber-400/40 bg-amber-500/10 text-amber-200" }
+    : row.orderStatus === "auto" ? { t: "مرتب تلقائياً", c: "border-emerald-400/40 bg-emerald-500/10 text-emerald-200" }
+    : { t: "مراجعة الترتيب", c: "border-rose-400/40 bg-rose-500/10 text-rose-200" };
+
+  return (
+    <li ref={setNodeRef} style={style}
+      className={`flex flex-wrap items-center gap-3 rounded-xl border bg-slate-900/60 p-3 ${
+        dirty ? "border-amber-400/60" : "border-slate-800"
+      }`}>
+      <button {...attributes} {...listeners}
+        aria-label="سحب لإعادة الترتيب"
+        className="cursor-grab touch-none rounded p-1 text-slate-500 hover:bg-slate-800 hover:text-amber-300">
+        <GripVertical className="h-4 w-4" />
+      </button>
+
+      <div className="w-10 text-center text-sm font-mono text-slate-400">{visibleIndex + 1}</div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="truncate text-sm font-bold text-amber-100">{row.title}</h3>
+          <span className={`rounded-full border px-2 py-0.5 text-[10px] ${badge.c}`}>{badge.t}</span>
+          {row.status !== "published" && (
+            <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-400">{row.status}</span>
+          )}
+        </div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-500">
+          <span>{eraLabel}</span>
+          {row.period && <span>• {row.period}</span>}
+          <span>• {row.chapters} فصول</span>
+          {row.slug && <span>• <code className="text-slate-400">{row.slug}</code></span>}
+          {row.currentOrder != null && <span>• ترتيب محفوظ: {row.currentOrder}</span>}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <button onClick={onMoveUp} aria-label="تحريك للأعلى"
+          className="rounded border border-slate-700 p-1 text-slate-300 hover:border-amber-400 hover:text-amber-300">
+          <ArrowUp className="h-3.5 w-3.5" />
+        </button>
+        <button onClick={onMoveDown} aria-label="تحريك للأسفل"
+          className="rounded border border-slate-700 p-1 text-slate-300 hover:border-amber-400 hover:text-amber-300">
+          <ArrowDown className="h-3.5 w-3.5" />
+        </button>
+        <RelativeMover row={row} siblings={siblings} onMoveRelative={onMoveRelative} />
+      </div>
+    </li>
+  );
+}
+
+function RelativeMover({ row, siblings, onMoveRelative }: { row: Row; siblings: Row[]; onMoveRelative: SortableRowProps["onMoveRelative"] }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"before" | "after">("before");
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen((v) => !v)}
+        className="rounded border border-slate-700 px-2 py-1 text-[10px] text-slate-300 hover:border-amber-400 hover:text-amber-300">
+        نقل إلى…
+      </button>
+      {open && (
+        <div className="absolute left-0 z-30 mt-1 w-64 rounded-lg border border-slate-700 bg-slate-950/95 p-2 shadow-2xl">
+          <div className="mb-2 flex gap-1 text-[10px]">
+            {(["before", "after"] as const).map((m) => (
+              <button key={m} onClick={() => setMode(m)}
+                className={`flex-1 rounded px-2 py-1 ${mode === m ? "bg-amber-500/20 text-amber-200" : "text-slate-400 hover:text-slate-200"}`}>
+                {m === "before" ? "قبل" : "بعد"}
+              </button>
+            ))}
+          </div>
+          <select autoFocus
+            onChange={(e) => {
+              const id = e.target.value;
+              if (id) { onMoveRelative(id, mode); setOpen(false); }
+            }}
+            defaultValue=""
+            className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
+            <option value="" disabled>اختر حملة مرجعية…</option>
+            {siblings.filter((s) => s.id !== row.id).map((s) => (
+              <option key={s.id} value={s.id}>{s.title}</option>
+            ))}
+          </select>
+          <button onClick={() => setOpen(false)}
+            className="mt-2 w-full rounded border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200">
+            إلغاء
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

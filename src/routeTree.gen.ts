@@ -81,6 +81,7 @@ import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCanonicalDuplicatesRouteImport } from './routes/admin.canonical-duplicates'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as AdminCampaignRelationshipsRouteImport } from './routes/admin.campaign-relationships'
+import { Route as AdminCampaignOrderRouteImport } from './routes/admin.campaign-order'
 import { Route as AdminAtlasReviewRouteImport } from './routes/admin.atlas-review'
 import { Route as AdminAtlasRepairRouteImport } from './routes/admin.atlas-repair'
 import { Route as AdminAtlasImportRouteImport } from './routes/admin.atlas-import'
@@ -476,6 +477,11 @@ const AdminCampaignRelationshipsRoute =
     path: '/admin/campaign-relationships',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminCampaignOrderRoute = AdminCampaignOrderRouteImport.update({
+  id: '/admin/campaign-order',
+  path: '/admin/campaign-order',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAtlasReviewRoute = AdminAtlasReviewRouteImport.update({
   id: '/admin/atlas-review',
   path: '/admin/atlas-review',
@@ -655,6 +661,7 @@ export interface FileRoutesByFullPath {
   '/admin/atlas-import': typeof AdminAtlasImportRoute
   '/admin/atlas-repair': typeof AdminAtlasRepairRoute
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
+  '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
@@ -754,6 +761,7 @@ export interface FileRoutesByTo {
   '/admin/atlas-import': typeof AdminAtlasImportRoute
   '/admin/atlas-repair': typeof AdminAtlasRepairRoute
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
+  '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
@@ -854,6 +862,7 @@ export interface FileRoutesById {
   '/admin/atlas-import': typeof AdminAtlasImportRoute
   '/admin/atlas-repair': typeof AdminAtlasRepairRoute
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
+  '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
@@ -957,6 +966,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-import'
     | '/admin/atlas-repair'
     | '/admin/atlas-review'
+    | '/admin/campaign-order'
     | '/admin/campaign-relationships'
     | '/admin/campaigns'
     | '/admin/canonical-duplicates'
@@ -1056,6 +1066,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-import'
     | '/admin/atlas-repair'
     | '/admin/atlas-review'
+    | '/admin/campaign-order'
     | '/admin/campaign-relationships'
     | '/admin/campaigns'
     | '/admin/canonical-duplicates'
@@ -1155,6 +1166,7 @@ export interface FileRouteTypes {
     | '/admin/atlas-import'
     | '/admin/atlas-repair'
     | '/admin/atlas-review'
+    | '/admin/campaign-order'
     | '/admin/campaign-relationships'
     | '/admin/campaigns'
     | '/admin/canonical-duplicates'
@@ -1257,6 +1269,7 @@ export interface RootRouteChildren {
   AdminAtlasImportRoute: typeof AdminAtlasImportRoute
   AdminAtlasRepairRoute: typeof AdminAtlasRepairRoute
   AdminAtlasReviewRoute: typeof AdminAtlasReviewRoute
+  AdminCampaignOrderRoute: typeof AdminCampaignOrderRoute
   AdminCampaignRelationshipsRoute: typeof AdminCampaignRelationshipsRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminCanonicalDuplicatesRoute: typeof AdminCanonicalDuplicatesRoute
@@ -1816,6 +1829,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCampaignRelationshipsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/campaign-order': {
+      id: '/admin/campaign-order'
+      path: '/admin/campaign-order'
+      fullPath: '/admin/campaign-order'
+      preLoaderRoute: typeof AdminCampaignOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/atlas-review': {
       id: '/admin/atlas-review'
       path: '/admin/atlas-review'
@@ -2128,6 +2148,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAtlasImportRoute: AdminAtlasImportRoute,
   AdminAtlasRepairRoute: AdminAtlasRepairRoute,
   AdminAtlasReviewRoute: AdminAtlasReviewRoute,
+  AdminCampaignOrderRoute: AdminCampaignOrderRoute,
   AdminCampaignRelationshipsRoute: AdminCampaignRelationshipsRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminCanonicalDuplicatesRoute: AdminCanonicalDuplicatesRoute,
