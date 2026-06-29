@@ -16,6 +16,14 @@ import { supabase } from "@/integrations/supabase/client";
 const NATIVE_REDIRECT_URL =
   "https://irth-develop.lovable.app/auth/callback?native=1";
 
+// Important: native Google sign-in must use the Lovable OAuth broker, not the
+// raw backend /auth/v1/authorize endpoint. The raw backend provider can be
+// disabled or missing a project-local OAuth secret while the broker has the
+// managed Google credentials. Using the broker also matches the published web
+// flow and avoids the APK error: "Unsupported provider: missing OAuth secret".
+const NATIVE_OAUTH_BROKER_URL = "https://irth-develop.lovable.app/~oauth/initiate";
+const NATIVE_OAUTH_STATE_KEY = "irth-native-oauth-state";
+
 // Custom scheme registered in AndroidManifest.xml (intent-filter on
 // MainActivity). Matches Capacitor's appId.
 export const NATIVE_DEEP_LINK_SCHEME = "app.lovable.irth";
@@ -35,25 +43,39 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
   try {
     const { Browser } = await import("@capacitor/browser");
 
-    // skipBrowserRedirect → returns the OAuth URL instead of navigating the
-    // WebView. The PKCE verifier is generated and stored in the app's
-    // localStorage by supabase-js right now, so the eventual code exchange
-    // (also inside the app) will succeed.
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const state = generateNativeOAuthState();
+    try { window.sessionStorage.setItem(NATIVE_OAUTH_STATE_KEY, state); } catch { /* ignore */ }
+    const params = new URLSearchParams({
       provider: "google",
-      options: {
-        redirectTo: NATIVE_REDIRECT_URL,
-        skipBrowserRedirect: true,
-      },
+      redirect_uri: NATIVE_REDIRECT_URL,
+      state,
     });
-    if (error) return { ok: false, error: error.message };
-    if (!data?.url) return { ok: false, error: "تعذر إنشاء رابط Google" };
 
-    await Browser.open({ url: data.url, presentationStyle: "fullscreen" });
+    await Browser.open({ url: `${NATIVE_OAUTH_BROKER_URL}?${params.toString()}`, presentationStyle: "fullscreen" });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+function generateNativeOAuthState(): string {
+  try {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  }
+}
+
+function collectDeepLinkParams(url: URL): URLSearchParams {
+  const params = new URLSearchParams(url.search);
+  const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
+  if (hash) {
+    const hashParams = new URLSearchParams(hash);
+    hashParams.forEach((value, key) => params.set(key, value));
+  }
+  return params;
 }
 
 // Registered once at app boot (android-client.tsx). Listens for the OS handing
@@ -71,14 +93,36 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
       if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) return;
 
       try {
-        // Parse query + hash from the deep link.
+        // Parse query + hash from the deep link. The Lovable OAuth broker can
+        // return tokens in the URL fragment; the legacy direct backend flow
+        // returned a PKCE code in the query string.
         const u = new URL(url);
-        const code = u.searchParams.get("code");
+        const params = collectDeepLinkParams(u);
+        const state = params.get("state");
+        const expectedState = (() => {
+          try { return window.sessionStorage.getItem(NATIVE_OAUTH_STATE_KEY); } catch { return null; }
+        })();
+        try { window.sessionStorage.removeItem(NATIVE_OAUTH_STATE_KEY); } catch { /* ignore */ }
+
+        if (expectedState && state && state !== expectedState) {
+          console.error("[native-auth] state mismatch");
+          return;
+        }
+
+        const code = params.get("code");
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
         const errorDescription =
-          u.searchParams.get("error_description") || u.searchParams.get("error");
+          params.get("error_description") || params.get("error");
 
         if (errorDescription) {
           console.error("[native-auth] provider error", errorDescription);
+        } else if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (error) console.error("[native-auth] session set failed", error.message);
         } else if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) console.error("[native-auth] exchange failed", error.message);
