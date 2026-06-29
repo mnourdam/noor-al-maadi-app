@@ -17,8 +17,6 @@ import { Capacitor } from "@capacitor/core";
 const NATIVE_REDIRECT_URL =
   "https://irth-develop.lovable.app/auth/callback?native=1";
 
-const NATIVE_OAUTH_STATE_KEY = "irth-native-oauth-state";
-
 // Custom scheme registered in AndroidManifest.xml (intent-filter on
 // MainActivity). Matches Capacitor's appId.
 export const NATIVE_DEEP_LINK_SCHEME = "app.lovable.irth";
@@ -39,15 +37,11 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
   try {
     const { Browser } = await import("@capacitor/browser");
 
-    const state = generateNativeOAuthState();
-    try { window.sessionStorage.setItem(NATIVE_OAUTH_STATE_KEY, state); } catch { /* ignore */ }
-
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: NATIVE_REDIRECT_URL,
         skipBrowserRedirect: true,
-        queryParams: { state },
       },
     });
 
@@ -64,16 +58,6 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
-}
-
-function generateNativeOAuthState(): string {
-  try {
-    const bytes = new Uint8Array(16);
-    window.crypto.getRandomValues(bytes);
-    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-  } catch {
-    return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
   }
 }
 
@@ -107,16 +91,6 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         // returned a PKCE code in the query string.
         const u = new URL(url);
         const params = collectDeepLinkParams(u);
-        const state = params.get("state");
-        const expectedState = (() => {
-          try { return window.sessionStorage.getItem(NATIVE_OAUTH_STATE_KEY); } catch { return null; }
-        })();
-        try { window.sessionStorage.removeItem(NATIVE_OAUTH_STATE_KEY); } catch { /* ignore */ }
-
-        if (expectedState && state && state !== expectedState) {
-          console.error("[native-auth] state mismatch");
-          return;
-        }
 
         const code = params.get("code");
         const accessToken = params.get("access_token");
