@@ -16,7 +16,7 @@ import {
 } from "./AtlasControls";
 import { AtlasEntityDetailPanel } from "./AtlasEntityDetailPanel";
 import { usePublishedAtlasEntities } from "@/lib/atlas-entities-query";
-import type { AtlasEntityKind, AtlasEntityRow } from "@/lib/atlas-entities";
+import { isLc1VisibleAtlasKind, type AtlasEntityKind, type AtlasEntityRow } from "@/lib/atlas-entities";
 import { sortAtlasEntitiesChronological } from "@/lib/atlas/atlas-visual";
 import { pickBestAtlasMatch, type AtlasSearchHit } from "@/lib/atlas/atlas-search";
 import { Route as MapRoute, type MapSearch } from "@/routes/map";
@@ -40,7 +40,10 @@ function AtlasShellInner() {
   // URL state — single source of truth for filters + selection.
   const search = MapRoute.useSearch();
   const navigate = useNavigate({ from: MapRoute.fullPath });
-  const kind = (search.kind ?? null) as AtlasEntityKind | null;
+  const rawKind = (search.kind ?? null) as AtlasEntityKind | null;
+  // LC1: ignore deep links to hidden kinds (events/artifacts/etc.) so the
+  // map doesn't render empty when an old URL specifies a now-hidden layer.
+  const kind = isLc1VisibleAtlasKind(rawKind) ? rawKind : null;
   const era = search.era ?? null;
   const world = search.world ?? null;
   const q = search.q ?? "";

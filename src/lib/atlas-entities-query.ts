@@ -4,19 +4,27 @@
 // Local-first: the bundled offline snapshot seeds `initialData` so the map
 // renders instantly even with no network. The network query refreshes the
 // list in the background when online.
+//
+// LC1 (player Atlas only): events / artifacts / figure markers / route
+// points are filtered out at this query layer. Data remains intact in the
+// database; this is purely a display-layer decision for the public beta.
 import { useQuery } from "@tanstack/react-query";
-import { listPublishedAtlasEntities, type AtlasEntityRow } from "./atlas-entities";
+import {
+  listPublishedAtlasEntities,
+  filterLc1AtlasRows,
+  type AtlasEntityRow,
+} from "./atlas-entities";
 import { localAtlasEntities } from "./local-first-store";
 
 export function usePublishedAtlasEntities() {
   return useQuery<AtlasEntityRow[]>({
-    queryKey: ["atlas-entities", "published"],
+    queryKey: ["atlas-entities", "published", "lc1"],
     staleTime: 60_000,
     initialData: () => {
       const rows = localAtlasEntities() as AtlasEntityRow[];
-      return rows.length > 0 ? rows : undefined;
+      return rows.length > 0 ? filterLc1AtlasRows(rows) : undefined;
     },
     initialDataUpdatedAt: 0,
-    queryFn: listPublishedAtlasEntities,
+    queryFn: async () => filterLc1AtlasRows(await listPublishedAtlasEntities()),
   });
 }
