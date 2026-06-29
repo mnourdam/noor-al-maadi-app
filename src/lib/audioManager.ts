@@ -283,6 +283,7 @@ export const audioManager = {
     if (typeof window === "undefined") return;
     if (isAndroidUltraStableMode()) return;
     if (!settings.soundEnabled || !settings.sfxEnabled) return;
+    if (!deviceAllowsAudio()) return;
     if (sfxFailed.has("error")) {
       // eslint-disable-next-line no-console
       console.warn("[audio] error sfx unavailable — skipping (synth fallback disabled)");
