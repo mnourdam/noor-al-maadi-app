@@ -252,14 +252,19 @@ function CampaignOrderPage() {
   // ---- Auto-order ----
 
   const applyAutoOrder = () => {
+    const ok = typeof window !== "undefined"
+      ? window.confirm("سيتم إعادة بناء الترتيب الزمني لكل الحملات وفق الخوارزمية التاريخية. هذا الإجراء سيتجاوز الترتيب اليدوي. هل تريد المتابعة؟")
+      : true;
+    if (!ok) return;
     setRows((prev) => {
       const next = initialSort(prev);
-      // Mark all non-manual rows as auto. (Manual rows keep their saved manual status.)
-      const updated = next.map((r) => r.orderStatus === "manual" ? r : { ...r, orderStatus: "auto" as OrderStatus });
+      // Explicit rebuild: every row becomes "auto" — that is what the
+      // admin asked for. Manual order is overwritten only here.
+      const updated = next.map((r) => ({ ...r, orderStatus: "auto" as OrderStatus }));
       markDirty(updated.map((r) => r.id));
       return updated;
     });
-    notify("ok", "تم تطبيق الترتيب الزمني الافتراضي. اضغط حفظ لتثبيته.");
+    notify("ok", "تم إعادة بناء الترتيب الزمني. اضغط حفظ لتثبيته.");
   };
 
   // ---- Save ----
@@ -277,7 +282,13 @@ function CampaignOrderPage() {
       const r = rows[i];
       if (!dirtyIds.has(r.id)) continue;
       const newOrder = (i + 1) * 10;
-      const nextStatus: OrderStatus = r.orderStatus === "review" ? "review" : (r.orderStatus === "auto" ? "auto" : "manual");
+      // Any row touched by a drag / move action is, by definition, the
+      // admin's manual decision and must be preserved on future imports.
+      // Auto-rebuild paths set orderStatus to "auto" explicitly before
+      // marking dirty, so those rows stay "auto" here.
+      const nextStatus: OrderStatus = r.orderStatus === "review"
+        ? "review"
+        : r.orderStatus === "auto" ? "auto" : "manual";
       const nextData = {
         ...(r.data ?? {}),
         chronological_order: newOrder,
