@@ -145,9 +145,10 @@ export function HUD() {
               <button
                 type="button"
                 aria-label="الخبرة"
-                className={`inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-amber-200 transition hover:bg-white/5 active:bg-white/10 ${bumpCls("points")}`}
+                className={`motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-amber-200 transition hover:bg-white/5 active:bg-white/10 ${bumpCls("points")}`}
               >
-                <Star className="size-3.5" /> {profile.points.toLocaleString("en-US")}
+                <Star className="size-3.5" /> <AnimatedNumber value={profile.points} />
+
               </button>
             </PopoverTrigger>
             <PopoverContent align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
