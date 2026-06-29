@@ -78,9 +78,8 @@ function ResetPasswordPage() {
             <form onSubmit={submit} className="space-y-3" autoComplete="on">
               <label className="block">
                 <span className="mb-1 block text-[11px] text-muted-foreground">كلمة المرور الجديدة</span>
-                <input
+                <PasswordField
                   ref={passwordRef}
-                  type="password"
                   name="new-password"
                   required
                   minLength={6}
