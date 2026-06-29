@@ -4,6 +4,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { isCapacitorNative, signInWithGoogleNative } from "@/lib/native-auth";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
