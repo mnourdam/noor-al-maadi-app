@@ -684,7 +684,7 @@ function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
           </label>
           <label className="block">
             <span className="mb-1 block text-xs text-slate-400">كلمة المرور (8 محارف فأكثر)</span>
-            <input dir="ltr" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} maxLength={72}
+            <PasswordField dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} maxLength={72}
               className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-500/60" />
           </label>
           <label className="block">
