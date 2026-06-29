@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Trash2, ChevronLeft, MailOpen, CheckCheck, Image as ImageIcon } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { resolveCategory } from "@/lib/notifications/categories";
-import { resolveDeepLink, type NotificationPayload } from "@/lib/notifications/deepLink";
+import { resolveDeepLink, isInformationalNotification, type NotificationPayload } from "@/lib/notifications/deepLink";
 import {
   fetchMyNotifications,
   markNotificationRead,
@@ -71,6 +71,11 @@ function NotificationsCenter() {
     if (!n.read_at) {
       setRows((cur) => cur.map((r) => (r.id === n.id ? { ...r, read_at: new Date().toISOString() } : r)));
       void markNotificationRead(n.id);
+    }
+    // Reminder / informational entries are read-only inside the center —
+    // tapping them just marks as read; no navigation.
+    if (isInformationalNotification({ type: n.type, category: n.category, deep_link: n.deep_link, payload: n.payload as NotificationPayload })) {
+      return;
     }
     const to = resolveDeepLink({
       type: n.type, category: n.category, deep_link: n.deep_link,
