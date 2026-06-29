@@ -64,7 +64,7 @@ function ImportedChapterPlayer() {
   const [progressTick, setProgressTick] = useState(0);
   const bump = () => setProgressTick(t => t + 1);
 
-  const { profile, addPoints, addDinars, loseHeartOnce } = useProfile();
+  const { profile, addPoints, addDinars, loseHeartOnce, touchStreak } = useProfile();
   // PR1: per-render lock to swallow rapid duplicate onResolve calls
   // (e.g. double-tap on the answer button before the next paint).
   const resolveLockRef = useRef(false);
@@ -179,6 +179,8 @@ function ImportedChapterPlayer() {
     // Chapter completion rewards — claimed once via ledger.
     if (newlyChapter) {
       audioManager.playSfx("chapter-complete", { dedupeKey: `ch:${chapter!.id}` });
+      // Qualifying streak activity: completing a campaign chapter.
+      touchStreak();
       const chDelta = claimChapterReward(campaign!, chapter!);
       if (chDelta.granted) {
         if (chDelta.xp > 0)    addPoints(chDelta.xp);

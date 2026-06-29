@@ -53,7 +53,7 @@ type HeroSlide =
 
 
 function HomeFull() {
-  const { profile, touchStreak } = useProfile();
+  const { profile } = useProfile();
   const { account, user, lastSyncAt } = useAccount();
 
   const displayName = account?.username ?? (user ? profile.name : profile.name);
@@ -91,9 +91,10 @@ function HomeFull() {
 
   useEffect(() => {
     setMounted(true);
-    if (!user || lastSyncAt) {
-      touchStreak();
-    }
+    // NOTE: streak is NOT touched on app open. Only qualifying gameplay
+    // activity (campaign chapter complete, investigation complete, daily
+    // challenge / mini-game complete) updates the streak. Browsing the app
+    // counts as "last seen" via touch_my_last_active, not streak activity.
     const season = currentSeason();
     runDailyNotifications({
       prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
@@ -106,7 +107,7 @@ function HomeFull() {
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [touchStreak, todayEvent?.id, user, lastSyncAt]);
+  }, [todayEvent?.id, user, lastSyncAt]);
 
   // Scroll to (and briefly highlight) the "في مثل هذا اليوم" section when a
   // Today-in-History notification opens Home with the #today-in-history hash.
