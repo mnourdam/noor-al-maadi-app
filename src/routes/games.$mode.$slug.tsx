@@ -178,6 +178,24 @@ function GamePlayPage() {
 
   const onPaidHint = useCallback((cost: number) => spendDinars(cost), [spendDinars]);
 
+  // Built-in help option available in every timed mini-game.
+  const helpBuiltins = useMemo(() => [{
+    id: "add_time",
+    icon: <Hourglass className="h-4 w-4" />,
+    label: "شراء دقيقتين إضافيتين",
+    description: "أضف دقيقتين إلى الوقت المتبقي لمواصلة التحدّي.",
+    cost: TIME_BONUS_COST,
+    getAvailable: () => !stageDone && !failed,
+    perform: ({ pay }: { pay: () => boolean }) => {
+      if (stageDone || failed) return false;
+      if (!pay()) return false;
+      timerRef.current?.addSeconds(TIME_BONUS_SECONDS);
+      sfx("gold_unlock", "help-add-time");
+      toast.success("تمت إضافة دقيقتين مقابل 10 دنانير.");
+      return true;
+    },
+  }], [stageDone, failed]);
+
   const next = () => {
     if (isLast) return;
     setStageIdx((i) => i + 1);
