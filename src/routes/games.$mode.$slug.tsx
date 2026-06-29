@@ -365,6 +365,16 @@ function GamePlayPage() {
           </HelpErrorBoundary>
         )}
 
+        {/* Time-Expired grace dialog — shared by every timed mini-game. */}
+        <TimeExpiredDialog
+          open={timeExpiredOpen}
+          dinars={playerDinars}
+          onBuyTime={handleBuyExtraTime}
+          onEndChallenge={handleEndChallenge}
+        />
+
+
+
 
         {/* Breadcrumb with exit guard */}
         <div className="flex items-center justify-between text-xs">
