@@ -458,67 +458,7 @@ export function CrosswordRenderer({
         )}
       </div>
 
-      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-        <DialogContent dir="rtl" className="max-w-sm border-amber-500/30 bg-gradient-to-b from-slate-950 to-slate-900 text-amber-50">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-200">
-              <HelpCircle className="h-5 w-5 text-amber-300" />
-              المساعدة
-            </DialogTitle>
-            <DialogDescription className="text-amber-100/80 leading-7">
-              يمكنك كشف حرف واحد مقابل {HINT_COST} دنانير.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90">
-            <span className="inline-flex items-center gap-1.5">
-              <Coins className="h-3.5 w-3.5 text-amber-300" />
-              رصيدك
-            </span>
-            <span className="font-bold">{playerDinars} دينار</span>
-          </div>
-          <DialogFooter className="mt-3 flex-col gap-2 sm:flex-row-reverse sm:justify-start">
-            <button
-              type="button"
-              onClick={requestRevealLetter}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 sm:w-auto"
-            >
-              <Lightbulb className="h-4 w-4" />
-              كشف حرف ({HINT_COST} دنانير)
-            </button>
-            <button
-              type="button"
-              onClick={() => setHelpOpen(false)}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-transparent px-4 py-2.5 text-sm font-semibold text-amber-100 transition hover:bg-amber-500/10 sm:w-auto"
-            >
-              <X className="h-4 w-4" />
-              إلغاء
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={insufficientOpen} onOpenChange={setInsufficientOpen}>
-        <DialogContent dir="rtl" className="max-w-sm border-amber-500/30 bg-gradient-to-b from-slate-950 to-slate-900 text-amber-50">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-200">
-              <Coins className="h-5 w-5 text-amber-300" />
-              لا توجد دنانير كافية
-            </DialogTitle>
-            <DialogDescription className="text-amber-100/80 leading-7">
-              تحتاج إلى {HINT_COST} دنانير لكشف حرف واحد.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-3">
-            <button
-              type="button"
-              onClick={() => setInsufficientOpen(false)}
-              className="inline-flex w-full items-center justify-center rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400"
-            >
-              حسنًا
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Help dialog (including "reveal letter") is rendered by the game host. */}
     </div>
   );
 }
