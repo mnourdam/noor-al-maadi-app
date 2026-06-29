@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Sword, RefreshCw, Save, Wand2, GripVertical, ArrowUp, ArrowDown,
   AlertTriangle, CheckCircle2, X, ChevronRight, FileJson, FileSpreadsheet,
+  ScrollText, Plus, Trash2, Pencil,
 } from "lucide-react";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
