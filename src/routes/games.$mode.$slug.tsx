@@ -308,7 +308,16 @@ function GamePlayPage() {
 
   return (
     <AppShell>
+     <GameHelpProvider>
       <div dir="rtl" className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+        <GameHelpDialog
+          open={helpOpen}
+          onOpenChange={setHelpOpen}
+          dinars={playerDinars}
+          spendDinars={spendDinars}
+          builtinOptions={helpBuiltins}
+        />
+
         {/* Breadcrumb with exit guard */}
         <div className="flex items-center justify-between text-xs">
           <button
@@ -341,20 +350,29 @@ function GamePlayPage() {
           </div>
         </header>
 
-        {/* Countdown timer (always visible) + progress rail */}
+        {/* Countdown timer + unified Help button + progress rail */}
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <GameTimer
+              ref={timerRef}
               key={`${game.id}-${stageIdx}-${retryNonce}`}
               seconds={timerSeconds}
               paused={stageDone || failed}
               onExpire={handleTimeout}
             />
-            <div className="hidden text-end text-[11px] text-slate-400 sm:block">
-              <p>الوقت المتاح</p>
-              <p className="text-amber-300/80">يستمر العدّ حتى انتهاء المرحلة</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              disabled={stageDone || failed}
+              aria-label="مساعدة"
+              title="مساعدة"
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-gradient-to-b from-amber-500/25 to-amber-600/10 px-3 py-1.5 text-[11px] font-bold text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.15)_inset] transition hover:from-amber-500/35 hover:to-amber-600/20 disabled:opacity-40"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              مساعدة
+            </button>
           </div>
+
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[11px] text-slate-400">
               <span>المرحلة {Math.min(stageIdx + 1, Math.max(stages.length, 1))} من {stages.length}</span>
