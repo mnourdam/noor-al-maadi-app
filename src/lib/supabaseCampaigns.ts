@@ -84,7 +84,7 @@ export async function fetchCampaignByIdOrSlug(idOrSlug: string): Promise<Campaig
   await ensureLocalSnapshotLoaded();
 
   const hit = localCampaignByIdOrSlug(idOrSlug);
-  if (hit) {
+  if (hit && !isDividerData(hit.data)) {
     const c = (hit.data ?? null) as Campaign | null;
     if (c && c.status === "published") return c;
   }
