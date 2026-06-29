@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  Compass, Sword, Search, Sparkles, Clock, Coins, Star, Play,
-  Crown, Hourglass, Link2, Archive, Feather, ScrollText, Moon,
+  Sword, Search, Sparkles, Clock, Coins, Star, Play,
+  Crown, Hourglass, Link2, Archive, Feather, ScrollText, Moon, Trophy, Check,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { fetchDailyFeaturedGames, type GameRow } from "@/lib/games/store";
+import {
+  selectDailyChallenges,
+  fetchMyCompletedGameIds,
+  type GameRow,
+} from "@/lib/games/store";
 import { MODE_LABELS_AR, type GameMode } from "@/lib/games/types";
 import "@/components/games/games-premium.css";
 
@@ -27,53 +31,63 @@ const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; stro
   memory: Archive,
 };
 
-
 function AdventurePage() {
-  const [daily, setDaily] = useState<GameRow[]>([]);
+  const [picks, setPicks] = useState<GameRow[] | null>(null);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [allCompleted, setAllCompleted] = useState(false);
 
   useEffect(() => {
-    (async () => setDaily(await fetchDailyFeaturedGames(2)))();
+    let cancelled = false;
+    (async () => {
+      const completed = await fetchMyCompletedGameIds();
+      const sel = await selectDailyChallenges(2, { completedIds: completed });
+      if (cancelled) return;
+      setCompletedIds(completed);
+      setPicks(sel.picks);
+      setAllCompleted(sel.allCompleted);
+    })().catch(() => {
+      if (!cancelled) setPicks([]);
+    });
+    return () => { cancelled = true; };
   }, []);
-
-  const spotlight = daily[0];
-  const second = daily[1];
 
   return (
     <AppShell>
-      <Screen title="قاعة التحديات" subtitle="تحدّيان مختاران بعناية كل يوم.">
+      <Screen title="قاعة التحديات" subtitle="تحدّيان من نوعين مختلفين كل يوم.">
         <div dir="rtl" className="space-y-10">
-          {/* Spotlight challenge */}
           <section>
-            <SectionHeader icon={<Sparkles className="h-4 w-4" />} title="تحدّي اليوم" hint="يتجدّد كل صباح" />
-            {!spotlight ? (
+            <SectionHeader icon={<Sparkles className="h-4 w-4" />} title="تحدي اليوم" hint="يتجدّد كل صباح" />
+            {picks === null ? (
+              <p className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
+                جارٍ التحميل…
+              </p>
+            ) : !picks.length ? (
               <p className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
                 لم تُنشر تحديات بعد. تابع قريبًا.
               </p>
+            ) : allCompleted ? (
+              <CompletedBanner />
             ) : (
-              <SpotlightCard game={spotlight} />
+              <div className="space-y-4">
+                {picks.map((g) => (
+                  <DailyCard key={g.id} game={g} completed={completedIds.has(g.id)} />
+                ))}
+              </div>
             )}
           </section>
-
-          {/* Secondary featured */}
-          {second && (
-            <section>
-              <SectionHeader icon={<Compass className="h-4 w-4" />} title="تحدٍّ مرافق" hint="مختار بعناية" />
-              <DailyCard game={second} />
-            </section>
-          )}
 
           {/* Teaser — no more challenges today */}
           <section>
             <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-950 via-slate-900/60 to-slate-950 p-6 text-center">
               <Moon className="mx-auto h-7 w-7 text-amber-300/80" strokeWidth={1.3} />
               <p className="mt-3 text-sm leading-7 text-amber-100/90">
-                هذه تحديات اليوم. تُفتح تحديات جديدة عند بزوغ فجر الغد إن شاء الله.
+                تتجدد التحديات عند بزوغ فجر الغد إن شاء الله.
               </p>
               <div className="mx-auto mt-3 h-px w-40 bg-gradient-to-l from-transparent via-amber-500/40 to-transparent" />
             </div>
           </section>
 
-          {/* Museum hall — moved to bottom */}
+          {/* Museum hall */}
           <section className="relative overflow-hidden rounded-2xl border border-amber-500/30 irth-title-card p-6 sm:p-8">
             <span className="irth-ember" style={{ left: "10%", animationDelay: "0s" }} />
             <span className="irth-ember" style={{ left: "32%", animationDelay: "1.1s" }} />
@@ -127,22 +141,73 @@ function SectionHeader({ icon, title, hint }: { icon: React.ReactNode; title: st
   );
 }
 
-function SpotlightCard({ game }: { game: GameRow }) {
-  const Icon = MODE_ICON[game.mode];
+function CompletedBanner() {
   return (
-    <Link
-      to="/games/$mode/$slug" params={{ mode: game.mode, slug: game.slug }}
-      className="group block relative overflow-hidden rounded-2xl border border-amber-500/40 irth-title-card p-6 transition hover:border-amber-300"
-    >
-      <span className="irth-ember" style={{ left: "18%", animationDelay: "0s" }} />
-      <span className="irth-ember" style={{ left: "62%", animationDelay: "1.4s" }} />
+    <div className="relative overflow-hidden rounded-2xl border border-emerald-400/30 irth-title-card p-8 text-center">
+      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
+        <Trophy className="h-7 w-7 text-emerald-300" strokeWidth={1.4} />
+      </div>
+      <h3 className="mt-4 text-lg font-bold text-emerald-100">أحسنت!</h3>
+      <p className="mt-2 text-sm leading-7 text-slate-300">
+        لقد أنهيت تحديات اليوم.
+        <br />
+        عد غدًا لاكتشاف تحديين جديدين.
+      </p>
+    </div>
+  );
+}
+
+function DailyCard({ game, completed }: { game: GameRow; completed: boolean }) {
+  const Icon = MODE_ICON[game.mode];
+
+  const shellBase =
+    "group relative block overflow-hidden rounded-2xl border p-5 transition";
+  const shellClass = completed
+    ? `${shellBase} border-emerald-400/40 bg-gradient-to-br from-[#0a1a14] via-[#0c2018] to-[#08120e]`
+    : `${shellBase} border-amber-500/40 irth-title-card hover:border-amber-300`;
+
+  const content = (
+    <>
+      {completed && (
+        <div className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold text-emerald-200">
+          <Check className="h-3 w-3" strokeWidth={2.5} /> تم الإنجاز
+        </div>
+      )}
+      {!completed && (
+        <>
+          <span className="irth-ember" style={{ left: "18%", animationDelay: "0s" }} />
+          <span className="irth-ember" style={{ left: "62%", animationDelay: "1.4s" }} />
+        </>
+      )}
       <div className="relative flex items-start gap-4">
-        <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-amber-400/50 bg-gradient-to-br from-amber-500/20 to-amber-700/5 irth-gold-glow">
-          <Icon className="h-8 w-8 text-amber-300" strokeWidth={1.4} />
+        <div
+          className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl border ${
+            completed
+              ? "border-emerald-400/50 bg-emerald-500/10"
+              : "border-amber-400/50 bg-gradient-to-br from-amber-500/20 to-amber-700/5 irth-gold-glow"
+          }`}
+        >
+          {completed ? (
+            <Check className="h-7 w-7 text-emerald-300" strokeWidth={2.5} />
+          ) : (
+            <Icon className="h-7 w-7 text-amber-300" strokeWidth={1.4} />
+          )}
         </div>
         <div className="flex-1">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-amber-300/80">{MODE_LABELS_AR[game.mode]}</p>
-          <h3 className="mt-1 text-xl font-bold text-amber-100 group-hover:text-amber-200">{game.title}</h3>
+          <p
+            className={`text-[10px] uppercase tracking-[0.3em] ${
+              completed ? "text-emerald-300/90" : "text-amber-300/80"
+            }`}
+          >
+            {MODE_LABELS_AR[game.mode]}
+          </p>
+          <h3
+            className={`mt-1 text-lg font-bold ${
+              completed ? "text-emerald-50" : "text-amber-100 group-hover:text-amber-200"
+            }`}
+          >
+            {game.title}
+          </h3>
           {game.description && (
             <p className="mt-2 line-clamp-2 text-sm leading-7 text-slate-300">{game.description}</p>
           )}
@@ -152,35 +217,31 @@ function SpotlightCard({ game }: { game: GameRow }) {
             <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/[0.06] px-2 py-1"><Sparkles className="h-3 w-3 text-amber-300" /> {game.xp_reward}</span>
             <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/[0.06] px-2 py-1"><Coins className="h-3 w-3 text-amber-300" /> {game.coin_reward}</span>
           </div>
-          <span className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 group-hover:bg-amber-400">
-            <Play className="h-4 w-4" /> ابدأ الآن
-          </span>
+          {completed ? (
+            <span className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/50 bg-emerald-500/15 px-4 py-2 text-sm font-bold text-emerald-100">
+              <Check className="h-4 w-4" strokeWidth={2.5} /> أُنجز اليوم
+            </span>
+          ) : (
+            <span className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 group-hover:bg-amber-400">
+              <Play className="h-4 w-4" /> ابدأ الآن
+            </span>
+          )}
         </div>
       </div>
-    </Link>
+    </>
   );
-}
 
-function DailyCard({ game }: { game: GameRow }) {
-  const Icon = MODE_ICON[game.mode];
+  if (completed) {
+    return <div className={shellClass} aria-disabled="true">{content}</div>;
+  }
+
   return (
-    <Link to="/games/$mode/$slug" params={{ mode: game.mode, slug: game.slug }}
-      className="group flex gap-4 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-4 transition hover:border-amber-400/60">
-      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300">
-        <Icon className="h-6 w-6" strokeWidth={1.4} />
-      </div>
-      <div className="flex-1">
-        <p className="text-[10px] uppercase tracking-wide text-amber-300/80">{MODE_LABELS_AR[game.mode]}</p>
-        <h3 className="mt-1 text-base font-bold text-amber-100 group-hover:text-amber-200">{game.title}</h3>
-        {game.description && <p className="mt-1 line-clamp-2 text-xs leading-6 text-slate-400">{game.description}</p>}
-        <div className="mt-3 flex flex-wrap gap-2 text-[10px] text-slate-400">
-          <span className="inline-flex items-center gap-1"><Star className="h-3 w-3 text-amber-400" /> {game.difficulty}/5</span>
-          <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> ~{game.estimated_time} د</span>
-          <span className="inline-flex items-center gap-1"><Sparkles className="h-3 w-3 text-amber-300" /> {game.xp_reward}</span>
-          <span className="inline-flex items-center gap-1"><Coins className="h-3 w-3 text-amber-300" /> {game.coin_reward}</span>
-        </div>
-      </div>
+    <Link
+      to="/games/$mode/$slug"
+      params={{ mode: game.mode, slug: game.slug }}
+      className={shellClass}
+    >
+      {content}
     </Link>
   );
 }
-
