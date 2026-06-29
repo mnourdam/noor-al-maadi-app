@@ -133,10 +133,10 @@ export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builti
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-200">
               <Coins className="h-5 w-5 text-amber-300" />
-              لا توجد دنانير كافية
+              ليس لديك دنانير كافية
             </DialogTitle>
             <DialogDescription className="text-amber-100/80 leading-7">
-              تحتاج إلى {pendingCost} دنانير لاستخدام هذه المساعدة.
+              تحتاج إلى {pendingCost} دنانير لاستخدام هذه المساعدة. اجمع المزيد من الدنانير من الحملات والتحديات ثم حاول مرة أخرى.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-3">
