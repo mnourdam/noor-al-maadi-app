@@ -81,19 +81,6 @@ function HintRow({ hint }: { hint?: string }) {
   );
 }
 
-// ---------- Multiple Choice / Reading-then-question ----------
-function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
-  const [picked, setPicked] = useState<number | null>(null);
-  const [resolved, setResolved] = useState(alreadyDone ?? false);
-  const [wrongPicks, setWrongPicks] = useState<Set<number>>(new Set());
-  const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
-  const options = activity.options ?? [];
-
-  if (!options.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
-
-  const correctIndex = typeof activity.correctAnswer === "number"
-    ? activity.correctAnswer
-    : options.findIndex(o => o === String(activity.correctAnswer));
 
 // ---------- Multiple Choice / Reading-then-question ----------
 // Learning-after-failure flow:
