@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
 import { supabase } from "@/integrations/supabase/client";
-import { isCapacitorNative, signInWithGoogleNative } from "@/lib/native-auth";
+// Google native sign-in helper preserved at "@/lib/native-auth" for future LC re-enable.
 import { PasswordField } from "@/components/ui/PasswordField";
 
 export const Route = createFileRoute("/auth")({
