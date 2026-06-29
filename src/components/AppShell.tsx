@@ -44,7 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {!androidStable && isSectionEnabled("audio") && <AudioInitializer />}
         {!androidStable && isSectionEnabled("friendPoller") && <FriendNotificationsPoller />}
         {!androidStable && isSectionEnabled("backNavGuard") && <BackNavigationGuard />}
-        <div className="flex-1">{children}</div>
+        <div className="section-flow flex-1">{children}</div>
         <nav
           className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-3"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
