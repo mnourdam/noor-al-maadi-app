@@ -80,12 +80,12 @@ export function useRegisterHelpOption(id: string, spec: HelpOptionSpec | null) {
   useEffect(() => {
     if (!ctx || !isActive) return;
     return ctx.register(id, {
-      get icon() { return specRef.current?.icon ?? null; },
-      get label() { return specRef.current?.label ?? ""; },
-      get description() { return specRef.current?.description ?? ""; },
-      get cost() { return specRef.current?.cost ?? 0; },
-      getAvailable: () => specRef.current?.getAvailable?.() ?? true,
-      perform: (h) => specRef.current?.perform(h) ?? false,
+      get icon() { try { return specRef.current?.icon ?? null; } catch { return null; } },
+      get label() { try { return specRef.current?.label ?? ""; } catch { return ""; } },
+      get description() { try { return specRef.current?.description ?? ""; } catch { return ""; } },
+      get cost() { try { return specRef.current?.cost ?? 0; } catch { return 0; } },
+      getAvailable: () => { try { return specRef.current?.getAvailable?.() ?? true; } catch { return false; } },
+      perform: (h) => { try { return specRef.current?.perform(h) ?? false; } catch { return false; } },
     } as HelpOptionSpec);
   }, [ctx, id, isActive]);
 }
