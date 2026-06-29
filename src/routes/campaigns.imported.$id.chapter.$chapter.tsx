@@ -125,7 +125,7 @@ function ImportedChapterPlayer() {
   const currentAck = activity ? pendingAck[activity.id] : undefined;
   const wrongAttempts = activity ? (wrongFlash[activity.id] ?? 0) : 0;
 
-  const onResolve = (correct: boolean) => {
+  const onResolve = (correct: boolean, meta?: { viaReveal?: boolean }) => {
     if (!activity) return;
     // PR1: hard guard against rapid duplicate submissions.
     if (resolveLockRef.current) return;
@@ -158,12 +158,32 @@ function ImportedChapterPlayer() {
 
 
     // ---- Correct branch ----
+    // Learning-after-failure reward tiering:
+    //   0 wrong  → full reward
+    //   1 wrong  → 50% reward (still rewards accuracy on retry)
+    //   viaReveal or 2+ wrong → minimum reward (floor 1 XP, 0 coins)
+    const rewardScale: "full" | "half" | "min" =
+      meta?.viaReveal || wrongAttempts >= 2
+        ? "min"
+        : wrongAttempts === 1
+          ? "half"
+          : "full";
+
     // PR3 local-first reward ledger: only grants once, across refreshes /
     // offline / reopen. Returns {granted:false, xp:0, coins:0} on replays.
     const actDelta = claimActivityReward(campaign!, chapter!, activity);
     if (actDelta.granted) {
-      if (actDelta.xp > 0)    addPoints(actDelta.xp);
-      if (actDelta.coins > 0) addDinars(actDelta.coins);
+      let xpGrant = actDelta.xp;
+      let coinGrant = actDelta.coins;
+      if (rewardScale === "half") {
+        xpGrant   = Math.max(0, Math.floor(actDelta.xp * 0.5));
+        coinGrant = Math.max(0, Math.floor(actDelta.coins * 0.5));
+      } else if (rewardScale === "min") {
+        xpGrant   = actDelta.xp > 0 ? Math.max(1, Math.floor(actDelta.xp * 0.1)) : 0;
+        coinGrant = 0;
+      }
+      if (xpGrant > 0)    addPoints(xpGrant);
+      if (coinGrant > 0)  addDinars(coinGrant);
       audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
     }
 
