@@ -15,9 +15,22 @@ import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import type { CampaignActivity } from "@/types/campaign";
 
 
+export interface ResolveMeta {
+  /** True when the answer was revealed after 2 wrong attempts (learning path). */
+  viaReveal?: boolean;
+}
+
 export interface RendererProps {
   activity: CampaignActivity;
-  onResolve: (correct: boolean) => void;
+  /**
+   * Notifies the parent of an answer attempt.
+   * - `correct=true`  → activity is resolved (parent advances + rewards).
+   * - `correct=false` → wrong attempt (parent deducts a heart).
+   * - `meta.viaReveal=true` paired with `correct=true` means the player is
+   *   advancing via the "متابعة" button after the answer was auto-revealed,
+   *   so the parent should apply the minimum reward tier.
+   */
+  onResolve: (correct: boolean, meta?: ResolveMeta) => void;
   alreadyDone?: boolean;
 }
 
