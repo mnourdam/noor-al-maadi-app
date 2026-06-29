@@ -44,7 +44,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         {!androidStable && isSectionEnabled("audio") && <AudioInitializer />}
         {!androidStable && isSectionEnabled("friendPoller") && <FriendNotificationsPoller />}
         {!androidStable && isSectionEnabled("backNavGuard") && <BackNavigationGuard />}
-        <div className="section-flow flex-1">{children}</div>
+        <div className="section-flow flex-1">
+          <div key={pathname} className="motion-page">{children}</div>
+        </div>
         <nav
           className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-3"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
@@ -56,8 +58,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Link
                   key={to}
                   to={to}
-                  className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[10px] transition-all ${
-                    active ? "bg-gradient-gold text-primary-foreground shadow-gold" : "text-muted-foreground hover:text-foreground"
+                  className={`motion-tap flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[10px] transition-all duration-200 ${
+                    active ? "bg-gradient-gold text-primary-foreground shadow-gold motion-nav-active" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Icon className="size-4" strokeWidth={active ? 2.5 : 1.8} />
@@ -67,6 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             })}
           </div>
         </nav>
+
       </div>
     </AppShellNestingContext.Provider>
   );
