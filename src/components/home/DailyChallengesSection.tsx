@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Feather, Hourglass, ScrollText, Link2, Archive,
-  Sparkles, Coins, Clock, Package, ChevronLeft, Trophy, Play,
+  Sparkles, Coins, Clock, Package, ChevronLeft, Trophy, Play, Check,
 } from "lucide-react";
 import {
   selectDailyChallenges,
@@ -45,34 +45,72 @@ function difficultyDots(d: number) {
 function ChallengeCard({
   game,
   variant,
+  completed,
 }: {
   game: GameRow;
   variant: "primary" | "secondary";
+  completed: boolean;
 }) {
   const Icon = MODE_ICON[game.mode];
   const unlocks = extractMuseumUnlocks({
     metadata: game.metadata,
   }).length;
   const isPrimary = variant === "primary";
-  return (
-    <Link
-      to="/games/$mode/$slug"
-      params={{ mode: game.mode, slug: game.slug }}
-      className={`group relative block overflow-hidden rounded-3xl border border-gold/30 bg-gradient-to-br from-[#0b1428] via-[#0d1a33] to-[#0a1024] shadow-elegant transition active:scale-[0.99] ${
-        isPrimary ? "p-5" : "p-4"
-      }`}
-    >
-      <div className="pointer-events-none absolute -right-10 -top-12 size-40 rounded-full bg-gold/15 blur-3xl" />
+
+  const baseClass = `group relative block overflow-hidden rounded-3xl border shadow-elegant transition active:scale-[0.99] ${
+    isPrimary ? "p-5" : "p-4"
+  } ${
+    completed
+      ? "border-emerald-400/40 bg-gradient-to-br from-[#0a1a14] via-[#0c2018] to-[#08120e]"
+      : "border-gold/30 bg-gradient-to-br from-[#0b1428] via-[#0d1a33] to-[#0a1024]"
+  }`;
+
+  const inner = (
+    <>
+      <div
+        className={`pointer-events-none absolute -right-10 -top-12 size-40 rounded-full blur-3xl ${
+          completed ? "bg-emerald-400/15" : "bg-gold/15"
+        }`}
+      />
       <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:radial-gradient(circle_at_20%_30%,#f5c97a_0,transparent_45%),radial-gradient(circle_at_80%_70%,#f5c97a_0,transparent_40%)]" />
+
+      {completed && (
+        <div className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold text-emerald-200">
+          <Check className="size-3" strokeWidth={2.5} /> تم الإنجاز
+        </div>
+      )}
+
       <div className="relative flex items-start gap-3">
-        <div className={`grid place-items-center rounded-2xl border border-gold/40 bg-black/40 ${isPrimary ? "size-12" : "size-10"}`}>
-          <Icon className={`${isPrimary ? "size-6" : "size-5"} text-gold`} strokeWidth={1.5} />
+        <div
+          className={`grid place-items-center rounded-2xl border bg-black/40 ${
+            isPrimary ? "size-12" : "size-10"
+          } ${completed ? "border-emerald-400/50" : "border-gold/40"}`}
+        >
+          {completed ? (
+            <Check
+              className={`${isPrimary ? "size-6" : "size-5"} text-emerald-300`}
+              strokeWidth={2.5}
+            />
+          ) : (
+            <Icon
+              className={`${isPrimary ? "size-6" : "size-5"} text-gold`}
+              strokeWidth={1.5}
+            />
+          )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] tracking-[0.25em] text-gold/80">
+          <p
+            className={`text-[10px] tracking-[0.25em] ${
+              completed ? "text-emerald-300/90" : "text-gold/80"
+            }`}
+          >
             {MODE_LABELS_AR[game.mode]}
           </p>
-          <h3 className={`font-display mt-0.5 truncate font-bold text-amber-50 ${isPrimary ? "text-base" : "text-sm"}`}>
+          <h3
+            className={`font-display mt-0.5 truncate font-bold ${
+              completed ? "text-emerald-50" : "text-amber-50"
+            } ${isPrimary ? "text-base" : "text-sm"}`}
+          >
             {game.title}
           </h3>
           {isPrimary && game.description && (
@@ -81,7 +119,7 @@ function ChallengeCard({
             </p>
           )}
         </div>
-        {difficultyDots(game.difficulty)}
+        {!completed && difficultyDots(game.difficulty)}
       </div>
 
       <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
@@ -101,16 +139,41 @@ function ChallengeCard({
         )}
       </div>
 
-      {isPrimary && (
+      {completed ? (
+        <div
+          className={`relative mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-100 ${
+            !isPrimary && "py-2 text-[12px]"
+          }`}
+        >
+          <Check className="size-4" strokeWidth={2.5} /> أُنجز اليوم
+        </div>
+      ) : isPrimary ? (
         <div className="relative mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-4 py-2.5 text-sm font-semibold text-amber-100 transition group-hover:bg-gold/25">
           <Play className="size-4" /> ابدأ التحدي
         </div>
-      )}
-      {!isPrimary && (
+      ) : (
         <div className="relative mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-gold">
           ابدأ التحدي <ChevronLeft className="size-3.5" />
         </div>
       )}
+    </>
+  );
+
+  if (completed) {
+    return (
+      <div className={baseClass} aria-disabled="true">
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      to="/games/$mode/$slug"
+      params={{ mode: game.mode, slug: game.slug }}
+      className={baseClass}
+    >
+      {inner}
     </Link>
   );
 }
@@ -118,6 +181,7 @@ function ChallengeCard({
 export function DailyChallengesSection() {
   const androidStable = isAndroidUltraStableMode();
   const [picks, setPicks] = useState<GameRow[] | null>(null);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [allCompleted, setAllCompleted] = useState(false);
 
   useEffect(() => {
@@ -125,8 +189,9 @@ export function DailyChallengesSection() {
     let cancelled = false;
     (async () => {
       const completed = await fetchMyCompletedGameIds();
-      const sel = await selectDailyChallenges(2, { excludeIds: completed });
+      const sel = await selectDailyChallenges(2, { completedIds: completed });
       if (cancelled) return;
+      setCompletedIds(completed);
       setPicks(sel.picks);
       setAllCompleted(sel.allCompleted);
     })().catch(() => {
@@ -137,10 +202,7 @@ export function DailyChallengesSection() {
     };
   }, [androidStable]);
 
-  // Hide entirely while loading, when no content, or when the player has
-  // already completed today's pool. (Challenge Hall keeps its own completed state.)
   if (picks === null) return null;
-  if (allCompleted) return null;
   if (!picks.length) return null;
 
   return (
@@ -148,13 +210,13 @@ export function DailyChallengesSection() {
       <div className="mb-3 flex items-end justify-between">
         <div>
           <p className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.3em] text-gold/80">
-            <Trophy className="size-3.5" /> تحديا اليوم
+            <Trophy className="size-3.5" /> تحدي اليوم
           </p>
           <h2 className="font-display mt-1 text-lg font-bold text-amber-50">
-            تحديا اليوم
+            تحدي اليوم
           </h2>
           <p className="text-[12px] text-white/60">
-            لعبتان تاريخيتان تتجددان يوميًا من قاعة التحديات.
+            تحديان مختلفان يتجددان يوميًا.
           </p>
         </div>
         <Link
@@ -166,35 +228,41 @@ export function DailyChallengesSection() {
       </div>
 
       {allCompleted ? (
-        <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 p-5 text-center shadow-elegant">
+        <div className="parchment-dark relative overflow-hidden rounded-3xl border border-emerald-400/30 p-5 text-center shadow-elegant">
           <div className="arabesque-layer opacity-50" />
           <div className="relative">
-            <div className="mx-auto grid size-12 place-items-center rounded-full border border-gold/40 bg-black/40">
-              <Trophy className="size-6 text-gold" strokeWidth={1.5} />
+            <div className="mx-auto grid size-12 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
+              <Trophy className="size-6 text-emerald-300" strokeWidth={1.5} />
             </div>
-            <h3 className="font-display mt-3 text-base font-bold text-amber-50">أحسنت!</h3>
+            <h3 className="font-display mt-3 text-base font-bold text-emerald-50">أحسنت!</h3>
             <p className="mt-1 text-[12px] leading-6 text-white/70">
-              لقد أنهيت جميع التحديات التاريخية الحالية.
+              لقد أنهيت تحديات اليوم.
               <br />
-              ستظهر تحديات جديدة فور إضافتها.
+              عد غدًا لاكتشاف تحديين جديدين.
             </p>
-            <Link
-              to="/adventure"
-              className="mt-4 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-2 text-[12px] font-semibold text-amber-100 hover:bg-gold/20"
-            >
-              استكشف الحملات <ChevronLeft className="size-3.5" />
-            </Link>
           </div>
         </div>
       ) : picks.length === 1 ? (
-        <ChallengeCard game={picks[0]} variant="primary" />
+        <ChallengeCard
+          game={picks[0]}
+          variant="primary"
+          completed={completedIds.has(picks[0].id)}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
           <div className="sm:col-span-3">
-            <ChallengeCard game={picks[0]} variant="primary" />
+            <ChallengeCard
+              game={picks[0]}
+              variant="primary"
+              completed={completedIds.has(picks[0].id)}
+            />
           </div>
           <div className="sm:col-span-2">
-            <ChallengeCard game={picks[1]} variant="secondary" />
+            <ChallengeCard
+              game={picks[1]}
+              variant="secondary"
+              completed={completedIds.has(picks[1].id)}
+            />
           </div>
         </div>
       )}
