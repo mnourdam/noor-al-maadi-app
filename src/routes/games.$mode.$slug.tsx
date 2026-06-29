@@ -313,13 +313,16 @@ function GamePlayPage() {
     <AppShell>
      <GameHelpProvider>
       <div dir="rtl" className="mx-auto max-w-3xl space-y-5 px-4 py-6">
-        <GameHelpDialog
-          open={helpOpen}
-          onOpenChange={setHelpOpen}
-          dinars={playerDinars}
-          spendDinars={spendDinars}
-          builtinOptions={helpBuiltins}
-        />
+        <HelpErrorBoundary open={helpOpen} onClose={() => setHelpOpen(false)}>
+          <GameHelpDialog
+            open={helpOpen}
+            onOpenChange={setHelpOpen}
+            dinars={playerDinars}
+            spendDinars={spendDinars}
+            builtinOptions={helpBuiltins}
+          />
+        </HelpErrorBoundary>
+
 
         {/* Breadcrumb with exit guard */}
         <div className="flex items-center justify-between text-xs">
