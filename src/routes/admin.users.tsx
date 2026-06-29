@@ -7,6 +7,7 @@ import { AdminGate, useAdminGuard } from "@/lib/admin-guard";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { createTeamUser, deletePlayer } from "@/lib/teamUsers.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { PasswordField } from "@/components/ui/PasswordField";
 import {
   adminListUsers,
   adminUserDetail,
