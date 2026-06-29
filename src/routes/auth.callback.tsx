@@ -50,6 +50,16 @@ function AuthCallbackPage() {
   useEffect(() => {
     let alive = true;
     (async () => {
+      // Native Capacitor hand-off: redirect every param (code, error, hash) to
+      // the app's custom scheme. The app's deep-link listener finishes the
+      // PKCE exchange inside the WebView so the session lives there.
+      if (search.native === "1" && typeof window !== "undefined") {
+        const qs = window.location.search || "";
+        const hash = window.location.hash || "";
+        const target = `app.lovable.irth://auth/callback${qs}${hash}`;
+        window.location.replace(target);
+        return;
+      }
       const hashParams = parseHashParams();
       const errCode = search.error_code || hashParams.error_code || search.error || hashParams.error;
       const errDesc = search.error_description || hashParams.error_description;
