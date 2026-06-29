@@ -95,20 +95,58 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
     ? activity.correctAnswer
     : options.findIndex(o => o === String(activity.correctAnswer));
 
+// ---------- Multiple Choice / Reading-then-question ----------
+// Learning-after-failure flow:
+//   1st wrong → keep open, show "حاول مرة أخرى" (heart consumed by parent).
+//   2nd wrong → reveal correct answer, highlight wrong picks, lock the
+//   question, surface a "متابعة" button. The player learns the correct
+//   answer before moving on; parent applies the minimum reward tier.
+function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
+  const [picked, setPicked] = useState<number | null>(null);
+  const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const [revealed, setRevealed] = useState(false);
+  const [wrongPicks, setWrongPicks] = useState<Set<number>>(new Set());
+  const [wrongCount, setWrongCount] = useState(0);
+  const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
+  const options = activity.options ?? [];
+
+  if (!options.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
+
+  const correctIndex = typeof activity.correctAnswer === "number"
+    ? activity.correctAnswer
+    : options.findIndex(o => o === String(activity.correctAnswer));
+
+  const locked = resolved || revealed;
+
   const submit = () => {
-    if (picked === null || resolved) return;
+    if (picked === null || locked) return;
     const isCorrect = picked === correctIndex;
     if (isCorrect) {
       setResolved(true);
       setFeedback("ok");
       onResolve(true);
-    } else {
-      // Wrong: mark this option as tried, allow retry, do NOT reveal correct.
-      setWrongPicks(prev => new Set(prev).add(picked));
+      return;
+    }
+    // Wrong answer.
+    const nextWrong = wrongCount + 1;
+    setWrongPicks(prev => new Set(prev).add(picked));
+    setWrongCount(nextWrong);
+    setPicked(null);
+    if (nextWrong >= 2) {
+      // Second strike → reveal & lock. Parent still deducts the heart.
+      setRevealed(true);
       setFeedback("err");
-      setPicked(null);
+      onResolve(false);
+    } else {
+      setFeedback("err");
       onResolve(false);
     }
+  };
+
+  const continueAfterReveal = () => {
+    if (!revealed || resolved) return;
+    setResolved(true);
+    onResolve(true, { viaReveal: true });
   };
 
   return (
@@ -118,16 +156,21 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
       <div className="space-y-2">
         {options.map((opt, i) => {
           const isPicked  = picked === i;
-          const isAnswer  = resolved && i === correctIndex;
-          const isWrong   = wrongPicks.has(i) && !resolved;
+          const isAnswer  = (resolved || revealed) && i === correctIndex;
+          // Once revealed, show ALL wrong picks in red. Pre-reveal, only the
+          // most recent wrong pick stays disabled.
+          const isWrong   = wrongPicks.has(i) && i !== correctIndex;
+          const wrongStyle = isWrong && (revealed
+            ? "border-red-400/70 bg-red-500/15 text-red-100"
+            : "border-red-400/50 bg-red-500/10 text-red-200/70 line-through opacity-60");
           return (
             <button
               key={`${i}-${opt}`}
-              disabled={resolved || isWrong}
+              disabled={locked || isWrong}
               onClick={() => { setPicked(i); setFeedback(null); }}
               className={`w-full rounded-xl border px-3 py-2 text-right text-[12px] transition ${
                 isAnswer ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
-                : isWrong ? "border-red-400/50 bg-red-500/10 text-red-200/70 line-through opacity-60"
+                : isWrong ? wrongStyle
                 : isPicked ? "border-gold/60 bg-gold/10 text-foreground"
                 : "border-white/10 bg-black/30 text-foreground/90 hover:border-gold/40"
               }`}
@@ -138,7 +181,7 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
         })}
       </div>
       <HintRow hint={activity.hint} />
-      {!resolved && (
+      {!locked && (
         <button
           onClick={submit}
           disabled={picked === null}
@@ -152,8 +195,18 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
           kind={feedback}
           text={feedback === "ok"
             ? (activity.feedbackCorrect ?? FALLBACK_OK)
-            : (activity.feedbackWrong ?? FALLBACK_WRONG)}
+            : revealed
+              ? "هذه هي الإجابة الصحيحة. تابع لرحلتك."
+              : (activity.feedbackWrong ?? FALLBACK_WRONG)}
         />
+      )}
+      {revealed && !resolved && (
+        <button
+          onClick={continueAfterReveal}
+          className="mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
+        >
+          متابعة
+        </button>
       )}
     </div>
   );
