@@ -533,6 +533,11 @@ function CampaignOrderPage() {
               title="إعادة بناء الترتيب الزمني لكل الحملات (يتجاوز الترتيب اليدوي)">
               <Wand2 className="h-3.5 w-3.5" /> إعادة الترتيب التلقائي
             </button>
+            <button onClick={createDivider}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/15"
+              title="إضافة فاصل عصر جديد">
+              <Plus className="h-3.5 w-3.5" /> إضافة فاصل عصر
+            </button>
             <button onClick={save} disabled={saving || dirtyIds.size === 0}
               className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40">
               <Save className="h-3.5 w-3.5" /> حفظ ({dirtyIds.size})
