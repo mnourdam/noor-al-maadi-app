@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Check, Sparkles, Feather, AlertTriangle, Lightbulb, HelpCircle, Coins, X } from "lucide-react";
+import { Check, Sparkles, Feather, AlertTriangle, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
@@ -8,10 +8,7 @@ import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
 import { isAndroidNativeApp, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
-import { useProfile } from "@/lib/profile";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from "@/components/ui/dialog";
+import { useRegisterHelpOption } from "./help/GameHelpContext";
 
 
 interface Props {
@@ -99,9 +96,6 @@ export function CrosswordRenderer({
   const [activeClue, setActiveClue] = useState<number | null>(null);
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<null | { kind: "ok" | "err"; msg: string }>(null);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [insufficientOpen, setInsufficientOpen] = useState(false);
-  const { profile } = useProfile();
   const inputsRef = useRef<Record<string, HTMLInputElement | null>>({});
   const clueInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
