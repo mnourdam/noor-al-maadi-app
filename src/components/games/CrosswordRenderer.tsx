@@ -267,7 +267,8 @@ export function CrosswordRenderer({
   };
 
   // Register the "reveal letter" option in the unified Help dialog hosted
-  // by the game route. The dialog handles balance + insufficient UI.
+  // by the game route. The dialog deducts dinars via `pay()` and handles
+  // the "insufficient funds" UI.
   useRegisterHelpOption(
     "reveal_letter",
     done ? null : {
@@ -280,11 +281,7 @@ export function CrosswordRenderer({
         if (done) return false;
         const target = findRevealTarget();
         if (!target) return false;
-        if (!onPaidHint || !onPaidHint(HINT_COST) || !pay /* unreachable, pay always defined */) {
-          return false;
-        }
-        // Note: onPaidHint already deducted dinars via host's spendDinars.
-        // `pay()` is intentionally not called to avoid double-charging.
+        if (!pay()) return false;
         setEntries((prev) => ({ ...prev, [target.k]: target.ch }));
         sfx("ink_write");
         sfx("correct");
