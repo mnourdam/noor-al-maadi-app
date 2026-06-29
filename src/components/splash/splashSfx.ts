@@ -40,6 +40,9 @@ export function playSplashSfx(opts: PlaySplashSfxOptions = {}): () => void {
     allowed = s.soundEnabled && s.sfxEnabled;
   } catch { /* ignore */ }
 
+  // Respect Android Silent / Vibrate mode.
+  if (!deviceAllowsAudio()) allowed = false;
+
   // Respect reduced-motion as a sound proxy too.
   try {
     if (typeof window !== "undefined" &&
