@@ -113,4 +113,5 @@ export const GameTimer = forwardRef<GameTimerHandle, Props>(function GameTimer(
       </div>
     </div>
   );
-}
+});
+
