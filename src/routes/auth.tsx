@@ -209,9 +209,8 @@ function AuthPage() {
             {mode !== "forgot" && (
               <label className="block">
                 <span className="mb-1 block text-[11px] text-muted-foreground">كلمة المرور</span>
-                <input
+                <PasswordField
                   ref={passwordRef}
-                  type="password"
                   name="password"
                   required
                   minLength={6}
