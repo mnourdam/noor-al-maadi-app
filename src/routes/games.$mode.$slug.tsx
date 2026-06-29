@@ -15,6 +15,7 @@ import { GameTimer, type GameTimerHandle } from "@/components/games/GameTimer";
 import { GameHelpProvider } from "@/components/games/help/GameHelpContext";
 import { GameHelpDialog } from "@/components/games/help/GameHelpDialog";
 import { HelpErrorBoundary } from "@/components/games/help/HelpErrorBoundary";
+import { CrosswordHelpDialog } from "@/components/games/CrosswordHelpDialog";
 import { ExitConfirmDialog } from "@/components/games/ExitConfirmDialog";
 import { sfx } from "@/components/games/sfx";
 import { resolveMaxAttempts, resolveTimerSeconds } from "@/lib/games/timer";
@@ -313,15 +314,27 @@ function GamePlayPage() {
     <AppShell>
      <GameHelpProvider>
       <div dir="rtl" className="mx-auto max-w-3xl space-y-5 px-4 py-6">
-        <HelpErrorBoundary open={helpOpen} onClose={() => setHelpOpen(false)}>
-          <GameHelpDialog
+        {mode === "crossword" ? (
+          <CrosswordHelpDialog
             open={helpOpen}
             onOpenChange={setHelpOpen}
             dinars={playerDinars}
             spendDinars={spendDinars}
-            builtinOptions={helpBuiltins}
+            hasTimer={timerSeconds > 0}
+            addSeconds={(s) => timerRef.current?.addSeconds(s)}
+            disabled={stageDone || failed}
           />
-        </HelpErrorBoundary>
+        ) : (
+          <HelpErrorBoundary open={helpOpen} onClose={() => setHelpOpen(false)}>
+            <GameHelpDialog
+              open={helpOpen}
+              onOpenChange={setHelpOpen}
+              dinars={playerDinars}
+              spendDinars={spendDinars}
+              builtinOptions={helpBuiltins}
+            />
+          </HelpErrorBoundary>
+        )}
 
 
         {/* Breadcrumb with exit guard */}
