@@ -39,7 +39,7 @@ export const Route = createFileRoute("/admin/unlock-integrity")({
   component: () => (
     <AdminGate>
       <AppShell>
-        <Screen>
+        <Screen title="سلامة المكتشفات">
           <Breadcrumbs items={[{ label: "الإدارة", to: "/admin" }, { label: "سلامة المكتشفات" }]} />
           <UnlockIntegrityPage />
         </Screen>
