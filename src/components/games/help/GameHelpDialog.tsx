@@ -63,7 +63,8 @@ export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builti
           ) : (
             <ul className="space-y-2">
               {options.map((opt) => {
-                const available = opt.getAvailable?.() ?? true;
+                let available = true;
+                try { available = opt.getAvailable?.() ?? true; } catch { available = true; }
                 const affordable = dinars >= opt.cost;
                 const disabled = !available;
                 return (
@@ -79,7 +80,12 @@ export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builti
                           setInsufficientOpen(true);
                           return;
                         }
-                        const ok = opt.perform({ pay: () => spendDinars(opt.cost) });
+                        let ok = false;
+                        try { ok = opt.perform({ pay: () => spendDinars(opt.cost) }); } catch (err) {
+                          // eslint-disable-next-line no-console
+                          console.warn("[GameHelp] option failed", opt.id, err);
+                          ok = false;
+                        }
                         if (ok) onOpenChange(false);
                       }}
                       className="group flex w-full items-center justify-between gap-3 rounded-lg border border-amber-500/25 bg-gradient-to-b from-amber-500/10 to-amber-600/5 px-3 py-3 text-right transition hover:from-amber-500/20 hover:to-amber-600/10 disabled:cursor-not-allowed disabled:opacity-40"
