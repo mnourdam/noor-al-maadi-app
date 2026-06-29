@@ -9,6 +9,8 @@ import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HeartsPopover, DinarsPopover, XPPopover, StreakPopover } from "./HUDStatPopovers";
+import { AnimatedNumber } from "./motion/MotionPrimitives";
+
 
 type BumpKey = "dinars" | "points" | "hearts";
 
@@ -127,9 +129,10 @@ export function HUD() {
               <button
                 type="button"
                 aria-label="الدنانير"
-                className={`inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-gold transition hover:bg-white/5 active:bg-white/10 ${bumpCls("dinars")}`}
+                className={`motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-gold transition hover:bg-white/5 active:bg-white/10 ${bumpCls("dinars")}`}
               >
-                <Coins className="size-3.5" /> {profile.dinars.toLocaleString("en-US")}
+                <Coins className="size-3.5" /> <AnimatedNumber value={profile.dinars} />
+
               </button>
             </PopoverTrigger>
             <PopoverContent align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
@@ -142,9 +145,10 @@ export function HUD() {
               <button
                 type="button"
                 aria-label="الخبرة"
-                className={`inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-amber-200 transition hover:bg-white/5 active:bg-white/10 ${bumpCls("points")}`}
+                className={`motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-amber-200 transition hover:bg-white/5 active:bg-white/10 ${bumpCls("points")}`}
               >
-                <Star className="size-3.5" /> {profile.points.toLocaleString("en-US")}
+                <Star className="size-3.5" /> <AnimatedNumber value={profile.points} />
+
               </button>
             </PopoverTrigger>
             <PopoverContent align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
@@ -157,9 +161,10 @@ export function HUD() {
               <button
                 type="button"
                 aria-label="الحماسة"
-                className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-orange-400 transition hover:bg-white/5 active:bg-white/10"
+                className="motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-orange-400 transition hover:bg-white/5 active:bg-white/10"
               >
-                <Flame className="size-3.5" /> {profile.streak.toLocaleString("en-US")}
+                <Flame className="size-3.5" /> <AnimatedNumber value={profile.streak} />
+
               </button>
             </PopoverTrigger>
             <PopoverContent align="end" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
