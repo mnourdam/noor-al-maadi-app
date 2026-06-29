@@ -151,8 +151,15 @@ function GamePlayPage() {
     }
   }, [game, isLast, stageIdx, failed, stageDone, addPoints, addDinars, touchStreak]);
 
-  // Timeout pipeline: instant fail, lose one heart, no rewards.
-  const handleTimeout = useCallback(() => {
+  // ── Time-Expired grace flow ──────────────────────────────────────────
+  // When the countdown hits zero we DO NOT immediately fail. We open a
+  // grace dialog that lets the player buy +2:00 for 10 dinars. Only when
+  // the player chooses "End challenge" — or buys time without funds and
+  // then ends — do we apply the original timeout penalty.
+  const [timeExpiredOpen, setTimeExpiredOpen] = useState(false);
+  const TIMEOUT_GRACE_SECONDS = 120;
+
+  const applyTimeoutPenalty = useCallback(() => {
     if (!game || game === "loading" || failed || stageDone) return;
     sfx("timeout");
     setFailReason("timeout");
@@ -161,6 +168,27 @@ function GamePlayPage() {
     const heartsAfter = loseHeartOnce(dedupKey);
     if (heartsAfter <= 0) setShowOutOfHearts(true);
   }, [game, failed, stageDone, stageIdx, retryNonce, loseHeartOnce]);
+
+  // Called by GameTimer when it reaches 00:00. Guarded against duplicates
+  // by `expiredRef` inside GameTimer + the open-state check here.
+  const handleTimeout = useCallback(() => {
+    if (!game || game === "loading" || failed || stageDone) return;
+    if (timeExpiredOpen) return;
+    setTimeExpiredOpen(true);
+  }, [game, failed, stageDone, timeExpiredOpen]);
+
+  const handleBuyExtraTime = useCallback(() => {
+    if (!spendDinars(TIME_BONUS_COST)) return; // safety: balance check is in dialog
+    timerRef.current?.addSeconds(TIMEOUT_GRACE_SECONDS);
+    sfx("gold_unlock", "timeout-grace-add");
+    setTimeExpiredOpen(false);
+    toast.success("تمت إضافة دقيقتين.");
+  }, [spendDinars]);
+
+  const handleEndChallenge = useCallback(() => {
+    setTimeExpiredOpen(false);
+    applyTimeoutPenalty();
+  }, [applyTimeoutPenalty]);
 
 
 
