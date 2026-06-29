@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, CheckCircle2, ScrollText } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { useProfile } from "@/lib/profile";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
-import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
+import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
+import type { CampaignDivider } from "@/lib/campaignDividers";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/campaigns/")({
@@ -24,10 +25,12 @@ function CampaignsHub() {
 
 function CampaignsHubFull() {
   useProfile();
-  const { data: importedCampaigns = [], isLoading } = useQuery({
-    queryKey: ["campaigns", "published"],
-    queryFn: fetchPublishedCampaigns,
+  const { data, isLoading } = useQuery({
+    queryKey: ["campaigns", "feed"],
+    queryFn: fetchPublishedFeed,
   });
+  const sections = data?.sections ?? [];
+  const totalCampaigns = data?.campaigns.length ?? 0;
 
   return (
     <AppShell>
@@ -39,20 +42,34 @@ function CampaignsHubFull() {
           ]}
         />
       </div>
-      <Screen title="الحملات" subtitle="رحلاتٌ مصمَّمة تأخذك عبر العصور">
+      <Screen title="الحملات" subtitle="رحلةٌ زمنيّة عبر العصور">
         {isLoading && (
           <div className="px-2 py-10 text-center text-sm text-muted-foreground">جاري التحميل…</div>
         )}
 
-        {!isLoading && importedCampaigns.length > 0 && (
-          <div className="mb-6 space-y-3">
-            {importedCampaigns.map((c) => (
-              <ImportedCampaignCard key={c.id} c={c} />
+        {!isLoading && totalCampaigns > 0 && (
+          <div className="space-y-8">
+            {sections.map((section, i) => (
+              <section key={section.divider?.id ?? `uncat-${i}`} className="space-y-3">
+                {section.divider ? (
+                  <EraDivider d={section.divider} count={section.campaigns.length} />
+                ) : (
+                  <UncategorizedHeader count={section.campaigns.length} />
+                )}
+                {section.campaigns.map((c) => (
+                  <ImportedCampaignCard key={c.id} c={c} />
+                ))}
+                {section.campaigns.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-gold/15 bg-surface/30 p-4 text-center text-xs text-muted-foreground">
+                    لا توجد حملات في هذا العصر بعد.
+                  </div>
+                )}
+              </section>
             ))}
           </div>
         )}
 
-        {!isLoading && importedCampaigns.length === 0 && (
+        {!isLoading && totalCampaigns === 0 && (
           <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
             <Swords className="mx-auto mb-3 size-8 text-gold/70" />
             <p className="font-display text-base font-bold text-gold">لا توجد حملات منشورة حاليًا.</p>
@@ -60,6 +77,41 @@ function CampaignsHubFull() {
         )}
       </Screen>
     </AppShell>
+  );
+}
+
+function EraDivider({ d, count }: { d: CampaignDivider; count: number }) {
+  return (
+    <header
+      className="relative overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-l from-amber-950/40 via-stone-950/60 to-amber-950/40 px-5 py-5"
+      aria-label={`عصر ${d.title}`}
+    >
+      <div className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-gold/15 blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-6 top-2 h-px bg-gradient-to-l from-transparent via-gold/40 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-6 bottom-2 h-px bg-gradient-to-l from-transparent via-gold/30 to-transparent" />
+      <div className="relative flex items-center gap-3">
+        <ScrollText className="size-5 text-gold" />
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] tracking-[0.35em] text-gold/70">عصر تاريخي</div>
+          <h2 className="font-display text-2xl font-bold text-amber-100 shimmer-text">{d.title}</h2>
+          {d.subtitle && <p className="mt-0.5 text-xs text-gold/70">{d.subtitle}</p>}
+        </div>
+        <span className="rounded-full border border-gold/40 bg-black/30 px-2.5 py-1 text-[10px] font-bold text-gold">
+          {count.toLocaleString("en-US")} حملة
+        </span>
+      </div>
+    </header>
+  );
+}
+
+function UncategorizedHeader({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <header className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+      <div className="h-px flex-1 bg-gold/15" />
+      <span>حملات بانتظار التصنيف ({count.toLocaleString("en-US")})</span>
+      <div className="h-px flex-1 bg-gold/15" />
+    </header>
   );
 }
 
@@ -86,6 +138,7 @@ function AndroidStableCampaigns() {
     </AppShell>
   );
 }
+
 
 function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
   const fr = c.finalRewards;
