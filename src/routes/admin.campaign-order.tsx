@@ -68,6 +68,10 @@ interface Row {
   chapters: number;
   currentOrder: number | null;
   orderStatus: OrderStatus;
+  /** True when this row is an era divider, not a playable campaign. */
+  isDivider: boolean;
+  /** Optional subtitle (dividers only). */
+  subtitle?: string;
 }
 
 const ERA_LABELS: Record<string, string> = {
