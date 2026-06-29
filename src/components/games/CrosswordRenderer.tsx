@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Check, Sparkles, Feather, AlertTriangle, Lightbulb } from "lucide-react";
+import { Check, Sparkles, Feather, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
