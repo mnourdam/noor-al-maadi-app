@@ -5,6 +5,7 @@ import { useAccount } from "@/lib/account";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { isCapacitorNative, signInWithGoogleNative } from "@/lib/native-auth";
+import { PasswordField } from "@/components/ui/PasswordField";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
@@ -208,9 +209,8 @@ function AuthPage() {
             {mode !== "forgot" && (
               <label className="block">
                 <span className="mb-1 block text-[11px] text-muted-foreground">كلمة المرور</span>
-                <input
+                <PasswordField
                   ref={passwordRef}
-                  type="password"
                   name="password"
                   required
                   minLength={6}
