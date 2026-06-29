@@ -36,6 +36,7 @@ import { AdminGate } from "@/lib/admin-guard";
 import { parseHistoricalPeriodYear } from "@/lib/campaignChronology";
 import { withBackfilledChronology } from "@/lib/campaignChronologyBackfill";
 import { inferWorldFromMetadata } from "@/lib/contentIntegrity";
+import { isDividerData } from "@/lib/campaignDividers";
 
 export const Route = createFileRoute("/admin/campaign-order")({
   head: () => ({
