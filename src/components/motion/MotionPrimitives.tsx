@@ -49,14 +49,12 @@ export function Reveal({
   children,
   className,
   delayMs = 0,
-  as: Tag = "div",
 }: {
   children: ReactNode;
   className?: string;
   delayMs?: number;
-  as?: keyof JSX.IntrinsicElements;
 }) {
-  const ref = useRef<HTMLElement | null>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   const [shown, setShown] = useState(false);
 
   useEffect(() => {
@@ -83,17 +81,17 @@ export function Reveal({
     return () => io.disconnect();
   }, [shown]);
 
-  // @ts-expect-error — generic tag ref typing
   return (
-    <Tag
+    <div
       ref={ref}
       className={cn("motion-reveal", shown && "is-in", className)}
       style={{ transitionDelay: shown && delayMs ? `${delayMs}ms` : undefined }}
     >
       {children}
-    </Tag>
+    </div>
   );
 }
+
 
 /* ─── Stagger ───────────────────────────────────────────────
  * Lightweight stagger wrapper: sets --i on each child so the
