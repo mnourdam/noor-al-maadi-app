@@ -417,6 +417,15 @@ function CollectionPage() {
     });
   }, [rawMissingUnlockIds, allLoadedEntities]);
 
+  useEffect(() => {
+    if (missingUnlockIds.length > 0 && typeof console !== "undefined") {
+      console.warn(
+        "[museum] unresolved unlock ids (hidden from players):",
+        missingUnlockIds,
+      );
+    }
+  }, [missingUnlockIds]);
+
 
   // ── Render section ──────────────────────────────────────────
   const current = SECTIONS.find(s => s.id === section)!;
@@ -607,17 +616,11 @@ function CollectionPage() {
         {/* Recent unlocks — "آخر المقتنيات" */}
         <RecentUnlocks />
 
-        {missingUnlockIds.length > 0 && (
-          <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
-            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-            <div className="flex-1 space-y-0.5">
-              {missingUnlockIds.map((mid) => (
-                <p key={mid} className="font-mono text-[10px]">
-                  عنصر مفتوح بلا صفحة موسوعية: <span className="font-bold">{mid}</span>
-                </p>
-              ))}
-            </div>
-          </div>
+        {/* Broken unlock references are never shown to players.
+            They are silently logged for admins via the integrity audit
+            route at /admin/unlock-integrity. */}
+        {missingUnlockIds.length > 0 && import.meta.env.DEV && (
+          <div className="mb-3 hidden">{missingUnlockIds.join(",")}</div>
         )}
 
         {/* Exhibition Halls — section pills with progress */}
