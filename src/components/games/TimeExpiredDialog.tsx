@@ -39,11 +39,10 @@ export function TimeExpiredDialog({ open, dinars, onBuyTime, onEndChallenge }: P
       <Dialog open={open}>
         <DialogContent
           dir="rtl"
-          showCloseButton={false}
           onEscapeKeyDown={(e) => e.preventDefault()}
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
-          className="max-w-md overflow-hidden border-amber-400/40 bg-gradient-to-b from-slate-950 via-slate-950 to-amber-950/30 p-0 text-right shadow-[0_30px_80px_-20px_rgba(251,191,36,0.35)]"
+          className="max-w-md overflow-hidden border-amber-400/40 bg-gradient-to-b from-slate-950 via-slate-950 to-amber-950/30 p-0 text-right shadow-[0_30px_80px_-20px_rgba(251,191,36,0.35)] [&>button]:hidden"
         >
           <div className="relative px-6 pt-8 pb-6">
             <div className="pointer-events-none absolute inset-x-0 -top-16 mx-auto h-32 w-32 rounded-full bg-amber-400/20 blur-3xl" />
