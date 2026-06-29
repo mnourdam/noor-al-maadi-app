@@ -39,6 +39,12 @@ export interface NotificationLike {
  */
 export function resolveDeepLink(n: NotificationLike): string {
   const payload = (n.payload ?? {}) as NotificationPayload;
+  const cat0 = (n.category ?? n.type ?? "").toLowerCase();
+
+  // Today-in-history entries are reminder-only — always send to Home's section,
+  // never to a (possibly missing) entity/story page.
+  if (cat0 === "today_in_history" || payload.todayEventId) return "/#today-in-history";
+
 
   // 1. Explicit URL in payload wins over raw deep_link string.
   if (typeof payload.url === "string" && payload.url.startsWith("/")) {
