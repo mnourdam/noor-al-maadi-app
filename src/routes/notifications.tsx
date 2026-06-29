@@ -72,6 +72,11 @@ function NotificationsCenter() {
       setRows((cur) => cur.map((r) => (r.id === n.id ? { ...r, read_at: new Date().toISOString() } : r)));
       void markNotificationRead(n.id);
     }
+    // Reminder / informational entries are read-only inside the center —
+    // tapping them just marks as read; no navigation.
+    if (isInformationalNotification({ type: n.type, category: n.category, deep_link: n.deep_link, payload: n.payload as NotificationPayload })) {
+      return;
+    }
     const to = resolveDeepLink({
       type: n.type, category: n.category, deep_link: n.deep_link,
       payload: n.payload as NotificationPayload,
