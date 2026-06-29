@@ -214,11 +214,26 @@ async function fetchEntities(): Promise<RawEntity[]> {
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   if (online) {
     try {
-      const { data, error } = await (supabase as any)
-        .from("encyclopedia_entities")
-        .select(SELECT)
-        .eq("enabled", true);
-      if (!error && Array.isArray(data) && data.length > 0) return data as RawEntity[];
+      // Supabase caps responses at 1000 rows; paginate so the timeline
+      // gets the full chronological dataset (currently ~1900+ entities)
+      // instead of silently truncating the Prophetic/Abbasid/etc. eras.
+      const PAGE = 1000;
+      const all: RawEntity[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const to = from + PAGE - 1;
+        const { data, error } = await (supabase as any)
+          .from("encyclopedia_entities")
+          .select(SELECT)
+          .eq("enabled", true)
+          .order("id", { ascending: true })
+          .range(from, to);
+        if (error) break;
+        const chunk = (data as RawEntity[] | null) ?? [];
+        all.push(...chunk);
+        if (chunk.length < PAGE) break;
+        if (from > 50_000) break; // hard safety stop
+      }
+      if (all.length > 0) return all;
     } catch { /* fall through */ }
   }
   // Offline / failed: read bundled or local snapshot.
