@@ -585,6 +585,8 @@ function CampaignOrderPage() {
                     onMoveUp={() => moveBy(r.id, -1)}
                     onMoveDown={() => moveBy(r.id, +1)}
                     onMoveRelative={(anchor, pos) => moveRelative(r.id, anchor, pos)}
+                    onRenameDivider={() => renameDivider(r)}
+                    onDeleteDivider={() => deleteDivider(r)}
                   />
                 ))}
                 {visible.length === 0 && (
