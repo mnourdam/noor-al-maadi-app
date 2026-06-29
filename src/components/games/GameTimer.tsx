@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Timer } from "lucide-react";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
@@ -11,6 +11,11 @@ interface Props {
   onExpire?: () => void;
 }
 
+/** Imperative handle exposed to the host so the Help system can grant bonus time. */
+export interface GameTimerHandle {
+  addSeconds: (n: number) => void;
+}
+
 function pad(n: number) {
   return n.toString().padStart(2, "0");
 }
@@ -20,17 +25,35 @@ type Tone = "green" | "gold" | "red";
 /**
  * Premium countdown timer — large, elegant, mm:ss format.
  * Color transitions subtly: Green → Gold → Red (final 20%).
+ *
+ * Exposes `addSeconds(n)` via ref so the unified Help system can add
+ * bonus time (e.g. "+2 minutes" purchase) without remounting the timer.
  */
-export function GameTimer({ seconds, paused, onExpire }: Props) {
+export const GameTimer = forwardRef<GameTimerHandle, Props>(function GameTimer(
+  { seconds, paused, onExpire }, ref,
+) {
   androidMark("render:GameTimer");
   const androidStable = isAndroidUltraStableMode();
   const [remaining, setRemaining] = useState(seconds);
+  const [baseSeconds, setBaseSeconds] = useState(seconds);
   const expiredRef = useRef(false);
 
   useEffect(() => {
     setRemaining(seconds);
+    setBaseSeconds(seconds);
     expiredRef.current = false;
   }, [seconds]);
+
+  useImperativeHandle(ref, () => ({
+    addSeconds: (n: number) => {
+      if (!Number.isFinite(n) || n === 0) return;
+      setRemaining((r) => Math.max(0, r + n));
+      // Grow the rail's reference so the bar doesn't jump past 100%.
+      if (n > 0) setBaseSeconds((b) => Math.max(b, remaining + n, b + n));
+      // A non-zero add brings the timer out of "expired" state.
+      if (n > 0 && remaining + n > 0) expiredRef.current = false;
+    },
+  }), [remaining]);
 
   useEffect(() => {
     if (androidStable) return;
@@ -49,6 +72,7 @@ export function GameTimer({ seconds, paused, onExpire }: Props) {
     }, 1000);
     return () => window.clearInterval(id);
   }, [paused, onExpire, androidStable]);
+
 
   const m = Math.floor(remaining / 60);
   const s = remaining % 60;
