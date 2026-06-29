@@ -33,6 +33,35 @@ export interface NotificationLike {
 }
 
 /**
+ * Reminder / informational notification types. Tapping these should open
+ * the Notification Center only — they have no real destination page.
+ *
+ * Includes: "معلومة من إرث" (daily_fact), come-back reminders, hearts
+ * restored, streak reminders, daily challenge reminders, and generic
+ * daily reminders. If the backend later attaches a real `payload.url`
+ * or structured target, that still wins via the explicit checks below.
+ */
+const INFORMATIONAL_TYPES = new Set<string>([
+  "daily_fact",
+  "daily_reminder",
+  "reengagement",
+  "comeback_24h",
+  "comeback",
+  "hearts_full",
+  "hearts_restored",
+  "streak_reminder",
+  "streak_protection",
+  "daily_challenge",
+  "system_update",
+]);
+
+export function isInformationalNotification(n: NotificationLike): boolean {
+  const t = (n.type ?? "").toLowerCase();
+  const c = (n.category ?? "").toLowerCase();
+  return INFORMATIONAL_TYPES.has(t) || INFORMATIONAL_TYPES.has(c);
+}
+
+/**
  * Resolve a notification into a navigable path within the Irth router.
  * Returns `/notifications` when nothing more specific can be inferred so
  * the user is at least taken somewhere meaningful.
@@ -40,6 +69,21 @@ export interface NotificationLike {
 export function resolveDeepLink(n: NotificationLike): string {
   const payload = (n.payload ?? {}) as NotificationPayload;
   const cat0 = (n.category ?? n.type ?? "").toLowerCase();
+
+  // Reminder / informational notifications never open a content page —
+  // they're standalone messages that live in the Notification Center.
+  // Real targets (campaign, achievement, friend, etc.) still resolve
+  // below via their explicit payload keys / raw deep_link.
+  if (
+    isInformationalNotification(n)
+    && !payload.campaignId && !payload.campaignSlug
+    && !payload.entitySlug && !payload.artifactId
+    && !payload.achievementId && !payload.investigationId
+    && !(typeof payload.url === "string" && payload.url.startsWith("/"))
+    && !(n.deep_link && n.deep_link.startsWith("/"))
+  ) {
+    return "/notifications";
+  }
 
   // Today-in-history entries are reminder-only — always send to Home's section,
   // never to a (possibly missing) entity/story page.
