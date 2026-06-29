@@ -15,6 +15,7 @@
 
 import { audioManager } from "@/lib/audioManager";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { deviceAllowsAudio } from "@/lib/androidSilentMode";
 
 const SFX_URL = "/audio/splash-startup.mp3";
 
@@ -38,6 +39,9 @@ export function playSplashSfx(opts: PlaySplashSfxOptions = {}): () => void {
     const s = audioManager.getSettings();
     allowed = s.soundEnabled && s.sfxEnabled;
   } catch { /* ignore */ }
+
+  // Respect Android Silent / Vibrate mode.
+  if (!deviceAllowsAudio()) allowed = false;
 
   // Respect reduced-motion as a sound proxy too.
   try {

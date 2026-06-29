@@ -1,6 +1,7 @@
 // ============================================================
 
 import { androidMark, isAndroidNativeApp, isAndroidUltraStableMode } from "./androidFreezeDiagnostics";
+import { deviceAllowsAudio, initAndroidSilentMode } from "./androidSilentMode";
 // audioManager.ts — Global audio singleton for Irth
 // ------------------------------------------------------------
 // - Subtle background ambience (looping)
@@ -110,7 +111,7 @@ function ensureAmbience() {
 }
 
 function ambienceShouldPlay(): boolean {
-  return settings.soundEnabled && settings.ambienceEnabled && hasInteracted;
+  return settings.soundEnabled && settings.ambienceEnabled && hasInteracted && deviceAllowsAudio();
 }
 
 function applyAmbienceState() {
@@ -210,6 +211,7 @@ export const audioManager = {
     }
     bindFirstInteraction();
     bindLifecycle();
+    initAndroidSilentMode();
     // try immediately in case the user already interacted (e.g. SPA nav)
     applyAmbienceState();
   },
@@ -240,6 +242,7 @@ export const audioManager = {
     androidMark("audio.sfx", { name });
     if (isAndroidUltraStableMode()) return;
     if (!settings.soundEnabled || !settings.sfxEnabled) return;
+    if (!deviceAllowsAudio()) return;
     if (sfxFailed.has(name)) return;
 
     // Dedupe so the same activity doesn't fire twice
@@ -280,6 +283,7 @@ export const audioManager = {
     if (typeof window === "undefined") return;
     if (isAndroidUltraStableMode()) return;
     if (!settings.soundEnabled || !settings.sfxEnabled) return;
+    if (!deviceAllowsAudio()) return;
     if (sfxFailed.has("error")) {
       // eslint-disable-next-line no-console
       console.warn("[audio] error sfx unavailable — skipping (synth fallback disabled)");
