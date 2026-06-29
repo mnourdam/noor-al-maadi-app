@@ -252,14 +252,19 @@ function CampaignOrderPage() {
   // ---- Auto-order ----
 
   const applyAutoOrder = () => {
+    const ok = typeof window !== "undefined"
+      ? window.confirm("سيتم إعادة بناء الترتيب الزمني لكل الحملات وفق الخوارزمية التاريخية. هذا الإجراء سيتجاوز الترتيب اليدوي. هل تريد المتابعة؟")
+      : true;
+    if (!ok) return;
     setRows((prev) => {
       const next = initialSort(prev);
-      // Mark all non-manual rows as auto. (Manual rows keep their saved manual status.)
-      const updated = next.map((r) => r.orderStatus === "manual" ? r : { ...r, orderStatus: "auto" as OrderStatus });
+      // Explicit rebuild: every row becomes "auto" — that is what the
+      // admin asked for. Manual order is overwritten only here.
+      const updated = next.map((r) => ({ ...r, orderStatus: "auto" as OrderStatus }));
       markDirty(updated.map((r) => r.id));
       return updated;
     });
-    notify("ok", "تم تطبيق الترتيب الزمني الافتراضي. اضغط حفظ لتثبيته.");
+    notify("ok", "تم إعادة بناء الترتيب الزمني. اضغط حفظ لتثبيته.");
   };
 
   // ---- Save ----
@@ -277,7 +282,13 @@ function CampaignOrderPage() {
       const r = rows[i];
       if (!dirtyIds.has(r.id)) continue;
       const newOrder = (i + 1) * 10;
-      const nextStatus: OrderStatus = r.orderStatus === "review" ? "review" : (r.orderStatus === "auto" ? "auto" : "manual");
+      // Any row touched by a drag / move action is, by definition, the
+      // admin's manual decision and must be preserved on future imports.
+      // Auto-rebuild paths set orderStatus to "auto" explicitly before
+      // marking dirty, so those rows stay "auto" here.
+      const nextStatus: OrderStatus = r.orderStatus === "review"
+        ? "review"
+        : r.orderStatus === "auto" ? "auto" : "manual";
       const nextData = {
         ...(r.data ?? {}),
         chronological_order: newOrder,
@@ -320,8 +331,9 @@ function CampaignOrderPage() {
               <RefreshCw className="h-3.5 w-3.5" /> تحديث
             </button>
             <button onClick={applyAutoOrder}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20">
-              <Wand2 className="h-3.5 w-3.5" /> ترتيب زمني تلقائي
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20"
+              title="إعادة بناء الترتيب الزمني لكل الحملات (يتجاوز الترتيب اليدوي)">
+              <Wand2 className="h-3.5 w-3.5" /> إعادة الترتيب التلقائي
             </button>
             <button onClick={save} disabled={saving || dirtyIds.size === 0}
               className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40">
@@ -383,12 +395,14 @@ function CampaignOrderPage() {
         )}
 
         <footer className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-xs leading-loose text-slate-400">
-          <p className="mb-1 text-amber-200">كيف يعمل هذا الترتيب؟</p>
+          <p className="mb-1 text-amber-200">سياسة الترتيب</p>
           <ul className="list-disc ps-5">
-            <li>الحقل: <code className="text-slate-200">admin_campaigns.data.chronological_order</code> (عدد متسلسل بخطوة 10).</li>
-            <li>الحالة: <code className="text-slate-200">data.order_status</code> = manual / auto / review.</li>
-            <li>القارئ في تطبيق اللاعب يفضّل هذا الحقل عبر <code className="text-slate-200">campaignSortKey</code>، ثم <code className="text-slate-200">sort_year</code>، ثم تحليل <code className="text-slate-200">historicalPeriod</code>.</li>
-            <li>اللقطة دون اتصال (offline snapshot) تشمل نفس حقل <code className="text-slate-200">data</code>، فيُحفظ الترتيب تلقائياً.</li>
+            <li><span className="text-amber-200">الترتيب اليدوي هو المرجع.</span> كل سحب أو نقل تقوم به يُحفظ كـ <code className="text-slate-200">manual</code> ولن يُغيَّر تلقائياً.</li>
+            <li>استيراد حملة جديدة <span className="text-amber-200">لن يُعيد ترتيب أي حملة موجودة</span>. يُحسب فقط أفضل موقع مقترح للحملة الجديدة. عند عدم اليقين تُعلَّم <code className="text-slate-200">مراجعة الترتيب</code>.</li>
+            <li>إعادة استيراد حملة موجودة تحافظ على <code className="text-slate-200">chronological_order</code> و <code className="text-slate-200">order_status</code> المحفوظَين.</li>
+            <li>زر <span className="text-emerald-200">إعادة الترتيب التلقائي</span> هو الإجراء الوحيد الذي يعيد بناء الترتيب لكل الحملات وفق الخوارزمية التاريخية، وهو إجراء صريح فقط.</li>
+            <li>التخزين: <code className="text-slate-200">admin_campaigns.data.chronological_order</code> (بخطوة 10) و <code className="text-slate-200">data.order_status</code>.</li>
+            <li>اللقطة دون اتصال تشمل نفس حقل <code className="text-slate-200">data</code> فيُحفظ الترتيب تلقائياً.</li>
           </ul>
         </footer>
       </div>
