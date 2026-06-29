@@ -266,28 +266,34 @@ export function CrosswordRenderer({
     return null;
   };
 
-  const playerDinars = profile?.dinars ?? 0;
-
-  const openHelp = () => {
-    if (done) return;
-    setHelpOpen(true);
-  };
-
-  const requestRevealLetter = () => {
-    setHelpOpen(false);
-    if (done) return;
-    const target = findRevealTarget();
-    if (!target) return;
-    if (playerDinars < HINT_COST || !onPaidHint || !onPaidHint(HINT_COST)) {
-      setInsufficientOpen(true);
-      return;
-    }
-    setEntries((prev) => ({ ...prev, [target.k]: target.ch }));
-    sfx("ink_write");
-    sfx("correct");
-    focusCell(target.k);
-    toast.success(`تم كشف حرف مقابل ${HINT_COST} دنانير.`);
-  };
+  // Register the "reveal letter" option in the unified Help dialog hosted
+  // by the game route. The dialog handles balance + insufficient UI.
+  useRegisterHelpOption(
+    "reveal_letter",
+    done ? null : {
+      icon: <Lightbulb className="h-4 w-4" />,
+      label: "كشف حرف",
+      description: "كشف حرف واحد من كلمة لم تُحلَّ بعد.",
+      cost: HINT_COST,
+      getAvailable: () => !done && findRevealTarget() !== null,
+      perform: ({ pay }) => {
+        if (done) return false;
+        const target = findRevealTarget();
+        if (!target) return false;
+        if (!onPaidHint || !onPaidHint(HINT_COST) || !pay /* unreachable, pay always defined */) {
+          return false;
+        }
+        // Note: onPaidHint already deducted dinars via host's spendDinars.
+        // `pay()` is intentionally not called to avoid double-charging.
+        setEntries((prev) => ({ ...prev, [target.k]: target.ch }));
+        sfx("ink_write");
+        sfx("correct");
+        focusCell(target.k);
+        toast.success(`تم كشف حرف مقابل ${HINT_COST} دنانير.`);
+        return true;
+      },
+    },
+  );
 
 
 
