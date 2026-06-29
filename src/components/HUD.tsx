@@ -129,9 +129,10 @@ export function HUD() {
               <button
                 type="button"
                 aria-label="الدنانير"
-                className={`inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-gold transition hover:bg-white/5 active:bg-white/10 ${bumpCls("dinars")}`}
+                className={`motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-gold transition hover:bg-white/5 active:bg-white/10 ${bumpCls("dinars")}`}
               >
-                <Coins className="size-3.5" /> {profile.dinars.toLocaleString("en-US")}
+                <Coins className="size-3.5" /> <AnimatedNumber value={profile.dinars} />
+
               </button>
             </PopoverTrigger>
             <PopoverContent align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
