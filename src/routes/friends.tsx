@@ -10,7 +10,8 @@ import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { useAccount } from "@/lib/account";
 import {
   acceptFriend, listFriendships, removeFriend, searchPlayers, sendFriendRequest,
-  type FriendEntry, type PublicProfile,
+  fetchGlobalLeaderboard, fetchLeaderboardAroundMe,
+  type FriendEntry, type PublicProfile, type LeaderboardRow,
 } from "@/lib/social";
 import { Avatar } from "@/components/Avatar";
 
@@ -21,8 +22,9 @@ const TABS: { id: FriendsTab; label: string; icon: typeof Users; subtitle: strin
   { id: "requests",    label: "طلبات الصداقة", icon: Inbox,      subtitle: "الطلبات الواردة والمرسلة" },
   { id: "add",         label: "إضافة صديق",     icon: UserPlus,   subtitle: "ابحث بالاسم أو اسم المستخدم" },
   { id: "compare",     label: "مقارنة",         icon: GitCompare, subtitle: "قارن إنجازاتك مع صديق" },
-  { id: "leaderboard", label: "لوحة الترتيب",   icon: Trophy,     subtitle: "ترتيب أصدقائك حسب المستوى" },
+  { id: "leaderboard", label: "لوحة الترتيب",   icon: Trophy,     subtitle: "الترتيب العالمي حسب الخبرة" },
 ];
+
 
 export const Route = createFileRoute("/friends")({
   head: () => ({ meta: [{ title: "الأصدقاء" }] }),
