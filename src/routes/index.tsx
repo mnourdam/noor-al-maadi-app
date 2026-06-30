@@ -691,12 +691,12 @@ function HomeFull() {
         <Reveal>
           <section className="mt-12 px-5">
             <SectionHeader icon={<Sunrise className="size-3.5" />} eyebrow="آخر نشاطاتك" title="عودة إلى رحلتك" />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <_Stagger className="grid grid-cols-1 gap-2 sm:grid-cols-2" max={8}>
               {recentActivity.map((a) => (
                 <Link
                   key={a.key}
                   to={a.to as "/"}
-                  className="group flex items-center gap-3 rounded-2xl border border-gold/20 bg-surface/60 p-3 transition hover:border-gold/50"
+                  className="motion-tap group flex items-center gap-3 rounded-2xl border border-gold/20 bg-surface/60 p-3 transition hover:border-gold/50"
                 >
                   <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">{a.icon}</div>
                   <div className="min-w-0 flex-1">
@@ -706,7 +706,7 @@ function HomeFull() {
                   <ChevronLeft className="size-4 shrink-0 text-gold/50 group-hover:text-gold" />
                 </Link>
               ))}
-            </div>
+            </_Stagger>
           </section>
         </Reveal>
       )}
