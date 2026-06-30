@@ -165,7 +165,7 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
     <Link
       to="/campaigns/imported/$id"
       params={{ id: c.id }}
-      className={`shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
+      className={`motion-tap shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
         isComplete
           ? "border-emerald-400/60 ring-1 ring-emerald-400/30 shadow-[0_18px_50px_-25px_rgba(16,185,129,0.55)]"
           : "border-gold/40 hover:border-gold/60"
