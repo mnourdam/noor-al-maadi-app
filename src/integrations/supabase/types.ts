@@ -1470,6 +1470,10 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: Json
       }
+      admin_resolve_segment: {
+        Args: { p_segment_id: string }
+        Returns: string[]
+      }
       admin_revoke_role: {
         Args: {
           p_reason?: string
