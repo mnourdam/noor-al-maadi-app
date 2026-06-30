@@ -4,14 +4,6 @@
 
 export type IdleHandle = { cancel: () => void };
 
-type IdleCb = (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void;
-
-declare global {
-  interface Window {
-    requestIdleCallback?: (cb: IdleCb, opts?: { timeout?: number }) => number;
-    cancelIdleCallback?: (h: number) => void;
-  }
-}
 
 export function scheduleIdle(fn: () => void, timeout = 2000): IdleHandle {
   if (typeof window === "undefined") return { cancel: () => {} };
