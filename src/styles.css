@@ -985,6 +985,63 @@ html.perf-lite .motion-shake { animation-duration: 220ms !important; }
 .irth-reading[data-reading-size="lg"] :is(h4, .text-xl) { font-size: 1.38rem; line-height: 1.45; }
 .irth-reading[data-reading-size="lg"] :is(h5, .text-lg) { font-size: 1.25rem; line-height: 1.5; }
 
-/* Opt-out for fixed-size islands (chips, small badges, compact buttons). */
-.irth-reading .no-reading-scale,
-.irth-reading .no-reading-scale * { font-size: revert !important; line-height: revert !important; }
+/* ------------------------------------------------------------
+   Automatic opt-out: interactive controls, chips, badges, stats,
+   navigation, HUD, and any element explicitly marked
+   `.no-reading-scale` (or its descendants) keep their native
+   typography even when nested inside a <ReadingScale> region.
+   This ensures the Reading Comfort setting only changes prose
+   density, never the layout of cards/buttons/navigation.
+   ------------------------------------------------------------ */
+.irth-reading :is(
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="navigation"],
+  [role="status"],
+  [role="progressbar"],
+  nav,
+  header,
+  input,
+  select,
+  textarea,
+  label,
+  .badge,
+  [data-slot="badge"],
+  [data-chip],
+  .chip,
+  .hud,
+  [data-hud],
+  [data-stat],
+  .stat,
+  .no-reading-scale
+),
+.irth-reading :is(
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="navigation"],
+  [role="status"],
+  [role="progressbar"],
+  nav,
+  header,
+  input,
+  select,
+  textarea,
+  label,
+  .badge,
+  [data-slot="badge"],
+  [data-chip],
+  .chip,
+  .hud,
+  [data-hud],
+  [data-stat],
+  .stat,
+  .no-reading-scale
+) * {
+  font-size: revert !important;
+  line-height: revert !important;
+}
+
