@@ -169,6 +169,8 @@ function HomeFull() {
   };
   const campaignSel = useMemo<CampaignSelection | null>(() => {
     if (!importedCampaigns.length) return null;
+    // `importedCampaigns` is already chronologically sorted by
+    // `fetchPublishedCampaigns()` — identical feed/order to the Campaigns page.
     const enriched: CampaignSelection[] = importedCampaigns.map((c) => {
       const p = getCampaignProgress(c.id);
       const sorted = [...c.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -184,11 +186,46 @@ function HomeFull() {
         Object.values(p.chapters).some((ch) => (ch.completedActivityIds?.length ?? 0) > 0);
       return { campaign: c, progress: p, hasStarted, isComplete: p.completed, completedChapters, nextChapter, nextActivity };
     });
-    return (
-      enriched.find((e) => e.hasStarted && !e.isComplete) ??
+    // Canonical "current campaign" = earliest unfinished in chronological
+    // order. Same rule the Campaigns page uses, so Hero and Campaigns can
+    // never disagree. Do NOT bias by `hasStarted` — that would skip an
+    // earlier-era campaign in favor of a later one the player happened to
+    // open first.
+    const selected =
       enriched.find((e) => !e.isComplete) ??
-      enriched[0]
-    );
+      enriched[enriched.length - 1] ??
+      enriched[0];
+
+    if (typeof window !== "undefined" && (window as any).__IRTH_HERO_DEBUG !== false) {
+      try {
+        // eslint-disable-next-line no-console
+        console.groupCollapsed(
+          `[Hero] candidates (${enriched.length}) — selected: ${selected?.campaign.title ?? "(none)"}`,
+        );
+        // eslint-disable-next-line no-console
+        console.table(
+          enriched.map((e, i) => ({
+            i,
+            id: e.campaign.id,
+            slug: (e.campaign as any).slug ?? "",
+            title: e.campaign.title,
+            hasStarted: e.hasStarted,
+            isComplete: e.isComplete,
+            done: e.completedChapters,
+            total: e.campaign.chapters.length,
+          })),
+        );
+        // eslint-disable-next-line no-console
+        console.log("[Hero] list source: fetchPublishedCampaigns (local-first snapshot, chronological)");
+        // eslint-disable-next-line no-console
+        console.log("[Hero] progress source: getCampaignProgress (irth_campaign_progress + cloud hydration)");
+        // eslint-disable-next-line no-console
+        console.log("[Hero] selected:", selected?.campaign.id, selected?.campaign.title);
+        // eslint-disable-next-line no-console
+        console.groupEnd();
+      } catch { /* ignore */ }
+    }
+    return selected;
   }, [importedCampaigns, progressTick]);
 
   // ===== Hero background pool =====

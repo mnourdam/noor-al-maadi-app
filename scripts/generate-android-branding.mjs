@@ -286,10 +286,19 @@ function writeVectors() {
     svgToVector(notifSvg, { widthDp: 24, heightDp: 24, fillOverride: "#FFFFFF" }),
   );
 
-  // Splash icon for the Android 12+ SplashScreen API. We re-use the
-  // foreground mark (with built-in safe padding) so the cold-start logo
-  // matches the launcher exactly.
-  write(join(RES, "drawable", "ic_splash_icon.xml"), fgVector);
+  // Splash icon for the Android 12+ SplashScreen API. The OS already applies
+  // a circular mask and animates the icon — we must NOT bake in our own
+  // background, and the artwork should fill the full 108dp viewport (Android
+  // crops to a 66dp visible disc on its own). Re-using the inset adaptive
+  // foreground here made the icon look like a small gold mark sitting on a
+  // square dark plate during the cold-start frame on some devices.
+  const splashVector = svgToVector(fgSvg, {
+    widthDp: 108,
+    heightDp: 108,
+    // foreground.svg already uses brand gold; keep its native fills so the
+    // splash mark matches the launcher exactly.
+  });
+  write(join(RES, "drawable", "ic_splash_icon.xml"), splashVector);
 }
 
 // Post-generation assertion: every drawable referenced by the adaptive icon
