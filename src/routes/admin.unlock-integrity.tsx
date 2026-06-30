@@ -170,11 +170,12 @@ function UnlockIntegrityPage() {
   }, [refs, entitiesBySlug]);
 
   const tally = useMemo(() => {
-    const t = { total: audited.length, ok: 0, unpublished: 0, mismatch: 0, missing: 0 };
+    const t = { total: audited.length, ok: 0, unpublished: 0, mismatch: 0, missing: 0, respected: 0 };
     for (const a of audited) {
       if (a.status === "ok") t.ok++;
       else if (a.status === "unpublished") t.unpublished++;
       else if (a.status === "type-mismatch") t.mismatch++;
+      else if (a.status === "respected") t.respected++;
       else t.missing++;
     }
     return t;
