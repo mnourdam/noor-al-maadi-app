@@ -250,59 +250,35 @@ function EncyclopediaHubFull() {
 
   const suggestions = useMemo(() => {
     if (!q) return [];
+    const nq = normArabic(q);
     return all
       .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
-      .filter((e) => {
-        const hay = `${e.title} ${e.subtitle ?? ""} ${e.slug}`.toLowerCase();
-        return hay.includes(q);
-      })
-      .slice(0, 6);
+      .map((e) => ({ e, s: scoreEntity(e, nq) }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 6)
+      .map((x) => x.e);
   }, [all, q, typeFilter]);
 
   const results = useMemo(() => {
     if (!q && !era && typeFilter === "all") return [];
-    const norm = (s: string) =>
-      s.toLowerCase()
-        .replace(/[\u064B-\u065F\u0670]/g, "") // strip Arabic diacritics
-        .replace(/[إأآا]/g, "ا")
-        .replace(/ى/g, "ي")
-        .replace(/ة/g, "ه")
-        .trim();
-    const nq = norm(q);
-    const scored = all
+    const nq = normArabic(q);
+    const filtered = all
       .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
-      .filter((e) => !era || (toCanonicalEra(metaEra(e)) ?? metaEra(e)) === era)
-      .map((e) => {
-        const title = norm(e.title ?? "");
-        const subtitle = norm(e.subtitle ?? "");
-        const summary = norm(e.summary ?? "");
-        const slug = norm(e.slug ?? "");
-        let score = 0;
-        if (nq) {
-          if (title === nq) score += 1000;
-          else if (title.startsWith(nq)) score += 600;
-          else if (new RegExp(`(^|\\s)${nq}`).test(title)) score += 450;
-          else if (title.includes(nq)) score += 300;
-          if (subtitle.includes(nq)) score += 120;
-          if (slug.includes(nq)) score += 80;
-          if (summary.includes(nq)) score += 40;
-          // shorter titles win ties (more specific)
-          score -= Math.min(title.length, 60) * 0.2;
-          if (score <= 0) return null;
-        }
-        return { e, score };
-      })
-      .filter(Boolean) as { e: SupabaseEncyclopediaEntity; score: number }[];
-    scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, 60).map((s) => s.e);
+      .filter((e) => !era || (toCanonicalEra(metaEra(e)) ?? metaEra(e)) === era);
+    if (!nq) return filtered.slice(0, 60);
+    return filtered
+      .map((e) => ({ e, s: scoreEntity(e, nq) }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 60)
+      .map((x) => x.e);
   }, [all, q, era, typeFilter]);
 
   const topMatch = useMemo(() => {
     if (!q || results.length === 0) return null;
-    const norm = (s: string) =>
-      s.toLowerCase().replace(/[\u064B-\u065F\u0670]/g, "").replace(/[إأآا]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
-    const nq = norm(q);
-    const t = norm(results[0].title ?? "");
+    const nq = normArabic(q);
+    const t = normArabic(results[0].title ?? "");
     if (t === nq || t.startsWith(nq)) return results[0].id;
     return null;
   }, [results, q]);
