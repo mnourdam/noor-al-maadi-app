@@ -61,6 +61,23 @@ function HomeFull() {
   const { selected: todayEvent } = useTodayInHistoryEvent();
   const stats = useRealCollectionStats();
   const [unread, setUnread] = useState(0);
+
+  // Perf-lite detection — drives reduced visual layers (no embers, single
+  // hero image, no Ken-Burns) so low-end Android WebView renders Home fast.
+  const perfLite = typeof document !== "undefined"
+    && document.documentElement.classList.contains("perf-lite");
+
+  // Debug instrumentation — helps QA confirm Home cold-start on real devices.
+  useEffect(() => {
+    const t = performance.now();
+    // eslint-disable-next-line no-console
+    console.info("[home] mounted", { perfLite, t: Math.round(t) });
+    return () => {
+      // eslint-disable-next-line no-console
+      console.info("[home] unmounted", { dt: Math.round(performance.now() - t) });
+    };
+  }, [perfLite]);
+
   useEffect(() => {
     let serverAuthoritative = false;
     let cancelled = false;
