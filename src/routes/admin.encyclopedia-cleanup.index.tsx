@@ -865,6 +865,25 @@ function CleanupWorkshop() {
   //   missing/weak. Marks cleanup_resolved + needs_content so it leaves
   //   "يحتاج تنظيف" and lands in "يحتاج محتوى".
   // ------------------------------------------------------------
+  const computeStage = (r: { enabled: boolean; metadata: any; body: any }):
+    "needs-cleanup-candidate" | "needs-content" | "complete" | "resolved-other" => {
+    const row = r as EntityRow;
+    if (!isFinalCanonical(row)) return "resolved-other";
+    return hasRealContent(row) ? "complete" : "needs-content";
+  };
+
+  const snapshotCounts = (list: EntityRow[]) => {
+    let nc = 0, content = 0, done = 0;
+    for (const r of list) {
+      const isOrphan = !(atlasLinks.get(r.id) || campaignSlugs.get(r.id));
+      const quality = classifyQuality(r, dupIds.has(r.id), isOrphan);
+      if (rowNeedsCleanup(r, liveDupIds, quality)) nc++;
+      if (needsContent(r)) content++;
+      if (isComplete(r)) done++;
+    }
+    return { needsCleanup: nc, needsContent: content, complete: done };
+  };
+
   const fullyApproveCleanup = async (r: EntityRow) => {
     setBusy(r.id);
     const stamp = new Date().toISOString();
@@ -874,6 +893,9 @@ function CleanupWorkshop() {
     meta.content_verified = true;
     meta.content_verified_at = stamp;
     delete meta.needs_content;
+    delete meta.needs_content_at;
+    const oldStage = computeStage(r);
+    const countsBefore = snapshotCounts(rows);
     try {
       const upd = await supabase.from("encyclopedia_entities" as any)
         .update({ metadata: meta }).eq("id", r.id).select("id").maybeSingle();
@@ -882,9 +904,20 @@ function CleanupWorkshop() {
         metadata: { cleanup_resolved: true, content_verified: true, needs_content: null },
       });
       if (!v.ok) { showToast(`فشل التحقق — لم تُحفظ: ${v.diff.join(", ")}`, "err"); return; }
-      await logAudit("encyclopedia.cleanup.fully_approve", { id: r.id, slug: r.slug, verified: true });
-      showToast(`اعتمدت «${r.title}» بالكامل — انتقلت إلى مكتمل ✓`);
+      const newStage = computeStage(v.row);
+      const hasBodyResult = hasRealBody(v.row?.body);
+      await logAudit("encyclopedia.cleanup.fully_approve", { id: r.id, slug: r.slug, verified: true, newStage });
       await refresh();
+      const countsAfter = snapshotCounts(rowsRef.current);
+      devLog("fullyApprove", {
+        id: r.id, title: r.title, action: "fullyApprove",
+        oldStage, hasBodyResult, newStage, countsBefore, countsAfter,
+      });
+      showToast(
+        newStage === "complete"
+          ? `اعتمدت «${r.title}» — انتقلت إلى مكتمل ✓`
+          : `اعتمدت «${r.title}» — انتقلت إلى «يحتاج محتوى» (لا يوجد محتوى فعلي) ✓`,
+      );
     } catch (e: any) { showToast("فشل: " + (e?.message || e), "err"); }
     finally { setBusy(null); }
   };
@@ -899,6 +932,8 @@ function CleanupWorkshop() {
     meta.needs_content_at = stamp;
     delete meta.content_verified;
     delete meta.content_verified_at;
+    const oldStage = computeStage(r);
+    const countsBefore = snapshotCounts(rows);
     try {
       const upd = await supabase.from("encyclopedia_entities" as any)
         .update({ metadata: meta }).eq("id", r.id).select("id").maybeSingle();
@@ -907,9 +942,20 @@ function CleanupWorkshop() {
         metadata: { cleanup_resolved: true, needs_content: true, content_verified: null },
       });
       if (!v.ok) { showToast(`فشل التحقق — لم تُحفظ: ${v.diff.join(", ")}`, "err"); return; }
-      await logAudit("encyclopedia.cleanup.mark_needs_content", { id: r.id, slug: r.slug, verified: true });
-      showToast(`نُقل «${r.title}» إلى «يحتاج محتوى» ✓`);
+      const newStage = computeStage(v.row);
+      const hasBodyResult = hasRealBody(v.row?.body);
+      await logAudit("encyclopedia.cleanup.mark_needs_content", { id: r.id, slug: r.slug, verified: true, newStage });
       await refresh();
+      const countsAfter = snapshotCounts(rowsRef.current);
+      devLog("markNeedsContent", {
+        id: r.id, title: r.title, action: "markNeedsContent",
+        oldStage, hasBodyResult, newStage, countsBefore, countsAfter,
+      });
+      if (newStage !== "needs-content") {
+        showToast(`تحذير: لم تنتقل إلى «يحتاج محتوى» — الحالة الفعلية: ${newStage}`, "err");
+      } else {
+        showToast(`نُقل «${r.title}» إلى «يحتاج محتوى» ✓`);
+      }
     } catch (e: any) { showToast("فشل: " + (e?.message || e), "err"); }
     finally { setBusy(null); }
   };
