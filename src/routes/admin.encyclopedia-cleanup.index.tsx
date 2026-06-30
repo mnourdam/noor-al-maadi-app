@@ -1153,13 +1153,21 @@ function Header({ onRefresh, onExport, onExportFullJson, onExportFullCsv, loadin
 // ------------------------------------------------------------
 // Toolbar (search + filter chips)
 // ------------------------------------------------------------
-function Toolbar({ q, setQ, filter, setFilter, needsCleanupCount }: {
+type PipelineKey = "any" | "needs-cleanup" | "needs-content" | "complete";
+
+function Toolbar({
+  q, setQ, filter, setFilter,
+  pipeline, setPipeline,
+  needsCleanupCount, needsContentCount, completeCount,
+}: {
   q: string; setQ: (v: string) => void;
   filter: FilterKey; setFilter: (v: FilterKey) => void;
+  pipeline: PipelineKey; setPipeline: (v: PipelineKey) => void;
   needsCleanupCount: number;
+  needsContentCount: number;
+  completeCount: number;
 }) {
-  const chips: { key: FilterKey; label: string; badge?: number }[] = [
-    { key: "needs-cleanup", label: "يحتاج تنظيف", badge: needsCleanupCount },
+  const restChips: { key: FilterKey; label: string }[] = [
     { key: "all", label: "الكل" },
     { key: "figure", label: "شخصيات" },
     { key: "city", label: "مدن" },
@@ -1174,8 +1182,51 @@ function Toolbar({ q, setQ, filter, setFilter, needsCleanupCount }: {
     { key: "duplicate", label: "مكررات" },
     { key: "archived", label: "مؤرشف" },
   ];
-  const queueChip = chips[0];
-  const restChips = chips.slice(1);
+
+  // Three pipeline stages — first-class chips with live counts.
+  // Visual identity: amber (cleanup) → sky (content) → emerald (complete).
+  const stages: {
+    key: Exclude<PipelineKey, "any">;
+    label: string;
+    count: number;
+    dot: string;
+    active: string;
+    idle: string;
+    badgeActive: string;
+    badgeIdle: string;
+  }[] = [
+    {
+      key: "needs-cleanup",
+      label: "يحتاج تنظيف",
+      count: needsCleanupCount,
+      dot: "bg-amber-300 shadow-[0_0_8px_rgba(253,224,71,0.9)]",
+      active: "border-amber-300 bg-amber-500/25 text-amber-50 shadow-amber-500/30",
+      idle: "border-amber-400/70 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20",
+      badgeActive: "bg-amber-950 text-amber-50",
+      badgeIdle: "bg-amber-400/30 text-amber-50",
+    },
+    {
+      key: "needs-content",
+      label: "يحتاج محتوى",
+      count: needsContentCount,
+      dot: "bg-sky-300 shadow-[0_0_8px_rgba(125,211,252,0.9)]",
+      active: "border-sky-300 bg-sky-500/25 text-sky-50 shadow-sky-500/30",
+      idle: "border-sky-400/70 bg-sky-500/10 text-sky-100 hover:bg-sky-500/20",
+      badgeActive: "bg-sky-950 text-sky-50",
+      badgeIdle: "bg-sky-400/30 text-sky-50",
+    },
+    {
+      key: "complete",
+      label: "مكتمل",
+      count: completeCount,
+      dot: "bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]",
+      active: "border-emerald-300 bg-emerald-500/25 text-emerald-50 shadow-emerald-500/30",
+      idle: "border-emerald-400/70 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20",
+      badgeActive: "bg-emerald-950 text-emerald-50",
+      badgeIdle: "bg-emerald-400/30 text-emerald-50",
+    },
+  ];
+
   return (
     <div className="space-y-3">
       <div className="relative">
@@ -1186,26 +1237,47 @@ function Toolbar({ q, setQ, filter, setFilter, needsCleanupCount }: {
           className="w-full rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-2 pe-10 text-sm text-slate-100 placeholder-slate-500 focus:border-amber-500/50 focus:outline-none"
         />
       </div>
+
+      {/* Pipeline row — the three production stages. Toggling a chip
+          again returns to "any" so the user is never stuck inside one stage. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] uppercase tracking-widest text-slate-500">المسار</span>
+        {stages.map((s) => {
+          const isActive = pipeline === s.key;
+          return (
+            <button
+              key={s.key}
+              onClick={() => setPipeline(isActive ? "any" : s.key)}
+              className={`inline-flex items-center gap-2 rounded-full border-2 px-3 py-1 text-xs font-semibold shadow-sm transition ${
+                isActive ? s.active : s.idle
+              }`}
+            >
+              <span className={`inline-block size-1.5 rounded-full ${s.dot}`} />
+              <span>{s.label}</span>
+              <span
+                className={`inline-flex min-w-[22px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
+                  isActive ? s.badgeActive : s.badgeIdle
+                }`}
+              >
+                {s.count}
+              </span>
+            </button>
+          );
+        })}
+        {pipeline !== "any" && (
+          <button
+            onClick={() => setPipeline("any")}
+            className="ms-1 inline-flex items-center gap-1 rounded-full border border-slate-700/60 px-2 py-0.5 text-[10px] text-slate-400 hover:bg-slate-800/60"
+            title="إلغاء فلتر المسار"
+          >
+            <X className="size-3" /> إلغاء المسار
+          </button>
+        )}
+      </div>
+
+      {/* Type / quality chips — combine with the pipeline filter above. */}
       <div className="flex flex-wrap items-center gap-2">
         <Filter className="size-3.5 text-slate-500" />
-        {/* Queue chip — first-class, visually distinct */}
-        <button
-          onClick={() => setFilter(queueChip.key)}
-          className={`inline-flex items-center gap-2 rounded-full border-2 px-3 py-1 text-xs font-semibold shadow-sm transition ${
-            filter === queueChip.key
-              ? "border-emerald-300 bg-emerald-500/25 text-emerald-50 shadow-emerald-500/30"
-              : "border-emerald-400/70 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20"
-          }`}
-        >
-          <span className="inline-block size-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
-          <span>{queueChip.label}</span>
-          <span className={`inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
-            filter === queueChip.key ? "bg-emerald-950 text-emerald-50" : "bg-emerald-400/30 text-emerald-50"
-          }`}>
-            {queueChip.badge ?? 0}
-          </span>
-        </button>
-        <span className="mx-1 h-5 w-px bg-slate-700/60" aria-hidden />
         {restChips.map((c) => {
           const isActive = filter === c.key;
           return (
