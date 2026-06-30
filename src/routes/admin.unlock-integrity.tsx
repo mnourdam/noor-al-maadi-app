@@ -154,9 +154,15 @@ function UnlockIntegrityPage() {
         status = "missing";
       } else {
         sameType = matches.find((m) => m.entity_type === r.type) ?? matches[0];
-        if (sameType.entity_type !== r.type) status = "type-mismatch";
-        else if (!sameType.enabled)          status = "unpublished";
-        else                                 status = "ok";
+        const meta: any = sameType.metadata || {};
+        const intentionallyHidden =
+          meta.archived === true ||
+          meta.hidden_duplicate === true ||
+          (typeof meta.canonical_id === "string" && meta.canonical_id);
+        if (sameType.entity_type !== r.type)      status = "type-mismatch";
+        else if (sameType.enabled)                 status = "ok";
+        else if (intentionallyHidden)              status = "respected";
+        else                                       status = "unpublished";
       }
       seen.set(r.raw, { ...r, status, matchSameType: sameType, matchAnyType: matches });
     }
