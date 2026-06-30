@@ -52,14 +52,18 @@ function CampaignsHubFull() {
           <div className="space-y-8">
             {sections.map((section, i) => (
               <section key={section.divider?.id ?? `uncat-${i}`} className="space-y-3">
-                {section.divider ? (
-                  <EraDivider d={section.divider} count={section.campaigns.length} />
-                ) : (
-                  <UncategorizedHeader count={section.campaigns.length} />
-                )}
-                {section.campaigns.map((c) => (
-                  <ImportedCampaignCard key={c.id} c={c} />
-                ))}
+                <Reveal>
+                  {section.divider ? (
+                    <EraDivider d={section.divider} count={section.campaigns.length} />
+                  ) : (
+                    <UncategorizedHeader count={section.campaigns.length} />
+                  )}
+                </Reveal>
+                <Stagger className="space-y-3" max={12}>
+                  {section.campaigns.map((c) => (
+                    <ImportedCampaignCard key={c.id} c={c} />
+                  ))}
+                </Stagger>
                 {section.campaigns.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-gold/15 bg-surface/30 p-4 text-center text-xs text-muted-foreground">
                     لا توجد حملات في هذا العصر بعد.
