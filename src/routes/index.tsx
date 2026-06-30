@@ -108,6 +108,7 @@ function HomeFull() {
     window.addEventListener("focus", onLocal);
     return () => {
       cancelled = true;
+      idle.cancel();
       window.removeEventListener("irth:notifications:updated", onLocal);
       window.removeEventListener("focus", onLocal);
       unsubRealtime();
