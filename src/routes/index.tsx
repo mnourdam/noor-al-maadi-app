@@ -839,36 +839,13 @@ function SectionHeader({ icon, eyebrow, title }: { icon: React.ReactNode; eyebro
   );
 }
 
-/** Lightweight intersection-observer fade-in wrapper. Hidden by default; once
- *  in view it stays visible. One observer per Reveal — cheap on mobile. */
+/** Re-export of the shared motion Reveal so existing call sites stay intact. */
+import { Reveal as _Reveal, Stagger as _Stagger } from "@/components/motion/MotionPrimitives";
 function Reveal({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === "undefined") { setShown(true); return; }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) { setShown(true); io.disconnect(); break; }
-        }
-      },
-      { rootMargin: "0px 0px -10% 0px", threshold: 0.05 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return (
-    <div
-      ref={ref}
-      className={shown ? "animate-fade-in" : ""}
-      style={shown ? undefined : { opacity: 0, transform: "translateY(10px)" }}
-    >
-      {children}
-    </div>
-  );
+  return <_Reveal>{children}</_Reveal>;
 }
+// Re-export Stagger so it can be imported elsewhere if needed.
+export { _Stagger as HomeStagger };
 
 function Stat({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string | number; tone: "gold" | "rose" | "emerald" | "indigo" | "ruby" }) {
   const toneClass: Record<string, string> = {
