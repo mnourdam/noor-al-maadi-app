@@ -136,8 +136,14 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
     onResolve(true, { viaReveal: true });
   };
 
+  const wrapperCls = feedback === "ok"
+    ? "motion-page motion-correct-pop"
+    : wrongCount > 0 && feedback === "err"
+      ? "motion-page motion-shake"
+      : "motion-page";
+
   return (
-    <div>
+    <div className={wrapperCls} key={`${activity.id}:${wrongCount}:${feedback ?? "_"}`}>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <div className="space-y-2">
@@ -155,7 +161,7 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
               key={`${i}-${opt}`}
               disabled={locked || isWrong}
               onClick={() => { setPicked(i); setFeedback(null); }}
-              className={`w-full rounded-xl border px-3 py-2 text-right text-[12px] transition ${
+              className={`motion-tap w-full rounded-xl border px-3 py-2 text-right text-[12px] transition ${
                 isAnswer ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
                 : isWrong ? wrongStyle
                 : isPicked ? "border-gold/60 bg-gold/10 text-foreground"
@@ -172,7 +178,7 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
         <button
           onClick={submit}
           disabled={picked === null}
-          className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50"
+          className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50"
         >
           تحقق من الإجابة
         </button>
@@ -190,7 +196,7 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
       {revealed && !resolved && (
         <button
           onClick={continueAfterReveal}
-          className="mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
+          className="motion-tap motion-reveal is-in mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
         >
           متابعة
         </button>
