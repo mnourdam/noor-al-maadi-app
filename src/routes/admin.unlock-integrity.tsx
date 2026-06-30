@@ -64,9 +64,10 @@ interface EntityRow {
   entity_type: string;
   enabled: boolean;
   title: string | null;
+  metadata: any;
 }
 
-type Status = "ok" | "type-mismatch" | "unpublished" | "missing";
+type Status = "ok" | "type-mismatch" | "unpublished" | "missing" | "respected";
 
 interface AuditedRef extends UnlockRef {
   status: Status;
