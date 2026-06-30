@@ -851,6 +851,70 @@ function CleanupWorkshop() {
     finally { setBusy(null); }
   };
 
+  // ------------------------------------------------------------
+  // Cleanup-stage shortcuts — only resolve the cleanup workflow.
+  // They never touch duplicate/redirect metadata; the content stage
+  // remains independent.
+  //
+  // fullyApproveCleanup → entity is already canonical AND its content
+  //   is good enough as-is. Marks cleanup_resolved + content_verified
+  //   so it lands in "مكتمل" immediately.
+  //
+  // markNeedsContentOnly → entity is canonical but body is still
+  //   missing/weak. Marks cleanup_resolved + needs_content so it leaves
+  //   "يحتاج تنظيف" and lands in "يحتاج محتوى".
+  // ------------------------------------------------------------
+  const fullyApproveCleanup = async (r: EntityRow) => {
+    setBusy(r.id);
+    const stamp = new Date().toISOString();
+    const meta: any = { ...(r.metadata || {}) };
+    meta.cleanup_resolved = true;
+    meta.cleanup_resolved_at = stamp;
+    meta.content_verified = true;
+    meta.content_verified_at = stamp;
+    delete meta.needs_content;
+    try {
+      const upd = await supabase.from("encyclopedia_entities" as any)
+        .update({ metadata: meta }).eq("id", r.id).select("id").maybeSingle();
+      if (upd.error) { showToast("فشل الاعتماد التام: " + upd.error.message, "err"); return; }
+      const v = await verifyDbUpdate(r.id, {
+        metadata: { cleanup_resolved: true, content_verified: true, needs_content: null },
+      });
+      if (!v.ok) { showToast(`فشل التحقق — لم تُحفظ: ${v.diff.join(", ")}`, "err"); return; }
+      await logAudit("encyclopedia.cleanup.fully_approve", { id: r.id, slug: r.slug, verified: true });
+      showToast(`اعتمدت «${r.title}» بالكامل — انتقلت إلى مكتمل ✓`);
+      await refresh();
+    } catch (e: any) { showToast("فشل: " + (e?.message || e), "err"); }
+    finally { setBusy(null); }
+  };
+
+  const markNeedsContentOnly = async (r: EntityRow) => {
+    setBusy(r.id);
+    const stamp = new Date().toISOString();
+    const meta: any = { ...(r.metadata || {}) };
+    meta.cleanup_resolved = true;
+    meta.cleanup_resolved_at = stamp;
+    meta.needs_content = true;
+    meta.needs_content_at = stamp;
+    delete meta.content_verified;
+    delete meta.content_verified_at;
+    try {
+      const upd = await supabase.from("encyclopedia_entities" as any)
+        .update({ metadata: meta }).eq("id", r.id).select("id").maybeSingle();
+      if (upd.error) { showToast("فشل النقل: " + upd.error.message, "err"); return; }
+      const v = await verifyDbUpdate(r.id, {
+        metadata: { cleanup_resolved: true, needs_content: true, content_verified: null },
+      });
+      if (!v.ok) { showToast(`فشل التحقق — لم تُحفظ: ${v.diff.join(", ")}`, "err"); return; }
+      await logAudit("encyclopedia.cleanup.mark_needs_content", { id: r.id, slug: r.slug, verified: true });
+      showToast(`نُقل «${r.title}» إلى «يحتاج محتوى» ✓`);
+      await refresh();
+    } catch (e: any) { showToast("فشل: " + (e?.message || e), "err"); }
+    finally { setBusy(null); }
+  };
+
+
+
 
   // ------------------------------------------------------------
   // Delete (only if no references) — verified by re-fetching
