@@ -479,13 +479,13 @@ function GamePlayPage() {
               <div className="mt-2 flex flex-wrap justify-center gap-2">
                 <button
                   onClick={retry}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400"
+                  className="motion-tap inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400"
                 >
                   <RotateCcw className="h-4 w-4" /> إعادة المحاولة
                 </button>
                 <button
                   onClick={() => requestNavigate("/adventure")}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-amber-400"
+                  className="motion-tap inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-amber-400"
                 >
                   <Compass className="h-4 w-4" /> العودة للتحديات
                 </button>
@@ -496,7 +496,7 @@ function GamePlayPage() {
 
         {stageDone && !isLast && (
           <button onClick={next}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400">
+            className="motion-tap motion-reveal is-in inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400">
             المرحلة التالية <ChevronLeft className="h-4 w-4" />
           </button>
         )}
