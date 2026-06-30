@@ -734,31 +734,32 @@ function HomeFull() {
       </Reveal>
 
       {/* ============ 4. LATEST DISCOVERIES ============ */}
-      <Reveal>
-        <section className="mt-12 px-5">
-          <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
-          {stats.recent.length > 0 ? (
-            <div className="relative">
-              <_Stagger
-                className="-mx-5 flex gap-3 overflow-x-auto px-5 pe-12 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-end:3rem]"
-                itemClassName="shrink-0 snap-start"
-                max={8}
-              >
-                {stats.recent.map((r) => <RecentCard key={r.key} item={r} />)}
-              </_Stagger>
-              {stats.recent.length > 2 && (
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-l from-background to-transparent" />
-              )}
+      <section className="mt-12 px-5">
+        <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
+        {stats.recent.length > 0 ? (
+          <div className="relative">
+            <div
+              className="-mx-5 flex flex-nowrap items-stretch gap-3 overflow-x-auto overscroll-x-contain px-5 pe-12 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-end:3rem]"
+              aria-label="آخر الاكتشافات"
+            >
+              {stats.recent.slice(0, 8).map((r) => (
+                <div key={r.key} className="w-48 flex-none snap-start">
+                  <RecentCard item={r} />
+                </div>
+              ))}
             </div>
-          ) : (
-            <EmptyState
-              icon={<Gem className="size-5 text-gold" />}
-              title="لم تبدأ رحلتك بعد…"
-              body="أكمل الفصول لتفتح شخصياتٍ وآثارًا وتظهر هنا."
-            />
-          )}
-        </section>
-      </Reveal>
+            {stats.recent.length > 2 && (
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-l from-background to-transparent" />
+            )}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Gem className="size-5 text-gold" />}
+            title="لم تبدأ رحلتك بعد…"
+            body="أكمل الفصول لتفتح شخصياتٍ وآثارًا وتظهر هنا."
+          />
+        )}
+      </section>
 
       {/* ============ 5. TODAY IN HISTORY ============ */}
       {mounted && todayEvent && (
@@ -953,7 +954,7 @@ function RecentCard({ item }: { item: UnifiedUnlock }) {
   return (
     <Link
       to={item.to as "/"}
-      className="group relative w-48 shrink-0 snap-start overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-3 transition hover:border-gold/50"
+      className="group relative block h-full w-full overflow-hidden rounded-2xl border border-gold/20 bg-surface/70 p-3 transition hover:border-gold/50"
     >
       <div className="absolute -left-6 -top-6 size-24 rounded-full bg-gold/10 blur-2xl" />
       <div className="relative">
