@@ -262,7 +262,7 @@ function EncyclopediaHubFull() {
           ]}
         />
         {/* Cinematic Hero */}
-        <section className="relative -mx-5 -mt-2 overflow-hidden border-b border-gold/15 bg-gradient-to-b from-gold/[0.08] via-background to-background px-5 pb-6 pt-8">
+        <section className="relative -mx-5 -mt-2 border-b border-gold/15 bg-gradient-to-b from-gold/[0.08] via-background to-background px-5 pb-6 pt-8">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 opacity-[0.07]"
