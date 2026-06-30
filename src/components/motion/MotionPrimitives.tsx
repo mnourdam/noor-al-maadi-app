@@ -102,10 +102,12 @@ export function Reveal({
 export function Stagger({
   children,
   className,
+  itemClassName,
   max = 12,
 }: {
   children: ReactNode;
   className?: string;
+  itemClassName?: string;
   max?: number;
 }) {
   const arr = Array.isArray(children) ? children : [children];
@@ -115,7 +117,7 @@ export function Stagger({
         if (i >= max) return child;
         const style: CSSProperties = { ["--i" as never]: String(i) };
         return (
-          <div key={(child as { key?: string })?.key ?? i} style={style}>
+          <div key={(child as { key?: string })?.key ?? i} style={style} className={itemClassName}>
             {child}
           </div>
         );
