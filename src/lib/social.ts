@@ -232,8 +232,10 @@ export async function sendFriendRequest(meId: string, otherId: string): Promise<
     // recipient's poller will surface the request on next tick.
   }
 
+  emitFriendsUpdated();
   return { ok: true };
 }
+
 
 export async function acceptFriend(id: string): Promise<boolean> {
   // Read the row first so we know who the original requester was.
