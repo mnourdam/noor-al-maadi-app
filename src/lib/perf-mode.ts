@@ -25,25 +25,41 @@ export function applyPerfMode() {
     const isCapacitor = !!w.Capacitor?.isNativePlatform?.();
     const isNativeAndroid = isCapacitor && w.Capacitor?.getPlatform?.() === "android";
     const isAndroid = /Android/i.test(ua);
+    const isWebView = /; wv\)/.test(ua) || /Version\/[\d.]+ Chrome\/[\d.]+ Mobile/.test(ua);
     const smallScreen = window.matchMedia("(max-width: 480px)").matches;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const lowMem = typeof (navigator as any).deviceMemory === "number" && (navigator as any).deviceMemory <= 4;
-    const lowCpu = typeof navigator.hardwareConcurrency === "number" && navigator.hardwareConcurrency <= 4;
+    const deviceMemory = typeof (navigator as any).deviceMemory === "number"
+      ? (navigator as any).deviceMemory : null;
+    const hwConcurrency = typeof navigator.hardwareConcurrency === "number"
+      ? navigator.hardwareConcurrency : null;
+    const lowMem = deviceMemory != null && deviceMemory <= 4;
+    const lowCpu = hwConcurrency != null && hwConcurrency <= 4;
 
+    // Any Android device (native or browser) gets perf-lite by default —
+    // Android WebView is the platform that suffers most from filter:blur and
+    // backdrop-filter compositing. Desktops keep the full visual identity.
     const lite =
       isCapacitor ||
+      isAndroid ||
+      isWebView ||
       reduceMotion ||
-      (isAndroid && (smallScreen || lowMem || lowCpu)) ||
       (smallScreen && (lowMem || lowCpu));
 
     html.classList.toggle("perf-lite", !!lite);
     if (reduceMotion) html.classList.add("perf-no-motion");
     if (isNativeAndroid) {
-      // Safe perf hints only — the degraded "android-ultra-stable" class is
-      // applied exclusively when the diagnostic flag is enabled, so the
-      // production APK keeps the full Irth visual identity.
       html.classList.add("is-android", "is-capacitor", "perf-lite", "perf-no-motion");
+    } else if (isAndroid) {
+      html.classList.add("is-android");
     }
+
+    try {
+      // eslint-disable-next-line no-console
+      console.info("[perf-mode]", {
+        lite, isCapacitor, isNativeAndroid, isAndroid, isWebView,
+        smallScreen, reduceMotion, deviceMemory, hwConcurrency,
+      });
+    } catch { /* noop */ }
   } catch {
     // never throw from a perf hint
   }
