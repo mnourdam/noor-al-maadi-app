@@ -658,9 +658,9 @@ function HomeFull() {
           <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
           {stats.recent.length > 0 ? (
             <div className="relative">
-              <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pe-12 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-end:3rem]">
+              <_Stagger className="-mx-5 flex gap-3 overflow-x-auto px-5 pe-12 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-end:3rem]" max={8}>
                 {stats.recent.map((r) => <RecentCard key={r.key} item={r} />)}
-              </div>
+              </_Stagger>
               {stats.recent.length > 2 && (
                 <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-l from-background to-transparent" />
               )}
