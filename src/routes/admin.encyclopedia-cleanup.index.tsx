@@ -999,7 +999,14 @@ function CleanupWorkshop() {
           </div>
         )}
 
-        <Toolbar q={q} setQ={setQ} filter={filter} setFilter={setFilter} needsCleanupCount={needsCleanupCount} />
+        <Toolbar
+          q={q} setQ={setQ}
+          filter={filter} setFilter={setFilter}
+          pipeline={pipeline} setPipeline={setPipeline}
+          needsCleanupCount={needsCleanupCount}
+          needsContentCount={needsContentCount}
+          completeCount={completeCount}
+        />
         <MissingContentStrip rows={rows} atlasLinks={atlasLinks} campaignSlugs={campaignSlugs} dupIds={dupIds} onFilter={setFilter} />
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
