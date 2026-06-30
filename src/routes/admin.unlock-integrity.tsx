@@ -375,6 +375,11 @@ function StatusChip({ status }: { status: Status }) {
       <AlertTriangle className="size-3" /> نوع غير مطابق
     </span>
   );
+  if (status === "respected") return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-200">
+      <ShieldCheck className="size-3" /> مخفي عمداً
+    </span>
+  );
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-200">
       <AlertTriangle className="size-3" /> مفقود
