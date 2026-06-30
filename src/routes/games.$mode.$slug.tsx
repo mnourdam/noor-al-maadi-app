@@ -555,7 +555,8 @@ function GamePlayPage() {
             </div>
           </section>
         )}
-      </div>
+      </ReadingScale>
+
 
       <ExitConfirmDialog
         open={exitOpen}
