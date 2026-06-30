@@ -108,6 +108,56 @@ function rowNeedsCleanup(
 }
 
 // ------------------------------------------------------------
+// Pipeline stage predicates — drive the three first-class chips:
+//   needs-cleanup → needs-content → complete.
+//
+// A row is "final canonical" when it is published and not pointing
+// elsewhere: enabled, not archived, not hidden duplicate, no
+// metadata.canonical_id redirect. These are the only rows that can
+// move through the content pipeline.
+//
+// "Real content" requires more than a title + short blurb. We accept
+// EITHER: a meaningful summary (>= 80 chars) AND a body with sections,
+// OR a substantial body payload (>= 400 chars of extracted text).
+// Placeholder/stub markers in metadata force a "needs content" verdict
+// regardless of length.
+// ------------------------------------------------------------
+function isRedirected(r: { metadata: any }): boolean {
+  const m: any = r.metadata || {};
+  return typeof m.canonical_id === "string" && m.canonical_id.length > 0;
+}
+
+function isArchivedOrHidden(r: { enabled: boolean; metadata: any }): boolean {
+  const m: any = r.metadata || {};
+  if (r.enabled === false) return true;
+  if (m.archived === true) return true;
+  if (m.hidden_duplicate === true) return true;
+  return false;
+}
+
+function isFinalCanonical(r: EntityRow): boolean {
+  return !isArchivedOrHidden(r) && !isRedirected(r);
+}
+
+function hasRealContent(r: EntityRow): boolean {
+  const m: any = r.metadata || {};
+  if (m.placeholder === true || m.stub === true || m.auto_generated === true) return false;
+  const summaryLen = (r.summary ?? "").trim().length;
+  const bodyLen = bodyText(r.body).length;
+  if (hasSections(r.body) && summaryLen >= 80) return true;
+  if (bodyLen >= 400) return true;
+  return false;
+}
+
+function needsContent(r: EntityRow): boolean {
+  return isFinalCanonical(r) && !hasRealContent(r);
+}
+
+function isComplete(r: EntityRow): boolean {
+  return isFinalCanonical(r) && hasRealContent(r);
+}
+
+// ------------------------------------------------------------
 // Helpers
 // ------------------------------------------------------------
 function bodyText(body: any): string {
