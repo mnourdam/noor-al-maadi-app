@@ -89,7 +89,7 @@ export function CommunityHubSection() {
       </header>
 
       {/* Pending request highlight */}
-      {incoming.length > 0 && (
+      {badgeCount > 0 && (
         <Link
           to="/friends"
           search={{ tab: "requests" }}
@@ -97,11 +97,12 @@ export function CommunityHubSection() {
         >
           <BellRing className="size-4 text-amber-200" />
           <span className="text-[13px] font-bold">
-            {incoming.length === 1 ? "لديك طلب صداقة جديد" : `لديك ${incoming.length} طلبات صداقة بانتظار الرد`}
+            {badgeCount === 1 ? "لديك طلب صداقة جديد" : `لديك ${badgeCount} طلبات صداقة بانتظار الرد`}
           </span>
           <ChevronLeft className="mr-auto size-4 opacity-70" />
         </Link>
       )}
+
 
       {/* Stat chips */}
       <div className="relative mt-4 grid grid-cols-3 gap-2">
