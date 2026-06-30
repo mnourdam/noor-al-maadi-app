@@ -433,7 +433,7 @@ function CleanupWorkshop() {
       if (aliases.some((a) => normalizeArabicName(a).includes(nNorm))) return true;
       return false;
     }).slice(0, 400);
-  }, [rows, filter, q, dupIds, atlasLinks, campaignSlugs]);
+  }, [rows, filter, q, dupIds, liveDupIds, atlasLinks, campaignSlugs]);
 
   const selected = useMemo(
     () => rows.find((r) => r.id === selectedId) ?? null,
