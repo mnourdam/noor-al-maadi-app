@@ -444,6 +444,18 @@ function CleanupWorkshop() {
     return n;
   }, [rows, liveDupIds, dupIds, atlasLinks, campaignSlugs]);
 
+  // Pipeline-stage counts — drive the "needs content" and "complete"
+  // first-class chips. Both operate only on final canonical entities,
+  // so archived / hidden / redirected rows never leak in.
+  const needsContentCount = useMemo(
+    () => rows.reduce((n, r) => (needsContent(r) ? n + 1 : n), 0),
+    [rows],
+  );
+  const completeCount = useMemo(
+    () => rows.reduce((n, r) => (isComplete(r) ? n + 1 : n), 0),
+    [rows],
+  );
+
   // ------------------------------------------------------------
   // Filter + search
   // ------------------------------------------------------------
@@ -455,11 +467,22 @@ function CleanupWorkshop() {
       const quality = classifyQuality(r, dupIds.has(r.id), isOrphan);
       const archived = r.metadata?.archived === true || r.enabled === false;
 
-      // Filter chip
+      // Pipeline filter (ANDs with type/quality chips below).
+      if (pipeline === "needs-cleanup" && !rowNeedsCleanup(r, liveDupIds, quality)) return false;
+      if (pipeline === "needs-content" && !needsContent(r)) return false;
+      if (pipeline === "complete" && !isComplete(r)) return false;
+
+      // Type / quality / linkage chips
       switch (filter) {
         case "all": break;
         case "needs-cleanup":
           if (!rowNeedsCleanup(r, liveDupIds, quality)) return false;
+          break;
+        case "needs-content":
+          if (!needsContent(r)) return false;
+          break;
+        case "complete":
+          if (!isComplete(r)) return false;
           break;
         case "empty": if (quality !== "empty") return false; break;
         case "weak":  if (quality !== "weak") return false; break;
@@ -483,7 +506,7 @@ function CleanupWorkshop() {
       if (aliases.some((a) => normalizeArabicName(a).includes(nNorm))) return true;
       return false;
     }).slice(0, 400);
-  }, [rows, filter, q, dupIds, liveDupIds, atlasLinks, campaignSlugs]);
+  }, [rows, filter, pipeline, q, dupIds, liveDupIds, atlasLinks, campaignSlugs]);
 
   const selected = useMemo(
     () => rows.find((r) => r.id === selectedId) ?? null,
