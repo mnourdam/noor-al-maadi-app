@@ -349,7 +349,10 @@ function ImportedChapterPlayer() {
                   </div>
                 )}
 
-                <div className={`mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted ? "pointer-events-none opacity-60" : ""}`}>
+                <div
+                  key={activity ? activity.id : "none"}
+                  className={`motion-page mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted ? "pointer-events-none opacity-60" : ""}`}
+                >
                   {activity ? (
                     <ActivityRenderer
                       key={`${activity.id}:${wrongAttempts}`}
@@ -362,7 +365,7 @@ function ImportedChapterPlayer() {
 
                 {/* PR2: wrong-answer banner — no Next button, must retry. */}
                 {currentAck !== "correct" && wrongAttempts === 1 && !heartsDepleted && (
-                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
+                  <div className="motion-toast mt-3 flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
                     <XIcon className="size-3.5" />
                     <span className="flex-1">إجابة غير صحيحة. خسرتَ قلبًا — حاول مرة أخرى.</span>
                   </div>
@@ -372,7 +375,7 @@ function ImportedChapterPlayer() {
                 {currentAck === "correct" && (
                   <button
                     onClick={acknowledgeAndAdvance}
-                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+                    className="motion-tap motion-reveal is-in mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
                   >
                     <Check className="size-4" /> التالي
                     <ArrowLeft className="size-4" />
