@@ -152,11 +152,17 @@ export function CommunityHubSection() {
       <div className="relative mt-4 grid grid-cols-3 gap-2">
         <Link
           to="/friends"
-          search={{ tab: "friends" }}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-gold py-2.5 text-[12px] font-bold text-primary-foreground shadow-gold"
+          search={{ tab: badgeCount > 0 ? "requests" : "friends" }}
+          className="relative inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-gold py-2.5 text-[12px] font-bold text-primary-foreground shadow-gold"
         >
           <Users className="size-4" /> عرض الأصدقاء
+          {badgeCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white ring-2 ring-[#0b1024]">
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </span>
+          )}
         </Link>
+
         <Link
           to="/friends"
           search={{ tab: "leaderboard" }}
