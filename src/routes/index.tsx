@@ -61,6 +61,23 @@ function HomeFull() {
   const { selected: todayEvent } = useTodayInHistoryEvent();
   const stats = useRealCollectionStats();
   const [unread, setUnread] = useState(0);
+
+  // Perf-lite detection — drives reduced visual layers (no embers, single
+  // hero image, no Ken-Burns) so low-end Android WebView renders Home fast.
+  const perfLite = typeof document !== "undefined"
+    && document.documentElement.classList.contains("perf-lite");
+
+  // Debug instrumentation — helps QA confirm Home cold-start on real devices.
+  useEffect(() => {
+    const t = performance.now();
+    // eslint-disable-next-line no-console
+    console.info("[home] mounted", { perfLite, t: Math.round(t) });
+    return () => {
+      // eslint-disable-next-line no-console
+      console.info("[home] unmounted", { dt: Math.round(performance.now() - t) });
+    };
+  }, [perfLite]);
+
   useEffect(() => {
     let serverAuthoritative = false;
     let cancelled = false;
@@ -589,25 +606,38 @@ function HomeFull() {
           onTouchCancel={onTouchEnd}
           className="relative h-[78vh] min-h-[560px] w-full overflow-hidden touch-pan-y select-none"
         >
-          {slides.map((s, i) => (
-            <img
-              key={`${s.kind}-${i}`}
-              src={s.bg}
-              alt=""
-              loading={i === 0 ? "eager" : "lazy"}
-              decoding="async"
-              className={`animate-ken-burns absolute inset-0 size-full object-cover transition-opacity duration-[1200ms] ease-in-out ${i === slideIdx ? "opacity-100" : "opacity-0"}`}
-            />
-          ))}
+          {slides.map((s, i) => {
+            // Perf-lite: render ONLY the visible slide image. Stacking 3
+            // full-screen <img> elements with opacity-0 still forces decode
+            // + composite layers on Android WebView and is a major cause of
+            // slow Home cold-start on low-end devices.
+            if (perfLite && i !== slideIdx) return null;
+            return (
+              <img
+                key={`${s.kind}-${i}`}
+                src={s.bg}
+                alt=""
+                loading={i === 0 ? "eager" : "lazy"}
+                decoding="async"
+                fetchPriority={i === slideIdx ? "high" : "low"}
+                onLoad={i === slideIdx ? (() => {
+                  // eslint-disable-next-line no-console
+                  try { console.info("[home] hero loaded", { i, t: Math.round(performance.now()) }); } catch { /* noop */ }
+                }) : undefined}
+                className={`${perfLite ? "" : "animate-ken-burns"} absolute inset-0 size-full object-cover transition-opacity duration-[1200ms] ease-in-out ${i === slideIdx ? "opacity-100" : "opacity-0"}`}
+              />
+            );
+          })}
           <div className="ink-overlay absolute inset-0" />
-          <div className="arabesque-layer" />
-          {Array.from({ length: 10 }).map((_, i) => (
+          {!perfLite && <div className="arabesque-layer" />}
+          {!perfLite && Array.from({ length: 10 }).map((_, i) => (
             <span key={i} className="ember" style={{
               left: `${(i * 73) % 100}%`,
               animationDelay: `${(i * 0.7) % 7}s`,
               animationDuration: `${6 + ((i * 1.3) % 5)}s`,
             }} />
           ))}
+
 
           {/* Top greeting strip */}
           <div className="relative z-10 flex items-start justify-between px-5 pt-8">

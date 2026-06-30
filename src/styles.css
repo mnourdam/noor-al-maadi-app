@@ -570,6 +570,18 @@ html.perf-lite [class*="backdrop-blur"] {
   background: color-mix(in oklab, var(--color-surface) 92%, transparent);
 }
 
+/* Tailwind `blur-sm/md/lg/xl/2xl/3xl` utilities apply `filter: blur(N)` to
+   the element itself. On Android WebView each one allocates an offscreen
+   layer and re-rasterises every frame — Home's hero alone stacks 4-6 of
+   these "glow orb" divs, which is the dominant cause of the "stuck blurry
+   30% visible" symptom on low-end devices. Strip the blur but keep a soft
+   gold tint so the accent still reads. */
+html.perf-lite [class*=" blur-"],
+html.perf-lite [class^="blur-"] {
+  filter: none !important;
+  opacity: 0.35 !important;
+}
+
 /* Soften repeated card shadows */
 html.perf-lite .shadow-elegant,
 html.perf-lite .shadow-gold,
