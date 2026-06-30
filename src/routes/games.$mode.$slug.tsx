@@ -444,7 +444,7 @@ function GamePlayPage() {
 
         {/* Stage */}
         {stage && !failed ? (
-          <div key={`${stageIdx}-${retryNonce}`} className="irth-reveal">
+          <div key={`${stageIdx}-${retryNonce}`} className="motion-page irth-reveal">
             <GameStageRenderer
               mode={game.mode}
               stage={stage}
