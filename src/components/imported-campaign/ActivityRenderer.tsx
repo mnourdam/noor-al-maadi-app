@@ -8,11 +8,29 @@
 // ============================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, X, HelpCircle, Lightbulb } from "lucide-react";
+import { Check, X, HelpCircle, Lightbulb, GripVertical } from "lucide-react";
 import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import type { CampaignActivity } from "@/types/campaign";
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+  useSortable,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 
 export interface ResolveMeta {
@@ -297,25 +315,48 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 // ---------- Arrange Events ----------
 function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const correctOrder = activity.correctOrder ?? activity.options ?? [];
-  const [order, setOrder] = useState<string[]>(() => shuffle(correctOrder));
+  // Stable item ids so dnd-kit can track items even when labels repeat.
+  const items = useMemo(
+    () => correctOrder.map((label, i) => ({ id: `evt-${i}`, label })),
+    [correctOrder],
+  );
+  const [order, setOrder] = useState<string[]>(() => shuffle(items.map((it) => it.id)));
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   if (!correctOrder.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
+
+  const labelById = (id: string) => items.find((it) => it.id === id)?.label ?? "";
 
   const move = (idx: number, dir: -1 | 1) => {
     if (resolved) return;
-    const next = [...order];
     const j = idx + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[idx], next[j]] = [next[j], next[idx]];
-    setOrder(next);
+    if (j < 0 || j >= order.length) return;
+    setOrder(arrayMove(order, idx, j));
+    setFeedback(null);
+  };
+
+  const onDragEnd = (e: DragEndEvent) => {
+    if (resolved) return;
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const from = order.indexOf(String(active.id));
+    const to = order.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    setOrder(arrayMove(order, from, to));
     setFeedback(null);
   };
 
   const submit = () => {
     if (resolved) return;
-    const isCorrect = order.every((v, i) => v === correctOrder[i]);
+    const current = order.map(labelById);
+    const isCorrect = current.every((v, i) => v === correctOrder[i]);
     if (isCorrect) {
       setResolved(true);
       setFeedback("ok");
@@ -330,16 +371,27 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
     <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
-      <ol className="space-y-2">
-        {order.map((item, i) => (
-          <li key={item + i} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2 py-2 text-[12px]">
-            <span className="grid size-6 place-items-center rounded-md bg-gold/15 text-[11px] text-gold">{i + 1}</span>
-            <span className="flex-1">{item}</span>
-            <button disabled={resolved} onClick={() => move(i, -1)} className="rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] disabled:opacity-30">▲</button>
-            <button disabled={resolved} onClick={() => move(i, +1)} className="rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] disabled:opacity-30">▼</button>
-          </li>
-        ))}
-      </ol>
+      <p className="mb-2 text-[11px] text-white/55">
+        اسحب البطاقة بإصبعك (أو امسكها للحظة) ورتّب الأحداث.
+      </p>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={order} strategy={verticalListSortingStrategy}>
+          <ol className="space-y-2">
+            {order.map((id, i) => (
+              <SortableArrangeRow
+                key={id}
+                id={id}
+                index={i}
+                label={labelById(id)}
+                disabled={resolved}
+                onMove={(dir) => move(i, dir)}
+                canMoveUp={i > 0}
+                canMoveDown={i < order.length - 1}
+              />
+            ))}
+          </ol>
+        </SortableContext>
+      </DndContext>
       <HintRow hint={activity.hint} />
       {!resolved && (
         <button onClick={submit} className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold">
@@ -355,6 +407,62 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
         />
       )}
     </div>
+  );
+}
+
+function SortableArrangeRow({
+  id, index, label, disabled, onMove, canMoveUp, canMoveDown,
+}: {
+  id: string;
+  index: number;
+  label: string;
+  disabled: boolean;
+  onMove: (dir: -1 | 1) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 30 : undefined,
+    boxShadow: isDragging ? "0 10px 30px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,175,55,0.5)" : undefined,
+  };
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 rounded-xl border bg-black/30 px-2 py-2 text-[12px] ${
+        isDragging ? "border-gold/60" : "border-white/10"
+      }`}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        disabled={disabled}
+        aria-label="اسحب لإعادة الترتيب"
+        className="grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded-md border border-gold/30 bg-black/40 text-gold/80 disabled:opacity-40"
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <span className="grid size-6 shrink-0 place-items-center rounded-md bg-gold/15 text-[11px] text-gold">{index + 1}</span>
+      <span className="flex-1 min-w-0">{label}</span>
+      <button
+        type="button"
+        disabled={disabled || !canMoveUp}
+        onClick={() => onMove(-1)}
+        aria-label="نقل لأعلى"
+        className="rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] disabled:opacity-30"
+      >▲</button>
+      <button
+        type="button"
+        disabled={disabled || !canMoveDown}
+        onClick={() => onMove(+1)}
+        aria-label="نقل لأسفل"
+        className="rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] disabled:opacity-30"
+      >▼</button>
+    </li>
   );
 }
 
