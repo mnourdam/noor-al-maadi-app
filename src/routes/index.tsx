@@ -30,6 +30,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
 import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
+import { scheduleIdle, decodeImage, perfMark } from "@/lib/idle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
