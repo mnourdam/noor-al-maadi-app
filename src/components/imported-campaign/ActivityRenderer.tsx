@@ -342,7 +342,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
       </ol>
       <HintRow hint={activity.hint} />
       {!resolved && (
-        <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold">
+        <button onClick={submit} className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold">
           تحقق من الترتيب
         </button>
       )}
@@ -448,7 +448,7 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
         <button
           onClick={submit}
           disabled={Object.keys(mapping).length < pairs.length}
-          className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50"
+          className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50"
         >
           تحقق من المطابقة
         </button>
@@ -528,7 +528,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 
       <HintRow hint={activity.hint} />
       {!resolved && (
-        <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
+        <button onClick={submit} className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
           تحقق
         </button>
       )}
@@ -597,7 +597,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
       )}
 
       {!resolved && (
-        <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
+        <button onClick={submit} className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
           سجّل تأمّلك
         </button>
       )}
@@ -622,7 +622,7 @@ function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
         نشاطٌ تأمّلي — لا توجد إجابة آلية. يُحتسب عند الإكمال.
       </p>
       {!resolved && (
-        <button onClick={() => { setResolved(true); onResolve(true); }} className="mt-3 w-full rounded-xl border border-gold/40 bg-gold/10 py-2 text-xs font-bold text-gold">
+        <button onClick={() => { setResolved(true); onResolve(true); }} className="motion-tap mt-3 w-full rounded-xl border border-gold/40 bg-gold/10 py-2 text-xs font-bold text-gold">
           تم — وضع علامة كمكتمل
         </button>
       )}
