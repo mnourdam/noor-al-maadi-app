@@ -38,7 +38,8 @@ export interface PublicProfile {
 // view (security_invoker=on) — never read from the base `profiles` table
 // for non-owner queries.
 const PUBLIC_COLS =
-  "id, username, display_name, bio, title, level, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id";
+  "id, username, display_name, bio, title, level, xp, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id";
+
 
 const PUBLIC_VIEW = "public_profiles";
 
