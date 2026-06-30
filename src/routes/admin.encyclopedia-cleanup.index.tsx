@@ -167,9 +167,13 @@ function hasRealBody(body: any): boolean {
 
 function hasRealContent(r: EntityRow): boolean {
   const m: any = r.metadata || {};
+  // Explicit moderator overrides win over heuristics.
+  if (m.content_verified === true) return true;
+  if (m.needs_content === true) return false;
   if (m.placeholder === true || m.stub === true || m.auto_generated === true) return false;
   return hasRealBody(r.body);
 }
+
 
 function needsContent(r: EntityRow): boolean {
   return isFinalCanonical(r) && !hasRealContent(r);
