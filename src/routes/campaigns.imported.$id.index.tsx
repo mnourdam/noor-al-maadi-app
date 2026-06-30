@@ -151,7 +151,7 @@ function ImportedCampaignOverview() {
                   <Link
                     to="/campaigns/imported/$id/chapter/$chapter"
                     params={{ id: campaign.id, chapter: resumeChId }}
-                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-gold px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-gold"
+                    className="motion-tap mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-gold px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-gold"
                   >
                     <Play className="size-4 fill-current" />
                     {hasStarted ? "متابعة" : "ابدأ الرحلة"}
