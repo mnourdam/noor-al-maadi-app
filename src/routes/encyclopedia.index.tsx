@@ -224,16 +224,18 @@ function EncyclopediaHubFull() {
   const suggestions = useMemo(() => {
     if (!q) return [];
     return all
+      .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
       .filter((e) => {
         const hay = `${e.title} ${e.subtitle ?? ""} ${e.slug}`.toLowerCase();
         return hay.includes(q);
       })
       .slice(0, 6);
-  }, [all, q]);
+  }, [all, q, typeFilter]);
 
   const results = useMemo(() => {
-    if (!q && !era) return [];
+    if (!q && !era && typeFilter === "all") return [];
     return all
+      .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
       .filter((e) => !era || (toCanonicalEra(metaEra(e)) ?? metaEra(e)) === era)
       .filter((e) => {
         if (!q) return true;
@@ -241,7 +243,7 @@ function EncyclopediaHubFull() {
         return hay.includes(q);
       })
       .slice(0, 60);
-  }, [all, q, era]);
+  }, [all, q, era, typeFilter]);
 
   const total = all.length;
   const submitRecent = (value: string) => {
