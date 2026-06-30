@@ -22,6 +22,7 @@ import { getActivePosition } from "@/lib/campaignLedger";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
+import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/")({
   head: () => ({ meta: [{ title: "حملة تاريخية — إرث" }] }),
@@ -133,7 +134,7 @@ function ImportedCampaignOverview() {
                       <span className="text-white/50"> / {chapters.length.toLocaleString("en-US")} فصل</span>
                     </p>
                   </div>
-                  <p className="font-display text-2xl font-extrabold text-gold leading-none">{percent}<span className="text-sm">٪</span></p>
+                  <p className="font-display text-2xl font-extrabold text-gold leading-none"><AnimatedNumber value={percent} /><span className="text-sm">٪</span></p>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
                   <div className="h-full bg-gradient-gold transition-all duration-700" style={{ width: `${percent}%` }} />
@@ -150,7 +151,7 @@ function ImportedCampaignOverview() {
                   <Link
                     to="/campaigns/imported/$id/chapter/$chapter"
                     params={{ id: campaign.id, chapter: resumeChId }}
-                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-gold px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-gold"
+                    className="motion-tap mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-gold px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-gold"
                   >
                     <Play className="size-4 fill-current" />
                     {hasStarted ? "متابعة" : "ابدأ الرحلة"}
@@ -199,7 +200,7 @@ function ImportedCampaignOverview() {
               لا توجد فصول في هذه الحملة بعد.
             </div>
           ) : (
-            <div className="space-y-4">
+            <Stagger className="space-y-4" max={12}>
               {chapters.map((ch, i) => {
                 const chProgress = progress?.chapters[ch.id];
                 const done = Boolean(chProgress?.completed);
@@ -289,7 +290,7 @@ function ImportedCampaignOverview() {
                   </div>
                 );
               })}
-            </div>
+            </Stagger>
           )}
 
           {/* COMPLETION STATE — premium */}

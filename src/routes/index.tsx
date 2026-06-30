@@ -658,9 +658,9 @@ function HomeFull() {
           <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
           {stats.recent.length > 0 ? (
             <div className="relative">
-              <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pe-12 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-end:3rem]">
+              <_Stagger className="-mx-5 flex gap-3 overflow-x-auto px-5 pe-12 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-end:3rem]" max={8}>
                 {stats.recent.map((r) => <RecentCard key={r.key} item={r} />)}
-              </div>
+              </_Stagger>
               {stats.recent.length > 2 && (
                 <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-l from-background to-transparent" />
               )}
@@ -691,12 +691,12 @@ function HomeFull() {
         <Reveal>
           <section className="mt-12 px-5">
             <SectionHeader icon={<Sunrise className="size-3.5" />} eyebrow="آخر نشاطاتك" title="عودة إلى رحلتك" />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <_Stagger className="grid grid-cols-1 gap-2 sm:grid-cols-2" max={8}>
               {recentActivity.map((a) => (
                 <Link
                   key={a.key}
                   to={a.to as "/"}
-                  className="group flex items-center gap-3 rounded-2xl border border-gold/20 bg-surface/60 p-3 transition hover:border-gold/50"
+                  className="motion-tap group flex items-center gap-3 rounded-2xl border border-gold/20 bg-surface/60 p-3 transition hover:border-gold/50"
                 >
                   <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">{a.icon}</div>
                   <div className="min-w-0 flex-1">
@@ -706,7 +706,7 @@ function HomeFull() {
                   <ChevronLeft className="size-4 shrink-0 text-gold/50 group-hover:text-gold" />
                 </Link>
               ))}
-            </div>
+            </_Stagger>
           </section>
         </Reveal>
       )}
@@ -839,36 +839,13 @@ function SectionHeader({ icon, eyebrow, title }: { icon: React.ReactNode; eyebro
   );
 }
 
-/** Lightweight intersection-observer fade-in wrapper. Hidden by default; once
- *  in view it stays visible. One observer per Reveal — cheap on mobile. */
+/** Re-export of the shared motion Reveal so existing call sites stay intact. */
+import { Reveal as _Reveal, Stagger as _Stagger } from "@/components/motion/MotionPrimitives";
 function Reveal({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === "undefined") { setShown(true); return; }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) { setShown(true); io.disconnect(); break; }
-        }
-      },
-      { rootMargin: "0px 0px -10% 0px", threshold: 0.05 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return (
-    <div
-      ref={ref}
-      className={shown ? "animate-fade-in" : ""}
-      style={shown ? undefined : { opacity: 0, transform: "translateY(10px)" }}
-    >
-      {children}
-    </div>
-  );
+  return <_Reveal>{children}</_Reveal>;
 }
+// Re-export Stagger so it can be imported elsewhere if needed.
+export { _Stagger as HomeStagger };
 
 function Stat({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string | number; tone: "gold" | "rose" | "emerald" | "indigo" | "ruby" }) {
   const toneClass: Record<string, string> = {

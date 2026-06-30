@@ -12,6 +12,7 @@ import {
 import { MODE_LABELS_AR, type GameMode } from "@/lib/games/types";
 import { extractMuseumUnlocks } from "@/lib/games/museumUnlocks";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { Reveal, Stagger } from "@/components/motion/MotionPrimitives";
 
 const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   crossword: Feather,
@@ -57,11 +58,11 @@ function ChallengeCard({
   }).length;
   const isPrimary = variant === "primary";
 
-  const baseClass = `group relative block overflow-hidden rounded-3xl border shadow-elegant transition active:scale-[0.99] ${
+  const baseClass = `motion-tap group relative block overflow-hidden rounded-3xl border shadow-elegant transition active:scale-[0.99] ${
     isPrimary ? "p-5" : "p-4"
   } ${
     completed
-      ? "border-emerald-400/40 bg-gradient-to-br from-[#0a1a14] via-[#0c2018] to-[#08120e]"
+      ? "border-emerald-400/40 bg-gradient-to-br from-[#0a1a14] via-[#0c2018] to-[#08120e] motion-unlock-glow"
       : "border-gold/30 bg-gradient-to-br from-[#0b1428] via-[#0d1a33] to-[#0a1024]"
   }`;
 
@@ -228,20 +229,22 @@ export function DailyChallengesSection() {
       </div>
 
       {allCompleted ? (
-        <div className="parchment-dark relative overflow-hidden rounded-3xl border border-emerald-400/30 p-5 text-center shadow-elegant">
-          <div className="arabesque-layer opacity-50" />
-          <div className="relative">
-            <div className="mx-auto grid size-12 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
-              <Trophy className="size-6 text-emerald-300" strokeWidth={1.5} />
+        <Reveal>
+          <div className="parchment-dark relative overflow-hidden rounded-3xl border border-emerald-400/30 p-5 text-center shadow-elegant motion-unlock-glow">
+            <div className="arabesque-layer opacity-50" />
+            <div className="relative">
+              <div className="mx-auto grid size-12 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
+                <Trophy className="size-6 text-emerald-300" strokeWidth={1.5} />
+              </div>
+              <h3 className="font-display mt-3 text-base font-bold text-emerald-50">أحسنت!</h3>
+              <p className="mt-1 text-[12px] leading-6 text-white/70">
+                لقد أنهيت تحديات اليوم.
+                <br />
+                عد غدًا لاكتشاف تحديين جديدين.
+              </p>
             </div>
-            <h3 className="font-display mt-3 text-base font-bold text-emerald-50">أحسنت!</h3>
-            <p className="mt-1 text-[12px] leading-6 text-white/70">
-              لقد أنهيت تحديات اليوم.
-              <br />
-              عد غدًا لاكتشاف تحديين جديدين.
-            </p>
           </div>
-        </div>
+        </Reveal>
       ) : picks.length === 1 ? (
         <ChallengeCard
           game={picks[0]}
@@ -249,7 +252,7 @@ export function DailyChallengesSection() {
           completed={completedIds.has(picks[0].id)}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
+        <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-5" max={2}>
           <div className="sm:col-span-3">
             <ChallengeCard
               game={picks[0]}
@@ -264,7 +267,7 @@ export function DailyChallengesSection() {
               completed={completedIds.has(picks[1].id)}
             />
           </div>
-        </div>
+        </Stagger>
       )}
     </section>
   );

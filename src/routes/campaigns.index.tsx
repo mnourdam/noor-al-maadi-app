@@ -11,6 +11,7 @@ import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
 import type { CampaignDivider } from "@/lib/campaignDividers";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { Reveal, Stagger } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/")({
   head: () => ({ meta: [{ title: "الحملات التاريخية" }] }),
@@ -51,14 +52,18 @@ function CampaignsHubFull() {
           <div className="space-y-8">
             {sections.map((section, i) => (
               <section key={section.divider?.id ?? `uncat-${i}`} className="space-y-3">
-                {section.divider ? (
-                  <EraDivider d={section.divider} count={section.campaigns.length} />
-                ) : (
-                  <UncategorizedHeader count={section.campaigns.length} />
-                )}
-                {section.campaigns.map((c) => (
-                  <ImportedCampaignCard key={c.id} c={c} />
-                ))}
+                <Reveal>
+                  {section.divider ? (
+                    <EraDivider d={section.divider} count={section.campaigns.length} />
+                  ) : (
+                    <UncategorizedHeader count={section.campaigns.length} />
+                  )}
+                </Reveal>
+                <Stagger className="space-y-3" max={12}>
+                  {section.campaigns.map((c) => (
+                    <ImportedCampaignCard key={c.id} c={c} />
+                  ))}
+                </Stagger>
                 {section.campaigns.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-gold/15 bg-surface/30 p-4 text-center text-xs text-muted-foreground">
                     لا توجد حملات في هذا العصر بعد.
@@ -160,7 +165,7 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
     <Link
       to="/campaigns/imported/$id"
       params={{ id: c.id }}
-      className={`shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
+      className={`motion-tap shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
         isComplete
           ? "border-emerald-400/60 ring-1 ring-emerald-400/30 shadow-[0_18px_50px_-25px_rgba(16,185,129,0.55)]"
           : "border-gold/40 hover:border-gold/60"

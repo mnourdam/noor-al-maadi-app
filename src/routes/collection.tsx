@@ -143,17 +143,18 @@ function useUserCollectionByType() {
 
 
 // ───── Reusable card ───────────────────────────────────────────
-function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick }: {
+function Card({ unlocked, rarity, icon, title, subtitle, footer, onClick, unlockedAt }: {
   unlocked: boolean; rarity: Rarity; icon: React.ReactNode; title: string;
-  subtitle: string; footer?: string; onClick: () => void;
+  subtitle: string; footer?: string; onClick: () => void; unlockedAt?: string | null;
 }) {
   const meta = RARITY_META[rarity];
+  const isFresh = unlocked && !!unlockedAt && (Date.now() - new Date(unlockedAt).getTime() < 24 * 60 * 60 * 1000);
   return (
     <button
       onClick={onClick}
-      className={`group relative w-full overflow-hidden rounded-2xl border text-right transition-all duration-300 hover:-translate-y-0.5
+      className={`motion-tap group relative w-full overflow-hidden rounded-2xl border text-right transition-all duration-300 hover:-translate-y-0.5
         ${unlocked
-          ? `${rarity === "legendary" ? "border-gold/40" : rarity === "epic" ? "border-fuchsia-400/30" : rarity === "rare" ? "border-sky-400/30" : "border-white/10"} bg-surface ring-1 ${meta.ring} ${meta.glow}`
+          ? `${rarity === "legendary" ? "border-gold/40" : rarity === "epic" ? "border-fuchsia-400/30" : rarity === "rare" ? "border-sky-400/30" : "border-white/10"} bg-surface ring-1 ${meta.ring} ${meta.glow} ${isFresh ? "motion-unlock-glow" : ""}`
           : "border-white/10 bg-surface/70 opacity-75"}`}
     >
       {unlocked && (
@@ -669,6 +670,7 @@ function CollectionPage() {
             {currentEntities.map(({ e, open }) => {
               const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
               const GlyphIcon = current.glyphIcon;
+              const ua = userUnlockedAt.get(`${current.type}:${e.slug}`) ?? null;
               return (
                 <Card
                   key={`enc-${e.id ?? e.slug}`}
@@ -679,6 +681,7 @@ function CollectionPage() {
                   subtitle={e.subtitle ?? current.label}
                   footer={e.summary?.slice(0, 80)}
                   onClick={() => openEntityReveal(e, open)}
+                  unlockedAt={ua}
                 />
               );
             })}
