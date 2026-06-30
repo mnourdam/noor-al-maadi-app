@@ -1093,6 +1093,8 @@ function Toolbar({ q, setQ, filter, setFilter, needsCleanupCount }: {
     { key: "duplicate", label: "مكررات" },
     { key: "archived", label: "مؤرشف" },
   ];
+  const queueChip = chips[0];
+  const restChips = chips.slice(1);
   return (
     <div className="space-y-3">
       <div className="relative">
@@ -1103,30 +1105,36 @@ function Toolbar({ q, setQ, filter, setFilter, needsCleanupCount }: {
           className="w-full rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-2 pe-10 text-sm text-slate-100 placeholder-slate-500 focus:border-amber-500/50 focus:outline-none"
         />
       </div>
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
         <Filter className="size-3.5 text-slate-500" />
-        {chips.map((c) => {
+        {/* Queue chip — first-class, visually distinct */}
+        <button
+          onClick={() => setFilter(queueChip.key)}
+          className={`inline-flex items-center gap-2 rounded-full border-2 px-3 py-1 text-xs font-semibold shadow-sm transition ${
+            filter === queueChip.key
+              ? "border-emerald-300 bg-emerald-500/25 text-emerald-50 shadow-emerald-500/30"
+              : "border-emerald-400/70 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20"
+          }`}
+        >
+          <span className="inline-block size-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]" />
+          <span>{queueChip.label}</span>
+          <span className={`inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
+            filter === queueChip.key ? "bg-emerald-950 text-emerald-50" : "bg-emerald-400/30 text-emerald-50"
+          }`}>
+            {queueChip.badge ?? 0}
+          </span>
+        </button>
+        <span className="mx-1 h-5 w-px bg-slate-700/60" aria-hidden />
+        {restChips.map((c) => {
           const isActive = filter === c.key;
-          const isQueue = c.key === "needs-cleanup";
           return (
             <button key={c.key} onClick={() => setFilter(c.key)}
               className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] transition ${
                 isActive
-                  ? isQueue
-                    ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100"
-                    : "border-amber-400/60 bg-amber-500/20 text-amber-100"
-                  : isQueue
-                    ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-200 hover:bg-emerald-500/10"
-                    : "border-slate-700/60 bg-slate-900/40 text-slate-300 hover:bg-slate-800/60"
+                  ? "border-amber-400/60 bg-amber-500/20 text-amber-100"
+                  : "border-slate-700/60 bg-slate-900/40 text-slate-300 hover:bg-slate-800/60"
               }`}>
               <span>{c.label}</span>
-              {typeof c.badge === "number" && (
-                <span className={`inline-flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums ${
-                  isActive ? "bg-emerald-950/60 text-emerald-50" : "bg-emerald-500/20 text-emerald-100"
-                }`}>
-                  {c.badge}
-                </span>
-              )}
             </button>
           );
         })}
@@ -1134,6 +1142,7 @@ function Toolbar({ q, setQ, filter, setFilter, needsCleanupCount }: {
     </div>
   );
 }
+
 
 
 // ------------------------------------------------------------
