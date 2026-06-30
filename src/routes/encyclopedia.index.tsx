@@ -417,7 +417,7 @@ function EncyclopediaHubFull() {
                 onValueChange={setQuery}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setTimeout(() => setFocused(false), 150)}
-                onEnter={() => submitRecent(query)}
+                onEnter={handleEnter}
                 androidEntryKey="encyclopedia.search"
                 autoComplete="off"
                 autoCorrect="off"
