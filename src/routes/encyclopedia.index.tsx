@@ -138,6 +138,33 @@ function pushRecent(key: string, value: string) {
     window.localStorage.setItem(key, JSON.stringify(next));
   } catch { /* noop */ }
 }
+function normArabic(s: string): string {
+  return s.toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .replace(/[إأآا]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .trim();
+}
+
+function scoreEntity(e: SupabaseEncyclopediaEntity, nq: string): number {
+  if (!nq) return 0;
+  const title = normArabic(e.title ?? "");
+  const subtitle = normArabic(e.subtitle ?? "");
+  const summary = normArabic(e.summary ?? "");
+  const slug = normArabic(e.slug ?? "");
+  let score = 0;
+  if (title === nq) score += 1000;
+  else if (title.startsWith(nq)) score += 600;
+  else if (new RegExp(`(^|\\s)${nq}`).test(title)) score += 450;
+  else if (title.includes(nq)) score += 300;
+  if (subtitle.includes(nq)) score += 120;
+  if (slug.includes(nq)) score += 80;
+  if (summary.includes(nq)) score += 40;
+  score -= Math.min(title.length, 60) * 0.2;
+  return score;
+}
+
 
 function EncyclopediaHub() {
   androidMark("render:Encyclopedia");
@@ -223,27 +250,38 @@ function EncyclopediaHubFull() {
 
   const suggestions = useMemo(() => {
     if (!q) return [];
+    const nq = normArabic(q);
     return all
       .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
-      .filter((e) => {
-        const hay = `${e.title} ${e.subtitle ?? ""} ${e.slug}`.toLowerCase();
-        return hay.includes(q);
-      })
-      .slice(0, 6);
+      .map((e) => ({ e, s: scoreEntity(e, nq) }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 6)
+      .map((x) => x.e);
   }, [all, q, typeFilter]);
 
   const results = useMemo(() => {
     if (!q && !era && typeFilter === "all") return [];
-    return all
+    const nq = normArabic(q);
+    const filtered = all
       .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
-      .filter((e) => !era || (toCanonicalEra(metaEra(e)) ?? metaEra(e)) === era)
-      .filter((e) => {
-        if (!q) return true;
-        const hay = `${e.title} ${e.subtitle ?? ""} ${e.summary ?? ""} ${e.slug}`.toLowerCase();
-        return hay.includes(q);
-      })
-      .slice(0, 60);
+      .filter((e) => !era || (toCanonicalEra(metaEra(e)) ?? metaEra(e)) === era);
+    if (!nq) return filtered.slice(0, 60);
+    return filtered
+      .map((e) => ({ e, s: scoreEntity(e, nq) }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 60)
+      .map((x) => x.e);
   }, [all, q, era, typeFilter]);
+
+  const topMatch = useMemo(() => {
+    if (!q || results.length === 0) return null;
+    const nq = normArabic(q);
+    const t = normArabic(results[0].title ?? "");
+    if (t === nq || t.startsWith(nq)) return results[0].id;
+    return null;
+  }, [results, q]);
 
   const total = all.length;
   const submitRecent = (value: string) => {
@@ -461,7 +499,17 @@ function EncyclopediaHubFull() {
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-2.5">
-                {results.map((e) => <EncyclopediaCard key={e.id} entity={e} />)}
+                {results.map((e) => (
+                  <div key={e.id} className="relative">
+                    {topMatch === e.id && (
+                      <div className="pointer-events-none absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full border border-gold/50 bg-gradient-to-l from-gold/25 to-gold/10 px-2 py-0.5 text-[9px] font-bold tracking-[0.15em] text-gold shadow-[0_0_0_1px_rgba(212,175,55,0.15),0_4px_14px_-4px_rgba(212,175,55,0.45)] backdrop-blur-sm">
+                        <Sparkles className="size-2.5" strokeWidth={2} />
+                        <span>مطابقة مباشرة</span>
+                      </div>
+                    )}
+                    <EncyclopediaCard entity={e} />
+                  </div>
+                ))}
               </div>
             )}
           </section>
