@@ -878,6 +878,33 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_action_reminders: {
+        Row: {
+          action_key: string
+          created_at: string
+          last_sent_at: string | null
+          sent_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_key: string
+          created_at?: string
+          last_sent_at?: string | null
+          sent_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_key?: string
+          created_at?: string
+          last_sent_at?: string | null
+          sent_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_status: string
@@ -1313,6 +1340,7 @@ export type Database = {
           level: number | null
           title: string | null
           username: string | null
+          xp: number | null
         }
         Insert: {
           artifacts_collected?: number | null
@@ -1327,6 +1355,7 @@ export type Database = {
           level?: number | null
           title?: string | null
           username?: string | null
+          xp?: number | null
         }
         Update: {
           artifacts_collected?: number | null
@@ -1341,6 +1370,7 @@ export type Database = {
           level?: number | null
           title?: string | null
           username?: string | null
+          xp?: number | null
         }
         Relationships: []
       }
@@ -1479,6 +1509,34 @@ export type Database = {
       is_content_editor: { Args: never; Returns: boolean }
       is_user_manager: { Args: never; Returns: boolean }
       is_username_available: { Args: { p_username: string }; Returns: boolean }
+      leaderboard_around_me: {
+        Args: { p_window?: number }
+        Returns: {
+          avatar_id: string
+          display_name: string
+          id: string
+          is_friend: boolean
+          is_me: boolean
+          level: number
+          rank: number
+          username: string
+          xp: number
+        }[]
+      }
+      leaderboard_global: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          avatar_id: string
+          display_name: string
+          id: string
+          is_friend: boolean
+          is_me: boolean
+          level: number
+          rank: number
+          username: string
+          xp: number
+        }[]
+      }
       list_my_notifications: {
         Args: { p_before?: string; p_limit?: number }
         Returns: Json
@@ -1506,6 +1564,7 @@ export type Database = {
         }
         Returns: number
       }
+      my_pending_badges: { Args: never; Returns: Json }
       my_referral_stats: { Args: never; Returns: Json }
       my_unread_notification_count: { Args: never; Returns: number }
       read_email_batch: {
@@ -1521,6 +1580,7 @@ export type Database = {
         Returns: undefined
       }
       redeem_referral_code: { Args: { p_code: string }; Returns: Json }
+      send_friend_request_reminders: { Args: never; Returns: number }
       set_my_display_name: { Args: { p_name: string }; Returns: string }
       set_my_notification_preferences: {
         Args: { p_categories: Json }
