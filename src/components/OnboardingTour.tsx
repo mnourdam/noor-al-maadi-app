@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-// Removed: Link import (no longer auto-navigating away from onboarding).
+import { createPortal } from "react-dom";
 import { Swords, BookOpen, Map as MapIcon, Calendar, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 const STORAGE_KEY = "irth.onboarded.v1";
@@ -46,14 +46,30 @@ const STEPS: Step[] = [
 export function OnboardingTour() {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     try {
       if (!localStorage.getItem(STORAGE_KEY)) setOpen(true);
     } catch { /* ignore */ }
   }, []);
 
-  if (!open) return null;
+  // Lock body scroll while the dialog is open so the background never moves.
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return;
+    const body = document.body;
+    const prevOverflow = body.style.overflow;
+    const prevTouch = body.style.touchAction;
+    body.style.overflow = "hidden";
+    body.style.touchAction = "none";
+    return () => {
+      body.style.overflow = prevOverflow;
+      body.style.touchAction = prevTouch;
+    };
+  }, [open]);
+
+  if (!open || !mounted || typeof document === "undefined") return null;
 
   const step = STEPS[i];
   const last = i === STEPS.length - 1;
@@ -65,9 +81,21 @@ export function OnboardingTour() {
     setOpen(false);
   }
 
-  return (
-    <div className="fixed inset-0 z-[300] grid place-items-center bg-black/80 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-3xl border border-gold/40 bg-surface p-5 shadow-elegant">
+  const node = (
+    <div
+      dir="rtl"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 p-4"
+      style={{
+        paddingTop: "max(1rem, env(safe-area-inset-top))",
+        paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+        paddingLeft: "max(1rem, env(safe-area-inset-left))",
+        paddingRight: "max(1rem, env(safe-area-inset-right))",
+      }}
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => { if (e.target === e.currentTarget) finish(true); }}
+    >
+      <div className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-3xl border border-gold/40 bg-surface p-5 shadow-elegant">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-[10px] tracking-[0.3em] text-gold">جولة تعريفية · {i + 1}/{STEPS.length}</span>
           <button onClick={() => finish(true)} aria-label="تخطّي" className="rounded-full border border-white/10 p-1 text-muted-foreground hover:text-foreground">
@@ -122,4 +150,6 @@ export function OnboardingTour() {
       </div>
     </div>
   );
+
+  return createPortal(node, document.body);
 }
