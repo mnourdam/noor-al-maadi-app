@@ -283,12 +283,15 @@ export async function acceptFriend(id: string): Promise<boolean> {
     // Best-effort only — acceptance still succeeded.
   }
 
+  emitFriendsUpdated();
   return true;
 }
 
 export async function removeFriend(id: string): Promise<boolean> {
   const { error } = await db.from("friendships").delete().eq("id", id);
+  if (!error) emitFriendsUpdated();
   return !error;
+
 }
 
 // =========== Referrals ===========
