@@ -670,6 +670,7 @@ function CollectionPage() {
             {currentEntities.map(({ e, open }) => {
               const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
               const GlyphIcon = current.glyphIcon;
+              const ua = userUnlockedAt.get(`${current.type}:${e.slug}`) ?? null;
               return (
                 <Card
                   key={`enc-${e.id ?? e.slug}`}
@@ -680,6 +681,7 @@ function CollectionPage() {
                   subtitle={e.subtitle ?? current.label}
                   footer={e.summary?.slice(0, 80)}
                   onClick={() => openEntityReveal(e, open)}
+                  unlockedAt={ua}
                 />
               );
             })}
