@@ -27,6 +27,7 @@ import { enqueueCollectionSync } from "@/lib/campaignLedger";
 import { audioManager } from "@/lib/audioManager";
 import { androidMark } from "@/lib/androidFreezeDiagnostics";
 import "@/components/games/games-premium.css";
+import { AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 
 export const Route = createFileRoute("/games/$mode/$slug")({
