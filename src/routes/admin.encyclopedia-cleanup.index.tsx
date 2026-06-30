@@ -535,9 +535,9 @@ function CleanupWorkshop() {
         "application/json;charset=utf-8",
         `irth-encyclopedia-cleanup-${todayStamp()}.json`,
       );
-      setToast(`تم تصدير ${totals.all} كيان كـ JSON`);
+      showToast(`تم تصدير ${totals.all} كيان كـ JSON`);
     } catch (e: any) {
-      setToast("فشل التصدير: " + (e?.message || e));
+      showToast("فشل التصدير: " + (e?.message || e), "err");
     }
   };
 
