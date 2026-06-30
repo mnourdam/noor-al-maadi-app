@@ -153,17 +153,51 @@ function scoreEntity(e: SupabaseEncyclopediaEntity, nq: string): number {
   const subtitle = normArabic(e.subtitle ?? "");
   const summary = normArabic(e.summary ?? "");
   const slug = normArabic(e.slug ?? "");
+  const aliases: string[] = Array.isArray(e.aliases)
+    ? (e.aliases.filter((a) => typeof a === "string") as string[])
+    : [];
   let score = 0;
+  // Title matches (highest tier).
   if (title === nq) score += 1000;
   else if (title.startsWith(nq)) score += 600;
   else if (new RegExp(`(^|\\s)${nq}`).test(title)) score += 450;
   else if (title.includes(nq)) score += 300;
+  // Aliases: very close to title, but always one rung lower so the real
+  // title wins ties.
+  let bestAlias = 0;
+  for (const raw of aliases) {
+    const a = normArabic(raw);
+    if (!a) continue;
+    let s = 0;
+    if (a === nq) s = 900;
+    else if (a.startsWith(nq)) s = 550;
+    else if (new RegExp(`(^|\\s)${nq}`).test(a)) s = 420;
+    else if (a.includes(nq)) s = 260;
+    if (s > bestAlias) bestAlias = s;
+  }
+  if (bestAlias > 0) score = Math.max(score, bestAlias);
   if (subtitle.includes(nq)) score += 120;
   if (slug.includes(nq)) score += 80;
   if (summary.includes(nq)) score += 40;
   score -= Math.min(title.length, 60) * 0.2;
   return score;
 }
+
+function exactTopMatchHref(e: SupabaseEncyclopediaEntity, nq: string): string | null {
+  if (!nq) return null;
+  const title = normArabic(e.title ?? "");
+  const aliases: string[] = Array.isArray(e.aliases)
+    ? (e.aliases.filter((a) => typeof a === "string") as string[])
+    : [];
+  const exactAlias = aliases.some((a) => normArabic(a) === nq);
+  if (title === nq || exactAlias) {
+    return e.entity_type === "state"
+      ? `/encyclopedia/state/${e.slug}`
+      : `/encyclopedia/entity/${e.slug}`;
+  }
+  return null;
+}
+
 
 
 function EncyclopediaHub() {
