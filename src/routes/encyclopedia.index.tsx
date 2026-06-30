@@ -312,8 +312,13 @@ function EncyclopediaHubFull() {
   const topMatch = useMemo(() => {
     if (!q || results.length === 0) return null;
     const nq = normArabic(q);
-    const t = normArabic(results[0].title ?? "");
-    if (t === nq || t.startsWith(nq)) return results[0].id;
+    const top = results[0];
+    const t = normArabic(top.title ?? "");
+    const aliases: string[] = Array.isArray(top.aliases)
+      ? (top.aliases.filter((a) => typeof a === "string") as string[])
+      : [];
+    const exactAlias = aliases.some((a) => normArabic(a) === nq);
+    if (t === nq || t.startsWith(nq) || exactAlias) return top.id;
     return null;
   }, [results, q]);
 
@@ -324,6 +329,24 @@ function EncyclopediaHubFull() {
     pushRecent(RECENT_KEY, v);
     setRecent(readRecent(RECENT_KEY));
   };
+
+  // Enter-to-open: if the user's query is an exact title/alias match for a
+  // single top result, jump directly into that entity.
+  const handleEnter = () => {
+    submitRecent(query);
+    const nq = normArabic(query);
+    if (!nq || results.length === 0) return;
+    const href = exactTopMatchHref(results[0], nq);
+    if (!href) return;
+    // Require strong confidence: top result is exact AND either it's the
+    // only hit, or it strictly outranks the next hit by a wide margin.
+    const second = results[1];
+    const secondExact = second ? exactTopMatchHref(second, nq) : null;
+    if (results.length === 1 || !secondExact) {
+      if (typeof window !== "undefined") window.location.assign(href);
+    }
+  };
+
 
   return (
     <AppShell>
