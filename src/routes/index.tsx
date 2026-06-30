@@ -372,9 +372,18 @@ function HomeFull() {
 
   useEffect(() => {
     if (slides.length <= 1 || isDragging) return;
-    const id = setInterval(() => setSlideIdx((i) => (i + 1) % slides.length), 7000);
-    return () => clearInterval(id);
-  }, [slides.length, isDragging]);
+    let cancelled = false;
+    const id = window.setInterval(async () => {
+      if (cancelled) return;
+      const nextIdx = (slideIdx + 1) % slides.length;
+      // Decode the next image (best-effort) BEFORE swapping so the
+      // transition never reveals a partially decoded frame.
+      await decodeImage(slides[nextIdx]?.bg ?? "");
+      if (cancelled) return;
+      setSlideIdx(nextIdx);
+    }, 7000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [slides, slideIdx, isDragging]);
 
   useEffect(() => { if (slideIdx >= slides.length) setSlideIdx(0); }, [slides.length, slideIdx]);
   const slide = slides[Math.min(slideIdx, slides.length - 1)] ?? slides[0];
