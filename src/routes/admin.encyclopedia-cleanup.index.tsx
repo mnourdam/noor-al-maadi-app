@@ -68,9 +68,44 @@ type EntityRow = {
 
 type Quality = "good" | "weak" | "empty" | "duplicate" | "orphaned";
 type FilterKey =
-  | "all" | "figure" | "city" | "landmark" | "battle" | "event"
+  | "all" | "needs-cleanup"
+  | "figure" | "city" | "landmark" | "battle" | "event"
   | "artifact" | "state" | "empty" | "weak" | "duplicate" | "stub" | "archived"
   | "no-image" | "no-sources" | "no-overview" | "no-atlas" | "no-campaign";
+
+// ------------------------------------------------------------
+// Cleanup workflow predicates
+// ------------------------------------------------------------
+// A row is considered "resolved" once it has been touched by the cleanup
+// workflow in any way: archived as a duplicate, redirected to a canonical,
+// hidden as a duplicate, explicitly marked resolved, or absorbed duplicates
+// itself (canonical with a merged_from trail). Resolved rows must never
+// appear in the "Needs Cleanup" queue.
+function isCleanupResolved(r: { enabled: boolean; metadata: any }): boolean {
+  const m: any = r.metadata || {};
+  if (r.enabled === false) return true;
+  if (m.archived === true) return true;
+  if (m.hidden_duplicate === true) return true;
+  if (typeof m.canonical_id === "string" && m.canonical_id) return true;
+  if (m.cleanup_resolved === true) return true;
+  if (Array.isArray(m.merged_from) && m.merged_from.length > 0) return true;
+  return false;
+}
+
+// A row "needs cleanup" if it is still live AND it either (a) sits in an
+// unresolved duplicate group with another live sibling, or (b) is empty /
+// weak quality. Plain "good" entries with no duplicates do NOT clutter the
+// queue — the goal is a remaining-work view, not a full list.
+function rowNeedsCleanup(
+  r: EntityRow,
+  liveDupIds: Set<string>,
+  quality: Quality,
+): boolean {
+  if (isCleanupResolved(r)) return false;
+  if (liveDupIds.has(r.id)) return true;
+  if (quality === "empty" || quality === "weak") return true;
+  return false;
+}
 
 // ------------------------------------------------------------
 // Helpers
