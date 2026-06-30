@@ -1118,6 +1118,7 @@ function CleanupWorkshop() {
               const state = primaryState(r, dupIds.has(r.id), q);
               const cid = typeof r.metadata?.canonical_id === "string" ? r.metadata.canonical_id : null;
               const canonicalTitle = cid ? (rows.find((x) => x.id === cid)?.title ?? null) : null;
+              const inCleanupQueue = rowNeedsCleanup(r, liveDupIds, q);
               return (
                 <ResultRow
                   key={r.id}
@@ -1128,9 +1129,14 @@ function CleanupWorkshop() {
                   camps={campaignSlugs.get(r.id) ?? 0}
                   active={selectedId === r.id}
                   onOpen={() => setSelectedId(r.id)}
+                  inCleanupQueue={inCleanupQueue}
+                  busy={busy === r.id}
+                  onFullyApprove={() => fullyApproveCleanup(r)}
+                  onMarkNeedsContent={() => markNeedsContentOnly(r)}
                 />
               );
             })}
+
 
           </div>
 
