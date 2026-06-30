@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { iconForType } from "@/lib/encyclopedia-icons";
+import { HighlightedText } from "@/components/HighlightedText";
+import { findHighlightRanges } from "@/lib/encyclopedia-highlight";
 
 const CARD_CLASS =
   "group block rounded-2xl border border-white/10 bg-surface p-3 text-right transition hover:border-gold/40 hover:bg-surface-2";
@@ -38,7 +40,13 @@ export function entityHref(
   return `/encyclopedia/entity/${slug}`;
 }
 
-export function EncyclopediaCard({ entity }: { entity: SupabaseEncyclopediaEntity }) {
+export function EncyclopediaCard({
+  entity,
+  highlight,
+}: {
+  entity: SupabaseEncyclopediaEntity;
+  highlight?: string;
+}) {
   const meta = metaRecord(entity);
   const kind = typeof meta.kind === "string" ? (meta.kind as string) : undefined;
   const isScholar = entity.entity_type === "figure" && kind === "scholar";
@@ -54,6 +62,28 @@ export function EncyclopediaCard({ entity }: { entity: SupabaseEncyclopediaEntit
 
   const summary = entity.summary || entity.subtitle || "";
 
+  // When the highlight query matches an alias (but not the title or summary),
+  // surface that alias underneath the title so the user sees why this hit.
+  let aliasHit: string | null = null;
+  if (highlight) {
+    const colAliases: string[] = Array.isArray(entity.aliases)
+      ? (entity.aliases.filter((a) => typeof a === "string") as string[])
+      : [];
+    const metaAliases: string[] = Array.isArray((meta as { aliases?: unknown }).aliases)
+      ? ((meta as { aliases: unknown[] }).aliases.filter((a) => typeof a === "string") as string[])
+      : [];
+    const allAliases = Array.from(new Set([...colAliases, ...metaAliases]));
+    if (allAliases.length > 0) {
+      const titleHits = findHighlightRanges(entity.title ?? "", highlight).length;
+      const sumHits = summary ? findHighlightRanges(summary, highlight).length : 0;
+      if (titleHits === 0 && sumHits === 0) {
+        aliasHit = allAliases.find(
+          (a) => findHighlightRanges(a, highlight).length > 0,
+        ) ?? null;
+      }
+    }
+  }
+
   const Inner = (
     <>
       <div className="flex items-center justify-between gap-2">
@@ -64,9 +94,18 @@ export function EncyclopediaCard({ entity }: { entity: SupabaseEncyclopediaEntit
           {typeLabel}
         </span>
       </div>
-      <p className="font-display mt-2 text-[12px] font-bold line-clamp-1">{entity.title}</p>
+      <p className="font-display mt-2 text-[12px] font-bold line-clamp-1">
+        <HighlightedText text={entity.title} query={highlight} />
+      </p>
+      {aliasHit && (
+        <p className="mt-0.5 text-[10px] text-gold/70 line-clamp-1">
+          المعروف بـ <HighlightedText text={aliasHit} query={highlight} />
+        </p>
+      )}
       {summary && (
-        <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">{summary}</p>
+        <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">
+          <HighlightedText text={summary} query={highlight} />
+        </p>
       )}
       {period && <p className="mt-1 text-[9px] text-gold/60">{period}</p>}
     </>

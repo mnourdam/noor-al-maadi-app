@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
@@ -31,6 +31,7 @@ import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { cachedEncyclopediaList } from "@/lib/offline-fallback";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 import { iconForType } from "@/lib/encyclopedia-icons";
+import { HighlightedText } from "@/components/HighlightedText";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/encyclopedia/")({
@@ -72,7 +73,7 @@ const RECENT_VIEW_KEY = "irth.enc.recent-views";
 
 function useAllEncyclopedia() {
   return useQuery({
-    queryKey: ["encyclopedia", "all-min-v2"],
+    queryKey: ["encyclopedia", "all-min-v3"],
     staleTime: 60_000,
     queryFn: async () => {
       const PAGE = 1000;
@@ -81,7 +82,7 @@ function useAllEncyclopedia() {
         for (let from = 0; ; from += PAGE) {
           const { data, error } = await supabase
             .from("encyclopedia_entities")
-            .select("id,slug,entity_type,title,subtitle,summary,metadata,created_at,updated_at")
+            .select("id,slug,entity_type,title,subtitle,summary,metadata,aliases,created_at,updated_at")
             .eq("enabled", true)
             .order("title")
             .range(from, from + PAGE - 1);
@@ -153,17 +154,68 @@ function scoreEntity(e: SupabaseEncyclopediaEntity, nq: string): number {
   const subtitle = normArabic(e.subtitle ?? "");
   const summary = normArabic(e.summary ?? "");
   const slug = normArabic(e.slug ?? "");
+  const meta = (e.metadata && typeof e.metadata === "object")
+    ? (e.metadata as Record<string, unknown>) : {};
+  const metaAliases = Array.isArray((meta as { aliases?: unknown }).aliases)
+    ? ((meta as { aliases: unknown[] }).aliases.filter((a) => typeof a === "string") as string[])
+    : [];
+  const colAliases = Array.isArray(e.aliases)
+    ? (e.aliases.filter((a) => typeof a === "string") as string[])
+    : [];
+  const aliases: string[] = Array.from(new Set([...colAliases, ...metaAliases]));
   let score = 0;
+  // Title matches (highest tier).
   if (title === nq) score += 1000;
   else if (title.startsWith(nq)) score += 600;
   else if (new RegExp(`(^|\\s)${nq}`).test(title)) score += 450;
   else if (title.includes(nq)) score += 300;
+  // Aliases: very close to title, but always one rung lower so the real
+  // title wins ties.
+  let bestAlias = 0;
+  for (const raw of aliases) {
+    const a = normArabic(raw);
+    if (!a) continue;
+    let s = 0;
+    if (a === nq) s = 900;
+    else if (a.startsWith(nq)) s = 550;
+    else if (new RegExp(`(^|\\s)${nq}`).test(a)) s = 420;
+    else if (a.includes(nq)) s = 260;
+    if (s > bestAlias) bestAlias = s;
+  }
+  if (bestAlias > 0) score = Math.max(score, bestAlias);
   if (subtitle.includes(nq)) score += 120;
   if (slug.includes(nq)) score += 80;
   if (summary.includes(nq)) score += 40;
   score -= Math.min(title.length, 60) * 0.2;
   return score;
 }
+
+function exactTopMatchTarget(
+  e: SupabaseEncyclopediaEntity,
+  nq: string,
+): { to: "/encyclopedia/state/$id" | "/encyclopedia/entity/$id"; id: string } | null {
+  if (!nq) return null;
+  const title = normArabic(e.title ?? "");
+  const meta = (e.metadata && typeof e.metadata === "object")
+    ? (e.metadata as Record<string, unknown>) : {};
+  const metaAliases = Array.isArray((meta as { aliases?: unknown }).aliases)
+    ? ((meta as { aliases: unknown[] }).aliases.filter((a) => typeof a === "string") as string[])
+    : [];
+  const colAliases = Array.isArray(e.aliases)
+    ? (e.aliases.filter((a) => typeof a === "string") as string[])
+    : [];
+  const aliases: string[] = Array.from(new Set([...colAliases, ...metaAliases]));
+  const exactAlias = aliases.some((a) => normArabic(a) === nq);
+  if (title === nq || exactAlias) {
+    return {
+      to: e.entity_type === "state" ? "/encyclopedia/state/$id" : "/encyclopedia/entity/$id",
+      id: e.slug,
+    };
+  }
+  return null;
+}
+
+
 
 
 function EncyclopediaHub() {
@@ -174,6 +226,7 @@ function EncyclopediaHub() {
 }
 
 function EncyclopediaHubFull() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [era, setEra] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -278,8 +331,19 @@ function EncyclopediaHubFull() {
   const topMatch = useMemo(() => {
     if (!q || results.length === 0) return null;
     const nq = normArabic(q);
-    const t = normArabic(results[0].title ?? "");
-    if (t === nq || t.startsWith(nq)) return results[0].id;
+    const top = results[0];
+    const t = normArabic(top.title ?? "");
+    const meta = (top.metadata && typeof top.metadata === "object")
+      ? (top.metadata as Record<string, unknown>) : {};
+    const metaAliases = Array.isArray((meta as { aliases?: unknown }).aliases)
+      ? ((meta as { aliases: unknown[] }).aliases.filter((a) => typeof a === "string") as string[])
+      : [];
+    const colAliases = Array.isArray(top.aliases)
+      ? (top.aliases.filter((a) => typeof a === "string") as string[])
+      : [];
+    const aliases: string[] = Array.from(new Set([...colAliases, ...metaAliases]));
+    const exactAlias = aliases.some((a) => normArabic(a) === nq);
+    if (t === nq || t.startsWith(nq) || exactAlias) return top.id;
     return null;
   }, [results, q]);
 
@@ -290,6 +354,23 @@ function EncyclopediaHubFull() {
     pushRecent(RECENT_KEY, v);
     setRecent(readRecent(RECENT_KEY));
   };
+
+  // Enter-to-open: if the user's query is an exact title/alias match for a
+  // single top result, jump directly into that entity.
+  const handleEnter = () => {
+    submitRecent(query);
+    const nq = normArabic(query);
+    if (!nq || results.length === 0) return;
+    const target = exactTopMatchTarget(results[0], nq);
+    if (!target) return;
+    const second = results[1];
+    const secondExact = second ? exactTopMatchTarget(second, nq) : null;
+    if (results.length === 1 || !secondExact) {
+      navigate({ to: target.to, params: { id: target.id } });
+    }
+  };
+
+
 
   return (
     <AppShell>
@@ -355,7 +436,7 @@ function EncyclopediaHubFull() {
                 onValueChange={setQuery}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setTimeout(() => setFocused(false), 150)}
-                onEnter={() => submitRecent(query)}
+                onEnter={handleEnter}
                 androidEntryKey="encyclopedia.search"
                 autoComplete="off"
                 autoCorrect="off"
@@ -393,7 +474,7 @@ function EncyclopediaHubFull() {
                               >
                                 <SIcon className="size-4 text-gold/70" strokeWidth={1.5} />
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate text-[12px] font-bold">{s.title}</p>
+                                  <p className="truncate text-[12px] font-bold"><HighlightedText text={s.title} query={query} /></p>
                                   {s.subtitle && (
                                     <p className="truncate text-[10px] text-muted-foreground">{s.subtitle}</p>
                                   )}
@@ -507,7 +588,7 @@ function EncyclopediaHubFull() {
                         <span>مطابقة مباشرة</span>
                       </div>
                     )}
-                    <EncyclopediaCard entity={e} />
+                    <EncyclopediaCard entity={e} highlight={q ? query : undefined} />
                   </div>
                 ))}
               </div>

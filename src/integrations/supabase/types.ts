@@ -446,6 +446,7 @@ export type Database = {
       }
       encyclopedia_entities: {
         Row: {
+          aliases: string[]
           body: Json
           created_at: string
           enabled: boolean
@@ -467,6 +468,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aliases?: string[]
           body?: Json
           created_at?: string
           enabled?: boolean
@@ -488,6 +490,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aliases?: string[]
           body?: Json
           created_at?: string
           enabled?: boolean

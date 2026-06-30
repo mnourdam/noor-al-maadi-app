@@ -43,11 +43,13 @@ export type SupabaseEncyclopediaEntity = {
   timeline_order?: number | null;
   timeline_year?: number | null;
   timeline_start_year?: number | null;
+  /** Alternative names / common references; participates in search. */
+  aliases?: string[] | null;
 };
 
 /** Columns required to render + chronologically sort an entity. */
 export const ENCYCLOPEDIA_ENTITY_COLUMNS =
-  "id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body," +
+  "id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body,aliases," +
   "timeline_order,timeline_year,timeline_start_year";
 
 export type EncyclopediaSourceTag = "supabase" | "legacy" | "fallback";
