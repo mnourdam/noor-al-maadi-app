@@ -31,6 +31,7 @@ import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { cachedEncyclopediaList } from "@/lib/offline-fallback";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 import { iconForType } from "@/lib/encyclopedia-icons";
+import { HighlightedText } from "@/components/HighlightedText";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 
 export const Route = createFileRoute("/encyclopedia/")({
