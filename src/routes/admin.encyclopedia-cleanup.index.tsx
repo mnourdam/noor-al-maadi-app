@@ -116,11 +116,19 @@ function rowNeedsCleanup(
 // metadata.canonical_id redirect. These are the only rows that can
 // move through the content pipeline.
 //
-// "Real content" requires more than a title + short blurb. We accept
-// EITHER: a meaningful summary (>= 80 chars) AND a body with sections,
-// OR a substantial body payload (>= 400 chars of extracted text).
-// Placeholder/stub markers in metadata force a "needs content" verdict
-// regardless of length.
+// "Real content" = the entity has an actual `body` payload beyond the
+// basic metadata (title/slug/subtitle/summary). We do NOT measure
+// character counts: brief but complete entries (small artifacts,
+// landmarks, short events…) must qualify as complete.
+//
+// A body counts as real when it is:
+//   • a non-empty string, OR
+//   • an object containing at least one meaningful article field
+//     (overview / sections / blocks / timeline / facts / related /
+//      sources) that is itself non-empty.
+//
+// Placeholder/stub markers in metadata still force a "needs content"
+// verdict regardless of body shape.
 // ------------------------------------------------------------
 function isRedirected(r: { metadata: any }): boolean {
   const m: any = r.metadata || {};
@@ -139,14 +147,28 @@ function isFinalCanonical(r: EntityRow): boolean {
   return !isArchivedOrHidden(r) && !isRedirected(r);
 }
 
+function hasRealBody(body: any): boolean {
+  if (body == null) return false;
+  if (typeof body === "string") return body.trim().length > 0;
+  if (typeof body !== "object" || Array.isArray(body)) return false;
+  const b = body as Record<string, any>;
+  if (typeof b.overview === "string" && b.overview.trim().length > 0) return true;
+  for (const key of ["sections", "blocks", "timeline", "facts", "sources"]) {
+    const v = b[key];
+    if (Array.isArray(v) && v.length > 0) return true;
+  }
+  if (b.related && typeof b.related === "object") {
+    for (const v of Object.values(b.related)) {
+      if (Array.isArray(v) && v.length > 0) return true;
+    }
+  }
+  return false;
+}
+
 function hasRealContent(r: EntityRow): boolean {
   const m: any = r.metadata || {};
   if (m.placeholder === true || m.stub === true || m.auto_generated === true) return false;
-  const summaryLen = (r.summary ?? "").trim().length;
-  const bodyLen = bodyText(r.body).length;
-  if (hasSections(r.body) && summaryLen >= 80) return true;
-  if (bodyLen >= 400) return true;
-  return false;
+  return hasRealBody(r.body);
 }
 
 function needsContent(r: EntityRow): boolean {
