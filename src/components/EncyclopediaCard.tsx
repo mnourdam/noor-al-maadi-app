@@ -65,13 +65,22 @@ export function EncyclopediaCard({
   // When the highlight query matches an alias (but not the title or summary),
   // surface that alias underneath the title so the user sees why this hit.
   let aliasHit: string | null = null;
-  if (highlight && Array.isArray(entity.aliases) && entity.aliases.length > 0) {
-    const titleHits = findHighlightRanges(entity.title ?? "", highlight).length;
-    const sumHits = summary ? findHighlightRanges(summary, highlight).length : 0;
-    if (titleHits === 0 && sumHits === 0) {
-      aliasHit = entity.aliases.find(
-        (a) => typeof a === "string" && findHighlightRanges(a, highlight).length > 0,
-      ) ?? null;
+  if (highlight) {
+    const colAliases: string[] = Array.isArray(entity.aliases)
+      ? (entity.aliases.filter((a) => typeof a === "string") as string[])
+      : [];
+    const metaAliases: string[] = Array.isArray((meta as { aliases?: unknown }).aliases)
+      ? ((meta as { aliases: unknown[] }).aliases.filter((a) => typeof a === "string") as string[])
+      : [];
+    const allAliases = Array.from(new Set([...colAliases, ...metaAliases]));
+    if (allAliases.length > 0) {
+      const titleHits = findHighlightRanges(entity.title ?? "", highlight).length;
+      const sumHits = summary ? findHighlightRanges(summary, highlight).length : 0;
+      if (titleHits === 0 && sumHits === 0) {
+        aliasHit = allAliases.find(
+          (a) => findHighlightRanges(a, highlight).length > 0,
+        ) ?? null;
+      }
     }
   }
 
