@@ -149,6 +149,7 @@ function EncyclopediaHub() {
 function EncyclopediaHubFull() {
   const [query, setQuery] = useState("");
   const [era, setEra] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [showAllEras, setShowAllEras] = useState(false);
   const [focused, setFocused] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
@@ -223,16 +224,18 @@ function EncyclopediaHubFull() {
   const suggestions = useMemo(() => {
     if (!q) return [];
     return all
+      .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
       .filter((e) => {
         const hay = `${e.title} ${e.subtitle ?? ""} ${e.slug}`.toLowerCase();
         return hay.includes(q);
       })
       .slice(0, 6);
-  }, [all, q]);
+  }, [all, q, typeFilter]);
 
   const results = useMemo(() => {
-    if (!q && !era) return [];
+    if (!q && !era && typeFilter === "all") return [];
     return all
+      .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
       .filter((e) => !era || (toCanonicalEra(metaEra(e)) ?? metaEra(e)) === era)
       .filter((e) => {
         if (!q) return true;
@@ -240,7 +243,7 @@ function EncyclopediaHubFull() {
         return hay.includes(q);
       })
       .slice(0, 60);
-  }, [all, q, era]);
+  }, [all, q, era, typeFilter]);
 
   const total = all.length;
   const submitRecent = (value: string) => {
@@ -262,7 +265,7 @@ function EncyclopediaHubFull() {
           ]}
         />
         {/* Cinematic Hero */}
-        <section className="relative -mx-5 -mt-2 overflow-hidden border-b border-gold/15 bg-gradient-to-b from-gold/[0.08] via-background to-background px-5 pb-6 pt-8">
+        <section className="relative -mx-5 -mt-2 border-b border-gold/15 bg-gradient-to-b from-gold/[0.08] via-background to-background px-5 pb-6 pt-8">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 opacity-[0.07]"
@@ -335,7 +338,7 @@ function EncyclopediaHubFull() {
 
               {/* Suggestions / Recent / Popular dropdown */}
               {focused && (
-                <div className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-gold/25 bg-surface/95 shadow-xl backdrop-blur animate-fade-in">
+                <div className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-gold/25 bg-surface shadow-xl animate-fade-in">
                   {q && suggestions.length > 0 && (
                     <div className="p-2">
                       <p className="px-2 py-1 text-[10px] tracking-[0.3em] text-gold/70">اقتراحات</p>
@@ -401,8 +404,35 @@ function EncyclopediaHubFull() {
                 </div>
               )}
             </div>
+
+            {/* Type filter chips */}
+            <div className="relative z-10 -mx-5 mt-3 overflow-x-auto px-5 pb-1 scrollbar-thin" dir="rtl">
+              <div className="flex items-center gap-1.5">
+                {[{ key: "all", label: "الكل" }, ...CATEGORIES.map((c) => ({ key: c.key, label: c.label }))].map((t) => {
+                  const active = typeFilter === t.key;
+                  const n = t.key === "all" ? total : (counts[t.key] ?? 0);
+                  return (
+                    <button
+                      key={t.key}
+                      onClick={() => setTypeFilter(t.key)}
+                      className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] transition ${
+                        active
+                          ? "border-gold/60 bg-gold/15 text-gold shadow-[0_0_0_1px_rgba(212,175,55,0.25)]"
+                          : "border-white/10 bg-black/30 text-muted-foreground hover:border-gold/40 hover:text-foreground"
+                      }`}
+                    >
+                      <span className="font-bold">{t.label}</span>
+                      <span className={`ms-1.5 text-[10px] ${active ? "text-gold/80" : "text-muted-foreground/70"}`}>
+                        {n}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </section>
+
 
         {isLoading ? (
           <p className="mt-10 text-center text-xs text-muted-foreground">جارٍ فتح المكتبة…</p>
@@ -410,7 +440,7 @@ function EncyclopediaHubFull() {
           <p className="mt-8 rounded-2xl border border-white/10 bg-surface/70 p-6 text-center text-xs text-muted-foreground">
             لا توجد عناصر في الموسوعة بعد.
           </p>
-        ) : (q || era) ? (
+        ) : (q || era || typeFilter !== "all") ? (
           <section className="mt-6 animate-fade-in">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
