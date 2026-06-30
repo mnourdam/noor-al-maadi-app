@@ -163,6 +163,65 @@ async function logAudit(action: string, detail: Record<string, unknown>, reason?
 }
 
 // ------------------------------------------------------------
+// Hard DB verification — re-fetch the row by id and confirm
+// that the expected fields actually contain the new values.
+// Returns { ok, row, diff } where diff lists fields that did
+// NOT persist as expected. Used by every admin mutation.
+// ------------------------------------------------------------
+type VerifyExpect = Partial<{
+  enabled: boolean;
+  title: string | null;
+  slug: string;
+  subtitle: string | null;
+  summary: string | null;
+  body: any;
+  // metadata is compared as a deep subset of keys actually provided.
+  metadata: Record<string, unknown>;
+}>;
+
+function deepEqualJson(a: unknown, b: unknown): boolean {
+  try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
+}
+
+async function verifyDbUpdate(id: string, expect: VerifyExpect): Promise<{
+  ok: boolean; row: any | null; diff: string[]; error?: string;
+}> {
+  const { data, error } = await supabase
+    .from("encyclopedia_entities" as any)
+    .select("id,enabled,title,slug,subtitle,summary,body,metadata,updated_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) return { ok: false, row: null, diff: ["<fetch failed>"], error: error.message };
+  if (!data) return { ok: false, row: null, diff: ["<row not found>"], error: "row missing" };
+  const row: any = data;
+  const diff: string[] = [];
+  for (const [k, v] of Object.entries(expect)) {
+    if (k === "metadata") {
+      const md = row.metadata ?? {};
+      for (const [mk, mv] of Object.entries(v as Record<string, unknown>)) {
+        if (mv === undefined) continue;
+        // "null" in expected means "must be absent or null".
+        if (mv === null) {
+          if (md[mk] != null) diff.push(`metadata.${mk}`);
+          continue;
+        }
+        if (!deepEqualJson(md[mk], mv)) diff.push(`metadata.${mk}`);
+      }
+    } else if (!deepEqualJson(row[k], v)) {
+      diff.push(k);
+    }
+  }
+  return { ok: diff.length === 0, row, diff };
+}
+
+function devLog(action: string, payload: Record<string, unknown>) {
+  if (typeof import.meta !== "undefined" && (import.meta as any).env?.DEV) {
+    // eslint-disable-next-line no-console
+    console.log(`[cleanup:${action}]`, payload);
+  }
+}
+
+// ------------------------------------------------------------
 // Component
 // ------------------------------------------------------------
 function CleanupWorkshop() {
