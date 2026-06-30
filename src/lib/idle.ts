@@ -7,9 +7,13 @@ export type IdleHandle = { cancel: () => void };
 
 export function scheduleIdle(fn: () => void, timeout = 2000): IdleHandle {
   if (typeof window === "undefined") return { cancel: () => {} };
-  if (typeof window.requestIdleCallback === "function") {
-    const id = window.requestIdleCallback(() => fn(), { timeout });
-    return { cancel: () => window.cancelIdleCallback?.(id) };
+  const w = window as unknown as {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => number;
+    cancelIdleCallback?: (h: number) => void;
+  };
+  if (typeof w.requestIdleCallback === "function") {
+    const id = w.requestIdleCallback(() => fn(), { timeout });
+    return { cancel: () => w.cancelIdleCallback?.(id) };
   }
   const id = window.setTimeout(fn, Math.min(timeout, 200));
   return { cancel: () => window.clearTimeout(id) };
