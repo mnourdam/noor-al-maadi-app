@@ -937,9 +937,15 @@ function CleanupWorkshop() {
       )}
 
       {toast && (
-        <div className="fixed inset-x-0 bottom-6 mx-auto w-fit max-w-md rounded-full border border-amber-400/30 bg-slate-900/90 px-4 py-2 text-sm text-amber-100 shadow-lg backdrop-blur">
-          {toast}
-          <button onClick={() => setToast(null)} className="ms-3 text-slate-400 hover:text-slate-100">
+        <div
+          role="status"
+          className={`fixed inset-x-0 bottom-6 mx-auto w-fit max-w-md rounded-full border px-4 py-2 text-sm shadow-lg backdrop-blur ${
+            toast.tone === "err"
+              ? "border-rose-400/40 bg-rose-950/90 text-rose-100"
+              : "border-emerald-400/40 bg-emerald-950/90 text-emerald-100"
+          }`}>
+          {toast.text}
+          <button onClick={() => setToast(null)} className="ms-3 opacity-70 hover:opacity-100">
             <X className="inline size-3.5" />
           </button>
         </div>
