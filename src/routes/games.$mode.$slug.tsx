@@ -345,7 +345,7 @@ function GamePlayPage() {
   return (
     <AppShell>
      <GameHelpProvider>
-      <ReadingScale dir="rtl" className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+      <div dir="rtl"><ReadingScale className="mx-auto max-w-3xl space-y-5 px-4 py-6">
 
         {mode === "crossword" ? (
           <CrosswordHelpDialog
@@ -555,7 +555,7 @@ function GamePlayPage() {
             </div>
           </section>
         )}
-      </ReadingScale>
+      </ReadingScale></div>
 
 
       <ExitConfirmDialog
