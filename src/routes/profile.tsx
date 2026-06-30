@@ -1324,7 +1324,8 @@ function SettingsTab({
           <LogOut className="size-4" /> تسجيل الخروج وإعادة التهيئة
         </button>
       )}
-    </div>
+    </ReadingScale>
+
   );
 }
 
