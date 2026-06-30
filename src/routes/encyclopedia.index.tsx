@@ -196,9 +196,15 @@ function exactTopMatchTarget(
 ): { to: "/encyclopedia/state/$id" | "/encyclopedia/entity/$id"; id: string } | null {
   if (!nq) return null;
   const title = normArabic(e.title ?? "");
-  const aliases: string[] = Array.isArray(e.aliases)
+  const meta = (e.metadata && typeof e.metadata === "object")
+    ? (e.metadata as Record<string, unknown>) : {};
+  const metaAliases = Array.isArray((meta as { aliases?: unknown }).aliases)
+    ? ((meta as { aliases: unknown[] }).aliases.filter((a) => typeof a === "string") as string[])
+    : [];
+  const colAliases = Array.isArray(e.aliases)
     ? (e.aliases.filter((a) => typeof a === "string") as string[])
     : [];
+  const aliases: string[] = Array.from(new Set([...colAliases, ...metaAliases]));
   const exactAlias = aliases.some((a) => normArabic(a) === nq);
   if (title === nq || exactAlias) {
     return {
