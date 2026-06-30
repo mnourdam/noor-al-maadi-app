@@ -225,7 +225,9 @@ Deno.serve(async (req) => {
       notif.status = "sent";
     }
 
-    // Load tokens
+    // Load tokens. New: when `target_user_ids` is present (smart-segment
+    // send from the admin composer), restrict tokens to those users. This
+    // is purely additive — legacy "all" and "user" paths are unchanged.
     let tokensQuery = admin
       .from("device_tokens")
       .select("token, user_id")
@@ -235,6 +237,8 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "target_user_id required for target_type=user" }, { status: 400 });
       }
       tokensQuery = tokensQuery.eq("user_id", notif.target_user_id);
+    } else if (Array.isArray(notif.target_user_ids) && notif.target_user_ids.length > 0) {
+      tokensQuery = tokensQuery.in("user_id", notif.target_user_ids);
     }
 
     const { data: tokens, error: tokensErr } = await tokensQuery;
