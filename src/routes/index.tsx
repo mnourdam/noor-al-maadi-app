@@ -615,12 +615,7 @@ function HomeFull() {
               <p className="text-[11px] tracking-[0.2em] text-gold drop-shadow-[0_1px_4px_oklch(0_0_0/0.6)]">مرحبًا بك، {displayName}</p>
               <p className="font-display mt-1 text-[11px] text-white/80">المستوى {lvl.level} · {lvl.title}</p>
             </div>
-            {profile.streak > 1 && (
-              <div className="animate-curtain inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 ring-1 ring-gold/30 backdrop-blur-sm">
-                <Flame className="size-3.5 text-gold" />
-                <span className="font-display text-[11px] font-bold text-gold">{profile.streak}</span>
-              </div>
-            )}
+            {/* Streak pill removed — Hamasa is shown in the top HUD already */}
           </div>
 
           {/* Slide content */}

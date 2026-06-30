@@ -13,6 +13,7 @@ import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeT
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import type { CampaignActivity } from "@/types/campaign";
+import { sfx as gameSfx } from "@/components/games/sfx";
 import {
   DndContext,
   PointerSensor,
@@ -141,10 +142,10 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
       // Second strike → reveal & lock. Parent still deducts the heart.
       setRevealed(true);
       setFeedback("err");
-      onResolve(false);
+      gameSfx("wrong", `activity:${activity.id}`); onResolve(false);
     } else {
       setFeedback("err");
-      onResolve(false);
+      gameSfx("wrong", `activity:${activity.id}`); onResolve(false);
     }
   };
 
@@ -251,7 +252,7 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
     setWrongPick(val);
     setFeedback("err");
     if (nextWrong >= 2) setRevealed(true);
-    onResolve(false);
+    gameSfx("wrong", `activity:${activity.id}`); onResolve(false);
   };
 
   const continueAfterReveal = () => {
@@ -363,7 +364,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
       onResolve(true);
     } else {
       setFeedback("err");
-      onResolve(false);
+      gameSfx("wrong", `activity:${activity.id}`); onResolve(false);
     }
   };
 
@@ -526,7 +527,7 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
       onResolve(true);
     } else {
       setFeedback("err");
-      onResolve(false);
+      gameSfx("wrong", `activity:${activity.id}`); onResolve(false);
     }
   };
 
@@ -593,7 +594,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
       onResolve(true);
     } else {
       setFeedback("err");
-      onResolve(false);
+      gameSfx("wrong", `activity:${activity.id}`); onResolve(false);
     }
   };
 

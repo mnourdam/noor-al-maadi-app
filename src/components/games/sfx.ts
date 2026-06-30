@@ -43,7 +43,9 @@ export function sfx(kind: GameSfxKind, scopeKey?: string): void {
     /* noop */
   }
   if (kind === "wrong") {
-    audioManager.playError();
+    // eslint-disable-next-line no-console
+    console.log(`[SFX] wrong answer → error_sfx${scopeKey ? ` (scope=${scopeKey})` : ""}`);
+    audioManager.playError(scopeKey);
     return;
   }
   const name = MAP[kind];

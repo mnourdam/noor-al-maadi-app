@@ -279,19 +279,43 @@ export const audioManager = {
    * The synth fallback is intentionally disabled — silence is preferred
    * over a tone that doesn't match the uploaded asset.
    */
-  playError() {
-    if (typeof window === "undefined") return;
-    if (isAndroidUltraStableMode()) return;
-    if (!settings.soundEnabled || !settings.sfxEnabled) return;
-    if (!deviceAllowsAudio()) return;
-    if (sfxFailed.has("error")) {
+  playError(scopeKey?: string) {
+    const log = (status: "played" | "skipped", reason?: string) => {
       // eslint-disable-next-line no-console
-      console.warn("[audio] error sfx unavailable — skipping (synth fallback disabled)");
-      return;
+      console.log(`[SFX] error_sfx ${status}${reason ? ` — ${reason}` : ""}${scopeKey ? ` (scope=${scopeKey})` : ""}`);
+    };
+    if (typeof window === "undefined") return log("skipped", "ssr");
+    if (isAndroidUltraStableMode()) return log("skipped", "android ultra-stable mode");
+    if (!settings.soundEnabled) return log("skipped", "disabled by user setting (sound)");
+    if (!settings.sfxEnabled) return log("skipped", "disabled by user setting (sfx)");
+    if (!deviceAllowsAudio()) return log("skipped", "blocked by silent/vibrate mode");
+    if (sfxFailed.has("error")) return log("skipped", "missing asset / previous playback error");
+
+    // Dedupe rapid re-fires (e.g. double-tap, parallel heart-lost event).
+    const now = Date.now();
+    const dedupeKey = "sfx:error";
+    const last = recentSfx.get(dedupeKey) ?? 0;
+    if (now - last < 220) return log("skipped", "already playing / throttled");
+    recentSfx.set(dedupeKey, now);
+
+    const url = SFX_URLS.error;
+    try {
+      const a = new Audio(url);
+      a.volume = Math.max(0, Math.min(1, settings.masterVolume * settings.sfxVolume));
+      a.addEventListener("error", () => {
+        sfxFailed.add("error");
+        log("skipped", `playback error (asset unplayable: ${url})`);
+      });
+      const p = a.play();
+      if (p && typeof p.catch === "function") {
+        p.then(() => log("played")).catch((err) => log("skipped", `playback error: ${err?.message ?? err}`));
+      } else {
+        log("played");
+      }
+    } catch (err) {
+      sfxFailed.add("error");
+      log("skipped", `exception: ${(err as Error)?.message ?? err}`);
     }
-    // eslint-disable-next-line no-console
-    console.log("[audio] Playing uploaded error.mp3", SFX_URLS.error);
-    audioManager.playSfx("error", { dedupeKey: "sfx:error", dedupeMs: 220 });
   },
 
   /** Cleanup — useful for hot reload / tests. */
