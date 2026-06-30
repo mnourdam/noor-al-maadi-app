@@ -363,6 +363,38 @@ function CleanupWorkshop() {
   }, [dupGroups]);
 
   // ------------------------------------------------------------
+  // Live duplicate groups — a cleanup group is "open" only while it still
+  // has 2+ unresolved members. As soon as a merge marks all but one as
+  // hidden/redirected (and stamps the canonical with merged_from), the
+  // group falls out of this set and disappears from "Needs Cleanup".
+  // ------------------------------------------------------------
+  const liveDupIds = useMemo(() => {
+    const live = new Set<string>();
+    const byId = new Map(rows.map((r) => [r.id, r] as const));
+    for (const ids of dupGroups.values()) {
+      const liveMembers = ids
+        .map((id) => byId.get(id))
+        .filter((r): r is EntityRow => !!r && !isCleanupResolved(r));
+      if (liveMembers.length >= 2) {
+        for (const r of liveMembers) live.add(r.id);
+      }
+    }
+    return live;
+  }, [rows, dupGroups]);
+
+  // Count of items still requiring a human decision — drives the badge
+  // next to the "Needs Cleanup" chip and updates live after every merge.
+  const needsCleanupCount = useMemo(() => {
+    let n = 0;
+    for (const r of rows) {
+      const isOrphan = !(atlasLinks.get(r.id) || campaignSlugs.get(r.id));
+      const quality = classifyQuality(r, dupIds.has(r.id), isOrphan);
+      if (rowNeedsCleanup(r, liveDupIds, quality)) n++;
+    }
+    return n;
+  }, [rows, liveDupIds, dupIds, atlasLinks, campaignSlugs]);
+
+  // ------------------------------------------------------------
   // Filter + search
   // ------------------------------------------------------------
   const filtered = useMemo(() => {
