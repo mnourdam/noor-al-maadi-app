@@ -98,7 +98,10 @@ function HomeFull() {
         if (!serverAuthoritative) setUnread(unreadCount());
       }
     };
-    void recount();
+    // Defer initial recount past first paint — notification badge is not
+    // part of the LCP and forcing it onto the boot path competes for the
+    // network and main thread on low-end Android.
+    const idle = scheduleIdle(() => { void recount(); }, 1500);
     const unsubRealtime = subscribeToMyNotifications(() => { void recount(); });
     const onLocal = () => { void recount(); };
     window.addEventListener("irth:notifications:updated", onLocal);
