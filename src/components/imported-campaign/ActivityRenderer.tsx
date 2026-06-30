@@ -43,7 +43,7 @@ function FeedbackBanner({ kind, text }: { kind: "ok" | "err"; text?: string }) {
     ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
     : "border-red-400/40 bg-red-500/10 text-red-200";
   return (
-    <div className={`mt-3 rounded-xl border px-3 py-2 text-[12px] ${cls}`}>
+    <div key={`${kind}:${text}`} className={`motion-toast mt-3 rounded-xl border px-3 py-2 text-[12px] ${cls}`}>
       {kind === "ok" ? <Check className="me-1 inline size-3.5" /> : <X className="me-1 inline size-3.5" />}
       {text}
     </div>
@@ -136,8 +136,14 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
     onResolve(true, { viaReveal: true });
   };
 
+  const wrapperCls = feedback === "ok"
+    ? "motion-page motion-correct-pop"
+    : wrongCount > 0 && feedback === "err"
+      ? "motion-page motion-shake"
+      : "motion-page";
+
   return (
-    <div>
+    <div className={wrapperCls} key={`${activity.id}:${wrongCount}:${feedback ?? "_"}`}>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <div className="space-y-2">
@@ -155,7 +161,7 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
               key={`${i}-${opt}`}
               disabled={locked || isWrong}
               onClick={() => { setPicked(i); setFeedback(null); }}
-              className={`w-full rounded-xl border px-3 py-2 text-right text-[12px] transition ${
+              className={`motion-tap w-full rounded-xl border px-3 py-2 text-right text-[12px] transition ${
                 isAnswer ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
                 : isWrong ? wrongStyle
                 : isPicked ? "border-gold/60 bg-gold/10 text-foreground"
@@ -172,7 +178,7 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
         <button
           onClick={submit}
           disabled={picked === null}
-          className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50"
+          className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50"
         >
           تحقق من الإجابة
         </button>
@@ -190,7 +196,7 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
       {revealed && !resolved && (
         <button
           onClick={continueAfterReveal}
-          className="mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
+          className="motion-tap motion-reveal is-in mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
         >
           متابعة
         </button>
@@ -236,8 +242,13 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
     onResolve(true, { viaReveal: true });
   };
 
+  const wrapperCls = feedback === "ok"
+    ? "motion-page motion-correct-pop"
+    : wrongCount > 0 && feedback === "err"
+      ? "motion-page motion-shake"
+      : "motion-page";
   return (
-    <div>
+    <div className={wrapperCls} key={`${activity.id}:${wrongCount}:${feedback ?? "_"}`}>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <div className="grid grid-cols-2 gap-2">
@@ -249,7 +260,7 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
               key={String(val)}
               disabled={locked}
               onClick={() => submit(val)}
-              className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
+              className={`motion-tap rounded-xl border px-3 py-3 text-sm font-bold transition ${
                 isCorrectChoice ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
                 : isWrongChoice ? "border-red-400/70 bg-red-500/15 text-red-100"
                 : "border-white/10 bg-black/30 hover:border-gold/40"
@@ -274,7 +285,7 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
       {revealed && !resolved && (
         <button
           onClick={continueAfterReveal}
-          className="mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
+          className="motion-tap motion-reveal is-in mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
         >
           متابعة
         </button>
@@ -316,7 +327,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
   };
 
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <ol className="space-y-2">
@@ -331,7 +342,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
       </ol>
       <HintRow hint={activity.hint} />
       {!resolved && (
-        <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold">
+        <button onClick={submit} className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold">
           تحقق من الترتيب
         </button>
       )}
@@ -362,7 +373,7 @@ function DecisionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   };
 
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <div className="space-y-2">
@@ -412,7 +423,7 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
   };
 
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <div className="space-y-2">
@@ -437,7 +448,7 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
         <button
           onClick={submit}
           disabled={Object.keys(mapping).length < pairs.length}
-          className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50"
+          className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50"
         >
           تحقق من المطابقة
         </button>
@@ -479,7 +490,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
   };
 
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       {isAndroidNativeApp() ? (
@@ -517,7 +528,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 
       <HintRow hint={activity.hint} />
       {!resolved && (
-        <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
+        <button onClick={submit} className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
           تحقق
         </button>
       )}
@@ -548,7 +559,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
   };
 
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       {isAndroidNativeApp() ? (
@@ -586,7 +597,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
       )}
 
       {!resolved && (
-        <button onClick={submit} className="mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
+        <button onClick={submit} className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
           سجّل تأمّلك
         </button>
       )}
@@ -599,7 +610,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
 function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       {activity.options && activity.options.length > 0 && (
@@ -611,7 +622,7 @@ function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
         نشاطٌ تأمّلي — لا توجد إجابة آلية. يُحتسب عند الإكمال.
       </p>
       {!resolved && (
-        <button onClick={() => { setResolved(true); onResolve(true); }} className="mt-3 w-full rounded-xl border border-gold/40 bg-gold/10 py-2 text-xs font-bold text-gold">
+        <button onClick={() => { setResolved(true); onResolve(true); }} className="motion-tap mt-3 w-full rounded-xl border border-gold/40 bg-gold/10 py-2 text-xs font-bold text-gold">
           تم — وضع علامة كمكتمل
         </button>
       )}
@@ -631,7 +642,7 @@ function ReflectionSkippedRenderer({ activity, onResolve, alreadyDone }: Rendere
     if (!resolved) { setResolved(true); onResolve(true); }
   }, [resolved, onResolve]);
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <p className="mt-2 rounded-xl border border-amber-300/20 bg-amber-500/[0.06] px-3 py-2 text-[11px] leading-6 text-amber-200/85">

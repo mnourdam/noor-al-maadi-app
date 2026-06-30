@@ -27,6 +27,7 @@ import { enqueueCollectionSync } from "@/lib/campaignLedger";
 import { audioManager } from "@/lib/audioManager";
 import { androidMark } from "@/lib/androidFreezeDiagnostics";
 import "@/components/games/games-premium.css";
+import { AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 
 export const Route = createFileRoute("/games/$mode/$slug")({
@@ -444,7 +445,7 @@ function GamePlayPage() {
 
         {/* Stage */}
         {stage && !failed ? (
-          <div key={`${stageIdx}-${retryNonce}`} className="irth-reveal">
+          <div key={`${stageIdx}-${retryNonce}`} className="motion-page irth-reveal">
             <GameStageRenderer
               mode={game.mode}
               stage={stage}
@@ -479,13 +480,13 @@ function GamePlayPage() {
               <div className="mt-2 flex flex-wrap justify-center gap-2">
                 <button
                   onClick={retry}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400"
+                  className="motion-tap inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400"
                 >
                   <RotateCcw className="h-4 w-4" /> إعادة المحاولة
                 </button>
                 <button
                   onClick={() => requestNavigate("/adventure")}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-amber-400"
+                  className="motion-tap inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-amber-400"
                 >
                   <Compass className="h-4 w-4" /> العودة للتحديات
                 </button>
@@ -496,7 +497,7 @@ function GamePlayPage() {
 
         {stageDone && !isLast && (
           <button onClick={next}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400">
+            className="motion-tap motion-reveal is-in inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400">
             المرحلة التالية <ChevronLeft className="h-4 w-4" />
           </button>
         )}
@@ -520,10 +521,10 @@ function GamePlayPage() {
               )}
 
               <div className="mt-2 grid w-full max-w-md grid-cols-2 gap-2">
-                <RewardChip icon={<Sparkles className="h-4 w-4" />} value={`+${game.xp_reward}`} label="خبرة" />
-                <RewardChip icon={<Coins className="h-4 w-4" />} value={`+${game.coin_reward}`} label="دينار" />
+                <RewardChip icon={<Sparkles className="h-4 w-4" />} value={game.xp_reward} label="خبرة" />
+                <RewardChip icon={<Coins className="h-4 w-4" />} value={game.coin_reward} label="دينار" />
                 {unlockToast > 0 && (
-                  <div className="col-span-2 flex items-center justify-center gap-2 rounded-lg border border-amber-400/50 bg-amber-500/10 px-3 py-2 irth-gold-glow">
+                  <div className="motion-unlock-glow col-span-2 flex items-center justify-center gap-2 rounded-lg border border-amber-400/50 bg-amber-500/10 px-3 py-2 irth-gold-glow">
                     <Landmark className="h-4 w-4 text-amber-300" />
                     <span className="text-sm font-bold text-amber-100">مقتنى جديد!</span>
                     <span className="text-[11px] text-slate-300">أُضيف {unlockToast} {unlockToast === 1 ? "أثرٌ" : "آثار"} إلى متحفك</span>
@@ -535,16 +536,16 @@ function GamePlayPage() {
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {relatedEntity && (
                   <Link to="/encyclopedia/entity/$id" params={{ id: relatedEntity }}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-500/15">
+                        className="motion-tap inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-500/15">
                     <BookOpen className="h-3.5 w-3.5" /> اكتشف في الموسوعة
                   </Link>
                 )}
                 <Link to="/collection"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-amber-400">
+                      className="motion-tap inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-amber-400">
                   <Library className="h-3.5 w-3.5" /> تصفح المتحف
                 </Link>
                 <Link to="/adventure"
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400">
+                      className="motion-tap inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400">
                   <Compass className="h-3.5 w-3.5" /> تحدٍّ آخر
                 </Link>
               </div>
@@ -578,11 +579,11 @@ function Chip({ icon, children }: { icon: React.ReactNode; children: React.React
   );
 }
 
-function RewardChip({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
+function RewardChip({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2">
+    <div className="motion-reveal is-in flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2">
       <span className="text-amber-300">{icon}</span>
-      <span className="text-base font-bold text-amber-100">{value}</span>
+      <span className="text-base font-bold text-amber-100">+<AnimatedNumber value={value} /></span>
       <span className="text-[11px] text-slate-300">{label}</span>
     </div>
   );
