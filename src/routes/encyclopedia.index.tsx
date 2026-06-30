@@ -149,6 +149,7 @@ function EncyclopediaHub() {
 function EncyclopediaHubFull() {
   const [query, setQuery] = useState("");
   const [era, setEra] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [showAllEras, setShowAllEras] = useState(false);
   const [focused, setFocused] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
