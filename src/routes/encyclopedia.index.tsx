@@ -81,7 +81,7 @@ function useAllEncyclopedia() {
         for (let from = 0; ; from += PAGE) {
           const { data, error } = await supabase
             .from("encyclopedia_entities")
-            .select("id,slug,entity_type,title,subtitle,summary,metadata,created_at,updated_at")
+            .select("id,slug,entity_type,title,subtitle,summary,metadata,aliases,created_at,updated_at")
             .eq("enabled", true)
             .order("title")
             .range(from, from + PAGE - 1);
