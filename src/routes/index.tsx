@@ -622,19 +622,22 @@ function HomeFull() {
             // + composite layers on Android WebView and is a major cause of
             // slow Home cold-start on low-end devices.
             if (perfLite && i !== slideIdx) return null;
+            const isCurrent = i === slideIdx;
+            // Only the visible image gets eager+high. Every other slide is
+            // lazy+low so the carousel never decodes 3–5 full-resolution
+            // images during first paint.
             return (
               <img
                 key={`${s.kind}-${i}`}
                 src={s.bg}
                 alt=""
-                loading={i === 0 ? "eager" : "lazy"}
+                loading={isCurrent ? "eager" : "lazy"}
                 decoding="async"
-                fetchPriority={i === slideIdx ? "high" : "low"}
-                onLoad={i === slideIdx ? (() => {
-                  // eslint-disable-next-line no-console
-                  try { console.info("[home] hero loaded", { i, t: Math.round(performance.now()) }); } catch { /* noop */ }
+                fetchPriority={isCurrent ? "high" : "low"}
+                onLoad={isCurrent ? (() => {
+                  perfMark("hero ready", { i });
                 }) : undefined}
-                className={`${perfLite ? "" : "animate-ken-burns"} absolute inset-0 size-full object-cover transition-opacity duration-[1200ms] ease-in-out ${i === slideIdx ? "opacity-100" : "opacity-0"}`}
+                className={`${perfLite ? "" : "animate-ken-burns"} absolute inset-0 size-full object-cover transition-opacity duration-[1200ms] ease-in-out ${isCurrent ? "opacity-100" : "opacity-0"}`}
               />
             );
           })}
