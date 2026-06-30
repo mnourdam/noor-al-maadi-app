@@ -408,6 +408,9 @@ function CleanupWorkshop() {
       // Filter chip
       switch (filter) {
         case "all": break;
+        case "needs-cleanup":
+          if (!rowNeedsCleanup(r, liveDupIds, quality)) return false;
+          break;
         case "empty": if (quality !== "empty") return false; break;
         case "weak":  if (quality !== "weak") return false; break;
         case "stub":  if (quality !== "empty" && quality !== "weak") return false; break;
