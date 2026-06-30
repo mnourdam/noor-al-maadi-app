@@ -200,7 +200,7 @@ function ImportedCampaignOverview() {
               لا توجد فصول في هذه الحملة بعد.
             </div>
           ) : (
-            <div className="space-y-4">
+            <Stagger className="space-y-4" max={12}>
               {chapters.map((ch, i) => {
                 const chProgress = progress?.chapters[ch.id];
                 const done = Boolean(chProgress?.completed);
