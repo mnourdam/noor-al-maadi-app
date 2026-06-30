@@ -315,6 +315,7 @@ function CleanupWorkshop() {
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [pipeline, setPipeline] = useState<"any" | "needs-cleanup" | "needs-content" | "complete">("any");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; tone: "ok" | "err" } | null>(null);
