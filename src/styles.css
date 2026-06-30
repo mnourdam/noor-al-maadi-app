@@ -916,9 +916,32 @@ html.perf-lite .section-flow { background: none; }
 /* Number rolling — purely cosmetic; the count is updated in JS */
 .motion-num { transition: color 180ms ease-out; }
 
+/* ─── Gameplay micro-feedback (reuses existing motion vocabulary) ─── */
+@keyframes irth-shake-x {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  20%      { transform: translate3d(-4px, 0, 0); }
+  40%      { transform: translate3d(4px, 0, 0); }
+  60%      { transform: translate3d(-3px, 0, 0); }
+  80%      { transform: translate3d(3px, 0, 0); }
+}
+@keyframes irth-correct-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+@keyframes irth-tile-pop {
+  0%   { transform: scale(0.96); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.motion-shake        { animation: irth-shake-x 320ms cubic-bezier(.36,.07,.19,.97) both; }
+.motion-correct-pop  { animation: irth-correct-pop 280ms cubic-bezier(.2,.7,.2,1) both; }
+.motion-tile-pop     { animation: irth-tile-pop 180ms cubic-bezier(.2,.7,.2,1) both; }
+
 /* Perf-lite: simplify but keep enter transitions for feel of life */
 html.perf-lite .motion-card-stagger > * { animation-delay: 0ms !important; }
 html.perf-lite .motion-skel { animation: none !important; background: color-mix(in oklab, var(--color-foreground) 8%, transparent); }
 html.perf-lite .motion-reward-float { animation-duration: 600ms !important; }
 html.perf-lite .motion-unlock-glow { animation-duration: 700ms !important; box-shadow: 0 0 10px 1px oklch(0.82 0.14 82 / 0.4) !important; }
+html.perf-lite .motion-shake { animation-duration: 220ms !important; }
+
 
