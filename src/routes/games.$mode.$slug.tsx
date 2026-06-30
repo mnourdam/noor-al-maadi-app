@@ -520,10 +520,10 @@ function GamePlayPage() {
               )}
 
               <div className="mt-2 grid w-full max-w-md grid-cols-2 gap-2">
-                <RewardChip icon={<Sparkles className="h-4 w-4" />} value={`+${game.xp_reward}`} label="خبرة" />
-                <RewardChip icon={<Coins className="h-4 w-4" />} value={`+${game.coin_reward}`} label="دينار" />
+                <RewardChip icon={<Sparkles className="h-4 w-4" />} value={game.xp_reward} label="خبرة" />
+                <RewardChip icon={<Coins className="h-4 w-4" />} value={game.coin_reward} label="دينار" />
                 {unlockToast > 0 && (
-                  <div className="col-span-2 flex items-center justify-center gap-2 rounded-lg border border-amber-400/50 bg-amber-500/10 px-3 py-2 irth-gold-glow">
+                  <div className="motion-unlock-glow col-span-2 flex items-center justify-center gap-2 rounded-lg border border-amber-400/50 bg-amber-500/10 px-3 py-2 irth-gold-glow">
                     <Landmark className="h-4 w-4 text-amber-300" />
                     <span className="text-sm font-bold text-amber-100">مقتنى جديد!</span>
                     <span className="text-[11px] text-slate-300">أُضيف {unlockToast} {unlockToast === 1 ? "أثرٌ" : "آثار"} إلى متحفك</span>
