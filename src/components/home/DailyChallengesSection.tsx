@@ -58,11 +58,11 @@ function ChallengeCard({
   }).length;
   const isPrimary = variant === "primary";
 
-  const baseClass = `group relative block overflow-hidden rounded-3xl border shadow-elegant transition active:scale-[0.99] ${
+  const baseClass = `motion-tap group relative block overflow-hidden rounded-3xl border shadow-elegant transition active:scale-[0.99] ${
     isPrimary ? "p-5" : "p-4"
   } ${
     completed
-      ? "border-emerald-400/40 bg-gradient-to-br from-[#0a1a14] via-[#0c2018] to-[#08120e]"
+      ? "border-emerald-400/40 bg-gradient-to-br from-[#0a1a14] via-[#0c2018] to-[#08120e] motion-unlock-glow"
       : "border-gold/30 bg-gradient-to-br from-[#0b1428] via-[#0d1a33] to-[#0a1024]"
   }`;
 
