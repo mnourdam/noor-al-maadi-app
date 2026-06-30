@@ -72,7 +72,7 @@ const RECENT_VIEW_KEY = "irth.enc.recent-views";
 
 function useAllEncyclopedia() {
   return useQuery({
-    queryKey: ["encyclopedia", "all-min-v2"],
+    queryKey: ["encyclopedia", "all-min-v3"],
     staleTime: 60_000,
     queryFn: async () => {
       const PAGE = 1000;
