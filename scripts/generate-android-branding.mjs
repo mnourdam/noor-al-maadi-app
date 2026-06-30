@@ -141,11 +141,13 @@ function parseViewBox(svg) {
 }
 
 function polygonToPath(points) {
-  const nums = points.trim().split(/\s+/).map((p) => p.split(",").map(Number));
-  if (!nums.length) return "";
-  const [x0, y0] = nums[0];
-  let d = `M${x0},${y0}`;
-  for (let i = 1; i < nums.length; i++) d += `L${nums[i][0]},${nums[i][1]}`;
+  // SVG polygon points may use commas, spaces, or both as separators.
+  // Flatten to a numeric stream and rebuild as (x,y) pairs so the output
+  // path is always a valid Android `pathData` string.
+  const nums = points.trim().split(/[\s,]+/).filter(Boolean).map(Number);
+  if (nums.length < 4) return "";
+  let d = `M${nums[0]},${nums[1]}`;
+  for (let i = 2; i < nums.length; i += 2) d += `L${nums[i]},${nums[i + 1]}`;
   return d + "Z";
 }
 
