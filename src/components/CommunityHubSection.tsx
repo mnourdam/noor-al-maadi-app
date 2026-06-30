@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Users, Trophy, UserPlus, Inbox, ChevronLeft, Sparkles, BellRing } from "lucide-react";
 import { useAccount } from "@/lib/account";
-import { listFriendships, fetchPendingBadges, type FriendEntry } from "@/lib/social";
+import { listFriendships, type FriendEntry } from "@/lib/social";
+import { usePendingBadge, refreshPendingBadges } from "@/lib/pending-badges";
 
 function initialsOf(p: { display_name: string | null; username: string }): string {
   const src = (p.display_name?.trim() || p.username || "?").trim();
@@ -15,23 +16,20 @@ function initialsOf(p: { display_name: string | null; username: string }): strin
 export function CommunityHubSection() {
   const { user } = useAccount();
   const [friends, setFriends] = useState<FriendEntry[] | null>(null);
-  const [pendingCount, setPendingCount] = useState(0);
+  const pendingCount = usePendingBadge("friend_requests");
 
   useEffect(() => {
-    if (!user) { setFriends([]); setPendingCount(0); return; }
+    if (!user) { setFriends([]); return; }
     let alive = true;
     const refresh = async () => {
       try {
-        const [list, badges] = await Promise.all([
-          listFriendships(user.id),
-          fetchPendingBadges(),
-        ]);
+        const list = await listFriendships(user.id);
         if (!alive) return;
         setFriends(list);
-        setPendingCount(badges.friend_requests);
       } catch {
-        if (alive) { setFriends([]); setPendingCount(0); }
+        if (alive) setFriends([]);
       }
+      void refreshPendingBadges();
     };
     refresh();
     const onUpdate = () => { refresh(); };
@@ -43,6 +41,7 @@ export function CommunityHubSection() {
       window.removeEventListener("irth:notifications:updated", onUpdate);
     };
   }, [user]);
+
 
   const accepted = (friends ?? []).filter((f) => f.direction === "accepted");
   const incoming = (friends ?? []).filter((f) => f.direction === "incoming");

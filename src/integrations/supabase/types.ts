@@ -735,6 +735,48 @@ export type Database = {
         }
         Relationships: []
       }
+      leaderboard_snapshots: {
+        Row: {
+          created_at: string
+          id: string
+          metric: string
+          payload: Json
+          period_end: string
+          period_key: string
+          period_start: string
+          score: number
+          timeframe: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metric: string
+          payload?: Json
+          period_end: string
+          period_key: string
+          period_start: string
+          score?: number
+          timeframe: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metric?: string
+          payload?: Json
+          period_end?: string
+          period_key?: string
+          period_start?: string
+          score?: number
+          timeframe?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_deliveries: {
         Row: {
           created_at: string
@@ -1509,6 +1551,29 @@ export type Database = {
       is_content_editor: { Args: never; Returns: boolean }
       is_user_manager: { Args: never; Returns: boolean }
       is_username_available: { Args: { p_username: string }; Returns: boolean }
+      leaderboard_around: {
+        Args: {
+          p_metric?: string
+          p_period_key?: string
+          p_timeframe?: string
+          p_window?: number
+        }
+        Returns: {
+          avatar_id: string
+          display_name: string
+          id: string
+          is_friend: boolean
+          is_me: boolean
+          level: number
+          metric: string
+          period_key: string
+          rank: number
+          score: number
+          timeframe: string
+          username: string
+          xp: number
+        }[]
+      }
       leaderboard_around_me: {
         Args: { p_window?: number }
         Returns: {
@@ -1533,6 +1598,34 @@ export type Database = {
           is_me: boolean
           level: number
           rank: number
+          username: string
+          xp: number
+        }[]
+      }
+      leaderboard_resolve_metric: {
+        Args: { p_metric: string }
+        Returns: string
+      }
+      leaderboard_top: {
+        Args: {
+          p_limit?: number
+          p_metric?: string
+          p_offset?: number
+          p_period_key?: string
+          p_timeframe?: string
+        }
+        Returns: {
+          avatar_id: string
+          display_name: string
+          id: string
+          is_friend: boolean
+          is_me: boolean
+          level: number
+          metric: string
+          period_key: string
+          rank: number
+          score: number
+          timeframe: string
           username: string
           xp: number
         }[]
