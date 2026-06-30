@@ -577,9 +577,9 @@ function CleanupWorkshop() {
         "text/csv;charset=utf-8",
         `irth-encyclopedia-cleanup-${todayStamp()}.csv`,
       );
-      setToast(`تم تصدير ${tagged.length} كيان كـ CSV`);
+      showToast(`تم تصدير ${tagged.length} كيان كـ CSV`);
     } catch (e: any) {
-      setToast("فشل التصدير: " + (e?.message || e));
+      showToast("فشل التصدير: " + (e?.message || e), "err");
     }
   };
 
