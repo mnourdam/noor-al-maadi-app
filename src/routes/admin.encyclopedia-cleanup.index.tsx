@@ -68,9 +68,44 @@ type EntityRow = {
 
 type Quality = "good" | "weak" | "empty" | "duplicate" | "orphaned";
 type FilterKey =
-  | "all" | "figure" | "city" | "landmark" | "battle" | "event"
+  | "all" | "needs-cleanup"
+  | "figure" | "city" | "landmark" | "battle" | "event"
   | "artifact" | "state" | "empty" | "weak" | "duplicate" | "stub" | "archived"
   | "no-image" | "no-sources" | "no-overview" | "no-atlas" | "no-campaign";
+
+// ------------------------------------------------------------
+// Cleanup workflow predicates
+// ------------------------------------------------------------
+// A row is considered "resolved" once it has been touched by the cleanup
+// workflow in any way: archived as a duplicate, redirected to a canonical,
+// hidden as a duplicate, explicitly marked resolved, or absorbed duplicates
+// itself (canonical with a merged_from trail). Resolved rows must never
+// appear in the "Needs Cleanup" queue.
+function isCleanupResolved(r: { enabled: boolean; metadata: any }): boolean {
+  const m: any = r.metadata || {};
+  if (r.enabled === false) return true;
+  if (m.archived === true) return true;
+  if (m.hidden_duplicate === true) return true;
+  if (typeof m.canonical_id === "string" && m.canonical_id) return true;
+  if (m.cleanup_resolved === true) return true;
+  if (Array.isArray(m.merged_from) && m.merged_from.length > 0) return true;
+  return false;
+}
+
+// A row "needs cleanup" if it is still live AND it either (a) sits in an
+// unresolved duplicate group with another live sibling, or (b) is empty /
+// weak quality. Plain "good" entries with no duplicates do NOT clutter the
+// queue — the goal is a remaining-work view, not a full list.
+function rowNeedsCleanup(
+  r: EntityRow,
+  liveDupIds: Set<string>,
+  quality: Quality,
+): boolean {
+  if (isCleanupResolved(r)) return false;
+  if (liveDupIds.has(r.id)) return true;
+  if (quality === "empty" || quality === "weak") return true;
+  return false;
+}
 
 // ------------------------------------------------------------
 // Helpers
@@ -328,6 +363,38 @@ function CleanupWorkshop() {
   }, [dupGroups]);
 
   // ------------------------------------------------------------
+  // Live duplicate groups — a cleanup group is "open" only while it still
+  // has 2+ unresolved members. As soon as a merge marks all but one as
+  // hidden/redirected (and stamps the canonical with merged_from), the
+  // group falls out of this set and disappears from "Needs Cleanup".
+  // ------------------------------------------------------------
+  const liveDupIds = useMemo(() => {
+    const live = new Set<string>();
+    const byId = new Map(rows.map((r) => [r.id, r] as const));
+    for (const ids of dupGroups.values()) {
+      const liveMembers = ids
+        .map((id) => byId.get(id))
+        .filter((r): r is EntityRow => !!r && !isCleanupResolved(r));
+      if (liveMembers.length >= 2) {
+        for (const r of liveMembers) live.add(r.id);
+      }
+    }
+    return live;
+  }, [rows, dupGroups]);
+
+  // Count of items still requiring a human decision — drives the badge
+  // next to the "Needs Cleanup" chip and updates live after every merge.
+  const needsCleanupCount = useMemo(() => {
+    let n = 0;
+    for (const r of rows) {
+      const isOrphan = !(atlasLinks.get(r.id) || campaignSlugs.get(r.id));
+      const quality = classifyQuality(r, dupIds.has(r.id), isOrphan);
+      if (rowNeedsCleanup(r, liveDupIds, quality)) n++;
+    }
+    return n;
+  }, [rows, liveDupIds, dupIds, atlasLinks, campaignSlugs]);
+
+  // ------------------------------------------------------------
   // Filter + search
   // ------------------------------------------------------------
   const filtered = useMemo(() => {
@@ -341,6 +408,9 @@ function CleanupWorkshop() {
       // Filter chip
       switch (filter) {
         case "all": break;
+        case "needs-cleanup":
+          if (!rowNeedsCleanup(r, liveDupIds, quality)) return false;
+          break;
         case "empty": if (quality !== "empty") return false; break;
         case "weak":  if (quality !== "weak") return false; break;
         case "stub":  if (quality !== "empty" && quality !== "weak") return false; break;
@@ -363,7 +433,7 @@ function CleanupWorkshop() {
       if (aliases.some((a) => normalizeArabicName(a).includes(nNorm))) return true;
       return false;
     }).slice(0, 400);
-  }, [rows, filter, q, dupIds, atlasLinks, campaignSlugs]);
+  }, [rows, filter, q, dupIds, liveDupIds, atlasLinks, campaignSlugs]);
 
   const selected = useMemo(
     () => rows.find((r) => r.id === selectedId) ?? null,
@@ -855,7 +925,7 @@ function CleanupWorkshop() {
           </div>
         )}
 
-        <Toolbar q={q} setQ={setQ} filter={filter} setFilter={setFilter} />
+        <Toolbar q={q} setQ={setQ} filter={filter} setFilter={setFilter} needsCleanupCount={needsCleanupCount} />
         <MissingContentStrip rows={rows} atlasLinks={atlasLinks} campaignSlugs={campaignSlugs} dupIds={dupIds} onFilter={setFilter} />
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
@@ -1002,11 +1072,13 @@ function Header({ onRefresh, onExport, onExportFullJson, onExportFullCsv, loadin
 // ------------------------------------------------------------
 // Toolbar (search + filter chips)
 // ------------------------------------------------------------
-function Toolbar({ q, setQ, filter, setFilter }: {
+function Toolbar({ q, setQ, filter, setFilter, needsCleanupCount }: {
   q: string; setQ: (v: string) => void;
   filter: FilterKey; setFilter: (v: FilterKey) => void;
+  needsCleanupCount: number;
 }) {
-  const chips: { key: FilterKey; label: string }[] = [
+  const chips: { key: FilterKey; label: string; badge?: number }[] = [
+    { key: "needs-cleanup", label: "يحتاج تنظيف", badge: needsCleanupCount },
     { key: "all", label: "الكل" },
     { key: "figure", label: "شخصيات" },
     { key: "city", label: "مدن" },
@@ -1033,20 +1105,36 @@ function Toolbar({ q, setQ, filter, setFilter }: {
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <Filter className="size-3.5 text-slate-500" />
-        {chips.map((c) => (
-          <button key={c.key} onClick={() => setFilter(c.key)}
-            className={`rounded-full border px-2.5 py-0.5 text-[11px] transition ${
-              filter === c.key
-                ? "border-amber-400/60 bg-amber-500/20 text-amber-100"
-                : "border-slate-700/60 bg-slate-900/40 text-slate-300 hover:bg-slate-800/60"
-            }`}>
-            {c.label}
-          </button>
-        ))}
+        {chips.map((c) => {
+          const isActive = filter === c.key;
+          const isQueue = c.key === "needs-cleanup";
+          return (
+            <button key={c.key} onClick={() => setFilter(c.key)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] transition ${
+                isActive
+                  ? isQueue
+                    ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100"
+                    : "border-amber-400/60 bg-amber-500/20 text-amber-100"
+                  : isQueue
+                    ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-200 hover:bg-emerald-500/10"
+                    : "border-slate-700/60 bg-slate-900/40 text-slate-300 hover:bg-slate-800/60"
+              }`}>
+              <span>{c.label}</span>
+              {typeof c.badge === "number" && (
+                <span className={`inline-flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums ${
+                  isActive ? "bg-emerald-950/60 text-emerald-50" : "bg-emerald-500/20 text-emerald-100"
+                }`}>
+                  {c.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
+
 
 // ------------------------------------------------------------
 // Result row
