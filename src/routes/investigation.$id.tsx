@@ -2,6 +2,8 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, ChevronRight, Check, X, Trophy, Coins, BookOpen, Heart, Star, Loader2, Lightbulb, Lock } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { ReadingScale } from "@/components/ReadingScale";
+
 import { getInvestigation, investigationScopeKey } from "@/lib/investigations";
 import {
   useSupabaseInvestigation,
@@ -129,7 +131,8 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
   return (
     <AppShell>
-      <div className="px-5 pt-6">
+      <ReadingScale className="px-5 pt-6">
+
         <Link to="/investigations" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
           <ChevronRight className="size-4" /> كل التحقيقات
         </Link>
@@ -218,8 +221,9 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
             </div>
           </section>
         )}
-      </div>
+      </ReadingScale>
     </AppShell>
+
   );
 }
 
@@ -355,7 +359,8 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
 
   return (
     <AppShell>
-      <div className="px-5 pt-6">
+      <ReadingScale className="px-5 pt-6">
+
         <Link to="/investigations" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
           <ChevronRight className="size-4" /> كل التحقيقات
         </Link>
@@ -498,7 +503,8 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
             <Link to="/investigations" className="mt-4 inline-block text-sm text-gold">قضية أخرى</Link>
           </section>
         )}
-      </div>
+      </ReadingScale>
     </AppShell>
+
   );
 }

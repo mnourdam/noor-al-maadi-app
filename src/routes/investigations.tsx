@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Search, ChevronLeft, Check, Coins, Star, Heart, Loader2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
+import { ReadingScale } from "@/components/ReadingScale";
+
 import { INVESTIGATION_REGISTRY } from "@/lib/investigations";
 import {
   useSupabaseInvestigations,
@@ -51,7 +53,9 @@ function InvestigationsIndex() {
 
   return (
     <AppShell>
+      <ReadingScale>
       <Screen title="التحقيقات التاريخية" subtitle="اكشف القرائن، استنتج الإجابة، واربح القلوب والدنانير">
+
         {rows === null && (
           <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> جارٍ التحميل…
@@ -101,7 +105,9 @@ function InvestigationsIndex() {
           )}
         </div>
       </Screen>
+      </ReadingScale>
     </AppShell>
+
   );
 }
 

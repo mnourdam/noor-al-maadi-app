@@ -6,7 +6,9 @@ import {
   Coins, Gift, Bell, Music, Zap, LayoutGrid, TrendingUp, Medal, ScrollText,
   Users2, Settings as SettingsIcon, X, BookOpen, Swords, Landmark, Search,
   Map as MapIcon, Hourglass, Copy, Share2, QrCode, ChevronRight, Lock,
+  Type as TypeIcon,
 } from "lucide-react";
+
 import { toWesternDigits } from "@/lib/formatNumber";
 import { useAudioSettings } from "@/hooks/useAudioSettings";
 import { AppShell, Screen } from "@/components/AppShell";
@@ -28,6 +30,8 @@ import { useAccount } from "@/lib/account";
 import { clearLocalPlayerProgress } from "@/lib/resetProgress";
 import { fetchMyReferralStats, buildReferralShareUrl, shareReferral, type MyReferralStats } from "@/lib/referrals";
 import { AndroidTextEntryInput, AndroidTextEntryTextarea, readAndroidTextEntryResult } from "@/components/AndroidTextEntry";
+import { ReadingScale } from "@/components/ReadingScale";
+
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
@@ -1145,7 +1149,8 @@ function SettingsTab({
   }, [setBio]);
 
   return (
-    <div className="space-y-5">
+    <ReadingScale className="space-y-5">
+
       {/* Account */}
       <SettingsGroup title="الحساب" icon={IdCard}>
         <AccountSection />
@@ -1262,6 +1267,46 @@ function SettingsTab({
         <SettingToggle icon={<Zap className="size-4" />} label="تقليل الحركة" desc="إيقاف الجزيئات والتأثيرات المتحرّكة" value={profile.settings.reduceMotion} onChange={(v) => updateSettings({ reduceMotion: v })} />
       </SettingsGroup>
 
+      {/* Reading Comfort */}
+      <SettingsGroup title="راحة القراءة" icon={TypeIcon}>
+        <p className="mb-3 text-[11px] leading-6 text-muted-foreground">
+          يطبَّق فقط على الشاشات النصّية: الموسوعة، فصول الحملات، التحقيقات، الاختبارات، وصفحات الشخصيات والمدن والمعارك والأحداث. لا يؤثر على الواجهة الرئيسية أو شريط التنقّل.
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { id: "sm" as const, label: "صغير", desc: "الافتراضي", sample: "النص" },
+            { id: "md" as const, label: "متوسّط", desc: "أوضح", sample: "النص" },
+            { id: "lg" as const, label: "كبير", desc: "أكبر للقراءة", sample: "النص" },
+          ]).map((opt) => {
+            const active = (profile.settings.textSize ?? "sm") === opt.id;
+            const sampleClass = opt.id === "sm" ? "text-[13px]" : opt.id === "md" ? "text-[15px]" : "text-[17px]";
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => updateSettings({ textSize: opt.id })}
+                aria-pressed={active}
+                className={`relative flex flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 py-3 transition ${
+                  active
+                    ? "border-gold/60 bg-gold/10 shadow-[0_0_0_1px_oklch(0.82_0.14_82/0.35)_inset]"
+                    : "border-white/10 bg-background/40 hover:border-gold/30"
+                }`}
+              >
+                <span className={`font-display font-bold text-foreground ${sampleClass}`}>{opt.sample}</span>
+                <span className="text-[11px] font-bold text-gold">{opt.label}</span>
+                <span className="text-[10px] text-muted-foreground">{opt.desc}</span>
+                {active && (
+                  <span className="absolute top-1.5 left-1.5 inline-flex size-4 items-center justify-center rounded-full bg-gradient-gold text-primary-foreground">
+                    <Check className="size-2.5" />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </SettingsGroup>
+
+
       {/* About */}
       <SettingsGroup title="حول إرث" icon={Info}>
         <Link to="/about" className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-background/40 p-3 hover:border-gold/30">
@@ -1279,7 +1324,8 @@ function SettingsTab({
           <LogOut className="size-4" /> تسجيل الخروج وإعادة التهيئة
         </button>
       )}
-    </div>
+    </ReadingScale>
+
   );
 }
 

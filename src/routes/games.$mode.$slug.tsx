@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, Screen } from "@/components/AppShell";
+import { ReadingScale } from "@/components/ReadingScale";
+
 import { getGameBySlug, type GameRow } from "@/lib/games/store";
 import { recordCompletion, getMyProgress } from "@/lib/games/progress";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, GAME_MODES, type GameMode } from "@/lib/games/types";
@@ -343,7 +345,8 @@ function GamePlayPage() {
   return (
     <AppShell>
      <GameHelpProvider>
-      <div dir="rtl" className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+      <div dir="rtl"><ReadingScale className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+
         {mode === "crossword" ? (
           <CrosswordHelpDialog
             open={helpOpen}
@@ -552,7 +555,8 @@ function GamePlayPage() {
             </div>
           </section>
         )}
-      </div>
+      </ReadingScale></div>
+
 
       <ExitConfirmDialog
         open={exitOpen}

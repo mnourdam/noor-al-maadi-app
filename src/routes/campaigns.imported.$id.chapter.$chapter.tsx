@@ -13,6 +13,8 @@ import { createFileRoute, Link, useParams, useNavigate, notFound } from "@tansta
 import { useQuery } from "@tanstack/react-query";
 import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart, X as XIcon } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { ReadingScale } from "@/components/ReadingScale";
+
 import type { Campaign, CampaignChapter } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { fetchCampaignByIdOrSlug } from "@/lib/supabaseCampaigns";
@@ -264,7 +266,8 @@ function ImportedChapterPlayer() {
 
   return (
     <AppShell>
-      <div className="animate-reveal pb-10">
+      <ReadingScale className="animate-reveal pb-10">
+
         {/* HEADER */}
         <div className="sticky top-0 z-10 border-b border-gold/20 bg-[#0a0f1e]/95 px-3 py-3 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-2">
@@ -390,7 +393,8 @@ function ImportedChapterPlayer() {
             )}
           </div>
         </div>
-      </div>
+      </ReadingScale>
+
 
       <OutOfHeartsModal open={outOfHeartsOpen} onClose={() => setOutOfHeartsOpen(false)} />
 

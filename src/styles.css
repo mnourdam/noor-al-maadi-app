@@ -945,3 +945,46 @@ html.perf-lite .motion-unlock-glow { animation-duration: 700ms !important; box-s
 html.perf-lite .motion-shake { animation-duration: 220ms !important; }
 
 
+
+/* ============================================================
+   Reading Comfort — per-style typography scaling.
+   Active only on reading-heavy screens that opt-in by wrapping
+   their content in <ReadingScale> (renders `.irth-reading`).
+   Each text style scales independently — no global zoom or
+   single multiplier. Containers using flex/grid + min-height
+   absorb the extra height without overlap.
+   Use class `no-reading-scale` on chips/badges/compact buttons
+   inside a reading screen to keep them at their original size.
+   ============================================================ */
+
+.irth-reading p,
+.irth-reading li,
+.irth-reading blockquote { line-height: 1.85; }
+
+.irth-reading[data-reading-size="md"] :is(
+  p, li, blockquote,
+  .text-base, .text-\[15px\], .text-\[14px\]
+) { font-size: 1.08rem; line-height: 1.95; }
+.irth-reading[data-reading-size="md"] :is(.text-sm, .text-\[13px\]) { font-size: 0.97rem; line-height: 1.7; }
+.irth-reading[data-reading-size="md"] :is(.text-xs, .text-\[12px\], .text-\[11px\], .text-\[10px\]) { font-size: 0.84rem; line-height: 1.55; }
+.irth-reading[data-reading-size="md"] :is(h1, .text-4xl) { font-size: 2rem; line-height: 1.25; }
+.irth-reading[data-reading-size="md"] :is(h2, .text-3xl) { font-size: 1.7rem; line-height: 1.3; }
+.irth-reading[data-reading-size="md"] :is(h3, .text-2xl) { font-size: 1.45rem; line-height: 1.35; }
+.irth-reading[data-reading-size="md"] :is(h4, .text-xl) { font-size: 1.25rem; line-height: 1.5; }
+.irth-reading[data-reading-size="md"] :is(h5, .text-lg) { font-size: 1.15rem; line-height: 1.55; }
+
+.irth-reading[data-reading-size="lg"] :is(
+  p, li, blockquote,
+  .text-base, .text-\[15px\], .text-\[14px\]
+) { font-size: 1.2rem; line-height: 2.05; }
+.irth-reading[data-reading-size="lg"] :is(.text-sm, .text-\[13px\]) { font-size: 1.06rem; line-height: 1.8; }
+.irth-reading[data-reading-size="lg"] :is(.text-xs, .text-\[12px\], .text-\[11px\], .text-\[10px\]) { font-size: 0.94rem; line-height: 1.65; }
+.irth-reading[data-reading-size="lg"] :is(h1, .text-4xl) { font-size: 2.25rem; line-height: 1.2; }
+.irth-reading[data-reading-size="lg"] :is(h2, .text-3xl) { font-size: 1.9rem; line-height: 1.25; }
+.irth-reading[data-reading-size="lg"] :is(h3, .text-2xl) { font-size: 1.6rem; line-height: 1.3; }
+.irth-reading[data-reading-size="lg"] :is(h4, .text-xl) { font-size: 1.38rem; line-height: 1.45; }
+.irth-reading[data-reading-size="lg"] :is(h5, .text-lg) { font-size: 1.25rem; line-height: 1.5; }
+
+/* Opt-out for fixed-size islands (chips, small badges, compact buttons). */
+.irth-reading .no-reading-scale,
+.irth-reading .no-reading-scale * { font-size: revert !important; line-height: revert !important; }

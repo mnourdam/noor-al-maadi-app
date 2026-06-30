@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { ReadingScale } from "@/components/ReadingScale";
+
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
@@ -250,7 +252,8 @@ function EncyclopediaHubFull() {
 
   return (
     <AppShell>
-      <div className="px-5 pt-2">
+      <ReadingScale className="px-5 pt-2">
+
         <Breadcrumbs
           className="mb-2"
           items={[
@@ -611,8 +614,9 @@ function EncyclopediaHubFull() {
             <div className="h-6" />
           </>
         )}
-      </div>
+      </ReadingScale>
     </AppShell>
+
   );
 }
 
@@ -620,7 +624,8 @@ function AndroidStableEncyclopedia() {
   const [query, setQuery] = useState("");
   return (
     <AppShell>
-      <main className="px-5 pt-8">
+      <ReadingScale as="main" className="px-5 pt-8">
+
         <section className="rounded-3xl border border-gold/25 bg-surface p-5">
           <p className="text-[11px] tracking-[0.25em] text-gold/80">المكتبة الكبرى</p>
           <h1 className="font-display mt-2 text-2xl font-bold text-foreground">الموسوعة في الوضع المستقر</h1>
@@ -655,7 +660,8 @@ function AndroidStableEncyclopedia() {
             </Link>
           ))}
         </section>
-      </main>
+      </ReadingScale>
     </AppShell>
+
   );
 }
