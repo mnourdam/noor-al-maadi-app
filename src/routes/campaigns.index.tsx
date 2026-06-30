@@ -11,6 +11,7 @@ import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
 import type { CampaignDivider } from "@/lib/campaignDividers";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { Reveal, Stagger } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/")({
   head: () => ({ meta: [{ title: "الحملات التاريخية" }] }),
