@@ -134,24 +134,28 @@ function HomeFull() {
 
   const lvl = levelFor(profile.points);
 
-  // ===== Imported campaigns (single source of truth) =====
-  const [importedCampaigns, setImportedCampaigns] = useState<ImportedCampaign[]>(() => {
-    try { return listPublishedCampaigns(); } catch { return []; }
+  // ===== Imported campaigns (CANONICAL source: same as /campaigns page) =====
+  // Reads from local-first snapshot + Supabase admin_campaigns via
+  // fetchPublishedCampaigns — identical chronological feed used by the
+  // Campaigns route, so Hero and Campaigns can never disagree on which
+  // campaign is "current".
+  const { data: importedCampaigns = [] } = useQuery({
+    queryKey: ["home-hero-campaigns"],
+    queryFn: fetchPublishedCampaigns,
+    staleTime: 60_000,
   });
-  useEffect(() => {
-    import("@/lib/cloudSync")
-      .then((m) => m.pullAllFromCloud())
-      .then(() => {
-        try { setImportedCampaigns(listPublishedCampaigns()); } catch {}
-      })
-      .catch(() => {});
-  }, []);
   const [progressTick, setProgressTick] = useState(0);
   useEffect(() => {
     const onFocus = () => setProgressTick((t) => t + 1);
+    const onProgress = () => setProgressTick((t) => t + 1);
     window.addEventListener("focus", onFocus);
-    return () => { window.removeEventListener("focus", onFocus); };
+    window.addEventListener("irth:campaign-progress:updated", onProgress);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("irth:campaign-progress:updated", onProgress);
+    };
   }, []);
+
 
 
   type CampaignSelection = {
