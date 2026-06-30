@@ -859,6 +859,8 @@ export type Database = {
       }
       notifications: {
         Row: {
+          analytics: Json
+          archived_at: string | null
           body: string
           category: string | null
           created_at: string
@@ -869,17 +871,22 @@ export type Database = {
           image_url: string | null
           payload: Json
           priority: string
+          schedule: Json | null
           scheduled_at: string | null
           sender: string
           sent_at: string | null
           status: string
+          target_segment_id: string | null
           target_type: string
           target_user_id: string | null
+          target_user_ids: string[] | null
           title: string
           type: string
           updated_at: string
         }
         Insert: {
+          analytics?: Json
+          archived_at?: string | null
           body: string
           category?: string | null
           created_at?: string
@@ -890,17 +897,22 @@ export type Database = {
           image_url?: string | null
           payload?: Json
           priority?: string
+          schedule?: Json | null
           scheduled_at?: string | null
           sender?: string
           sent_at?: string | null
           status?: string
+          target_segment_id?: string | null
           target_type?: string
           target_user_id?: string | null
+          target_user_ids?: string[] | null
           title: string
           type?: string
           updated_at?: string
         }
         Update: {
+          analytics?: Json
+          archived_at?: string | null
           body?: string
           category?: string | null
           created_at?: string
@@ -911,12 +923,15 @@ export type Database = {
           image_url?: string | null
           payload?: Json
           priority?: string
+          schedule?: Json | null
           scheduled_at?: string | null
           sender?: string
           sent_at?: string | null
           status?: string
+          target_segment_id?: string | null
           target_type?: string
           target_user_id?: string | null
+          target_user_ids?: string[] | null
           title?: string
           type?: string
           updated_at?: string
@@ -1451,6 +1466,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_notification_stats: {
+        Args: { p_notification_id: string }
+        Returns: Json
+      }
       admin_revoke_role: {
         Args: {
           p_reason?: string
@@ -1670,6 +1689,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      record_notification_click: {
+        Args: { p_notification_id: string }
+        Returns: undefined
       }
       record_notification_dismissed: {
         Args: { p_notification_id: string }
