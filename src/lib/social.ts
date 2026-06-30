@@ -18,21 +18,21 @@ export interface PublicProfile {
   bio: string | null;
   title: string | null;
   level: number;
+  xp?: number;
   campaigns_completed: number;
   artifacts_collected: number;
   discovery_pct: number;
   favorite_state_id: string | null;
   favorite_figure_id: string | null;
   avatar_id: string | null;
-  // Owner-only / unavailable through the public view. Always undefined when
-  // returned from a public read.
-  xp?: number;
+  // Owner-only / unavailable through the public view.
   dinars?: number;
   streak?: number;
   referral_code?: string | null;
   last_active?: string;
   join_date?: string;
 }
+
 
 // Only safe, intentionally public columns. Backed by the `public_profiles`
 // view (security_invoker=on) — never read from the base `profiles` table
