@@ -30,6 +30,8 @@ import { useAccount } from "@/lib/account";
 import { clearLocalPlayerProgress } from "@/lib/resetProgress";
 import { fetchMyReferralStats, buildReferralShareUrl, shareReferral, type MyReferralStats } from "@/lib/referrals";
 import { AndroidTextEntryInput, AndroidTextEntryTextarea, readAndroidTextEntryResult } from "@/components/AndroidTextEntry";
+import { ReadingScale } from "@/components/ReadingScale";
+
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
@@ -1147,7 +1149,8 @@ function SettingsTab({
   }, [setBio]);
 
   return (
-    <div className="space-y-5">
+    <ReadingScale className="space-y-5">
+
       {/* Account */}
       <SettingsGroup title="الحساب" icon={IdCard}>
         <AccountSection />
