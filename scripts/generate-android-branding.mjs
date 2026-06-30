@@ -1,0 +1,364 @@
+#!/usr/bin/env node
+/**
+ * Generates the full Android branding asset set from a small number of master
+ * inputs the designer keeps under `branding/android/`:
+ *
+ *   - launcher.png    (1024x1024 RGBA — final framed launcher icon)
+ *   - foreground.svg  (transparent — brand mark for the adaptive foreground)
+ *   - monochrome.svg  (transparent, single-color — Android 13+ themed icon)
+ *   - notification.svg(transparent, white — FCM/status-bar icon)
+ *
+ * Outputs (all overwritten on every run):
+ *
+ *   res/mipmap-{m,h,x,xx,xxx}hdpi/ic_launcher.png         (legacy square)
+ *   res/mipmap-{m,h,x,xx,xxx}hdpi/ic_launcher_round.png   (legacy round)
+ *   res/mipmap-{m,h,x,xx,xxx}hdpi/ic_launcher_foreground.png (raster fallback)
+ *   res/drawable/ic_launcher_foreground.xml               (vector adaptive fg)
+ *   res/drawable/ic_launcher_monochrome.xml               (themed icon)
+ *   res/drawable/ic_stat_notify.xml                       (notification icon)
+ *   res/drawable/ic_splash_icon.xml                       (Android 12 splash)
+ *   res/mipmap-anydpi-v26/ic_launcher.xml                 (adaptive + mono)
+ *   res/mipmap-anydpi-v26/ic_launcher_round.xml           (adaptive + mono)
+ *   res/values/ic_launcher_background.xml                 (brand navy)
+ *   res/values/colors.xml                                 (notify + splash)
+ *   branding/play-store/icon-512.png                      (Play listing)
+ *
+ * Run with: `node scripts/generate-android-branding.mjs`.
+ * Wired into `npm run sync:android` so APK builds always see fresh assets.
+ */
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import sharp from "sharp";
+
+const ROOT = dirname(fileURLToPath(import.meta.url)) + "/..";
+const SRC_DIR = join(ROOT, "branding", "android");
+const RES = join(ROOT, "android", "app", "src", "main", "res");
+const PLAY_DIR = join(ROOT, "branding", "play-store");
+
+const LAUNCHER = join(SRC_DIR, "launcher.png");
+const FOREGROUND_SVG = join(SRC_DIR, "foreground.svg");
+const MONOCHROME_SVG = join(SRC_DIR, "monochrome.svg");
+const NOTIFICATION_SVG = join(SRC_DIR, "notification.svg");
+
+for (const f of [LAUNCHER, FOREGROUND_SVG, MONOCHROME_SVG, NOTIFICATION_SVG]) {
+  if (!existsSync(f)) {
+    console.error(`[android-branding] missing master asset: ${f}`);
+    process.exit(1);
+  }
+}
+
+// Brand tokens — sampled from launcher.png + foreground.svg.
+const BRAND_GOLD = "#E1BA59";
+const BRAND_NAVY = "#02111E";
+
+// dp targets for mipmap density buckets. Legacy icon = 48dp, adaptive
+// foreground/background must be rendered at 108dp.
+const DENSITIES = [
+  { name: "mdpi", scale: 1 },
+  { name: "hdpi", scale: 1.5 },
+  { name: "xhdpi", scale: 2 },
+  { name: "xxhdpi", scale: 3 },
+  { name: "xxxhdpi", scale: 4 },
+];
+
+function ensureDir(p) {
+  if (!existsSync(p)) mkdirSync(p, { recursive: true });
+}
+
+function write(p, data) {
+  ensureDir(dirname(p));
+  writeFileSync(p, data);
+  console.log(`[android-branding] wrote ${p}`);
+}
+
+// ---------------------------------------------------------------------------
+// Raster outputs (launcher PNGs)
+// ---------------------------------------------------------------------------
+async function makeRasterIcons() {
+  const masterBuf = readFileSync(LAUNCHER);
+  for (const { name, scale } of DENSITIES) {
+    const legacy = Math.round(48 * scale);
+    const adaptive = Math.round(108 * scale);
+    const dir = join(RES, `mipmap-${name}`);
+    ensureDir(dir);
+
+    // Legacy square: pre-rendered, full-bleed launcher.
+    await sharp(masterBuf)
+      .resize(legacy, legacy, { fit: "cover" })
+      .png({ compressionLevel: 9 })
+      .toFile(join(dir, "ic_launcher.png"));
+
+    // Legacy round: circular mask so launchers that ignore adaptive XML still
+    // render a clean circle (no white square on older devices).
+    const circleMask = Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${legacy}" height="${legacy}"><circle cx="${legacy / 2}" cy="${legacy / 2}" r="${legacy / 2}" fill="#fff"/></svg>`,
+    );
+    await sharp(masterBuf)
+      .resize(legacy, legacy, { fit: "cover" })
+      .composite([{ input: circleMask, blend: "dest-in" }])
+      .png({ compressionLevel: 9 })
+      .toFile(join(dir, "ic_launcher_round.png"));
+
+    // Adaptive foreground raster fallback (used by launchers below v26).
+    // The brand mark needs 25% safe padding inside the 108dp canvas so the
+    // adaptive mask never clips the gold strokes.
+    const safeSize = Math.round(adaptive * 0.66);
+    const padded = await sharp(masterBuf)
+      .resize(safeSize, safeSize, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .extend({
+        top: Math.floor((adaptive - safeSize) / 2),
+        bottom: Math.ceil((adaptive - safeSize) / 2),
+        left: Math.floor((adaptive - safeSize) / 2),
+        right: Math.ceil((adaptive - safeSize) / 2),
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+    writeFileSync(join(dir, "ic_launcher_foreground.png"), padded);
+  }
+  console.log("[android-branding] rasterized launcher icons");
+}
+
+async function makePlayStoreIcon() {
+  ensureDir(PLAY_DIR);
+  await sharp(readFileSync(LAUNCHER))
+    .resize(512, 512, { fit: "cover" })
+    .flatten({ background: BRAND_NAVY })
+    .png({ compressionLevel: 9 })
+    .toFile(join(PLAY_DIR, "icon-512.png"));
+  console.log("[android-branding] wrote Play Store icon-512.png");
+}
+
+// ---------------------------------------------------------------------------
+// SVG → Android Vector Drawable converter (paths, polygons, rects)
+// ---------------------------------------------------------------------------
+function parseViewBox(svg) {
+  const m = svg.match(/viewBox="([\d.\s-]+)"/);
+  if (!m) throw new Error("viewBox missing");
+  const [, , w, h] = m[1].trim().split(/\s+/).map(Number);
+  return { w, h };
+}
+
+function polygonToPath(points) {
+  const nums = points.trim().split(/\s+/).map((p) => p.split(",").map(Number));
+  if (!nums.length) return "";
+  const [x0, y0] = nums[0];
+  let d = `M${x0},${y0}`;
+  for (let i = 1; i < nums.length; i++) d += `L${nums[i][0]},${nums[i][1]}`;
+  return d + "Z";
+}
+
+function rectToPath(attrs) {
+  const x = Number(attrs.x ?? 0);
+  const y = Number(attrs.y ?? 0);
+  const w = Number(attrs.width ?? 0);
+  const h = Number(attrs.height ?? 0);
+  return `M${x},${y}h${w}v${h}h${-w}Z`;
+}
+
+function parseAttrs(tag) {
+  const attrs = {};
+  for (const m of tag.matchAll(/(\w[\w:-]*)="([^"]*)"/g)) attrs[m[1]] = m[2];
+  return attrs;
+}
+
+function classFill(cls, svg) {
+  // Very small CSS lookup: find `.cls { fill: X }` inside <style>.
+  const styleBlock = svg.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+  if (!styleBlock) return null;
+  const re = new RegExp(`\\.${cls}\\s*\\{[^}]*fill:\\s*([^;\\}]+)`);
+  const m = styleBlock[1].match(re);
+  return m ? m[1].trim() : null;
+}
+
+function svgToVector(svg, { widthDp, heightDp, fillOverride }) {
+  const { w, h } = parseViewBox(svg);
+  const parts = [];
+  // <path d="..." class="stX"/>
+  for (const m of svg.matchAll(/<path\b([^/>]*)\/>/g)) {
+    const a = parseAttrs(m[0]);
+    if (!a.d) continue;
+    const cls = a.class;
+    let fill = a.fill ?? (cls ? classFill(cls, svg) : null);
+    if (!fill || fill === "none") continue;
+    if (fillOverride) fill = fillOverride;
+    parts.push(`    <path android:fillColor="${fill}" android:pathData="${a.d}"/>`);
+  }
+  for (const m of svg.matchAll(/<polygon\b([^/>]*)\/>/g)) {
+    const a = parseAttrs(m[0]);
+    if (!a.points) continue;
+    const cls = a.class;
+    let fill = a.fill ?? (cls ? classFill(cls, svg) : null);
+    if (!fill || fill === "none") continue;
+    if (fillOverride) fill = fillOverride;
+    parts.push(`    <path android:fillColor="${fill}" android:pathData="${polygonToPath(a.points)}"/>`);
+  }
+  for (const m of svg.matchAll(/<rect\b([^/>]*)\/>/g)) {
+    const a = parseAttrs(m[0]);
+    if (a.transform) continue; // rotated decorative speckles — skip safely.
+    const cls = a.class;
+    let fill = a.fill ?? (cls ? classFill(cls, svg) : null);
+    if (!fill || fill === "none") continue;
+    if (fillOverride) fill = fillOverride;
+    parts.push(`    <path android:fillColor="${fill}" android:pathData="${rectToPath(a)}"/>`);
+  }
+
+  return `<?xml version="1.0" encoding="utf-8"?>
+<!-- AUTO-GENERATED by scripts/generate-android-branding.mjs — do not edit. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="${widthDp}dp"
+    android:height="${heightDp}dp"
+    android:viewportWidth="${w}"
+    android:viewportHeight="${h}">
+${parts.join("\n")}
+</vector>
+`;
+}
+
+// Inline the brand mark inside a 108x108 viewport so the adaptive system mask
+// keeps a generous safe area around the foreground glyph.
+function svgToAdaptiveForeground(svg) {
+  const { w, h } = parseViewBox(svg);
+  const safe = 72; // dp inside the 108dp adaptive canvas
+  const scale = safe / Math.max(w, h);
+  const drawW = w * scale;
+  const drawH = h * scale;
+  const tx = (108 - drawW) / 2;
+  const ty = (108 - drawH) / 2;
+
+  const inner = [];
+  for (const m of svg.matchAll(/<path\b([^/>]*)\/>/g)) {
+    const a = parseAttrs(m[0]);
+    if (!a.d) continue;
+    let fill = a.fill ?? (a.class ? classFill(a.class, svg) : null);
+    if (!fill || fill === "none") continue;
+    inner.push(`        <path android:fillColor="${fill}" android:pathData="${a.d}"/>`);
+  }
+  for (const m of svg.matchAll(/<polygon\b([^/>]*)\/>/g)) {
+    const a = parseAttrs(m[0]);
+    if (!a.points) continue;
+    let fill = a.fill ?? (a.class ? classFill(a.class, svg) : null);
+    if (!fill || fill === "none") continue;
+    inner.push(`        <path android:fillColor="${fill}" android:pathData="${polygonToPath(a.points)}"/>`);
+  }
+
+  return `<?xml version="1.0" encoding="utf-8"?>
+<!-- AUTO-GENERATED by scripts/generate-android-branding.mjs — do not edit. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="${tx.toFixed(3)}"
+        android:translateY="${ty.toFixed(3)}"
+        android:scaleX="${scale.toFixed(6)}"
+        android:scaleY="${scale.toFixed(6)}">
+${inner.join("\n")}
+    </group>
+</vector>
+`;
+}
+
+// ---------------------------------------------------------------------------
+// XML resources
+// ---------------------------------------------------------------------------
+function writeVectors() {
+  const fgSvg = readFileSync(FOREGROUND_SVG, "utf8");
+  const monoSvg = readFileSync(MONOCHROME_SVG, "utf8");
+  const notifSvg = readFileSync(NOTIFICATION_SVG, "utf8");
+
+  // Adaptive foreground vector (replaces the previous full-bleed PNG that
+  // had zero safe padding and was being clipped by every adaptive mask).
+  write(join(RES, "drawable", "ic_launcher_foreground.xml"), svgToAdaptiveForeground(fgSvg));
+
+  // Themed (Android 13+) monochrome icon.
+  write(
+    join(RES, "drawable", "ic_launcher_monochrome.xml"),
+    svgToVector(monoSvg, { widthDp: 108, heightDp: 108, fillOverride: "#FFFFFF" }),
+  );
+
+  // Notification icon — small, single-color, fully transparent background so
+  // the system can tint it for light/dark mode automatically.
+  write(
+    join(RES, "drawable", "ic_stat_notify.xml"),
+    svgToVector(notifSvg, { widthDp: 24, heightDp: 24, fillOverride: "#FFFFFF" }),
+  );
+
+  // Splash icon for the Android 12+ SplashScreen API. We re-use the
+  // foreground mark (with built-in safe padding) so the cold-start logo
+  // matches the launcher exactly.
+  write(join(RES, "drawable", "ic_splash_icon.xml"), svgToAdaptiveForeground(fgSvg));
+}
+
+function writeXmlResources() {
+  write(
+    join(RES, "values", "ic_launcher_background.xml"),
+    `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">${BRAND_NAVY}</color>
+</resources>
+`,
+  );
+
+  write(
+    join(RES, "values", "colors.xml"),
+    `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">${BRAND_NAVY}</color>
+    <color name="colorPrimaryDark">${BRAND_NAVY}</color>
+    <color name="colorAccent">${BRAND_GOLD}</color>
+    <color name="notification_accent">${BRAND_GOLD}</color>
+    <color name="splash_background">${BRAND_NAVY}</color>
+</resources>
+`,
+  );
+
+  // Adaptive icon XML (square + round) with monochrome layer for themed icons.
+  const adaptiveXml = `<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome"/>
+</adaptive-icon>
+`;
+  write(join(RES, "mipmap-anydpi-v26", "ic_launcher.xml"), adaptiveXml);
+  write(join(RES, "mipmap-anydpi-v26", "ic_launcher_round.xml"), adaptiveXml);
+}
+
+// ---------------------------------------------------------------------------
+// Cleanup: remove obsolete legacy assets the new pipeline replaces.
+// ---------------------------------------------------------------------------
+function cleanup() {
+  const toRemove = [
+    join(RES, "drawable", "splash.png"),
+    join(RES, "drawable-v24", "ic_launcher_foreground.xml"),
+    ...["land", "port"].flatMap((o) =>
+      ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"].map((d) =>
+        join(RES, `drawable-${o}-${d}`, "splash.png"),
+      ),
+    ),
+  ];
+  for (const f of toRemove) {
+    if (existsSync(f)) {
+      rmSync(f);
+      console.log(`[android-branding] removed obsolete ${f}`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+async function main() {
+  await makeRasterIcons();
+  writeVectors();
+  writeXmlResources();
+  await makePlayStoreIcon();
+  cleanup();
+  console.log("[android-branding] done.");
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
