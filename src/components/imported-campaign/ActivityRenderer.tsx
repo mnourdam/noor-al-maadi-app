@@ -242,8 +242,13 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
     onResolve(true, { viaReveal: true });
   };
 
+  const wrapperCls = feedback === "ok"
+    ? "motion-page motion-correct-pop"
+    : wrongCount > 0 && feedback === "err"
+      ? "motion-page motion-shake"
+      : "motion-page";
   return (
-    <div>
+    <div className={wrapperCls} key={`${activity.id}:${wrongCount}:${feedback ?? "_"}`}>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <div className="grid grid-cols-2 gap-2">
@@ -255,7 +260,7 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
               key={String(val)}
               disabled={locked}
               onClick={() => submit(val)}
-              className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
+              className={`motion-tap rounded-xl border px-3 py-3 text-sm font-bold transition ${
                 isCorrectChoice ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-100"
                 : isWrongChoice ? "border-red-400/70 bg-red-500/15 text-red-100"
                 : "border-white/10 bg-black/30 hover:border-gold/40"
@@ -280,7 +285,7 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
       {revealed && !resolved && (
         <button
           onClick={continueAfterReveal}
-          className="mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
+          className="motion-tap motion-reveal is-in mt-3 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
         >
           متابعة
         </button>
