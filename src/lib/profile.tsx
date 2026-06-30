@@ -53,7 +53,10 @@ export interface AppSettings {
   reduceMotion: boolean;
   notifications: boolean;
   notificationPrefs?: NotificationPrefs;
+  /** Reading Comfort — scales typography on reading-heavy screens only. */
+  textSize?: "sm" | "md" | "lg";
 }
+
 
 export interface ProfileState {
   name: string;
@@ -120,7 +123,7 @@ const initial: ProfileState = {
   seasonPoints: 0,
   seasonClaimed: false,
   titlesEarned: [],
-  settings: { ambienceEnabled: false, ambienceVolume: 0.4, reduceMotion: false, notifications: true },
+  settings: { ambienceEnabled: false, ambienceVolume: 0.4, reduceMotion: false, notifications: true, textSize: "sm" },
   bio: "",
   favoriteStateId: "",
   favoriteFigureId: "",
