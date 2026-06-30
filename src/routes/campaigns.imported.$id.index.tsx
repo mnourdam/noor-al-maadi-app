@@ -290,7 +290,7 @@ function ImportedCampaignOverview() {
                   </div>
                 );
               })}
-            </div>
+            </Stagger>
           )}
 
           {/* COMPLETION STATE — premium */}
