@@ -366,17 +366,76 @@ export interface LeaderboardRow {
   xp: number;
   is_me: boolean;
   is_friend: boolean;
+  // Populated by the extensible RPCs; legacy shims leave them undefined.
+  score?: number;
+  metric?: string;
+  timeframe?: string;
+  period_key?: string | null;
 }
 
-export async function fetchGlobalLeaderboard(limit = 50, offset = 0): Promise<LeaderboardRow[]> {
-  const { data } = await db.rpc("leaderboard_global", { p_limit: limit, p_offset: offset });
+/**
+ * Whitelisted ranking metrics — backend `leaderboard_resolve_metric` falls back
+ * to "xp" for anything outside this set, so adding a new metric requires both
+ * a UI entry here and a DB whitelist entry.
+ */
+export type LeaderboardMetric =
+  | "xp"
+  | "level"
+  | "campaigns"
+  | "museum"
+  | "investigations"
+  | "streak"
+  | "longest_streak"
+  | "discovery";
+
+/** Supported timeframes. `alltime` reads live profiles; others read snapshots. */
+export type LeaderboardTimeframe = "alltime" | "weekly" | "monthly" | "seasonal" | "custom";
+
+export interface LeaderboardQuery {
+  metric?: LeaderboardMetric;
+  timeframe?: LeaderboardTimeframe;
+  periodKey?: string | null;
+}
+
+/** Generic top-N query supporting any metric/timeframe combination. */
+export async function fetchLeaderboardTop(
+  q: LeaderboardQuery = {},
+  limit = 50,
+  offset = 0,
+): Promise<LeaderboardRow[]> {
+  const { data } = await (db as any).rpc("leaderboard_top", {
+    p_metric: q.metric ?? "xp",
+    p_timeframe: q.timeframe ?? "alltime",
+    p_period_key: q.periodKey ?? null,
+    p_limit: limit,
+    p_offset: offset,
+  });
   return (data as LeaderboardRow[]) ?? [];
+}
+
+/** Generic "rows around me" query for any metric/timeframe combination. */
+export async function fetchLeaderboardAround(
+  q: LeaderboardQuery = {},
+  window = 3,
+): Promise<LeaderboardRow[]> {
+  const { data } = await (db as any).rpc("leaderboard_around", {
+    p_metric: q.metric ?? "xp",
+    p_timeframe: q.timeframe ?? "alltime",
+    p_period_key: q.periodKey ?? null,
+    p_window: window,
+  });
+  return (data as LeaderboardRow[]) ?? [];
+}
+
+// Legacy shims kept for current Friends UI — route through the extensible RPCs.
+export async function fetchGlobalLeaderboard(limit = 50, offset = 0): Promise<LeaderboardRow[]> {
+  return fetchLeaderboardTop({ metric: "xp", timeframe: "alltime" }, limit, offset);
 }
 
 export async function fetchLeaderboardAroundMe(window = 3): Promise<LeaderboardRow[]> {
-  const { data } = await db.rpc("leaderboard_around_me", { p_window: window });
-  return (data as LeaderboardRow[]) ?? [];
+  return fetchLeaderboardAround({ metric: "xp", timeframe: "alltime" }, window);
 }
+
 
 // =========== Generic unread badges ===========
 export interface PendingBadges {
