@@ -236,6 +236,7 @@ function RootComponent() {
 
     import("../lib/orphanUnlocksMigration").then((m) => m.migrateOrphanUnlocks()).catch(() => {});
     import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
+    import("../lib/importedCampaignProgress").then((m) => m.hydrateLegacyProgressFromCloud()).catch(() => {});
     import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
 
     const onOnline = () => {
@@ -265,6 +266,10 @@ function RootComponent() {
               void l.flushPending();
               if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
             }).catch(() => {});
+            if (event === "SIGNED_IN") {
+              import("../lib/importedCampaignProgress")
+                .then((m) => m.hydrateLegacyProgressFromCloud()).catch(() => {});
+            }
           }
         });
         unsub = () => data.subscription.unsubscribe();
