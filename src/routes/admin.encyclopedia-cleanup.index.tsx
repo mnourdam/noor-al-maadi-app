@@ -291,8 +291,20 @@ type VerifyExpect = Partial<{
   metadata: Record<string, unknown>;
 }>;
 
+// Order-independent deep equality. Postgres JSONB does NOT preserve key
+// order on round-trip, so a naive JSON.stringify compare falsely flags
+// `body` / `metadata` as unsaved whenever the server reorders keys.
+function canonicalize(v: unknown): unknown {
+  if (v === null || typeof v !== "object") return v;
+  if (Array.isArray(v)) return v.map(canonicalize);
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(v as Record<string, unknown>).sort()) {
+    out[k] = canonicalize((v as Record<string, unknown>)[k]);
+  }
+  return out;
+}
 function deepEqualJson(a: unknown, b: unknown): boolean {
-  try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
+  try { return JSON.stringify(canonicalize(a)) === JSON.stringify(canonicalize(b)); } catch { return false; }
 }
 
 async function verifyDbUpdate(id: string, expect: VerifyExpect): Promise<{
