@@ -30,6 +30,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
 import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
+import { scheduleIdle, decodeImage, perfMark } from "@/lib/idle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -69,13 +70,18 @@ function HomeFull() {
 
   // Debug instrumentation — helps QA confirm Home cold-start on real devices.
   useEffect(() => {
-    const t = performance.now();
-    // eslint-disable-next-line no-console
-    console.info("[home] mounted", { perfLite, t: Math.round(t) });
-    return () => {
-      // eslint-disable-next-line no-console
-      console.info("[home] unmounted", { dt: Math.round(performance.now() - t) });
-    };
+    perfMark("home mounted", { perfLite });
+    // First paint marker — fires after React commits and the browser paints.
+    requestAnimationFrame(() => requestAnimationFrame(() => perfMark("first paint")));
+    // Home interactive — input handlers + carousel state are wired.
+    const interactiveHandle = scheduleIdle(() => {
+      perfMark("home interactive");
+      perfMark("idle tasks started");
+      // Pre-decode neighbor hero images so the next swap is instant, but
+      // only once the main thread is idle.
+      scheduleIdle(() => { perfMark("idle tasks finished"); }, 3000);
+    }, 1500);
+    return () => { interactiveHandle.cancel(); };
   }, [perfLite]);
 
   useEffect(() => {
@@ -92,13 +98,17 @@ function HomeFull() {
         if (!serverAuthoritative) setUnread(unreadCount());
       }
     };
-    void recount();
+    // Defer initial recount past first paint — notification badge is not
+    // part of the LCP and forcing it onto the boot path competes for the
+    // network and main thread on low-end Android.
+    const idle = scheduleIdle(() => { void recount(); }, 1500);
     const unsubRealtime = subscribeToMyNotifications(() => { void recount(); });
     const onLocal = () => { void recount(); };
     window.addEventListener("irth:notifications:updated", onLocal);
     window.addEventListener("focus", onLocal);
     return () => {
       cancelled = true;
+      idle.cancel();
       window.removeEventListener("irth:notifications:updated", onLocal);
       window.removeEventListener("focus", onLocal);
       unsubRealtime();
@@ -108,21 +118,21 @@ function HomeFull() {
 
   useEffect(() => {
     setMounted(true);
-    // NOTE: streak is NOT touched on app open. Only qualifying gameplay
-    // activity (campaign chapter complete, investigation complete, daily
-    // challenge / mini-game complete) updates the streak. Browsing the app
-    // counts as "last seen" via touch_my_last_active, not streak activity.
-    const season = currentSeason();
-    runDailyNotifications({
-      prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
-      today: todayEvent
-        ? { title: todayEvent.title, teaser: todayEvent.body, href: "/on-this-day" }
-        : null,
-      season: {
-        name: season.name, tagline: season.tagline,
-        ready: profile.seasonPoints >= season.goalPoints && !profile.seasonClaimed,
-      },
-    });
+    // Daily notifications are background sync — never block first paint.
+    const idle = scheduleIdle(() => {
+      const season = currentSeason();
+      runDailyNotifications({
+        prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
+        today: todayEvent
+          ? { title: todayEvent.title, teaser: todayEvent.body, href: "/on-this-day" }
+          : null,
+        season: {
+          name: season.name, tagline: season.tagline,
+          ready: profile.seasonPoints >= season.goalPoints && !profile.seasonClaimed,
+        },
+      });
+    }, 2500);
+    return () => { idle.cancel(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayEvent?.id, user, lastSyncAt]);
 
@@ -295,8 +305,13 @@ function HomeFull() {
   // The pool auto-includes any file dropped under src/assets/hero/.
   const [heroBgs, setHeroBgs] = useState<string[]>(() => defaultHeroImages(3));
   useEffect(() => {
-    const picks = pickHeroImages(3);
-    if (picks.length > 0) setHeroBgs(picks);
+    // Randomized pool selection is a non-critical refresh — let the
+    // deterministic default render first, then upgrade when idle.
+    const idle = scheduleIdle(() => {
+      const picks = pickHeroImages(3);
+      if (picks.length > 0) setHeroBgs(picks);
+    }, 1200);
+    return () => { idle.cancel(); };
   }, []);
 
   // ===== Hero slides =====
@@ -371,9 +386,18 @@ function HomeFull() {
 
   useEffect(() => {
     if (slides.length <= 1 || isDragging) return;
-    const id = setInterval(() => setSlideIdx((i) => (i + 1) % slides.length), 7000);
-    return () => clearInterval(id);
-  }, [slides.length, isDragging]);
+    let cancelled = false;
+    const id = window.setInterval(async () => {
+      if (cancelled) return;
+      const nextIdx = (slideIdx + 1) % slides.length;
+      // Decode the next image (best-effort) BEFORE swapping so the
+      // transition never reveals a partially decoded frame.
+      await decodeImage(slides[nextIdx]?.bg ?? "");
+      if (cancelled) return;
+      setSlideIdx(nextIdx);
+    }, 7000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [slides, slideIdx, isDragging]);
 
   useEffect(() => { if (slideIdx >= slides.length) setSlideIdx(0); }, [slides.length, slideIdx]);
   const slide = slides[Math.min(slideIdx, slides.length - 1)] ?? slides[0];
@@ -612,19 +636,22 @@ function HomeFull() {
             // + composite layers on Android WebView and is a major cause of
             // slow Home cold-start on low-end devices.
             if (perfLite && i !== slideIdx) return null;
+            const isCurrent = i === slideIdx;
+            // Only the visible image gets eager+high. Every other slide is
+            // lazy+low so the carousel never decodes 3–5 full-resolution
+            // images during first paint.
             return (
               <img
                 key={`${s.kind}-${i}`}
                 src={s.bg}
                 alt=""
-                loading={i === 0 ? "eager" : "lazy"}
+                loading={isCurrent ? "eager" : "lazy"}
                 decoding="async"
-                fetchPriority={i === slideIdx ? "high" : "low"}
-                onLoad={i === slideIdx ? (() => {
-                  // eslint-disable-next-line no-console
-                  try { console.info("[home] hero loaded", { i, t: Math.round(performance.now()) }); } catch { /* noop */ }
+                fetchPriority={isCurrent ? "high" : "low"}
+                onLoad={isCurrent ? (() => {
+                  perfMark("hero ready", { i });
                 }) : undefined}
-                className={`${perfLite ? "" : "animate-ken-burns"} absolute inset-0 size-full object-cover transition-opacity duration-[1200ms] ease-in-out ${i === slideIdx ? "opacity-100" : "opacity-0"}`}
+                className={`${perfLite ? "" : "animate-ken-burns"} absolute inset-0 size-full object-cover transition-opacity duration-[1200ms] ease-in-out ${isCurrent ? "opacity-100" : "opacity-0"}`}
               />
             );
           })}
