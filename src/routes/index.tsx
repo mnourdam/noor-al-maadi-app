@@ -305,8 +305,13 @@ function HomeFull() {
   // The pool auto-includes any file dropped under src/assets/hero/.
   const [heroBgs, setHeroBgs] = useState<string[]>(() => defaultHeroImages(3));
   useEffect(() => {
-    const picks = pickHeroImages(3);
-    if (picks.length > 0) setHeroBgs(picks);
+    // Randomized pool selection is a non-critical refresh — let the
+    // deterministic default render first, then upgrade when idle.
+    const idle = scheduleIdle(() => {
+      const picks = pickHeroImages(3);
+      if (picks.length > 0) setHeroBgs(picks);
+    }, 1200);
+    return () => { idle.cancel(); };
   }, []);
 
   // ===== Hero slides =====
