@@ -184,3 +184,119 @@ export function resetCampaignProgress(campaignId: string): void {
   delete all[campaignId];
   writeAll(all);
 }
+
+// ============================================================
+// Cloud → local hydration (backward compat / reinstall recovery)
+// ------------------------------------------------------------
+// Reads user_campaign_progress rows for the signed-in user and merges
+// them into `irth_campaign_progress`. NEVER downgrades local progress —
+// only ADDs missing completed chapters/activities. A one-time backup of
+// the pre-merge state is saved to `irth_campaign_progress.backup_v1`.
+// Safe to call repeatedly; idempotent.
+// ============================================================
+
+const BACKUP_KEY = "irth_campaign_progress.backup_v1";
+const HYDRATED_FLAG = "irth_campaign_progress.cloud_hydrated_v1";
+
+export async function hydrateLegacyProgressFromCloud(): Promise<{ chaptersAdded: number; campaignsCompleted: number } | null> {
+  if (!isBrowser()) return null;
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const uid = sessionData.session?.user?.id;
+    if (!uid) return null;
+
+    const { data: rows, error } = await supabase
+      .from("user_campaign_progress")
+      .select("campaign_id, chapter_id, completed_at, xp_earned, coins_earned, score")
+      .eq("user_id", uid);
+    if (error || !rows || !rows.length) return null;
+
+    // One-time backup of existing local progress before we touch it.
+    try {
+      if (!window.localStorage.getItem(BACKUP_KEY)) {
+        const existing = window.localStorage.getItem(PROGRESS_KEY);
+        if (existing) window.localStorage.setItem(BACKUP_KEY, existing);
+      }
+    } catch { /* quota — non-fatal */ }
+
+    // Need the local campaign cache to expand chapter rows into activity IDs
+    // and to evaluate campaign-level completion.
+    const { listCampaigns } = await import("@/lib/campaignStorage");
+    const campaigns = listCampaigns();
+    const campaignById = new Map(campaigns.map(c => [c.id, c] as const));
+
+    const all = readAll();
+    let chaptersAdded = 0;
+    let campaignsCompleted = 0;
+    const now = new Date().toISOString();
+    const touchedCampaigns = new Set<string>();
+
+    for (const row of rows) {
+      const cid = row.campaign_id;
+      const chid = row.chapter_id;
+      if (!cid || !chid) continue;
+      if (!row.completed_at) continue;
+
+      const cur = all[cid] ?? blankCampaign(cid);
+      const ch = cur.chapters[chid] ?? blankChapter();
+
+      // Never downgrade: if local already says completed, leave it alone.
+      if (ch.completed) {
+        cur.chapters[chid] = ch;
+        all[cid] = cur;
+        continue;
+      }
+
+      const campaign = campaignById.get(cid);
+      const chapter = campaign?.chapters.find(c => c.id === chid);
+      const activityIds = (chapter?.activities ?? []).map(a => a.id).filter(Boolean);
+
+      const merged = new Set<string>(ch.completedActivityIds);
+      for (const aid of activityIds) merged.add(aid);
+      ch.completedActivityIds = [...merged];
+      ch.completed = true;
+      ch.xpEarned = Math.max(ch.xpEarned, row.xp_earned ?? 0);
+      ch.coinsEarned = Math.max(ch.coinsEarned, row.coins_earned ?? 0);
+
+      cur.chapters[chid] = ch;
+      cur.updatedAt = now;
+      all[cid] = cur;
+      touchedCampaigns.add(cid);
+      chaptersAdded += 1;
+    }
+
+    for (const cid of touchedCampaigns) {
+      const cur = all[cid];
+      const campaign = campaignById.get(cid);
+      if (!cur || !campaign || !campaign.chapters.length) continue;
+
+      let xp = 0; let coins = 0;
+      for (const c of campaign.chapters) {
+        const cp = cur.chapters[c.id];
+        if (cp) { xp += cp.xpEarned; coins += cp.coinsEarned; }
+      }
+      cur.totalXp = Math.max(cur.totalXp, xp);
+      cur.totalCoins = Math.max(cur.totalCoins, coins);
+
+      const allDone = campaign.chapters.every(c => cur.chapters[c.id]?.completed);
+      if (allDone && !cur.completed) {
+        cur.completed = true;
+        const unlocks = new Set<string>(cur.unlockedRegistryIds);
+        (campaign.unlocks ?? []).forEach(u => unlocks.add(u));
+        (campaign.finalRewards?.unlocks ?? []).forEach(u => unlocks.add(u));
+        campaign.chapters.forEach(c => (c.rewards?.unlocks ?? []).forEach(u => unlocks.add(u)));
+        cur.unlockedRegistryIds = [...unlocks];
+        campaignsCompleted += 1;
+      }
+      all[cid] = cur;
+    }
+
+    writeAll(all);
+    try { window.localStorage.setItem(HYDRATED_FLAG, now); } catch { /* noop */ }
+    return { chaptersAdded, campaignsCompleted };
+  } catch {
+    return null;
+  }
+}
+
