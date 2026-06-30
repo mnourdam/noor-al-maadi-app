@@ -31,6 +31,7 @@ import {
   enqueueChapterSync, enqueueCollectionSync, setActivePosition,
   clearActivePositionIf, unlockIdsToCollectionItems,
 } from "@/lib/campaignLedger";
+import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
