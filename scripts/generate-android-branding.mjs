@@ -257,15 +257,27 @@ function writeVectors() {
   const monoSvg = readFileSync(MONOCHROME_SVG, "utf8");
   const notifSvg = readFileSync(NOTIFICATION_SVG, "utf8");
 
-  // Adaptive foreground vector (replaces the previous full-bleed PNG that
-  // had zero safe padding and was being clipped by every adaptive mask).
-  write(join(RES, "drawable", "ic_launcher_foreground.xml"), svgToAdaptiveForeground(fgSvg));
+  const fgVector = svgToAdaptiveForeground(fgSvg);
+  const monoVector = svgToVector(monoSvg, {
+    widthDp: 108,
+    heightDp: 108,
+    fillOverride: "#FFFFFF",
+  });
 
-  // Themed (Android 13+) monochrome icon.
-  write(
-    join(RES, "drawable", "ic_launcher_monochrome.xml"),
-    svgToVector(monoSvg, { widthDp: 108, heightDp: 108, fillOverride: "#FFFFFF" }),
-  );
+  // Adaptive foreground vector. We write the same drawable into BOTH the
+  // unqualified `drawable/` bucket AND `drawable-anydpi-v24/`. The v24
+  // bucket is what the resource merger picks when an adaptive-icon
+  // (mipmap-anydpi-v26) references `@drawable/ic_launcher_foreground`
+  // on certain AGP / AAPT2 versions; without it the link step fails with
+  // "resource drawable/ic_launcher_foreground not found" even though the
+  // unqualified file exists. Duplicating the vector is the standard fix
+  // and matches the Android Studio Asset Studio output.
+  write(join(RES, "drawable", "ic_launcher_foreground.xml"), fgVector);
+  write(join(RES, "drawable-anydpi-v24", "ic_launcher_foreground.xml"), fgVector);
+
+  // Themed (Android 13+) monochrome icon — same dual-bucket strategy.
+  write(join(RES, "drawable", "ic_launcher_monochrome.xml"), monoVector);
+  write(join(RES, "drawable-anydpi-v24", "ic_launcher_monochrome.xml"), monoVector);
 
   // Notification icon — small, single-color, fully transparent background so
   // the system can tint it for light/dark mode automatically.
@@ -277,7 +289,32 @@ function writeVectors() {
   // Splash icon for the Android 12+ SplashScreen API. We re-use the
   // foreground mark (with built-in safe padding) so the cold-start logo
   // matches the launcher exactly.
-  write(join(RES, "drawable", "ic_splash_icon.xml"), svgToAdaptiveForeground(fgSvg));
+  write(join(RES, "drawable", "ic_splash_icon.xml"), fgVector);
+}
+
+// Post-generation assertion: every drawable referenced by the adaptive icon
+// XML must exist on disk before Gradle starts. Failing loudly here turns a
+// silent CI link error ("resource drawable/ic_launcher_foreground not found")
+// into an immediate, actionable script failure.
+function verifyOutputs() {
+  const required = [
+    join(RES, "drawable", "ic_launcher_foreground.xml"),
+    join(RES, "drawable-anydpi-v24", "ic_launcher_foreground.xml"),
+    join(RES, "drawable", "ic_launcher_monochrome.xml"),
+    join(RES, "drawable-anydpi-v24", "ic_launcher_monochrome.xml"),
+    join(RES, "drawable", "ic_stat_notify.xml"),
+    join(RES, "drawable", "ic_splash_icon.xml"),
+    join(RES, "mipmap-anydpi-v26", "ic_launcher.xml"),
+    join(RES, "mipmap-anydpi-v26", "ic_launcher_round.xml"),
+    join(RES, "values", "ic_launcher_background.xml"),
+    join(RES, "values", "colors.xml"),
+  ];
+  const missing = required.filter((p) => !existsSync(p));
+  if (missing.length > 0) {
+    console.error("[android-branding] FATAL: expected outputs missing:\n  - " + missing.join("\n  - "));
+    process.exit(1);
+  }
+  console.log(`[android-branding] verified ${required.length} resource outputs`);
 }
 
 function writeXmlResources() {
@@ -343,6 +380,7 @@ async function main() {
   writeXmlResources();
   await makePlayStoreIcon();
   cleanup();
+  verifyOutputs();
   console.log("[android-branding] done.");
 }
 
