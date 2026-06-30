@@ -154,9 +154,15 @@ function scoreEntity(e: SupabaseEncyclopediaEntity, nq: string): number {
   const subtitle = normArabic(e.subtitle ?? "");
   const summary = normArabic(e.summary ?? "");
   const slug = normArabic(e.slug ?? "");
-  const aliases: string[] = Array.isArray(e.aliases)
+  const meta = (e.metadata && typeof e.metadata === "object")
+    ? (e.metadata as Record<string, unknown>) : {};
+  const metaAliases = Array.isArray((meta as { aliases?: unknown }).aliases)
+    ? ((meta as { aliases: unknown[] }).aliases.filter((a) => typeof a === "string") as string[])
+    : [];
+  const colAliases = Array.isArray(e.aliases)
     ? (e.aliases.filter((a) => typeof a === "string") as string[])
     : [];
+  const aliases: string[] = Array.from(new Set([...colAliases, ...metaAliases]));
   let score = 0;
   // Title matches (highest tier).
   if (title === nq) score += 1000;
