@@ -1072,11 +1072,13 @@ function Header({ onRefresh, onExport, onExportFullJson, onExportFullCsv, loadin
 // ------------------------------------------------------------
 // Toolbar (search + filter chips)
 // ------------------------------------------------------------
-function Toolbar({ q, setQ, filter, setFilter }: {
+function Toolbar({ q, setQ, filter, setFilter, needsCleanupCount }: {
   q: string; setQ: (v: string) => void;
   filter: FilterKey; setFilter: (v: FilterKey) => void;
+  needsCleanupCount: number;
 }) {
-  const chips: { key: FilterKey; label: string }[] = [
+  const chips: { key: FilterKey; label: string; badge?: number }[] = [
+    { key: "needs-cleanup", label: "يحتاج تنظيف", badge: needsCleanupCount },
     { key: "all", label: "الكل" },
     { key: "figure", label: "شخصيات" },
     { key: "city", label: "مدن" },
@@ -1103,20 +1105,36 @@ function Toolbar({ q, setQ, filter, setFilter }: {
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <Filter className="size-3.5 text-slate-500" />
-        {chips.map((c) => (
-          <button key={c.key} onClick={() => setFilter(c.key)}
-            className={`rounded-full border px-2.5 py-0.5 text-[11px] transition ${
-              filter === c.key
-                ? "border-amber-400/60 bg-amber-500/20 text-amber-100"
-                : "border-slate-700/60 bg-slate-900/40 text-slate-300 hover:bg-slate-800/60"
-            }`}>
-            {c.label}
-          </button>
-        ))}
+        {chips.map((c) => {
+          const isActive = filter === c.key;
+          const isQueue = c.key === "needs-cleanup";
+          return (
+            <button key={c.key} onClick={() => setFilter(c.key)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] transition ${
+                isActive
+                  ? isQueue
+                    ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100"
+                    : "border-amber-400/60 bg-amber-500/20 text-amber-100"
+                  : isQueue
+                    ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-200 hover:bg-emerald-500/10"
+                    : "border-slate-700/60 bg-slate-900/40 text-slate-300 hover:bg-slate-800/60"
+              }`}>
+              <span>{c.label}</span>
+              {typeof c.badge === "number" && (
+                <span className={`inline-flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums ${
+                  isActive ? "bg-emerald-950/60 text-emerald-50" : "bg-emerald-500/20 text-emerald-100"
+                }`}>
+                  {c.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
+
 
 // ------------------------------------------------------------
 // Result row
