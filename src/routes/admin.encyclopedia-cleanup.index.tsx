@@ -793,6 +793,12 @@ function CleanupWorkshop() {
       const v = await verifyDbUpdate(id, expected);
       devLog("save:verify", { id, ok: v.ok, diff: v.diff, dbRow: v.row });
       if (!v.ok) {
+        // eslint-disable-next-line no-console
+        console.warn("[cleanup:save:verify-failed]", {
+          id, diff: v.diff,
+          expectedBody: expected.body,
+          dbBody: v.row?.body,
+        });
         showToast(`فشل التحقق من الحفظ — حقول لم تُحفظ: ${v.diff.join(", ") || "?"}${v.error ? " · " + v.error : ""}`, "err");
         return;
       }
