@@ -123,7 +123,7 @@ function UnlockIntegrityPage() {
     try {
       const [campaignsRes, entitiesRes] = await Promise.all([
         supabase.from("admin_campaigns").select("id,title,data"),
-        supabase.from("encyclopedia_entities").select("id,slug,entity_type,enabled,title"),
+        supabase.from("encyclopedia_entities").select("id,slug,entity_type,enabled,title,metadata"),
       ]);
       const campaigns = (campaignsRes.data ?? []) as any[];
       const allRefs = collectRefs(campaigns);
