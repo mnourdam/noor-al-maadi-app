@@ -432,22 +432,28 @@ function ChapterCompletePanel(props: {
   nextChapter: CampaignChapter | null;
 }) {
   return (
-    <div className="rounded-3xl border border-gold/40 bg-gradient-to-b from-amber-900/40 via-surface to-stone-900/60 p-6 text-center shadow-elegant">
+    <div className="motion-page motion-unlock-glow rounded-3xl border border-gold/40 bg-gradient-to-b from-amber-900/40 via-surface to-stone-900/60 p-6 text-center shadow-elegant">
       <Sparkles className="mx-auto size-7 text-gold" />
       <p className="font-display mt-2 text-base font-bold text-gold">أتممتَ هذا الفصل</p>
-      <div className="mt-3 flex items-center justify-center gap-3 text-[12px]">
-        <span className="inline-flex items-center gap-1 text-sky-300"><Zap className="size-3.5" />+{props.xpEarned}</span>
-        <span className="inline-flex items-center gap-1 text-amber-300"><Coins className="size-3.5" />+{props.coinsEarned}</span>
+      <Stagger className="mt-3 flex items-center justify-center gap-3 text-[12px]">
+        <span className="motion-reveal is-in inline-flex items-center gap-1 text-sky-300">
+          <Zap className="size-3.5" />+<AnimatedNumber value={props.xpEarned} />
+        </span>
+        <span className="motion-reveal is-in inline-flex items-center gap-1 text-amber-300">
+          <Coins className="size-3.5" />+<AnimatedNumber value={props.coinsEarned} />
+        </span>
         {props.heartsLost > 0 && (
-          <span className="inline-flex items-center gap-1 text-red-300"><Heart className="size-3.5" />-{props.heartsLost}</span>
+          <span className="motion-reveal is-in inline-flex items-center gap-1 text-red-300">
+            <Heart className="size-3.5" />-<AnimatedNumber value={props.heartsLost} />
+          </span>
         )}
-      </div>
+      </Stagger>
       <div className="mt-5 flex flex-col items-stretch gap-2">
         {props.nextChapter ? (
           <Link
             to="/campaigns/imported/$id/chapter/$chapter"
             params={{ id: props.campaignId, chapter: props.nextChapter.id }}
-            className="inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+            className="motion-tap inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
           >
             <Check className="size-4" /> الفصل التالي
             <ArrowLeft className="size-4" />
@@ -456,7 +462,7 @@ function ChapterCompletePanel(props: {
           <Link
             to="/campaigns/imported/$id"
             params={{ id: props.campaignId }}
-            className="inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+            className="motion-tap inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
           >
             <Check className="size-4" /> عودة لختام الحملة
           </Link>
@@ -464,7 +470,7 @@ function ChapterCompletePanel(props: {
         <Link
           to="/campaigns/imported/$id"
           params={{ id: props.campaignId }}
-          className="rounded-2xl border border-white/10 py-2 text-xs text-muted-foreground"
+          className="motion-tap rounded-2xl border border-white/10 py-2 text-xs text-muted-foreground"
         >
           عودة لقائمة الفصول
         </Link>
