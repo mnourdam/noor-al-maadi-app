@@ -15,12 +15,13 @@ export function ReadingScale({
   className = "",
 }: {
   children: React.ReactNode;
-  as?: keyof JSX.IntrinsicElements;
+  as?: React.ElementType;
   className?: string;
 }) {
   const { profile } = useProfile();
   const size = (profile?.settings?.textSize ?? "sm") as ReadingTextSize;
-  const Comp = Tag as any;
+  const Comp: React.ElementType = Tag;
+
   return (
     <Comp className={`irth-reading ${className}`} data-reading-size={size}>
       {children}
