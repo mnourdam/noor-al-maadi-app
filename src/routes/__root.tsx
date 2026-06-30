@@ -266,6 +266,10 @@ function RootComponent() {
               void l.flushPending();
               if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
             }).catch(() => {});
+            if (event === "SIGNED_IN") {
+              import("../lib/importedCampaignProgress")
+                .then((m) => m.hydrateLegacyProgressFromCloud()).catch(() => {});
+            }
           }
         });
         unsub = () => data.subscription.unsubscribe();
