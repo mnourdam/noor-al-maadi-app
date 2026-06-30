@@ -25,10 +25,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle, Archive, ArrowUpRight, BookOpen, CheckCircle2, Copy, CornerDownRight,
-  Download, Eye, FileWarning, Filter, Loader2, Pencil, RefreshCw, RotateCcw, Save,
+  AlertTriangle, Archive, ArrowUpRight, BadgeCheck, BookOpen, CheckCircle2, Copy, CornerDownRight,
+  Download, Eye, FileText, FileWarning, Filter, Loader2, Pencil, RefreshCw, RotateCcw, Save,
   Search, Shield, Sparkles, Trash2, X,
 } from "lucide-react";
+
 
 import { EncyclopediaEntityPreview } from "@/components/admin/EncyclopediaEntityPreview";
 import { supabase } from "@/integrations/supabase/client";
@@ -167,9 +168,13 @@ function hasRealBody(body: any): boolean {
 
 function hasRealContent(r: EntityRow): boolean {
   const m: any = r.metadata || {};
+  // Explicit moderator overrides win over heuristics.
+  if (m.content_verified === true) return true;
+  if (m.needs_content === true) return false;
   if (m.placeholder === true || m.stub === true || m.auto_generated === true) return false;
   return hasRealBody(r.body);
 }
+
 
 function needsContent(r: EntityRow): boolean {
   return isFinalCanonical(r) && !hasRealContent(r);
@@ -847,6 +852,70 @@ function CleanupWorkshop() {
     finally { setBusy(null); }
   };
 
+  // ------------------------------------------------------------
+  // Cleanup-stage shortcuts — only resolve the cleanup workflow.
+  // They never touch duplicate/redirect metadata; the content stage
+  // remains independent.
+  //
+  // fullyApproveCleanup → entity is already canonical AND its content
+  //   is good enough as-is. Marks cleanup_resolved + content_verified
+  //   so it lands in "مكتمل" immediately.
+  //
+  // markNeedsContentOnly → entity is canonical but body is still
+  //   missing/weak. Marks cleanup_resolved + needs_content so it leaves
+  //   "يحتاج تنظيف" and lands in "يحتاج محتوى".
+  // ------------------------------------------------------------
+  const fullyApproveCleanup = async (r: EntityRow) => {
+    setBusy(r.id);
+    const stamp = new Date().toISOString();
+    const meta: any = { ...(r.metadata || {}) };
+    meta.cleanup_resolved = true;
+    meta.cleanup_resolved_at = stamp;
+    meta.content_verified = true;
+    meta.content_verified_at = stamp;
+    delete meta.needs_content;
+    try {
+      const upd = await supabase.from("encyclopedia_entities" as any)
+        .update({ metadata: meta }).eq("id", r.id).select("id").maybeSingle();
+      if (upd.error) { showToast("فشل الاعتماد التام: " + upd.error.message, "err"); return; }
+      const v = await verifyDbUpdate(r.id, {
+        metadata: { cleanup_resolved: true, content_verified: true, needs_content: null },
+      });
+      if (!v.ok) { showToast(`فشل التحقق — لم تُحفظ: ${v.diff.join(", ")}`, "err"); return; }
+      await logAudit("encyclopedia.cleanup.fully_approve", { id: r.id, slug: r.slug, verified: true });
+      showToast(`اعتمدت «${r.title}» بالكامل — انتقلت إلى مكتمل ✓`);
+      await refresh();
+    } catch (e: any) { showToast("فشل: " + (e?.message || e), "err"); }
+    finally { setBusy(null); }
+  };
+
+  const markNeedsContentOnly = async (r: EntityRow) => {
+    setBusy(r.id);
+    const stamp = new Date().toISOString();
+    const meta: any = { ...(r.metadata || {}) };
+    meta.cleanup_resolved = true;
+    meta.cleanup_resolved_at = stamp;
+    meta.needs_content = true;
+    meta.needs_content_at = stamp;
+    delete meta.content_verified;
+    delete meta.content_verified_at;
+    try {
+      const upd = await supabase.from("encyclopedia_entities" as any)
+        .update({ metadata: meta }).eq("id", r.id).select("id").maybeSingle();
+      if (upd.error) { showToast("فشل النقل: " + upd.error.message, "err"); return; }
+      const v = await verifyDbUpdate(r.id, {
+        metadata: { cleanup_resolved: true, needs_content: true, content_verified: null },
+      });
+      if (!v.ok) { showToast(`فشل التحقق — لم تُحفظ: ${v.diff.join(", ")}`, "err"); return; }
+      await logAudit("encyclopedia.cleanup.mark_needs_content", { id: r.id, slug: r.slug, verified: true });
+      showToast(`نُقل «${r.title}» إلى «يحتاج محتوى» ✓`);
+      await refresh();
+    } catch (e: any) { showToast("فشل: " + (e?.message || e), "err"); }
+    finally { setBusy(null); }
+  };
+
+
+
 
   // ------------------------------------------------------------
   // Delete (only if no references) — verified by re-fetching
@@ -1050,6 +1119,7 @@ function CleanupWorkshop() {
               const state = primaryState(r, dupIds.has(r.id), q);
               const cid = typeof r.metadata?.canonical_id === "string" ? r.metadata.canonical_id : null;
               const canonicalTitle = cid ? (rows.find((x) => x.id === cid)?.title ?? null) : null;
+              const inCleanupQueue = rowNeedsCleanup(r, liveDupIds, q);
               return (
                 <ResultRow
                   key={r.id}
@@ -1060,9 +1130,14 @@ function CleanupWorkshop() {
                   camps={campaignSlugs.get(r.id) ?? 0}
                   active={selectedId === r.id}
                   onOpen={() => setSelectedId(r.id)}
+                  inCleanupQueue={inCleanupQueue}
+                  busy={busy === r.id}
+                  onFullyApprove={() => fullyApproveCleanup(r)}
+                  onMarkNeedsContent={() => markNeedsContentOnly(r)}
                 />
               );
             })}
+
 
           </div>
 
@@ -1323,10 +1398,17 @@ function Toolbar({
 // ------------------------------------------------------------
 // Result row
 // ------------------------------------------------------------
-function ResultRow({ row, state, canonicalTitle, atlas, camps, active, onOpen }: {
+function ResultRow({
+  row, state, canonicalTitle, atlas, camps, active, onOpen,
+  inCleanupQueue = false, busy = false, onFullyApprove, onMarkNeedsContent,
+}: {
   row: EntityRow; state: PrimaryState; canonicalTitle: string | null;
   atlas: number; camps: number;
   active: boolean; onOpen: () => void;
+  inCleanupQueue?: boolean;
+  busy?: boolean;
+  onFullyApprove?: () => void;
+  onMarkNeedsContent?: () => void;
 }) {
   const sm = STATE_META[state];
   const bodyLen = (row.summary ?? "").length + bodyText(row.body).length;
@@ -1337,9 +1419,18 @@ function ResultRow({ row, state, canonicalTitle, atlas, camps, active, onOpen }:
   const stateLabel = state === "redirected" && canonicalTitle
     ? `محوّل → ${canonicalTitle}`
     : sm.label;
+  const stop = (fn?: () => void) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    fn?.();
+  };
   return (
-    <button onClick={onOpen}
-      className={`w-full rounded-lg border px-3 py-2 text-start transition ${
+    <div
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(); }}
+      className={`w-full cursor-pointer rounded-lg border px-3 py-2 text-start transition ${
         active ? "border-amber-400/60 bg-amber-500/10" : "border-slate-700/60 bg-slate-900/40 hover:bg-slate-800/60"
       }`}>
       <div className="flex items-start justify-between gap-2">
@@ -1361,9 +1452,34 @@ function ResultRow({ row, state, canonicalTitle, atlas, camps, active, onOpen }:
         {atlas > 0 && <Chip tone="ok">أطلس×{atlas}</Chip>}
         {camps > 0 && <Chip tone="ok">حملات×{camps}</Chip>}
       </div>
-    </button>
+
+      {inCleanupQueue && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-700/40 pt-2">
+          <span className="me-1 text-[10px] uppercase tracking-wider text-slate-500">إجراءات سريعة</span>
+          <button
+            onClick={stop(onFullyApprove)}
+            disabled={busy}
+            title="هذا الكيان نظيف ومحتواه جيد — انقله مباشرة إلى «مكتمل»"
+            className="inline-flex items-center gap-1 rounded-md border border-emerald-400/50 bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-100 hover:bg-emerald-500/25 disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="size-3 animate-spin" /> : <BadgeCheck className="size-3" />}
+            اعتماد تام
+          </button>
+          <button
+            onClick={stop(onMarkNeedsContent)}
+            disabled={busy}
+            title="لا يوجد تكرار — لكن المحتوى ينقصه. انقله إلى «يحتاج محتوى»"
+            className="inline-flex items-center gap-1 rounded-md border border-sky-400/50 bg-sky-500/15 px-2 py-1 text-[11px] font-semibold text-sky-100 hover:bg-sky-500/25 disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="size-3 animate-spin" /> : <FileText className="size-3" />}
+            يحتاج محتوى
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
+
 
 
 function Chip({ children, tone }: { children: React.ReactNode; tone?: "ok" | "warn" }) {
