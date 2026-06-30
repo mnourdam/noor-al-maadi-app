@@ -163,6 +163,65 @@ async function logAudit(action: string, detail: Record<string, unknown>, reason?
 }
 
 // ------------------------------------------------------------
+// Hard DB verification — re-fetch the row by id and confirm
+// that the expected fields actually contain the new values.
+// Returns { ok, row, diff } where diff lists fields that did
+// NOT persist as expected. Used by every admin mutation.
+// ------------------------------------------------------------
+type VerifyExpect = Partial<{
+  enabled: boolean;
+  title: string | null;
+  slug: string;
+  subtitle: string | null;
+  summary: string | null;
+  body: any;
+  // metadata is compared as a deep subset of keys actually provided.
+  metadata: Record<string, unknown>;
+}>;
+
+function deepEqualJson(a: unknown, b: unknown): boolean {
+  try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
+}
+
+async function verifyDbUpdate(id: string, expect: VerifyExpect): Promise<{
+  ok: boolean; row: any | null; diff: string[]; error?: string;
+}> {
+  const { data, error } = await supabase
+    .from("encyclopedia_entities" as any)
+    .select("id,enabled,title,slug,subtitle,summary,body,metadata,updated_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) return { ok: false, row: null, diff: ["<fetch failed>"], error: error.message };
+  if (!data) return { ok: false, row: null, diff: ["<row not found>"], error: "row missing" };
+  const row: any = data;
+  const diff: string[] = [];
+  for (const [k, v] of Object.entries(expect)) {
+    if (k === "metadata") {
+      const md = row.metadata ?? {};
+      for (const [mk, mv] of Object.entries(v as Record<string, unknown>)) {
+        if (mv === undefined) continue;
+        // "null" in expected means "must be absent or null".
+        if (mv === null) {
+          if (md[mk] != null) diff.push(`metadata.${mk}`);
+          continue;
+        }
+        if (!deepEqualJson(md[mk], mv)) diff.push(`metadata.${mk}`);
+      }
+    } else if (!deepEqualJson(row[k], v)) {
+      diff.push(k);
+    }
+  }
+  return { ok: diff.length === 0, row, diff };
+}
+
+function devLog(action: string, payload: Record<string, unknown>) {
+  if (typeof import.meta !== "undefined" && (import.meta as any).env?.DEV) {
+    // eslint-disable-next-line no-console
+    console.log(`[cleanup:${action}]`, payload);
+  }
+}
+
+// ------------------------------------------------------------
 // Component
 // ------------------------------------------------------------
 function CleanupWorkshop() {
@@ -173,7 +232,8 @@ function CleanupWorkshop() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; tone: "ok" | "err" } | null>(null);
+  const showToast = (text: string, tone: "ok" | "err" = "ok") => setToast({ text, tone });
   const [atlasLinks, setAtlasLinks] = useState<Map<string, number>>(new Map());
   const [campaignSlugs, setCampaignSlugs] = useState<Map<string, number>>(new Map());
   const [mergeFor, setMergeFor] = useState<EntityRow | null>(null);
@@ -475,9 +535,9 @@ function CleanupWorkshop() {
         "application/json;charset=utf-8",
         `irth-encyclopedia-cleanup-${todayStamp()}.json`,
       );
-      setToast(`تم تصدير ${totals.all} كيان كـ JSON`);
+      showToast(`تم تصدير ${totals.all} كيان كـ JSON`);
     } catch (e: any) {
-      setToast("فشل التصدير: " + (e?.message || e));
+      showToast("فشل التصدير: " + (e?.message || e), "err");
     }
   };
 
@@ -517,43 +577,72 @@ function CleanupWorkshop() {
         "text/csv;charset=utf-8",
         `irth-encyclopedia-cleanup-${todayStamp()}.csv`,
       );
-      setToast(`تم تصدير ${tagged.length} كيان كـ CSV`);
+      showToast(`تم تصدير ${tagged.length} كيان كـ CSV`);
     } catch (e: any) {
-      setToast("فشل التصدير: " + (e?.message || e));
+      showToast("فشل التصدير: " + (e?.message || e), "err");
     }
   };
 
   // ------------------------------------------------------------
-  // Save edits from JSON editor
+  // Save edits from JSON editor (with hard DB verification)
   // ------------------------------------------------------------
   const saveEntity = async (id: string, patch: Partial<EntityRow>) => {
     setBusy(id);
+    devLog("save:start", { id, patch });
     try {
-      const { error } = await supabase.from("encyclopedia_entities" as any).update(patch).eq("id", id);
-      if (error) throw error;
-      await logAudit("encyclopedia.update", { id, fields: Object.keys(patch) });
-      setToast("تم الحفظ بنجاح");
+      const upd = await supabase.from("encyclopedia_entities" as any).update(patch).eq("id", id).select("id").maybeSingle();
+      devLog("save:response", { id, error: upd.error, returned: upd.data });
+      if (upd.error) {
+        showToast("فشل الحفظ (قاعدة البيانات): " + upd.error.message, "err");
+        return;
+      }
+      const expected: VerifyExpect = {};
+      if (patch.title !== undefined) expected.title = patch.title ?? null;
+      if (patch.slug !== undefined) expected.slug = patch.slug as string;
+      if (patch.subtitle !== undefined) expected.subtitle = patch.subtitle ?? null;
+      if (patch.summary !== undefined) expected.summary = patch.summary ?? null;
+      if (patch.body !== undefined) expected.body = patch.body;
+      if (patch.metadata !== undefined && patch.metadata && typeof patch.metadata === "object") {
+        expected.metadata = patch.metadata as Record<string, unknown>;
+      }
+      const v = await verifyDbUpdate(id, expected);
+      devLog("save:verify", { id, ok: v.ok, diff: v.diff, dbRow: v.row });
+      if (!v.ok) {
+        showToast(`فشل التحقق من الحفظ — حقول لم تُحفظ: ${v.diff.join(", ") || "?"}${v.error ? " · " + v.error : ""}`, "err");
+        return;
+      }
+      await logAudit("encyclopedia.update", { id, fields: Object.keys(patch), verified: true });
+      showToast("تم الحفظ في قاعدة البيانات ✓");
       await refresh();
     } catch (e: any) {
-      setToast("فشل الحفظ: " + (e?.message || e));
+      showToast("فشل الحفظ: " + (e?.message || e), "err");
     } finally { setBusy(null); }
   };
 
   // ------------------------------------------------------------
-  // Archive — hide from players, keep restorable
+  // Archive — hide from players, keep restorable (verified)
   // ------------------------------------------------------------
   const archiveEntity = async (r: EntityRow) => {
     if (!confirm(`أرشفة «${r.title}»؟ لن تظهر للزوّار لكنها قابلة للاستعادة.`)) return;
     setBusy(r.id);
+    const archived_at = new Date().toISOString();
+    const meta = { ...(r.metadata || {}), archived: true, archived_at };
+    devLog("archive:start", { id: r.id, slug: r.slug, expected: { enabled: false, "metadata.archived": true } });
     try {
-      const meta = { ...(r.metadata || {}), archived: true, archived_at: new Date().toISOString() };
-      const { error } = await supabase.from("encyclopedia_entities" as any)
-        .update({ metadata: meta, enabled: false }).eq("id", r.id);
-      if (error) throw error;
-      await logAudit("encyclopedia.archive", { id: r.id, slug: r.slug });
-      setToast("تمت الأرشفة");
+      const upd = await supabase.from("encyclopedia_entities" as any)
+        .update({ metadata: meta, enabled: false }).eq("id", r.id).select("id").maybeSingle();
+      devLog("archive:response", { id: r.id, error: upd.error });
+      if (upd.error) { showToast("فشل الأرشفة (قاعدة البيانات): " + upd.error.message, "err"); return; }
+      const v = await verifyDbUpdate(r.id, { enabled: false, metadata: { archived: true, archived_at } });
+      devLog("archive:verify", { id: r.id, ok: v.ok, diff: v.diff, dbRow: v.row });
+      if (!v.ok) {
+        showToast(`فشل التحقق من الأرشفة — لم تُحفظ: ${v.diff.join(", ")}`, "err");
+        return;
+      }
+      await logAudit("encyclopedia.archive", { id: r.id, slug: r.slug, verified: true });
+      showToast("تمت الأرشفة وتأكّد الحفظ ✓");
       await refresh();
-    } catch (e: any) { setToast("فشل: " + (e?.message || e)); }
+    } catch (e: any) { showToast("فشل: " + (e?.message || e), "err"); }
     finally { setBusy(null); }
   };
 
@@ -562,53 +651,72 @@ function CleanupWorkshop() {
   // ------------------------------------------------------------
   const approveEntity = async (r: EntityRow) => {
     setBusy(r.id);
+    const meta: any = { ...(r.metadata || {}) };
+    delete meta.archived;
+    delete meta.archived_at;
+    delete meta.hidden_duplicate;
+    delete meta.hidden_at;
+    delete meta.canonical_id;
+    delete meta.canonical_slug;
+    meta.canonical = true;
+    devLog("approve:start", { id: r.id, slug: r.slug });
     try {
-      const meta: any = { ...(r.metadata || {}) };
-      delete meta.archived;
-      delete meta.archived_at;
-      delete meta.hidden_duplicate;
-      delete meta.hidden_at;
-      delete meta.canonical_id;
-      delete meta.canonical_slug;
-      meta.canonical = true;
-      const { error } = await supabase.from("encyclopedia_entities" as any)
-        .update({ metadata: meta, enabled: true }).eq("id", r.id);
-      if (error) throw error;
-      await logAudit("encyclopedia.approve", { id: r.id, slug: r.slug });
-      setToast("تم الاعتماد — الكيان ظاهر للاعبين");
+      const upd = await supabase.from("encyclopedia_entities" as any)
+        .update({ metadata: meta, enabled: true }).eq("id", r.id).select("id").maybeSingle();
+      devLog("approve:response", { id: r.id, error: upd.error });
+      if (upd.error) { showToast("فشل الاعتماد (قاعدة البيانات): " + upd.error.message, "err"); return; }
+      const v = await verifyDbUpdate(r.id, {
+        enabled: true,
+        metadata: { archived: null, canonical_id: null, hidden_duplicate: null, canonical: true },
+      });
+      devLog("approve:verify", { id: r.id, ok: v.ok, diff: v.diff, dbRow: v.row });
+      if (!v.ok) {
+        showToast(`فشل التحقق من الاعتماد — لم تُحفظ: ${v.diff.join(", ")}`, "err");
+        return;
+      }
+      await logAudit("encyclopedia.approve", { id: r.id, slug: r.slug, verified: true });
+      showToast("تم الاعتماد — ظاهر للاعبين وتأكّد الحفظ ✓");
       await refresh();
-    } catch (e: any) { setToast("فشل الاعتماد: " + (e?.message || e)); }
+    } catch (e: any) { showToast("فشل الاعتماد: " + (e?.message || e), "err"); }
     finally { setBusy(null); }
   };
 
 
   // ------------------------------------------------------------
-  // Delete (only if no references)
+  // Delete (only if no references) — verified by re-fetching
   // ------------------------------------------------------------
   const deleteEntity = async (r: EntityRow) => {
     const refs = (atlasLinks.get(r.id) ?? 0) + (campaignSlugs.get(r.id) ?? 0);
     if (refs > 0) {
-      setToast(`لا يمكن الحذف: توجد ${refs} مرجع. استخدم الأرشفة أو الدمج بدلاً من ذلك.`);
+      showToast(`لا يمكن الحذف: توجد ${refs} مرجع. استخدم الأرشفة أو الدمج بدلاً من ذلك.`, "err");
       return;
     }
     if (!confirm(`حذف نهائي لـ«${r.title}»؟ لا يمكن التراجع.`)) return;
     setBusy(r.id);
+    devLog("delete:start", { id: r.id, slug: r.slug });
     try {
-      const { error } = await supabase.from("encyclopedia_entities" as any).delete().eq("id", r.id);
-      if (error) throw error;
-      await logAudit("encyclopedia.delete", { id: r.id, slug: r.slug, title: r.title });
-      setToast("تم الحذف");
+      const del = await supabase.from("encyclopedia_entities" as any).delete().eq("id", r.id).select("id");
+      devLog("delete:response", { id: r.id, error: del.error, returned: del.data });
+      if (del.error) { showToast("فشل الحذف (قاعدة البيانات): " + del.error.message, "err"); return; }
+      const { data: still } = await supabase.from("encyclopedia_entities" as any).select("id").eq("id", r.id).maybeSingle();
+      devLog("delete:verify", { id: r.id, stillExists: !!still });
+      if (still) {
+        showToast("فشل التحقق من الحذف — الصف لا يزال موجوداً في قاعدة البيانات", "err");
+        return;
+      }
+      await logAudit("encyclopedia.delete", { id: r.id, slug: r.slug, title: r.title, verified: true });
+      showToast("تم الحذف وتأكّد ✓");
       if (selectedId === r.id) setSelectedId(null);
       await refresh();
-    } catch (e: any) { setToast("فشل: " + (e?.message || e)); }
+    } catch (e: any) { showToast("فشل: " + (e?.message || e), "err"); }
     finally { setBusy(null); }
   };
 
   // ------------------------------------------------------------
-  // Safe merge (canonical wins, dup hidden + redirect)
+  // Safe merge (canonical wins, dup hidden + redirect) — verified
   // ------------------------------------------------------------
   const mergeInto = async (dup: EntityRow, canonical: EntityRow) => {
-    if (dup.id === canonical.id) { setToast("لا يمكن دمج كيان مع نفسه"); return; }
+    if (dup.id === canonical.id) { showToast("لا يمكن دمج كيان مع نفسه", "err"); return; }
     if (!confirm(`دمج «${dup.title}» داخل «${canonical.title}»؟ سيتم إخفاء المكرر وتحويل الروابط.`)) return;
     setBusy(dup.id);
     try {
@@ -633,7 +741,6 @@ function CleanupWorkshop() {
         return [...set];
       };
       canMeta.aliases = mergeArr(canMeta.aliases, dupMeta.aliases);
-      // Add duplicate's own title as an alias for future fuzzy matches.
       if (dup.title && !canMeta.aliases.includes(dup.title)) canMeta.aliases.push(dup.title);
       canMeta.sources = mergeArr(canMeta.sources, dupMeta.sources);
       canMeta.related = mergeArr(canMeta.related, dupMeta.related);
@@ -652,29 +759,55 @@ function CleanupWorkshop() {
       canMeta.canonical = true;
 
       patch.metadata = canMeta;
+
+      devLog("merge:start", { canonical_id: canonical.id, duplicate_id: dup.id });
+
       const r1 = await supabase.from("encyclopedia_entities" as any)
-        .update(patch).eq("id", canonical.id);
-      if (r1.error) throw r1.error;
+        .update(patch).eq("id", canonical.id).select("id").maybeSingle();
+      devLog("merge:canonical-response", { error: r1.error });
+      if (r1.error) { showToast("فشل تحديث الكيان المعتمد: " + r1.error.message, "err"); return; }
 
       // 5) Hide duplicate, point at canonical.
-      const r2 = await supabase.from("encyclopedia_entities" as any).update({
+      const dupMetaNew = {
+        ...dupMeta,
+        canonical_id: canonical.id,
+        canonical_slug: canonical.slug,
+        hidden_duplicate: true,
+        hidden_at: new Date().toISOString(),
+      };
+      const r2 = await supabase.from("encyclopedia_entities" as any)
+        .update({ enabled: false, metadata: dupMetaNew }).eq("id", dup.id).select("id").maybeSingle();
+      devLog("merge:duplicate-response", { error: r2.error });
+      if (r2.error) { showToast("فشل إخفاء المكرر: " + r2.error.message, "err"); return; }
+
+      // Hard verification of both rows.
+      const vCan = await verifyDbUpdate(canonical.id, {
+        metadata: { redirect_from: canMeta.redirect_from, canonical: true },
+      });
+      const vDup = await verifyDbUpdate(dup.id, {
         enabled: false,
         metadata: {
-          ...dupMeta,
           canonical_id: canonical.id,
           canonical_slug: canonical.slug,
           hidden_duplicate: true,
-          hidden_at: new Date().toISOString(),
         },
-      }).eq("id", dup.id);
-      if (r2.error) throw r2.error;
+      });
+      devLog("merge:verify", { canonical: vCan, duplicate: vDup });
+      if (!vCan.ok || !vDup.ok) {
+        const fail = [
+          !vCan.ok ? `canonical: ${vCan.diff.join(",")}` : "",
+          !vDup.ok ? `duplicate: ${vDup.diff.join(",")}` : "",
+        ].filter(Boolean).join(" · ");
+        showToast(`فشل التحقق من الدمج — ${fail}`, "err");
+        return;
+      }
 
       // 6) Repoint atlas links.
       const { error: aErr } = await supabase
         .from("atlas_entities" as any)
         .update({ encyclopedia_entity_id: canonical.id })
         .eq("encyclopedia_entity_id", dup.id);
-      if (aErr) throw aErr;
+      if (aErr) { showToast("الدمج تم لكن فشل تحويل روابط الأطلس: " + aErr.message, "err"); }
 
       // 7) Repoint campaign references by slug (string-level, safe boundary).
       try {
@@ -693,15 +826,15 @@ function CleanupWorkshop() {
 
       await logAudit("encyclopedia.merge", {
         canonical_id: canonical.id, canonical_slug: canonical.slug,
-        duplicate_id: dup.id, duplicate_slug: dup.slug,
+        duplicate_id: dup.id, duplicate_slug: dup.slug, verified: true,
       });
 
-      setToast(`تم الدمج: «${dup.title}» → «${canonical.title}»`);
+      showToast(`تم الدمج وتأكّد الحفظ: «${dup.title}» → «${canonical.title}» ✓`);
       setMergeFor(null);
       if (selectedId === dup.id) setSelectedId(canonical.id);
       await refresh();
     } catch (e: any) {
-      setToast("فشل الدمج: " + (e?.message || e));
+      showToast("فشل الدمج: " + (e?.message || e), "err");
     } finally { setBusy(null); }
   };
 
@@ -804,9 +937,15 @@ function CleanupWorkshop() {
       )}
 
       {toast && (
-        <div className="fixed inset-x-0 bottom-6 mx-auto w-fit max-w-md rounded-full border border-amber-400/30 bg-slate-900/90 px-4 py-2 text-sm text-amber-100 shadow-lg backdrop-blur">
-          {toast}
-          <button onClick={() => setToast(null)} className="ms-3 text-slate-400 hover:text-slate-100">
+        <div
+          role="status"
+          className={`fixed inset-x-0 bottom-6 mx-auto w-fit max-w-md rounded-full border px-4 py-2 text-sm shadow-lg backdrop-blur ${
+            toast.tone === "err"
+              ? "border-rose-400/40 bg-rose-950/90 text-rose-100"
+              : "border-emerald-400/40 bg-emerald-950/90 text-emerald-100"
+          }`}>
+          {toast.text}
+          <button onClick={() => setToast(null)} className="ms-3 opacity-70 hover:opacity-100">
             <X className="inline size-3.5" />
           </button>
         </div>

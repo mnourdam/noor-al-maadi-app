@@ -64,9 +64,10 @@ interface EntityRow {
   entity_type: string;
   enabled: boolean;
   title: string | null;
+  metadata: any;
 }
 
-type Status = "ok" | "type-mismatch" | "unpublished" | "missing";
+type Status = "ok" | "type-mismatch" | "unpublished" | "missing" | "respected";
 
 interface AuditedRef extends UnlockRef {
   status: Status;
@@ -122,7 +123,7 @@ function UnlockIntegrityPage() {
     try {
       const [campaignsRes, entitiesRes] = await Promise.all([
         supabase.from("admin_campaigns").select("id,title,data"),
-        supabase.from("encyclopedia_entities").select("id,slug,entity_type,enabled,title"),
+        supabase.from("encyclopedia_entities").select("id,slug,entity_type,enabled,title,metadata"),
       ]);
       const campaigns = (campaignsRes.data ?? []) as any[];
       const allRefs = collectRefs(campaigns);
@@ -153,9 +154,15 @@ function UnlockIntegrityPage() {
         status = "missing";
       } else {
         sameType = matches.find((m) => m.entity_type === r.type) ?? matches[0];
-        if (sameType.entity_type !== r.type) status = "type-mismatch";
-        else if (!sameType.enabled)          status = "unpublished";
-        else                                 status = "ok";
+        const meta: any = sameType.metadata || {};
+        const intentionallyHidden =
+          meta.archived === true ||
+          meta.hidden_duplicate === true ||
+          (typeof meta.canonical_id === "string" && meta.canonical_id);
+        if (sameType.entity_type !== r.type)      status = "type-mismatch";
+        else if (sameType.enabled)                 status = "ok";
+        else if (intentionallyHidden)              status = "respected";
+        else                                       status = "unpublished";
       }
       seen.set(r.raw, { ...r, status, matchSameType: sameType, matchAnyType: matches });
     }
@@ -163,11 +170,12 @@ function UnlockIntegrityPage() {
   }, [refs, entitiesBySlug]);
 
   const tally = useMemo(() => {
-    const t = { total: audited.length, ok: 0, unpublished: 0, mismatch: 0, missing: 0 };
+    const t = { total: audited.length, ok: 0, unpublished: 0, mismatch: 0, missing: 0, respected: 0 };
     for (const a of audited) {
       if (a.status === "ok") t.ok++;
       else if (a.status === "unpublished") t.unpublished++;
       else if (a.status === "type-mismatch") t.mismatch++;
+      else if (a.status === "respected") t.respected++;
       else t.missing++;
     }
     return t;
@@ -365,6 +373,11 @@ function StatusChip({ status }: { status: Status }) {
   if (status === "type-mismatch") return (
     <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
       <AlertTriangle className="size-3" /> نوع غير مطابق
+    </span>
+  );
+  if (status === "respected") return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-200">
+      <ShieldCheck className="size-3" /> مخفي عمداً
     </span>
   );
   return (
