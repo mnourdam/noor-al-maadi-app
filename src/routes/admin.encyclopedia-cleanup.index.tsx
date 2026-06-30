@@ -232,7 +232,8 @@ function CleanupWorkshop() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; tone: "ok" | "err" } | null>(null);
+  const showToast = (text: string, tone: "ok" | "err" = "ok") => setToast({ text, tone });
   const [atlasLinks, setAtlasLinks] = useState<Map<string, number>>(new Map());
   const [campaignSlugs, setCampaignSlugs] = useState<Map<string, number>>(new Map());
   const [mergeFor, setMergeFor] = useState<EntityRow | null>(null);
