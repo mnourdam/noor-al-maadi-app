@@ -455,7 +455,7 @@ function EncyclopediaHubFull() {
                               >
                                 <SIcon className="size-4 text-gold/70" strokeWidth={1.5} />
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate text-[12px] font-bold">{s.title}</p>
+                                  <p className="truncate text-[12px] font-bold"><HighlightedText text={s.title} query={query} /></p>
                                   {s.subtitle && (
                                     <p className="truncate text-[10px] text-muted-foreground">{s.subtitle}</p>
                                   )}
