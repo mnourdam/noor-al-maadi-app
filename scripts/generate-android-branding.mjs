@@ -380,6 +380,7 @@ async function main() {
   writeXmlResources();
   await makePlayStoreIcon();
   cleanup();
+  verifyOutputs();
   console.log("[android-branding] done.");
 }
 
