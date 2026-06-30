@@ -393,7 +393,8 @@ function ImportedChapterPlayer() {
             )}
           </div>
         </div>
-      </div>
+      </ReadingScale>
+
 
       <OutOfHeartsModal open={outOfHeartsOpen} onClose={() => setOutOfHeartsOpen(false)} />
 
