@@ -12,6 +12,7 @@ import {
 import { MODE_LABELS_AR, type GameMode } from "@/lib/games/types";
 import { extractMuseumUnlocks } from "@/lib/games/museumUnlocks";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { Reveal, Stagger } from "@/components/motion/MotionPrimitives";
 
 const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   crossword: Feather,
