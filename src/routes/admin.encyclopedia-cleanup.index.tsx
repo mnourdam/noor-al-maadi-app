@@ -338,6 +338,8 @@ function devLog(action: string, payload: Record<string, unknown>) {
 // ------------------------------------------------------------
 function CleanupWorkshop() {
   const [rows, setRows] = useState<EntityRow[]>([]);
+  const rowsRef = useRef<EntityRow[]>([]);
+  useEffect(() => { rowsRef.current = rows; }, [rows]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
