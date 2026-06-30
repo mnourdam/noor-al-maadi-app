@@ -183,7 +183,10 @@ function scoreEntity(e: SupabaseEncyclopediaEntity, nq: string): number {
   return score;
 }
 
-function exactTopMatchHref(e: SupabaseEncyclopediaEntity, nq: string): string | null {
+function exactTopMatchTarget(
+  e: SupabaseEncyclopediaEntity,
+  nq: string,
+): { to: "/encyclopedia/state/$id" | "/encyclopedia/entity/$id"; id: string } | null {
   if (!nq) return null;
   const title = normArabic(e.title ?? "");
   const aliases: string[] = Array.isArray(e.aliases)
@@ -191,12 +194,14 @@ function exactTopMatchHref(e: SupabaseEncyclopediaEntity, nq: string): string | 
     : [];
   const exactAlias = aliases.some((a) => normArabic(a) === nq);
   if (title === nq || exactAlias) {
-    return e.entity_type === "state"
-      ? `/encyclopedia/state/${e.slug}`
-      : `/encyclopedia/entity/${e.slug}`;
+    return {
+      to: e.entity_type === "state" ? "/encyclopedia/state/$id" : "/encyclopedia/entity/$id",
+      id: e.slug,
+    };
   }
   return null;
 }
+
 
 
 
