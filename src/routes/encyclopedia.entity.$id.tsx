@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { ReadingScale } from "@/components/ReadingScale";
+
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -230,8 +232,10 @@ function EntityPage() {
 
   return (
     <AppShell>
+      <ReadingScale>
       {/* Atmospheric museum stage — one continuous warm scene */}
       <div className="relative min-h-screen overflow-hidden">
+
         {/* Background gradients (gold dawn over deep navy) */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(212,175,90,0.18),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(16,24,40,0.6),transparent_60%)]" />
         {/* Subtle arabesque overlay (CSS-only, no asset) */}
@@ -457,6 +461,8 @@ function EntityPage() {
           <div className="h-10" />
         </div>
       </div>
+      </ReadingScale>
     </AppShell>
   );
 }
+
