@@ -118,21 +118,21 @@ function HomeFull() {
 
   useEffect(() => {
     setMounted(true);
-    // NOTE: streak is NOT touched on app open. Only qualifying gameplay
-    // activity (campaign chapter complete, investigation complete, daily
-    // challenge / mini-game complete) updates the streak. Browsing the app
-    // counts as "last seen" via touch_my_last_active, not streak activity.
-    const season = currentSeason();
-    runDailyNotifications({
-      prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
-      today: todayEvent
-        ? { title: todayEvent.title, teaser: todayEvent.body, href: "/on-this-day" }
-        : null,
-      season: {
-        name: season.name, tagline: season.tagline,
-        ready: profile.seasonPoints >= season.goalPoints && !profile.seasonClaimed,
-      },
-    });
+    // Daily notifications are background sync — never block first paint.
+    const idle = scheduleIdle(() => {
+      const season = currentSeason();
+      runDailyNotifications({
+        prefs: profile.settings.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS,
+        today: todayEvent
+          ? { title: todayEvent.title, teaser: todayEvent.body, href: "/on-this-day" }
+          : null,
+        season: {
+          name: season.name, tagline: season.tagline,
+          ready: profile.seasonPoints >= season.goalPoints && !profile.seasonClaimed,
+        },
+      });
+    }, 2500);
+    return () => { idle.cancel(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayEvent?.id, user, lastSyncAt]);
 
