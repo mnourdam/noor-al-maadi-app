@@ -171,9 +171,17 @@ function HomeFull() {
     if (!importedCampaigns.length) return null;
     // `importedCampaigns` is already chronologically sorted by
     // `fetchPublishedCampaigns()` — identical feed/order to the Campaigns page.
-    const enriched: CampaignSelection[] = importedCampaigns.map((c) => {
+    type EnrichedDebug = CampaignSelection & {
+      _debug: {
+        startedChapterIds: string[];
+        chaptersWithActivity: { id: string; activityCount: number }[];
+        rawProgressKeys: string[];
+      };
+    };
+    const enriched: EnrichedDebug[] = importedCampaigns.map((c) => {
       const p = getCampaignProgress(c.id);
       const sorted = [...c.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const validChapterIds = new Set(sorted.map((ch) => ch.id));
       const completedChapters = sorted.filter((ch) => p.chapters[ch.id]?.completed).length;
       const nextChapter = sorted.find((ch) => !p.chapters[ch.id]?.completed) ?? null;
       const nextActivity = nextChapter
@@ -181,26 +189,50 @@ function HomeFull() {
             (a) => !(p.chapters[nextChapter.id]?.completedActivityIds ?? []).includes(a.id),
           ) ?? null)
         : null;
-      const hasStarted =
-        completedChapters > 0 ||
-        Object.values(p.chapters).some((ch) => (ch.completedActivityIds?.length ?? 0) > 0);
-      return { campaign: c, progress: p, hasStarted, isComplete: p.completed, completedChapters, nextChapter, nextActivity };
+
+      // hasStarted reasoning. We only count progress against chapters that
+      // STILL EXIST in the campaign — stale chapter IDs left over from a
+      // previous import would otherwise inflate `hasStarted` and make the
+      // Hero "resume" a campaign the player never actually opened.
+      const startedChapterIds = Object.entries(p.chapters)
+        .filter(([chid, ch]) => validChapterIds.has(chid) &&
+          (ch.completed || (ch.completedActivityIds?.length ?? 0) > 0))
+        .map(([chid]) => chid);
+      const chaptersWithActivity = Object.entries(p.chapters)
+        .filter(([chid]) => validChapterIds.has(chid))
+        .map(([chid, ch]) => ({ id: chid, activityCount: ch.completedActivityIds?.length ?? 0 }))
+        .filter((x) => x.activityCount > 0);
+      const hasStarted = startedChapterIds.length > 0;
+
+      return {
+        campaign: c,
+        progress: p,
+        hasStarted,
+        isComplete: p.completed,
+        completedChapters,
+        nextChapter,
+        nextActivity,
+        _debug: {
+          startedChapterIds,
+          chaptersWithActivity,
+          rawProgressKeys: Object.keys(p.chapters),
+        },
+      };
     });
-    // Canonical "current campaign" = earliest unfinished in chronological
-    // order. Same rule the Campaigns page uses, so Hero and Campaigns can
-    // never disagree. Do NOT bias by `hasStarted` — that would skip an
-    // earlier-era campaign in favor of a later one the player happened to
-    // open first.
-    const selected =
-      enriched.find((e) => !e.isComplete) ??
-      enriched[enriched.length - 1] ??
-      enriched[0];
+
+    // Priority — keep this rule, it is the correct UX:
+    //   1) earliest STARTED but not complete campaign
+    //   2) earliest unfinished campaign overall
+    //   3) last campaign in the chronological list (everything complete)
+    const startedPick = enriched.find((e) => e.hasStarted && !e.isComplete);
+    const fallbackPick = enriched.find((e) => !e.isComplete);
+    const selected = startedPick ?? fallbackPick ?? enriched[enriched.length - 1] ?? enriched[0];
 
     if (typeof window !== "undefined" && (window as any).__IRTH_HERO_DEBUG !== false) {
       try {
         // eslint-disable-next-line no-console
         console.groupCollapsed(
-          `[Hero] candidates (${enriched.length}) — selected: ${selected?.campaign.title ?? "(none)"}`,
+          `[Hero] selection — ${selected?.campaign.title ?? "(none)"} (started=${!!startedPick}, fallback=${!startedPick && !!fallbackPick})`,
         );
         // eslint-disable-next-line no-console
         console.table(
@@ -211,10 +243,23 @@ function HomeFull() {
             title: e.campaign.title,
             hasStarted: e.hasStarted,
             isComplete: e.isComplete,
-            done: e.completedChapters,
-            total: e.campaign.chapters.length,
+            startedChapters: e._debug.startedChapterIds.length,
+            chaptersWithActivity: e._debug.chaptersWithActivity.length,
+            completedChapters: e.completedChapters,
+            totalChapters: e.campaign.chapters.length,
           })),
         );
+        for (const e of enriched.filter((x) => x.hasStarted)) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `[Hero] hasStarted=true for "${e.campaign.title}" (id=${e.campaign.id}) — reason:`,
+            {
+              startedChapterIds: e._debug.startedChapterIds,
+              chaptersWithActivity: e._debug.chaptersWithActivity,
+              rawProgressKeys: e._debug.rawProgressKeys,
+            },
+          );
+        }
         // eslint-disable-next-line no-console
         console.log("[Hero] list source: fetchPublishedCampaigns (local-first snapshot, chronological)");
         // eslint-disable-next-line no-console
