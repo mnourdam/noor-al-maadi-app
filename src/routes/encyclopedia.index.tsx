@@ -213,6 +213,7 @@ function EncyclopediaHub() {
 }
 
 function EncyclopediaHubFull() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [era, setEra] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
