@@ -134,7 +134,7 @@ function ImportedCampaignOverview() {
                       <span className="text-white/50"> / {chapters.length.toLocaleString("en-US")} فصل</span>
                     </p>
                   </div>
-                  <p className="font-display text-2xl font-extrabold text-gold leading-none">{percent}<span className="text-sm">٪</span></p>
+                  <p className="font-display text-2xl font-extrabold text-gold leading-none"><AnimatedNumber value={percent} /><span className="text-sm">٪</span></p>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
                   <div className="h-full bg-gradient-gold transition-all duration-700" style={{ width: `${percent}%` }} />
