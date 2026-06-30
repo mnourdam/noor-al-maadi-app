@@ -10,7 +10,8 @@ import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { useAccount } from "@/lib/account";
 import {
   acceptFriend, listFriendships, removeFriend, searchPlayers, sendFriendRequest,
-  type FriendEntry, type PublicProfile,
+  fetchGlobalLeaderboard, fetchLeaderboardAroundMe,
+  type FriendEntry, type PublicProfile, type LeaderboardRow,
 } from "@/lib/social";
 import { Avatar } from "@/components/Avatar";
 
@@ -21,8 +22,9 @@ const TABS: { id: FriendsTab; label: string; icon: typeof Users; subtitle: strin
   { id: "requests",    label: "طلبات الصداقة", icon: Inbox,      subtitle: "الطلبات الواردة والمرسلة" },
   { id: "add",         label: "إضافة صديق",     icon: UserPlus,   subtitle: "ابحث بالاسم أو اسم المستخدم" },
   { id: "compare",     label: "مقارنة",         icon: GitCompare, subtitle: "قارن إنجازاتك مع صديق" },
-  { id: "leaderboard", label: "لوحة الترتيب",   icon: Trophy,     subtitle: "ترتيب أصدقائك حسب المستوى" },
+  { id: "leaderboard", label: "لوحة الترتيب",   icon: Trophy,     subtitle: "الترتيب العالمي حسب الخبرة" },
 ];
+
 
 export const Route = createFileRoute("/friends")({
   head: () => ({ meta: [{ title: "الأصدقاء" }] }),
@@ -115,7 +117,7 @@ function FriendsPage() {
           {tab === "requests"    && <RequestsSection incoming={incoming} outgoing={outgoing} reload={reload} onAdd={() => setTab("add")} />}
           {tab === "add"         && <AddSection meId={user.id} friends={friends} reload={reload} />}
           {tab === "compare"     && <CompareSection accepted={accepted} onAdd={() => setTab("add")} />}
-          {tab === "leaderboard" && <LeaderboardSection accepted={accepted} onAdd={() => setTab("add")} />}
+          {tab === "leaderboard" && <LeaderboardSection />}
         </div>
       </Screen>
     </AppShell>
@@ -311,46 +313,95 @@ function CompareSection({ accepted, onAdd }: { accepted: FriendEntry[]; onAdd: (
   );
 }
 
-function LeaderboardSection({ accepted, onAdd }: { accepted: FriendEntry[]; onAdd: () => void }) {
-  if (accepted.length === 0) {
-    return (
-      <EmptyState
-        icon={<Trophy className="size-8 text-gold" />}
-        title="لا توجد لوحة بعد"
-        body="ستظهر لوحة ترتيب أصدقائك حسب المستوى عند إضافة أول صديق."
-        cta={{ label: "إضافة صديق", onClick: onAdd }}
-      />
-    );
-  }
-  const ranked = [...accepted].sort((a, b) => (b.other.level ?? 0) - (a.other.level ?? 0));
+function LeaderboardSection() {
+  const [top, setTop] = useState<LeaderboardRow[] | null>(null);
+  const [around, setAround] = useState<LeaderboardRow[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [t, a] = await Promise.all([
+          fetchGlobalLeaderboard(50, 0),
+          fetchLeaderboardAroundMe(3),
+        ]);
+        if (!alive) return;
+        setTop(t);
+        setAround(a);
+      } catch {
+        if (alive) setErr("تعذر تحميل لوحة الترتيب");
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  if (err) return <p className="text-center text-xs text-rose-300">{err}</p>;
+  if (!top) return <p className="text-center text-xs text-muted-foreground">جارٍ التحميل…</p>;
+
+  const meInTop = top.some((r) => r.is_me);
+  const aroundFiltered = (around ?? []).filter((r) => !top.some((t) => t.id === r.id));
+
   return (
     <div>
-      <p className="mb-3 text-[11px] text-muted-foreground">ترتيب أصدقائك حسب المستوى الحالي.</p>
-      <div className="space-y-2">
-        {ranked.map((f, i) => (
-          <div key={f.row.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3">
-            <div className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold ${
-              i === 0 ? "bg-gradient-gold text-primary-foreground shadow-gold" :
-              i === 1 ? "border border-white/30 bg-white/5 text-foreground" :
-              i === 2 ? "border border-amber-700/40 bg-amber-700/15 text-amber-200" :
-              "border border-white/10 text-muted-foreground"
-            }`}>
-              {i === 0 ? <Crown className="size-4" /> : i + 1}
-            </div>
-            <Avatar avatarId={f.other.avatar_id} size="sm" fallbackChar={f.other.display_name?.[0] ?? f.other.username?.[0] ?? "?"} />
-            <Link to="/u/$username" params={{ username: f.other.username }} className="min-w-0 flex-1">
-              <div className="truncate text-sm font-bold">{f.other.display_name?.trim() || f.other.username}</div>
-              <div className="truncate text-[11px] text-muted-foreground">@{f.other.username} • {f.other.campaigns_completed} حملة</div>
-            </Link>
-            <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[11px] text-gold">
-              <Sparkles className="size-3" /> م.{f.other.level}
-            </span>
-          </div>
-        ))}
+      <p className="mb-3 text-[11px] text-muted-foreground">
+        الترتيب العالمي حسب الخبرة. الأصدقاء يظهرون بإطار ذهبي. اضغط لاعبًا لزيارة صفحته العامة.
+      </p>
+      <div className="space-y-1.5">
+        {top.map((r) => <LeaderRow key={r.id} r={r} />)}
       </div>
+
+      {!meInTop && aroundFiltered.length > 0 && (
+        <>
+          <div className="my-4 flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <span className="h-px flex-1 bg-white/10" /> ترتيبك <span className="h-px flex-1 bg-white/10" />
+          </div>
+          <div className="space-y-1.5">
+            {aroundFiltered.map((r) => <LeaderRow key={r.id} r={r} />)}
+          </div>
+        </>
+      )}
     </div>
   );
 }
+
+function LeaderRow({ r }: { r: LeaderboardRow }) {
+  const displayName = r.display_name?.trim() || r.username;
+  const tone = r.is_me
+    ? "border-gold/60 bg-gold/10 shadow-gold/40"
+    : r.is_friend
+      ? "border-amber-300/40 bg-amber-300/5"
+      : "border-white/10 bg-surface";
+  const rankBadge =
+    r.rank === 1 ? "bg-gradient-gold text-primary-foreground shadow-gold" :
+    r.rank === 2 ? "border border-white/30 bg-white/5 text-foreground" :
+    r.rank === 3 ? "border border-amber-700/40 bg-amber-700/15 text-amber-200" :
+                   "border border-white/10 text-muted-foreground";
+  return (
+    <div className={`flex items-center gap-3 rounded-2xl border p-2.5 ${tone}`}>
+      <div className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold ${rankBadge}`}>
+        {r.rank === 1 ? <Crown className="size-4" /> : r.rank}
+      </div>
+      <Avatar avatarId={r.avatar_id} size="sm" fallbackChar={displayName[0] ?? "?"} />
+      <Link to="/u/$username" params={{ username: r.username }} className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="truncate text-sm font-bold">{displayName}</span>
+          {r.is_me && <span className="rounded-full bg-gold/20 px-1.5 py-0.5 text-[9px] font-bold text-gold">أنت</span>}
+          {!r.is_me && r.is_friend && (
+            <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300/40 bg-amber-300/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-200">
+              <Users className="size-2.5" /> صديق
+            </span>
+          )}
+        </div>
+        <div className="truncate text-[10px] text-muted-foreground">@{r.username} • م.{r.level}</div>
+      </Link>
+      <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[11px] text-gold">
+        <Sparkles className="size-3" /> {r.xp.toLocaleString("ar-EG")} خبرة
+      </span>
+    </div>
+  );
+}
+
 
 // ============== Shared ==============
 

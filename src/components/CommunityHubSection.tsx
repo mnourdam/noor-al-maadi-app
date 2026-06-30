@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Users, Trophy, UserPlus, Inbox, ChevronLeft, Sparkles, BellRing } from "lucide-react";
 import { useAccount } from "@/lib/account";
-import { listFriendships, type FriendEntry } from "@/lib/social";
+import { listFriendships, fetchPendingBadges, type FriendEntry } from "@/lib/social";
 
 function initialsOf(p: { display_name: string | null; username: string }): string {
   const src = (p.display_name?.trim() || p.username || "?").trim();
@@ -15,25 +15,40 @@ function initialsOf(p: { display_name: string | null; username: string }): strin
 export function CommunityHubSection() {
   const { user } = useAccount();
   const [friends, setFriends] = useState<FriendEntry[] | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    if (!user) { setFriends([]); return; }
+    if (!user) { setFriends([]); setPendingCount(0); return; }
     let alive = true;
-    (async () => {
+    const refresh = async () => {
       try {
-        const list = await listFriendships(user.id);
-        if (alive) setFriends(list);
+        const [list, badges] = await Promise.all([
+          listFriendships(user.id),
+          fetchPendingBadges(),
+        ]);
+        if (!alive) return;
+        setFriends(list);
+        setPendingCount(badges.friend_requests);
       } catch {
-        if (alive) setFriends([]);
+        if (alive) { setFriends([]); setPendingCount(0); }
       }
-    })();
-    return () => { alive = false; };
+    };
+    refresh();
+    const onUpdate = () => { refresh(); };
+    window.addEventListener("irth:friends:updated", onUpdate);
+    window.addEventListener("irth:notifications:updated", onUpdate);
+    return () => {
+      alive = false;
+      window.removeEventListener("irth:friends:updated", onUpdate);
+      window.removeEventListener("irth:notifications:updated", onUpdate);
+    };
   }, [user]);
 
   const accepted = (friends ?? []).filter((f) => f.direction === "accepted");
   const incoming = (friends ?? []).filter((f) => f.direction === "incoming");
   const isGuest = !user;
   const isEmpty = !isGuest && accepted.length === 0 && incoming.length === 0;
+  const badgeCount = Math.max(pendingCount, incoming.length);
 
   const friendsLabel = isGuest
     ? "سجّل لتبدأ"
@@ -43,11 +58,13 @@ export function CommunityHubSection() {
 
   const requestsLabel = isGuest
     ? "—"
-    : incoming.length === 0
+    : badgeCount === 0
       ? "لا توجد طلبات"
-      : incoming.length === 1
+      : badgeCount === 1
         ? "طلب جديد"
-        : `${incoming.length} طلبات جديدة`;
+        : `${badgeCount} طلبات جديدة`;
+
+
 
   const rankLabel = "ابدأ رحلتك لتظهر في الترتيب";
 
@@ -72,7 +89,7 @@ export function CommunityHubSection() {
       </header>
 
       {/* Pending request highlight */}
-      {incoming.length > 0 && (
+      {badgeCount > 0 && (
         <Link
           to="/friends"
           search={{ tab: "requests" }}
@@ -80,11 +97,12 @@ export function CommunityHubSection() {
         >
           <BellRing className="size-4 text-amber-200" />
           <span className="text-[13px] font-bold">
-            {incoming.length === 1 ? "لديك طلب صداقة جديد" : `لديك ${incoming.length} طلبات صداقة بانتظار الرد`}
+            {badgeCount === 1 ? "لديك طلب صداقة جديد" : `لديك ${badgeCount} طلبات صداقة بانتظار الرد`}
           </span>
           <ChevronLeft className="mr-auto size-4 opacity-70" />
         </Link>
       )}
+
 
       {/* Stat chips */}
       <div className="relative mt-4 grid grid-cols-3 gap-2">
@@ -134,11 +152,17 @@ export function CommunityHubSection() {
       <div className="relative mt-4 grid grid-cols-3 gap-2">
         <Link
           to="/friends"
-          search={{ tab: "friends" }}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-gold py-2.5 text-[12px] font-bold text-primary-foreground shadow-gold"
+          search={{ tab: badgeCount > 0 ? "requests" : "friends" }}
+          className="relative inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-gold py-2.5 text-[12px] font-bold text-primary-foreground shadow-gold"
         >
           <Users className="size-4" /> عرض الأصدقاء
+          {badgeCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white ring-2 ring-[#0b1024]">
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </span>
+          )}
         </Link>
+
         <Link
           to="/friends"
           search={{ tab: "leaderboard" }}

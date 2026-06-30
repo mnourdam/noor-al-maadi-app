@@ -18,15 +18,14 @@ export interface PublicProfile {
   bio: string | null;
   title: string | null;
   level: number;
+  xp?: number;
   campaigns_completed: number;
   artifacts_collected: number;
   discovery_pct: number;
   favorite_state_id: string | null;
   favorite_figure_id: string | null;
   avatar_id: string | null;
-  // Owner-only / unavailable through the public view. Always undefined when
-  // returned from a public read.
-  xp?: number;
+  // Owner-only / unavailable through the public view.
   dinars?: number;
   streak?: number;
   referral_code?: string | null;
@@ -34,11 +33,13 @@ export interface PublicProfile {
   join_date?: string;
 }
 
+
 // Only safe, intentionally public columns. Backed by the `public_profiles`
 // view (security_invoker=on) — never read from the base `profiles` table
 // for non-owner queries.
 const PUBLIC_COLS =
-  "id, username, display_name, bio, title, level, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id";
+  "id, username, display_name, bio, title, level, xp, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id";
+
 
 const PUBLIC_VIEW = "public_profiles";
 
@@ -136,6 +137,15 @@ export async function pushPublicStats(userId: string, p: ProfileState): Promise<
 }
 
 // =========== Friendships ===========
+function emitFriendsUpdated() {
+  try {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("irth:friends:updated"));
+    }
+  } catch { /* no-op */ }
+}
+
+
 export interface FriendshipRow {
   id: string;
   user_a: string;
@@ -231,8 +241,10 @@ export async function sendFriendRequest(meId: string, otherId: string): Promise<
     // recipient's poller will surface the request on next tick.
   }
 
+  emitFriendsUpdated();
   return { ok: true };
 }
+
 
 export async function acceptFriend(id: string): Promise<boolean> {
   // Read the row first so we know who the original requester was.
@@ -271,12 +283,15 @@ export async function acceptFriend(id: string): Promise<boolean> {
     // Best-effort only — acceptance still succeeded.
   }
 
+  emitFriendsUpdated();
   return true;
 }
 
 export async function removeFriend(id: string): Promise<boolean> {
   const { error } = await db.from("friendships").delete().eq("id", id);
+  if (!error) emitFriendsUpdated();
   return !error;
+
 }
 
 // =========== Referrals ===========
@@ -338,4 +353,46 @@ export const REFERRAL_REWARDS = {
 export function buildReferralLink(code: string): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://irth-app.lovable.app";
   return `${origin}/auth?ref=${encodeURIComponent(code)}`;
+}
+
+// =========== Global Leaderboard ===========
+export interface LeaderboardRow {
+  rank: number;
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_id: string | null;
+  level: number;
+  xp: number;
+  is_me: boolean;
+  is_friend: boolean;
+}
+
+export async function fetchGlobalLeaderboard(limit = 50, offset = 0): Promise<LeaderboardRow[]> {
+  const { data } = await db.rpc("leaderboard_global", { p_limit: limit, p_offset: offset });
+  return (data as LeaderboardRow[]) ?? [];
+}
+
+export async function fetchLeaderboardAroundMe(window = 3): Promise<LeaderboardRow[]> {
+  const { data } = await db.rpc("leaderboard_around_me", { p_window: window });
+  return (data as LeaderboardRow[]) ?? [];
+}
+
+// =========== Generic unread badges ===========
+export interface PendingBadges {
+  friend_requests: number;
+  notifications: number;
+  total: number;
+  [key: string]: number;
+}
+
+export async function fetchPendingBadges(): Promise<PendingBadges> {
+  const { data } = await db.rpc("my_pending_badges");
+  const v = (data as Partial<PendingBadges> | null) ?? {};
+  return {
+    friend_requests: Number(v.friend_requests ?? 0),
+    notifications: Number(v.notifications ?? 0),
+    total: Number(v.total ?? 0),
+    ...v,
+  } as PendingBadges;
 }
