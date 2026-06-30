@@ -5,6 +5,7 @@ import { Sparkles, Zap, Coins, Trophy } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { UnlockList } from "./UnlockList";
+import { AnimatedNumber, Stagger } from "@/components/motion/MotionPrimitives";
 
 interface Props {
   open: boolean;
@@ -28,19 +29,19 @@ export function CampaignCompleteModal({
 
         {/* Sticky header */}
         <div className="shrink-0 border-b border-white/5 bg-stone-950/60 px-6 pb-4 pt-6 backdrop-blur">
-          <div className="mx-auto grid size-14 place-items-center rounded-full border border-gold/60 bg-gold/15">
+          <div className="motion-unlock-glow mx-auto grid size-14 place-items-center rounded-full border border-gold/60 bg-gold/15">
             <Trophy className="size-7 text-gold" />
           </div>
           <h3 className="font-display mt-3 text-xl font-bold shimmer-text">أتممتَ الحملة</h3>
           <p className="mt-1 text-sm text-gold/80">{campaignTitle}</p>
-          <div className="mt-4 flex items-center justify-center gap-3 text-[13px]">
-            <span className="inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-sky-200">
-              <Zap className="size-3.5" /> +{xp} XP
+          <Stagger className="mt-4 flex items-center justify-center gap-3 text-[13px]">
+            <span className="motion-reveal is-in inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-sky-200">
+              <Zap className="size-3.5" /> +<AnimatedNumber value={xp} /> XP
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-200">
-              <Coins className="size-3.5" /> +{coins} دينار
+            <span className="motion-reveal is-in inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-200">
+              <Coins className="size-3.5" /> +<AnimatedNumber value={coins} /> دينار
             </span>
-          </div>
+          </Stagger>
         </div>
 
         {/* Scrollable body */}
@@ -65,7 +66,7 @@ export function CampaignCompleteModal({
           <div className="flex flex-col gap-2">
             <Link
               to="/collection"
-              className="rounded-xl bg-gradient-gold py-2.5 text-center text-sm font-bold text-primary-foreground shadow-gold"
+              className="motion-tap rounded-xl bg-gradient-gold py-2.5 text-center text-sm font-bold text-primary-foreground shadow-gold"
               onClick={onClose}
             >
               افتح المتحف
@@ -73,7 +74,7 @@ export function CampaignCompleteModal({
             <Link
               to="/campaigns/imported/$id"
               params={{ id: campaignId }}
-              className="rounded-xl border border-white/10 py-2 text-center text-xs text-muted-foreground"
+              className="motion-tap rounded-xl border border-white/10 py-2 text-center text-xs text-muted-foreground"
               onClick={onClose}
             >
               عودة لختام الحملة
