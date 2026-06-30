@@ -70,13 +70,18 @@ function HomeFull() {
 
   // Debug instrumentation — helps QA confirm Home cold-start on real devices.
   useEffect(() => {
-    const t = performance.now();
-    // eslint-disable-next-line no-console
-    console.info("[home] mounted", { perfLite, t: Math.round(t) });
-    return () => {
-      // eslint-disable-next-line no-console
-      console.info("[home] unmounted", { dt: Math.round(performance.now() - t) });
-    };
+    perfMark("home mounted", { perfLite });
+    // First paint marker — fires after React commits and the browser paints.
+    requestAnimationFrame(() => requestAnimationFrame(() => perfMark("first paint")));
+    // Home interactive — input handlers + carousel state are wired.
+    const interactiveHandle = scheduleIdle(() => {
+      perfMark("home interactive");
+      perfMark("idle tasks started");
+      // Pre-decode neighbor hero images so the next swap is instant, but
+      // only once the main thread is idle.
+      scheduleIdle(() => { perfMark("idle tasks finished"); }, 3000);
+    }, 1500);
+    return () => { interactiveHandle.cancel(); };
   }, [perfLite]);
 
   useEffect(() => {
