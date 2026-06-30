@@ -12,7 +12,6 @@
  *
  *   res/mipmap-{m,h,x,xx,xxx}hdpi/ic_launcher.png         (legacy square)
  *   res/mipmap-{m,h,x,xx,xxx}hdpi/ic_launcher_round.png   (legacy round)
- *   res/mipmap-{m,h,x,xx,xxx}hdpi/ic_launcher_foreground.png (raster fallback)
  *   res/drawable/ic_launcher_foreground.xml               (vector adaptive fg)
  *   res/drawable/ic_launcher_monochrome.xml               (themed icon)
  *   res/drawable/ic_stat_notify.xml                       (notification icon)
@@ -115,7 +114,6 @@ async function makeRasterIcons() {
       })
       .png({ compressionLevel: 9 })
       .toBuffer();
-    writeFileSync(join(dir, "ic_launcher_foreground.png"), padded);
   }
   console.log("[android-branding] rasterized launcher icons");
 }
