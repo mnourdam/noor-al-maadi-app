@@ -138,6 +138,33 @@ function pushRecent(key: string, value: string) {
     window.localStorage.setItem(key, JSON.stringify(next));
   } catch { /* noop */ }
 }
+function normArabic(s: string): string {
+  return s.toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .replace(/[إأآا]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .trim();
+}
+
+function scoreEntity(e: SupabaseEncyclopediaEntity, nq: string): number {
+  if (!nq) return 0;
+  const title = normArabic(e.title ?? "");
+  const subtitle = normArabic(e.subtitle ?? "");
+  const summary = normArabic(e.summary ?? "");
+  const slug = normArabic(e.slug ?? "");
+  let score = 0;
+  if (title === nq) score += 1000;
+  else if (title.startsWith(nq)) score += 600;
+  else if (new RegExp(`(^|\\s)${nq}`).test(title)) score += 450;
+  else if (title.includes(nq)) score += 300;
+  if (subtitle.includes(nq)) score += 120;
+  if (slug.includes(nq)) score += 80;
+  if (summary.includes(nq)) score += 40;
+  score -= Math.min(title.length, 60) * 0.2;
+  return score;
+}
+
 
 function EncyclopediaHub() {
   androidMark("render:Encyclopedia");
