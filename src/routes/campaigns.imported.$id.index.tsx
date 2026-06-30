@@ -22,6 +22,7 @@ import { getActivePosition } from "@/lib/campaignLedger";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
+import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/")({
   head: () => ({ meta: [{ title: "حملة تاريخية — إرث" }] }),
