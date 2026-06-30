@@ -341,16 +341,15 @@ function EncyclopediaHubFull() {
     submitRecent(query);
     const nq = normArabic(query);
     if (!nq || results.length === 0) return;
-    const href = exactTopMatchHref(results[0], nq);
-    if (!href) return;
-    // Require strong confidence: top result is exact AND either it's the
-    // only hit, or it strictly outranks the next hit by a wide margin.
+    const target = exactTopMatchTarget(results[0], nq);
+    if (!target) return;
     const second = results[1];
-    const secondExact = second ? exactTopMatchHref(second, nq) : null;
+    const secondExact = second ? exactTopMatchTarget(second, nq) : null;
     if (results.length === 1 || !secondExact) {
-      if (typeof window !== "undefined") window.location.assign(href);
+      navigate({ to: target.to, params: { id: target.id } });
     }
   };
+
 
 
   return (
