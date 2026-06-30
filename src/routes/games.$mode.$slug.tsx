@@ -578,11 +578,11 @@ function Chip({ icon, children }: { icon: React.ReactNode; children: React.React
   );
 }
 
-function RewardChip({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
+function RewardChip({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2">
+    <div className="motion-reveal is-in flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2">
       <span className="text-amber-300">{icon}</span>
-      <span className="text-base font-bold text-amber-100">{value}</span>
+      <span className="text-base font-bold text-amber-100">+<AnimatedNumber value={value} /></span>
       <span className="text-[11px] text-slate-300">{label}</span>
     </div>
   );
