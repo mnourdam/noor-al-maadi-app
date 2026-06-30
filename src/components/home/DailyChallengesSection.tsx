@@ -229,20 +229,22 @@ export function DailyChallengesSection() {
       </div>
 
       {allCompleted ? (
-        <div className="parchment-dark relative overflow-hidden rounded-3xl border border-emerald-400/30 p-5 text-center shadow-elegant">
-          <div className="arabesque-layer opacity-50" />
-          <div className="relative">
-            <div className="mx-auto grid size-12 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
-              <Trophy className="size-6 text-emerald-300" strokeWidth={1.5} />
+        <Reveal>
+          <div className="parchment-dark relative overflow-hidden rounded-3xl border border-emerald-400/30 p-5 text-center shadow-elegant motion-unlock-glow">
+            <div className="arabesque-layer opacity-50" />
+            <div className="relative">
+              <div className="mx-auto grid size-12 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
+                <Trophy className="size-6 text-emerald-300" strokeWidth={1.5} />
+              </div>
+              <h3 className="font-display mt-3 text-base font-bold text-emerald-50">أحسنت!</h3>
+              <p className="mt-1 text-[12px] leading-6 text-white/70">
+                لقد أنهيت تحديات اليوم.
+                <br />
+                عد غدًا لاكتشاف تحديين جديدين.
+              </p>
             </div>
-            <h3 className="font-display mt-3 text-base font-bold text-emerald-50">أحسنت!</h3>
-            <p className="mt-1 text-[12px] leading-6 text-white/70">
-              لقد أنهيت تحديات اليوم.
-              <br />
-              عد غدًا لاكتشاف تحديين جديدين.
-            </p>
           </div>
-        </div>
+        </Reveal>
       ) : picks.length === 1 ? (
         <ChallengeCard
           game={picks[0]}
@@ -250,7 +252,7 @@ export function DailyChallengesSection() {
           completed={completedIds.has(picks[0].id)}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
+        <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-5" max={2}>
           <div className="sm:col-span-3">
             <ChallengeCard
               game={picks[0]}
@@ -265,7 +267,7 @@ export function DailyChallengesSection() {
               completed={completedIds.has(picks[1].id)}
             />
           </div>
-        </div>
+        </Stagger>
       )}
     </section>
   );
