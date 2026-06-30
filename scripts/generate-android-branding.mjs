@@ -99,21 +99,9 @@ async function makeRasterIcons() {
       .png({ compressionLevel: 9 })
       .toFile(join(dir, "ic_launcher_round.png"));
 
-    // Adaptive foreground raster fallback (used by launchers below v26).
-    // The brand mark needs 25% safe padding inside the 108dp canvas so the
-    // adaptive mask never clips the gold strokes.
-    const safeSize = Math.round(adaptive * 0.66);
-    const padded = await sharp(masterBuf)
-      .resize(safeSize, safeSize, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .extend({
-        top: Math.floor((adaptive - safeSize) / 2),
-        bottom: Math.ceil((adaptive - safeSize) / 2),
-        left: Math.floor((adaptive - safeSize) / 2),
-        right: Math.ceil((adaptive - safeSize) / 2),
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-      })
-      .png({ compressionLevel: 9 })
-      .toBuffer();
+    // Adaptive icons are handled entirely via the vector drawable
+    // `@drawable/ic_launcher_foreground` referenced from mipmap-anydpi-v26;
+    // there is no raster fallback file to write here.
   }
   console.log("[android-branding] rasterized launcher icons");
 }
