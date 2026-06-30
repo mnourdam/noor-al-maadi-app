@@ -3,7 +3,6 @@
 
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
@@ -15,8 +14,18 @@
         <item name="android:background">@null</item>
     </style>
 
-
+    <!--
+        Cold-start theme. Uses the Android 12+ SplashScreen API (the AndroidX
+        core-splashscreen library back-ports it to API 24+). The brand icon is
+        a transparent vector (`ic_splash_icon`) so it never shows a black or
+        white edge over the navy background, eliminating the previous flash.
+        The post-splash theme then transitions into the cinematic React splash
+        already shipped with the app — this layer only owns the OS hand-off.
+    -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>
