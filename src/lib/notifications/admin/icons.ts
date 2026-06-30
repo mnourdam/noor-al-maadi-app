@@ -7,7 +7,7 @@
 
 import {
   Bell, BellRing, BookOpen, Scroll, Swords, Trophy, Gift, Shield,
-  Map, Users, Calendar, CalendarClock, Flame, Heart, Star, Crown,
+  Map as MapIcon, Users, Calendar, CalendarClock, Flame, Heart, Star, Crown,
   Coins, Compass, Megaphone, Sparkles, Search, Image as ImageIcon,
   Flag, Award, Target, Zap, Castle, Landmark, Gem, ScrollText,
   Activity, Clock, AlertTriangle, CheckCircle2, Info, MessageCircle,
@@ -36,7 +36,7 @@ export const ICON_CATALOG: IconEntry[] = [
   { name: "trophy",          label: "Trophy",          labelAr: "كأس",        Icon: Trophy },
   { name: "gift",            label: "Gift",            labelAr: "هدية",       Icon: Gift },
   { name: "shield",          label: "Shield",          labelAr: "درع",        Icon: Shield },
-  { name: "map",             label: "Map",             labelAr: "خريطة",      Icon: Map },
+  { name: "map",             label: "Map",             labelAr: "خريطة",      Icon: MapIcon },
   { name: "users",           label: "Users",           labelAr: "مستخدمون",   Icon: Users },
   { name: "calendar",        label: "Calendar",        labelAr: "تقويم",      Icon: Calendar },
   { name: "calendar-clock",  label: "Calendar Clock",  labelAr: "موعد",       Icon: CalendarClock },
