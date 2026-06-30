@@ -137,6 +137,15 @@ export async function pushPublicStats(userId: string, p: ProfileState): Promise<
 }
 
 // =========== Friendships ===========
+function emitFriendsUpdated() {
+  try {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("irth:friends:updated"));
+    }
+  } catch { /* no-op */ }
+}
+
+
 export interface FriendshipRow {
   id: string;
   user_a: string;
