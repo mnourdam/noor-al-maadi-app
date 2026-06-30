@@ -294,6 +294,7 @@ export async function hydrateLegacyProgressFromCloud(): Promise<{ chaptersAdded:
 
     writeAll(all);
     try { window.localStorage.setItem(HYDRATED_FLAG, now); } catch { /* noop */ }
+    try { window.dispatchEvent(new CustomEvent("irth:campaign-progress:updated")); } catch { /* noop */ }
     return { chaptersAdded, campaignsCompleted };
   } catch {
     return null;
