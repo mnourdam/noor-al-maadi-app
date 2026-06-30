@@ -333,9 +333,15 @@ function EncyclopediaHubFull() {
     const nq = normArabic(q);
     const top = results[0];
     const t = normArabic(top.title ?? "");
-    const aliases: string[] = Array.isArray(top.aliases)
+    const meta = (top.metadata && typeof top.metadata === "object")
+      ? (top.metadata as Record<string, unknown>) : {};
+    const metaAliases = Array.isArray((meta as { aliases?: unknown }).aliases)
+      ? ((meta as { aliases: unknown[] }).aliases.filter((a) => typeof a === "string") as string[])
+      : [];
+    const colAliases = Array.isArray(top.aliases)
       ? (top.aliases.filter((a) => typeof a === "string") as string[])
       : [];
+    const aliases: string[] = Array.from(new Set([...colAliases, ...metaAliases]));
     const exactAlias = aliases.some((a) => normArabic(a) === nq);
     if (t === nq || t.startsWith(nq) || exactAlias) return top.id;
     return null;
