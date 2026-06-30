@@ -327,7 +327,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
   };
 
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <ol className="space-y-2">
@@ -373,7 +373,7 @@ function DecisionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   };
 
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <div className="space-y-2">
@@ -423,7 +423,7 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
   };
 
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <div className="space-y-2">
@@ -490,7 +490,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
   };
 
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       {isAndroidNativeApp() ? (
@@ -559,7 +559,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
   };
 
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       {isAndroidNativeApp() ? (
@@ -610,7 +610,7 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
 function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       {activity.options && activity.options.length > 0 && (
@@ -642,7 +642,7 @@ function ReflectionSkippedRenderer({ activity, onResolve, alreadyDone }: Rendere
     if (!resolved) { setResolved(true); onResolve(true); }
   }, [resolved, onResolve]);
   return (
-    <div>
+    <div className="motion-page">
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       <p className="mt-2 rounded-xl border border-amber-300/20 bg-amber-500/[0.06] px-3 py-2 text-[11px] leading-6 text-amber-200/85">
