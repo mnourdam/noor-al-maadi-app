@@ -117,7 +117,7 @@ function FriendsPage() {
           {tab === "requests"    && <RequestsSection incoming={incoming} outgoing={outgoing} reload={reload} onAdd={() => setTab("add")} />}
           {tab === "add"         && <AddSection meId={user.id} friends={friends} reload={reload} />}
           {tab === "compare"     && <CompareSection accepted={accepted} onAdd={() => setTab("add")} />}
-          {tab === "leaderboard" && <LeaderboardSection accepted={accepted} onAdd={() => setTab("add")} />}
+          {tab === "leaderboard" && <LeaderboardSection />}
         </div>
       </Screen>
     </AppShell>
