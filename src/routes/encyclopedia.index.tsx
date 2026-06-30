@@ -569,7 +569,7 @@ function EncyclopediaHubFull() {
                         <span>مطابقة مباشرة</span>
                       </div>
                     )}
-                    <EncyclopediaCard entity={e} />
+                    <EncyclopediaCard entity={e} highlight={q ? query : undefined} />
                   </div>
                 ))}
               </div>
