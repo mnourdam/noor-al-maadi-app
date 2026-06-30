@@ -404,8 +404,35 @@ function EncyclopediaHubFull() {
                 </div>
               )}
             </div>
+
+            {/* Type filter chips */}
+            <div className="relative z-10 -mx-5 mt-3 overflow-x-auto px-5 pb-1 scrollbar-thin" dir="rtl">
+              <div className="flex items-center gap-1.5">
+                {[{ key: "all", label: "الكل" }, ...CATEGORIES.map((c) => ({ key: c.key, label: c.label }))].map((t) => {
+                  const active = typeFilter === t.key;
+                  const n = t.key === "all" ? total : (counts[t.key] ?? 0);
+                  return (
+                    <button
+                      key={t.key}
+                      onClick={() => setTypeFilter(t.key)}
+                      className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] transition ${
+                        active
+                          ? "border-gold/60 bg-gold/15 text-gold shadow-[0_0_0_1px_rgba(212,175,55,0.25)]"
+                          : "border-white/10 bg-black/30 text-muted-foreground hover:border-gold/40 hover:text-foreground"
+                      }`}
+                    >
+                      <span className="font-bold">{t.label}</span>
+                      <span className={`ms-1.5 text-[10px] ${active ? "text-gold/80" : "text-muted-foreground/70"}`}>
+                        {n}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </section>
+
 
         {isLoading ? (
           <p className="mt-10 text-center text-xs text-muted-foreground">جارٍ فتح المكتبة…</p>
