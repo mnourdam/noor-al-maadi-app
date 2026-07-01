@@ -364,6 +364,17 @@ function CleanupWorkshop() {
   const [atlasLinks, setAtlasLinks] = useState<Map<string, number>>(new Map());
   const [campaignSlugs, setCampaignSlugs] = useState<Map<string, number>>(new Map());
   const [mergeFor, setMergeFor] = useState<EntityRow | null>(null);
+  // Bulk multi-select — persists across scroll/pagination, cleared when
+  // filters/search/pipeline change so selections never carry into a set
+  // of cards the user can no longer see.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const toggleSelect = (id: string) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const clearSelection = () => setSelectedIds(new Set());
 
   const refresh = async () => {
     setLoading(true); setErr(null);
@@ -549,6 +560,30 @@ function CleanupWorkshop() {
       return false;
     }).slice(0, 400);
   }, [rows, filter, pipeline, q, dupIds, liveDupIds, atlasLinks, campaignSlugs]);
+
+  // Changing the active filter or pipeline clears the current selection;
+  // search only affects visible cards and does NOT reset selection.
+  useEffect(() => { setSelectedIds(new Set()); }, [filter, pipeline]);
+
+  // Derived selection helpers for the sticky bar + "Select All" checkbox.
+  const filteredIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
+  const visibleSelectedCount = useMemo(
+    () => filteredIds.reduce((n, id) => (selectedIds.has(id) ? n + 1 : n), 0),
+    [filteredIds, selectedIds],
+  );
+  const allVisibleSelected = filteredIds.length > 0 && visibleSelectedCount === filteredIds.length;
+  const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
+  const toggleSelectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        for (const id of filteredIds) next.delete(id);
+      } else {
+        for (const id of filteredIds) next.add(id);
+      }
+      return next;
+    });
+  };
 
   const selected = useMemo(
     () => rows.find((r) => r.id === selectedId) ?? null,
@@ -980,7 +1015,75 @@ function CleanupWorkshop() {
     finally { setBusy(null); }
   };
 
+  // ------------------------------------------------------------
+  // Bulk actions — apply "Mark as Needs Content" or "Fully Approve"
+  // to every currently-selected row. Each row's own metadata is
+  // preserved (merged, not replaced) so we don't clobber unrelated
+  // flags. Runs updates in small parallel batches for responsiveness,
+  // then a single refresh() re-pulls the truth.
+  // ------------------------------------------------------------
+  type BulkKind = "fully-approve" | "needs-content";
+  const applyBulkStamp = (meta: any, kind: BulkKind, stamp: string) => {
+    const m: any = { ...(meta || {}) };
+    m.cleanup_resolved = true;
+    m.cleanup_resolved_at = stamp;
+    if (kind === "fully-approve") {
+      m.content_verified = true;
+      m.content_verified_at = stamp;
+      delete m.needs_content;
+      delete m.needs_content_at;
+    } else {
+      m.needs_content = true;
+      m.needs_content_at = stamp;
+      delete m.content_verified;
+      delete m.content_verified_at;
+    }
+    return m;
+  };
 
+  const runBulk = async (kind: BulkKind) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (ids.length > 20) {
+      const label = kind === "fully-approve" ? "الاعتماد التام" : "النقل إلى «يحتاج محتوى»";
+      if (!confirm(`تأكيد ${label} لعدد ${ids.length} كياناً؟`)) return;
+    }
+    setBulkBusy(true);
+    const stamp = new Date().toISOString();
+    const byId = new Map(rowsRef.current.map((r) => [r.id, r] as const));
+    let ok = 0;
+    let fail = 0;
+    const CHUNK = 8;
+    try {
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const slice = ids.slice(i, i + CHUNK);
+        const results = await Promise.all(slice.map(async (id) => {
+          const row = byId.get(id);
+          if (!row) return false;
+          const meta = applyBulkStamp(row.metadata, kind, stamp);
+          const { error } = await supabase
+            .from("encyclopedia_entities" as any)
+            .update({ metadata: meta })
+            .eq("id", id);
+          return !error;
+        }));
+        for (const r of results) { if (r) ok++; else fail++; }
+      }
+      await logAudit(
+        kind === "fully-approve"
+          ? "encyclopedia.cleanup.bulk_fully_approve"
+          : "encyclopedia.cleanup.bulk_mark_needs_content",
+        { count: ids.length, ok, fail },
+      );
+      clearSelection();
+      await refresh();
+      const verb = kind === "fully-approve" ? "اعتماد" : "نقل إلى «يحتاج محتوى»";
+      if (fail === 0) showToast(`تم ${verb} ${ok} كياناً ✓`);
+      else showToast(`تم ${verb} ${ok} — فشل ${fail}`, fail > ok ? "err" : "ok");
+    } catch (e: any) {
+      showToast("فشل الإجراء الجماعي: " + (e?.message || e), "err");
+    } finally { setBulkBusy(false); }
+  };
 
 
   // ------------------------------------------------------------
@@ -1169,6 +1272,26 @@ function CleanupWorkshop() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           {/* Results list */}
           <div className="space-y-2">
+            {/* Select-all row — applies only to the currently filtered / searched cards. */}
+            {!loading && filtered.length > 0 && (
+              <label className="flex items-center justify-between gap-2 rounded-md border border-slate-700/60 bg-slate-900/40 px-3 py-1.5 text-xs text-slate-300">
+                <span className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-amber-400"
+                    checked={allVisibleSelected}
+                    ref={(el) => { if (el) el.indeterminate = someVisibleSelected; }}
+                    onChange={toggleSelectAllVisible}
+                  />
+                  <span>تحديد الكل ({filtered.length})</span>
+                </span>
+                {selectedIds.size > 0 && (
+                  <span className="text-[10px] text-amber-200">
+                    محدد: {selectedIds.size}
+                  </span>
+                )}
+              </label>
+            )}
             {loading && (
               <div className="flex items-center gap-2 text-sm text-slate-400">
                 <Loader2 className="size-4 animate-spin" /> جارٍ التحميل…
@@ -1200,12 +1323,15 @@ function CleanupWorkshop() {
                   busy={busy === r.id}
                   onFullyApprove={() => fullyApproveCleanup(r)}
                   onMarkNeedsContent={() => markNeedsContentOnly(r)}
+                  selected={selectedIds.has(r.id)}
+                  onToggleSelect={() => toggleSelect(r.id)}
                 />
               );
             })}
 
 
           </div>
+
 
           {/* Editor */}
           <div className="lg:sticky lg:top-4">
@@ -1249,6 +1375,44 @@ function CleanupWorkshop() {
           onConfirm={(canonical) => mergeInto(mergeFor, canonical)}
         />
       )}
+
+      {selectedIds.size > 0 && (
+        <div
+          dir="rtl"
+          role="region"
+          aria-label="شريط الإجراءات الجماعية"
+          className="fixed inset-x-0 bottom-4 z-40 mx-auto flex w-fit max-w-[95vw] flex-wrap items-center justify-center gap-2 rounded-full border border-amber-400/50 bg-slate-950/95 px-3 py-2 text-xs text-slate-100 shadow-2xl backdrop-blur"
+        >
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-100">
+            <BadgeCheck className="size-3.5" />
+            {selectedIds.size} محدد
+          </span>
+          <button
+            onClick={() => void runBulk("needs-content")}
+            disabled={bulkBusy}
+            className="inline-flex items-center gap-1 rounded-full border border-sky-400/50 bg-sky-500/15 px-3 py-1 text-[11px] font-semibold text-sky-100 hover:bg-sky-500/25 disabled:opacity-50"
+          >
+            {bulkBusy ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
+            وسم كـ «يحتاج محتوى»
+          </button>
+          <button
+            onClick={() => void runBulk("fully-approve")}
+            disabled={bulkBusy}
+            className="inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-100 hover:bg-emerald-500/25 disabled:opacity-50"
+          >
+            {bulkBusy ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+            اعتماد تام
+          </button>
+          <button
+            onClick={clearSelection}
+            disabled={bulkBusy}
+            className="inline-flex items-center gap-1 rounded-full border border-slate-600/60 bg-slate-800/60 px-3 py-1 text-[11px] text-slate-200 hover:bg-slate-700/60 disabled:opacity-50"
+          >
+            <X className="size-3.5" /> إلغاء التحديد
+          </button>
+        </div>
+      )}
+
 
       {toast && (
         <div
@@ -1467,6 +1631,7 @@ function Toolbar({
 function ResultRow({
   row, state, canonicalTitle, atlas, camps, active, onOpen,
   inCleanupQueue = false, busy = false, onFullyApprove, onMarkNeedsContent,
+  selected = false, onToggleSelect,
 }: {
   row: EntityRow; state: PrimaryState; canonicalTitle: string | null;
   atlas: number; camps: number;
@@ -1475,6 +1640,8 @@ function ResultRow({
   busy?: boolean;
   onFullyApprove?: () => void;
   onMarkNeedsContent?: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const sm = STATE_META[state];
   const bodyLen = (row.summary ?? "").length + bodyText(row.body).length;
@@ -1497,14 +1664,26 @@ function ResultRow({
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(); }}
       className={`w-full cursor-pointer rounded-lg border px-3 py-2 text-start transition ${
-        active ? "border-amber-400/60 bg-amber-500/10" : "border-slate-700/60 bg-slate-900/40 hover:bg-slate-800/60"
+        selected
+          ? "border-amber-400/70 bg-amber-500/15 ring-1 ring-amber-400/30"
+          : active ? "border-amber-400/60 bg-amber-500/10" : "border-slate-700/60 bg-slate-900/40 hover:bg-slate-800/60"
       }`}>
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-100">{row.title}</p>
-          <p className="truncate font-mono text-[10px] text-slate-500">
-            {TYPE_LABEL[row.entity_type] ?? row.entity_type} · {row.slug}
-          </p>
+        <div className="flex min-w-0 items-start gap-2">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-4 shrink-0 accent-amber-400"
+            checked={selected}
+            onChange={onToggleSelect}
+            onClick={(e) => e.stopPropagation()}
+            aria-label="تحديد"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-100">{row.title}</p>
+            <p className="truncate font-mono text-[10px] text-slate-500">
+              {TYPE_LABEL[row.entity_type] ?? row.entity_type} · {row.slug}
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <span className={`rounded-full border px-2 py-0.5 text-[10px] tabular-nums ${scoreColor(score)}`}>{score}%</span>
@@ -1518,6 +1697,7 @@ function ResultRow({
         {atlas > 0 && <Chip tone="ok">أطلس×{atlas}</Chip>}
         {camps > 0 && <Chip tone="ok">حملات×{camps}</Chip>}
       </div>
+
 
       {inCleanupQueue && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-700/40 pt-2">
