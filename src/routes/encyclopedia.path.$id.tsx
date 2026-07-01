@@ -179,6 +179,16 @@ function PathPage() {
           </section>
         )}
 
+        {journeyQuery.data?.anchor && (
+          <FeedbackCTA
+            context={{
+              entity_id: journeyQuery.data.anchor.id,
+              slug: journeyQuery.data.anchor.slug,
+              title: journeyQuery.data.anchor.title,
+            }}
+          />
+        )}
+
         <div className="h-10" />
       </div>
     </AppShell>
