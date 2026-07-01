@@ -28,8 +28,7 @@ export function AtlasIntroDialog({
   /** When true, checkbox defaults hidden — used when reopened from ⓘ. */
   forceInteractive?: boolean;
 }) {
-  const { profile, updateSettings } = useProfile();
-  const settings = profile.settings;
+  const { updateSettings } = useProfile();
   const [dontShowAgain, setDontShowAgain] = useState(true);
 
   useEffect(() => {
