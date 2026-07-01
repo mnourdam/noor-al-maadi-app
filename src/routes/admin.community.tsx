@@ -31,6 +31,8 @@ import {
   CheckCircle2,
   Star,
   Inbox,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 
 const STATUS_ORDER: FeedbackStatus[] = ["new", "review", "planned", "fixed", "closed"];
@@ -188,7 +190,17 @@ function AdminCommunity() {
                               <span className="h-2 w-2 shrink-0 rounded-full bg-rose-400" title="جديد" />
                             )}
                             <div className="min-w-0">
-                              <p className="truncate font-medium text-slate-100">{r.title}</p>
+                              <p className="truncate font-medium text-slate-100">
+                                {r.title}
+                                {r.player_rating != null && (
+                                  <span
+                                    className={`ms-2 inline-flex items-center gap-0.5 align-middle ${r.player_rating >= 4 ? "text-emerald-300" : "text-rose-300"}`}
+                                    title={`تقييم اللاعب: ${r.player_rating}/5`}
+                                  >
+                                    {r.player_rating >= 4 ? <ThumbsUp className="h-3 w-3" /> : <ThumbsDown className="h-3 w-3" />}
+                                  </span>
+                                )}
+                              </p>
                               <p className="truncate text-[11px] text-slate-500">{r.description}</p>
                             </div>
                           </div>
@@ -333,6 +345,21 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
                       minute: "2-digit",
                     })}
                   </p>
+                  {issue.player_rating != null && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-100">
+                      {issue.player_rating >= 4 ? (
+                        <ThumbsUp className="h-3 w-3" />
+                      ) : (
+                        <ThumbsDown className="h-3 w-3" />
+                      )}
+                      تقييم اللاعب: {issue.player_rating >= 4 ? "مفيد" : "غير مفيد"}
+                      {issue.player_rating_at && (
+                        <span className="font-normal text-amber-200/70">
+                          · {new Date(issue.player_rating_at).toLocaleDateString("ar", { day: "numeric", month: "short" })}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
