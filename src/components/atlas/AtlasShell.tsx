@@ -20,7 +20,12 @@ import { AtlasEntityDetailPanel } from "./AtlasEntityDetailPanel";
 import { usePublishedAtlasEntities } from "@/lib/atlas-entities-query";
 import { isLc1VisibleAtlasKind, type AtlasEntityKind, type AtlasEntityRow } from "@/lib/atlas-entities";
 import { sortAtlasEntitiesChronological } from "@/lib/atlas/atlas-visual";
-import { pickBestAtlasMatch, type AtlasSearchHit } from "@/lib/atlas/atlas-search";
+import {
+  pickBestAtlasMatch,
+  searchAtlasEntities,
+  zoomForKind,
+  type AtlasSearchHit,
+} from "@/lib/atlas/atlas-search";
 import { Route as MapRoute, type MapSearch } from "@/routes/map";
 import { androidMark, isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 
@@ -69,7 +74,7 @@ function AtlasShellInner() {
     });
 
   const facets = useMemo(() => buildAtlasFacets(entities), [entities]);
-  const visible = useMemo(
+  const filtered = useMemo(
     () =>
       sortAtlasEntitiesChronological(
         filterAtlasEntities(entities, { kind, era, world, search: q }),
@@ -83,13 +88,21 @@ function AtlasShellInner() {
   );
   const selected = focus ? entityById.get(focus) ?? null : null;
 
-  // If the focused entity is filtered out, drop the focus from the URL.
-  useEffect(() => {
-    if (focus && !visible.find((e) => e.id === focus)) {
-      setSearchParam("focus", null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, focus]);
+  // Visibility override: ensure the selected/focused entity is always in the
+  // render list, even if the current kind/era/world filters would exclude it
+  // (e.g. searching for a battle while battles are chip-filtered out, or
+  // while zoomed far out where battles are normally hidden). The pin layer's
+  // `active` flag then keeps it visible at any zoom tier.
+  const visible = useMemo(() => {
+    if (!selected) return filtered;
+    if (filtered.some((e) => e.id === selected.id)) return filtered;
+    return [selected, ...filtered];
+  }, [filtered, selected]);
+
+  // NOTE: We intentionally do NOT drop `focus` when it's filtered out — the
+  // visibility override above keeps the selected result visible until the
+  // user clears the search or closes its preview.
+
 
   // ── Search navigation ────────────────────────────────────────────────
   const [suggestions, setSuggestions] = useState<AtlasSearchHit[]>([]);
@@ -103,13 +116,30 @@ function AtlasShellInner() {
     setSearchParam("focus", e.id);
     if (typeof e.aps_x === "number" && typeof e.aps_y === "number") {
       focusAtlasRef.current += 1;
-      setFocusAps({ x: e.aps_x, y: e.aps_y, minScale: 5, nonce: focusAtlasRef.current });
+      setFocusAps({
+        x: e.aps_x,
+        y: e.aps_y,
+        minScale: zoomForKind(e.kind),
+        nonce: focusAtlasRef.current,
+      });
       setFallbackMsg(null);
     } else {
       setFallbackMsg("هذا العنصر موجود في الموسوعة لكنه غير محدد على الخريطة بعد");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Live suggestions as the user types (debounced). Empty query clears.
+  useEffect(() => {
+    const query = q.trim();
+    if (!query) { setSuggestions([]); setNoMatch(false); return; }
+    const t = setTimeout(() => {
+      const hits = searchAtlasEntities(entities, query, 6);
+      setSuggestions(hits);
+      setNoMatch(hits.length === 0);
+    }, 140);
+    return () => clearTimeout(t);
+  }, [q, entities]);
 
   const submitSearch = useCallback((raw: string) => {
     const query = raw.trim();
@@ -122,22 +152,18 @@ function AtlasShellInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entities, navigateToEntity]);
 
-  // Clear suggestions when the user clears the query
-  useEffect(() => {
-    if (!q) { setSuggestions([]); setNoMatch(false); }
-  }, [q]);
-
   // When the focused entity changes (e.g., via URL or pin click), pan to it.
-  // Honours an optional ?zoom= deep-link hint for a moderate framing when
-  // arriving from another surface (e.g. encyclopedia dossiers).
+  // Honours an optional ?zoom= deep-link hint, otherwise uses a type-aware
+  // comfortable zoom so approximate locations aren't over-framed.
   useEffect(() => {
     if (!selected) return;
     if (typeof selected.aps_x === "number" && typeof selected.aps_y === "number") {
       focusAtlasRef.current += 1;
-      const min = typeof search.zoom === "number" ? search.zoom : 5;
+      const min = typeof search.zoom === "number" ? search.zoom : zoomForKind(selected.kind);
       setFocusAps({ x: selected.aps_x, y: selected.aps_y, minScale: min, nonce: focusAtlasRef.current });
     }
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   return (
     <div className="fixed inset-0 z-40 bg-slate-950" dir="rtl">
