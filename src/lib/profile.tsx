@@ -55,6 +55,8 @@ export interface AppSettings {
   notificationPrefs?: NotificationPrefs;
   /** Reading Comfort — scales typography on reading-heavy screens only. */
   textSize?: "sm" | "md" | "lg";
+  /** True once the user has dismissed the Atlas informational intro. */
+  atlasIntroDismissed?: boolean;
 }
 
 

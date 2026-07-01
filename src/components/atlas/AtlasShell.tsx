@@ -7,7 +7,9 @@
 // URL state: ?focus, ?kind, ?era, ?world are deep-linkable.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Loader2, Map as MapIcon } from "lucide-react";
+import { ChevronRight, Info, Loader2, Map as MapIcon } from "lucide-react";
+import { AtlasIntroDialog, hasDismissedAtlasIntro } from "./AtlasIntroDialog";
+import { useProfile } from "@/lib/profile";
 import { AtlasStage } from "./AtlasStage";
 import {
   AtlasControls,
@@ -36,6 +38,10 @@ export function AtlasShell() {
 
 function AtlasShellInner() {
   const { data: entities = [], isLoading } = usePublishedAtlasEntities();
+  const { profile } = useProfile();
+  const settingsDismissed = profile.settings.atlasIntroDismissed === true;
+  const [introOpen, setIntroOpen] = useState(() => !hasDismissedAtlasIntro(settingsDismissed));
+  const [introReopened, setIntroReopened] = useState(false);
 
   // URL state — single source of truth for filters + selection.
   const search = MapRoute.useSearch();
@@ -140,6 +146,23 @@ function AtlasShellInner() {
         <ChevronRight className="size-4" /> الرئيسية
       </Link>
 
+      <div
+        className="pointer-events-none absolute top-3 left-1/2 z-30 -translate-x-1/2 flex items-center gap-2"
+        style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
+      >
+        <h1 className="font-display text-[13px] font-bold text-amber-100/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.6)]">
+          أطلس إرث
+        </h1>
+        <button
+          type="button"
+          onClick={() => { setIntroReopened(true); setIntroOpen(true); }}
+          aria-label="حول أطلس إرث"
+          className="pointer-events-auto grid size-7 place-items-center rounded-full border border-amber-400/30 bg-slate-950/70 text-amber-200/90 hover:bg-slate-900 hover:text-amber-100"
+        >
+          <Info className="size-3.5" />
+        </button>
+      </div>
+
       <AtlasStage
         entities={visible}
         selectedId={focus}
@@ -197,6 +220,12 @@ function AtlasShellInner() {
           }}
         />
       )}
+
+      <AtlasIntroDialog
+        open={introOpen}
+        onClose={() => { setIntroOpen(false); setIntroReopened(false); }}
+        forceInteractive={introReopened}
+      />
     </div>
   );
 }
