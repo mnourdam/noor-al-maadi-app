@@ -55,6 +55,21 @@ export async function fetchPublicProfileByUsername(username: string): Promise<Pu
 }
 
 /**
+ * Friendship-gated profile fetchers. Returns the full public profile only
+ * when the viewer is the same user or an accepted friend. For anyone else
+ * the RPC returns NULL — enforced server-side in `get_gated_public_profile`.
+ */
+export async function fetchGatedProfileById(id: string): Promise<PublicProfile | null> {
+  const { data } = await db.rpc("get_gated_public_profile", { p_user_id: id });
+  return (data as PublicProfile | null) ?? null;
+}
+
+export async function fetchGatedProfileByUsername(username: string): Promise<PublicProfile | null> {
+  const { data } = await db.rpc("get_gated_public_profile_by_username", { p_username: username });
+  return (data as PublicProfile | null) ?? null;
+}
+
+/**
  * Owner-only helper for fetching the current user's referral code. Goes
  * through the `get_my_profile` SECURITY DEFINER RPC because direct SELECT
  * on private profile columns is no longer permitted to authenticated.
