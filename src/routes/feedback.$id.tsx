@@ -117,6 +117,13 @@ function FeedbackThread() {
                     <span>·</span>
                     <span>{new Date(issue.created_at).toLocaleDateString("ar", { day: "numeric", month: "short", year: "numeric" })}</span>
                   </div>
+                  <div className="mt-2">
+                    <FeedbackPresenceBadge
+                      viewerRole="player"
+                      otherOnline={otherOnline}
+                      otherTyping={otherTyping}
+                    />
+                  </div>
                 </div>
               </div>
               {contextChips.length > 0 && (
