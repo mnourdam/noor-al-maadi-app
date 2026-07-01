@@ -6,8 +6,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, Check, Eye, EyeOff, MapPin, RefreshCw, Save, Search, ShieldCheck, Upload,
+  ArrowRight, Check, Eye, EyeOff, MapPin, RefreshCw, Save, Search, ShieldCheck, Trash2, Upload,
 } from "lucide-react";
+import { toast } from "sonner";
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
 import {
