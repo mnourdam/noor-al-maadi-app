@@ -131,6 +131,14 @@ function AdminAtlasEntitiesPage() {
             >
               <RefreshCw className="inline size-4" />
             </button>
+            <label className="flex items-center gap-1.5 text-[11px] text-slate-400">
+              <input
+                type="checkbox"
+                checked={showLegacyKinds}
+                onChange={(e) => setShowLegacyKinds(e.target.checked)}
+              />
+              إظهار أنواع قديمة{legacyCount ? ` (${legacyCount})` : ""}
+            </label>
             <button
               onClick={() => setImporting(true)}
               className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/10"
