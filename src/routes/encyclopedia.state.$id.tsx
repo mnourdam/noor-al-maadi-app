@@ -216,6 +216,16 @@ function StatePage() {
           </p>
         )}
 
+        {state && (
+          <FeedbackCTA
+            context={{
+              entity_id: state.id,
+              slug: state.slug,
+              title: state.title,
+            }}
+          />
+        )}
+
         <div className="h-10" />
       </div>
     </AppShell>
