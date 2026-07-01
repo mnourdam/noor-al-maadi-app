@@ -9,11 +9,11 @@ import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagno
 import { isSectionEnabled } from "@/lib/androidQuietMode";
 
 const tabs = [
-  { to: "/", label: "المغامرة", icon: Compass },
+  { to: "/", label: "الرئيسية", icon: Compass },
   { to: "/campaigns", label: "الحملات", icon: Swords },
   { to: "/encyclopedia", label: "الموسوعة", icon: BookOpen },
-  { to: "/map", label: "الخارطة", icon: Map },
-  { to: "/collection", label: "الخزائن", icon: Library },
+  { to: "/map", label: "الأطلس", icon: Map },
+  { to: "/collection", label: "المتحف", icon: Library },
   { to: "/profile", label: "حسابي", icon: User },
 ] as const;
 

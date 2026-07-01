@@ -123,9 +123,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "ach_char_15",   name: "ديوان الأعلام",     desc: "افتح 15 شخصية.",            icon: "🪪", goal: 15,  category: "exploration", rarity: "uncommon",  rewards: [{ kind: "xp", amount: 200 }, { kind: "dinars", amount: 100 }] },
   { id: "ach_char_30",   name: "مؤرّخ الرجال",      desc: "افتح 30 شخصية.",            icon: "🧑‍🎓", goal: 30, category: "exploration", rarity: "rare",      rewards: [{ kind: "xp", amount: 500 }, { kind: "dinars", amount: 200 }] },
   { id: "ach_char_60",   name: "موسوعة الشخصيات",  desc: "افتح 60 شخصية.",            icon: "👤", goal: 60,  category: "exploration", rarity: "epic",      rewards: [{ kind: "xp", amount: 1200 }, { kind: "title", label: "موسوعة الشخصيات" }] },
-  { id: "ach_region_5",  name: "فاتح الأقاليم",     desc: "افتح 5 مناطق على الخارطة.",  icon: "🗺️", goal: 5,   category: "exploration", rarity: "common",    rewards: [{ kind: "xp", amount: 80 }] },
-  { id: "ach_region_10", name: "رحّالة الأقطار",    desc: "افتح 10 مناطق على الخارطة.", icon: "🧭", goal: 10,  category: "exploration", rarity: "uncommon",  rewards: [{ kind: "xp", amount: 200 }] },
-  { id: "ach_region_15", name: "جغرافيُّ الأمّة",    desc: "افتح 15 منطقة على الخارطة.", icon: "🌍", goal: 15,  category: "exploration", rarity: "rare",      rewards: [{ kind: "xp", amount: 500 }, { kind: "dinars", amount: 250 }] },
+  { id: "ach_region_5",  name: "فاتح الأقاليم",     desc: "افتح 5 مناطق على الأطلس.",  icon: "🗺️", goal: 5,   category: "exploration", rarity: "common",    rewards: [{ kind: "xp", amount: 80 }] },
+  { id: "ach_region_10", name: "رحّالة الأقطار",    desc: "افتح 10 مناطق على الأطلس.", icon: "🧭", goal: 10,  category: "exploration", rarity: "uncommon",  rewards: [{ kind: "xp", amount: 200 }] },
+  { id: "ach_region_15", name: "جغرافيُّ الأمّة",    desc: "افتح 15 منطقة على الأطلس.", icon: "🌍", goal: 15,  category: "exploration", rarity: "rare",      rewards: [{ kind: "xp", amount: 500 }, { kind: "dinars", amount: 250 }] },
   { id: "ach_eras_5",    name: "عبر العصور",       desc: "افتح 5 عصور تاريخية.",       icon: "🏺", goal: 5,   category: "exploration", rarity: "uncommon",  rewards: [{ kind: "xp", amount: 250 }] },
   { id: "ach_eras_10",   name: "ابن العصور",       desc: "افتح 10 عصور تاريخية.",      icon: "⏳", goal: 10,  category: "exploration", rarity: "epic",      rewards: [{ kind: "xp", amount: 800 }, { kind: "title", label: "ابن العصور" }] },
 
