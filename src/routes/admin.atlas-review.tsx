@@ -6,8 +6,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, Check, Eye, EyeOff, MapPin, RefreshCw, Save, Search, ShieldCheck, Upload,
+  ArrowRight, Check, Eye, EyeOff, MapPin, RefreshCw, Save, Search, ShieldCheck, Trash2, Upload,
 } from "lucide-react";
+import { toast } from "sonner";
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -56,6 +57,9 @@ function AtlasReviewPage() {
   const [era, setEra] = useState<string>("all");
   const [batch, setBatch] = useState<string>("all");
   const [onlyUnverified, setOnlyUnverified] = useState(true);
+  const [showRemoved, setShowRemoved] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<AtlasEntityRow | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   // Selection + drafts
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -142,8 +146,13 @@ function AtlasReviewPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
-      if (onlyUnverified) {
-        if (r.aps_verified && r.status === "published") return false;
+      if (showRemoved) {
+        if (r.status !== "retired") return false;
+      } else {
+        if (r.status === "retired") return false;
+        if (onlyUnverified) {
+          if (r.aps_verified && r.status === "published") return false;
+        }
       }
       if (kind !== "all" && r.kind !== kind) return false;
       if (era !== "all" && r.era !== era) return false;
@@ -151,7 +160,7 @@ function AtlasReviewPage() {
       if (q && !`${r.name_ar} ${r.name_en ?? ""} ${r.slug}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [rows, search, kind, era, batch, onlyUnverified]);
+  }, [rows, search, kind, era, batch, onlyUnverified, showRemoved]);
 
   // Drag handlers — convert client px → APS via current transform
   const dragRef = useRef<{
@@ -324,6 +333,25 @@ function AtlasReviewPage() {
   const selectAllVisible = () => setSelected(new Set(filtered.map((r) => r.id)));
   const clearSelection = () => setSelected(new Set());
 
+  // Soft-remove an atlas marker only. Does NOT touch the linked
+  // encyclopedia_entities row — the article and its content are preserved.
+  // We flip status='retired'; player Atlas only exposes published+verified.
+  const confirmRemoveFromAtlas = async () => {
+    const row = removeTarget;
+    if (!row) return;
+    setRemoving(true);
+    try {
+      const updated = await updateAtlasEntity(row.id, { status: "retired" });
+      setRows((rs) => rs.map((r) => (r.id === row.id ? updated : r)));
+      setRemoveTarget(null);
+      toast.success("أُزيل من الأطلس. محتوى الموسوعة لم يتغيّر.");
+    } catch (e: any) {
+      toast.error(`فشل الإزالة: ${e.message ?? e}`);
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   const dirtyCount = Object.keys(drafts).length;
 
   return (
@@ -409,8 +437,13 @@ function AtlasReviewPage() {
                     {batches.map((b) => <option key={b} value={b}>{b}</option>)}
                   </select>
                   <label className="col-span-2 flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1">
-                    <input type="checkbox" checked={onlyUnverified} onChange={(e) => setOnlyUnverified(e.target.checked)} />
-                    <span>غير مؤكّد فقط</span>
+                    <input type="checkbox" checked={onlyUnverified} disabled={showRemoved}
+                      onChange={(e) => setOnlyUnverified(e.target.checked)} />
+                    <span className={showRemoved ? "opacity-50" : ""}>غير مؤكّد فقط</span>
+                  </label>
+                  <label className="col-span-2 flex items-center gap-2 rounded border border-rose-900/60 bg-rose-950/30 px-2 py-1 text-rose-200">
+                    <input type="checkbox" checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} />
+                    <span>عرض المُزال من الأطلس فقط</span>
                   </label>
                 </div>
               </div>
@@ -444,11 +477,21 @@ function AtlasReviewPage() {
                               : <span className="text-stone-500">· بلا موسوعة</span>}
                           </div>
                         </button>
-                        <button disabled={!dirty || savingIds.has(r.id)} onClick={() => saveOne(r.id)}
-                          title="حفظ هذا العنصر"
-                          className="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-stone-950 hover:bg-amber-400 disabled:opacity-30">
-                          حفظ
-                        </button>
+                        <div className="flex flex-col items-stretch gap-1">
+                          <button disabled={!dirty || savingIds.has(r.id)} onClick={() => saveOne(r.id)}
+                            title="حفظ هذا العنصر"
+                            className="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-stone-950 hover:bg-amber-400 disabled:opacity-30">
+                            حفظ
+                          </button>
+                          {r.status !== "retired" && (
+                            <button onClick={() => setRemoveTarget(r)}
+                              title="إزالة من الأطلس فقط (لن تُحذف الموسوعة)"
+                              className="inline-flex items-center justify-center gap-1 rounded border border-rose-700 bg-rose-900/50 px-1.5 py-0.5 text-[10px] font-bold text-rose-100 hover:bg-rose-800">
+                              <Trash2 className="size-3" />
+                              إزالة
+                            </button>
+                          )}
+                        </div>
                       </li>
                     );
                   })}
@@ -621,6 +664,53 @@ function AtlasReviewPage() {
           </div>
         </main>
       </div>
+
+      {removeTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => !removing && setRemoveTarget(null)}
+        >
+          <div
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-xl border border-rose-800/60 bg-stone-900 p-5 shadow-2xl"
+          >
+            <div className="mb-2 flex items-center gap-2 text-rose-200">
+              <Trash2 className="size-5" />
+              <h2 className="font-display text-base font-bold">إزالة هذا العنصر من الأطلس؟</h2>
+            </div>
+            <p className="text-[13px] leading-7 text-stone-300">
+              سيُزال العنصر من الخريطة فقط. لن يتم حذف أو تعديل صفحة الموسوعة المرتبطة.
+            </p>
+            <div className="mt-2 rounded border border-stone-700 bg-stone-950 p-2 text-[12px]">
+              <div className="truncate font-bold text-amber-100">{removeTarget.name_ar}</div>
+              <div className="text-[10px] text-stone-400">
+                {KIND_LABEL_AR[removeTarget.kind]} · {removeTarget.slug}
+                {removeTarget.encyclopedia_entity_id && (
+                  <span className="text-sky-300"> · الموسوعة محفوظة</span>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                disabled={removing}
+                onClick={() => setRemoveTarget(null)}
+                className="rounded border border-stone-700 bg-stone-800 px-3 py-1.5 text-[12px] hover:bg-stone-700 disabled:opacity-40"
+              >
+                إلغاء
+              </button>
+              <button
+                disabled={removing}
+                onClick={confirmRemoveFromAtlas}
+                className="inline-flex items-center gap-1 rounded bg-rose-600 px-3 py-1.5 text-[12px] font-bold text-white hover:bg-rose-500 disabled:opacity-40"
+              >
+                <Trash2 className="size-3.5" />
+                {removing ? "جاري الإزالة…" : "إزالة من الأطلس"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
