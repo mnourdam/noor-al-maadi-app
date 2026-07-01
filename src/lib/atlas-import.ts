@@ -107,6 +107,14 @@ export async function runImportBatch(
       }
       const aps = clampAps(geoToAps(e.lon, e.lat));
       const kind = e.kind ?? batch.default_kind;
+      // Atlas is now a dedicated historical *geographic* atlas: only
+      // states/regions, cities/places, and battles are ever synchronized.
+      // Non-geographic kinds (artifacts, figures, events, route points)
+      // stay in the encyclopedia but never enter the Atlas.
+      if (!isLc1VisibleAtlasKind(kind)) {
+        rows.push({ slug: e.slug, status: "failed", reason: `kind ${kind} not allowed on atlas` });
+        continue;
+      }
       const encyId = e.encyclopedia_slug ? encyMap.get(e.encyclopedia_slug) ?? null : null;
       toInsert.push({
         slug: e.slug,
