@@ -72,3 +72,28 @@ export async function adminListIssues(params: {
   if (error) throw error;
   return (data as unknown as AdminIssueRow[]) ?? [];
 }
+
+export async function rateIssue(issueId: string, rating: 1 | 2 | 3 | 4 | 5): Promise<void> {
+  const { error } = await supabase.rpc("rate_feedback_issue", { p_issue_id: issueId, p_rating: rating });
+  if (error) throw error;
+}
+
+export async function countMyUnreadFeedback(): Promise<number> {
+  const { data, error } = await supabase.rpc("count_my_unread_feedback");
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+export interface AdminFeedbackStats {
+  counts: Partial<Record<FeedbackStatus, number>>;
+  avg_first_response_seconds: number;
+  avg_resolution_seconds: number;
+  avg_rating: number;
+  rating_count: number;
+}
+
+export async function adminFeedbackStats(): Promise<AdminFeedbackStats> {
+  const { data, error } = await supabase.rpc("admin_feedback_stats");
+  if (error) throw error;
+  return data as unknown as AdminFeedbackStats;
+}

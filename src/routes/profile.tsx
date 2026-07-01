@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { countMyUnreadFeedback } from "@/lib/feedback/api";
+import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info,
@@ -1326,14 +1328,7 @@ function SettingsTab({
           </div>
           <ChevronLeft className="size-4 text-muted-foreground" />
         </Link>
-        <Link to="/feedback" className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-background/40 p-3 hover:border-gold/30">
-          <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold"><Inbox className="size-4" /></div>
-          <div className="min-w-0 flex-1 text-right">
-            <p className="font-display text-sm font-bold">مساهماتي والردود</p>
-            <p className="text-[11px] text-muted-foreground">تابع حوارك مع فريق إرث.</p>
-          </div>
-          <ChevronLeft className="size-4 text-muted-foreground" />
-        </Link>
+        <FeedbackInboxLink />
       </SettingsGroup>
 
       {/* About */}
@@ -1429,5 +1424,40 @@ function SettingToggle({ icon, label, desc, value, onChange }: { icon: React.Rea
         <span className={`absolute top-0.5 size-4 rounded-full bg-white transition ${value ? "right-0.5" : "right-[18px]"}`} />
       </span>
     </button>
+  );
+}
+
+function FeedbackInboxLink() {
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    let mounted = true;
+    const refresh = () => {
+      countMyUnreadFeedback().then((n) => { if (mounted) setUnread(n); }).catch(() => {});
+    };
+    refresh();
+    const channel = supabase
+      .channel("profile-feedback-unread")
+      .on("postgres_changes", { event: "*", schema: "public", table: "feedback_issues" }, refresh)
+      .subscribe();
+    return () => { mounted = false; supabase.removeChannel(channel); };
+  }, []);
+  return (
+    <Link to="/feedback" className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-background/40 p-3 hover:border-gold/30">
+      <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold"><Inbox className="size-4" /></div>
+      <div className="min-w-0 flex-1 text-right">
+        <div className="flex items-center gap-2">
+          <p className="font-display text-sm font-bold">مساهماتي والردود</p>
+          {unread > 0 && (
+            <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
+              {unread}
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          {unread > 0 ? `لديك ${unread} رد${unread > 1 ? "ودًا" : "ًا"} جديدًا من فريق إرث.` : "تابع حوارك مع فريق إرث."}
+        </p>
+      </div>
+      <ChevronLeft className="size-4 text-muted-foreground" />
+    </Link>
   );
 }

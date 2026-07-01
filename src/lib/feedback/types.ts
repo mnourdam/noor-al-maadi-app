@@ -42,6 +42,8 @@ export interface FeedbackIssue {
   admin_unread: boolean;
   created_at: string;
   updated_at: string;
+  player_rating?: number | null;
+  player_rating_at?: string | null;
 }
 
 export interface FeedbackMessage {
@@ -62,15 +64,16 @@ export interface CategoryDef {
   icon: LucideIcon;
   accent: string;
   accentBg: string;
+  submitLabel: string;
 }
 
 export const FEEDBACK_CATEGORIES: CategoryDef[] = [
-  { key: "bug",                 label: "الإبلاغ عن مشكلة",       hint: "عطل أو سلوك غير متوقع", icon: Bug,        accent: "text-rose-200",    accentBg: "bg-rose-500/15" },
-  { key: "history_correction",  label: "تصحيح معلومة تاريخية",   hint: "تصويب معلومة داخل المحتوى", icon: BookOpen,   accent: "text-amber-200",   accentBg: "bg-amber-500/15" },
-  { key: "improvement",         label: "اقتراح تطوير",           hint: "فكرة لتحسين تجربة إرث", icon: Lightbulb,  accent: "text-sky-200",     accentBg: "bg-sky-500/15" },
-  { key: "content_suggestion",  label: "اقتراح حملة أو محتوى جديد", hint: "شخصية، مدينة، معركة، حملة", icon: Landmark,   accent: "text-emerald-200", accentBg: "bg-emerald-500/15" },
-  { key: "general",             label: "ملاحظات عامة",           hint: "انطباع أو تعليق مفتوح", icon: Heart,      accent: "text-pink-200",    accentBg: "bg-pink-500/15" },
-  { key: "question",            label: "سؤال أو استفسار",         hint: "استفسار حول ميزة أو محتوى", icon: HelpCircle, accent: "text-violet-200",  accentBg: "bg-violet-500/15" },
+  { key: "bug",                 label: "الإبلاغ عن مشكلة",       hint: "عطل أو سلوك غير متوقع", icon: Bug,        accent: "text-rose-200",    accentBg: "bg-rose-500/15",    submitLabel: "إرسال البلاغ" },
+  { key: "history_correction",  label: "تصحيح معلومة تاريخية",   hint: "تصويب معلومة داخل المحتوى", icon: BookOpen,   accent: "text-amber-200",   accentBg: "bg-amber-500/15",   submitLabel: "إرسال للمراجعة" },
+  { key: "improvement",         label: "اقتراح تطوير",           hint: "فكرة لتحسين تجربة إرث", icon: Lightbulb,  accent: "text-sky-200",     accentBg: "bg-sky-500/15",     submitLabel: "إرسال الاقتراح" },
+  { key: "content_suggestion",  label: "اقتراح حملة أو محتوى جديد", hint: "شخصية، مدينة، معركة، حملة", icon: Landmark,   accent: "text-emerald-200", accentBg: "bg-emerald-500/15", submitLabel: "اقتراح المحتوى" },
+  { key: "general",             label: "ملاحظات عامة",           hint: "انطباع أو تعليق مفتوح", icon: Heart,      accent: "text-pink-200",    accentBg: "bg-pink-500/15",    submitLabel: "إرسال الملاحظة" },
+  { key: "question",            label: "سؤال أو استفسار",         hint: "استفسار حول ميزة أو محتوى", icon: HelpCircle, accent: "text-violet-200",  accentBg: "bg-violet-500/15",  submitLabel: "إرسال السؤال" },
 ];
 
 export const CATEGORY_MAP: Record<FeedbackCategory, CategoryDef> =
