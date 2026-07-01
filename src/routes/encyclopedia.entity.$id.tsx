@@ -442,7 +442,7 @@ function EntityPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2.5">
                       {g.items.slice(0, 12).map((n) => (
-                        <EncyclopediaCard key={n.entity.id} entity={n.entity} />
+                        <EncyclopediaCard key={n.entity.id} entity={n.entity} interactive={false} />
                       ))}
                     </div>
                   </div>

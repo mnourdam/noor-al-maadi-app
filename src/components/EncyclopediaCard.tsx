@@ -43,9 +43,11 @@ export function entityHref(
 export function EncyclopediaCard({
   entity,
   highlight,
+  interactive = true,
 }: {
   entity: SupabaseEncyclopediaEntity;
   highlight?: string;
+  interactive?: boolean;
 }) {
   const meta = metaRecord(entity);
   const kind = typeof meta.kind === "string" ? (meta.kind as string) : undefined;
@@ -110,6 +112,12 @@ export function EncyclopediaCard({
       {period && <p className="mt-1 text-[9px] text-gold/60">{period}</p>}
     </>
   );
+
+  if (!interactive) {
+    const staticClass =
+      "block rounded-2xl border border-white/10 bg-surface p-3 text-right";
+    return <div className={staticClass}>{Inner}</div>;
+  }
 
   if (entity.entity_type === "state") {
     return (
