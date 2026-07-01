@@ -196,7 +196,9 @@ function ProfilePage() {
 
   return (
     <AppShell>
+      <CinematicPageBackdrop image={profileHeaderArt} alt="عمارة إسلامية" />
       <Screen title="حسابي" subtitle="رحلتك التاريخية">
+
         {/* ============== CINEMATIC HERO ============== */}
         <section className="relative overflow-hidden rounded-3xl border border-gold/30 parchment-dark shadow-elegant">
           <div className="arabesque-layer opacity-60" />
