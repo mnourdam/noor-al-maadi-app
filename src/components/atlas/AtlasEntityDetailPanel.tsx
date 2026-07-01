@@ -15,6 +15,7 @@ import {
   ENCYCLOPEDIA_ENTITY_COLUMNS,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 
 function useEncyclopediaEntity(id: string | null) {
   return useQuery<SupabaseEncyclopediaEntity | null>({
