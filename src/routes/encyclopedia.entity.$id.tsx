@@ -27,6 +27,7 @@ import { localEncyclopediaById, localEncyclopediaBySlug } from "@/lib/local-firs
 import { resolveCanonicalLocal } from "@/lib/encyclopedia-canonical";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
+import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import {
   resolveRelatedEntities,
   groupRelatedByReason,
