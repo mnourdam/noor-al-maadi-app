@@ -38,6 +38,15 @@ function FeedbackInbox() {
   return (
     <AppShell>
       <Screen title="مساهماتي" subtitle="محادثاتك مع فريق إرث">
+        <div className="mb-3">
+          <Link
+            to="/profile"
+            className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-surface/60 px-3 py-1.5 text-xs text-muted-foreground transition hover:border-gold/40 hover:text-gold"
+          >
+            <ChevronRight className="size-3.5" />
+            العودة إلى حسابي
+          </Link>
+        </div>
         <div className="mb-4 flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             كل مساهمة تفتح محادثة مباشرة مع الفريق.
