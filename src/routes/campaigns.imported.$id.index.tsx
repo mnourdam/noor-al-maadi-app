@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
-import { fetchCampaignByIdOrSlug } from "@/lib/supabaseCampaigns";
+import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
 import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
