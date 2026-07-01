@@ -1376,6 +1376,44 @@ function CleanupWorkshop() {
         />
       )}
 
+      {selectedIds.size > 0 && (
+        <div
+          dir="rtl"
+          role="region"
+          aria-label="شريط الإجراءات الجماعية"
+          className="fixed inset-x-0 bottom-4 z-40 mx-auto flex w-fit max-w-[95vw] flex-wrap items-center justify-center gap-2 rounded-full border border-amber-400/50 bg-slate-950/95 px-3 py-2 text-xs text-slate-100 shadow-2xl backdrop-blur"
+        >
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-100">
+            <BadgeCheck className="size-3.5" />
+            {selectedIds.size} محدد
+          </span>
+          <button
+            onClick={() => void runBulk("needs-content")}
+            disabled={bulkBusy}
+            className="inline-flex items-center gap-1 rounded-full border border-sky-400/50 bg-sky-500/15 px-3 py-1 text-[11px] font-semibold text-sky-100 hover:bg-sky-500/25 disabled:opacity-50"
+          >
+            {bulkBusy ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
+            وسم كـ «يحتاج محتوى»
+          </button>
+          <button
+            onClick={() => void runBulk("fully-approve")}
+            disabled={bulkBusy}
+            className="inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-100 hover:bg-emerald-500/25 disabled:opacity-50"
+          >
+            {bulkBusy ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+            اعتماد تام
+          </button>
+          <button
+            onClick={clearSelection}
+            disabled={bulkBusy}
+            className="inline-flex items-center gap-1 rounded-full border border-slate-600/60 bg-slate-800/60 px-3 py-1 text-[11px] text-slate-200 hover:bg-slate-700/60 disabled:opacity-50"
+          >
+            <X className="size-3.5" /> إلغاء التحديد
+          </button>
+        </div>
+      )}
+
+
       {toast && (
         <div
           role="status"
