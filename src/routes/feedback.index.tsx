@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { listMyIssues } from "@/lib/feedback/api";
 import { CATEGORY_MAP, STATUS_LABELS, type FeedbackIssue } from "@/lib/feedback/types";
-import { Plus, MessageSquare, Inbox } from "lucide-react";
+import { Plus, MessageSquare, Inbox, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/feedback/")({
   head: () => ({ meta: [{ title: "رسائلي — إرث" }] }),
