@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { AdminGate } from "@/lib/admin-guard";
@@ -241,9 +241,10 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
                     ))}
                   </div>
                   {jumpLink && (
-                    <Link to={jumpLink} className="mt-2 inline-flex items-center gap-1 text-[11px] text-gold hover:underline">
+                    <a href={jumpLink} className="mt-2 inline-flex items-center gap-1 text-[11px] text-gold hover:underline">
                       <ExternalLink className="size-3" /> فتح المحتوى المرتبط
-                    </Link>
+                    </a>
+
                   )}
                 </div>
               )}
