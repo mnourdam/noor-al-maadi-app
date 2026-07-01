@@ -8,6 +8,7 @@ import {
   MapPin,
   Tag,
   ScrollText,
+  Map as MapIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
