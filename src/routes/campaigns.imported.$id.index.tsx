@@ -335,11 +335,13 @@ function ImportedCampaignOverview() {
             </div>
           )}
         </div>
+        <FeedbackCTA context={{ campaign_id: id, title: "الحملة" }} />
 
       </div>
     </AppShell>
   );
 }
+
 
 function RewardPill({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (

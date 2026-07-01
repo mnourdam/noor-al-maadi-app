@@ -701,9 +701,11 @@ function CollectionPage() {
             متحفك في انتظارك. ابدأ بحملةٍ لتكشف أوّل قطعة.
           </div>
         )}
+        <FeedbackCTA context={{ title: "المتحف" }} />
       </Screen>
       <CollectibleRevealDialog item={reveal} onClose={() => setReveal(null)} />
     </AppShell>
+
   );
 }
 

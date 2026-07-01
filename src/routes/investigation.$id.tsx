@@ -221,8 +221,10 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
             </div>
           </section>
         )}
+        <FeedbackCTA context={{ investigation_id: id, title: "التحقيق" }} />
       </ReadingScale>
     </AppShell>
+
 
   );
 }
