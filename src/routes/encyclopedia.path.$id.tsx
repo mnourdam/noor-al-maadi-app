@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, Compass, ArrowDown } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import {
   buildExplorationJourney,
   findExplorationPath,
