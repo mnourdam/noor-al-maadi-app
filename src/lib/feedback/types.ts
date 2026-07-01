@@ -42,6 +42,8 @@ export interface FeedbackIssue {
   admin_unread: boolean;
   created_at: string;
   updated_at: string;
+  player_rating?: number | null;
+  player_rating_at?: string | null;
 }
 
 export interface FeedbackMessage {
