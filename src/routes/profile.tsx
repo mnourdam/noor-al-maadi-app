@@ -12,6 +12,8 @@ import {
 import { toWesternDigits } from "@/lib/formatNumber";
 import { useAudioSettings } from "@/hooks/useAudioSettings";
 import { AppShell, Screen } from "@/components/AppShell";
+import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
+import profileHeaderArt from "@/assets/hero/07-cordoba-night.jpg?url";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import {
   ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, evaluateAchievements, levelFor,
@@ -194,7 +196,9 @@ function ProfilePage() {
 
   return (
     <AppShell>
+      <CinematicPageBackdrop image={profileHeaderArt} alt="عمارة إسلامية" />
       <Screen title="حسابي" subtitle="رحلتك التاريخية">
+
         {/* ============== CINEMATIC HERO ============== */}
         <section className="relative overflow-hidden rounded-3xl border border-gold/30 parchment-dark shadow-elegant">
           <div className="arabesque-layer opacity-60" />

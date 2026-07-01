@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
+import museumHeaderArt from "@/assets/hero/19-observatory.jpg?url";
 import { useProfile } from "@/lib/profile";
 
 import {
@@ -524,7 +526,9 @@ function CollectionPage() {
 
   return (
     <AppShell>
+      <CinematicPageBackdrop image={museumHeaderArt} alt="قاعة متحف تاريخي" />
       <div className="px-5 pt-6">
+
         <Breadcrumbs
           items={[
             { label: "الرئيسية", to: "/" },

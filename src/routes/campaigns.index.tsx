@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, CheckCircle2, ScrollText } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
+import campaignsHeaderArt from "@/assets/hero/04-fortress.jpg?url";
 import { useProfile } from "@/lib/profile";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
@@ -35,6 +37,7 @@ function CampaignsHubFull() {
 
   return (
     <AppShell>
+      <CinematicPageBackdrop image={campaignsHeaderArt} alt="حصن تاريخي" />
       <div className="px-5 pt-6">
         <Breadcrumbs
           items={[
