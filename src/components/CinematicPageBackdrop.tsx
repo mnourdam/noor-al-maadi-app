@@ -39,7 +39,7 @@ function CinematicPageBackdropImpl({ image, alt = "", height = 320 }: Props) {
       <div
         role={alt ? "img" : undefined}
         aria-label={alt || undefined}
-        className="cinematic-kenburns absolute inset-0 bg-cover bg-center"
+        className="animate-ken-burns absolute inset-0 bg-cover bg-center will-change-transform"
         style={{
           backgroundImage: `url(${image})`,
           filter: "saturate(0.55) contrast(0.9) brightness(0.75)",
