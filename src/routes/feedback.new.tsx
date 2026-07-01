@@ -148,7 +148,7 @@ function FeedbackNew() {
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gold px-4 py-3 text-sm font-bold text-slate-950 disabled:opacity-50 hover:bg-gold/90"
             >
               <Send className="size-4" />
-              {submitting ? "جاري الإرسال…" : "إرسال المساهمة"}
+              {submitting ? "جاري الإرسال…" : (category ? (FEEDBACK_CATEGORIES.find((c) => c.key === category)?.submitLabel ?? "إرسال المساهمة") : "إرسال المساهمة")}
             </button>
             <p className="text-center text-[11px] text-muted-foreground/80">
               شكراً لمساهمتك في بناء أفضل منصة للتاريخ الإسلامي.
