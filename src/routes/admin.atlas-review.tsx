@@ -34,6 +34,19 @@ const RASTER = ATLAS_V1_PIXEL_SIZE;
 const ERA_LABEL: Record<string, string> = Object.fromEntries(ERAS.map((e) => [e.id, e.name]));
 const eraLabel = (id: string | null | undefined) => (id ? ERA_LABEL[id] ?? id : "—");
 
+// Chip filter list for the Duplicates tab. Labels come from the beta-QA brief;
+// values map onto the atlas_entity_kind enum. Kinds without a natural chip
+// (e.g. route_point) stay reachable via the "all" chip.
+const DUP_KIND_FILTERS: Array<{ value: AtlasEntityKind | "all"; label: string }> = [
+  { value: "all", label: "الكل" },
+  { value: "battle", label: "المعارك" },
+  { value: "place", label: "المدن" },
+  { value: "figure_marker", label: "المعالم" },
+  { value: "artifact_site", label: "الآثار" },
+  { value: "event", label: "الأحداث" },
+  { value: "region", label: "الأقاليم" },
+];
+
 export const Route = createFileRoute("/admin/atlas-review")({
   head: () => ({
     meta: [
@@ -72,6 +85,7 @@ function AtlasReviewPage() {
   // Atlas Coverage — Needs Placement tab.
   const [tab, setTab] = useState<"review" | "needs" | "duplicates">("review");
   const [dupSearch, setDupSearch] = useState("");
+  const [dupKind, setDupKind] = useState<AtlasEntityKind | "all">("all");
   const [needsRows, setNeedsRows] = useState<NeedsPlacementRow[] | null>(null);
   const [needsLoading, setNeedsLoading] = useState(false);
   const [needsError, setNeedsError] = useState<string | null>(null);
@@ -170,15 +184,24 @@ function AtlasReviewPage() {
   const duplicateGroups = useMemo(() => findAtlasDuplicateGroups(rows), [rows]);
   const filteredDupGroups = useMemo(() => {
     const q = normalizeArabic(dupSearch);
-    if (!q) return duplicateGroups;
-    return duplicateGroups.filter((g) =>
-      g.items.some((it) => normalizeArabic(`${it.name_ar} ${it.name_en ?? ""} ${it.slug}`).includes(q)),
-    );
-  }, [duplicateGroups, dupSearch]);
+    return duplicateGroups.filter((g) => {
+      if (dupKind !== "all" && !g.items.some((it) => it.kind === dupKind)) return false;
+      if (q && !g.items.some((it) => normalizeArabic(`${it.name_ar} ${it.name_en ?? ""} ${it.slug}`).includes(q))) return false;
+      return true;
+    });
+  }, [duplicateGroups, dupSearch, dupKind]);
   const duplicateItemCount = useMemo(
     () => duplicateGroups.reduce((sum, g) => sum + g.items.length, 0),
     [duplicateGroups],
   );
+  // Per-kind counts across ALL duplicate groups — powers chip badges.
+  const dupKindCounts = useMemo(() => {
+    const counts: Partial<Record<AtlasEntityKind, number>> = {};
+    for (const g of duplicateGroups) for (const it of g.items) {
+      counts[it.kind] = (counts[it.kind] ?? 0) + 1;
+    }
+    return counts;
+  }, [duplicateGroups]);
   const removedCount = useMemo(() => rows.filter((r) => r.status === "retired").length, [rows]);
 
   // When the review-tab search string matches a real duplicate cluster,
@@ -702,6 +725,26 @@ function AtlasReviewPage() {
                   <span className="rounded border border-stone-700 bg-stone-950 px-1.5 py-0.5">عناصر مكررة: <b className="text-amber-100">{duplicateItemCount}</b></span>
                   <span className="rounded border border-stone-700 bg-stone-950 px-1.5 py-0.5">مُزال: <b className="text-rose-200">{removedCount}</b></span>
                 </div>
+                <div className="flex flex-wrap gap-1" dir="rtl">
+                  {DUP_KIND_FILTERS.map((f) => {
+                    const active = dupKind === f.value;
+                    const count = f.value === "all" ? duplicateItemCount : (dupKindCounts[f.value] ?? 0);
+                    return (
+                      <button
+                        key={f.value}
+                        onClick={() => setDupKind(f.value)}
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition ${
+                          active
+                            ? "border-amber-500/60 bg-amber-500/20 text-amber-100"
+                            : "border-stone-700 bg-stone-950 text-stone-300 hover:bg-stone-900"
+                        }`}
+                      >
+                        <span>{f.label}</span>
+                        <span className={`rounded px-1 text-[9px] ${active ? "bg-amber-500/30 text-amber-50" : "bg-stone-800 text-stone-400"}`}>{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto">
@@ -724,7 +767,7 @@ function AtlasReviewPage() {
                       </div>
                       <ul className="space-y-1">
                         {g.items.map((it) => (
-                          <li key={it.id} className={`rounded border p-1.5 text-[11px] ${it.status === "retired" ? "border-rose-900/50 bg-rose-950/20 opacity-70" : "border-stone-700 bg-stone-950"}`}>
+                          <li key={it.id} className={`rounded border p-1.5 text-[11px] ${it.status === "retired" ? "border-rose-900/50 bg-rose-950/20 opacity-70" : "border-stone-700 bg-stone-950"} ${dupKind !== "all" && it.kind !== dupKind ? "opacity-50" : ""}`}>
                             <div className="flex items-start gap-1.5">
                               <button
                                 onClick={() => { setFocusedId(it.id); setTab("review"); if (it.aps_x != null && it.aps_y != null) centerOn(it, { x: it.aps_x, y: it.aps_y }, scale, wrapSize, setTx, setTy); }}
