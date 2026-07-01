@@ -185,7 +185,7 @@ function AdminAtlasEntitiesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 bg-slate-950">
-                {rows.map((r) => (
+                {visibleRows.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-900/50">
                     <td className="px-3 py-2">
                       <div className="font-semibold text-slate-100">{r.name_ar}</div>
