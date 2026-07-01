@@ -34,6 +34,19 @@ const RASTER = ATLAS_V1_PIXEL_SIZE;
 const ERA_LABEL: Record<string, string> = Object.fromEntries(ERAS.map((e) => [e.id, e.name]));
 const eraLabel = (id: string | null | undefined) => (id ? ERA_LABEL[id] ?? id : "—");
 
+// Chip filter list for the Duplicates tab. Labels come from the beta-QA brief;
+// values map onto the atlas_entity_kind enum. Kinds without a natural chip
+// (e.g. route_point) stay reachable via the "all" chip.
+const DUP_KIND_FILTERS: Array<{ value: AtlasEntityKind | "all"; label: string }> = [
+  { value: "all", label: "الكل" },
+  { value: "battle", label: "المعارك" },
+  { value: "place", label: "المدن" },
+  { value: "figure_marker", label: "المعالم" },
+  { value: "artifact_site", label: "الآثار" },
+  { value: "event", label: "الأحداث" },
+  { value: "region", label: "الأقاليم" },
+];
+
 export const Route = createFileRoute("/admin/atlas-review")({
   head: () => ({
     meta: [
