@@ -142,7 +142,17 @@ export function AtlasEntityDetailPanel({
             </button>
           )}
         </div>
+
+        <FeedbackCTA
+          className="mt-4"
+          context={{
+            atlas_entity_id: entity.id,
+            encyclopedia_entity_id: encId ?? undefined,
+            title: entity.name_ar,
+          }}
+        />
       </div>
     </div>
   );
 }
+
