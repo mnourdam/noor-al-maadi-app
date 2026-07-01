@@ -113,6 +113,7 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as AdminCampaignsIdEditRouteImport } from './routes/admin.campaigns.$id.edit'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
@@ -652,6 +653,11 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCampaignsIdEditRoute = AdminCampaignsIdEditRouteImport.update({
+  id: '/$id/edit',
+  path: '/$id/edit',
+  getParentRoute: () => AdminCampaignsRoute,
+} as any)
 const CampaignsImportedIdChapterChapterRoute =
   CampaignsImportedIdChapterChapterRouteImport.update({
     id: '/imported/$id/chapter/$chapter',
@@ -693,7 +699,7 @@ export interface FileRoutesByFullPath {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
-  '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/campaigns': typeof AdminCampaignsRouteWithChildren
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
   '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
@@ -758,6 +764,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
+  '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -798,7 +805,7 @@ export interface FileRoutesByTo {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
-  '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/campaigns': typeof AdminCampaignsRouteWithChildren
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
   '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
@@ -861,6 +868,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games': typeof AdminGamesIndexRoute
+  '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -904,7 +912,7 @@ export interface FileRoutesById {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
-  '/admin/campaigns': typeof AdminCampaignsRoute
+  '/admin/campaigns': typeof AdminCampaignsRouteWithChildren
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
   '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
@@ -969,6 +977,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
+  '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1078,6 +1087,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/admin/encyclopedia-cleanup/'
     | '/admin/games/'
+    | '/admin/campaigns/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1181,6 +1191,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/admin/encyclopedia-cleanup'
     | '/admin/games'
+    | '/admin/campaigns/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1288,6 +1299,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/admin/encyclopedia-cleanup/'
     | '/admin/games/'
+    | '/admin/campaigns/$id/edit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1331,7 +1343,7 @@ export interface RootRouteChildren {
   AdminAtlasReviewRoute: typeof AdminAtlasReviewRoute
   AdminCampaignOrderRoute: typeof AdminCampaignOrderRoute
   AdminCampaignRelationshipsRoute: typeof AdminCampaignRelationshipsRoute
-  AdminCampaignsRoute: typeof AdminCampaignsRoute
+  AdminCampaignsRoute: typeof AdminCampaignsRouteWithChildren
   AdminCanonicalDuplicatesRoute: typeof AdminCanonicalDuplicatesRoute
   AdminCommunityRoute: typeof AdminCommunityRoute
   AdminContentRoute: typeof AdminContentRoute
@@ -2118,6 +2130,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/campaigns/$id/edit': {
+      id: '/admin/campaigns/$id/edit'
+      path: '/$id/edit'
+      fullPath: '/admin/campaigns/$id/edit'
+      preLoaderRoute: typeof AdminCampaignsIdEditRouteImport
+      parentRoute: typeof AdminCampaignsRoute
+    }
     '/campaigns/imported/$id/chapter/$chapter': {
       id: '/campaigns/imported/$id/chapter/$chapter'
       path: '/imported/$id/chapter/$chapter'
@@ -2173,6 +2192,18 @@ const EncyclopediaRouteChildren: EncyclopediaRouteChildren = {
 
 const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
   EncyclopediaRouteChildren,
+)
+
+interface AdminCampaignsRouteChildren {
+  AdminCampaignsIdEditRoute: typeof AdminCampaignsIdEditRoute
+}
+
+const AdminCampaignsRouteChildren: AdminCampaignsRouteChildren = {
+  AdminCampaignsIdEditRoute: AdminCampaignsIdEditRoute,
+}
+
+const AdminCampaignsRouteWithChildren = AdminCampaignsRoute._addFileChildren(
+  AdminCampaignsRouteChildren,
 )
 
 interface AdminEncyclopediaCleanupRouteChildren {
@@ -2250,7 +2281,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAtlasReviewRoute: AdminAtlasReviewRoute,
   AdminCampaignOrderRoute: AdminCampaignOrderRoute,
   AdminCampaignRelationshipsRoute: AdminCampaignRelationshipsRoute,
-  AdminCampaignsRoute: AdminCampaignsRoute,
+  AdminCampaignsRoute: AdminCampaignsRouteWithChildren,
   AdminCanonicalDuplicatesRoute: AdminCanonicalDuplicatesRoute,
   AdminCommunityRoute: AdminCommunityRoute,
   AdminContentRoute: AdminContentRoute,
