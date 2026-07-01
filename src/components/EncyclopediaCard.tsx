@@ -43,9 +43,11 @@ export function entityHref(
 export function EncyclopediaCard({
   entity,
   highlight,
+  interactive = true,
 }: {
   entity: SupabaseEncyclopediaEntity;
   highlight?: string;
+  interactive?: boolean;
 }) {
   const meta = metaRecord(entity);
   const kind = typeof meta.kind === "string" ? (meta.kind as string) : undefined;
