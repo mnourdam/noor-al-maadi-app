@@ -1558,6 +1558,16 @@ export type Database = {
       }
     }
     Functions: {
+      _feedback_main_admin_id: { Args: never; Returns: string }
+      _feedback_notify_admin: {
+        Args: {
+          p_admin: string
+          p_body: string
+          p_issue: string
+          p_title: string
+        }
+        Returns: undefined
+      }
       admin_adjust_balance: {
         Args: {
           p_delta: number
