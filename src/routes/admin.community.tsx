@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminGate } from "@/lib/admin-guard";
+import { supabase } from "@/integrations/supabase/client";
+import { useFeedbackPresence } from "@/lib/feedback/usePresence";
+import { FeedbackPresenceBadge } from "@/components/feedback/FeedbackPresenceBadge";
 import {
   adminFeedbackStats,
   adminListIssues,
