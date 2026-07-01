@@ -31,6 +31,8 @@ import {
   CheckCircle2,
   Star,
   Inbox,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 
 const STATUS_ORDER: FeedbackStatus[] = ["new", "review", "planned", "fixed", "closed"];
