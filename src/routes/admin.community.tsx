@@ -273,6 +273,17 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
   const [reply, setReply] = useState("");
   const [internal, setInternal] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
+
+  const { otherOnline, otherTyping, markTyping } = useFeedbackPresence({
+    issueId: id,
+    role: "admin",
+    userId,
+  });
 
   const load = useCallback(async () => {
     const res = await getIssueThread(id);
