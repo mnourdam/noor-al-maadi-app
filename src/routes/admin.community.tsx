@@ -335,6 +335,21 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
                       minute: "2-digit",
                     })}
                   </p>
+                  {issue.player_rating != null && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-100">
+                      {issue.player_rating >= 4 ? (
+                        <ThumbsUp className="h-3 w-3" />
+                      ) : (
+                        <ThumbsDown className="h-3 w-3" />
+                      )}
+                      تقييم اللاعب: {issue.player_rating >= 4 ? "مفيد" : "غير مفيد"}
+                      {issue.player_rating_at && (
+                        <span className="font-normal text-amber-200/70">
+                          · {new Date(issue.player_rating_at).toLocaleDateString("ar", { day: "numeric", month: "short" })}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
