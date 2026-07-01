@@ -5,7 +5,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { AuthLink } from "@/components/AuthLink";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
-import { fetchPublicProfileById, derivePublicStats, type PublicProfile } from "@/lib/social";
+import { fetchGatedProfileById, derivePublicStats, type PublicProfile } from "@/lib/social";
 import { evaluateAchievements } from "@/lib/app-constants";
 import { Avatar } from "@/components/Avatar";
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
