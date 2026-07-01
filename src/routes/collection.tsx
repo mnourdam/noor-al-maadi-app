@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
+import museumHeaderArt from "@/assets/hero/19-observatory.jpg?url";
 import { useProfile } from "@/lib/profile";
 
 import {
