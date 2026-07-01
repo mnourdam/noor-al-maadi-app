@@ -23,9 +23,11 @@ import {
   ATLAS_ENTITY_KINDS,
   ATLAS_ENTITY_STATUSES,
   KIND_LABEL_AR,
+  LC1_ATLAS_VISIBLE_KINDS,
   STATUS_LABEL_AR,
   createAtlasEntity,
   deleteAtlasEntity,
+  isLc1VisibleAtlasKind,
   listAllAtlasEntities,
   setAtlasEntityStatus,
   suggestSlug,
@@ -35,6 +37,9 @@ import {
   type AtlasEntityKind,
   type AtlasEntityRow,
 } from "@/lib/atlas-entities";
+const ATLAS_ALLOWED_KINDS: AtlasEntityKind[] = ATLAS_ENTITY_KINDS.filter((k) =>
+  LC1_ATLAS_VISIBLE_KINDS.has(k),
+);
 import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
 
 export const Route = createFileRoute("/admin/atlas-entities")({
