@@ -50,10 +50,24 @@ const DIFFICULTY_LABEL: Record<string, string> = {
 
 function ImportedCampaignOverview() {
   const { id } = useParams({ from: "/campaigns/imported/$id/" });
+  const search = useSearch({ from: "/campaigns/imported/$id/" });
+  const mode: "published" | "draft" = search.preview === "draft" ? "draft" : "published";
+  const queryClient = useQueryClient();
   const { data: campaign, isLoading } = useQuery({
-    queryKey: ["campaign", id],
-    queryFn: () => fetchCampaignByIdOrSlug(id),
+    queryKey: ["campaign", id, mode],
+    queryFn: () => fetchCampaignByIdOrSlug(id, { mode }),
   });
+
+  // Auto-refresh on admin publish (same tab or via BroadcastChannel).
+  useEffect(() => {
+    const off = onCampaignPublished((changedId) => {
+      if (changedId === id || changedId === campaign?.slug) {
+        queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      }
+    });
+    return off;
+  }, [id, campaign?.slug, queryClient]);
+
 
 
   // Progress tick — re-read from localStorage when window regains focus.
