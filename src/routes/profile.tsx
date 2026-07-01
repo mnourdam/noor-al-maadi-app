@@ -921,6 +921,7 @@ function AchievementDialog({
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
