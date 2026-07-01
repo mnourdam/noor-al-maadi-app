@@ -167,7 +167,7 @@ function AdminAtlasEntitiesPage() {
           <div className="flex items-center gap-2 text-slate-400">
             <RefreshCw className="size-4 animate-spin" /> جاري التحميل…
           </div>
-        ) : rows.length === 0 ? (
+        ) : visibleRows.length === 0 ? (
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-400">
             لا توجد كيانات بعد. أنشئ أول كيان للبدء.
           </div>
