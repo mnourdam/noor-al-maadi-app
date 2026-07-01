@@ -1,15 +1,42 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { AppShell, Screen } from "@/components/AppShell";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminGate } from "@/lib/admin-guard";
-import { adminFeedbackStats, adminListIssues, getIssueThread, replyToIssue, setIssueStatus, type AdminFeedbackStats, type AdminIssueRow } from "@/lib/feedback/api";
-import { CATEGORY_MAP, FEEDBACK_CATEGORIES, STATUS_LABELS, type FeedbackCategory, type FeedbackMessage, type FeedbackStatus } from "@/lib/feedback/types";
-import { Search, RefreshCw, MessageSquare, Send, MapPin, X, ExternalLink, Clock, CheckCircle2, Star } from "lucide-react";
+import {
+  adminFeedbackStats,
+  adminListIssues,
+  getIssueThread,
+  replyToIssue,
+  setIssueStatus,
+  type AdminFeedbackStats,
+  type AdminIssueRow,
+} from "@/lib/feedback/api";
+import {
+  CATEGORY_MAP,
+  FEEDBACK_CATEGORIES,
+  STATUS_LABELS,
+  type FeedbackCategory,
+  type FeedbackMessage,
+  type FeedbackStatus,
+} from "@/lib/feedback/types";
+import {
+  Search,
+  RefreshCw,
+  MessageSquare,
+  Send,
+  MapPin,
+  X,
+  ExternalLink,
+  Clock,
+  CheckCircle2,
+  Star,
+  Inbox,
+} from "lucide-react";
 
 const STATUS_ORDER: FeedbackStatus[] = ["new", "review", "planned", "fixed", "closed"];
 
 export const Route = createFileRoute("/admin/community")({
-  head: () => ({ meta: [{ title: "مركز مساهمات المجتمع — إرث" }] }),
+  head: () => ({ meta: [{ title: "مساهمات المجتمع — إدارة إرث" }] }),
   component: AdminCommunity,
 });
 
@@ -35,107 +62,190 @@ function AdminCommunity() {
     }
   }, [status, category, search]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   return (
     <AdminGate>
-      <AppShell>
-        <Screen title="مساهمات المجتمع" subtitle="حوار مباشر مع اللاعبين">
-          <StatsDashboard refreshKey={rows.length} />
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[220px]">
-              <Search className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <AdminLayout
+        title="مساهمات المجتمع"
+        subtitle="إدارة البلاغات والاقتراحات وتصحيحات المعلومات والتواصل مع اللاعبين."
+        breadcrumbs={[{ label: "مساهمات المجتمع" }]}
+        actions={
+          <button
+            onClick={() => void load()}
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900/60 px-2.5 py-1 text-xs text-slate-200 hover:border-amber-400/40 hover:text-amber-100"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> تحديث
+          </button>
+        }
+      >
+        <StatsDashboard refreshKey={rows.length} />
+
+        {/* Filters + search */}
+        <section className="mb-4 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[240px] flex-1">
+              <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") void load(); }}
-                placeholder="ابحث في العنوان أو الوصف…"
-                className="w-full rounded-xl border border-white/10 bg-background/60 py-2 pr-9 pl-3 text-sm outline-none focus:border-gold/40"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void load();
+                }}
+                placeholder="بحث في العنوان أو الوصف…"
+                className="w-full rounded-md border border-slate-700 bg-slate-950/60 py-2 pr-9 pl-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-amber-400/40"
               />
             </div>
-            <button onClick={() => void load()} className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-background/60 px-3 py-2 text-xs hover:border-gold/30">
-              <RefreshCw className="size-3.5" /> تحديث
-            </button>
           </div>
 
-          <div className="mb-3 flex flex-wrap gap-1.5">
-            <FilterChip active={status === "all"} onClick={() => setStatus("all")}>كل الحالات</FilterChip>
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-500">الحالة:</span>
+            <FilterChip active={status === "all"} onClick={() => setStatus("all")}>
+              الكل
+            </FilterChip>
             {STATUS_ORDER.map((s) => (
-              <FilterChip key={s} active={status === s} onClick={() => setStatus(s)}>{STATUS_LABELS[s].label}</FilterChip>
+              <FilterChip key={s} active={status === s} onClick={() => setStatus(s)}>
+                {STATUS_LABELS[s].label}
+              </FilterChip>
             ))}
           </div>
-          <div className="mb-4 flex flex-wrap gap-1.5">
-            <FilterChip active={category === "all"} onClick={() => setCategory("all")}>كل الأنواع</FilterChip>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-500">النوع:</span>
+            <FilterChip active={category === "all"} onClick={() => setCategory("all")}>
+              الكل
+            </FilterChip>
             {FEEDBACK_CATEGORIES.map((c) => (
-              <FilterChip key={c.key} active={category === c.key} onClick={() => setCategory(c.key)}>{c.label}</FilterChip>
+              <FilterChip key={c.key} active={category === c.key} onClick={() => setCategory(c.key)}>
+                {c.label}
+              </FilterChip>
             ))}
+          </div>
+        </section>
+
+        {/* Table */}
+        <section className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/60">
+          <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
+            <div className="inline-flex items-center gap-2 text-xs text-slate-300">
+              <Inbox className="h-3.5 w-3.5 text-amber-300" />
+              <span>قائمة المساهمات</span>
+              <span className="text-slate-500">({rows.length})</span>
+            </div>
           </div>
 
           {loading ? (
-            <div className="rounded-2xl border border-white/10 bg-surface/40 p-6 text-center text-sm text-muted-foreground">جاري التحميل…</div>
+            <div className="p-8 text-center text-sm text-slate-400">جاري التحميل…</div>
           ) : rows.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/15 bg-surface/40 p-8 text-center text-sm text-muted-foreground">
-              لا توجد مساهمات مطابقة.
-            </div>
+            <div className="p-10 text-center text-sm text-slate-400">لا توجد مساهمات مطابقة.</div>
           ) : (
-            <ul className="space-y-2">
-              {rows.map((r) => {
-                const cat = CATEGORY_MAP[r.category];
-                const st = STATUS_LABELS[r.status];
-                const Icon = cat?.icon ?? MessageSquare;
-                return (
-                  <li key={r.id}>
-                    <button
-                      type="button"
-                      onClick={() => setActiveId(r.id)}
-                      className="flex w-full items-start gap-3 rounded-2xl border border-white/10 bg-surface/60 p-3 text-right transition hover:border-gold/30"
-                    >
-                      <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${cat?.accentBg ?? "bg-white/10"} ${cat?.accent ?? ""}`}>
-                        <Icon className="size-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="min-w-0 flex-1 truncate font-display text-sm font-bold text-foreground">{r.title}</p>
-                          {r.admin_unread && <span className="size-2 shrink-0 rounded-full bg-rose-400" title="جديد" />}
-                        </div>
-                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{r.description}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-                          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${st.chip}`}>
-                            <span className={`size-1.5 rounded-full ${st.dot}`} />
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px] border-collapse text-right text-sm">
+                <thead className="bg-slate-950/60 text-[11px] uppercase tracking-wide text-slate-400">
+                  <tr>
+                    <th className="px-3 py-2 font-semibold">الحالة</th>
+                    <th className="px-3 py-2 font-semibold">النوع</th>
+                    <th className="px-3 py-2 font-semibold">المُبلِّغ</th>
+                    <th className="px-3 py-2 font-semibold">الموضوع</th>
+                    <th className="px-3 py-2 font-semibold">آخر رد</th>
+                    <th className="px-3 py-2 font-semibold">تاريخ الإنشاء</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => {
+                    const cat = CATEGORY_MAP[r.category];
+                    const st = STATUS_LABELS[r.status];
+                    const Icon = cat?.icon ?? MessageSquare;
+                    const isActive = activeId === r.id;
+                    return (
+                      <tr
+                        key={r.id}
+                        onClick={() => setActiveId(r.id)}
+                        className={`cursor-pointer border-t border-slate-800/60 transition ${
+                          isActive ? "bg-amber-500/5" : "hover:bg-slate-800/40"
+                        }`}
+                      >
+                        <td className="px-3 py-2.5">
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${st.chip}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
                             {st.label}
                           </span>
-                          <span>{cat?.label}</span>
-                          <span>·</span>
-                          <span>{r.reporter?.display_name ?? r.reporter?.username ?? "زائر"}</span>
-                          <span>·</span>
-                          <span>{new Date(r.created_at).toLocaleDateString("ar", { day: "numeric", month: "short" })}</span>
-                        </div>
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span className="inline-flex items-center gap-1.5 text-xs text-slate-300">
+                            <Icon className={`h-3.5 w-3.5 ${cat?.accent ?? "text-slate-400"}`} />
+                            {cat?.label ?? r.category}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-xs text-slate-300">
+                          {r.reporter?.display_name ?? r.reporter?.username ?? "زائر"}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-2">
+                            {r.admin_unread && (
+                              <span className="h-2 w-2 shrink-0 rounded-full bg-rose-400" title="جديد" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-slate-100">{r.title}</p>
+                              <p className="truncate text-[11px] text-slate-500">{r.description}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5 text-[11px] text-slate-400">
+                          {r.last_reply_at
+                            ? `${r.last_reply_by === "admin" ? "الإدارة" : "اللاعب"} · ${new Date(
+                                r.last_reply_at,
+                              ).toLocaleDateString("ar", { day: "numeric", month: "short" })}`
+                            : "—"}
+                        </td>
+                        <td className="px-3 py-2.5 text-[11px] text-slate-400">
+                          {new Date(r.created_at).toLocaleDateString("ar", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
-        </Screen>
+        </section>
 
         {activeId && (
           <AdminIssueDrawer
             id={activeId}
-            onClose={() => { setActiveId(null); void load(); }}
+            onClose={() => {
+              setActiveId(null);
+              void load();
+            }}
           />
         )}
-      </AppShell>
+      </AdminLayout>
     </AdminGate>
   );
 }
 
-function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-[11px] transition ${
-        active ? "border-gold/50 bg-gold/15 text-gold" : "border-white/10 bg-background/40 text-muted-foreground hover:border-white/20"
+      className={`rounded-md border px-2.5 py-1 text-[11px] transition ${
+        active
+          ? "border-amber-400/50 bg-amber-500/10 text-amber-100"
+          : "border-slate-700 bg-slate-950/40 text-slate-300 hover:border-slate-600"
       }`}
     >
       {children}
@@ -154,7 +264,9 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
     setData(res as unknown as { issue: AdminIssueRow; messages: FeedbackMessage[] });
   }, [id]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function send() {
     if (!reply.trim()) return;
@@ -184,44 +296,57 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
   const jumpLink = buildJumpLink(ctx);
 
   return (
-    <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
-      <button aria-label="إغلاق" className="flex-1 bg-black/60" onClick={onClose} />
-      <aside className="flex h-full w-full max-w-lg flex-col overflow-hidden border-l border-white/10 bg-background shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 p-4">
-          <p className="font-display text-sm font-bold">تفاصيل المساهمة</p>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-white/5"><X className="size-4" /></button>
+    <div dir="rtl" className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
+      <button aria-label="إغلاق" className="flex-1 bg-black/70" onClick={onClose} />
+      <aside className="flex h-full w-full max-w-xl flex-col overflow-hidden border-l border-amber-500/20 bg-slate-950 text-slate-100 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/70 px-4 py-3">
+          <p className="text-sm font-bold text-amber-100">تفاصيل المساهمة</p>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {!issue ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">جاري التحميل…</div>
+          <div className="p-6 text-center text-sm text-slate-400">جاري التحميل…</div>
         ) : (
           <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="space-y-3 border-b border-white/10 p-4">
+            <div className="space-y-3 border-b border-slate-800 bg-slate-900/40 p-4">
               <div className="flex items-start gap-3">
                 {cat && (
-                  <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${cat.accentBg} ${cat.accent}`}>
-                    <cat.icon className="size-4" />
+                  <div
+                    className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${cat.accentBg} ${cat.accent}`}
+                  >
+                    <cat.icon className="h-4 w-4" />
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="font-display text-sm font-bold text-foreground">{issue.title}</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {issue.reporter?.display_name ?? issue.reporter?.username ?? "زائر"} · {new Date(issue.created_at).toLocaleString("ar", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  <p className="text-sm font-bold text-slate-100">{issue.title}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    {issue.reporter?.display_name ?? issue.reporter?.username ?? "زائر"} ·{" "}
+                    {new Date(issue.created_at).toLocaleString("ar", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] text-muted-foreground">الحالة:</span>
+                <span className="text-[10px] font-bold text-slate-500">الحالة:</span>
                 {STATUS_ORDER.map((s) => (
                   <button
                     key={s}
                     disabled={busy}
                     onClick={() => void changeStatus(s)}
-                    className={`rounded-full border px-2 py-0.5 text-[10px] transition ${
+                    className={`rounded-md border px-2 py-0.5 text-[10px] transition ${
                       issue.status === s
                         ? `${STATUS_LABELS[s].chip}`
-                        : "border-white/10 bg-background/40 text-muted-foreground hover:border-white/25"
+                        : "border-slate-700 bg-slate-950/40 text-slate-400 hover:border-slate-600"
                     }`}
                   >
                     {STATUS_LABELS[s].label}
@@ -230,63 +355,94 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
               </div>
 
               {Object.keys(ctx).length > 0 && (
-                <div className="rounded-xl border border-white/10 bg-surface/40 p-2.5">
-                  <p className="mb-1 inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
-                    <MapPin className="size-3" /> السياق
+                <div className="rounded-md border border-slate-800 bg-slate-950/60 p-2.5">
+                  <p className="mb-1 inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                    <MapPin className="h-3 w-3" /> السياق
                   </p>
                   <div className="flex flex-wrap gap-1 text-[10px]">
                     {Object.entries(ctx).map(([k, v]) => (
-                      <span key={k} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-muted-foreground">
+                      <span
+                        key={k}
+                        className="rounded-full border border-slate-700 bg-slate-900/60 px-2 py-0.5 text-slate-400"
+                      >
                         {k}: {String(v)}
                       </span>
                     ))}
                   </div>
                   {jumpLink && (
-                    <a href={jumpLink} className="mt-2 inline-flex items-center gap-1 text-[11px] text-gold hover:underline">
-                      <ExternalLink className="size-3" /> فتح المحتوى المرتبط
+                    <a
+                      href={jumpLink}
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-300 hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" /> فتح المحتوى المرتبط
                     </a>
-
                   )}
                 </div>
               )}
             </div>
 
-            <ul className="flex-1 space-y-3 overflow-y-auto p-4">
-              {data!.messages.map((m) => (
-                <li key={m.id} className={`flex ${m.author_role === "admin" ? "justify-start" : "justify-end"}`}>
-                  <div className={`max-w-[85%] rounded-2xl border p-3 ${m.author_role === "admin" ? "border-gold/30 bg-gold/10" : "border-white/10 bg-surface/70"} ${m.is_internal ? "ring-1 ring-amber-500/40" : ""}`}>
-                    <div className="mb-1 inline-flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
-                      {m.author_role === "admin" ? "فريق إرث" : "اللاعب"}
-                      {m.is_internal && <span className="rounded-full bg-amber-500/20 px-1.5 text-amber-200">ملاحظة داخلية</span>}
-                      <span>·</span>
-                      <span>{new Date(m.created_at).toLocaleString("ar", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+            <ul className="flex-1 space-y-3 overflow-y-auto bg-slate-950 p-4">
+              {data!.messages.map((m) => {
+                const isAdmin = m.author_role === "admin";
+                return (
+                  <li key={m.id} className={`flex ${isAdmin ? "justify-start" : "justify-end"}`}>
+                    <div
+                      className={`max-w-[85%] rounded-lg border p-3 ${
+                        isAdmin
+                          ? "border-amber-500/30 bg-amber-500/10"
+                          : "border-slate-700 bg-slate-900/70"
+                      } ${m.is_internal ? "ring-1 ring-amber-400/50" : ""}`}
+                    >
+                      <div className="mb-1 inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                        {isAdmin ? "فريق إرث" : "اللاعب"}
+                        {m.is_internal && (
+                          <span className="rounded-full bg-amber-500/25 px-1.5 text-amber-100">
+                            ملاحظة داخلية
+                          </span>
+                        )}
+                        <span>·</span>
+                        <span>
+                          {new Date(m.created_at).toLocaleString("ar", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-100">
+                        {m.body}
+                      </p>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{m.body}</p>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
 
-            <div className="border-t border-white/10 p-3">
+            <div className="border-t border-slate-800 bg-slate-900/60 p-3">
               <textarea
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 rows={3}
                 maxLength={5000}
                 placeholder="اكتب ردك للّاعب أو ملاحظة داخلية…"
-                className="w-full resize-none rounded-xl border border-white/10 bg-background/60 p-3 text-sm text-foreground outline-none focus:border-gold/50"
+                className="w-full resize-none rounded-md border border-slate-700 bg-slate-950/60 p-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-amber-400/40"
               />
               <div className="mt-2 flex items-center justify-between gap-2">
-                <label className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} />
+                <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={internal}
+                    onChange={(e) => setInternal(e.target.checked)}
+                  />
                   ملاحظة داخلية (لا يراها اللاعب)
                 </label>
                 <button
                   onClick={() => void send()}
                   disabled={busy || !reply.trim()}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gold px-3 py-2 text-xs font-bold text-slate-950 disabled:opacity-50 hover:bg-gold/90"
+                  className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
                 >
-                  <Send className="size-3.5" /> إرسال
+                  <Send className="h-3.5 w-3.5" /> إرسال
                 </button>
               </div>
             </div>
@@ -298,7 +454,8 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
 }
 
 function buildJumpLink(ctx: Record<string, unknown>): string | null {
-  if (typeof ctx.encyclopedia_entity_id === "string") return `/encyclopedia/entity/${ctx.encyclopedia_entity_id}`;
+  if (typeof ctx.encyclopedia_entity_id === "string")
+    return `/encyclopedia/entity/${ctx.encyclopedia_entity_id}`;
   if (typeof ctx.entity_id === "string") return `/encyclopedia/entity/${ctx.entity_id}`;
   if (typeof ctx.campaign_id === "string") return `/campaigns/imported/${ctx.campaign_id}`;
   if (typeof ctx.investigation_id === "string") return `/investigation/${ctx.investigation_id}`;
@@ -325,45 +482,67 @@ function StatsDashboard({ refreshKey }: { refreshKey: number }) {
   const total = STATUS_ORDER.reduce((sum, s) => sum + (counts[s] ?? 0), 0);
 
   return (
-    <div className="mb-4 rounded-2xl border border-white/10 bg-surface/60 p-4">
+    <section className="mb-4 rounded-lg border border-slate-800 bg-slate-900/60 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <p className="font-display text-sm font-bold text-foreground">لوحة القيادة</p>
-        <span className="text-[10px] text-muted-foreground">إجمالي: {total}</span>
+        <p className="text-sm font-bold text-amber-100">لوحة القيادة</p>
+        <span className="text-[10px] text-slate-400">إجمالي: {total}</span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {STATUS_ORDER.map((s) => {
           const st = STATUS_LABELS[s];
           const n = counts[s] ?? 0;
           return (
-            <div key={s} className={`rounded-xl border p-3 ${st.chip}`}>
+            <div key={s} className={`rounded-md border p-3 ${st.chip}`}>
               <div className="inline-flex items-center gap-1.5 text-[10px] font-bold opacity-80">
-                <span className={`size-1.5 rounded-full ${st.dot}`} /> {st.label}
+                <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} /> {st.label}
               </div>
-              <p className="mt-1 font-display text-2xl font-bold">{n}</p>
+              <p className="mt-1 text-2xl font-bold">{n}</p>
             </div>
           );
         })}
       </div>
       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <MetricPill icon={Clock} label="متوسط أول رد" value={formatDuration(stats?.avg_first_response_seconds ?? 0)} />
-        <MetricPill icon={CheckCircle2} label="متوسط زمن الحل" value={formatDuration(stats?.avg_resolution_seconds ?? 0)} />
+        <MetricPill
+          icon={Clock}
+          label="متوسط أول رد"
+          value={formatDuration(stats?.avg_first_response_seconds ?? 0)}
+        />
+        <MetricPill
+          icon={CheckCircle2}
+          label="متوسط زمن الحل"
+          value={formatDuration(stats?.avg_resolution_seconds ?? 0)}
+        />
         <MetricPill
           icon={Star}
           label="جودة الدعم"
-          value={stats && stats.rating_count > 0 ? `${stats.avg_rating.toFixed(1)} / 5 · ${stats.rating_count} تقييم` : "—"}
+          value={
+            stats && stats.rating_count > 0
+              ? `${stats.avg_rating.toFixed(1)} / 5 · ${stats.rating_count} تقييم`
+              : "—"
+          }
         />
       </div>
-    </div>
+    </section>
   );
 }
 
-function MetricPill({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
+function MetricPill({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Clock;
+  label: string;
+  value: string;
+}) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-background/40 p-3">
-      <div className="grid size-8 place-items-center rounded-lg bg-gold/15 text-gold"><Icon className="size-4" /></div>
+    <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-950/60 p-3">
+      <div className="grid h-8 w-8 place-items-center rounded-md bg-amber-500/15 text-amber-300">
+        <Icon className="h-4 w-4" />
+      </div>
       <div className="min-w-0">
-        <p className="text-[10px] text-muted-foreground">{label}</p>
-        <p className="font-display text-sm font-bold text-foreground">{value}</p>
+        <p className="text-[10px] text-slate-400">{label}</p>
+        <p className="text-sm font-bold text-slate-100">{value}</p>
       </div>
     </div>
   );
