@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { Crown, Flame, Star, Trophy, Coins, MapPin, IdCard, ChevronLeft, UserPlus, BarChart3, Check, X, Users, Hourglass } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import {
-  fetchPublicProfileByUsername, sendFriendRequest, getFriendshipWith,
+  fetchPublicProfileByUsername, fetchGatedProfileByUsername,
+  sendFriendRequest, getFriendshipWith,
   acceptFriend, removeFriend,
   type PublicProfile, type FriendshipRow,
 } from "@/lib/social";
