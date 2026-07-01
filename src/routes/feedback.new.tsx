@@ -46,7 +46,11 @@ function FeedbackNew() {
       });
       await navigate({ to: "/feedback/$id", params: { id } });
     } catch (err) {
-      setError((err as Error).message || "تعذّر الإرسال");
+      const raw = (err as Error).message || "";
+      const friendly = raw.includes("daily_limit_reached")
+        ? "وصلت إلى الحد اليومي للمساهمات. يمكنك إرسال مساهمات جديدة غدًا."
+        : raw || "تعذّر الإرسال";
+      setError(friendly);
       setSubmitting(false);
     }
   }
