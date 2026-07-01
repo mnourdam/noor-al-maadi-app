@@ -1593,6 +1593,7 @@ function Toolbar({
 function ResultRow({
   row, state, canonicalTitle, atlas, camps, active, onOpen,
   inCleanupQueue = false, busy = false, onFullyApprove, onMarkNeedsContent,
+  selected = false, onToggleSelect,
 }: {
   row: EntityRow; state: PrimaryState; canonicalTitle: string | null;
   atlas: number; camps: number;
@@ -1601,6 +1602,8 @@ function ResultRow({
   busy?: boolean;
   onFullyApprove?: () => void;
   onMarkNeedsContent?: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const sm = STATE_META[state];
   const bodyLen = (row.summary ?? "").length + bodyText(row.body).length;
@@ -1623,14 +1626,26 @@ function ResultRow({
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(); }}
       className={`w-full cursor-pointer rounded-lg border px-3 py-2 text-start transition ${
-        active ? "border-amber-400/60 bg-amber-500/10" : "border-slate-700/60 bg-slate-900/40 hover:bg-slate-800/60"
+        selected
+          ? "border-amber-400/70 bg-amber-500/15 ring-1 ring-amber-400/30"
+          : active ? "border-amber-400/60 bg-amber-500/10" : "border-slate-700/60 bg-slate-900/40 hover:bg-slate-800/60"
       }`}>
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-100">{row.title}</p>
-          <p className="truncate font-mono text-[10px] text-slate-500">
-            {TYPE_LABEL[row.entity_type] ?? row.entity_type} · {row.slug}
-          </p>
+        <div className="flex min-w-0 items-start gap-2">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-4 shrink-0 accent-amber-400"
+            checked={selected}
+            onChange={onToggleSelect}
+            onClick={(e) => e.stopPropagation()}
+            aria-label="تحديد"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-100">{row.title}</p>
+            <p className="truncate font-mono text-[10px] text-slate-500">
+              {TYPE_LABEL[row.entity_type] ?? row.entity_type} · {row.slug}
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <span className={`rounded-full border px-2 py-0.5 text-[10px] tabular-nums ${scoreColor(score)}`}>{score}%</span>
@@ -1644,6 +1659,7 @@ function ResultRow({
         {atlas > 0 && <Chip tone="ok">أطلس×{atlas}</Chip>}
         {camps > 0 && <Chip tone="ok">حملات×{camps}</Chip>}
       </div>
+
 
       {inCleanupQueue && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-700/40 pt-2">
