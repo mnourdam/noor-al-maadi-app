@@ -1,12 +1,10 @@
 // Renders an unlock (type:slug) as an Arabic chip with a type badge.
 // Resolves IDs through the encyclopedia. Never shows raw English IDs to
-// normal users — falls back to a friendly placeholder.
-//
-// Clicking a card variant row opens the SAME unified reveal modal used by
-// the museum, so the discovery experience is identical regardless of source.
+// normal users — falls back to a friendly Arabic placeholder.
 
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { LockOpen, Users, Landmark, Building2, Swords, Flag, ScrollText, Gem, Sparkles } from "lucide-react";
 import { useResolvedUnlocks, typeLabel, type ResolvedUnlock } from "@/lib/campaignUnlocks";
 import {
   CollectibleRevealDialog,
@@ -16,28 +14,36 @@ import {
 
 interface Props {
   ids: string[];
-  /** Compact one-line pills (default) vs. card list. */
   variant?: "pill" | "card";
-  /** Show raw IDs / "missing from encyclopedia" warning. Admin/dev only. */
   debug?: boolean;
-  /** Optional source label shown in the unified reveal (e.g. "من حملة ..."). */
   sourceLabel?: string;
 }
 
-const TYPE_GLYPH: Record<string, string> = {
-  figure: "👤", artifact: "🏺", city: "🏛️", landmark: "🏛️",
-  battle: "⚔️", state: "🏳️", event: "📜",
-};
+const TYPE_ICON = {
+  figure: Users,
+  artifact: Gem,
+  city: Building2,
+  landmark: Landmark,
+  battle: Swords,
+  state: Flag,
+  event: ScrollText,
+} as const;
 
-function friendlyTitle(slug: string | null): string {
-  if (!slug) return "مكافأة جديدة";
-  return slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+function iconFor(type: string | null | undefined) {
+  return (type && (TYPE_ICON as Record<string, typeof Sparkles>)[type]) ?? Sparkles;
 }
 
 function rarityFor(r: ResolvedUnlock): CollectibleRarity {
   const m = r.metadata?.rarity as CollectibleRarity | undefined;
   if (m && ["common", "rare", "epic", "legendary"].includes(m)) return m;
   return ["figure", "landmark", "battle"].includes(r.type ?? "") ? "epic" : "rare";
+}
+
+function resolveLabel(r: ResolvedUnlock, isLoading: boolean, debug: boolean): string {
+  if (r.title && r.title.trim()) return r.title;
+  if (isLoading) return "جاري التحميل…";
+  if (debug) return "عنصر غير موجود بالموسوعة";
+  return "عنصر غير معروف";
 }
 
 export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel }: Props) {
@@ -48,12 +54,11 @@ export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel }
   if (!ids.length) return null;
 
   const openReveal = (r: ResolvedUnlock) => {
-    const glyph = TYPE_GLYPH[r.type ?? ""] ?? "✨";
-    const title = r.title ?? friendlyTitle(r.slug);
+    const title = resolveLabel(r, isLoading, debug);
     const subtitle = r.subtitle ?? typeLabel(r.type);
     setReveal({
       rarity: rarityFor(r),
-      icon: glyph,
+      icon: "✨",
       title,
       subtitle,
       lines: r.summary ? [r.summary] : ["عنصر من الموسوعة. افتحه لقراءة تفاصيله الكاملة."],
@@ -70,27 +75,28 @@ export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel }
       <>
         <ul className="space-y-2">
           {resolved.map((r) => {
-            const label = r.found
-              ? r.title!
-              : isLoading
-                ? "…"
-                : debug
-                  ? "عنصر غير موجود بالموسوعة"
-                  : friendlyTitle(r.slug);
+            const label = resolveLabel(r, isLoading, debug);
+            const Icon = iconFor(r.type);
             return (
               <li key={r.raw}>
                 <button
                   type="button"
                   onClick={() => openReveal(r)}
-                  className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-right text-[12px] transition hover:border-gold/60 ${
+                  className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-right text-[13px] transition hover:border-gold/60 ${
                     r.found
-                      ? "border-gold/30 bg-gold/10 text-gold"
-                      : "border-gold/20 bg-gold/5 text-gold/80"
+                      ? "border-gold/40 bg-gold/10"
+                      : "border-white/10 bg-white/[0.04]"
                   }`}
                 >
-                  <span className="text-base leading-none">🔓</span>
-                  <span className="flex-1 font-bold">{label}</span>
-                  <span className="rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-[10px] text-foreground/80">
+                  <LockOpen className="size-4 shrink-0 text-gold" strokeWidth={1.75} />
+                  <span
+                    className="flex-1 font-bold leading-snug text-foreground line-clamp-2"
+                    title={label}
+                  >
+                    {label}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/40 px-2 py-0.5 text-[10px] text-foreground/85">
+                    <Icon className="size-3" strokeWidth={1.75} />
                     {typeLabel(r.type)}
                   </span>
                 </button>
@@ -104,26 +110,19 @@ export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel }
   }
 
   return (
-    <div className="flex flex-wrap gap-2 text-[11px]">
+    <div className="flex flex-wrap gap-2 text-[12px]">
       {resolved.map((r) => {
-        const label = r.found
-          ? r.title!
-          : isLoading
-            ? "…"
-            : debug
-              ? "عنصر غير موجود بالموسوعة"
-              : friendlyTitle(r.slug);
+        const label = resolveLabel(r, isLoading, debug);
+        const Icon = iconFor(r.type);
         return (
           <span
             key={r.raw}
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${
-              r.found
-                ? "border-gold/30 bg-gold/10 text-gold"
-                : "border-gold/20 bg-gold/5 text-gold/80"
-            }`}
+            className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-foreground"
           >
-            🔓 {label}
-            <span className="rounded-full bg-black/30 px-1.5 py-0.5 text-[9px] text-foreground/70">
+            <LockOpen className="size-3 shrink-0 text-gold" strokeWidth={1.75} />
+            <span className="truncate font-medium" title={label}>{label}</span>
+            <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-black/40 px-1.5 py-0.5 text-[10px] text-foreground/80">
+              <Icon className="size-2.5" strokeWidth={1.75} />
               {typeLabel(r.type)}
             </span>
           </span>
