@@ -12,6 +12,8 @@ import {
 import { toWesternDigits } from "@/lib/formatNumber";
 import { useAudioSettings } from "@/hooks/useAudioSettings";
 import { AppShell, Screen } from "@/components/AppShell";
+import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
+import profileHeaderArt from "@/assets/hero/07-cordoba-night.jpg?url";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import {
   ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, evaluateAchievements, levelFor,
