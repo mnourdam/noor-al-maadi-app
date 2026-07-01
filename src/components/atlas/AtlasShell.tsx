@@ -116,13 +116,30 @@ function AtlasShellInner() {
     setSearchParam("focus", e.id);
     if (typeof e.aps_x === "number" && typeof e.aps_y === "number") {
       focusAtlasRef.current += 1;
-      setFocusAps({ x: e.aps_x, y: e.aps_y, minScale: 5, nonce: focusAtlasRef.current });
+      setFocusAps({
+        x: e.aps_x,
+        y: e.aps_y,
+        minScale: zoomForKind(e.kind),
+        nonce: focusAtlasRef.current,
+      });
       setFallbackMsg(null);
     } else {
       setFallbackMsg("هذا العنصر موجود في الموسوعة لكنه غير محدد على الخريطة بعد");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Live suggestions as the user types (debounced). Empty query clears.
+  useEffect(() => {
+    const query = q.trim();
+    if (!query) { setSuggestions([]); setNoMatch(false); return; }
+    const t = setTimeout(() => {
+      const hits = searchAtlasEntities(entities, query, 6);
+      setSuggestions(hits);
+      setNoMatch(hits.length === 0);
+    }, 140);
+    return () => clearTimeout(t);
+  }, [q, entities]);
 
   const submitSearch = useCallback((raw: string) => {
     const query = raw.trim();
@@ -135,22 +152,18 @@ function AtlasShellInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entities, navigateToEntity]);
 
-  // Clear suggestions when the user clears the query
-  useEffect(() => {
-    if (!q) { setSuggestions([]); setNoMatch(false); }
-  }, [q]);
-
   // When the focused entity changes (e.g., via URL or pin click), pan to it.
-  // Honours an optional ?zoom= deep-link hint for a moderate framing when
-  // arriving from another surface (e.g. encyclopedia dossiers).
+  // Honours an optional ?zoom= deep-link hint, otherwise uses a type-aware
+  // comfortable zoom so approximate locations aren't over-framed.
   useEffect(() => {
     if (!selected) return;
     if (typeof selected.aps_x === "number" && typeof selected.aps_y === "number") {
       focusAtlasRef.current += 1;
-      const min = typeof search.zoom === "number" ? search.zoom : 5;
+      const min = typeof search.zoom === "number" ? search.zoom : zoomForKind(selected.kind);
       setFocusAps({ x: selected.aps_x, y: selected.aps_y, minScale: min, nonce: focusAtlasRef.current });
     }
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   return (
     <div className="fixed inset-0 z-40 bg-slate-950" dir="rtl">
