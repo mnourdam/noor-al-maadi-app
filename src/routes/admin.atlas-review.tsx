@@ -6,8 +6,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, Check, Eye, EyeOff, MapPin, RefreshCw, Save, Search, ShieldCheck, Trash2, Upload,
+  ArrowRight, BookOpen, Check, Copy, ExternalLink, Eye, EyeOff, MapPin, PinOff, RefreshCw, Save, Search, ShieldCheck, Star, Trash2, Upload,
 } from "lucide-react";
+import { findAtlasDuplicateGroups, DUP_REASON_AR, type AtlasDuplicateGroup } from "@/lib/atlas/atlas-duplicates";
+import { normalizeArabic } from "@/lib/atlas/atlas-search";
 import { toast } from "sonner";
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,7 +70,8 @@ function AtlasReviewPage() {
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
 
   // Atlas Coverage — Needs Placement tab.
-  const [tab, setTab] = useState<"review" | "needs">("review");
+  const [tab, setTab] = useState<"review" | "needs" | "duplicates">("review");
+  const [dupSearch, setDupSearch] = useState("");
   const [needsRows, setNeedsRows] = useState<NeedsPlacementRow[] | null>(null);
   const [needsLoading, setNeedsLoading] = useState(false);
   const [needsError, setNeedsError] = useState<string | null>(null);
@@ -161,6 +164,36 @@ function AtlasReviewPage() {
       return true;
     });
   }, [rows, search, kind, era, batch, onlyUnverified, showRemoved]);
+
+  // Duplicate detection — clusters across the full atlas dataset (not the
+  // review filter) so admins always see the true duplicate surface.
+  const duplicateGroups = useMemo(() => findAtlasDuplicateGroups(rows), [rows]);
+  const filteredDupGroups = useMemo(() => {
+    const q = normalizeArabic(dupSearch);
+    if (!q) return duplicateGroups;
+    return duplicateGroups.filter((g) =>
+      g.items.some((it) => normalizeArabic(`${it.name_ar} ${it.name_en ?? ""} ${it.slug}`).includes(q)),
+    );
+  }, [duplicateGroups, dupSearch]);
+  const duplicateItemCount = useMemo(
+    () => duplicateGroups.reduce((sum, g) => sum + g.items.length, 0),
+    [duplicateGroups],
+  );
+  const removedCount = useMemo(() => rows.filter((r) => r.status === "retired").length, [rows]);
+
+  // When the review-tab search string matches a real duplicate cluster,
+  // surface a compact warning so the admin can jump straight to cleanup.
+  const searchDupWarning = useMemo(() => {
+    const q = normalizeArabic(search);
+    if (!q) return null;
+    const hits = duplicateGroups.filter((g) =>
+      g.items.some((it) => normalizeArabic(it.name_ar).includes(q)),
+    );
+    const total = hits.reduce((s, g) => s + g.items.length, 0);
+    if (hits.length === 0 || total < 2) return null;
+    return { groups: hits.length, total };
+  }, [search, duplicateGroups]);
+
 
   // Drag handlers — convert client px → APS via current transform
   const dragRef = useRef<{
@@ -352,12 +385,33 @@ function AtlasReviewPage() {
     }
   };
 
+  // Duplicate cleanup: keep the picked atlas row visible and soft-remove
+  // every other row in the same group. Never touches encyclopedia content.
+  const [keepBusyGroup, setKeepBusyGroup] = useState<string | null>(null);
+  const keepOnlyInGroup = async (group: AtlasDuplicateGroup, keepId: string) => {
+    const others = group.items.filter((it) => it.id !== keepId && it.status !== "retired");
+    if (others.length === 0) { toast.info("لا توجد نسخ إضافية لإزالتها."); return; }
+    if (!confirm(`إبقاء عنصر واحد وإزالة ${others.length} من الأطلس؟ لن تتأثر الموسوعة.`)) return;
+    setKeepBusyGroup(group.key);
+    try {
+      for (const it of others) {
+        const updated = await updateAtlasEntity(it.id, { status: "retired" });
+        setRows((rs) => rs.map((r) => (r.id === it.id ? updated : r)));
+      }
+      toast.success(`أُبقي عنصر واحد وأُزيل ${others.length} من الأطلس.`);
+    } catch (e: any) {
+      toast.error(`فشل الإزالة: ${e.message ?? e}`);
+    } finally {
+      setKeepBusyGroup(null);
+    }
+  };
+
   const dirtyCount = Object.keys(drafts).length;
 
   return (
     <div dir="rtl" className="fixed inset-0 flex flex-col bg-stone-950 text-stone-100">
       {/* Header */}
-      <header className="flex items-center gap-2 border-b border-stone-800 bg-stone-900 px-3 py-2">
+      <header className="flex flex-wrap items-center gap-2 border-b border-stone-800 bg-stone-900 px-3 py-2">
         <Link to="/admin" className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 text-[11px] hover:bg-stone-700">
           <ArrowRight className="size-3.5" /> الإدارة
         </Link>
@@ -365,6 +419,23 @@ function AtlasReviewPage() {
         <span className="text-[11px] text-stone-400">
           {filtered.length} عنصر · {dirtyCount} تغيير غير محفوظ
         </span>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <span className="rounded border border-stone-700 bg-stone-950 px-2 py-0.5 text-stone-300">
+            الإجمالي: <b className="text-amber-100">{rows.length}</b>
+          </span>
+          <button
+            onClick={() => setTab("duplicates")}
+            className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-200 hover:bg-amber-500/20"
+            title="عرض التكرارات"
+          >
+            <Copy className="ml-1 inline size-3" />
+            {duplicateGroups.length} مجموعة · {duplicateItemCount} عنصر مكرر
+          </button>
+          <span className="rounded border border-rose-900/60 bg-rose-950/30 px-2 py-0.5 text-rose-200">
+            مُزال: <b>{removedCount}</b>
+          </span>
+        </div>
+
         <div className="ml-auto flex items-center gap-1.5 text-[11px]">
           <button onClick={reload} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">
             <RefreshCw className="size-3.5" /> تحديث
@@ -406,7 +477,14 @@ function AtlasReviewPage() {
             >
               تحتاج إلى تموضع{needsRows ? ` (${needsRows.length})` : ""}
             </button>
+            <button
+              onClick={() => setTab("duplicates")}
+              className={`flex-1 px-2 py-1.5 ${tab === "duplicates" ? "bg-stone-800 text-amber-100" : "text-stone-400 hover:bg-stone-800/50"}`}
+            >
+              التكرارات ({duplicateGroups.length})
+            </button>
           </div>
+
 
           {tab === "review" && (
             <>
@@ -418,6 +496,15 @@ function AtlasReviewPage() {
                     placeholder="بحث بالاسم أو slug..."
                     className="min-w-0 flex-1 bg-transparent text-[12px] outline-none" />
                 </div>
+                {searchDupWarning && (
+                  <button
+                    onClick={() => { setDupSearch(search); setTab("duplicates"); }}
+                    className="flex w-full items-center gap-1.5 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-right text-[11px] font-bold text-amber-200 hover:bg-amber-500/20"
+                  >
+                    <Copy className="size-3.5" />
+                    تم العثور على {searchDupWarning.total} عناصر متشابهة — راجع التكرارات
+                  </button>
+                )}
                 <div className="grid grid-cols-2 gap-1.5 text-[11px]">
                   <select value={kind} onChange={(e) => setKind(e.target.value as any)}
                     className="rounded border border-stone-700 bg-stone-950 px-2 py-1">
@@ -594,7 +681,126 @@ function AtlasReviewPage() {
               </div>
             </>
           )}
+
+          {tab === "duplicates" && (
+            <>
+              <div className="space-y-2 border-b border-stone-800 p-2">
+                <p className="text-[11px] leading-relaxed text-stone-400">
+                  مجموعات محتملة من التكرارات على الأطلس. الإجراءات هنا لا تعدّل الموسوعة.
+                </p>
+                <div className="flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1.5">
+                  <Search className="size-3.5 opacity-60" />
+                  <input
+                    value={dupSearch}
+                    onChange={(e) => setDupSearch(e.target.value)}
+                    placeholder="بحث داخل التكرارات..."
+                    className="min-w-0 flex-1 bg-transparent text-[12px] outline-none"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1 text-[10px] text-stone-400">
+                  <span className="rounded border border-stone-700 bg-stone-950 px-1.5 py-0.5">مجموعات: <b className="text-amber-100">{duplicateGroups.length}</b></span>
+                  <span className="rounded border border-stone-700 bg-stone-950 px-1.5 py-0.5">عناصر مكررة: <b className="text-amber-100">{duplicateItemCount}</b></span>
+                  <span className="rounded border border-stone-700 bg-stone-950 px-1.5 py-0.5">مُزال: <b className="text-rose-200">{removedCount}</b></span>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {filteredDupGroups.length === 0 && (
+                  <div className="p-3 text-[12px] text-stone-400">لا توجد تكرارات مطابقة.</div>
+                )}
+                <ul className="divide-y divide-stone-800/80">
+                  {filteredDupGroups.map((g) => (
+                    <li key={g.key} className="p-2">
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <span className="truncate text-[12px] font-bold text-amber-100">{g.label}</span>
+                        <span className="rounded bg-stone-800 px-1.5 py-0.5 text-[10px] text-stone-300">{g.items.length}</span>
+                        <div className="ml-auto flex flex-wrap gap-1 text-[9px]">
+                          {g.reasons.map((r) => (
+                            <span key={r} className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-amber-200">
+                              {DUP_REASON_AR[r]}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <ul className="space-y-1">
+                        {g.items.map((it) => (
+                          <li key={it.id} className={`rounded border p-1.5 text-[11px] ${it.status === "retired" ? "border-rose-900/50 bg-rose-950/20 opacity-70" : "border-stone-700 bg-stone-950"}`}>
+                            <div className="flex items-start gap-1.5">
+                              <button
+                                onClick={() => { setFocusedId(it.id); setTab("review"); if (it.aps_x != null && it.aps_y != null) centerOn(it, { x: it.aps_x, y: it.aps_y }, scale, wrapSize, setTx, setTy); }}
+                                className="min-w-0 flex-1 text-right"
+                                title="عرض على الخريطة"
+                              >
+                                <div className="truncate font-bold text-amber-100">{it.name_ar}</div>
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-stone-400">
+                                  <span>{KIND_LABEL_AR[it.kind]}</span>
+                                  <span>· {eraLabel(it.era)}</span>
+                                  {it.aps_x != null && it.aps_y != null && (
+                                    <span>· APS {Math.round(it.aps_x)},{Math.round(it.aps_y)}</span>
+                                  )}
+                                  <span>· {STATUS_LABEL_AR[it.status]}</span>
+                                  {it.aps_verified && <span className="text-emerald-300">· مؤكّد</span>}
+                                  {it.encyclopedia_entity_id
+                                    ? <span className="text-sky-300">· موسوعة ✓</span>
+                                    : <span className="text-stone-500">· بلا موسوعة</span>}
+                                  {(it.metadata as any)?.import_batch && (
+                                    <span>· {(it.metadata as any).import_batch}</span>
+                                  )}
+                                </div>
+                              </button>
+                            </div>
+                            <div className="mt-1.5 flex flex-wrap items-center justify-end gap-1">
+                              <button
+                                disabled={keepBusyGroup === g.key || it.status === "retired"}
+                                onClick={() => keepOnlyInGroup(g, it.id)}
+                                title="إبقاء هذا وإزالة البقية من الأطلس"
+                                className="inline-flex items-center gap-1 rounded bg-emerald-700 px-1.5 py-0.5 text-[10px] font-bold text-white hover:bg-emerald-600 disabled:opacity-40"
+                              >
+                                <Star className="size-3" />
+                                إبقاء هذا
+                              </button>
+                              <a
+                                href={`/admin/atlas-entities?focus=${it.id}`}
+                                target="_blank" rel="noreferrer"
+                                className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-1.5 py-0.5 text-[10px] hover:bg-stone-700"
+                                title="فتح عنصر الأطلس"
+                              >
+                                <ExternalLink className="size-3" />
+                                الأطلس
+                              </a>
+                              {it.encyclopedia_entity_id && (
+                                <a
+                                  href={`/encyclopedia/entity/${it.encyclopedia_entity_id}`}
+                                  target="_blank" rel="noreferrer"
+                                  className="inline-flex items-center gap-1 rounded border border-sky-800 bg-sky-950/40 px-1.5 py-0.5 text-[10px] text-sky-200 hover:bg-sky-950/70"
+                                  title="فتح صفحة الموسوعة"
+                                >
+                                  <BookOpen className="size-3" />
+                                  الموسوعة
+                                </a>
+                              )}
+                              {it.status !== "retired" && (
+                                <button
+                                  onClick={() => setRemoveTarget(it)}
+                                  title="إزالة من الأطلس فقط"
+                                  className="inline-flex items-center gap-1 rounded border border-rose-700 bg-rose-900/50 px-1.5 py-0.5 text-[10px] font-bold text-rose-100 hover:bg-rose-800"
+                                >
+                                  <PinOff className="size-3" />
+                                  إزالة
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
         </aside>
+
 
 
         {/* Stage */}
