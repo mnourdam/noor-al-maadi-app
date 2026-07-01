@@ -77,11 +77,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 export function Screen({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <div className="px-5 pt-8">
+    <div className="px-5 pt-5">
       <div className="mb-5">
-        <h1 className="font-display text-3xl font-bold text-foreground">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
-        <div className="ornament-divider mt-3" />
+        <h1 className="font-display text-3xl font-bold leading-tight text-foreground drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)]">{title}</h1>
+        {subtitle && <p className="mt-0.5 text-sm text-muted-foreground/90">{subtitle}</p>}
+        <div className="ornament-divider mt-2.5" />
       </div>
       {children}
     </div>
