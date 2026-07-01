@@ -9,7 +9,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { geoToAps } from "@/lib/atlas/transform";
 import { clampAps } from "@/lib/atlas/aps";
-import type { AtlasEntityKind } from "@/lib/atlas-entities";
+import { isLc1VisibleAtlasKind, type AtlasEntityKind } from "@/lib/atlas-entities";
 
 export type ImportEntity = {
   slug: string;
