@@ -309,28 +309,28 @@ function ImportedChapterPlayer() {
 
         <div className="mx-auto max-w-2xl px-5 pt-4">
           <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold/80">
-            <Scroll className="size-3.5" /> فصل من الحملة
+            <Scroll className="size-3.5" /> {reviewMode ? "مراجعة الفصل" : "فصل من الحملة"}
           </div>
           <h1 className="font-display mt-1 text-2xl font-bold shimmer-text">{chapter.title}</h1>
           {chapter.subtitle && <p className="mt-1 text-sm text-gold/80">{chapter.subtitle}</p>}
 
           {chapter.introText && (
-            <p className="mt-4 text-[12px] leading-relaxed text-foreground/90">{chapter.introText}</p>
-          )}
-
-          {chapter.historicalReadingText && (
-            <div className="parchment-dark mt-4 rounded-2xl border border-gold/25 p-4">
-              <div className="mb-2 flex items-center gap-1 text-[10px] tracking-widest text-gold/80">
-                <BookOpen className="size-3" /> قراءة تاريخية
-              </div>
-              <p className="text-[12px] leading-7 text-foreground/90 whitespace-pre-wrap">
-                {chapter.historicalReadingText}
-              </p>
+            <div className="mt-4">
+              <RichReadingText text={chapter.introText} size="base" />
             </div>
           )}
 
-          {/* Chapter reward preview — unlocks rendered with resolved names. */}
-          {chapter.rewards && (chapter.rewards.xp || chapter.rewards.coins || chapter.rewards.unlocks?.length) && (
+          {chapter.historicalReadingText && (
+            <div className="parchment-dark mt-4 rounded-2xl border border-gold/25 p-5">
+              <div className="mb-3 flex items-center gap-1 text-[10px] tracking-widest text-gold/80">
+                <BookOpen className="size-3" /> قراءة تاريخية
+              </div>
+              <RichReadingText text={chapter.historicalReadingText} size="lg" />
+            </div>
+          )}
+
+          {/* Chapter reward preview — hidden in review mode (already earned). */}
+          {!reviewMode && chapter.rewards && (chapter.rewards.xp || chapter.rewards.coins || chapter.rewards.unlocks?.length) && (
             <div className="mt-4 space-y-2">
               <div className="flex flex-wrap gap-2 text-[11px]">
                 {chapter.rewards.xp ? <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2 py-0.5 text-sky-200">+{chapter.rewards.xp} XP</span> : null}
@@ -348,6 +348,8 @@ function ImportedChapterPlayer() {
               <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-6 text-center text-sm text-muted-foreground">
                 لا توجد أنشطة في هذا الفصل بعد.
               </div>
+            ) : reviewMode ? (
+              <ReviewChapterView campaign={campaign} chapter={chapter} />
             ) : allDone ? (
               <ChapterCompletePanel
                 campaignId={campaign.id}
