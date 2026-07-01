@@ -69,13 +69,13 @@ export function useFeedbackPresence({ issueId, role, userId, enabled = true }: O
       .on("presence", { event: "leave" }, computeOther)
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
-          await channel.track({ role, online_at: Date.now(), user_id: userId ?? null } satisfies PresenceState);
+          await channel.track({ role, online_at: Date.now(), user_id: userId ?? undefined } satisfies PresenceState);
         }
       });
 
     // Heartbeat: keep online_at fresh so the 5-minute window rolls forward.
     const heartbeat = setInterval(() => {
-      void channel.track({ role, online_at: Date.now(), user_id: userId ?? null } satisfies PresenceState);
+      void channel.track({ role, online_at: Date.now(), user_id: userId ?? undefined } satisfies PresenceState);
       computeOther();
     }, 30_000);
 
@@ -104,12 +104,12 @@ export function useFeedbackPresence({ issueId, role, userId, enabled = true }: O
         role,
         online_at: now,
         typing_at: now,
-        user_id: userId ?? null,
+        user_id: userId ?? undefined,
       } satisfies PresenceState);
 
       if (typingClearTimerRef.current) clearTimeout(typingClearTimerRef.current);
       typingClearTimerRef.current = setTimeout(() => {
-        void channel.track({ role, online_at: Date.now(), user_id: userId ?? null } satisfies PresenceState);
+        void channel.track({ role, online_at: Date.now(), user_id: userId ?? undefined } satisfies PresenceState);
       }, TYPING_TIMEOUT_MS);
     },
     [role, userId],
