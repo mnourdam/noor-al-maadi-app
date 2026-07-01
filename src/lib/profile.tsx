@@ -36,6 +36,7 @@ import { HEART_MAX, getEffectiveHearts, commitHearts, ACTIVITY_COOLDOWN_MS, acti
 import { DEFAULT_AVATAR_ID } from "./avatars";
 import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notifications";
 import { androidMeasure, recordAndroidAction } from "./androidFreezeDiagnostics";
+import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "hakaya.profile.v2";
 
