@@ -123,6 +123,8 @@ export function searchAtlasEntities(
   if (!nq) return [];
   const hits: AtlasSearchHit[] = [];
   for (const e of entities) {
+    // Atlas is geographic-only: never surface artifacts/figures/events/routes.
+    if (!isLc1VisibleAtlasKind(e.kind)) continue;
     const s = scoreEntity(e, nq);
     if (!s) continue;
     hits.push({ entity: e, score: s.score, matchedField: s.field });
