@@ -20,8 +20,18 @@ function ComparePage() {
   const { user, account } = useAccount();
   const { profile } = useProfile();
   const [other, setOther] = useState<PublicProfile | null>(null);
+  const [denied, setDenied] = useState(false);
 
-  useEffect(() => { fetchPublicProfileById(id).then(setOther); }, [id]);
+  useEffect(() => {
+    let alive = true;
+    setDenied(false);
+    fetchGatedProfileById(id).then((r) => {
+      if (!alive) return;
+      setOther(r);
+      if (!r) setDenied(true);
+    });
+    return () => { alive = false; };
+  }, [id]);
 
   const me = useMemo(() => {
     const s = derivePublicStats(profile);
