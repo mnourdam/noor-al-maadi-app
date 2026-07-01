@@ -165,6 +165,36 @@ function AtlasReviewPage() {
     });
   }, [rows, search, kind, era, batch, onlyUnverified, showRemoved]);
 
+  // Duplicate detection — clusters across the full atlas dataset (not the
+  // review filter) so admins always see the true duplicate surface.
+  const duplicateGroups = useMemo(() => findAtlasDuplicateGroups(rows), [rows]);
+  const filteredDupGroups = useMemo(() => {
+    const q = normalizeArabic(dupSearch);
+    if (!q) return duplicateGroups;
+    return duplicateGroups.filter((g) =>
+      g.items.some((it) => normalizeArabic(`${it.name_ar} ${it.name_en ?? ""} ${it.slug}`).includes(q)),
+    );
+  }, [duplicateGroups, dupSearch]);
+  const duplicateItemCount = useMemo(
+    () => duplicateGroups.reduce((sum, g) => sum + g.items.length, 0),
+    [duplicateGroups],
+  );
+  const removedCount = useMemo(() => rows.filter((r) => r.status === "retired").length, [rows]);
+
+  // When the review-tab search string matches a real duplicate cluster,
+  // surface a compact warning so the admin can jump straight to cleanup.
+  const searchDupWarning = useMemo(() => {
+    const q = normalizeArabic(search);
+    if (!q) return null;
+    const hits = duplicateGroups.filter((g) =>
+      g.items.some((it) => normalizeArabic(it.name_ar).includes(q)),
+    );
+    const total = hits.reduce((s, g) => s + g.items.length, 0);
+    if (hits.length === 0 || total < 2) return null;
+    return { groups: hits.length, total };
+  }, [search, duplicateGroups]);
+
+
   // Drag handlers — convert client px → APS via current transform
   const dragRef = useRef<{
     id: string;
