@@ -70,7 +70,8 @@ function AtlasReviewPage() {
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
 
   // Atlas Coverage — Needs Placement tab.
-  const [tab, setTab] = useState<"review" | "needs">("review");
+  const [tab, setTab] = useState<"review" | "needs" | "duplicates">("review");
+  const [dupSearch, setDupSearch] = useState("");
   const [needsRows, setNeedsRows] = useState<NeedsPlacementRow[] | null>(null);
   const [needsLoading, setNeedsLoading] = useState(false);
   const [needsError, setNeedsError] = useState<string | null>(null);
