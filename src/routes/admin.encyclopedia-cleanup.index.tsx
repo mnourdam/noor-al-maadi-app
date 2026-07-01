@@ -1272,6 +1272,26 @@ function CleanupWorkshop() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           {/* Results list */}
           <div className="space-y-2">
+            {/* Select-all row — applies only to the currently filtered / searched cards. */}
+            {!loading && filtered.length > 0 && (
+              <label className="flex items-center justify-between gap-2 rounded-md border border-slate-700/60 bg-slate-900/40 px-3 py-1.5 text-xs text-slate-300">
+                <span className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-amber-400"
+                    checked={allVisibleSelected}
+                    ref={(el) => { if (el) el.indeterminate = someVisibleSelected; }}
+                    onChange={toggleSelectAllVisible}
+                  />
+                  <span>تحديد الكل ({filtered.length})</span>
+                </span>
+                {selectedIds.size > 0 && (
+                  <span className="text-[10px] text-amber-200">
+                    محدد: {selectedIds.size}
+                  </span>
+                )}
+              </label>
+            )}
             {loading && (
               <div className="flex items-center gap-2 text-sm text-slate-400">
                 <Loader2 className="size-4 animate-spin" /> جارٍ التحميل…
@@ -1303,12 +1323,15 @@ function CleanupWorkshop() {
                   busy={busy === r.id}
                   onFullyApprove={() => fullyApproveCleanup(r)}
                   onMarkNeedsContent={() => markNeedsContentOnly(r)}
+                  selected={selectedIds.has(r.id)}
+                  onToggleSelect={() => toggleSelect(r.id)}
                 />
               );
             })}
 
 
           </div>
+
 
           {/* Editor */}
           <div className="lg:sticky lg:top-4">
