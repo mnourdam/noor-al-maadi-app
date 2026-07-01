@@ -466,7 +466,7 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
             <div className="border-t border-slate-800 bg-slate-900/60 p-3">
               <textarea
                 value={reply}
-                onChange={(e) => setReply(e.target.value)}
+                onChange={(e) => { setReply(e.target.value); markTyping(); }}
                 rows={3}
                 maxLength={5000}
                 placeholder="اكتب ردك للّاعب أو ملاحظة داخلية…"
