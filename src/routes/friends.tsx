@@ -400,13 +400,11 @@ function LeaderRow({ r }: { r: LeaderboardRow }) {
       </div>
       <Avatar avatarId={r.avatar_id} size="sm" fallbackChar={displayName[0] ?? "?"} />
       {clickable ? (
-        <Link
-          to={r.is_me ? "/profile" : "/u/$username"}
-          params={r.is_me ? undefined as never : { username: r.username }}
-          className="min-w-0 flex-1"
-        >
-          {Body}
-        </Link>
+        r.is_me ? (
+          <Link to="/profile" className="min-w-0 flex-1">{Body}</Link>
+        ) : (
+          <Link to="/u/$username" params={{ username: r.username }} className="min-w-0 flex-1">{Body}</Link>
+        )
       ) : (
         <div
           className="min-w-0 flex-1 cursor-default select-none"
