@@ -539,7 +539,7 @@ function AtlasReviewPage() {
                   <select value={kind} onChange={(e) => setKind(e.target.value as any)}
                     className="rounded border border-stone-700 bg-stone-950 px-2 py-1">
                     <option value="all">كل الأنواع</option>
-                    {(["place","battle","artifact_site","region","event","figure_marker","route_point"] as AtlasEntityKind[]).map((k) => (
+                    {ATLAS_KIND_ORDER.map((k) => (
                       <option key={k} value={k}>{KIND_LABEL_AR[k]}</option>
                     ))}
                   </select>
