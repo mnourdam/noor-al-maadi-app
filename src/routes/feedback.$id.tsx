@@ -4,6 +4,8 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { getIssueThread, markIssueRead, rateIssue, replyToIssue } from "@/lib/feedback/api";
 import { CATEGORY_MAP, STATUS_LABELS, type FeedbackIssue, type FeedbackMessage } from "@/lib/feedback/types";
 import { supabase } from "@/integrations/supabase/client";
+import { useFeedbackPresence } from "@/lib/feedback/usePresence";
+import { FeedbackPresenceBadge } from "@/components/feedback/FeedbackPresenceBadge";
 import { ChevronLeft, Send, MapPin, Sparkles, ThumbsUp, ThumbsDown, Check } from "lucide-react";
 
 export const Route = createFileRoute("/feedback/$id")({
