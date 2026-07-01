@@ -208,7 +208,7 @@ export function lastOpenedAt(): number {
 const REENGAGE_HOOKS: { title: string; body: string; href: string }[] = [
   { title: "هل تعلم من أسقط بغداد؟", body: "اكتشف قصة سقوط الخلافة العباسية في الموسوعة.", href: "/encyclopedia" },
   { title: "من القائد الذي هزم المغول؟", body: "تعرّف على قطز وعين جالوت في حملاتنا.", href: "/campaigns" },
-  { title: "ماذا كان داخل بيت الحكمة؟", body: "زر الخارطة وادخل بغداد العباسية.", href: "/map" },
+  { title: "ماذا كان داخل بيت الحكمة؟", body: "زر الأطلس وادخل بغداد العباسية.", href: "/map" },
   { title: "كم استمرت الأندلس؟", body: "اكتشف قصة الأندلس من الفتح إلى السقوط في الموسوعة.", href: "/encyclopedia" },
   { title: "أين دُفن صلاح الدين؟", body: "تجوّل في دمشق الأيوبية واكتشف أثره.", href: "/encyclopedia" },
 ];
