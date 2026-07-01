@@ -329,6 +329,9 @@ function ImportedChapterPlayer() {
             ) : allDone ? (
               <ChapterCompletePanel
                 campaignId={campaign.id}
+                campaignTitle={campaign.title}
+                chapterId={chapter.id}
+                chapterTitle={chapter.title}
                 xpEarned={chProgress?.xpEarned ?? 0}
                 coinsEarned={chProgress?.coinsEarned ?? 0}
                 heartsLost={chProgress?.heartsLost ?? 0}
