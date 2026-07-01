@@ -185,8 +185,10 @@ interface Ctx {
   spendDinars: (n: number) => boolean;
   buyHint: (scopeKey: string, hintIndex: number, cost: number) => boolean;
   hintsRevealed: (scopeKey: string) => number;
-  claimStreakMilestone: (days: number) => boolean;
+  claimStreakMilestone: (days: number) => Promise<boolean>;
   availableStreakMilestones: () => StreakMilestone[];
+  /** Fetch already-claimed streak milestones from the server and merge locally. */
+  hydrateClaimedStreakRewards: () => Promise<void>;
   // Cloud-save integration
   replaceProfile: (next: ProfileState) => void;
   resetProfile: () => void;
