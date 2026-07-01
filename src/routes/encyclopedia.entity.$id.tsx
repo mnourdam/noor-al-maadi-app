@@ -298,6 +298,21 @@ function EntityPage() {
             <div className="pointer-events-none absolute -top-32 left-1/2 size-80 -translate-x-1/2 rounded-full bg-gold/15 blur-[80px]" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
 
+            {/* Atlas deep-link — only shown when a published+verified Atlas
+                record is linked to this entity. Top-left in RTL. */}
+            {atlasLink && (
+              <Link
+                to="/map"
+                search={{ focus: atlasLink.id, zoom: 3.5 }}
+                aria-label="عرض على الأطلس"
+                className="group absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-gold/35 bg-black/55 px-3 py-1.5 text-[11px] font-medium text-gold/95 shadow-[0_6px_20px_-8px_rgba(212,175,90,0.5)] backdrop-blur-sm transition hover:border-gold/60 hover:bg-black/70 hover:text-gold active:scale-95"
+              >
+                <MapIcon className="size-3.5" strokeWidth={1.8} />
+                على الأطلس
+              </Link>
+            )}
+
+
             <div className="relative flex flex-col items-center text-center">
               <span className="font-display text-[10px] tracking-[0.5em] text-gold/85">
                 {typeLabel.toUpperCase()}
