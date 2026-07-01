@@ -468,7 +468,7 @@ function EntityEditor({
               onChange={(e) => setKind(e.target.value as AtlasEntityKind)}
               className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5"
             >
-              {ATLAS_ENTITY_KINDS.map((k) => (
+              {ATLAS_ALLOWED_KINDS.map((k) => (
                 <option key={k} value={k}>
                   {KIND_LABEL_AR[k]}
                 </option>
