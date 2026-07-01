@@ -14,6 +14,7 @@ import {
   Clock, Tag, Coins, Zap, Gift, Package, Play, ChevronLeft,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { fetchCampaignByIdOrSlug } from "@/lib/supabaseCampaigns";
 import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,

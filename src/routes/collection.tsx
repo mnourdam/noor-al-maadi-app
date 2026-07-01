@@ -34,6 +34,7 @@
 // ============================================================
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Lock, Swords, Landmark, Users, Sparkles,
