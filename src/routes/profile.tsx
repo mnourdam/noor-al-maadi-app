@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { countMyUnreadFeedback } from "@/lib/feedback/api";
+import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info,
