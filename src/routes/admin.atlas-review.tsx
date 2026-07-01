@@ -477,11 +477,21 @@ function AtlasReviewPage() {
                               : <span className="text-stone-500">· بلا موسوعة</span>}
                           </div>
                         </button>
-                        <button disabled={!dirty || savingIds.has(r.id)} onClick={() => saveOne(r.id)}
-                          title="حفظ هذا العنصر"
-                          className="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-stone-950 hover:bg-amber-400 disabled:opacity-30">
-                          حفظ
-                        </button>
+                        <div className="flex flex-col items-stretch gap-1">
+                          <button disabled={!dirty || savingIds.has(r.id)} onClick={() => saveOne(r.id)}
+                            title="حفظ هذا العنصر"
+                            className="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-stone-950 hover:bg-amber-400 disabled:opacity-30">
+                            حفظ
+                          </button>
+                          {r.status !== "retired" && (
+                            <button onClick={() => setRemoveTarget(r)}
+                              title="إزالة من الأطلس فقط (لن تُحذف الموسوعة)"
+                              className="inline-flex items-center justify-center gap-1 rounded border border-rose-700 bg-rose-900/50 px-1.5 py-0.5 text-[10px] font-bold text-rose-100 hover:bg-rose-800">
+                              <Trash2 className="size-3" />
+                              إزالة
+                            </button>
+                          )}
+                        </div>
                       </li>
                     );
                   })}
