@@ -524,3 +524,49 @@ function ChapterCompletePanel(props: {
     </div>
   );
 }
+
+// ---------- Review Mode (completed campaign) ----------
+// Stacks every activity in a read-only "answer key" form so the
+// player can browse the chapter again without earning rewards or
+// mutating progress.
+function ReviewChapterView({
+  campaign,
+  chapter,
+}: {
+  campaign: Campaign;
+  chapter: CampaignChapter;
+}) {
+  const next = nextChapterAfter(campaign, chapter);
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-[12px] text-emerald-100">
+        <Check className="me-1 inline size-3.5" />
+        أنهيتَ هذه الحملة — أنت الآن في وضع المراجعة. تصفّح المحتوى دون أثر على تقدمك.
+      </div>
+
+      {chapter.activities.map((act) => (
+        <ActivityReviewCard key={act.id} activity={act} />
+      ))}
+
+      <div className="flex flex-col gap-2 pt-2">
+        {next && (
+          <Link
+            to="/campaigns/imported/$id/chapter/$chapter"
+            params={{ id: campaign.id, chapter: next.id }}
+            className="motion-tap inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+          >
+            <Check className="size-4" /> الفصل التالي
+            <ArrowLeft className="size-4" />
+          </Link>
+        )}
+        <Link
+          to="/campaigns/imported/$id"
+          params={{ id: campaign.id }}
+          className="motion-tap rounded-2xl border border-white/10 py-2 text-center text-xs text-muted-foreground"
+        >
+          عودة لقائمة الفصول
+        </Link>
+      </div>
+    </div>
+  );
+}
