@@ -42,8 +42,6 @@ function AtlasShellInner() {
   const settingsDismissed = profile.settings.atlasIntroDismissed === true;
   const [introOpen, setIntroOpen] = useState(() => !hasDismissedAtlasIntro(settingsDismissed));
   const [introReopened, setIntroReopened] = useState(false);
-  // First-visit gate: block interactions with the map until dialog dismissed.
-  const firstVisitGate = introOpen && !introReopened && !settingsDismissed;
 
   // URL state — single source of truth for filters + selection.
   const search = MapRoute.useSearch();
