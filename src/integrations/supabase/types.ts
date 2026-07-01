@@ -1090,6 +1090,7 @@ export type Database = {
           longest_streak: number
           marketing_opt_in: boolean
           museum_items_unlocked: number
+          notification_started_at: string
           referral_code: string | null
           referred_by: string | null
           streak: number
@@ -1121,6 +1122,7 @@ export type Database = {
           longest_streak?: number
           marketing_opt_in?: boolean
           museum_items_unlocked?: number
+          notification_started_at?: string
           referral_code?: string | null
           referred_by?: string | null
           streak?: number
@@ -1152,6 +1154,7 @@ export type Database = {
           longest_streak?: number
           marketing_opt_in?: boolean
           museum_items_unlocked?: number
+          notification_started_at?: string
           referral_code?: string | null
           referred_by?: string | null
           streak?: number
@@ -1682,6 +1685,11 @@ export type Database = {
       }
       gen_referral_code: { Args: never; Returns: string }
       get_feedback_issue_thread: { Args: { p_issue_id: string }; Returns: Json }
+      get_gated_public_profile: { Args: { p_user_id: string }; Returns: Json }
+      get_gated_public_profile_by_username: {
+        Args: { p_username: string }
+        Returns: Json
+      }
       get_my_email: { Args: never; Returns: string }
       get_my_notification_preferences: { Args: never; Returns: Json }
       get_my_profile: {
@@ -1709,6 +1717,7 @@ export type Database = {
           longest_streak: number
           marketing_opt_in: boolean
           museum_items_unlocked: number
+          notification_started_at: string
           referral_code: string | null
           referred_by: string | null
           streak: number

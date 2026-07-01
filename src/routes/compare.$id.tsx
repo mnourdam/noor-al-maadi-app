@@ -5,7 +5,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { AuthLink } from "@/components/AuthLink";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
-import { fetchPublicProfileById, derivePublicStats, type PublicProfile } from "@/lib/social";
+import { fetchGatedProfileById, derivePublicStats, type PublicProfile } from "@/lib/social";
 import { evaluateAchievements } from "@/lib/app-constants";
 import { Avatar } from "@/components/Avatar";
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
@@ -20,8 +20,18 @@ function ComparePage() {
   const { user, account } = useAccount();
   const { profile } = useProfile();
   const [other, setOther] = useState<PublicProfile | null>(null);
+  const [denied, setDenied] = useState(false);
 
-  useEffect(() => { fetchPublicProfileById(id).then(setOther); }, [id]);
+  useEffect(() => {
+    let alive = true;
+    setDenied(false);
+    fetchGatedProfileById(id).then((r) => {
+      if (!alive) return;
+      setOther(r);
+      if (!r) setDenied(true);
+    });
+    return () => { alive = false; };
+  }, [id]);
 
   const me = useMemo(() => {
     const s = derivePublicStats(profile);
@@ -57,7 +67,12 @@ function ComparePage() {
     <AppShell>
       <Screen title="مقارنة التقدم" subtitle="أنت مقابل صديقك">
         <div className="mb-3"><Link to="/friends" className="inline-flex items-center gap-1 text-sm text-muted-foreground"><ChevronLeft className="size-4" /> رجوع</Link></div>
-        {!other && <p className="text-sm text-muted-foreground">جارٍ التحميل…</p>}
+        {!other && !denied && <p className="text-sm text-muted-foreground">جارٍ التحميل…</p>}
+        {denied && (
+          <div className="rounded-3xl border border-white/10 bg-surface p-6 text-center text-sm text-muted-foreground">
+            هذه المقارنة متاحة فقط بين الأصدقاء. أرسل طلب صداقة أولاً لعرض تقدّم هذا اللاعب.
+          </div>
+        )}
         {other && (
           <div className="rounded-3xl border border-gold/25 bg-surface p-4 shadow-elegant">
             <div className="grid grid-cols-2 gap-3 border-b border-white/10 pb-3 text-center">

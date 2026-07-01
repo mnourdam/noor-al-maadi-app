@@ -345,7 +345,7 @@ function LeaderboardSection() {
   return (
     <div>
       <p className="mb-3 text-[11px] text-muted-foreground">
-        الترتيب العالمي حسب الخبرة. الأصدقاء يظهرون بإطار ذهبي. اضغط لاعبًا لزيارة صفحته العامة.
+        الترتيب العالمي حسب الخبرة. الأصدقاء يظهرون بإطار ذهبي — اضغط صديقًا لزيارة صفحته. لا يمكن فتح ملفات اللاعبين الآخرين حفاظًا على الخصوصية.
       </p>
       <div className="space-y-1.5">
         {top.map((r) => <LeaderRow key={r.id} r={r} />)}
@@ -377,24 +377,43 @@ function LeaderRow({ r }: { r: LeaderboardRow }) {
     r.rank === 2 ? "border border-white/30 bg-white/5 text-foreground" :
     r.rank === 3 ? "border border-amber-700/40 bg-amber-700/15 text-amber-200" :
                    "border border-white/10 text-muted-foreground";
+  // Privacy: only self and accepted friends can open a profile.
+  const clickable = r.is_me || r.is_friend;
+  const Body = (
+    <div className="min-w-0 flex-1">
+      <div className="flex items-center gap-1.5">
+        <span className="truncate text-sm font-bold">{displayName}</span>
+        {r.is_me && <span className="rounded-full bg-gold/20 px-1.5 py-0.5 text-[9px] font-bold text-gold">أنت</span>}
+        {!r.is_me && r.is_friend && (
+          <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300/40 bg-amber-300/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-200">
+            <Users className="size-2.5" /> صديق
+          </span>
+        )}
+      </div>
+      <div className="truncate text-[10px] text-muted-foreground">@{r.username} • م.{r.level}</div>
+    </div>
+  );
   return (
     <div className={`flex items-center gap-3 rounded-2xl border p-2.5 ${tone}`}>
       <div className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold ${rankBadge}`}>
         {r.rank === 1 ? <Crown className="size-4" /> : r.rank}
       </div>
       <Avatar avatarId={r.avatar_id} size="sm" fallbackChar={displayName[0] ?? "?"} />
-      <Link to="/u/$username" params={{ username: r.username }} className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span className="truncate text-sm font-bold">{displayName}</span>
-          {r.is_me && <span className="rounded-full bg-gold/20 px-1.5 py-0.5 text-[9px] font-bold text-gold">أنت</span>}
-          {!r.is_me && r.is_friend && (
-            <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300/40 bg-amber-300/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-200">
-              <Users className="size-2.5" /> صديق
-            </span>
-          )}
+      {clickable ? (
+        r.is_me ? (
+          <Link to="/profile" className="min-w-0 flex-1">{Body}</Link>
+        ) : (
+          <Link to="/u/$username" params={{ username: r.username }} className="min-w-0 flex-1">{Body}</Link>
+        )
+      ) : (
+        <div
+          className="min-w-0 flex-1 cursor-default select-none"
+          aria-disabled="true"
+          title="متاح للأصدقاء فقط"
+        >
+          {Body}
         </div>
-        <div className="truncate text-[10px] text-muted-foreground">@{r.username} • م.{r.level}</div>
-      </Link>
+      )}
       <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[11px] text-gold">
         <Sparkles className="size-3" /> {r.xp.toLocaleString("ar-EG")} خبرة
       </span>
