@@ -74,7 +74,7 @@ function AtlasShellInner() {
     });
 
   const facets = useMemo(() => buildAtlasFacets(entities), [entities]);
-  const visible = useMemo(
+  const filtered = useMemo(
     () =>
       sortAtlasEntitiesChronological(
         filterAtlasEntities(entities, { kind, era, world, search: q }),
@@ -88,13 +88,21 @@ function AtlasShellInner() {
   );
   const selected = focus ? entityById.get(focus) ?? null : null;
 
-  // If the focused entity is filtered out, drop the focus from the URL.
-  useEffect(() => {
-    if (focus && !visible.find((e) => e.id === focus)) {
-      setSearchParam("focus", null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, focus]);
+  // Visibility override: ensure the selected/focused entity is always in the
+  // render list, even if the current kind/era/world filters would exclude it
+  // (e.g. searching for a battle while battles are chip-filtered out, or
+  // while zoomed far out where battles are normally hidden). The pin layer's
+  // `active` flag then keeps it visible at any zoom tier.
+  const visible = useMemo(() => {
+    if (!selected) return filtered;
+    if (filtered.some((e) => e.id === selected.id)) return filtered;
+    return [selected, ...filtered];
+  }, [filtered, selected]);
+
+  // NOTE: We intentionally do NOT drop `focus` when it's filtered out — the
+  // visibility override above keeps the selected result visible until the
+  // user clears the search or closes its preview.
+
 
   // ── Search navigation ────────────────────────────────────────────────
   const [suggestions, setSuggestions] = useState<AtlasSearchHit[]>([]);
