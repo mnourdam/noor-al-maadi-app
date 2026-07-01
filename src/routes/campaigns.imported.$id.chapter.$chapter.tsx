@@ -437,6 +437,9 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
 
 function ChapterCompletePanel(props: {
   campaignId: string;
+  campaignTitle?: string;
+  chapterId?: string;
+  chapterTitle?: string;
   xpEarned: number; coinsEarned: number; heartsLost: number;
   nextChapter: CampaignChapter | null;
 }) {
