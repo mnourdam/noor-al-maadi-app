@@ -217,26 +217,44 @@ export function AtlasControls({
           </button>
         </div>
 
-        {/* Suggestions / no-match (only shown after an explicit submit). */}
+        {/* Live suggestions — appear as the user types (debounced upstream). */}
         {suggestions.length > 0 && (
           <div className="flex flex-col gap-1 rounded-xl border border-amber-400/20 bg-slate-950/60 p-1.5">
             <div className="px-2 py-0.5 text-[10px] font-bold text-amber-200/80">
-              {suggestions.length === 1 ? "هل تقصد:" : "اقتراحات قريبة:"}
+              اقتراحات ({suggestions.length})
             </div>
-            {suggestions.map((h) => (
-              <button
-                key={h.entity.id}
-                type="button"
-                onClick={() => onPickSuggestion?.(h)}
-                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-right text-[12px] text-amber-50 hover:bg-amber-400/10"
-              >
-                <MapPin className="size-3.5 shrink-0 text-amber-300" />
-                <span className="truncate font-bold">{h.entity.name_ar}</span>
-                {h.entity.name_en && (
-                  <span className="ml-auto truncate text-[10px] text-amber-200/60">{h.entity.name_en}</span>
-                )}
-              </button>
-            ))}
+            {suggestions.map((h) => {
+              const period = periodForEntity(h.entity);
+              const kindColor = KIND_COLOR[h.entity.kind];
+              return (
+                <button
+                  key={h.entity.id}
+                  type="button"
+                  onClick={() => onPickSuggestion?.(h)}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-right text-[12px] text-amber-50 hover:bg-amber-400/10"
+                >
+                  <span
+                    aria-hidden
+                    className="inline-block size-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: kindColor }}
+                  />
+                  <span className="truncate font-bold">{h.entity.name_ar}</span>
+                  <span className="shrink-0 rounded-full border border-amber-400/20 bg-slate-950/60 px-1.5 py-0.5 text-[10px] font-bold text-amber-200/80">
+                    {KIND_LABEL_AR[h.entity.kind]}
+                  </span>
+                  {period && (
+                    <span className="hidden shrink-0 truncate text-[10px] text-amber-200/60 sm:inline">
+                      {PERIOD_LABEL[period] ?? period}
+                    </span>
+                  )}
+                  {h.entity.name_en && (
+                    <span className="ml-auto hidden truncate text-[10px] text-amber-200/50 sm:inline">
+                      {h.entity.name_en}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
         {noMatch && (
