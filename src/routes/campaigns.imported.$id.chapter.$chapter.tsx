@@ -38,6 +38,9 @@ import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    preview: s.preview === "draft" ? "draft" : undefined,
+  }),
   component: ImportedChapterPlayer,
   notFoundComponent: () => (
     <AppShell>
@@ -54,10 +57,22 @@ export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")
 
 function ImportedChapterPlayer() {
   const { id, chapter: chapterId } = useParams({ from: "/campaigns/imported/$id/chapter/$chapter" });
+  const search = useSearch({ from: "/campaigns/imported/$id/chapter/$chapter" });
+  const mode: "published" | "draft" = search.preview === "draft" ? "draft" : "published";
+  const queryClient = useQueryClient();
   const { data: campaign, isLoading: loading } = useQuery({
-    queryKey: ["campaign", id],
-    queryFn: () => fetchCampaignByIdOrSlug(id),
+    queryKey: ["campaign", id, mode],
+    queryFn: () => fetchCampaignByIdOrSlug(id, { mode }),
   });
+
+  useEffect(() => {
+    const off = onCampaignPublished((changedId) => {
+      if (changedId === id || changedId === campaign?.slug) {
+        queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      }
+    });
+    return off;
+  }, [id, campaign?.slug, queryClient]);
 
 
   const chapter: CampaignChapter | undefined = useMemo(
