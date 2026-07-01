@@ -44,8 +44,8 @@ export function AtlasIntroDialog({
   const persistDismissal = () => {
     try { window.localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
     try {
-      if (settings && typeof updateSettings === "function") {
-        updateSettings({ ...settings, atlasIntroDismissed: true } as typeof settings);
+      if (typeof updateSettings === "function") {
+        updateSettings({ atlasIntroDismissed: true });
       }
     } catch { /* ignore */ }
   };
