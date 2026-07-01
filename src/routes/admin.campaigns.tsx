@@ -189,21 +189,34 @@ function CampaignCard({ c, onView, onPublish, onArchive, onDuplicate, onDelete }
   const subtitle = (c.data?.subtitle ?? c.data?.description ?? "") as string;
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-amber-500/40">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 text-[10px] tracking-widest text-amber-300/80">
-            <StatusBadge status={c.status} />
-            <span className="text-slate-500">{c.slug || c.id}</span>
+      <Link
+        to="/admin/campaigns/$id/edit"
+        params={{ id: c.id } as any}
+        className="block"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] tracking-widest text-amber-300/80">
+              <StatusBadge status={c.status} />
+              <span className="text-slate-500">{c.slug || c.id}</span>
+            </div>
+            <h3 className="mt-1 truncate text-base font-bold text-amber-100 hover:text-amber-300">{c.title || "بدون عنوان"}</h3>
+            {subtitle && <p className="line-clamp-2 text-xs text-slate-400">{subtitle}</p>}
+            <p className="mt-1 text-[10px] text-slate-500">
+              {chapters} فصول · آخر تحديث {formatDate(c.updated_at)}
+            </p>
           </div>
-          <h3 className="mt-1 truncate text-base font-bold text-amber-100">{c.title || "بدون عنوان"}</h3>
-          {subtitle && <p className="line-clamp-2 text-xs text-slate-400">{subtitle}</p>}
-          <p className="mt-1 text-[10px] text-slate-500">
-            {chapters} فصول · آخر تحديث {formatDate(c.updated_at)}
-          </p>
         </div>
-      </div>
+      </Link>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        <Btn onClick={onView} icon={Eye} label="تفاصيل" />
+        <Link
+          to="/admin/campaigns/$id/edit"
+          params={{ id: c.id } as any}
+          className="inline-flex items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-200 hover:bg-amber-500/20"
+        >
+          <Eye className="h-3 w-3" /> تعديل
+        </Link>
+        <Btn onClick={onView} icon={ClipboardList} label="ملخص سريع" />
         <Btn onClick={onPublish} icon={c.status === "published" ? EyeOff : Eye}
           label={c.status === "published" ? "إلغاء النشر" : "نشر"} />
         <Btn onClick={onArchive} icon={Archive} label={c.status === "archived" ? "استرجاع" : "أرشفة"} />
