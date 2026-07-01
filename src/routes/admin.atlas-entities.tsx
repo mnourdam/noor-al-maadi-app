@@ -66,6 +66,9 @@ function AdminAtlasEntitiesPage() {
   const [encyclopedia, setEncyclopedia] = useState<EncyclopediaRef[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showLegacyKinds, setShowLegacyKinds] = useState(false);
+  const visibleRows = showLegacyKinds ? rows : rows.filter((r) => isLc1VisibleAtlasKind(r.kind));
+  const legacyCount = rows.length - rows.filter((r) => isLc1VisibleAtlasKind(r.kind)).length;
 
 
   const reload = async () => {
