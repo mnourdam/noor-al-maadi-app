@@ -127,9 +127,11 @@ function FeedbackThread() {
             </ul>
 
             {issue.status === "closed" ? (
-              <div className="rounded-2xl border border-white/10 bg-surface/40 p-4 text-center text-xs text-muted-foreground">
-                هذه المحادثة مغلقة. تواصل معنا عبر مساهمة جديدة إن احتجت.
-              </div>
+              <RatingPanel
+                issueId={issue.id}
+                initialRating={issue.player_rating ?? null}
+                onRated={() => void load()}
+              />
             ) : (
               <form onSubmit={onSend} className="rounded-2xl border border-white/10 bg-surface/60 p-3">
                 <textarea
