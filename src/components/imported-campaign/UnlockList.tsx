@@ -76,7 +76,7 @@ export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel }
         <ul className="space-y-2">
           {resolved.map((r) => {
             const label = resolveLabel(r, isLoading, debug);
-            const Icon = iconFor(r.type);
+            const TypeIcon = iconFor(r.type);
             return (
               <li key={r.raw}>
                 <button
@@ -96,7 +96,7 @@ export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel }
                     {label}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/40 px-2 py-0.5 text-[10px] text-foreground/85">
-                    <Icon className="size-3" strokeWidth={1.75} />
+                    <TypeIcon className="size-3" strokeWidth={1.75} />
                     {typeLabel(r.type)}
                   </span>
                 </button>
@@ -113,7 +113,7 @@ export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel }
     <div className="flex flex-wrap gap-2 text-[12px]">
       {resolved.map((r) => {
         const label = resolveLabel(r, isLoading, debug);
-        const Icon = iconFor(r.type);
+        const TypeIcon = iconFor(r.type);
         return (
           <span
             key={r.raw}
@@ -122,7 +122,7 @@ export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel }
             <LockOpen className="size-3 shrink-0 text-gold" strokeWidth={1.75} />
             <span className="truncate font-medium" title={label}>{label}</span>
             <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-black/40 px-1.5 py-0.5 text-[10px] text-foreground/80">
-              <Icon className="size-2.5" strokeWidth={1.75} />
+              <TypeIcon className="size-2.5" strokeWidth={1.75} />
               {typeLabel(r.type)}
             </span>
           </span>
