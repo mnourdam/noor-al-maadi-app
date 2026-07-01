@@ -164,6 +164,9 @@ function AtlasReviewPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
+      // Atlas is geographic-only. Hide legacy artifact/figure/event/route rows
+      // by default so they never re-surface in normal review workflows.
+      if (!showLegacyKinds && !isLc1VisibleAtlasKind(r.kind)) return false;
       if (showRemoved) {
         if (r.status !== "retired") return false;
       } else {
@@ -178,11 +181,14 @@ function AtlasReviewPage() {
       if (q && !`${r.name_ar} ${r.name_en ?? ""} ${r.slug}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [rows, search, kind, era, batch, onlyUnverified, showRemoved]);
+  }, [rows, search, kind, era, batch, onlyUnverified, showRemoved, showLegacyKinds]);
 
-  // Duplicate detection — clusters across the full atlas dataset (not the
-  // review filter) so admins always see the true duplicate surface.
-  const duplicateGroups = useMemo(() => findAtlasDuplicateGroups(rows), [rows]);
+  // Duplicate detection — clusters across the geographic atlas dataset.
+  const geoRows = useMemo(
+    () => (showLegacyKinds ? rows : rows.filter((r) => isLc1VisibleAtlasKind(r.kind))),
+    [rows, showLegacyKinds],
+  );
+  const duplicateGroups = useMemo(() => findAtlasDuplicateGroups(geoRows), [geoRows]);
   const filteredDupGroups = useMemo(() => {
     const q = normalizeArabic(dupSearch);
     return duplicateGroups.filter((g) => {
