@@ -9,8 +9,8 @@
 // ============================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link, useParams, useNavigate, notFound } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams, useNavigate, useSearch, notFound } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart, X as XIcon } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
@@ -18,7 +18,7 @@ import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 
 import type { Campaign, CampaignChapter } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
-import { fetchCampaignByIdOrSlug } from "@/lib/supabaseCampaigns";
+import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
 import {
   getChapterProgress, getCampaignProgress, recordActivity, isChapterUnlocked,
 } from "@/lib/importedCampaignProgress";
