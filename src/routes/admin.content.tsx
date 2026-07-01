@@ -391,7 +391,6 @@ function DailyFactsTab() {
   };
 
   const remove = async (r: DailyFact) => {
-    if (!confirm(`حذف المعلومة: "${r.title}"؟`) && false) return; // no-op guard; real per-row deletion below
     if (!window.confirm(`حذف المعلومة: "${r.title}"؟`)) return;
     const { error } = await supabase.from("daily_facts" as any).delete().eq("id", r.id);
     if (error) setMsg({ type: "err", text: `فشل الحذف: ${error.message}` });
