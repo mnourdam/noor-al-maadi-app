@@ -496,6 +496,15 @@ function AtlasReviewPage() {
                     placeholder="بحث بالاسم أو slug..."
                     className="min-w-0 flex-1 bg-transparent text-[12px] outline-none" />
                 </div>
+                {searchDupWarning && (
+                  <button
+                    onClick={() => { setDupSearch(search); setTab("duplicates"); }}
+                    className="flex w-full items-center gap-1.5 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-right text-[11px] font-bold text-amber-200 hover:bg-amber-500/20"
+                  >
+                    <Copy className="size-3.5" />
+                    تم العثور على {searchDupWarning.total} عناصر متشابهة — راجع التكرارات
+                  </button>
+                )}
                 <div className="grid grid-cols-2 gap-1.5 text-[11px]">
                   <select value={kind} onChange={(e) => setKind(e.target.value as any)}
                     className="rounded border border-stone-700 bg-stone-950 px-2 py-1">
