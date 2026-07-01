@@ -21,6 +21,17 @@ function FeedbackThread() {
   const [error, setError] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
+
+  const { otherOnline, otherTyping, markTyping } = useFeedbackPresence({
+    issueId: id,
+    role: "player",
+    userId,
+  });
 
   const load = useCallback(async () => {
     try {
