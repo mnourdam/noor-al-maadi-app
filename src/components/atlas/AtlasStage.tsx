@@ -128,6 +128,8 @@ export function AtlasStage({
 
   // ── Pointer drag (active from first paint, including scale=1) ─────────
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const didDragRef = useRef(false);
   const pinch = useRef<
     { dist: number; scale: number; midX: number; midY: number; tx: number; ty: number } | null
   >(null);
@@ -138,6 +140,8 @@ export function AtlasStage({
     wrapRef.current?.setPointerCapture?.(e.pointerId);
     const v = viewRef.current;
     drag.current = { x: e.clientX, y: e.clientY, tx: v.tx, ty: v.ty };
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    didDragRef.current = false;
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current) return;
@@ -145,9 +149,13 @@ export function AtlasStage({
       drag.current = null;
       return;
     }
-    // Pan in user units: 1 CSS px of finger movement ⇒ 1 CSS px of map
-    // movement on screen ⇒ (1 / unitsPerPx) user units of translate.
-    // PAN_GAIN keeps a slight Google/Apple-Maps-style acceleration.
+    if (dragStart.current) {
+      const ddx = e.clientX - dragStart.current.x;
+      const ddy = e.clientY - dragStart.current.y;
+      if (!didDragRef.current && ddx * ddx + ddy * ddy > 36) {
+        didDragRef.current = true;
+      }
+    }
     const w = wrapSizeRef.current.w;
     const h = wrapSizeRef.current.h;
     const unitsPerPx = unitsPerPxFor(w, h);
@@ -162,8 +170,16 @@ export function AtlasStage({
   };
   const onPointerUp = () => {
     drag.current = null;
-    // Re-clamp tightly on release.
+    dragStart.current = null;
     setView((v) => clamp(v));
+  };
+
+  // Suppress synthetic click on pins when the user was actually panning.
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (didDragRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
   };
 
 
