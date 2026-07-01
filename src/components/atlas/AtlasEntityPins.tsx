@@ -143,8 +143,9 @@ const AtlasPin = memo(function AtlasPin({
     <g
       transform={`translate(${x} ${y})`}
       className="cursor-pointer"
-      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => {
+        // Drag-vs-tap: AtlasStage cancels this click via capture phase when
+        // the pointer moved more than the tap threshold.
         e.stopPropagation();
         onSelect(entity);
       }}
@@ -152,16 +153,16 @@ const AtlasPin = memo(function AtlasPin({
         transition: "transform 180ms cubic-bezier(0.22, 1, 0.36, 1)",
       }}
     >
-      {/* Soft golden glow — only on selection. No SVG filters (Android perf). */}
+      {/* Soft golden glow — decorative, must not block map drag. */}
       {active && !disableGlow && (
-        <>
+        <g style={{ pointerEvents: "none" }}>
           <circle r={size * 2.4} fill="oklch(0.86 0.16 82)" opacity={0.14} />
           <circle r={size * 1.55} fill="oklch(0.92 0.14 82)" opacity={0.22} />
-        </>
+        </g>
       )}
-      {/* Engraved shadow pass — same glyph offset down, very low opacity. */}
+      {/* Engraved shadow pass — decorative only. */}
       {!disableGlow && (
-        <g transform={`translate(0 ${size * 0.18})`} opacity={0.22}>
+        <g transform={`translate(0 ${size * 0.18})`} opacity={0.22} style={{ pointerEvents: "none" }}>
           <AtlasKindGlyph kind={entity.kind} size={size} fill={rim} stroke={rim} />
         </g>
       )}
@@ -177,7 +178,7 @@ const AtlasPin = memo(function AtlasPin({
           stroke="oklch(0.18 0.04 60)"
           strokeWidth={0.2 * inv * S}
           paintOrder="stroke"
-          style={{ fontFamily: "var(--font-display)" }}
+          style={{ fontFamily: "var(--font-display)", pointerEvents: "none" }}
         >
           {entity.name_ar}
         </text>
