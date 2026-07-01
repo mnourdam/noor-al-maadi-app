@@ -15,6 +15,8 @@ import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
 import {
   KIND_LABEL_AR, STATUS_LABEL_AR,
+  LC1_ATLAS_VISIBLE_KINDS,
+  isLc1VisibleAtlasKind,
   listAllAtlasEntities, updateAtlasEntity,
   type AtlasEntityKind, type AtlasEntityRow,
 } from "@/lib/atlas-entities";
@@ -34,17 +36,15 @@ const RASTER = ATLAS_V1_PIXEL_SIZE;
 const ERA_LABEL: Record<string, string> = Object.fromEntries(ERAS.map((e) => [e.id, e.name]));
 const eraLabel = (id: string | null | undefined) => (id ? ERA_LABEL[id] ?? id : "—");
 
-// Chip filter list for the Duplicates tab. Labels come from the beta-QA brief;
-// values map onto the atlas_entity_kind enum. Kinds without a natural chip
-// (e.g. route_point) stay reachable via the "all" chip.
+// Atlas is a dedicated *geographic* atlas: only these kinds ever appear in
+// the review workflows. Legacy non-geographic rows stay in the DB but are
+// hidden by default (toggle "إظهار أنواع قديمة" to inspect them).
+const ATLAS_KIND_ORDER: AtlasEntityKind[] = ["region", "place", "battle"];
 const DUP_KIND_FILTERS: Array<{ value: AtlasEntityKind | "all"; label: string }> = [
   { value: "all", label: "الكل" },
-  { value: "battle", label: "المعارك" },
+  { value: "region", label: "الدول والأقاليم" },
   { value: "place", label: "المدن" },
-  { value: "figure_marker", label: "المعالم" },
-  { value: "artifact_site", label: "الآثار" },
-  { value: "event", label: "الأحداث" },
-  { value: "region", label: "الأقاليم" },
+  { value: "battle", label: "المعارك" },
 ];
 
 export const Route = createFileRoute("/admin/atlas-review")({
