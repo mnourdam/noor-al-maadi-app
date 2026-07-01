@@ -385,12 +385,33 @@ function AtlasReviewPage() {
     }
   };
 
+  // Duplicate cleanup: keep the picked atlas row visible and soft-remove
+  // every other row in the same group. Never touches encyclopedia content.
+  const [keepBusyGroup, setKeepBusyGroup] = useState<string | null>(null);
+  const keepOnlyInGroup = async (group: AtlasDuplicateGroup, keepId: string) => {
+    const others = group.items.filter((it) => it.id !== keepId && it.status !== "retired");
+    if (others.length === 0) { toast.info("لا توجد نسخ إضافية لإزالتها."); return; }
+    if (!confirm(`إبقاء عنصر واحد وإزالة ${others.length} من الأطلس؟ لن تتأثر الموسوعة.`)) return;
+    setKeepBusyGroup(group.key);
+    try {
+      for (const it of others) {
+        const updated = await updateAtlasEntity(it.id, { status: "retired" });
+        setRows((rs) => rs.map((r) => (r.id === it.id ? updated : r)));
+      }
+      toast.success(`أُبقي عنصر واحد وأُزيل ${others.length} من الأطلس.`);
+    } catch (e: any) {
+      toast.error(`فشل الإزالة: ${e.message ?? e}`);
+    } finally {
+      setKeepBusyGroup(null);
+    }
+  };
+
   const dirtyCount = Object.keys(drafts).length;
 
   return (
     <div dir="rtl" className="fixed inset-0 flex flex-col bg-stone-950 text-stone-100">
       {/* Header */}
-      <header className="flex items-center gap-2 border-b border-stone-800 bg-stone-900 px-3 py-2">
+      <header className="flex flex-wrap items-center gap-2 border-b border-stone-800 bg-stone-900 px-3 py-2">
         <Link to="/admin" className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 text-[11px] hover:bg-stone-700">
           <ArrowRight className="size-3.5" /> الإدارة
         </Link>
@@ -398,6 +419,23 @@ function AtlasReviewPage() {
         <span className="text-[11px] text-stone-400">
           {filtered.length} عنصر · {dirtyCount} تغيير غير محفوظ
         </span>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <span className="rounded border border-stone-700 bg-stone-950 px-2 py-0.5 text-stone-300">
+            الإجمالي: <b className="text-amber-100">{rows.length}</b>
+          </span>
+          <button
+            onClick={() => setTab("duplicates")}
+            className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-200 hover:bg-amber-500/20"
+            title="عرض التكرارات"
+          >
+            <Copy className="ml-1 inline size-3" />
+            {duplicateGroups.length} مجموعة · {duplicateItemCount} عنصر مكرر
+          </button>
+          <span className="rounded border border-rose-900/60 bg-rose-950/30 px-2 py-0.5 text-rose-200">
+            مُزال: <b>{removedCount}</b>
+          </span>
+        </div>
+
         <div className="ml-auto flex items-center gap-1.5 text-[11px]">
           <button onClick={reload} className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-2 py-1 hover:bg-stone-700">
             <RefreshCw className="size-3.5" /> تحديث
