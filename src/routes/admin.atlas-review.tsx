@@ -767,7 +767,7 @@ function AtlasReviewPage() {
                       </div>
                       <ul className="space-y-1">
                         {g.items.map((it) => (
-                          <li key={it.id} className={`rounded border p-1.5 text-[11px] ${it.status === "retired" ? "border-rose-900/50 bg-rose-950/20 opacity-70" : "border-stone-700 bg-stone-950"}`}>
+                          <li key={it.id} className={`rounded border p-1.5 text-[11px] ${it.status === "retired" ? "border-rose-900/50 bg-rose-950/20 opacity-70" : "border-stone-700 bg-stone-950"} ${dupKind !== "all" && it.kind !== dupKind ? "opacity-50" : ""}`}>
                             <div className="flex items-start gap-1.5">
                               <button
                                 onClick={() => { setFocusedId(it.id); setTab("review"); if (it.aps_x != null && it.aps_y != null) centerOn(it, { x: it.aps_x, y: it.aps_y }, scale, wrapSize, setTx, setTy); }}
