@@ -72,8 +72,8 @@ function FeedbackBanner({ kind, text }: { kind: "ok" | "err"; text?: string }) {
 function ContextBlock({ text }: { text?: string }) {
   if (!text) return null;
   return (
-    <div className="parchment-dark mb-4 rounded-2xl border border-gold/25 p-4 text-[12px] leading-7 text-foreground/90">
-      {text}
+    <div className="parchment-dark mb-4 rounded-2xl border border-gold/25 p-4">
+      <RichReadingText text={text} size="sm" />
     </div>
   );
 }
