@@ -306,3 +306,65 @@ function buildJumpLink(ctx: Record<string, unknown>): string | null {
   if (typeof ctx.route === "string" && ctx.route.startsWith("/")) return ctx.route;
   return null;
 }
+
+function formatDuration(seconds: number): string {
+  if (!seconds || !isFinite(seconds) || seconds <= 0) return "—";
+  const h = seconds / 3600;
+  if (h < 1) return `${Math.max(1, Math.round(seconds / 60))} د`;
+  if (h < 48) return `${h.toFixed(1)} س`;
+  return `${(h / 24).toFixed(1)} ي`;
+}
+
+function StatsDashboard({ refreshKey }: { refreshKey: number }) {
+  const [stats, setStats] = useState<AdminFeedbackStats | null>(null);
+  useEffect(() => {
+    adminFeedbackStats().then(setStats).catch(() => setStats(null));
+  }, [refreshKey]);
+
+  const counts = stats?.counts ?? {};
+  const total = STATUS_ORDER.reduce((sum, s) => sum + (counts[s] ?? 0), 0);
+
+  return (
+    <div className="mb-4 rounded-2xl border border-white/10 bg-surface/60 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="font-display text-sm font-bold text-foreground">لوحة القيادة</p>
+        <span className="text-[10px] text-muted-foreground">إجمالي: {total}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {STATUS_ORDER.map((s) => {
+          const st = STATUS_LABELS[s];
+          const n = counts[s] ?? 0;
+          return (
+            <div key={s} className={`rounded-xl border p-3 ${st.chip}`}>
+              <div className="inline-flex items-center gap-1.5 text-[10px] font-bold opacity-80">
+                <span className={`size-1.5 rounded-full ${st.dot}`} /> {st.label}
+              </div>
+              <p className="mt-1 font-display text-2xl font-bold">{n}</p>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <MetricPill icon={Clock} label="متوسط أول رد" value={formatDuration(stats?.avg_first_response_seconds ?? 0)} />
+        <MetricPill icon={CheckCircle2} label="متوسط زمن الحل" value={formatDuration(stats?.avg_resolution_seconds ?? 0)} />
+        <MetricPill
+          icon={Star}
+          label="جودة الدعم"
+          value={stats && stats.rating_count > 0 ? `${stats.avg_rating.toFixed(1)} / 5 · ${stats.rating_count} تقييم` : "—"}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MetricPill({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-background/40 p-3">
+      <div className="grid size-8 place-items-center rounded-lg bg-gold/15 text-gold"><Icon className="size-4" /></div>
+      <div className="min-w-0">
+        <p className="text-[10px] text-muted-foreground">{label}</p>
+        <p className="font-display text-sm font-bold text-foreground">{value}</p>
+      </div>
+    </div>
+  );
+}
