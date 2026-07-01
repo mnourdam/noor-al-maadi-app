@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { parseHistoricalPeriodYear } from "@/lib/campaignChronology";
 
-export const Route = createFileRoute("/admin/campaigns")({
+export const Route = createFileRoute("/admin/campaigns/")({
   head: () => ({
     meta: [
       { title: "إدارة الحملات — إرث" },

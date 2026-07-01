@@ -84,7 +84,6 @@ import { Route as AdminContentAutoHealRouteImport } from './routes/admin.content
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminCommunityRouteImport } from './routes/admin.community'
 import { Route as AdminCanonicalDuplicatesRouteImport } from './routes/admin.canonical-duplicates'
-import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as AdminCampaignRelationshipsRouteImport } from './routes/admin.campaign-relationships'
 import { Route as AdminCampaignOrderRouteImport } from './routes/admin.campaign-order'
 import { Route as AdminAtlasReviewRouteImport } from './routes/admin.atlas-review'
@@ -95,6 +94,7 @@ import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
 import { Route as AdminEncyclopediaCleanupIndexRouteImport } from './routes/admin.encyclopedia-cleanup.index'
+import { Route as AdminCampaignsIndexRouteImport } from './routes/admin.campaigns.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as GamesModeSlugRouteImport } from './routes/games.$mode.$slug'
 import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
@@ -497,11 +497,6 @@ const AdminCanonicalDuplicatesRoute =
     path: '/admin/canonical-duplicates',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AdminCampaignsRoute = AdminCampaignsRouteImport.update({
-  id: '/admin/campaigns',
-  path: '/admin/campaigns',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminCampaignRelationshipsRoute =
   AdminCampaignRelationshipsRouteImport.update({
     id: '/admin/campaign-relationships',
@@ -554,6 +549,11 @@ const AdminEncyclopediaCleanupIndexRoute =
     path: '/',
     getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
+const AdminCampaignsIndexRoute = AdminCampaignsIndexRouteImport.update({
+  id: '/admin/campaigns/',
+  path: '/admin/campaigns/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
   path: '/lovable/email/suppression',
@@ -654,9 +654,9 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminCampaignsIdEditRoute = AdminCampaignsIdEditRouteImport.update({
-  id: '/$id/edit',
-  path: '/$id/edit',
-  getParentRoute: () => AdminCampaignsRoute,
+  id: '/admin/campaigns/$id/edit',
+  path: '/admin/campaigns/$id/edit',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CampaignsImportedIdChapterChapterRoute =
   CampaignsImportedIdChapterChapterRouteImport.update({
@@ -699,7 +699,6 @@ export interface FileRoutesByFullPath {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
-  '/admin/campaigns': typeof AdminCampaignsRouteWithChildren
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
   '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
@@ -762,6 +761,7 @@ export interface FileRoutesByFullPath {
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/games/$mode/$slug': typeof GamesModeSlugRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/admin/campaigns/': typeof AdminCampaignsIndexRoute
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
@@ -805,7 +805,6 @@ export interface FileRoutesByTo {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
-  '/admin/campaigns': typeof AdminCampaignsRouteWithChildren
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
   '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
@@ -866,6 +865,7 @@ export interface FileRoutesByTo {
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/games/$mode/$slug': typeof GamesModeSlugRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/admin/campaigns': typeof AdminCampaignsIndexRoute
   '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games': typeof AdminGamesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
@@ -912,7 +912,6 @@ export interface FileRoutesById {
   '/admin/atlas-review': typeof AdminAtlasReviewRoute
   '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
-  '/admin/campaigns': typeof AdminCampaignsRouteWithChildren
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
   '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
@@ -975,6 +974,7 @@ export interface FileRoutesById {
   '/encyclopedia/type/$type': typeof EncyclopediaTypeTypeRoute
   '/games/$mode/$slug': typeof GamesModeSlugRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/admin/campaigns/': typeof AdminCampaignsIndexRoute
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
@@ -1022,7 +1022,6 @@ export interface FileRouteTypes {
     | '/admin/atlas-review'
     | '/admin/campaign-order'
     | '/admin/campaign-relationships'
-    | '/admin/campaigns'
     | '/admin/canonical-duplicates'
     | '/admin/community'
     | '/admin/content'
@@ -1085,6 +1084,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/type/$type'
     | '/games/$mode/$slug'
     | '/lovable/email/suppression'
+    | '/admin/campaigns/'
     | '/admin/encyclopedia-cleanup/'
     | '/admin/games/'
     | '/admin/campaigns/$id/edit'
@@ -1128,7 +1128,6 @@ export interface FileRouteTypes {
     | '/admin/atlas-review'
     | '/admin/campaign-order'
     | '/admin/campaign-relationships'
-    | '/admin/campaigns'
     | '/admin/canonical-duplicates'
     | '/admin/community'
     | '/admin/content'
@@ -1189,6 +1188,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/type/$type'
     | '/games/$mode/$slug'
     | '/lovable/email/suppression'
+    | '/admin/campaigns'
     | '/admin/encyclopedia-cleanup'
     | '/admin/games'
     | '/admin/campaigns/$id/edit'
@@ -1234,7 +1234,6 @@ export interface FileRouteTypes {
     | '/admin/atlas-review'
     | '/admin/campaign-order'
     | '/admin/campaign-relationships'
-    | '/admin/campaigns'
     | '/admin/canonical-duplicates'
     | '/admin/community'
     | '/admin/content'
@@ -1297,6 +1296,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/type/$type'
     | '/games/$mode/$slug'
     | '/lovable/email/suppression'
+    | '/admin/campaigns/'
     | '/admin/encyclopedia-cleanup/'
     | '/admin/games/'
     | '/admin/campaigns/$id/edit'
@@ -1343,7 +1343,6 @@ export interface RootRouteChildren {
   AdminAtlasReviewRoute: typeof AdminAtlasReviewRoute
   AdminCampaignOrderRoute: typeof AdminCampaignOrderRoute
   AdminCampaignRelationshipsRoute: typeof AdminCampaignRelationshipsRoute
-  AdminCampaignsRoute: typeof AdminCampaignsRouteWithChildren
   AdminCanonicalDuplicatesRoute: typeof AdminCanonicalDuplicatesRoute
   AdminCommunityRoute: typeof AdminCommunityRoute
   AdminContentRoute: typeof AdminContentRoute
@@ -1393,6 +1392,8 @@ export interface RootRouteChildren {
   WorldsIndexRoute: typeof WorldsIndexRoute
   GamesModeSlugRoute: typeof GamesModeSlugRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  AdminCampaignsIndexRoute: typeof AdminCampaignsIndexRoute
+  AdminCampaignsIdEditRoute: typeof AdminCampaignsIdEditRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -1927,13 +1928,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCanonicalDuplicatesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/campaigns': {
-      id: '/admin/campaigns'
-      path: '/admin/campaigns'
-      fullPath: '/admin/campaigns'
-      preLoaderRoute: typeof AdminCampaignsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/campaign-relationships': {
       id: '/admin/campaign-relationships'
       path: '/admin/campaign-relationships'
@@ -2003,6 +1997,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/encyclopedia-cleanup/'
       preLoaderRoute: typeof AdminEncyclopediaCleanupIndexRouteImport
       parentRoute: typeof AdminEncyclopediaCleanupRoute
+    }
+    '/admin/campaigns/': {
+      id: '/admin/campaigns/'
+      path: '/admin/campaigns'
+      fullPath: '/admin/campaigns/'
+      preLoaderRoute: typeof AdminCampaignsIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
@@ -2132,10 +2133,10 @@ declare module '@tanstack/react-router' {
     }
     '/admin/campaigns/$id/edit': {
       id: '/admin/campaigns/$id/edit'
-      path: '/$id/edit'
+      path: '/admin/campaigns/$id/edit'
       fullPath: '/admin/campaigns/$id/edit'
       preLoaderRoute: typeof AdminCampaignsIdEditRouteImport
-      parentRoute: typeof AdminCampaignsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/campaigns/imported/$id/chapter/$chapter': {
       id: '/campaigns/imported/$id/chapter/$chapter'
@@ -2192,18 +2193,6 @@ const EncyclopediaRouteChildren: EncyclopediaRouteChildren = {
 
 const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
   EncyclopediaRouteChildren,
-)
-
-interface AdminCampaignsRouteChildren {
-  AdminCampaignsIdEditRoute: typeof AdminCampaignsIdEditRoute
-}
-
-const AdminCampaignsRouteChildren: AdminCampaignsRouteChildren = {
-  AdminCampaignsIdEditRoute: AdminCampaignsIdEditRoute,
-}
-
-const AdminCampaignsRouteWithChildren = AdminCampaignsRoute._addFileChildren(
-  AdminCampaignsRouteChildren,
 )
 
 interface AdminEncyclopediaCleanupRouteChildren {
@@ -2281,7 +2270,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAtlasReviewRoute: AdminAtlasReviewRoute,
   AdminCampaignOrderRoute: AdminCampaignOrderRoute,
   AdminCampaignRelationshipsRoute: AdminCampaignRelationshipsRoute,
-  AdminCampaignsRoute: AdminCampaignsRouteWithChildren,
   AdminCanonicalDuplicatesRoute: AdminCanonicalDuplicatesRoute,
   AdminCommunityRoute: AdminCommunityRoute,
   AdminContentRoute: AdminContentRoute,
@@ -2331,6 +2319,8 @@ const rootRouteChildren: RootRouteChildren = {
   WorldsIndexRoute: WorldsIndexRoute,
   GamesModeSlugRoute: GamesModeSlugRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  AdminCampaignsIndexRoute: AdminCampaignsIndexRoute,
+  AdminCampaignsIdEditRoute: AdminCampaignsIdEditRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
