@@ -190,7 +190,17 @@ function AdminCommunity() {
                               <span className="h-2 w-2 shrink-0 rounded-full bg-rose-400" title="جديد" />
                             )}
                             <div className="min-w-0">
-                              <p className="truncate font-medium text-slate-100">{r.title}</p>
+                              <p className="truncate font-medium text-slate-100">
+                                {r.title}
+                                {r.player_rating != null && (
+                                  <span
+                                    className={`ms-2 inline-flex items-center gap-0.5 align-middle ${r.player_rating >= 4 ? "text-emerald-300" : "text-rose-300"}`}
+                                    title={`تقييم اللاعب: ${r.player_rating}/5`}
+                                  >
+                                    {r.player_rating >= 4 ? <ThumbsUp className="h-3 w-3" /> : <ThumbsDown className="h-3 w-3" />}
+                                  </span>
+                                )}
+                              </p>
                               <p className="truncate text-[11px] text-slate-500">{r.description}</p>
                             </div>
                           </div>
