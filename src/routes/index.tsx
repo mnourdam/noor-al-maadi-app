@@ -824,10 +824,10 @@ function HomeFull() {
       </section>
 
       {/* ============ 5. TODAY IN HISTORY ============ */}
-      {mounted && todayEvent && (
+      {mounted && todayEvents.length > 0 && (
         <Reveal>
           <div id="today-in-history" className="scroll-mt-24">
-            <OnThisDayCalendarCard event={todayEvent} />
+            <OnThisDayCalendarCard events={todayEvents} />
           </div>
         </Reveal>
       )}
