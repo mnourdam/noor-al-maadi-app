@@ -679,7 +679,7 @@ function ProgressTab({
     { icon: BookOpen, label: "قصص مُنهاة",     current: profile.storiesRead.length, goal: 60 },
     { icon: Hourglass,label: "خطوط زمنية",     current: profile.timelinesCompleted.length, goal: 30 },
     { icon: Compass,  label: "قرارات",         current: profile.decisionsCompleted.length, goal: 40 },
-    { icon: MapIcon,  label: "مناطق على الخارطة", current: profile.regionsUnlocked.length, goal: 15 },
+    { icon: MapIcon,  label: "مناطق على الأطلس", current: profile.regionsUnlocked.length, goal: 15 },
     { icon: ScrollText, label: "عصور مفتوحة", current: profile.unlockedEras.length, goal: 11 },
     { icon: Landmark, label: "آثار في المتحف", current: profile.artifactsFound.length, goal: 100 },
     { icon: Users2,   label: "شخصيات",         current: profile.charactersUnlocked.length, goal: 60 },
