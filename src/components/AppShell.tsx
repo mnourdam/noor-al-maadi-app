@@ -44,7 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {!androidStable && isSectionEnabled("audio") && <AudioInitializer />}
         {!androidStable && isSectionEnabled("friendPoller") && <FriendNotificationsPoller />}
         {!androidStable && isSectionEnabled("backNavGuard") && <BackNavigationGuard />}
-        <div className="section-flow relative z-10 flex-1">
+        <div className="section-flow relative z-20 flex-1">
           <div key={pathname} className="motion-page">{children}</div>
         </div>
         <nav
