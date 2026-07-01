@@ -27,6 +27,9 @@ import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/")({
   head: () => ({ meta: [{ title: "حملة تاريخية — إرث" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    preview: s.preview === "draft" ? "draft" : undefined,
+  }),
   component: ImportedCampaignOverview,
   notFoundComponent: () => (
     <AppShell>
