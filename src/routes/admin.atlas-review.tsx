@@ -333,6 +333,25 @@ function AtlasReviewPage() {
   const selectAllVisible = () => setSelected(new Set(filtered.map((r) => r.id)));
   const clearSelection = () => setSelected(new Set());
 
+  // Soft-remove an atlas marker only. Does NOT touch the linked
+  // encyclopedia_entities row — the article and its content are preserved.
+  // We flip status='retired'; player Atlas only exposes published+verified.
+  const confirmRemoveFromAtlas = async () => {
+    const row = removeTarget;
+    if (!row) return;
+    setRemoving(true);
+    try {
+      const updated = await updateAtlasEntity(row.id, { status: "retired" });
+      setRows((rs) => rs.map((r) => (r.id === row.id ? updated : r)));
+      setRemoveTarget(null);
+      toast.success("أُزيل من الأطلس. محتوى الموسوعة لم يتغيّر.");
+    } catch (e: any) {
+      toast.error(`فشل الإزالة: ${e.message ?? e}`);
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   const dirtyCount = Object.keys(drafts).length;
 
   return (
