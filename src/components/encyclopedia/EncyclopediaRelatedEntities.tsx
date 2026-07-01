@@ -55,16 +55,14 @@ export function EncyclopediaRelatedEntities({ related }: { related?: RelatedEnti
             </p>
             <div className="flex flex-wrap gap-1.5">
               {(related[k] as RelatedRef[]).map((ref, i) => (
-                <Link
+                <span
                   key={`${ref.slug}-${i}`}
-                  to="/encyclopedia/entity/$id"
-                  params={{ id: ref.slug }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-black/30 px-3 py-1 text-[11px] text-foreground/90 transition hover:border-gold/60 hover:bg-gold/10 hover:text-gold"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-black/30 px-3 py-1 text-[11px] text-foreground/90 select-none"
                   title={ref.note}
                 >
                   <span className="size-1 rounded-full bg-gold/70" />
                   <span className="truncate max-w-[200px]">{ref.label ?? ref.slug}</span>
-                </Link>
+                </span>
               ))}
             </div>
           </div>
