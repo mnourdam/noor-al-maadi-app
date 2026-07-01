@@ -437,8 +437,13 @@ function AtlasReviewPage() {
                     {batches.map((b) => <option key={b} value={b}>{b}</option>)}
                   </select>
                   <label className="col-span-2 flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1">
-                    <input type="checkbox" checked={onlyUnverified} onChange={(e) => setOnlyUnverified(e.target.checked)} />
-                    <span>غير مؤكّد فقط</span>
+                    <input type="checkbox" checked={onlyUnverified} disabled={showRemoved}
+                      onChange={(e) => setOnlyUnverified(e.target.checked)} />
+                    <span className={showRemoved ? "opacity-50" : ""}>غير مؤكّد فقط</span>
+                  </label>
+                  <label className="col-span-2 flex items-center gap-2 rounded border border-rose-900/60 bg-rose-950/30 px-2 py-1 text-rose-200">
+                    <input type="checkbox" checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} />
+                    <span>عرض المُزال من الأطلس فقط</span>
                   </label>
                 </div>
               </div>
