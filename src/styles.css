@@ -1057,3 +1057,47 @@ html.perf-lite .motion-shake { animation-duration: 220ms !important; }
   line-height: revert !important;
 }
 
+/* =========================================================================
+   Native-app polish — player-facing scope only
+   -------------------------------------------------------------------------
+   Applied when <body data-app-scope="player"> is set by AppShell. Admin
+   pages never set this flag, so text selection, copy/paste, tooltips, and
+   native context menus keep working normally in the admin console.
+   ========================================================================= */
+
+body[data-app-scope="player"],
+body[data-app-scope="player"] * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body[data-app-scope="player"] {
+  overscroll-behavior: none;
+}
+
+/* Suppress iOS/Android long-press previews and drag ghosts on interactive
+   elements and imagery in the player app. */
+body[data-app-scope="player"] a,
+body[data-app-scope="player"] button,
+body[data-app-scope="player"] img,
+body[data-app-scope="player"] svg,
+body[data-app-scope="player"] [role="button"],
+body[data-app-scope="player"] [data-card] {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+/* Real editable fields must still allow selection, caret handles, and paste. */
+body[data-app-scope="player"] input,
+body[data-app-scope="player"] textarea,
+body[data-app-scope="player"] select,
+body[data-app-scope="player"] [contenteditable="true"],
+body[data-app-scope="player"] [data-allow-select="true"],
+body[data-app-scope="player"] [data-allow-select="true"] * {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
