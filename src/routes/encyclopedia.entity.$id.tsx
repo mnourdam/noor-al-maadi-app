@@ -184,6 +184,29 @@ function EntityPage() {
     ? buildContextBlocks(entity, relatedQuery.data ?? [])
     : [];
 
+  // Atlas deep-link — surface a "على الأطلس" button only when this
+  // encyclopedia entity is linked to a published + verified Atlas record.
+  const atlasLinkQuery = useQuery({
+    queryKey: ["encyclopedia", "atlas-link", entity?.id ?? ""],
+    enabled: !!entity?.id,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      if (!entity?.id) return null;
+      const { data, error } = await supabase
+        .from("atlas_entities")
+        .select("id, aps_x, aps_y")
+        .eq("encyclopedia_entity_id", entity.id)
+        .eq("status", "published")
+        .eq("aps_verified", true)
+        .limit(1)
+        .maybeSingle();
+      if (error) return null;
+      if (!data || data.aps_x == null || data.aps_y == null) return null;
+      return data as { id: string; aps_x: number; aps_y: number };
+    },
+  });
+  const atlasLink = atlasLinkQuery.data ?? null;
+
   if (query.isLoading) {
     return (
       <AppShell>
