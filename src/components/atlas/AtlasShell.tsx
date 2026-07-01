@@ -7,7 +7,9 @@
 // URL state: ?focus, ?kind, ?era, ?world are deep-linkable.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Loader2, Map as MapIcon } from "lucide-react";
+import { ChevronRight, Info, Loader2, Map as MapIcon } from "lucide-react";
+import { AtlasIntroDialog, hasDismissedAtlasIntro } from "./AtlasIntroDialog";
+import { useProfile } from "@/lib/profile";
 import { AtlasStage } from "./AtlasStage";
 import {
   AtlasControls,
