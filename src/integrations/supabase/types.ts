@@ -47,33 +47,93 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_campaigns: {
+      admin_campaign_versions: {
         Row: {
+          campaign_id: string
           created_at: string
           data: Json
+          editor_email: string | null
+          editor_id: string | null
           id: string
+          note: string | null
+          slug: string | null
+          status: string | null
+          title: string | null
+          version: number
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          data: Json
+          editor_email?: string | null
+          editor_id?: string | null
+          id?: string
+          note?: string | null
+          slug?: string | null
+          status?: string | null
+          title?: string | null
+          version: number
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          data?: Json
+          editor_email?: string | null
+          editor_id?: string | null
+          id?: string
+          note?: string | null
+          slug?: string | null
+          status?: string | null
+          title?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
+      admin_campaigns: {
+        Row: {
+          content_version: number
+          created_at: string
+          data: Json
+          draft_data: Json | null
+          has_unpublished_changes: boolean
+          id: string
+          last_editor_email: string | null
+          published_at: string | null
           slug: string | null
           status: string
           title: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          content_version?: number
           created_at?: string
           data: Json
+          draft_data?: Json | null
+          has_unpublished_changes?: boolean
           id: string
+          last_editor_email?: string | null
+          published_at?: string | null
           slug?: string | null
           status?: string
           title: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          content_version?: number
           created_at?: string
           data?: Json
+          draft_data?: Json | null
+          has_unpublished_changes?: boolean
           id?: string
+          last_editor_email?: string | null
+          published_at?: string | null
           slug?: string | null
           status?: string
           title?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -1588,7 +1648,18 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_campaign_progress_stats: { Args: { p_id: string }; Returns: Json }
       admin_feedback_stats: { Args: never; Returns: Json }
+      admin_list_campaign_versions: {
+        Args: { p_id: string }
+        Returns: {
+          created_at: string
+          editor_email: string
+          note: string
+          title: string
+          version: number
+        }[]
+      }
       admin_list_feedback_issues: {
         Args: {
           p_category?: string
@@ -1616,15 +1687,32 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: Json
       }
+      admin_publish_campaign: {
+        Args: { p_id: string; p_note?: string }
+        Returns: Json
+      }
       admin_resolve_segment: {
         Args: { p_segment_id: string }
         Returns: string[]
+      }
+      admin_restore_campaign_version: {
+        Args: { p_as_draft?: boolean; p_id: string; p_version: number }
+        Returns: Json
       }
       admin_revoke_role: {
         Args: {
           p_reason?: string
           p_role: Database["public"]["Enums"]["app_role"]
           p_user_id: string
+        }
+        Returns: Json
+      }
+      admin_save_campaign_draft: {
+        Args: {
+          p_draft_data: Json
+          p_id: string
+          p_slug: string
+          p_title: string
         }
         Returns: Json
       }
