@@ -149,6 +149,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           autoPushEnabled.current = true;
           setLastSyncAt(Date.now());
         }
+        // Merge server-side streak reward claims so they can never be
+        // re-claimed after a fresh install / cloud restore.
+        try { await hydrateClaimedStreakRewards(); } catch { /* noop */ }
 
         // Identity → never show "ضيف" once authenticated. Prefer display_name.
         const identityName = acc?.display_name?.trim()
