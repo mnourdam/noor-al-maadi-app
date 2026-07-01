@@ -1,7 +1,7 @@
 // Atlas search: Arabic normalization + weighted ranking, mirroring the
 // enhanced Encyclopedia search behavior (hamza tolerance, diacritics,
 // tatweel, alias/slug matching, partial/contains).
-import type { AtlasEntityRow, AtlasEntityKind } from "@/lib/atlas-entities";
+import { isLc1VisibleAtlasKind, type AtlasEntityRow, type AtlasEntityKind } from "@/lib/atlas-entities";
 
 const DIACRITICS = /[\u064B-\u065F\u0670\u06D6-\u06ED]/g;
 const TATWEEL = /\u0640/g;
@@ -123,6 +123,8 @@ export function searchAtlasEntities(
   if (!nq) return [];
   const hits: AtlasSearchHit[] = [];
   for (const e of entities) {
+    // Atlas is geographic-only: never surface artifacts/figures/events/routes.
+    if (!isLc1VisibleAtlasKind(e.kind)) continue;
     const s = scoreEntity(e, nq);
     if (!s) continue;
     hits.push({ entity: e, score: s.score, matchedField: s.field });

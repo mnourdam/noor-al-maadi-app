@@ -23,9 +23,11 @@ import {
   ATLAS_ENTITY_KINDS,
   ATLAS_ENTITY_STATUSES,
   KIND_LABEL_AR,
+  LC1_ATLAS_VISIBLE_KINDS,
   STATUS_LABEL_AR,
   createAtlasEntity,
   deleteAtlasEntity,
+  isLc1VisibleAtlasKind,
   listAllAtlasEntities,
   setAtlasEntityStatus,
   suggestSlug,
@@ -35,6 +37,9 @@ import {
   type AtlasEntityKind,
   type AtlasEntityRow,
 } from "@/lib/atlas-entities";
+const ATLAS_ALLOWED_KINDS: AtlasEntityKind[] = ATLAS_ENTITY_KINDS.filter((k) =>
+  LC1_ATLAS_VISIBLE_KINDS.has(k),
+);
 import { ATLAS_V1_PIXEL_SIZE } from "@/data/atlas-anchors";
 
 export const Route = createFileRoute("/admin/atlas-entities")({
@@ -61,6 +66,9 @@ function AdminAtlasEntitiesPage() {
   const [encyclopedia, setEncyclopedia] = useState<EncyclopediaRef[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showLegacyKinds, setShowLegacyKinds] = useState(false);
+  const visibleRows = showLegacyKinds ? rows : rows.filter((r) => isLc1VisibleAtlasKind(r.kind));
+  const legacyCount = rows.length - rows.filter((r) => isLc1VisibleAtlasKind(r.kind)).length;
 
 
   const reload = async () => {
@@ -123,6 +131,14 @@ function AdminAtlasEntitiesPage() {
             >
               <RefreshCw className="inline size-4" />
             </button>
+            <label className="flex items-center gap-1.5 text-[11px] text-slate-400">
+              <input
+                type="checkbox"
+                checked={showLegacyKinds}
+                onChange={(e) => setShowLegacyKinds(e.target.checked)}
+              />
+              إظهار أنواع قديمة{legacyCount ? ` (${legacyCount})` : ""}
+            </label>
             <button
               onClick={() => setImporting(true)}
               className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/10"
@@ -151,7 +167,7 @@ function AdminAtlasEntitiesPage() {
           <div className="flex items-center gap-2 text-slate-400">
             <RefreshCw className="size-4 animate-spin" /> جاري التحميل…
           </div>
-        ) : rows.length === 0 ? (
+        ) : visibleRows.length === 0 ? (
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-400">
             لا توجد كيانات بعد. أنشئ أول كيان للبدء.
           </div>
@@ -169,7 +185,7 @@ function AdminAtlasEntitiesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 bg-slate-950">
-                {rows.map((r) => (
+                {visibleRows.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-900/50">
                     <td className="px-3 py-2">
                       <div className="font-semibold text-slate-100">{r.name_ar}</div>
@@ -452,7 +468,7 @@ function EntityEditor({
               onChange={(e) => setKind(e.target.value as AtlasEntityKind)}
               className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5"
             >
-              {ATLAS_ENTITY_KINDS.map((k) => (
+              {ATLAS_ALLOWED_KINDS.map((k) => (
                 <option key={k} value={k}>
                   {KIND_LABEL_AR[k]}
                 </option>
@@ -681,7 +697,7 @@ function ImportJsonDialog({
         const slug = String(raw.slug ?? "").trim();
         if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(slug)) throw new Error("slug مفقود أو غير صالح");
         const kind = String(raw.kind ?? "").trim() as AtlasEntityKind;
-        if (!ATLAS_ENTITY_KINDS.includes(kind)) throw new Error("kind مفقود أو غير صالح");
+        if (!ATLAS_ALLOWED_KINDS.includes(kind)) throw new Error("kind غير مسموح على الأطلس");
         const name_ar = String(raw.name_ar ?? "").trim();
         if (!name_ar) throw new Error("name_ar مطلوب");
 

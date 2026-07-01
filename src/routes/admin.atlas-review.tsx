@@ -15,6 +15,8 @@ import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
 import {
   KIND_LABEL_AR, STATUS_LABEL_AR,
+  LC1_ATLAS_VISIBLE_KINDS,
+  isLc1VisibleAtlasKind,
   listAllAtlasEntities, updateAtlasEntity,
   type AtlasEntityKind, type AtlasEntityRow,
 } from "@/lib/atlas-entities";
@@ -34,17 +36,15 @@ const RASTER = ATLAS_V1_PIXEL_SIZE;
 const ERA_LABEL: Record<string, string> = Object.fromEntries(ERAS.map((e) => [e.id, e.name]));
 const eraLabel = (id: string | null | undefined) => (id ? ERA_LABEL[id] ?? id : "—");
 
-// Chip filter list for the Duplicates tab. Labels come from the beta-QA brief;
-// values map onto the atlas_entity_kind enum. Kinds without a natural chip
-// (e.g. route_point) stay reachable via the "all" chip.
+// Atlas is a dedicated *geographic* atlas: only these kinds ever appear in
+// the review workflows. Legacy non-geographic rows stay in the DB but are
+// hidden by default (toggle "إظهار أنواع قديمة" to inspect them).
+const ATLAS_KIND_ORDER: AtlasEntityKind[] = ["region", "place", "battle"];
 const DUP_KIND_FILTERS: Array<{ value: AtlasEntityKind | "all"; label: string }> = [
   { value: "all", label: "الكل" },
-  { value: "battle", label: "المعارك" },
+  { value: "region", label: "الدول والأقاليم" },
   { value: "place", label: "المدن" },
-  { value: "figure_marker", label: "المعالم" },
-  { value: "artifact_site", label: "الآثار" },
-  { value: "event", label: "الأحداث" },
-  { value: "region", label: "الأقاليم" },
+  { value: "battle", label: "المعارك" },
 ];
 
 export const Route = createFileRoute("/admin/atlas-review")({
@@ -75,6 +75,7 @@ function AtlasReviewPage() {
   const [showRemoved, setShowRemoved] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<AtlasEntityRow | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [showLegacyKinds, setShowLegacyKinds] = useState(false);
 
   // Selection + drafts
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -122,12 +123,13 @@ function AtlasReviewPage() {
   const filteredNeeds = useMemo(() => {
     const q = needsSearch.trim().toLowerCase();
     return (needsRows ?? []).filter((r) => {
+      if (!showLegacyKinds && !isLc1VisibleAtlasKind(r.kind)) return false;
       if (needsType !== "all" && r.kind !== needsType) return false;
 
       if (q && !`${r.title} ${r.slug}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [needsRows, needsSearch, needsType]);
+  }, [needsRows, needsSearch, needsType, showLegacyKinds]);
 
 
   useEffect(() => {
@@ -163,6 +165,9 @@ function AtlasReviewPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
+      // Atlas is geographic-only. Hide legacy artifact/figure/event/route rows
+      // by default so they never re-surface in normal review workflows.
+      if (!showLegacyKinds && !isLc1VisibleAtlasKind(r.kind)) return false;
       if (showRemoved) {
         if (r.status !== "retired") return false;
       } else {
@@ -177,11 +182,14 @@ function AtlasReviewPage() {
       if (q && !`${r.name_ar} ${r.name_en ?? ""} ${r.slug}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [rows, search, kind, era, batch, onlyUnverified, showRemoved]);
+  }, [rows, search, kind, era, batch, onlyUnverified, showRemoved, showLegacyKinds]);
 
-  // Duplicate detection — clusters across the full atlas dataset (not the
-  // review filter) so admins always see the true duplicate surface.
-  const duplicateGroups = useMemo(() => findAtlasDuplicateGroups(rows), [rows]);
+  // Duplicate detection — clusters across the geographic atlas dataset.
+  const geoRows = useMemo(
+    () => (showLegacyKinds ? rows : rows.filter((r) => isLc1VisibleAtlasKind(r.kind))),
+    [rows, showLegacyKinds],
+  );
+  const duplicateGroups = useMemo(() => findAtlasDuplicateGroups(geoRows), [geoRows]);
   const filteredDupGroups = useMemo(() => {
     const q = normalizeArabic(dupSearch);
     return duplicateGroups.filter((g) => {
@@ -532,7 +540,7 @@ function AtlasReviewPage() {
                   <select value={kind} onChange={(e) => setKind(e.target.value as any)}
                     className="rounded border border-stone-700 bg-stone-950 px-2 py-1">
                     <option value="all">كل الأنواع</option>
-                    {(["place","battle","artifact_site","region","event","figure_marker","route_point"] as AtlasEntityKind[]).map((k) => (
+                    {ATLAS_KIND_ORDER.map((k) => (
                       <option key={k} value={k}>{KIND_LABEL_AR[k]}</option>
                     ))}
                   </select>
@@ -554,6 +562,10 @@ function AtlasReviewPage() {
                   <label className="col-span-2 flex items-center gap-2 rounded border border-rose-900/60 bg-rose-950/30 px-2 py-1 text-rose-200">
                     <input type="checkbox" checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} />
                     <span>عرض المُزال من الأطلس فقط</span>
+                  </label>
+                  <label className="col-span-2 flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1 text-stone-300">
+                    <input type="checkbox" checked={showLegacyKinds} onChange={(e) => setShowLegacyKinds(e.target.checked)} />
+                    <span>إظهار أنواع قديمة (آثار/شخصيات/أحداث)</span>
                   </label>
                 </div>
               </div>
@@ -627,7 +639,7 @@ function AtlasReviewPage() {
                   <select value={needsType} onChange={(e) => setNeedsType(e.target.value)}
                     className="flex-1 rounded border border-stone-700 bg-stone-950 px-2 py-1">
                     <option value="all">كل الأنواع</option>
-                    {(["region","place","battle","artifact_site","event"] as AtlasEntityKind[]).map((k) => (
+                    {ATLAS_KIND_ORDER.map((k) => (
                       <option key={k} value={k}>{KIND_LABEL_AR[k]}</option>
                     ))}
                   </select>
