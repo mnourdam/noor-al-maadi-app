@@ -185,17 +185,20 @@ function EntityPage() {
     ? buildContextBlocks(entity, relatedQuery.data ?? [])
     : [];
 
-  // Atlas deep-link — surface a "على الأطلس" button only when this
-  // encyclopedia entity is linked to a published + verified Atlas record.
+  // Atlas deep-link — restricted to geographic/event types (state, region,
+  // city, battle). Never shown for figure/landmark/artifact/event/etc.
+  // Only surfaces when a linked, published + verified Atlas record exists.
+  const ATLAS_LINKABLE_TYPES = new Set(["state", "region", "city", "battle"]);
+  const atlasEligible = !!entity && ATLAS_LINKABLE_TYPES.has(entity.entity_type);
   const atlasLinkQuery = useQuery({
     queryKey: ["encyclopedia", "atlas-link", entity?.id ?? ""],
-    enabled: !!entity?.id,
+    enabled: atlasEligible && !!entity?.id,
     staleTime: 5 * 60_000,
     queryFn: async () => {
       if (!entity?.id) return null;
       const { data, error } = await supabase
         .from("atlas_entities")
-        .select("id, aps_x, aps_y")
+        .select("id, aps_x, aps_y, kind")
         .eq("encyclopedia_entity_id", entity.id)
         .eq("status", "published")
         .eq("aps_verified", true)
@@ -203,10 +206,18 @@ function EntityPage() {
         .maybeSingle();
       if (error) return null;
       if (!data || data.aps_x == null || data.aps_y == null) return null;
-      return data as { id: string; aps_x: number; aps_y: number };
+      return data as { id: string; aps_x: number; aps_y: number; kind: string };
     },
   });
-  const atlasLink = atlasLinkQuery.data ?? null;
+  const atlasLink = atlasEligible ? atlasLinkQuery.data ?? null : null;
+  // Type-aware zoom so regions/states stay wide while battles pull in tight.
+  const atlasZoom = atlasLink
+    ? atlasLink.kind === "battle"
+      ? 4.5
+      : atlasLink.kind === "region"
+        ? 2.2
+        : 3.5
+    : 3.5;
 
   if (query.isLoading) {
     return (
@@ -303,7 +314,7 @@ function EntityPage() {
             {atlasLink && (
               <Link
                 to="/map"
-                search={{ focus: atlasLink.id, zoom: 3.5 }}
+                search={{ focus: atlasLink.id, zoom: atlasZoom }}
                 aria-label="عرض على الأطلس"
                 className="group absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-gold/35 bg-black/55 px-3 py-1.5 text-[11px] font-medium text-gold/95 shadow-[0_6px_20px_-8px_rgba(212,175,90,0.5)] backdrop-blur-sm transition hover:border-gold/60 hover:bg-black/70 hover:text-gold active:scale-95"
               >
