@@ -146,8 +146,13 @@ function AtlasReviewPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
-      if (onlyUnverified) {
-        if (r.aps_verified && r.status === "published") return false;
+      if (showRemoved) {
+        if (r.status !== "retired") return false;
+      } else {
+        if (r.status === "retired") return false;
+        if (onlyUnverified) {
+          if (r.aps_verified && r.status === "published") return false;
+        }
       }
       if (kind !== "all" && r.kind !== kind) return false;
       if (era !== "all" && r.era !== era) return false;
@@ -155,7 +160,7 @@ function AtlasReviewPage() {
       if (q && !`${r.name_ar} ${r.name_en ?? ""} ${r.slug}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [rows, search, kind, era, batch, onlyUnverified]);
+  }, [rows, search, kind, era, batch, onlyUnverified, showRemoved]);
 
   // Drag handlers — convert client px → APS via current transform
   const dragRef = useRef<{
