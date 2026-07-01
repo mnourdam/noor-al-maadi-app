@@ -697,7 +697,7 @@ function ImportJsonDialog({
         const slug = String(raw.slug ?? "").trim();
         if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(slug)) throw new Error("slug مفقود أو غير صالح");
         const kind = String(raw.kind ?? "").trim() as AtlasEntityKind;
-        if (!ATLAS_ENTITY_KINDS.includes(kind)) throw new Error("kind مفقود أو غير صالح");
+        if (!ATLAS_ALLOWED_KINDS.includes(kind)) throw new Error("kind غير مسموح على الأطلس");
         const name_ar = String(raw.name_ar ?? "").trim();
         if (!name_ar) throw new Error("name_ar مطلوب");
 
