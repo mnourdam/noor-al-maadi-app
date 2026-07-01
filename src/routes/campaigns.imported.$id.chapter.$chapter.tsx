@@ -487,6 +487,16 @@ function ChapterCompletePanel(props: {
           عودة لقائمة الفصول
         </Link>
       </div>
+      <FeedbackCTA
+        className="mt-6"
+        context={{
+          campaign_id: props.campaignId,
+          title: props.chapterTitle
+            ? `${props.campaignTitle ?? "الحملة"} · ${props.chapterTitle}`
+            : (props.campaignTitle ?? "فصل الحملة"),
+          ...(props.chapterId ? { chapter_id: props.chapterId } : {}),
+        }}
+      />
     </div>
   );
 }
