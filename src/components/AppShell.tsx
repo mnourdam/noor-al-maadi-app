@@ -30,6 +30,28 @@ export function AppShell({ children }: { children: ReactNode }) {
     androidMark("commit:AppShell", { pathname });
   }, [pathname]);
 
+  // Native-app polish: while the player shell is mounted (and we're not on an
+  // admin route), mark the body so the "player scope" CSS in styles.css kicks
+  // in (no text selection, no link previews, no drag ghosts), and swallow
+  // right-click / long-press context menus. Admin pages keep normal browser
+  // behavior — copy/paste, selection, tooltips — because the flag is never
+  // set for them.
+  useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
+    document.body.setAttribute("data-app-scope", "player");
+    const onContextMenu = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      // Preserve context menu on real editable fields so paste still works.
+      if (target?.closest('input, textarea, [contenteditable="true"]')) return;
+      event.preventDefault();
+    };
+    document.addEventListener("contextmenu", onContextMenu);
+    return () => {
+      document.body.removeAttribute("data-app-scope");
+      document.removeEventListener("contextmenu", onContextMenu);
+    };
+  }, [pathname]);
+
   if (androidStable && nestedShell) {
     return <>{children}</>;
   }
