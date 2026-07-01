@@ -72,6 +72,7 @@ function AtlasReviewPage() {
   // Atlas Coverage — Needs Placement tab.
   const [tab, setTab] = useState<"review" | "needs" | "duplicates">("review");
   const [dupSearch, setDupSearch] = useState("");
+  const [dupKind, setDupKind] = useState<AtlasEntityKind | "all">("all");
   const [needsRows, setNeedsRows] = useState<NeedsPlacementRow[] | null>(null);
   const [needsLoading, setNeedsLoading] = useState(false);
   const [needsError, setNeedsError] = useState<string | null>(null);
