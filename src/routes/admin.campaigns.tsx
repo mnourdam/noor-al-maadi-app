@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Sword, Plus, Trash2, Copy, Eye, EyeOff, Archive,
   ExternalLink, Upload, RefreshCw, ChevronRight, CheckCircle2, AlertTriangle, X,
-  FileSpreadsheet, FileJson, ClipboardList,
+  FileSpreadsheet, FileJson, ClipboardList, Pencil,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
