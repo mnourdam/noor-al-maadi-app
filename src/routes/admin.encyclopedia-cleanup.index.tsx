@@ -364,6 +364,17 @@ function CleanupWorkshop() {
   const [atlasLinks, setAtlasLinks] = useState<Map<string, number>>(new Map());
   const [campaignSlugs, setCampaignSlugs] = useState<Map<string, number>>(new Map());
   const [mergeFor, setMergeFor] = useState<EntityRow | null>(null);
+  // Bulk multi-select — persists across scroll/pagination, cleared when
+  // filters/search/pipeline change so selections never carry into a set
+  // of cards the user can no longer see.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const toggleSelect = (id: string) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const clearSelection = () => setSelectedIds(new Set());
 
   const refresh = async () => {
     setLoading(true); setErr(null);
