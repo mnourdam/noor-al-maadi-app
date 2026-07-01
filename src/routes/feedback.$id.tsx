@@ -162,6 +162,64 @@ function FeedbackThread() {
   );
 }
 
+function RatingPanel({ issueId, initialRating, onRated }: { issueId: string; initialRating: number | null; onRated: () => void }) {
+  const [rating, setRating] = useState<number | null>(initialRating);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(value: 1 | 5) {
+    if (busy || rating != null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await rateIssue(issueId, value);
+      setRating(value);
+      onRated();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (rating != null) {
+    return (
+      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
+        <div className="inline-flex items-center gap-2 text-sm font-bold text-emerald-200">
+          <Check className="size-4" /> شكراً لتقييمك — يساعدنا على تحسين الدعم.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-surface/60 p-4 text-center">
+      <p className="font-display text-sm font-bold text-foreground">هل ساعدك هذا الرد؟</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">تقييمك يساعد فريق إرث على تحسين جودة الدعم.</p>
+      <div className="mt-3 flex items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => void submit(5)}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/20 disabled:opacity-50"
+        >
+          <ThumbsUp className="size-4" /> نعم
+        </button>
+        <button
+          type="button"
+          onClick={() => void submit(1)}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-200 transition hover:bg-rose-500/20 disabled:opacity-50"
+        >
+          <ThumbsDown className="size-4" /> لا
+        </button>
+      </div>
+      {error && <p className="mt-2 text-[11px] text-rose-300">{error}</p>}
+      <p className="mt-3 text-[10px] text-muted-foreground/70">هذه المحادثة مغلقة. افتح مساهمة جديدة إن احتجت.</p>
+    </div>
+  );
+}
+
 function MessageBubble({ message }: { message: FeedbackMessage }) {
   const isAdmin = message.author_role === "admin";
   return (
