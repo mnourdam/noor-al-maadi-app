@@ -525,6 +525,8 @@ export type Database = {
           id: string
           last_reply_at: string | null
           last_reply_by: string | null
+          player_rating: number | null
+          player_rating_at: string | null
           player_unread: boolean
           reporter_id: string | null
           status: string
@@ -542,6 +544,8 @@ export type Database = {
           id?: string
           last_reply_at?: string | null
           last_reply_by?: string | null
+          player_rating?: number | null
+          player_rating_at?: string | null
           player_unread?: boolean
           reporter_id?: string | null
           status?: string
@@ -559,6 +563,8 @@ export type Database = {
           id?: string
           last_reply_at?: string | null
           last_reply_by?: string | null
+          player_rating?: number | null
+          player_rating_at?: string | null
           player_unread?: boolean
           reporter_id?: string | null
           status?: string
@@ -1548,6 +1554,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_feedback_stats: { Args: never; Returns: Json }
       admin_list_feedback_issues: {
         Args: {
           p_category?: string
@@ -1612,6 +1619,7 @@ export type Database = {
       }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       clear_my_notifications: { Args: never; Returns: undefined }
+      count_my_unread_feedback: { Args: never; Returns: number }
       create_feedback_issue: {
         Args: {
           p_category: string
@@ -1789,6 +1797,8 @@ export type Database = {
           id: string
           last_reply_at: string | null
           last_reply_by: string | null
+          player_rating: number | null
+          player_rating_at: string | null
           player_unread: boolean
           reporter_id: string | null
           status: string
@@ -1836,6 +1846,10 @@ export type Database = {
       my_pending_badges: { Args: never; Returns: Json }
       my_referral_stats: { Args: never; Returns: Json }
       my_unread_notification_count: { Args: never; Returns: number }
+      rate_feedback_issue: {
+        Args: { p_issue_id: string; p_rating: number }
+        Returns: undefined
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
