@@ -162,6 +162,17 @@ export function AtlasControls({
               placeholder="ابحث في الأطلس..."
               className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-amber-200/40"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => onSearch("")}
+                aria-label="مسح البحث"
+                className="grid size-6 shrink-0 place-items-center rounded-full text-amber-200/70 hover:bg-amber-400/10 hover:text-amber-100"
+                title="مسح البحث"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
             {onSubmitSearch && (
               <button
                 type="button"
@@ -174,6 +185,7 @@ export function AtlasControls({
               </button>
             )}
           </div>
+
 
           {!expanded && hasActiveFilter && (
             <span
