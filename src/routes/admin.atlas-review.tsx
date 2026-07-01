@@ -664,6 +664,53 @@ function AtlasReviewPage() {
           </div>
         </main>
       </div>
+
+      {removeTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => !removing && setRemoveTarget(null)}
+        >
+          <div
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-xl border border-rose-800/60 bg-stone-900 p-5 shadow-2xl"
+          >
+            <div className="mb-2 flex items-center gap-2 text-rose-200">
+              <Trash2 className="size-5" />
+              <h2 className="font-display text-base font-bold">إزالة هذا العنصر من الأطلس؟</h2>
+            </div>
+            <p className="text-[13px] leading-7 text-stone-300">
+              سيُزال العنصر من الخريطة فقط. لن يتم حذف أو تعديل صفحة الموسوعة المرتبطة.
+            </p>
+            <div className="mt-2 rounded border border-stone-700 bg-stone-950 p-2 text-[12px]">
+              <div className="truncate font-bold text-amber-100">{removeTarget.name_ar}</div>
+              <div className="text-[10px] text-stone-400">
+                {KIND_LABEL_AR[removeTarget.kind]} · {removeTarget.slug}
+                {removeTarget.encyclopedia_entity_id && (
+                  <span className="text-sky-300"> · الموسوعة محفوظة</span>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                disabled={removing}
+                onClick={() => setRemoveTarget(null)}
+                className="rounded border border-stone-700 bg-stone-800 px-3 py-1.5 text-[12px] hover:bg-stone-700 disabled:opacity-40"
+              >
+                إلغاء
+              </button>
+              <button
+                disabled={removing}
+                onClick={confirmRemoveFromAtlas}
+                className="inline-flex items-center gap-1 rounded bg-rose-600 px-3 py-1.5 text-[12px] font-bold text-white hover:bg-rose-500 disabled:opacity-40"
+              >
+                <Trash2 className="size-3.5" />
+                {removing ? "جاري الإزالة…" : "إزالة من الأطلس"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
