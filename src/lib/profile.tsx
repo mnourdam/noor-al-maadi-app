@@ -518,14 +518,37 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       return ok;
     },
     hintsRevealed: (scopeKey) => profile.hintsPurchased?.[scopeKey] ?? 0,
-    claimStreakMilestone: (days) => {
-      let ok = false;
+    claimStreakMilestone: async (days) => {
+      const m = STREAK_MILESTONES.find((x) => x.days === days);
+      if (!m) return false;
+      if (profile.streak < days) return false;
+      if ((profile.streakMilestonesClaimed ?? []).includes(days)) return false;
+      // Server-side gate — permanent one-time claim per (user, milestone).
+      try {
+        const { data, error } = await supabase.rpc("claim_streak_reward", { p_days: days });
+        if (error) {
+          console.error("[streak-reward] claim_streak_reward", error);
+          return false;
+        }
+        const payload = (data ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) {
+          // Already claimed on another device/session — mirror locally so UI
+          // never offers it again, but do NOT re-grant the reward.
+          if (payload.reason === "already_claimed") {
+            update((p) => (
+              (p.streakMilestonesClaimed ?? []).includes(days)
+                ? p
+                : { ...p, streakMilestonesClaimed: [...(p.streakMilestonesClaimed ?? []), days] }
+            ));
+          }
+          return false;
+        }
+      } catch (e) {
+        console.error("[streak-reward] rpc failed", e);
+        return false;
+      }
       update((p) => {
-        const m = STREAK_MILESTONES.find((x) => x.days === days);
-        if (!m) return p;
-        if (p.streak < days) return p;
         if ((p.streakMilestonesClaimed ?? []).includes(days)) return p;
-        ok = true;
         let np: ProfileState = {
           ...p,
           streakMilestonesClaimed: [...(p.streakMilestonesClaimed ?? []), days],
@@ -537,10 +560,30 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         if (m.title && !np.titlesEarned.includes(m.title)) np = { ...np, titlesEarned: [...np.titlesEarned, m.title] };
         return np;
       });
-      return ok;
+      return true;
     },
     availableStreakMilestones: () =>
       STREAK_MILESTONES.filter((m) => profile.streak >= m.days && !(profile.streakMilestonesClaimed ?? []).includes(m.days)),
+    hydrateClaimedStreakRewards: async () => {
+      try {
+        const { data, error } = await supabase.rpc("my_claimed_streak_rewards");
+        if (error) {
+          console.error("[streak-reward] my_claimed_streak_rewards", error);
+          return;
+        }
+        const list = Array.isArray(data) ? (data as number[]) : [];
+        if (list.length === 0) return;
+        update((p) => {
+          const cur = new Set(p.streakMilestonesClaimed ?? []);
+          let changed = false;
+          for (const d of list) { if (!cur.has(d)) { cur.add(d); changed = true; } }
+          if (!changed) return p;
+          return { ...p, streakMilestonesClaimed: Array.from(cur).sort((a, b) => a - b) };
+        });
+      } catch (e) {
+        console.error("[streak-reward] hydrate failed", e);
+      }
+    },
 
     // ============= Cloud Save bridge =============
     replaceProfile: (next) => setProfile({
