@@ -313,6 +313,7 @@ export function AtlasStage({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onClickCapture={onClickCapture}
       style={{ touchAction: "none", background: "oklch(0.13 0.04 255)" }}
       dir="ltr"
     >
