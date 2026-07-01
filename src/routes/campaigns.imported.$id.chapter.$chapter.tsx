@@ -110,16 +110,21 @@ function ImportedChapterPlayer() {
   }, [heartsDepleted]);
 
   // PR2 anti-skip: hard URL guard. If this chapter is locked, redirect to overview.
+  // Exception: if the campaign is already fully completed, all chapters are
+  // freely browsable in review mode — never redirect.
+  const reviewMode = !!camProgress?.completed;
   const navigate = useNavigate();
   useEffect(() => {
     if (!campaign || !chapter) return;
-    if (!isChapterUnlocked(campaign, chapter)) {
+    if (!reviewMode && !isChapterUnlocked(campaign, chapter)) {
       navigate({ to: "/campaigns/imported/$id", params: { id: campaign.id }, replace: true });
       return;
     }
     // PR3: persist resume pointer the moment we enter this chapter.
-    setActivePosition({ campaignId: campaign.id, chapterId: chapter.id });
-  }, [campaign, chapter, navigate]);
+    if (!reviewMode) {
+      setActivePosition({ campaignId: campaign.id, chapterId: chapter.id });
+    }
+  }, [campaign, chapter, navigate, reviewMode]);
 
   // Current activity = first activity that is either un-completed,
   // OR completed-and-not-yet-acknowledged (correct feedback pending).
