@@ -351,16 +351,17 @@ function HomeFull() {
         )},
       });
     }
-    if (todayEvent) {
-      const yr = todayEvent.hijri_year ? `${todayEvent.hijri_year} هـ` : (todayEvent.gregorian_year ? `${todayEvent.gregorian_year} م` : "في مثل هذا اليوم");
+    todayEvents.forEach((ev, i) => {
+      const yr = ev.hijri_year ? `${ev.hijri_year} هـ` : (ev.gregorian_year ? `${ev.gregorian_year} م` : "في مثل هذا اليوم");
+      const suffix = todayEvents.length > 1 ? ` · ${i + 1}/${todayEvents.length}` : "";
       out.push({
         kind: "history",
-        bg: bgAt(1),
-        eyebrow: `في مثل هذا اليوم · ${yr}`,
-        title: todayEvent.title,
-        subtitle: todayEvent.body,
+        bg: bgAt(1 + i),
+        eyebrow: `في مثل هذا اليوم · ${yr}${suffix}`,
+        title: ev.title,
+        subtitle: ev.body,
       });
-    }
+    });
     if (stats.recent.length > 0) {
       const r = stats.recent[0];
       out.push({
