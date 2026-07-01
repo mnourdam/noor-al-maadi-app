@@ -376,7 +376,9 @@ function EncyclopediaHubFull() {
 
   return (
     <AppShell>
+      <CinematicPageBackdrop image={encyclopediaHeaderArt} alt="مكتبة تاريخية" />
       <ReadingScale className="px-5 pt-2">
+
 
         <Breadcrumbs
           className="mb-2"
