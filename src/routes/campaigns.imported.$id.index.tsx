@@ -7,15 +7,15 @@
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams, useSearch, notFound } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight, Lock, Check, Crown, Trophy, Scroll, BookOpen, Sparkles,
   Clock, Tag, Coins, Zap, Gift, Package, Play, ChevronLeft,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
-import { fetchCampaignByIdOrSlug } from "@/lib/supabaseCampaigns";
+import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
 import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
@@ -27,6 +27,9 @@ import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/")({
   head: () => ({ meta: [{ title: "حملة تاريخية — إرث" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    preview: s.preview === "draft" ? "draft" : undefined,
+  }),
   component: ImportedCampaignOverview,
   notFoundComponent: () => (
     <AppShell>
@@ -47,10 +50,24 @@ const DIFFICULTY_LABEL: Record<string, string> = {
 
 function ImportedCampaignOverview() {
   const { id } = useParams({ from: "/campaigns/imported/$id/" });
+  const search = useSearch({ from: "/campaigns/imported/$id/" });
+  const mode: "published" | "draft" = search.preview === "draft" ? "draft" : "published";
+  const queryClient = useQueryClient();
   const { data: campaign, isLoading } = useQuery({
-    queryKey: ["campaign", id],
-    queryFn: () => fetchCampaignByIdOrSlug(id),
+    queryKey: ["campaign", id, mode],
+    queryFn: () => fetchCampaignByIdOrSlug(id, { mode }),
   });
+
+  // Auto-refresh on admin publish (same tab or via BroadcastChannel).
+  useEffect(() => {
+    const off = onCampaignPublished((changedId) => {
+      if (changedId === id || changedId === campaign?.slug) {
+        queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      }
+    });
+    return off;
+  }, [id, campaign?.slug, queryClient]);
+
 
 
   // Progress tick — re-read from localStorage when window regains focus.

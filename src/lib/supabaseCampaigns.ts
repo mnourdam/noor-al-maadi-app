@@ -13,6 +13,7 @@ import { sortCampaignsChronological } from "./campaignChronology";
 import { withBackfilledChronologyAll } from "./campaignChronologyBackfill";
 import {
   ensureLocalSnapshotLoaded,
+  invalidateLocalCampaign,
   localCampaignByIdOrSlug,
   localPublishedCampaigns,
 } from "./local-first-store";
@@ -78,9 +79,42 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   return [];
 }
 
-/** Resolve a published campaign by UUID id or slug. Local-first. */
-export async function fetchCampaignByIdOrSlug(idOrSlug: string): Promise<Campaign | null> {
+/**
+ * Resolve a campaign by UUID id or slug.
+ * - mode: "published" (default) → local-first, live snapshot only.
+ * - mode: "draft" → editor preview; always reads `draft_data` from Supabase
+ *   (admin/editor RLS required). Never returns local cache.
+ */
+export async function fetchCampaignByIdOrSlug(
+  idOrSlug: string,
+  opts?: { mode?: "published" | "draft" },
+): Promise<Campaign | null> {
   if (!idOrSlug) return null;
+  const mode = opts?.mode ?? "published";
+
+  if (mode === "draft") {
+    try {
+      let row = await supabase
+        .from("admin_campaigns")
+        .select("id, slug, draft_data")
+        .eq("id", idOrSlug)
+        .maybeSingle();
+      if (!row.data) {
+        row = await supabase
+          .from("admin_campaigns")
+          .select("id, slug, draft_data")
+          .eq("slug", idOrSlug)
+          .maybeSingle();
+      }
+      const c = ((row.data as any)?.draft_data ?? null) as Campaign | null;
+      // Preview always renders — status can be draft/published/archived.
+      return c ? { ...c, status: "published" } as Campaign : null;
+    } catch (err) {
+      console.warn("[supabaseCampaigns] draft resolve failed:", err);
+      return null;
+    }
+  }
+
   await ensureLocalSnapshotLoaded();
 
   const hit = localCampaignByIdOrSlug(idOrSlug);
@@ -114,6 +148,45 @@ export async function fetchCampaignByIdOrSlug(idOrSlug: string): Promise<Campaig
   }
   return null;
 }
+
+// -------------------- Publish-event invalidation --------------------
+
+/**
+ * Bust the local in-memory campaign cache. Called on `irth:campaign-published`
+ * and BroadcastChannel messages so the very next `fetchCampaignByIdOrSlug`
+ * call refetches the freshly-published data from Supabase.
+ */
+export function invalidatePublishedCampaign(idOrSlug: string): void {
+  invalidateLocalCampaign(idOrSlug);
+}
+
+let _publishListenerInstalled = false;
+type PublishListener = (id: string, kind: "draft" | "publish") => void;
+const _publishListeners = new Set<PublishListener>();
+
+function ensurePublishListener() {
+  if (_publishListenerInstalled || typeof window === "undefined") return;
+  _publishListenerInstalled = true;
+  const handle = (id: string, kind: "draft" | "publish") => {
+    invalidatePublishedCampaign(id);
+    _publishListeners.forEach(fn => { try { fn(id, kind); } catch { /* noop */ } });
+  };
+  window.addEventListener("irth:campaign-published", (e: any) => {
+    handle(e?.detail?.id, e?.detail?.kind ?? "publish");
+  });
+  try {
+    const ch = new BroadcastChannel("irth-campaigns");
+    ch.onmessage = (m) => handle(m?.data?.id, m?.data?.kind ?? "publish");
+  } catch { /* noop */ }
+}
+
+/** Subscribe to publish notifications. Returns unsubscribe. */
+export function onCampaignPublished(fn: PublishListener): () => void {
+  ensurePublishListener();
+  _publishListeners.add(fn);
+  return () => { _publishListeners.delete(fn); };
+}
+
 
 /**
  * Full ordered timeline feed: era dividers interleaved with campaigns

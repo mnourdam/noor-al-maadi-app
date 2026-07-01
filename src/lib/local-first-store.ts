@@ -281,6 +281,20 @@ export function localCampaignByIdOrSlug(idOrSlug: string): Row | null {
   return campaignsById.get(idOrSlug) ?? campaignsBySlug.get(idOrSlug) ?? null;
 }
 
+/**
+ * Drop a campaign from the in-memory local store so the next
+ * `fetchCampaignByIdOrSlug` call falls through to Supabase. Called by the
+ * admin studio after publish so player pages read fresh content immediately.
+ */
+export function invalidateLocalCampaign(idOrSlug: string): void {
+  if (!idOrSlug) return;
+  const row = campaignsById.get(idOrSlug) ?? campaignsBySlug.get(idOrSlug);
+  if (!row) return;
+  if (row.id) campaignsById.delete(row.id);
+  if (row.slug) campaignsBySlug.delete(row.slug);
+  campaignsAll = campaignsAll.filter(r => r !== row);
+}
+
 export function localInvestigations(): Row[] { return investigationsAll; }
 export function localInvestigationBySlug(slug: string): Row | null {
   return investigationsBySlug.get(slug) ?? null;
