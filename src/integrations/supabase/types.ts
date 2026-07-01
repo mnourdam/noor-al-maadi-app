@@ -1485,6 +1485,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_streak_reward_claims: {
+        Row: {
+          claimed_at: string
+          id: string
+          milestone_days: number
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          id?: string
+          milestone_days: number
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string
+          id?: string
+          milestone_days?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       public_profiles: {
@@ -1618,6 +1639,7 @@ export type Database = {
         Returns: undefined
       }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
+      claim_streak_reward: { Args: { p_days: number }; Returns: Json }
       clear_my_notifications: { Args: never; Returns: undefined }
       count_my_unread_feedback: { Args: never; Returns: number }
       create_feedback_issue: {
@@ -1843,6 +1865,7 @@ export type Database = {
         }
         Returns: number
       }
+      my_claimed_streak_rewards: { Args: never; Returns: number[] }
       my_pending_badges: { Args: never; Returns: Json }
       my_referral_stats: { Args: never; Returns: Json }
       my_unread_notification_count: { Args: never; Returns: number }
