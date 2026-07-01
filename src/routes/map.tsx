@@ -20,10 +20,18 @@ export type MapSearch = {
   era?: string;
   world?: string;
   q?: string;
+  /** Optional zoom hint for deep-links (e.g. from encyclopedia). Clamped 1.5–8. */
+  zoom?: number;
 };
 
 function str(v: unknown): string | undefined {
   return typeof v === "string" && v.length > 0 ? v : undefined;
+}
+
+function num(v: unknown): number | undefined {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  if (!Number.isFinite(n)) return undefined;
+  return Math.max(1.5, Math.min(8, n));
 }
 
 export const Route = createFileRoute("/map")({
@@ -35,6 +43,7 @@ export const Route = createFileRoute("/map")({
       era: str(s.era),
       world: str(s.world),
       q: str(s.q),
+      zoom: num(s.zoom),
     };
   },
   head: () => ({
