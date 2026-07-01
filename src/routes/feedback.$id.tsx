@@ -156,7 +156,7 @@ function FeedbackThread() {
               <form onSubmit={onSend} className="rounded-2xl border border-white/10 bg-surface/60 p-3">
                 <textarea
                   value={reply}
-                  onChange={(e) => setReply(e.target.value)}
+                  onChange={(e) => { setReply(e.target.value); markTyping(); }}
                   rows={3}
                   maxLength={5000}
                   placeholder="اكتب ردك…"
