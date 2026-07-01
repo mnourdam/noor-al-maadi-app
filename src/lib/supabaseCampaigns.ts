@@ -13,6 +13,7 @@ import { sortCampaignsChronological } from "./campaignChronology";
 import { withBackfilledChronologyAll } from "./campaignChronologyBackfill";
 import {
   ensureLocalSnapshotLoaded,
+  invalidateLocalCampaign,
   localCampaignByIdOrSlug,
   localPublishedCampaigns,
 } from "./local-first-store";
