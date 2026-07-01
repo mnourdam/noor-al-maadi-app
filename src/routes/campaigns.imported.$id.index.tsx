@@ -7,8 +7,8 @@
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useParams, useSearch, notFound } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight, Lock, Check, Crown, Trophy, Scroll, BookOpen, Sparkles,
   Clock, Tag, Coins, Zap, Gift, Package, Play, ChevronLeft,
