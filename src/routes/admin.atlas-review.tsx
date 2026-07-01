@@ -75,6 +75,7 @@ function AtlasReviewPage() {
   const [showRemoved, setShowRemoved] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<AtlasEntityRow | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [showLegacyKinds, setShowLegacyKinds] = useState(false);
 
   // Selection + drafts
   const [selected, setSelected] = useState<Set<string>>(new Set());
