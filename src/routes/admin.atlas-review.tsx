@@ -57,6 +57,9 @@ function AtlasReviewPage() {
   const [era, setEra] = useState<string>("all");
   const [batch, setBatch] = useState<string>("all");
   const [onlyUnverified, setOnlyUnverified] = useState(true);
+  const [showRemoved, setShowRemoved] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<AtlasEntityRow | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   // Selection + drafts
   const [selected, setSelected] = useState<Set<string>>(new Set());
