@@ -4,7 +4,7 @@ import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, Check
 import { AppShell, Screen } from "@/components/AppShell";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
-import campaignsHeaderArt from "@/assets/hero/04-fortress.jpg?url";
+import campaignsHeaderArt from "@/assets/hero/21-islamic-army-banners.jpg?url";
 import { useProfile } from "@/lib/profile";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";

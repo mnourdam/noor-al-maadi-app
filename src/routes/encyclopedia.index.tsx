@@ -388,15 +388,7 @@ function EncyclopediaHubFull() {
           ]}
         />
         {/* Cinematic Hero */}
-        <section className="relative -mx-5 -mt-2 border-b border-gold/15 bg-gradient-to-b from-gold/[0.08] via-background to-background px-5 pb-6 pt-8">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-[0.07]"
-            style={{
-              backgroundImage:
-                "radial-gradient(ellipse at top, rgba(212,175,55,0.5), transparent 60%), repeating-linear-gradient(45deg, rgba(212,175,55,0.15) 0 2px, transparent 2px 14px)",
-            }}
-          />
+        <section className="relative -mx-5 -mt-2 px-5 pb-6 pt-8">
           <div className="relative">
             <div className="flex items-center gap-2 text-[10px] tracking-[0.4em] text-gold/70">
               <Library className="size-3.5" />
