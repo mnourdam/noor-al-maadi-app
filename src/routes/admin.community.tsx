@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { AdminGate } from "@/lib/admin-guard";
-import { adminListIssues, getIssueThread, replyToIssue, setIssueStatus, type AdminIssueRow } from "@/lib/feedback/api";
+import { adminFeedbackStats, adminListIssues, getIssueThread, replyToIssue, setIssueStatus, type AdminFeedbackStats, type AdminIssueRow } from "@/lib/feedback/api";
 import { CATEGORY_MAP, FEEDBACK_CATEGORIES, STATUS_LABELS, type FeedbackCategory, type FeedbackMessage, type FeedbackStatus } from "@/lib/feedback/types";
-import { Search, RefreshCw, MessageSquare, Send, MapPin, X, ExternalLink } from "lucide-react";
+import { Search, RefreshCw, MessageSquare, Send, MapPin, X, ExternalLink, Clock, CheckCircle2, Star } from "lucide-react";
 
 const STATUS_ORDER: FeedbackStatus[] = ["new", "review", "planned", "fixed", "closed"];
 
