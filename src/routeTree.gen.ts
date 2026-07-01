@@ -36,6 +36,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorldsIndexRouteImport } from './routes/worlds.index'
 import { Route as GamesIndexRouteImport } from './routes/games.index'
+import { Route as FeedbackIndexRouteImport } from './routes/feedback.index'
 import { Route as EncyclopediaIndexRouteImport } from './routes/encyclopedia.index'
 import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -48,6 +49,8 @@ import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
 import { Route as PlayChapterRouteImport } from './routes/play.chapter'
 import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
 import { Route as FigureIdRouteImport } from './routes/figure.$id'
+import { Route as FeedbackNewRouteImport } from './routes/feedback.new'
+import { Route as FeedbackIdRouteImport } from './routes/feedback.$id'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CompareIdRouteImport } from './routes/compare.$id'
 import { Route as CityIdRouteImport } from './routes/city.$id'
@@ -79,6 +82,7 @@ import { Route as AdminContentFoundationRouteImport } from './routes/admin.conte
 import { Route as AdminContentCleanupRouteImport } from './routes/admin.content-cleanup'
 import { Route as AdminContentAutoHealRouteImport } from './routes/admin.content-auto-heal'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
+import { Route as AdminCommunityRouteImport } from './routes/admin.community'
 import { Route as AdminCanonicalDuplicatesRouteImport } from './routes/admin.canonical-duplicates'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as AdminCampaignRelationshipsRouteImport } from './routes/admin.campaign-relationships'
@@ -246,6 +250,11 @@ const GamesIndexRoute = GamesIndexRouteImport.update({
   path: '/games/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FeedbackIndexRoute = FeedbackIndexRouteImport.update({
+  id: '/feedback/',
+  path: '/feedback/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EncyclopediaIndexRoute = EncyclopediaIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -304,6 +313,16 @@ const InvestigationIdRoute = InvestigationIdRouteImport.update({
 const FigureIdRoute = FigureIdRouteImport.update({
   id: '/figure/$id',
   path: '/figure/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackNewRoute = FeedbackNewRouteImport.update({
+  id: '/feedback/new',
+  path: '/feedback/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackIdRoute = FeedbackIdRouteImport.update({
+  id: '/feedback/$id',
+  path: '/feedback/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -464,6 +483,11 @@ const AdminContentAutoHealRoute = AdminContentAutoHealRouteImport.update({
 const AdminContentRoute = AdminContentRouteImport.update({
   id: '/admin/content',
   path: '/admin/content',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCommunityRoute = AdminCommunityRouteImport.update({
+  id: '/admin/community',
+  path: '/admin/community',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminCanonicalDuplicatesRoute =
@@ -671,6 +695,7 @@ export interface FileRoutesByFullPath {
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
+  '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
@@ -702,6 +727,8 @@ export interface FileRoutesByFullPath {
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/feedback/$id': typeof FeedbackIdRoute
+  '/feedback/new': typeof FeedbackNewRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -714,6 +741,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
+  '/feedback/': typeof FeedbackIndexRoute
   '/games/': typeof GamesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
   '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
@@ -772,6 +800,7 @@ export interface FileRoutesByTo {
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
+  '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
@@ -801,6 +830,8 @@ export interface FileRoutesByTo {
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/feedback/$id': typeof FeedbackIdRoute
+  '/feedback/new': typeof FeedbackNewRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -813,6 +844,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/campaigns': typeof CampaignsIndexRoute
   '/encyclopedia': typeof EncyclopediaIndexRoute
+  '/feedback': typeof FeedbackIndexRoute
   '/games': typeof GamesIndexRoute
   '/worlds': typeof WorldsIndexRoute
   '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
@@ -874,6 +906,7 @@ export interface FileRoutesById {
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
+  '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
   '/admin/content-cleanup': typeof AdminContentCleanupRoute
@@ -905,6 +938,8 @@ export interface FileRoutesById {
   '/city/$id': typeof CityIdRoute
   '/compare/$id': typeof CompareIdRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/feedback/$id': typeof FeedbackIdRoute
+  '/feedback/new': typeof FeedbackNewRoute
   '/figure/$id': typeof FigureIdRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/play/chapter': typeof PlayChapterRoute
@@ -917,6 +952,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/campaigns/': typeof CampaignsIndexRoute
   '/encyclopedia/': typeof EncyclopediaIndexRoute
+  '/feedback/': typeof FeedbackIndexRoute
   '/games/': typeof GamesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
   '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
@@ -979,6 +1015,7 @@ export interface FileRouteTypes {
     | '/admin/campaign-relationships'
     | '/admin/campaigns'
     | '/admin/canonical-duplicates'
+    | '/admin/community'
     | '/admin/content'
     | '/admin/content-auto-heal'
     | '/admin/content-cleanup'
@@ -1010,6 +1047,8 @@ export interface FileRouteTypes {
     | '/city/$id'
     | '/compare/$id'
     | '/email/unsubscribe'
+    | '/feedback/$id'
+    | '/feedback/new'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -1022,6 +1061,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/campaigns/'
     | '/encyclopedia/'
+    | '/feedback/'
     | '/games/'
     | '/worlds/'
     | '/admin/encyclopedia-cleanup/import-preview'
@@ -1080,6 +1120,7 @@ export interface FileRouteTypes {
     | '/admin/campaign-relationships'
     | '/admin/campaigns'
     | '/admin/canonical-duplicates'
+    | '/admin/community'
     | '/admin/content'
     | '/admin/content-auto-heal'
     | '/admin/content-cleanup'
@@ -1109,6 +1150,8 @@ export interface FileRouteTypes {
     | '/city/$id'
     | '/compare/$id'
     | '/email/unsubscribe'
+    | '/feedback/$id'
+    | '/feedback/new'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -1121,6 +1164,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/campaigns'
     | '/encyclopedia'
+    | '/feedback'
     | '/games'
     | '/worlds'
     | '/admin/encyclopedia-cleanup/import-preview'
@@ -1181,6 +1225,7 @@ export interface FileRouteTypes {
     | '/admin/campaign-relationships'
     | '/admin/campaigns'
     | '/admin/canonical-duplicates'
+    | '/admin/community'
     | '/admin/content'
     | '/admin/content-auto-heal'
     | '/admin/content-cleanup'
@@ -1212,6 +1257,8 @@ export interface FileRouteTypes {
     | '/city/$id'
     | '/compare/$id'
     | '/email/unsubscribe'
+    | '/feedback/$id'
+    | '/feedback/new'
     | '/figure/$id'
     | '/investigation/$id'
     | '/play/chapter'
@@ -1224,6 +1271,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/campaigns/'
     | '/encyclopedia/'
+    | '/feedback/'
     | '/games/'
     | '/worlds/'
     | '/admin/encyclopedia-cleanup/import-preview'
@@ -1285,6 +1333,7 @@ export interface RootRouteChildren {
   AdminCampaignRelationshipsRoute: typeof AdminCampaignRelationshipsRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminCanonicalDuplicatesRoute: typeof AdminCanonicalDuplicatesRoute
+  AdminCommunityRoute: typeof AdminCommunityRoute
   AdminContentRoute: typeof AdminContentRoute
   AdminContentAutoHealRoute: typeof AdminContentAutoHealRoute
   AdminContentCleanupRoute: typeof AdminContentCleanupRoute
@@ -1315,6 +1364,8 @@ export interface RootRouteChildren {
   CityIdRoute: typeof CityIdRoute
   CompareIdRoute: typeof CompareIdRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  FeedbackIdRoute: typeof FeedbackIdRoute
+  FeedbackNewRoute: typeof FeedbackNewRoute
   FigureIdRoute: typeof FigureIdRoute
   InvestigationIdRoute: typeof InvestigationIdRoute
   PlayChapterRoute: typeof PlayChapterRoute
@@ -1325,6 +1376,7 @@ export interface RootRouteChildren {
   UUsernameRoute: typeof UUsernameRoute
   WorldsSlugRoute: typeof WorldsSlugRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  FeedbackIndexRoute: typeof FeedbackIndexRoute
   GamesIndexRoute: typeof GamesIndexRoute
   WorldsIndexRoute: typeof WorldsIndexRoute
   GamesModeSlugRoute: typeof GamesModeSlugRoute
@@ -1527,6 +1579,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GamesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/feedback/': {
+      id: '/feedback/'
+      path: '/feedback'
+      fullPath: '/feedback/'
+      preLoaderRoute: typeof FeedbackIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/encyclopedia/': {
       id: '/encyclopedia/'
       path: '/'
@@ -1609,6 +1668,20 @@ declare module '@tanstack/react-router' {
       path: '/figure/$id'
       fullPath: '/figure/$id'
       preLoaderRoute: typeof FigureIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback/new': {
+      id: '/feedback/new'
+      path: '/feedback/new'
+      fullPath: '/feedback/new'
+      preLoaderRoute: typeof FeedbackNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback/$id': {
+      id: '/feedback/$id'
+      path: '/feedback/$id'
+      fullPath: '/feedback/$id'
+      preLoaderRoute: typeof FeedbackIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -1826,6 +1899,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/content'
       fullPath: '/admin/content'
       preLoaderRoute: typeof AdminContentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/community': {
+      id: '/admin/community'
+      path: '/admin/community'
+      fullPath: '/admin/community'
+      preLoaderRoute: typeof AdminCommunityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/canonical-duplicates': {
@@ -2172,6 +2252,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminCampaignRelationshipsRoute: AdminCampaignRelationshipsRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminCanonicalDuplicatesRoute: AdminCanonicalDuplicatesRoute,
+  AdminCommunityRoute: AdminCommunityRoute,
   AdminContentRoute: AdminContentRoute,
   AdminContentAutoHealRoute: AdminContentAutoHealRoute,
   AdminContentCleanupRoute: AdminContentCleanupRoute,
@@ -2202,6 +2283,8 @@ const rootRouteChildren: RootRouteChildren = {
   CityIdRoute: CityIdRoute,
   CompareIdRoute: CompareIdRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  FeedbackIdRoute: FeedbackIdRoute,
+  FeedbackNewRoute: FeedbackNewRoute,
   FigureIdRoute: FigureIdRoute,
   InvestigationIdRoute: InvestigationIdRoute,
   PlayChapterRoute: PlayChapterRoute,
@@ -2212,6 +2295,7 @@ const rootRouteChildren: RootRouteChildren = {
   UUsernameRoute: UUsernameRoute,
   WorldsSlugRoute: WorldsSlugRoute,
   AdminIndexRoute: AdminIndexRoute,
+  FeedbackIndexRoute: FeedbackIndexRoute,
   GamesIndexRoute: GamesIndexRoute,
   WorldsIndexRoute: WorldsIndexRoute,
   GamesModeSlugRoute: GamesModeSlugRoute,

@@ -28,6 +28,7 @@ import { resolveCanonicalLocal } from "@/lib/encyclopedia-canonical";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import {
   resolveRelatedEntities,
   groupRelatedByReason,
@@ -503,7 +504,19 @@ function EntityPage() {
             </>
           )}
 
+          {entity && (
+            <FeedbackCTA
+              context={{
+                encyclopedia_entity_id: entity.id,
+                entity_id: entity.id,
+                slug: entity.slug,
+                title: entity.title,
+              }}
+            />
+          )}
+
           <div className="h-10" />
+
         </div>
       </div>
       </ReadingScale>

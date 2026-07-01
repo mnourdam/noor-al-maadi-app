@@ -6,7 +6,7 @@ import {
   Coins, Gift, Bell, Music, Zap, LayoutGrid, TrendingUp, Medal, ScrollText,
   Users2, Settings as SettingsIcon, X, BookOpen, Swords, Landmark, Search,
   Map as MapIcon, Hourglass, Copy, Share2, QrCode, ChevronRight, Lock,
-  Type as TypeIcon,
+  Type as TypeIcon, Sprout, Inbox,
 } from "lucide-react";
 
 import { toWesternDigits } from "@/lib/formatNumber";
@@ -1316,7 +1316,28 @@ function SettingsTab({
       </SettingsGroup>
 
 
+      {/* Community feedback */}
+      <SettingsGroup title="ساهم في تطوير إرث" icon={Sprout}>
+        <Link to="/feedback/new" className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-background/40 p-3 hover:border-gold/30">
+          <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold"><Sprout className="size-4" /></div>
+          <div className="min-w-0 flex-1 text-right">
+            <p className="font-display text-sm font-bold">إرسال مساهمة جديدة</p>
+            <p className="text-[11px] text-muted-foreground">اقتراح، تصحيح، أو ملاحظة تساعدنا على تطوير إرث.</p>
+          </div>
+          <ChevronLeft className="size-4 text-muted-foreground" />
+        </Link>
+        <Link to="/feedback" className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-background/40 p-3 hover:border-gold/30">
+          <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold"><Inbox className="size-4" /></div>
+          <div className="min-w-0 flex-1 text-right">
+            <p className="font-display text-sm font-bold">مساهماتي والردود</p>
+            <p className="text-[11px] text-muted-foreground">تابع حوارك مع فريق إرث.</p>
+          </div>
+          <ChevronLeft className="size-4 text-muted-foreground" />
+        </Link>
+      </SettingsGroup>
+
       {/* About */}
+
       <SettingsGroup title="حول إرث" icon={Info}>
         <Link to="/about" className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-background/40 p-3 hover:border-gold/30">
           <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold"><Info className="size-4" /></div>

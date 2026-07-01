@@ -13,6 +13,7 @@ import {
 } from "@/lib/investigations-source";
 import { useProfile } from "@/lib/profile";
 import { displayName } from "@/lib/display-names";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 
 export const Route = createFileRoute("/investigation/$id")({
   head: () => ({ meta: [{ title: "تحقيق تاريخي" }] }),
@@ -221,8 +222,10 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
             </div>
           </section>
         )}
+        <FeedbackCTA context={{ investigation_id: row.slug, title: row.title ?? "التحقيق" }} />
       </ReadingScale>
     </AppShell>
+
 
   );
 }

@@ -15,6 +15,7 @@ import {
   ENCYCLOPEDIA_ENTITY_COLUMNS,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 
 function useEncyclopediaEntity(id: string | null) {
   return useQuery<SupabaseEncyclopediaEntity | null>({
@@ -142,7 +143,17 @@ export function AtlasEntityDetailPanel({
             </button>
           )}
         </div>
+
+        <FeedbackCTA
+          className="mt-4"
+          context={{
+            atlas_entity_id: entity.id,
+            encyclopedia_entity_id: encId ?? undefined,
+            title: entity.name_ar,
+          }}
+        />
       </div>
     </div>
   );
 }
+
