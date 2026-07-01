@@ -65,14 +65,14 @@ export function filterAtlasEntities(
     search: string;
   },
 ): AtlasEntityRow[] {
-  const q = filters.search.trim().toLowerCase();
+  const nq = normalizeArabic(filters.search);
   return entities.filter((e) => {
     if (filters.kind && e.kind !== filters.kind) return false;
     if (filters.era && periodForEntity(e) !== filters.era) return false;
     if (filters.world && worldForEntity(e) !== filters.world) return false;
-    if (q) {
-      const hay = `${e.name_ar} ${e.name_en ?? ""} ${e.slug}`.toLowerCase();
-      if (!hay.includes(q)) return false;
+    if (nq) {
+      const hay = `${normalizeArabic(e.name_ar)} ${normalizeArabic(e.name_en ?? "")} ${normalizeArabic(e.slug.replace(/-/g, " "))}`;
+      if (!hay.includes(nq)) return false;
     }
     return true;
   });
