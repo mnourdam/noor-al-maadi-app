@@ -6,8 +6,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, Check, Eye, EyeOff, MapPin, RefreshCw, Save, Search, ShieldCheck, Trash2, Upload,
+  ArrowRight, BookOpen, Check, Copy, ExternalLink, Eye, EyeOff, MapPin, PinOff, RefreshCw, Save, Search, ShieldCheck, Star, Trash2, Upload,
 } from "lucide-react";
+import { findAtlasDuplicateGroups, DUP_REASON_AR, type AtlasDuplicateGroup } from "@/lib/atlas/atlas-duplicates";
+import { normalizeArabic } from "@/lib/atlas/atlas-search";
 import { toast } from "sonner";
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
