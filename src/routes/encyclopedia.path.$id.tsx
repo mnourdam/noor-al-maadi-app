@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, Compass, ArrowDown } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import {
   buildExplorationJourney,
   findExplorationPath,
@@ -176,6 +177,16 @@ function PathPage() {
               })}
             </ol>
           </section>
+        )}
+
+        {journeyQuery.data?.anchor && (
+          <FeedbackCTA
+            context={{
+              entity_id: journeyQuery.data.anchor.id,
+              slug: journeyQuery.data.anchor.slug,
+              title: journeyQuery.data.anchor.title,
+            }}
+          />
         )}
 
         <div className="h-10" />

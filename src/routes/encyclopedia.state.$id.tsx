@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { ChevronRight, Database } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import { supabase } from "@/integrations/supabase/client";
@@ -213,6 +214,16 @@ function StatePage() {
           <p className="mt-8 rounded-2xl border border-white/10 bg-surface/70 p-6 text-center text-xs text-muted-foreground">
             لا توجد عناصر مرتبطة بهذه الدولة بعد.
           </p>
+        )}
+
+        {state && (
+          <FeedbackCTA
+            context={{
+              entity_id: state.id,
+              slug: state.slug,
+              title: state.title,
+            }}
+          />
         )}
 
         <div className="h-10" />

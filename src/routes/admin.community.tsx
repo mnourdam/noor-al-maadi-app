@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminGate } from "@/lib/admin-guard";
+import { supabase } from "@/integrations/supabase/client";
+import { useFeedbackPresence } from "@/lib/feedback/usePresence";
+import { FeedbackPresenceBadge } from "@/components/feedback/FeedbackPresenceBadge";
 import {
   adminFeedbackStats,
   adminListIssues,
@@ -270,6 +273,17 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
   const [reply, setReply] = useState("");
   const [internal, setInternal] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
+
+  const { otherOnline, otherTyping, markTyping } = useFeedbackPresence({
+    issueId: id,
+    role: "admin",
+    userId,
+  });
 
   const load = useCallback(async () => {
     const res = await getIssueThread(id);
@@ -312,7 +326,10 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
       <button aria-label="إغلاق" className="flex-1 bg-black/70" onClick={onClose} />
       <aside className="flex h-full w-full max-w-xl flex-col overflow-hidden border-l border-amber-500/20 bg-slate-950 text-slate-100 shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/70 px-4 py-3">
-          <p className="text-sm font-bold text-amber-100">تفاصيل المساهمة</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-bold text-amber-100">تفاصيل المساهمة</p>
+            <FeedbackPresenceBadge viewerRole="admin" otherOnline={otherOnline} otherTyping={otherTyping} />
+          </div>
           <button
             onClick={onClose}
             className="rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
@@ -449,7 +466,7 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
             <div className="border-t border-slate-800 bg-slate-900/60 p-3">
               <textarea
                 value={reply}
-                onChange={(e) => setReply(e.target.value)}
+                onChange={(e) => { setReply(e.target.value); markTyping(); }}
                 rows={3}
                 maxLength={5000}
                 placeholder="اكتب ردك للّاعب أو ملاحظة داخلية…"

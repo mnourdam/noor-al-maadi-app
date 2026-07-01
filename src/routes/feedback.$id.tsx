@@ -4,6 +4,8 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { getIssueThread, markIssueRead, rateIssue, replyToIssue } from "@/lib/feedback/api";
 import { CATEGORY_MAP, STATUS_LABELS, type FeedbackIssue, type FeedbackMessage } from "@/lib/feedback/types";
 import { supabase } from "@/integrations/supabase/client";
+import { useFeedbackPresence } from "@/lib/feedback/usePresence";
+import { FeedbackPresenceBadge } from "@/components/feedback/FeedbackPresenceBadge";
 import { ChevronLeft, Send, MapPin, Sparkles, ThumbsUp, ThumbsDown, Check } from "lucide-react";
 
 export const Route = createFileRoute("/feedback/$id")({
@@ -19,6 +21,17 @@ function FeedbackThread() {
   const [error, setError] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
+
+  const { otherOnline, otherTyping, markTyping } = useFeedbackPresence({
+    issueId: id,
+    role: "player",
+    userId,
+  });
 
   const load = useCallback(async () => {
     try {
@@ -104,6 +117,13 @@ function FeedbackThread() {
                     <span>·</span>
                     <span>{new Date(issue.created_at).toLocaleDateString("ar", { day: "numeric", month: "short", year: "numeric" })}</span>
                   </div>
+                  <div className="mt-2">
+                    <FeedbackPresenceBadge
+                      viewerRole="player"
+                      otherOnline={otherOnline}
+                      otherTyping={otherTyping}
+                    />
+                  </div>
                 </div>
               </div>
               {contextChips.length > 0 && (
@@ -136,7 +156,7 @@ function FeedbackThread() {
               <form onSubmit={onSend} className="rounded-2xl border border-white/10 bg-surface/60 p-3">
                 <textarea
                   value={reply}
-                  onChange={(e) => setReply(e.target.value)}
+                  onChange={(e) => { setReply(e.target.value); markTyping(); }}
                   rows={3}
                   maxLength={5000}
                   placeholder="اكتب ردك…"

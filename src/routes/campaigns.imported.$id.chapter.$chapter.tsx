@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart, X as XIcon } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 
 import type { Campaign, CampaignChapter } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
@@ -328,6 +329,9 @@ function ImportedChapterPlayer() {
             ) : allDone ? (
               <ChapterCompletePanel
                 campaignId={campaign.id}
+                campaignTitle={campaign.title}
+                chapterId={chapter.id}
+                chapterTitle={chapter.title}
                 xpEarned={chProgress?.xpEarned ?? 0}
                 coinsEarned={chProgress?.coinsEarned ?? 0}
                 heartsLost={chProgress?.heartsLost ?? 0}
@@ -433,6 +437,9 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
 
 function ChapterCompletePanel(props: {
   campaignId: string;
+  campaignTitle?: string;
+  chapterId?: string;
+  chapterTitle?: string;
   xpEarned: number; coinsEarned: number; heartsLost: number;
   nextChapter: CampaignChapter | null;
 }) {
@@ -480,6 +487,16 @@ function ChapterCompletePanel(props: {
           عودة لقائمة الفصول
         </Link>
       </div>
+      <FeedbackCTA
+        className="mt-6"
+        context={{
+          campaign_id: props.campaignId,
+          title: props.chapterTitle
+            ? `${props.campaignTitle ?? "الحملة"} · ${props.chapterTitle}`
+            : (props.campaignTitle ?? "فصل الحملة"),
+          ...(props.chapterId ? { chapter_id: props.chapterId } : {}),
+        }}
+      />
     </div>
   );
 }
