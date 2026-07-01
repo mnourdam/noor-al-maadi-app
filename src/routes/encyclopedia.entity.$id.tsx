@@ -68,10 +68,7 @@ export const Route = createFileRoute("/encyclopedia/entity/$id")({
   component: EntityPage,
   notFoundComponent: () => (
     <AppShell>
-      <div className="px-5 pt-10 text-center">
-        <h1 className="font-display text-xl">العنصر غير موجود</h1>
-        <Link to="/encyclopedia" className="mt-4 inline-block text-gold underline">عُد إلى الموسوعة</Link>
-      </div>
+      <EntityNotFound />
     </AppShell>
   ),
 });
