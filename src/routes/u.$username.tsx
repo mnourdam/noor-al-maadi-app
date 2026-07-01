@@ -30,7 +30,22 @@ function PublicProfilePage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetchPublicProfileByUsername(username).then((r) => { setP(r); setLoading(false); });
+    let alive = true;
+    (async () => {
+      // Try the friendship-gated fetch first — returns the profile only for
+      // self or accepted friends. If it returns null, fall back to a minimal
+      // identity lookup so we can still show the "Add friend" call-to-action
+      // (name + avatar only, no progress details).
+      const gated = await fetchGatedProfileByUsername(username);
+      if (gated) {
+        if (!alive) return;
+        setP(gated); setLoading(false); return;
+      }
+      const basic = await fetchPublicProfileByUsername(username);
+      if (!alive) return;
+      setP(basic); setLoading(false);
+    })();
+    return () => { alive = false; };
   }, [username]);
 
   useEffect(() => {
