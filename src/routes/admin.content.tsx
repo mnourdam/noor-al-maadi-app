@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookOpen, CalendarDays, Pencil, Plus, RefreshCw, Save, ShieldAlert, Trash2, Upload, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BookOpen, CalendarDays, CheckSquare, Eye, EyeOff, Pencil, Plus, RefreshCw, Save, ShieldAlert, Square, Trash2, Upload, X } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount } from "@/lib/account";
 
@@ -92,7 +93,7 @@ function ContentManager() {
   const [tab, setTab] = useState<Tab>("facts");
   return (
     <div dir="rtl" className="min-h-screen bg-background px-4 py-8 text-foreground">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6 pb-24">
         <header className="flex items-center gap-3">
           <BookOpen className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">إدارة محتوى الإشعارات التلقائية</h1>
@@ -147,6 +148,186 @@ function Feedback({ msg }: { msg: { type: "ok" | "err"; text: string } | null })
 }
 
 // ============================================================
+// Bulk selection primitives
+// ============================================================
+
+/**
+ * Tracks a Set of selected row ids. Automatically clears whenever the caller's
+ * filter/search signature (`resetKey`) changes — this guarantees selections
+ * never leak across filter changes, matching the spec.
+ */
+function useBulkSelection(resetKey: string) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const prevKey = useRef(resetKey);
+  useEffect(() => {
+    if (prevKey.current !== resetKey) {
+      prevKey.current = resetKey;
+      setSelected(new Set());
+    }
+  }, [resetKey]);
+
+  const toggle = useCallback((id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const setAll = useCallback((ids: string[], on: boolean) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (on) ids.forEach(i => next.add(i));
+      else ids.forEach(i => next.delete(i));
+      return next;
+    });
+  }, []);
+
+  const clear = useCallback(() => setSelected(new Set()), []);
+
+  return { selected, toggle, setAll, clear };
+}
+
+/**
+ * Sticky bulk-action bar. Appears only when at least one row is selected.
+ * All copy is in Arabic per spec.
+ */
+function BulkBar({
+  count,
+  onEnable,
+  onDisable,
+  onDelete,
+  onClear,
+  busy,
+}: {
+  count: number;
+  onEnable: () => void;
+  onDisable: () => void;
+  onDelete: () => void;
+  onClear: () => void;
+  busy: boolean;
+}) {
+  if (count === 0) return null;
+  return (
+    <div
+      dir="rtl"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80"
+    >
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 px-4 py-3">
+        <span className="text-sm font-medium">
+          محدد: <span className="text-primary">{count}</span>
+        </span>
+        <div className="ml-auto flex flex-wrap gap-2">
+          <button
+            onClick={onEnable}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
+          >
+            <Eye className="h-4 w-4" /> تفعيل المحدد
+          </button>
+          <button
+            onClick={onDisable}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
+          >
+            <EyeOff className="h-4 w-4" /> تعطيل المحدد
+          </button>
+          <button
+            onClick={onDelete}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/20 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" /> حذف المحدد
+          </button>
+          <button
+            onClick={onClear}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
+          >
+            <X className="h-4 w-4" /> إلغاء التحديد
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Simple confirm modal (used for bulk delete + large bulk disable). */
+function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmLabel,
+  danger,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
+      <div
+        dir="rtl"
+        onClick={e => e.stopPropagation()}
+        className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-xl"
+      >
+        <h3 className="text-base font-semibold">{title}</h3>
+        <p className="mt-2 text-sm text-muted-foreground">{message}</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onCancel} className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted">
+            إلغاء
+          </button>
+          <button
+            onClick={onConfirm}
+            className={
+              danger
+                ? "rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground hover:opacity-90"
+                : "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+            }
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SelectAllButton({
+  allSelected,
+  someSelected,
+  onToggle,
+}: {
+  allSelected: boolean;
+  someSelected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted"
+      title="تحديد الكل (ضمن التصفية الحالية)"
+    >
+      {allSelected ? (
+        <CheckSquare className="h-4 w-4 text-primary" />
+      ) : someSelected ? (
+        <CheckSquare className="h-4 w-4 opacity-60" />
+      ) : (
+        <Square className="h-4 w-4" />
+      )}
+      تحديد الكل
+    </button>
+  );
+}
+
+// ============================================================
 // Daily Facts
 // ============================================================
 function DailyFactsTab() {
@@ -174,6 +355,13 @@ function DailyFactsTab() {
     if (!q) return rows;
     return rows.filter(r => r.title.toLowerCase().includes(q) || r.body.toLowerCase().includes(q));
   }, [rows, search]);
+
+  const { selected, toggle: toggleSel, setAll, clear } = useBulkSelection(`facts|${search}`);
+  const visibleIds = useMemo(() => filtered.map(r => r.id), [filtered]);
+  const selectedVisible = useMemo(() => visibleIds.filter(id => selected.has(id)), [visibleIds, selected]);
+  const allSelected = visibleIds.length > 0 && selectedVisible.length === visibleIds.length;
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState<null | { kind: "delete" | "disable" }>(null);
 
   const save = async () => {
     if (!editing) return;
@@ -203,10 +391,34 @@ function DailyFactsTab() {
   };
 
   const remove = async (r: DailyFact) => {
-    if (!confirm(`حذف المعلومة: "${r.title}"؟`)) return;
+    if (!window.confirm(`حذف المعلومة: "${r.title}"؟`)) return;
     const { error } = await supabase.from("daily_facts" as any).delete().eq("id", r.id);
     if (error) setMsg({ type: "err", text: `فشل الحذف: ${error.message}` });
     else { setMsg({ type: "ok", text: "تم الحذف." }); await load(); }
+  };
+
+  const applyBulkEnable = async (enabled: boolean) => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setBusy(true);
+    const { error } = await supabase.from("daily_facts" as any).update({ enabled }).in("id", ids);
+    setBusy(false);
+    if (error) { toast.error(`فشل التحديث: ${error.message}`); return; }
+    toast.success(`تم تحديث ${ids.length} عنصر`);
+    clear();
+    await load();
+  };
+
+  const applyBulkDelete = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setBusy(true);
+    const { error } = await supabase.from("daily_facts" as any).delete().in("id", ids);
+    setBusy(false);
+    if (error) { toast.error(`فشل الحذف: ${error.message}`); return; }
+    toast.success(`تم حذف ${ids.length} عنصر`);
+    clear();
+    await load();
   };
 
   return (
@@ -220,6 +432,11 @@ function DailyFactsTab() {
         >
           <Plus className="h-4 w-4" /> إضافة معلومة
         </button>
+        <SelectAllButton
+          allSelected={allSelected}
+          someSelected={selectedVisible.length > 0}
+          onToggle={() => setAll(visibleIds, !allSelected)}
+        />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -247,32 +464,77 @@ function DailyFactsTab() {
           <div className="p-6 text-center text-sm text-muted-foreground">لا توجد معلومات.</div>
         ) : (
           <ul className="divide-y divide-border">
-            {filtered.map(r => (
-              <li key={r.id} className="flex flex-col gap-2 p-4 md:flex-row md:items-center">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-block h-2 w-2 rounded-full ${r.enabled ? "bg-green-500" : "bg-muted-foreground"}`} />
-                    <h3 className="truncate font-medium">{r.title}</h3>
+            {filtered.map(r => {
+              const isSel = selected.has(r.id);
+              return (
+                <li
+                  key={r.id}
+                  className={`flex flex-col gap-2 p-4 md:flex-row md:items-center ${isSel ? "bg-primary/5" : ""}`}
+                >
+                  <label className="flex cursor-pointer items-center pt-1 md:pt-0">
+                    <input
+                      type="checkbox"
+                      checked={isSel}
+                      onChange={() => toggleSel(r.id)}
+                      className="h-4 w-4 cursor-pointer accent-primary"
+                      aria-label="تحديد العنصر"
+                    />
+                  </label>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block h-2 w-2 rounded-full ${r.enabled ? "bg-green-500" : "bg-muted-foreground"}`} />
+                      <h3 className="truncate font-medium">{r.title}</h3>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.body}</p>
+                    {r.deep_link && <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{r.deep_link}</p>}
                   </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.body}</p>
-                  {r.deep_link && <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{r.deep_link}</p>}
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => toggle(r)} className="rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
-                    {r.enabled ? "تعطيل" : "تفعيل"}
-                  </button>
-                  <button onClick={() => setEditing(r)} className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
-                    <Pencil className="h-3 w-3" /> تعديل
-                  </button>
-                  <button onClick={() => remove(r)} className="inline-flex items-center gap-1 rounded-md border border-destructive/40 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10">
-                    <Trash2 className="h-3 w-3" /> حذف
-                  </button>
-                </div>
-              </li>
-            ))}
+                  <div className="flex gap-2">
+                    <button onClick={() => toggle(r)} className="rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
+                      {r.enabled ? "تعطيل" : "تفعيل"}
+                    </button>
+                    <button onClick={() => setEditing(r)} className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
+                      <Pencil className="h-3 w-3" /> تعديل
+                    </button>
+                    <button onClick={() => remove(r)} className="inline-flex items-center gap-1 rounded-md border border-destructive/40 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10">
+                      <Trash2 className="h-3 w-3" /> حذف
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
+
+      <BulkBar
+        count={selected.size}
+        busy={busy}
+        onEnable={() => applyBulkEnable(true)}
+        onDisable={() => {
+          if (selected.size > 20) setConfirm({ kind: "disable" });
+          else applyBulkEnable(false);
+        }}
+        onDelete={() => setConfirm({ kind: "delete" })}
+        onClear={clear}
+      />
+
+      <ConfirmDialog
+        open={confirm?.kind === "delete"}
+        title="تأكيد الحذف"
+        message="سيتم حذف العناصر المحددة نهائيًا. هل تريد المتابعة؟"
+        confirmLabel="حذف"
+        danger
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => { setConfirm(null); void applyBulkDelete(); }}
+      />
+      <ConfirmDialog
+        open={confirm?.kind === "disable"}
+        title="تأكيد التعطيل"
+        message={`سيتم تعطيل ${selected.size} عنصر. هل تريد المتابعة؟`}
+        confirmLabel="تعطيل"
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => { setConfirm(null); void applyBulkEnable(false); }}
+      />
     </div>
   );
 }
@@ -349,6 +611,13 @@ function TodayEventsTab() {
     return rows.filter(r => r.title.toLowerCase().includes(q) || r.body.toLowerCase().includes(q));
   }, [rows, search]);
 
+  const { selected, toggle: toggleSel, setAll, clear } = useBulkSelection(`events|${search}`);
+  const visibleIds = useMemo(() => filtered.map(r => r.id), [filtered]);
+  const selectedVisible = useMemo(() => visibleIds.filter(id => selected.has(id)), [visibleIds, selected]);
+  const allSelected = visibleIds.length > 0 && selectedVisible.length === visibleIds.length;
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState<null | { kind: "delete" | "disable" }>(null);
+
   const save = async () => {
     if (!editing) return;
     const title = editing.title?.trim() ?? "";
@@ -382,10 +651,34 @@ function TodayEventsTab() {
   };
 
   const remove = async (r: TodayEvent) => {
-    if (!confirm(`حذف الحدث: "${r.title}"؟`)) return;
+    if (!window.confirm(`حذف الحدث: "${r.title}"؟`)) return;
     const { error } = await supabase.from("today_in_history_events" as any).delete().eq("id", r.id);
     if (error) setMsg({ type: "err", text: `فشل الحذف: ${error.message}` });
     else { setMsg({ type: "ok", text: "تم الحذف." }); await load(); }
+  };
+
+  const applyBulkEnable = async (enabled: boolean) => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setBusy(true);
+    const { error } = await supabase.from("today_in_history_events" as any).update({ enabled }).in("id", ids);
+    setBusy(false);
+    if (error) { toast.error(`فشل التحديث: ${error.message}`); return; }
+    toast.success(`تم تحديث ${ids.length} عنصر`);
+    clear();
+    await load();
+  };
+
+  const applyBulkDelete = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setBusy(true);
+    const { error } = await supabase.from("today_in_history_events" as any).delete().in("id", ids);
+    setBusy(false);
+    if (error) { toast.error(`فشل الحذف: ${error.message}`); return; }
+    toast.success(`تم حذف ${ids.length} عنصر`);
+    clear();
+    await load();
   };
 
   return (
@@ -399,6 +692,11 @@ function TodayEventsTab() {
         >
           <Plus className="h-4 w-4" /> إضافة حدث
         </button>
+        <SelectAllButton
+          allSelected={allSelected}
+          someSelected={selectedVisible.length > 0}
+          onToggle={() => setAll(visibleIds, !allSelected)}
+        />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -421,41 +719,86 @@ function TodayEventsTab() {
           <div className="p-6 text-center text-sm text-muted-foreground">لا توجد أحداث.</div>
         ) : (
           <ul className="divide-y divide-border">
-            {filtered.map(r => (
-              <li key={r.id} className="flex flex-col gap-2 p-4 md:flex-row md:items-center">
-                <div className="flex w-20 flex-col items-center justify-center rounded-md bg-muted px-2 py-1 text-center">
-                  <div className="text-lg font-bold">{r.day}</div>
-                  <div className="text-xs text-muted-foreground">/{r.month}</div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-block h-2 w-2 rounded-full ${r.enabled ? "bg-green-500" : "bg-muted-foreground"}`} />
-                    <h3 className="truncate font-medium">{r.title}</h3>
-                    {(r.hijri_year || r.gregorian_year) && (
-                      <span className="text-xs text-muted-foreground">
-                        {r.hijri_year ? `${r.hijri_year}هـ` : ""}{r.hijri_year && r.gregorian_year ? " / " : ""}{r.gregorian_year ? `${r.gregorian_year}م` : ""}
-                      </span>
-                    )}
+            {filtered.map(r => {
+              const isSel = selected.has(r.id);
+              return (
+                <li
+                  key={r.id}
+                  className={`flex flex-col gap-2 p-4 md:flex-row md:items-center ${isSel ? "bg-primary/5" : ""}`}
+                >
+                  <label className="flex cursor-pointer items-center pt-1 md:pt-0">
+                    <input
+                      type="checkbox"
+                      checked={isSel}
+                      onChange={() => toggleSel(r.id)}
+                      className="h-4 w-4 cursor-pointer accent-primary"
+                      aria-label="تحديد العنصر"
+                    />
+                  </label>
+                  <div className="flex w-20 flex-col items-center justify-center rounded-md bg-muted px-2 py-1 text-center">
+                    <div className="text-lg font-bold">{r.day}</div>
+                    <div className="text-xs text-muted-foreground">/{r.month}</div>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.body}</p>
-                  {r.deep_link && <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{r.deep_link}</p>}
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => toggle(r)} className="rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
-                    {r.enabled ? "تعطيل" : "تفعيل"}
-                  </button>
-                  <button onClick={() => setEditing(r)} className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
-                    <Pencil className="h-3 w-3" /> تعديل
-                  </button>
-                  <button onClick={() => remove(r)} className="inline-flex items-center gap-1 rounded-md border border-destructive/40 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10">
-                    <Trash2 className="h-3 w-3" /> حذف
-                  </button>
-                </div>
-              </li>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block h-2 w-2 rounded-full ${r.enabled ? "bg-green-500" : "bg-muted-foreground"}`} />
+                      <h3 className="truncate font-medium">{r.title}</h3>
+                      {(r.hijri_year || r.gregorian_year) && (
+                        <span className="text-xs text-muted-foreground">
+                          {r.hijri_year ? `${r.hijri_year}هـ` : ""}{r.hijri_year && r.gregorian_year ? " / " : ""}{r.gregorian_year ? `${r.gregorian_year}م` : ""}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.body}</p>
+                    {r.deep_link && <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{r.deep_link}</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => toggle(r)} className="rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
+                      {r.enabled ? "تعطيل" : "تفعيل"}
+                    </button>
+                    <button onClick={() => setEditing(r)} className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
+                      <Pencil className="h-3 w-3" /> تعديل
+                    </button>
+                    <button onClick={() => remove(r)} className="inline-flex items-center gap-1 rounded-md border border-destructive/40 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10">
+                      <Trash2 className="h-3 w-3" /> حذف
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
+
+      <BulkBar
+        count={selected.size}
+        busy={busy}
+        onEnable={() => applyBulkEnable(true)}
+        onDisable={() => {
+          if (selected.size > 20) setConfirm({ kind: "disable" });
+          else applyBulkEnable(false);
+        }}
+        onDelete={() => setConfirm({ kind: "delete" })}
+        onClear={clear}
+      />
+
+      <ConfirmDialog
+        open={confirm?.kind === "delete"}
+        title="تأكيد الحذف"
+        message="سيتم حذف العناصر المحددة نهائيًا. هل تريد المتابعة؟"
+        confirmLabel="حذف"
+        danger
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => { setConfirm(null); void applyBulkDelete(); }}
+      />
+      <ConfirmDialog
+        open={confirm?.kind === "disable"}
+        title="تأكيد التعطيل"
+        message={`سيتم تعطيل ${selected.size} عنصر. هل تريد المتابعة؟`}
+        confirmLabel="تعطيل"
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => { setConfirm(null); void applyBulkEnable(false); }}
+      />
     </div>
   );
 }
