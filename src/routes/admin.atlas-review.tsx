@@ -681,7 +681,126 @@ function AtlasReviewPage() {
               </div>
             </>
           )}
+
+          {tab === "duplicates" && (
+            <>
+              <div className="space-y-2 border-b border-stone-800 p-2">
+                <p className="text-[11px] leading-relaxed text-stone-400">
+                  مجموعات محتملة من التكرارات على الأطلس. الإجراءات هنا لا تعدّل الموسوعة.
+                </p>
+                <div className="flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1.5">
+                  <Search className="size-3.5 opacity-60" />
+                  <input
+                    value={dupSearch}
+                    onChange={(e) => setDupSearch(e.target.value)}
+                    placeholder="بحث داخل التكرارات..."
+                    className="min-w-0 flex-1 bg-transparent text-[12px] outline-none"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1 text-[10px] text-stone-400">
+                  <span className="rounded border border-stone-700 bg-stone-950 px-1.5 py-0.5">مجموعات: <b className="text-amber-100">{duplicateGroups.length}</b></span>
+                  <span className="rounded border border-stone-700 bg-stone-950 px-1.5 py-0.5">عناصر مكررة: <b className="text-amber-100">{duplicateItemCount}</b></span>
+                  <span className="rounded border border-stone-700 bg-stone-950 px-1.5 py-0.5">مُزال: <b className="text-rose-200">{removedCount}</b></span>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {filteredDupGroups.length === 0 && (
+                  <div className="p-3 text-[12px] text-stone-400">لا توجد تكرارات مطابقة.</div>
+                )}
+                <ul className="divide-y divide-stone-800/80">
+                  {filteredDupGroups.map((g) => (
+                    <li key={g.key} className="p-2">
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <span className="truncate text-[12px] font-bold text-amber-100">{g.label}</span>
+                        <span className="rounded bg-stone-800 px-1.5 py-0.5 text-[10px] text-stone-300">{g.items.length}</span>
+                        <div className="ml-auto flex flex-wrap gap-1 text-[9px]">
+                          {g.reasons.map((r) => (
+                            <span key={r} className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-amber-200">
+                              {DUP_REASON_AR[r]}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <ul className="space-y-1">
+                        {g.items.map((it) => (
+                          <li key={it.id} className={`rounded border p-1.5 text-[11px] ${it.status === "retired" ? "border-rose-900/50 bg-rose-950/20 opacity-70" : "border-stone-700 bg-stone-950"}`}>
+                            <div className="flex items-start gap-1.5">
+                              <button
+                                onClick={() => { setFocusedId(it.id); setTab("review"); if (it.aps_x != null && it.aps_y != null) centerOn(it, { x: it.aps_x, y: it.aps_y }, scale, wrapSize, setTx, setTy); }}
+                                className="min-w-0 flex-1 text-right"
+                                title="عرض على الخريطة"
+                              >
+                                <div className="truncate font-bold text-amber-100">{it.name_ar}</div>
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-stone-400">
+                                  <span>{KIND_LABEL_AR[it.kind]}</span>
+                                  <span>· {eraLabel(it.era)}</span>
+                                  {it.aps_x != null && it.aps_y != null && (
+                                    <span>· APS {Math.round(it.aps_x)},{Math.round(it.aps_y)}</span>
+                                  )}
+                                  <span>· {STATUS_LABEL_AR[it.status]}</span>
+                                  {it.aps_verified && <span className="text-emerald-300">· مؤكّد</span>}
+                                  {it.encyclopedia_entity_id
+                                    ? <span className="text-sky-300">· موسوعة ✓</span>
+                                    : <span className="text-stone-500">· بلا موسوعة</span>}
+                                  {(it.metadata as any)?.import_batch && (
+                                    <span>· {(it.metadata as any).import_batch}</span>
+                                  )}
+                                </div>
+                              </button>
+                            </div>
+                            <div className="mt-1.5 flex flex-wrap items-center justify-end gap-1">
+                              <button
+                                disabled={keepBusyGroup === g.key || it.status === "retired"}
+                                onClick={() => keepOnlyInGroup(g, it.id)}
+                                title="إبقاء هذا وإزالة البقية من الأطلس"
+                                className="inline-flex items-center gap-1 rounded bg-emerald-700 px-1.5 py-0.5 text-[10px] font-bold text-white hover:bg-emerald-600 disabled:opacity-40"
+                              >
+                                <Star className="size-3" />
+                                إبقاء هذا
+                              </button>
+                              <a
+                                href={`/admin/atlas-entities?focus=${it.id}`}
+                                target="_blank" rel="noreferrer"
+                                className="inline-flex items-center gap-1 rounded border border-stone-700 bg-stone-800 px-1.5 py-0.5 text-[10px] hover:bg-stone-700"
+                                title="فتح عنصر الأطلس"
+                              >
+                                <ExternalLink className="size-3" />
+                                الأطلس
+                              </a>
+                              {it.encyclopedia_entity_id && (
+                                <a
+                                  href={`/encyclopedia/entity/${it.encyclopedia_entity_id}`}
+                                  target="_blank" rel="noreferrer"
+                                  className="inline-flex items-center gap-1 rounded border border-sky-800 bg-sky-950/40 px-1.5 py-0.5 text-[10px] text-sky-200 hover:bg-sky-950/70"
+                                  title="فتح صفحة الموسوعة"
+                                >
+                                  <BookOpen className="size-3" />
+                                  الموسوعة
+                                </a>
+                              )}
+                              {it.status !== "retired" && (
+                                <button
+                                  onClick={() => setRemoveTarget(it)}
+                                  title="إزالة من الأطلس فقط"
+                                  className="inline-flex items-center gap-1 rounded border border-rose-700 bg-rose-900/50 px-1.5 py-0.5 text-[10px] font-bold text-rose-100 hover:bg-rose-800"
+                                >
+                                  <PinOff className="size-3" />
+                                  إزالة
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
         </aside>
+
 
 
         {/* Stage */}
