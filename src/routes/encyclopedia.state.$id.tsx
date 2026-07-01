@@ -146,10 +146,7 @@ function StatePage() {
   if (!state) {
     return (
       <AppShell>
-        <div className="px-5 pt-10 text-center">
-          <h1 className="font-display text-xl">الدولة غير موجودة</h1>
-          <Link to="/encyclopedia" className="mt-4 inline-block text-gold underline">عُد إلى الموسوعة</Link>
-        </div>
+        <EntityNotFound />
       </AppShell>
     );
   }
