@@ -23,6 +23,8 @@ import {
   getChapterProgress, getCampaignProgress, recordActivity, isChapterUnlocked,
 } from "@/lib/importedCampaignProgress";
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
+import { ActivityReviewCard } from "@/components/imported-campaign/ActivityReviewCard";
+import { RichReadingText } from "@/components/imported-campaign/RichReadingText";
 import { OutOfHeartsModal } from "@/components/imported-campaign/OutOfHeartsModal";
 import { CampaignCompleteModal } from "@/components/imported-campaign/CampaignCompleteModal";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
@@ -108,16 +110,21 @@ function ImportedChapterPlayer() {
   }, [heartsDepleted]);
 
   // PR2 anti-skip: hard URL guard. If this chapter is locked, redirect to overview.
+  // Exception: if the campaign is already fully completed, all chapters are
+  // freely browsable in review mode — never redirect.
+  const reviewMode = !!camProgress?.completed;
   const navigate = useNavigate();
   useEffect(() => {
     if (!campaign || !chapter) return;
-    if (!isChapterUnlocked(campaign, chapter)) {
+    if (!reviewMode && !isChapterUnlocked(campaign, chapter)) {
       navigate({ to: "/campaigns/imported/$id", params: { id: campaign.id }, replace: true });
       return;
     }
     // PR3: persist resume pointer the moment we enter this chapter.
-    setActivePosition({ campaignId: campaign.id, chapterId: chapter.id });
-  }, [campaign, chapter, navigate]);
+    if (!reviewMode) {
+      setActivePosition({ campaignId: campaign.id, chapterId: chapter.id });
+    }
+  }, [campaign, chapter, navigate, reviewMode]);
 
   // Current activity = first activity that is either un-completed,
   // OR completed-and-not-yet-acknowledged (correct feedback pending).
@@ -302,28 +309,28 @@ function ImportedChapterPlayer() {
 
         <div className="mx-auto max-w-2xl px-5 pt-4">
           <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold/80">
-            <Scroll className="size-3.5" /> فصل من الحملة
+            <Scroll className="size-3.5" /> {reviewMode ? "مراجعة الفصل" : "فصل من الحملة"}
           </div>
           <h1 className="font-display mt-1 text-2xl font-bold shimmer-text">{chapter.title}</h1>
           {chapter.subtitle && <p className="mt-1 text-sm text-gold/80">{chapter.subtitle}</p>}
 
           {chapter.introText && (
-            <p className="mt-4 text-[12px] leading-relaxed text-foreground/90">{chapter.introText}</p>
-          )}
-
-          {chapter.historicalReadingText && (
-            <div className="parchment-dark mt-4 rounded-2xl border border-gold/25 p-4">
-              <div className="mb-2 flex items-center gap-1 text-[10px] tracking-widest text-gold/80">
-                <BookOpen className="size-3" /> قراءة تاريخية
-              </div>
-              <p className="text-[12px] leading-7 text-foreground/90 whitespace-pre-wrap">
-                {chapter.historicalReadingText}
-              </p>
+            <div className="mt-4">
+              <RichReadingText text={chapter.introText} size="base" />
             </div>
           )}
 
-          {/* Chapter reward preview — unlocks rendered with resolved names. */}
-          {chapter.rewards && (chapter.rewards.xp || chapter.rewards.coins || chapter.rewards.unlocks?.length) && (
+          {chapter.historicalReadingText && (
+            <div className="parchment-dark mt-4 rounded-2xl border border-gold/25 p-5">
+              <div className="mb-3 flex items-center gap-1 text-[10px] tracking-widest text-gold/80">
+                <BookOpen className="size-3" /> قراءة تاريخية
+              </div>
+              <RichReadingText text={chapter.historicalReadingText} size="lg" />
+            </div>
+          )}
+
+          {/* Chapter reward preview — hidden in review mode (already earned). */}
+          {!reviewMode && chapter.rewards && (chapter.rewards.xp || chapter.rewards.coins || chapter.rewards.unlocks?.length) && (
             <div className="mt-4 space-y-2">
               <div className="flex flex-wrap gap-2 text-[11px]">
                 {chapter.rewards.xp ? <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2 py-0.5 text-sky-200">+{chapter.rewards.xp} XP</span> : null}
@@ -341,6 +348,8 @@ function ImportedChapterPlayer() {
               <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-6 text-center text-sm text-muted-foreground">
                 لا توجد أنشطة في هذا الفصل بعد.
               </div>
+            ) : reviewMode ? (
+              <ReviewChapterView campaign={campaign} chapter={chapter} />
             ) : allDone ? (
               <ChapterCompletePanel
                 campaignId={campaign.id}
@@ -512,6 +521,52 @@ function ChapterCompletePanel(props: {
           ...(props.chapterId ? { chapter_id: props.chapterId } : {}),
         }}
       />
+    </div>
+  );
+}
+
+// ---------- Review Mode (completed campaign) ----------
+// Stacks every activity in a read-only "answer key" form so the
+// player can browse the chapter again without earning rewards or
+// mutating progress.
+function ReviewChapterView({
+  campaign,
+  chapter,
+}: {
+  campaign: Campaign;
+  chapter: CampaignChapter;
+}) {
+  const next = nextChapterAfter(campaign, chapter);
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-[12px] text-emerald-100">
+        <Check className="me-1 inline size-3.5" />
+        أنهيتَ هذه الحملة — أنت الآن في وضع المراجعة. تصفّح المحتوى دون أثر على تقدمك.
+      </div>
+
+      {chapter.activities.map((act) => (
+        <ActivityReviewCard key={act.id} activity={act} />
+      ))}
+
+      <div className="flex flex-col gap-2 pt-2">
+        {next && (
+          <Link
+            to="/campaigns/imported/$id/chapter/$chapter"
+            params={{ id: campaign.id, chapter: next.id }}
+            className="motion-tap inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+          >
+            <Check className="size-4" /> الفصل التالي
+            <ArrowLeft className="size-4" />
+          </Link>
+        )}
+        <Link
+          to="/campaigns/imported/$id"
+          params={{ id: campaign.id }}
+          className="motion-tap rounded-2xl border border-white/10 py-2 text-center text-xs text-muted-foreground"
+        >
+          عودة لقائمة الفصول
+        </Link>
+      </div>
     </div>
   );
 }

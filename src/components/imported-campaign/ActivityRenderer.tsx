@@ -13,6 +13,7 @@ import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeT
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import type { CampaignActivity } from "@/types/campaign";
+import { RichReadingText } from "./RichReadingText";
 import { sfx as gameSfx } from "@/components/games/sfx";
 import {
   DndContext,
@@ -72,8 +73,8 @@ function FeedbackBanner({ kind, text }: { kind: "ok" | "err"; text?: string }) {
 function ContextBlock({ text }: { text?: string }) {
   if (!text) return null;
   return (
-    <div className="parchment-dark mb-4 rounded-2xl border border-gold/25 p-4 text-[12px] leading-7 text-foreground/90">
-      {text}
+    <div className="parchment-dark mb-4 rounded-2xl border border-gold/25 p-4">
+      <RichReadingText text={text} size="sm" />
     </div>
   );
 }
