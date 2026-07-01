@@ -561,6 +561,30 @@ function CleanupWorkshop() {
     }).slice(0, 400);
   }, [rows, filter, pipeline, q, dupIds, liveDupIds, atlasLinks, campaignSlugs]);
 
+  // Changing the active filter or pipeline clears the current selection;
+  // search only affects visible cards and does NOT reset selection.
+  useEffect(() => { setSelectedIds(new Set()); }, [filter, pipeline]);
+
+  // Derived selection helpers for the sticky bar + "Select All" checkbox.
+  const filteredIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
+  const visibleSelectedCount = useMemo(
+    () => filteredIds.reduce((n, id) => (selectedIds.has(id) ? n + 1 : n), 0),
+    [filteredIds, selectedIds],
+  );
+  const allVisibleSelected = filteredIds.length > 0 && visibleSelectedCount === filteredIds.length;
+  const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
+  const toggleSelectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        for (const id of filteredIds) next.delete(id);
+      } else {
+        for (const id of filteredIds) next.add(id);
+      }
+      return next;
+    });
+  };
+
   const selected = useMemo(
     () => rows.find((r) => r.id === selectedId) ?? null,
     [rows, selectedId],
