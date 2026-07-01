@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { ChevronRight, Database } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import { supabase } from "@/integrations/supabase/client";
