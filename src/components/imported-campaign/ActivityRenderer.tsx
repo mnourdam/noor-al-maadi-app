@@ -13,6 +13,7 @@ import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeT
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import type { CampaignActivity } from "@/types/campaign";
+import { RichReadingText } from "./RichReadingText";
 import { sfx as gameSfx } from "@/components/games/sfx";
 import {
   DndContext,
