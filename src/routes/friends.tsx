@@ -345,7 +345,7 @@ function LeaderboardSection() {
   return (
     <div>
       <p className="mb-3 text-[11px] text-muted-foreground">
-        الترتيب العالمي حسب الخبرة. الأصدقاء يظهرون بإطار ذهبي. اضغط لاعبًا لزيارة صفحته العامة.
+        الترتيب العالمي حسب الخبرة. الأصدقاء يظهرون بإطار ذهبي — اضغط صديقًا لزيارة صفحته. لا يمكن فتح ملفات اللاعبين الآخرين حفاظًا على الخصوصية.
       </p>
       <div className="space-y-1.5">
         {top.map((r) => <LeaderRow key={r.id} r={r} />)}
