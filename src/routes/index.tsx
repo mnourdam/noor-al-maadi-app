@@ -1138,36 +1138,91 @@ function WorldsHomepageSection() {
   );
 }
 
-// ----- Today in History card -----
-function OnThisDayCalendarCard({ event }: { event: TodayInHistoryEvent }) {
+// ----- Today in History card (supports 1..N events) -----
+function OnThisDayCalendarCard({ events }: { events: TodayInHistoryEvent[] }) {
+  const multi = events.length > 1;
+  return (
+    <section className="mt-12 px-5">
+      <div className="flex items-center justify-between gap-3">
+        <SectionHeader icon={<Calendar className="size-3.5" />} eyebrow="في مثل هذا اليوم" title="حدث من تاريخنا" />
+        {multi && (
+          <span className="mb-1 inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-[10px] font-bold text-gold">
+            {events.length} أحداث
+          </span>
+        )}
+      </div>
+      {multi ? (
+        <TodayEventsCarousel events={events} />
+      ) : (
+        <TodayEventCard event={events[0]} />
+      )}
+    </section>
+  );
+}
+
+function TodayEventsCarousel({ events }: { events: TodayInHistoryEvent[] }) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, direction: "rtl", align: "start" });
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (!emblaApi) return;
+    const onSel = () => setIdx(emblaApi.selectedScrollSnap());
+    emblaApi.on("select", onSel);
+    emblaApi.on("reInit", onSel);
+    onSel();
+    return () => { emblaApi.off("select", onSel); emblaApi.off("reInit", onSel); };
+  }, [emblaApi]);
+  return (
+    <div>
+      <div className="overflow-hidden" ref={emblaRef}>
+        <div className="flex">
+          {events.map((e) => (
+            <div key={e.id} className="min-w-0 flex-[0_0_100%]">
+              <TodayEventCard event={e} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="mt-3 flex items-center justify-center gap-1.5">
+        {events.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            aria-label={`الحدث ${i + 1}`}
+            onClick={() => emblaApi?.scrollTo(i)}
+            className={`h-1.5 rounded-full transition-all ${i === idx ? "w-5 bg-gold" : "w-1.5 bg-gold/30"}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TodayEventCard({ event }: { event: TodayInHistoryEvent }) {
   const yearBits: string[] = [];
   if (event.hijri_year) yearBits.push(`${event.hijri_year} هـ`);
   if (event.gregorian_year) yearBits.push(`${event.gregorian_year} م`);
   return (
-    <section className="mt-12 px-5">
-      <SectionHeader icon={<Calendar className="size-3.5" />} eyebrow="في مثل هذا اليوم" title="حدث من تاريخنا" />
-      <div className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark">
-        <div className="relative h-32 w-full overflow-hidden">
-          <img src={heroManuscriptLamp} alt="" loading="lazy" decoding="async" className="size-full object-cover opacity-50" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-surface" />
+    <div className="shadow-elegant relative block overflow-hidden rounded-3xl border border-gold/30 parchment-dark">
+      <div className="relative h-32 w-full overflow-hidden">
+        <img src={heroManuscriptLamp} alt="" loading="lazy" decoding="async" className="size-full object-cover opacity-50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-surface" />
+      </div>
+      <div className="arabesque-layer opacity-50" />
+      <div className="absolute -left-10 -top-10 size-32 rounded-full bg-gold/15 blur-3xl" />
+      <div className="relative flex gap-4 p-5 pt-0 -mt-10">
+        <div className="shrink-0 rounded-2xl border border-gold/40 bg-black/60 px-3 py-2 text-center backdrop-blur-sm">
+          <div className="text-[9px] tracking-[0.2em] text-gold/80">يوم</div>
+          <div className="font-display text-2xl font-bold text-gold leading-none mt-1">{new Date().getDate()}</div>
+          <div className="text-[9px] text-white/55 mt-1">{new Date().toLocaleDateString("ar", { month: "short" })}</div>
         </div>
-        <div className="arabesque-layer opacity-50" />
-        <div className="absolute -left-10 -top-10 size-32 rounded-full bg-gold/15 blur-3xl" />
-        <div className="relative flex gap-4 p-5 pt-0 -mt-10">
-          <div className="shrink-0 rounded-2xl border border-gold/40 bg-black/60 px-3 py-2 text-center backdrop-blur-sm">
-            <div className="text-[9px] tracking-[0.2em] text-gold/80">يوم</div>
-            <div className="font-display text-2xl font-bold text-gold leading-none mt-1">{new Date().getDate()}</div>
-            <div className="text-[9px] text-white/55 mt-1">{new Date().toLocaleDateString("ar", { month: "short" })}</div>
-          </div>
-          <div className="min-w-0 flex-1 pt-1">
-            {yearBits.length > 0 && (
-              <p className="text-[10px] tracking-[0.25em] text-gold">{yearBits.join(" · ")}</p>
-            )}
-            <h3 className="font-display mt-1 text-base font-bold leading-snug">{event.title}</h3>
-            <p className="mt-2 line-clamp-3 text-[12px] text-white/65 leading-relaxed">{event.body}</p>
-          </div>
+        <div className="min-w-0 flex-1 pt-1">
+          {yearBits.length > 0 && (
+            <p className="text-[10px] tracking-[0.25em] text-gold">{yearBits.join(" · ")}</p>
+          )}
+          <h3 className="font-display mt-1 text-base font-bold leading-snug">{event.title}</h3>
+          <p className="mt-2 line-clamp-3 text-[12px] text-white/65 leading-relaxed">{event.body}</p>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
