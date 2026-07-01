@@ -30,6 +30,7 @@ import { DEFAULT_NOTIFICATION_PREFS, ensurePermission } from "@/lib/notification
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 import { useAccount } from "@/lib/account";
 import { clearLocalPlayerProgress } from "@/lib/resetProgress";
+import { ModalPortal } from "@/components/ModalPortal";
 import { fetchMyReferralStats, buildReferralShareUrl, shareReferral, type MyReferralStats } from "@/lib/referrals";
 import { AndroidTextEntryInput, AndroidTextEntryTextarea, readAndroidTextEntryResult } from "@/components/AndroidTextEntry";
 import { ReadingScale } from "@/components/ReadingScale";
