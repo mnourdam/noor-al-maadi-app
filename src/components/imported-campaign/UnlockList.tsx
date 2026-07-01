@@ -29,8 +29,8 @@ const TYPE_ICON = {
   event: ScrollText,
 } as const;
 
-function iconFor(type: string | null | undefined) {
-  return (type && (TYPE_ICON as Record<string, typeof Sparkles>)[type]) ?? Sparkles;
+function iconFor(type: string | null | undefined): LucideIcon {
+  return (type && (TYPE_ICON as Record<string, LucideIcon>)[type]) || Sparkles;
 }
 
 function rarityFor(r: ResolvedUnlock): CollectibleRarity {
