@@ -22,6 +22,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
+import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
+import encyclopediaHeaderArt from "@/assets/hero/16-historical-library.jpg?url";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
