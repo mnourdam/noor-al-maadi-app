@@ -875,6 +875,7 @@ function AchievementDialog({
   const Icon = CATEGORY_ICON[def.category];
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 animate-fade-in" role="dialog" aria-modal="true" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-gold/30 bg-surface p-6 shadow-elegant animate-scale-in">
         <button onClick={onClose} aria-label="إغلاق" className="absolute top-3 left-3 grid size-8 place-items-center rounded-full border border-white/10 bg-background/60 text-muted-foreground hover:text-foreground">
