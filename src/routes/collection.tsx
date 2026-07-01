@@ -526,7 +526,9 @@ function CollectionPage() {
 
   return (
     <AppShell>
+      <CinematicPageBackdrop image={museumHeaderArt} alt="قاعة متحف تاريخي" />
       <div className="px-5 pt-6">
+
         <Breadcrumbs
           items={[
             { label: "الرئيسية", to: "/" },
