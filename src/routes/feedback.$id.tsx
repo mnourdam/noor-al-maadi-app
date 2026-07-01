@@ -4,7 +4,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { getIssueThread, markIssueRead, rateIssue, replyToIssue } from "@/lib/feedback/api";
 import { CATEGORY_MAP, STATUS_LABELS, type FeedbackIssue, type FeedbackMessage } from "@/lib/feedback/types";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, Send, MapPin, Sparkles } from "lucide-react";
+import { ChevronLeft, Send, MapPin, Sparkles, ThumbsUp, ThumbsDown, Check } from "lucide-react";
 
 export const Route = createFileRoute("/feedback/$id")({
   head: () => ({ meta: [{ title: "محادثة المساهمة — إرث" }] }),
