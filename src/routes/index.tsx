@@ -27,6 +27,7 @@ import heroManuscriptLamp from "@/assets/hero-manuscript-lamp.jpg";
 import heroFortress from "@/assets/hero-fortress.jpg";
 
 import { useQuery } from "@tanstack/react-query";
+import useEmblaCarousel from "embla-carousel-react";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
 import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
