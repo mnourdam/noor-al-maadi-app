@@ -1,10 +1,15 @@
-// Centralized Arabic display labels for era slugs used in encyclopedia_entities.metadata.era.
+// Centralized Arabic display labels for era/period slugs used across the app.
 // Keep keys lowercase + normalized (underscores/hyphens treated equivalently).
+// Never surface raw English keys to players — fall back to "غير محدد".
+
+import { canonicalEraLabel, toCanonicalEra } from "./era-canonical";
 
 const RAW: Record<string, string> = {
   "seerah": "السيرة النبوية",
+  "prophetic": "العصر النبوي",
   "prophetic-era": "العصر النبوي",
-  "prophetic_makkah": "العهد المكي",
+  "prophetic-makkah": "العهد المكي",
+  "prophetic-madinah": "العهد المدني",
   "rashidun": "الخلافة الراشدة",
   "rashidun-era": "الخلافة الراشدة",
   "rashidun-caliphate": "الخلافة الراشدة",
@@ -21,6 +26,7 @@ const RAW: Record<string, string> = {
   "murabitun": "المرابطون",
   "almoravid": "المرابطون",
   "muwahhidun": "الموحدون",
+  "almohad": "الموحدون",
   "granada": "مملكة غرناطة",
   "post-granada": "ما بعد سقوط غرناطة",
   "reconquista": "الاسترداد الإسباني",
@@ -33,26 +39,30 @@ const RAW: Record<string, string> = {
   "crusades": "الحروب الصليبية",
   "byzantine": "البيزنطيون",
   "ottoman": "الدولة العثمانية",
-  "late_ottoman": "أواخر العثمانيين",
+  "late-ottoman": "أواخر العثمانيين",
   "ww1": "الحرب العالمية الأولى",
   "transition": "مرحلة الانتقال",
   "modern": "العصر الحديث",
+  "contemporary": "العصر الحديث",
+  "pre-islamic": "ما قبل الإسلام",
+  "jahiliyya": "الجاهلية",
+  "islamic-middle-ages": "العصور الإسلامية الوسطى",
+  "late-medieval": "العصور الوسطى المتأخرة",
+  "early-medieval": "العصور الوسطى المبكرة",
+  "medieval": "العصور الوسطى",
 };
 
 function normalize(slug: string): string {
-  return slug.trim().toLowerCase().replace(/_/g, "-");
+  return slug.trim().toLowerCase().replace(/_/g, "-").replace(/\s+/g, "-");
 }
 
 export function eraLabel(slug: string | null | undefined): string {
   if (!slug) return "";
   const key = normalize(slug);
   if (RAW[key]) return RAW[key];
-  // try original casing/underscore form
-  if (RAW[slug.trim().toLowerCase()]) return RAW[slug.trim().toLowerCase()];
-  // humanize fallback
-  return key
-    .split("-")
-    .filter(Boolean)
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(" ");
+  // Try canonical mapping (handles aliases like "abbasi", "umawi", etc.)
+  const canonical = toCanonicalEra(key);
+  if (canonical) return canonicalEraLabel(canonical);
+  // Never expose raw English keys to players.
+  return "غير محدد";
 }
