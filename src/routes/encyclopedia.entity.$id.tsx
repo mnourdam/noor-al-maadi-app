@@ -314,7 +314,7 @@ function EntityPage() {
             {atlasLink && (
               <Link
                 to="/map"
-                search={{ focus: atlasLink.id, zoom: 3.5 }}
+                search={{ focus: atlasLink.id, zoom: atlasZoom }}
                 aria-label="عرض على الأطلس"
                 className="group absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-gold/35 bg-black/55 px-3 py-1.5 text-[11px] font-medium text-gold/95 shadow-[0_6px_20px_-8px_rgba(212,175,90,0.5)] backdrop-blur-sm transition hover:border-gold/60 hover:bg-black/70 hover:text-gold active:scale-95"
               >
