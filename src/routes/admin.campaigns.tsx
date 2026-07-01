@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Sword, Plus, Trash2, Copy, Eye, EyeOff, Archive,
   ExternalLink, Upload, RefreshCw, ChevronRight, CheckCircle2, AlertTriangle, X,
-  FileSpreadsheet, FileJson, ClipboardList,
+  FileSpreadsheet, FileJson, ClipboardList, Pencil,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
@@ -206,16 +206,13 @@ function CampaignCard({ c, onView, onPublish, onArchive, onDuplicate, onDelete }
               {chapters} فصول · آخر تحديث {formatDate(c.updated_at)}
             </p>
           </div>
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-slate-950 shadow hover:bg-amber-400">
+            <Pencil className="h-3.5 w-3.5" /> فتح المحرر
+            <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
+          </span>
         </div>
       </Link>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        <Link
-          to="/admin/campaigns/$id/edit"
-          params={{ id: c.id } as any}
-          className="inline-flex items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-200 hover:bg-amber-500/20"
-        >
-          <Eye className="h-3 w-3" /> تعديل
-        </Link>
         <Btn onClick={onView} icon={ClipboardList} label="ملخص سريع" />
         <Btn onClick={onPublish} icon={c.status === "published" ? EyeOff : Eye}
           label={c.status === "published" ? "إلغاء النشر" : "نشر"} />
