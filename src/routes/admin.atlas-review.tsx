@@ -171,15 +171,24 @@ function AtlasReviewPage() {
   const duplicateGroups = useMemo(() => findAtlasDuplicateGroups(rows), [rows]);
   const filteredDupGroups = useMemo(() => {
     const q = normalizeArabic(dupSearch);
-    if (!q) return duplicateGroups;
-    return duplicateGroups.filter((g) =>
-      g.items.some((it) => normalizeArabic(`${it.name_ar} ${it.name_en ?? ""} ${it.slug}`).includes(q)),
-    );
-  }, [duplicateGroups, dupSearch]);
+    return duplicateGroups.filter((g) => {
+      if (dupKind !== "all" && !g.items.some((it) => it.kind === dupKind)) return false;
+      if (q && !g.items.some((it) => normalizeArabic(`${it.name_ar} ${it.name_en ?? ""} ${it.slug}`).includes(q))) return false;
+      return true;
+    });
+  }, [duplicateGroups, dupSearch, dupKind]);
   const duplicateItemCount = useMemo(
     () => duplicateGroups.reduce((sum, g) => sum + g.items.length, 0),
     [duplicateGroups],
   );
+  // Per-kind counts across ALL duplicate groups — powers chip badges.
+  const dupKindCounts = useMemo(() => {
+    const counts: Partial<Record<AtlasEntityKind, number>> = {};
+    for (const g of duplicateGroups) for (const it of g.items) {
+      counts[it.kind] = (counts[it.kind] ?? 0) + 1;
+    }
+    return counts;
+  }, [duplicateGroups]);
   const removedCount = useMemo(() => rows.filter((r) => r.status === "retired").length, [rows]);
 
   // When the review-tab search string matches a real duplicate cluster,
