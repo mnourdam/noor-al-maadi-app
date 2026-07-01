@@ -59,7 +59,11 @@ function HomeFull() {
 
   const displayName = account?.username ?? (user ? profile.name : profile.name);
   const [mounted, setMounted] = useState(false);
-  const { selected: todayEvent } = useTodayInHistoryEvent();
+  const { selected: todayEvent, others: todayOthers } = useTodayInHistoryEvent();
+  const todayEvents = useMemo<TodayInHistoryEvent[]>(
+    () => (todayEvent ? [todayEvent, ...todayOthers] : []),
+    [todayEvent, todayOthers],
+  );
   const stats = useRealCollectionStats();
   const [unread, setUnread] = useState(0);
 
