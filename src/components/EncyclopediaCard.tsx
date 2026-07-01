@@ -113,6 +113,12 @@ export function EncyclopediaCard({
     </>
   );
 
+  if (!interactive) {
+    const staticClass =
+      "block rounded-2xl border border-white/10 bg-surface p-3 text-right";
+    return <div className={staticClass}>{Inner}</div>;
+  }
+
   if (entity.entity_type === "state") {
     return (
       <Link to="/encyclopedia/state/$id" params={{ id: entity.slug }} className={CARD_CLASS}>
