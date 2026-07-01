@@ -222,6 +222,12 @@ function AtlasShellInner() {
           }}
         />
       )}
+
+      <AtlasIntroDialog
+        open={introOpen}
+        onClose={() => { setIntroOpen(false); setIntroReopened(false); }}
+        forceInteractive={introReopened}
+      />
     </div>
   );
 }
