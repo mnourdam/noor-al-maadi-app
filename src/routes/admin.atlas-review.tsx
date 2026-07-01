@@ -477,7 +477,14 @@ function AtlasReviewPage() {
             >
               تحتاج إلى تموضع{needsRows ? ` (${needsRows.length})` : ""}
             </button>
+            <button
+              onClick={() => setTab("duplicates")}
+              className={`flex-1 px-2 py-1.5 ${tab === "duplicates" ? "bg-stone-800 text-amber-100" : "text-stone-400 hover:bg-stone-800/50"}`}
+            >
+              التكرارات ({duplicateGroups.length})
+            </button>
           </div>
+
 
           {tab === "review" && (
             <>
