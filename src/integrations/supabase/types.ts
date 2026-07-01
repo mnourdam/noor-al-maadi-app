@@ -513,6 +513,101 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_issues: {
+        Row: {
+          admin_unread: boolean
+          assigned_to: string | null
+          category: string
+          context: Json
+          created_at: string
+          description: string
+          device_id: string | null
+          id: string
+          last_reply_at: string | null
+          last_reply_by: string | null
+          player_unread: boolean
+          reporter_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          admin_unread?: boolean
+          assigned_to?: string | null
+          category: string
+          context?: Json
+          created_at?: string
+          description: string
+          device_id?: string | null
+          id?: string
+          last_reply_at?: string | null
+          last_reply_by?: string | null
+          player_unread?: boolean
+          reporter_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          admin_unread?: boolean
+          assigned_to?: string | null
+          category?: string
+          context?: Json
+          created_at?: string
+          description?: string
+          device_id?: string | null
+          id?: string
+          last_reply_at?: string | null
+          last_reply_by?: string | null
+          player_unread?: boolean
+          reporter_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      feedback_messages: {
+        Row: {
+          attachments: Json
+          author_id: string | null
+          author_role: string
+          body: string
+          created_at: string
+          id: string
+          is_internal: boolean
+          issue_id: string
+        }
+        Insert: {
+          attachments?: Json
+          author_id?: string | null
+          author_role: string
+          body: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          issue_id: string
+        }
+        Update: {
+          attachments?: Json
+          author_id?: string | null
+          author_role?: string
+          body?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          issue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_messages_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friendships: {
         Row: {
           created_at: string
@@ -1453,6 +1548,16 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_feedback_issues: {
+        Args: {
+          p_category?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       admin_list_users: {
         Args: {
           p_filter?: string
@@ -1501,8 +1606,21 @@ export type Database = {
         }
         Returns: Json
       }
+      assign_feedback_issue: {
+        Args: { p_assignee: string; p_issue_id: string }
+        Returns: undefined
+      }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       clear_my_notifications: { Args: never; Returns: undefined }
+      create_feedback_issue: {
+        Args: {
+          p_category: string
+          p_context?: Json
+          p_description: string
+          p_title: string
+        }
+        Returns: string
+      }
       current_user_capabilities: { Args: never; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
@@ -1523,6 +1641,7 @@ export type Database = {
         Returns: string
       }
       gen_referral_code: { Args: never; Returns: string }
+      get_feedback_issue_thread: { Args: { p_issue_id: string }; Returns: Json }
       get_my_email: { Args: never; Returns: string }
       get_my_notification_preferences: { Args: never; Returns: Json }
       get_my_profile: {
@@ -1657,6 +1776,32 @@ export type Database = {
           xp: number
         }[]
       }
+      list_my_feedback_issues: {
+        Args: never
+        Returns: {
+          admin_unread: boolean
+          assigned_to: string | null
+          category: string
+          context: Json
+          created_at: string
+          description: string
+          device_id: string | null
+          id: string
+          last_reply_at: string | null
+          last_reply_by: string | null
+          player_unread: boolean
+          reporter_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "feedback_issues"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       list_my_notifications: {
         Args: { p_before?: string; p_limit?: number }
         Returns: Json
@@ -1671,6 +1816,10 @@ export type Database = {
         Returns: string
       }
       mark_all_notifications_read: { Args: never; Returns: undefined }
+      mark_feedback_issue_read: {
+        Args: { p_issue_id: string }
+        Returns: undefined
+      }
       mark_notification_read: {
         Args: { p_notification_id: string }
         Returns: undefined
@@ -1704,7 +1853,15 @@ export type Database = {
         Returns: undefined
       }
       redeem_referral_code: { Args: { p_code: string }; Returns: Json }
+      reply_to_feedback_issue: {
+        Args: { p_body: string; p_is_internal?: boolean; p_issue_id: string }
+        Returns: string
+      }
       send_friend_request_reminders: { Args: never; Returns: number }
+      set_feedback_issue_status: {
+        Args: { p_issue_id: string; p_status: string }
+        Returns: undefined
+      }
       set_my_display_name: { Args: { p_name: string }; Returns: string }
       set_my_notification_preferences: {
         Args: { p_categories: Json }
