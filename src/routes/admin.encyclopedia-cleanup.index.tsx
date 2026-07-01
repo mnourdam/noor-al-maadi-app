@@ -991,7 +991,75 @@ function CleanupWorkshop() {
     finally { setBusy(null); }
   };
 
+  // ------------------------------------------------------------
+  // Bulk actions — apply "Mark as Needs Content" or "Fully Approve"
+  // to every currently-selected row. Each row's own metadata is
+  // preserved (merged, not replaced) so we don't clobber unrelated
+  // flags. Runs updates in small parallel batches for responsiveness,
+  // then a single refresh() re-pulls the truth.
+  // ------------------------------------------------------------
+  type BulkKind = "fully-approve" | "needs-content";
+  const applyBulkStamp = (meta: any, kind: BulkKind, stamp: string) => {
+    const m: any = { ...(meta || {}) };
+    m.cleanup_resolved = true;
+    m.cleanup_resolved_at = stamp;
+    if (kind === "fully-approve") {
+      m.content_verified = true;
+      m.content_verified_at = stamp;
+      delete m.needs_content;
+      delete m.needs_content_at;
+    } else {
+      m.needs_content = true;
+      m.needs_content_at = stamp;
+      delete m.content_verified;
+      delete m.content_verified_at;
+    }
+    return m;
+  };
 
+  const runBulk = async (kind: BulkKind) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (ids.length > 20) {
+      const label = kind === "fully-approve" ? "الاعتماد التام" : "النقل إلى «يحتاج محتوى»";
+      if (!confirm(`تأكيد ${label} لعدد ${ids.length} كياناً؟`)) return;
+    }
+    setBulkBusy(true);
+    const stamp = new Date().toISOString();
+    const byId = new Map(rowsRef.current.map((r) => [r.id, r] as const));
+    let ok = 0;
+    let fail = 0;
+    const CHUNK = 8;
+    try {
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const slice = ids.slice(i, i + CHUNK);
+        const results = await Promise.all(slice.map(async (id) => {
+          const row = byId.get(id);
+          if (!row) return false;
+          const meta = applyBulkStamp(row.metadata, kind, stamp);
+          const { error } = await supabase
+            .from("encyclopedia_entities" as any)
+            .update({ metadata: meta })
+            .eq("id", id);
+          return !error;
+        }));
+        for (const r of results) { if (r) ok++; else fail++; }
+      }
+      await logAudit(
+        kind === "fully-approve"
+          ? "encyclopedia.cleanup.bulk_fully_approve"
+          : "encyclopedia.cleanup.bulk_mark_needs_content",
+        { count: ids.length, ok, fail },
+      );
+      clearSelection();
+      await refresh();
+      const verb = kind === "fully-approve" ? "اعتماد" : "نقل إلى «يحتاج محتوى»";
+      if (fail === 0) showToast(`تم ${verb} ${ok} كياناً ✓`);
+      else showToast(`تم ${verb} ${ok} — فشل ${fail}`, fail > ok ? "err" : "ok");
+    } catch (e: any) {
+      showToast("فشل الإجراء الجماعي: " + (e?.message || e), "err");
+    } finally { setBulkBusy(false); }
+  };
 
 
   // ------------------------------------------------------------
