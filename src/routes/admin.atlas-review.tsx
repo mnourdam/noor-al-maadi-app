@@ -725,6 +725,26 @@ function AtlasReviewPage() {
                   <span className="rounded border border-stone-700 bg-stone-950 px-1.5 py-0.5">عناصر مكررة: <b className="text-amber-100">{duplicateItemCount}</b></span>
                   <span className="rounded border border-stone-700 bg-stone-950 px-1.5 py-0.5">مُزال: <b className="text-rose-200">{removedCount}</b></span>
                 </div>
+                <div className="flex flex-wrap gap-1" dir="rtl">
+                  {DUP_KIND_FILTERS.map((f) => {
+                    const active = dupKind === f.value;
+                    const count = f.value === "all" ? duplicateItemCount : (dupKindCounts[f.value] ?? 0);
+                    return (
+                      <button
+                        key={f.value}
+                        onClick={() => setDupKind(f.value)}
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition ${
+                          active
+                            ? "border-amber-500/60 bg-amber-500/20 text-amber-100"
+                            : "border-stone-700 bg-stone-950 text-stone-300 hover:bg-stone-900"
+                        }`}
+                      >
+                        <span>{f.label}</span>
+                        <span className={`rounded px-1 text-[9px] ${active ? "bg-amber-500/30 text-amber-50" : "bg-stone-800 text-stone-400"}`}>{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto">
