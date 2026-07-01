@@ -1,6 +1,5 @@
-// Related entities — grouped clickable chips. Lucide icons only (no emojis),
-// styled as small museum tags.
-import { Link } from "@tanstack/react-router";
+// Related entities — grouped informational chips (non-interactive).
+// Lucide icons only (no emojis), styled as small museum tags.
 import { Network } from "lucide-react";
 import type { RelatedEntityGroups, RelatedRef } from "@/types/encyclopediaArticle";
 import { iconForType } from "@/lib/encyclopedia-icons";
