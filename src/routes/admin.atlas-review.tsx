@@ -562,6 +562,10 @@ function AtlasReviewPage() {
                     <input type="checkbox" checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} />
                     <span>عرض المُزال من الأطلس فقط</span>
                   </label>
+                  <label className="col-span-2 flex items-center gap-2 rounded border border-stone-700 bg-stone-950 px-2 py-1 text-stone-300">
+                    <input type="checkbox" checked={showLegacyKinds} onChange={(e) => setShowLegacyKinds(e.target.checked)} />
+                    <span>إظهار أنواع قديمة (آثار/شخصيات/أحداث)</span>
+                  </label>
                 </div>
               </div>
 
