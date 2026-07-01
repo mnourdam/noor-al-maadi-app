@@ -120,7 +120,7 @@ export function EncyclopediaEntityPreview({ entity }: { entity: PreviewEntity })
         <section className="mt-5">
           <article className="relative rounded-2xl border border-gold/15 bg-gradient-to-b from-surface/70 to-black/30 px-5 py-5">
             <span className="absolute -top-3 right-5 inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-background px-3 py-1 text-[10px] tracking-[0.32em] text-gold/85">
-              مقدمة الدوسيه
+              المقدمة
             </span>
             <p className="text-[14.5px] leading-[2] text-foreground/95">{entity.summary}</p>
           </article>

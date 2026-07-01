@@ -366,7 +366,7 @@ function EntityPage() {
             <section className="mt-7">
               <article className="relative mx-auto max-w-[640px] rounded-3xl border border-gold/15 bg-gradient-to-b from-surface/70 to-black/30 px-6 py-7">
                 <span className="absolute -top-3 right-6 inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-background px-3 py-1 text-[10px] tracking-[0.32em] text-gold/85">
-                  مقدمة الدوسيه
+                  المقدمة
                 </span>
                 <p className="text-[15px] leading-[2.1] text-foreground/95">
                   {entity.summary}
