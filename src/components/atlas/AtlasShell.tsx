@@ -128,11 +128,14 @@ function AtlasShellInner() {
   }, [q]);
 
   // When the focused entity changes (e.g., via URL or pin click), pan to it.
+  // Honours an optional ?zoom= deep-link hint for a moderate framing when
+  // arriving from another surface (e.g. encyclopedia dossiers).
   useEffect(() => {
     if (!selected) return;
     if (typeof selected.aps_x === "number" && typeof selected.aps_y === "number") {
       focusAtlasRef.current += 1;
-      setFocusAps({ x: selected.aps_x, y: selected.aps_y, minScale: 5, nonce: focusAtlasRef.current });
+      const min = typeof search.zoom === "number" ? search.zoom : 5;
+      setFocusAps({ x: selected.aps_x, y: selected.aps_y, minScale: min, nonce: focusAtlasRef.current });
     }
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 

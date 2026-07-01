@@ -8,6 +8,7 @@ import {
   MapPin,
   Tag,
   ScrollText,
+  Map as MapIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
@@ -184,6 +185,29 @@ function EntityPage() {
     ? buildContextBlocks(entity, relatedQuery.data ?? [])
     : [];
 
+  // Atlas deep-link — surface a "على الأطلس" button only when this
+  // encyclopedia entity is linked to a published + verified Atlas record.
+  const atlasLinkQuery = useQuery({
+    queryKey: ["encyclopedia", "atlas-link", entity?.id ?? ""],
+    enabled: !!entity?.id,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      if (!entity?.id) return null;
+      const { data, error } = await supabase
+        .from("atlas_entities")
+        .select("id, aps_x, aps_y")
+        .eq("encyclopedia_entity_id", entity.id)
+        .eq("status", "published")
+        .eq("aps_verified", true)
+        .limit(1)
+        .maybeSingle();
+      if (error) return null;
+      if (!data || data.aps_x == null || data.aps_y == null) return null;
+      return data as { id: string; aps_x: number; aps_y: number };
+    },
+  });
+  const atlasLink = atlasLinkQuery.data ?? null;
+
   if (query.isLoading) {
     return (
       <AppShell>
@@ -273,6 +297,21 @@ function EntityPage() {
             {/* Hero glow + ornament */}
             <div className="pointer-events-none absolute -top-32 left-1/2 size-80 -translate-x-1/2 rounded-full bg-gold/15 blur-[80px]" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
+
+            {/* Atlas deep-link — only shown when a published+verified Atlas
+                record is linked to this entity. Top-left in RTL. */}
+            {atlasLink && (
+              <Link
+                to="/map"
+                search={{ focus: atlasLink.id, zoom: 3.5 }}
+                aria-label="عرض على الأطلس"
+                className="group absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-gold/35 bg-black/55 px-3 py-1.5 text-[11px] font-medium text-gold/95 shadow-[0_6px_20px_-8px_rgba(212,175,90,0.5)] backdrop-blur-sm transition hover:border-gold/60 hover:bg-black/70 hover:text-gold active:scale-95"
+              >
+                <MapIcon className="size-3.5" strokeWidth={1.8} />
+                على الأطلس
+              </Link>
+            )}
+
 
             <div className="relative flex flex-col items-center text-center">
               <span className="font-display text-[10px] tracking-[0.5em] text-gold/85">
