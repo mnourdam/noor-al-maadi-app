@@ -27,6 +27,7 @@ import { localEncyclopediaById, localEncyclopediaBySlug } from "@/lib/local-firs
 import { resolveCanonicalLocal } from "@/lib/encyclopedia-canonical";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
+import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import {
   resolveRelatedEntities,
   groupRelatedByReason,
@@ -68,10 +69,7 @@ export const Route = createFileRoute("/encyclopedia/entity/$id")({
   component: EntityPage,
   notFoundComponent: () => (
     <AppShell>
-      <div className="px-5 pt-10 text-center">
-        <h1 className="font-display text-xl">العنصر غير موجود</h1>
-        <Link to="/encyclopedia" className="mt-4 inline-block text-gold underline">عُد إلى الموسوعة</Link>
-      </div>
+      <EntityNotFound />
     </AppShell>
   ),
 });
@@ -230,10 +228,7 @@ function EntityPage() {
   if (!entity) {
     return (
       <AppShell>
-        <div className="px-5 pt-10 text-center">
-          <h1 className="font-display text-xl">العنصر غير موجود</h1>
-          <Link to="/encyclopedia" className="mt-4 inline-block text-gold underline">عُد إلى الموسوعة</Link>
-        </div>
+        <EntityNotFound />
       </AppShell>
     );
   }
