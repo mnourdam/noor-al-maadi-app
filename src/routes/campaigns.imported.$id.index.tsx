@@ -197,7 +197,7 @@ function ImportedCampaignOverview() {
               </div>
               {(finalRewards.unlocks?.length ?? 0) > 0 && (
                 <div className="mt-3">
-                  <UnlockList ids={finalRewards.unlocks ?? []} variant="card" />
+                  <UnlockList ids={finalRewards.unlocks ?? []} variant="card" locked={!progress?.completed} lockedHint={`أكمل حملة «${campaign.title}» لفتح هذه الجائزة.`} />
                 </div>
               )}
             </div>
