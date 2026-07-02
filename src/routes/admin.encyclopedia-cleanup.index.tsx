@@ -2012,6 +2012,16 @@ function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, on
         </div>
       )}
 
+      <RelationsPanel
+        row={row}
+        allRows={allRows}
+        busy={busy}
+        onSave={onSave}
+        onJumpTo={onJumpTo}
+      />
+
+
+
       {/* Tabs — visible on small screens. On lg+ both panes show side-by-side. */}
       <div className="flex items-center gap-1 lg:hidden">
         <button onClick={() => setView("edit")}
