@@ -1577,7 +1577,8 @@ function StatesCleanup({
 // ============================================================
 // 5) Orphan relationship report
 // ============================================================
-function OrphanReport({ rows }: { rows: Row[] }) {
+function OrphanReport({ rows, onReload }: { rows: Row[]; onReload: () => Promise<void> | void }) {
+  const [bulkOpen, setBulkOpen] = useState(false);
   const orphans = useMemo(() => {
     // Explicit outbound refs per row
     const outbound = new Map<string, number>();
