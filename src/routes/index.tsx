@@ -690,7 +690,7 @@ function HomeFull() {
             }}
           >
             {slide && (
-              <div key={`slide-${slideIdx}`} className="animate-curtain max-w-xl">
+              <div key={`slide-${slideIdx}`} className="motion-hero-fade max-w-xl">
                 <div className="flex items-center gap-2 text-[11px] text-gold">
                   {slide.kind === "campaign" && <Crown className="size-3.5" />}
                   {slide.kind === "history" && <Calendar className="size-3.5" />}
