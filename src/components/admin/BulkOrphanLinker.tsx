@@ -183,26 +183,36 @@ function buildPlans(
         confidence = "high"; score += 60 + sharedTags.length * 5;
       }
 
-      // -------- MEDIUM-confidence signals (never auto-applied) --------
+      // -------- MEDIUM-confidence signals --------
+      // Requires at least one DIRECT historical signal. Context
+      // (era/world/state) alone is never Medium — it is Low.
       if (confidence !== "high") {
-        if (geoAll) {
-          reasons.push("نفس الدولة/العالم/الحقبة");
-          confidence = "medium"; score += 40;
-        } else if (sharedTags.length >= 2) {
-          reasons.push(`وسوم مشتركة: ${sharedTags.slice(0, 2).join("، ")}`);
-          confidence = "medium"; score += 25;
-        } else if (state && tState === state && world && tWorld === world) {
-          reasons.push("نفس الدولة + العالم");
-          confidence = "medium"; score += 20;
+        // Direct historical: ≥2 shared historical tags. Context, when
+        // present, only boosts the score — it does not qualify alone.
+        if (sharedTags.length >= 2) {
+          reasons.push(`وسوم تاريخية مشتركة: ${sharedTags.slice(0, 2).join("، ")}`);
+          confidence = "medium"; score += 25 + sharedTags.length * 3;
+          if (geoAll)       { reasons.push("سياق: نفس الدولة/العالم/الحقبة"); score += 10; }
+          else if (state && tState === state) { reasons.push("سياق: نفس الدولة"); score += 5; }
+        }
+        // Soft city/landmark co-mention (source city referenced anywhere
+        // in target's known fields but not as an explicit canonical link).
+        else if (city && (tCity === city)) {
+          reasons.push("مدينة مشتركة");
+          confidence = "medium"; score += 22;
         }
       }
 
-      // -------- LOW (broad, single-signal) --------
+      // -------- LOW (contextual similarity only) --------
+      // era / world / state (any combination) with no historical signal.
       if (confidence === "low") {
-        if (state && tState === state) { reasons.push("نفس الدولة"); score += 10; }
-        else if (world && tWorld === world) { reasons.push("نفس العالم"); score += 6; }
-        else if (era && tEra === era) { reasons.push("نفس الحقبة"); score += 4; }
-        else continue; // no signal at all
+        const ctx: string[] = [];
+        if (state && tState === state) { ctx.push("نفس الدولة"); score += 10; }
+        if (world && tWorld === world) { ctx.push("نفس العالم"); score += 6; }
+        if (era   && tEra   === era)   { ctx.push("نفس الحقبة"); score += 4; }
+        if (sharedTags.length === 1)   { ctx.push(`وسم مشترك: ${sharedTags[0]}`); score += 5; }
+        if (!ctx.length) continue; // no signal at all
+        reasons.push(ctx.join(" + "));
       }
 
       // Bias toward acceptable target kinds for this source type.
