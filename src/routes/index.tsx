@@ -719,7 +719,7 @@ function HomeFull() {
               </div>
             )}
             {!slide && (
-              <div className="animate-curtain max-w-xl">
+              <div className="motion-hero-fade max-w-xl">
                 <div className="flex items-center gap-2 text-[11px] text-gold">
                   <Lock className="size-3.5" />
                   <span className="tracking-[0.25em]">قريبًا · حملة جديدة</span>
