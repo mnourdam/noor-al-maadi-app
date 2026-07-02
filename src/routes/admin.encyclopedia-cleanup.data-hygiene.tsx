@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ERAS } from "@/lib/app-constants";
 import { WORLD_HUBS } from "@/lib/worlds";
 import { useTaxonomy } from "@/lib/taxonomy";
+import { BulkOrphanLinker } from "@/components/admin/BulkOrphanLinker";
 
 export const Route = createFileRoute("/admin/encyclopedia-cleanup/data-hygiene")({
   head: () => ({
