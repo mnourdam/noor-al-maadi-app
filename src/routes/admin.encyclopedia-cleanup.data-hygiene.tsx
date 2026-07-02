@@ -134,6 +134,67 @@ function suggestWorldForEntity(r: Row): string {
   return "";
 }
 
+// World / Era → preferred canonical State slug. Used only for per-entity
+// suggestions inside the Entity State Mapper — never for bulk assignment.
+// State represents an entity's specific political affiliation and must be
+// reviewed at the entity level.
+const WORLD_TO_STATE: Record<string, string> = {
+  rashidun: "rashidun-caliphate",
+  umayyad: "umayyad-caliphate",
+  abbasid: "abbasid-caliphate",
+  ottoman: "ottoman-empire",
+  seljuk: "seljuk-empire",
+  zengid: "zengid-dynasty",
+  "ayyubid-state": "ayyubid-dynasty",
+  "mamluk-sultanate": "mamluk-sultanate",
+  fatimid: "fatimid-caliphate",
+  andalus: "andalusi-caliphate",
+  buyid: "buyid-dynasty",
+  timurid: "timurid-empire",
+  mongols: "mongol-empire",
+  prophetic: "prophetic-state",
+};
+const ERA_TO_STATE: Record<string, string> = {
+  rashidun: "rashidun-caliphate",
+  umayyad: "umayyad-caliphate",
+  abbasid: "abbasid-caliphate",
+  ottoman: "ottoman-empire",
+  seljuk: "seljuk-empire",
+  zengid: "zengid-dynasty",
+  ayyubid: "ayyubid-dynasty",
+  mamluk: "mamluk-sultanate",
+  fatimid: "fatimid-caliphate",
+  andalus: "andalusi-caliphate",
+  buyid: "buyid-dynasty",
+  timurid: "timurid-empire",
+  mongols: "mongol-empire",
+  mongol: "mongol-empire",
+  ilkhanid: "mongol-empire",
+  prophetic: "prophetic-state",
+};
+
+function suggestStateForEntity(r: Row): string {
+  const m = metaObj(r);
+  const cur = typeof m.state === "string" ? (m.state as string).trim() : "";
+  if (cur && CANONICAL_STATE.has(cur)) return cur;
+  const world = typeof m.world === "string" ? (m.world as string).trim() : "";
+  const wGuess = world ? WORLD_TO_STATE[world] : undefined;
+  if (wGuess && CANONICAL_STATE.has(wGuess)) return wGuess;
+  const era = typeof m.era === "string" ? (m.era as string).trim() : "";
+  const eGuess = era ? ERA_TO_STATE[era] : undefined;
+  if (eGuess && CANONICAL_STATE.has(eGuess)) return eGuess;
+  // Suffix-strip fallback: try to match current value after normalizing.
+  if (cur) {
+    const candidates = [
+      cur, cur.replace(/-empire$/, ""), cur.replace(/-caliphate$/, ""),
+      cur.replace(/-sultanate$/, ""), cur.replace(/-dynasty$/, ""),
+      cur.replace(/-state$/, ""),
+    ];
+    for (const c of candidates) if (c && CANONICAL_STATE.has(c)) return c;
+  }
+  return "";
+}
+
 
 // ------------------------------------------------------------
 // Fetch — one shot, paged.
