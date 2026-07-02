@@ -55,12 +55,15 @@ type Suggestion = {
 };
 
 export function OrphanRelationEditor({
-  entity, allRows, onClose, onSaved,
+  entity, allRows, onClose, onSaved, onCommit,
 }: {
   entity: Row;
   allRows: Row[];
   onClose: () => void;
   onSaved: () => void;
+  /** If provided, the modal delegates persistence to the caller with the
+   *  merged related_entities slug list. Otherwise it writes directly. */
+  onCommit?: (mergedRelatedSlugs: string[]) => Promise<void> | void;
 }) {
   const em = meta(entity);
   const era     = asStr(em.era);
