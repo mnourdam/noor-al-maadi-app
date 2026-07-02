@@ -512,13 +512,20 @@ function CleanupWorkshop() {
     [rows, liveDupIds],
   );
 
+  // "needs-content" targets ONLY active canonical entities that still lack
+  // real content. needsContent() already excludes archived / hidden /
+  // redirected rows via isFinalCanonical. We additionally exclude any row
+  // still sitting in an OPEN duplicate group (liveDupIds) so admins finish
+  // dedupe first — but canonical winners of a completed merge remain
+  // visible so they can be enriched.
   const needsContentCount = useMemo(
     () => rows.reduce(
-      (n, r) => (needsContent(r) && !dupIds.has(r.id) ? n + 1 : n),
+      (n, r) => (needsContent(r) && !liveDupIds.has(r.id) ? n + 1 : n),
       0,
     ),
-    [rows, dupIds],
+    [rows, liveDupIds],
   );
+
   const completeCount = useMemo(
     () => rows.reduce((n, r) => (isComplete(r) ? n + 1 : n), 0),
     [rows],
@@ -540,7 +547,7 @@ function CleanupWorkshop() {
 
       // Pipeline filter (ANDs with type/quality chips below).
       if (pipeline === "needs-cleanup" && !rowNeedsCleanup(r, liveDupIds, quality)) return false;
-      if (pipeline === "needs-content" && (!needsContent(r) || isDup)) return false;
+      if (pipeline === "needs-content" && (!needsContent(r) || liveDupIds.has(r.id))) return false;
       if (pipeline === "complete" && !isComplete(r)) return false;
 
       // Type / quality / linkage chips
@@ -550,7 +557,8 @@ function CleanupWorkshop() {
           if (!rowNeedsCleanup(r, liveDupIds, quality)) return false;
           break;
         case "needs-content":
-          if (!needsContent(r) || isDup) return false;
+          if (!needsContent(r) || liveDupIds.has(r.id)) return false;
+
           break;
         case "dedupe-pending":
           if (!dedupePending) return false;
