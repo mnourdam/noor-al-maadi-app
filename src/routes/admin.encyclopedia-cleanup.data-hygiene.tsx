@@ -40,6 +40,9 @@ type Row = {
   enabled: boolean;
 };
 
+// Seeded from code constants; augmented at runtime with CMS taxonomy rows
+// (see useSyncTaxonomy() in DataHygienePage). Mutable Sets so downstream
+// memos see the enlarged canon without threading it through helpers.
 const CANONICAL_ERA = new Set(ERAS.map((e) => e.id as string));
 const CANONICAL_WORLD = new Set(WORLD_HUBS.map((w) => w.slug));
 
