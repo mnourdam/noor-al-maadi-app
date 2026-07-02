@@ -533,9 +533,12 @@ function CleanupWorkshop() {
       const quality = classifyQuality(r, dupIds.has(r.id), isOrphan);
       const archived = r.metadata?.archived === true || r.enabled === false;
 
+      const isDup = dupIds.has(r.id);
+      const dedupePending = isDup && !isArchivedOrHidden(r) && !isRedirected(r);
+
       // Pipeline filter (ANDs with type/quality chips below).
       if (pipeline === "needs-cleanup" && !rowNeedsCleanup(r, liveDupIds, quality)) return false;
-      if (pipeline === "needs-content" && !needsContent(r)) return false;
+      if (pipeline === "needs-content" && (!needsContent(r) || isDup)) return false;
       if (pipeline === "complete" && !isComplete(r)) return false;
 
       // Type / quality / linkage chips
@@ -545,7 +548,10 @@ function CleanupWorkshop() {
           if (!rowNeedsCleanup(r, liveDupIds, quality)) return false;
           break;
         case "needs-content":
-          if (!needsContent(r)) return false;
+          if (!needsContent(r) || isDup) return false;
+          break;
+        case "dedupe-pending":
+          if (!dedupePending) return false;
           break;
         case "complete":
           if (!isComplete(r)) return false;
@@ -553,7 +559,7 @@ function CleanupWorkshop() {
         case "empty": if (quality !== "empty") return false; break;
         case "weak":  if (quality !== "weak") return false; break;
         case "stub":  if (quality !== "empty" && quality !== "weak") return false; break;
-        case "duplicate": if (!dupIds.has(r.id)) return false; break;
+        case "duplicate": if (!isDup) return false; break;
         case "archived":  if (!archived) return false; break;
         case "no-image":    if (hasImage(r.metadata)) return false; break;
         case "no-sources":  if (hasSources(r.metadata, r.body)) return false; break;
