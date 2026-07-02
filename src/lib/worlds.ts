@@ -26,7 +26,9 @@ export const WORLD_HUBS: WorldHub[] = [
   { slug: "zengid", glyph: "🛡️", order: 7 },
   { slug: "ayyubid-state", glyph: "⚔️", order: 8 },
   { slug: "mamluk-sultanate", glyph: "🗡️", order: 9 },
-  { slug: "ottoman", glyph: "🌘", order: 10 },
+  { slug: "mongols", glyph: "🐎", order: 10 },
+  { slug: "timurid", glyph: "🏇", order: 11 },
+  { slug: "ottoman", glyph: "🌘", order: 12 },
 ];
 
 export const WORLD_SLUGS = new Set(WORLD_HUBS.map((h) => h.slug));
@@ -45,6 +47,8 @@ export const WORLD_ERA: Record<string, string> = {
   zengid: "zengid",
   "ayyubid-state": "ayyubid",
   "mamluk-sultanate": "mamluk",
+  mongols: "mongols",
+  timurid: "timurid",
   ottoman: "ottoman",
 };
 
