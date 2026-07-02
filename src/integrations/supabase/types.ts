@@ -137,6 +137,63 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_taxonomy: {
+        Row: {
+          archived: boolean
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          enabled: boolean
+          icon: string | null
+          id: string
+          key: string
+          label_ar: string
+          label_en: string | null
+          metadata: Json
+          sort_order: number
+          type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived?: boolean
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean
+          icon?: string | null
+          id?: string
+          key: string
+          label_ar: string
+          label_en?: string | null
+          metadata?: Json
+          sort_order?: number
+          type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived?: boolean
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean
+          icon?: string | null
+          id?: string
+          key?: string
+          label_ar?: string
+          label_en?: string | null
+          metadata?: Json
+          sort_order?: number
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       atlas_entities: {
         Row: {
           aps_verified: boolean

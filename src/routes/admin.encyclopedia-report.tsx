@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { ERAS } from "@/lib/app-constants";
 import { WORLD_HUBS, WORLD_ERA } from "@/lib/worlds";
+import { useTaxonomy } from "@/lib/taxonomy";
 import {
   SUPABASE_ENABLED_TYPES,
   isDisplayableEntity,
@@ -165,6 +166,10 @@ function qualityReasons(r: Row): string[] {
   return reasons;
 }
 
+// Canonical key sets — seeded from code constants and augmented at runtime
+// by CMS-managed taxonomy rows (see useSyncCanonicalKeys() below). Sets are
+// mutable so aggregation code that runs after taxonomy resolves still sees
+// admin-added values without threading them through every helper.
 const CANONICAL_ERA_KEYS: Set<string> = new Set(ERAS.map((e) => e.id as string));
 const CANONICAL_WORLD_KEYS: Set<string> = new Set(WORLD_HUBS.map((w) => w.slug));
 
@@ -294,6 +299,18 @@ function authoringTemplate(type: string): Record<string, unknown> {
 function Page() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Pull CMS-managed taxonomy and merge admin-added keys into the
+  // canonical sets so entities using new eras/worlds stop being flagged.
+  const eraTax = useTaxonomy("era");
+  const worldTax = useTaxonomy("world");
+  useEffect(() => {
+    for (const e of eraTax.entries) if (e.enabled && !e.archived) CANONICAL_ERA_KEYS.add(e.key);
+    for (const w of worldTax.entries) if (w.enabled && !w.archived) CANONICAL_WORLD_KEYS.add(w.key);
+    // Trigger re-render so downstream memos re-run against the enlarged sets.
+    if (rows) setRows((prev) => (prev ? [...prev] : prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eraTax.entries, worldTax.entries]);
 
   useEffect(() => {
     fetchAllEntities().then(setRows).catch((e) => setError(e.message ?? String(e)));

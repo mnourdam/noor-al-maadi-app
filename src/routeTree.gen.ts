@@ -59,6 +59,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AdminWorldMembershipReviewRouteImport } from './routes/admin.world-membership-review'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminUnlockIntegrityRouteImport } from './routes/admin.unlock-integrity'
+import { Route as AdminTaxonomyRouteImport } from './routes/admin.taxonomy'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum-provenance'
@@ -367,6 +368,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
 const AdminUnlockIntegrityRoute = AdminUnlockIntegrityRouteImport.update({
   id: '/admin/unlock-integrity',
   path: '/admin/unlock-integrity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTaxonomyRoute = AdminTaxonomyRouteImport.update({
+  id: '/admin/taxonomy',
+  path: '/admin/taxonomy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminOfflineRoute = AdminOfflineRouteImport.update({
@@ -738,6 +744,7 @@ export interface FileRoutesByFullPath {
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
+  '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/world-membership-review': typeof AdminWorldMembershipReviewRoute
@@ -844,6 +851,7 @@ export interface FileRoutesByTo {
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
+  '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/world-membership-review': typeof AdminWorldMembershipReviewRoute
@@ -955,6 +963,7 @@ export interface FileRoutesById {
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
+  '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/world-membership-review': typeof AdminWorldMembershipReviewRoute
@@ -1067,6 +1076,7 @@ export interface FileRouteTypes {
     | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
+    | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
     | '/admin/world-membership-review'
@@ -1173,6 +1183,7 @@ export interface FileRouteTypes {
     | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
+    | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
     | '/admin/world-membership-review'
@@ -1283,6 +1294,7 @@ export interface FileRouteTypes {
     | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
+    | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
     | '/admin/world-membership-review'
@@ -1394,6 +1406,7 @@ export interface RootRouteChildren {
   AdminMuseumProvenanceRoute: typeof AdminMuseumProvenanceRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOfflineRoute: typeof AdminOfflineRoute
+  AdminTaxonomyRoute: typeof AdminTaxonomyRoute
   AdminUnlockIntegrityRoute: typeof AdminUnlockIntegrityRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminWorldMembershipReviewRoute: typeof AdminWorldMembershipReviewRoute
@@ -1777,6 +1790,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/unlock-integrity'
       fullPath: '/admin/unlock-integrity'
       preLoaderRoute: typeof AdminUnlockIntegrityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/taxonomy': {
+      id: '/admin/taxonomy'
+      path: '/admin/taxonomy'
+      fullPath: '/admin/taxonomy'
+      preLoaderRoute: typeof AdminTaxonomyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/offline': {
@@ -2339,6 +2359,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminMuseumProvenanceRoute: AdminMuseumProvenanceRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOfflineRoute: AdminOfflineRoute,
+  AdminTaxonomyRoute: AdminTaxonomyRoute,
   AdminUnlockIntegrityRoute: AdminUnlockIntegrityRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminWorldMembershipReviewRoute: AdminWorldMembershipReviewRoute,
