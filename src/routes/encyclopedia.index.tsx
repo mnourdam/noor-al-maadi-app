@@ -521,7 +521,7 @@ function EncyclopediaHubFull() {
             {/* Type filter chips */}
             <div className="relative z-10 -mx-5 mt-3 overflow-x-auto px-5 pb-1 scrollbar-thin" dir="rtl">
               <div className="flex items-center gap-1.5">
-                {[{ key: "all", label: "الكل" }, ...CATEGORIES.map((c) => ({ key: c.key, label: c.label }))].map((t) => {
+                {[{ key: "all", label: "الكل" }, ...CATEGORIES.filter((c) => (counts[c.key] ?? 0) > 0).map((c) => ({ key: c.key, label: c.label }))].map((t) => {
                   const active = typeFilter === t.key;
                   const n = t.key === "all" ? total : (counts[t.key] ?? 0);
                   return (
