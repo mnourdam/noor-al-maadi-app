@@ -1506,6 +1506,7 @@ function Toolbar({
   q, setQ, filter, setFilter,
   pipeline, setPipeline,
   needsCleanupCount, needsContentCount, completeCount,
+  dedupePendingCount,
 }: {
   q: string; setQ: (v: string) => void;
   filter: FilterKey; setFilter: (v: FilterKey) => void;
@@ -1513,9 +1514,11 @@ function Toolbar({
   needsCleanupCount: number;
   needsContentCount: number;
   completeCount: number;
+  dedupePendingCount: number;
 }) {
   const restChips: { key: FilterKey; label: string }[] = [
     { key: "all", label: "الكل" },
+    { key: "dedupe-pending", label: `معالجة إزالة التكرار (${dedupePendingCount})` },
     { key: "figure", label: "شخصيات" },
     { key: "city", label: "مدن" },
     { key: "landmark", label: "معالم" },
