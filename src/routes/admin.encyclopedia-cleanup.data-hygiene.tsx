@@ -45,6 +45,9 @@ type Row = {
 // memos see the enlarged canon without threading it through helpers.
 const CANONICAL_ERA = new Set(ERAS.map((e) => e.id as string));
 const CANONICAL_WORLD = new Set(WORLD_HUBS.map((w) => w.slug));
+// State canon is CMS-only (no code fallback); populated at runtime by the
+// admin_taxonomy sync effect. Kept mutable so downstream memos re-read it.
+const CANONICAL_STATE = new Set<string>();
 
 // Same rule as encyclopedia-source.isDisplayableEntity
 function bodyHasContent(body: unknown): boolean {
@@ -128,6 +131,67 @@ function suggestWorldForEntity(r: Row): string {
   const eraGuess = era ? ERA_TO_WORLD[era] : undefined;
   if (eraGuess && CANONICAL_WORLD.has(eraGuess)) return eraGuess;
   if (state && CANONICAL_WORLD.has(state)) return state;
+  return "";
+}
+
+// World / Era → preferred canonical State slug. Used only for per-entity
+// suggestions inside the Entity State Mapper — never for bulk assignment.
+// State represents an entity's specific political affiliation and must be
+// reviewed at the entity level.
+const WORLD_TO_STATE: Record<string, string> = {
+  rashidun: "rashidun-caliphate",
+  umayyad: "umayyad-caliphate",
+  abbasid: "abbasid-caliphate",
+  ottoman: "ottoman-empire",
+  seljuk: "seljuk-empire",
+  zengid: "zengid-dynasty",
+  "ayyubid-state": "ayyubid-dynasty",
+  "mamluk-sultanate": "mamluk-sultanate",
+  fatimid: "fatimid-caliphate",
+  andalus: "andalusi-caliphate",
+  buyid: "buyid-dynasty",
+  timurid: "timurid-empire",
+  mongols: "mongol-empire",
+  prophetic: "prophetic-state",
+};
+const ERA_TO_STATE: Record<string, string> = {
+  rashidun: "rashidun-caliphate",
+  umayyad: "umayyad-caliphate",
+  abbasid: "abbasid-caliphate",
+  ottoman: "ottoman-empire",
+  seljuk: "seljuk-empire",
+  zengid: "zengid-dynasty",
+  ayyubid: "ayyubid-dynasty",
+  mamluk: "mamluk-sultanate",
+  fatimid: "fatimid-caliphate",
+  andalus: "andalusi-caliphate",
+  buyid: "buyid-dynasty",
+  timurid: "timurid-empire",
+  mongols: "mongol-empire",
+  mongol: "mongol-empire",
+  ilkhanid: "mongol-empire",
+  prophetic: "prophetic-state",
+};
+
+function suggestStateForEntity(r: Row): string {
+  const m = metaObj(r);
+  const cur = typeof m.state === "string" ? (m.state as string).trim() : "";
+  if (cur && CANONICAL_STATE.has(cur)) return cur;
+  const world = typeof m.world === "string" ? (m.world as string).trim() : "";
+  const wGuess = world ? WORLD_TO_STATE[world] : undefined;
+  if (wGuess && CANONICAL_STATE.has(wGuess)) return wGuess;
+  const era = typeof m.era === "string" ? (m.era as string).trim() : "";
+  const eGuess = era ? ERA_TO_STATE[era] : undefined;
+  if (eGuess && CANONICAL_STATE.has(eGuess)) return eGuess;
+  // Suffix-strip fallback: try to match current value after normalizing.
+  if (cur) {
+    const candidates = [
+      cur, cur.replace(/-empire$/, ""), cur.replace(/-caliphate$/, ""),
+      cur.replace(/-sultanate$/, ""), cur.replace(/-dynasty$/, ""),
+      cur.replace(/-state$/, ""),
+    ];
+    for (const c of candidates) if (c && CANONICAL_STATE.has(c)) return c;
+  }
   return "";
 }
 
@@ -251,15 +315,17 @@ function DataHygienePage() {
   const [busy, setBusy] = useState<string | null>(null);
 
   // Sync CMS taxonomy into the canonical Sets so entities using
-  // admin-added eras/worlds are no longer flagged as non-canonical.
+  // admin-added eras/worlds/states are no longer flagged as non-canonical.
   const eraTax = useTaxonomy("era");
   const worldTax = useTaxonomy("world");
+  const stateTax = useTaxonomy("state");
   useEffect(() => {
     for (const e of eraTax.entries) if (e.enabled && !e.archived) CANONICAL_ERA.add(e.key);
     for (const w of worldTax.entries) if (w.enabled && !w.archived) CANONICAL_WORLD.add(w.key);
+    for (const s of stateTax.entries) if (s.enabled && !s.archived) CANONICAL_STATE.add(s.key);
     if (rows) setRows((prev) => (prev ? [...prev] : prev));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eraTax.entries, worldTax.entries]);
+  }, [eraTax.entries, worldTax.entries, stateTax.entries]);
 
   async function reload() {
     setLoading(true); setErr(null);
@@ -399,7 +465,7 @@ function CanonicalFixer({
   rows, onDone, setBusy, busy,
 }: { rows: Row[]; onDone: () => void; setBusy: (s: string | null) => void; busy: string | null }) {
   const [kind, setKind] = useState<"era" | "world" | "state">("era");
-  const canonical = kind === "era" ? CANONICAL_ERA : kind === "world" ? CANONICAL_WORLD : CANONICAL_WORLD;
+  const canonical = kind === "era" ? CANONICAL_ERA : kind === "world" ? CANONICAL_WORLD : CANONICAL_STATE;
 
   // Build value groups from live data
   const groups = useMemo(() => {
@@ -413,7 +479,7 @@ function CanonicalFixer({
       map.get(raw)!.push(r);
     }
     return [...map.entries()]
-      .map(([raw, list]) => ({ raw, list, suggested: suggestCanonical(kind === "state" ? "world" : kind, raw) }))
+      .map(([raw, list]) => ({ raw, list, suggested: kind === "state" ? "" : suggestCanonical(kind, raw) }))
       .sort((a, b) => b.list.length - a.list.length);
   }, [rows, kind, canonical]);
 
@@ -421,6 +487,7 @@ function CanonicalFixer({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [previewOpen, setPreviewOpen] = useState<string | null>(null);
   const [entityMapperGroup, setEntityMapperGroup] = useState<string | null>(null);
+  const [entityStateMapperGroup, setEntityStateMapperGroup] = useState<string | null>(null);
 
   useEffect(() => {
     // seed mapping with suggestions on load / kind change
@@ -445,7 +512,7 @@ function CanonicalFixer({
     const jobs: { id: string; patch: Record<string, unknown> }[] = [];
     for (const raw of selected) {
       const target = mapping[raw];
-      if (!target || !canonical.has(target) && kind !== "state") continue;
+      if (!target || !canonical.has(target)) continue;
       const g = groups.find((x) => x.raw === raw);
       if (!g) continue;
       for (const r of g.list) jobs.push({ id: r.id, patch: { [kind]: target } });
@@ -478,15 +545,26 @@ function CanonicalFixer({
       </div>
 
       <p className="mb-3 text-[11px] text-slate-400">
-        القيم غير الموجودة في المجموعة القانونية {kind === "era" ? `(${[...CANONICAL_ERA].join(" • ")})` : `(${[...CANONICAL_WORLD].join(" • ")})`}. لن يُنفَّذ أي تحديث قبل استعراض العدد والضغط على «تطبيق».
+        القيم غير الموجودة في المجموعة القانونية{" "}
+        {kind === "era"
+          ? `(${[...CANONICAL_ERA].join(" • ")})`
+          : kind === "world"
+            ? `(${[...CANONICAL_WORLD].join(" • ")})`
+            : `(${[...CANONICAL_STATE].join(" • ") || "لا توجد قيم قانونية للدول بعد — أضِفها من /admin/taxonomy"})`}
+        . لن يُنفَّذ أي تحديث قبل استعراض العدد والضغط على «تطبيق».
       </p>
 
-      {kind === "world" && (
+      {(kind === "world" || kind === "state") && (
         <div className="mb-3 rounded border border-amber-500/40 bg-amber-500/5 p-3 text-[12px] leading-6 text-amber-100">
           <div className="mb-1 flex items-center gap-1.5 font-semibold">
-            <AlertTriangle className="size-4" /> لا تُطبّق تحويل «عالَم» كمجموعة
+            <AlertTriangle className="size-4" />
+            {kind === "world" ? "لا تُطبّق تحويل «عالَم» كمجموعة" : "لا تُطبّق تحويل «دولة» كمجموعة"}
           </div>
-          مجموعة قديمة واحدة مثل <code className="mx-1 rounded bg-slate-900 px-1">iraq-and-hijaz</code> قد تحوي شخصيات أموية وعباسية وسلجوقية وزنكية معًا — ولا يمكن ضمّها كلها لعالَم واحد. استخدم زر <b>«مصنّف الكيانات»</b> بجانب كل مجموعة لمراجعة كل كيان على حدة مع اقتراح ذكي مبني على العصر ثم الدولة.
+          {kind === "world" ? (
+            <>مجموعة قديمة واحدة مثل <code className="mx-1 rounded bg-slate-900 px-1">iraq-and-hijaz</code> قد تحوي شخصيات أموية وعباسية وسلجوقية وزنكية معًا — ولا يمكن ضمّها كلها لعالَم واحد. استخدم زر <b>«مصنّف الكيانات»</b> بجانب كل مجموعة لمراجعة كل كيان على حدة مع اقتراح ذكي مبني على العصر ثم الدولة.</>
+          ) : (
+            <>«الدولة» ملكية سياسية تخص كل كيان على حدة. المجموعة القديمة الواحدة قد تجمع كيانات تنتمي فعليًا إلى عدة دول قانونية. استخدم زر <b>«مصنّف الكيانات»</b> بجانب كل مجموعة لاستعراض كل كيان مع اقتراح ذكي مبني على العالَم ثم العصر ثم القيمة الحالية، مع قائمة بحث للدول القانونية.</>
+          )}
         </div>
       )}
 
@@ -507,21 +585,21 @@ function CanonicalFixer({
                   /></th>
                   <th className="p-2">القيمة الحالية</th>
                   <th className="p-2">العدد</th>
-                  <th className="p-2">{kind === "world" ? "قيمة قانونية جماعية (غير مستحسن)" : "القيمة القانونية المقترحة"}</th>
+                  <th className="p-2">{kind === "world" || kind === "state" ? "قيمة قانونية جماعية (غير مستحسن)" : "القيمة القانونية المقترحة"}</th>
                   <th className="p-2">تصفح</th>
-                  <th className="p-2">{kind === "world" ? "مصنّف الكيانات" : ""}</th>
+                  <th className="p-2">{kind === "world" || kind === "state" ? "مصنّف الكيانات" : ""}</th>
                 </tr>
               </thead>
               <tbody>
                 {groups.map((g) => {
                   const target = mapping[g.raw] ?? "";
-                  const valid = kind === "state" ? true : canonical.has(target);
+                  const valid = canonical.has(target);
                   return (
                     <tr key={g.raw} className="border-t border-slate-800 hover:bg-slate-900/30">
                       <td className="p-2">
                         <input
                           type="checkbox"
-                          disabled={!target}
+                          disabled={!target || !valid}
                           checked={selected.has(g.raw)}
                           onChange={(e) => {
                             const s = new Set(selected);
@@ -533,24 +611,15 @@ function CanonicalFixer({
                       <td className="p-2 font-mono text-amber-200">{g.raw}</td>
                       <td className="p-2 text-slate-300">{g.list.length}</td>
                       <td className="p-2">
-                        {kind === "state" ? (
-                          <input
-                            className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
-                            value={target}
-                            onChange={(e) => setMapping({ ...mapping, [g.raw]: e.target.value })}
-                            placeholder="اكتب قيمة قياسية"
-                          />
-                        ) : (
-                          <select
-                            className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
-                            value={target}
-                            onChange={(e) => setMapping({ ...mapping, [g.raw]: e.target.value })}
-                          >
-                            <option value="">— اختر —</option>
-                            {[...canonical].sort().map((c) => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                        )}
-                        {target && !valid && kind !== "state" && (
+                        <select
+                          className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
+                          value={target}
+                          onChange={(e) => setMapping({ ...mapping, [g.raw]: e.target.value })}
+                        >
+                          <option value="">— اختر —</option>
+                          {[...canonical].sort().map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        {target && !valid && (
                           <span className="mr-2 text-[10px] text-rose-300">غير قانوني</span>
                         )}
                       </td>
@@ -566,6 +635,13 @@ function CanonicalFixer({
                         {kind === "world" ? (
                           <button
                             onClick={() => setEntityMapperGroup(g.raw)}
+                            className="inline-flex items-center gap-1 rounded border border-amber-400/50 bg-amber-500/10 px-2 py-1 text-amber-100 hover:bg-amber-500/20"
+                          >
+                            <Users className="size-3.5" /> فتح المصنّف
+                          </button>
+                        ) : kind === "state" ? (
+                          <button
+                            onClick={() => setEntityStateMapperGroup(g.raw)}
                             className="inline-flex items-center gap-1 rounded border border-amber-400/50 bg-amber-500/10 px-2 py-1 text-amber-100 hover:bg-amber-500/20"
                           >
                             <Users className="size-3.5" /> فتح المصنّف
@@ -635,6 +711,17 @@ function CanonicalFixer({
           rows={groups.find((g) => g.raw === entityMapperGroup)?.list ?? []}
           onClose={() => setEntityMapperGroup(null)}
           onApplied={() => { setEntityMapperGroup(null); onDone(); }}
+          setBusy={setBusy}
+          busy={busy}
+        />
+      )}
+
+      {entityStateMapperGroup && (
+        <EntityStateMapperModal
+          rawState={entityStateMapperGroup}
+          rows={groups.find((g) => g.raw === entityStateMapperGroup)?.list ?? []}
+          onClose={() => setEntityStateMapperGroup(null)}
+          onApplied={() => { setEntityStateMapperGroup(null); onDone(); }}
           setBusy={setBusy}
           busy={busy}
         />
@@ -860,6 +947,246 @@ function EntityWorldMapperModal({
     </div>
   );
 }
+
+
+// ============================================================
+// Entity State Mapper — per-entity state review
+// ------------------------------------------------------------
+// State is an entity-level political affiliation. A single legacy state
+// value can group entities that actually belong to several canonical
+// states, so we NEVER bulk-map a group→state. This modal lists every
+// affected entity, pre-fills a smart suggestion (world → era →
+// existing → suffix-strip), lets the admin adjust each row via a
+// searchable dropdown backed by CANONICAL_STATE, and applies only rows
+// whose chosen value is a known canonical state.
+// ============================================================
+function EntityStateMapperModal({
+  rawState, rows, onClose, onApplied, setBusy, busy,
+}: {
+  rawState: string;
+  rows: Row[];
+  onClose: () => void;
+  onApplied: () => void;
+  setBusy: (s: string | null) => void;
+  busy: string | null;
+}) {
+  const [assign, setAssign] = useState<Record<string, string>>(() => {
+    const seed: Record<string, string> = {};
+    for (const r of rows) seed[r.id] = suggestStateForEntity(r);
+    return seed;
+  });
+  const [filterType, setFilterType] = useState<string>("");
+  const [filterEra, setFilterEra] = useState<string>("");
+  const [filterWorld, setFilterWorld] = useState<string>("");
+  const [onlySuggested, setOnlySuggested] = useState<boolean>(false);
+  const [query, setQuery] = useState<string>("");
+
+  const stateOptions = useMemo(() => [...CANONICAL_STATE].sort(), []);
+  const types = useMemo(() => [...new Set(rows.map((r) => r.entity_type))].sort(), [rows]);
+  const eras = useMemo(() => [...new Set(rows.map((r) => (metaObj(r).era as string) || "").filter(Boolean))].sort(), [rows]);
+  const worlds = useMemo(() => [...new Set(rows.map((r) => (metaObj(r).world as string) || "").filter(Boolean))].sort(), [rows]);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (filterType && r.entity_type !== filterType) return false;
+      const m = metaObj(r);
+      if (filterEra && (m.era as string) !== filterEra) return false;
+      if (filterWorld && (m.world as string) !== filterWorld) return false;
+      if (onlySuggested && !assign[r.id]) return false;
+      if (q && !(`${r.title} ${r.slug}`.toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }, [rows, filterType, filterEra, filterWorld, onlySuggested, query, assign]);
+
+  const readyCount = useMemo(
+    () => rows.filter((r) => assign[r.id] && CANONICAL_STATE.has(assign[r.id])).length,
+    [rows, assign],
+  );
+
+  function setAll(target: string) {
+    const next = { ...assign };
+    for (const r of visible) next[r.id] = target;
+    setAssign(next);
+  }
+  function resetToSuggestions() {
+    const next: Record<string, string> = {};
+    for (const r of rows) next[r.id] = suggestStateForEntity(r);
+    setAssign(next);
+  }
+
+  async function apply() {
+    const jobs = rows
+      .filter((r) => assign[r.id] && CANONICAL_STATE.has(assign[r.id]))
+      .map((r) => ({ id: r.id, state: assign[r.id] }));
+    if (jobs.length === 0) { alert("لا توجد كيانات جاهزة للتطبيق."); return; }
+    if (!confirm(`سيتم تحديث حقل «الدولة» لعدد ${jobs.length} كيان. متابعة؟`)) return;
+    setBusy("entity-state-mapper");
+    const res = await runBulk(jobs, (j) => patchMetadata(j.id, { state: j.state }));
+    setBusy(null);
+    alert(`تم تحديث ${res.ok}. فشل ${res.failed}.`);
+    onApplied();
+  }
+
+  function exportCsv() {
+    const csv = toCsv(
+      ["id", "type", "slug", "title", "era", "world", "current_state", "new_state"],
+      rows.map((r) => {
+        const m = metaObj(r);
+        return [
+          r.id, r.entity_type, r.slug, r.title,
+          (m.era as string) ?? "", (m.world as string) ?? "",
+          rawState, assign[r.id] ?? "",
+        ];
+      }),
+    );
+    downloadCsv(`entity-state-mapper-${rawState}.csv`, csv);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4">
+      <div dir="rtl" className="my-6 w-full max-w-6xl rounded-xl border border-amber-500/40 bg-slate-950 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-800 p-4">
+          <div>
+            <div className="text-sm text-slate-400">مصنّف الدولة للكيانات</div>
+            <div className="text-base font-semibold text-amber-100">
+              المجموعة القديمة: <code className="rounded bg-slate-900 px-1.5 py-0.5">{rawState}</code>
+              <span className="ms-2 text-xs text-slate-400">({rows.length} كيان — {readyCount} جاهز)</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-900 hover:text-slate-100" aria-label="إغلاق">
+            <X className="size-5" />
+          </button>
+        </div>
+
+        {stateOptions.length === 0 && (
+          <div className="border-b border-amber-500/40 bg-amber-500/10 p-3 text-[12px] leading-6 text-amber-100">
+            لا توجد قيم قانونية للدول مُعرَّفة بعد. أضِف الدول القانونية من صفحة{" "}
+            <code className="rounded bg-slate-900 px-1">/admin/taxonomy</code> ثم أعِد فتح المصنّف.
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 p-3 text-xs">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="بحث بالعنوان أو الـ slug"
+            className="w-56 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
+          />
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100">
+            <option value="">كل الأنواع</option>
+            {types.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={filterEra} onChange={(e) => setFilterEra(e.target.value)} className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100">
+            <option value="">كل العصور</option>
+            {eras.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={filterWorld} onChange={(e) => setFilterWorld(e.target.value)} className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100">
+            <option value="">كل العوالم</option>
+            {worlds.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <label className="flex items-center gap-1.5 text-slate-300">
+            <input type="checkbox" checked={onlySuggested} onChange={(e) => setOnlySuggested(e.target.checked)} />
+            الظاهر يحوي اقتراحًا فقط
+          </label>
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            <button onClick={resetToSuggestions} className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-200 hover:bg-slate-800">
+              إعادة الاقتراحات
+            </button>
+            <div className="flex items-center gap-1">
+              <span className="text-slate-400">تطبيق على الظاهر:</span>
+              <select
+                onChange={(e) => { if (e.target.value) { setAll(e.target.value); e.currentTarget.value = ""; } }}
+                className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
+                defaultValue=""
+              >
+                <option value="">— اختر دولة —</option>
+                {stateOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-h-[60vh] overflow-auto">
+          <table className="w-full text-right text-xs">
+            <thead className="sticky top-0 bg-slate-950/95 text-slate-400 backdrop-blur">
+              <tr>
+                <th className="p-2">الكيان</th>
+                <th className="p-2">النوع</th>
+                <th className="p-2">العصر</th>
+                <th className="p-2">العالَم</th>
+                <th className="p-2">الدولة الحالية</th>
+                <th className="p-2">الدولة الجديدة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((r) => {
+                const m = metaObj(r);
+                const era = (m.era as string) ?? "";
+                const world = (m.world as string) ?? "";
+                const chosen = assign[r.id] ?? "";
+                const valid = chosen === "" || CANONICAL_STATE.has(chosen);
+                const listId = `state-opts-${r.id}`;
+                return (
+                  <tr key={r.id} className="border-t border-slate-800 hover:bg-slate-900/40">
+                    <td className="p-2">
+                      <div className="font-semibold text-slate-100">{r.title}</div>
+                      <div className="font-mono text-[10px] text-slate-500">{r.slug}</div>
+                    </td>
+                    <td className="p-2 text-slate-300">{r.entity_type}</td>
+                    <td className="p-2 text-slate-300">{era || <span className="text-slate-600">—</span>}</td>
+                    <td className="p-2 text-slate-300">{world || <span className="text-slate-600">—</span>}</td>
+                    <td className="p-2 font-mono text-amber-200/80">{rawState}</td>
+                    <td className="p-2">
+                      <input
+                        list={listId}
+                        value={chosen}
+                        onChange={(e) => setAssign({ ...assign, [r.id]: e.target.value })}
+                        placeholder="ابحث عن دولة قانونية…"
+                        className={`w-56 rounded border px-2 py-1 text-slate-100 ${valid ? "border-slate-700 bg-slate-900" : "border-rose-500/60 bg-rose-500/10"}`}
+                      />
+                      <datalist id={listId}>
+                        {stateOptions.map((s) => <option key={s} value={s} />)}
+                      </datalist>
+                    </td>
+                  </tr>
+                );
+              })}
+              {visible.length === 0 && (
+                <tr><td colSpan={6} className="p-6 text-center text-slate-500">لا نتائج مطابقة للفلاتر.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 p-3 text-xs">
+          <div className="text-slate-400">
+            الظاهر: {visible.length} — الجاهز للتطبيق: {readyCount}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-slate-200 hover:bg-slate-800">
+              <Download className="size-3.5" /> CSV احتياطي
+            </button>
+            <button onClick={onClose} className="rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-slate-200 hover:bg-slate-800">
+              إلغاء
+            </button>
+            <button
+              onClick={apply}
+              disabled={busy !== null || readyCount === 0}
+              className="inline-flex items-center gap-1.5 rounded bg-amber-500 px-3 py-1.5 font-semibold text-slate-950 hover:bg-amber-400 disabled:opacity-40"
+            >
+              {busy === "entity-state-mapper" ? <Loader2 className="size-3.5 animate-spin" /> : <Wand2 className="size-3.5" />}
+              تطبيق ({readyCount})
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
 
 
 // ============================================================
