@@ -585,21 +585,21 @@ function CanonicalFixer({
                   /></th>
                   <th className="p-2">القيمة الحالية</th>
                   <th className="p-2">العدد</th>
-                  <th className="p-2">{kind === "world" ? "قيمة قانونية جماعية (غير مستحسن)" : "القيمة القانونية المقترحة"}</th>
+                  <th className="p-2">{kind === "world" || kind === "state" ? "قيمة قانونية جماعية (غير مستحسن)" : "القيمة القانونية المقترحة"}</th>
                   <th className="p-2">تصفح</th>
-                  <th className="p-2">{kind === "world" ? "مصنّف الكيانات" : ""}</th>
+                  <th className="p-2">{kind === "world" || kind === "state" ? "مصنّف الكيانات" : ""}</th>
                 </tr>
               </thead>
               <tbody>
                 {groups.map((g) => {
                   const target = mapping[g.raw] ?? "";
-                  const valid = kind === "state" ? true : canonical.has(target);
+                  const valid = canonical.has(target);
                   return (
                     <tr key={g.raw} className="border-t border-slate-800 hover:bg-slate-900/30">
                       <td className="p-2">
                         <input
                           type="checkbox"
-                          disabled={!target}
+                          disabled={!target || !valid}
                           checked={selected.has(g.raw)}
                           onChange={(e) => {
                             const s = new Set(selected);
@@ -611,24 +611,15 @@ function CanonicalFixer({
                       <td className="p-2 font-mono text-amber-200">{g.raw}</td>
                       <td className="p-2 text-slate-300">{g.list.length}</td>
                       <td className="p-2">
-                        {kind === "state" ? (
-                          <input
-                            className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
-                            value={target}
-                            onChange={(e) => setMapping({ ...mapping, [g.raw]: e.target.value })}
-                            placeholder="اكتب قيمة قياسية"
-                          />
-                        ) : (
-                          <select
-                            className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
-                            value={target}
-                            onChange={(e) => setMapping({ ...mapping, [g.raw]: e.target.value })}
-                          >
-                            <option value="">— اختر —</option>
-                            {[...canonical].sort().map((c) => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                        )}
-                        {target && !valid && kind !== "state" && (
+                        <select
+                          className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
+                          value={target}
+                          onChange={(e) => setMapping({ ...mapping, [g.raw]: e.target.value })}
+                        >
+                          <option value="">— اختر —</option>
+                          {[...canonical].sort().map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        {target && !valid && (
                           <span className="mr-2 text-[10px] text-rose-300">غير قانوني</span>
                         )}
                       </td>
@@ -644,6 +635,13 @@ function CanonicalFixer({
                         {kind === "world" ? (
                           <button
                             onClick={() => setEntityMapperGroup(g.raw)}
+                            className="inline-flex items-center gap-1 rounded border border-amber-400/50 bg-amber-500/10 px-2 py-1 text-amber-100 hover:bg-amber-500/20"
+                          >
+                            <Users className="size-3.5" /> فتح المصنّف
+                          </button>
+                        ) : kind === "state" ? (
+                          <button
+                            onClick={() => setEntityStateMapperGroup(g.raw)}
                             className="inline-flex items-center gap-1 rounded border border-amber-400/50 bg-amber-500/10 px-2 py-1 text-amber-100 hover:bg-amber-500/20"
                           >
                             <Users className="size-3.5" /> فتح المصنّف
