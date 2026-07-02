@@ -110,12 +110,25 @@ const RAW_TO_CANONICAL: Record<string, CanonicalEra> = {
   "post-granada": "andalus",
   "reconquista": "andalus",
 
+  // Taifa (own canonical era)
+  "taifa": "taifa",
+  "taifa-kingdoms": "taifa",
+  "taifas": "taifa",
+  "muluk-al-tawaif": "taifa",
+
   // Abbasid
   "abbasid": "abbasid",
   "abbasid-era": "abbasid",
   "abbasid-caliphate": "abbasid",
   "abbasi": "abbasid",
   "baghdad": "abbasid",
+
+  // Buyid
+  "buyid": "buyid",
+  "buyids": "buyid",
+  "buwayhid": "buyid",
+  "buwayhids": "buyid",
+  "buyid-era": "buyid",
 
   // Fatimid
   "fatimid": "fatimid",
@@ -128,16 +141,25 @@ const RAW_TO_CANONICAL: Record<string, CanonicalEra> = {
   "saljuq": "seljuk",
   "saljuk": "seljuk",
 
+  // Byzantine
+  "byzantine": "byzantine",
+  "byzantines": "byzantine",
+  "byzantium": "byzantine",
+  "byzantine-era": "byzantine",
+  "roman-east": "byzantine",
+
   // Crusades
   "crusades": "crusades",
   "crusader": "crusades",
   "crusaders": "crusades",
+  "crusader-era": "crusades",
 
   // Zengid
   "zengid": "zengid",
   "zangid": "zengid",
   "zengi": "zengid",
   "zankid": "zengid",
+  "zengid-era": "zengid",
 
   // Ayyubid
   "ayyubid": "ayyubid",
@@ -148,12 +170,20 @@ const RAW_TO_CANONICAL: Record<string, CanonicalEra> = {
   "mongols": "mongols",
   "mongol": "mongols",
   "ilkhanid": "mongols",
+  "mongol-invasion": "mongols",
 
   // Mamluk
   "mamluk": "mamluk",
   "mamluks": "mamluk",
   "mamluki": "mamluk",
   "mamluk-era": "mamluk",
+
+  // Timurid
+  "timurid": "timurid",
+  "timurids": "timurid",
+  "timurid-era": "timurid",
+  "timur": "timurid",
+  "tamerlane": "timurid",
 
   // Ottoman
   "ottoman": "ottoman",
