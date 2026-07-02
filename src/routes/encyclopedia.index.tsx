@@ -92,9 +92,10 @@ function useAllEncyclopedia() {
         rows.push(...batch);
         if (batch.length < PAGE) break;
       }
-      // Supabase is the only source of truth. Hide incomplete rows so
-      // empty cards, orphan records and stubs never reach the UI.
-      return rows.filter(isDisplayableEntity);
+      // Supabase is the only source of truth. Hide incomplete rows and
+      // enforce the public taxonomy whitelist so legacy / migration state
+      // entities never surface in player-facing filters or lists.
+      return rows.filter(isDisplayableEntity).filter(isPublicEntity);
     },
   });
 }
