@@ -300,6 +300,18 @@ function Page() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Pull CMS-managed taxonomy and merge admin-added keys into the
+  // canonical sets so entities using new eras/worlds stop being flagged.
+  const eraTax = useTaxonomy("era");
+  const worldTax = useTaxonomy("world");
+  useEffect(() => {
+    for (const e of eraTax.entries) if (e.enabled && !e.archived) CANONICAL_ERA_KEYS.add(e.key);
+    for (const w of worldTax.entries) if (w.enabled && !w.archived) CANONICAL_WORLD_KEYS.add(w.key);
+    // Trigger re-render so downstream memos re-run against the enlarged sets.
+    if (rows) setRows((prev) => (prev ? [...prev] : prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eraTax.entries, worldTax.entries]);
+
   useEffect(() => {
     fetchAllEntities().then(setRows).catch((e) => setError(e.message ?? String(e)));
   }, []);
