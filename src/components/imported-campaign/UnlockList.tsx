@@ -129,9 +129,17 @@ export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel, 
         return (
           <span
             key={r.raw}
-            className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-foreground"
+            className={`inline-flex max-w-[220px] items-center gap-1.5 rounded-full border px-2.5 py-1 ${
+              locked
+                ? "border-white/15 bg-white/[0.04] text-foreground/70"
+                : "border-gold/30 bg-gold/10 text-foreground"
+            }`}
           >
-            <LockOpen className="size-3 shrink-0 text-gold" strokeWidth={1.75} />
+            {locked ? (
+              <Lock className="size-3 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+            ) : (
+              <LockOpen className="size-3 shrink-0 text-gold" strokeWidth={1.75} />
+            )}
             <span className="truncate font-medium" title={label}>{label}</span>
             <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-black/40 px-1.5 py-0.5 text-[10px] text-foreground/80">
               <TypeIcon className="size-2.5" strokeWidth={1.75} />
