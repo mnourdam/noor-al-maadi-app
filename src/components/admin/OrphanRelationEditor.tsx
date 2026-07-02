@@ -177,12 +177,16 @@ export function OrphanRelationEditor({
     try {
       const existing = asStrArr(em.related_entities);
       const merged = Array.from(new Set([...existing, ...Array.from(selected)]));
-      const nextMeta = { ...em, related_entities: merged };
-      const { error } = await supabase
-        .from("encyclopedia_entities")
-        .update({ metadata: nextMeta as any })
-        .eq("id", entity.id);
-      if (error) throw error;
+      if (onCommit) {
+        await onCommit(merged);
+      } else {
+        const nextMeta = { ...em, related_entities: merged };
+        const { error } = await supabase
+          .from("encyclopedia_entities")
+          .update({ metadata: nextMeta as any })
+          .eq("id", entity.id);
+        if (error) throw error;
+      }
       onSaved();
       onClose();
     } catch (e: any) {
@@ -191,6 +195,7 @@ export function OrphanRelationEditor({
       setSaving(false);
     }
   };
+
 
   const allowedList = (ALLOWED_TARGETS[entity.entity_type] ?? [])
     .map((t) => TYPE_LABELS[t] ?? t).join(" · ");
