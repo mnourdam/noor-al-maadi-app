@@ -50,7 +50,7 @@ function resolveLabel(r: ResolvedUnlock, isLoading: boolean, debug: boolean): st
   return "عنصر غير معروف";
 }
 
-export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel }: Props) {
+export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel, locked = false, lockedHint }: Props) {
   const { resolved, isLoading } = useResolvedUnlocks(ids);
   const navigate = useNavigate();
   const [reveal, setReveal] = useState<CollectibleRevealItem | null>(null);
@@ -67,8 +67,10 @@ export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel }
       subtitle,
       lines: r.summary ? [r.summary] : ["عنصر من الموسوعة. افتحه لقراءة تفاصيله الكاملة."],
       sourceLabel: sourceLabel ?? "من الموسوعة",
-      alreadyOwned: true,
-      onOpenEncyclopedia: r.slug
+      alreadyOwned: !locked,
+      locked,
+      lockedHint: locked ? (lockedHint ?? "أكمل الحملة لفتح هذه الجائزة وإضافتها إلى متحفك.") : undefined,
+      onOpenEncyclopedia: !locked && r.slug
         ? () => navigate({ to: "/encyclopedia/entity/$id", params: { id: r.slug! } })
         : undefined,
     });
