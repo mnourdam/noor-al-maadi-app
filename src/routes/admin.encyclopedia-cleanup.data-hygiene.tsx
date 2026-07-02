@@ -1663,6 +1663,15 @@ function OrphanReport({ rows, onReload }: { rows: Row[]; onReload: () => Promise
           </div>
         )}
       </div>
+      {bulkOpen && (
+        <BulkOrphanLinker
+          orphans={orphans}
+          allRows={rows}
+          onClose={() => setBulkOpen(false)}
+          onDone={() => { void onReload(); }}
+        />
+      )}
     </section>
+
   );
 }
