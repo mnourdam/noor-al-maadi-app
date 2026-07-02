@@ -70,7 +70,7 @@ type EntityRow = {
 
 type Quality = "good" | "weak" | "empty" | "duplicate" | "orphaned";
 type FilterKey =
-  | "all" | "needs-cleanup" | "needs-content" | "complete"
+  | "all" | "needs-cleanup" | "needs-content" | "complete" | "dedupe-pending"
   | "figure" | "city" | "landmark" | "battle" | "event"
   | "artifact" | "state" | "empty" | "weak" | "duplicate" | "stub" | "archived"
   | "no-image" | "no-sources" | "no-overview" | "no-atlas" | "no-campaign";
@@ -500,10 +500,22 @@ function CleanupWorkshop() {
 
   // Pipeline-stage counts — drive the "needs content" and "complete"
   // first-class chips. Both operate only on final canonical entities,
-  // so archived / hidden / redirected rows never leak in.
+  // so archived / hidden / redirected rows never leak in. Duplicates that
+  // still require dedupe are excluded from "needs content" so admins fix
+  // duplication first, then enrich the surviving canonical entity.
+  const dedupePendingCount = useMemo(
+    () => rows.reduce(
+      (n, r) => (dupIds.has(r.id) && !isArchivedOrHidden(r) && !isRedirected(r) ? n + 1 : n),
+      0,
+    ),
+    [rows, dupIds],
+  );
   const needsContentCount = useMemo(
-    () => rows.reduce((n, r) => (needsContent(r) ? n + 1 : n), 0),
-    [rows],
+    () => rows.reduce(
+      (n, r) => (needsContent(r) && !dupIds.has(r.id) ? n + 1 : n),
+      0,
+    ),
+    [rows, dupIds],
   );
   const completeCount = useMemo(
     () => rows.reduce((n, r) => (isComplete(r) ? n + 1 : n), 0),
@@ -521,9 +533,12 @@ function CleanupWorkshop() {
       const quality = classifyQuality(r, dupIds.has(r.id), isOrphan);
       const archived = r.metadata?.archived === true || r.enabled === false;
 
+      const isDup = dupIds.has(r.id);
+      const dedupePending = isDup && !isArchivedOrHidden(r) && !isRedirected(r);
+
       // Pipeline filter (ANDs with type/quality chips below).
       if (pipeline === "needs-cleanup" && !rowNeedsCleanup(r, liveDupIds, quality)) return false;
-      if (pipeline === "needs-content" && !needsContent(r)) return false;
+      if (pipeline === "needs-content" && (!needsContent(r) || isDup)) return false;
       if (pipeline === "complete" && !isComplete(r)) return false;
 
       // Type / quality / linkage chips
@@ -533,7 +548,10 @@ function CleanupWorkshop() {
           if (!rowNeedsCleanup(r, liveDupIds, quality)) return false;
           break;
         case "needs-content":
-          if (!needsContent(r)) return false;
+          if (!needsContent(r) || isDup) return false;
+          break;
+        case "dedupe-pending":
+          if (!dedupePending) return false;
           break;
         case "complete":
           if (!isComplete(r)) return false;
@@ -541,7 +559,7 @@ function CleanupWorkshop() {
         case "empty": if (quality !== "empty") return false; break;
         case "weak":  if (quality !== "weak") return false; break;
         case "stub":  if (quality !== "empty" && quality !== "weak") return false; break;
-        case "duplicate": if (!dupIds.has(r.id)) return false; break;
+        case "duplicate": if (!isDup) return false; break;
         case "archived":  if (!archived) return false; break;
         case "no-image":    if (hasImage(r.metadata)) return false; break;
         case "no-sources":  if (hasSources(r.metadata, r.body)) return false; break;
@@ -1267,6 +1285,7 @@ function CleanupWorkshop() {
           needsCleanupCount={needsCleanupCount}
           needsContentCount={needsContentCount}
           completeCount={completeCount}
+          dedupePendingCount={dedupePendingCount}
         />
         <MissingContentStrip rows={rows} atlasLinks={atlasLinks} campaignSlugs={campaignSlugs} dupIds={dupIds} onFilter={setFilter} />
 
@@ -1487,6 +1506,7 @@ function Toolbar({
   q, setQ, filter, setFilter,
   pipeline, setPipeline,
   needsCleanupCount, needsContentCount, completeCount,
+  dedupePendingCount,
 }: {
   q: string; setQ: (v: string) => void;
   filter: FilterKey; setFilter: (v: FilterKey) => void;
@@ -1494,9 +1514,11 @@ function Toolbar({
   needsCleanupCount: number;
   needsContentCount: number;
   completeCount: number;
+  dedupePendingCount: number;
 }) {
   const restChips: { key: FilterKey; label: string }[] = [
     { key: "all", label: "الكل" },
+    { key: "dedupe-pending", label: `معالجة إزالة التكرار (${dedupePendingCount})` },
     { key: "figure", label: "شخصيات" },
     { key: "city", label: "مدن" },
     { key: "landmark", label: "معالم" },
