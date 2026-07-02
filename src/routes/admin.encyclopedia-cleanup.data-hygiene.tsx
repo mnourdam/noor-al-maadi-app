@@ -417,6 +417,7 @@ function CanonicalFixer({
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [previewOpen, setPreviewOpen] = useState<string | null>(null);
+  const [entityMapperGroup, setEntityMapperGroup] = useState<string | null>(null);
 
   useEffect(() => {
     // seed mapping with suggestions on load / kind change
