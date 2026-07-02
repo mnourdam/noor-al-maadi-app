@@ -511,7 +511,7 @@ function CanonicalFixer({
     const jobs: { id: string; patch: Record<string, unknown> }[] = [];
     for (const raw of selected) {
       const target = mapping[raw];
-      if (!target || !canonical.has(target) && kind !== "state") continue;
+      if (!target || !canonical.has(target)) continue;
       const g = groups.find((x) => x.raw === raw);
       if (!g) continue;
       for (const r of g.list) jobs.push({ id: r.id, patch: { [kind]: target } });
