@@ -26,12 +26,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle, Archive, ArrowUpRight, BadgeCheck, BookOpen, CheckCircle2, Copy, CornerDownRight,
-  Download, Eye, FileText, FileWarning, Filter, Loader2, Pencil, RefreshCw, RotateCcw, Save,
+  Download, Eye, FileText, FileWarning, Filter, Link2, Loader2, Pencil, Plus, RefreshCw, RotateCcw, Save,
   Search, Shield, Sparkles, Trash2, X,
 } from "lucide-react";
 
 
 import { EncyclopediaEntityPreview } from "@/components/admin/EncyclopediaEntityPreview";
+import { OrphanRelationEditor } from "@/components/admin/OrphanRelationEditor";
 import { supabase } from "@/integrations/supabase/client";
 import {
   entityNameKeys, normalizeArabicName, normalizeSlugKey,
