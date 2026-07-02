@@ -950,6 +950,246 @@ function EntityWorldMapperModal({
 
 
 // ============================================================
+// Entity State Mapper — per-entity state review
+// ------------------------------------------------------------
+// State is an entity-level political affiliation. A single legacy state
+// value can group entities that actually belong to several canonical
+// states, so we NEVER bulk-map a group→state. This modal lists every
+// affected entity, pre-fills a smart suggestion (world → era →
+// existing → suffix-strip), lets the admin adjust each row via a
+// searchable dropdown backed by CANONICAL_STATE, and applies only rows
+// whose chosen value is a known canonical state.
+// ============================================================
+function EntityStateMapperModal({
+  rawState, rows, onClose, onApplied, setBusy, busy,
+}: {
+  rawState: string;
+  rows: Row[];
+  onClose: () => void;
+  onApplied: () => void;
+  setBusy: (s: string | null) => void;
+  busy: string | null;
+}) {
+  const [assign, setAssign] = useState<Record<string, string>>(() => {
+    const seed: Record<string, string> = {};
+    for (const r of rows) seed[r.id] = suggestStateForEntity(r);
+    return seed;
+  });
+  const [filterType, setFilterType] = useState<string>("");
+  const [filterEra, setFilterEra] = useState<string>("");
+  const [filterWorld, setFilterWorld] = useState<string>("");
+  const [onlySuggested, setOnlySuggested] = useState<boolean>(false);
+  const [query, setQuery] = useState<string>("");
+
+  const stateOptions = useMemo(() => [...CANONICAL_STATE].sort(), []);
+  const types = useMemo(() => [...new Set(rows.map((r) => r.entity_type))].sort(), [rows]);
+  const eras = useMemo(() => [...new Set(rows.map((r) => (metaObj(r).era as string) || "").filter(Boolean))].sort(), [rows]);
+  const worlds = useMemo(() => [...new Set(rows.map((r) => (metaObj(r).world as string) || "").filter(Boolean))].sort(), [rows]);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (filterType && r.entity_type !== filterType) return false;
+      const m = metaObj(r);
+      if (filterEra && (m.era as string) !== filterEra) return false;
+      if (filterWorld && (m.world as string) !== filterWorld) return false;
+      if (onlySuggested && !assign[r.id]) return false;
+      if (q && !(`${r.title} ${r.slug}`.toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }, [rows, filterType, filterEra, filterWorld, onlySuggested, query, assign]);
+
+  const readyCount = useMemo(
+    () => rows.filter((r) => assign[r.id] && CANONICAL_STATE.has(assign[r.id])).length,
+    [rows, assign],
+  );
+
+  function setAll(target: string) {
+    const next = { ...assign };
+    for (const r of visible) next[r.id] = target;
+    setAssign(next);
+  }
+  function resetToSuggestions() {
+    const next: Record<string, string> = {};
+    for (const r of rows) next[r.id] = suggestStateForEntity(r);
+    setAssign(next);
+  }
+
+  async function apply() {
+    const jobs = rows
+      .filter((r) => assign[r.id] && CANONICAL_STATE.has(assign[r.id]))
+      .map((r) => ({ id: r.id, state: assign[r.id] }));
+    if (jobs.length === 0) { alert("لا توجد كيانات جاهزة للتطبيق."); return; }
+    if (!confirm(`سيتم تحديث حقل «الدولة» لعدد ${jobs.length} كيان. متابعة؟`)) return;
+    setBusy("entity-state-mapper");
+    const res = await runBulk(jobs, (j) => patchMetadata(j.id, { state: j.state }));
+    setBusy(null);
+    alert(`تم تحديث ${res.ok}. فشل ${res.failed}.`);
+    onApplied();
+  }
+
+  function exportCsv() {
+    const csv = toCsv(
+      ["id", "type", "slug", "title", "era", "world", "current_state", "new_state"],
+      rows.map((r) => {
+        const m = metaObj(r);
+        return [
+          r.id, r.entity_type, r.slug, r.title,
+          (m.era as string) ?? "", (m.world as string) ?? "",
+          rawState, assign[r.id] ?? "",
+        ];
+      }),
+    );
+    downloadCsv(`entity-state-mapper-${rawState}.csv`, csv);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4">
+      <div dir="rtl" className="my-6 w-full max-w-6xl rounded-xl border border-amber-500/40 bg-slate-950 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-800 p-4">
+          <div>
+            <div className="text-sm text-slate-400">مصنّف الدولة للكيانات</div>
+            <div className="text-base font-semibold text-amber-100">
+              المجموعة القديمة: <code className="rounded bg-slate-900 px-1.5 py-0.5">{rawState}</code>
+              <span className="ms-2 text-xs text-slate-400">({rows.length} كيان — {readyCount} جاهز)</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-900 hover:text-slate-100" aria-label="إغلاق">
+            <X className="size-5" />
+          </button>
+        </div>
+
+        {stateOptions.length === 0 && (
+          <div className="border-b border-amber-500/40 bg-amber-500/10 p-3 text-[12px] leading-6 text-amber-100">
+            لا توجد قيم قانونية للدول مُعرَّفة بعد. أضِف الدول القانونية من صفحة{" "}
+            <code className="rounded bg-slate-900 px-1">/admin/taxonomy</code> ثم أعِد فتح المصنّف.
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 p-3 text-xs">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="بحث بالعنوان أو الـ slug"
+            className="w-56 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
+          />
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100">
+            <option value="">كل الأنواع</option>
+            {types.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={filterEra} onChange={(e) => setFilterEra(e.target.value)} className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100">
+            <option value="">كل العصور</option>
+            {eras.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={filterWorld} onChange={(e) => setFilterWorld(e.target.value)} className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100">
+            <option value="">كل العوالم</option>
+            {worlds.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <label className="flex items-center gap-1.5 text-slate-300">
+            <input type="checkbox" checked={onlySuggested} onChange={(e) => setOnlySuggested(e.target.checked)} />
+            الظاهر يحوي اقتراحًا فقط
+          </label>
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            <button onClick={resetToSuggestions} className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-200 hover:bg-slate-800">
+              إعادة الاقتراحات
+            </button>
+            <div className="flex items-center gap-1">
+              <span className="text-slate-400">تطبيق على الظاهر:</span>
+              <select
+                onChange={(e) => { if (e.target.value) { setAll(e.target.value); e.currentTarget.value = ""; } }}
+                className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
+                defaultValue=""
+              >
+                <option value="">— اختر دولة —</option>
+                {stateOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-h-[60vh] overflow-auto">
+          <table className="w-full text-right text-xs">
+            <thead className="sticky top-0 bg-slate-950/95 text-slate-400 backdrop-blur">
+              <tr>
+                <th className="p-2">الكيان</th>
+                <th className="p-2">النوع</th>
+                <th className="p-2">العصر</th>
+                <th className="p-2">العالَم</th>
+                <th className="p-2">الدولة الحالية</th>
+                <th className="p-2">الدولة الجديدة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((r) => {
+                const m = metaObj(r);
+                const era = (m.era as string) ?? "";
+                const world = (m.world as string) ?? "";
+                const chosen = assign[r.id] ?? "";
+                const valid = chosen === "" || CANONICAL_STATE.has(chosen);
+                const listId = `state-opts-${r.id}`;
+                return (
+                  <tr key={r.id} className="border-t border-slate-800 hover:bg-slate-900/40">
+                    <td className="p-2">
+                      <div className="font-semibold text-slate-100">{r.title}</div>
+                      <div className="font-mono text-[10px] text-slate-500">{r.slug}</div>
+                    </td>
+                    <td className="p-2 text-slate-300">{r.entity_type}</td>
+                    <td className="p-2 text-slate-300">{era || <span className="text-slate-600">—</span>}</td>
+                    <td className="p-2 text-slate-300">{world || <span className="text-slate-600">—</span>}</td>
+                    <td className="p-2 font-mono text-amber-200/80">{rawState}</td>
+                    <td className="p-2">
+                      <input
+                        list={listId}
+                        value={chosen}
+                        onChange={(e) => setAssign({ ...assign, [r.id]: e.target.value })}
+                        placeholder="ابحث عن دولة قانونية…"
+                        className={`w-56 rounded border px-2 py-1 text-slate-100 ${valid ? "border-slate-700 bg-slate-900" : "border-rose-500/60 bg-rose-500/10"}`}
+                      />
+                      <datalist id={listId}>
+                        {stateOptions.map((s) => <option key={s} value={s} />)}
+                      </datalist>
+                    </td>
+                  </tr>
+                );
+              })}
+              {visible.length === 0 && (
+                <tr><td colSpan={6} className="p-6 text-center text-slate-500">لا نتائج مطابقة للفلاتر.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 p-3 text-xs">
+          <div className="text-slate-400">
+            الظاهر: {visible.length} — الجاهز للتطبيق: {readyCount}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-slate-200 hover:bg-slate-800">
+              <Download className="size-3.5" /> CSV احتياطي
+            </button>
+            <button onClick={onClose} className="rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-slate-200 hover:bg-slate-800">
+              إلغاء
+            </button>
+            <button
+              onClick={apply}
+              disabled={busy !== null || readyCount === 0}
+              className="inline-flex items-center gap-1.5 rounded bg-amber-500 px-3 py-1.5 font-semibold text-slate-950 hover:bg-amber-400 disabled:opacity-40"
+            >
+              {busy === "entity-state-mapper" ? <Loader2 className="size-3.5 animate-spin" /> : <Wand2 className="size-3.5" />}
+              تطبيق ({readyCount})
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
+// ============================================================
 // 2) Stub cleanup — grouped by type
 // ============================================================
 function StubCleanup({
