@@ -18,13 +18,11 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  isDisplayableEntity,
   isUuid,
   pickCanonicalEntity,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
-import { cachedEncyclopediaById, cachedEncyclopediaBySlug } from "@/lib/offline-fallback";
-import { localEncyclopediaById, localEncyclopediaBySlug } from "@/lib/local-first-store";
-import { resolveCanonicalLocal } from "@/lib/encyclopedia-canonical";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
@@ -35,7 +33,7 @@ import {
 } from "@/lib/relationship-graph";
 import { buildContextBlocks } from "@/lib/context-blocks";
 import { iconForType } from "@/lib/encyclopedia-icons";
-import { eraLabel } from "@/lib/era-labels";
+import { canonicalEraLabel, toCanonicalEra } from "@/lib/era-canonical";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
