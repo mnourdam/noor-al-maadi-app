@@ -92,6 +92,8 @@ function AdminHub() {
             desc="إطار JSON للتحديات التاريخية: كلمات متقاطعة، ترتيب الأحداث، من أنا؟، الروابط، الذاكرة." />
           <AdminCard to="/admin/encyclopedia" icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
             desc="إدارة مدخلات الموسوعة (شخصيات، مدن، معارك...)." />
+          <AdminCard to="/admin/encyclopedia-report" icon={<Database className="h-5 w-5" />} title="تقرير بيانات الموسوعة"
+            desc="التصنيف القياسي، آلية الروابط، بوابة الجودة، الكيانات اليتيمة، ودليل تأليف الميتاداتا." />
           <AdminCard to="/admin/encyclopedia-audit" icon={<ShieldCheck className="h-5 w-5" />} title="تدقيق توحيد الموسوعة"
             desc="مكررات slug/عناوين/legacy_id، صفوف ضعيفة، تعطيل آمن." />
           <AdminCard to="/admin/canonical-duplicates" icon={<ShieldCheck className="h-5 w-5" />} title="حل المكررات القياسية"
