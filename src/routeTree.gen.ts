@@ -108,6 +108,7 @@ import { Route as AdminEncyclopediaCleanupReviewRouteImport } from './routes/adm
 import { Route as AdminEncyclopediaCleanupRedirectsRouteImport } from './routes/admin.encyclopedia-cleanup.redirects'
 import { Route as AdminEncyclopediaCleanupIntegrityRouteImport } from './routes/admin.encyclopedia-cleanup.integrity'
 import { Route as AdminEncyclopediaCleanupImportPreviewRouteImport } from './routes/admin.encyclopedia-cleanup.import-preview'
+import { Route as AdminEncyclopediaCleanupDataHygieneRouteImport } from './routes/admin.encyclopedia-cleanup.data-hygiene'
 import { Route as CampaignsImportedIdIndexRouteImport } from './routes/campaigns.imported.$id.index'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -625,6 +626,12 @@ const AdminEncyclopediaCleanupImportPreviewRoute =
     path: '/import-preview',
     getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
+const AdminEncyclopediaCleanupDataHygieneRoute =
+  AdminEncyclopediaCleanupDataHygieneRouteImport.update({
+    id: '/data-hygiene',
+    path: '/data-hygiene',
+    getParentRoute: () => AdminEncyclopediaCleanupRoute,
+  } as any)
 const CampaignsImportedIdIndexRoute =
   CampaignsImportedIdIndexRouteImport.update({
     id: '/imported/$id/',
@@ -756,6 +763,7 @@ export interface FileRoutesByFullPath {
   '/feedback/': typeof FeedbackIndexRoute
   '/games/': typeof GamesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
+  '/admin/encyclopedia-cleanup/data-hygiene': typeof AdminEncyclopediaCleanupDataHygieneRoute
   '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
   '/admin/encyclopedia-cleanup/integrity': typeof AdminEncyclopediaCleanupIntegrityRoute
   '/admin/encyclopedia-cleanup/redirects': typeof AdminEncyclopediaCleanupRedirectsRoute
@@ -861,6 +869,7 @@ export interface FileRoutesByTo {
   '/feedback': typeof FeedbackIndexRoute
   '/games': typeof GamesIndexRoute
   '/worlds': typeof WorldsIndexRoute
+  '/admin/encyclopedia-cleanup/data-hygiene': typeof AdminEncyclopediaCleanupDataHygieneRoute
   '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
   '/admin/encyclopedia-cleanup/integrity': typeof AdminEncyclopediaCleanupIntegrityRoute
   '/admin/encyclopedia-cleanup/redirects': typeof AdminEncyclopediaCleanupRedirectsRoute
@@ -971,6 +980,7 @@ export interface FileRoutesById {
   '/feedback/': typeof FeedbackIndexRoute
   '/games/': typeof GamesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
+  '/admin/encyclopedia-cleanup/data-hygiene': typeof AdminEncyclopediaCleanupDataHygieneRoute
   '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
   '/admin/encyclopedia-cleanup/integrity': typeof AdminEncyclopediaCleanupIntegrityRoute
   '/admin/encyclopedia-cleanup/redirects': typeof AdminEncyclopediaCleanupRedirectsRoute
@@ -1082,6 +1092,7 @@ export interface FileRouteTypes {
     | '/feedback/'
     | '/games/'
     | '/worlds/'
+    | '/admin/encyclopedia-cleanup/data-hygiene'
     | '/admin/encyclopedia-cleanup/import-preview'
     | '/admin/encyclopedia-cleanup/integrity'
     | '/admin/encyclopedia-cleanup/redirects'
@@ -1187,6 +1198,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/games'
     | '/worlds'
+    | '/admin/encyclopedia-cleanup/data-hygiene'
     | '/admin/encyclopedia-cleanup/import-preview'
     | '/admin/encyclopedia-cleanup/integrity'
     | '/admin/encyclopedia-cleanup/redirects'
@@ -1296,6 +1308,7 @@ export interface FileRouteTypes {
     | '/feedback/'
     | '/games/'
     | '/worlds/'
+    | '/admin/encyclopedia-cleanup/data-hygiene'
     | '/admin/encyclopedia-cleanup/import-preview'
     | '/admin/encyclopedia-cleanup/integrity'
     | '/admin/encyclopedia-cleanup/redirects'
@@ -2109,6 +2122,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEncyclopediaCleanupImportPreviewRouteImport
       parentRoute: typeof AdminEncyclopediaCleanupRoute
     }
+    '/admin/encyclopedia-cleanup/data-hygiene': {
+      id: '/admin/encyclopedia-cleanup/data-hygiene'
+      path: '/data-hygiene'
+      fullPath: '/admin/encyclopedia-cleanup/data-hygiene'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupDataHygieneRouteImport
+      parentRoute: typeof AdminEncyclopediaCleanupRoute
+    }
     '/campaigns/imported/$id/': {
       id: '/campaigns/imported/$id/'
       path: '/imported/$id'
@@ -2216,6 +2236,7 @@ const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
 )
 
 interface AdminEncyclopediaCleanupRouteChildren {
+  AdminEncyclopediaCleanupDataHygieneRoute: typeof AdminEncyclopediaCleanupDataHygieneRoute
   AdminEncyclopediaCleanupImportPreviewRoute: typeof AdminEncyclopediaCleanupImportPreviewRoute
   AdminEncyclopediaCleanupIntegrityRoute: typeof AdminEncyclopediaCleanupIntegrityRoute
   AdminEncyclopediaCleanupRedirectsRoute: typeof AdminEncyclopediaCleanupRedirectsRoute
@@ -2225,6 +2246,8 @@ interface AdminEncyclopediaCleanupRouteChildren {
 
 const AdminEncyclopediaCleanupRouteChildren: AdminEncyclopediaCleanupRouteChildren =
   {
+    AdminEncyclopediaCleanupDataHygieneRoute:
+      AdminEncyclopediaCleanupDataHygieneRoute,
     AdminEncyclopediaCleanupImportPreviewRoute:
       AdminEncyclopediaCleanupImportPreviewRoute,
     AdminEncyclopediaCleanupIntegrityRoute:
