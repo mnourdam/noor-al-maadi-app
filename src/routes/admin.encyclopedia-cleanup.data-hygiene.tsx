@@ -315,15 +315,17 @@ function DataHygienePage() {
   const [busy, setBusy] = useState<string | null>(null);
 
   // Sync CMS taxonomy into the canonical Sets so entities using
-  // admin-added eras/worlds are no longer flagged as non-canonical.
+  // admin-added eras/worlds/states are no longer flagged as non-canonical.
   const eraTax = useTaxonomy("era");
   const worldTax = useTaxonomy("world");
+  const stateTax = useTaxonomy("state");
   useEffect(() => {
     for (const e of eraTax.entries) if (e.enabled && !e.archived) CANONICAL_ERA.add(e.key);
     for (const w of worldTax.entries) if (w.enabled && !w.archived) CANONICAL_WORLD.add(w.key);
+    for (const s of stateTax.entries) if (s.enabled && !s.archived) CANONICAL_STATE.add(s.key);
     if (rows) setRows((prev) => (prev ? [...prev] : prev));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eraTax.entries, worldTax.entries]);
+  }, [eraTax.entries, worldTax.entries, stateTax.entries]);
 
   async function reload() {
     setLoading(true); setErr(null);
