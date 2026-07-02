@@ -278,6 +278,43 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     androidMeasure("profile.localStorage.write", started, { bytes: raw.length });
   }, [profile, hydrated]);
 
+  // Live streak-expiry watcher. While the app stays open across local
+  // midnight, the stored streak value would otherwise stay stale (e.g. 7)
+  // even though `lastActiveDay` is now older than yesterday → expired.
+  // Re-derive every 30s and on visibility change, resetting to 0 the
+  // moment the day rolls over without a qualifying activity.
+  useEffect(() => {
+    if (!hydrated) return;
+    const check = () => {
+      setProfile((p) => {
+        const d = deriveStreak(p.streak, p.lastActiveDay);
+        if (d.status === "expired" && p.streak !== 0) {
+          if (import.meta.env.DEV) {
+            console.debug("[streak] live-expire", {
+              today: todayKey(),
+              lastActiveDay: p.lastActiveDay,
+              storedStreak: p.streak,
+            });
+          }
+          return { ...p, streak: 0 };
+        }
+        return p;
+      });
+    };
+    check();
+    const id = window.setInterval(check, 30_000);
+    const onVis = () => { if (document.visibilityState === "visible") check(); };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis);
+    }
+    return () => {
+      window.clearInterval(id);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVis);
+      }
+    };
+  }, [hydrated, profile.lastActiveDay, profile.streak]);
+
   const update = useCallback((fn: (p: ProfileState) => ProfileState) => setProfile((p) => {
     const started = performance.now();
     const next = fn(p);
