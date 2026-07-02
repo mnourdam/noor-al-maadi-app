@@ -337,7 +337,7 @@ function ImportedChapterPlayer() {
                 {chapter.rewards.coins ? <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">+{chapter.rewards.coins} دينار</span> : null}
               </div>
               {(chapter.rewards.unlocks?.length ?? 0) > 0 && (
-                <UnlockList ids={chapter.rewards.unlocks ?? []} />
+                <UnlockList ids={chapter.rewards.unlocks ?? []} locked={!chProgress?.completed} lockedHint={`أكمل فصل «${chapter.title}» لفتح هذه الجائزة.`} />
               )}
             </div>
           )}
