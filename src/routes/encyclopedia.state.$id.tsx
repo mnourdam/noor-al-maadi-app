@@ -1,14 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ChevronRight, Database } from "lucide-react";
+import {
+  ChevronRight,
+  Database,
+  Users,
+  Building2,
+  Swords,
+  ScrollText,
+  Castle,
+  Gem,
+  Landmark,
+  type LucideIcon,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import { supabase } from "@/integrations/supabase/client";
-import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
-import { cachedEncyclopediaBySlug, cachedEncyclopediaList } from "@/lib/offline-fallback";
+import {
+  isDisplayableEntity,
+  type SupabaseEncyclopediaEntity,
+} from "@/lib/encyclopedia-source";
+import { resolveRelatedEntities } from "@/lib/relationship-graph";
 
 const SECTION_LABELS: Record<string, string> = {
   figure: "الشخصيات",
@@ -18,22 +32,15 @@ const SECTION_LABELS: Record<string, string> = {
   landmark: "المعالم",
   artifact: "الآثار",
 };
-const SECTION_GLYPHS: Record<string, string> = {
-  figure: "🪶",
-  city: "🏙️",
-  battle: "⚔️",
-  event: "📜",
-  landmark: "🕌",
-  artifact: "🗝️",
+const SECTION_ICONS: Record<string, LucideIcon> = {
+  figure: Users,
+  city: Building2,
+  battle: Swords,
+  event: ScrollText,
+  landmark: Castle,
+  artifact: Gem,
 };
 const SECTION_ORDER = Object.keys(SECTION_LABELS);
-
-function metaEra(entity: Pick<SupabaseEncyclopediaEntity, "metadata">): string {
-  const m = entity.metadata && typeof entity.metadata === "object"
-    ? (entity.metadata as Record<string, unknown>)
-    : {};
-  return typeof m.era === "string" ? (m.era as string) : "";
-}
 
 export const Route = createFileRoute("/encyclopedia/state/$id")({
   head: ({ params }) => ({
@@ -53,83 +60,43 @@ export const Route = createFileRoute("/encyclopedia/state/$id")({
 function StatePage() {
   const { id } = Route.useParams();
 
-  // Resolve state by slug OR by metadata.era matching the id (legacy era ids).
+  // Supabase-only. Resolve strictly by slug on the `state` type.
   const stateQuery = useQuery({
-    queryKey: ["encyclopedia", "state", id],
+    queryKey: ["encyclopedia", "state", id, "v2"],
     staleTime: 60_000,
-    queryFn: async () => {
-      try {
-        const bySlug = await supabase
-          .from("encyclopedia_entities")
-          .select("*")
-          .eq("enabled", true)
-          .eq("entity_type", "state")
-          .eq("slug", id)
-          .maybeSingle();
-        if (bySlug.data) return bySlug.data as SupabaseEncyclopediaEntity;
-        const byEra = await supabase
-          .from("encyclopedia_entities")
-          .select("*")
-          .eq("enabled", true)
-          .eq("entity_type", "state")
-          .contains("metadata", { era: id })
-          .limit(1);
-        const row = ((byEra.data ?? [])[0] ?? null) as SupabaseEncyclopediaEntity | null;
-        if (row) return row;
-      } catch (e) {
-        if (typeof console !== "undefined")
-          console.warn("[encyclopedia.state] online fetch failed, using snapshot", e);
-      }
-      // Offline fallback: by slug, then by metadata.era.
-      const bySlug = await cachedEncyclopediaBySlug(id, "state");
-      if (bySlug) return bySlug as SupabaseEncyclopediaEntity;
-      const all = await cachedEncyclopediaList();
-      return (all.find(
-        (r) =>
-          r?.enabled !== false &&
-          r?.entity_type === "state" &&
-          (r as any)?.metadata?.era === id,
-      ) ?? null) as SupabaseEncyclopediaEntity | null;
+    queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
+      const { data, error } = await supabase
+        .from("encyclopedia_entities")
+        .select("*")
+        .eq("enabled", true)
+        .eq("entity_type", "state")
+        .eq("slug", id)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as SupabaseEncyclopediaEntity | null) ?? null;
     },
   });
 
-  const state = stateQuery.data;
-  const era = state ? metaEra(state) : "";
+  // A state page must be a real, published, content-rich entity.
+  // Anything else is treated as "not found" — no stubs, no fillers.
+  const state = stateQuery.data && isDisplayableEntity(stateQuery.data)
+    ? stateQuery.data
+    : null;
 
+  // Related entities come exclusively from explicit relationships
+  // authored on this state (or on entities that point AT this state).
   const relatedQuery = useQuery({
-    queryKey: ["encyclopedia", "state-related", era],
-    enabled: !!era,
+    queryKey: ["encyclopedia", "state-related", state?.id ?? ""],
+    enabled: !!state,
     staleTime: 60_000,
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from("encyclopedia_entities")
-          .select("id,slug,entity_type,title,subtitle,summary,metadata")
-          .eq("enabled", true)
-          .contains("metadata", { era })
-          .neq("entity_type", "state");
-        if (error) throw error;
-        const rows = (data ?? []) as SupabaseEncyclopediaEntity[];
-        if (rows.length > 0) return rows;
-      } catch (e) {
-        if (typeof console !== "undefined")
-          console.warn("[encyclopedia.state-related] using snapshot", e);
-      }
-      const all = await cachedEncyclopediaList();
-      return all.filter(
-        (r) =>
-          r?.enabled !== false &&
-          r?.entity_type !== "state" &&
-          (r as any)?.metadata?.era === era,
-      ) as SupabaseEncyclopediaEntity[];
-    },
+    queryFn: async () => (state ? resolveRelatedEntities(state) : []),
   });
 
   const groups = useMemo(() => {
     const g: Record<string, SupabaseEncyclopediaEntity[]> = {};
     for (const s of SECTION_ORDER) g[s] = [];
-    for (const r of relatedQuery.data ?? []) {
-      if (g[r.entity_type]) g[r.entity_type].push(r);
+    for (const n of relatedQuery.data ?? []) {
+      if (g[n.entity.entity_type]) g[n.entity.entity_type].push(n.entity);
     }
     return g;
   }, [relatedQuery.data]);
@@ -155,7 +122,6 @@ function StatePage() {
   return (
     <AppShell>
       <div className="px-5 pt-8">
-        {/* Step up to the States listing rather than the encyclopedia root. */}
         <Link
           to="/encyclopedia/type/$type"
           params={{ type: "state" } as any}
@@ -166,8 +132,8 @@ function StatePage() {
 
         <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
           <div className="flex items-start gap-3">
-            <span className="grid size-14 place-items-center rounded-2xl bg-black/40 text-3xl ring-1 ring-white/10">
-              🏛️
+            <span className="grid size-14 place-items-center rounded-2xl bg-black/40 ring-1 ring-white/10 text-gold">
+              <Landmark className="size-6" strokeWidth={1.5} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] tracking-[0.3em] text-gold/80">دولة</p>
@@ -184,20 +150,23 @@ function StatePage() {
             <p className="mt-3 text-[13px] leading-7 text-foreground/90">{state.summary}</p>
           )}
 
-          <div className="mt-4 flex flex-wrap gap-1.5 text-[10px]">
-            <span className="rounded-full border border-gold/25 bg-black/30 px-2 py-0.5 text-gold/85">
-              {totalEntities} عنصرًا تاريخيًا
-            </span>
-          </div>
+          {totalEntities > 0 && (
+            <div className="mt-4 flex flex-wrap gap-1.5 text-[10px]">
+              <span className="rounded-full border border-gold/25 bg-black/30 px-2 py-0.5 text-gold/85">
+                {totalEntities} روابط موثقة
+              </span>
+            </div>
+          )}
         </div>
 
         {SECTION_ORDER.map((s) => {
           const list = groups[s];
           if (list.length === 0) return null;
+          const Icon = SECTION_ICONS[s];
           return (
             <section key={s} className="mt-6">
               <div className="mb-2 flex items-center gap-2">
-                <span className="text-lg">{SECTION_GLYPHS[s]}</span>
+                <Icon className="size-4 text-gold" strokeWidth={1.5} />
                 <h2 className="font-display text-sm font-bold">{SECTION_LABELS[s]}</h2>
                 <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
                   {list.length}
@@ -212,19 +181,17 @@ function StatePage() {
 
         {totalEntities === 0 && !relatedQuery.isLoading && (
           <p className="mt-8 rounded-2xl border border-white/10 bg-surface/70 p-6 text-center text-xs text-muted-foreground">
-            لا توجد عناصر مرتبطة بهذه الدولة بعد.
+            لا توجد روابط تاريخية متاحة حاليًا.
           </p>
         )}
 
-        {state && (
-          <FeedbackCTA
-            context={{
-              entity_id: state.id,
-              slug: state.slug,
-              title: state.title,
-            }}
-          />
-        )}
+        <FeedbackCTA
+          context={{
+            entity_id: state.id,
+            slug: state.slug,
+            title: state.title,
+          }}
+        />
 
         <div className="h-10" />
       </div>

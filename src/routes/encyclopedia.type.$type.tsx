@@ -7,9 +7,8 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
-import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
-import { cachedEncyclopediaByType } from "@/lib/offline-fallback";
-import { eraLabel } from "@/lib/era-labels";
+import { isDisplayableEntity, type SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 
 const SECTION_LABELS: Record<string, string> = {
   state: "الدول",
@@ -68,40 +67,38 @@ function TypeBrowsePage() {
   const [era, setEra] = useState<string>("");
 
   const { data: all = [], isLoading } = useQuery({
-    queryKey: ["encyclopedia", "type", type],
+    queryKey: ["encyclopedia", "type", type, "v2"],
     staleTime: 60_000,
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from("encyclopedia_entities")
-          .select("id,slug,entity_type,title,subtitle,summary,metadata")
-          .eq("enabled", true)
-          .eq("entity_type", type)
-          .order("title");
-        if (error) throw error;
-        const rows = (data ?? []) as SupabaseEncyclopediaEntity[];
-        if (rows.length > 0) return rows;
-      } catch (e) {
-        if (typeof console !== "undefined")
-          console.warn("[encyclopedia.type] online fetch failed, using snapshot", e);
-      }
-      return (await cachedEncyclopediaByType(type)) as SupabaseEncyclopediaEntity[];
+    queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
+      const { data, error } = await supabase
+        .from("encyclopedia_entities")
+        .select("id,slug,entity_type,title,subtitle,summary,body,metadata,enabled")
+        .eq("enabled", true)
+        .eq("entity_type", type)
+        .order("title");
+      if (error) throw error;
+      const rows = (data ?? []) as SupabaseEncyclopediaEntity[];
+      // Single source of truth: no fallback. Hide incomplete rows so
+      // categories never show empty cards or orphan stubs.
+      return rows.filter(isDisplayableEntity);
     },
   });
 
+  // Only show eras that (a) map to a canonical era and (b) actually have
+  // published entities in this category. Never show "غير محدد".
   const eras = useMemo(() => {
     const set = new Set<string>();
     for (const e of all) {
-      const er = metaEra(e);
-      if (er) set.add(er);
+      const canon = toCanonicalEra(metaEra(e));
+      if (canon) set.add(canon);
     }
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => eraSortIndex(a) - eraSortIndex(b));
   }, [all]);
 
   const q = query.trim().toLowerCase();
   const filtered = useMemo(() => {
     return all
-      .filter((e) => !era || metaEra(e) === era)
+      .filter((e) => !era || toCanonicalEra(metaEra(e)) === era)
       .filter((e) => {
         if (!q) return true;
         const hay = `${e.title} ${e.subtitle ?? ""} ${e.summary ?? ""} ${e.slug}`.toLowerCase();
@@ -161,7 +158,7 @@ function TypeBrowsePage() {
           <div className="mt-3 flex flex-wrap gap-1.5">
             <Chip active={era === ""} onClick={() => setEra("")}>كل العصور</Chip>
             {eras.map((e) => (
-              <Chip key={e} active={era === e} onClick={() => setEra(e)}>{eraLabel(e)}</Chip>
+              <Chip key={e} active={era === e} onClick={() => setEra(e)}>{canonicalEraLabel(e)}</Chip>
             ))}
           </div>
         )}

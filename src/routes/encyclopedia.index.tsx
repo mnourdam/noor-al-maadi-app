@@ -29,8 +29,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
-import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
-import { cachedEncyclopediaList } from "@/lib/offline-fallback";
+import { isDisplayableEntity, type SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 import { iconForType } from "@/lib/encyclopedia-icons";
 import { HighlightedText } from "@/components/HighlightedText";
@@ -75,32 +74,26 @@ const RECENT_VIEW_KEY = "irth.enc.recent-views";
 
 function useAllEncyclopedia() {
   return useQuery({
-    queryKey: ["encyclopedia", "all-min-v3"],
+    queryKey: ["encyclopedia", "all-min-v4"],
     staleTime: 60_000,
-    queryFn: async () => {
+    queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
       const PAGE = 1000;
       const rows: SupabaseEncyclopediaEntity[] = [];
-      try {
-        for (let from = 0; ; from += PAGE) {
-          const { data, error } = await supabase
-            .from("encyclopedia_entities")
-            .select("id,slug,entity_type,title,subtitle,summary,metadata,aliases,created_at,updated_at")
-            .eq("enabled", true)
-            .order("title")
-            .range(from, from + PAGE - 1);
-          if (error) throw error;
-          const batch = (data ?? []) as SupabaseEncyclopediaEntity[];
-          rows.push(...batch);
-          if (batch.length < PAGE) break;
-        }
-        if (rows.length > 0) return rows;
-      } catch (e) {
-        if (typeof console !== "undefined")
-          console.warn("[encyclopedia.index] online fetch failed, using snapshot", e);
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from("encyclopedia_entities")
+          .select("id,slug,entity_type,title,subtitle,summary,body,metadata,aliases,enabled,created_at,updated_at")
+          .eq("enabled", true)
+          .order("title")
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as SupabaseEncyclopediaEntity[];
+        rows.push(...batch);
+        if (batch.length < PAGE) break;
       }
-      // Offline / failure fallback — use bundled / synced snapshot so
-      // stats, search and category counts keep working without network.
-      return (await cachedEncyclopediaList()) as SupabaseEncyclopediaEntity[];
+      // Supabase is the only source of truth. Hide incomplete rows so
+      // empty cards, orphan records and stubs never reach the UI.
+      return rows.filter(isDisplayableEntity);
     },
   });
 }
@@ -252,7 +245,10 @@ function EncyclopediaHubFull() {
     for (const e of all) {
       const er = metaEra(e);
       if (!er) continue;
-      const canon = toCanonicalEra(er) ?? er;
+      // Only surface eras that map to a known canonical era. Anything
+      // unknown or free-form is dropped so filters never show "غير محدد".
+      const canon = toCanonicalEra(er);
+      if (!canon) continue;
       m.set(canon, (m.get(canon) ?? 0) + 1);
     }
     return Array.from(m.entries()).sort((a, b) => {
@@ -320,7 +316,7 @@ function EncyclopediaHubFull() {
     const nq = normArabic(q);
     const filtered = all
       .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
-      .filter((e) => !era || (toCanonicalEra(metaEra(e)) ?? metaEra(e)) === era);
+      .filter((e) => !era || toCanonicalEra(metaEra(e)) === era);
     if (!nq) return filtered.slice(0, 60);
     return filtered
       .map((e) => ({ e, s: scoreEntity(e, nq) }))
