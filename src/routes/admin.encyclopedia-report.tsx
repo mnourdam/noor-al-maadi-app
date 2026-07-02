@@ -166,6 +166,10 @@ function qualityReasons(r: Row): string[] {
   return reasons;
 }
 
+// Canonical key sets — seeded from code constants and augmented at runtime
+// by CMS-managed taxonomy rows (see useSyncCanonicalKeys() below). Sets are
+// mutable so aggregation code that runs after taxonomy resolves still sees
+// admin-added values without threading them through every helper.
 const CANONICAL_ERA_KEYS: Set<string> = new Set(ERAS.map((e) => e.id as string));
 const CANONICAL_WORLD_KEYS: Set<string> = new Set(WORLD_HUBS.map((w) => w.slug));
 
