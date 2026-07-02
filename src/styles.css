@@ -864,7 +864,7 @@ html.perf-lite .section-flow { background: none; }
   to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 @keyframes irth-card-enter {
-  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
   to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 @keyframes irth-dialog-enter {
