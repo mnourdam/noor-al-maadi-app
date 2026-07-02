@@ -1615,15 +1615,25 @@ function OrphanReport({ rows, onReload }: { rows: Row[]; onReload: () => Promise
         <div className="text-sm font-semibold text-amber-100">
           <Network className="mr-1 inline size-4" /> كيانات قابلة للعرض بدون علاقات صريحة ({orphans.length})
         </div>
-        <button
-          onClick={() => downloadCsv("orphans.csv", toCsv(
-            ["id", "type", "slug", "title"],
-            orphans.map((r) => [r.id, r.entity_type, r.slug, r.title]),
-          ))}
-          className="inline-flex items-center gap-1.5 rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900"
-        >
-          <Download className="size-3.5" /> CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setBulkOpen(true)}
+            disabled={orphans.length === 0}
+            className="inline-flex items-center gap-1.5 rounded border border-amber-500/50 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/25 disabled:opacity-40"
+          >
+            <Wand2 className="size-3.5" /> اقتراح وربط تلقائي آمن
+          </button>
+          <button
+            onClick={() => downloadCsv("orphans.csv", toCsv(
+              ["id", "type", "slug", "title"],
+              orphans.map((r) => [r.id, r.entity_type, r.slug, r.title]),
+            ))}
+            className="inline-flex items-center gap-1.5 rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900"
+          >
+            <Download className="size-3.5" /> CSV
+          </button>
+        </div>
+
       </div>
       <p className="mb-3 text-[11px] text-slate-400">
         هذه الكيانات ليست معطوبة، لكنها تحتاج إلى ربط صريح ضمن <span className="font-mono">metadata.related_entities</span> لتظهر في شبكة العلاقات.
