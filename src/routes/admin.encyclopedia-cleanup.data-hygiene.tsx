@@ -715,6 +715,17 @@ function CanonicalFixer({
           busy={busy}
         />
       )}
+
+      {entityStateMapperGroup && (
+        <EntityStateMapperModal
+          rawState={entityStateMapperGroup}
+          rows={groups.find((g) => g.raw === entityStateMapperGroup)?.list ?? []}
+          onClose={() => setEntityStateMapperGroup(null)}
+          onApplied={() => { setEntityStateMapperGroup(null); onDone(); }}
+          setBusy={setBusy}
+          busy={busy}
+        />
+      )}
     </section>
   );
 }
