@@ -504,8 +504,9 @@ function CanonicalFixer({
                   /></th>
                   <th className="p-2">القيمة الحالية</th>
                   <th className="p-2">العدد</th>
-                  <th className="p-2">القيمة القانونية المقترحة</th>
+                  <th className="p-2">{kind === "world" ? "قيمة قانونية جماعية (غير مستحسن)" : "القيمة القانونية المقترحة"}</th>
                   <th className="p-2">تصفح</th>
+                  <th className="p-2">{kind === "world" ? "مصنّف الكيانات" : ""}</th>
                 </tr>
               </thead>
               <tbody>
