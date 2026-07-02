@@ -864,7 +864,7 @@ html.perf-lite .section-flow { background: none; }
   to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 @keyframes irth-card-enter {
-  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
   to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 @keyframes irth-dialog-enter {
@@ -893,8 +893,8 @@ html.perf-lite .section-flow { background: none; }
 .motion-page         { animation: irth-page-enter 200ms cubic-bezier(.2,.7,.2,1) both; }
 .motion-card         { animation: irth-card-enter 180ms cubic-bezier(.2,.7,.2,1) both; }
 .motion-card-stagger > * {
-  animation: irth-card-enter 180ms cubic-bezier(.2,.7,.2,1) both;
-  animation-delay: calc(var(--i, 0) * 25ms);
+  animation: irth-card-enter 480ms cubic-bezier(.2,.7,.2,1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
 }
 .motion-dialog       { animation: irth-dialog-enter 180ms cubic-bezier(.2,.7,.2,1) both; }
 .motion-toast        { animation: irth-toast-enter 180ms cubic-bezier(.2,.7,.2,1) both; }
@@ -921,9 +921,25 @@ html.perf-lite .section-flow { background: none; }
 /* Bottom-nav active item: tiny calm pop, GPU only */
 .motion-nav-active { transition: transform 180ms cubic-bezier(.2,.7,.2,1); transform: scale(1.04); }
 
-/* Reveal-on-scroll: hidden until .is-in is added by IntersectionObserver */
-.motion-reveal { opacity: 0; transform: translate3d(0, 8px, 0); transition: opacity 220ms cubic-bezier(.2,.7,.2,1), transform 220ms cubic-bezier(.2,.7,.2,1); will-change: opacity, transform; }
+/* Reveal-on-scroll: hidden until .is-in is added by IntersectionObserver.
+   Premium fade-up: opacity + 16px translate over ~520ms, GPU only. */
+.motion-reveal {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  transition:
+    opacity 520ms cubic-bezier(.22,.61,.36,1),
+    transform 560ms cubic-bezier(.22,.61,.36,1);
+  will-change: opacity, transform;
+}
 .motion-reveal.is-in { opacity: 1; transform: translate3d(0, 0, 0); }
+
+/* Hero-slide content crossfade: opacity + 10px translate, no blur.
+   Matches the 1200ms image crossfade so image + copy feel unified. */
+@keyframes irth-hero-fade {
+  0%   { opacity: 0; transform: translate3d(0, 10px, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.motion-hero-fade { animation: irth-hero-fade 620ms cubic-bezier(.22,.61,.36,1) both; }
 
 /* Number rolling — purely cosmetic; the count is updated in JS */
 .motion-num { transition: color 180ms ease-out; }
