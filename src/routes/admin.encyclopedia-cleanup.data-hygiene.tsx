@@ -126,6 +126,8 @@ function suggestWorldForEntity(r: Row): string {
   if (eraGuess && CANONICAL_WORLD.has(eraGuess)) return eraGuess;
   if (state && CANONICAL_WORLD.has(state)) return state;
   return "";
+}
+
 
 // ------------------------------------------------------------
 // Fetch — one shot, paged.
