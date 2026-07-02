@@ -465,7 +465,7 @@ function CanonicalFixer({
   rows, onDone, setBusy, busy,
 }: { rows: Row[]; onDone: () => void; setBusy: (s: string | null) => void; busy: string | null }) {
   const [kind, setKind] = useState<"era" | "world" | "state">("era");
-  const canonical = kind === "era" ? CANONICAL_ERA : kind === "world" ? CANONICAL_WORLD : CANONICAL_WORLD;
+  const canonical = kind === "era" ? CANONICAL_ERA : kind === "world" ? CANONICAL_WORLD : CANONICAL_STATE;
 
   // Build value groups from live data
   const groups = useMemo(() => {
