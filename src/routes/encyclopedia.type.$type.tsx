@@ -80,8 +80,10 @@ function TypeBrowsePage() {
       if (error) throw error;
       const rows = (data ?? []) as SupabaseEncyclopediaEntity[];
       // Single source of truth: no fallback. Hide incomplete rows so
-      // categories never show empty cards or orphan stubs.
-      return rows.filter(isDisplayableEntity);
+      // categories never show empty cards or orphan stubs. Also enforce
+      // the public taxonomy whitelist so legacy / migration values never
+      // reach the player-facing browse.
+      return rows.filter(isDisplayableEntity).filter(isPublicEntity);
     },
   });
 
