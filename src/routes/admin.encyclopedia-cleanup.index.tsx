@@ -505,7 +505,7 @@ function CleanupWorkshop() {
   // duplication first, then enrich the surviving canonical entity.
   const dedupePendingCount = useMemo(
     () => rows.reduce(
-      (n, r) => (dupIds.has(r.id) && !isArchivedOrHidden(r) && !isRedirected(r) ? n + 1 : n),
+      (n, r) => (dupIds.has(r.id) && !isCleanupResolved(r) ? n + 1 : n),
       0,
     ),
     [rows, dupIds],
@@ -534,7 +534,7 @@ function CleanupWorkshop() {
       const archived = r.metadata?.archived === true || r.enabled === false;
 
       const isDup = dupIds.has(r.id);
-      const dedupePending = isDup && !isArchivedOrHidden(r) && !isRedirected(r);
+      const dedupePending = isDup && !isCleanupResolved(r);
 
       // Pipeline filter (ANDs with type/quality chips below).
       if (pipeline === "needs-cleanup" && !rowNeedsCleanup(r, liveDupIds, quality)) return false;
