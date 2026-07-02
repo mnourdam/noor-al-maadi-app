@@ -4,7 +4,7 @@
 // integrity, import-preview).
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
-  BookOpenCheck, GitCompareArrows, Network, ScanSearch, Shield, Workflow,
+  BookOpenCheck, GitCompareArrows, Network, ScanSearch, Shield, Workflow, SprayCan,
 } from "lucide-react";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -24,6 +24,7 @@ export const Route = createFileRoute("/admin/encyclopedia-cleanup")({
 
 const TABS: { to: string; label: string; icon: any; exact?: boolean }[] = [
   { to: "/admin/encyclopedia-cleanup", label: "الورشة", icon: BookOpenCheck, exact: true },
+  { to: "/admin/encyclopedia-cleanup/data-hygiene", label: "تنظيف البيانات", icon: SprayCan },
   { to: "/admin/encyclopedia-cleanup/review", label: "مراجعة جماعية", icon: GitCompareArrows },
   { to: "/admin/encyclopedia-cleanup/redirects", label: "التحويلات", icon: Workflow },
   { to: "/admin/encyclopedia-cleanup/integrity", label: "العلاقات", icon: Network },
