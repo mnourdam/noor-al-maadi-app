@@ -26,12 +26,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle, Archive, ArrowUpRight, BadgeCheck, BookOpen, CheckCircle2, Copy, CornerDownRight,
-  Download, Eye, FileText, FileWarning, Filter, Loader2, Pencil, RefreshCw, RotateCcw, Save,
+  Download, Eye, FileText, FileWarning, Filter, Link2, Loader2, Pencil, Plus, RefreshCw, RotateCcw, Save,
   Search, Shield, Sparkles, Trash2, X,
 } from "lucide-react";
 
 
 import { EncyclopediaEntityPreview } from "@/components/admin/EncyclopediaEntityPreview";
+import { OrphanRelationEditor } from "@/components/admin/OrphanRelationEditor";
 import { supabase } from "@/integrations/supabase/client";
 import {
   entityNameKeys, normalizeArabicName, normalizeSlugKey,
@@ -2011,6 +2012,16 @@ function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, on
         </div>
       )}
 
+      <RelationsPanel
+        row={row}
+        allRows={allRows}
+        busy={busy}
+        onSave={onSave}
+        onJumpTo={onJumpTo}
+      />
+
+
+
       {/* Tabs — visible on small screens. On lg+ both panes show side-by-side. */}
       <div className="flex items-center gap-1 lg:hidden">
         <button onClick={() => setView("edit")}
@@ -2172,3 +2183,132 @@ function MissingContentStrip({ rows, atlasLinks, campaignSlugs, dupIds, onFilter
     </div>
   );
 }
+
+// ------------------------------------------------------------
+// Relations panel — shows current explicit relations and opens
+// the OrphanRelationEditor to add more. Removals persist through
+// the parent's saveEntity() so audit/verify/refresh all run.
+// ------------------------------------------------------------
+function RelationsPanel({
+  row, allRows, busy, onSave, onJumpTo,
+}: {
+  row: EntityRow;
+  allRows: EntityRow[];
+  busy: boolean;
+  onSave: (patch: Partial<EntityRow>) => void;
+  onJumpTo: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const meta: any = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+  const currentSlugs: string[] = Array.isArray(meta.related_entities)
+    ? meta.related_entities.filter((s: unknown): s is string => typeof s === "string" && !!s)
+    : [];
+
+  // Legacy mirrors we only surface for visibility — writes go to related_entities.
+  const legacy: string[] = [];
+  for (const key of ["related", "relationships"]) {
+    const v = meta[key];
+    if (Array.isArray(v)) for (const s of v) if (typeof s === "string" && s && !currentSlugs.includes(s)) legacy.push(s);
+  }
+
+  const bySlug = useMemo(() => {
+    const m = new Map<string, EntityRow>();
+    for (const r of allRows) m.set(r.slug.toLowerCase(), r);
+    return m;
+  }, [allRows]);
+
+  const removeSlug = (slug: string) => {
+    const next = currentSlugs.filter((s) => s !== slug);
+    onSave({ metadata: { ...meta, related_entities: next } as any });
+  };
+
+  const commitAdd = async (mergedSlugs: string[]) => {
+    onSave({ metadata: { ...meta, related_entities: mergedSlugs } as any });
+  };
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Link2 className="size-4 text-amber-300" />
+          <h3 className="text-sm font-semibold text-amber-100">الروابط الصريحة</h3>
+          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] text-amber-200">
+            {currentSlugs.length}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/50 bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-100 hover:bg-amber-500/25 disabled:opacity-50"
+        >
+          <Plus className="size-3.5" /> إضافة روابط
+        </button>
+      </div>
+
+      {currentSlugs.length === 0 ? (
+        <p className="rounded-md border border-dashed border-amber-500/30 bg-slate-950/40 px-3 py-4 text-center text-xs text-slate-400">
+          لا توجد روابط صريحة حتى الآن — استخدم «إضافة روابط» لاختيار كيانات مقترحة أو البحث اليدوي.
+        </p>
+      ) : (
+        <ul className="flex flex-wrap gap-1.5">
+          {currentSlugs.map((slug) => {
+            const target = bySlug.get(slug.toLowerCase());
+            return (
+              <li
+                key={slug}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-600/60 bg-slate-900/70 py-1 ps-2 pe-1 text-[11px]"
+              >
+                {target ? (
+                  <button
+                    type="button"
+                    onClick={() => onJumpTo(target.id)}
+                    className="max-w-[180px] truncate text-slate-100 hover:text-amber-200"
+                    title="فتح للتحرير"
+                  >
+                    {target.title}
+                  </button>
+                ) : (
+                  <span dir="ltr" className="max-w-[180px] truncate font-mono text-rose-200" title="Slug غير موجود">
+                    {slug}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeSlug(slug)}
+                  disabled={busy}
+                  className="rounded-full p-0.5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-200 disabled:opacity-50"
+                  title="إزالة الرابط"
+                >
+                  <X className="size-3" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {legacy.length > 0 && (
+        <p className="mt-2 text-[10px] text-slate-500">
+          روابط قديمة في <code>metadata.related</code> / <code>relationships</code>:{" "}
+          {legacy.map((s) => (
+            <span key={s} dir="ltr" className="mx-0.5 rounded bg-slate-800/60 px-1 font-mono">{s}</span>
+          ))}{" "}
+          — احفظ عبر «إضافة روابط» لتوحيدها تحت <code>related_entities</code>.
+        </p>
+      )}
+
+      {open && (
+        <OrphanRelationEditor
+          entity={row as any}
+          allRows={allRows as any}
+          onClose={() => setOpen(false)}
+          onSaved={() => { /* parent onSave already refreshes */ }}
+          onCommit={commitAdd}
+        />
+      )}
+    </div>
+  );
+}
+
