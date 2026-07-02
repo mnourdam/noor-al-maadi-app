@@ -165,8 +165,8 @@ function qualityReasons(r: Row): string[] {
   return reasons;
 }
 
-const CANONICAL_ERA_KEYS = new Set(ERAS.map((e) => e.id));
-const CANONICAL_WORLD_KEYS = new Set(WORLD_HUBS.map((w) => w.slug));
+const CANONICAL_ERA_KEYS: Set<string> = new Set(ERAS.map((e) => e.id as string));
+const CANONICAL_WORLD_KEYS: Set<string> = new Set(WORLD_HUBS.map((w) => w.slug));
 
 // ─────────────────────────────────────────────────────────────
 // Fetch every enabled/disabled row in pages (Supabase caps at 1000).
