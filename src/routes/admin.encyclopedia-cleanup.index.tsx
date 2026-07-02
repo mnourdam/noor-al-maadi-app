@@ -547,7 +547,7 @@ function CleanupWorkshop() {
 
       // Pipeline filter (ANDs with type/quality chips below).
       if (pipeline === "needs-cleanup" && !rowNeedsCleanup(r, liveDupIds, quality)) return false;
-      if (pipeline === "needs-content" && (!needsContent(r) || isDup)) return false;
+      if (pipeline === "needs-content" && (!needsContent(r) || liveDupIds.has(r.id))) return false;
       if (pipeline === "complete" && !isComplete(r)) return false;
 
       // Type / quality / linkage chips
