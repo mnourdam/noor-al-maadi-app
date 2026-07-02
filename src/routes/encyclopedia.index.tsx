@@ -31,6 +31,7 @@ import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import { isDisplayableEntity, type SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
+import { isPublicEntity } from "@/lib/taxonomy-public";
 import { iconForType } from "@/lib/encyclopedia-icons";
 import { HighlightedText } from "@/components/HighlightedText";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
@@ -91,9 +92,10 @@ function useAllEncyclopedia() {
         rows.push(...batch);
         if (batch.length < PAGE) break;
       }
-      // Supabase is the only source of truth. Hide incomplete rows so
-      // empty cards, orphan records and stubs never reach the UI.
-      return rows.filter(isDisplayableEntity);
+      // Supabase is the only source of truth. Hide incomplete rows and
+      // enforce the public taxonomy whitelist so legacy / migration state
+      // entities never surface in player-facing filters or lists.
+      return rows.filter(isDisplayableEntity).filter(isPublicEntity);
     },
   });
 }
@@ -519,7 +521,7 @@ function EncyclopediaHubFull() {
             {/* Type filter chips */}
             <div className="relative z-10 -mx-5 mt-3 overflow-x-auto px-5 pb-1 scrollbar-thin" dir="rtl">
               <div className="flex items-center gap-1.5">
-                {[{ key: "all", label: "الكل" }, ...CATEGORIES.map((c) => ({ key: c.key, label: c.label }))].map((t) => {
+                {[{ key: "all", label: "الكل" }, ...CATEGORIES.filter((c) => (counts[c.key] ?? 0) > 0).map((c) => ({ key: c.key, label: c.label }))].map((t) => {
                   const active = typeFilter === t.key;
                   const n = t.key === "all" ? total : (counts[t.key] ?? 0);
                   return (
@@ -597,7 +599,7 @@ function EncyclopediaHubFull() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
-                {CATEGORIES.map((c) => {
+                {CATEGORIES.filter((c) => (counts[c.key] ?? 0) > 0).map((c) => {
                   const n = counts[c.key] ?? 0;
                   const Icon = c.icon;
                   return (

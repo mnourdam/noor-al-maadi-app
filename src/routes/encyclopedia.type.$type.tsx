@@ -9,6 +9,7 @@ import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import { isDisplayableEntity, type SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
+import { isPublicEntity } from "@/lib/taxonomy-public";
 
 const SECTION_LABELS: Record<string, string> = {
   state: "الدول",
@@ -79,8 +80,10 @@ function TypeBrowsePage() {
       if (error) throw error;
       const rows = (data ?? []) as SupabaseEncyclopediaEntity[];
       // Single source of truth: no fallback. Hide incomplete rows so
-      // categories never show empty cards or orphan stubs.
-      return rows.filter(isDisplayableEntity);
+      // categories never show empty cards or orphan stubs. Also enforce
+      // the public taxonomy whitelist so legacy / migration values never
+      // reach the player-facing browse.
+      return rows.filter(isDisplayableEntity).filter(isPublicEntity);
     },
   });
 
