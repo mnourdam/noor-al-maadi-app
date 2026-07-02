@@ -478,6 +478,15 @@ function CanonicalFixer({
         القيم غير الموجودة في المجموعة القانونية {kind === "era" ? `(${[...CANONICAL_ERA].join(" • ")})` : `(${[...CANONICAL_WORLD].join(" • ")})`}. لن يُنفَّذ أي تحديث قبل استعراض العدد والضغط على «تطبيق».
       </p>
 
+      {kind === "world" && (
+        <div className="mb-3 rounded border border-amber-500/40 bg-amber-500/5 p-3 text-[12px] leading-6 text-amber-100">
+          <div className="mb-1 flex items-center gap-1.5 font-semibold">
+            <AlertTriangle className="size-4" /> لا تُطبّق تحويل «عالَم» كمجموعة
+          </div>
+          مجموعة قديمة واحدة مثل <code className="mx-1 rounded bg-slate-900 px-1">iraq-and-hijaz</code> قد تحوي شخصيات أموية وعباسية وسلجوقية وزنكية معًا — ولا يمكن ضمّها كلها لعالَم واحد. استخدم زر <b>«مصنّف الكيانات»</b> بجانب كل مجموعة لمراجعة كل كيان على حدة مع اقتراح ذكي مبني على العصر ثم الدولة.
+        </div>
+      )}
+
       {groups.length === 0 ? (
         <div className="rounded border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-200">
           <CheckCircle2 className="mr-1 inline size-4" /> كل القيم قانونية.
