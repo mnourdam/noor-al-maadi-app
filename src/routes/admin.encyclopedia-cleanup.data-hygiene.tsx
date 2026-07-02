@@ -479,7 +479,7 @@ function CanonicalFixer({
       map.get(raw)!.push(r);
     }
     return [...map.entries()]
-      .map(([raw, list]) => ({ raw, list, suggested: suggestCanonical(kind === "state" ? "world" : kind, raw) }))
+      .map(([raw, list]) => ({ raw, list, suggested: kind === "state" ? "" : suggestCanonical(kind, raw) }))
       .sort((a, b) => b.list.length - a.list.length);
   }, [rows, kind, canonical]);
 
