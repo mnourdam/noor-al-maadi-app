@@ -89,14 +89,20 @@ export function UnlockList({ ids, variant = "pill", debug = false, sourceLabel, 
                   type="button"
                   onClick={() => openReveal(r)}
                   className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-right text-[13px] transition hover:border-gold/60 ${
-                    r.found
-                      ? "border-gold/40 bg-gold/10"
-                      : "border-white/10 bg-white/[0.04]"
+                    locked
+                      ? "border-white/10 bg-white/[0.03] opacity-80"
+                      : r.found
+                        ? "border-gold/40 bg-gold/10"
+                        : "border-white/10 bg-white/[0.04]"
                   }`}
                 >
-                  <LockOpen className="size-4 shrink-0 text-gold" strokeWidth={1.75} />
+                  {locked ? (
+                    <Lock className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                  ) : (
+                    <LockOpen className="size-4 shrink-0 text-gold" strokeWidth={1.75} />
+                  )}
                   <span
-                    className="flex-1 font-bold leading-snug text-foreground line-clamp-2"
+                    className={`flex-1 font-bold leading-snug line-clamp-2 ${locked ? "text-foreground/70" : "text-foreground"}`}
                     title={label}
                   >
                     {label}
