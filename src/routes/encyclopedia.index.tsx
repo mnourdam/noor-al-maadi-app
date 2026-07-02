@@ -599,7 +599,7 @@ function EncyclopediaHubFull() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
-                {CATEGORIES.map((c) => {
+                {CATEGORIES.filter((c) => (counts[c.key] ?? 0) > 0).map((c) => {
                   const n = counts[c.key] ?? 0;
                   const Icon = c.icon;
                   return (
