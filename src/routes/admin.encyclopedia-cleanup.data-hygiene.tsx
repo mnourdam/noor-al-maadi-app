@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, Archive, ArrowRight, ArrowUpRight, CheckCircle2, ChevronLeft,
   Download, EyeOff, Filter, Landmark, Layers, Loader2, MapPin, Network, RefreshCw,
-  Shield, SprayCan, Wand2,
+  Shield, SprayCan, Wand2, X, Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ERAS } from "@/lib/app-constants";
