@@ -500,10 +500,22 @@ function CleanupWorkshop() {
 
   // Pipeline-stage counts — drive the "needs content" and "complete"
   // first-class chips. Both operate only on final canonical entities,
-  // so archived / hidden / redirected rows never leak in.
+  // so archived / hidden / redirected rows never leak in. Duplicates that
+  // still require dedupe are excluded from "needs content" so admins fix
+  // duplication first, then enrich the surviving canonical entity.
+  const dedupePendingCount = useMemo(
+    () => rows.reduce(
+      (n, r) => (dupIds.has(r.id) && !isArchivedOrHidden(r) && !isRedirected(r) ? n + 1 : n),
+      0,
+    ),
+    [rows, dupIds],
+  );
   const needsContentCount = useMemo(
-    () => rows.reduce((n, r) => (needsContent(r) ? n + 1 : n), 0),
-    [rows],
+    () => rows.reduce(
+      (n, r) => (needsContent(r) && !dupIds.has(r.id) ? n + 1 : n),
+      0,
+    ),
+    [rows, dupIds],
   );
   const completeCount = useMemo(
     () => rows.reduce((n, r) => (isComplete(r) ? n + 1 : n), 0),
