@@ -70,7 +70,7 @@ type EntityRow = {
 
 type Quality = "good" | "weak" | "empty" | "duplicate" | "orphaned";
 type FilterKey =
-  | "all" | "needs-cleanup" | "needs-content" | "complete"
+  | "all" | "needs-cleanup" | "needs-content" | "complete" | "dedupe-pending"
   | "figure" | "city" | "landmark" | "battle" | "event"
   | "artifact" | "state" | "empty" | "weak" | "duplicate" | "stub" | "archived"
   | "no-image" | "no-sources" | "no-overview" | "no-atlas" | "no-campaign";
