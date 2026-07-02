@@ -45,6 +45,9 @@ type Row = {
 // memos see the enlarged canon without threading it through helpers.
 const CANONICAL_ERA = new Set(ERAS.map((e) => e.id as string));
 const CANONICAL_WORLD = new Set(WORLD_HUBS.map((w) => w.slug));
+// State canon is CMS-only (no code fallback); populated at runtime by the
+// admin_taxonomy sync effect. Kept mutable so downstream memos re-read it.
+const CANONICAL_STATE = new Set<string>();
 
 // Same rule as encyclopedia-source.isDisplayableEntity
 function bodyHasContent(body: unknown): boolean {
