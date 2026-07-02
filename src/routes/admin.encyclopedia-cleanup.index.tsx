@@ -557,7 +557,8 @@ function CleanupWorkshop() {
           if (!rowNeedsCleanup(r, liveDupIds, quality)) return false;
           break;
         case "needs-content":
-          if (!needsContent(r) || isDup) return false;
+          if (!needsContent(r) || liveDupIds.has(r.id)) return false;
+
           break;
         case "dedupe-pending":
           if (!dedupePending) return false;
