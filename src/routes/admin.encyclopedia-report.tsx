@@ -21,9 +21,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ChevronRight, Loader2, ShieldCheck, Download, Network, Filter,
-  Database, BookOpen, Link2, AlertTriangle, CheckCircle2, XCircle,
+  Database, BookOpen, Link2, AlertTriangle, CheckCircle2, XCircle, Plus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { OrphanRelationEditor } from "@/components/admin/OrphanRelationEditor";
 import { AdminGate } from "@/lib/admin-guard";
 import { ERAS } from "@/lib/app-constants";
 import { WORLD_HUBS, WORLD_ERA } from "@/lib/worlds";
