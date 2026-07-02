@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { LockOpen, Users, Landmark, Building2, Swords, Flag, ScrollText, Gem, Sparkles, type LucideIcon } from "lucide-react";
+import { LockOpen, Lock, Users, Landmark, Building2, Swords, Flag, ScrollText, Gem, Sparkles, type LucideIcon } from "lucide-react";
 import { useResolvedUnlocks, typeLabel, type ResolvedUnlock } from "@/lib/campaignUnlocks";
 import {
   CollectibleRevealDialog,
