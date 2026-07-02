@@ -96,6 +96,37 @@ function suggestCanonical(kind: "era" | "world", raw: string): string | null {
   return null;
 }
 
+// Era → preferred World slug. World represents the civilizational home, not
+// geography, so `world` MUST be reviewed at the entity level. This map only
+// powers per-entity suggestions in the Entity World Mapper modal — never a
+// bulk group→world assignment (a single legacy world like `iraq-and-hijaz`
+// contains Umayyad, Abbasid, Seljuk, Zengid, ... entities that cannot all be
+// mapped to one world).
+const ERA_TO_WORLD: Record<string, string> = {
+  prophetic: "prophetic",
+  rashidun: "rashidun",
+  umayyad: "umayyad",
+  abbasid: "abbasid",
+  andalus: "andalus",
+  seljuk: "seljuk",
+  zengid: "zengid",
+  ayyubid: "ayyubid-state",
+  mamluk: "mamluk-sultanate",
+  ottoman: "ottoman",
+  fatimid: "fatimid",
+  buyid: "buyid",
+  timurid: "timurid",
+};
+
+function suggestWorldForEntity(r: Row): string {
+  const m = metaObj(r);
+  const era = typeof m.era === "string" ? (m.era as string).trim() : "";
+  const state = typeof m.state === "string" ? (m.state as string).trim() : "";
+  const eraGuess = era ? ERA_TO_WORLD[era] : undefined;
+  if (eraGuess && CANONICAL_WORLD.has(eraGuess)) return eraGuess;
+  if (state && CANONICAL_WORLD.has(state)) return state;
+  return "";
+
 // ------------------------------------------------------------
 // Fetch — one shot, paged.
 // ------------------------------------------------------------
