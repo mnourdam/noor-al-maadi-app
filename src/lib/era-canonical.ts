@@ -97,8 +97,6 @@ const RAW_TO_CANONICAL: Record<string, CanonicalEra> = {
   "andalusi": "andalus",
   "cordoba": "andalus",
   "cordoba-caliphate": "andalus",
-  "taifa": "andalus",
-  "taifa-kingdoms": "andalus",
   "murabitun": "andalus",
   "almoravid": "andalus",
   "almoravids": "andalus",
