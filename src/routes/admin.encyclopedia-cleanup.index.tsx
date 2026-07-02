@@ -534,7 +534,7 @@ function CleanupWorkshop() {
       const archived = r.metadata?.archived === true || r.enabled === false;
 
       const isDup = dupIds.has(r.id);
-      const dedupePending = isDup && !isArchivedOrHidden(r) && !isRedirected(r);
+      const dedupePending = isDup && !isCleanupResolved(r);
 
       // Pipeline filter (ANDs with type/quality chips below).
       if (pipeline === "needs-cleanup" && !rowNeedsCleanup(r, liveDupIds, quality)) return false;
