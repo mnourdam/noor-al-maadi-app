@@ -18,13 +18,11 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  isDisplayableEntity,
   isUuid,
   pickCanonicalEntity,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
-import { cachedEncyclopediaById, cachedEncyclopediaBySlug } from "@/lib/offline-fallback";
-import { localEncyclopediaById, localEncyclopediaBySlug } from "@/lib/local-first-store";
-import { resolveCanonicalLocal } from "@/lib/encyclopedia-canonical";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
@@ -35,7 +33,7 @@ import {
 } from "@/lib/relationship-graph";
 import { buildContextBlocks } from "@/lib/context-blocks";
 import { iconForType } from "@/lib/encyclopedia-icons";
-import { eraLabel } from "@/lib/era-labels";
+import { canonicalEraLabel, toCanonicalEra } from "@/lib/era-canonical";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
@@ -100,73 +98,47 @@ function EntityPage() {
   const { id } = Route.useParams();
 
   const query = useQuery({
-    queryKey: ["encyclopedia", "entity", id],
+    queryKey: ["encyclopedia", "entity", id, "v2"],
     staleTime: 60_000,
-    // Local-first: render the bundled snapshot synchronously so offline /
-    // cold-start players see real content immediately, not "جارٍ التحميل…".
-    initialData: () => {
-      const local = (isUuid(id)
-        ? localEncyclopediaById(id)
-        : localEncyclopediaBySlug(id)) as SupabaseEncyclopediaEntity | null;
-      if (!local) return undefined;
-      const canon = resolveCanonicalLocal(local as any) as SupabaseEncyclopediaEntity | null;
-      return canon ?? local;
-    },
-    initialDataUpdatedAt: 0,
-    queryFn: async () => {
+    queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
       const fetchById = async (eid: string) => {
-        try {
-          const r = await supabase.from("encyclopedia_entities").select("*").eq("id", eid).maybeSingle();
-          return (r.data ?? null) as SupabaseEncyclopediaEntity | null;
-        } catch {
-          return null;
-        }
+        const r = await supabase
+          .from("encyclopedia_entities")
+          .select("*")
+          .eq("id", eid)
+          .maybeSingle();
+        return (r.data ?? null) as SupabaseEncyclopediaEntity | null;
       };
       const followCanonical = async (row: SupabaseEncyclopediaEntity | null) => {
         if (!row) return null;
-        const meta = (row.metadata && typeof row.metadata === "object") ? row.metadata as any : {};
+        const meta = (row.metadata && typeof row.metadata === "object")
+          ? (row.metadata as any) : {};
         const cid = typeof meta.canonical_id === "string" ? meta.canonical_id : null;
         if (cid && cid !== row.id) {
-          const canon = (await fetchById(cid)) ?? (await cachedEncyclopediaById(cid));
+          const canon = await fetchById(cid);
           if (canon && canon.enabled) return canon;
         }
         return row.enabled ? row : null;
       };
 
+      // Supabase-only lookup — no local packs, no bundled snapshot,
+      // no offline fallback. If the row is not in the database, the
+      // entity does not exist.
       let primary: SupabaseEncyclopediaEntity | null = null;
-      try {
-        if (isUuid(id)) {
-          primary = await fetchById(id);
-        } else {
-          const res = await supabase.from("encyclopedia_entities").select("*").eq("slug", id).eq("enabled", true);
-          const rows = (res.data ?? []) as SupabaseEncyclopediaEntity[];
-          // Pick richest among same-slug rows so the player never lands on a
-          // stub when a fuller sibling exists.
-          primary = pickCanonicalEntity(rows);
-          if (!primary) {
-            const alias = await supabase
-              .from("encyclopedia_entities").select("*")
-              .or(`metadata.cs.{"aliases":["${id}"]},metadata.cs.{"legacy_id":"${id}"}`).limit(1);
-            primary = ((alias.data ?? [])[0] ?? null) as SupabaseEncyclopediaEntity | null;
-          }
-        }
-      } catch {
-        primary = null;
-      }
-      // Offline / failure fallback — read from the bundled or synced snapshot.
-      if (!primary) {
-        primary = isUuid(id)
-          ? (localEncyclopediaById(id) as SupabaseEncyclopediaEntity | null) ?? await cachedEncyclopediaById(id)
-          : (localEncyclopediaBySlug(id) as SupabaseEncyclopediaEntity | null)
-            ?? (await cachedEncyclopediaBySlug(id))
-            ?? (await cachedEncyclopediaById(id));
+      if (isUuid(id)) {
+        primary = await fetchById(id);
+      } else {
+        const res = await supabase
+          .from("encyclopedia_entities")
+          .select("*")
+          .eq("slug", id)
+          .eq("enabled", true);
+        const rows = (res.data ?? []) as SupabaseEncyclopediaEntity[];
+        primary = pickCanonicalEntity(rows);
       }
       const followed = await followCanonical(primary);
-      // Final guard — if the chosen row is empty but a richer same-name
-      // sibling exists in the local store, transparently switch to it so
-      // the player never sees a blank duplicate.
-      const escalated = resolveCanonicalLocal(followed as any) as SupabaseEncyclopediaEntity | null;
-      return escalated ?? followed;
+      // Quality gate: incomplete/orphan rows are treated as "not found".
+      return followed && isDisplayableEntity(followed) ? followed : null;
     },
   });
 
@@ -254,7 +226,10 @@ function EntityPage() {
 
   const chips: { icon: typeof Calendar; label: string }[] = [];
   if (period) chips.push({ icon: ScrollText, label: period });
-  if (era)    chips.push({ icon: Sparkles,   label: eraLabel(era) });
+  if (era)    {
+    const canon = toCanonicalEra(era);
+    if (canon) chips.push({ icon: Sparkles, label: canonicalEraLabel(canon) });
+  }
   if (date)   chips.push({ icon: Calendar,   label: date });
   if (location) chips.push({ icon: MapPin,   label: location });
   if (region) chips.push({ icon: Tag,        label: region });
@@ -421,7 +396,7 @@ function EntityPage() {
             ) : groups.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-gold/20 bg-black/20 p-6 text-center">
                 <p className="text-[12px] text-muted-foreground">
-                  لا توجد روابط تاريخية موثقة بعد
+                  لا توجد روابط تاريخية متاحة حاليًا.
                 </p>
               </div>
             ) : (
