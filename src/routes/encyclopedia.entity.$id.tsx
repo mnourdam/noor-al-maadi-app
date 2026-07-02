@@ -396,7 +396,7 @@ function EntityPage() {
             ) : groups.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-gold/20 bg-black/20 p-6 text-center">
                 <p className="text-[12px] text-muted-foreground">
-                  لا توجد روابط تاريخية موثقة بعد
+                  لا توجد روابط تاريخية متاحة حاليًا.
                 </p>
               </div>
             ) : (
