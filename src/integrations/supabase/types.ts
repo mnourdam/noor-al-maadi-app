@@ -327,6 +327,7 @@ export type Database = {
           data: Json
           id: string
           name: string
+          status: string
           type: string
           updated_at: string
         }
@@ -335,6 +336,7 @@ export type Database = {
           data: Json
           id: string
           name: string
+          status?: string
           type: string
           updated_at?: string
         }
@@ -343,6 +345,7 @@ export type Database = {
           data?: Json
           id?: string
           name?: string
+          status?: string
           type?: string
           updated_at?: string
         }
