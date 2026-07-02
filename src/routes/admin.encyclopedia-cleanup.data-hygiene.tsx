@@ -559,6 +559,18 @@ function CanonicalFixer({
                           {previewOpen === g.raw ? "إخفاء" : `عرض (${g.list.length})`}
                         </button>
                       </td>
+                      <td className="p-2">
+                        {kind === "world" ? (
+                          <button
+                            onClick={() => setEntityMapperGroup(g.raw)}
+                            className="inline-flex items-center gap-1 rounded border border-amber-400/50 bg-amber-500/10 px-2 py-1 text-amber-100 hover:bg-amber-500/20"
+                          >
+                            <Users className="size-3.5" /> فتح المصنّف
+                          </button>
+                        ) : (
+                          <span className="text-slate-600">—</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 }).flatMap((tr, i) => {
@@ -567,7 +579,7 @@ function CanonicalFixer({
                   return [
                     tr,
                     <tr key={g.raw + "-p"} className="bg-slate-950/40">
-                      <td colSpan={5} className="p-2">
+                      <td colSpan={6} className="p-2">
                         <ul className="max-h-48 space-y-1 overflow-auto text-[11px] text-slate-300">
                           {g.list.slice(0, 100).map((r) => (
                             <li key={r.id}>
