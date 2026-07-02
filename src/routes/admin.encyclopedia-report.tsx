@@ -752,6 +752,9 @@ function FilterSelect({
 // ============================================================
 
 function OrphanSection({ rows }: { rows: Row[] }) {
+  const [editing, setEditing] = useState<Row | null>(null);
+  const [tick, setTick] = useState(0); // bump to force re-derive after save
+
   const groups = useMemo(() => {
     const map = new Map<string, Row[]>();
     for (const t of SUPABASE_ENABLED_TYPES) map.set(t, []);
@@ -762,14 +765,15 @@ function OrphanSection({ rows }: { rows: Row[] }) {
       if (bucket) bucket.push(r);
     }
     return map;
-  }, [rows]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, tick]);
 
   return (
     <section className="space-y-4">
       <SectionHeader
         icon={<Link2 className="h-5 w-5" />}
         title="٤. الكيانات اليتيمة (بدون روابط صريحة)"
-        subtitle="منشورة ومقبولة عرضيًا، لكنها لن تظهر في أي شبكة روابط لأنها لا تُصرّح بأي كيان مرتبط."
+        subtitle="منشورة ومقبولة عرضيًا، لكنها لا تُصرّح بأي كيان مرتبط. استخدم «إضافة روابط» لاعتماد روابط صريحة."
       />
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -784,11 +788,19 @@ function OrphanSection({ rows }: { rows: Row[] }) {
             {list.length === 0 ? (
               <div className="text-xs text-emerald-300">لا يوجد يتامى — كل الكيانات مربوطة.</div>
             ) : (
-              <ul className="max-h-64 space-y-1 overflow-y-auto pr-1 text-xs">
+              <ul className="max-h-72 space-y-1 overflow-y-auto pr-1 text-xs">
                 {list.slice(0, 60).map((r) => (
                   <li key={r.id} className="flex items-center justify-between gap-2 rounded border border-slate-800/60 bg-slate-950/40 px-2 py-1">
-                    <span className="truncate text-slate-100">{r.title}</span>
-                    <span className="font-mono text-[10px] text-slate-400">{r.slug}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-slate-100">{r.title}</div>
+                      <div dir="ltr" className="truncate font-mono text-[10px] text-slate-500">{r.slug}</div>
+                    </div>
+                    <button
+                      onClick={() => setEditing(r)}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-100 hover:bg-amber-500/20"
+                    >
+                      <Plus className="size-3" /> إضافة روابط
+                    </button>
                   </li>
                 ))}
                 {list.length > 60 && (
@@ -799,9 +811,19 @@ function OrphanSection({ rows }: { rows: Row[] }) {
           </div>
         ))}
       </div>
+
+      {editing && (
+        <OrphanRelationEditor
+          entity={editing}
+          allRows={rows}
+          onClose={() => setEditing(null)}
+          onSaved={() => setTick((n) => n + 1)}
+        />
+      )}
     </section>
   );
 }
+
 
 // ============================================================
 // 5. Metadata authoring guide
