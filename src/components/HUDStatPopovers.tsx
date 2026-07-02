@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Heart, Coins, Star, Flame, Trophy, Sparkles } from "lucide-react";
-import type { ProfileState } from "@/lib/profile";
+import { deriveStreak, type ProfileState } from "@/lib/profile";
 import {
   HEART_MAX,
   getEffectiveHearts,
