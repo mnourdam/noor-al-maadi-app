@@ -116,6 +116,9 @@ const ERA_TO_WORLD: Record<string, string> = {
   fatimid: "fatimid",
   buyid: "buyid",
   timurid: "timurid",
+  mongols: "mongols",
+  mongol: "mongols",
+  ilkhanid: "mongols",
 };
 
 function suggestWorldForEntity(r: Row): string {
