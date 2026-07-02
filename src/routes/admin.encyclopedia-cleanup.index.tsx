@@ -1285,6 +1285,7 @@ function CleanupWorkshop() {
           needsCleanupCount={needsCleanupCount}
           needsContentCount={needsContentCount}
           completeCount={completeCount}
+          dedupePendingCount={dedupePendingCount}
         />
         <MissingContentStrip rows={rows} atlasLinks={atlasLinks} campaignSlugs={campaignSlugs} dupIds={dupIds} onFilter={setFilter} />
 
