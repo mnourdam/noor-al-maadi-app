@@ -17,6 +17,10 @@ interface Props {
   variant?: "pill" | "card";
   debug?: boolean;
   sourceLabel?: string;
+  /** When true, opening a reward shows a locked preview instead of a discovery. */
+  locked?: boolean;
+  /** Optional Arabic hint shown inside the locked preview dialog. */
+  lockedHint?: string;
 }
 
 const TYPE_ICON = {
