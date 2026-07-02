@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { ERAS } from "@/lib/app-constants";
 import { WORLD_HUBS, WORLD_ERA } from "@/lib/worlds";
+import { useTaxonomy } from "@/lib/taxonomy";
 import {
   SUPABASE_ENABLED_TYPES,
   isDisplayableEntity,
