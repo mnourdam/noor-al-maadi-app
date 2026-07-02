@@ -625,6 +625,17 @@ function CanonicalFixer({
           </div>
         </>
       )}
+
+      {entityMapperGroup && (
+        <EntityWorldMapperModal
+          rawWorld={entityMapperGroup}
+          rows={groups.find((g) => g.raw === entityMapperGroup)?.list ?? []}
+          onClose={() => setEntityMapperGroup(null)}
+          onApplied={() => { setEntityMapperGroup(null); onDone(); }}
+          setBusy={setBusy}
+          busy={busy}
+        />
+      )}
     </section>
   );
 }
