@@ -505,7 +505,7 @@ function CleanupWorkshop() {
   // duplication first, then enrich the surviving canonical entity.
   const dedupePendingCount = useMemo(
     () => rows.reduce(
-      (n, r) => (dupIds.has(r.id) && !isArchivedOrHidden(r) && !isRedirected(r) ? n + 1 : n),
+      (n, r) => (dupIds.has(r.id) && !isCleanupResolved(r) ? n + 1 : n),
       0,
     ),
     [rows, dupIds],
