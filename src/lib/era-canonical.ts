@@ -7,14 +7,18 @@ export type CanonicalEra =
   | "rashidun"
   | "umayyad"
   | "andalus"
+  | "taifa"
   | "abbasid"
+  | "buyid"
   | "fatimid"
   | "seljuk"
+  | "byzantine"
   | "crusades"
   | "zengid"
   | "ayyubid"
   | "mongols"
   | "mamluk"
+  | "timurid"
   | "ottoman"
   | "modern";
 
@@ -23,14 +27,18 @@ export const CANONICAL_ERA_ORDER: CanonicalEra[] = [
   "rashidun",
   "umayyad",
   "andalus",
+  "taifa",
   "abbasid",
+  "buyid",
   "fatimid",
   "seljuk",
+  "byzantine",
   "crusades",
   "zengid",
   "ayyubid",
   "mongols",
   "mamluk",
+  "timurid",
   "ottoman",
   "modern",
 ];
@@ -40,14 +48,18 @@ export const CANONICAL_ERA_LABEL: Record<CanonicalEra, string> = {
   rashidun: "الخلافة الراشدة",
   umayyad: "الدولة الأموية",
   andalus: "الأندلس الإسلامية",
+  taifa: "عصر ملوك الطوائف",
   abbasid: "الدولة العباسية",
+  buyid: "العصر البويهي",
   fatimid: "الدولة الفاطمية",
   seljuk: "السلاجقة",
-  crusades: "الحروب الصليبية",
-  zengid: "الزنكيون",
+  byzantine: "العصر البيزنطي",
+  crusades: "عصر الحروب الصليبية",
+  zengid: "العصر الزنكي",
   ayyubid: "الأيوبيون",
   mongols: "الغزو المغولي",
   mamluk: "المماليك",
+  timurid: "العصر التيموري",
   ottoman: "العثمانيون",
   modern: "العصر الحديث",
 };
