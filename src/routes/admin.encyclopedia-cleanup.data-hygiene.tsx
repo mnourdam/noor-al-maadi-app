@@ -436,8 +436,9 @@ function DataHygienePage() {
             <StatesCleanup rows={rows} onDone={reload} setBusy={setBusy} busy={busy} />
           )}
           {section === "orphans" && (
-            <OrphanReport rows={rows} />
+            <OrphanReport rows={rows} onReload={reload} />
           )}
+
         </>
       )}
 
