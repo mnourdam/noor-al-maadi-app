@@ -503,13 +503,15 @@ function CleanupWorkshop() {
   // so archived / hidden / redirected rows never leak in. Duplicates that
   // still require dedupe are excluded from "needs content" so admins fix
   // duplication first, then enrich the surviving canonical entity.
+  // "dedupe-pending" surfaces only entities that are part of an OPEN duplicate
+  // group (2+ live siblings). Archived rows, hidden/redirected duplicates, and
+  // canonicals whose group has already collapsed to a single survivor are all
+  // excluded automatically because they are not in liveDupIds.
   const dedupePendingCount = useMemo(
-    () => rows.reduce(
-      (n, r) => (dupIds.has(r.id) && !isCleanupResolved(r) ? n + 1 : n),
-      0,
-    ),
-    [rows, dupIds],
+    () => rows.reduce((n, r) => (liveDupIds.has(r.id) ? n + 1 : n), 0),
+    [rows, liveDupIds],
   );
+
   const needsContentCount = useMemo(
     () => rows.reduce(
       (n, r) => (needsContent(r) && !dupIds.has(r.id) ? n + 1 : n),
