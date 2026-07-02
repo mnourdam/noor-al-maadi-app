@@ -172,22 +172,27 @@ export function StreakPopover({ profile }: { profile: ProfileState }) {
     return () => clearInterval(id);
   }, []);
   const today = isoToday();
+  const derived = deriveStreak(profile.streak, profile.lastActiveDay);
+  const liveStreak = derived.streak;
   const activeToday = profile.lastActiveDay === today;
+  const broken = derived.status === "expired";
   return (
     <PopShell icon={<Flame className="size-4" />} title="الحماسة">
       <p className="text-white/70">
-        {activeToday
+        {broken
+          ? "انقطعت سلسلتك. أكمل نشاطًا مؤهلًا لبدء سلسلة جديدة."
+          : activeToday
           ? "حماستك محفوظة اليوم."
           : "أكمل فصلًا أو تحديًا اليوم للحفاظ على السلسلة."}
       </p>
       <StatRow
         label="السلسلة الحالية"
-        value={`${profile.streak.toLocaleString("en-US")} يوم`}
+        value={`${liveStreak.toLocaleString("en-US")} يوم`}
       />
       {profile.lastActiveDay && (
         <StatRow label="آخر يوم نشاط" value={profile.lastActiveDay} />
       )}
-      {!activeToday && profile.streak > 0 && (
+      {!activeToday && !broken && liveStreak > 0 && (
         <StatRow label="الوقت قبل المخاطرة" value={formatHMS(msUntilEndOfDay())} />
       )}
     </PopShell>
