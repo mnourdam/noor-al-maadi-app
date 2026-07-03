@@ -388,10 +388,15 @@ export const audioManager = {
   /** Cleanup — useful for hot reload / tests. */
   dispose() {
     androidMark("audio.dispose");
-    if (ambience) {
-      try { ambience.pause(); } catch {/*ignore*/}
-      ambience = null;
-    }
+    if (fadeTimer !== null) { try { window.clearInterval(fadeTimer); } catch {/*ignore*/} fadeTimer = null; }
+    (Object.keys(tracks) as AmbienceLayer[]).forEach((layer) => {
+      const t = tracks[layer];
+      if (t.el) { try { t.el.pause(); } catch {/*ignore*/} }
+      t.el = null;
+    });
+    tracks.global.gain = 1;
+    tracks.campaign.gain = 0;
+    activeLayer = "global";
   },
 };
 
