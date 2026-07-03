@@ -791,6 +791,17 @@ function CanonicalFixer({
           busy={busy}
         />
       )}
+
+      {entityEraMapperGroup && (
+        <EntityEraMapperModal
+          rawEra={entityEraMapperGroup}
+          rows={groups.find((g) => g.raw === entityEraMapperGroup)?.list ?? []}
+          onClose={() => setEntityEraMapperGroup(null)}
+          onApplied={() => { setEntityEraMapperGroup(null); onDone(); }}
+          setBusy={setBusy}
+          busy={busy}
+        />
+      )}
     </section>
   );
 }
