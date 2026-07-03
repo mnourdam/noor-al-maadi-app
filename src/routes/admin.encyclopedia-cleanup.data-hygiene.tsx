@@ -1917,7 +1917,7 @@ function StatesCleanup({
     const linked = linkedByType.get(r.slug) ?? linkedByType.get(r.id) ?? { total: 0, byType: {} as Record<string, number> };
     const relCount = linked.total;
     const byType = linked.byType;
-    const campaigns = (campaignsByState.get(r.slug) ?? 0) + (campaignsByType.get?.(r.id) ?? campaignsByState.get(r.id) ?? 0);
+    const campaigns = (campaignsByState.get(r.slug) ?? 0) + (campaignsByState.get(r.id) ?? 0);
 
     // Weighted strength score (0-100). No single missing field is a blocker.
     // Overview 15 · Body 15 · Canonical era 10 · Campaigns 10 · Relations volume 30 · Link variety 20
