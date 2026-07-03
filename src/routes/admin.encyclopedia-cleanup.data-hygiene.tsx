@@ -540,6 +540,7 @@ function CanonicalFixer({
   const [previewOpen, setPreviewOpen] = useState<string | null>(null);
   const [entityMapperGroup, setEntityMapperGroup] = useState<string | null>(null);
   const [entityStateMapperGroup, setEntityStateMapperGroup] = useState<string | null>(null);
+  const [entityEraMapperGroup, setEntityEraMapperGroup] = useState<string | null>(null);
 
   useEffect(() => {
     // seed mapping with suggestions on load / kind change
