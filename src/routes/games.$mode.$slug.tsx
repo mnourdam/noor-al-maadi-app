@@ -533,7 +533,7 @@ function GamePlayPage() {
                 <Trophy className="h-8 w-8 text-amber-300" />
               </div>
               <p className="text-[11px] uppercase tracking-[0.35em] text-amber-300/80">اكتملت الرحلة</p>
-              <h2 className="text-xl font-bold text-amber-100">أحسنت — أضفت قطعةً جديدة إلى متحفك</h2>
+              <h2 className="text-xl font-bold text-amber-100">{hasMuseumReward ? "أحسنت — أضفت قطعةً جديدة إلى متحفك" : "أحسنت — أتممت التحدي"}</h2>
               {finalScore !== null && (
                 <p className="text-xs text-slate-400">دقة الأداء: {finalScore}٪</p>
               )}
