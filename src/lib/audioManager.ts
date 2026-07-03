@@ -12,7 +12,6 @@ import { deviceAllowsAudio, initAndroidSilentMode } from "./androidSilentMode";
 // ============================================================
 
 import errorSfxAsset from "@/assets/audio-error.mp3.asset.json";
-import campaignAmbienceAsset from "@/assets/campaign-ambience.mp3.asset.json";
 
 export type AmbienceLayer = "global" | "campaign";
 
@@ -44,6 +43,7 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
 const STORAGE_KEY = "irth_audio_settings";
 
 const AMBIENCE_URL = "/audio/irth-ambience.mp3";
+export const CAMPAIGN_AMBIENCE_SRC = "/audio/campaign-ambient.mp3";
 const SFX_URLS: Record<SfxName, string> = {
   "success":            "/audio/success-soft.mp3",
   "chapter-complete":   "/audio/chapter-complete.mp3",
@@ -90,10 +90,11 @@ interface AmbienceTrack {
   el: HTMLAudioElement | null;
   failed: boolean;
   gain: number; // 0..1 layer gain (before master*ambience volume)
+  lastPlayError: string | null;
 }
 const tracks: Record<AmbienceLayer, AmbienceTrack> = {
-  global:   { url: AMBIENCE_URL,          el: null, failed: false, gain: 1 },
-  campaign: { url: campaignAmbienceAsset.url, el: null, failed: false, gain: 0 },
+  global:   { url: AMBIENCE_URL,         el: null, failed: false, gain: 1, lastPlayError: null },
+  campaign: { url: CAMPAIGN_AMBIENCE_SRC, el: null, failed: false, gain: 0, lastPlayError: null },
 };
 let activeLayer: AmbienceLayer = "global";
 let fadeTimer: number | null = null;
@@ -121,6 +122,7 @@ function ensureTrack(layer: AmbienceLayer) {
     a.volume = 0;
     a.addEventListener("error", () => {
       t.failed = true;
+      t.lastPlayError = `load error: ${t.url}`;
       warnOnce(`ambience file missing or unplayable (${layer}): ${t.url}`);
       if (layer === "campaign" && activeLayer === "campaign") {
         console.warn("[audio] campaign track failed — reverting to global ambience");
@@ -137,11 +139,15 @@ function ensureTrack(layer: AmbienceLayer) {
     console.log(`[audio] created ${layer} track element: ${t.url}`);
   } catch (err) {
     t.failed = true;
+    t.lastPlayError = (err as Error)?.message ?? String(err);
     console.warn(`[audio] failed to construct ${layer} audio element`, err);
   }
 }
 
 function ambienceShouldPlay(): boolean {
+  if (!hasInteracted && typeof navigator !== "undefined" && navigator.userActivation?.hasBeenActive) {
+    hasInteracted = true;
+  }
   return settings.soundEnabled && settings.ambienceEnabled && hasInteracted && deviceAllowsAudio();
 }
 
@@ -165,8 +171,10 @@ function tryPlay(layer: AmbienceLayer) {
   const p = t.el.play();
   if (p && typeof p.catch === "function") {
     p.then(() => {
+      t.lastPlayError = null;
       console.log(`[audio] ${layer} play() succeeded (vol=${t.el?.volume.toFixed(3)})`);
     }).catch((err) => {
+      t.lastPlayError = err?.message ?? String(err);
       console.warn(`[audio] ${layer} play() failed:`, err?.message ?? err);
       if (layer === "campaign" && activeLayer === "campaign") {
         console.warn("[audio] campaign playback blocked — keeping global ambience as fallback");
@@ -236,13 +244,17 @@ function bindFirstInteraction() {
   const onFirst = () => {
     hasInteracted = true;
     applyAmbienceState();
-    window.removeEventListener("pointerdown", onFirst);
-    window.removeEventListener("keydown", onFirst);
-    window.removeEventListener("touchstart", onFirst);
+    window.removeEventListener("pointerdown", onFirst, true);
+    window.removeEventListener("mousedown", onFirst, true);
+    window.removeEventListener("click", onFirst, true);
+    window.removeEventListener("keydown", onFirst, true);
+    window.removeEventListener("touchstart", onFirst, true);
   };
-  window.addEventListener("pointerdown", onFirst, { once: true, passive: true });
-    if (!isAndroidNativeApp()) window.addEventListener("keydown", onFirst, { once: true });
-  window.addEventListener("touchstart",  onFirst, { once: true, passive: true });
+  window.addEventListener("pointerdown", onFirst, { once: true, passive: true, capture: true });
+  window.addEventListener("mousedown", onFirst, { once: true, passive: true, capture: true });
+  window.addEventListener("click", onFirst, { once: true, passive: true, capture: true });
+  if (!isAndroidNativeApp()) window.addEventListener("keydown", onFirst, { once: true, capture: true });
+  window.addEventListener("touchstart", onFirst, { once: true, passive: true, capture: true });
 }
 
 // ---------- App lifecycle (background/foreground) ----------
@@ -315,6 +327,9 @@ export const audioManager = {
     bindFirstInteraction();
     bindLifecycle();
     initAndroidSilentMode();
+    if (import.meta.env.DEV) {
+      (window as typeof window & { __IRTH_AUDIO_DEBUG__?: () => unknown }).__IRTH_AUDIO_DEBUG__ = () => audioManager.getDebugSnapshot();
+    }
     // try immediately in case the user already interacted (e.g. SPA nav)
     applyAmbienceState();
   },
@@ -434,6 +449,18 @@ export const audioManager = {
 
   getAmbienceLayer(): AmbienceLayer {
     return activeLayer;
+  },
+
+  getDebugSnapshot() {
+    const campaign = tracks.campaign;
+    return {
+      activeLayer,
+      campaignSrc: CAMPAIGN_AMBIENCE_SRC,
+      campaignReadyState: campaign.el?.readyState ?? 0,
+      campaignPaused: campaign.el?.paused ?? true,
+      campaignVolume: Number((campaign.el?.volume ?? 0).toFixed(3)),
+      lastPlayError: campaign.lastPlayError,
+    };
   },
 
   /** Cleanup — useful for hot reload / tests. */
