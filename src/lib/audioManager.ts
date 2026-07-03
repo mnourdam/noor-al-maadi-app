@@ -121,11 +121,23 @@ function ensureTrack(layer: AmbienceLayer) {
     a.volume = 0;
     a.addEventListener("error", () => {
       t.failed = true;
-      warnOnce(`ambience file missing or unplayable: ${t.url}`);
+      warnOnce(`ambience file missing or unplayable (${layer}): ${t.url}`);
+      if (layer === "campaign" && activeLayer === "campaign") {
+        console.warn("[audio] campaign track failed — reverting to global ambience");
+        tracks.campaign.gain = 0;
+        tracks.global.gain = 1;
+        activeLayer = "global";
+        applyAmbienceState();
+      }
     });
+    a.addEventListener("canplaythrough", () => {
+      console.log(`[audio] ${layer} canplaythrough (${t.url})`);
+    }, { once: true });
     t.el = a;
-  } catch {
+    console.log(`[audio] created ${layer} track element: ${t.url}`);
+  } catch (err) {
     t.failed = true;
+    console.warn(`[audio] failed to construct ${layer} audio element`, err);
   }
 }
 
@@ -146,19 +158,36 @@ function applyTrackVolumes() {
   });
 }
 
+function tryPlay(layer: AmbienceLayer) {
+  const t = tracks[layer];
+  if (!t.el || t.failed) return;
+  if (!t.el.paused) return;
+  const p = t.el.play();
+  if (p && typeof p.catch === "function") {
+    p.then(() => {
+      console.log(`[audio] ${layer} play() succeeded (vol=${t.el?.volume.toFixed(3)})`);
+    }).catch((err) => {
+      console.warn(`[audio] ${layer} play() failed:`, err?.message ?? err);
+      if (layer === "campaign" && activeLayer === "campaign") {
+        console.warn("[audio] campaign playback blocked — keeping global ambience as fallback");
+        tracks.campaign.gain = 0;
+        tracks.global.gain = 1;
+        activeLayer = "global";
+        applyAmbienceState();
+      }
+    });
+  }
+}
+
 function applyAmbienceState() {
   if (typeof window === "undefined") return;
   const shouldPlay = ambienceShouldPlay();
   (Object.keys(tracks) as AmbienceLayer[]).forEach((layer) => {
     const t = tracks[layer];
-    // Only bother instantiating tracks that could contribute audio.
     if (shouldPlay && t.gain > 0) ensureTrack(layer);
     if (!t.el || t.failed) return;
     if (shouldPlay && t.gain > 0) {
-      const p = t.el.play();
-      if (p && typeof p.catch === "function") {
-        p.catch(() => { /* autoplay blocked — will retry on next interaction */ });
-      }
+      tryPlay(layer);
     } else {
       try { t.el.pause(); } catch {/*ignore*/}
     }
@@ -168,16 +197,23 @@ function applyAmbienceState() {
 
 function startCrossfade(target: AmbienceLayer) {
   if (typeof window === "undefined") return;
+  console.log(`[audio] crossfade → ${target} (from ${activeLayer}); shouldPlay=${ambienceShouldPlay()}, base=${baseAmbienceVolume().toFixed(3)}`);
   activeLayer = target;
-  // Ensure both tracks exist (target for fade-in, other for fade-out).
+
+  // Ensure BOTH tracks exist so the target can ramp in while the other ramps out.
+  ensureTrack("global");
   ensureTrack(target);
+
+  // Nudge target above 0 so applyAmbienceState() will call .play() immediately.
+  if (tracks[target].gain <= 0) tracks[target].gain = 0.0001;
+
   const from = { global: tracks.global.gain, campaign: tracks.campaign.gain };
   const to   = { global: target === "global"   ? 1 : 0,
                  campaign: target === "campaign" ? 1 : 0 };
   const start = performance.now();
 
   if (fadeTimer !== null) { window.clearInterval(fadeTimer); fadeTimer = null; }
-  applyAmbienceState(); // make sure target starts playing
+  applyAmbienceState(); // start target playing NOW at near-zero volume
 
   fadeTimer = window.setInterval(() => {
     const t = Math.min(1, (performance.now() - start) / FADE_MS);
@@ -186,7 +222,7 @@ function startCrossfade(target: AmbienceLayer) {
     applyTrackVolumes();
     if (t >= 1) {
       if (fadeTimer !== null) { window.clearInterval(fadeTimer); fadeTimer = null; }
-      // Pause the fully-silent layer to save resources.
+      console.log(`[audio] crossfade complete → ${activeLayer}. global.vol=${tracks.global.el?.volume.toFixed(3)}, campaign.vol=${tracks.campaign.el?.volume.toFixed(3)}`);
       applyAmbienceState();
     }
   }, FADE_STEP_MS);
