@@ -290,6 +290,12 @@ function GamePlayPage() {
   }
   if (alreadyCompleted) {
     const relatedEntityDone = game.related_entities?.[0];
+    const doneUnlockIds = extractMuseumUnlocks({
+      metadata: (game.metadata as Record<string, unknown> | null) ?? undefined,
+    });
+    const doneFirstUnlockSlug = doneUnlockIds.length
+      ? (museumUnlocksToCollectionItems(doneUnlockIds)[0]?.itemId ?? null)
+      : null;
     return (
       <AppShell>
         <div dir="rtl" className="mx-auto max-w-3xl space-y-5 px-4 py-6">
@@ -324,10 +330,12 @@ function GamePlayPage() {
                     <BookOpen className="h-3.5 w-3.5" /> اكتشف في الموسوعة
                   </Link>
                 )}
-                <Link to="/collection"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-amber-400">
-                  <Library className="h-3.5 w-3.5" /> تصفح المتحف
-                </Link>
+                {doneFirstUnlockSlug && (
+                  <Link to="/collection" hash={doneFirstUnlockSlug}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-amber-400">
+                    <Library className="h-3.5 w-3.5" /> افتح في المتحف
+                  </Link>
+                )}
                 <Link to="/adventure"
                       className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400">
                   <Compass className="h-3.5 w-3.5" /> تحدٍّ آخر
@@ -341,6 +349,13 @@ function GamePlayPage() {
   }
 
   const relatedEntity = game.related_entities?.[0];
+  const museumUnlockIds = extractMuseumUnlocks({
+    metadata: (game.metadata as Record<string, unknown> | null) ?? undefined,
+  });
+  const firstUnlockSlug = museumUnlockIds.length
+    ? (museumUnlocksToCollectionItems(museumUnlockIds)[0]?.itemId ?? null)
+    : null;
+  const hasMuseumReward = !!firstUnlockSlug;
 
   return (
     <AppShell>
@@ -518,7 +533,7 @@ function GamePlayPage() {
                 <Trophy className="h-8 w-8 text-amber-300" />
               </div>
               <p className="text-[11px] uppercase tracking-[0.35em] text-amber-300/80">اكتملت الرحلة</p>
-              <h2 className="text-xl font-bold text-amber-100">أحسنت — أضفت قطعةً جديدة إلى متحفك</h2>
+              <h2 className="text-xl font-bold text-amber-100">{hasMuseumReward ? "أحسنت — أضفت قطعةً جديدة إلى متحفك" : "أحسنت — أتممت التحدي"}</h2>
               {finalScore !== null && (
                 <p className="text-xs text-slate-400">دقة الأداء: {finalScore}٪</p>
               )}
@@ -543,10 +558,12 @@ function GamePlayPage() {
                     <BookOpen className="h-3.5 w-3.5" /> اكتشف في الموسوعة
                   </Link>
                 )}
-                <Link to="/collection"
-                      className="motion-tap inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-amber-400">
-                  <Library className="h-3.5 w-3.5" /> تصفح المتحف
-                </Link>
+                {hasMuseumReward && (
+                  <Link to="/collection" hash={firstUnlockSlug ?? undefined}
+                        className="motion-tap inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-amber-400">
+                    <Library className="h-3.5 w-3.5" /> افتح في المتحف
+                  </Link>
+                )}
                 <Link to="/adventure"
                       className="motion-tap inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400">
                   <Compass className="h-3.5 w-3.5" /> تحدٍّ آخر
