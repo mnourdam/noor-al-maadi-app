@@ -2038,8 +2038,12 @@ function StatesCleanup({
               const detailRow = (
                 <tr key={`${r.id}-details`} className="border-t border-slate-800/50 bg-slate-950/40">
                   <td colSpan={10} className="p-3">
-                    <div className="mb-2 text-[11px] text-slate-400">
-                      سبب التقييم — لماذا هذه الدولة {publishable ? "قابلة للنشر" : "ضعيفة"}:
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                      <span>سبب التقييم — لماذا هذه الدولة {publishable ? "قوية" : "ضعيفة"}:</span>
+                      <span className={`rounded px-2 py-0.5 font-semibold ${publishable ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : x.score >= 30 ? "border border-amber-500/40 bg-amber-500/10 text-amber-200" : "border border-rose-500/40 bg-rose-500/10 text-rose-200"}`}>
+                        الدرجة {x.score}/100
+                      </span>
+                      <span className="text-slate-500">تنوّع الأنواع: {x.distinctTypes}/{STATE_LINK_TYPES.length}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       <MetricChip label="مقدمة" ok={hasOverview} value={hasOverview ? "موجودة" : "ناقصة"} />
