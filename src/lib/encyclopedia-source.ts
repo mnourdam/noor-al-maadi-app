@@ -86,9 +86,16 @@ function bodyHasContent(body: unknown): boolean {
  * either a substantial summary or a real body.
  */
 export function isDisplayableEntity(
-  e: Pick<SupabaseEncyclopediaEntity, "enabled" | "summary" | "body"> | null | undefined,
+  e:
+    | (Pick<SupabaseEncyclopediaEntity, "enabled" | "summary" | "body"> & {
+        entity_type?: string;
+      })
+    | null
+    | undefined,
 ): boolean {
   if (!e || e.enabled === false) return false;
+  // Artifacts are always visible once published — content can be enriched over time.
+  if ((e as { entity_type?: string }).entity_type === "artifact") return true;
   const summary = (e.summary ?? "").trim();
   if (summary.length >= 40) return true;
   if (bodyHasContent(e.body)) return true;
@@ -96,9 +103,9 @@ export function isDisplayableEntity(
 }
 
 /** Filter helper for lists. */
-export function filterDisplayable<T extends { enabled?: boolean; summary?: string | null; body?: unknown }>(
-  list: T[] | null | undefined,
-): T[] {
+export function filterDisplayable<
+  T extends { entity_type?: string; enabled?: boolean; summary?: string | null; body?: unknown },
+>(list: T[] | null | undefined): T[] {
   return (list ?? []).filter((r) => isDisplayableEntity(r as any));
 }
 
