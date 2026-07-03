@@ -2026,7 +2026,7 @@ function StatesCleanup({
                   <td className="p-2">{canonicalEra ? "✓" : <span className="text-rose-400">—</span>}</td>
                   <td className={`p-2 ${relCount >= 2 ? "text-slate-200" : "text-rose-300"}`}>{relCount}</td>
                   <td className={`p-2 ${campaigns > 0 ? "text-slate-200" : "text-slate-500"}`}>{campaigns}</td>
-                  <td className={`p-2 ${publishable ? "text-emerald-300" : "text-rose-300"}`}>{publishable ? "نعم" : "لا"}</td>
+                  <td className={`p-2 font-semibold ${publishable ? "text-emerald-300" : x.score >= 30 ? "text-amber-300" : "text-rose-300"}`}>{x.score}</td>
                   <td className="p-2">
                     <button onClick={() => toggleBreakdown(r.id)} className="rounded border border-slate-700 bg-slate-950 px-2 py-0.5 text-[10px] text-amber-200 hover:bg-slate-900">
                       {isOpen ? "إخفاء" : "تفاصيل"}
