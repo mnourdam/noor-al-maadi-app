@@ -290,6 +290,12 @@ function GamePlayPage() {
   }
   if (alreadyCompleted) {
     const relatedEntityDone = game.related_entities?.[0];
+    const doneUnlockIds = extractMuseumUnlocks({
+      metadata: (game.metadata as Record<string, unknown> | null) ?? undefined,
+    });
+    const doneFirstUnlockSlug = doneUnlockIds.length
+      ? (museumUnlocksToCollectionItems(doneUnlockIds)[0]?.itemId ?? null)
+      : null;
     return (
       <AppShell>
         <div dir="rtl" className="mx-auto max-w-3xl space-y-5 px-4 py-6">
