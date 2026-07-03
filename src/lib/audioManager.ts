@@ -215,7 +215,10 @@ function bindLifecycle() {
   if (lifecycleBound || typeof window === "undefined") return;
   lifecycleBound = true;
   const onHidden = () => {
-    if (ambience) { try { ambience.pause(); } catch {/*ignore*/} }
+    (Object.keys(tracks) as AmbienceLayer[]).forEach((layer) => {
+      const t = tracks[layer];
+      if (t.el) { try { t.el.pause(); } catch {/*ignore*/} }
+    });
   };
   const onVisible = () => {
     // Only resume if the user has it enabled and previously interacted.
