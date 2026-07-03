@@ -330,10 +330,12 @@ function GamePlayPage() {
                     <BookOpen className="h-3.5 w-3.5" /> اكتشف في الموسوعة
                   </Link>
                 )}
-                <Link to="/collection"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-amber-400">
-                  <Library className="h-3.5 w-3.5" /> تصفح المتحف
-                </Link>
+                {doneFirstUnlockSlug && (
+                  <Link to="/collection" hash={doneFirstUnlockSlug}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-amber-400">
+                    <Library className="h-3.5 w-3.5" /> افتح في المتحف
+                  </Link>
+                )}
                 <Link to="/adventure"
                       className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400">
                   <Compass className="h-3.5 w-3.5" /> تحدٍّ آخر
