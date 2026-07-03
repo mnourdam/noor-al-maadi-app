@@ -1976,8 +1976,8 @@ function StatesCleanup({
           <button onClick={() => setOpenBreakdown(new Set(weak.map((x) => x.r.id)))} className="rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900">فتح تفاصيل الضعيفة</button>
           <button onClick={() => setSelected(new Set(weak.map((x) => x.r.id)))} className="rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900">تحديد الضعيفة</button>
           <button onClick={() => downloadCsv("states.csv", toCsv(
-            ["id", "slug", "title", "enabled", "hasOverview", "hasBody", "canonicalEra", "relations", "campaigns", ...STATE_LINK_TYPES, "publishable"],
-            evaluated.map((x) => [x.r.id, x.r.slug, x.r.title, x.r.enabled, x.hasOverview, x.hasBody, x.canonicalEra, x.relCount, x.campaigns, ...STATE_LINK_TYPES.map((t) => x.byType[t] ?? 0), x.publishable]),
+            ["id", "slug", "title", "enabled", "score", "hasOverview", "hasBody", "canonicalEra", "relations", "campaigns", ...STATE_LINK_TYPES, "publishable"],
+            evaluated.map((x) => [x.r.id, x.r.slug, x.r.title, x.r.enabled, x.score, x.hasOverview, x.hasBody, x.canonicalEra, x.relCount, x.campaigns, ...STATE_LINK_TYPES.map((t) => x.byType[t] ?? 0), x.publishable]),
           ))} className="inline-flex items-center gap-1.5 rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900">
             <Download className="size-3.5" /> CSV
           </button>
