@@ -1913,13 +1913,35 @@ function StatesCleanup({
     const hasOverview = ((r.summary ?? "").trim().length >= 40) || (typeof m.overview === "string" && (m.overview as string).trim().length >= 40);
     const hasBody = bodyHasContent(r.body);
     const era = typeof m.era === "string" ? (m.era as string) : "";
-    const canonicalEra = era && CANONICAL_ERA.has(era);
+    const canonicalEra = !!(era && CANONICAL_ERA.has(era));
     const linked = linkedByType.get(r.slug) ?? linkedByType.get(r.id) ?? { total: 0, byType: {} as Record<string, number> };
     const relCount = linked.total;
     const byType = linked.byType;
-    const campaigns = (campaignsByState.get(r.slug) ?? 0) + (campaignsByState.get(r.id) ?? 0);
-    const publishable = r.enabled && hasOverview && hasBody && canonicalEra && relCount >= 2;
-    return { r, hasOverview, hasBody, canonicalEra, relCount, byType, campaigns, publishable };
+    const campaigns = (campaignsByState.get(r.slug) ?? 0) + (campaignsByType.get?.(r.id) ?? campaignsByState.get(r.id) ?? 0);
+
+    // Weighted strength score (0-100). No single missing field is a blocker.
+    // Overview 15 · Body 15 · Canonical era 10 · Campaigns 10 · Relations volume 30 · Link variety 20
+    let score = 0;
+    if (hasOverview) score += 15;
+    if (hasBody) score += 15;
+    if (canonicalEra) score += 10;
+    if (campaigns > 0) score += 10;
+    // Relations volume — rewards rich historical networks.
+    if (relCount >= 50) score += 30;
+    else if (relCount >= 25) score += 25;
+    else if (relCount >= 10) score += 20;
+    else if (relCount >= 5) score += 15;
+    else if (relCount >= 2) score += 10;
+    else if (relCount >= 1) score += 4;
+    // Link variety — distinct entity types linked.
+    const distinctTypes = STATE_LINK_TYPES.reduce((n, t) => n + ((byType[t] ?? 0) > 0 ? 1 : 0), 0);
+    score += Math.min(20, distinctTypes * 3);
+    score = Math.min(100, score);
+
+    // "Weak" is now a true completeness signal, not a strict gate.
+    // Strong network overrides missing body/campaigns.
+    const publishable = r.enabled && score >= 50;
+    return { r, hasOverview, hasBody, canonicalEra, relCount, byType, campaigns, score, distinctTypes, publishable };
   }), [states, linkedByType, campaignsByState]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
