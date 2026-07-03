@@ -78,12 +78,27 @@ function writeSettings(s: AudioSettings) {
 // ---------- Internal state ----------
 let settings: AudioSettings = readSettings();
 const listeners = new Set<(s: AudioSettings) => void>();
-let ambience: HTMLAudioElement | null = null;
-let ambienceFailed = false;
 let interactionBound = false;
 let hasInteracted = false;
 const sfxFailed = new Set<SfxName>();
 const recentSfx = new Map<string, number>(); // dedupe key -> ts
+
+// Two-layer ambience: "global" (default app) + "campaign" (campaign scope).
+// Both elements exist simultaneously; we crossfade their volumes.
+interface AmbienceTrack {
+  url: string;
+  el: HTMLAudioElement | null;
+  failed: boolean;
+  gain: number; // 0..1 layer gain (before master*ambience volume)
+}
+const tracks: Record<AmbienceLayer, AmbienceTrack> = {
+  global:   { url: AMBIENCE_URL,          el: null, failed: false, gain: 1 },
+  campaign: { url: campaignAmbienceAsset.url, el: null, failed: false, gain: 0 },
+};
+let activeLayer: AmbienceLayer = "global";
+let fadeTimer: number | null = null;
+const FADE_MS = 1500;
+const FADE_STEP_MS = 50;
 
 function notify() {
   for (const l of listeners) {
@@ -96,20 +111,21 @@ function warnOnce(msg: string) {
 }
 
 // ---------- Ambience ----------
-function ensureAmbience() {
-  if (ambience || ambienceFailed || typeof window === "undefined") return;
+function ensureTrack(layer: AmbienceLayer) {
+  const t = tracks[layer];
+  if (t.el || t.failed || typeof window === "undefined") return;
   try {
-    const a = new Audio(AMBIENCE_URL);
+    const a = new Audio(t.url);
     a.loop = true;
     a.preload = "auto";
-    a.volume = settings.masterVolume * settings.ambienceVolume;
+    a.volume = 0;
     a.addEventListener("error", () => {
-      ambienceFailed = true;
-      warnOnce(`ambience file missing or unplayable: ${AMBIENCE_URL}`);
+      t.failed = true;
+      warnOnce(`ambience file missing or unplayable: ${t.url}`);
     });
-    ambience = a;
+    t.el = a;
   } catch {
-    ambienceFailed = true;
+    t.failed = true;
   }
 }
 
@@ -117,20 +133,65 @@ function ambienceShouldPlay(): boolean {
   return settings.soundEnabled && settings.ambienceEnabled && hasInteracted && deviceAllowsAudio();
 }
 
+function baseAmbienceVolume() {
+  return Math.max(0, Math.min(1, settings.masterVolume * settings.ambienceVolume));
+}
+
+function applyTrackVolumes() {
+  const base = baseAmbienceVolume();
+  (Object.keys(tracks) as AmbienceLayer[]).forEach((layer) => {
+    const t = tracks[layer];
+    if (!t.el) return;
+    t.el.volume = Math.max(0, Math.min(1, base * t.gain));
+  });
+}
+
 function applyAmbienceState() {
   if (typeof window === "undefined") return;
-  if (ambienceShouldPlay()) {
-    ensureAmbience();
-    if (!ambience || ambienceFailed) return;
-    ambience.volume = settings.masterVolume * settings.ambienceVolume;
-    const p = ambience.play();
-    if (p && typeof p.catch === "function") {
-      p.catch(() => { /* autoplay blocked — will retry on next interaction */ });
+  const shouldPlay = ambienceShouldPlay();
+  (Object.keys(tracks) as AmbienceLayer[]).forEach((layer) => {
+    const t = tracks[layer];
+    // Only bother instantiating tracks that could contribute audio.
+    if (shouldPlay && t.gain > 0) ensureTrack(layer);
+    if (!t.el || t.failed) return;
+    if (shouldPlay && t.gain > 0) {
+      const p = t.el.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => { /* autoplay blocked — will retry on next interaction */ });
+      }
+    } else {
+      try { t.el.pause(); } catch {/*ignore*/}
     }
-  } else if (ambience) {
-    try { ambience.pause(); } catch {/*ignore*/}
-  }
+  });
+  applyTrackVolumes();
 }
+
+function startCrossfade(target: AmbienceLayer) {
+  if (typeof window === "undefined") return;
+  activeLayer = target;
+  // Ensure both tracks exist (target for fade-in, other for fade-out).
+  ensureTrack(target);
+  const from = { global: tracks.global.gain, campaign: tracks.campaign.gain };
+  const to   = { global: target === "global"   ? 1 : 0,
+                 campaign: target === "campaign" ? 1 : 0 };
+  const start = performance.now();
+
+  if (fadeTimer !== null) { window.clearInterval(fadeTimer); fadeTimer = null; }
+  applyAmbienceState(); // make sure target starts playing
+
+  fadeTimer = window.setInterval(() => {
+    const t = Math.min(1, (performance.now() - start) / FADE_MS);
+    tracks.global.gain   = from.global   + (to.global   - from.global)   * t;
+    tracks.campaign.gain = from.campaign + (to.campaign - from.campaign) * t;
+    applyTrackVolumes();
+    if (t >= 1) {
+      if (fadeTimer !== null) { window.clearInterval(fadeTimer); fadeTimer = null; }
+      // Pause the fully-silent layer to save resources.
+      applyAmbienceState();
+    }
+  }, FADE_STEP_MS);
+}
+
 
 // ---------- First-interaction unlock ----------
 function bindFirstInteraction() {
