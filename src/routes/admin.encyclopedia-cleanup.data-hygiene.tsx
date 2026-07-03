@@ -1913,13 +1913,35 @@ function StatesCleanup({
     const hasOverview = ((r.summary ?? "").trim().length >= 40) || (typeof m.overview === "string" && (m.overview as string).trim().length >= 40);
     const hasBody = bodyHasContent(r.body);
     const era = typeof m.era === "string" ? (m.era as string) : "";
-    const canonicalEra = era && CANONICAL_ERA.has(era);
+    const canonicalEra = !!(era && CANONICAL_ERA.has(era));
     const linked = linkedByType.get(r.slug) ?? linkedByType.get(r.id) ?? { total: 0, byType: {} as Record<string, number> };
     const relCount = linked.total;
     const byType = linked.byType;
     const campaigns = (campaignsByState.get(r.slug) ?? 0) + (campaignsByState.get(r.id) ?? 0);
-    const publishable = r.enabled && hasOverview && hasBody && canonicalEra && relCount >= 2;
-    return { r, hasOverview, hasBody, canonicalEra, relCount, byType, campaigns, publishable };
+
+    // Weighted strength score (0-100). No single missing field is a blocker.
+    // Overview 15 · Body 15 · Canonical era 10 · Campaigns 10 · Relations volume 30 · Link variety 20
+    let score = 0;
+    if (hasOverview) score += 15;
+    if (hasBody) score += 15;
+    if (canonicalEra) score += 10;
+    if (campaigns > 0) score += 10;
+    // Relations volume — rewards rich historical networks.
+    if (relCount >= 50) score += 30;
+    else if (relCount >= 25) score += 25;
+    else if (relCount >= 10) score += 20;
+    else if (relCount >= 5) score += 15;
+    else if (relCount >= 2) score += 10;
+    else if (relCount >= 1) score += 4;
+    // Link variety — distinct entity types linked.
+    const distinctTypes = STATE_LINK_TYPES.reduce((n, t) => n + ((byType[t] ?? 0) > 0 ? 1 : 0), 0);
+    score += Math.min(20, distinctTypes * 3);
+    score = Math.min(100, score);
+
+    // "Weak" is now a true completeness signal, not a strict gate.
+    // Strong network overrides missing body/campaigns.
+    const publishable = r.enabled && score >= 50;
+    return { r, hasOverview, hasBody, canonicalEra, relCount, byType, campaigns, score, distinctTypes, publishable };
   }), [states, linkedByType, campaignsByState]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -1954,8 +1976,8 @@ function StatesCleanup({
           <button onClick={() => setOpenBreakdown(new Set(weak.map((x) => x.r.id)))} className="rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900">فتح تفاصيل الضعيفة</button>
           <button onClick={() => setSelected(new Set(weak.map((x) => x.r.id)))} className="rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900">تحديد الضعيفة</button>
           <button onClick={() => downloadCsv("states.csv", toCsv(
-            ["id", "slug", "title", "enabled", "hasOverview", "hasBody", "canonicalEra", "relations", "campaigns", ...STATE_LINK_TYPES, "publishable"],
-            evaluated.map((x) => [x.r.id, x.r.slug, x.r.title, x.r.enabled, x.hasOverview, x.hasBody, x.canonicalEra, x.relCount, x.campaigns, ...STATE_LINK_TYPES.map((t) => x.byType[t] ?? 0), x.publishable]),
+            ["id", "slug", "title", "enabled", "score", "hasOverview", "hasBody", "canonicalEra", "relations", "campaigns", ...STATE_LINK_TYPES, "publishable"],
+            evaluated.map((x) => [x.r.id, x.r.slug, x.r.title, x.r.enabled, x.score, x.hasOverview, x.hasBody, x.canonicalEra, x.relCount, x.campaigns, ...STATE_LINK_TYPES.map((t) => x.byType[t] ?? 0), x.publishable]),
           ))} className="inline-flex items-center gap-1.5 rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900">
             <Download className="size-3.5" /> CSV
           </button>
@@ -1968,7 +1990,7 @@ function StatesCleanup({
         </div>
       </div>
       <p className="mb-2 text-[11px] text-slate-400">
-        معيار النشر: مقدمة + محتوى + حقبة قانونية + عدد صلات صريحة ≥ 2. اضغط «تفاصيل» أمام أي دولة ضعيفة لرؤية توزيع الصلات حسب النوع وعدد الحملات المرتبطة — لتعرف تحديدًا ما الناقص.
+        درجة القوة (0–100) موزونة: مقدمة 15 · محتوى 15 · حقبة قانونية 10 · حملات 10 · حجم الصلات ≤30 · تنوع الأنواع ≤20. تُعتبر «ضعيفة» إذا كانت الدرجة أقل من 50 — لا يوجد حقل واحد يحجب النشر بمفرده.
       </p>
       <div className="max-h-[560px] overflow-auto rounded border border-slate-800">
         <table className="w-full text-right text-xs">
@@ -1982,7 +2004,7 @@ function StatesCleanup({
               <th className="p-2">حقبة</th>
               <th className="p-2">صلات</th>
               <th className="p-2">حملات</th>
-              <th className="p-2">صالحة للعرض</th>
+              <th className="p-2">الدرجة</th>
               <th className="p-2"></th>
             </tr>
           </thead>
@@ -2004,7 +2026,7 @@ function StatesCleanup({
                   <td className="p-2">{canonicalEra ? "✓" : <span className="text-rose-400">—</span>}</td>
                   <td className={`p-2 ${relCount >= 2 ? "text-slate-200" : "text-rose-300"}`}>{relCount}</td>
                   <td className={`p-2 ${campaigns > 0 ? "text-slate-200" : "text-slate-500"}`}>{campaigns}</td>
-                  <td className={`p-2 ${publishable ? "text-emerald-300" : "text-rose-300"}`}>{publishable ? "نعم" : "لا"}</td>
+                  <td className={`p-2 font-semibold ${publishable ? "text-emerald-300" : x.score >= 30 ? "text-amber-300" : "text-rose-300"}`}>{x.score}</td>
                   <td className="p-2">
                     <button onClick={() => toggleBreakdown(r.id)} className="rounded border border-slate-700 bg-slate-950 px-2 py-0.5 text-[10px] text-amber-200 hover:bg-slate-900">
                       {isOpen ? "إخفاء" : "تفاصيل"}
@@ -2016,8 +2038,12 @@ function StatesCleanup({
               const detailRow = (
                 <tr key={`${r.id}-details`} className="border-t border-slate-800/50 bg-slate-950/40">
                   <td colSpan={10} className="p-3">
-                    <div className="mb-2 text-[11px] text-slate-400">
-                      سبب التقييم — لماذا هذه الدولة {publishable ? "قابلة للنشر" : "ضعيفة"}:
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                      <span>سبب التقييم — لماذا هذه الدولة {publishable ? "قوية" : "ضعيفة"}:</span>
+                      <span className={`rounded px-2 py-0.5 font-semibold ${publishable ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : x.score >= 30 ? "border border-amber-500/40 bg-amber-500/10 text-amber-200" : "border border-rose-500/40 bg-rose-500/10 text-rose-200"}`}>
+                        الدرجة {x.score}/100
+                      </span>
+                      <span className="text-slate-500">تنوّع الأنواع: {x.distinctTypes}/{STATE_LINK_TYPES.length}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       <MetricChip label="مقدمة" ok={hasOverview} value={hasOverview ? "موجودة" : "ناقصة"} />
