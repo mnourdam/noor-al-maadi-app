@@ -2004,7 +2004,7 @@ function StatesCleanup({
               <th className="p-2">حقبة</th>
               <th className="p-2">صلات</th>
               <th className="p-2">حملات</th>
-              <th className="p-2">صالحة للعرض</th>
+              <th className="p-2">الدرجة</th>
               <th className="p-2"></th>
             </tr>
           </thead>
