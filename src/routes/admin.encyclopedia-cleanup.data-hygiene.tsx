@@ -678,10 +678,15 @@ function CanonicalFixer({
                       </td>
                       <td className="p-2">
                         <button
-                          onClick={() => setPreviewOpen(previewOpen === g.raw ? null : g.raw)}
+                          onClick={() => {
+                            if (kind === "era") setEntityEraMapperGroup(g.raw);
+                            else setPreviewOpen(previewOpen === g.raw ? null : g.raw);
+                          }}
                           className="text-amber-300 hover:underline"
                         >
-                          {previewOpen === g.raw ? "إخفاء" : `عرض (${g.list.length})`}
+                          {kind === "era"
+                            ? `عرض (${g.list.length})`
+                            : previewOpen === g.raw ? "إخفاء" : `عرض (${g.list.length})`}
                         </button>
                       </td>
                       <td className="p-2">
@@ -695,6 +700,13 @@ function CanonicalFixer({
                         ) : kind === "state" ? (
                           <button
                             onClick={() => setEntityStateMapperGroup(g.raw)}
+                            className="inline-flex items-center gap-1 rounded border border-amber-400/50 bg-amber-500/10 px-2 py-1 text-amber-100 hover:bg-amber-500/20"
+                          >
+                            <Users className="size-3.5" /> فتح المصنّف
+                          </button>
+                        ) : kind === "era" ? (
+                          <button
+                            onClick={() => setEntityEraMapperGroup(g.raw)}
                             className="inline-flex items-center gap-1 rounded border border-amber-400/50 bg-amber-500/10 px-2 py-1 text-amber-100 hover:bg-amber-500/20"
                           >
                             <Users className="size-3.5" /> فتح المصنّف
