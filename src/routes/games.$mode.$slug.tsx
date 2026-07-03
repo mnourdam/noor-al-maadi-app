@@ -341,6 +341,13 @@ function GamePlayPage() {
   }
 
   const relatedEntity = game.related_entities?.[0];
+  const museumUnlockIds = extractMuseumUnlocks({
+    metadata: (game.metadata as Record<string, unknown> | null) ?? undefined,
+  });
+  const firstUnlockSlug = museumUnlockIds.length
+    ? (museumUnlocksToCollectionItems(museumUnlockIds)[0]?.itemId ?? null)
+    : null;
+  const hasMuseumReward = !!firstUnlockSlug;
 
   return (
     <AppShell>
