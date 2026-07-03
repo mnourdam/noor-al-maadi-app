@@ -385,6 +385,21 @@ export const audioManager = {
     }
   },
 
+  /**
+   * Switch which ambience layer is audible. Crossfades over ~1500ms.
+   * Safe to call repeatedly with the same layer — no-op if unchanged.
+   */
+  setAmbienceLayer(layer: AmbienceLayer) {
+    if (typeof window === "undefined") return;
+    if (isAndroidUltraStableMode()) return;
+    if (layer === activeLayer) return;
+    startCrossfade(layer);
+  },
+
+  getAmbienceLayer(): AmbienceLayer {
+    return activeLayer;
+  },
+
   /** Cleanup — useful for hot reload / tests. */
   dispose() {
     androidMark("audio.dispose");
