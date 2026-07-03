@@ -155,14 +155,22 @@ function baseAmbienceVolume() {
   return Math.max(0, Math.min(1, settings.masterVolume * settings.ambienceVolume));
 }
 
+// Per-layer playback attenuation (linear gain). Campaign is ~-10 dB quieter
+// so it stays cinematic without overpowering UI/reading.
+const LAYER_ATTENUATION: Record<AmbienceLayer, number> = {
+  global: 1,
+  campaign: 0.32,
+};
+
 function applyTrackVolumes() {
   const base = baseAmbienceVolume();
   (Object.keys(tracks) as AmbienceLayer[]).forEach((layer) => {
     const t = tracks[layer];
     if (!t.el) return;
-    t.el.volume = Math.max(0, Math.min(1, base * t.gain));
+    t.el.volume = Math.max(0, Math.min(1, base * t.gain * LAYER_ATTENUATION[layer]));
   });
 }
+
 
 function tryPlay(layer: AmbienceLayer) {
   const t = tracks[layer];
