@@ -12,7 +12,6 @@ import { deviceAllowsAudio, initAndroidSilentMode } from "./androidSilentMode";
 // ============================================================
 
 import errorSfxAsset from "@/assets/audio-error.mp3.asset.json";
-import campaignAmbienceAsset from "@/assets/campaign-ambience.mp3.asset.json";
 
 export type AmbienceLayer = "global" | "campaign";
 
@@ -44,6 +43,7 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
 const STORAGE_KEY = "irth_audio_settings";
 
 const AMBIENCE_URL = "/audio/irth-ambience.mp3";
+export const CAMPAIGN_AMBIENCE_SRC = "/audio/campaign-ambient.mp3";
 const SFX_URLS: Record<SfxName, string> = {
   "success":            "/audio/success-soft.mp3",
   "chapter-complete":   "/audio/chapter-complete.mp3",
@@ -90,10 +90,11 @@ interface AmbienceTrack {
   el: HTMLAudioElement | null;
   failed: boolean;
   gain: number; // 0..1 layer gain (before master*ambience volume)
+  lastPlayError: string | null;
 }
 const tracks: Record<AmbienceLayer, AmbienceTrack> = {
-  global:   { url: AMBIENCE_URL,          el: null, failed: false, gain: 1 },
-  campaign: { url: campaignAmbienceAsset.url, el: null, failed: false, gain: 0 },
+  global:   { url: AMBIENCE_URL,         el: null, failed: false, gain: 1, lastPlayError: null },
+  campaign: { url: CAMPAIGN_AMBIENCE_SRC, el: null, failed: false, gain: 0, lastPlayError: null },
 };
 let activeLayer: AmbienceLayer = "global";
 let fadeTimer: number | null = null;
@@ -121,6 +122,7 @@ function ensureTrack(layer: AmbienceLayer) {
     a.volume = 0;
     a.addEventListener("error", () => {
       t.failed = true;
+      t.lastPlayError = `load error: ${t.url}`;
       warnOnce(`ambience file missing or unplayable (${layer}): ${t.url}`);
       if (layer === "campaign" && activeLayer === "campaign") {
         console.warn("[audio] campaign track failed — reverting to global ambience");
@@ -137,6 +139,7 @@ function ensureTrack(layer: AmbienceLayer) {
     console.log(`[audio] created ${layer} track element: ${t.url}`);
   } catch (err) {
     t.failed = true;
+    t.lastPlayError = (err as Error)?.message ?? String(err);
     console.warn(`[audio] failed to construct ${layer} audio element`, err);
   }
 }
@@ -165,8 +168,10 @@ function tryPlay(layer: AmbienceLayer) {
   const p = t.el.play();
   if (p && typeof p.catch === "function") {
     p.then(() => {
+      t.lastPlayError = null;
       console.log(`[audio] ${layer} play() succeeded (vol=${t.el?.volume.toFixed(3)})`);
     }).catch((err) => {
+      t.lastPlayError = err?.message ?? String(err);
       console.warn(`[audio] ${layer} play() failed:`, err?.message ?? err);
       if (layer === "campaign" && activeLayer === "campaign") {
         console.warn("[audio] campaign playback blocked — keeping global ambience as fallback");
@@ -434,6 +439,18 @@ export const audioManager = {
 
   getAmbienceLayer(): AmbienceLayer {
     return activeLayer;
+  },
+
+  getDebugSnapshot() {
+    const campaign = tracks.campaign;
+    return {
+      activeLayer,
+      campaignSrc: CAMPAIGN_AMBIENCE_SRC,
+      campaignReadyState: campaign.el?.readyState ?? 0,
+      campaignPaused: campaign.el?.paused ?? true,
+      campaignVolume: Number((campaign.el?.volume ?? 0).toFixed(3)),
+      lastPlayError: campaign.lastPlayError,
+    };
   },
 
   /** Cleanup — useful for hot reload / tests. */
