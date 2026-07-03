@@ -196,6 +196,56 @@ function suggestStateForEntity(r: Row): string {
   return "";
 }
 
+// World / State → preferred canonical Era slug. Used only for per-entity
+// suggestions inside the Entity Era Mapper — never for bulk assignment.
+const WORLD_TO_ERA: Record<string, string> = {
+  prophetic: "prophetic",
+  rashidun: "rashidun",
+  umayyad: "umayyad",
+  abbasid: "abbasid",
+  andalus: "andalus",
+  seljuk: "seljuk",
+  zengid: "zengid",
+  "ayyubid-state": "ayyubid",
+  "mamluk-sultanate": "mamluk",
+  ottoman: "ottoman",
+  fatimid: "fatimid",
+  buyid: "buyid",
+  timurid: "timurid",
+  mongols: "mongols",
+};
+const STATE_TO_ERA: Record<string, string> = {
+  "rashidun-caliphate": "rashidun",
+  "umayyad-caliphate": "umayyad",
+  "abbasid-caliphate": "abbasid",
+  "ottoman-empire": "ottoman",
+  "seljuk-empire": "seljuk",
+  "zengid-dynasty": "zengid",
+  "ayyubid-dynasty": "ayyubid",
+  "mamluk-sultanate": "mamluk",
+  "fatimid-caliphate": "fatimid",
+  "andalusi-caliphate": "andalus",
+  "buyid-dynasty": "buyid",
+  "timurid-empire": "timurid",
+  "mongol-empire": "mongols",
+  "prophetic-state": "prophetic",
+};
+
+function suggestEraForEntity(r: Row): string {
+  const m = metaObj(r);
+  const cur = typeof m.era === "string" ? (m.era as string).trim() : "";
+  if (cur && CANONICAL_ERA.has(cur)) return cur;
+  const normalized = cur ? suggestCanonical("era", cur) : null;
+  if (normalized) return normalized;
+  const world = typeof m.world === "string" ? (m.world as string).trim() : "";
+  const wGuess = world ? WORLD_TO_ERA[world] : undefined;
+  if (wGuess && CANONICAL_ERA.has(wGuess)) return wGuess;
+  const state = typeof m.state === "string" ? (m.state as string).trim() : "";
+  const sGuess = state ? STATE_TO_ERA[state] : undefined;
+  if (sGuess && CANONICAL_ERA.has(sGuess)) return sGuess;
+  return "";
+}
+
 
 // ------------------------------------------------------------
 // Fetch — one shot, paged.
