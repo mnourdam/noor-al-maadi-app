@@ -145,6 +145,9 @@ function ensureTrack(layer: AmbienceLayer) {
 }
 
 function ambienceShouldPlay(): boolean {
+  if (!hasInteracted && typeof navigator !== "undefined" && navigator.userActivation?.hasBeenActive) {
+    hasInteracted = true;
+  }
   return settings.soundEnabled && settings.ambienceEnabled && hasInteracted && deviceAllowsAudio();
 }
 
@@ -241,13 +244,17 @@ function bindFirstInteraction() {
   const onFirst = () => {
     hasInteracted = true;
     applyAmbienceState();
-    window.removeEventListener("pointerdown", onFirst);
-    window.removeEventListener("keydown", onFirst);
-    window.removeEventListener("touchstart", onFirst);
+    window.removeEventListener("pointerdown", onFirst, true);
+    window.removeEventListener("mousedown", onFirst, true);
+    window.removeEventListener("click", onFirst, true);
+    window.removeEventListener("keydown", onFirst, true);
+    window.removeEventListener("touchstart", onFirst, true);
   };
-  window.addEventListener("pointerdown", onFirst, { once: true, passive: true });
-    if (!isAndroidNativeApp()) window.addEventListener("keydown", onFirst, { once: true });
-  window.addEventListener("touchstart",  onFirst, { once: true, passive: true });
+  window.addEventListener("pointerdown", onFirst, { once: true, passive: true, capture: true });
+  window.addEventListener("mousedown", onFirst, { once: true, passive: true, capture: true });
+  window.addEventListener("click", onFirst, { once: true, passive: true, capture: true });
+  if (!isAndroidNativeApp()) window.addEventListener("keydown", onFirst, { once: true, capture: true });
+  window.addEventListener("touchstart", onFirst, { once: true, passive: true, capture: true });
 }
 
 // ---------- App lifecycle (background/foreground) ----------
@@ -320,6 +327,9 @@ export const audioManager = {
     bindFirstInteraction();
     bindLifecycle();
     initAndroidSilentMode();
+    if (import.meta.env.DEV) {
+      (window as typeof window & { __IRTH_AUDIO_DEBUG__?: () => unknown }).__IRTH_AUDIO_DEBUG__ = () => audioManager.getDebugSnapshot();
+    }
     // try immediately in case the user already interacted (e.g. SPA nav)
     applyAmbienceState();
   },
