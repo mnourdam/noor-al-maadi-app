@@ -1820,28 +1820,93 @@ function Select({ value, onChange, label, options }: { value: string; onChange: 
 // ============================================================
 // 4) States cleanup — strong publish criteria
 // ============================================================
+const STATE_LINK_TYPES = ["figure", "scholar", "city", "landmark", "battle", "event", "artifact"] as const;
+const STATE_LINK_LABELS: Record<string, string> = {
+  figure: "شخصيات",
+  scholar: "علماء",
+  city: "مدن",
+  landmark: "معالم",
+  battle: "معارك",
+  event: "أحداث",
+  artifact: "آثار",
+};
+
 function StatesCleanup({
   rows, onDone, setBusy, busy,
 }: { rows: Row[]; onDone: () => void; setBusy: (s: string | null) => void; busy: string | null }) {
   // A "state" here = entity_type=state
   const states = useMemo(() => rows.filter((r) => r.entity_type === "state"), [rows]);
 
-  // Explicit relationships from any entity pointing to this state's slug/id.
-  const relIndex = useMemo(() => {
-    const idx = new Map<string, number>();
+  // Per-state reverse index broken down by the linking entity's type.
+  // Any non-state row that points to a state via relationships or via
+  // canonical affiliation/dynasty/caliphate/sultanate/state fields counts.
+  const linkedByType = useMemo(() => {
+    const idx = new Map<string, { total: number; byType: Record<string, number> }>();
+    const bump = (key: string, type: string) => {
+      if (!key) return;
+      let e = idx.get(key);
+      if (!e) { e = { total: 0, byType: {} }; idx.set(key, e); }
+      e.total += 1;
+      e.byType[type] = (e.byType[type] ?? 0) + 1;
+    };
     for (const r of rows) {
+      if (r.entity_type === "state") continue;
       const m = metaObj(r);
+      const targets = new Set<string>();
       const rel = [
         ...(Array.isArray((m as any).related_entities) ? (m as any).related_entities : []),
         ...(Array.isArray((m as any).related) ? (m as any).related : []),
         ...(Array.isArray((m as any).relationships) ? (m as any).relationships : []),
       ] as unknown[];
       for (const v of rel) {
-        if (typeof v === "string") idx.set(v, (idx.get(v) ?? 0) + 1);
+        if (typeof v === "string" && v.trim()) targets.add(v.trim());
+        else if (v && typeof v === "object") {
+          const o = v as Record<string, unknown>;
+          const s = (typeof o.slug === "string" && o.slug) || (typeof o.id === "string" && o.id) || (typeof o.entity_slug === "string" && o.entity_slug);
+          if (typeof s === "string" && s) targets.add(s);
+        }
       }
+      for (const key of ["state", "affiliation", "dynasty", "caliphate", "sultanate"]) {
+        const v = (m as any)[key];
+        if (typeof v === "string" && v) targets.add(v);
+      }
+      for (const t of targets) bump(t, r.entity_type);
     }
     return idx;
   }, [rows]);
+
+  // Campaigns referencing each state (by slug or id).
+  const [campaignsByState, setCampaignsByState] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("admin_campaigns").select("data").limit(1000);
+      const map = new Map<string, number>();
+      const bump = (k: string) => { if (k) map.set(k, (map.get(k) ?? 0) + 1); };
+      for (const c of (data ?? []) as { data: unknown }[]) {
+        const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
+        const cmeta = (cm.metadata && typeof cm.metadata === "object" ? (cm.metadata as Record<string, unknown>) : {});
+        const slugs = new Set<string>();
+        for (const arr of [cm.core_entities, cm.supporting_entities, (cmeta as any).core_entities, (cmeta as any).supporting_entities]) {
+          if (Array.isArray(arr)) for (const v of arr) {
+            if (typeof v === "string") { const s = v.includes(":") ? v.split(":").pop()! : v; slugs.add(s); }
+            else if (v && typeof v === "object") {
+              const o = v as Record<string, unknown>;
+              const s = (typeof o.slug === "string" && o.slug) || (typeof o.id === "string" && o.id);
+              if (typeof s === "string") slugs.add(s);
+            }
+          }
+        }
+        for (const key of ["state", "affiliation", "dynasty"]) {
+          const v = (cm as any)[key] ?? (cmeta as any)[key];
+          if (typeof v === "string" && v) slugs.add(v);
+        }
+        for (const s of slugs) bump(s);
+      }
+      if (!cancelled) setCampaignsByState(map);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const evaluated = useMemo(() => states.map((r) => {
     const m = metaObj(r);
@@ -1849,12 +1914,19 @@ function StatesCleanup({
     const hasBody = bodyHasContent(r.body);
     const era = typeof m.era === "string" ? (m.era as string) : "";
     const canonicalEra = era && CANONICAL_ERA.has(era);
-    const relCount = (relIndex.get(r.slug) ?? 0) + (relIndex.get(r.id) ?? 0);
+    const linked = linkedByType.get(r.slug) ?? linkedByType.get(r.id) ?? { total: 0, byType: {} as Record<string, number> };
+    const relCount = linked.total;
+    const byType = linked.byType;
+    const campaigns = (campaignsByState.get(r.slug) ?? 0) + (campaignsByState.get(r.id) ?? 0);
     const publishable = r.enabled && hasOverview && hasBody && canonicalEra && relCount >= 2;
-    return { r, hasOverview, hasBody, canonicalEra, relCount, publishable };
-  }), [states, relIndex]);
+    return { r, hasOverview, hasBody, canonicalEra, relCount, byType, campaigns, publishable };
+  }), [states, linkedByType, campaignsByState]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [openBreakdown, setOpenBreakdown] = useState<Set<string>>(new Set());
+  const toggleBreakdown = (id: string) => setOpenBreakdown((p) => {
+    const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
 
   const weak = evaluated.filter((x) => !x.publishable && x.r.enabled);
 
@@ -1879,10 +1951,11 @@ function StatesCleanup({
           <MapPin className="mr-1 inline size-4" /> الدول ({evaluated.length}) — {weak.length} ضعيفة تحتاج إخفاء
         </div>
         <div className="flex flex-wrap gap-2">
+          <button onClick={() => setOpenBreakdown(new Set(weak.map((x) => x.r.id)))} className="rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900">فتح تفاصيل الضعيفة</button>
           <button onClick={() => setSelected(new Set(weak.map((x) => x.r.id)))} className="rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900">تحديد الضعيفة</button>
           <button onClick={() => downloadCsv("states.csv", toCsv(
-            ["id", "slug", "title", "enabled", "hasOverview", "hasBody", "canonicalEra", "relations", "publishable"],
-            evaluated.map((x) => [x.r.id, x.r.slug, x.r.title, x.r.enabled, x.hasOverview, x.hasBody, x.canonicalEra, x.relCount, x.publishable]),
+            ["id", "slug", "title", "enabled", "hasOverview", "hasBody", "canonicalEra", "relations", "campaigns", ...STATE_LINK_TYPES, "publishable"],
+            evaluated.map((x) => [x.r.id, x.r.slug, x.r.title, x.r.enabled, x.hasOverview, x.hasBody, x.canonicalEra, x.relCount, x.campaigns, ...STATE_LINK_TYPES.map((t) => x.byType[t] ?? 0), x.publishable]),
           ))} className="inline-flex items-center gap-1.5 rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900">
             <Download className="size-3.5" /> CSV
           </button>
@@ -1895,7 +1968,7 @@ function StatesCleanup({
         </div>
       </div>
       <p className="mb-2 text-[11px] text-slate-400">
-        معيار النشر: مقدمة + محتوى + حقبة قانونية + عدد صلات صريحة ≥ 2. الدول التي لا تحقق كل المعايير لا يجب عرضها في موسوعة اللاعب.
+        معيار النشر: مقدمة + محتوى + حقبة قانونية + عدد صلات صريحة ≥ 2. اضغط «تفاصيل» أمام أي دولة ضعيفة لرؤية توزيع الصلات حسب النوع وعدد الحملات المرتبطة — لتعرف تحديدًا ما الناقص.
       </p>
       <div className="max-h-[560px] overflow-auto rounded border border-slate-800">
         <table className="w-full text-right text-xs">
@@ -1908,30 +1981,97 @@ function StatesCleanup({
               <th className="p-2">محتوى</th>
               <th className="p-2">حقبة</th>
               <th className="p-2">صلات</th>
+              <th className="p-2">حملات</th>
               <th className="p-2">صالحة للعرض</th>
+              <th className="p-2"></th>
             </tr>
           </thead>
           <tbody>
-            {evaluated.map(({ r, hasOverview, hasBody, canonicalEra, relCount, publishable }) => (
-              <tr key={r.id} className="border-t border-slate-800 hover:bg-slate-900/30">
-                <td className="p-2"><input type="checkbox" checked={selected.has(r.id)} onChange={(e) => {
-                  const s = new Set(selected);
-                  if (e.target.checked) s.add(r.id); else s.delete(r.id);
-                  setSelected(s);
-                }} /></td>
-                <td className="p-2 text-slate-100">{r.title} <span className="text-slate-500">— {r.slug}</span></td>
-                <td className="p-2">{r.enabled ? "منشور" : "معطل"}</td>
-                <td className="p-2">{hasOverview ? "✓" : "—"}</td>
-                <td className="p-2">{hasBody ? "✓" : "—"}</td>
-                <td className="p-2">{canonicalEra ? "✓" : "—"}</td>
-                <td className="p-2">{relCount}</td>
-                <td className={`p-2 ${publishable ? "text-emerald-300" : "text-rose-300"}`}>{publishable ? "نعم" : "لا"}</td>
-              </tr>
-            ))}
+            {evaluated.flatMap((x) => {
+              const { r, hasOverview, hasBody, canonicalEra, relCount, byType, campaigns, publishable } = x;
+              const isOpen = openBreakdown.has(r.id);
+              const mainRow = (
+                <tr key={r.id} className="border-t border-slate-800 hover:bg-slate-900/30">
+                  <td className="p-2"><input type="checkbox" checked={selected.has(r.id)} onChange={(e) => {
+                    const s = new Set(selected);
+                    if (e.target.checked) s.add(r.id); else s.delete(r.id);
+                    setSelected(s);
+                  }} /></td>
+                  <td className="p-2 text-slate-100">{r.title} <span className="text-slate-500">— {r.slug}</span></td>
+                  <td className="p-2">{r.enabled ? "منشور" : "معطل"}</td>
+                  <td className="p-2">{hasOverview ? "✓" : <span className="text-rose-400">—</span>}</td>
+                  <td className="p-2">{hasBody ? "✓" : <span className="text-rose-400">—</span>}</td>
+                  <td className="p-2">{canonicalEra ? "✓" : <span className="text-rose-400">—</span>}</td>
+                  <td className={`p-2 ${relCount >= 2 ? "text-slate-200" : "text-rose-300"}`}>{relCount}</td>
+                  <td className={`p-2 ${campaigns > 0 ? "text-slate-200" : "text-slate-500"}`}>{campaigns}</td>
+                  <td className={`p-2 ${publishable ? "text-emerald-300" : "text-rose-300"}`}>{publishable ? "نعم" : "لا"}</td>
+                  <td className="p-2">
+                    <button onClick={() => toggleBreakdown(r.id)} className="rounded border border-slate-700 bg-slate-950 px-2 py-0.5 text-[10px] text-amber-200 hover:bg-slate-900">
+                      {isOpen ? "إخفاء" : "تفاصيل"}
+                    </button>
+                  </td>
+                </tr>
+              );
+              if (!isOpen) return [mainRow];
+              const detailRow = (
+                <tr key={`${r.id}-details`} className="border-t border-slate-800/50 bg-slate-950/40">
+                  <td colSpan={10} className="p-3">
+                    <div className="mb-2 text-[11px] text-slate-400">
+                      سبب التقييم — لماذا هذه الدولة {publishable ? "قابلة للنشر" : "ضعيفة"}:
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <MetricChip label="مقدمة" ok={hasOverview} value={hasOverview ? "موجودة" : "ناقصة"} />
+                      <MetricChip label="محتوى" ok={hasBody} value={hasBody ? "موجود" : "ناقص"} />
+                      <MetricChip label="حقبة قانونية" ok={!!canonicalEra} value={canonicalEra ? "صحيحة" : "غير قانونية"} />
+                      <MetricChip label="إجمالي الصلات" ok={relCount >= 2} value={String(relCount)} />
+                      <MetricChip label="حملات مرتبطة" ok={campaigns > 0} value={String(campaigns)} soft />
+                      {STATE_LINK_TYPES.map((t) => (
+                        <MetricChip
+                          key={t}
+                          label={STATE_LINK_LABELS[t]}
+                          ok={(byType[t] ?? 0) > 0}
+                          value={String(byType[t] ?? 0)}
+                          soft
+                        />
+                      ))}
+                    </div>
+                    {!publishable && (
+                      <div className="mt-2 flex flex-wrap gap-3 text-[11px]">
+                        <Link to="/admin/hub-builder" className="text-amber-300 underline hover:text-amber-200">
+                          فتح باني المحاور لإضافة صلات →
+                        </Link>
+                        <Link
+                          to="/encyclopedia/state/$id"
+                          params={{ id: r.slug } as any}
+                          className="text-amber-300 underline hover:text-amber-200"
+                        >
+                          معاينة الدولة في الموسوعة →
+                        </Link>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+              return [mainRow, detailRow];
+            })}
           </tbody>
         </table>
       </div>
     </section>
+  );
+}
+
+function MetricChip({ label, value, ok, soft }: { label: string; value: string; ok: boolean; soft?: boolean }) {
+  const tone = ok
+    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+    : soft
+      ? "border-slate-600 bg-slate-900/60 text-slate-400"
+      : "border-rose-500/40 bg-rose-500/10 text-rose-200";
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${tone}`}>
+      <span className="opacity-80">{label}</span>
+      <span className="font-semibold">{value}</span>
+    </span>
   );
 }
 
