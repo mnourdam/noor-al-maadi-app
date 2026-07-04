@@ -86,8 +86,18 @@ export function resolveDeepLink(n: NotificationLike): string {
   }
 
   // Today-in-history entries are reminder-only — always send to Home's section,
-  // never to a (possibly missing) entity/story page.
-  if (cat0 === "today_in_history" || payload.todayEventId) return "/#today-in-history";
+  // never to a (possibly missing) entity/story page. If the raw deep_link
+  // already carries a todayHistoryId (or the payload does), preserve it so
+  // the Home carousel opens on the exact tapped event.
+  if (cat0 === "today_in_history" || payload.todayEventId) {
+    if (n.deep_link && n.deep_link.startsWith("/") && n.deep_link.includes("todayHistoryId=")) {
+      return n.deep_link;
+    }
+    if (payload.todayEventId) {
+      return `/?todayHistoryId=${encodeURIComponent(String(payload.todayEventId))}#today-in-history`;
+    }
+    return "/#today-in-history";
+  }
 
 
   // 1. Explicit URL in payload wins over raw deep_link string.

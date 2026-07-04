@@ -141,13 +141,40 @@ function HomeFull() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayEvent?.id, user, lastSyncAt]);
 
-  // Scroll to (and briefly highlight) the "في مثل هذا اليوم" section when a
-  // Today-in-History notification opens Home with the #today-in-history hash.
+  // `todayHistoryId` — carried by Today-in-History notifications so the
+  // Home carousel can open on the exact tapped event. Read from the URL
+  // and update when the app is relaunched from a notification (which sets
+  // window.location.href, firing hashchange/popstate).
+  const [todayHistoryId, setTodayHistoryId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const p = new URLSearchParams(window.location.search);
+    return p.get("todayHistoryId");
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sync = () => {
+      const p = new URLSearchParams(window.location.search);
+      setTodayHistoryId(p.get("todayHistoryId"));
+    };
+    window.addEventListener("popstate", sync);
+    window.addEventListener("hashchange", sync);
+    return () => {
+      window.removeEventListener("popstate", sync);
+      window.removeEventListener("hashchange", sync);
+    };
+  }, []);
+
+  // Scroll to (and briefly highlight) the "في مثل هذا اليوم" section when
+  // opened via a notification — either the legacy `#today-in-history` hash
+  // or the newer `?todayHistoryId=...` query param.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!mounted || !todayEvent) return;
     const focus = () => {
-      if (window.location.hash !== "#today-in-history") return;
+      const hasHash = window.location.hash === "#today-in-history";
+      const params = new URLSearchParams(window.location.search);
+      const hasId = !!params.get("todayHistoryId");
+      if (!hasHash && !hasId) return;
       const el = document.getElementById("today-in-history");
       if (!el) return;
       window.setTimeout(() => {
@@ -160,8 +187,12 @@ function HomeFull() {
     };
     focus();
     window.addEventListener("hashchange", focus);
-    return () => window.removeEventListener("hashchange", focus);
-  }, [mounted, todayEvent?.id]);
+    window.addEventListener("popstate", focus);
+    return () => {
+      window.removeEventListener("hashchange", focus);
+      window.removeEventListener("popstate", focus);
+    };
+  }, [mounted, todayEvent?.id, todayHistoryId]);
 
 
   const lvl = levelFor(profile.points);
@@ -828,7 +859,7 @@ function HomeFull() {
       {mounted && todayEvents.length > 0 && (
         <Reveal>
           <div id="today-in-history" className="scroll-mt-24">
-            <OnThisDayCalendarCard events={todayEvents} />
+            <OnThisDayCalendarCard events={todayEvents} focusEventId={todayHistoryId} />
           </div>
         </Reveal>
       )}
@@ -1140,7 +1171,7 @@ function WorldsHomepageSection() {
 }
 
 // ----- Today in History card (supports 1..N events) -----
-function OnThisDayCalendarCard({ events }: { events: TodayInHistoryEvent[] }) {
+function OnThisDayCalendarCard({ events, focusEventId }: { events: TodayInHistoryEvent[]; focusEventId?: string | null }) {
   const multi = events.length > 1;
   return (
     <section className="mt-12 px-5">
@@ -1153,7 +1184,7 @@ function OnThisDayCalendarCard({ events }: { events: TodayInHistoryEvent[] }) {
         )}
       </div>
       {multi ? (
-        <TodayEventsCarousel events={events} />
+        <TodayEventsCarousel events={events} focusEventId={focusEventId} />
       ) : (
         <TodayEventCard event={events[0]} />
       )}
@@ -1161,7 +1192,7 @@ function OnThisDayCalendarCard({ events }: { events: TodayInHistoryEvent[] }) {
   );
 }
 
-function TodayEventsCarousel({ events }: { events: TodayInHistoryEvent[] }) {
+function TodayEventsCarousel({ events, focusEventId }: { events: TodayInHistoryEvent[]; focusEventId?: string | null }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, direction: "rtl", align: "start" });
   const [idx, setIdx] = useState(0);
   useEffect(() => {
@@ -1172,6 +1203,24 @@ function TodayEventsCarousel({ events }: { events: TodayInHistoryEvent[] }) {
     onSel();
     return () => { emblaApi.off("select", onSel); emblaApi.off("reInit", onSel); };
   }, [emblaApi]);
+
+  // Notification hand-off: when a Today-in-History notification opens Home
+  // with `?todayHistoryId=<id>`, jump the carousel to that event. Falls
+  // back to the first card if the id can't be resolved. After applying,
+  // strip the query param so re-renders / hash changes don't retrigger.
+  useEffect(() => {
+    if (!emblaApi || !focusEventId) return;
+    const target = events.findIndex((e) => String(e.id) === String(focusEventId));
+    if (target > 0) emblaApi.scrollTo(target, true);
+    if (typeof window !== "undefined") {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("todayHistoryId");
+        window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+      } catch { /* ignore */ }
+    }
+  }, [emblaApi, focusEventId, events]);
+
   return (
     <div>
       <div className="overflow-hidden" ref={emblaRef}>
