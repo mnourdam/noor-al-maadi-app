@@ -23,26 +23,30 @@ export type Era =
   | "byzantine"
   | "taifa"
   | "timurid"
-  | "buyid";
+  | "buyid"
+  | "fatimid"
+  | "safavid";
 
 export const ERAS: { id: Era; name: string; years: string; tagline: string }[] = [
-  { id: "seerah", name: "السيرة النبوية", years: "570 – 632 م", tagline: "نور النبوّة وميلاد أمّة" },
+  { id: "seerah", name: "عصر النبوة", years: "570 – 632 م", tagline: "نور النبوّة وميلاد أمّة" },
   { id: "rashidun", name: "الخلافة الراشدة", years: "632 – 661 م", tagline: "عدلٌ وفتوحٌ ومجدٌ تأسيسي" },
   { id: "umayyad", name: "الدولة الأموية", years: "661 – 750 م", tagline: "من دمشق إلى أطراف الأرض" },
   { id: "abbasid", name: "الدولة العباسية", years: "750 – 1258 م", tagline: "بغداد عاصمة الحضارة" },
+  { id: "fatimid", name: "الدولة الفاطمية", years: "909 – 1171 م", tagline: "من المهدية إلى القاهرة" },
   { id: "buyid", name: "العصر البويهي", years: "934 – 1062 م", tagline: "نفوذ البويهيين في المشرق" },
   { id: "andalus", name: "الأندلس", years: "711 – 1492 م", tagline: "زهرة الغرب الإسلامي" },
   { id: "taifa", name: "عصر ملوك الطوائف", years: "1031 – 1091 م", tagline: "تفتّت الأندلس إلى ممالك" },
   { id: "seljuk", name: "السلاجقة", years: "1037 – 1194 م", tagline: "حماة المشرق الإسلامي" },
   { id: "byzantine", name: "العصر البيزنطي", years: "330 – 1453 م", tagline: "الجارة الرومية للعالم الإسلامي" },
   { id: "crusades", name: "عصر الحروب الصليبية", years: "1096 – 1291 م", tagline: "قرنان من الصراع على الشام" },
-  { id: "zengid", name: "العصر الزنكي", years: "1127 – 1250 م", tagline: "نور الدين وإعداد التحرير" },
-  { id: "ayyubid", name: "الأيوبيون", years: "1171 – 1260 م", tagline: "صلاح الدين وتحرير القدس" },
-  { id: "mongols", name: "الغزو المغولي", years: "1219 – 1335 م", tagline: "عاصفة اجتاحت المشرق" },
-  { id: "mamluk", name: "المماليك", years: "1250 – 1517 م", tagline: "كاسرو المغول وحماة الحرمين" },
-  { id: "timurid", name: "العصر التيموري", years: "1370 – 1507 م", tagline: "تيمور ووريثوه في ما وراء النهر" },
+  { id: "zengid", name: "الزنكيون", years: "1127 – 1250 م", tagline: "نور الدين وإعداد التحرير" },
+  { id: "ayyubid", name: "الدولة الأيوبية", years: "1171 – 1260 م", tagline: "صلاح الدين وتحرير القدس" },
+  { id: "mongols", name: "المغول", years: "1219 – 1335 م", tagline: "عاصفة اجتاحت المشرق" },
+  { id: "mamluk", name: "دولة المماليك", years: "1250 – 1517 م", tagline: "كاسرو المغول وحماة الحرمين" },
+  { id: "timurid", name: "التيموريون", years: "1370 – 1507 م", tagline: "تيمور ووريثوه في ما وراء النهر" },
+  { id: "safavid", name: "الدولة الصفوية", years: "1501 – 1736 م", tagline: "الصفويون في إيران" },
   { id: "ottoman", name: "الدولة العثمانية", years: "1299 – 1924 م", tagline: "خلافة امتدّت ستة قرون" },
-  { id: "modern", name: "التاريخ العربي الحديث", years: "1798 – اليوم", tagline: "نهضة، استقلال، وتحوّلات" },
+  { id: "modern", name: "العصر الحديث", years: "1798 – اليوم", tagline: "نهضة، استقلال، وتحوّلات" },
 ];
 
 // ============================================================

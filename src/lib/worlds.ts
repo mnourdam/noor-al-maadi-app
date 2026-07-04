@@ -22,13 +22,15 @@ export const WORLD_HUBS: WorldHub[] = [
   { slug: "umayyad", glyph: "🏛️", order: 3 },
   { slug: "andalus", glyph: "🕌", order: 4 },
   { slug: "abbasid", glyph: "📚", order: 5 },
-  { slug: "seljuk", glyph: "🏹", order: 6 },
-  { slug: "zengid", glyph: "🛡️", order: 7 },
-  { slug: "ayyubid-state", glyph: "⚔️", order: 8 },
-  { slug: "mamluk-sultanate", glyph: "🗡️", order: 9 },
-  { slug: "mongols", glyph: "🐎", order: 10 },
-  { slug: "timurid", glyph: "🏇", order: 11 },
-  { slug: "ottoman", glyph: "🌘", order: 12 },
+  { slug: "fatimid", glyph: "🌌", order: 6 },
+  { slug: "seljuk", glyph: "🏹", order: 7 },
+  { slug: "zengid", glyph: "🛡️", order: 8 },
+  { slug: "ayyubid-state", glyph: "⚔️", order: 9 },
+  { slug: "mamluk-sultanate", glyph: "🗡️", order: 10 },
+  { slug: "mongols", glyph: "🐎", order: 11 },
+  { slug: "timurid", glyph: "🏇", order: 12 },
+  { slug: "ottoman", glyph: "🌘", order: 13 },
+  { slug: "safavid", glyph: "🏺", order: 14 },
 ];
 
 export const WORLD_SLUGS = new Set(WORLD_HUBS.map((h) => h.slug));
@@ -43,6 +45,7 @@ export const WORLD_ERA: Record<string, string> = {
   umayyad: "umayyad",
   andalus: "andalus",
   abbasid: "abbasid",
+  fatimid: "fatimid",
   seljuk: "seljuk",
   zengid: "zengid",
   "ayyubid-state": "ayyubid",
@@ -50,6 +53,7 @@ export const WORLD_ERA: Record<string, string> = {
   mongols: "mongols",
   timurid: "timurid",
   ottoman: "ottoman",
+  safavid: "safavid",
 };
 
 // State-reference aliases an entity may use to declare it belongs to a hub.
@@ -65,6 +69,8 @@ const WORLD_STATE_ALIASES: Record<string, string[]> = {
   zengid: ["zengid", "zengids"],
   mongols: ["mongols", "mongol", "mongol-empire", "ilkhanid", "ilkhanate", "golden-horde"],
   timurid: ["timurid", "timurids", "timurid-empire", "timurid-state"],
+  fatimid: ["fatimid", "fatimids", "fatimid-caliphate", "fatimid-state"],
+  safavid: ["safavid", "safavids", "safavid-empire", "safavid-state"],
   prophetic: ["prophetic"],
 };
 

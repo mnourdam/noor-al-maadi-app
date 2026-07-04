@@ -20,6 +20,7 @@ export type CanonicalEra =
   | "mamluk"
   | "timurid"
   | "ottoman"
+  | "safavid"
   | "modern";
 
 export const CANONICAL_ERA_ORDER: CanonicalEra[] = [
@@ -40,14 +41,15 @@ export const CANONICAL_ERA_ORDER: CanonicalEra[] = [
   "mamluk",
   "timurid",
   "ottoman",
+  "safavid",
   "modern",
 ];
 
 export const CANONICAL_ERA_LABEL: Record<CanonicalEra, string> = {
-  prophetic: "العهد النبوي",
+  prophetic: "عصر النبوة",
   rashidun: "الخلافة الراشدة",
   umayyad: "الدولة الأموية",
-  andalus: "الأندلس الإسلامية",
+  andalus: "الأندلس",
   taifa: "عصر ملوك الطوائف",
   abbasid: "الدولة العباسية",
   buyid: "العصر البويهي",
@@ -55,12 +57,13 @@ export const CANONICAL_ERA_LABEL: Record<CanonicalEra, string> = {
   seljuk: "السلاجقة",
   byzantine: "العصر البيزنطي",
   crusades: "عصر الحروب الصليبية",
-  zengid: "العصر الزنكي",
-  ayyubid: "الأيوبيون",
-  mongols: "الغزو المغولي",
-  mamluk: "المماليك",
-  timurid: "العصر التيموري",
-  ottoman: "العثمانيون",
+  zengid: "الزنكيون",
+  ayyubid: "الدولة الأيوبية",
+  mongols: "المغول",
+  mamluk: "دولة المماليك",
+  timurid: "التيموريون",
+  ottoman: "الدولة العثمانية",
+  safavid: "الدولة الصفوية",
   modern: "العصر الحديث",
 };
 
@@ -189,6 +192,12 @@ const RAW_TO_CANONICAL: Record<string, CanonicalEra> = {
   "ottoman-era": "ottoman",
   "late-ottoman": "ottoman",
   "uthmani": "ottoman",
+
+  // Safavid
+  "safavid": "safavid",
+  "safavids": "safavid",
+  "safavid-empire": "safavid",
+  "safavid-state": "safavid",
 
   // Modern
   "modern": "modern",
