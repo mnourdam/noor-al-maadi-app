@@ -69,6 +69,8 @@ const WORLD_STATE_ALIASES: Record<string, string[]> = {
   zengid: ["zengid", "zengids"],
   mongols: ["mongols", "mongol", "mongol-empire", "ilkhanid", "ilkhanate", "golden-horde"],
   timurid: ["timurid", "timurids", "timurid-empire", "timurid-state"],
+  fatimid: ["fatimid", "fatimids", "fatimid-caliphate", "fatimid-state"],
+  safavid: ["safavid", "safavids", "safavid-empire", "safavid-state"],
   prophetic: ["prophetic"],
 };
 
