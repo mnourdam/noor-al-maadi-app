@@ -15,6 +15,14 @@ import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ERAS as CODE_ERAS } from "@/lib/app-constants";
 import { WORLD_HUBS as CODE_WORLD_HUBS } from "@/lib/worlds";
+import {
+  APPROVED_ERA_SLUGS,
+  APPROVED_WORLD_SLUGS,
+  APPROVED_STATE_SLUGS,
+  ERA_LABELS_AR,
+  WORLD_LABELS_AR,
+  STATE_LABELS_AR,
+} from "@/lib/taxonomy-labels";
 
 export type TaxonomyType =
   | "era"
@@ -41,9 +49,14 @@ export interface TaxonomyEntry {
   updated_at: string;
 }
 
-/** Fallback rows synthesised from code constants — used before the network
- *  responds so we never render an empty filter bar. */
-function bootstrap(type: TaxonomyType): TaxonomyEntry[] {
+
+/**
+ * Synthesised taxonomy entries built from the approved taxonomy-labels
+ * source of truth. This is what normal pickers / filters / editors should
+ * use — legacy DB values (buyid, taifa, byzantine, crusades, modern, …)
+ * never appear here.
+ */
+function approvedEntries(type: TaxonomyType): TaxonomyEntry[] {
   const now = new Date().toISOString();
   const mk = (
     key: string,
@@ -51,7 +64,7 @@ function bootstrap(type: TaxonomyType): TaxonomyEntry[] {
     sort_order: number,
     extra: Partial<TaxonomyEntry> = {},
   ): TaxonomyEntry => ({
-    id: `bootstrap-${type}-${key}`,
+    id: `approved-${type}-${key}`,
     type,
     key,
     label_ar,
@@ -68,22 +81,49 @@ function bootstrap(type: TaxonomyType): TaxonomyEntry[] {
     ...extra,
   });
   if (type === "era") {
-    return CODE_ERAS.map((e, i) => mk(e.id, e.name, (i + 1) * 10, { metadata: { years: e.years } }));
+    return APPROVED_ERA_SLUGS.map((k, i) => {
+      const meta = CODE_ERAS.find((e) => e.id === k);
+      return mk(k, ERA_LABELS_AR[k], (i + 1) * 10, {
+        metadata: meta ? { years: meta.years } : {},
+      });
+    });
   }
   if (type === "world") {
-    return CODE_WORLD_HUBS.map((w) => mk(w.slug, w.slug, w.order * 10, { metadata: { glyph: w.glyph } }));
+    return APPROVED_WORLD_SLUGS.map((k, i) => {
+      const hub = CODE_WORLD_HUBS.find((h) => h.slug === k);
+      return mk(k, WORLD_LABELS_AR[k], (i + 1) * 10, {
+        metadata: hub ? { glyph: hub.glyph } : {},
+      });
+    });
+  }
+  if (type === "state") {
+    return APPROVED_STATE_SLUGS.map((k, i) => mk(k, STATE_LABELS_AR[k], (i + 1) * 10));
   }
   return [];
 }
 
-/** Fetch every taxonomy row (including disabled/archived — admin surfaces
- *  filter client-side). Public callers should pass `{ enabledOnly: true }`. */
-export function useTaxonomy(type: TaxonomyType, opts: { enabledOnly?: boolean } = {}) {
+/**
+ * Taxonomy hook.
+ *
+ * - Default (`source: "approved"`): returns ONLY approved values from the
+ *   central taxonomy-labels module. This is what normal pickers, filters
+ *   and editors must use.
+ * - `source: "db"`: reads raw `admin_taxonomy` rows including legacy /
+ *   disabled / archived values. Reserved for cleanup / audit / review
+ *   tools that need to remap or clean legacy slugs.
+ */
+export function useTaxonomy(
+  type: TaxonomyType,
+  opts: { enabledOnly?: boolean; source?: "approved" | "db" } = {},
+) {
+  const source = opts.source ?? "approved";
   const enabledOnly = opts.enabledOnly ?? false;
+
   const query = useQuery({
-    queryKey: ["admin-taxonomy", type, enabledOnly],
+    queryKey: ["admin-taxonomy", type, enabledOnly, source],
     staleTime: 60_000,
     retry: 1,
+    enabled: source === "db",
     queryFn: async (): Promise<TaxonomyEntry[]> => {
       let q = supabase
         .from("admin_taxonomy" as never)
@@ -101,15 +141,20 @@ export function useTaxonomy(type: TaxonomyType, opts: { enabledOnly?: boolean } 
     },
   });
 
-  const entries = query.data ?? [];
+  const dbEntries = query.data ?? [];
+
+  const effective: TaxonomyEntry[] = useMemo(() => {
+    if (source === "approved") return approvedEntries(type);
+    // DB mode — fall back to approved list on first paint / when empty
+    // so audit tools never render a blank picker.
+    return dbEntries.length > 0 ? dbEntries : approvedEntries(type);
+  }, [source, type, dbEntries]);
+
   const byKey = useMemo(() => {
     const m = new Map<string, TaxonomyEntry>();
-    for (const r of entries) m.set(r.key, r);
+    for (const r of effective) m.set(r.key, r);
     return m;
-  }, [entries]);
-
-  // Bootstrap so the UI has something to render on first paint / while offline.
-  const effective: TaxonomyEntry[] = entries.length > 0 ? entries : bootstrap(type);
+  }, [effective]);
 
   return { ...query, entries: effective, byKey };
 }
@@ -122,6 +167,7 @@ export function useCanonicalKeys(type: TaxonomyType): Set<string> {
     [entries],
   );
 }
+
 
 /** Look up a label by key. Falls back to the raw key when unknown. */
 export function labelFor(entries: TaxonomyEntry[], key: string | null | undefined): string {

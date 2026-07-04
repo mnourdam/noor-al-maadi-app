@@ -85,7 +85,7 @@ function EraAssignmentPage() {
   const [query, setQuery] = useState("");
   const [jumpOpen, setJumpOpen] = useState(false);
 
-  const eraTax = useTaxonomy("era");
+  const eraTax = useTaxonomy("era", { source: "db" });
 
   const eraOptions = useMemo<EraOption[]>(() => {
     const seen = new Set<string>();

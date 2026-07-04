@@ -367,9 +367,9 @@ function DataHygienePage() {
 
   // Sync CMS taxonomy into the canonical Sets so entities using
   // admin-added eras/worlds/states are no longer flagged as non-canonical.
-  const eraTax = useTaxonomy("era");
-  const worldTax = useTaxonomy("world");
-  const stateTax = useTaxonomy("state");
+  const eraTax = useTaxonomy("era", { source: "db" });
+  const worldTax = useTaxonomy("world", { source: "db" });
+  const stateTax = useTaxonomy("state", { source: "db" });
   useEffect(() => {
     for (const e of eraTax.entries) if (e.enabled && !e.archived) CANONICAL_ERA.add(e.key);
     for (const w of worldTax.entries) if (w.enabled && !w.archived) CANONICAL_WORLD.add(w.key);

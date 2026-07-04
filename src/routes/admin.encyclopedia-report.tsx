@@ -303,8 +303,8 @@ function Page() {
 
   // Pull CMS-managed taxonomy and merge admin-added keys into the
   // canonical sets so entities using new eras/worlds stop being flagged.
-  const eraTax = useTaxonomy("era");
-  const worldTax = useTaxonomy("world");
+  const eraTax = useTaxonomy("era", { source: "db" });
+  const worldTax = useTaxonomy("world", { source: "db" });
   useEffect(() => {
     for (const e of eraTax.entries) if (e.enabled && !e.archived) CANONICAL_ERA_KEYS.add(e.key);
     for (const w of worldTax.entries) if (w.enabled && !w.archived) CANONICAL_WORLD_KEYS.add(w.key);
