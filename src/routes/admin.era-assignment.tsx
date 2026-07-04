@@ -308,6 +308,14 @@ function EraAssignmentPage() {
           <h1 className="text-lg font-bold text-amber-100">تعيين العصور يدويًا</h1>
         </div>
         <button
+          onClick={exportCsv}
+          disabled={loading || !rows}
+          className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-600/10 px-3 py-1 text-xs text-emerald-100 hover:bg-emerald-600/20 disabled:opacity-40"
+          title="تصدير الكيانات التي تحتاج تعيين عصر (CSV)"
+        >
+          <Download className="size-3.5" /> تصدير CSV
+        </button>
+        <button
           onClick={reload}
           disabled={loading}
           className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/60 bg-slate-900/40 px-3 py-1 text-xs text-slate-200 hover:bg-slate-800/60 disabled:opacity-40"
@@ -316,6 +324,7 @@ function EraAssignmentPage() {
           تحديث
         </button>
       </div>
+
 
       <p className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-2 text-[11px] text-amber-200/80">
         أداة تنظيم يدوي فقط. تعرض كيانًا واحدًا في كل مرة، وتحفظ فور اختيار العصر ثم تنتقل تلقائيًا. لا يوجد تخمين آلي.
