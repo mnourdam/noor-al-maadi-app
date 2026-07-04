@@ -15,8 +15,44 @@ import {
 } from "@/lib/era-canonical";
 import {
   ArrowLeft, ArrowRight, ChevronLeft, Save, SkipForward, Search,
-  Loader2, AlertTriangle, CheckCircle2, RefreshCw,
+  Loader2, AlertTriangle, CheckCircle2, RefreshCw, Download,
 } from "lucide-react";
+
+function csvEscape(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function timelineSummary(body: any): string {
+  const tl = body && typeof body === "object" && Array.isArray(body.timeline) ? body.timeline : [];
+  if (!tl.length) return "";
+  return tl.slice(0, 10).map((t: any) => {
+    const y = t?.year ?? t?.date ?? "";
+    const label = t?.title ?? t?.label ?? t?.description ?? "";
+    return `${y ? y + ": " : ""}${label}`.trim();
+  }).filter(Boolean).join(" | ");
+}
+
+function bodyExcerpt(body: any): string {
+  if (!body) return "";
+  if (typeof body === "string") return body.slice(0, 500);
+  try {
+    const parts: string[] = [];
+    if (typeof body.overview === "string") parts.push(body.overview);
+    if (Array.isArray(body.sections)) {
+      for (const s of body.sections) {
+        if (typeof s?.title === "string") parts.push(s.title);
+        if (typeof s?.body === "string") parts.push(s.body);
+      }
+    }
+    const joined = parts.join("\n\n") || JSON.stringify(body);
+    return joined.slice(0, 500);
+  } catch {
+    return "";
+  }
+}
 
 export const Route = createFileRoute("/admin/era-assignment")({
   head: () => ({
@@ -206,6 +242,59 @@ function EraAssignmentPage() {
   function goNext() { setIndex((i) => Math.min(filtered.length - 1, i + 1)); }
   function goSkip() { goNext(); }
 
+  function exportCsv() {
+    if (!rows) return;
+    const q = query.trim().toLowerCase();
+    const unresolved = rows.filter((r) => {
+      if (!r.enabled) return false;
+      const m = metaObj(r);
+      if ((m as any).archived === true) return false;
+      const raw = rawEra(r);
+      if (raw && validEraKeys.has(raw)) return false;
+      if (filterType && r.entity_type !== filterType) return false;
+      if (filterWorld && (m.world ?? "") !== filterWorld) return false;
+      if (filterState && (m.state ?? "") !== filterState) return false;
+      if (q) {
+        const hay = `${r.title} ${r.slug}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    const headers = ["id","type","title","slug","current_era","world","state","overview","body","timeline_summary"];
+    const lines = [headers.join(",")];
+    for (const r of unresolved) {
+      const m = metaObj(r);
+      const body = r.body && typeof r.body === "object" ? r.body : {};
+      const overview = typeof body.overview === "string" ? body.overview : "";
+      lines.push([
+        r.id,
+        r.entity_type,
+        r.title,
+        r.slug,
+        rawEra(r),
+        typeof m.world === "string" ? m.world : "",
+        typeof m.state === "string" ? m.state : "",
+        overview,
+        bodyExcerpt(r.body),
+        timelineSummary(r.body),
+      ].map(csvEscape).join(","));
+    }
+    const csv = "\uFEFF" + lines.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    a.href = url;
+    a.download = `era-unresolved-${ts}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setToast(`تم تصدير ${unresolved.length} كيان`);
+    setTimeout(() => setToast(null), 1600);
+  }
+
+
   return (
     <div dir="rtl" className="mx-auto min-h-screen max-w-5xl bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-6 text-slate-100">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -219,6 +308,14 @@ function EraAssignmentPage() {
           <h1 className="text-lg font-bold text-amber-100">تعيين العصور يدويًا</h1>
         </div>
         <button
+          onClick={exportCsv}
+          disabled={loading || !rows}
+          className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-600/10 px-3 py-1 text-xs text-emerald-100 hover:bg-emerald-600/20 disabled:opacity-40"
+          title="تصدير الكيانات التي تحتاج تعيين عصر (CSV)"
+        >
+          <Download className="size-3.5" /> تصدير CSV
+        </button>
+        <button
           onClick={reload}
           disabled={loading}
           className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/60 bg-slate-900/40 px-3 py-1 text-xs text-slate-200 hover:bg-slate-800/60 disabled:opacity-40"
@@ -227,6 +324,7 @@ function EraAssignmentPage() {
           تحديث
         </button>
       </div>
+
 
       <p className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-2 text-[11px] text-amber-200/80">
         أداة تنظيم يدوي فقط. تعرض كيانًا واحدًا في كل مرة، وتحفظ فور اختيار العصر ثم تنتقل تلقائيًا. لا يوجد تخمين آلي.
