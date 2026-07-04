@@ -859,7 +859,7 @@ function HomeFull() {
       {mounted && todayEvents.length > 0 && (
         <Reveal>
           <div id="today-in-history" className="scroll-mt-24">
-            <OnThisDayCalendarCard events={todayEvents} />
+            <OnThisDayCalendarCard events={todayEvents} focusEventId={todayHistoryId} />
           </div>
         </Reveal>
       )}
