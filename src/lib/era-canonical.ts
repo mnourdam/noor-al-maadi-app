@@ -63,6 +63,7 @@ export const CANONICAL_ERA_LABEL: Record<CanonicalEra, string> = {
   mamluk: "دولة المماليك",
   timurid: "التيموريون",
   ottoman: "الدولة العثمانية",
+  safavid: "الدولة الصفوية",
   modern: "العصر الحديث",
 };
 
