@@ -22,13 +22,15 @@ export const WORLD_HUBS: WorldHub[] = [
   { slug: "umayyad", glyph: "🏛️", order: 3 },
   { slug: "andalus", glyph: "🕌", order: 4 },
   { slug: "abbasid", glyph: "📚", order: 5 },
-  { slug: "seljuk", glyph: "🏹", order: 6 },
-  { slug: "zengid", glyph: "🛡️", order: 7 },
-  { slug: "ayyubid-state", glyph: "⚔️", order: 8 },
-  { slug: "mamluk-sultanate", glyph: "🗡️", order: 9 },
-  { slug: "mongols", glyph: "🐎", order: 10 },
-  { slug: "timurid", glyph: "🏇", order: 11 },
-  { slug: "ottoman", glyph: "🌘", order: 12 },
+  { slug: "fatimid", glyph: "🌌", order: 6 },
+  { slug: "seljuk", glyph: "🏹", order: 7 },
+  { slug: "zengid", glyph: "🛡️", order: 8 },
+  { slug: "ayyubid-state", glyph: "⚔️", order: 9 },
+  { slug: "mamluk-sultanate", glyph: "🗡️", order: 10 },
+  { slug: "mongols", glyph: "🐎", order: 11 },
+  { slug: "timurid", glyph: "🏇", order: 12 },
+  { slug: "ottoman", glyph: "🌘", order: 13 },
+  { slug: "safavid", glyph: "🏺", order: 14 },
 ];
 
 export const WORLD_SLUGS = new Set(WORLD_HUBS.map((h) => h.slug));
