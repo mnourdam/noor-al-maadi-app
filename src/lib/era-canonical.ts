@@ -193,6 +193,12 @@ const RAW_TO_CANONICAL: Record<string, CanonicalEra> = {
   "late-ottoman": "ottoman",
   "uthmani": "ottoman",
 
+  // Safavid
+  "safavid": "safavid",
+  "safavids": "safavid",
+  "safavid-empire": "safavid",
+  "safavid-state": "safavid",
+
   // Modern
   "modern": "modern",
   "contemporary": "modern",
