@@ -20,6 +20,7 @@ export type CanonicalEra =
   | "mamluk"
   | "timurid"
   | "ottoman"
+  | "safavid"
   | "modern";
 
 export const CANONICAL_ERA_ORDER: CanonicalEra[] = [
@@ -40,6 +41,7 @@ export const CANONICAL_ERA_ORDER: CanonicalEra[] = [
   "mamluk",
   "timurid",
   "ottoman",
+  "safavid",
   "modern",
 ];
 
