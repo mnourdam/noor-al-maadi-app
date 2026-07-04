@@ -49,40 +49,6 @@ export interface TaxonomyEntry {
   updated_at: string;
 }
 
-/** Fallback rows synthesised from code constants — used before the network
- *  responds so we never render an empty filter bar. */
-function bootstrap(type: TaxonomyType): TaxonomyEntry[] {
-  const now = new Date().toISOString();
-  const mk = (
-    key: string,
-    label_ar: string,
-    sort_order: number,
-    extra: Partial<TaxonomyEntry> = {},
-  ): TaxonomyEntry => ({
-    id: `bootstrap-${type}-${key}`,
-    type,
-    key,
-    label_ar,
-    label_en: null,
-    description: null,
-    sort_order,
-    enabled: true,
-    archived: false,
-    color: null,
-    icon: null,
-    metadata: {},
-    created_at: now,
-    updated_at: now,
-    ...extra,
-  });
-  if (type === "era") {
-    return CODE_ERAS.map((e, i) => mk(e.id, e.name, (i + 1) * 10, { metadata: { years: e.years } }));
-  }
-  if (type === "world") {
-    return CODE_WORLD_HUBS.map((w) => mk(w.slug, w.slug, w.order * 10, { metadata: { glyph: w.glyph } }));
-  }
-  return [];
-}
 
 /**
  * Synthesised taxonomy entries built from the approved taxonomy-labels
