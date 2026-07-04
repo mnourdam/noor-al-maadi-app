@@ -82,55 +82,86 @@ async function recordRun(
 }
 
 // ---------- Job 1: today in history ----------
-async function runTodayInHistory(admin: any, baseUrl: string, serviceKey: string, dryRun: boolean) {
-  const jobKey = "today_in_history";
+// Multiple events on the same day are spread across up to 4 slots so
+// users don't get every card at once:
+//   slot 0 → 08:00 UTC (11:00 GMT+3)
+//   slot 1 → 11:00 UTC (14:00 GMT+3)
+//   slot 2 → 14:00 UTC (17:00 GMT+3)
+//   slot 3 → 17:00 UTC (20:00 GMT+3)
+// The slot is derived from the current UTC hour (or an explicit
+// `today_in_history_slot` override in the request body — useful for
+// tests / dry-runs). Dedup is per (date, slot) so each slot fires at
+// most once per day even if the cron retries.
+const TIH_SLOT_BY_UTC_HOUR: Record<number, number> = { 8: 0, 11: 1, 14: 2, 17: 3 };
+const TIH_MAX_SLOTS = 4;
+
+async function runTodayInHistory(
+  admin: any,
+  baseUrl: string,
+  serviceKey: string,
+  dryRun: boolean,
+  slotOverride?: number | null,
+) {
+  const now = new Date();
+  const slot = typeof slotOverride === "number"
+    ? slotOverride
+    : TIH_SLOT_BY_UTC_HOUR[now.getUTCHours()] ?? 0;
+
+  const jobKey = `today_in_history:slot=${slot}`;
   const runDate = todayISODate();
   if (await alreadyRan(admin, jobKey, runDate)) {
     return { job: jobKey, skipped: "already_ran" };
   }
 
-  const now = new Date();
   const month = now.getUTCMonth() + 1;
   const day = now.getUTCDate();
 
-  // Deterministic selection — must match src/lib/today-in-history.ts so the
-  // notification, the Adventure page card, and the Today in History page
-  // resolve the SAME event for the same date.
+  // Deterministic order — must match src/lib/today-in-history.ts and the
+  // Home carousel so notification slot N always maps to card index N.
   const { data: events, error } = await admin
     .from("today_in_history_events")
     .select("*")
     .eq("enabled", true)
     .eq("month", month)
     .eq("day", day)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) return { job: jobKey, error: error.message };
   if (!events || events.length === 0) return { job: jobKey, skipped: "no_event_for_today" };
 
-  if (dryRun) return { job: jobKey, would_send: events };
-
-  const sends: any[] = [];
-  for (const event of events) {
-    const summary = String(event.body ?? "").trim();
-    const body = summary ? `${event.title} — ${summary}` : String(event.title);
-    const send = await invokeSendNotification(baseUrl, serviceKey, {
-      title: "في مثل هذا اليوم",
-      body,
-      type: "today_in_history",
-      target_type: "all",
-      deep_link: event.deep_link ?? "/on-this-day",
-    });
-    sends.push({ event_id: event.id, ok: send.ok, notification_id: send.body?.notification_id ?? null });
+  // Cap notifications per day at TIH_MAX_SLOTS. Extra events still appear
+  // in the Home carousel — they just don't get their own notification.
+  if (slot >= Math.min(events.length, TIH_MAX_SLOTS)) {
+    return { job: jobKey, skipped: "no_event_for_slot", slot, total_events: events.length };
   }
 
-  const allOk = sends.every((s) => s.ok);
+  const event = events[slot];
+  const summary = String(event.body ?? "").trim();
+  const body = summary ? `${event.title} — ${summary}` : String(event.title);
+  // Deep link carries the event id so the Home carousel opens on the
+  // exact card the user tapped. Encyclopedia deep links are intentionally
+  // skipped for now — routing is still being stabilised.
+  const deepLink = `/?todayHistoryId=${encodeURIComponent(String(event.id))}#today-in-history`;
+
+  if (dryRun) return { job: jobKey, slot, would_send: { event, deep_link: deepLink } };
+
+  const send = await invokeSendNotification(baseUrl, serviceKey, {
+    title: "في مثل هذا اليوم",
+    body,
+    type: "today_in_history",
+    target_type: "all",
+    deep_link: deepLink,
+  });
+  const sends = [{ event_id: event.id, ok: send.ok, notification_id: send.body?.notification_id ?? null }];
+
   await recordRun(
     admin, jobKey, runDate,
-    allOk ? "success" : "failed",
-    sends.find((s) => s.notification_id)?.notification_id ?? null,
-    { sends },
+    send.ok ? "success" : "failed",
+    send.body?.notification_id ?? null,
+    { slot, event_id: event.id, total_events: events.length, send },
   );
-  return { job: jobKey, sent: allOk, count: sends.length, sends };
+  return { job: jobKey, sent: send.ok, slot, event_id: event.id, sends };
 }
 
 // ---------- Job 2: daily fact ----------
