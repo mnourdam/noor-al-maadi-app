@@ -581,7 +581,10 @@ Deno.serve(async (req) => {
     const results: Record<string, any> = {};
 
     if (jobs.includes("today_in_history"))
-      results.today_in_history = await runTodayInHistory(admin, supabaseUrl, serviceKey, dryRun);
+      results.today_in_history = await runTodayInHistory(
+        admin, supabaseUrl, serviceKey, dryRun,
+        typeof body.today_in_history_slot === "number" ? body.today_in_history_slot : null,
+      );
     if (jobs.includes("daily_fact"))
       results.daily_fact = await runDailyFact(admin, supabaseUrl, serviceKey, dryRun);
     if (jobs.includes("comeback_24h") || jobs.includes("inactive_user"))
