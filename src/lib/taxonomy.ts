@@ -15,6 +15,14 @@ import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ERAS as CODE_ERAS } from "@/lib/app-constants";
 import { WORLD_HUBS as CODE_WORLD_HUBS } from "@/lib/worlds";
+import {
+  APPROVED_ERA_SLUGS,
+  APPROVED_WORLD_SLUGS,
+  APPROVED_STATE_SLUGS,
+  ERA_LABELS_AR,
+  WORLD_LABELS_AR,
+  STATE_LABELS_AR,
+} from "@/lib/taxonomy-labels";
 
 export type TaxonomyType =
   | "era"
