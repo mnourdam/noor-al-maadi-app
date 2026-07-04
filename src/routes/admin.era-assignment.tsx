@@ -15,8 +15,44 @@ import {
 } from "@/lib/era-canonical";
 import {
   ArrowLeft, ArrowRight, ChevronLeft, Save, SkipForward, Search,
-  Loader2, AlertTriangle, CheckCircle2, RefreshCw,
+  Loader2, AlertTriangle, CheckCircle2, RefreshCw, Download,
 } from "lucide-react";
+
+function csvEscape(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function timelineSummary(body: any): string {
+  const tl = body && typeof body === "object" && Array.isArray(body.timeline) ? body.timeline : [];
+  if (!tl.length) return "";
+  return tl.slice(0, 10).map((t: any) => {
+    const y = t?.year ?? t?.date ?? "";
+    const label = t?.title ?? t?.label ?? t?.description ?? "";
+    return `${y ? y + ": " : ""}${label}`.trim();
+  }).filter(Boolean).join(" | ");
+}
+
+function bodyExcerpt(body: any): string {
+  if (!body) return "";
+  if (typeof body === "string") return body.slice(0, 500);
+  try {
+    const parts: string[] = [];
+    if (typeof body.overview === "string") parts.push(body.overview);
+    if (Array.isArray(body.sections)) {
+      for (const s of body.sections) {
+        if (typeof s?.title === "string") parts.push(s.title);
+        if (typeof s?.body === "string") parts.push(s.body);
+      }
+    }
+    const joined = parts.join("\n\n") || JSON.stringify(body);
+    return joined.slice(0, 500);
+  } catch {
+    return "";
+  }
+}
 
 export const Route = createFileRoute("/admin/era-assignment")({
   head: () => ({
