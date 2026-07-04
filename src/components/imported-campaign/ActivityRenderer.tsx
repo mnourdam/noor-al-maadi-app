@@ -655,28 +655,82 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 }
 
 // ---------- Reflection ----------
+// Two-phase experience:
+//   Phase 1 — writing: user types their personal reflection and presses
+//   "سجّل تأمّلك". This does NOT advance to the next activity yet.
+//   Phase 2 — reflection view: the question area smoothly fades out and a
+//   contemplative message fades in ("💭 لحظة تأمل"), using the activity's
+//   `feedbackCorrect` (the closest normalized equivalent of the raw JSON
+//   `correct_explanation` field) or a system default. The activity's hint,
+//   when present, is reframed as "💡 فكرة للتأمل". A single elegant
+//   "متابعة الرحلة →" button advances via onResolve(true).
+// XP / coins / heart logic are unchanged — parent still receives a single
+// onResolve(true) call, exactly once.
+const REFLECTION_DEFAULT =
+  "لا توجد إجابة صحيحة أو خاطئة لهذا النشاط، وإنما وُجد ليمنحك فرصة للتأمل قبل متابعة الرحلة.";
+
 function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [val, setVal] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
+  const [phase, setPhase] = useState<"write" | "reflect">(alreadyDone ? "reflect" : "write");
   const [resolved, setResolved] = useState(alreadyDone ?? false);
 
-  const submit = () => {
-    if (resolved) return;
+  const enterReflection = () => {
+    if (phase === "reflect") return;
     setVal(textareaRef.current?.value ?? val);
+    setPhase("reflect");
+  };
+
+  const continueJourney = () => {
+    if (resolved) return;
     setResolved(true);
     onResolve(true);
   };
 
+  const reflectionMessage = (activity.feedbackCorrect ?? "").trim() || REFLECTION_DEFAULT;
+  const reflectionHint = (activity.hint ?? "").trim();
+
+  if (phase === "reflect") {
+    return (
+      <div className="motion-page animate-fade-in" key={`reflect:${activity.id}`}>
+        <ContextBlock text={activity.contextText} />
+        <div className="rounded-2xl border border-gold/25 bg-gradient-to-b from-amber-900/15 via-surface/50 to-stone-900/20 p-5 text-center">
+          <p className="font-display text-[13px] font-bold tracking-wide text-gold/90">
+            💭 لحظة تأمل
+          </p>
+          <p className="mt-4 text-[13px] leading-relaxed text-foreground/90">
+            {reflectionMessage}
+          </p>
+          {reflectionHint && (
+            <div className="mt-5 rounded-xl border border-amber-300/25 bg-amber-500/[0.06] px-3 py-3 text-right text-[12px] leading-relaxed text-amber-100/90">
+              <p className="mb-1 font-display text-[11px] font-bold text-amber-200/90">
+                💡 فكرة للتأمل
+              </p>
+              <p>{reflectionHint}</p>
+            </div>
+          )}
+        </div>
+        {!resolved && (
+          <button
+            onClick={continueJourney}
+            className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+          >
+            متابعة الرحلة ←
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="motion-page">
+    <div className="motion-page animate-fade-in" key={`write:${activity.id}`}>
       <ContextBlock text={activity.contextText} />
       <PromptBlock activity={activity} />
       {isAndroidNativeApp() ? (
         <textarea
           ref={textareaRef}
           defaultValue=""
-          disabled={resolved}
           rows={4}
           autoComplete="off"
           autoCorrect="off"
@@ -692,7 +746,6 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
           value={val}
           onValueChange={setVal}
           commitMode="blur"
-          disabled={resolved}
           rows={4}
           autoComplete="off"
           autoCorrect="off"
@@ -706,12 +759,12 @@ function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps)
         />
       )}
 
-      {!resolved && (
-        <button onClick={submit} className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold disabled:opacity-50">
-          سجّل تأمّلك
-        </button>
-      )}
-      {resolved && <FeedbackBanner kind="ok" text={activity.feedbackCorrect ?? "شكرًا على تأمّلك."} />}
+      <button
+        onClick={enterReflection}
+        className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
+      >
+        سجّل تأمّلك
+      </button>
     </div>
   );
 }
