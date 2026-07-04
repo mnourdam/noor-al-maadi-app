@@ -141,13 +141,40 @@ function HomeFull() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayEvent?.id, user, lastSyncAt]);
 
-  // Scroll to (and briefly highlight) the "في مثل هذا اليوم" section when a
-  // Today-in-History notification opens Home with the #today-in-history hash.
+  // `todayHistoryId` — carried by Today-in-History notifications so the
+  // Home carousel can open on the exact tapped event. Read from the URL
+  // and update when the app is relaunched from a notification (which sets
+  // window.location.href, firing hashchange/popstate).
+  const [todayHistoryId, setTodayHistoryId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const p = new URLSearchParams(window.location.search);
+    return p.get("todayHistoryId");
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sync = () => {
+      const p = new URLSearchParams(window.location.search);
+      setTodayHistoryId(p.get("todayHistoryId"));
+    };
+    window.addEventListener("popstate", sync);
+    window.addEventListener("hashchange", sync);
+    return () => {
+      window.removeEventListener("popstate", sync);
+      window.removeEventListener("hashchange", sync);
+    };
+  }, []);
+
+  // Scroll to (and briefly highlight) the "في مثل هذا اليوم" section when
+  // opened via a notification — either the legacy `#today-in-history` hash
+  // or the newer `?todayHistoryId=...` query param.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!mounted || !todayEvent) return;
     const focus = () => {
-      if (window.location.hash !== "#today-in-history") return;
+      const hasHash = window.location.hash === "#today-in-history";
+      const params = new URLSearchParams(window.location.search);
+      const hasId = !!params.get("todayHistoryId");
+      if (!hasHash && !hasId) return;
       const el = document.getElementById("today-in-history");
       if (!el) return;
       window.setTimeout(() => {
@@ -160,8 +187,12 @@ function HomeFull() {
     };
     focus();
     window.addEventListener("hashchange", focus);
-    return () => window.removeEventListener("hashchange", focus);
-  }, [mounted, todayEvent?.id]);
+    window.addEventListener("popstate", focus);
+    return () => {
+      window.removeEventListener("hashchange", focus);
+      window.removeEventListener("popstate", focus);
+    };
+  }, [mounted, todayEvent?.id, todayHistoryId]);
 
 
   const lvl = levelFor(profile.points);
