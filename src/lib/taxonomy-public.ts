@@ -91,6 +91,8 @@ export const APPROVED_WORLD_SLUGS = [
   "ottoman",
   "mongols",
   "timurid",
+  "fatimid",
+  "safavid",
 ] as const;
 
 const APPROVED_WORLD_SET = new Set<string>(APPROVED_WORLD_SLUGS);
