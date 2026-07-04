@@ -45,6 +45,7 @@ export const WORLD_ERA: Record<string, string> = {
   umayyad: "umayyad",
   andalus: "andalus",
   abbasid: "abbasid",
+  fatimid: "fatimid",
   seljuk: "seljuk",
   zengid: "zengid",
   "ayyubid-state": "ayyubid",
@@ -52,6 +53,7 @@ export const WORLD_ERA: Record<string, string> = {
   mongols: "mongols",
   timurid: "timurid",
   ottoman: "ottoman",
+  safavid: "safavid",
 };
 
 // State-reference aliases an entity may use to declare it belongs to a hub.
