@@ -242,6 +242,59 @@ function EraAssignmentPage() {
   function goNext() { setIndex((i) => Math.min(filtered.length - 1, i + 1)); }
   function goSkip() { goNext(); }
 
+  function exportCsv() {
+    if (!rows) return;
+    const q = query.trim().toLowerCase();
+    const unresolved = rows.filter((r) => {
+      if (!r.enabled) return false;
+      const m = metaObj(r);
+      if ((m as any).archived === true) return false;
+      const raw = rawEra(r);
+      if (raw && validEraKeys.has(raw)) return false;
+      if (filterType && r.entity_type !== filterType) return false;
+      if (filterWorld && (m.world ?? "") !== filterWorld) return false;
+      if (filterState && (m.state ?? "") !== filterState) return false;
+      if (q) {
+        const hay = `${r.title} ${r.slug}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    const headers = ["id","type","title","slug","current_era","world","state","overview","body","timeline_summary"];
+    const lines = [headers.join(",")];
+    for (const r of unresolved) {
+      const m = metaObj(r);
+      const body = r.body && typeof r.body === "object" ? r.body : {};
+      const overview = typeof body.overview === "string" ? body.overview : "";
+      lines.push([
+        r.id,
+        r.entity_type,
+        r.title,
+        r.slug,
+        rawEra(r),
+        typeof m.world === "string" ? m.world : "",
+        typeof m.state === "string" ? m.state : "",
+        overview,
+        bodyExcerpt(r.body),
+        timelineSummary(r.body),
+      ].map(csvEscape).join(","));
+    }
+    const csv = "\uFEFF" + lines.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    a.href = url;
+    a.download = `era-unresolved-${ts}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setToast(`تم تصدير ${unresolved.length} كيان`);
+    setTimeout(() => setToast(null), 1600);
+  }
+
+
   return (
     <div dir="rtl" className="mx-auto min-h-screen max-w-5xl bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-6 text-slate-100">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
