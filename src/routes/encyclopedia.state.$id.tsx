@@ -10,6 +10,7 @@ import {
   Castle,
   Gem,
   Landmark,
+  Info,
   type LucideIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +18,8 @@ import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
+import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
+import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { supabase } from "@/integrations/supabase/client";
 import {
   isDisplayableEntity,
@@ -42,6 +45,38 @@ const SECTION_ICONS: Record<string, LucideIcon> = {
 };
 const SECTION_ORDER = Object.keys(SECTION_LABELS);
 
+// Ordered list of metadata keys we display in the "معلومات الدولة"
+// panel. Extend by appending — display order follows this array.
+const META_FIELDS: { key: string; label: string }[] = [
+  { key: "period",     label: "الفترة" },
+  { key: "duration",   label: "المدة" },
+  { key: "founded",    label: "التأسيس" },
+  { key: "ended",      label: "النهاية" },
+  { key: "capital",    label: "العاصمة" },
+  { key: "founder",    label: "المؤسس" },
+  { key: "government", label: "نظام الحكم" },
+  { key: "religion",   label: "الديانة" },
+  { key: "currency",   label: "العملة" },
+  { key: "languages",  label: "اللغات" },
+  { key: "language",   label: "اللغة" },
+  { key: "region",     label: "المنطقة" },
+  { key: "location",   label: "الموقع" },
+  { key: "era",        label: "الحقبة" },
+];
+
+function metaValueToString(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v === "string") return v.trim() || null;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (Array.isArray(v)) {
+    const parts = v
+      .map((x) => (typeof x === "string" ? x : typeof x === "number" ? String(x) : null))
+      .filter((s): s is string => !!s && s.trim().length > 0);
+    return parts.length ? parts.join("، ") : null;
+  }
+  return null;
+}
+
 export const Route = createFileRoute("/encyclopedia/state/$id")({
   head: ({ params }) => ({
     meta: [
@@ -60,7 +95,6 @@ export const Route = createFileRoute("/encyclopedia/state/$id")({
 function StatePage() {
   const { id } = Route.useParams();
 
-  // Supabase-only. Resolve strictly by slug on the `state` type.
   const stateQuery = useQuery({
     queryKey: ["encyclopedia", "state", id, "v2"],
     staleTime: 60_000,
@@ -77,14 +111,10 @@ function StatePage() {
     },
   });
 
-  // A state page must be a real, published, content-rich entity.
-  // Anything else is treated as "not found" — no stubs, no fillers.
   const state = stateQuery.data && isDisplayableEntity(stateQuery.data)
     ? stateQuery.data
     : null;
 
-  // Related entities come exclusively from explicit relationships
-  // authored on this state (or on entities that point AT this state).
   const relatedQuery = useQuery({
     queryKey: ["encyclopedia", "state-related", state?.id ?? ""],
     enabled: !!state,
@@ -102,6 +132,28 @@ function StatePage() {
   }, [relatedQuery.data]);
 
   const totalEntities = SECTION_ORDER.reduce((s, k) => s + groups[k].length, 0);
+
+  const article = useMemo(
+    () => (state ? parseEncyclopediaArticle(state.body, state.metadata) : null),
+    [state],
+  );
+
+  const metaEntries = useMemo(() => {
+    if (!state) return [] as { label: string; value: string }[];
+    const meta = (state.metadata && typeof state.metadata === "object"
+      ? (state.metadata as Record<string, unknown>)
+      : {}) as Record<string, unknown>;
+    const seen = new Set<string>();
+    const out: { label: string; value: string }[] = [];
+    for (const f of META_FIELDS) {
+      const v = metaValueToString(meta[f.key]);
+      if (v && !seen.has(f.label)) {
+        seen.add(f.label);
+        out.push({ label: f.label, value: v });
+      }
+    }
+    return out;
+  }, [state]);
 
   if (stateQuery.isLoading) {
     return (
@@ -130,6 +182,7 @@ function StatePage() {
           <ChevronRight className="size-3.5" /> الدول
         </Link>
 
+        {/* ───────── Hero ───────── */}
         <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
           <div className="flex items-start gap-3">
             <span className="grid size-14 place-items-center rounded-2xl bg-black/40 ring-1 ring-white/10 text-gold">
@@ -149,35 +202,64 @@ function StatePage() {
           {state.summary && (
             <p className="mt-3 text-[13px] leading-7 text-foreground/90">{state.summary}</p>
           )}
-
-          {totalEntities > 0 && (
-            <div className="mt-4 flex flex-wrap gap-1.5 text-[10px]">
-              <span className="rounded-full border border-gold/25 bg-black/30 px-2 py-0.5 text-gold/85">
-                {totalEntities} روابط موثقة
-              </span>
-            </div>
-          )}
         </div>
 
-        {SECTION_ORDER.map((s) => {
-          const list = groups[s];
-          if (list.length === 0) return null;
-          const Icon = SECTION_ICONS[s];
-          return (
-            <section key={s} className="mt-6">
-              <div className="mb-2 flex items-center gap-2">
-                <Icon className="size-4 text-gold" strokeWidth={1.5} />
-                <h2 className="font-display text-sm font-bold">{SECTION_LABELS[s]}</h2>
-                <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
-                  {list.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                {list.map((e) => <EncyclopediaCard key={e.id} entity={e} />)}
-              </div>
-            </section>
-          );
-        })}
+        {/* ───────── Main encyclopedia article body ───────── */}
+        {article && (
+          <div className="mt-6">
+            <EncyclopediaArticleBody article={article} />
+          </div>
+        )}
+
+        {/* ───────── Metadata ───────── */}
+        {metaEntries.length > 0 && (
+          <section className="mt-8">
+            <div className="mb-2 flex items-center gap-2">
+              <Info className="size-4 text-gold" strokeWidth={1.5} />
+              <h2 className="font-display text-sm font-bold">معلومات الدولة</h2>
+            </div>
+            <dl className="grid grid-cols-1 gap-1.5 rounded-2xl border border-white/10 bg-surface/60 p-4 sm:grid-cols-2">
+              {metaEntries.map((m) => (
+                <div key={m.label} className="flex items-start gap-2 text-[12px] leading-6">
+                  <dt className="min-w-[84px] shrink-0 text-muted-foreground">{m.label}</dt>
+                  <dd className="min-w-0 flex-1 text-foreground/95">{m.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+
+        {/* ───────── Related knowledge graph ───────── */}
+        {totalEntities > 0 && (
+          <section className="mt-8">
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="font-display text-base font-bold">التاريخ المرتبط</h2>
+              <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
+                {totalEntities}
+              </span>
+            </div>
+
+            {SECTION_ORDER.map((s) => {
+              const list = groups[s];
+              if (list.length === 0) return null;
+              const Icon = SECTION_ICONS[s];
+              return (
+                <section key={s} className="mt-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Icon className="size-4 text-gold" strokeWidth={1.5} />
+                    <h3 className="font-display text-sm font-bold">{SECTION_LABELS[s]}</h3>
+                    <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
+                      {list.length}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {list.map((e) => <EncyclopediaCard key={e.id} entity={e} />)}
+                  </div>
+                </section>
+              );
+            })}
+          </section>
+        )}
 
         {totalEntities === 0 && !relatedQuery.isLoading && (
           <p className="mt-8 rounded-2xl border border-white/10 bg-surface/70 p-6 text-center text-xs text-muted-foreground">
