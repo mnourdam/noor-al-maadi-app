@@ -120,6 +120,33 @@ export async function fetchMyCompletedGameIds(): Promise<Set<string>> {
 }
 
 /**
+ * Fetch game_ids the player has completed *today* (UTC — matches the
+ * deterministic UTC-day daily pick seed). This is what the Home / Adventure
+ * "Daily Challenge" surface uses to decide whether today's picks are done.
+ * An older completion of a game that happens to be today's pick must NOT
+ * mark the challenge as already-completed for today: the daily reset must
+ * make the challenge playable again the moment the calendar day rolls over.
+ */
+export async function fetchMyDailyCompletedGameIds(): Promise<Set<string>> {
+  const { data: u } = await supabase.auth.getUser();
+  const uid = u.user?.id;
+  if (!uid) return new Set();
+  const now = new Date();
+  const startOfDayUtc = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  )).toISOString();
+  const { data } = await supabase
+    .from("game_progress")
+    .select("game_id, completed, last_played_at")
+    .eq("user_id", uid)
+    .eq("completed", true)
+    .gte("last_played_at", startOfDayUtc);
+  return new Set(((data ?? []) as Array<{ game_id: string }>).map((r) => r.game_id));
+}
+
+/**
  * Pick daily challenges for the Home / Adventure screens.
  *
  * Selection rules (in order):
