@@ -189,7 +189,7 @@ export function DailyChallengesSection() {
     if (androidStable) return;
     let cancelled = false;
     (async () => {
-      const completed = await fetchMyCompletedGameIds();
+      const completed = await fetchMyDailyCompletedGameIds();
       const sel = await selectDailyChallenges(2, { completedIds: completed });
       if (cancelled) return;
       setCompletedIds(completed);
