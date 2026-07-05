@@ -355,14 +355,33 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOutFn = useCallback(async () => {
+    // Cancel the debounce and flush a final synchronous push BEFORE
+    // signing out so any pending progression (hearts just lost, coins
+    // earned, XP awarded seconds before logout, streak update) lands in
+    // both cloud_saves and the profiles row. Without this the debounced
+    // push is dropped when the auth token is cleared and the next login
+    // restores a stale snapshot — most visibly, a heart the player just
+    // lost reappears / a heart just spent comes back at 5/5.
     autoPushEnabled.current = false;
-    if (pushTimer.current) clearTimeout(pushTimer.current);
+    if (pushTimer.current) {
+      clearTimeout(pushTimer.current);
+      pushTimer.current = null;
+    }
+    const currentUser = user;
+    if (currentUser) {
+      try {
+        await pushSave(currentUser.id, profileRef.current);
+        await pushPublicStats(currentUser.id, profileRef.current);
+      } catch (err) {
+        console.warn("[account] final flush before signOut failed", err);
+      }
+    }
     await cloudSignOut();
     setUser(null);
     setAccount(null);
     setLastSyncAt(null);
     try { resetProfileRef.current?.(); } catch { /* ignore */ }
-  }, []);
+  }, [user]);
 
   const syncNow = useCallback(async () => {
     if (!user) return false;
