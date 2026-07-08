@@ -150,7 +150,7 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
  */
 async function fetchCollectionSince(def: CollectionDef, since: string): Promise<any[] | null> {
   if (NO_UPDATED_AT.has(def.key)) return null;
-  const PAGE = 1000;
+  const PAGE = 500;
   const out: any[] = [];
   for (let from = 0; ; from += PAGE) {
     let query: any = supabase
@@ -169,8 +169,27 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
     const batch = data ?? [];
     out.push(...batch);
     if (batch.length < PAGE) break;
+    if (from > 200_000) break;
   }
   return out;
+}
+
+/**
+ * Return the current authoritative row count for a collection (as seen by
+ * the current auth context, i.e. anon RLS in production). Used to detect
+ * caches that trail behind the live source and trigger a true-up.
+ */
+async function fetchCollectionExpectedCount(def: CollectionDef): Promise<number | null> {
+  let query: any = supabase
+    .from(def.table as any)
+    .select("id", { count: "exact", head: true });
+  if (def.filter) query = def.filter(query);
+  const { count, error } = await query;
+  if (error) {
+    console.warn(`[snapshot] count query failed for ${def.table}:`, error.message);
+    return null;
+  }
+  return typeof count === "number" ? count : null;
 }
 
 function maxUpdatedAt(rows: any[]): string | null {
