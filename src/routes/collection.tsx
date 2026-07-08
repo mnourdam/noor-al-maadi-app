@@ -885,18 +885,18 @@ function ImportedCard({
   const imageUrl = registryItemImageUrl(item);
 
   const cardIcon: React.ReactNode = imageUrl ? (
-    <img
+    <CachedImage
       src={imageUrl}
       alt={item.name}
       loading="lazy"
       className="absolute inset-0 size-full object-cover"
-      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      fallback={<span aria-hidden>{emoji}</span>}
     />
   ) : (
     <span aria-hidden>{emoji}</span>
   );
   const revealIcon: React.ReactNode = imageUrl ? (
-    <img src={imageUrl} alt={item.name} className="size-full rounded-2xl object-cover" />
+    <CachedImage src={imageUrl} alt={item.name} className="size-full rounded-2xl object-cover" fallback={<span aria-hidden>{emoji}</span>} />
   ) : (
     <span aria-hidden>{emoji}</span>
   );
