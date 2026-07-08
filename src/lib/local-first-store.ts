@@ -316,6 +316,12 @@ export function localTihForMonthDay(month: number, day: number): Row[] {
   return tihByMonthDay.get(`${month}-${day}`) ?? [];
 }
 
+export function localTihAll(): Row[] {
+  const out: Row[] = [];
+  for (const list of tihByMonthDay.values()) out.push(...list);
+  return out;
+}
+
 export function localDailyFacts(): Row[] { return dailyFactsAll; }
 
 export function localSnapshotInfo() {

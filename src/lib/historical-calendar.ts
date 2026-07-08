@@ -91,11 +91,25 @@ function rowToEvent(r: any): CalendarEvent {
   };
 }
 
-/** React Query hook reading every enabled today-in-history event. */
+/** React Query hook reading every enabled today-in-history event, local-first. */
 export function useCalendarEvents() {
   const q = useQuery({
     queryKey: ["calendar", "today_in_history_events"],
     queryFn: async (): Promise<CalendarEvent[]> => {
+      // Local-first: read from the bundled/IndexedDB snapshot so the calendar
+      // works completely offline after the first successful sync.
+      try {
+        const { ensureLocalSnapshotLoaded, localTihAll } = await import("./local-first-store");
+        await ensureLocalSnapshotLoaded();
+        const rows = localTihAll() as any[];
+        const enabled = rows.filter((r) => r?.enabled !== false);
+        if (enabled.length > 0) return enabled.map(rowToEvent);
+      } catch { /* fall through */ }
+
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        return [];
+      }
+
       const { data, error } = await supabase
         .from("today_in_history_events")
         .select("id,month,day,title,body,gregorian_year,hijri_year,deep_link,enabled")
