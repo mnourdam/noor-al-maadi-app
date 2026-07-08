@@ -93,28 +93,52 @@ const NO_UPDATED_AT: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollecti
 ]);
 
 async function fetchCollection(def: CollectionDef): Promise<any[]> {
-  const PAGE = 1000;
+  // Smaller page size than the PostgREST default (1000) so heavy JSON
+  // columns (encyclopedia body, campaign data) don't push a single page
+  // past preview/CDN payload limits and hang.
+  const PAGE = 500;
   const out: any[] = [];
+  // First, ask PostgREST for the exact row count so we can validate we
+  // fetched every page. Without this guard, a silently-truncated response
+  // (extension shim, proxy, network hiccup) would look like a clean short
+  // batch and end the loop early — which is what pinned the encyclopedia
+  // snapshot at 1000 rows even though 1778 were public.
+  let expectedTotal: number | null = null;
   for (let from = 0; ; from += PAGE) {
     let query: any = supabase
       .from(def.table as any)
-      .select("*")
+      .select("*", from === 0 ? { count: "exact" } : undefined)
       // Stable ordering is REQUIRED — PostgREST without an explicit
       // order can reshuffle rows between pages and silently drop or
-      // duplicate records across .range() calls. This bug is what
-      // caused the offline snapshot to shrink after a full refresh.
+      // duplicate records across .range() calls.
       .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
     if (def.filter) query = def.filter(query);
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) {
       console.warn(`[snapshot] failed to read ${def.table}:`, error.message);
       throw error;
     }
+    if (from === 0 && typeof count === "number") expectedTotal = count;
     const batch = data ?? [];
     out.push(...batch);
     if (batch.length < PAGE) break;
+    if (from > 200_000) {
+      console.warn(`[snapshot] ${def.table}: pagination safety cap hit at ${from}`);
+      break;
+    }
   }
+  if (expectedTotal !== null && out.length < expectedTotal) {
+    const msg =
+      `[snapshot] ${def.table}: fetched ${out.length}/${expectedTotal} rows ` +
+      `— pagination came up short, refusing to persist truncated data`;
+    console.warn(msg);
+    throw new Error(msg);
+  }
+  console.info(
+    `[snapshot] ${def.table}: fetched ${out.length} rows` +
+      (expectedTotal !== null ? ` (expected ${expectedTotal})` : ""),
+  );
   return out;
 }
 
