@@ -23,7 +23,7 @@ export const SNAPSHOT_SCHEMA_VERSION = 2;
  * changes below this number, update this floor in the same release that ships
  * a newly verified bundled snapshot.
  */
-const MIN_PUBLIC_ENCYCLOPEDIA_ROWS = 1778;
+export const MIN_PUBLIC_ENCYCLOPEDIA_ROWS = 1778;
 
 export type OfflineCollectionKey =
   | "encyclopedia_entities"
