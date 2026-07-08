@@ -17,7 +17,7 @@
  * Indexing is idempotent and best-effort; failures here never block UI.
  */
 import { loadBundledSnapshot } from "./offline-snapshot";
-import { loadSnapshot, saveSnapshot, type OfflineSnapshot } from "./offline-storage";
+import { loadSnapshot, saveSnapshot, MIN_PUBLIC_ENCYCLOPEDIA_ROWS, type OfflineSnapshot } from "./offline-storage";
 import { normalizeArabicName } from "./arabic-normalize";
 
 type Row = Record<string, any>;
@@ -30,7 +30,12 @@ const REQUIRED_LOCAL_COLLECTIONS = ["encyclopedia_entities", "admin_campaigns"];
 
 function hasRequiredContent(snap: OfflineSnapshot | null | undefined): snap is OfflineSnapshot {
   if (!snap?.collections) return false;
-  return REQUIRED_LOCAL_COLLECTIONS.every((key) => Array.isArray(snap.collections[key]) && snap.collections[key].length > 0);
+  return REQUIRED_LOCAL_COLLECTIONS.every((key) => {
+    const rows = snap.collections[key];
+    if (!Array.isArray(rows) || rows.length === 0) return false;
+    if (key === "encyclopedia_entities") return rows.length >= MIN_PUBLIC_ENCYCLOPEDIA_ROWS;
+    return true;
+  });
 }
 
 const encyclopediaById = new Map<string, Row>();
