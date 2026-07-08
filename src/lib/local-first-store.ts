@@ -17,7 +17,7 @@
  * Indexing is idempotent and best-effort; failures here never block UI.
  */
 import { loadBundledSnapshot } from "./offline-snapshot";
-import { loadSnapshot, type OfflineSnapshot } from "./offline-storage";
+import { loadSnapshot, saveSnapshot, type OfflineSnapshot } from "./offline-storage";
 import { normalizeArabicName } from "./arabic-normalize";
 
 type Row = Record<string, any>;
@@ -25,6 +25,13 @@ type Row = Record<string, any>;
 let _ready = false;
 let _readyPromise: Promise<void> | null = null;
 let _snapshot: OfflineSnapshot | null = null;
+
+const REQUIRED_LOCAL_COLLECTIONS = ["encyclopedia_entities", "admin_campaigns"];
+
+function hasRequiredContent(snap: OfflineSnapshot | null | undefined): snap is OfflineSnapshot {
+  if (!snap?.collections) return false;
+  return REQUIRED_LOCAL_COLLECTIONS.every((key) => Array.isArray(snap.collections[key]) && snap.collections[key].length > 0);
+}
 
 const encyclopediaById = new Map<string, Row>();
 const encyclopediaBySlug = new Map<string, Row[]>(); // slug → list across types
@@ -162,24 +169,29 @@ export function ensureLocalSnapshotLoaded(): Promise<void> {
   _readyPromise = (async () => {
     try {
       const local = await loadSnapshot();
-      if (local) {
+      const localUsable = hasRequiredContent(local);
+      if (localUsable) {
         applyLocalSnapshot(local);
-        _ready = true;
         // Best-effort: if bundled is newer (e.g. shipped APK update), merge it.
         try {
           const bundled = await loadBundledSnapshot();
-          if (bundled && bundled.snapshot_version > local.snapshot_version) {
+          if (hasRequiredContent(bundled) && bundled.snapshot_version > local.snapshot_version) {
             applyLocalSnapshot(bundled);
+            await saveSnapshot(bundled).catch(() => {});
           }
         } catch { /* ignore */ }
         return;
       }
       const bundled = await loadBundledSnapshot();
-      if (bundled) applyLocalSnapshot(bundled);
+      if (hasRequiredContent(bundled)) {
+        applyLocalSnapshot(bundled);
+        await saveSnapshot(bundled).catch(() => {});
+      }
     } catch (e) {
       if (typeof console !== "undefined") console.warn("[local-first] init failed", e);
     } finally {
-      _ready = true;
+      _ready = !!_snapshot;
+      if (!_ready) _readyPromise = null;
     }
   })();
   return _readyPromise;
