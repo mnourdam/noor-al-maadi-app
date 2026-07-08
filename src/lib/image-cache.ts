@@ -120,7 +120,7 @@ export async function prefetchImages(urls: Iterable<string>): Promise<void> {
     while (i < list.length) {
       const idx = i++;
       const u = list[idx];
-      try { await fetchAndCache(u, cache); } catch { /* ignore */ }
+      try { await fetchAndCache(u, cache!); } catch { /* ignore */ }
     }
   }
   await Promise.all(
