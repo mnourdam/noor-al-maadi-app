@@ -6,6 +6,7 @@ import {
   Swords, Sparkles, Bell, Gem, Target, Flame, Sunrise, Zap, Award,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { CachedImage } from "@/components/CachedImage";
 import {
   levelFor, currentSeason,
   ACHIEVEMENTS, evaluateAchievements,
@@ -1098,7 +1099,7 @@ function ContinueJourneyCard({ sel }: {
         className="group relative block overflow-hidden rounded-3xl border border-gold/35 shadow-elegant"
       >
         <div className="relative h-48 w-full overflow-hidden">
-          <img src={cover} alt="" loading="lazy" decoding="async" className="size-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]" />
+          <CachedImage src={cover} alt="" loading="lazy" decoding="async" className="size-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-transparent" />
           <div className="arabesque-layer opacity-40" />
           <div className="absolute -left-12 -top-12 size-40 rounded-full bg-gold/20 blur-3xl" />
