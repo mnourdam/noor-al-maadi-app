@@ -132,7 +132,10 @@ function AdminHub() {
             desc="نسخ data.ts / cities.ts / packs إلى Supabase دون حذف." />
           <AdminCard to="/admin/offline" icon={<HardDrive className="h-5 w-5" />} title="لقطة المحتوى دون اتصال"
             desc="توليد لقطة JSON موحّدة وتخزينها محليًا (Phase 1)." />
+          <AdminCard to="/admin/offline-diagnostics" icon={<ShieldCheck className="h-5 w-5" />} title="تشخيص العمل دون اتصال"
+            desc="حالة الاتصال، مصدر البيانات، عدّادات المجموعات، كاش الصور، ومزامنة يدوية — للاختبار على APK." />
         </section>
+
 
       </div>
     </div>

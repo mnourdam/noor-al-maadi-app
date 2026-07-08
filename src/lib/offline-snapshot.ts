@@ -99,6 +99,11 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
     let query: any = supabase
       .from(def.table as any)
       .select("*")
+      // Stable ordering is REQUIRED — PostgREST without an explicit
+      // order can reshuffle rows between pages and silently drop or
+      // duplicate records across .range() calls. This bug is what
+      // caused the offline snapshot to shrink after a full refresh.
+      .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
     if (def.filter) query = def.filter(query);
     const { data, error } = await query;
@@ -112,6 +117,7 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
   }
   return out;
 }
+
 
 /**
  * Fetch only rows whose `updated_at` is strictly greater than `since`.
@@ -222,19 +228,28 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
     console.warn("[snapshot] refusing to store invalid live snapshot", report.issues);
     throw new Error("Invalid offline snapshot; keeping existing local content");
   }
-  // Never let a failed/partial online refresh erase a richer local/bundled
-  // cache. This protects offline-first playability when a public policy,
-  // network hop, or API page returns empty/incomplete data.
+  // Never let a full online refresh SHRINK the local cache. If a public
+  // policy tightened, a network hop returned partial data, or an API page
+  // came back short, we still keep every row we already had. We union by
+  // `id` with the previous snapshot so the full-fetch path can only ADD
+  // or REFRESH rows, never remove them. Explicit removal only happens
+  // through the admin "Clear Offline Cache" action.
   if (previous?.collections) {
     for (const def of COLLECTIONS) {
       const prevRows = previous.collections[def.key] ?? [];
       const nextRows = snap.collections[def.key] ?? [];
-      if (prevRows.length > 0 && nextRows.length === 0) {
-        snap.collections[def.key] = prevRows;
-        snap.content_counts[def.key] = prevRows.length;
+      const merged = mergeRows(prevRows, nextRows);
+      if (nextRows.length < prevRows.length) {
+        console.warn(
+          `[snapshot] full-fetch of ${def.key} returned ${nextRows.length} rows ` +
+          `(< previous ${prevRows.length}). Preserving old rows via id-merge.`,
+        );
       }
+      snap.collections[def.key] = merged;
+      snap.content_counts[def.key] = merged.length;
     }
   }
+
   await saveSnapshot(snap);
   // Keep the in-memory local-first index in sync with the freshly persisted
   // snapshot so subsequent route reads see the new content immediately.
