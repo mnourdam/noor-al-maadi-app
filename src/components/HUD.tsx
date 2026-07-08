@@ -44,6 +44,7 @@ export function HUD() {
     window.addEventListener("irth:notifications:updated", recount);
     if (androidStable) {
       return () => {
+        cancelled = true;
         window.removeEventListener("irth:notifications:updated", recount);
         unsubRealtime();
       };
@@ -51,11 +52,13 @@ export function HUD() {
     const focus = () => { void recount(); };
     if (!disableGlobalFocusBlur) window.addEventListener("focus", focus);
     return () => {
+      cancelled = true;
       if (id) clearInterval(id);
       window.removeEventListener("irth:notifications:updated", recount);
       if (!disableGlobalFocusBlur) window.removeEventListener("focus", focus);
       unsubRealtime();
     };
+
   }, [androidStable, disableGlobalFocusBlur]);
 
 
