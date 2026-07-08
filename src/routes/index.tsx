@@ -6,6 +6,7 @@ import {
   Swords, Sparkles, Bell, Gem, Target, Flame, Sunrise, Zap, Award,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { CachedImage } from "@/components/CachedImage";
 import {
   levelFor, currentSeason,
   ACHIEVEMENTS, evaluateAchievements,
