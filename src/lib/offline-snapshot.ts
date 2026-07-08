@@ -99,6 +99,11 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
     let query: any = supabase
       .from(def.table as any)
       .select("*")
+      // Stable ordering is REQUIRED — PostgREST without an explicit
+      // order can reshuffle rows between pages and silently drop or
+      // duplicate records across .range() calls. This bug is what
+      // caused the offline snapshot to shrink after a full refresh.
+      .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
     if (def.filter) query = def.filter(query);
     const { data, error } = await query;
@@ -112,6 +117,7 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
   }
   return out;
 }
+
 
 /**
  * Fetch only rows whose `updated_at` is strictly greater than `since`.
