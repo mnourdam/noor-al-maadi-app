@@ -27,22 +27,16 @@ export function HUD() {
 
   useEffect(() => {
     const id = androidStable ? null : setInterval(() => force((n) => n + 1), 1_000);
-    let serverAuthoritative = false;
+    let cancelled = false;
     const recount = async () => {
-      if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        setUnread(unreadCount());
-        return;
-      }
-      // Server is source of truth. Local cache is only used before the first
-      // successful server fetch (guest/offline cold-start).
-      try {
-        const n = await fetchMyUnreadCount();
-        serverAuthoritative = true;
-        setUnread(n);
-      } catch {
-        if (!serverAuthoritative) setUnread(unreadCount());
-      }
+      // Single source of truth: derive the badge from the same list the
+      // Notification Center renders. `fetchMyUnreadCount` handles offline
+      // / cache fallback internally and never throws.
+      const n = await fetchMyUnreadCount();
+      if (cancelled) return;
+      setUnread(n);
     };
+
     void recount();
     const unsubRealtime = subscribeToMyNotifications(() => { void recount(); });
     // Always listen for the in-app update event — it's how foreground pushes,
