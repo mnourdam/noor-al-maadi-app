@@ -104,9 +104,31 @@ const SECTIONS: SectionDef[] = [
   { id: "events",    label: "أحداث",  icon: CalendarClock, glyphIcon: ScrollText,   type: "event",    glyph: "📜" },
 ];
 
-// ───── Supabase user_collection hook ───────────────────────────
+// ───── Supabase user_collection hook (offline-cached) ─────────
+// The rows are mirrored to localStorage so the museum still shows the
+// player's unlocks after a cold restart without connectivity. On a
+// successful Supabase fetch we overwrite the cache; on failure (offline,
+// signed-out, etc.) we keep whatever the cache already had.
+type CachedCollectionRow = { type: string; slug: string; unlockedAt: string | null };
+const USER_COLLECTION_CACHE_KEY = "irth.user_collection.v1";
+function readUserCollectionCache(): CachedCollectionRow[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(USER_COLLECTION_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as CachedCollectionRow[]) : [];
+  } catch { return []; }
+}
+function writeUserCollectionCache(rows: CachedCollectionRow[]) {
+  if (typeof localStorage === "undefined") return;
+  try { localStorage.setItem(USER_COLLECTION_CACHE_KEY, JSON.stringify(rows)); } catch {}
+}
+
 function useUserCollectionByType() {
-  const [rows, setRows] = useState<Array<{ type: string; slug: string; unlockedAt: string | null }>>([]);
+  // Hydrate synchronously from cache so the museum is populated on the
+  // very first render — required for offline cold-start.
+  const [rows, setRows] = useState<CachedCollectionRow[]>(() => readUserCollectionCache());
   const [refreshTick, setRefreshTick] = useState(0);
   const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
   useEffect(() => {
@@ -117,13 +139,18 @@ function useUserCollectionByType() {
         const { data: sess } = await supabase.auth.getSession();
         const uid = sess.session?.user?.id;
         if (!uid) return;
+        if (typeof navigator !== "undefined" && navigator.onLine === false) return;
         const { data, error } = await supabase
           .from("user_collection")
           .select("item_id,item_type,unlocked_at")
           .eq("user_id", uid);
         if (cancelled || error || !data) return;
-        setRows(data.map((r: any) => ({ type: r.item_type, slug: r.item_id, unlockedAt: r.unlocked_at ?? null })));
-      } catch { /* noop */ }
+        const next: CachedCollectionRow[] = data.map((r: any) => ({
+          type: r.item_type, slug: r.item_id, unlockedAt: r.unlocked_at ?? null,
+        }));
+        setRows(next);
+        writeUserCollectionCache(next);
+      } catch { /* offline / signed-out — keep cached rows */ }
     })();
     const bump = () => setRefreshTick(t => t + 1);
     if (!disableGlobalFocusBlur) window.addEventListener("focus", bump);
@@ -144,6 +171,7 @@ function useUserCollectionByType() {
   }, [rows]);
   return { byType, unlockedAt, rows };
 }
+
 
 
 // ───── Reusable card ───────────────────────────────────────────
