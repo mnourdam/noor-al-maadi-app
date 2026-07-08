@@ -22,7 +22,6 @@ import {
   type OfflineCollectionKey,
   type OfflineSnapshot,
 } from "./offline-storage";
-import { validateSnapshot } from "./offline-snapshot-validate";
 
 /** Legacy alias kept for older imports. */
 export type ContentType =
@@ -163,6 +162,7 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
 export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   const previous = await loadSnapshot();
   const snap = await generateSnapshot();
+  const { validateSnapshot } = await import("./offline-snapshot-validate");
   const report = validateSnapshot(snap);
   if (!report.ok) {
     console.warn("[snapshot] refusing to store invalid live snapshot", report.issues);
@@ -218,6 +218,7 @@ export async function loadBundledSnapshot(): Promise<OfflineSnapshot | null> {
       const j = await res.json();
       if (!j || typeof j !== "object" || !j.collections) continue;
       const snap = { ...j, source: "bundled" } as OfflineSnapshot;
+      const { validateSnapshot } = await import("./offline-snapshot-validate");
       if (!validateSnapshot(snap).ok) continue;
       return snap;
     } catch { /* try next URL */ }
