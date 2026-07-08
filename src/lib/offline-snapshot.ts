@@ -151,7 +151,7 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
     `[snapshot] ${def.table}: fetched ${out.length} rows` +
       (expectedTotal !== null ? ` (expected ${expectedTotal})` : ""),
   );
-  return out;
+  return pruneOfflineRows(def, out);
 }
 
 
@@ -184,7 +184,7 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
     if (batch.length < PAGE) break;
     if (from > 200_000) break;
   }
-  return out;
+  return pruneOfflineRows(def, out);
 }
 
 /**
@@ -221,6 +221,28 @@ function mergeRows(existing: any[], deltas: any[]): any[] {
   for (const r of existing) if (r?.id != null) byId.set(String(r.id), r);
   for (const r of deltas) if (r?.id != null) byId.set(String(r.id), r);
   return Array.from(byId.values());
+}
+
+function pruneOfflineRow(def: CollectionDef, row: any): any {
+  if (!row || typeof row !== "object") return row;
+  if (def.key === "admin_campaigns") {
+    // Player-facing offline mode only reads the published `data` payload.
+    // `draft_data` duplicates most campaign content and can push the bundled
+    // APK snapshot over the repository/package size limit; keep drafts live in
+    // the admin editor, not in the public offline bundle.
+    const {
+      draft_data: _draftData,
+      last_editor_email: _lastEditorEmail,
+      updated_by: _updatedBy,
+      ...playerRow
+    } = row;
+    return playerRow;
+  }
+  return row;
+}
+
+function pruneOfflineRows(def: CollectionDef, rows: any[]): any[] {
+  return rows.map((row) => pruneOfflineRow(def, row));
 }
 
 async function sha256Hex(text: string): Promise<string | undefined> {
