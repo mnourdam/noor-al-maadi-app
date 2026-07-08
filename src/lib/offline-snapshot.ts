@@ -335,17 +335,30 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     const since = maxUpdatedAt(prevRows);
     let merged: any[] = prevRows;
     try {
-      if (since && !NO_UPDATED_AT.has(def.key)) {
+      // True-up: if the live source has more rows than our cache, the
+      // since-based delta will miss the rows we simply never fetched
+      // (they existed with older `updated_at` before our first sync, or a
+      // previous full fetch was silently truncated). Detect that gap and
+      // do a full re-fetch for this collection so the cache converges.
+      const expected = await fetchCollectionExpectedCount(def);
+      const cacheIsShort =
+        typeof expected === "number" && expected > prevRows.length;
+
+      if (cacheIsShort) {
+        console.info(
+          `[snapshot] true-up ${def.table}: cache=${prevRows.length}, live=${expected} → full fetch`,
+        );
+        const fresh = await fetchCollection(def);
+        merged = mergeRows(prevRows, fresh);
+      } else if (since && !NO_UPDATED_AT.has(def.key)) {
         const deltas = await fetchCollectionSince(def, since);
         if (deltas === null) {
-          // Column missing / not supported — full refetch for this collection.
           merged = await fetchCollection(def);
         } else {
           merged = mergeRows(prevRows, deltas);
           totalDeltas += deltas.length;
         }
       } else {
-        // No baseline timestamp OR no updated_at → full fetch.
         merged = await fetchCollection(def);
       }
     } catch (e) {
