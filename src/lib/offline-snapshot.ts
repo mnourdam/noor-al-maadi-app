@@ -451,9 +451,24 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
     } catch { /* ignore */ }
 
     // Fire-and-forget — UI is already rendered from local/bundled.
-    void generateAndStoreSnapshot().catch((e) =>
+    // Prefer incremental sync when we already have a baseline snapshot.
+    const refresh = local?.collections
+      ? refreshSnapshotIncremental()
+      : generateAndStoreSnapshot();
+    void refresh.catch((e) =>
       console.warn("[offline-sync] background refresh failed:", e),
     );
+
+    // Warm the image cache from whatever content we already have locally
+    // so covers/thumbnails survive going offline mid-session.
+    void (async () => {
+      try {
+        const snap = local ?? (await loadSnapshot());
+        if (!snap?.collections) return;
+        const { collectImageUrls, prefetchImages } = await import("./image-cache");
+        await prefetchImages(collectImageUrls(snap.collections));
+      } catch { /* ignore */ }
+    })();
   } catch (e) {
     console.warn("[offline-sync] bootstrap failed:", e);
   }
