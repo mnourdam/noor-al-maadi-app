@@ -251,6 +251,96 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   return snap;
 }
 
+/**
+ * Incremental refresh: for each collection with `updated_at`, fetch only
+ * rows newer than the previous snapshot and merge by id. Collections
+ * without an `updated_at` column full-fetch (they are small: today-in-
+ * history, daily-facts). Preserves the existing cache and player progress
+ * (which lives in a separate table).
+ *
+ * Returns the merged, validated, persisted snapshot. Throws if no previous
+ * snapshot exists — callers should use `generateAndStoreSnapshot()` in
+ * that case.
+ */
+export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
+  const previous = await loadSnapshot();
+  if (!previous?.collections) {
+    throw new Error("No previous snapshot; run generateAndStoreSnapshot() first");
+  }
+  const nextCollections: Record<string, any[]> = { ...previous.collections };
+  const nextCounts: Record<string, number> = { ...previous.content_counts };
+  const manifest: { key: string; count: number; checksum?: string }[] = [];
+  let totalDeltas = 0;
+
+  for (const def of COLLECTIONS) {
+    const prevRows = previous.collections[def.key] ?? [];
+    const since = maxUpdatedAt(prevRows);
+    let merged: any[] = prevRows;
+    try {
+      if (since && !NO_UPDATED_AT.has(def.key)) {
+        const deltas = await fetchCollectionSince(def, since);
+        if (deltas === null) {
+          // Column missing / not supported — full refetch for this collection.
+          merged = await fetchCollection(def);
+        } else {
+          merged = mergeRows(prevRows, deltas);
+          totalDeltas += deltas.length;
+        }
+      } else {
+        // No baseline timestamp OR no updated_at → full fetch.
+        merged = await fetchCollection(def);
+      }
+    } catch (e) {
+      console.warn(`[snapshot] delta failed for ${def.table}, keeping cache:`, e);
+      merged = prevRows;
+    }
+    // Guard: never let a delta reduce the cache to nothing.
+    if (merged.length === 0 && prevRows.length > 0) merged = prevRows;
+    nextCollections[def.key] = merged;
+    nextCounts[def.key] = merged.length;
+    manifest.push({
+      key: def.key,
+      count: merged.length,
+      checksum: await sha256Hex(canonicalJSON(merged)),
+    });
+  }
+
+  const snap: OfflineSnapshot = {
+    snapshot_version: Date.now(),
+    schema_version: SNAPSHOT_SCHEMA_VERSION,
+    generated_at: new Date().toISOString(),
+    source: "live",
+    content_counts: nextCounts,
+    checksum: await sha256Hex(canonicalJSON(nextCollections)),
+    collection_manifest: manifest,
+    collections: nextCollections,
+  };
+
+  const { validateSnapshot } = await import("./offline-snapshot-validate");
+  const report = validateSnapshot(snap);
+  if (!report.ok) {
+    console.warn("[snapshot] refusing to store invalid incremental snapshot", report.issues);
+    throw new Error("Invalid offline snapshot; keeping existing local content");
+  }
+  await saveSnapshot(snap);
+  try {
+    const { applyLocalSnapshot } = await import("./local-first-store");
+    applyLocalSnapshot(snap);
+  } catch { /* ignore */ }
+
+  // Warm the image cache in the background with any new URLs.
+  void (async () => {
+    try {
+      const { collectImageUrls, prefetchImages } = await import("./image-cache");
+      const urls = collectImageUrls(nextCollections);
+      await prefetchImages(urls);
+    } catch { /* ignore */ }
+  })();
+
+  console.info(`[offline-sync] incremental: ${totalDeltas} row deltas across ${COLLECTIONS.length} collections`);
+  return snap;
+}
+
 /** Load the bundled snapshot shipped in /public. */
 export async function loadBundledSnapshot(): Promise<OfflineSnapshot | null> {
   const urls = new Set<string>([BUNDLED_SNAPSHOT_URL]);
