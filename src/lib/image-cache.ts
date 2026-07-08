@@ -1,0 +1,178 @@
+/**
+ * Remote-image cache for offline-first playback.
+ *
+ * Strategy:
+ *   - Use the browser Cache Storage API (`caches.open('irth-images-v1')`)
+ *     to persist image bytes across sessions. This works in modern browsers
+ *     and inside the Capacitor Android WebView.
+ *   - Cache-first: return the cached blob URL if present; otherwise fetch
+ *     from network, store in the cache, and return the fresh URL.
+ *   - When offline and not cached, return `null` so callers can render a
+ *     graceful placeholder instead of a broken thumbnail.
+ *   - Cross-origin fetches use `no-cors` mode when needed so the response
+ *     can be stored even without CORS headers (opaque responses are fine
+ *     for `<img>` display).
+ *
+ * Public entry points:
+ *   - `resolveImageUrl(url)` — async, returns a usable URL string (either
+ *     the original if online-cached in HTTP, or an object URL from Cache
+ *     Storage, or the original URL as a last resort).
+ *   - `prefetchImages(urls)` — background warm-up used by the offline
+ *     bootstrap to cache every image referenced by the snapshot.
+ *   - `useCachedImageSrc(url)` — React hook.
+ */
+
+const CACHE_NAME = "irth-images-v1";
+/** Cap prefetch to avoid hammering the network on a fresh install. */
+const PREFETCH_CONCURRENCY = 4;
+/** Ignore obvious non-images (audio, video, JSON, etc.). */
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|svg|ico|bmp|tiff?)(\?.*)?$/i;
+
+function hasCaches(): boolean {
+  try { return typeof caches !== "undefined"; } catch { return false; }
+}
+
+function isLikelyImage(url: string): boolean {
+  if (!url || typeof url !== "string") return false;
+  if (url.startsWith("data:image/") || url.startsWith("blob:")) return false;
+  return IMAGE_EXT.test(url) || /\/storage\/v1\/object\//.test(url);
+}
+
+async function openCache(): Promise<Cache | null> {
+  if (!hasCaches()) return null;
+  try { return await caches.open(CACHE_NAME); } catch { return null; }
+}
+
+async function toObjectUrl(response: Response): Promise<string | null> {
+  try {
+    const blob = await response.blob();
+    if (!blob || blob.size === 0) return null;
+    return URL.createObjectURL(blob);
+  } catch { return null; }
+}
+
+/** Try to fetch + store an image. Uses `no-cors` for cross-origin. */
+async function fetchAndCache(url: string, cache: Cache): Promise<Response | null> {
+  const sameOrigin = (() => {
+    try {
+      if (typeof window === "undefined") return true;
+      return new URL(url, window.location.href).origin === window.location.origin;
+    } catch { return false; }
+  })();
+  try {
+    const init: RequestInit = sameOrigin ? {} : { mode: "no-cors", credentials: "omit" };
+    const res = await fetch(url, init);
+    // `no-cors` yields an opaque response (status 0); still cacheable.
+    if (!res || (res.status !== 0 && !res.ok)) return null;
+    try { await cache.put(url, res.clone()); } catch { /* quota / opaque limits */ }
+    return res;
+  } catch { return null; }
+}
+
+/**
+ * Return a usable image URL. Cache-first; falls back to network when online.
+ * Returns `null` when the URL is not cached and the app is offline.
+ */
+export async function resolveImageUrl(url: string): Promise<string | null> {
+  if (!url) return null;
+  if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+  const cache = await openCache();
+  if (cache) {
+    try {
+      const hit = await cache.match(url);
+      if (hit) {
+        const obj = await toObjectUrl(hit);
+        if (obj) return obj;
+      }
+    } catch { /* fall through */ }
+  }
+  const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  if (!online) return null;
+  if (!cache) return url;
+  const fresh = await fetchAndCache(url, cache);
+  if (!fresh) return url; // last-resort: let the browser try directly
+  const obj = await toObjectUrl(fresh);
+  return obj ?? url;
+}
+
+/** Background: warm the cache with a set of image URLs. */
+export async function prefetchImages(urls: Iterable<string>): Promise<void> {
+  const cache = await openCache();
+  if (!cache) return;
+  const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  if (!online) return;
+
+  const list: string[] = [];
+  const seen = new Set<string>();
+  for (const u of urls) {
+    if (!u || typeof u !== "string") continue;
+    if (!isLikelyImage(u)) continue;
+    if (seen.has(u)) continue;
+    seen.add(u);
+    try {
+      const already = await cache.match(u);
+      if (!already) list.push(u);
+    } catch { list.push(u); }
+  }
+
+  let i = 0;
+  async function worker() {
+    while (i < list.length) {
+      const idx = i++;
+      const u = list[idx];
+      try { await fetchAndCache(u, cache); } catch { /* ignore */ }
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(PREFETCH_CONCURRENCY, list.length) }, () => worker()),
+  );
+}
+
+/** Recursively collect image-looking string values from an object. */
+export function collectImageUrls(root: unknown, out: Set<string> = new Set()): Set<string> {
+  const stack: unknown[] = [root];
+  const IMAGE_KEY = /(image|cover|thumb|thumbnail|avatar|hero|photo|picture|artwork|banner|icon)/i;
+
+  while (stack.length) {
+    const node = stack.pop();
+    if (node == null) continue;
+    if (typeof node === "string") {
+      if (isLikelyImage(node) && /^https?:\/\//i.test(node)) out.add(node);
+      continue;
+    }
+    if (Array.isArray(node)) { for (const v of node) stack.push(v); continue; }
+    if (typeof node === "object") {
+      for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+        if (typeof v === "string") {
+          if ((IMAGE_KEY.test(k) || isLikelyImage(v)) && /^https?:\/\//i.test(v)) out.add(v);
+        } else {
+          stack.push(v);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** React hook — returns the cached/object URL for an image, or `null` while resolving. */
+import { useEffect, useState } from "react";
+export function useCachedImageSrc(url: string | null | undefined): string | null {
+  const [src, setSrc] = useState<string | null>(url && (url.startsWith("data:") || url.startsWith("blob:")) ? url : null);
+  useEffect(() => {
+    let alive = true;
+    let created: string | null = null;
+    if (!url) { setSrc(null); return; }
+    if (url.startsWith("data:") || url.startsWith("blob:")) { setSrc(url); return; }
+    (async () => {
+      const resolved = await resolveImageUrl(url);
+      if (!alive) { if (resolved && resolved.startsWith("blob:")) URL.revokeObjectURL(resolved); return; }
+      if (resolved && resolved.startsWith("blob:")) created = resolved;
+      setSrc(resolved);
+    })();
+    return () => {
+      alive = false;
+      if (created) { try { URL.revokeObjectURL(created); } catch { /* ignore */ } }
+    };
+  }, [url]);
+  return src;
+}
