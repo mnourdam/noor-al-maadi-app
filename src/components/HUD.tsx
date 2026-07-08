@@ -3,7 +3,7 @@ import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart, formatHeartTimer } from "@/lib/hearts";
-import { unreadCount, formatBadgeCount } from "@/lib/notifications";
+import { formatBadgeCount } from "@/lib/notifications";
 import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
@@ -27,22 +27,16 @@ export function HUD() {
 
   useEffect(() => {
     const id = androidStable ? null : setInterval(() => force((n) => n + 1), 1_000);
-    let serverAuthoritative = false;
+    let cancelled = false;
     const recount = async () => {
-      if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        setUnread(unreadCount());
-        return;
-      }
-      // Server is source of truth. Local cache is only used before the first
-      // successful server fetch (guest/offline cold-start).
-      try {
-        const n = await fetchMyUnreadCount();
-        serverAuthoritative = true;
-        setUnread(n);
-      } catch {
-        if (!serverAuthoritative) setUnread(unreadCount());
-      }
+      // Single source of truth: derive the badge from the same list the
+      // Notification Center renders. `fetchMyUnreadCount` handles offline
+      // / cache fallback internally and never throws.
+      const n = await fetchMyUnreadCount();
+      if (cancelled) return;
+      setUnread(n);
     };
+
     void recount();
     const unsubRealtime = subscribeToMyNotifications(() => { void recount(); });
     // Always listen for the in-app update event — it's how foreground pushes,
@@ -50,6 +44,7 @@ export function HUD() {
     window.addEventListener("irth:notifications:updated", recount);
     if (androidStable) {
       return () => {
+        cancelled = true;
         window.removeEventListener("irth:notifications:updated", recount);
         unsubRealtime();
       };
@@ -57,11 +52,13 @@ export function HUD() {
     const focus = () => { void recount(); };
     if (!disableGlobalFocusBlur) window.addEventListener("focus", focus);
     return () => {
+      cancelled = true;
       if (id) clearInterval(id);
       window.removeEventListener("irth:notifications:updated", recount);
       if (!disableGlobalFocusBlur) window.removeEventListener("focus", focus);
       unsubRealtime();
     };
+
   }, [androidStable, disableGlobalFocusBlur]);
 
 

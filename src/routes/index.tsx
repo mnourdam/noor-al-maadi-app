@@ -13,7 +13,7 @@ import {
 } from "@/lib/app-constants";
 import { useProfile } from "@/lib/profile";
 import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
-import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS, unreadCount, formatBadgeCount } from "@/lib/notifications";
+import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS, formatBadgeCount } from "@/lib/notifications";
 import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
 import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
@@ -91,23 +91,16 @@ function HomeFull() {
   }, [perfLite]);
 
   useEffect(() => {
-    let serverAuthoritative = false;
     let cancelled = false;
     const recount = async () => {
-      if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        setUnread(unreadCount());
-        return;
-      }
-      try {
-        const n = await fetchMyUnreadCount();
-        if (cancelled) return;
-        serverAuthoritative = true;
-        setUnread(n);
-      } catch {
-        if (cancelled) return;
-        if (!serverAuthoritative) setUnread(unreadCount());
-      }
+      // Single source of truth: derive the badge from the same list the
+      // Notification Center renders. `fetchMyUnreadCount` already handles
+      // offline / cache fallback internally and never throws.
+      const n = await fetchMyUnreadCount();
+      if (cancelled) return;
+      setUnread(n);
     };
+
     // Defer initial recount past first paint — notification badge is not
     // part of the LCP and forcing it onto the boot path competes for the
     // network and main thread on low-end Android.
