@@ -43,7 +43,7 @@ export function AtlasStage({
   const androidStable = isAndroidUltraStableMode();
   const wrapRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>(IDENTITY);
-  const [rasterLoaded, setRasterLoaded] = useState(false);
+  const [rasterLoaded, setRasterLoaded] = useState(true);
   const viewRef = useRef<View>(view);
   useEffect(() => { viewRef.current = view; }, [view]);
 
@@ -351,7 +351,8 @@ export function AtlasStage({
             height={VB_H}
             preserveAspectRatio="xMidYMid slice"
             onLoad={() => setRasterLoaded(true)}
-            style={{ imageRendering: "auto", opacity: rasterLoaded ? 1 : 0, transition: androidStable ? "none" : "opacity 200ms ease-out" }}
+            onError={() => setRasterLoaded(false)}
+            style={{ imageRendering: "auto", opacity: 1, transition: androidStable ? "none" : "opacity 200ms ease-out" }}
           />
 
           <AtlasEntityPinsLayer

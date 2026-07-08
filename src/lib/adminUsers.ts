@@ -146,6 +146,7 @@ export async function adminSetAccountStatus(userId: string, status: AccountStatu
 }
 
 export async function touchMyLastActive() {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   try {
     await supabase.rpc("touch_my_last_active" as any);
   } catch {

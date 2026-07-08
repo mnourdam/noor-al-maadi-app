@@ -30,6 +30,13 @@ export function FirstLaunchGate() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (loadingSession) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      // Offline-first: first launch with no connection must still allow the
+      // bundled encyclopedia/campaign/museum snapshot to be browsed.
+      try { window.localStorage.setItem(GUEST_CHOICE_KEY, "guest"); } catch { /* */ }
+      setOpen(false);
+      return;
+    }
     if (user) {
       // Signed-in users never see the gate. Also record their choice
       // implicitly so the gate doesn't pop on sign-out.

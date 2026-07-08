@@ -15,6 +15,7 @@
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
+import { ensureLocalSnapshotLoaded, localPublishedCampaigns } from "@/lib/local-first-store";
 
 export type ArtifactClassification = {
   adminImported: boolean;
@@ -59,6 +60,15 @@ export function classifyArtifact(
 // chapter reward unlocks/artifacts). Read-only.
 export async function fetchCampaignArtifactRefSet(): Promise<Set<string>> {
   const refs = new Set<string>();
+  try {
+    await ensureLocalSnapshotLoaded();
+    const local = localPublishedCampaigns() as Array<{ data: any }>;
+    if (local.length > 0) {
+      for (const row of local) collectArtifactRefs(row?.data, refs);
+      return refs;
+    }
+  } catch { /* fall through to live fallback */ }
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return refs;
   const PAGE = 1000;
   let from = 0;
   // Loop pagination — campaigns are few but be safe.

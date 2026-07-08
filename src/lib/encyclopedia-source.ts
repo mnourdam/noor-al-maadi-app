@@ -1,19 +1,22 @@
 // ============================================================
-// Encyclopedia data source — SUPABASE IS THE ONLY SOURCE OF TRUTH.
+// Encyclopedia data source — local-first, network-refreshed.
 //
-// Architectural rule (locked):
-//   • The Encyclopedia surface reads exclusively from
-//     `public.encyclopedia_entities` in Supabase.
-//   • No local packs, no bundled JSON, no offline fallback,
-//     no legacy registry, no synthetic entities, no generated cards.
-//   • If Supabase has nothing, the UI renders an empty state.
-//
-// Anything incomplete is hidden — quality over quantity.
+// Player-facing encyclopedia, museum, atlas panels, and related-content
+// surfaces render from the offline snapshot first (memory/IndexedDB/
+// bundled JSON). Live reads are only a fallback when the local cache is
+// empty; normal freshness comes from the global background offline sync.
 // ============================================================
 
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  ensureLocalSnapshotLoaded,
+  localEncyclopediaAll,
+  localEncyclopediaById,
+  localEncyclopediaBySlug,
+  localEncyclopediaByType,
+} from "./local-first-store";
 
 export type SupabaseEncyclopediaEntity = {
   id: string;
@@ -118,6 +121,10 @@ export function isUuid(s: string): boolean {
   return !!s && UUID_RE.test(s.trim());
 }
 
+function isOnline(): boolean {
+  return typeof navigator === "undefined" || navigator.onLine !== false;
+}
+
 /** Score how "rich" a row is; used only to disambiguate same-slug siblings. */
 export function entityRichness(e: {
   body?: unknown;
@@ -167,6 +174,95 @@ export function pickCanonicalEntity<
   );
 }
 
+async function liveFetchById(id: string): Promise<SupabaseEncyclopediaEntity | null> {
+  const r = await supabase
+    .from("encyclopedia_entities")
+    .select("*")
+    .eq("id", id)
+    .eq("enabled", true)
+    .maybeSingle();
+  if (r.error) throw r.error;
+  return (r.data ?? null) as SupabaseEncyclopediaEntity | null;
+}
+
+async function liveFetchBySlug(slug: string, entityType?: string | null): Promise<SupabaseEncyclopediaEntity | null> {
+  let q = supabase
+    .from("encyclopedia_entities")
+    .select("*")
+    .eq("slug", slug)
+    .eq("enabled", true);
+  if (entityType) q = q.eq("entity_type", entityType);
+  const { data, error } = await q;
+  if (error) throw error;
+  return pickCanonicalEntity((data as unknown as SupabaseEncyclopediaEntity[]) ?? [], entityType ?? null);
+}
+
+async function liveFetchByType(entityType: string): Promise<SupabaseEncyclopediaEntity[]> {
+  const { data, error } = await supabase
+    .from("encyclopedia_entities")
+    .select("*")
+    .eq("entity_type", entityType)
+    .eq("enabled", true);
+  if (error) throw error;
+  return (data as unknown as SupabaseEncyclopediaEntity[] | null) ?? [];
+}
+
+async function liveFetchAll(): Promise<SupabaseEncyclopediaEntity[]> {
+  const PAGE = 1000;
+  const rows: SupabaseEncyclopediaEntity[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("encyclopedia_entities")
+      .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
+      .eq("enabled", true)
+      .order("title")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as unknown as SupabaseEncyclopediaEntity[];
+    rows.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return rows;
+}
+
+export async function fetchEncyclopediaAllLocalFirst(): Promise<SupabaseEncyclopediaEntity[]> {
+  await ensureLocalSnapshotLoaded();
+  const local = localEncyclopediaAll() as SupabaseEncyclopediaEntity[];
+  if (local.length > 0) return local;
+  if (!isOnline()) return [];
+  try { return await liveFetchAll(); } catch { return []; }
+}
+
+export async function fetchEncyclopediaByTypeLocalFirst(entityType: string): Promise<SupabaseEncyclopediaEntity[]> {
+  if (!isSupabaseEnabled(entityType)) return [];
+  await ensureLocalSnapshotLoaded();
+  const local = localEncyclopediaByType(entityType) as SupabaseEncyclopediaEntity[];
+  if (local.length > 0) return local;
+  if (!isOnline()) return [];
+  try { return await liveFetchByType(entityType); } catch { return []; }
+}
+
+export async function fetchEncyclopediaByIdLocalFirst(id: string): Promise<SupabaseEncyclopediaEntity | null> {
+  await ensureLocalSnapshotLoaded();
+  const local = localEncyclopediaById(id) as SupabaseEncyclopediaEntity | null;
+  if (local && local.enabled !== false) return local;
+  if (!isOnline()) return null;
+  try { return await liveFetchById(id); } catch { return null; }
+}
+
+export async function fetchEncyclopediaBySlugLocalFirst(
+  rawId: string,
+  entityType?: string | null,
+): Promise<SupabaseEncyclopediaEntity | null> {
+  const slug = normalizeEntitySlug(rawId);
+  if (!slug) return null;
+  await ensureLocalSnapshotLoaded();
+  const local = localEncyclopediaBySlug(slug, entityType) as SupabaseEncyclopediaEntity | null;
+  if (local && local.enabled !== false) return local;
+  if (!isOnline()) return null;
+  try { return await liveFetchBySlug(slug, entityType); } catch { return null; }
+}
+
 /** Fetch one enabled entity by (type, slug). Returns null on miss. */
 export function useEncyclopediaSupabaseEntity(
   entityType: string,
@@ -181,16 +277,9 @@ export function useEncyclopediaSupabaseEntity(
     enabled,
     staleTime: 60_000,
     retry: 1,
+    initialData: () => localEncyclopediaBySlug(slug, entityType) as SupabaseEncyclopediaEntity | null,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
-      const { data, error } = await supabase
-        .from("encyclopedia_entities")
-        .select("*")
-        .eq("entity_type", entityType)
-        .eq("slug", slug)
-        .eq("enabled", true)
-        .maybeSingle();
-      if (error) throw error;
-      return (data as SupabaseEncyclopediaEntity | null) ?? null;
+      return fetchEncyclopediaBySlugLocalFirst(slug, entityType);
     },
   });
 }
@@ -204,15 +293,9 @@ export function useEncyclopediaSupabaseEntityById(rawId: string) {
     enabled,
     staleTime: 60_000,
     retry: 1,
+    initialData: () => localEncyclopediaById(id) as SupabaseEncyclopediaEntity | null,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
-      const { data, error } = await supabase
-        .from("encyclopedia_entities")
-        .select("*")
-        .eq("id", id)
-        .eq("enabled", true)
-        .maybeSingle();
-      if (error) throw error;
-      return (data as SupabaseEncyclopediaEntity | null) ?? null;
+      return fetchEncyclopediaByIdLocalFirst(id);
     },
   });
 }
@@ -225,14 +308,9 @@ export function useEncyclopediaSupabaseEntityBySlug(rawId: string) {
     enabled: !!slug,
     staleTime: 60_000,
     retry: 1,
+    initialData: () => localEncyclopediaBySlug(slug) as SupabaseEncyclopediaEntity | null,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
-      const { data, error } = await supabase
-        .from("encyclopedia_entities")
-        .select("*")
-        .eq("slug", slug)
-        .eq("enabled", true);
-      if (error) throw error;
-      return pickCanonicalEntity((data as SupabaseEncyclopediaEntity[]) ?? []);
+      return fetchEncyclopediaBySlugLocalFirst(slug);
     },
   });
 }
@@ -245,14 +323,12 @@ export function useEncyclopediaSupabaseList(entityType: string) {
     enabled,
     staleTime: 60_000,
     retry: 1,
+    initialData: () => {
+      const rows = localEncyclopediaByType(entityType) as SupabaseEncyclopediaEntity[];
+      return rows.length > 0 ? rows : undefined;
+    },
     queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
-      const { data, error } = await supabase
-        .from("encyclopedia_entities")
-        .select("*")
-        .eq("entity_type", entityType)
-        .eq("enabled", true);
-      if (error) throw error;
-      return (data as SupabaseEncyclopediaEntity[] | null) ?? [];
+      return fetchEncyclopediaByTypeLocalFirst(entityType);
     },
   });
   const bySlug = useMemo(() => {

@@ -1,8 +1,6 @@
 // Phase 3 — Atlas detail viewer.
-// The Atlas does NOT store summaries. When an entity is linked to an
-// encyclopedia article (encyclopedia_entity_id), we fetch the live article
-// row and render title/subtitle/summary from THAT row — so any edit in
-// the encyclopedia propagates here without duplication.
+// When an entity is linked to an encyclopedia article, render from the
+// local-first encyclopedia cache so the Atlas remains usable offline.
 //
 // Layout: bottom sheet on mobile, floating popover at the bottom-right on
 // desktop. Safe-area padding so it never hides behind the home-bar.
@@ -10,9 +8,8 @@ import { Link } from "@tanstack/react-router";
 import { BookOpen, Crosshair, Loader2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { KIND_LABEL_AR, type AtlasEntityRow } from "@/lib/atlas-entities";
-import { supabase } from "@/integrations/supabase/client";
 import {
-  ENCYCLOPEDIA_ENTITY_COLUMNS,
+  fetchEncyclopediaByIdLocalFirst,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
@@ -24,13 +21,7 @@ function useEncyclopediaEntity(id: string | null) {
     staleTime: 30_000,
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from("encyclopedia_entities")
-        .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
-        .eq("id", id)
-        .maybeSingle();
-      if (error) throw error;
-      return (data as SupabaseEncyclopediaEntity | null) ?? null;
+      return fetchEncyclopediaByIdLocalFirst(id);
     },
   });
 }

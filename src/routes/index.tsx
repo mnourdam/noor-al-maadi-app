@@ -93,6 +93,10 @@ function HomeFull() {
     let serverAuthoritative = false;
     let cancelled = false;
     const recount = async () => {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setUnread(unreadCount());
+        return;
+      }
       try {
         const n = await fetchMyUnreadCount();
         if (cancelled) return;

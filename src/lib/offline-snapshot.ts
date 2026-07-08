@@ -87,14 +87,24 @@ export const COLLECTIONS: CollectionDef[] = [
 ];
 
 async function fetchCollection(def: CollectionDef): Promise<any[]> {
-  let query: any = supabase.from(def.table as any).select("*");
-  if (def.filter) query = def.filter(query);
-  const { data, error } = await query;
-  if (error) {
-    console.warn(`[snapshot] failed to read ${def.table}:`, error.message);
-    return [];
+  const PAGE = 1000;
+  const out: any[] = [];
+  for (let from = 0; ; from += PAGE) {
+    let query: any = supabase
+      .from(def.table as any)
+      .select("*")
+      .range(from, from + PAGE - 1);
+    if (def.filter) query = def.filter(query);
+    const { data, error } = await query;
+    if (error) {
+      console.warn(`[snapshot] failed to read ${def.table}:`, error.message);
+      return out;
+    }
+    const batch = data ?? [];
+    out.push(...batch);
+    if (batch.length < PAGE) break;
   }
-  return data ?? [];
+  return out;
 }
 
 async function sha256Hex(text: string): Promise<string | undefined> {
@@ -150,7 +160,21 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
 }
 
 export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
+  const previous = await loadSnapshot();
   const snap = await generateSnapshot();
+  // Never let a failed/partial online refresh erase a richer local/bundled
+  // cache. This protects offline-first playability when a public policy,
+  // network hop, or API page returns empty/incomplete data.
+  if (previous?.collections) {
+    for (const def of COLLECTIONS) {
+      const prevRows = previous.collections[def.key] ?? [];
+      const nextRows = snap.collections[def.key] ?? [];
+      if (prevRows.length > 0 && nextRows.length === 0) {
+        snap.collections[def.key] = prevRows;
+        snap.content_counts[def.key] = prevRows.length;
+      }
+    }
+  }
   await saveSnapshot(snap);
   // Keep the in-memory local-first index in sync with the freshly persisted
   // snapshot so subsequent route reads see the new content immediately.
@@ -244,7 +268,7 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
 
     const stale =
       !local ||
-      local.snapshot_version !== SNAPSHOT_SCHEMA_VERSION ||
+      local.schema_version !== SNAPSHOT_SCHEMA_VERSION ||
       Date.now() - new Date(local.generated_at).getTime() > maxAge;
     if (!stale) return;
 

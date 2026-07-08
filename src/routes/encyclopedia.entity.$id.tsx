@@ -16,11 +16,11 @@ import { ReadingScale } from "@/components/ReadingScale";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
-import { supabase } from "@/integrations/supabase/client";
 import {
+  fetchEncyclopediaByIdLocalFirst,
+  fetchEncyclopediaBySlugLocalFirst,
   isDisplayableEntity,
   isUuid,
-  pickCanonicalEntity,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
@@ -34,6 +34,7 @@ import {
 import { buildContextBlocks } from "@/lib/context-blocks";
 import { iconForType } from "@/lib/encyclopedia-icons";
 import { canonicalEraLabel, toCanonicalEra } from "@/lib/era-canonical";
+import { localAtlasEntities } from "@/lib/local-first-store";
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
@@ -101,40 +102,23 @@ function EntityPage() {
     queryKey: ["encyclopedia", "entity", id, "v2"],
     staleTime: 60_000,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
-      const fetchById = async (eid: string) => {
-        const r = await supabase
-          .from("encyclopedia_entities")
-          .select("*")
-          .eq("id", eid)
-          .maybeSingle();
-        return (r.data ?? null) as SupabaseEncyclopediaEntity | null;
-      };
       const followCanonical = async (row: SupabaseEncyclopediaEntity | null) => {
         if (!row) return null;
         const meta = (row.metadata && typeof row.metadata === "object")
           ? (row.metadata as any) : {};
         const cid = typeof meta.canonical_id === "string" ? meta.canonical_id : null;
         if (cid && cid !== row.id) {
-          const canon = await fetchById(cid);
+          const canon = await fetchEncyclopediaByIdLocalFirst(cid);
           if (canon && canon.enabled) return canon;
         }
         return row.enabled ? row : null;
       };
 
-      // Supabase-only lookup — no local packs, no bundled snapshot,
-      // no offline fallback. If the row is not in the database, the
-      // entity does not exist.
       let primary: SupabaseEncyclopediaEntity | null = null;
       if (isUuid(id)) {
-        primary = await fetchById(id);
+        primary = await fetchEncyclopediaByIdLocalFirst(id);
       } else {
-        const res = await supabase
-          .from("encyclopedia_entities")
-          .select("*")
-          .eq("slug", id)
-          .eq("enabled", true);
-        const rows = (res.data ?? []) as SupabaseEncyclopediaEntity[];
-        primary = pickCanonicalEntity(rows);
+        primary = await fetchEncyclopediaBySlugLocalFirst(id);
       }
       const followed = await followCanonical(primary);
       // Quality gate: incomplete/orphan rows are treated as "not found".
@@ -167,15 +151,7 @@ function EntityPage() {
     staleTime: 5 * 60_000,
     queryFn: async () => {
       if (!entity?.id) return null;
-      const { data, error } = await supabase
-        .from("atlas_entities")
-        .select("id, aps_x, aps_y, kind")
-        .eq("encyclopedia_entity_id", entity.id)
-        .eq("status", "published")
-        .eq("aps_verified", true)
-        .limit(1)
-        .maybeSingle();
-      if (error) return null;
+      const data = localAtlasEntities().find((row: any) => row.encyclopedia_entity_id === entity.id) ?? null;
       if (!data || data.aps_x == null || data.aps_y == null) return null;
       return data as { id: string; aps_x: number; aps_y: number; kind: string };
     },

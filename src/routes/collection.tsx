@@ -243,6 +243,7 @@ function CollectionPage() {
   const [refreshTick, setRefreshTick] = useState(0);
   const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
   useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
     pullAllFromCloud().then(() => setRefreshTick(t => t + 1)).catch(() => {});
     const bump = () => setRefreshTick(t => t + 1);
     if (!disableGlobalFocusBlur) window.addEventListener("focus", bump);
@@ -253,7 +254,7 @@ function CollectionPage() {
     };
   }, [disableGlobalFocusBlur]);
 
-  // ── Supabase entity lists (one per museum section) ──────────
+  // ── Local-first entity lists (one per museum section) ───────
   const supFigures   = useEncyclopediaSupabaseList("figure");
   const supArtifacts = useEncyclopediaSupabaseList("artifact");
   const supLandmarks = useEncyclopediaSupabaseList("landmark");
@@ -283,7 +284,7 @@ function CollectionPage() {
     return classifyArtifact(metadata, hasRef).visible;
   };
 
-  // ── Imported registry items: museum is Supabase-only now. ───
+  // ── Imported registry items: museum reads encyclopedia snapshot. ───
   // Keep the shape so downstream consumers (rendering, counts)
   // continue to work without legacy registry fallback.
   const importedByType = useMemo(() => {
@@ -299,7 +300,7 @@ function CollectionPage() {
   const userUnlockedAt = userCollectionResult.unlockedAt;
 
   // ── Imported registry unlocks (raw "type:slug" strings) ─────
-  // ── Imported registry unlocks: Supabase-only museum, no fallback ──
+  // ── Imported registry unlocks: no legacy fallback shown to players ──
   const importedUnlockSet = useMemo(() => new Set<string>(), []);
 
   const unlockSources = useMemo(() => getUnlockSourcesMap(), [refreshTick]);
@@ -732,6 +733,10 @@ function RecentUnlocks() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        if (!cancelled) setSupaRecents([]);
+        return;
+      }
       try {
         const { supabase } = await import("@/integrations/supabase/client");
         const { data: sess } = await supabase.auth.getSession();

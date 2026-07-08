@@ -6,8 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { AppShell, Screen } from "@/components/AppShell";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
-import { supabase } from "@/integrations/supabase/client";
-import { isDisplayableEntity, type SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import {
+  fetchEncyclopediaByTypeLocalFirst,
+  isDisplayableEntity,
+  type SupabaseEncyclopediaEntity,
+} from "@/lib/encyclopedia-source";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 import { isPublicEntity } from "@/lib/taxonomy-public";
 
@@ -71,18 +74,7 @@ function TypeBrowsePage() {
     queryKey: ["encyclopedia", "type", type, "v2"],
     staleTime: 60_000,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
-      const { data, error } = await supabase
-        .from("encyclopedia_entities")
-        .select("id,slug,entity_type,title,subtitle,summary,body,metadata,enabled")
-        .eq("enabled", true)
-        .eq("entity_type", type)
-        .order("title");
-      if (error) throw error;
-      const rows = (data ?? []) as SupabaseEncyclopediaEntity[];
-      // Single source of truth: no fallback. Hide incomplete rows so
-      // categories never show empty cards or orphan stubs. Also enforce
-      // the public taxonomy whitelist so legacy / migration values never
-      // reach the player-facing browse.
+      const rows = await fetchEncyclopediaByTypeLocalFirst(type);
       return rows.filter(isDisplayableEntity).filter(isPublicEntity);
     },
   });

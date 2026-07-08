@@ -1,10 +1,10 @@
 // ============================================================
-// Encyclopedia relationship graph — EXPLICIT RELATIONSHIPS ONLY.
+// Encyclopedia relationship graph — explicit relationships, local-first.
 //
 // Architectural rule:
 //   • No guessed connections. No campaign inference. No atlas family.
 //   • No alias fan-out. No same-era pairing. No synthetic edges.
-//   • Only edges that are literally recorded in Supabase are surfaced.
+//   • Only edges literally recorded in content metadata are surfaced.
 //
 // Sources considered:
 //   100 — metadata.related_entities / related  (explicit references)
@@ -22,12 +22,12 @@
 // "لا توجد روابط تاريخية متاحة حاليًا."
 // ============================================================
 
-import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import {
   isDisplayableEntity,
   normalizeEntitySlug,
 } from "@/lib/encyclopedia-source";
+import { ensureLocalSnapshotLoaded, localEncyclopediaAll, localEncyclopediaBySlug } from "@/lib/local-first-store";
 
 export type RelationReason = "explicit" | "biography" | "geography";
 
@@ -75,6 +75,7 @@ type ScoredRef = { score: number; reason: RelationReason };
 export async function resolveRelatedEntities(
   entity: SupabaseEncyclopediaEntity,
 ): Promise<RelatedNode[]> {
+  await ensureLocalSnapshotLoaded();
   const meta = metaObj(entity);
   const selfSlug = entity.slug.toLowerCase();
   const selfId = entity.id;
@@ -127,27 +128,33 @@ export async function resolveRelatedEntities(
   }
 
   if (ors.length > 0) {
-    const { data: geo } = await supabase
-      .from("encyclopedia_entities")
-      .select("slug")
-      .eq("enabled", true)
-      .neq("id", selfId)
-      .or(ors.join(","))
-      .limit(80);
-    bump((geo ?? []).map((r: { slug: string }) => r.slug), 60, "geography");
+    const geo = (localEncyclopediaAll() as SupabaseEncyclopediaEntity[])
+      .filter((candidate) => {
+        if (!candidate || candidate.enabled === false || candidate.id === selfId) return false;
+        const m = metaObj(candidate);
+        if (entity.entity_type === "city") {
+          return [m.city, m.location, m.capital]
+            .some((v) => typeof v === "string" && normalizeEntitySlug(v) === entity.slug);
+        }
+        if (entity.entity_type === "state") {
+          return [m.state, m.affiliation]
+            .some((v) => typeof v === "string" && normalizeEntitySlug(v) === entity.slug);
+        }
+        return false;
+      })
+      .slice(0, 80);
+    bump(geo.map((r) => r.slug), 60, "geography");
   }
 
   if (scores.size === 0) return [];
 
-  // Resolve slugs → live enabled rows, then filter for displayability.
+  // Resolve slugs → local enabled rows, then filter for displayability.
   const keys = Array.from(scores.keys());
-  const { data: rows } = await supabase
-    .from("encyclopedia_entities")
-    .select("*")
-    .eq("enabled", true)
-    .in("slug", keys);
+  const rows = keys
+    .map((key) => localEncyclopediaBySlug(key) as SupabaseEncyclopediaEntity | null)
+    .filter((row): row is SupabaseEncyclopediaEntity => !!row && row.enabled !== false);
 
-  const nodes: RelatedNode[] = ((rows ?? []) as SupabaseEncyclopediaEntity[])
+  const nodes: RelatedNode[] = rows
     .filter(isDisplayableEntity)
     .map((r) => {
       const ref = scores.get(r.slug.toLowerCase())!;

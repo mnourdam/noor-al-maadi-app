@@ -54,6 +54,10 @@ export async function fetchTodayInHistory(
     if (local.length > 0) return { selected: local[0], others: local.slice(1) };
   } catch { /* ignore */ }
 
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return { selected: null, others: [] };
+  }
+
   try {
     const { data, error } = await supabase
       .from("today_in_history_events" as any)
