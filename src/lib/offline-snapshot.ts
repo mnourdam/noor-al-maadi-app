@@ -93,28 +93,52 @@ const NO_UPDATED_AT: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollecti
 ]);
 
 async function fetchCollection(def: CollectionDef): Promise<any[]> {
-  const PAGE = 1000;
+  // Smaller page size than the PostgREST default (1000) so heavy JSON
+  // columns (encyclopedia body, campaign data) don't push a single page
+  // past preview/CDN payload limits and hang.
+  const PAGE = 500;
   const out: any[] = [];
+  // First, ask PostgREST for the exact row count so we can validate we
+  // fetched every page. Without this guard, a silently-truncated response
+  // (extension shim, proxy, network hiccup) would look like a clean short
+  // batch and end the loop early — which is what pinned the encyclopedia
+  // snapshot at 1000 rows even though 1778 were public.
+  let expectedTotal: number | null = null;
   for (let from = 0; ; from += PAGE) {
     let query: any = supabase
       .from(def.table as any)
-      .select("*")
+      .select("*", from === 0 ? { count: "exact" } : undefined)
       // Stable ordering is REQUIRED — PostgREST without an explicit
       // order can reshuffle rows between pages and silently drop or
-      // duplicate records across .range() calls. This bug is what
-      // caused the offline snapshot to shrink after a full refresh.
+      // duplicate records across .range() calls.
       .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
     if (def.filter) query = def.filter(query);
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) {
       console.warn(`[snapshot] failed to read ${def.table}:`, error.message);
       throw error;
     }
+    if (from === 0 && typeof count === "number") expectedTotal = count;
     const batch = data ?? [];
     out.push(...batch);
     if (batch.length < PAGE) break;
+    if (from > 200_000) {
+      console.warn(`[snapshot] ${def.table}: pagination safety cap hit at ${from}`);
+      break;
+    }
   }
+  if (expectedTotal !== null && out.length < expectedTotal) {
+    const msg =
+      `[snapshot] ${def.table}: fetched ${out.length}/${expectedTotal} rows ` +
+      `— pagination came up short, refusing to persist truncated data`;
+    console.warn(msg);
+    throw new Error(msg);
+  }
+  console.info(
+    `[snapshot] ${def.table}: fetched ${out.length} rows` +
+      (expectedTotal !== null ? ` (expected ${expectedTotal})` : ""),
+  );
   return out;
 }
 
@@ -126,7 +150,7 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
  */
 async function fetchCollectionSince(def: CollectionDef, since: string): Promise<any[] | null> {
   if (NO_UPDATED_AT.has(def.key)) return null;
-  const PAGE = 1000;
+  const PAGE = 500;
   const out: any[] = [];
   for (let from = 0; ; from += PAGE) {
     let query: any = supabase
@@ -145,8 +169,27 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
     const batch = data ?? [];
     out.push(...batch);
     if (batch.length < PAGE) break;
+    if (from > 200_000) break;
   }
   return out;
+}
+
+/**
+ * Return the current authoritative row count for a collection (as seen by
+ * the current auth context, i.e. anon RLS in production). Used to detect
+ * caches that trail behind the live source and trigger a true-up.
+ */
+async function fetchCollectionExpectedCount(def: CollectionDef): Promise<number | null> {
+  let query: any = supabase
+    .from(def.table as any)
+    .select("id", { count: "exact", head: true });
+  if (def.filter) query = def.filter(query);
+  const { count, error } = await query;
+  if (error) {
+    console.warn(`[snapshot] count query failed for ${def.table}:`, error.message);
+    return null;
+  }
+  return typeof count === "number" ? count : null;
 }
 
 function maxUpdatedAt(rows: any[]): string | null {
@@ -292,17 +335,30 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     const since = maxUpdatedAt(prevRows);
     let merged: any[] = prevRows;
     try {
-      if (since && !NO_UPDATED_AT.has(def.key)) {
+      // True-up: if the live source has more rows than our cache, the
+      // since-based delta will miss the rows we simply never fetched
+      // (they existed with older `updated_at` before our first sync, or a
+      // previous full fetch was silently truncated). Detect that gap and
+      // do a full re-fetch for this collection so the cache converges.
+      const expected = await fetchCollectionExpectedCount(def);
+      const cacheIsShort =
+        typeof expected === "number" && expected > prevRows.length;
+
+      if (cacheIsShort) {
+        console.info(
+          `[snapshot] true-up ${def.table}: cache=${prevRows.length}, live=${expected} → full fetch`,
+        );
+        const fresh = await fetchCollection(def);
+        merged = mergeRows(prevRows, fresh);
+      } else if (since && !NO_UPDATED_AT.has(def.key)) {
         const deltas = await fetchCollectionSince(def, since);
         if (deltas === null) {
-          // Column missing / not supported — full refetch for this collection.
           merged = await fetchCollection(def);
         } else {
           merged = mergeRows(prevRows, deltas);
           totalDeltas += deltas.length;
         }
       } else {
-        // No baseline timestamp OR no updated_at → full fetch.
         merged = await fetchCollection(def);
       }
     } catch (e) {
