@@ -217,7 +217,7 @@ function Row({
         {isHigh && <span className="absolute inset-y-0 right-0 w-[3px] bg-gradient-to-b from-gold via-amber-300 to-gold" />}
         <button onClick={() => onOpen(n)} className="flex flex-1 items-start gap-3 text-right">
           {n.image_url ? (
-            <img src={n.image_url} alt="" className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-gold/20" loading="lazy" />
+            <CachedImage src={n.image_url} alt="" className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-gold/20" loading="lazy" />
           ) : (
             <div className={`grid size-14 shrink-0 place-items-center rounded-xl ${cat.accentBg} ring-1 ring-white/10`}>
               <Icon className={`size-5 ${cat.accent}`} strokeWidth={1.7} />
