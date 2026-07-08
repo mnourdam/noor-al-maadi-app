@@ -22,6 +22,7 @@ import {
   type OfflineCollectionKey,
   type OfflineSnapshot,
 } from "./offline-storage";
+import { validateSnapshot } from "./offline-snapshot-validate";
 
 /** Legacy alias kept for older imports. */
 export type ContentType =
@@ -98,7 +99,7 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
     const { data, error } = await query;
     if (error) {
       console.warn(`[snapshot] failed to read ${def.table}:`, error.message);
-      return out;
+      throw error;
     }
     const batch = data ?? [];
     out.push(...batch);
@@ -162,6 +163,11 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
 export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   const previous = await loadSnapshot();
   const snap = await generateSnapshot();
+  const report = validateSnapshot(snap);
+  if (!report.ok) {
+    console.warn("[snapshot] refusing to store invalid live snapshot", report.issues);
+    throw new Error("Invalid offline snapshot; keeping existing local content");
+  }
   // Never let a failed/partial online refresh erase a richer local/bundled
   // cache. This protects offline-first playability when a public policy,
   // network hop, or API page returns empty/incomplete data.
@@ -193,15 +199,30 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
 
 /** Load the bundled snapshot shipped in /public. */
 export async function loadBundledSnapshot(): Promise<OfflineSnapshot | null> {
+  const urls = new Set<string>([BUNDLED_SNAPSHOT_URL]);
   try {
-    const res = await fetch(BUNDLED_SNAPSHOT_URL, { cache: "force-cache" });
-    if (!res.ok) return null;
-    const j = await res.json();
-    if (!j || typeof j !== "object" || !j.collections) return null;
-    return { ...j, source: "bundled" } as OfflineSnapshot;
-  } catch {
-    return null;
+    const base = (import.meta as any).env?.BASE_URL ?? "/";
+    urls.add(`${String(base).replace(/\/$/, "")}/offline-snapshot.json`);
+  } catch { /* ignore */ }
+  try {
+    if (typeof window !== "undefined") {
+      urls.add(new URL("/offline-snapshot.json", window.location.origin).toString());
+      urls.add(new URL("offline-snapshot.json", window.location.href).toString());
+    }
+  } catch { /* ignore */ }
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: "force-cache" });
+      if (!res.ok) continue;
+      const j = await res.json();
+      if (!j || typeof j !== "object" || !j.collections) continue;
+      const snap = { ...j, source: "bundled" } as OfflineSnapshot;
+      if (!validateSnapshot(snap).ok) continue;
+      return snap;
+    } catch { /* try next URL */ }
   }
+  return null;
 }
 
 /** Read content for a collection using the documented priority order. */
