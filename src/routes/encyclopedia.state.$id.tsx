@@ -20,8 +20,8 @@ import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
-import { supabase } from "@/integrations/supabase/client";
 import {
+  fetchEncyclopediaBySlugLocalFirst,
   isDisplayableEntity,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
@@ -99,15 +99,7 @@ function StatePage() {
     queryKey: ["encyclopedia", "state", id, "v2"],
     staleTime: 60_000,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
-      const { data, error } = await supabase
-        .from("encyclopedia_entities")
-        .select("*")
-        .eq("enabled", true)
-        .eq("entity_type", "state")
-        .eq("slug", id)
-        .maybeSingle();
-      if (error) throw error;
-      return (data as SupabaseEncyclopediaEntity | null) ?? null;
+      return fetchEncyclopediaBySlugLocalFirst(id, "state");
     },
   });
 

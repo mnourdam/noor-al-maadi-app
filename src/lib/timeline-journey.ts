@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getCollection } from "@/lib/offline-snapshot";
+import { ensureLocalSnapshotLoaded, localAtlasEntities } from "@/lib/local-first-store";
 
 export type EraId =
   | "pre_islam" | "prophetic" | "rashidun" | "umayyad" | "abbasid"
@@ -242,6 +243,14 @@ async function fetchEntities(): Promise<RawEntity[]> {
 }
 
 async function fetchAtlasIds(): Promise<Set<string>> {
+  try {
+    await ensureLocalSnapshotLoaded();
+    const local = localAtlasEntities() as Array<{ encyclopedia_entity_id?: string | null }>;
+    if (local.length > 0) {
+      return new Set(local.map((r) => r.encyclopedia_entity_id).filter((id): id is string => !!id));
+    }
+  } catch { /* fall through */ }
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return new Set();
   try {
     const { data, error } = await (supabase as any)
       .from("atlas_entities")

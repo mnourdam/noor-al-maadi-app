@@ -8,6 +8,11 @@ import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { normalizeEntitySlug, ENCYCLOPEDIA_ENTITY_COLUMNS } from "@/lib/encyclopedia-source";
 import { resolveRelatedEntities, type RelatedNode } from "@/lib/relationship-graph";
 import { sortEntitiesChronological } from "@/lib/entityChronology";
+import {
+  ensureLocalSnapshotLoaded,
+  localEncyclopediaBySlug,
+  localPublishedCampaigns,
+} from "@/lib/local-first-store";
 
 export type WorldHub = {
   slug: string;
@@ -115,9 +120,15 @@ function stripPrefix(s: string): string {
 }
 
 async function countCampaignsForSlug(slug: string): Promise<number> {
-  const { data } = await supabase.from("admin_campaigns").select("data").limit(500);
+  await ensureLocalSnapshotLoaded();
+  const local = localPublishedCampaigns() as Array<{ data: any }>;
+  const data = local.length > 0
+    ? local
+    : (typeof navigator === "undefined" || navigator.onLine !== false)
+      ? ((await supabase.from("admin_campaigns").select("data").limit(500)).data ?? [])
+      : [];
   let count = 0;
-  for (const c of data ?? []) {
+  for (const c of data) {
     const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
     const cmeta = (cm.metadata && typeof cm.metadata === "object"
       ? (cm.metadata as Record<string, unknown>)
@@ -134,22 +145,35 @@ async function countCampaignsForSlug(slug: string): Promise<number> {
 }
 
 export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
+  await ensureLocalSnapshotLoaded();
   const slugs = WORLD_HUBS.map((h) => h.slug);
-  const { data: rows } = await supabase
-    .from("encyclopedia_entities")
-    .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
-    .in("slug", slugs)
-    .eq("enabled", true);
+  let rows = slugs
+    .map((slug) => localEncyclopediaBySlug(slug, "state"))
+    .filter((row): row is SupabaseEncyclopediaEntity => !!row && row.enabled !== false);
+
+  if (rows.length === 0 && (typeof navigator === "undefined" || navigator.onLine !== false)) {
+    const live = await supabase
+      .from("encyclopedia_entities")
+      .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
+      .in("slug", slugs)
+      .eq("enabled", true);
+    rows = (live.data ?? []) as unknown as SupabaseEncyclopediaEntity[];
+  }
 
   const bySlug = new Map<string, SupabaseEncyclopediaEntity>();
-  for (const r of (rows ?? []) as unknown as SupabaseEncyclopediaEntity[]) {
+  for (const r of rows) {
     bySlug.set(r.slug, r);
   }
 
   // Count campaigns once per hub (cheap: 500 rows, in-memory filter per hub).
-  const { data: campRows } = await supabase.from("admin_campaigns").select("data").limit(500);
+  const localCampaignRows = localPublishedCampaigns() as Array<{ data: any }>;
+  const campRows = localCampaignRows.length > 0
+    ? localCampaignRows
+    : (typeof navigator === "undefined" || navigator.onLine !== false)
+      ? ((await supabase.from("admin_campaigns").select("data").limit(500)).data ?? [])
+      : [];
   const campCount = new Map<string, number>();
-  for (const c of campRows ?? []) {
+  for (const c of campRows) {
     const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
     const cmeta = (cm.metadata && typeof cm.metadata === "object"
       ? (cm.metadata as Record<string, unknown>)
@@ -210,15 +234,19 @@ const SECTION_KEYS: WorldSectionKey[] = [
 ];
 
 export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null> {
+  await ensureLocalSnapshotLoaded();
   const hub = findHub(slug);
   if (!hub) return null;
-  const { data } = await supabase
-    .from("encyclopedia_entities")
-    .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
-    .eq("slug", slug)
-    .eq("enabled", true)
-    .maybeSingle();
-  const entity = (data ?? null) as unknown as SupabaseEncyclopediaEntity | null;
+  let entity = localEncyclopediaBySlug(slug, "state") as SupabaseEncyclopediaEntity | null;
+  if (!entity && (typeof navigator === "undefined" || navigator.onLine !== false)) {
+    const { data } = await supabase
+      .from("encyclopedia_entities")
+      .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
+      .eq("slug", slug)
+      .eq("enabled", true)
+      .maybeSingle();
+    entity = (data ?? null) as unknown as SupabaseEncyclopediaEntity | null;
+  }
   if (!entity) return null;
 
   const related = await resolveRelatedEntities(entity);

@@ -28,8 +28,11 @@ import encyclopediaHeaderArt from "@/assets/hero/16-historical-library.jpg?url";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
-import { supabase } from "@/integrations/supabase/client";
-import { isDisplayableEntity, type SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import {
+  fetchEncyclopediaAllLocalFirst,
+  isDisplayableEntity,
+  type SupabaseEncyclopediaEntity,
+} from "@/lib/encyclopedia-source";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 import { isPublicEntity } from "@/lib/taxonomy-public";
 import { iconForType } from "@/lib/encyclopedia-icons";
@@ -78,23 +81,7 @@ function useAllEncyclopedia() {
     queryKey: ["encyclopedia", "all-min-v4"],
     staleTime: 60_000,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
-      const PAGE = 1000;
-      const rows: SupabaseEncyclopediaEntity[] = [];
-      for (let from = 0; ; from += PAGE) {
-        const { data, error } = await supabase
-          .from("encyclopedia_entities")
-          .select("id,slug,entity_type,title,subtitle,summary,body,metadata,aliases,enabled,created_at,updated_at")
-          .eq("enabled", true)
-          .order("title")
-          .range(from, from + PAGE - 1);
-        if (error) throw error;
-        const batch = (data ?? []) as SupabaseEncyclopediaEntity[];
-        rows.push(...batch);
-        if (batch.length < PAGE) break;
-      }
-      // Supabase is the only source of truth. Hide incomplete rows and
-      // enforce the public taxonomy whitelist so legacy / migration state
-      // entities never surface in player-facing filters or lists.
+      const rows = await fetchEncyclopediaAllLocalFirst();
       return rows.filter(isDisplayableEntity).filter(isPublicEntity);
     },
   });

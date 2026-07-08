@@ -80,6 +80,9 @@ export async function fetchMyNotifications(limit = 100): Promise<ServerNotificat
 }
 
 export async function fetchMyUnreadCount(): Promise<number> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return readCache().filter((n) => !n.read_at && !n.deleted_locally).length;
+  }
   try {
     const { data, error } = await supabase.rpc("my_unread_notification_count" as never);
     if (error) throw error;
@@ -165,6 +168,7 @@ export async function setMyPreferences(prefs: NotificationPreferences): Promise<
  * the Bell badge and Notification Center stay in sync.
  */
 export function subscribeToMyNotifications(onChange: () => void): () => void {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return () => {};
   let alive = true;
   const channels: Array<ReturnType<typeof supabase.channel>> = [];
 

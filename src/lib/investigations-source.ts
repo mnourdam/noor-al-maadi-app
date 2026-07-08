@@ -72,6 +72,11 @@ export function useSupabaseInvestigations() {
         if (!cancelled && local.length > 0) setRows(local);
       } catch { /* ignore */ }
 
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setRows((prev) => prev ?? []);
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from("investigations" as any)
@@ -117,6 +122,11 @@ export function useSupabaseInvestigation(slug: string | undefined) {
         const local = localInvestigationBySlug(slug) as unknown as InvestigationRow | null;
         if (!cancelled && local) setRow(local);
       } catch { /* ignore */ }
+
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setRow((prev) => prev ?? null);
+        return;
+      }
 
       try {
         const { data, error } = await supabase

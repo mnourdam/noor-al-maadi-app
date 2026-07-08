@@ -87,14 +87,24 @@ export const COLLECTIONS: CollectionDef[] = [
 ];
 
 async function fetchCollection(def: CollectionDef): Promise<any[]> {
-  let query: any = supabase.from(def.table as any).select("*");
-  if (def.filter) query = def.filter(query);
-  const { data, error } = await query;
-  if (error) {
-    console.warn(`[snapshot] failed to read ${def.table}:`, error.message);
-    return [];
+  const PAGE = 1000;
+  const out: any[] = [];
+  for (let from = 0; ; from += PAGE) {
+    let query: any = supabase
+      .from(def.table as any)
+      .select("*")
+      .range(from, from + PAGE - 1);
+    if (def.filter) query = def.filter(query);
+    const { data, error } = await query;
+    if (error) {
+      console.warn(`[snapshot] failed to read ${def.table}:`, error.message);
+      throw error;
+    }
+    const batch = data ?? [];
+    out.push(...batch);
+    if (batch.length < PAGE) break;
   }
-  return data ?? [];
+  return out;
 }
 
 async function sha256Hex(text: string): Promise<string | undefined> {
@@ -150,7 +160,27 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
 }
 
 export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
+  const previous = await loadSnapshot();
   const snap = await generateSnapshot();
+  const { validateSnapshot } = await import("./offline-snapshot-validate");
+  const report = validateSnapshot(snap);
+  if (!report.ok) {
+    console.warn("[snapshot] refusing to store invalid live snapshot", report.issues);
+    throw new Error("Invalid offline snapshot; keeping existing local content");
+  }
+  // Never let a failed/partial online refresh erase a richer local/bundled
+  // cache. This protects offline-first playability when a public policy,
+  // network hop, or API page returns empty/incomplete data.
+  if (previous?.collections) {
+    for (const def of COLLECTIONS) {
+      const prevRows = previous.collections[def.key] ?? [];
+      const nextRows = snap.collections[def.key] ?? [];
+      if (prevRows.length > 0 && nextRows.length === 0) {
+        snap.collections[def.key] = prevRows;
+        snap.content_counts[def.key] = prevRows.length;
+      }
+    }
+  }
   await saveSnapshot(snap);
   // Keep the in-memory local-first index in sync with the freshly persisted
   // snapshot so subsequent route reads see the new content immediately.
@@ -169,15 +199,31 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
 
 /** Load the bundled snapshot shipped in /public. */
 export async function loadBundledSnapshot(): Promise<OfflineSnapshot | null> {
+  const urls = new Set<string>([BUNDLED_SNAPSHOT_URL]);
   try {
-    const res = await fetch(BUNDLED_SNAPSHOT_URL, { cache: "force-cache" });
-    if (!res.ok) return null;
-    const j = await res.json();
-    if (!j || typeof j !== "object" || !j.collections) return null;
-    return { ...j, source: "bundled" } as OfflineSnapshot;
-  } catch {
-    return null;
+    const base = (import.meta as any).env?.BASE_URL ?? "/";
+    urls.add(`${String(base).replace(/\/$/, "")}/offline-snapshot.json`);
+  } catch { /* ignore */ }
+  try {
+    if (typeof window !== "undefined") {
+      urls.add(new URL("/offline-snapshot.json", window.location.origin).toString());
+      urls.add(new URL("offline-snapshot.json", window.location.href).toString());
+    }
+  } catch { /* ignore */ }
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: "force-cache" });
+      if (!res.ok) continue;
+      const j = await res.json();
+      if (!j || typeof j !== "object" || !j.collections) continue;
+      const snap = { ...j, source: "bundled" } as OfflineSnapshot;
+      const { validateSnapshot } = await import("./offline-snapshot-validate");
+      if (!validateSnapshot(snap).ok) continue;
+      return snap;
+    } catch { /* try next URL */ }
   }
+  return null;
 }
 
 /** Read content for a collection using the documented priority order. */
@@ -219,13 +265,18 @@ export async function getContent<T = any>(
  */
 const SYNC_LOCK_KEY = "irth.offline.sync.lock";
 
+function hasRequiredSnapshotContent(snap: OfflineSnapshot | null | undefined): snap is OfflineSnapshot {
+  if (!snap?.collections) return false;
+  return REQUIRED_COLLECTION_KEYS.every((key) => Array.isArray(snap.collections[key]) && snap.collections[key].length > 0);
+}
+
 export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Promise<void> {
   const maxAge = opts.maxAgeMs ?? 6 * 60 * 60 * 1000; // 6h
   try {
     let local = await loadSnapshot();
-    if (!local) {
+    if (!hasRequiredSnapshotContent(local)) {
       const bundled = await loadBundledSnapshot();
-      if (bundled) {
+      if (hasRequiredSnapshotContent(bundled)) {
         await saveSnapshot(bundled);
         local = bundled;
       }
@@ -234,7 +285,7 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
     // can read content synchronously on first paint, even without network.
     try {
       const { applyLocalSnapshot, ensureLocalSnapshotLoaded } = await import("./local-first-store");
-      if (local) applyLocalSnapshot(local);
+      if (hasRequiredSnapshotContent(local)) applyLocalSnapshot(local);
       else await ensureLocalSnapshotLoaded();
     } catch { /* ignore */ }
 
@@ -244,7 +295,7 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
 
     const stale =
       !local ||
-      local.snapshot_version !== SNAPSHOT_SCHEMA_VERSION ||
+      local.schema_version !== SNAPSHOT_SCHEMA_VERSION ||
       Date.now() - new Date(local.generated_at).getTime() > maxAge;
     if (!stale) return;
 

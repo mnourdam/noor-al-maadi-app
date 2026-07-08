@@ -52,6 +52,7 @@ export async function listGamesByMode(
 }
 
 export async function listPublishedGames(): Promise<GameRow[]> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return [];
   const { data } = await supabase
     .from("games")
     .select(SELECT_COLS)
@@ -63,6 +64,7 @@ export async function listPublishedGames(): Promise<GameRow[]> {
 export async function listPublishedGamesByMode(
   mode: GameMode,
 ): Promise<GameRow[]> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return [];
   const { data } = await supabase
     .from("games")
     .select(SELECT_COLS)
@@ -73,6 +75,7 @@ export async function listPublishedGamesByMode(
 }
 
 export async function getGameBySlug(slug: string): Promise<GameRow | null> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
   const { data } = await supabase
     .from("games")
     .select(SELECT_COLS)
@@ -108,6 +111,7 @@ export async function fetchDailyFeaturedGames(count = 2): Promise<GameRow[]> {
 // Fetch ids of games the current player already completed. Returns empty set
 // if not signed in or on error — daily picks should still work for guests.
 export async function fetchMyCompletedGameIds(): Promise<Set<string>> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return new Set();
   const { data: u } = await supabase.auth.getUser();
   const uid = u.user?.id;
   if (!uid) return new Set();
@@ -128,6 +132,7 @@ export async function fetchMyCompletedGameIds(): Promise<Set<string>> {
  * make the challenge playable again the moment the calendar day rolls over.
  */
 export async function fetchMyDailyCompletedGameIds(): Promise<Set<string>> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return new Set();
   const { data: u } = await supabase.auth.getUser();
   const uid = u.user?.id;
   if (!uid) return new Set();

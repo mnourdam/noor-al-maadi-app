@@ -14,7 +14,7 @@ import {
   filterLc1AtlasRows,
   type AtlasEntityRow,
 } from "./atlas-entities";
-import { localAtlasEntities } from "./local-first-store";
+import { ensureLocalSnapshotLoaded, localAtlasEntities } from "./local-first-store";
 
 export function usePublishedAtlasEntities() {
   return useQuery<AtlasEntityRow[]>({
@@ -25,6 +25,11 @@ export function usePublishedAtlasEntities() {
       return rows.length > 0 ? filterLc1AtlasRows(rows) : undefined;
     },
     initialDataUpdatedAt: 0,
-    queryFn: async () => filterLc1AtlasRows(await listPublishedAtlasEntities()),
+    queryFn: async () => {
+      await ensureLocalSnapshotLoaded();
+      const local = localAtlasEntities() as AtlasEntityRow[];
+      if (local.length > 0) return filterLc1AtlasRows(local);
+      return filterLc1AtlasRows(await listPublishedAtlasEntities());
+    },
   });
 }

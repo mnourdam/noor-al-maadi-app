@@ -29,6 +29,10 @@ export function HUD() {
     const id = androidStable ? null : setInterval(() => force((n) => n + 1), 1_000);
     let serverAuthoritative = false;
     const recount = async () => {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setUnread(unreadCount());
+        return;
+      }
       // Server is source of truth. Local cache is only used before the first
       // successful server fetch (guest/offline cold-start).
       try {

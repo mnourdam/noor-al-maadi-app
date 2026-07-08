@@ -9,8 +9,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { normalizeEntitySlug } from "@/lib/encyclopedia-source";
+import { ensureLocalSnapshotLoaded, localEncyclopediaAll, localEncyclopediaBySlug } from "@/lib/local-first-store";
 
 export type ParsedUnlock = {
   raw: string;
@@ -124,19 +124,17 @@ export function useResolvedUnlocks(ids: string[] | undefined | null) {
             }
           }
         };
-        const slugRes = await supabase
-          .from("encyclopedia_entities")
-          .select("entity_type, slug, title, subtitle, summary, body, metadata, enabled")
-          .in("slug", slugs)
-          .eq("enabled", true);
-        if (!slugRes.error) push(slugRes.data);
+        await ensureLocalSnapshotLoaded();
+        push(slugs.flatMap((slug) => {
+          const hit = localEncyclopediaBySlug(slug) as EncRow | null;
+          return hit && hit.enabled !== false ? [hit] : [];
+        }));
         for (const raw of rawIds) {
-          const aliasRes = await supabase
-            .from("encyclopedia_entities")
-            .select("entity_type, slug, title, subtitle, summary, body, metadata, enabled")
-            .contains("metadata", { aliases: [raw] })
-            .eq("enabled", true);
-          if (!aliasRes.error) push(aliasRes.data);
+          push((localEncyclopediaAll() as EncRow[]).filter((r) => {
+            if (r?.enabled === false) return false;
+            const aliases = (r.metadata as { aliases?: unknown } | null)?.aliases;
+            return Array.isArray(aliases) && aliases.includes(raw);
+          }));
         }
         return rows;
       } catch {
