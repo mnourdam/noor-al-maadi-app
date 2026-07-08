@@ -86,6 +86,12 @@ export const COLLECTIONS: CollectionDef[] = [
 
 ];
 
+/** Collections that DO NOT expose `updated_at` — sync must full-fetch these. */
+const NO_UPDATED_AT: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollectionKey>([
+  "today_in_history_events",
+  "daily_facts",
+]);
+
 async function fetchCollection(def: CollectionDef): Promise<any[]> {
   const PAGE = 1000;
   const out: any[] = [];
@@ -105,6 +111,54 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
     if (batch.length < PAGE) break;
   }
   return out;
+}
+
+/**
+ * Fetch only rows whose `updated_at` is strictly greater than `since`.
+ * Returns `null` when the collection has no `updated_at` column and the
+ * caller must fall back to a full fetch.
+ */
+async function fetchCollectionSince(def: CollectionDef, since: string): Promise<any[] | null> {
+  if (NO_UPDATED_AT.has(def.key)) return null;
+  const PAGE = 1000;
+  const out: any[] = [];
+  for (let from = 0; ; from += PAGE) {
+    let query: any = supabase
+      .from(def.table as any)
+      .select("*")
+      .gt("updated_at", since)
+      .order("updated_at", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (def.filter) query = def.filter(query);
+    const { data, error } = await query;
+    if (error) {
+      // Missing column, permission issue, etc. — surrender to full fetch.
+      console.warn(`[snapshot] incremental fetch failed for ${def.table}:`, error.message);
+      return null;
+    }
+    const batch = data ?? [];
+    out.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return out;
+}
+
+function maxUpdatedAt(rows: any[]): string | null {
+  let best: string | null = null;
+  for (const r of rows) {
+    const u = (r as any)?.updated_at;
+    if (typeof u === "string" && (!best || u > best)) best = u;
+  }
+  return best;
+}
+
+/** Merge deltas into an existing row set by `id`, replacing on conflict. */
+function mergeRows(existing: any[], deltas: any[]): any[] {
+  if (deltas.length === 0) return existing;
+  const byId = new Map<string, any>();
+  for (const r of existing) if (r?.id != null) byId.set(String(r.id), r);
+  for (const r of deltas) if (r?.id != null) byId.set(String(r.id), r);
+  return Array.from(byId.values());
 }
 
 async function sha256Hex(text: string): Promise<string | undefined> {
