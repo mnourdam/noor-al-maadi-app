@@ -15,6 +15,16 @@
 
 export const SNAPSHOT_SCHEMA_VERSION = 2;
 
+/**
+ * Hard floor for the player-facing public encyclopedia dataset. This is a
+ * deliberate fail-closed guard: a bootstrap/full-sync result with 923/1000
+ * rows is worse than no live sync at all, because it poisons IndexedDB and
+ * hides most of the app offline. If the live public dataset intentionally
+ * changes below this number, update this floor in the same release that ships
+ * a newly verified bundled snapshot.
+ */
+const MIN_PUBLIC_ENCYCLOPEDIA_ROWS = 1778;
+
 export type OfflineCollectionKey =
   | "encyclopedia_entities"
   | "admin_campaigns"
@@ -73,6 +83,30 @@ function openDB(): Promise<IDBDatabase> {
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
+}
+
+function snapshotPersistable(snap: OfflineSnapshot | null): snap is OfflineSnapshot {
+  if (!snap?.collections || typeof snap.collections !== "object") return false;
+  const encyclopedia = snap.collections.encyclopedia_entities;
+  if (!Array.isArray(encyclopedia) || encyclopedia.length < MIN_PUBLIC_ENCYCLOPEDIA_ROWS) {
+    console.warn(
+      `[offline-storage] rejecting incomplete encyclopedia snapshot: ` +
+      `${Array.isArray(encyclopedia) ? encyclopedia.length : 0}/${MIN_PUBLIC_ENCYCLOPEDIA_ROWS}`,
+    );
+    return false;
+  }
+  if (snap.content_counts && typeof snap.content_counts === "object") {
+    for (const [key, rows] of Object.entries(snap.collections)) {
+      if (Array.isArray(rows) && typeof snap.content_counts[key] === "number" && snap.content_counts[key] !== rows.length) {
+        console.warn(
+          `[offline-storage] rejecting snapshot with mismatched count for ${key}: ` +
+          `${snap.content_counts[key]} != ${rows.length}`,
+        );
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 async function idbPut(value: OfflineSnapshot): Promise<void> {
@@ -143,6 +177,9 @@ function normalize(raw: any): OfflineSnapshot | null {
 }
 
 export async function saveSnapshot(snap: OfflineSnapshot): Promise<void> {
+  if (!snapshotPersistable(snap)) {
+    throw new Error("Refusing to persist incomplete offline snapshot");
+  }
   if (hasIDB()) {
     try { await idbPut(snap); return; } catch { /* fall through */ }
   }
@@ -152,12 +189,24 @@ export async function saveSnapshot(snap: OfflineSnapshot): Promise<void> {
 
 export async function loadSnapshot(): Promise<OfflineSnapshot | null> {
   if (hasIDB()) {
-    try { const v = await idbGet(); if (v) return normalize(v); }
+    try {
+      const v = await idbGet();
+      if (v) {
+        const snap = normalize(v);
+        if (snapshotPersistable(snap)) return snap;
+        await idbDelete().catch(() => {});
+      }
+    }
     catch { /* fall through */ }
   }
   try {
     const raw = localStorage.getItem(LS_KEY) ?? localStorage.getItem(LEGACY_LS_KEY);
-    return raw ? normalize(JSON.parse(raw)) : null;
+    if (!raw) return null;
+    const snap = normalize(JSON.parse(raw));
+    if (snapshotPersistable(snap)) return snap;
+    localStorage.removeItem(LS_KEY);
+    localStorage.removeItem(LEGACY_LS_KEY);
+    return null;
   } catch {
     return null;
   }
