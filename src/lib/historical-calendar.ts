@@ -99,10 +99,9 @@ export function useCalendarEvents() {
       // Local-first: read from the bundled/IndexedDB snapshot so the calendar
       // works completely offline after the first successful sync.
       try {
-        const { ensureLocalSnapshotLoaded, localSnapshotInfo } = await import("./local-first-store");
+        const { ensureLocalSnapshotLoaded, localTihAll } = await import("./local-first-store");
         await ensureLocalSnapshotLoaded();
-        const info = localSnapshotInfo();
-        const rows = ((info as any)?.snapshot?.collections?.today_in_history_events ?? []) as any[];
+        const rows = localTihAll() as any[];
         const enabled = rows.filter((r) => r?.enabled !== false);
         if (enabled.length > 0) return enabled.map(rowToEvent);
       } catch { /* fall through */ }
