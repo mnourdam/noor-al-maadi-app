@@ -80,17 +80,18 @@ export async function fetchMyNotifications(limit = 100): Promise<ServerNotificat
 }
 
 export async function fetchMyUnreadCount(): Promise<number> {
-  if (typeof navigator !== "undefined" && navigator.onLine === false) {
-    return readCache().filter((n) => !n.read_at && !n.deleted_locally).length;
-  }
+  // Derive the badge from the SAME list the Notification Center renders,
+  // so the two can never disagree (e.g. server RPC counts deliveries that
+  // no longer surface in list_my_notifications after cleanup/RLS changes).
+  // On failure/offline we still fall back to the cached list.
   try {
-    const { data, error } = await supabase.rpc("my_unread_notification_count" as never);
-    if (error) throw error;
-    return Number(data ?? 0);
+    const rows = await fetchMyNotifications(200);
+    return rows.filter((n) => !n.read_at && !n.dismissed_at && !n.deleted_locally).length;
   } catch {
-    return readCache().filter((n) => !n.read_at && !n.deleted_locally).length;
+    return readCache().filter((n) => !n.read_at && !n.dismissed_at && !n.deleted_locally).length;
   }
 }
+
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
   try {
