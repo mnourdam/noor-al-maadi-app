@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   loadSnapshot,
   saveSnapshot,
+  MIN_PUBLIC_ENCYCLOPEDIA_ROWS,
   SNAPSHOT_SCHEMA_VERSION,
   type OfflineCollectionKey,
   type OfflineSnapshot,
@@ -96,30 +97,41 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
   // Smaller page size than the PostgREST default (1000) so heavy JSON
   // columns (encyclopedia body, campaign data) don't push a single page
   // past preview/CDN payload limits and hang.
-  const PAGE = 500;
+  const PAGE = 100;
   const out: any[] = [];
-  // First, ask PostgREST for the exact row count so we can validate we
-  // fetched every page. Without this guard, a silently-truncated response
-  // (extension shim, proxy, network hiccup) would look like a clean short
-  // batch and end the loop early — which is what pinned the encyclopedia
-  // snapshot at 1000 rows even though 1778 were public.
-  let expectedTotal: number | null = null;
+  // Ask PostgREST for the exact count BEFORE reading any row data. The count
+  // request is tiny and independent of heavy JSON payloads, so we can fail
+  // closed if pagination later returns 923/1000 rows without an error.
+  const expectedTotal = await fetchCollectionExpectedCount(def);
+  if (def.key === "encyclopedia_entities") {
+    if (typeof expectedTotal !== "number") {
+      throw new Error("[snapshot] encyclopedia_entities: expected count unavailable; refusing full fetch");
+    }
+    if (expectedTotal < MIN_PUBLIC_ENCYCLOPEDIA_ROWS) {
+      throw new Error(
+        `[snapshot] encyclopedia_entities: live count ${expectedTotal} is below required floor ` +
+        `${MIN_PUBLIC_ENCYCLOPEDIA_ROWS}; refusing full fetch`,
+      );
+    }
+  } else if (def.required && typeof expectedTotal !== "number") {
+    throw new Error(`[snapshot] ${def.table}: expected count unavailable; refusing required full fetch`);
+  }
+
   for (let from = 0; ; from += PAGE) {
     let query: any = supabase
       .from(def.table as any)
-      .select("*", from === 0 ? { count: "exact" } : undefined)
+      .select("*")
       // Stable ordering is REQUIRED — PostgREST without an explicit
       // order can reshuffle rows between pages and silently drop or
       // duplicate records across .range() calls.
       .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
     if (def.filter) query = def.filter(query);
-    const { data, error, count } = await query;
+    const { data, error } = await query;
     if (error) {
       console.warn(`[snapshot] failed to read ${def.table}:`, error.message);
       throw error;
     }
-    if (from === 0 && typeof count === "number") expectedTotal = count;
     const batch = data ?? [];
     out.push(...batch);
     if (batch.length < PAGE) break;
@@ -128,10 +140,10 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
       break;
     }
   }
-  if (expectedTotal !== null && out.length < expectedTotal) {
+  if (typeof expectedTotal === "number" && out.length !== expectedTotal) {
     const msg =
       `[snapshot] ${def.table}: fetched ${out.length}/${expectedTotal} rows ` +
-      `— pagination came up short, refusing to persist truncated data`;
+      `— full fetch did not match expected count, refusing to persist data`;
     console.warn(msg);
     throw new Error(msg);
   }
@@ -158,6 +170,7 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
       .select("*")
       .gt("updated_at", since)
       .order("updated_at", { ascending: true })
+      .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
     if (def.filter) query = def.filter(query);
     const { data, error } = await query;
@@ -482,7 +495,12 @@ const SYNC_LOCK_KEY = "irth.offline.sync.lock";
 
 function hasRequiredSnapshotContent(snap: OfflineSnapshot | null | undefined): snap is OfflineSnapshot {
   if (!snap?.collections) return false;
-  return REQUIRED_COLLECTION_KEYS.every((key) => Array.isArray(snap.collections[key]) && snap.collections[key].length > 0);
+  return REQUIRED_COLLECTION_KEYS.every((key) => {
+    const rows = snap.collections[key];
+    if (!Array.isArray(rows) || rows.length === 0) return false;
+    if (key === "encyclopedia_entities") return rows.length >= MIN_PUBLIC_ENCYCLOPEDIA_ROWS;
+    return true;
+  });
 }
 
 export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Promise<void> {
