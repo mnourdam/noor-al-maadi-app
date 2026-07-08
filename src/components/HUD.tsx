@@ -3,7 +3,7 @@ import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart, formatHeartTimer } from "@/lib/hearts";
-import { unreadCount, formatBadgeCount } from "@/lib/notifications";
+import { formatBadgeCount } from "@/lib/notifications";
 import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
