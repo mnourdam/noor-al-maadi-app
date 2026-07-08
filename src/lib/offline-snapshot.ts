@@ -265,13 +265,18 @@ export async function getContent<T = any>(
  */
 const SYNC_LOCK_KEY = "irth.offline.sync.lock";
 
+function hasRequiredSnapshotContent(snap: OfflineSnapshot | null | undefined): snap is OfflineSnapshot {
+  if (!snap?.collections) return false;
+  return REQUIRED_COLLECTION_KEYS.every((key) => Array.isArray(snap.collections[key]) && snap.collections[key].length > 0);
+}
+
 export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Promise<void> {
   const maxAge = opts.maxAgeMs ?? 6 * 60 * 60 * 1000; // 6h
   try {
     let local = await loadSnapshot();
-    if (!local) {
+    if (!hasRequiredSnapshotContent(local)) {
       const bundled = await loadBundledSnapshot();
-      if (bundled) {
+      if (hasRequiredSnapshotContent(bundled)) {
         await saveSnapshot(bundled);
         local = bundled;
       }
@@ -280,7 +285,7 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
     // can read content synchronously on first paint, even without network.
     try {
       const { applyLocalSnapshot, ensureLocalSnapshotLoaded } = await import("./local-first-store");
-      if (local) applyLocalSnapshot(local);
+      if (hasRequiredSnapshotContent(local)) applyLocalSnapshot(local);
       else await ensureLocalSnapshotLoaded();
     } catch { /* ignore */ }
 
