@@ -60,6 +60,7 @@ import { Route as AdminWorldMembershipReviewRouteImport } from './routes/admin.w
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminUnlockIntegrityRouteImport } from './routes/admin.unlock-integrity'
 import { Route as AdminTaxonomyRouteImport } from './routes/admin.taxonomy'
+import { Route as AdminOfflineDiagnosticsRouteImport } from './routes/admin.offline-diagnostics'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum-provenance'
@@ -374,6 +375,11 @@ const AdminUnlockIntegrityRoute = AdminUnlockIntegrityRouteImport.update({
 const AdminTaxonomyRoute = AdminTaxonomyRouteImport.update({
   id: '/admin/taxonomy',
   path: '/admin/taxonomy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminOfflineDiagnosticsRoute = AdminOfflineDiagnosticsRouteImport.update({
+  id: '/admin/offline-diagnostics',
+  path: '/admin/offline-diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminOfflineRoute = AdminOfflineRouteImport.update({
@@ -751,6 +757,7 @@ export interface FileRoutesByFullPath {
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
+  '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
@@ -859,6 +866,7 @@ export interface FileRoutesByTo {
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
+  '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
@@ -972,6 +980,7 @@ export interface FileRoutesById {
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
+  '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
@@ -1086,6 +1095,7 @@ export interface FileRouteTypes {
     | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
+    | '/admin/offline-diagnostics'
     | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
@@ -1194,6 +1204,7 @@ export interface FileRouteTypes {
     | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
+    | '/admin/offline-diagnostics'
     | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
@@ -1306,6 +1317,7 @@ export interface FileRouteTypes {
     | '/admin/museum-provenance'
     | '/admin/notifications'
     | '/admin/offline'
+    | '/admin/offline-diagnostics'
     | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
@@ -1419,6 +1431,7 @@ export interface RootRouteChildren {
   AdminMuseumProvenanceRoute: typeof AdminMuseumProvenanceRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOfflineRoute: typeof AdminOfflineRoute
+  AdminOfflineDiagnosticsRoute: typeof AdminOfflineDiagnosticsRoute
   AdminTaxonomyRoute: typeof AdminTaxonomyRoute
   AdminUnlockIntegrityRoute: typeof AdminUnlockIntegrityRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -1810,6 +1823,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/taxonomy'
       fullPath: '/admin/taxonomy'
       preLoaderRoute: typeof AdminTaxonomyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/offline-diagnostics': {
+      id: '/admin/offline-diagnostics'
+      path: '/admin/offline-diagnostics'
+      fullPath: '/admin/offline-diagnostics'
+      preLoaderRoute: typeof AdminOfflineDiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/offline': {
@@ -2380,6 +2400,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminMuseumProvenanceRoute: AdminMuseumProvenanceRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOfflineRoute: AdminOfflineRoute,
+  AdminOfflineDiagnosticsRoute: AdminOfflineDiagnosticsRoute,
   AdminTaxonomyRoute: AdminTaxonomyRoute,
   AdminUnlockIntegrityRoute: AdminUnlockIntegrityRoute,
   AdminUsersRoute: AdminUsersRoute,
