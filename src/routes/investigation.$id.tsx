@@ -93,13 +93,15 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     // Economy cap — investigations are rich content but must not eclipse
     // multi-campaign progression. Excess authored XP is silently dropped.
     const xp = Math.min(150, Math.max(0, Number(reward.xp ?? 0)));
-    const coins = Math.max(0, Number(reward.coins ?? 0));
+    // Coin cap — keep Dinar economy in step with capped XP.
+    const coins = Math.min(50, Math.max(0, Number(reward.coins ?? 0)));
     const hearts = Math.max(0, Number(reward.hearts ?? 0));
 
     completeInvestigation(row.slug, xp); // adds xp + auto-coins from xp/4
     const autoCoins = Math.max(1, Math.floor(xp / 4));
     const deltaCoins = Math.max(0, coins - autoCoins);
     if (deltaCoins > 0) addDinars(deltaCoins);
+
     if (reward.badge) awardBadge(reward.badge);
     if (reward.artifact) findArtifact(reward.artifact);
 
