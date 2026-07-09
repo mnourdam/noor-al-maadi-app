@@ -972,7 +972,7 @@ function CleanupWorkshop() {
     "needs-cleanup-candidate" | "needs-content" | "complete" | "resolved-other" => {
     const row = r as EntityRow;
     if (!isFinalCanonical(row)) return "resolved-other";
-    return hasRealContent(row) ? "complete" : "needs-content";
+    return hasRealContent(row, scoreOf(row)) ? "complete" : "needs-content";
   };
 
   const snapshotCounts = (list: EntityRow[]) => {
@@ -980,9 +980,10 @@ function CleanupWorkshop() {
     for (const r of list) {
       const isOrphan = !(atlasLinks.get(r.id) || campaignSlugs.get(r.id));
       const quality = classifyQuality(r, dupIds.has(r.id), isOrphan);
+      const s = scoreOf(r);
       if (rowNeedsCleanup(r, liveDupIds, quality)) nc++;
-      if (needsContent(r)) content++;
-      if (isComplete(r)) done++;
+      if (needsContent(r, s)) content++;
+      if (isComplete(r, s)) done++;
     }
     return { needsCleanup: nc, needsContent: content, complete: done };
   };
