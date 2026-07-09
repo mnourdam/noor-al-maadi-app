@@ -459,7 +459,38 @@ function UserDetailDrawer({ userId, isManager, onClose, onChanged }: { userId: s
                 <KV label="آخر نشاط"><span dir="ltr">{fmtDate(detail.profile.last_active as string)}</span></KV>
                 <KV label="النوع"><TypeBadge t={(detail.profile as any).account_type ?? "registered"} /></KV>
                 <KV label="الحالة"><StatusBadge status={detail.profile.account_status as AccountStatus} /></KV>
+                <KV label="طرق الدخول"><ProvidersChips providers={detail.providers} /></KV>
               </Section>
+
+              {/* Identities */}
+              <Section title="الهويات المرتبطة">
+                <div className="col-span-2 space-y-2">
+                  {(detail.identities ?? []).length === 0 ? (
+                    <div className="text-xs text-slate-500">لا توجد هويات مسجّلة.</div>
+                  ) : (
+                    (detail.identities ?? []).map((idn, i) => (
+                      <div key={`${idn.provider}-${i}`} className="flex items-center gap-3 rounded border border-slate-800 bg-slate-900/60 p-2">
+                        {idn.avatar_url ? (
+                          <img src={idn.avatar_url} alt="" className="h-9 w-9 rounded-full border border-slate-700 object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="h-9 w-9 rounded-full border border-slate-700 bg-slate-800" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <ProvidersChips providers={[idn.provider]} />
+                            {idn.name && <span className="truncate text-xs text-slate-200">{idn.name}</span>}
+                          </div>
+                          {idn.email && <div dir="ltr" className="truncate text-[11px] text-slate-400">{idn.email}</div>}
+                          <div dir="ltr" className="text-[11px] text-slate-500">
+                            آخر دخول: {fmtDate(idn.last_sign_in_at)}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Section>
+
 
               {/* Progress */}
               <Section title="التقدم">
