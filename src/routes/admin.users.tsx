@@ -114,6 +114,29 @@ function RolesChips({ roles }: { roles: string[] | undefined }) {
   );
 }
 
+const PROVIDER_LABEL: Record<string, string> = {
+  email: "بريد",
+  google: "Google",
+  apple: "Apple",
+};
+const PROVIDER_CLASS: Record<string, string> = {
+  email: "border-slate-500/30 bg-slate-500/10 text-slate-200",
+  google: "border-sky-500/30 bg-sky-500/10 text-sky-200",
+  apple: "border-slate-300/30 bg-slate-300/10 text-slate-100",
+};
+function ProvidersChips({ providers }: { providers: string[] | undefined }) {
+  if (!providers || providers.length === 0) return <span className="text-[11px] text-slate-500">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {providers.map((p) => (
+        <span key={p} className={`rounded border px-1.5 py-0.5 text-[10px] ${PROVIDER_CLASS[p] ?? "border-slate-500/30 bg-slate-500/10 text-slate-200"}`}>
+          {PROVIDER_LABEL[p] ?? p}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 
 function AdminUsers() {
   const [search, setSearch] = useState("");
