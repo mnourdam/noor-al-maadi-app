@@ -167,22 +167,32 @@ function hasRealBody(body: any): boolean {
   return false;
 }
 
-function hasRealContent(r: EntityRow): boolean {
+// Completeness threshold rule:
+//   score > 50  → approved / complete
+//   score ≤ 50  → needs content
+// This applies uniformly to figures, cities, landmarks, battles, events,
+// states AND artifacts. Artifacts have a lighter content model, but they
+// naturally hit the same threshold sooner because the scoring rubric is
+// generous with what they already provide (image, aliases, atlas link,
+// short overview) — no per-type override is required.
+const APPROVAL_SCORE_THRESHOLD = 50;
+
+function hasRealContent(r: EntityRow, score: number): boolean {
   const m: any = r.metadata || {};
-  // Explicit moderator overrides win over heuristics.
+  // Explicit moderator overrides win over the score threshold.
   if (m.content_verified === true) return true;
   if (m.needs_content === true) return false;
   if (m.placeholder === true || m.stub === true || m.auto_generated === true) return false;
-  return hasRealBody(r.body);
+  return score > APPROVAL_SCORE_THRESHOLD;
 }
 
 
-function needsContent(r: EntityRow): boolean {
-  return isFinalCanonical(r) && !hasRealContent(r);
+function needsContent(r: EntityRow, score: number): boolean {
+  return isFinalCanonical(r) && !hasRealContent(r, score);
 }
 
-function isComplete(r: EntityRow): boolean {
-  return isFinalCanonical(r) && hasRealContent(r);
+function isComplete(r: EntityRow, score: number): boolean {
+  return isFinalCanonical(r) && hasRealContent(r, score);
 }
 
 // ------------------------------------------------------------
@@ -486,6 +496,14 @@ function CleanupWorkshop() {
     return live;
   }, [rows, dupGroups]);
 
+  // Completeness score for a row using the same rubric as the cards.
+  // Feeds needsContent / isComplete which now gate on score > 50.
+  const scoreOf = (r: EntityRow) => scoreEntity({
+    summary: r.summary, body: r.body, metadata: r.metadata,
+    atlasLinks: atlasLinks.get(r.id) ?? 0,
+    campaignRefs: campaignSlugs.get(r.id) ?? 0,
+  });
+
   // Count of items still requiring a human decision — drives the badge
   // next to the "Needs Cleanup" chip and updates live after every merge.
   const needsCleanupCount = useMemo(() => {
@@ -520,15 +538,15 @@ function CleanupWorkshop() {
   // visible so they can be enriched.
   const needsContentCount = useMemo(
     () => rows.reduce(
-      (n, r) => (needsContent(r) && !liveDupIds.has(r.id) ? n + 1 : n),
+      (n, r) => (needsContent(r, scoreOf(r)) && !liveDupIds.has(r.id) ? n + 1 : n),
       0,
     ),
-    [rows, liveDupIds],
+    [rows, liveDupIds, atlasLinks, campaignSlugs],
   );
 
   const completeCount = useMemo(
-    () => rows.reduce((n, r) => (isComplete(r) ? n + 1 : n), 0),
-    [rows],
+    () => rows.reduce((n, r) => (isComplete(r, scoreOf(r)) ? n + 1 : n), 0),
+    [rows, atlasLinks, campaignSlugs],
   );
 
   // ------------------------------------------------------------
@@ -546,9 +564,10 @@ function CleanupWorkshop() {
       const dedupePending = liveDupIds.has(r.id) && !isCleanupResolved(r);
 
       // Pipeline filter (ANDs with type/quality chips below).
+      const rScore = scoreOf(r);
       if (pipeline === "needs-cleanup" && !rowNeedsCleanup(r, liveDupIds, quality)) return false;
-      if (pipeline === "needs-content" && (!needsContent(r) || liveDupIds.has(r.id))) return false;
-      if (pipeline === "complete" && !isComplete(r)) return false;
+      if (pipeline === "needs-content" && (!needsContent(r, rScore) || liveDupIds.has(r.id))) return false;
+      if (pipeline === "complete" && !isComplete(r, rScore)) return false;
 
       // Type / quality / linkage chips
       switch (filter) {
@@ -557,14 +576,14 @@ function CleanupWorkshop() {
           if (!rowNeedsCleanup(r, liveDupIds, quality)) return false;
           break;
         case "needs-content":
-          if (!needsContent(r) || liveDupIds.has(r.id)) return false;
+          if (!needsContent(r, rScore) || liveDupIds.has(r.id)) return false;
 
           break;
         case "dedupe-pending":
           if (!dedupePending) return false;
           break;
         case "complete":
-          if (!isComplete(r)) return false;
+          if (!isComplete(r, rScore)) return false;
           break;
         case "empty": if (quality !== "empty") return false; break;
         case "weak":  if (quality !== "weak") return false; break;
@@ -953,7 +972,7 @@ function CleanupWorkshop() {
     "needs-cleanup-candidate" | "needs-content" | "complete" | "resolved-other" => {
     const row = r as EntityRow;
     if (!isFinalCanonical(row)) return "resolved-other";
-    return hasRealContent(row) ? "complete" : "needs-content";
+    return hasRealContent(row, scoreOf(row)) ? "complete" : "needs-content";
   };
 
   const snapshotCounts = (list: EntityRow[]) => {
@@ -961,9 +980,10 @@ function CleanupWorkshop() {
     for (const r of list) {
       const isOrphan = !(atlasLinks.get(r.id) || campaignSlugs.get(r.id));
       const quality = classifyQuality(r, dupIds.has(r.id), isOrphan);
+      const s = scoreOf(r);
       if (rowNeedsCleanup(r, liveDupIds, quality)) nc++;
-      if (needsContent(r)) content++;
-      if (isComplete(r)) done++;
+      if (needsContent(r, s)) content++;
+      if (isComplete(r, s)) done++;
     }
     return { needsCleanup: nc, needsContent: content, complete: done };
   };
