@@ -179,9 +179,13 @@ const APPROVAL_SCORE_THRESHOLD = 50;
 
 function hasRealContent(r: EntityRow, score: number): boolean {
   const m: any = r.metadata || {};
-  // Explicit moderator overrides win over the score threshold.
+  // Explicit moderator overrides always win.
   if (m.content_verified === true) return true;
   if (m.needs_content === true) return false;
+  // Artifacts use a pure score gate — their lighter content model means
+  // placeholder/stub/auto_generated flags from bulk imports must not veto
+  // an already-scored-approved artifact. > 50% = approved, period.
+  if (r.entity_type === "artifact") return score > APPROVAL_SCORE_THRESHOLD;
   if (m.placeholder === true || m.stub === true || m.auto_generated === true) return false;
   return score > APPROVAL_SCORE_THRESHOLD;
 }
