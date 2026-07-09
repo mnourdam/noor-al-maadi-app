@@ -90,7 +90,9 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   };
 
   const grantRewards = () => {
-    const xp = Math.max(0, Number(reward.xp ?? 0));
+    // Economy cap — investigations are rich content but must not eclipse
+    // multi-campaign progression. Excess authored XP is silently dropped.
+    const xp = Math.min(150, Math.max(0, Number(reward.xp ?? 0)));
     const coins = Math.max(0, Number(reward.coins ?? 0));
     const hearts = Math.max(0, Number(reward.hearts ?? 0));
 
