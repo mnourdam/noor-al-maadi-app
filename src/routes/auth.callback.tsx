@@ -24,6 +24,20 @@ export const Route = createFileRoute("/auth/callback")({
     error_description: typeof s.error_description === "string" ? s.error_description : undefined,
     native: typeof s.native === "string" ? s.native : undefined,
   }),
+  // Native Capacitor hand-off: on the SSR request we short-circuit to the
+  // app's custom scheme with a 302 so Chrome Custom Tab never renders any
+  // HTML — the OS immediately hands the URL to the APK's deep-link
+  // intent-filter (AndroidManifest → scheme=app.lovable.irth, host=auth).
+  // The client-side useEffect below is kept as a defensive fallback for
+  // cases where the SSR redirect is intercepted by a proxy/cache.
+  beforeLoad: ({ search, location }) => {
+    if (search.native !== "1") return;
+    if (typeof window !== "undefined") return; // client fallback handles it
+    const qs = location.searchStr ?? "";
+    const hashStr = location.hash ? `#${location.hash}` : "";
+    const target = `app.lovable.irth://auth/callback${qs}${hashStr}`;
+    throw new Response(null, { status: 302, headers: { Location: target } });
+  },
   component: AuthCallbackPage,
 });
 
