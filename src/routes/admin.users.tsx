@@ -256,7 +256,9 @@ function AdminUsers() {
                   <th className="px-3 py-2">البريد</th>
                   <th className="px-3 py-2">النوع</th>
                   <th className="px-3 py-2">الأدوار</th>
+                  <th className="px-3 py-2">تسجيل الدخول</th>
                   <th className="px-3 py-2">الحالة</th>
+
 
                   <th className="px-3 py-2">المستوى</th>
                   <th className="px-3 py-2">XP</th>
