@@ -84,11 +84,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         try { resetProfileRef.current?.(); } catch { /* ignore */ }
         try {
           if (typeof localStorage !== "undefined") {
-            // Strip any user-scoped keys that survive the profile reset.
+            // Strip user-scoped keys that survive the profile reset and the
+            // stored profile snapshot itself, so the NEXT sign-in cannot
+            // inherit the previous user's XP/coins/progress.
+            localStorage.removeItem("hakaya.profile.v2");
+            localStorage.removeItem("hakaya.profile.userId");
             for (const k of Object.keys(localStorage)) {
-              if (k.startsWith("irth.refclaim.") || k.startsWith("sb-") && k.endsWith("-auth-token")) {
-                if (k.startsWith("irth.refclaim.")) localStorage.removeItem(k);
-              }
+              if (k.startsWith("irth.refclaim.")) localStorage.removeItem(k);
             }
           }
         } catch { /* ignore */ }
@@ -104,6 +106,32 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+
+    // Guard against leaking a previous account's local snapshot into a new
+    // user's cloud save. If this device previously belonged to a different
+    // auth user (admin/other Google account), wipe the in-memory + on-disk
+    // profile BEFORE we read `profileRef.current` as a seed for the new
+    // user's cloud_saves row.
+    const LAST_USER_KEY = "hakaya.profile.userId";
+    let switchedUser = false;
+    try {
+      const prev = typeof localStorage !== "undefined"
+        ? localStorage.getItem(LAST_USER_KEY)
+        : null;
+      if (prev && prev !== user.id) {
+        switchedUser = true;
+        resetProfileRef.current?.();
+        try {
+          if (typeof localStorage !== "undefined") {
+            localStorage.removeItem("hakaya.profile.v2");
+            for (const k of Object.keys(localStorage)) {
+              if (k.startsWith("irth.refclaim.")) localStorage.removeItem(k);
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+
     (async () => {
       const started = performance.now();
       androidMark("account.hydrate.start", { userId: user.id.slice(0, 8) });
@@ -132,13 +160,19 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           } catch { /* ignore */ }
         }
 
-        const localSnap = profileRef.current;
         if (!save) {
-          // No cloud save yet — push current local progress as the seed.
+          // No cloud save yet. If we just switched from another auth user,
+          // ensure the seed is a clean starter profile — never the previous
+          // account's XP/coins/progress. For a genuinely fresh install
+          // (no previous user recorded) keep the guest local snapshot so
+          // anonymous progress carries forward.
+          if (switchedUser) {
+            resetProfileRef.current?.();
+          }
           if (androidStable) {
             autoPushEnabled.current = false;
           } else {
-            await pushSave(user.id, localSnap);
+            await pushSave(user.id, profileRef.current);
             autoPushEnabled.current = true;
             setLastSyncAt(Date.now());
           }
@@ -149,6 +183,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           autoPushEnabled.current = true;
           setLastSyncAt(Date.now());
         }
+
+        try {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(LAST_USER_KEY, user.id);
+          }
+        } catch { /* ignore */ }
         // Merge server-side streak reward claims so they can never be
         // re-claimed after a fresh install / cloud restore.
         try { await hydrateClaimedStreakRewards(); } catch { /* noop */ }
