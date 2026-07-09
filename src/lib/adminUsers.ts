@@ -92,6 +92,8 @@ export interface AdminUserDetail {
   auth_email: string | null;
   auth_created_at: string | null;
   auth_last_sign_in_at: string | null;
+  providers?: string[];
+  identities?: AdminUserIdentity[];
   referrer: (AdminUserRow & Record<string, unknown>) | null;
   referrals_out: Array<{
     id: string;
