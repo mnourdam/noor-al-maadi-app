@@ -260,11 +260,12 @@ function primaryState(r: EntityRow, isDup: boolean, quality: Quality, score: num
   if (typeof meta.canonical_id === "string" && meta.canonical_id) return "redirected";
   if (meta.archived === true || r.enabled === false) return "archived";
   if (isDup) return "duplicate";
+  // Score-based approval gate — must run BEFORE quality-based weak/empty
+  // labels, otherwise an artifact with score 60 but a short body still
+  // renders as "ضعيف" and contradicts the needs-content filter.
+  if (hasRealContent(r, score)) return "approved";
   if (quality === "empty") return "empty";
-  if (quality === "weak") return "weak";
-  // Score-based approval gate — keeps the badge in sync with needsContent().
-  if (!hasRealContent(r, score)) return "weak";
-  return "approved";
+  return "weak";
 }
 
 const STATE_META: Record<PrimaryState, { label: string; tone: string }> = {
