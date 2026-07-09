@@ -538,15 +538,15 @@ function CleanupWorkshop() {
   // visible so they can be enriched.
   const needsContentCount = useMemo(
     () => rows.reduce(
-      (n, r) => (needsContent(r) && !liveDupIds.has(r.id) ? n + 1 : n),
+      (n, r) => (needsContent(r, scoreOf(r)) && !liveDupIds.has(r.id) ? n + 1 : n),
       0,
     ),
-    [rows, liveDupIds],
+    [rows, liveDupIds, atlasLinks, campaignSlugs],
   );
 
   const completeCount = useMemo(
-    () => rows.reduce((n, r) => (isComplete(r) ? n + 1 : n), 0),
-    [rows],
+    () => rows.reduce((n, r) => (isComplete(r, scoreOf(r)) ? n + 1 : n), 0),
+    [rows, atlasLinks, campaignSlugs],
   );
 
   // ------------------------------------------------------------
