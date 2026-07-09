@@ -20,6 +20,7 @@ import { Link } from "@tanstack/react-router";
 import { UserRound, LogIn, UserPlus, AlertTriangle } from "lucide-react";
 import { useAccount } from "@/lib/account";
 import { AuthLink } from "@/components/AuthLink";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 const GUEST_CHOICE_KEY = "irth.firstLaunch.choice.v1";
 
