@@ -90,7 +90,9 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   };
 
   const grantRewards = () => {
-    const xp = Math.max(0, Number(reward.xp ?? 0));
+    // Economy cap — investigations are rich content but must not eclipse
+    // multi-campaign progression. Excess authored XP is silently dropped.
+    const xp = Math.min(150, Math.max(0, Number(reward.xp ?? 0)));
     const coins = Math.max(0, Number(reward.coins ?? 0));
     const hearts = Math.max(0, Number(reward.hearts ?? 0));
 
@@ -349,8 +351,9 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
     setPicked(null);
     if (!isLastQuestion) { setQIndex((i) => i + 1); return; }
     if (!alreadyDone) {
-      completeInvestigation(inv.id, totalReward.xp);
-      const auto = Math.max(1, Math.floor(totalReward.xp / 4));
+      const xp = Math.min(150, Math.max(0, totalReward.xp)); // economy cap
+      completeInvestigation(inv.id, xp);
+      const auto = Math.max(1, Math.floor(xp / 4));
       const delta = Math.max(0, totalReward.dinars - auto);
       if (delta > 0) addDinars(delta);
       if (totalReward.badge) awardBadge(totalReward.badge);

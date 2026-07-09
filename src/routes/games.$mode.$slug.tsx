@@ -132,7 +132,8 @@ function GamePlayPage() {
       setFinalScore(score);
       const { firstTime } = await recordCompletion(game.id, stageIdx, score);
       if (firstTime) {
-        if (game.xp_reward > 0) addPoints(game.xp_reward);
+        // Economy cap — mini-games contribute XP but must not dwarf campaign work.
+        if (game.xp_reward > 0) addPoints(Math.min(game.xp_reward, 40));
         if (game.coin_reward > 0) addDinars(game.coin_reward);
         // Qualifying streak activity: completing a mini-game / daily challenge.
         touchStreak();

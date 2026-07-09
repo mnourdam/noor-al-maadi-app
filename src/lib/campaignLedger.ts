@@ -107,6 +107,17 @@ export interface RewardDelta {
 
 const ZERO: RewardDelta = { granted: false, xp: 0, coins: 0, unlocks: [] };
 
+// Economy caps — enforced at grant time so legacy authored JSON with inflated
+// XP values still works; the excess is simply not granted. Chosen 2026-07 to
+// stop one-campaign-per-level runaway. Adjust here (single source of truth).
+export const CHAPTER_XP_CAP = 40;
+export const CAMPAIGN_XP_CAP = 200;
+
+function capXp(xp: number, cap: number): number {
+  const n = Math.max(0, Math.floor(xp || 0));
+  return Math.min(n, cap);
+}
+
 function rewardOfActivity(a: CampaignActivity): { xp: number; coins: number } {
   return {
     xp:    a.xpReward    ?? ACTIVITY_DEFAULTS.xpReward,
@@ -138,7 +149,7 @@ export function claimChapterReward(
   const key = chapterKey(campaign.id, chapter.id);
   if (!claim(key)) return ZERO;
   const r = rewardOfCampaignReward(chapter.rewards);
-  return { granted: true, ...r };
+  return { granted: true, xp: capXp(r.xp, CHAPTER_XP_CAP), coins: r.coins, unlocks: r.unlocks };
 }
 
 export function claimCampaignReward(campaign: Campaign): RewardDelta {
@@ -146,7 +157,7 @@ export function claimCampaignReward(campaign: Campaign): RewardDelta {
   if (!claim(key)) return ZERO;
   const r = rewardOfCampaignReward(campaign.finalRewards);
   const extra = campaign.unlocks ?? [];
-  return { granted: true, xp: r.xp, coins: r.coins, unlocks: [...r.unlocks, ...extra] };
+  return { granted: true, xp: capXp(r.xp, CAMPAIGN_XP_CAP), coins: r.coins, unlocks: [...r.unlocks, ...extra] };
 }
 
 // -------------------- Active position (resume) --------------------
