@@ -167,22 +167,32 @@ function hasRealBody(body: any): boolean {
   return false;
 }
 
-function hasRealContent(r: EntityRow): boolean {
+// Completeness threshold rule:
+//   score > 50  → approved / complete
+//   score ≤ 50  → needs content
+// This applies uniformly to figures, cities, landmarks, battles, events,
+// states AND artifacts. Artifacts have a lighter content model, but they
+// naturally hit the same threshold sooner because the scoring rubric is
+// generous with what they already provide (image, aliases, atlas link,
+// short overview) — no per-type override is required.
+const APPROVAL_SCORE_THRESHOLD = 50;
+
+function hasRealContent(r: EntityRow, score: number): boolean {
   const m: any = r.metadata || {};
-  // Explicit moderator overrides win over heuristics.
+  // Explicit moderator overrides win over the score threshold.
   if (m.content_verified === true) return true;
   if (m.needs_content === true) return false;
   if (m.placeholder === true || m.stub === true || m.auto_generated === true) return false;
-  return hasRealBody(r.body);
+  return score > APPROVAL_SCORE_THRESHOLD;
 }
 
 
-function needsContent(r: EntityRow): boolean {
-  return isFinalCanonical(r) && !hasRealContent(r);
+function needsContent(r: EntityRow, score: number): boolean {
+  return isFinalCanonical(r) && !hasRealContent(r, score);
 }
 
-function isComplete(r: EntityRow): boolean {
-  return isFinalCanonical(r) && hasRealContent(r);
+function isComplete(r: EntityRow, score: number): boolean {
+  return isFinalCanonical(r) && hasRealContent(r, score);
 }
 
 // ------------------------------------------------------------
