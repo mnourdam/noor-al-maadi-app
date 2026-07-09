@@ -156,8 +156,10 @@ function LevelUpModal({ info, onClose }: { info: LevelInfo; onClose: () => void 
           )}
 
           <button
-            onClick={onClose}
-            className="mt-6 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-gold py-2.5 text-[12px] font-bold text-primary-foreground hover:opacity-95"
+            type="button"
+            onClick={handleContinue}
+            disabled={busy}
+            className="mt-6 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-gold py-2.5 text-[12px] font-bold text-primary-foreground hover:opacity-95 disabled:opacity-60"
           >
             <Sparkles className="size-4" /> واصل الرحلة
           </button>
