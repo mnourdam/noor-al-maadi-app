@@ -112,11 +112,15 @@ const ZERO: RewardDelta = { granted: false, xp: 0, coins: 0, unlocks: [] };
 // stop one-campaign-per-level runaway. Adjust here (single source of truth).
 export const CHAPTER_XP_CAP = 40;
 export const CAMPAIGN_XP_CAP = 200;
+export const CHAPTER_COINS_CAP = 30;
+export const CAMPAIGN_COINS_CAP = 150;
 
 function capXp(xp: number, cap: number): number {
   const n = Math.max(0, Math.floor(xp || 0));
   return Math.min(n, cap);
 }
+const capCoins = capXp;
+
 
 function rewardOfActivity(a: CampaignActivity): { xp: number; coins: number } {
   return {
@@ -149,7 +153,7 @@ export function claimChapterReward(
   const key = chapterKey(campaign.id, chapter.id);
   if (!claim(key)) return ZERO;
   const r = rewardOfCampaignReward(chapter.rewards);
-  return { granted: true, xp: capXp(r.xp, CHAPTER_XP_CAP), coins: r.coins, unlocks: r.unlocks };
+  return { granted: true, xp: capXp(r.xp, CHAPTER_XP_CAP), coins: capCoins(r.coins, CHAPTER_COINS_CAP), unlocks: r.unlocks };
 }
 
 export function claimCampaignReward(campaign: Campaign): RewardDelta {
@@ -157,8 +161,9 @@ export function claimCampaignReward(campaign: Campaign): RewardDelta {
   if (!claim(key)) return ZERO;
   const r = rewardOfCampaignReward(campaign.finalRewards);
   const extra = campaign.unlocks ?? [];
-  return { granted: true, xp: capXp(r.xp, CAMPAIGN_XP_CAP), coins: r.coins, unlocks: [...r.unlocks, ...extra] };
+  return { granted: true, xp: capXp(r.xp, CAMPAIGN_XP_CAP), coins: capCoins(r.coins, CAMPAIGN_COINS_CAP), unlocks: [...r.unlocks, ...extra] };
 }
+
 
 // -------------------- Active position (resume) --------------------
 

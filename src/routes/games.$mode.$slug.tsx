@@ -134,7 +134,7 @@ function GamePlayPage() {
       if (firstTime) {
         // Economy cap — mini-games contribute XP but must not dwarf campaign work.
         if (game.xp_reward > 0) addPoints(Math.min(game.xp_reward, 40));
-        if (game.coin_reward > 0) addDinars(game.coin_reward);
+        if (game.coin_reward > 0) addDinars(Math.min(game.coin_reward, 20));
         // Qualifying streak activity: completing a mini-game / daily challenge.
         touchStreak();
         // Museum unlocks — reuse the Campaign pipeline (user_collection).
