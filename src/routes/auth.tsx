@@ -103,8 +103,22 @@ function AuthPage() {
         </div>
 
         <div className="rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
-          {/* Google Sign-In intentionally hidden for LC1. Implementation preserved in
-              src/lib/native-auth.ts and src/routes/auth.callback.tsx for future re-enable. */}
+          {mode !== "forgot" && (
+            <>
+              <GoogleSignInButton
+                label={mode === "signup" ? "إنشاء حساب عبر Google" : "تسجيل الدخول عبر Google"}
+                onError={(m) => { setError(m); setInfo(null); }}
+                onBeforeRedirect={() => { setError(null); setInfo(null); }}
+              />
+              <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                <span className="h-px flex-1 bg-white/10" />
+                <span>أو</span>
+                <span className="h-px flex-1 bg-white/10" />
+              </div>
+            </>
+          )}
+
+
 
 
           {mode !== "forgot" && (
