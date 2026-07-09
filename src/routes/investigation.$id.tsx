@@ -356,8 +356,10 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
       const xp = Math.min(150, Math.max(0, totalReward.xp)); // economy cap
       completeInvestigation(inv.id, xp);
       const auto = Math.max(1, Math.floor(xp / 4));
-      const delta = Math.max(0, totalReward.dinars - auto);
+      const cappedDinars = Math.min(50, Math.max(0, totalReward.dinars)); // coin cap
+      const delta = Math.max(0, cappedDinars - auto);
       if (delta > 0) addDinars(delta);
+
       if (totalReward.badge) awardBadge(totalReward.badge);
       if (totalReward.artifact) findArtifact(totalReward.artifact);
       if (totalReward.character) unlockCharacter(totalReward.character);
