@@ -40,6 +40,18 @@ export interface AdminUserRow {
   marketing_opt_in: boolean;
   referrals_count: number;
   roles?: string[];
+  providers?: string[];
+}
+
+export interface AdminUserIdentity {
+  provider: string;
+  provider_id: string | null;
+  email: string | null;
+  name: string | null;
+  avatar_url: string | null;
+  last_sign_in_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 
