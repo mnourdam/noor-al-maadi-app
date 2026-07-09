@@ -564,9 +564,10 @@ function CleanupWorkshop() {
       const dedupePending = liveDupIds.has(r.id) && !isCleanupResolved(r);
 
       // Pipeline filter (ANDs with type/quality chips below).
+      const rScore = scoreOf(r);
       if (pipeline === "needs-cleanup" && !rowNeedsCleanup(r, liveDupIds, quality)) return false;
-      if (pipeline === "needs-content" && (!needsContent(r) || liveDupIds.has(r.id))) return false;
-      if (pipeline === "complete" && !isComplete(r)) return false;
+      if (pipeline === "needs-content" && (!needsContent(r, rScore) || liveDupIds.has(r.id))) return false;
+      if (pipeline === "complete" && !isComplete(r, rScore)) return false;
 
       // Type / quality / linkage chips
       switch (filter) {
@@ -575,14 +576,14 @@ function CleanupWorkshop() {
           if (!rowNeedsCleanup(r, liveDupIds, quality)) return false;
           break;
         case "needs-content":
-          if (!needsContent(r) || liveDupIds.has(r.id)) return false;
+          if (!needsContent(r, rScore) || liveDupIds.has(r.id)) return false;
 
           break;
         case "dedupe-pending":
           if (!dedupePending) return false;
           break;
         case "complete":
-          if (!isComplete(r)) return false;
+          if (!isComplete(r, rScore)) return false;
           break;
         case "empty": if (quality !== "empty") return false; break;
         case "weak":  if (quality !== "weak") return false; break;
