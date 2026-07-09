@@ -496,6 +496,14 @@ function CleanupWorkshop() {
     return live;
   }, [rows, dupGroups]);
 
+  // Completeness score for a row using the same rubric as the cards.
+  // Feeds needsContent / isComplete which now gate on score > 50.
+  const scoreOf = (r: EntityRow) => scoreEntity({
+    summary: r.summary, body: r.body, metadata: r.metadata,
+    atlasLinks: atlasLinks.get(r.id) ?? 0,
+    campaignRefs: campaignSlugs.get(r.id) ?? 0,
+  });
+
   // Count of items still requiring a human decision — drives the badge
   // next to the "Needs Cleanup" chip and updates live after every merge.
   const needsCleanupCount = useMemo(() => {
