@@ -47,9 +47,9 @@ export function AchievementWatcher() {
       // On the very first render after hydration, silently backfill timestamps
       // for already-earned achievements so we don't spam notifications on app open.
       if (isNew && !firstRun.current) {
-        const xp = ACHIEVEMENT_XP_BY_RARITY[def.rarity] ?? 25;
+        const xp = ACHIEVEMENT_XP_BY_RARITY[def.rarity ?? "common"] ?? 25;
         if (xp > 0) addPoints(xp);
-        void notifyAchievementUnlocked(def, xp);
+        void notifyAchievementUnlocked(def);
       }
     }
     firstRun.current = false;
