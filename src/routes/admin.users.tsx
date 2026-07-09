@@ -114,6 +114,29 @@ function RolesChips({ roles }: { roles: string[] | undefined }) {
   );
 }
 
+const PROVIDER_LABEL: Record<string, string> = {
+  email: "بريد",
+  google: "Google",
+  apple: "Apple",
+};
+const PROVIDER_CLASS: Record<string, string> = {
+  email: "border-slate-500/30 bg-slate-500/10 text-slate-200",
+  google: "border-sky-500/30 bg-sky-500/10 text-sky-200",
+  apple: "border-slate-300/30 bg-slate-300/10 text-slate-100",
+};
+function ProvidersChips({ providers }: { providers: string[] | undefined }) {
+  if (!providers || providers.length === 0) return <span className="text-[11px] text-slate-500">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {providers.map((p) => (
+        <span key={p} className={`rounded border px-1.5 py-0.5 text-[10px] ${PROVIDER_CLASS[p] ?? "border-slate-500/30 bg-slate-500/10 text-slate-200"}`}>
+          {PROVIDER_LABEL[p] ?? p}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 
 function AdminUsers() {
   const [search, setSearch] = useState("");
@@ -256,7 +279,9 @@ function AdminUsers() {
                   <th className="px-3 py-2">البريد</th>
                   <th className="px-3 py-2">النوع</th>
                   <th className="px-3 py-2">الأدوار</th>
+                  <th className="px-3 py-2">تسجيل الدخول</th>
                   <th className="px-3 py-2">الحالة</th>
+
 
                   <th className="px-3 py-2">المستوى</th>
                   <th className="px-3 py-2">XP</th>
@@ -269,9 +294,9 @@ function AdminUsers() {
               </thead>
               <tbody>
                 {loading && rows.length === 0 ? (
-                  <tr><td colSpan={isManager ? 13 : 12} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
+                  <tr><td colSpan={isManager ? 14 : 13} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={isManager ? 13 : 12} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
+                  <tr><td colSpan={isManager ? 14 : 13} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
                 ) : (
                   rows.map((r) => {
                     const isSelf = currentUserId === r.id;
@@ -282,6 +307,7 @@ function AdminUsers() {
                       <td className="px-3 py-2 text-xs text-slate-400" dir="ltr">{r.email ?? "—"}</td>
                       <td className="px-3 py-2"><TypeBadge t={r.account_type} /></td>
                       <td className="px-3 py-2"><RolesChips roles={r.roles} /></td>
+                      <td className="px-3 py-2"><ProvidersChips providers={r.providers} /></td>
                       <td className="px-3 py-2"><StatusBadge status={r.account_status} /></td>
 
                       <td className="px-3 py-2 text-amber-300">{r.level}</td>
@@ -433,7 +459,38 @@ function UserDetailDrawer({ userId, isManager, onClose, onChanged }: { userId: s
                 <KV label="آخر نشاط"><span dir="ltr">{fmtDate(detail.profile.last_active as string)}</span></KV>
                 <KV label="النوع"><TypeBadge t={(detail.profile as any).account_type ?? "registered"} /></KV>
                 <KV label="الحالة"><StatusBadge status={detail.profile.account_status as AccountStatus} /></KV>
+                <KV label="طرق الدخول"><ProvidersChips providers={detail.providers} /></KV>
               </Section>
+
+              {/* Identities */}
+              <Section title="الهويات المرتبطة">
+                <div className="col-span-2 space-y-2">
+                  {(detail.identities ?? []).length === 0 ? (
+                    <div className="text-xs text-slate-500">لا توجد هويات مسجّلة.</div>
+                  ) : (
+                    (detail.identities ?? []).map((idn, i) => (
+                      <div key={`${idn.provider}-${i}`} className="flex items-center gap-3 rounded border border-slate-800 bg-slate-900/60 p-2">
+                        {idn.avatar_url ? (
+                          <img src={idn.avatar_url} alt="" className="h-9 w-9 rounded-full border border-slate-700 object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="h-9 w-9 rounded-full border border-slate-700 bg-slate-800" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <ProvidersChips providers={[idn.provider]} />
+                            {idn.name && <span className="truncate text-xs text-slate-200">{idn.name}</span>}
+                          </div>
+                          {idn.email && <div dir="ltr" className="truncate text-[11px] text-slate-400">{idn.email}</div>}
+                          <div dir="ltr" className="text-[11px] text-slate-500">
+                            آخر دخول: {fmtDate(idn.last_sign_in_at)}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Section>
+
 
               {/* Progress */}
               <Section title="التقدم">

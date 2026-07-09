@@ -40,6 +40,18 @@ export interface AdminUserRow {
   marketing_opt_in: boolean;
   referrals_count: number;
   roles?: string[];
+  providers?: string[];
+}
+
+export interface AdminUserIdentity {
+  provider: string;
+  provider_id: string | null;
+  email: string | null;
+  name: string | null;
+  avatar_url: string | null;
+  last_sign_in_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 
@@ -80,6 +92,8 @@ export interface AdminUserDetail {
   auth_email: string | null;
   auth_created_at: string | null;
   auth_last_sign_in_at: string | null;
+  providers?: string[];
+  identities?: AdminUserIdentity[];
   referrer: (AdminUserRow & Record<string, unknown>) | null;
   referrals_out: Array<{
     id: string;
@@ -167,6 +181,7 @@ export function buildUsersCsv(rows: AdminUserRow[]): string {
     ["account_status", (r) => r.account_status],
     ["account_type", (r) => r.account_type],
     ["referrals_count", (r) => r.referrals_count],
+    ["providers", (r) => (r.providers ?? []).join("|")],
     ["marketing_opt_in", (r) => (r.marketing_opt_in ? "true" : "false")],
     ["locale", (r) => (r as unknown as { locale?: string }).locale ?? ""],
   ];
