@@ -245,15 +245,21 @@ const QUALITY_META: Record<Quality, { label: string; tone: string }> = {
 };
 
 // Single-badge state, computed per row. Priority: redirect > archive > duplicate > quality > approved.
+// "approved" MUST agree with hasRealContent()/needsContent() — otherwise the
+// dashboard shows an "approved" badge while the same row is still listed under
+// "يحتاج محتوى". We therefore gate the final "approved" verdict on the same
+// score threshold (with the same moderator overrides) used by the pipeline.
 type PrimaryState = "redirected" | "archived" | "duplicate" | "empty" | "weak" | "approved";
 
-function primaryState(r: EntityRow, isDup: boolean, quality: Quality): PrimaryState {
+function primaryState(r: EntityRow, isDup: boolean, quality: Quality, score: number): PrimaryState {
   const meta: any = r.metadata || {};
   if (typeof meta.canonical_id === "string" && meta.canonical_id) return "redirected";
   if (meta.archived === true || r.enabled === false) return "archived";
   if (isDup) return "duplicate";
   if (quality === "empty") return "empty";
   if (quality === "weak") return "weak";
+  // Score-based approval gate — keeps the badge in sync with needsContent().
+  if (!hasRealContent(r, score)) return "weak";
   return "approved";
 }
 
