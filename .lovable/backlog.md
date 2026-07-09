@@ -29,3 +29,36 @@ respecting RTL direction.
 - Add a subtle visual affordance (edge hint) the first few times only.
 
 **Decision for LC1:** keep bottom navigation tap-based only.
+
+---
+
+## Centralize game economy into a single config module (post-launch)
+
+**Goal:** One single source of truth for every economy-related value, e.g.
+`src/lib/game-economy.ts`. Gameplay systems import from it instead of
+redefining numbers across files.
+
+**Scope (values to centralize):**
+- Level XP formula + thresholds (`src/lib/progression.ts`)
+- XP caps: chapter, campaign, mini-game, investigation
+- Coin caps: chapter, campaign, mini-game, investigation
+- Achievement XP by rarity (common/uncommon/rare/epic/legendary)
+- Streak reward tiers
+- Daily reward values
+- Heart regeneration timing + values
+- Heart purchase costs
+- Shop prices
+- Investigation rewards
+- Mini-game rewards
+- Campaign / chapter reward limits
+- Any future economy constants (seasons, referrals bonuses, etc.)
+
+**Current locations to migrate from:**
+- `src/lib/campaignLedger.ts` (CHAPTER_XP_CAP, CAMPAIGN_XP_CAP, CHAPTER_COINS_CAP, CAMPAIGN_COINS_CAP)
+- `src/routes/games.$mode.$slug.tsx` (mini-game XP/coin caps)
+- `src/routes/investigation.$id.tsx` (investigation XP/coin caps)
+- `src/lib/hearts.ts` (streak rewards, heart regen)
+- `src/components/AchievementWatcher.tsx` (achievement tier XP)
+- `src/lib/progression.ts` (level curve + per-level rewards)
+
+**Decision for LC1:** keep current implementation stable. Refactor after launch.
