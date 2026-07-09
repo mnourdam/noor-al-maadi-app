@@ -14,9 +14,24 @@ import { supabase } from "@/integrations/supabase/client";
  *
  * Dedup is enforced via `profile.achievementsEarned[id]` so each achievement
  * notifies exactly once on the locked → unlocked transition.
+ *
+ * XP grant is TIER-BASED (rarity), NOT the legacy per-achievement `rewards`
+ * amounts — those were authored with inflated numbers that never fired.
+ * Rarity → XP map (economy pillar):
+ *   common / uncommon → 25 XP (small)
+ *   rare              → 50 XP (medium)
+ *   epic / legendary  → 100 XP (major)
  */
+const ACHIEVEMENT_XP_BY_RARITY: Record<string, number> = {
+  common:    25,
+  uncommon:  25,
+  rare:      50,
+  epic:      100,
+  legendary: 100,
+};
+
 export function AchievementWatcher() {
-  const { profile, markAchievementEarned } = useProfile();
+  const { profile, markAchievementEarned, addPoints } = useProfile();
   const firstRun = useRef(true);
 
   useEffect(() => {
@@ -32,12 +47,14 @@ export function AchievementWatcher() {
       // On the very first render after hydration, silently backfill timestamps
       // for already-earned achievements so we don't spam notifications on app open.
       if (isNew && !firstRun.current) {
-        void notifyAchievementUnlocked(def);
+        const xp = ACHIEVEMENT_XP_BY_RARITY[def.rarity] ?? 25;
+        if (xp > 0) addPoints(xp);
+        void notifyAchievementUnlocked(def, xp);
       }
     }
     firstRun.current = false;
     // We intentionally depend on the whole profile so any state change re-checks.
-  }, [profile, markAchievementEarned]);
+  }, [profile, markAchievementEarned, addPoints]);
 
   return null;
 }
