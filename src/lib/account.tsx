@@ -84,11 +84,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         try { resetProfileRef.current?.(); } catch { /* ignore */ }
         try {
           if (typeof localStorage !== "undefined") {
-            // Strip any user-scoped keys that survive the profile reset.
+            // Strip user-scoped keys that survive the profile reset and the
+            // stored profile snapshot itself, so the NEXT sign-in cannot
+            // inherit the previous user's XP/coins/progress.
+            localStorage.removeItem("hakaya.profile.v2");
+            localStorage.removeItem("hakaya.profile.userId");
             for (const k of Object.keys(localStorage)) {
-              if (k.startsWith("irth.refclaim.") || k.startsWith("sb-") && k.endsWith("-auth-token")) {
-                if (k.startsWith("irth.refclaim.")) localStorage.removeItem(k);
-              }
+              if (k.startsWith("irth.refclaim.")) localStorage.removeItem(k);
             }
           }
         } catch { /* ignore */ }
