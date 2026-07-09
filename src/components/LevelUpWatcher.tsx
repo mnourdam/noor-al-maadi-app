@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Crown, Sparkles, Star, X, Coins, Shield } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { LEVELS, levelFor, type LevelInfo } from "@/lib/progression";
 
