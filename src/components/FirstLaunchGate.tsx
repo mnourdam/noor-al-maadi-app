@@ -20,6 +20,7 @@ import { Link } from "@tanstack/react-router";
 import { UserRound, LogIn, UserPlus, AlertTriangle } from "lucide-react";
 import { useAccount } from "@/lib/account";
 import { AuthLink } from "@/components/AuthLink";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 const GUEST_CHOICE_KEY = "irth.firstLaunch.choice.v1";
 
@@ -75,6 +76,19 @@ export function FirstLaunchGate() {
           </p>
 
           <div className="mt-5 space-y-2">
+            <GoogleSignInButton
+              label="المتابعة عبر Google"
+              onBeforeRedirect={() => {
+                try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
+              }}
+              onError={() => { /* silent — user stays on gate */ }}
+            />
+            <div className="my-1 flex items-center gap-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+              <span className="h-px flex-1 bg-white/10" />
+              <span>أو</span>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+
             <AuthLink
               mode="login"
               onClick={() => {
