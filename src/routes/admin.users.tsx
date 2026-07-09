@@ -271,9 +271,9 @@ function AdminUsers() {
               </thead>
               <tbody>
                 {loading && rows.length === 0 ? (
-                  <tr><td colSpan={isManager ? 13 : 12} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
+                  <tr><td colSpan={isManager ? 14 : 13} className="px-3 py-6 text-center text-slate-400">جاري التحميل…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={isManager ? 13 : 12} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
+                  <tr><td colSpan={isManager ? 14 : 13} className="px-3 py-6 text-center text-slate-400">لا توجد نتائج.</td></tr>
                 ) : (
                   rows.map((r) => {
                     const isSelf = currentUserId === r.id;
@@ -284,6 +284,7 @@ function AdminUsers() {
                       <td className="px-3 py-2 text-xs text-slate-400" dir="ltr">{r.email ?? "—"}</td>
                       <td className="px-3 py-2"><TypeBadge t={r.account_type} /></td>
                       <td className="px-3 py-2"><RolesChips roles={r.roles} /></td>
+                      <td className="px-3 py-2"><ProvidersChips providers={r.providers} /></td>
                       <td className="px-3 py-2"><StatusBadge status={r.account_status} /></td>
 
                       <td className="px-3 py-2 text-amber-300">{r.level}</td>
