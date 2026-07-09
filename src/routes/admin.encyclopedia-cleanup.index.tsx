@@ -178,14 +178,17 @@ function hasRealBody(body: any): boolean {
 const APPROVAL_SCORE_THRESHOLD = 50;
 
 function hasRealContent(r: EntityRow, score: number): boolean {
+  // Artifacts: PURE score gate for the cleanup dashboard. No metadata flag
+  // (needs_content, placeholder, stub, auto_generated, missing image, missing
+  // atlas link, short body, missing sources) may keep an artifact scored > 50
+  // out of "مكتمل" or inside "يحتاج محتوى". This only affects the cleanup
+  // dashboard filters — the player encyclopedia still shows all published
+  // artifacts regardless of score.
+  if (r.entity_type === "artifact") return score > APPROVAL_SCORE_THRESHOLD;
   const m: any = r.metadata || {};
-  // Explicit moderator overrides always win.
+  // Explicit moderator overrides always win (non-artifact types only).
   if (m.content_verified === true) return true;
   if (m.needs_content === true) return false;
-  // Artifacts use a pure score gate — their lighter content model means
-  // placeholder/stub/auto_generated flags from bulk imports must not veto
-  // an already-scored-approved artifact. > 50% = approved, period.
-  if (r.entity_type === "artifact") return score > APPROVAL_SCORE_THRESHOLD;
   if (m.placeholder === true || m.stub === true || m.auto_generated === true) return false;
   return score > APPROVAL_SCORE_THRESHOLD;
 }
