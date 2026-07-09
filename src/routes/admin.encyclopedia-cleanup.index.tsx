@@ -1361,7 +1361,7 @@ function CleanupWorkshop() {
             {filtered.map((r) => {
               const isOrphan = !(atlasLinks.get(r.id) || campaignSlugs.get(r.id));
               const q = classifyQuality(r, dupIds.has(r.id), isOrphan);
-              const state = primaryState(r, dupIds.has(r.id), q);
+              const state = primaryState(r, dupIds.has(r.id), q, scoreOf(r));
               const cid = typeof r.metadata?.canonical_id === "string" ? r.metadata.canonical_id : null;
               const canonicalTitle = cid ? (rows.find((x) => x.id === cid)?.title ?? null) : null;
               const inCleanupQueue = rowNeedsCleanup(r, liveDupIds, q);
