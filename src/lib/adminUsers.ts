@@ -181,6 +181,7 @@ export function buildUsersCsv(rows: AdminUserRow[]): string {
     ["account_status", (r) => r.account_status],
     ["account_type", (r) => r.account_type],
     ["referrals_count", (r) => r.referrals_count],
+    ["providers", (r) => (r.providers ?? []).join("|")],
     ["marketing_opt_in", (r) => (r.marketing_opt_in ? "true" : "false")],
     ["locale", (r) => (r as unknown as { locale?: string }).locale ?? ""],
   ];
