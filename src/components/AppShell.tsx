@@ -59,7 +59,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AppShellNestingContext.Provider value={true}>
       <div
-        className="mx-auto flex min-h-screen w-full max-w-md flex-col"
+        className="mx-auto flex min-h-screen w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col"
         style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
       >
         <HUD />
