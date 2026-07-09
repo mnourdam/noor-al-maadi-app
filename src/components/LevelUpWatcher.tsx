@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Crown, Sparkles, Star, X, Coins, Shield } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
 import { LEVELS, levelFor, type LevelInfo } from "@/lib/progression";
 
@@ -63,10 +64,9 @@ export function LevelUpWatcher() {
     }
   }, [current, pending]);
 
-  const close = () => {
-    // Always clear, even if React batches a duplicate close.
+  const close = useCallback(() => {
     setCurrent(null);
-  };
+  }, []);
 
   if (!current) return null;
   return <LevelUpModal key={current.level} info={current} onClose={close} />;
@@ -74,15 +74,39 @@ export function LevelUpWatcher() {
 
 function LevelUpModal({ info, onClose }: { info: LevelInfo; onClose: () => void }) {
   const reward = info.reward;
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+
+  const handleClose = useCallback(() => {
+    if (busy) return;
+    setBusy(true);
+    onClose();
+  }, [busy, onClose]);
+
+  const handleContinue = useCallback(() => {
+    if (busy) return;
+    setBusy(true);
+    onClose();
+    setTimeout(() => {
+      try { navigate({ to: "/campaigns" }); } catch { /* */ }
+    }, 0);
+  }, [busy, onClose, navigate]);
+
   return (
     <div className="fixed inset-0 z-[120] grid place-items-center px-4 animate-fade-in" role="dialog" aria-modal>
-      <button
-        aria-label="إغلاق"
-        onClick={onClose}
+      <div
+        aria-hidden
+        onClick={handleClose}
         className="absolute inset-0 bg-background/80 backdrop-blur-sm"
       />
       <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-gold/50 bg-gradient-to-br from-surface via-background to-surface p-6 shadow-elegant animate-scale-in">
-        <button onClick={onClose} aria-label="إغلاق" className="absolute top-3 left-3 grid size-8 place-items-center rounded-full border border-white/10 bg-background/60 text-muted-foreground hover:text-foreground">
+        <button
+          type="button"
+          onClick={handleClose}
+          disabled={busy}
+          aria-label="إغلاق"
+          className="absolute top-3 left-3 z-10 grid size-8 place-items-center rounded-full border border-white/10 bg-background/60 text-muted-foreground hover:text-foreground disabled:opacity-60"
+        >
           <X className="size-4" />
         </button>
         <div className="arabesque-layer pointer-events-none absolute inset-0 opacity-25" aria-hidden />
@@ -132,8 +156,10 @@ function LevelUpModal({ info, onClose }: { info: LevelInfo; onClose: () => void 
           )}
 
           <button
-            onClick={onClose}
-            className="mt-6 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-gold py-2.5 text-[12px] font-bold text-primary-foreground hover:opacity-95"
+            type="button"
+            onClick={handleContinue}
+            disabled={busy}
+            className="mt-6 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-gold py-2.5 text-[12px] font-bold text-primary-foreground hover:opacity-95 disabled:opacity-60"
           >
             <Sparkles className="size-4" /> واصل الرحلة
           </button>
