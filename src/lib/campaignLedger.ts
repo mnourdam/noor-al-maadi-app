@@ -112,11 +112,15 @@ const ZERO: RewardDelta = { granted: false, xp: 0, coins: 0, unlocks: [] };
 // stop one-campaign-per-level runaway. Adjust here (single source of truth).
 export const CHAPTER_XP_CAP = 40;
 export const CAMPAIGN_XP_CAP = 200;
+export const CHAPTER_COINS_CAP = 30;
+export const CAMPAIGN_COINS_CAP = 150;
 
 function capXp(xp: number, cap: number): number {
   const n = Math.max(0, Math.floor(xp || 0));
   return Math.min(n, cap);
 }
+const capCoins = capXp;
+
 
 function rewardOfActivity(a: CampaignActivity): { xp: number; coins: number } {
   return {
