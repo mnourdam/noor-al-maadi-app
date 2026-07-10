@@ -185,7 +185,7 @@ function hasRealContent(r: EntityRow, score: number): boolean {
   // out of "مكتمل" or inside "يحتاج محتوى". This only affects the cleanup
   // dashboard filters — the player encyclopedia still shows all published
   // artifacts regardless of score.
-  if (r.entity_type === "artifact") return score >= APPROVAL_SCORE_THRESHOLD;
+  if (r.entity_type === "artifact") return score >= ARTIFACT_APPROVAL_SCORE_THRESHOLD;
   const m: any = r.metadata || {};
   // Explicit moderator overrides always win (non-artifact types only).
   if (m.content_verified === true) return true;
