@@ -176,6 +176,7 @@ function hasRealBody(body: any): boolean {
 // generous with what they already provide (image, aliases, atlas link,
 // short overview) — no per-type override is required.
 const APPROVAL_SCORE_THRESHOLD = 50;
+const ARTIFACT_APPROVAL_SCORE_THRESHOLD = 47;
 
 function hasRealContent(r: EntityRow, score: number): boolean {
   // Artifacts: PURE score gate for the cleanup dashboard. No metadata flag
