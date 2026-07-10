@@ -176,6 +176,7 @@ function hasRealBody(body: any): boolean {
 // generous with what they already provide (image, aliases, atlas link,
 // short overview) — no per-type override is required.
 const APPROVAL_SCORE_THRESHOLD = 50;
+const ARTIFACT_APPROVAL_SCORE_THRESHOLD = 47;
 
 function hasRealContent(r: EntityRow, score: number): boolean {
   // Artifacts: PURE score gate for the cleanup dashboard. No metadata flag
@@ -184,7 +185,7 @@ function hasRealContent(r: EntityRow, score: number): boolean {
   // out of "مكتمل" or inside "يحتاج محتوى". This only affects the cleanup
   // dashboard filters — the player encyclopedia still shows all published
   // artifacts regardless of score.
-  if (r.entity_type === "artifact") return score >= APPROVAL_SCORE_THRESHOLD;
+  if (r.entity_type === "artifact") return score >= ARTIFACT_APPROVAL_SCORE_THRESHOLD;
   const m: any = r.metadata || {};
   // Explicit moderator overrides always win (non-artifact types only).
   if (m.content_verified === true) return true;
