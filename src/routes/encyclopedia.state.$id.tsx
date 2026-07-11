@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { useEffect, useMemo } from "react";
 import {
   ChevronRight,
   Database,
