@@ -30,13 +30,15 @@ import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import {
   fetchEncyclopediaAllLocalFirst,
-  isDisplayableEntity,
-  isRedirectedOrArchivedEntity,
+  fetchEncyclopediaLivePublicAll,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
-import { resolveCanonicalLocal } from "@/lib/encyclopedia-canonical";
+import {
+  buildCanonicalizedEncyclopediaSearch,
+  exactTopMatchTarget,
+  normalizeArabicSearch,
+} from "@/lib/encyclopedia-search";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
-import { isPublicEntity } from "@/lib/taxonomy-public";
 import { iconForType } from "@/lib/encyclopedia-icons";
 import { HighlightedText } from "@/components/HighlightedText";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
@@ -91,27 +93,34 @@ const SUGGEST_TYPE_LABELS: Record<string, string> = {
 };
 
 
-function useAllEncyclopedia() {
-  return useQuery({
-    queryKey: ["encyclopedia", "all-min-v4"],
-    staleTime: 60_000,
-    queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
-      const rows = await fetchEncyclopediaAllLocalFirst();
-      return rows.filter(isDisplayableEntity).filter(isPublicEntity);
-    },
-  });
+type EncyclopediaIndexData = {
+  rows: SupabaseEncyclopediaEntity[];
+  authoritativeIds: Set<string> | null;
+};
+
+function mergeRowsById(
+  local: SupabaseEncyclopediaEntity[],
+  live: SupabaseEncyclopediaEntity[] | null,
+): SupabaseEncyclopediaEntity[] {
+  const byId = new Map<string, SupabaseEncyclopediaEntity>();
+  for (const row of local) if (row?.id) byId.set(row.id, row);
+  for (const row of live ?? []) if (row?.id) byId.set(row.id, row);
+  return Array.from(byId.values());
 }
 
-// Redirected/archived rows kept as a separate index so search on the OLD
-// name/alias can still surface the canonical destination. They are never
-// displayed as their own entities.
-function useRedirectedIndex() {
+function useAllEncyclopedia() {
   return useQuery({
-    queryKey: ["encyclopedia", "redirected-index-v1"],
+    queryKey: ["encyclopedia", "all-search-canonical-v1"],
     staleTime: 60_000,
-    queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
-      const rows = await fetchEncyclopediaAllLocalFirst();
-      return rows.filter((r) => r.enabled !== false && isRedirectedOrArchivedEntity(r));
+    queryFn: async (): Promise<EncyclopediaIndexData> => {
+      const [local, live] = await Promise.all([
+        fetchEncyclopediaAllLocalFirst(),
+        fetchEncyclopediaLivePublicAll(),
+      ]);
+      return {
+        rows: mergeRowsById(local, live),
+        authoritativeIds: live ? new Set(live.map((row) => row.id)) : null,
+      };
     },
   });
 }
@@ -154,85 +163,6 @@ function pushRecent(key: string, value: string) {
     window.localStorage.setItem(key, JSON.stringify(next));
   } catch { /* noop */ }
 }
-function normArabic(s: string): string {
-  return s.toLowerCase()
-    .replace(/[\u064B-\u065F\u0670]/g, "")
-    .replace(/[إأآا]/g, "ا")
-    .replace(/ى/g, "ي")
-    .replace(/ة/g, "ه")
-    .trim();
-}
-
-function scoreEntity(e: SupabaseEncyclopediaEntity, nq: string): number {
-  if (!nq) return 0;
-  const title = normArabic(e.title ?? "");
-  const subtitle = normArabic(e.subtitle ?? "");
-  const summary = normArabic(e.summary ?? "");
-  const slug = normArabic(e.slug ?? "");
-  const meta = (e.metadata && typeof e.metadata === "object")
-    ? (e.metadata as Record<string, unknown>) : {};
-  const metaAliases = Array.isArray((meta as { aliases?: unknown }).aliases)
-    ? ((meta as { aliases: unknown[] }).aliases.filter((a) => typeof a === "string") as string[])
-    : [];
-  const colAliases = Array.isArray(e.aliases)
-    ? (e.aliases.filter((a) => typeof a === "string") as string[])
-    : [];
-  const aliases: string[] = Array.from(new Set([...colAliases, ...metaAliases]));
-  let score = 0;
-  // Title matches (highest tier).
-  if (title === nq) score += 1000;
-  else if (title.startsWith(nq)) score += 600;
-  else if (new RegExp(`(^|\\s)${nq}`).test(title)) score += 450;
-  else if (title.includes(nq)) score += 300;
-  // Aliases: very close to title, but always one rung lower so the real
-  // title wins ties.
-  let bestAlias = 0;
-  for (const raw of aliases) {
-    const a = normArabic(raw);
-    if (!a) continue;
-    let s = 0;
-    if (a === nq) s = 900;
-    else if (a.startsWith(nq)) s = 550;
-    else if (new RegExp(`(^|\\s)${nq}`).test(a)) s = 420;
-    else if (a.includes(nq)) s = 260;
-    if (s > bestAlias) bestAlias = s;
-  }
-  if (bestAlias > 0) score = Math.max(score, bestAlias);
-  if (subtitle.includes(nq)) score += 120;
-  if (slug.includes(nq)) score += 80;
-  if (summary.includes(nq)) score += 40;
-  score -= Math.min(title.length, 60) * 0.2;
-  return score;
-}
-
-function exactTopMatchTarget(
-  e: SupabaseEncyclopediaEntity,
-  nq: string,
-): { to: "/encyclopedia/state/$id" | "/encyclopedia/entity/$id"; id: string } | null {
-  if (!nq) return null;
-  const title = normArabic(e.title ?? "");
-  const meta = (e.metadata && typeof e.metadata === "object")
-    ? (e.metadata as Record<string, unknown>) : {};
-  const metaAliases = Array.isArray((meta as { aliases?: unknown }).aliases)
-    ? ((meta as { aliases: unknown[] }).aliases.filter((a) => typeof a === "string") as string[])
-    : [];
-  const colAliases = Array.isArray(e.aliases)
-    ? (e.aliases.filter((a) => typeof a === "string") as string[])
-    : [];
-  const aliases: string[] = Array.from(new Set([...colAliases, ...metaAliases]));
-  const exactAlias = aliases.some((a) => normArabic(a) === nq);
-  if (title === nq || exactAlias) {
-    return {
-      to: e.entity_type === "state" ? "/encyclopedia/state/$id" : "/encyclopedia/entity/$id",
-      id: e.slug,
-    };
-  }
-  return null;
-}
-
-
-
-
 function EncyclopediaHub() {
   androidMark("render:Encyclopedia");
   if (isAndroidUltraStableMode()) return <AndroidStableEncyclopedia />;
@@ -252,25 +182,18 @@ function EncyclopediaHubFull() {
 
   useEffect(() => { setRecent(readRecent(RECENT_KEY)); }, []);
 
-  const { data: all = [], isLoading } = useAllEncyclopedia();
-  const { data: redirected = [] } = useRedirectedIndex();
-
-  // Alias remap: redirected source row → canonical destination row in `all`.
-  // Lets a search for the OLD name surface the CANONICAL entity.
-  const remapRedirectedToCanonical = useMemo(() => {
-    const byId = new Map<string, SupabaseEncyclopediaEntity>();
-    for (const e of all) byId.set(e.id, e);
-    const out: { src: SupabaseEncyclopediaEntity; dest: SupabaseEncyclopediaEntity }[] = [];
-    for (const src of redirected) {
-      const resolved = resolveCanonicalLocal(src) as SupabaseEncyclopediaEntity | null;
-      const destId = resolved?.id;
-      if (!destId || destId === src.id) continue;
-      const dest = byId.get(destId);
-      if (!dest) continue;
-      out.push({ src, dest });
-    }
-    return out;
-  }, [all, redirected]);
+  const { data: encyclopediaData, isLoading } = useAllEncyclopedia();
+  const searchRows = encyclopediaData?.rows ?? [];
+  const authoritativeIds = encyclopediaData?.authoritativeIds ?? null;
+  const all = useMemo(
+    () => buildCanonicalizedEncyclopediaSearch({
+      rows: searchRows,
+      query: "",
+      authoritativeIds,
+      includeUnscored: true,
+    }).map((x) => x.e),
+    [searchRows, authoritativeIds],
+  );
 
 
   const counts = useMemo(() => {
@@ -336,82 +259,39 @@ function EncyclopediaHubFull() {
     return viewedIds.map((s) => map.get(s)).filter(Boolean).slice(0, 6) as SupabaseEncyclopediaEntity[];
   }, [viewedIds, all]);
 
-  const q = query.trim().toLowerCase();
-
-  // Search the OLD (redirected) titles/aliases and remap to their canonical
-  // destination — same scoring, but the returned entity is always canonical.
-  // De-duplicated by canonical id so a query matching multiple old duplicates
-  // never shows the destination twice.
-  const aliasScoredResolved = useMemo(() => {
-    if (!q) return [] as { e: SupabaseEncyclopediaEntity; s: number }[];
-    const nq = normArabic(q);
-    const byDest = new Map<string, number>();
-    for (const { src, dest } of remapRedirectedToCanonical) {
-      const s = scoreEntity(src, nq);
-      if (s <= 0) continue;
-      const prev = byDest.get(dest.id) ?? 0;
-      if (s > prev) byDest.set(dest.id, s);
-    }
-    const destById = new Map(all.map((e) => [e.id, e] as const));
-    return Array.from(byDest.entries())
-      .map(([id, s]) => {
-        const e = destById.get(id);
-        return e ? { e, s } : null;
-      })
-      .filter((x): x is { e: SupabaseEncyclopediaEntity; s: number } => !!x);
-  }, [q, remapRedirectedToCanonical, all]);
+  const q = query.trim();
 
   const suggestions = useMemo(() => {
     if (!q) return [];
-    const nq = normArabic(q);
-    const scored = all
-      .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
-      .map((e) => ({ e, s: scoreEntity(e, nq) }))
-      .filter((x) => x.s > 0);
-    // Merge alias hits, keep the best score per canonical entity.
-    const bestById = new Map<string, { e: SupabaseEncyclopediaEntity; s: number }>();
-    for (const x of [...scored, ...aliasScoredResolved]) {
-      if (typeFilter !== "all" && x.e.entity_type !== typeFilter) continue;
-      const prev = bestById.get(x.e.id);
-      if (!prev || x.s > prev.s) bestById.set(x.e.id, x);
-    }
-    return Array.from(bestById.values())
-      .sort((a, b) => b.s - a.s)
-      .slice(0, 6)
-      .map((x) => x.e);
-  }, [all, q, typeFilter, aliasScoredResolved]);
+    return buildCanonicalizedEncyclopediaSearch({
+      rows: searchRows,
+      query: q,
+      authoritativeIds,
+      typeFilter,
+      max: 6,
+    }).map((x) => x.e);
+  }, [searchRows, authoritativeIds, q, typeFilter]);
 
   const results = useMemo(() => {
     if (!q && !era && typeFilter === "all") return [];
-    const nq = normArabic(q);
-    const filtered = all
-      .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
-      .filter((e) => !era || toCanonicalEra(metaEra(e)) === era);
-    if (!nq) return filtered.slice(0, 60);
-    const bestById = new Map<string, { e: SupabaseEncyclopediaEntity; s: number }>();
-    for (const e of filtered) {
-      const s = scoreEntity(e, nq);
-      if (s <= 0) continue;
-      bestById.set(e.id, { e, s });
-    }
-    for (const x of aliasScoredResolved) {
-      if (typeFilter !== "all" && x.e.entity_type !== typeFilter) continue;
-      if (era && toCanonicalEra(metaEra(x.e)) !== era) continue;
-      const prev = bestById.get(x.e.id);
-      if (!prev || x.s > prev.s) bestById.set(x.e.id, x);
-    }
-    return Array.from(bestById.values())
-      .sort((a, b) => b.s - a.s)
-      .slice(0, 60)
-      .map((x) => x.e);
+    return buildCanonicalizedEncyclopediaSearch({
+      rows: searchRows,
+      query: q,
+      authoritativeIds,
+      typeFilter,
+      eraFilter: era,
+      getEra: (entity) => toCanonicalEra(metaEra(entity)),
+      includeUnscored: !q,
+      max: 60,
+    }).map((x) => x.e);
 
-  }, [all, q, era, typeFilter, aliasScoredResolved]);
+  }, [searchRows, authoritativeIds, q, era, typeFilter]);
 
   const topMatch = useMemo(() => {
     if (!q || results.length === 0) return null;
-    const nq = normArabic(q);
+    const nq = normalizeArabicSearch(q);
     const top = results[0];
-    const t = normArabic(top.title ?? "");
+    const t = normalizeArabicSearch(top.title ?? "");
     const meta = (top.metadata && typeof top.metadata === "object")
       ? (top.metadata as Record<string, unknown>) : {};
     const metaAliases = Array.isArray((meta as { aliases?: unknown }).aliases)
@@ -421,7 +301,7 @@ function EncyclopediaHubFull() {
       ? (top.aliases.filter((a) => typeof a === "string") as string[])
       : [];
     const aliases: string[] = Array.from(new Set([...colAliases, ...metaAliases]));
-    const exactAlias = aliases.some((a) => normArabic(a) === nq);
+    const exactAlias = aliases.some((a) => normalizeArabicSearch(a) === nq);
     if (t === nq || t.startsWith(nq) || exactAlias) return top.id;
     return null;
   }, [results, q]);
@@ -438,7 +318,7 @@ function EncyclopediaHubFull() {
   // single top result, jump directly into that entity.
   const handleEnter = () => {
     submitRecent(query);
-    const nq = normArabic(query);
+    const nq = normalizeArabicSearch(query);
     if (!nq || results.length === 0) return;
     const target = exactTopMatchTarget(results[0], nq);
     if (!target) return;
