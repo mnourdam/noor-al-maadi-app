@@ -2236,6 +2236,7 @@ function MissingContentStrip({ rows, atlasLinks, campaignSlugs, dupIds, onFilter
     { label: "كيانات فارغة",        value: stats.empty,      filter: "empty",       tone: "border-rose-500/40 bg-rose-500/5 text-rose-200" },
     { label: "كيانات ضعيفة",        value: stats.weak,       filter: "weak",        tone: "border-amber-500/40 bg-amber-500/5 text-amber-200" },
     { label: "بدون صورة",           value: stats.noImage,    filter: "no-image",    tone: "border-fuchsia-500/40 bg-fuchsia-500/5 text-fuchsia-200" },
+    { label: "لديه صورة",           value: rows.length - stats.noImage, filter: "has-image", tone: "border-emerald-500/40 bg-emerald-500/5 text-emerald-200" },
     { label: "بدون مصادر",          value: stats.noSources,  filter: "no-sources",  tone: "border-sky-500/40 bg-sky-500/5 text-sky-200" },
     { label: "بدون ملخص",           value: stats.noOverview, filter: "no-overview", tone: "border-amber-500/40 bg-amber-500/5 text-amber-200" },
     { label: "بدون رابط أطلس",      value: stats.noAtlas,    filter: "no-atlas",    tone: "border-emerald-500/40 bg-emerald-500/5 text-emerald-200" },
