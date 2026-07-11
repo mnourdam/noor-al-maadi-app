@@ -91,12 +91,10 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
     const { App } = await import("@capacitor/app");
     await App.addListener("appUrlOpen", async (event: { url: string }) => {
       const url = event?.url ?? "";
+      console.info("[native-auth] appUrlOpen received:", url);
       if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) return;
 
       try {
-        // Parse query + hash from the deep link. The Lovable OAuth broker can
-        // return tokens in the URL fragment; the legacy direct backend flow
-        // returned a PKCE code in the query string.
         const u = new URL(url);
         const params = collectDeepLinkParams(u);
 
@@ -109,14 +107,20 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         if (errorDescription) {
           console.error("[native-auth] provider error", errorDescription);
         } else if (accessToken && refreshToken) {
+          console.info("[native-auth] setSession from hash tokens");
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
           if (error) console.error("[native-auth] session set failed", error.message);
+          else console.info("[native-auth] session set OK");
         } else if (code) {
+          console.info("[native-auth] exchangeCodeForSession start");
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) console.error("[native-auth] exchange failed", error.message);
+          else console.info("[native-auth] exchange OK");
+        } else {
+          console.warn("[native-auth] deep link had no code/token/error");
         }
       } catch (e) {
         console.error("[native-auth] deep-link parse failed", e);
