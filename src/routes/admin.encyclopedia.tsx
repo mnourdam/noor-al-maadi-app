@@ -7,6 +7,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { normalizeArabicName } from "@/lib/arabic-normalize";
+import { EncyclopediaEntityImageUploader } from "@/components/admin/EncyclopediaEntityImageUploader";
+import type { EntityImageFields } from "@/lib/encyclopedia-images";
 
 export const Route = createFileRoute("/admin/encyclopedia")({
   head: () => ({
@@ -51,6 +53,10 @@ interface Entity {
   timeline_category: string | null;
   timeline_tone: string | null;
   timeline_glyph: string | null;
+  image_url?: string | null;
+  image_path?: string | null;
+  image_credit?: string | null;
+  image_source?: string | null;
 }
 
 const TIMELINE_CATEGORIES = ["caliphate", "figure", "battle", "book", "event"] as const;
