@@ -93,24 +93,29 @@ const SUGGEST_TYPE_LABELS: Record<string, string> = {
 
 function useAllEncyclopedia() {
   return useQuery({
-    queryKey: ["encyclopedia", "all-min-v5"],
+    queryKey: ["encyclopedia", "all-min-v4"],
     staleTime: 60_000,
-    queryFn: async (): Promise<{
-      visible: SupabaseEncyclopediaEntity[];
-      redirected: SupabaseEncyclopediaEntity[];
-    }> => {
+    queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
       const rows = await fetchEncyclopediaAllLocalFirst();
-      const visible = rows.filter(isDisplayableEntity).filter(isPublicEntity);
-      // Keep the redirected/archived rows around only so search on the OLD
-      // name/aliases can still surface the canonical destination. They are
-      // never displayed as their own entity.
-      const redirected = rows.filter(
-        (r) => r.enabled !== false && isRedirectedOrArchivedEntity(r),
-      );
-      return { visible, redirected };
+      return rows.filter(isDisplayableEntity).filter(isPublicEntity);
     },
   });
 }
+
+// Redirected/archived rows kept as a separate index so search on the OLD
+// name/alias can still surface the canonical destination. They are never
+// displayed as their own entities.
+function useRedirectedIndex() {
+  return useQuery({
+    queryKey: ["encyclopedia", "redirected-index-v1"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
+      const rows = await fetchEncyclopediaAllLocalFirst();
+      return rows.filter((r) => r.enabled !== false && isRedirectedOrArchivedEntity(r));
+    },
+  });
+}
+
 
 
 function metaEra(entity: SupabaseEncyclopediaEntity): string {
