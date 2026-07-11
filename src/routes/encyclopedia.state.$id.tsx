@@ -19,6 +19,7 @@ import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
+import { EncyclopediaHero } from "@/components/encyclopedia/EncyclopediaHero";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import {
   fetchEncyclopediaBySlugLocalFirst,
@@ -26,6 +27,7 @@ import {
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
 import { resolveRelatedEntities } from "@/lib/relationship-graph";
+
 
 const SECTION_LABELS: Record<string, string> = {
   figure: "الشخصيات",
@@ -174,27 +176,53 @@ function StatePage() {
           <ChevronRight className="size-3.5" /> الدول
         </Link>
 
-        {/* ───────── Hero ───────── */}
-        <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
-          <div className="flex items-start gap-3">
-            <span className="grid size-14 place-items-center rounded-2xl bg-black/40 ring-1 ring-white/10 text-gold">
-              <Landmark className="size-6" strokeWidth={1.5} />
+        {/* ───────── Hero ─────────
+            When the state has a valid, decoded image → cinematic image
+            hero (shared with all other entity types). Otherwise → the
+            original compact card layout is preserved verbatim below. */}
+        <EncyclopediaHero
+          imageUrl={state.image_url}
+          imageCredit={state.image_credit}
+          imageSource={state.image_source}
+          eyebrow="دولة"
+          Icon={Landmark}
+          title={state.title}
+          subtitle={state.subtitle ? `«${state.subtitle}»` : null}
+          extra={
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+              <Database className="size-2.5" /> من قاعدة البيانات
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] tracking-[0.3em] text-gold/80">دولة</p>
-              <h1 className="font-display text-2xl font-bold">{state.title}</h1>
-              {state.subtitle && (
-                <p className="mt-1 text-[12px] italic text-white/70">«{state.subtitle}»</p>
+          }
+          fallback={
+            <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
+              <div className="flex items-start gap-3">
+                <span className="grid size-14 place-items-center rounded-2xl bg-black/40 ring-1 ring-white/10 text-gold">
+                  <Landmark className="size-6" strokeWidth={1.5} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] tracking-[0.3em] text-gold/80">دولة</p>
+                  <h1 className="font-display text-2xl font-bold">{state.title}</h1>
+                  {state.subtitle && (
+                    <p className="mt-1 text-[12px] italic text-white/70">«{state.subtitle}»</p>
+                  )}
+                  <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
+                    <Database className="size-2.5" /> من قاعدة البيانات
+                  </span>
+                </div>
+              </div>
+              {state.summary && (
+                <p className="mt-3 text-[13px] leading-7 text-foreground/90">{state.summary}</p>
               )}
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
-                <Database className="size-2.5" /> من قاعدة البيانات
-              </span>
             </div>
-          </div>
-          {state.summary && (
-            <p className="mt-3 text-[13px] leading-7 text-foreground/90">{state.summary}</p>
-          )}
-        </div>
+          }
+        />
+
+        {/* Summary rendered separately when the image hero takes over so it
+            still appears beneath the cinematic hero. */}
+        {state.image_url && state.summary && (
+          <p className="mt-4 text-[13px] leading-7 text-foreground/90">{state.summary}</p>
+        )}
+
 
         {/* ───────── Main encyclopedia article body ───────── */}
         {article && (
