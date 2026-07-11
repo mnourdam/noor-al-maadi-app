@@ -2095,6 +2095,21 @@ function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, on
         onJumpTo={onJumpTo}
       />
 
+      <EncyclopediaEntityImageUploader
+        entityId={row.id}
+        entityType={row.entity_type}
+        entityTitle={row.title}
+        initial={{
+          image_url: row.image_url ?? null,
+          image_path: row.image_path ?? null,
+          image_credit: row.image_credit ?? null,
+          image_source: row.image_source ?? null,
+        }}
+        onChange={onRefresh}
+      />
+
+
+
 
 
       {/* Tabs — visible on small screens. On lg+ both panes show side-by-side. */}
