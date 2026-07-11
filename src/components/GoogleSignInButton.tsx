@@ -13,12 +13,16 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isCapacitorNative, signInWithGoogleNative } from "@/lib/native-auth";
+import { setGoogleAuthIntent, type GoogleAuthIntent } from "@/lib/googleAuthResult";
 
 type Props = {
   /** Same-origin path to return to after successful sign-in (web only). */
   next?: string;
   /** Optional label override. Defaults to "المتابعة عبر Google". */
   label?: string;
+  /** Which button the user pressed. Used only to pick the friendly
+   * post-auth dialog copy ("account already existed" vs "account created"). */
+  intent?: GoogleAuthIntent;
   /** Called after a failed attempt (native error, missing URL, etc.). */
   onError?: (message: string) => void;
   /** Called before opening the browser / redirecting. */
