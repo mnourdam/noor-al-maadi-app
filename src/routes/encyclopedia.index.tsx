@@ -93,14 +93,25 @@ const SUGGEST_TYPE_LABELS: Record<string, string> = {
 
 function useAllEncyclopedia() {
   return useQuery({
-    queryKey: ["encyclopedia", "all-min-v4"],
+    queryKey: ["encyclopedia", "all-min-v5"],
     staleTime: 60_000,
-    queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
+    queryFn: async (): Promise<{
+      visible: SupabaseEncyclopediaEntity[];
+      redirected: SupabaseEncyclopediaEntity[];
+    }> => {
       const rows = await fetchEncyclopediaAllLocalFirst();
-      return rows.filter(isDisplayableEntity).filter(isPublicEntity);
+      const visible = rows.filter(isDisplayableEntity).filter(isPublicEntity);
+      // Keep the redirected/archived rows around only so search on the OLD
+      // name/aliases can still surface the canonical destination. They are
+      // never displayed as their own entity.
+      const redirected = rows.filter(
+        (r) => r.enabled !== false && isRedirectedOrArchivedEntity(r),
+      );
+      return { visible, redirected };
     },
   });
 }
+
 
 function metaEra(entity: SupabaseEncyclopediaEntity): string {
   const m = entity.metadata && typeof entity.metadata === "object"
