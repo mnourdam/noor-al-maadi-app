@@ -1814,12 +1814,13 @@ function Chip({ children, tone }: { children: React.ReactNode; tone?: "ok" | "wa
 // ------------------------------------------------------------
 // Editor (JSON pane + structured controls)
 // ------------------------------------------------------------
-function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, onOpenMerge, onJumpTo, duplicates, atlasCount, campaignCount }: {
+function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, onOpenMerge, onJumpTo, onRefresh, duplicates, atlasCount, campaignCount }: {
   row: EntityRow; allRows: EntityRow[]; busy: boolean;
   onSave: (patch: Partial<EntityRow>) => void;
   onApprove: () => void;
   onArchive: () => void; onDelete: () => void; onOpenMerge: () => void;
   onJumpTo: (id: string) => void;
+  onRefresh: () => void;
   duplicates: EntityRow[]; atlasCount: number; campaignCount: number;
 }) {
 
