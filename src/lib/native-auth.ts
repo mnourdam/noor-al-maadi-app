@@ -10,12 +10,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from "@capacitor/core";
 
-// Published web callback that bounces back to the custom scheme. Must be
-// allow-listed in Supabase auth redirect URLs (the lovable.app domain is
-// auto-allowed). The `?native=1` flag tells /auth/callback to redirect to the
-// custom scheme instead of exchanging the code itself.
+// Published bounce endpoint that returns an HTML page which immediately
+// redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
+// `intent://` fallback and a visible manual link). Must be allow-listed in
+// Supabase auth redirect URLs (the lovable.app domain is auto-allowed).
+// Chrome Custom Tab does NOT reliably follow a server 302 to a custom
+// scheme, hence the bounce page instead of `/auth/callback?native=1`.
 const NATIVE_REDIRECT_URL =
-  "https://irth-develop.lovable.app/auth/callback?native=1";
+  "https://irth-develop.lovable.app/api/public/native-auth-bounce";
 
 // Custom scheme registered in AndroidManifest.xml (intent-filter on
 // MainActivity). Matches Capacitor's appId.
