@@ -451,11 +451,6 @@ function EntityPage() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Hero card — image-forward when an image successfully loads,
-// otherwise the original ornament-only card. The layout only
-// switches AFTER the SafeHeroImage reports a successful decode.
-// ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
 // Ornament-only fallback hero — the original no-image design.
 // Used when the entity has no image OR the image fails to load.
 // ─────────────────────────────────────────────────────────────
