@@ -252,63 +252,22 @@ function EntityPage() {
             return <Breadcrumbs items={trail} />;
           })()}
 
-          {/* ───────── Cinematic Hero ───────── */}
-          <header className="mt-4 relative overflow-hidden rounded-[28px] border border-gold/25 bg-gradient-to-br from-[#1a1f2e] via-[#10131c] to-black p-6 shadow-[0_30px_80px_-40px_rgba(212,175,90,0.45)]">
-            {/* Hero glow + ornament */}
-            <div className="pointer-events-none absolute -top-32 left-1/2 size-80 -translate-x-1/2 rounded-full bg-gold/15 blur-[80px]" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
+          {/* ───────── Cinematic Hero ─────────
+              When a valid image is attached AND it successfully loads,
+              the hero switches to an image-forward layout with a strong
+              bottom gradient so text stays readable. If the image is
+              missing, invalid, offline-uncached, or fails to decode, we
+              silently fall back to the original no-image design — no
+              placeholder, no broken icon, no reserved blank space. */}
+          <HeroCard
+            entity={entity}
+            typeLabel={typeLabel}
+            HeroIcon={HeroIcon}
+            chips={chips}
+            atlasLink={atlasLink}
+            atlasZoom={atlasZoom}
+          />
 
-            {/* Atlas deep-link — only shown when a published+verified Atlas
-                record is linked to this entity. Top-left in RTL. */}
-            {atlasLink && (
-              <Link
-                to="/map"
-                search={{ focus: atlasLink.id, zoom: atlasZoom }}
-                aria-label="عرض على الأطلس"
-                className="group absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-gold/35 bg-black/55 px-3 py-1.5 text-[11px] font-medium text-gold/95 shadow-[0_6px_20px_-8px_rgba(212,175,90,0.5)] backdrop-blur-sm transition hover:border-gold/60 hover:bg-black/70 hover:text-gold active:scale-95"
-              >
-                <MapIcon className="size-3.5" strokeWidth={1.8} />
-                على الأطلس
-              </Link>
-            )}
-
-
-            <div className="relative flex flex-col items-center text-center">
-              <span className="font-display text-[10px] tracking-[0.5em] text-gold/85">
-                {typeLabel.toUpperCase()}
-              </span>
-
-              <span className="mt-4 relative grid size-20 place-items-center rounded-3xl bg-gradient-to-br from-gold/25 to-gold/5 ring-1 ring-gold/35 text-gold shadow-[0_0_40px_rgba(212,175,90,0.25)]">
-                <span className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-inset ring-white/5" />
-                <HeroIcon className="size-9" strokeWidth={1.3} />
-              </span>
-
-              <h1 className="font-display mt-5 text-[26px] font-bold leading-tight text-foreground">
-                {entity.title}
-              </h1>
-              {entity.subtitle && (
-                <p className="mt-1.5 text-[12.5px] text-muted-foreground">
-                  {entity.subtitle}
-                </p>
-              )}
-
-              {/* Quick-fact chips */}
-              {chips.length > 0 && (
-                <div className="mt-5 flex flex-wrap justify-center gap-1.5">
-                  {chips.map((c, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-black/40 px-3 py-1 text-[11px] text-foreground/90"
-                    >
-                      <c.icon className="size-3 text-gold/85" strokeWidth={1.6} />
-                      {c.label}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-            </div>
-          </header>
 
           {/* ───────── Story Introduction (museum plaque) ───────── */}
           {entity.summary && (
