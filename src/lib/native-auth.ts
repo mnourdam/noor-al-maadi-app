@@ -11,6 +11,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from "@capacitor/core";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  computeGoogleAuthResult,
+  getAndClearGoogleAuthIntent,
+  stashGoogleAuthResult,
+} from "@/lib/googleAuthResult";
 
 // Published bounce endpoint that returns an HTML page which immediately
 // redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
