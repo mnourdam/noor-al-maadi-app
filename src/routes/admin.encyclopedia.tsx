@@ -335,6 +335,12 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     timeline_glyph: value?.timeline_glyph ?? "",
   });
   const [busy, setBusy] = useState(false);
+  const [imageFields, setImageFields] = useState<EntityImageFields>({
+    image_url: value?.image_url ?? null,
+    image_path: value?.image_path ?? null,
+    image_credit: value?.image_credit ?? null,
+    image_source: value?.image_source ?? null,
+  });
 
   const intOrNull = (s: string): number | null => {
     const t = s.trim();
