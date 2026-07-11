@@ -445,6 +445,12 @@ function EncyclopediaHubFull() {
                       <ul>
                         {suggestions.map((s) => {
                           const SIcon = iconForType(s.entity_type);
+                          const sMeta = (s.metadata && typeof s.metadata === "object"
+                            ? (s.metadata as Record<string, unknown>) : {}) as Record<string, unknown>;
+                          const sIsScholar = s.entity_type === "figure"
+                            && (typeof sMeta.kind === "string" ? sMeta.kind : "") === "scholar";
+                          const sTypeLabel = SUGGEST_TYPE_LABELS[sIsScholar ? "scholar" : s.entity_type]
+                            ?? s.entity_type;
                           return (
                             <li key={s.id}>
                               <Link
@@ -453,7 +459,10 @@ function EncyclopediaHubFull() {
                                 onClick={() => { submitRecent(s.title); pushRecent(RECENT_VIEW_KEY, s.slug); }}
                                 className="flex items-center gap-3 rounded-xl px-2 py-2 text-right hover:bg-surface-2"
                               >
-                                <SIcon className="size-4 text-gold/70" strokeWidth={1.5} />
+                                <SIcon className="size-4 shrink-0 text-gold/70" strokeWidth={1.5} />
+                                <span className="shrink-0 rounded-full border border-gold/25 bg-black/40 px-2 py-0.5 text-[9px] font-medium text-gold/85">
+                                  {sTypeLabel}
+                                </span>
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-[12px] font-bold"><HighlightedText text={s.title} query={query} /></p>
                                   {s.subtitle && (
@@ -464,6 +473,7 @@ function EncyclopediaHubFull() {
                             </li>
                           );
                         })}
+
                       </ul>
                     </div>
                   )}
