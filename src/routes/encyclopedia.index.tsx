@@ -253,6 +253,25 @@ function EncyclopediaHubFull() {
   useEffect(() => { setRecent(readRecent(RECENT_KEY)); }, []);
 
   const { data: all = [], isLoading } = useAllEncyclopedia();
+  const { data: redirected = [] } = useRedirectedIndex();
+
+  // Alias remap: redirected source row → canonical destination row in `all`.
+  // Lets a search for the OLD name surface the CANONICAL entity.
+  const remapRedirectedToCanonical = useMemo(() => {
+    const byId = new Map<string, SupabaseEncyclopediaEntity>();
+    for (const e of all) byId.set(e.id, e);
+    const out: { src: SupabaseEncyclopediaEntity; dest: SupabaseEncyclopediaEntity }[] = [];
+    for (const src of redirected) {
+      const resolved = resolveCanonicalLocal(src) as SupabaseEncyclopediaEntity | null;
+      const destId = resolved?.id;
+      if (!destId || destId === src.id) continue;
+      const dest = byId.get(destId);
+      if (!dest) continue;
+      out.push({ src, dest });
+    }
+    return out;
+  }, [all, redirected]);
+
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
