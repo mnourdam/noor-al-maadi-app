@@ -148,23 +148,34 @@ export async function resolveRelatedEntities(
 
   if (scores.size === 0) return [];
 
-  // Resolve slugs → local enabled rows, then filter for displayability.
+  // Resolve slugs → local enabled rows, then follow canonical/merged/converted/redirect
+  // chains so references to converted duplicates surface the canonical entity.
+  // Deduplicate by resolved id (keep the highest score / earliest reason).
   const keys = Array.from(scores.keys());
-  const rows = keys
+  const rawRows = keys
     .map((key) => localEncyclopediaBySlug(key) as SupabaseEncyclopediaEntity | null)
     .filter((row): row is SupabaseEncyclopediaEntity => !!row && row.enabled !== false);
 
-  const nodes: RelatedNode[] = rows
-    .filter(isDisplayableEntity)
-    .map((r) => {
-      const ref = scores.get(r.slug.toLowerCase())!;
-      return { entity: r, score: ref.score, reason: ref.reason };
-    });
+  const { resolveCanonicalLocal } = await import("@/lib/encyclopedia-canonical");
+  const byId = new Map<string, RelatedNode>();
+  for (const raw of rawRows) {
+    const ref = scores.get(raw.slug.toLowerCase());
+    if (!ref) continue;
+    const resolved = (resolveCanonicalLocal(raw) as SupabaseEncyclopediaEntity | null) ?? raw;
+    if (!isDisplayableEntity(resolved)) continue;
+    if (resolved.id === entity.id) continue;
+    const prev = byId.get(resolved.id);
+    if (!prev || ref.score > prev.score) {
+      byId.set(resolved.id, { entity: resolved, score: ref.score, reason: ref.reason });
+    }
+  }
 
+  const nodes = Array.from(byId.values());
   nodes.sort(
     (a, b) => b.score - a.score || a.entity.title.localeCompare(b.entity.title, "ar"),
   );
   return nodes;
+
 }
 
 export function groupRelatedByReason(
