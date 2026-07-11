@@ -10,12 +10,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from "@capacitor/core";
 
-// Published web callback that bounces back to the custom scheme. Must be
-// allow-listed in Supabase auth redirect URLs (the lovable.app domain is
-// auto-allowed). The `?native=1` flag tells /auth/callback to redirect to the
-// custom scheme instead of exchanging the code itself.
+// Published bounce endpoint that returns an HTML page which immediately
+// redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
+// `intent://` fallback and a visible manual link). Must be allow-listed in
+// Supabase auth redirect URLs (the lovable.app domain is auto-allowed).
+// Chrome Custom Tab does NOT reliably follow a server 302 to a custom
+// scheme, hence the bounce page instead of `/auth/callback?native=1`.
 const NATIVE_REDIRECT_URL =
-  "https://irth-develop.lovable.app/auth/callback?native=1";
+  "https://irth-develop.lovable.app/api/public/native-auth-bounce";
 
 // Custom scheme registered in AndroidManifest.xml (intent-filter on
 // MainActivity). Matches Capacitor's appId.
@@ -34,29 +36,35 @@ export function isCapacitorNative(): boolean {
 }
 
 export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: string }> {
+  console.info("[native-auth] branch=NATIVE redirectTo=", NATIVE_REDIRECT_URL);
   try {
     const { Browser } = await import("@capacitor/browser");
+
+    // Register the deep-link listener before opening the browser so the
+    // resume intent from Google → bounce → APK is never missed.
+    await installNativeAuthDeepLinkListener();
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: NATIVE_REDIRECT_URL,
         skipBrowserRedirect: true,
+        queryParams: { prompt: "select_account" },
       },
     });
 
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      console.error("[native-auth] signInWithOAuth failed", error.message);
+      return { ok: false, error: error.message };
+    }
     const oauthUrl = data.url;
     if (!oauthUrl) return { ok: false, error: "Missing Google OAuth URL" };
 
-    // Required QA signal: with direct backend Google OAuth this may be the
-    // backend `/auth/v1/authorize` URL, but the provider must be configured
-    // with Google credentials so it opens Google normally.
-    console.info(`Google OAuth URL: ${oauthUrl}`);
-
+    console.info("[native-auth] opening custom tab", oauthUrl);
     await Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" });
     return { ok: true };
   } catch (e) {
+    console.error("[native-auth] unexpected", e);
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -83,12 +91,10 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
     const { App } = await import("@capacitor/app");
     await App.addListener("appUrlOpen", async (event: { url: string }) => {
       const url = event?.url ?? "";
+      console.info("[native-auth] appUrlOpen received:", url);
       if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) return;
 
       try {
-        // Parse query + hash from the deep link. The Lovable OAuth broker can
-        // return tokens in the URL fragment; the legacy direct backend flow
-        // returned a PKCE code in the query string.
         const u = new URL(url);
         const params = collectDeepLinkParams(u);
 
@@ -101,14 +107,20 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         if (errorDescription) {
           console.error("[native-auth] provider error", errorDescription);
         } else if (accessToken && refreshToken) {
+          console.info("[native-auth] setSession from hash tokens");
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
           if (error) console.error("[native-auth] session set failed", error.message);
+          else console.info("[native-auth] session set OK");
         } else if (code) {
+          console.info("[native-auth] exchangeCodeForSession start");
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) console.error("[native-auth] exchange failed", error.message);
+          else console.info("[native-auth] exchange OK");
+        } else {
+          console.warn("[native-auth] deep link had no code/token/error");
         }
       } catch (e) {
         console.error("[native-auth] deep-link parse failed", e);

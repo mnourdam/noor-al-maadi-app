@@ -105,6 +105,7 @@ import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
 import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
+import { Route as ApiPublicNativeAuthBounceRouteImport } from './routes/api/public/native-auth-bounce'
 import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
 import { Route as AdminEncyclopediaCleanupReviewRouteImport } from './routes/admin.encyclopedia-cleanup.review'
@@ -609,6 +610,12 @@ const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
   path: '/entity/$id',
   getParentRoute: () => EncyclopediaRoute,
 } as any)
+const ApiPublicNativeAuthBounceRoute =
+  ApiPublicNativeAuthBounceRouteImport.update({
+    id: '/api/public/native-auth-bounce',
+    path: '/api/public/native-auth-bounce',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminGamesCrosswordGeneratorRoute =
   AdminGamesCrosswordGeneratorRouteImport.update({
     id: '/crossword-generator',
@@ -791,6 +798,7 @@ export interface FileRoutesByFullPath {
   '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
+  '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -900,6 +908,7 @@ export interface FileRoutesByTo {
   '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
+  '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -1014,6 +1023,7 @@ export interface FileRoutesById {
   '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
+  '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -1129,6 +1139,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/review'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
+    | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -1238,6 +1249,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/review'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
+    | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -1351,6 +1363,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/review'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
+    | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -1455,6 +1468,7 @@ export interface RootRouteChildren {
   FeedbackIndexRoute: typeof FeedbackIndexRoute
   GamesIndexRoute: typeof GamesIndexRoute
   WorldsIndexRoute: typeof WorldsIndexRoute
+  ApiPublicNativeAuthBounceRoute: typeof ApiPublicNativeAuthBounceRoute
   GamesModeSlugRoute: typeof GamesModeSlugRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   AdminCampaignsIndexRoute: typeof AdminCampaignsIndexRoute
@@ -2140,6 +2154,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EncyclopediaEntityIdRouteImport
       parentRoute: typeof EncyclopediaRoute
     }
+    '/api/public/native-auth-bounce': {
+      id: '/api/public/native-auth-bounce'
+      path: '/api/public/native-auth-bounce'
+      fullPath: '/api/public/native-auth-bounce'
+      preLoaderRoute: typeof ApiPublicNativeAuthBounceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/games/crossword-generator': {
       id: '/admin/games/crossword-generator'
       path: '/crossword-generator'
@@ -2424,6 +2445,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedbackIndexRoute: FeedbackIndexRoute,
   GamesIndexRoute: GamesIndexRoute,
   WorldsIndexRoute: WorldsIndexRoute,
+  ApiPublicNativeAuthBounceRoute: ApiPublicNativeAuthBounceRoute,
   GamesModeSlugRoute: GamesModeSlugRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   AdminCampaignsIndexRoute: AdminCampaignsIndexRoute,
