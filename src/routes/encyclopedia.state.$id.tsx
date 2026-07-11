@@ -121,7 +121,7 @@ function StatePage() {
         const nextId = readTargetId(cur);
         if (!nextId || seen.has(nextId)) break;
         seen.add(nextId);
-        const nxt = await (await import("@/lib/encyclopedia-source")).fetchEncyclopediaByIdLocalFirst(nextId);
+        const nxt = await fetchEncyclopediaByIdLocalFirst(nextId);
         if (!nxt || nxt.enabled === false) break;
         cur = nxt;
       }
