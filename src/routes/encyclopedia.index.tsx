@@ -31,8 +31,10 @@ import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import {
   fetchEncyclopediaAllLocalFirst,
   isDisplayableEntity,
+  isRedirectedOrArchivedEntity,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
+import { resolveCanonicalLocal } from "@/lib/encyclopedia-canonical";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 import { isPublicEntity } from "@/lib/taxonomy-public";
 import { iconForType } from "@/lib/encyclopedia-icons";
