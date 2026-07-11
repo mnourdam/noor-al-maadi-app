@@ -2,6 +2,11 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  computeGoogleAuthResult,
+  getAndClearGoogleAuthIntent,
+  stashGoogleAuthResult,
+} from "@/lib/googleAuthResult";
 
 type SearchParams = {
   code?: string;
