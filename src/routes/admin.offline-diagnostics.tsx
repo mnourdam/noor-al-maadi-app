@@ -95,33 +95,60 @@ function OfflineDiagnostics() {
   const [online, setOnline] = useState<boolean>(typeof navigator !== "undefined" ? navigator.onLine : true);
   const [busy, setBusy] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>([]);
+  const [scopedUid, setScopedUid] = useState<string | null>(null);
+  const [outbox, setOutbox] = useState<OutboxItem[]>([]);
+  const [lastSyncAt, setLastSyncAt] = useState<number>(0);
 
   const appendLog = (msg: string) =>
     setLog((prev) => [`[${new Date().toLocaleTimeString("ar-EG")}] ${msg}`, ...prev].slice(0, 20));
 
   const refresh = useCallback(async () => {
-    const [s, ic, st] = await Promise.all([
+    const [s, ic, st, sess] = await Promise.all([
       loadSnapshot(),
       readImageCacheStats(),
       readStorageStats(),
+      supabase.auth.getSession(),
     ]);
     setSnap(s);
     setImgStats(ic);
     setStorage(st);
     setLocalInfo(localSnapshotInfo());
+    const uid = sess.data.session?.user?.id ?? null;
+    setScopedUid(uid);
+    setOutbox(uid ? await peekAll(uid) : []);
+    setLastSyncAt(getLastFlushAt());
   }, []);
 
   useEffect(() => {
     void refresh();
-    const onOn = () => setOnline(true);
+    const onOn = () => { setOnline(true); void refresh(); };
     const onOff = () => setOnline(false);
+    const onOutbox = () => { void refresh(); };
     window.addEventListener("online", onOn);
     window.addEventListener("offline", onOff);
+    window.addEventListener("irth:outbox:changed", onOutbox);
+    window.addEventListener("irth:outbox:flushed", onOutbox);
     return () => {
       window.removeEventListener("online", onOn);
       window.removeEventListener("offline", onOff);
+      window.removeEventListener("irth:outbox:changed", onOutbox);
+      window.removeEventListener("irth:outbox:flushed", onOutbox);
     };
   }, [refresh]);
+
+  const syncProgress = async () => {
+    if (!scopedUid) { appendLog("لا يوجد مستخدم مسجّل — لا يمكن المزامنة."); return; }
+    setBusy("progress");
+    appendLog(`بدء مزامنة تقدّم اللاعب لـ ${scopedUid.slice(0, 8)}…`);
+    try {
+      const res = await flushOutbox(scopedUid);
+      appendLog(`تمت المزامنة: نجح ${res.flushed}، فشل ${res.failed}.`);
+      await refresh();
+    } catch (e: any) {
+      appendLog(`فشلت المزامنة: ${e?.message ?? e}`);
+    } finally { setBusy(null); }
+  };
+
 
   const source: string = (() => {
     if (!snap) return online ? "Supabase (لا يوجد كاش محلي)" : "لا يوجد مصدر متاح";
