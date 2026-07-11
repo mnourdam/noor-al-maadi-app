@@ -90,19 +90,43 @@ function bodyHasContent(body: unknown): boolean {
 }
 
 /**
+ * True when the entity has been converted / merged into another canonical
+ * entity, or has been archived / soft-hidden as a duplicate. These rows
+ * must never appear in public lists, search, suggestions, or pickers —
+ * only the destination canonical entity should remain visible.
+ */
+export function isRedirectedOrArchivedEntity(e: { metadata?: unknown } | null | undefined): boolean {
+  if (!e) return false;
+  const meta = (e.metadata && typeof e.metadata === "object")
+    ? (e.metadata as Record<string, unknown>)
+    : null;
+  if (!meta) return false;
+  if (typeof meta.canonical_id === "string" && meta.canonical_id.trim().length > 0) return true;
+  if (meta.archived === true) return true;
+  if (meta.hidden_duplicate === true) return true;
+  if (typeof meta.merged_into === "string" && meta.merged_into.trim().length > 0) return true;
+  if (typeof meta.converted_to === "string" && meta.converted_to.trim().length > 0) return true;
+  if (typeof meta.redirect_to === "string" && meta.redirect_to.trim().length > 0) return true;
+  return false;
+}
+
+/**
  * The Encyclopedia never shows empty cards, orphan records, or stubs.
- * A row is displayable only when it is enabled AND has real content —
- * either a substantial summary or a real body.
+ * A row is displayable only when it is enabled, not a redirect/merge/archive
+ * stub, and has real content — either a substantial summary or a real body.
  */
 export function isDisplayableEntity(
   e:
     | (Pick<SupabaseEncyclopediaEntity, "enabled" | "summary" | "body"> & {
         entity_type?: string;
+        metadata?: unknown;
       })
     | null
     | undefined,
 ): boolean {
   if (!e || e.enabled === false) return false;
+  // Converted/merged/archived rows must be hidden from every public surface.
+  if (isRedirectedOrArchivedEntity(e)) return false;
   // Artifacts are always visible once published — content can be enriched over time.
   if ((e as { entity_type?: string }).entity_type === "artifact") return true;
   const summary = (e.summary ?? "").trim();
@@ -110,6 +134,7 @@ export function isDisplayableEntity(
   if (bodyHasContent(e.body)) return true;
   return false;
 }
+
 
 /** Filter helper for lists. */
 export function filterDisplayable<
