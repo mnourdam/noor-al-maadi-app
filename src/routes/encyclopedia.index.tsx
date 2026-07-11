@@ -338,17 +338,48 @@ function EncyclopediaHubFull() {
 
   const q = query.trim().toLowerCase();
 
+  // Search the OLD (redirected) titles/aliases and remap to their canonical
+  // destination — same scoring, but the returned entity is always canonical.
+  // De-duplicated by canonical id so a query matching multiple old duplicates
+  // never shows the destination twice.
+  const aliasScoredResolved = useMemo(() => {
+    if (!q) return [] as { e: SupabaseEncyclopediaEntity; s: number }[];
+    const nq = normArabic(q);
+    const byDest = new Map<string, number>();
+    for (const { src, dest } of remapRedirectedToCanonical) {
+      const s = scoreEntity(src, nq);
+      if (s <= 0) continue;
+      const prev = byDest.get(dest.id) ?? 0;
+      if (s > prev) byDest.set(dest.id, s);
+    }
+    const destById = new Map(all.map((e) => [e.id, e] as const));
+    return Array.from(byDest.entries())
+      .map(([id, s]) => {
+        const e = destById.get(id);
+        return e ? { e, s } : null;
+      })
+      .filter((x): x is { e: SupabaseEncyclopediaEntity; s: number } => !!x);
+  }, [q, remapRedirectedToCanonical, all]);
+
   const suggestions = useMemo(() => {
     if (!q) return [];
     const nq = normArabic(q);
-    return all
+    const scored = all
       .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
       .map((e) => ({ e, s: scoreEntity(e, nq) }))
-      .filter((x) => x.s > 0)
+      .filter((x) => x.s > 0);
+    // Merge alias hits, keep the best score per canonical entity.
+    const bestById = new Map<string, { e: SupabaseEncyclopediaEntity; s: number }>();
+    for (const x of [...scored, ...aliasScoredResolved]) {
+      if (typeFilter !== "all" && x.e.entity_type !== typeFilter) continue;
+      const prev = bestById.get(x.e.id);
+      if (!prev || x.s > prev.s) bestById.set(x.e.id, x);
+    }
+    return Array.from(bestById.values())
       .sort((a, b) => b.s - a.s)
       .slice(0, 6)
       .map((x) => x.e);
-  }, [all, q, typeFilter]);
+  }, [all, q, typeFilter, aliasScoredResolved]);
 
   const results = useMemo(() => {
     if (!q && !era && typeFilter === "all") return [];
@@ -357,12 +388,23 @@ function EncyclopediaHubFull() {
       .filter((e) => typeFilter === "all" || e.entity_type === typeFilter)
       .filter((e) => !era || toCanonicalEra(metaEra(e)) === era);
     if (!nq) return filtered.slice(0, 60);
-    return filtered
-      .map((e) => ({ e, s: scoreEntity(e, nq) }))
-      .filter((x) => x.s > 0)
+    const bestById = new Map<string, { e: SupabaseEncyclopediaEntity; s: number }>();
+    for (const e of filtered) {
+      const s = scoreEntity(e, nq);
+      if (s <= 0) continue;
+      bestById.set(e.id, { e, s });
+    }
+    for (const x of aliasScoredResolved) {
+      if (typeFilter !== "all" && x.e.entity_type !== typeFilter) continue;
+      if (era && toCanonicalEra(metaEra(x.e)) !== era) continue;
+      const prev = bestById.get(x.e.id);
+      if (!prev || x.s > prev.s) bestById.set(x.e.id, x);
+    }
+    return Array.from(bestById.values())
       .sort((a, b) => b.s - a.s)
       .slice(0, 60)
       .map((x) => x.e);
+
   }, [all, q, era, typeFilter]);
 
   const topMatch = useMemo(() => {
