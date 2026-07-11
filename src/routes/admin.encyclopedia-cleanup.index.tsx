@@ -32,6 +32,7 @@ import {
 
 
 import { EncyclopediaEntityPreview } from "@/components/admin/EncyclopediaEntityPreview";
+import { EncyclopediaEntityImageUploader } from "@/components/admin/EncyclopediaEntityImageUploader";
 import { OrphanRelationEditor } from "@/components/admin/OrphanRelationEditor";
 import { supabase } from "@/integrations/supabase/client";
 import {
