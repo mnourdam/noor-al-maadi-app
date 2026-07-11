@@ -81,19 +81,52 @@ function useSupabaseCollection() {
   const [validSlugs, setValidSlugs] = useState<Set<string> | null>(null);
   const [slugTitles, setSlugTitles] = useState<Map<string, string>>(new Map());
   const [canonicalSlugFor, setCanonicalSlugFor] = useState<Map<string, string>>(new Map());
+  const [reloadTick, setReloadTick] = useState(0);
+  const [currentUid, setCurrentUid] = useState<string | null>(null);
+
+  // Track the signed-in user id so we can (a) refetch when it changes and
+  // (b) hard-reset local state on sign-out so a subsequent sign-in never
+  // shows the previous user's discoveries.
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setCurrentUid(data.session?.user?.id ?? null);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      const uid = session?.user?.id ?? null;
+      setCurrentUid(uid);
+      if (event === "SIGNED_OUT") {
+        setRows([]); // clear previous user immediately
+      }
+    });
+    return () => { alive = false; sub.subscription.unsubscribe(); };
+  }, []);
+
+  // Whenever the durable outbox drains, refresh so a just-synced discovery
+  // appears in "آخر اكتشافاتي" without a manual reload.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const bump = () => setReloadTick((n) => n + 1);
+    window.addEventListener("irth:outbox:flushed", bump);
+    window.addEventListener("online", bump);
+    return () => {
+      window.removeEventListener("irth:outbox:flushed", bump);
+      window.removeEventListener("online", bump);
+    };
+  }, []);
+
   useEffect(() => {
     if (isAndroidUltraStableMode()) return;
+    if (!currentUid) return;
     let cancelled = false;
     (async () => {
       try {
-        const { data: sess } = await supabase.auth.getSession();
-        const uid = sess.session?.user?.id;
-        if (!uid) return;
         const [colRes, encRes] = await Promise.all([
           supabase
             .from("user_collection")
             .select("item_id,item_type,unlocked_at")
-            .eq("user_id", uid),
+            .eq("user_id", currentUid),
           supabase
             .from("encyclopedia_entities")
             .select("slug,title,metadata")
@@ -109,7 +142,6 @@ function useSupabaseCollection() {
           slugSet.add(s);
           canonicalMap.set(s, s);
           const t = (r.title ?? "").trim();
-          // Prefer the first Arabic title encountered per slug.
           if (t && !titleMap.has(s) && HAS_ARABIC.test(t)) titleMap.set(s, t);
           const aliases = Array.isArray(r.metadata?.aliases) ? r.metadata.aliases : [];
           const legacyId = typeof r.metadata?.legacy_id === "string" ? r.metadata.legacy_id : null;
@@ -138,7 +170,7 @@ function useSupabaseCollection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentUid, reloadTick]);
   return { rows, validSlugs, slugTitles, canonicalSlugFor };
 }
 
