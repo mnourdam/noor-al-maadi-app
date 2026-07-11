@@ -11,6 +11,16 @@ export type EncyclopediaScoredResult = {
   s: number;
 };
 
+export function mergeEncyclopediaRowsById(
+  local: SupabaseEncyclopediaEntity[],
+  live: SupabaseEncyclopediaEntity[] | null,
+): SupabaseEncyclopediaEntity[] {
+  const byId = new Map<string, SupabaseEncyclopediaEntity>();
+  for (const row of local) if (row?.id) byId.set(row.id, row);
+  for (const row of live ?? []) if (row?.id) byId.set(row.id, row);
+  return Array.from(byId.values());
+}
+
 type CanonicalSearchOptions = {
   rows: SupabaseEncyclopediaEntity[];
   query: string;

@@ -36,6 +36,7 @@ import {
 import {
   buildCanonicalizedEncyclopediaSearch,
   exactTopMatchTarget,
+  mergeEncyclopediaRowsById,
   normalizeArabicSearch,
 } from "@/lib/encyclopedia-search";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
@@ -98,16 +99,6 @@ type EncyclopediaIndexData = {
   authoritativeIds: string[] | null;
 };
 
-function mergeRowsById(
-  local: SupabaseEncyclopediaEntity[],
-  live: SupabaseEncyclopediaEntity[] | null,
-): SupabaseEncyclopediaEntity[] {
-  const byId = new Map<string, SupabaseEncyclopediaEntity>();
-  for (const row of local) if (row?.id) byId.set(row.id, row);
-  for (const row of live ?? []) if (row?.id) byId.set(row.id, row);
-  return Array.from(byId.values());
-}
-
 function useAllEncyclopedia() {
   return useQuery({
     queryKey: ["encyclopedia", "all-search-canonical-v1"],
@@ -118,7 +109,7 @@ function useAllEncyclopedia() {
         fetchEncyclopediaLivePublicAll(),
       ]);
       return {
-        rows: mergeRowsById(local, live),
+        rows: mergeEncyclopediaRowsById(local, live),
         authoritativeIds: live ? live.map((row) => row.id) : null,
       };
     },
