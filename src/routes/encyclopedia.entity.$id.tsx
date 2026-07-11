@@ -259,14 +259,27 @@ function EntityPage() {
               missing, invalid, offline-uncached, or fails to decode, we
               silently fall back to the original no-image design — no
               placeholder, no broken icon, no reserved blank space. */}
-          <HeroCard
-            entity={entity}
-            typeLabel={typeLabel}
-            HeroIcon={HeroIcon}
+          <EncyclopediaHero
+            imageUrl={entity.image_url}
+            imageCredit={entity.image_credit}
+            imageSource={entity.image_source}
+            eyebrow={typeLabel}
+            Icon={HeroIcon}
+            title={entity.title}
+            subtitle={entity.subtitle}
             chips={chips}
             atlasLink={atlasLink}
             atlasZoom={atlasZoom}
+            fallback={<EntityOrnamentHero
+              entity={entity}
+              typeLabel={typeLabel}
+              HeroIcon={HeroIcon}
+              chips={chips}
+              atlasLink={atlasLink}
+              atlasZoom={atlasZoom}
+            />}
           />
+
 
 
           {/* ───────── Story Introduction (museum plaque) ───────── */}
