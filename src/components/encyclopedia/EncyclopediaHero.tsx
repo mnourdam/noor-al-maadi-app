@@ -61,18 +61,13 @@ export function EncyclopediaHero(props: EncyclopediaHeroProps) {
 
   return (
     <>
-      {/* Invisible preloader — mounts nothing until the image decodes. */}
-      {!imageReady && (
-        <div className="hidden">
-          <SafeHeroImage src={imageUrl} alt="" onReady={setImageReady} />
-        </div>
-      )}
-
-      {/* Until the image is ready, show the original fallback so the page
-          never flashes an empty frame. */}
+      {/* Fallback stays mounted (and visible) until the image successfully
+          decodes, so the page never flashes an empty frame. */}
       {!showImage && fallback}
 
-      {showImage && (
+      {/* Image hero is always mounted so <SafeHeroImage> can run its probe;
+          it is visually hidden until the image is ready. */}
+      <div className={showImage ? "contents" : "hidden"} aria-hidden={!showImage}>
         <header
           className="mt-4 relative overflow-hidden rounded-[28px] border border-gold/25 shadow-[0_30px_80px_-40px_rgba(212,175,90,0.45)] min-h-[380px] p-6"
         >
@@ -80,6 +75,7 @@ export function EncyclopediaHero(props: EncyclopediaHeroProps) {
             <SafeHeroImage
               src={imageUrl}
               alt=""
+              onReady={setImageReady}
               className="absolute inset-0 size-full object-cover"
             />
             <div className="absolute inset-0 bg-[#050812]/45" />
@@ -149,7 +145,8 @@ export function EncyclopediaHero(props: EncyclopediaHeroProps) {
             )}
           </div>
         </header>
-      )}
+      </div>
     </>
   );
 }
+
