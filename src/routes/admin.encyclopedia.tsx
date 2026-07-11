@@ -7,6 +7,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { normalizeArabicName } from "@/lib/arabic-normalize";
+import { EncyclopediaEntityImageUploader } from "@/components/admin/EncyclopediaEntityImageUploader";
+import type { EntityImageFields } from "@/lib/encyclopedia-images";
 
 export const Route = createFileRoute("/admin/encyclopedia")({
   head: () => ({
@@ -51,6 +53,10 @@ interface Entity {
   timeline_category: string | null;
   timeline_tone: string | null;
   timeline_glyph: string | null;
+  image_url?: string | null;
+  image_path?: string | null;
+  image_credit?: string | null;
+  image_source?: string | null;
 }
 
 const TIMELINE_CATEGORIES = ["caliphate", "figure", "battle", "book", "event"] as const;
@@ -329,6 +335,12 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     timeline_glyph: value?.timeline_glyph ?? "",
   });
   const [busy, setBusy] = useState(false);
+  const [imageFields, setImageFields] = useState<EntityImageFields>({
+    image_url: value?.image_url ?? null,
+    image_path: value?.image_path ?? null,
+    image_credit: value?.image_credit ?? null,
+    image_source: value?.image_source ?? null,
+  });
 
   const intOrNull = (s: string): number | null => {
     const t = s.trim();
@@ -457,6 +469,18 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs" />
           </Field>
         </div>
+
+        <div className="mt-4">
+          <EncyclopediaEntityImageUploader
+            entityId={value?.id ?? ""}
+            entityType={form.entity_type}
+            entityTitle={form.title || value?.title || ""}
+            initial={imageFields}
+            onChange={setImageFields}
+            disabled={isNew}
+          />
+        </div>
+
 
         <fieldset className="mt-4 rounded-lg border border-amber-500/20 bg-slate-900/40 p-3">
           <legend className="px-2 text-xs font-bold text-amber-200">الخط الزمني الكبير</legend>

@@ -32,6 +32,7 @@ import {
 
 
 import { EncyclopediaEntityPreview } from "@/components/admin/EncyclopediaEntityPreview";
+import { EncyclopediaEntityImageUploader } from "@/components/admin/EncyclopediaEntityImageUploader";
 import { OrphanRelationEditor } from "@/components/admin/OrphanRelationEditor";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -66,6 +67,10 @@ type EntityRow = {
   updated_at: string;
   timeline_year: number | null;
   timeline_category: string | null;
+  image_url: string | null;
+  image_path: string | null;
+  image_credit: string | null;
+  image_source: string | null;
 };
 
 type Quality = "good" | "weak" | "empty" | "duplicate" | "orphaned";
@@ -73,7 +78,7 @@ type FilterKey =
   | "all" | "needs-cleanup" | "needs-content" | "complete" | "dedupe-pending"
   | "figure" | "city" | "landmark" | "battle" | "event"
   | "artifact" | "state" | "empty" | "weak" | "duplicate" | "stub" | "archived"
-  | "no-image" | "no-sources" | "no-overview" | "no-atlas" | "no-campaign";
+  | "no-image" | "has-image" | "no-sources" | "no-overview" | "no-atlas" | "no-campaign";
 
 // ------------------------------------------------------------
 // Cleanup workflow predicates
@@ -230,8 +235,9 @@ function hasSources(meta: any, body: any): boolean {
       || (Array.isArray(b.sources) && b.sources.length > 0);
 }
 
-function hasImage(meta: any): boolean {
+function hasImage(meta: any, row?: { image_url?: string | null }): boolean {
   const m = meta || {};
+  if (row && typeof row.image_url === "string" && row.image_url.trim()) return true;
   return Boolean(m.image || m.image_url || m.hero_image || m.thumbnail);
 }
 
@@ -413,7 +419,7 @@ function CleanupWorkshop() {
       for (let from = 0; ; from += PAGE) {
         const { data, error } = await supabase
           .from("encyclopedia_entities" as any)
-          .select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled,updated_at,timeline_year,timeline_category")
+          .select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled,updated_at,timeline_year,timeline_category,image_url,image_path,image_credit,image_source")
           .order("updated_at", { ascending: false })
           .range(from, from + PAGE - 1);
         if (error) throw error;
@@ -605,7 +611,8 @@ function CleanupWorkshop() {
         case "stub":  if (quality !== "empty" && quality !== "weak") return false; break;
         case "duplicate": if (!isDup) return false; break;
         case "archived":  if (!archived) return false; break;
-        case "no-image":    if (hasImage(r.metadata)) return false; break;
+        case "no-image":    if (hasImage(r.metadata, r)) return false; break;
+        case "has-image":   if (!hasImage(r.metadata, r)) return false; break;
         case "no-sources":  if (hasSources(r.metadata, r.body)) return false; break;
         case "no-overview": if ((r.summary ?? "").trim().length >= 20) return false; break;
         case "no-atlas":    if ((atlasLinks.get(r.id) ?? 0) > 0) return false; break;
@@ -742,7 +749,7 @@ function CleanupWorkshop() {
         has_body: bodyLen > 0,
         has_sections: hasSections(r.body),
         has_sources: hasSources(r.metadata, r.body),
-        has_image: hasImage(r.metadata),
+        has_image: hasImage(r.metadata, r),
         has_atlas_link: atlas > 0,
         has_campaign_reference: camps > 0,
         atlas_links: atlas,
@@ -1417,6 +1424,7 @@ function CleanupWorkshop() {
                 onDelete={() => deleteEntity(selected)}
                 onOpenMerge={() => setMergeFor(selected)}
                 onJumpTo={(id) => setSelectedId(id)}
+                onRefresh={() => { void refresh(); }}
 
                 duplicates={
                   // Suggest other rows that share normalized title within the same type.
@@ -1808,12 +1816,13 @@ function Chip({ children, tone }: { children: React.ReactNode; tone?: "ok" | "wa
 // ------------------------------------------------------------
 // Editor (JSON pane + structured controls)
 // ------------------------------------------------------------
-function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, onOpenMerge, onJumpTo, duplicates, atlasCount, campaignCount }: {
+function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, onOpenMerge, onJumpTo, onRefresh, duplicates, atlasCount, campaignCount }: {
   row: EntityRow; allRows: EntityRow[]; busy: boolean;
   onSave: (patch: Partial<EntityRow>) => void;
   onApprove: () => void;
   onArchive: () => void; onDelete: () => void; onOpenMerge: () => void;
   onJumpTo: (id: string) => void;
+  onRefresh: () => void;
   duplicates: EntityRow[]; atlasCount: number; campaignCount: number;
 }) {
 
@@ -2087,6 +2096,21 @@ function Editor({ row, allRows, busy, onSave, onApprove, onArchive, onDelete, on
         onJumpTo={onJumpTo}
       />
 
+      <EncyclopediaEntityImageUploader
+        entityId={row.id}
+        entityType={row.entity_type}
+        entityTitle={row.title}
+        initial={{
+          image_url: row.image_url ?? null,
+          image_path: row.image_path ?? null,
+          image_credit: row.image_credit ?? null,
+          image_source: row.image_source ?? null,
+        }}
+        onChange={onRefresh}
+      />
+
+
+
 
 
       {/* Tabs — visible on small screens. On lg+ both panes show side-by-side. */}
@@ -2217,7 +2241,7 @@ function MissingContentStrip({ rows, atlasLinks, campaignSlugs, dupIds, onFilter
       const q = classifyQuality(r, dupIds.has(r.id), isOrphan);
       if (q === "empty") empty++;
       if (q === "weak") weak++;
-      if (!hasImage(r.metadata)) noImage++;
+      if (!hasImage(r.metadata, r)) noImage++;
       if (!hasSources(r.metadata, r.body)) noSources++;
       if ((r.summary ?? "").trim().length < 20) noOverview++;
       if (!(atlasLinks.get(r.id) ?? 0)) noAtlas++;
@@ -2230,6 +2254,7 @@ function MissingContentStrip({ rows, atlasLinks, campaignSlugs, dupIds, onFilter
     { label: "كيانات فارغة",        value: stats.empty,      filter: "empty",       tone: "border-rose-500/40 bg-rose-500/5 text-rose-200" },
     { label: "كيانات ضعيفة",        value: stats.weak,       filter: "weak",        tone: "border-amber-500/40 bg-amber-500/5 text-amber-200" },
     { label: "بدون صورة",           value: stats.noImage,    filter: "no-image",    tone: "border-fuchsia-500/40 bg-fuchsia-500/5 text-fuchsia-200" },
+    { label: "لديه صورة",           value: rows.length - stats.noImage, filter: "has-image", tone: "border-emerald-500/40 bg-emerald-500/5 text-emerald-200" },
     { label: "بدون مصادر",          value: stats.noSources,  filter: "no-sources",  tone: "border-sky-500/40 bg-sky-500/5 text-sky-200" },
     { label: "بدون ملخص",           value: stats.noOverview, filter: "no-overview", tone: "border-amber-500/40 bg-amber-500/5 text-amber-200" },
     { label: "بدون رابط أطلس",      value: stats.noAtlas,    filter: "no-atlas",    tone: "border-emerald-500/40 bg-emerald-500/5 text-emerald-200" },

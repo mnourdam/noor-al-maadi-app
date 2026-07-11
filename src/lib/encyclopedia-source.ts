@@ -35,12 +35,18 @@ export type SupabaseEncyclopediaEntity = {
   timeline_start_year?: number | null;
   /** Alternative names / common references; participates in search. */
   aliases?: string[] | null;
+  /** Optional hero image — all fields nullable, no-image is the default. */
+  image_url?: string | null;
+  image_path?: string | null;
+  image_credit?: string | null;
+  image_source?: string | null;
 };
 
 /** Columns required to render + chronologically sort an entity. */
 export const ENCYCLOPEDIA_ENTITY_COLUMNS =
   "id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body,aliases," +
-  "timeline_order,timeline_year,timeline_start_year";
+  "timeline_order,timeline_year,timeline_start_year," +
+  "image_url,image_path,image_credit,image_source";
 
 /** Mirror of admin migration normalizeSlug — keep in sync. */
 export function normalizeEntitySlug(raw: string): string {
