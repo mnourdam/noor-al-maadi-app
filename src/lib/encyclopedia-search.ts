@@ -54,6 +54,21 @@ export function scoreEncyclopediaEntity(e: SupabaseEncyclopediaEntity, nq: strin
     ? (e.aliases.filter((a) => typeof a === "string") as string[])
     : [];
   const aliases: string[] = Array.from(new Set([...colAliases, ...metaAliases]));
+  const mergedFrom = Array.isArray((meta as { merged_from?: unknown }).merged_from)
+    ? (meta as { merged_from: unknown[] }).merged_from
+    : [];
+  for (const item of mergedFrom) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    if (typeof record.title === "string") aliases.push(record.title);
+    if (typeof record.slug === "string") aliases.push(record.slug);
+  }
+  const redirectFrom = Array.isArray((meta as { redirect_from?: unknown }).redirect_from)
+    ? (meta as { redirect_from: unknown[] }).redirect_from
+    : [];
+  for (const item of redirectFrom) {
+    if (typeof item === "string") aliases.push(item);
+  }
   const wordStart = new RegExp(`(^|\\s)${escapeRegExp(nq)}`);
   let score = 0;
   if (title === nq) score += 1000;
