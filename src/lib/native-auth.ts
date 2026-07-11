@@ -36,29 +36,35 @@ export function isCapacitorNative(): boolean {
 }
 
 export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: string }> {
+  console.info("[native-auth] branch=NATIVE redirectTo=", NATIVE_REDIRECT_URL);
   try {
     const { Browser } = await import("@capacitor/browser");
+
+    // Register the deep-link listener before opening the browser so the
+    // resume intent from Google → bounce → APK is never missed.
+    await installNativeAuthDeepLinkListener();
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: NATIVE_REDIRECT_URL,
         skipBrowserRedirect: true,
+        queryParams: { prompt: "select_account" },
       },
     });
 
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      console.error("[native-auth] signInWithOAuth failed", error.message);
+      return { ok: false, error: error.message };
+    }
     const oauthUrl = data.url;
     if (!oauthUrl) return { ok: false, error: "Missing Google OAuth URL" };
 
-    // Required QA signal: with direct backend Google OAuth this may be the
-    // backend `/auth/v1/authorize` URL, but the provider must be configured
-    // with Google credentials so it opens Google normally.
-    console.info(`Google OAuth URL: ${oauthUrl}`);
-
+    console.info("[native-auth] opening custom tab", oauthUrl);
     await Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" });
     return { ok: true };
   } catch (e) {
+    console.error("[native-auth] unexpected", e);
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
