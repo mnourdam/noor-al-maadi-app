@@ -95,7 +95,7 @@ const SUGGEST_TYPE_LABELS: Record<string, string> = {
 
 type EncyclopediaIndexData = {
   rows: SupabaseEncyclopediaEntity[];
-  authoritativeIds: Set<string> | null;
+  authoritativeIds: string[] | null;
 };
 
 function mergeRowsById(
@@ -119,7 +119,7 @@ function useAllEncyclopedia() {
       ]);
       return {
         rows: mergeRowsById(local, live),
-        authoritativeIds: live ? new Set(live.map((row) => row.id)) : null,
+        authoritativeIds: live ? live.map((row) => row.id) : null,
       };
     },
   });
@@ -184,7 +184,10 @@ function EncyclopediaHubFull() {
 
   const { data: encyclopediaData, isLoading } = useAllEncyclopedia();
   const searchRows = encyclopediaData?.rows ?? [];
-  const authoritativeIds = encyclopediaData?.authoritativeIds ?? null;
+  const authoritativeIds = useMemo(
+    () => encyclopediaData?.authoritativeIds ? new Set(encyclopediaData.authoritativeIds) : null,
+    [encyclopediaData?.authoritativeIds],
+  );
   const all = useMemo(
     () => buildCanonicalizedEncyclopediaSearch({
       rows: searchRows,
