@@ -191,6 +191,11 @@ function EntityPage() {
         : 3.5
     : 3.5;
 
+  // If the redirect chain landed on a state, forward to the state route.
+  if (entity && entity.entity_type === "state") {
+    return <Navigate to="/encyclopedia/state/$id" params={{ id: entity.slug }} replace />;
+  }
+
   if (query.isLoading) {
     return (
       <AppShell>
@@ -198,6 +203,7 @@ function EntityPage() {
       </AppShell>
     );
   }
+
 
   if (!entity) {
     return (
