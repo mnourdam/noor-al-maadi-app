@@ -352,6 +352,7 @@ function RootComponent() {
           <SplashSequence />
           <AndroidBackHandler />
           <InAppBanner />
+          <GoogleAuthResultDialog />
           <GlobalOfflinePill />
         </AccountProvider>
       </ProfileProvider>
