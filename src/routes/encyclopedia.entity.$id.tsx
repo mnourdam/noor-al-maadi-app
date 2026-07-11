@@ -101,19 +101,37 @@ function EntityPage() {
   const { id } = Route.useParams();
 
   const query = useQuery({
-    queryKey: ["encyclopedia", "entity", id, "v2"],
+    queryKey: ["encyclopedia", "entity", id, "v3"],
     staleTime: 60_000,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
-      const followCanonical = async (row: SupabaseEncyclopediaEntity | null) => {
+      // Follow canonical_id / merged_into / converted_to / redirect_to
+      // chains so old references to converted entities still land on the
+      // canonical destination. Cycle-guarded, depth-limited.
+      const readTargetId = (row: SupabaseEncyclopediaEntity | null): string | null => {
         if (!row) return null;
         const meta = (row.metadata && typeof row.metadata === "object")
-          ? (row.metadata as any) : {};
-        const cid = typeof meta.canonical_id === "string" ? meta.canonical_id : null;
-        if (cid && cid !== row.id) {
-          const canon = await fetchEncyclopediaByIdLocalFirst(cid);
-          if (canon && canon.enabled) return canon;
+          ? (row.metadata as Record<string, unknown>) : {};
+        for (const k of ["canonical_id", "merged_into", "converted_to", "redirect_to"] as const) {
+          const v = meta[k];
+          if (typeof v === "string" && v.trim() && v.trim() !== row.id) return v.trim();
         }
-        return row.enabled ? row : null;
+        return null;
+      };
+      const followRedirects = async (
+        row: SupabaseEncyclopediaEntity | null,
+      ): Promise<SupabaseEncyclopediaEntity | null> => {
+        if (!row) return null;
+        const seen = new Set<string>([row.id]);
+        let cur = row;
+        for (let hops = 0; hops < 8; hops++) {
+          const nextId = readTargetId(cur);
+          if (!nextId || seen.has(nextId)) break;
+          seen.add(nextId);
+          const nxt = await fetchEncyclopediaByIdLocalFirst(nextId);
+          if (!nxt || nxt.enabled === false) break;
+          cur = nxt;
+        }
+        return cur;
       };
 
       let primary: SupabaseEncyclopediaEntity | null = null;
@@ -122,11 +140,16 @@ function EntityPage() {
       } else {
         primary = await fetchEncyclopediaBySlugLocalFirst(id);
       }
-      const followed = await followCanonical(primary);
-      // Quality gate: incomplete/orphan rows are treated as "not found".
-      return followed && isDisplayableEntity(followed) ? followed : null;
+      const followed = await followRedirects(primary);
+      // Only the resolved destination is subject to the displayable gate.
+      // The source (redirected) row is hidden as its own entity but its
+      // URL keeps working because we render the destination.
+      return followed && followed.enabled !== false && isDisplayableEntity(followed)
+        ? followed
+        : null;
     },
   });
+
 
   const entity = query.data ?? null;
 
