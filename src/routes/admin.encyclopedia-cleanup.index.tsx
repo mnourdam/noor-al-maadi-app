@@ -66,6 +66,10 @@ type EntityRow = {
   updated_at: string;
   timeline_year: number | null;
   timeline_category: string | null;
+  image_url: string | null;
+  image_path: string | null;
+  image_credit: string | null;
+  image_source: string | null;
 };
 
 type Quality = "good" | "weak" | "empty" | "duplicate" | "orphaned";
@@ -230,8 +234,9 @@ function hasSources(meta: any, body: any): boolean {
       || (Array.isArray(b.sources) && b.sources.length > 0);
 }
 
-function hasImage(meta: any): boolean {
+function hasImage(meta: any, row?: { image_url?: string | null }): boolean {
   const m = meta || {};
+  if (row && typeof row.image_url === "string" && row.image_url.trim()) return true;
   return Boolean(m.image || m.image_url || m.hero_image || m.thumbnail);
 }
 
