@@ -405,7 +405,7 @@ function EncyclopediaHubFull() {
       .slice(0, 60)
       .map((x) => x.e);
 
-  }, [all, q, era, typeFilter]);
+  }, [all, q, era, typeFilter, aliasScoredResolved]);
 
   const topMatch = useMemo(() => {
     if (!q || results.length === 0) return null;
