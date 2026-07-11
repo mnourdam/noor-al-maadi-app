@@ -194,6 +194,36 @@ export type Database = {
         }
         Relationships: []
       }
+      applied_profile_deltas: {
+        Row: {
+          applied_at: string
+          delta_id: string
+          dinars: number
+          hearts: number
+          source: string | null
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          applied_at?: string
+          delta_id: string
+          dinars?: number
+          hearts?: number
+          source?: string | null
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          applied_at?: string
+          delta_id?: string
+          dinars?: number
+          hearts?: number
+          source?: string | null
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
       atlas_entities: {
         Row: {
           aps_verified: boolean
@@ -1792,6 +1822,16 @@ export type Database = {
           p_from: string
           p_metric: string
           p_to: string
+        }
+        Returns: Json
+      }
+      apply_profile_delta: {
+        Args: {
+          p_delta_id: string
+          p_dinars?: number
+          p_hearts?: number
+          p_source?: string
+          p_xp?: number
         }
         Returns: Json
       }
