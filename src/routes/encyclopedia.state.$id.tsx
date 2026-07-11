@@ -174,6 +174,16 @@ function StatePage() {
     return out;
   }, [state]);
 
+  // If the redirect chain resolved to a non-state entity type, jump to the
+  // generic entity route so the destination still renders.
+  const resolvedButNotState =
+    stateQuery.data &&
+    stateQuery.data.entity_type !== "state" &&
+    isDisplayableEntity(stateQuery.data);
+  if (resolvedButNotState) {
+    return <Navigate to="/encyclopedia/entity/$id" params={{ id: stateQuery.data!.slug }} replace />;
+  }
+
   if (stateQuery.isLoading) {
     return (
       <AppShell>
@@ -181,6 +191,7 @@ function StatePage() {
       </AppShell>
     );
   }
+
 
   if (!state) {
     return (
