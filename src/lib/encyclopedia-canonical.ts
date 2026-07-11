@@ -66,21 +66,35 @@ export function hasBody(e: Row | null | undefined): boolean {
  *   2. Among same-name siblings of the same entity_type, pick the richest.
  *   3. If the richer sibling is strictly richer than the input, switch.
  */
-export function resolveCanonicalLocal(input: Row | null | undefined): Row | null {
+export function readRedirectTargetId(
+  input: Row | null | undefined,
+): string | null {
   if (!input) return null;
-  // (1) explicit redirect
   const meta = (input.metadata && typeof input.metadata === "object")
     ? (input.metadata as Record<string, unknown>)
     : {};
-  const cid = typeof meta.canonical_id === "string" ? meta.canonical_id : null;
-  if (cid && cid !== input.id) {
-    const canon = localEncyclopediaById(cid) as Row | null;
-    if (canon && canon.enabled !== false) {
-      // Recurse so chains of merges resolve to the leaf.
-      return resolveCanonicalLocal(canon) ?? canon;
-    }
+  const candidates = [meta.canonical_id, meta.merged_into, meta.converted_to, meta.redirect_to];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim() && c.trim() !== input.id) return c.trim();
   }
-  // (2) same-name siblings
+  return null;
+}
+
+export function resolveCanonicalLocal(input: Row | null | undefined): Row | null {
+  if (!input) return null;
+  // (1) explicit redirect chain — canonical_id / merged_into / converted_to / redirect_to
+  const seen = new Set<string>([input.id]);
+  let cur: Row = input;
+  for (let hops = 0; hops < 8; hops++) {
+    const nextId = readRedirectTargetId(cur);
+    if (!nextId || seen.has(nextId)) break;
+    seen.add(nextId);
+    const nxt = localEncyclopediaById(nextId) as Row | null;
+    if (!nxt || nxt.enabled === false) break;
+    cur = nxt;
+  }
+  if (cur !== input) return cur;
+  // (2) same-name siblings — pick strictly richer
   const sibs = (localEncyclopediaSameNameSiblings(input) as Row[]).filter(
     (s) => s && s.id !== input.id && s.enabled !== false,
   );
@@ -93,6 +107,7 @@ export function resolveCanonicalLocal(input: Row | null | undefined): Row | null
   }
   return best;
 }
+
 
 /**
  * Admin helper: returns a sibling that is strictly richer than `input`
