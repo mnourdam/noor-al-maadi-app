@@ -17,6 +17,7 @@ import {
 import { useProfile, type ProfileState } from "./profile";
 import { pushPublicStats, claimSignupReferral, REFERRAL_REWARDS } from "./social";
 import { androidMark, androidMeasure, isAndroidUltraStableMode, recordAndroidAction } from "./androidFreezeDiagnostics";
+import { flushOutbox } from "./offline/flush";
 
 interface AccountCtx {
   user: User | null;
