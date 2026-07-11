@@ -107,6 +107,7 @@ function AuthPage() {
             <>
               <GoogleSignInButton
                 label={mode === "signup" ? "إنشاء حساب عبر Google" : "تسجيل الدخول عبر Google"}
+                intent={mode === "signup" ? "signup" : "signin"}
                 onError={(m) => { setError(m); setInfo(null); }}
                 onBeforeRedirect={() => { setError(null); setInfo(null); }}
               />
