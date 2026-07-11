@@ -38,10 +38,19 @@ function buildStoragePath(entityType: string, entityId: string): string {
   return `${safeSegment(entityType)}/${safeSegment(entityId)}/${stamp}.webp`;
 }
 
-/** Resolve a storage `path` into a public URL usable by <img>. */
-export function publicUrlForPath(path: string): string {
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+/** Resolve a storage `path` into a signed URL usable by <img>.
+ *  Bucket is private (workspace blocks public buckets); we mint a very
+ *  long-lived signed URL and persist it in `image_url`. The path is also
+ *  persisted so we can re-sign later if we ever need to rotate. */
+async function signedUrlForPath(path: string): Promise<string> {
+  // 10 years — image is content-addressable via a fresh path each upload,
+  // so we don't need short-lived signatures.
+  const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, TEN_YEARS);
+  if (error || !data?.signedUrl) {
+    throw new Error(`تعذر إنشاء رابط للصورة. (${error?.message ?? "unknown"})`);
+  }
+  return data.signedUrl;
 }
 
 export interface UploadEntityImageArgs {
@@ -80,7 +89,7 @@ export async function uploadEntityImage(args: UploadEntityImageArgs): Promise<Up
     throw new Error(`تعذر رفع الصورة. لم يتم تغيير الصورة الحالية. (${uploadError.message})`);
   }
 
-  const url = publicUrlForPath(path);
+  const url = await signedUrlForPath(path);
   const fields: EntityImageFields = {
     image_url: url,
     image_path: path,
