@@ -35,8 +35,8 @@ import { buildContextBlocks } from "@/lib/context-blocks";
 import { iconForType } from "@/lib/encyclopedia-icons";
 import { canonicalEraLabel, toCanonicalEra } from "@/lib/era-canonical";
 import { localAtlasEntities } from "@/lib/local-first-store";
-import { SafeHeroImage } from "@/components/encyclopedia/SafeHeroImage";
-import { useState } from "react";
+import { EncyclopediaHero } from "@/components/encyclopedia/EncyclopediaHero";
+
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
