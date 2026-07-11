@@ -418,7 +418,7 @@ function CleanupWorkshop() {
       for (let from = 0; ; from += PAGE) {
         const { data, error } = await supabase
           .from("encyclopedia_entities" as any)
-          .select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled,updated_at,timeline_year,timeline_category")
+          .select("id,entity_type,slug,title,subtitle,summary,body,metadata,enabled,updated_at,timeline_year,timeline_category,image_url,image_path,image_credit,image_source")
           .order("updated_at", { ascending: false })
           .range(from, from + PAGE - 1);
         if (error) throw error;
