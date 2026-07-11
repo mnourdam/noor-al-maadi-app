@@ -31,7 +31,7 @@ export const Route = createFileRoute("/api/public/native-auth-bounce")({
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta http-equiv="refresh" content="0;url=${escapeAttr(customScheme)}" />
+<meta http-equiv="refresh" content="2;url=${escapeAttr(customScheme)}" />
 <title>العودة إلى إرث…</title>
 <script>
 (function(){
@@ -65,6 +65,8 @@ export const Route = createFileRoute("/api/public/native-auth-bounce")({
   }, 350);
   setTimeout(function(){
     var el = document.getElementById('manual');
+    var link = document.getElementById('manual-link');
+    if (link) link.setAttribute('href', scheme);
     if (el) el.style.display = 'block';
   }, 1200);
 })();
@@ -79,7 +81,7 @@ export const Route = createFileRoute("/api/public/native-auth-bounce")({
   <p>جاري العودة إلى تطبيق إرث…</p>
   <div id="manual">
     <p>إذا لم يفتح التطبيق تلقائياً:</p>
-    <a class="btn" href="${escapeAttr(customScheme)}">فتح التطبيق</a>
+    <a id="manual-link" class="btn" href="${escapeAttr(customScheme)}">فتح التطبيق</a>
   </div>
 </body>
 </html>`;
