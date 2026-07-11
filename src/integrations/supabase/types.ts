@@ -602,6 +602,10 @@ export type Database = {
           enabled: boolean
           entity_type: string
           id: string
+          image_credit: string | null
+          image_path: string | null
+          image_source: string | null
+          image_url: string | null
           metadata: Json
           slug: string
           subtitle: string | null
@@ -624,6 +628,10 @@ export type Database = {
           enabled?: boolean
           entity_type: string
           id?: string
+          image_credit?: string | null
+          image_path?: string | null
+          image_source?: string | null
+          image_url?: string | null
           metadata?: Json
           slug: string
           subtitle?: string | null
@@ -646,6 +654,10 @@ export type Database = {
           enabled?: boolean
           entity_type?: string
           id?: string
+          image_credit?: string | null
+          image_path?: string | null
+          image_source?: string | null
+          image_url?: string | null
           metadata?: Json
           slug?: string
           subtitle?: string | null
