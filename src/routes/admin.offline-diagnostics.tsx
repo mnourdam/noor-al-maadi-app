@@ -425,10 +425,19 @@ function OfflineDiagnostics() {
             <Trash2 className="h-4 w-4" />
             {busy === "clear" ? "جارٍ المسح…" : "مسح الكاش دون الاتصال"}
           </button>
+          <button
+            onClick={syncProgress}
+            disabled={!!busy || !online || !scopedUid}
+            className="inline-flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-2 text-sm text-sky-100 hover:bg-sky-500/20 disabled:opacity-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+            {busy === "progress" ? "جارٍ المزامنة…" : "مزامنة تقدّم اللاعب"}
+          </button>
           {!online && (
             <span className="self-center text-xs text-slate-400">أزرار المزامنة معطّلة أثناء انقطاع الاتصال.</span>
           )}
         </section>
+
 
         {/* Log */}
         {log.length > 0 && (
