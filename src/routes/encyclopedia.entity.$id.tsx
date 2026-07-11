@@ -437,3 +437,139 @@ function EntityPage() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// Hero card — image-forward when an image successfully loads,
+// otherwise the original ornament-only card. The layout only
+// switches AFTER the SafeHeroImage reports a successful decode.
+// ─────────────────────────────────────────────────────────────
+function HeroCard({
+  entity, typeLabel, HeroIcon, chips, atlasLink, atlasZoom,
+}: {
+  entity: SupabaseEncyclopediaEntity;
+  typeLabel: string;
+  HeroIcon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  chips: { icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; label: string }[];
+  atlasLink: { id: string } | null;
+  atlasZoom: number;
+}) {
+  const [imageReady, setImageReady] = useState(false);
+  const imageUrl = entity.image_url ?? null;
+  const showImage = Boolean(imageUrl) && imageReady;
+
+  return (
+    <header
+      className={`mt-4 relative overflow-hidden rounded-[28px] border border-gold/25 shadow-[0_30px_80px_-40px_rgba(212,175,90,0.45)] ${
+        showImage ? "min-h-[380px] p-6" : "bg-gradient-to-br from-[#1a1f2e] via-[#10131c] to-black p-6"
+      }`}
+    >
+      {/* Background image layer (rendered only on successful load) */}
+      {imageUrl && (
+        <div className="absolute inset-0" aria-hidden="true">
+          <SafeHeroImage
+            src={imageUrl}
+            alt=""
+            onReady={setImageReady}
+            className="absolute inset-0 size-full object-cover"
+          />
+          {showImage && (
+            <>
+              {/* Global dark overlay + strong bottom gradient for text */}
+              <div className="absolute inset-0 bg-[#050812]/45" />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, rgba(5,8,18,0.20) 0%, rgba(5,8,18,0.45) 45%, rgba(5,8,18,0.90) 80%, rgba(5,8,18,0.98) 100%)",
+                }}
+              />
+              {/* Subtle vignette + gold glow to stay on-brand */}
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(212,175,90,0.18),transparent_55%)]" />
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Ornament glow — hidden when the image takes over */}
+      {!showImage && (
+        <>
+          <div className="pointer-events-none absolute -top-32 left-1/2 size-80 -translate-x-1/2 rounded-full bg-gold/15 blur-[80px]" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
+        </>
+      )}
+
+      {atlasLink && (
+        <Link
+          to="/map"
+          search={{ focus: atlasLink.id, zoom: atlasZoom }}
+          aria-label="عرض على الأطلس"
+          className="group absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-gold/35 bg-black/55 px-3 py-1.5 text-[11px] font-medium text-gold/95 shadow-[0_6px_20px_-8px_rgba(212,175,90,0.5)] backdrop-blur-sm transition hover:border-gold/60 hover:bg-black/70 hover:text-gold active:scale-95"
+        >
+          <MapIcon className="size-3.5" strokeWidth={1.8} />
+          على الأطلس
+        </Link>
+      )}
+
+      <div
+        className={`relative flex flex-col items-center text-center ${
+          showImage ? "justify-end min-h-[340px] pt-24" : ""
+        }`}
+      >
+        <span className="font-display text-[10px] tracking-[0.5em] text-gold/85">
+          {typeLabel.toUpperCase()}
+        </span>
+
+        {/* Icon shrinks when the image is present so it doesn't compete. */}
+        <span
+          className={`relative grid place-items-center rounded-3xl bg-gradient-to-br from-gold/25 to-gold/5 ring-1 ring-gold/35 text-gold shadow-[0_0_40px_rgba(212,175,90,0.25)] ${
+            showImage ? "mt-3 size-11" : "mt-4 size-20"
+          }`}
+        >
+          <span className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-inset ring-white/5" />
+          <HeroIcon
+            className={showImage ? "size-5" : "size-9"}
+            strokeWidth={1.3}
+          />
+        </span>
+
+        <h1
+          className={`font-display mt-5 font-bold leading-tight text-foreground ${
+            showImage
+              ? "text-[28px] drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]"
+              : "text-[26px]"
+          }`}
+        >
+          {entity.title}
+        </h1>
+        {entity.subtitle && (
+          <p className={`mt-1.5 text-[12.5px] ${showImage ? "text-foreground/85 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]" : "text-muted-foreground"}`}>
+            {entity.subtitle}
+          </p>
+        )}
+
+        {chips.length > 0 && (
+          <div className="mt-5 flex flex-wrap justify-center gap-1.5">
+            {chips.map((c, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-black/55 px-3 py-1 text-[11px] text-foreground/90 backdrop-blur-sm"
+              >
+                <c.icon className="size-3 text-gold/85" strokeWidth={1.6} />
+                {c.label}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {showImage && (entity.image_credit || entity.image_source) && (
+          <p className="mt-3 text-[10px] text-foreground/60">
+            {entity.image_credit}
+            {entity.image_credit && entity.image_source ? " · " : ""}
+            {entity.image_source}
+          </p>
+        )}
+      </div>
+    </header>
+  );
+}
+
+
