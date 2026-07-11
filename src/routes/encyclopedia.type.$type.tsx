@@ -112,7 +112,7 @@ function TypeBrowsePage() {
       getEra: (entity) => toCanonicalEra(metaEra(entity)),
       includeUnscored: !q,
     }).map((x) => x.e);
-  }, [all, q, era]);
+  }, [all, q, era, type]);
 
   return (
     <AppShell>
