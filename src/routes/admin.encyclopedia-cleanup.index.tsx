@@ -610,7 +610,7 @@ function CleanupWorkshop() {
         case "stub":  if (quality !== "empty" && quality !== "weak") return false; break;
         case "duplicate": if (!isDup) return false; break;
         case "archived":  if (!archived) return false; break;
-        case "no-image":    if (hasImage(r.metadata)) return false; break;
+        case "no-image":    if (hasImage(r.metadata, r)) return false; break;
         case "no-sources":  if (hasSources(r.metadata, r.body)) return false; break;
         case "no-overview": if ((r.summary ?? "").trim().length >= 20) return false; break;
         case "no-atlas":    if ((atlasLinks.get(r.id) ?? 0) > 0) return false; break;
@@ -747,7 +747,7 @@ function CleanupWorkshop() {
         has_body: bodyLen > 0,
         has_sections: hasSections(r.body),
         has_sources: hasSources(r.metadata, r.body),
-        has_image: hasImage(r.metadata),
+        has_image: hasImage(r.metadata, r),
         has_atlas_link: atlas > 0,
         has_campaign_reference: camps > 0,
         atlas_links: atlas,
@@ -2222,7 +2222,7 @@ function MissingContentStrip({ rows, atlasLinks, campaignSlugs, dupIds, onFilter
       const q = classifyQuality(r, dupIds.has(r.id), isOrphan);
       if (q === "empty") empty++;
       if (q === "weak") weak++;
-      if (!hasImage(r.metadata)) noImage++;
+      if (!hasImage(r.metadata, r)) noImage++;
       if (!hasSources(r.metadata, r.body)) noSources++;
       if ((r.summary ?? "").trim().length < 20) noOverview++;
       if (!(atlasLinks.get(r.id) ?? 0)) noAtlas++;
