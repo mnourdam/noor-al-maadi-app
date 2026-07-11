@@ -470,6 +470,18 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
           </Field>
         </div>
 
+        <div className="mt-4">
+          <EncyclopediaEntityImageUploader
+            entityId={value?.id ?? ""}
+            entityType={form.entity_type}
+            entityTitle={form.title || value?.title || ""}
+            initial={imageFields}
+            onChange={setImageFields}
+            disabled={isNew}
+          />
+        </div>
+
+
         <fieldset className="mt-4 rounded-lg border border-amber-500/20 bg-slate-900/40 p-3">
           <legend className="px-2 text-xs font-bold text-amber-200">الخط الزمني الكبير</legend>
           <p className="mb-2 text-[11px] text-slate-400">
