@@ -11,6 +11,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from "@capacitor/core";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  computeGoogleAuthResult,
+  getAndClearGoogleAuthIntent,
+  stashGoogleAuthResult,
+} from "@/lib/googleAuthResult";
 
 // Published bounce endpoint that returns an HTML page which immediately
 // redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
@@ -207,6 +212,17 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         } catch { /* ignore */ }
 
         if (exchangedOk) {
+          // Compare the tapped intent (signin vs signup) against the actual
+          // outcome so the global GoogleAuthResultDialog can show a friendly
+          // note after the WebView reloads into /profile.
+          try {
+            const { data: sess } = await supabase.auth.getSession();
+            const intent = getAndClearGoogleAuthIntent();
+            stashGoogleAuthResult(
+              computeGoogleAuthResult(sess.session?.user, intent),
+            );
+          } catch { /* ignore */ }
+
           // Wait for the account provider to see SIGNED_IN before we navigate,
           // so /profile does not render a Guest flash while onAuthStateChange
           // is still propagating.
