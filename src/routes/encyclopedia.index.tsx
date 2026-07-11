@@ -76,6 +76,19 @@ const DISCOVERY_TYPES = ["figure", "city", "battle", "landmark", "artifact", "ev
 const RECENT_KEY = "irth.enc.recent-searches";
 const RECENT_VIEW_KEY = "irth.enc.recent-views";
 
+// Arabic entity-type labels for search suggestions — mirrors EncyclopediaCard.
+const SUGGEST_TYPE_LABELS: Record<string, string> = {
+  state: "دولة",
+  figure: "شخصية",
+  scholar: "عالم",
+  city: "مدينة",
+  battle: "معركة",
+  event: "حدث",
+  landmark: "معلم",
+  artifact: "أثر",
+};
+
+
 function useAllEncyclopedia() {
   return useQuery({
     queryKey: ["encyclopedia", "all-min-v4"],
