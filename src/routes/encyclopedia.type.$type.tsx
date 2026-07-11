@@ -7,12 +7,15 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import {
-  fetchEncyclopediaByTypeLocalFirst,
-  isDisplayableEntity,
+  fetchEncyclopediaAllLocalFirst,
+  fetchEncyclopediaLivePublicAll,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
+import {
+  buildCanonicalizedEncyclopediaSearch,
+  mergeEncyclopediaRowsById,
+} from "@/lib/encyclopedia-search";
 import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
-import { isPublicEntity } from "@/lib/taxonomy-public";
 
 const SECTION_LABELS: Record<string, string> = {
   state: "الدول",
@@ -71,11 +74,20 @@ function TypeBrowsePage() {
   const [era, setEra] = useState<string>("");
 
   const { data: all = [], isLoading } = useQuery({
-    queryKey: ["encyclopedia", "type", type, "v2"],
+    queryKey: ["encyclopedia", "type", type, "canonical-v1"],
     staleTime: 60_000,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity[]> => {
-      const rows = await fetchEncyclopediaByTypeLocalFirst(type);
-      return rows.filter(isDisplayableEntity).filter(isPublicEntity);
+      const [local, live] = await Promise.all([
+        fetchEncyclopediaAllLocalFirst(),
+        fetchEncyclopediaLivePublicAll(),
+      ]);
+      return buildCanonicalizedEncyclopediaSearch({
+        rows: mergeEncyclopediaRowsById(local, live),
+        query: "",
+        authoritativeIds: live ? new Set(live.map((row) => row.id)) : null,
+        typeFilter: type,
+        includeUnscored: true,
+      }).map((x) => x.e);
     },
   });
 
@@ -92,14 +104,15 @@ function TypeBrowsePage() {
 
   const q = query.trim().toLowerCase();
   const filtered = useMemo(() => {
-    return all
-      .filter((e) => !era || toCanonicalEra(metaEra(e)) === era)
-      .filter((e) => {
-        if (!q) return true;
-        const hay = `${e.title} ${e.subtitle ?? ""} ${e.summary ?? ""} ${e.slug}`.toLowerCase();
-        return hay.includes(q);
-      });
-  }, [all, q, era]);
+    return buildCanonicalizedEncyclopediaSearch({
+      rows: all,
+      query: q,
+      typeFilter: type,
+      eraFilter: era,
+      getEra: (entity) => toCanonicalEra(metaEra(entity)),
+      includeUnscored: !q,
+    }).map((x) => x.e);
+  }, [all, q, era, type]);
 
   return (
     <AppShell>

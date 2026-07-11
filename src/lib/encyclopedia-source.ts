@@ -264,6 +264,16 @@ export async function fetchEncyclopediaAllLocalFirst(): Promise<SupabaseEncyclop
   try { return await liveFetchAll(); } catch { return []; }
 }
 
+/**
+ * Fetch the current public live index without replacing local-first behavior.
+ * Public search uses this as an online authority so stale cached rows that were
+ * later archived/merged/disabled cannot keep rendering as duplicate results.
+ */
+export async function fetchEncyclopediaLivePublicAll(): Promise<SupabaseEncyclopediaEntity[] | null> {
+  if (!isOnline()) return null;
+  try { return await liveFetchAll(); } catch { return null; }
+}
+
 export async function fetchEncyclopediaByTypeLocalFirst(entityType: string): Promise<SupabaseEncyclopediaEntity[]> {
   if (!isSupabaseEnabled(entityType)) return [];
   await ensureLocalSnapshotLoaded();
