@@ -47,6 +47,7 @@ export function GoogleSignInButton({
       onBeforeRedirect?.();
 
       if (isCapacitorNative()) {
+        console.info("[google-oauth] branch=NATIVE (Capacitor)");
         const r = await signInWithGoogleNative();
         if (!r.ok) {
           onError?.(r.error ?? "تعذر تسجيل الدخول عبر Google.");
@@ -60,6 +61,7 @@ export function GoogleSignInButton({
       const safeNext =
         next && next.startsWith("/") && !next.startsWith("//") ? next : "/profile";
       const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+      console.info("[google-oauth] branch=WEB redirectTo=", redirectTo);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
