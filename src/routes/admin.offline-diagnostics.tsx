@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { AdminGate } from "@/lib/admin-guard";
-import { AlertTriangle, CheckCircle2, RefreshCw, Trash2, Wifi, WifiOff, Database, HardDrive, Image as ImageIcon } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, Trash2, Wifi, WifiOff, Database, HardDrive, Image as ImageIcon, Inbox, User as UserIcon } from "lucide-react";
 import {
   loadSnapshot,
   clearSnapshot,
@@ -16,6 +16,9 @@ import {
   generateAndStoreSnapshot,
 } from "@/lib/offline-snapshot";
 import { localSnapshotInfo, ensureLocalSnapshotLoaded, applyLocalSnapshot } from "@/lib/local-first-store";
+import { supabase } from "@/integrations/supabase/client";
+import { peekAll, type OutboxItem } from "@/lib/offline/outbox";
+import { flushOutbox, getLastFlushAt } from "@/lib/offline/flush";
 
 export const Route = createFileRoute("/admin/offline-diagnostics")({
   head: () => ({
