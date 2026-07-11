@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import {
   ChevronRight,
@@ -22,6 +22,7 @@ import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaA
 import { EncyclopediaHero } from "@/components/encyclopedia/EncyclopediaHero";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import {
+  fetchEncyclopediaByIdLocalFirst,
   fetchEncyclopediaBySlugLocalFirst,
   isDisplayableEntity,
   type SupabaseEncyclopediaEntity,
@@ -98,16 +99,40 @@ function StatePage() {
   const { id } = Route.useParams();
 
   const stateQuery = useQuery({
-    queryKey: ["encyclopedia", "state", id, "v2"],
+    queryKey: ["encyclopedia", "state", id, "v3"],
     staleTime: 60_000,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
-      return fetchEncyclopediaBySlugLocalFirst(id, "state");
+      const initial = await fetchEncyclopediaBySlugLocalFirst(id, "state");
+      if (!initial) return null;
+      // Follow canonical_id / merged_into / converted_to / redirect_to.
+      const readTargetId = (row: SupabaseEncyclopediaEntity | null): string | null => {
+        if (!row) return null;
+        const meta = (row.metadata && typeof row.metadata === "object")
+          ? (row.metadata as Record<string, unknown>) : {};
+        for (const k of ["canonical_id", "merged_into", "converted_to", "redirect_to"] as const) {
+          const v = meta[k];
+          if (typeof v === "string" && v.trim() && v.trim() !== row.id) return v.trim();
+        }
+        return null;
+      };
+      const seen = new Set<string>([initial.id]);
+      let cur = initial;
+      for (let hops = 0; hops < 8; hops++) {
+        const nextId = readTargetId(cur);
+        if (!nextId || seen.has(nextId)) break;
+        seen.add(nextId);
+        const nxt = await fetchEncyclopediaByIdLocalFirst(nextId);
+        if (!nxt || nxt.enabled === false) break;
+        cur = nxt;
+      }
+      return cur;
     },
   });
 
-  const state = stateQuery.data && isDisplayableEntity(stateQuery.data)
+  const state = stateQuery.data && isDisplayableEntity(stateQuery.data) && stateQuery.data.entity_type === "state"
     ? stateQuery.data
     : null;
+
 
   const relatedQuery = useQuery({
     queryKey: ["encyclopedia", "state-related", state?.id ?? ""],
@@ -149,6 +174,16 @@ function StatePage() {
     return out;
   }, [state]);
 
+  // If the redirect chain resolved to a non-state entity type, jump to the
+  // generic entity route so the destination still renders.
+  const resolvedButNotState =
+    stateQuery.data &&
+    stateQuery.data.entity_type !== "state" &&
+    isDisplayableEntity(stateQuery.data);
+  if (resolvedButNotState) {
+    return <Navigate to="/encyclopedia/entity/$id" params={{ id: stateQuery.data!.slug }} replace />;
+  }
+
   if (stateQuery.isLoading) {
     return (
       <AppShell>
@@ -156,6 +191,7 @@ function StatePage() {
       </AppShell>
     );
   }
+
 
   if (!state) {
     return (
