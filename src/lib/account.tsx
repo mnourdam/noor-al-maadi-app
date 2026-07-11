@@ -276,14 +276,21 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   // streak land server-side without waiting for the next gameplay event.
   useEffect(() => {
     if (!user) return;
+    const uid = user.id;
+    // On sign-in, drain any queued offline mutations for THIS user.
+    void flushOutbox(uid);
     const onOnline = () => {
-      if (!autoPushEnabled.current) return;
-      setSyncing(true);
-      pushSave(user.id, profileRef.current)
-        .then((ok) => { if (ok) setLastSyncAt(Date.now()); })
-        .then(() => pushPublicStats(user.id, profileRef.current))
-        .catch(() => { /* ignore */ })
-        .finally(() => setSyncing(false));
+      // Drain the durable outbox first so completions land before we push
+      // the profile blob. Both are idempotent server-side.
+      void flushOutbox(uid).finally(() => {
+        if (!autoPushEnabled.current) return;
+        setSyncing(true);
+        pushSave(uid, profileRef.current)
+          .then((ok) => { if (ok) setLastSyncAt(Date.now()); })
+          .then(() => pushPublicStats(uid, profileRef.current))
+          .catch(() => { /* ignore */ })
+          .finally(() => setSyncing(false));
+      });
     };
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
