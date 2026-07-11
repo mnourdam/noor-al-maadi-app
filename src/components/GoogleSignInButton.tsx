@@ -33,6 +33,7 @@ type Props = {
 export function GoogleSignInButton({
   next,
   label = "المتابعة عبر Google",
+  intent,
   onError,
   onBeforeRedirect,
   className,
@@ -47,6 +48,10 @@ export function GoogleSignInButton({
         onError?.("لا يوجد اتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.");
         return;
       }
+
+      // Persist the intent so the post-auth dialog (web callback OR native
+      // deep link) can compare it against the actual outcome.
+      if (intent) setGoogleAuthIntent(intent);
 
       onBeforeRedirect?.();
 
