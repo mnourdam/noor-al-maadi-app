@@ -77,7 +77,7 @@ type FilterKey =
   | "all" | "needs-cleanup" | "needs-content" | "complete" | "dedupe-pending"
   | "figure" | "city" | "landmark" | "battle" | "event"
   | "artifact" | "state" | "empty" | "weak" | "duplicate" | "stub" | "archived"
-  | "no-image" | "no-sources" | "no-overview" | "no-atlas" | "no-campaign";
+  | "no-image" | "has-image" | "no-sources" | "no-overview" | "no-atlas" | "no-campaign";
 
 // ------------------------------------------------------------
 // Cleanup workflow predicates
@@ -611,6 +611,7 @@ function CleanupWorkshop() {
         case "duplicate": if (!isDup) return false; break;
         case "archived":  if (!archived) return false; break;
         case "no-image":    if (hasImage(r.metadata, r)) return false; break;
+        case "has-image":   if (!hasImage(r.metadata, r)) return false; break;
         case "no-sources":  if (hasSources(r.metadata, r.body)) return false; break;
         case "no-overview": if ((r.summary ?? "").trim().length >= 20) return false; break;
         case "no-atlas":    if ((atlasLinks.get(r.id) ?? 0) > 0) return false; break;
