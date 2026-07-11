@@ -19,6 +19,7 @@ import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
+import { EncyclopediaHero } from "@/components/encyclopedia/EncyclopediaHero";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import {
   fetchEncyclopediaBySlugLocalFirst,
@@ -26,6 +27,7 @@ import {
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
 import { resolveRelatedEntities } from "@/lib/relationship-graph";
+
 
 const SECTION_LABELS: Record<string, string> = {
   figure: "الشخصيات",
