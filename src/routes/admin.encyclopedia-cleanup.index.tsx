@@ -1423,6 +1423,7 @@ function CleanupWorkshop() {
                 onDelete={() => deleteEntity(selected)}
                 onOpenMerge={() => setMergeFor(selected)}
                 onJumpTo={(id) => setSelectedId(id)}
+                onRefresh={() => { void refresh(); }}
 
                 duplicates={
                   // Suggest other rows that share normalized title within the same type.
