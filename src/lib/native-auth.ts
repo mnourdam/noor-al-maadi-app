@@ -94,6 +94,8 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
       console.info("[native-auth] appUrlOpen received:", url);
       if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) return;
 
+      let exchangedOk = false;
+      let exchangeError: string | null = null;
       try {
         const u = new URL(url);
         const params = collectDeepLinkParams(u);
@@ -104,44 +106,124 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         const errorDescription =
           params.get("error_description") || params.get("error");
 
+        // Sanity: log whether the PKCE verifier is present in this instance's
+        // localStorage. If it's missing here, `exchangeCodeForSession` will
+        // fail — meaning the OAuth start and the callback ran against
+        // different Supabase client instances / storages.
+        try {
+          if (typeof localStorage !== "undefined") {
+            const verifierKeys = Object.keys(localStorage).filter((k) =>
+              k.includes("code-verifier") || k.endsWith("-code-verifier"),
+            );
+            console.info(
+              "[native-auth] pkce verifier keys in localStorage:",
+              verifierKeys.length,
+              verifierKeys,
+            );
+          }
+        } catch { /* ignore */ }
+
         if (errorDescription) {
+          exchangeError = errorDescription;
           console.error("[native-auth] provider error", errorDescription);
         } else if (accessToken && refreshToken) {
           console.info("[native-auth] setSession from hash tokens");
-          const { error } = await supabase.auth.setSession({
+          const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
-          if (error) console.error("[native-auth] session set failed", error.message);
-          else console.info("[native-auth] session set OK");
+          if (error) {
+            exchangeError = error.message;
+            console.error("[native-auth] setSession failed", error.message);
+          } else {
+            exchangedOk = !!data.session;
+            console.info("[native-auth] setSession OK user=", data.session?.user?.id);
+          }
         } else if (code) {
-          console.info("[native-auth] exchangeCodeForSession start");
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) console.error("[native-auth] exchange failed", error.message);
-          else console.info("[native-auth] exchange OK");
+          console.info("[native-auth] exchangeCodeForSession start code.len=", code.length);
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            exchangeError = error.message;
+            console.error("[native-auth] exchange failed:", error.message);
+          } else {
+            exchangedOk = !!data.session;
+            console.info(
+              "[native-auth] exchange OK user=",
+              data.session?.user?.id,
+              "email=",
+              data.session?.user?.email,
+            );
+          }
         } else {
+          exchangeError = "الرابط لا يحتوي على رمز مصادقة";
           console.warn("[native-auth] deep link had no code/token/error");
         }
+
+        if (exchangedOk) {
+          const { data: sess } = await supabase.auth.getSession();
+          console.info(
+            "[native-auth] getSession after exchange -> user=",
+            sess.session?.user?.id ?? "(none)",
+          );
+          if (!sess.session) {
+            exchangedOk = false;
+            exchangeError = exchangeError ?? "لم يتم حفظ الجلسة داخل التطبيق";
+          }
+        }
       } catch (e) {
-        console.error("[native-auth] deep-link parse failed", e);
+        exchangeError = e instanceof Error ? e.message : String(e);
+        console.error("[native-auth] deep-link handler crashed:", exchangeError);
       } finally {
         try {
           const { Browser } = await import("@capacitor/browser");
           await Browser.close();
         } catch { /* ignore */ }
-        try {
-          // Route the user to their profile/home after sign-in.
-          if (typeof window !== "undefined") {
-            const target = "/profile";
-            if (window.location.pathname !== target) {
-              window.history.replaceState(null, "", target);
-              window.dispatchEvent(new PopStateEvent("popstate"));
+
+        if (exchangedOk) {
+          // Wait for the account provider to see SIGNED_IN before we navigate,
+          // so /profile does not render a Guest flash while onAuthStateChange
+          // is still propagating.
+          await waitForSignedIn(3000);
+          try {
+            if (typeof window !== "undefined") {
+              // Full reload is the most reliable way to force the router,
+              // account provider, and all queries to re-hydrate with the
+              // freshly persisted Supabase session inside the APK WebView.
+              window.location.replace("/profile");
             }
-          }
-        } catch { /* ignore */ }
+          } catch { /* ignore */ }
+        } else {
+          try {
+            if (typeof window !== "undefined") {
+              const msg = exchangeError
+                ? `تعذر إكمال تسجيل الدخول عبر Google: ${exchangeError}`
+                : "تعذر إكمال تسجيل الدخول عبر Google. حاول مرة أخرى.";
+              const w = window as unknown as { alert?: (m: string) => void };
+              w.alert?.(msg);
+              window.location.replace("/auth");
+            }
+          } catch { /* ignore */ }
+        }
       }
     });
   } catch (e) {
     console.error("[native-auth] listener install failed", e);
   }
+}
+
+async function waitForSignedIn(timeoutMs: number): Promise<boolean> {
+  const { data } = await supabase.auth.getSession();
+  if (data.session) return true;
+  return new Promise((resolve) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
+        try { sub.subscription.unsubscribe(); } catch { /* ignore */ }
+        resolve(true);
+      }
+    });
+    setTimeout(() => {
+      try { sub.subscription.unsubscribe(); } catch { /* ignore */ }
+      resolve(false);
+    }, timeoutMs);
+  });
 }
