@@ -126,6 +126,12 @@ function AuthCallbackPage() {
       const { data } = await supabase.auth.getSession();
       if (!alive) return;
       if (data.session) {
+        // Compare the tapped intent against the actual outcome so the
+        // global GoogleAuthResultDialog can show a friendly note when
+        // "sign up" landed on an existing account, or "sign in" created
+        // a brand-new one.
+        const intent = getAndClearGoogleAuthIntent();
+        stashGoogleAuthResult(computeGoogleAuthResult(data.session.user, intent));
         setStatus("success");
         setMessage("تم تأكيد بريدك الإلكتروني بنجاح. مرحباً بك في إرث!");
         setTimeout(() => navigate({ to: (search.next as "/profile") || "/profile" }), 1500);
