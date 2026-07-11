@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { recordGameComplete } from "@/lib/offline/record";
 
 export interface GameProgressRow {
   id: string;
@@ -29,6 +30,12 @@ export async function getMyProgress(
  * Idempotent completion record. Returns `firstTime: true` only when this is
  * the first time the user completes this game — callers should award XP/coins
  * only when `firstTime` is true to avoid double-rewards on refresh/replay.
+ *
+ * Offline-safe: enqueues the completion in the durable outbox so it is
+ * flushed automatically on reconnect. Local `firstTime` detection reads
+ * the current server row when online; when offline the local profile
+ * arrays (missionsCompleted / investigationsCompleted / campaignsCompleted)
+ * still gate reward re-issue.
  */
 export async function recordCompletion(
   gameId: string,
@@ -38,19 +45,15 @@ export async function recordCompletion(
   const { data: userData } = await supabase.auth.getUser();
   const uid = userData.user?.id;
   if (!uid) return { firstTime: false };
-  const existing = await getMyProgress(gameId);
-  const alreadyCompleted = !!existing?.completed;
-  const bestScore = Math.max(existing?.best_score ?? 0, score);
-  await supabase.from("game_progress").upsert(
-    {
-      user_id: uid,
-      game_id: gameId,
-      stage_index: stageIndex,
-      completed: true,
-      best_score: bestScore,
-      last_played_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,game_id" },
-  );
+  let alreadyCompleted = false;
+  try {
+    const existing = await getMyProgress(gameId);
+    alreadyCompleted = !!existing?.completed;
+    const bestScore = Math.max(existing?.best_score ?? 0, score);
+    score = bestScore;
+  } catch {
+    /* offline — best_score falls back to the passed value */
+  }
+  await recordGameComplete({ gameId, stageIndex, score });
   return { firstTime: !alreadyCompleted };
 }

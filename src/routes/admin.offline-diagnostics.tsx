@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { AdminGate } from "@/lib/admin-guard";
-import { AlertTriangle, CheckCircle2, RefreshCw, Trash2, Wifi, WifiOff, Database, HardDrive, Image as ImageIcon } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, Trash2, Wifi, WifiOff, Database, HardDrive, Image as ImageIcon, Inbox, User as UserIcon } from "lucide-react";
 import {
   loadSnapshot,
   clearSnapshot,
@@ -16,6 +16,9 @@ import {
   generateAndStoreSnapshot,
 } from "@/lib/offline-snapshot";
 import { localSnapshotInfo, ensureLocalSnapshotLoaded, applyLocalSnapshot } from "@/lib/local-first-store";
+import { supabase } from "@/integrations/supabase/client";
+import { peekAll, type OutboxItem } from "@/lib/offline/outbox";
+import { flushOutbox, getLastFlushAt } from "@/lib/offline/flush";
 
 export const Route = createFileRoute("/admin/offline-diagnostics")({
   head: () => ({
@@ -92,33 +95,60 @@ function OfflineDiagnostics() {
   const [online, setOnline] = useState<boolean>(typeof navigator !== "undefined" ? navigator.onLine : true);
   const [busy, setBusy] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>([]);
+  const [scopedUid, setScopedUid] = useState<string | null>(null);
+  const [outbox, setOutbox] = useState<OutboxItem[]>([]);
+  const [lastSyncAt, setLastSyncAt] = useState<number>(0);
 
   const appendLog = (msg: string) =>
     setLog((prev) => [`[${new Date().toLocaleTimeString("ar-EG")}] ${msg}`, ...prev].slice(0, 20));
 
   const refresh = useCallback(async () => {
-    const [s, ic, st] = await Promise.all([
+    const [s, ic, st, sess] = await Promise.all([
       loadSnapshot(),
       readImageCacheStats(),
       readStorageStats(),
+      supabase.auth.getSession(),
     ]);
     setSnap(s);
     setImgStats(ic);
     setStorage(st);
     setLocalInfo(localSnapshotInfo());
+    const uid = sess.data.session?.user?.id ?? null;
+    setScopedUid(uid);
+    setOutbox(uid ? await peekAll(uid) : []);
+    setLastSyncAt(getLastFlushAt());
   }, []);
 
   useEffect(() => {
     void refresh();
-    const onOn = () => setOnline(true);
+    const onOn = () => { setOnline(true); void refresh(); };
     const onOff = () => setOnline(false);
+    const onOutbox = () => { void refresh(); };
     window.addEventListener("online", onOn);
     window.addEventListener("offline", onOff);
+    window.addEventListener("irth:outbox:changed", onOutbox);
+    window.addEventListener("irth:outbox:flushed", onOutbox);
     return () => {
       window.removeEventListener("online", onOn);
       window.removeEventListener("offline", onOff);
+      window.removeEventListener("irth:outbox:changed", onOutbox);
+      window.removeEventListener("irth:outbox:flushed", onOutbox);
     };
   }, [refresh]);
+
+  const syncProgress = async () => {
+    if (!scopedUid) { appendLog("لا يوجد مستخدم مسجّل — لا يمكن المزامنة."); return; }
+    setBusy("progress");
+    appendLog(`بدء مزامنة تقدّم اللاعب لـ ${scopedUid.slice(0, 8)}…`);
+    try {
+      const res = await flushOutbox(scopedUid);
+      appendLog(`تمت المزامنة: نجح ${res.flushed}، فشل ${res.failed}.`);
+      await refresh();
+    } catch (e: any) {
+      appendLog(`فشلت المزامنة: ${e?.message ?? e}`);
+    } finally { setBusy(null); }
+  };
+
 
   const source: string = (() => {
     if (!snap) return online ? "Supabase (لا يوجد كاش محلي)" : "لا يوجد مصدر متاح";
@@ -316,6 +346,61 @@ function OfflineDiagnostics() {
           </div>
         </section>
 
+        {/* Player-progress outbox */}
+        <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-4">
+          <div className="mb-3 flex items-center gap-2 text-amber-200">
+            <Inbox className="h-4 w-4" />
+            <h2 className="text-sm font-semibold">قائمة انتظار تقدّم اللاعب (Outbox)</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <StatBox
+              icon={<UserIcon className="h-4 w-4 text-amber-300" />}
+              label="المستخدم الحالي"
+              value={scopedUid ? scopedUid.slice(0, 8) + "…" : "ضيف / غير مسجّل"}
+            />
+            <StatBox
+              icon={<Inbox className="h-4 w-4 text-amber-300" />}
+              label="عناصر معلّقة"
+              value={String(outbox.length)}
+              tone={outbox.length === 0 ? "ok" : undefined}
+            />
+            <StatBox
+              icon={<AlertTriangle className="h-4 w-4 text-amber-300" />}
+              label="عناصر فشلت (≥3 محاولات)"
+              value={String(outbox.filter((i) => i.attempts >= 3).length)}
+              tone={outbox.some((i) => i.attempts >= 3) ? "warn" : "ok"}
+            />
+          </div>
+          <p className="mt-3 text-xs text-slate-400">
+            آخر مزامنة تقدّم ناجحة: {lastSyncAt ? fmtDate(new Date(lastSyncAt).toISOString()) : "—"}
+          </p>
+          {outbox.length > 0 && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="border-b border-slate-700 text-slate-400">
+                  <tr>
+                    <th className="py-1">النوع</th>
+                    <th>المحاولات</th>
+                    <th>آخر خطأ</th>
+                    <th>تاريخ الإضافة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {outbox.slice(0, 20).map((it) => (
+                    <tr key={it.id} className="border-b border-slate-800/70">
+                      <td className="py-1 font-mono text-slate-200">{it.kind}</td>
+                      <td className="tabular-nums text-slate-100">{it.attempts}</td>
+                      <td className="text-rose-300">{it.lastError ?? "—"}</td>
+                      <td className="text-slate-400">{fmtDate(new Date(it.createdAt).toISOString())}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+
         {/* Actions */}
         <section className="flex flex-wrap gap-3">
           <button
@@ -340,10 +425,19 @@ function OfflineDiagnostics() {
             <Trash2 className="h-4 w-4" />
             {busy === "clear" ? "جارٍ المسح…" : "مسح الكاش دون الاتصال"}
           </button>
+          <button
+            onClick={syncProgress}
+            disabled={!!busy || !online || !scopedUid}
+            className="inline-flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-2 text-sm text-sky-100 hover:bg-sky-500/20 disabled:opacity-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+            {busy === "progress" ? "جارٍ المزامنة…" : "مزامنة تقدّم اللاعب"}
+          </button>
           {!online && (
             <span className="self-center text-xs text-slate-400">أزرار المزامنة معطّلة أثناء انقطاع الاتصال.</span>
           )}
         </section>
+
 
         {/* Log */}
         {log.length > 0 && (

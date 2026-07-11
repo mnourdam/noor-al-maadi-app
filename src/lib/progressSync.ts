@@ -3,23 +3,14 @@
 // ------------------------------------------------------------
 // Additive layer on top of the existing cloud_saves JSON blob.
 // Writes individual rows to user_campaign_progress and
-// user_collection so we can later query per-chapter/per-item
-// data server-side (leaderboards, friends' unlocks, analytics).
+// user_collection through the durable offline outbox so they
+// survive cold starts, retries, and long offline sessions.
 //
-// All functions are no-ops when the user is signed out, swallow
-// errors silently, and never block gameplay.
+// All functions are no-ops when the user is signed out and
+// never block gameplay.
 // ============================================================
 
-import { supabase } from "@/integrations/supabase/client";
-
-async function currentUserId(): Promise<string | null> {
-  try {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.user?.id ?? null;
-  } catch {
-    return null;
-  }
-}
+import { recordChapterProgress, recordCollectionAdd } from "@/lib/offline/record";
 
 export interface ChapterProgressUpsert {
   campaignId: string;
@@ -31,27 +22,9 @@ export interface ChapterProgressUpsert {
   completed?: boolean;
 }
 
-/** Upsert one chapter row. Safe to call repeatedly. */
+/** Enqueue one chapter row. Safe to call repeatedly. */
 export async function upsertChapterProgress(p: ChapterProgressUpsert): Promise<void> {
-  const uid = await currentUserId();
-  if (!uid) return;
-  try {
-    await supabase.from("user_campaign_progress").upsert(
-      {
-        user_id: uid,
-        campaign_id: p.campaignId,
-        chapter_id: p.chapterId,
-        status: p.status,
-        score: p.score ?? 0,
-        xp_earned: p.xpEarned ?? 0,
-        coins_earned: p.coinsEarned ?? 0,
-        completed_at: p.completed ? new Date().toISOString() : null,
-      },
-      { onConflict: "user_id,campaign_id,chapter_id" },
-    );
-  } catch {
-    /* offline / guest — ignore */
-  }
+  await recordChapterProgress(p);
 }
 
 export interface CollectionItemInsert {
@@ -61,43 +34,24 @@ export interface CollectionItemInsert {
   sourceChapterId?: string;
 }
 
-/** Insert one collection row. UNIQUE(user_id,item_id) makes it idempotent. */
+/** Enqueue one collection row. Server upsert is idempotent on (user_id,item_id). */
 export async function addCollectionItem(i: CollectionItemInsert): Promise<void> {
-  const uid = await currentUserId();
-  if (!uid) return;
-  try {
-    await supabase.from("user_collection").upsert(
-      {
-        user_id: uid,
-        item_id: i.itemId,
-        item_type: i.itemType,
-        source_campaign_id: i.sourceCampaignId ?? null,
-        source_chapter_id: i.sourceChapterId ?? null,
-      },
-      { onConflict: "user_id,item_id", ignoreDuplicates: true },
-    );
-  } catch {
-    /* ignore */
-  }
+  await recordCollectionAdd({
+    itemId: i.itemId,
+    itemType: i.itemType,
+    sourceCampaignId: i.sourceCampaignId ?? null,
+    sourceChapterId: i.sourceChapterId ?? null,
+  });
 }
 
-/** Batch insert multiple collection items. */
+/** Batch enqueue multiple collection items. */
 export async function addCollectionItems(items: CollectionItemInsert[]): Promise<void> {
-  if (!items.length) return;
-  const uid = await currentUserId();
-  if (!uid) return;
-  try {
-    await supabase.from("user_collection").upsert(
-      items.map((i) => ({
-        user_id: uid,
-        item_id: i.itemId,
-        item_type: i.itemType,
-        source_campaign_id: i.sourceCampaignId ?? null,
-        source_chapter_id: i.sourceChapterId ?? null,
-      })),
-      { onConflict: "user_id,item_id", ignoreDuplicates: true },
-    );
-  } catch {
-    /* ignore */
+  for (const i of items) {
+    await recordCollectionAdd({
+      itemId: i.itemId,
+      itemType: i.itemType,
+      sourceCampaignId: i.sourceCampaignId ?? null,
+      sourceChapterId: i.sourceChapterId ?? null,
+    });
   }
 }
