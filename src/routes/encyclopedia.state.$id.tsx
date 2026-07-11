@@ -22,6 +22,7 @@ import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaA
 import { EncyclopediaHero } from "@/components/encyclopedia/EncyclopediaHero";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import {
+  fetchEncyclopediaByIdLocalFirst,
   fetchEncyclopediaBySlugLocalFirst,
   isDisplayableEntity,
   type SupabaseEncyclopediaEntity,
