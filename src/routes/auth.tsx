@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 // Google native sign-in helper preserved at "@/lib/native-auth" for future LC re-enable.
 import { PasswordField } from "@/components/ui/PasswordField";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { consumeAuthOrigin, peekAuthOrigin } from "@/lib/authOrigin";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
