@@ -14,6 +14,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isCapacitorNative, signInWithGoogleNative } from "@/lib/native-auth";
 import { setGoogleAuthIntent, type GoogleAuthIntent } from "@/lib/googleAuthResult";
+import { peekAuthOrigin } from "@/lib/authOrigin";
 
 type Props = {
   /** Same-origin path to return to after successful sign-in (web only). */
