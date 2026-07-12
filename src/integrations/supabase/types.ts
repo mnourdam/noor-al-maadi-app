@@ -1043,6 +1043,48 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_subscribers: {
+        Row: {
+          confirmed: boolean
+          confirmed_at: string | null
+          created_at: string
+          email: string
+          email_normalized: string | null
+          id: string
+          source: string | null
+          subscribed: boolean
+          unsubscribed_at: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          confirmed?: boolean
+          confirmed_at?: string | null
+          created_at?: string
+          email: string
+          email_normalized?: string | null
+          id?: string
+          source?: string | null
+          subscribed?: boolean
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          confirmed?: boolean
+          confirmed_at?: string | null
+          created_at?: string
+          email?: string
+          email_normalized?: string | null
+          id?: string
+          source?: string | null
+          subscribed?: boolean
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notification_deliveries: {
         Row: {
           created_at: string
@@ -1891,6 +1933,7 @@ export type Database = {
         Returns: Json
       }
       get_my_email: { Args: never; Returns: string }
+      get_my_newsletter_subscription: { Args: never; Returns: Json }
       get_my_notification_preferences: { Args: never; Returns: Json }
       get_my_profile: {
         Args: never
@@ -2119,6 +2162,10 @@ export type Database = {
         Returns: undefined
       }
       set_my_display_name: { Args: { p_name: string }; Returns: string }
+      set_my_newsletter_subscription: {
+        Args: { p_source?: string; p_subscribed: boolean }
+        Returns: Json
+      }
       set_my_notification_preferences: {
         Args: { p_categories: Json }
         Returns: undefined
