@@ -169,13 +169,20 @@ export function isChapterUnlocked(campaign: Campaign, chapter: CampaignChapter):
     return Boolean(getChapterProgress(campaign.id, chapter.unlockRequirement).completed);
   }
   // Default rule: strict sequential order. First chapter is always unlocked;
-  // every subsequent chapter requires the previous (by `order`) to be completed.
+  // EVERY chapter earlier in the sequence must be completed — not just the
+  // immediately previous one. This preserves invariant #1 (a chapter can
+  // never be unlocked ahead of an earlier incomplete chapter) even when
+  // some middle chapter regressed to incomplete after a republish.
   const sorted = [...campaign.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const idx = sorted.findIndex(c => c.id === chapter.id);
   if (idx <= 0) return true;
-  const prev = sorted[idx - 1];
-  return Boolean(getChapterProgress(campaign.id, prev.id).completed);
+  const prog = getCampaignProgress(campaign.id);
+  for (let i = 0; i < idx; i++) {
+    if (!prog.chapters[sorted[i].id]?.completed) return false;
+  }
+  return true;
 }
+
 
 export function campaignCompletionPercent(campaign: Campaign): number {
   if (!campaign.chapters.length) return 0;
