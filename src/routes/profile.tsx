@@ -1433,6 +1433,67 @@ function SettingToggle({ icon, label, desc, value, onChange }: { icon: React.Rea
   );
 }
 
+function NewsletterSetting() {
+  const { user } = useAccount();
+  const [subscribed, setSubscribed] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!user) { setLoading(false); return; }
+    setLoading(true);
+    fetchMyNewsletterSubscription()
+      .then((sub) => { if (mounted) setSubscribed(!!sub.subscribed); })
+      .catch(() => { if (mounted) setError("تعذّر تحميل التفضيلات."); })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, [user]);
+
+  const onToggle = async (next: boolean) => {
+    if (!user) return;
+    const prev = subscribed;
+    setSubscribed(next);
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await setMyNewsletterSubscription(next);
+      setSubscribed(!!result.subscribed);
+    } catch {
+      setSubscribed(prev);
+      setError("تعذّر حفظ التفضيل. حاول مرة أخرى.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <p className="rounded-xl border border-white/10 bg-background/40 p-3 text-[12px] text-muted-foreground">
+        سجّل الدخول لإدارة اشتراكك في نشرة إرث.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <SettingToggle
+        icon={<Mail className="size-4" />}
+        label="استلام أخبار وتحديثات إرث بالبريد"
+        desc={loading || saving ? "..." : "اختياري — لا يؤثر على رسائل تسجيل الدخول أو استعادة كلمة المرور"}
+        value={subscribed}
+        onChange={onToggle}
+      />
+      {error && <p className="mt-2 text-[11px] text-rose-300">{error}</p>}
+      <p className="mt-2 text-[11px] leading-6 text-muted-foreground">
+        لن نرسل حاليًا أي بريد تسويقي. يمكنك تعديل هذا الخيار في أي وقت.
+      </p>
+    </>
+  );
+}
+
+
 function FeedbackInboxLink() {
   const [unread, setUnread] = useState(0);
   useEffect(() => {
