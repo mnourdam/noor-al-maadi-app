@@ -69,22 +69,41 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
           score?: number; xpEarned?: number; coinsEarned?: number;
           completed?: boolean;
         };
+        // Sticky merge — never downgrade a completed chapter back to
+        // "in progress". Read the existing row first so replays / added
+        // activities cannot null out completed_at, cannot lower score,
+        // and cannot roll back xp/coins earned. (P0, 2026-07.)
+        const { data: existing } = await supabase
+          .from("user_campaign_progress")
+          .select("completed_at, score, xp_earned, coins_earned, status")
+          .eq("user_id", uid)
+          .eq("campaign_id", p.campaignId)
+          .eq("chapter_id", p.chapterId)
+          .maybeSingle();
+        const now = new Date().toISOString();
+        const newCompletedAt =
+          (existing as any)?.completed_at ?? (p.completed ? now : null);
+        const mergedStatus =
+          (existing as any)?.status === "completed" || p.completed
+            ? "completed"
+            : p.status;
         const { error } = await supabase.from("user_campaign_progress").upsert(
           {
             user_id: uid,
             campaign_id: p.campaignId,
             chapter_id: p.chapterId,
-            status: p.status,
-            score: p.score ?? 0,
-            xp_earned: p.xpEarned ?? 0,
-            coins_earned: p.coinsEarned ?? 0,
-            completed_at: p.completed ? new Date().toISOString() : null,
+            status: mergedStatus,
+            score: Math.max((existing as any)?.score ?? 0, p.score ?? 0),
+            xp_earned: Math.max((existing as any)?.xp_earned ?? 0, p.xpEarned ?? 0),
+            coins_earned: Math.max((existing as any)?.coins_earned ?? 0, p.coinsEarned ?? 0),
+            completed_at: newCompletedAt,
           },
           { onConflict: "user_id,campaign_id,chapter_id" },
         );
         if (error) return { ok: false, error: error.message };
         return { ok: true };
       }
+
 
       case "profile_delta": {
         const p = item.payload as { xp?: number; dinars?: number; hearts?: number; source?: string };
