@@ -31,10 +31,13 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
+// Sender configuration (post-Resend migration). See transactional/send.ts.
 const SITE_NAME = "Irth"
-const SENDER_DOMAIN = "notify.dosur1444.com"
+const SITE_NAME_AR = "إرث"
+const SENDER_DOMAIN = "mail.dosur1444.com"
 const ROOT_DOMAIN = "dosur1444.com"
-const FROM_DOMAIN = "dosur1444.com"
+const FROM_DOMAIN = "mail.dosur1444.com"
+const FROM_ADDRESS = `${SITE_NAME_AR} <no-reply@${FROM_DOMAIN}>`
 
 function redactEmail(email: string | null | undefined): string {
   if (!email) return '***'
