@@ -14,13 +14,34 @@ function isCampaignRoute(pathname: string): boolean {
 }
 
 /** Mount once at the app root so ambience can start after first interaction. */
+/**
+ * Explicit opt-in for the floating Audio Debug panel. Keeps it out of the
+ * public preview and player-facing builds even when `import.meta.env.DEV` is
+ * true (Lovable's preview runs in dev mode). Enable by setting
+ * `VITE_AUDIO_DEBUG=1` or `localStorage.setItem("irth.audioDebug","1")`.
+ */
+function isAudioDebugEnabled(): boolean {
+  if (import.meta.env.VITE_AUDIO_DEBUG === "1" || import.meta.env.VITE_AUDIO_DEBUG === "true") {
+    return true;
+  }
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem("irth.audioDebug") === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function AudioInitializer() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [debug, setDebug] = useState(() => audioManager.getDebugSnapshot());
+  const [debugEnabled, setDebugEnabled] = useState(false);
 
   useEffect(() => {
     audioManager.init();
     bindSfxHooks();
+    // Read the opt-in flag on the client only to avoid SSR hydration drift.
+    setDebugEnabled(isAudioDebugEnabled());
   }, []);
 
   useEffect(() => {
@@ -28,12 +49,12 @@ export function AudioInitializer() {
   }, [pathname]);
 
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
+    if (!debugEnabled) return;
     const id = window.setInterval(() => setDebug(audioManager.getDebugSnapshot()), 300);
     return () => window.clearInterval(id);
-  }, []);
+  }, [debugEnabled]);
 
-  if (!import.meta.env.DEV) return null;
+  if (!debugEnabled) return null;
 
   return (
     <div className="fixed left-3 top-3 z-[9999] max-w-[calc(100vw-1.5rem)] rounded-lg border border-gold/40 bg-surface/95 px-3 py-2 text-left text-[11px] leading-5 text-foreground shadow-elegant backdrop-blur" dir="ltr">
