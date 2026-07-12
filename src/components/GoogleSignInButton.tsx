@@ -68,8 +68,10 @@ export function GoogleSignInButton({
       // Web flow — direct Supabase Google OAuth (custom credentials).
       const origin =
         typeof window !== "undefined" ? window.location.origin : "";
+      const stored = peekAuthOrigin();
+      const candidate = next ?? stored ?? "/";
       const safeNext =
-        next && next.startsWith("/") && !next.startsWith("//") ? next : "/profile";
+        candidate.startsWith("/") && !candidate.startsWith("//") ? candidate : "/";
       const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
       console.info("[google-oauth] branch=WEB redirectTo=", redirectTo);
 
