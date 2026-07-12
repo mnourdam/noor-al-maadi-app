@@ -76,7 +76,8 @@ function AuthPage() {
         return;
       }
       if (mode === "signup" && r.error) { setInfo(r.error); return; }
-      navigate({ to: "/profile" });
+      const dest = consumeAuthOrigin("/profile");
+      navigate({ to: dest as "/profile" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg || "حدث خطأ غير متوقع.");
