@@ -1,6 +1,12 @@
 import { sendLovableEmail } from '@lovable.dev/email-js'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createFileRoute } from '@tanstack/react-router'
+import { sendViaResend } from '@/lib/email/resend.server'
+
+// Transport selection. Defaults to Resend; set EMAIL_TRANSPORT=lovable to roll back.
+// The Lovable transport branch is retained for rollback until the Resend path
+// is fully verified end-to-end.
+const EMAIL_TRANSPORT = (process.env.EMAIL_TRANSPORT || 'resend').toLowerCase()
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
@@ -8,9 +14,7 @@ const DEFAULT_SEND_DELAY_MS = 200
 const DEFAULT_AUTH_TTL_MINUTES = 15
 const DEFAULT_TRANSACTIONAL_TTL_MINUTES = 60
 
-// Check if an error is a rate-limit (429) response.
-// Uses EmailAPIError.status when available (email-js >=0.x with structured errors),
-// falls back to parsing the error message for older versions.
+// Rate-limit (429). Works for both EmailAPIError and ResendSendError.
 function isRateLimited(error: unknown): boolean {
   if (error && typeof error === 'object' && 'status' in error) {
     return (error as { status: number }).status === 429
@@ -18,16 +22,18 @@ function isRateLimited(error: unknown): boolean {
   return error instanceof Error && error.message.includes('429')
 }
 
-// Check if an error is a forbidden (403) response. Retrying won't help.
-// Move straight to DLQ.
+// Permanent failure: 4xx that isn't 429. Retrying won't help; move to DLQ.
+// Resend permanent codes include 400 (validation), 401 (unauthorized),
+// 403 (forbidden/unverified sender), 404, 422 (invalid domain / not verified).
 function isForbidden(error: unknown): boolean {
   if (error && typeof error === 'object' && 'status' in error) {
-    return (error as { status: number }).status === 403
+    const s = (error as { status: number }).status
+    return s >= 400 && s < 500 && s !== 429
   }
-  return error instanceof Error && error.message.includes('403')
+  return error instanceof Error && /\b40[013489]\b|\b422\b/.test(error.message)
 }
 
-// Extract Retry-After seconds from a structured EmailAPIError, or default to 60s.
+// Retry-After seconds from either EmailAPIError or ResendSendError; default 60s.
 function getRetryAfterSeconds(error: unknown): number {
   if (error && typeof error === 'object' && 'retryAfterSeconds' in error) {
     return (error as { retryAfterSeconds: number | null }).retryAfterSeconds ?? 60
@@ -221,30 +227,66 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
             }
 
             try {
-              await sendLovableEmail(
-                {
-                  run_id: payload.run_id,
+              let providerMessageId: string | undefined
+              let providerResponse: Record<string, unknown> | undefined
+
+              if (EMAIL_TRANSPORT === 'lovable') {
+                await sendLovableEmail(
+                  {
+                    run_id: payload.run_id,
+                    to: payload.to,
+                    from: payload.from,
+                    sender_domain: payload.sender_domain,
+                    subject: payload.subject,
+                    html: payload.html,
+                    text: payload.text,
+                    purpose: payload.purpose,
+                    label: payload.label,
+                    idempotency_key: payload.idempotency_key,
+                    unsubscribe_token: payload.unsubscribe_token,
+                    message_id: payload.message_id,
+                  },
+                  { apiKey, sendUrl: process.env.LOVABLE_SEND_URL }
+                )
+              } else {
+                // Resend transport via the Lovable connector gateway.
+                const listUnsubscribe = payload.unsubscribe_token
+                  ? {
+                      'List-Unsubscribe': `<${(import.meta.env.VITE_SITE_URL || 'https://irth-develop.lovable.app')}/email/unsubscribe?token=${payload.unsubscribe_token}>`,
+                      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+                    }
+                  : undefined
+                const result = await sendViaResend({
                   to: payload.to,
                   from: payload.from,
-                  sender_domain: payload.sender_domain,
                   subject: payload.subject,
                   html: payload.html,
                   text: payload.text,
-                  purpose: payload.purpose,
-                  label: payload.label,
-                  idempotency_key: payload.idempotency_key,
-                  unsubscribe_token: payload.unsubscribe_token,
-                  message_id: payload.message_id,
-                },
-                { apiKey, sendUrl: process.env.LOVABLE_SEND_URL }
-              )
+                  headers: listUnsubscribe,
+                  idempotencyKey:
+                    payload.idempotency_key || payload.message_id || undefined,
+                  tags: [
+                    { name: 'purpose', value: String(payload.purpose || 'transactional') },
+                    { name: 'label', value: String(payload.label || queue) },
+                  ],
+                })
+                providerMessageId = result.provider_message_id
+                providerResponse = result.provider_response
+              }
 
-              // Log success
+              // Log success (with provider metadata when available)
               await supabase.from('email_send_log').insert({
                 message_id: payload.message_id,
                 template_name: payload.label || queue,
                 recipient_email: payload.to,
                 status: 'sent',
+                metadata: providerMessageId
+                  ? {
+                      transport: EMAIL_TRANSPORT,
+                      provider_message_id: providerMessageId,
+                      provider_response: providerResponse,
+                    }
+                  : { transport: EMAIL_TRANSPORT },
               })
 
               // Delete from queue

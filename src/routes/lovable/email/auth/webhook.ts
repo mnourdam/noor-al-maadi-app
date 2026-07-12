@@ -31,10 +31,13 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
+// Sender configuration (post-Resend migration). See transactional/send.ts.
 const SITE_NAME = "Irth"
-const SENDER_DOMAIN = "notify.dosur1444.com"
+const SITE_NAME_AR = "إرث"
+const SENDER_DOMAIN = "mail.dosur1444.com"
 const ROOT_DOMAIN = "dosur1444.com"
-const FROM_DOMAIN = "dosur1444.com"
+const FROM_DOMAIN = "mail.dosur1444.com"
+const FROM_ADDRESS = `${SITE_NAME_AR} <no-reply@${FROM_DOMAIN}>`
 
 function redactEmail(email: string | null | undefined): string {
   if (!email) return '***'
@@ -177,7 +180,7 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
             run_id,
             message_id: messageId,
             to: payload.data.email,
-            from: `Irth <info@${FROM_DOMAIN}>`,
+            from: FROM_ADDRESS,
             sender_domain: SENDER_DOMAIN,
             subject: EMAIL_SUBJECTS[emailType] || 'Notification',
             html,
