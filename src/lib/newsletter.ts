@@ -18,7 +18,7 @@ export interface NewsletterSubscription {
 export async function fetchMyNewsletterSubscription(): Promise<NewsletterSubscription> {
   const { data, error } = await supabase.rpc("get_my_newsletter_subscription");
   if (error) throw error;
-  return (data as NewsletterSubscription) ?? { email: null, subscribed: false, confirmed: false };
+  return ((data as unknown) as NewsletterSubscription) ?? { email: null, subscribed: false, confirmed: false };
 }
 
 /**
@@ -35,5 +35,5 @@ export async function setMyNewsletterSubscription(
     p_source: source,
   });
   if (error) throw error;
-  return data as NewsletterSubscription;
+  return (data as unknown) as NewsletterSubscription;
 }
