@@ -145,7 +145,8 @@ export function markActivityComplete(
     ch.completedActivityIds = [...ch.completedActivityIds, activity.id];
   }
   const allDone = chapter.activities.every(a => ch.completedActivityIds.includes(a.id));
-  ch.completed = allDone;
+  ch.completed = ch.completed || allDone; // sticky (see recordActivity)
+
   cur.chapters[chapter.id] = ch;
   const campaignDone = campaign.chapters.every(c => cur.chapters[c.id]?.completed);
   if (campaignDone && !cur.completed) {
