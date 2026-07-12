@@ -1835,6 +1835,12 @@ export type Database = {
         Args: { p_id: string; p_note?: string }
         Returns: Json
       }
+      admin_repair_chapter_completions_stickiness: {
+        Args: never
+        Returns: {
+          rows_repaired: number
+        }[]
+      }
       admin_resolve_segment: {
         Args: { p_segment_id: string }
         Returns: string[]
