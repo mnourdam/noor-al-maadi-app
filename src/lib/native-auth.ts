@@ -16,6 +16,7 @@ import {
   getAndClearGoogleAuthIntent,
   stashGoogleAuthResult,
 } from "@/lib/googleAuthResult";
+import { consumeAuthOrigin } from "@/lib/authOrigin";
 
 // Published bounce endpoint that returns an HTML page which immediately
 // redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
