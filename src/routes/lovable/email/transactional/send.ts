@@ -9,7 +9,6 @@ import { TEMPLATES } from '@/lib/email-templates/registry'
 // FROM_DOMAIN is the domain shown in the From: header (same subdomain — no
 // display_from_root fallback since the previous Lovable NS-delegated
 // `notify.dosur1444.com` was never verified).
-const SITE_NAME = "Irth"
 const SITE_NAME_AR = "إرث"
 const SENDER_DOMAIN = "mail.dosur1444.com"
 const FROM_DOMAIN = "mail.dosur1444.com"
