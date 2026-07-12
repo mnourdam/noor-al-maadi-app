@@ -34,6 +34,7 @@ import { useAccount } from "@/lib/account";
 import { clearLocalPlayerProgress } from "@/lib/resetProgress";
 import { ModalPortal } from "@/components/ModalPortal";
 import { fetchMyReferralStats, buildReferralShareUrl, shareReferral, type MyReferralStats } from "@/lib/referrals";
+import { fetchMyNewsletterSubscription, setMyNewsletterSubscription } from "@/lib/newsletter";
 import { AndroidTextEntryInput, AndroidTextEntryTextarea, readAndroidTextEntryResult } from "@/components/AndroidTextEntry";
 import { ReadingScale } from "@/components/ReadingScale";
 
