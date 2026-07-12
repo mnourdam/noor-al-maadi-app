@@ -244,39 +244,80 @@ export async function hydrateLegacyProgressFromCloud(): Promise<{ chaptersAdded:
     const now = new Date().toISOString();
     const touchedCampaigns = new Set<string>();
 
+    // Pass 1 — apply direct chapter completions from cloud.
+    const cloudChapters = new Map<string, Map<string, {
+      completed: boolean; xpEarned: number; coinsEarned: number;
+    }>>();
     for (const row of rows) {
       const cid = row.campaign_id;
       const chid = row.chapter_id;
       if (!cid || !chid) continue;
-      if (!row.completed_at) continue;
 
-      const cur = all[cid] ?? blankCampaign(cid);
-      const ch = cur.chapters[chid] ?? blankChapter();
-
-      // Never downgrade: if local already says completed, leave it alone.
-      if (ch.completed) {
-        cur.chapters[chid] = ch;
-        all[cid] = cur;
-        continue;
-      }
-
-      const campaign = campaignById.get(cid);
-      const chapter = campaign?.chapters.find(c => c.id === chid);
-      const activityIds = (chapter?.activities ?? []).map(a => a.id).filter(Boolean);
-
-      const merged = new Set<string>(ch.completedActivityIds);
-      for (const aid of activityIds) merged.add(aid);
-      ch.completedActivityIds = [...merged];
-      ch.completed = true;
-      ch.xpEarned = Math.max(ch.xpEarned, row.xp_earned ?? 0);
-      ch.coinsEarned = Math.max(ch.coinsEarned, row.coins_earned ?? 0);
-
-      cur.chapters[chid] = ch;
-      cur.updatedAt = now;
-      all[cid] = cur;
-      touchedCampaigns.add(cid);
-      chaptersAdded += 1;
+      let map = cloudChapters.get(cid);
+      if (!map) { map = new Map(); cloudChapters.set(cid, map); }
+      const prev = map.get(chid);
+      map.set(chid, {
+        completed: (prev?.completed || !!row.completed_at) as boolean,
+        xpEarned: Math.max(prev?.xpEarned ?? 0, row.xp_earned ?? 0),
+        coinsEarned: Math.max(prev?.coinsEarned ?? 0, row.coins_earned ?? 0),
+      });
     }
+
+    // Pass 2 — apply transitive completion. If chapter N is completed on the
+    // server, invariant #1 guarantees chapters 1..N-1 were also completed on
+    // some device. Their rows may have been overwritten to completed_at=NULL
+    // by the pre-fix regression bug (P0). Restore them here so a reinstall /
+    // cross-device login does not lose earlier completions.
+    for (const [cid, map] of cloudChapters) {
+      const campaign = campaignById.get(cid);
+      if (!campaign) continue;
+      const sorted = [...campaign.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      let seenCompletedIdx = -1;
+      for (let i = sorted.length - 1; i >= 0; i--) {
+        if (map.get(sorted[i].id)?.completed) { seenCompletedIdx = i; break; }
+      }
+      for (let i = 0; i <= seenCompletedIdx; i++) {
+        const chid = sorted[i].id;
+        const cur = map.get(chid) ?? { completed: false, xpEarned: 0, coinsEarned: 0 };
+        if (!cur.completed) {
+          cur.completed = true;
+          map.set(chid, cur);
+        }
+      }
+    }
+
+    // Pass 3 — merge into local map (STICKY: never downgrade local state).
+    for (const [cid, map] of cloudChapters) {
+      const cur = all[cid] ?? blankCampaign(cid);
+      const campaign = campaignById.get(cid);
+      for (const [chid, cloudCh] of map) {
+        const ch = cur.chapters[chid] ?? blankChapter();
+        if (ch.completed) {
+          // Local already completed — leave it alone (max the reward counters).
+          ch.xpEarned = Math.max(ch.xpEarned, cloudCh.xpEarned);
+          ch.coinsEarned = Math.max(ch.coinsEarned, cloudCh.coinsEarned);
+          cur.chapters[chid] = ch;
+          continue;
+        }
+        if (!cloudCh.completed) continue;
+
+        const chapter = campaign?.chapters.find(c => c.id === chid);
+        const activityIds = (chapter?.activities ?? []).map(a => a.id).filter(Boolean);
+        const merged = new Set<string>(ch.completedActivityIds);
+        for (const aid of activityIds) merged.add(aid);
+        ch.completedActivityIds = [...merged];
+        ch.completed = true;
+        ch.xpEarned = Math.max(ch.xpEarned, cloudCh.xpEarned);
+        ch.coinsEarned = Math.max(ch.coinsEarned, cloudCh.coinsEarned);
+
+        cur.chapters[chid] = ch;
+        cur.updatedAt = now;
+        touchedCampaigns.add(cid);
+        chaptersAdded += 1;
+      }
+      all[cid] = cur;
+    }
+
 
     for (const cid of touchedCampaigns) {
       const cur = all[cid];
