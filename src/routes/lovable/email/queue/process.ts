@@ -1,7 +1,7 @@
 import { sendLovableEmail } from '@lovable.dev/email-js'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createFileRoute } from '@tanstack/react-router'
-import { sendViaResend, ResendSendError } from '@/lib/email/resend.server'
+import { sendViaResend } from '@/lib/email/resend.server'
 
 // Transport selection. Defaults to Resend; set EMAIL_TRANSPORT=lovable to roll back.
 // The Lovable transport branch is retained for rollback until the Resend path
