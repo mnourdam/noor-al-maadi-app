@@ -101,11 +101,14 @@ export function recordActivity(
     cur.totalHeartsLost  += hearts;
   }
 
-  // Chapter completion = every activity attempted correctly at least once.
+  // Chapter completion is STICKY. Once a chapter is completed it stays
+  // completed for the life of the account, even if the admin later
+  // republishes the campaign with additional activities. Regressing this
+  // flag corrupts unlock order and wipes checkmarks (P0, 2026-07).
   const allDone = chapter.activities.every(a => ch.completedActivityIds.includes(a.id));
-  ch.completed = allDone;
+  ch.completed = ch.completed || allDone;
 
-  // Campaign completion = every chapter completed.
+  // Campaign completion is STICKY for the same reason.
   cur.chapters[chapter.id] = ch;
   const campaignDone = campaign.chapters.every(c => cur.chapters[c.id]?.completed);
   if (campaignDone && !cur.completed) {
@@ -117,6 +120,7 @@ export function recordActivity(
     campaign.chapters.forEach(c => (c.rewards?.unlocks ?? []).forEach(u => unlocks.add(u)));
     cur.unlockedRegistryIds = [...unlocks];
   }
+
 
   cur.updatedAt = new Date().toISOString();
   all[campaign.id] = cur;
@@ -141,7 +145,8 @@ export function markActivityComplete(
     ch.completedActivityIds = [...ch.completedActivityIds, activity.id];
   }
   const allDone = chapter.activities.every(a => ch.completedActivityIds.includes(a.id));
-  ch.completed = allDone;
+  ch.completed = ch.completed || allDone; // sticky (see recordActivity)
+
   cur.chapters[chapter.id] = ch;
   const campaignDone = campaign.chapters.every(c => cur.chapters[c.id]?.completed);
   if (campaignDone && !cur.completed) {
@@ -164,13 +169,20 @@ export function isChapterUnlocked(campaign: Campaign, chapter: CampaignChapter):
     return Boolean(getChapterProgress(campaign.id, chapter.unlockRequirement).completed);
   }
   // Default rule: strict sequential order. First chapter is always unlocked;
-  // every subsequent chapter requires the previous (by `order`) to be completed.
+  // EVERY chapter earlier in the sequence must be completed — not just the
+  // immediately previous one. This preserves invariant #1 (a chapter can
+  // never be unlocked ahead of an earlier incomplete chapter) even when
+  // some middle chapter regressed to incomplete after a republish.
   const sorted = [...campaign.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const idx = sorted.findIndex(c => c.id === chapter.id);
   if (idx <= 0) return true;
-  const prev = sorted[idx - 1];
-  return Boolean(getChapterProgress(campaign.id, prev.id).completed);
+  const prog = getCampaignProgress(campaign.id);
+  for (let i = 0; i < idx; i++) {
+    if (!prog.chapters[sorted[i].id]?.completed) return false;
+  }
+  return true;
 }
+
 
 export function campaignCompletionPercent(campaign: Campaign): number {
   if (!campaign.chapters.length) return 0;
@@ -232,39 +244,80 @@ export async function hydrateLegacyProgressFromCloud(): Promise<{ chaptersAdded:
     const now = new Date().toISOString();
     const touchedCampaigns = new Set<string>();
 
+    // Pass 1 — apply direct chapter completions from cloud.
+    const cloudChapters = new Map<string, Map<string, {
+      completed: boolean; xpEarned: number; coinsEarned: number;
+    }>>();
     for (const row of rows) {
       const cid = row.campaign_id;
       const chid = row.chapter_id;
       if (!cid || !chid) continue;
-      if (!row.completed_at) continue;
 
-      const cur = all[cid] ?? blankCampaign(cid);
-      const ch = cur.chapters[chid] ?? blankChapter();
-
-      // Never downgrade: if local already says completed, leave it alone.
-      if (ch.completed) {
-        cur.chapters[chid] = ch;
-        all[cid] = cur;
-        continue;
-      }
-
-      const campaign = campaignById.get(cid);
-      const chapter = campaign?.chapters.find(c => c.id === chid);
-      const activityIds = (chapter?.activities ?? []).map(a => a.id).filter(Boolean);
-
-      const merged = new Set<string>(ch.completedActivityIds);
-      for (const aid of activityIds) merged.add(aid);
-      ch.completedActivityIds = [...merged];
-      ch.completed = true;
-      ch.xpEarned = Math.max(ch.xpEarned, row.xp_earned ?? 0);
-      ch.coinsEarned = Math.max(ch.coinsEarned, row.coins_earned ?? 0);
-
-      cur.chapters[chid] = ch;
-      cur.updatedAt = now;
-      all[cid] = cur;
-      touchedCampaigns.add(cid);
-      chaptersAdded += 1;
+      let map = cloudChapters.get(cid);
+      if (!map) { map = new Map(); cloudChapters.set(cid, map); }
+      const prev = map.get(chid);
+      map.set(chid, {
+        completed: (prev?.completed || !!row.completed_at) as boolean,
+        xpEarned: Math.max(prev?.xpEarned ?? 0, row.xp_earned ?? 0),
+        coinsEarned: Math.max(prev?.coinsEarned ?? 0, row.coins_earned ?? 0),
+      });
     }
+
+    // Pass 2 — apply transitive completion. If chapter N is completed on the
+    // server, invariant #1 guarantees chapters 1..N-1 were also completed on
+    // some device. Their rows may have been overwritten to completed_at=NULL
+    // by the pre-fix regression bug (P0). Restore them here so a reinstall /
+    // cross-device login does not lose earlier completions.
+    for (const [cid, map] of cloudChapters) {
+      const campaign = campaignById.get(cid);
+      if (!campaign) continue;
+      const sorted = [...campaign.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      let seenCompletedIdx = -1;
+      for (let i = sorted.length - 1; i >= 0; i--) {
+        if (map.get(sorted[i].id)?.completed) { seenCompletedIdx = i; break; }
+      }
+      for (let i = 0; i <= seenCompletedIdx; i++) {
+        const chid = sorted[i].id;
+        const cur = map.get(chid) ?? { completed: false, xpEarned: 0, coinsEarned: 0 };
+        if (!cur.completed) {
+          cur.completed = true;
+          map.set(chid, cur);
+        }
+      }
+    }
+
+    // Pass 3 — merge into local map (STICKY: never downgrade local state).
+    for (const [cid, map] of cloudChapters) {
+      const cur = all[cid] ?? blankCampaign(cid);
+      const campaign = campaignById.get(cid);
+      for (const [chid, cloudCh] of map) {
+        const ch = cur.chapters[chid] ?? blankChapter();
+        if (ch.completed) {
+          // Local already completed — leave it alone (max the reward counters).
+          ch.xpEarned = Math.max(ch.xpEarned, cloudCh.xpEarned);
+          ch.coinsEarned = Math.max(ch.coinsEarned, cloudCh.coinsEarned);
+          cur.chapters[chid] = ch;
+          continue;
+        }
+        if (!cloudCh.completed) continue;
+
+        const chapter = campaign?.chapters.find(c => c.id === chid);
+        const activityIds = (chapter?.activities ?? []).map(a => a.id).filter(Boolean);
+        const merged = new Set<string>(ch.completedActivityIds);
+        for (const aid of activityIds) merged.add(aid);
+        ch.completedActivityIds = [...merged];
+        ch.completed = true;
+        ch.xpEarned = Math.max(ch.xpEarned, cloudCh.xpEarned);
+        ch.coinsEarned = Math.max(ch.coinsEarned, cloudCh.coinsEarned);
+
+        cur.chapters[chid] = ch;
+        cur.updatedAt = now;
+        touchedCampaigns.add(cid);
+        chaptersAdded += 1;
+      }
+      all[cid] = cur;
+    }
+
 
     for (const cid of touchedCampaigns) {
       const cur = all[cid];
