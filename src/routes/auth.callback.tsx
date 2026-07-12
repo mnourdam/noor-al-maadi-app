@@ -7,6 +7,7 @@ import {
   getAndClearGoogleAuthIntent,
   stashGoogleAuthResult,
 } from "@/lib/googleAuthResult";
+import { consumeAuthOrigin } from "@/lib/authOrigin";
 
 type SearchParams = {
   code?: string;
