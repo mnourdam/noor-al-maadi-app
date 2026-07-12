@@ -122,7 +122,25 @@ async function sendFcm(
         ...(payload.deep_link ? { deep_link: payload.deep_link } : {}),
         ...(payload.notification_id ? { notification_id: payload.notification_id } : {}),
       },
-      android: { priority: "HIGH" },
+      android: {
+        priority: "HIGH",
+        notification: {
+          // Versioned channel with the custom Irth sound. Must match the
+          // channel created in `IrthApp.java`. Referenced without file
+          // extension — Android resolves it against `res/raw/`.
+          channel_id: "irth_notifications_v2",
+          sound: "irth_notification",
+          default_sound: false,
+          ...(payload.image_url ? { image: payload.image_url } : {}),
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "irth_notification.caf",
+          },
+        },
+      },
     },
   };
 
