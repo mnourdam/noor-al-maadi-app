@@ -21,6 +21,7 @@ import { UserRound, LogIn, UserPlus, AlertTriangle } from "lucide-react";
 import { useAccount } from "@/lib/account";
 import { AuthLink } from "@/components/AuthLink";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { setAuthOrigin } from "@/lib/authOrigin";
 
 const GUEST_CHOICE_KEY = "irth.firstLaunch.choice.v1";
 
