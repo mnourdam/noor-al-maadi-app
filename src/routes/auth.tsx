@@ -32,7 +32,10 @@ function AuthPage() {
   const referralRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (user) navigate({ to: "/profile" });
+    if (user) {
+      const dest = consumeAuthOrigin("/profile");
+      navigate({ to: dest as "/profile" });
+    }
   }, [user, navigate]);
 
   async function submit(e: React.FormEvent) {
