@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 // Google native sign-in helper preserved at "@/lib/native-auth" for future LC re-enable.
 import { PasswordField } from "@/components/ui/PasswordField";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { consumeAuthOrigin } from "@/lib/authOrigin";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
@@ -31,7 +32,10 @@ function AuthPage() {
   const referralRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (user) navigate({ to: "/profile" });
+    if (user) {
+      const dest = consumeAuthOrigin("/profile");
+      navigate({ to: dest as "/profile" });
+    }
   }, [user, navigate]);
 
   async function submit(e: React.FormEvent) {
@@ -72,7 +76,8 @@ function AuthPage() {
         return;
       }
       if (mode === "signup" && r.error) { setInfo(r.error); return; }
-      navigate({ to: "/profile" });
+      const dest = consumeAuthOrigin("/profile");
+      navigate({ to: dest as "/profile" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg || "حدث خطأ غير متوقع.");

@@ -21,6 +21,7 @@ import { UserRound, LogIn, UserPlus, AlertTriangle } from "lucide-react";
 import { useAccount } from "@/lib/account";
 import { AuthLink } from "@/components/AuthLink";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { setAuthOrigin } from "@/lib/authOrigin";
 
 const GUEST_CHOICE_KEY = "irth.firstLaunch.choice.v1";
 
@@ -80,6 +81,8 @@ export function FirstLaunchGate() {
               label="المتابعة عبر Google"
               onBeforeRedirect={() => {
                 try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
+                // Startup gate → after auth, land on the home page.
+                setAuthOrigin("/");
               }}
               onError={() => { /* silent — user stays on gate */ }}
             />
@@ -91,6 +94,7 @@ export function FirstLaunchGate() {
 
             <AuthLink
               mode="login"
+              origin="/"
               onClick={() => {
                 try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
                 setOpen(false);
@@ -102,6 +106,7 @@ export function FirstLaunchGate() {
             </AuthLink>
             <AuthLink
               mode="signup"
+              origin="/"
               onClick={() => {
                 try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
                 setOpen(false);

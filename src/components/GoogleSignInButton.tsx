@@ -14,6 +14,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isCapacitorNative, signInWithGoogleNative } from "@/lib/native-auth";
 import { setGoogleAuthIntent, type GoogleAuthIntent } from "@/lib/googleAuthResult";
+import { peekAuthOrigin } from "@/lib/authOrigin";
 
 type Props = {
   /** Same-origin path to return to after successful sign-in (web only). */
@@ -67,8 +68,10 @@ export function GoogleSignInButton({
       // Web flow — direct Supabase Google OAuth (custom credentials).
       const origin =
         typeof window !== "undefined" ? window.location.origin : "";
+      const stored = peekAuthOrigin();
+      const candidate = next ?? stored ?? "/";
       const safeNext =
-        next && next.startsWith("/") && !next.startsWith("//") ? next : "/profile";
+        candidate.startsWith("/") && !candidate.startsWith("//") ? candidate : "/";
       const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
       console.info("[google-oauth] branch=WEB redirectTo=", redirectTo);
 

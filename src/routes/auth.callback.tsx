@@ -7,6 +7,7 @@ import {
   getAndClearGoogleAuthIntent,
   stashGoogleAuthResult,
 } from "@/lib/googleAuthResult";
+import { consumeAuthOrigin } from "@/lib/authOrigin";
 
 type SearchParams = {
   code?: string;
@@ -134,7 +135,11 @@ function AuthCallbackPage() {
         stashGoogleAuthResult(computeGoogleAuthResult(data.session.user, intent));
         setStatus("success");
         setMessage("تم تأكيد بريدك الإلكتروني بنجاح. مرحباً بك في إرث!");
-        setTimeout(() => navigate({ to: (search.next as "/profile") || "/profile" }), 1500);
+        // Prefer the stored origin (single-use). Fallback to ?next=, then "/".
+        const stored = consumeAuthOrigin("");
+        const nextParam = typeof search.next === "string" && search.next.startsWith("/") && !search.next.startsWith("//") ? search.next : "";
+        const dest = stored || nextParam || "/";
+        setTimeout(() => navigate({ to: dest as "/" }), 1500);
       } else {
         // No session, no error, no code → likely already verified or stale link
         setStatus("already_verified");

@@ -16,6 +16,7 @@ import {
   getAndClearGoogleAuthIntent,
   stashGoogleAuthResult,
 } from "@/lib/googleAuthResult";
+import { consumeAuthOrigin } from "@/lib/authOrigin";
 
 // Published bounce endpoint that returns an HTML page which immediately
 // redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
@@ -232,7 +233,8 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
               // Full reload is the most reliable way to force the router,
               // account provider, and all queries to re-hydrate with the
               // freshly persisted Supabase session inside the APK WebView.
-              window.location.replace("/profile");
+              const dest = consumeAuthOrigin("/profile");
+              window.location.replace(dest);
             }
           } catch { /* ignore */ }
         } else {
