@@ -8,7 +8,7 @@ import {
   Coins, Gift, Bell, Music, Zap, LayoutGrid, TrendingUp, Medal, ScrollText,
   Users2, Settings as SettingsIcon, X, BookOpen, Swords, Landmark, Search,
   Map as MapIcon, Hourglass, Copy, Share2, QrCode, ChevronRight, Lock,
-  Type as TypeIcon, Sprout, Inbox,
+  Type as TypeIcon, Sprout, Inbox, Mail,
 } from "lucide-react";
 
 import { toWesternDigits } from "@/lib/formatNumber";
