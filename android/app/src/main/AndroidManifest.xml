@@ -52,6 +52,11 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_accent" />
+        <!-- Route any FCM notification that omits an explicit channel_id
+             to the versioned Irth channel with the custom sound. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="irth_notifications_v2" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
