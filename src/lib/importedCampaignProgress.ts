@@ -101,11 +101,14 @@ export function recordActivity(
     cur.totalHeartsLost  += hearts;
   }
 
-  // Chapter completion = every activity attempted correctly at least once.
+  // Chapter completion is STICKY. Once a chapter is completed it stays
+  // completed for the life of the account, even if the admin later
+  // republishes the campaign with additional activities. Regressing this
+  // flag corrupts unlock order and wipes checkmarks (P0, 2026-07).
   const allDone = chapter.activities.every(a => ch.completedActivityIds.includes(a.id));
-  ch.completed = allDone;
+  ch.completed = ch.completed || allDone;
 
-  // Campaign completion = every chapter completed.
+  // Campaign completion is STICKY for the same reason.
   cur.chapters[chapter.id] = ch;
   const campaignDone = campaign.chapters.every(c => cur.chapters[c.id]?.completed);
   if (campaignDone && !cur.completed) {
@@ -117,6 +120,7 @@ export function recordActivity(
     campaign.chapters.forEach(c => (c.rewards?.unlocks ?? []).forEach(u => unlocks.add(u)));
     cur.unlockedRegistryIds = [...unlocks];
   }
+
 
   cur.updatedAt = new Date().toISOString();
   all[campaign.id] = cur;
