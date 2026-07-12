@@ -1269,6 +1269,11 @@ function SettingsTab({
         <SettingToggle icon={<Sparkles className="size-4" />} label="إشعارات المواسم" desc="بدء موسم جديد أو مكافأة جاهزة" value={prefs.season && prefs.master} onChange={(v) => setNotificationPrefs({ season: v })} />
       </SettingsGroup>
 
+      {/* Newsletter (Irth news & updates) — optional, independent of auth emails */}
+      <SettingsGroup title="نشرة إرث" icon={Mail}>
+        <NewsletterSetting />
+      </SettingsGroup>
+
       {/* Audio */}
       <SettingsGroup title="الصوت" icon={Music}>
         <AudioSettings />
