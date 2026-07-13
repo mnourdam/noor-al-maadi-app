@@ -381,6 +381,12 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
           oldEmail: callerEmail,
           newEmail: body.newEmail,
         })
+        const text = renderTextTemplate(body.action, {
+          url: link.url,
+          token: link.token,
+          oldEmail: callerEmail,
+          newEmail: body.newEmail,
+        })
         const subject = SUBJECTS[body.action]
         const messageId = crypto.randomUUID()
         const idempotencyKey = body.idempotencyKey ?? messageId
@@ -402,9 +408,11 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
             idempotency_key: idempotencyKey,
             to: recipient,
             from: FROM_ADDRESS,
+            reply_to: REPLY_TO_ADDRESS,
             sender_domain: SENDER_DOMAIN,
             subject,
             html,
+            text,
             purpose: 'transactional',
             label: body.action,
             queued_at: new Date().toISOString(),
