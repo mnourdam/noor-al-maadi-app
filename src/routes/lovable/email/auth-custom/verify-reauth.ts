@@ -25,7 +25,9 @@ interface VerifyBody {
 export const Route = createFileRoute('/lovable/email/auth-custom/verify-reauth')({
   server: {
     handlers: {
+      OPTIONS: async ({ request }) => corsPreflight(request),
       POST: async ({ request }) => {
+        const inner = async (): Promise<Response> => {
         const mode = (process.env.AUTH_EMAIL_MODE || 'custom').toLowerCase()
         if (mode !== 'custom') {
           return Response.json(
