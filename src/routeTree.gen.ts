@@ -63,6 +63,7 @@ import { Route as AdminTaxonomyRouteImport } from './routes/admin.taxonomy'
 import { Route as AdminOfflineDiagnosticsRouteImport } from './routes/admin.offline-diagnostics'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminNativeAuthDiagnosticsRouteImport } from './routes/admin.native-auth-diagnostics'
 import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum-provenance'
 import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminMapRouteImport } from './routes/admin.map'
@@ -396,6 +397,12 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   path: '/admin/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminNativeAuthDiagnosticsRoute =
+  AdminNativeAuthDiagnosticsRouteImport.update({
+    id: '/admin/native-auth-diagnostics',
+    path: '/admin/native-auth-diagnostics',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminMuseumProvenanceRoute = AdminMuseumProvenanceRouteImport.update({
   id: '/admin/museum-provenance',
   path: '/admin/museum-provenance',
@@ -782,6 +789,7 @@ export interface FileRoutesByFullPath {
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
+  '/admin/native-auth-diagnostics': typeof AdminNativeAuthDiagnosticsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
@@ -895,6 +903,7 @@ export interface FileRoutesByTo {
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
+  '/admin/native-auth-diagnostics': typeof AdminNativeAuthDiagnosticsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
@@ -1013,6 +1022,7 @@ export interface FileRoutesById {
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
+  '/admin/native-auth-diagnostics': typeof AdminNativeAuthDiagnosticsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
@@ -1132,6 +1142,7 @@ export interface FileRouteTypes {
     | '/admin/map'
     | '/admin/migration'
     | '/admin/museum-provenance'
+    | '/admin/native-auth-diagnostics'
     | '/admin/notifications'
     | '/admin/offline'
     | '/admin/offline-diagnostics'
@@ -1245,6 +1256,7 @@ export interface FileRouteTypes {
     | '/admin/map'
     | '/admin/migration'
     | '/admin/museum-provenance'
+    | '/admin/native-auth-diagnostics'
     | '/admin/notifications'
     | '/admin/offline'
     | '/admin/offline-diagnostics'
@@ -1362,6 +1374,7 @@ export interface FileRouteTypes {
     | '/admin/map'
     | '/admin/migration'
     | '/admin/museum-provenance'
+    | '/admin/native-auth-diagnostics'
     | '/admin/notifications'
     | '/admin/offline'
     | '/admin/offline-diagnostics'
@@ -1480,6 +1493,7 @@ export interface RootRouteChildren {
   AdminMapRoute: typeof AdminMapRoute
   AdminMigrationRoute: typeof AdminMigrationRoute
   AdminMuseumProvenanceRoute: typeof AdminMuseumProvenanceRoute
+  AdminNativeAuthDiagnosticsRoute: typeof AdminNativeAuthDiagnosticsRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOfflineRoute: typeof AdminOfflineRoute
   AdminOfflineDiagnosticsRoute: typeof AdminOfflineDiagnosticsRoute
@@ -1899,6 +1913,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/notifications'
       fullPath: '/admin/notifications'
       preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/native-auth-diagnostics': {
+      id: '/admin/native-auth-diagnostics'
+      path: '/admin/native-auth-diagnostics'
+      fullPath: '/admin/native-auth-diagnostics'
+      preLoaderRoute: typeof AdminNativeAuthDiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/museum-provenance': {
@@ -2481,6 +2502,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminMapRoute: AdminMapRoute,
   AdminMigrationRoute: AdminMigrationRoute,
   AdminMuseumProvenanceRoute: AdminMuseumProvenanceRoute,
+  AdminNativeAuthDiagnosticsRoute: AdminNativeAuthDiagnosticsRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOfflineRoute: AdminOfflineRoute,
   AdminOfflineDiagnosticsRoute: AdminOfflineDiagnosticsRoute,
