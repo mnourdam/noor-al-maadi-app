@@ -111,3 +111,38 @@ export async function requestEmailChangeEmail(newEmail: string): Promise<void> {
 export async function requestReauthenticationEmail(): Promise<void> {
   await dispatch({ action: 'reauthentication', requiresAuth: true })
 }
+
+/**
+ * Verify a 6-digit reauthentication OTP the user received by email.
+ * Returns `true` on success. Throws with a machine-readable error code on
+ * failure so callers can distinguish invalid_code, expired, locked, etc.
+ */
+export async function verifyReauthenticationCode(code: string): Promise<boolean> {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) throw new Error('No active session')
+
+  const res = await fetch('/lovable/email/auth-custom/verify-reauth', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ code }),
+  })
+
+  if (res.ok) {
+    const payload = (await res.json().catch(() => ({}))) as { verified?: boolean }
+    return payload.verified === true
+  }
+
+  let errorCode = `http_${res.status}`
+  try {
+    const payload = (await res.json()) as { error?: string }
+    if (payload?.error) errorCode = payload.error
+  } catch {
+    // ignore
+  }
+  throw new Error(errorCode)
+}
+
