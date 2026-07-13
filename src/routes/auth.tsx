@@ -267,6 +267,15 @@ function AuthPage() {
           </form>
 
 
+          {(BUILD_TYPE === "debug" || import.meta.env.DEV) && (
+            <Link
+              to="/admin/native-auth-diagnostics"
+              className="mt-4 block w-full rounded-xl border border-dashed border-gold/50 bg-transparent py-2 text-center text-xs font-semibold text-gold"
+            >
+              فتح تشخيص المصادقة
+            </Link>
+          )}
+
           <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground">
             بإنشاء حساب فإنك توافق على مزامنة تقدمك بأمان في السحابة.
           </p>
