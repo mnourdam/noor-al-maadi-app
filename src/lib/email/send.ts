@@ -17,7 +17,7 @@ export async function sendTransactionalEmail(input: SendTransactionalEmailInput)
   const token = sessionData.session?.access_token
   if (!token) throw new Error('No active session for transactional email')
 
-  const res = await fetch('/lovable/email/transactional/send', {
+  const res = await fetch(getServerApiUrl('/lovable/email/transactional/send'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
