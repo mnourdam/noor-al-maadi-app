@@ -14,6 +14,7 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createFileRoute } from '@tanstack/react-router'
+import { corsPreflight, withCors } from '@/lib/serverCors'
 
 import { REAUTH_PURPOSE, hashReauthCode, timingSafeEqualHex } from '@/lib/reauth-otp'
 
