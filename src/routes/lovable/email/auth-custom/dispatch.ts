@@ -18,6 +18,7 @@ import * as React from 'react'
 import { render } from 'react-email'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createFileRoute } from '@tanstack/react-router'
+import { corsPreflight, withCors } from '@/lib/serverCors'
 
 import { SignupEmail } from '@/lib/email-templates/signup'
 import { RecoveryEmail } from '@/lib/email-templates/recovery'
