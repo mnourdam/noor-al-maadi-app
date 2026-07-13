@@ -57,6 +57,12 @@ export function GoogleSignInButton({
       onBeforeRedirect?.();
 
       if (isCapacitorNative()) {
+        console.info("[native-auth-start]", {
+          ts: new Date().toISOString(),
+          platform: "android",
+          stage: "user-tapped-google",
+          hasIntent: Boolean(intent),
+        });
         console.info("[google-oauth] branch=NATIVE (Capacitor)");
         const r = await signInWithGoogleNative();
         if (!r.ok) {
