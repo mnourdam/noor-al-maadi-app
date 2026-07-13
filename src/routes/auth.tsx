@@ -39,6 +39,31 @@ function AuthPage() {
     }
   }, [user, navigate]);
 
+  // Surface a clean Arabic toast if the native Google OAuth flow bounced
+  // back here after failing to complete the PKCE exchange.
+  useEffect(() => {
+    let flagged = false;
+    try {
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("oauth_error") === "1") flagged = true;
+        if (window.sessionStorage.getItem("irth.oauth_error.v1") === "1") {
+          flagged = true;
+          window.sessionStorage.removeItem("irth.oauth_error.v1");
+        }
+        if (flagged) {
+          url.searchParams.delete("oauth_error");
+          window.history.replaceState(null, "", url.toString());
+        }
+      }
+    } catch { /* ignore */ }
+    if (flagged) {
+      void import("sonner").then(({ toast }) => {
+        toast.error("تعذر إكمال تسجيل الدخول عبر Google. حاول مرة أخرى.");
+      }).catch(() => { /* ignore */ });
+    }
+  }, []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;

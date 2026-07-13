@@ -74,12 +74,13 @@ async function dispatch(args: DispatchArgs): Promise<void> {
     })
   } catch { /* ignore */ }
   recordTrace('signup', 'fetch-start', args.action)
-  let res: Response
+  let res: import('@/lib/serverRequest').ServerResponse
   try {
-    res = await fetch(url, {
+    const { serverRequest } = await import('@/lib/serverRequest')
+    res = await serverRequest(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(args),
+      body: args,
     })
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}:${e.message}` : String(e)
@@ -206,13 +207,14 @@ export async function verifyReauthenticationCode(code: string): Promise<boolean>
   const token = data.session?.access_token
   if (!token) throw new Error('No active session')
 
-  const res = await fetch(getServerApiUrl('/lovable/email/auth-custom/verify-reauth'), {
+  const { serverRequest } = await import('@/lib/serverRequest')
+  const res = await serverRequest('/lovable/email/auth-custom/verify-reauth', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ code }),
+    body: { code },
   })
 
   if (res.ok) {
