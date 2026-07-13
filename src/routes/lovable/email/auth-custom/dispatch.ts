@@ -217,7 +217,7 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
           return Response.json({ error: 'invalid_action' }, { status: 400 })
         }
 
-        const admin = createClient(supabaseUrl, serviceKey)
+        const admin: SupabaseClient<any, any> = createClient(supabaseUrl, serviceKey)
 
         // If the action requires auth, validate bearer & get the caller's email/id.
         let callerEmail: string | undefined
