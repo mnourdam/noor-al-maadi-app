@@ -193,7 +193,7 @@ export async function verifyReauthenticationCode(code: string): Promise<boolean>
   const token = data.session?.access_token
   if (!token) throw new Error('No active session')
 
-  const res = await fetch('/lovable/email/auth-custom/verify-reauth', {
+  const res = await fetch(getServerApiUrl('/lovable/email/auth-custom/verify-reauth'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
