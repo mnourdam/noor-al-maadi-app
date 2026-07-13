@@ -133,8 +133,7 @@ export interface CustomSignUpArgs {
  * In legacy mode, callers should use `supabase.auth.signUp` directly.
  */
 export async function requestSignupEmail(args: CustomSignUpArgs): Promise<void> {
-  const redirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+  const redirectTo = buildRedirectTo('/auth/callback')
   await dispatch({
     action: 'signup',
     email: args.email,
@@ -147,22 +146,17 @@ export async function requestSignupEmail(args: CustomSignUpArgs): Promise<void> 
 }
 
 export async function requestPasswordResetEmail(email: string): Promise<void> {
-  const redirectTo =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/callback?type=recovery`
-      : undefined
+  const redirectTo = buildRedirectTo('/auth/callback?type=recovery')
   await dispatch({ action: 'recovery', email, redirectTo })
 }
 
 export async function requestMagicLinkEmail(email: string): Promise<void> {
-  const redirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+  const redirectTo = buildRedirectTo('/auth/callback')
   await dispatch({ action: 'magiclink', email, redirectTo })
 }
 
 export async function requestEmailChangeEmail(newEmail: string): Promise<void> {
-  const redirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+  const redirectTo = buildRedirectTo('/auth/callback')
   await dispatch({
     action: 'email_change',
     newEmail,
