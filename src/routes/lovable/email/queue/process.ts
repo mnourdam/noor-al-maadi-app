@@ -110,13 +110,17 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
         const sendDelayMs = state?.send_delay_ms ?? DEFAULT_SEND_DELAY_MS
         const ttlMinutes: Record<string, number> = {
           auth_emails: state?.auth_email_ttl_minutes ?? DEFAULT_AUTH_TTL_MINUTES,
+          auth_emails_custom: state?.auth_email_ttl_minutes ?? DEFAULT_AUTH_TTL_MINUTES,
           transactional_emails: state?.transactional_email_ttl_minutes ?? DEFAULT_TRANSACTIONAL_TTL_MINUTES,
         }
 
         let totalProcessed = 0
 
-        // 2. Process auth_emails first (priority), then transactional_emails
-        for (const queue of ['auth_emails', 'transactional_emails']) {
+        // 2. Drain queues in priority order.
+        //    - auth_emails_custom: new custom auth pipeline (feature-flagged).
+        //    - auth_emails:        legacy Lovable managed auth pipeline.
+        //    - transactional_emails: app emails.
+        for (const queue of ['auth_emails_custom', 'auth_emails', 'transactional_emails']) {
           const { data: messages, error: readError } = await supabase.rpc('read_email_batch', {
             queue_name: queue,
             batch_size: batchSize,
