@@ -11,6 +11,29 @@
 // Legacy code is kept intact behind the flag; nothing is deleted.
 
 import { supabase } from '@/integrations/supabase/client'
+import { isCapacitorNative } from '@/lib/native-auth'
+
+// Web origin used for email verification links so recipients can open them
+// on any device (desktop, mobile browser). When the request originates from
+// the Android/Capacitor app we append `native=1` so /auth/callback bounces
+// into the app's custom scheme; on web the same URL works unchanged.
+const WEB_CALLBACK_ORIGIN = 'https://irth-develop.lovable.app'
+
+function buildRedirectTo(path: string): string | undefined {
+  // Always use the stable web callback origin — email recipients may open
+  // the link on a different device than the sender.
+  const base = `${WEB_CALLBACK_ORIGIN}${path}`
+  try {
+    if (isCapacitorNative()) {
+      const u = new URL(base)
+      u.searchParams.set('native', '1')
+      return u.toString()
+    }
+  } catch {
+    /* SSR / no window — fall through */
+  }
+  return base
+}
 
 export type AuthEmailMode = 'custom' | 'legacy'
 
@@ -110,8 +133,7 @@ export interface CustomSignUpArgs {
  * In legacy mode, callers should use `supabase.auth.signUp` directly.
  */
 export async function requestSignupEmail(args: CustomSignUpArgs): Promise<void> {
-  const redirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+  const redirectTo = buildRedirectTo('/auth/callback')
   await dispatch({
     action: 'signup',
     email: args.email,
@@ -124,22 +146,17 @@ export async function requestSignupEmail(args: CustomSignUpArgs): Promise<void> 
 }
 
 export async function requestPasswordResetEmail(email: string): Promise<void> {
-  const redirectTo =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/callback?type=recovery`
-      : undefined
+  const redirectTo = buildRedirectTo('/auth/callback?type=recovery')
   await dispatch({ action: 'recovery', email, redirectTo })
 }
 
 export async function requestMagicLinkEmail(email: string): Promise<void> {
-  const redirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+  const redirectTo = buildRedirectTo('/auth/callback')
   await dispatch({ action: 'magiclink', email, redirectTo })
 }
 
 export async function requestEmailChangeEmail(newEmail: string): Promise<void> {
-  const redirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+  const redirectTo = buildRedirectTo('/auth/callback')
   await dispatch({
     action: 'email_change',
     newEmail,
