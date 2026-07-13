@@ -45,41 +45,128 @@ export function isCapacitorNative(): boolean {
   }
 }
 
+// Bounded await with a persisted trace of the outcome. Guarantees that a
+// hung awaited stage cannot silently swallow the diagnostics — the failing
+// stage is written to the diag-trace ring even if the promise never resolves.
+async function tracedAwait<T>(
+  stage: string,
+  op: () => Promise<T>,
+  timeoutMs: number,
+): Promise<{ ok: true; value: T; ms: number } | { ok: false; error: string; ms: number; timedOut: boolean }> {
+  const t0 = Date.now();
+  recordTrace("native-auth", `${stage}-start`);
+  try {
+    const result = await Promise.race<
+      { kind: "ok"; value: T } | { kind: "timeout" }
+    >([
+      op().then((v) => ({ kind: "ok" as const, value: v })),
+      new Promise<{ kind: "timeout" }>((resolve) =>
+        setTimeout(() => resolve({ kind: "timeout" as const }), timeoutMs),
+      ),
+    ]);
+    const ms = Date.now() - t0;
+    if (result.kind === "timeout") {
+      recordTrace("native-auth", `${stage}-timeout`, `${ms}ms`);
+      return { ok: false, error: `${stage}-timeout`, ms, timedOut: true };
+    }
+    recordTrace("native-auth", `${stage}-success`, `${ms}ms`);
+    return { ok: true, value: result.value, ms };
+  } catch (e) {
+    const ms = Date.now() - t0;
+    const msg = e instanceof Error ? e.message : String(e);
+    recordTrace("native-auth", `${stage}-error`, `${ms}ms:${msg.slice(0, 80)}`);
+    return { ok: false, error: msg, ms, timedOut: false };
+  }
+}
+
 export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: string }> {
   recordTrace("native-auth", "native-auth-start");
   console.info("[native-auth] branch=NATIVE redirectTo=", NATIVE_REDIRECT_URL);
   try {
-    const { Browser } = await import("@capacitor/browser");
+    const browserImport = await tracedAwait(
+      "browser-import",
+      () => import("@capacitor/browser"),
+      3000,
+    );
+    if (!browserImport.ok) {
+      return { ok: false, error: `browser-import:${browserImport.error}` };
+    }
+    const { Browser } = browserImport.value;
 
     // Register the deep-link listener before opening the browser so the
     // resume intent from Google → bounce → APK is never missed.
-    await installNativeAuthDeepLinkListener();
+    const listener = await tracedAwait(
+      "listener-install",
+      () => installNativeAuthDeepLinkListener(),
+      3000,
+    );
+    if (!listener.ok) {
+      return { ok: false, error: `listener-install:${listener.error}` };
+    }
 
-    const nativeClient = getNativePkceSupabaseClient();
-    const { data, error } = await nativeClient.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: NATIVE_REDIRECT_URL,
-        skipBrowserRedirect: true,
-        queryParams: { prompt: "select_account" },
-      },
-    });
+    // Client creation touches the durable storage adapter at import time
+    // but does NOT hit Preferences — instrument separately so a hang here
+    // is visible in the trace.
+    const clientInit = await tracedAwait(
+      "pkce-client-init",
+      async () => getNativePkceSupabaseClient(),
+      3000,
+    );
+    if (!clientInit.ok) {
+      return { ok: false, error: `pkce-client-init:${clientInit.error}` };
+    }
+    const nativeClient = clientInit.value;
 
+    // signInWithOAuth internally reads/writes the PKCE verifier via the
+    // storage adapter. If Preferences is hanging, this stage will time out
+    // and the trace makes it obvious which await failed.
+    const oauth = await tracedAwait(
+      "signInWithOAuth",
+      () =>
+        nativeClient.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: NATIVE_REDIRECT_URL,
+            skipBrowserRedirect: true,
+            queryParams: { prompt: "select_account" },
+          },
+        }),
+      8000,
+    );
+    if (!oauth.ok) {
+      return { ok: false, error: `signInWithOAuth:${oauth.error}` };
+    }
+    const { data, error } = oauth.value;
     if (error) {
       console.error("[native-auth] signInWithOAuth failed", error.message);
-      recordTrace("native-auth", "pkce-exchange-failure", error.message);
+      recordTrace("native-auth", "signInWithOAuth-provider-error", error.message);
       return { ok: false, error: error.message };
     }
     const oauthUrl = data.url;
-    if (!oauthUrl) return { ok: false, error: "Missing Google OAuth URL" };
+    if (!oauthUrl) {
+      recordTrace("native-auth", "signInWithOAuth-missing-url");
+      return { ok: false, error: "Missing Google OAuth URL" };
+    }
+    recordTrace("native-auth", "signInWithOAuth-url", `len=${oauthUrl.length}`);
 
     logPkceVerifierState("after signInWithOAuth");
     console.info("[native-auth] opening custom tab", sanitizeOAuthUrl(oauthUrl));
-    recordTrace("native-auth", "browser-opened");
-    await Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" });
+    const open = await tracedAwait(
+      "browser-open",
+      () => Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" }),
+      5000,
+    );
+    if (!open.ok) {
+      return { ok: false, error: `browser-open:${open.error}` };
+    }
     return { ok: true };
   } catch (e) {
     console.error("[native-auth] unexpected", e);
+    recordTrace(
+      "native-auth",
+      "signInWithGoogleNative-crash",
+      e instanceof Error ? e.message : String(e),
+    );
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
