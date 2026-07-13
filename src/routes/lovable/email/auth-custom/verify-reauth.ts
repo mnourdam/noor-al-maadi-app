@@ -137,6 +137,16 @@ export const Route = createFileRoute('/lovable/email/auth-custom/verify-reauth')
           },
           { status: isLocked ? 423 : 400 },
         )
+        }
+        try {
+          return withCors(request, await inner())
+        } catch (err) {
+          console.error('verify-reauth: unhandled', err)
+          return withCors(
+            request,
+            Response.json({ error: 'internal' }, { status: 500 }),
+          )
+        }
       },
     },
   },
