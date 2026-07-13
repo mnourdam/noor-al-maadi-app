@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client'
+import { getServerApiUrl } from '@/lib/serverApi'
 
 export interface SendTransactionalEmailInput {
   templateName: string
