@@ -47,7 +47,7 @@ function summarizeBody(text: string): string {
   return trimmed.length > 400 ? trimmed.slice(0, 400) + "…" : trimmed;
 }
 
-function corsHeadersFromResponse(res: Response): Record<string, string> {
+function corsHeadersFromResponse(res: { headers: { get(name: string): string | null } }): Record<string, string> {
   const wanted = [
     "access-control-allow-origin",
     "access-control-allow-methods",
@@ -111,7 +111,7 @@ function NativeAuthDiagnostics() {
 
   async function runProbe(
     label: string,
-    doFetch: () => Promise<Response>,
+    doFetch: () => Promise<{ ok: boolean; status: number; headers: { get(n: string): string | null }; text(): Promise<string> }>,
     captureBody: boolean,
   ): Promise<ProbeResult> {
     try {
@@ -143,10 +143,11 @@ function NativeAuthDiagnostics() {
 
   async function probeHealth() {
     setRunning("health");
+    const { serverRequest } = await import("@/lib/serverRequest");
     const url = `${BACKEND_ORIGIN}/`;
     const r = await runProbe(
-      "Backend health (GET /)",
-      () => fetch(url, { method: "GET" }),
+      "Backend health (GET /) — native transport",
+      () => serverRequest(url, { method: "GET" }),
       true,
     );
     r.url = url;
@@ -156,11 +157,12 @@ function NativeAuthDiagnostics() {
 
   async function probeDispatchOptions() {
     setRunning("options");
+    const { serverRequest } = await import("@/lib/serverRequest");
     const url = `${BACKEND_ORIGIN}/lovable/email/auth-custom/dispatch`;
     const r = await runProbe(
-      "Auth dispatch OPTIONS (manual preflight)",
+      "Auth dispatch OPTIONS (manual preflight) — native transport",
       () =>
-        fetch(url, {
+        serverRequest(url, {
           method: "OPTIONS",
           headers: {
             "Access-Control-Request-Method": "POST",
@@ -177,15 +179,15 @@ function NativeAuthDiagnostics() {
 
   async function probeDispatchPost() {
     setRunning("post");
+    const { serverRequest } = await import("@/lib/serverRequest");
     const url = `${BACKEND_ORIGIN}/lovable/email/auth-custom/dispatch`;
     const r = await runProbe(
-      "Auth dispatch POST (invalid payload, expect controlled 400)",
+      "Auth dispatch POST (invalid payload, expect controlled 400) — native transport",
       () =>
-        fetch(url, {
+        serverRequest(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          // Missing `action` — server should respond with 400 invalid_action.
-          body: JSON.stringify({ diagnostic: true }),
+          body: { diagnostic: true },
         }),
       true,
     );

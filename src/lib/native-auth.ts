@@ -18,6 +18,7 @@ import {
 } from "@/lib/googleAuthResult";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
 import { recordTrace } from "@/lib/diag-trace";
+import { getDurableAuthStorage } from "@/lib/nativeAuthStorage";
 
 // Published bounce endpoint that returns an HTML page which immediately
 // redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
@@ -92,9 +93,15 @@ function getNativePkceSupabaseClient(): SupabaseClient<Database> {
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Missing Supabase config for native OAuth.");
   }
+  // Durable storage adapter — backed by @capacitor/preferences on Android
+  // so PKCE verifiers survive Custom Tab / Activity teardown. The
+  // storageKey is deliberately distinct from the main `supabase` client's
+  // default key so the two clients cannot fight over the same slot.
+  
   nativePkceClient = createClient<Database>(supabaseUrl, supabaseKey, {
     auth: {
-      storage: typeof window !== "undefined" ? window.localStorage : undefined,
+      storage: getDurableAuthStorage() as unknown as Storage,
+      storageKey: "irth-native-auth",
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
@@ -214,14 +221,25 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           } else {
             console.info("[native-auth] exchange success");
             recordTrace("native-auth", "pkce-exchange-success");
-            const { data: mainSess } = await supabase.auth.getSession();
-            exchangedOk = !!mainSess.session;
-            if (!exchangedOk) {
-              exchangeError = "لم يتم حفظ الجلسة داخل التطبيق";
-              console.error("[native-auth] main client getSession returned no session after exchange");
+            // The native PKCE client now owns durable Preferences-backed
+            // storage, so the main `supabase` client (localStorage-backed)
+            // will NOT auto-hydrate. Copy the tokens across explicitly.
+            const session = data.session;
+            if (session?.access_token && session?.refresh_token) {
+              const { error: setErr } = await supabase.auth.setSession({
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+              });
+              if (setErr) {
+                exchangeError = setErr.message;
+                console.error("[native-auth] main setSession failed:", setErr.message);
+              } else {
+                exchangedOk = true;
+                recordTrace("native-auth", "session-established");
+              }
             } else {
-              console.info("[native-auth] main client hydrated from shared storage");
-              recordTrace("native-auth", "session-established");
+              exchangeError = "الجلسة غير مكتملة";
+              console.error("[native-auth] exchange returned no tokens");
             }
           }
 
@@ -279,12 +297,13 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           console.info("[native-auth] not navigating — exchange did not succeed");
           try {
             if (typeof window !== "undefined") {
-              const msg = exchangeError
-                ? `تعذر إكمال تسجيل الدخول عبر Google: ${exchangeError}`
-                : "تعذر إكمال تسجيل الدخول عبر Google. حاول مرة أخرى.";
-              const w = window as unknown as { alert?: (m: string) => void };
-              w.alert?.(msg);
-              window.location.replace("/auth");
+              // Do not surface raw provider error text (may leak tokens or
+              // debug detail). Log a redacted message and route the user
+              // back to /auth with a flag so the auth screen can show a
+              // clean Arabic toast via sonner.
+              console.warn("[native-auth] surfacing OAuth failure to user; exchangeError=", exchangeError ? "(present)" : "(none)");
+              try { window.sessionStorage.setItem("irth.oauth_error.v1", "1"); } catch { /* ignore */ }
+              window.location.replace("/auth?oauth_error=1");
             }
           } catch { /* ignore */ }
         }
@@ -298,15 +317,16 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
 
 function logPkceVerifierState(stage: string): void {
   try {
-    if (typeof localStorage === "undefined") return;
-    const verifierKeys = Object.keys(localStorage).filter((k) =>
-      k.includes("code-verifier") || k.endsWith("-code-verifier"),
-    );
-    const described = verifierKeys.map((key) => {
-      const value = localStorage.getItem(key) ?? "";
-      return `${key}:<len:${value.length}>`;
-    });
-    console.info("[native-auth] pkce verifier", stage, verifierKeys.length, described);
+    // The native PKCE client uses storageKey "irth-native-auth"; gotrue-js
+    // stores its verifier under `${storageKey}-code-verifier`.
+    void getDurableAuthStorage()
+      .getItem("irth-native-auth-code-verifier")
+      .then((value) => {
+        const len = value ? value.length : 0;
+        console.info("[native-auth] pkce verifier", stage, `<len:${len}>`);
+        recordTrace("native-auth", "pkce-verifier-probe", `${stage}:len=${len}`);
+      })
+      .catch(() => { /* ignore */ });
   } catch { /* ignore */ }
 }
 
