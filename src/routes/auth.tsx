@@ -197,14 +197,20 @@ function AuthPage() {
                   ref={passwordRef}
                   name="password"
                   required
-                  minLength={6}
+                  minLength={mode === "signup" ? 8 : 6}
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   autoCorrect="off"
                   autoCapitalize="none"
                   spellCheck={false}
                   style={inputStyle}
-                  placeholder="6 أحرف على الأقل"
+                  placeholder={mode === "signup" ? "٨ أحرف على الأقل" : "٦ أحرف على الأقل"}
                 />
+                {mode === "signup" && (
+                  <span className="mt-1 block text-[10px] leading-relaxed text-muted-foreground">
+                    استخدم ٨ أحرف على الأقل، وتجنّب الكلمات الشائعة أو المتسلسلة (مثل 123456 أو password).
+                    يُفضّل مزج أحرف كبيرة وصغيرة وأرقام ورموز.
+                  </span>
+                )}
               </label>
             )}
             {mode === "signup" && (
