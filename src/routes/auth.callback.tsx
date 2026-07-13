@@ -42,6 +42,15 @@ export const Route = createFileRoute("/auth/callback")({
     const qs = location.searchStr ?? "";
     const hashStr = location.hash ? `#${location.hash}` : "";
     const target = `app.lovable.irth://auth/callback${qs}${hashStr}`;
+    console.info("[oauth-callback]", {
+      ts: new Date().toISOString(),
+      platform: "server",
+      stage: "web-callback-ssr",
+      hasCode: Boolean(search.code),
+      hasError: Boolean(search.error),
+      nativeMarker: true,
+      willRedirectToScheme: true,
+    });
     throw new Response(null, { status: 302, headers: { Location: target } });
   },
   component: AuthCallbackPage,
