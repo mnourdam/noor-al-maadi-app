@@ -149,10 +149,10 @@ async function generateLink(
   throw new Error(`Unsupported action: ${action}`)
 }
 
-function renderTemplate(
+async function renderTemplate(
   action: Action,
   args: { url: string; token?: string; oldEmail?: string; newEmail?: string },
-): string {
+): Promise<string> {
   const site = { siteName: SITE_NAME_AR, siteUrl: `https://${FROM_DOMAIN}` }
   let node: React.ReactElement
   switch (action) {
@@ -189,7 +189,7 @@ function renderTemplate(
       node = React.createElement(ReauthenticationEmail, { token: args.token ?? '' })
       break
   }
-  return render(node)
+  return await render(node)
 }
 
 export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
