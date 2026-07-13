@@ -38,6 +38,7 @@ const SITE_NAME_LATIN = 'Irth'
 const SENDER_DOMAIN = 'mail.dosur1444.com'
 const FROM_DOMAIN = 'mail.dosur1444.com'
 const FROM_ADDRESS = `${SITE_NAME_AR} <no-reply@${FROM_DOMAIN}>`
+const REPLY_TO_ADDRESS = 'info@dosur1444.com'
 
 type Action = 'signup' | 'recovery' | 'magiclink' | 'email_change' | 'reauthentication'
 
@@ -187,6 +188,65 @@ async function renderTemplate(
   return await render(node)
 }
 
+/**
+ * Arabic plain-text alternative for each auth email. Improves deliverability
+ * (Gmail flags HTML-only mail) and gives a readable fallback for text clients.
+ * Kept intentionally minimal — do not modify the HTML templates.
+ */
+function renderTextTemplate(
+  action: Action,
+  args: { url: string; token?: string; oldEmail?: string; newEmail?: string },
+): string {
+  const brand = SITE_NAME_AR
+  const site = `https://${FROM_DOMAIN}`
+  const url = args.url
+  const nl = '\r\n'
+  const footer =
+    `${nl}${nl}` +
+    `إذا لم تطلب هذه الرسالة، يمكنك تجاهلها بأمان.${nl}` +
+    `للتواصل: ${REPLY_TO_ADDRESS}${nl}` +
+    `${brand} — ${site}${nl}`
+
+  switch (action) {
+    case 'signup':
+      return (
+        `مرحبًا بك في ${brand}.${nl}${nl}` +
+        `لتأكيد بريدك الإلكتروني، افتح الرابط التالي:${nl}${url}${nl}${nl}` +
+        `الرابط صالح لمدة محدودة ولا يمكن استخدامه إلا مرة واحدة.` +
+        footer
+      )
+    case 'recovery':
+      return (
+        `طلبتَ إعادة تعيين كلمة المرور لحسابك في ${brand}.${nl}${nl}` +
+        `لإكمال العملية، افتح الرابط التالي:${nl}${url}${nl}${nl}` +
+        `إذا لم تطلب إعادة التعيين، تجاهل هذه الرسالة.` +
+        footer
+      )
+    case 'magiclink':
+      return (
+        `رابط الدخول إلى ${brand}:${nl}${url}${nl}${nl}` +
+        `الرابط صالح لفترة قصيرة ويُستخدم مرة واحدة فقط.` +
+        footer
+      )
+    case 'email_change':
+      return (
+        `طلب تغيير البريد الإلكتروني لحسابك في ${brand}.${nl}` +
+        (args.oldEmail ? `البريد الحالي: ${args.oldEmail}${nl}` : '') +
+        (args.newEmail ? `البريد الجديد: ${args.newEmail}${nl}` : '') +
+        `${nl}لتأكيد التغيير، افتح الرابط التالي:${nl}${url}${nl}${nl}` +
+        `إذا لم تطلب هذا التغيير، تجاهل هذه الرسالة.` +
+        footer
+      )
+    case 'reauthentication':
+      return (
+        `رمز التحقق الخاص بك في ${brand}:${nl}${nl}` +
+        `${args.token ?? ''}${nl}${nl}` +
+        `الرمز صالح لعشر دقائق ولا يمكن استخدامه إلا مرة واحدة.` +
+        footer
+      )
+  }
+}
+
 export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
   server: {
     handlers: {
@@ -321,6 +381,12 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
           oldEmail: callerEmail,
           newEmail: body.newEmail,
         })
+        const text = renderTextTemplate(body.action, {
+          url: link.url,
+          token: link.token,
+          oldEmail: callerEmail,
+          newEmail: body.newEmail,
+        })
         const subject = SUBJECTS[body.action]
         const messageId = crypto.randomUUID()
         const idempotencyKey = body.idempotencyKey ?? messageId
@@ -342,9 +408,11 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
             idempotency_key: idempotencyKey,
             to: recipient,
             from: FROM_ADDRESS,
+            reply_to: REPLY_TO_ADDRESS,
             sender_domain: SENDER_DOMAIN,
             subject,
             html,
+            text,
             purpose: 'transactional',
             label: body.action,
             queued_at: new Date().toISOString(),
