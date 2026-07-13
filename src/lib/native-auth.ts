@@ -197,20 +197,27 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
             console.error("[native-auth] exchange failed:", error.message);
           } else {
             console.info("[native-auth] exchange success");
-            if (data.session) {
-              const { error: setMainSessionError } = await supabase.auth.setSession({
-                access_token: data.session.access_token,
-                refresh_token: data.session.refresh_token,
-              });
-              if (setMainSessionError) {
-                exchangeError = setMainSessionError.message;
-                console.error("[native-auth] main client setSession failed:", setMainSessionError.message);
-              } else {
-                console.info("[native-auth] main client setSession OK");
-              }
+            // NOTE: We intentionally do NOT call `supabase.auth.setSession()`
+            // on the main client here. `setSession` triggers a GET
+            // `/auth/v1/user` network request, which reliably fails with
+            // `TypeError: Failed to fetch` on Capacitor Android right after
+            // the Chrome Custom Tab hands control back to the WebView
+            // (network stack race on resume). Since the native PKCE client
+            // and the main client share the same default storage key
+            // (`sb-<project-ref>-auth-token` in localStorage), the session
+            // written by `exchangeCodeForSession` is already visible to the
+            // main client. A pure-storage `getSession()` re-hydrates it
+            // without any fetch.
+            const { data: mainSess } = await supabase.auth.getSession();
+            exchangedOk = !!mainSess.session;
+            if (!exchangedOk) {
+              exchangeError = "لم يتم حفظ الجلسة داخل التطبيق";
+              console.error("[native-auth] main client getSession returned no session after exchange");
+            } else {
+              console.info("[native-auth] main client hydrated from shared storage");
             }
-            exchangedOk = !!data.session && !exchangeError;
           }
+
         } else {
           exchangeError = "الرابط لا يحتوي على رمز مصادقة";
           console.info("[native-auth] ignored because deep link had no code / token / error");
