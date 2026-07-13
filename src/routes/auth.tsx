@@ -57,11 +57,22 @@ function AuthPage() {
       }
       if (mode === "forgot") {
         if (!email) { setError("أدخل بريدك الإلكتروني"); return; }
-        const redirectTo = typeof window !== "undefined"
-          ? `${window.location.origin}/auth/callback?type=recovery`
-          : undefined;
-        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-        if (resetErr) { setError(resetErr.message); return; }
+        const authEmailMode = ((import.meta.env.VITE_AUTH_EMAIL_MODE as string | undefined) ?? "custom").toLowerCase();
+        try {
+          if (authEmailMode === "custom") {
+            const { requestPasswordResetEmail } = await import("@/lib/auth-emails");
+            await requestPasswordResetEmail(email);
+          } else {
+            const redirectTo = typeof window !== "undefined"
+              ? `${window.location.origin}/auth/callback?type=recovery`
+              : undefined;
+            const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+            if (resetErr) { setError(resetErr.message); return; }
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : String(err));
+          return;
+        }
         setInfo("أرسلنا رابط إعادة تعيين كلمة المرور إلى بريدك. تحقّق من صندوق الوارد ومجلد الرسائل غير المرغوب فيها.");
         return;
       }
