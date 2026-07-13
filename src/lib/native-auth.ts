@@ -116,14 +116,26 @@ function collectDeepLinkParams(url: URL): URLSearchParams {
 // drive the rest (profile sync, FCM token registration, redirects).
 let listenerInstalled = false;
 export async function installNativeAuthDeepLinkListener(): Promise<void> {
-  if (listenerInstalled) return;
+  if (listenerInstalled) {
+    console.info("[native-auth] listener already installed — skipping");
+    return;
+  }
   listenerInstalled = true;
+  console.info("[native-auth] listener installed");
   try {
     const { App } = await import("@capacitor/app");
     await App.addListener("appUrlOpen", async (event: { url: string }) => {
+      console.info("[native-auth] appUrlOpen fired");
       const url = event?.url ?? "";
-      console.info("[native-auth] appUrlOpen received:", url);
-      if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) return;
+      console.info("[native-auth] url=", url ? sanitizeOAuthUrl(url) : "(empty)");
+      if (!url) {
+        console.info("[native-auth] ignored because url was empty");
+        return;
+      }
+      if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) {
+        console.info(`[native-auth] ignored because url did not start with ${NATIVE_DEEP_LINK_SCHEME}://`);
+        return;
+      }
 
       let exchangedOk = false;
       let exchangeError: string | null = null;
