@@ -156,7 +156,7 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
     }
     recordTrace("native-auth", "signInWithOAuth-url", `len=${oauthUrl.length}`);
 
-    const verifier = await getDurableAuthStorage().getItem(NATIVE_CODE_VERIFIER_KEY);
+    const verifier = readLocalStorageValue(NATIVE_CODE_VERIFIER_KEY);
     const verifierLen = verifier?.length ?? 0;
     recordTrace("native-auth", "pkce-verifier-present", `after signInWithOAuth:len=${verifierLen}`);
     if (!verifier) {
@@ -448,6 +448,15 @@ async function nativeStorageSelfTest(): Promise<{ ok: true } | { ok: false; erro
     const msg = e instanceof Error ? e.message : String(e);
     recordTrace("native-auth", "storage-self-test-failure", msg.slice(0, 80));
     return { ok: false, error: "تعذر تجهيز التخزين الآمن لتسجيل الدخول عبر Google. أعد المحاولة." };
+  }
+}
+
+function readLocalStorageValue(key: string): string | null {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
   }
 }
 
