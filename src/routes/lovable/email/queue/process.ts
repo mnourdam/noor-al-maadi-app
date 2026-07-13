@@ -266,6 +266,7 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
                   subject: payload.subject,
                   html: payload.html,
                   text: payload.text,
+                  replyTo: payload.reply_to,
                   headers: listUnsubscribe,
                   idempotencyKey:
                     payload.idempotency_key || payload.message_id || undefined,
