@@ -12,6 +12,7 @@
 
 import { supabase } from '@/integrations/supabase/client'
 import { isCapacitorNative } from '@/lib/native-auth'
+import { getServerApiUrl } from '@/lib/serverApi'
 
 // Web origin used for email verification links so recipients can open them
 // on any device (desktop, mobile browser). When the request originates from
