@@ -171,8 +171,10 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
 
         if (errorDescription) {
           exchangeError = errorDescription;
+          console.info("[native-auth] ignored because provider returned error:", errorDescription);
           console.error("[native-auth] provider error", errorDescription, "payload=", describeSearchParams(params));
         } else if (accessToken && refreshToken) {
+          console.info("[native-auth] parsed hash tokens (implicit flow)");
           console.info("[native-auth] setSession from hash tokens");
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -183,26 +185,18 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
             console.error("[native-auth] setSession failed", error.message);
           } else {
             exchangedOk = !!data.session;
-            console.info("[native-auth] setSession OK user=", data.session?.user?.id);
+            console.info("[native-auth] setSession OK");
           }
         } else if (code) {
-          console.info("[pkce-exchange-start]", {
-            ts: new Date().toISOString(),
-            platform: "android",
-            codePresent: true,
-          });
-          console.info("[native-auth] exchangeCodeForSession start code.len=", code.length);
+          console.info("[native-auth] parsed code (len=", code.length, ")");
+          console.info("[native-auth] exchanging code");
           const nativeClient = getNativePkceSupabaseClient();
           const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
           if (error) {
             exchangeError = error.message;
-            console.error("[pkce-exchange-failure]", {
-              ts: new Date().toISOString(),
-              platform: "android",
-              reason: error.message,
-            });
             console.error("[native-auth] exchange failed:", error.message);
           } else {
+            console.info("[native-auth] exchange success");
             if (data.session) {
               const { error: setMainSessionError } = await supabase.auth.setSession({
                 access_token: data.session.access_token,
@@ -211,37 +205,21 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
               if (setMainSessionError) {
                 exchangeError = setMainSessionError.message;
                 console.error("[native-auth] main client setSession failed:", setMainSessionError.message);
+              } else {
+                console.info("[native-auth] main client setSession OK");
               }
             }
             exchangedOk = !!data.session && !exchangeError;
-            console.info("[pkce-exchange-success]", {
-              ts: new Date().toISOString(),
-              platform: "android",
-              sessionEstablished: exchangedOk,
-            });
-            console.info(
-              "[native-auth] exchange OK user=",
-              data.session?.user?.id,
-              "email=",
-              data.session?.user?.email,
-            );
           }
         } else {
           exchangeError = "الرابط لا يحتوي على رمز مصادقة";
+          console.info("[native-auth] ignored because deep link had no code / token / error");
           console.warn("[native-auth] deep link had no code/token/error payload=", describeSearchParams(params));
         }
 
         if (exchangedOk) {
           const { data: sess } = await supabase.auth.getSession();
-          console.info("[auth-session-established]", {
-            ts: new Date().toISOString(),
-            platform: "android",
-            hasUser: Boolean(sess.session?.user?.id),
-          });
-          console.info(
-            "[native-auth] getSession after exchange -> user=",
-            sess.session?.user?.id ?? "(none)",
-          );
+          console.info("[native-auth] getSession after exchange hasUser=", Boolean(sess.session?.user?.id));
           if (!sess.session) {
             exchangedOk = false;
             exchangeError = exchangeError ?? "لم يتم حفظ الجلسة داخل التطبيق";
