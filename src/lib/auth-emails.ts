@@ -12,6 +12,7 @@
 
 import { supabase } from '@/integrations/supabase/client'
 import { isCapacitorNative } from '@/lib/native-auth'
+import { getServerApiUrl } from '@/lib/serverApi'
 
 // Web origin used for email verification links so recipients can open them
 // on any device (desktop, mobile browser). When the request originates from
@@ -63,11 +64,24 @@ async function dispatch(args: DispatchArgs): Promise<void> {
     if (!token) throw new Error('No active session')
     headers.Authorization = `Bearer ${token}`
   }
-  const res = await fetch('/lovable/email/auth-custom/dispatch', {
+  const url = getServerApiUrl('/lovable/email/auth-custom/dispatch')
+  try {
+    console.log('[auth-custom-dispatch-start]', {
+      action: args.action,
+      host: new URL(url, typeof window !== 'undefined' ? window.location.origin : 'https://localhost').host,
+    })
+  } catch { /* ignore */ }
+  const res = await fetch(url, {
     method: 'POST',
     headers,
     body: JSON.stringify(args),
   })
+  try {
+    console.log('[auth-custom-dispatch-response]', {
+      action: args.action,
+      status: res.status,
+    })
+  } catch { /* ignore */ }
   if (!res.ok) {
     // Parse structured server error so callers can show clean Arabic copy
     // instead of the raw JSON body.
@@ -179,7 +193,7 @@ export async function verifyReauthenticationCode(code: string): Promise<boolean>
   const token = data.session?.access_token
   if (!token) throw new Error('No active session')
 
-  const res = await fetch('/lovable/email/auth-custom/verify-reauth', {
+  const res = await fetch(getServerApiUrl('/lovable/email/auth-custom/verify-reauth'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
