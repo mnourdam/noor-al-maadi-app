@@ -132,8 +132,9 @@ async function generateLink(
   }
 
   if (action === 'reauthentication') {
+    // `reauthentication` is supported by the Auth Admin API but not typed in the JS SDK.
     const { data, error } = await admin.auth.admin.generateLink({
-      type: 'reauthentication',
+      type: 'reauthentication' as unknown as 'magiclink',
       email,
       options: { redirectTo },
     })
