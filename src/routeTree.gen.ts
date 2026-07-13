@@ -119,6 +119,7 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as LovableEmailAuthCustomVerifyReauthRouteImport } from './routes/lovable/email/auth-custom/verify-reauth'
 import { Route as LovableEmailAuthCustomDispatchRouteImport } from './routes/lovable/email/auth-custom/dispatch'
 import { Route as ApiPublicWebhooksResendRouteImport } from './routes/api/public/webhooks/resend'
 import { Route as AdminCampaignsIdEditRouteImport } from './routes/admin.campaigns.$id.edit'
@@ -693,6 +694,12 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailAuthCustomVerifyReauthRoute =
+  LovableEmailAuthCustomVerifyReauthRouteImport.update({
+    id: '/lovable/email/auth-custom/verify-reauth',
+    path: '/lovable/email/auth-custom/verify-reauth',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailAuthCustomDispatchRoute =
   LovableEmailAuthCustomDispatchRouteImport.update({
     id: '/lovable/email/auth-custom/dispatch',
@@ -824,6 +831,7 @@ export interface FileRoutesByFullPath {
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
+  '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -936,6 +944,7 @@ export interface FileRoutesByTo {
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
+  '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1053,6 +1062,7 @@ export interface FileRoutesById {
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
+  '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1171,6 +1181,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns/$id/edit'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
+    | '/lovable/email/auth-custom/verify-reauth'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1283,6 +1294,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns/$id/edit'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
+    | '/lovable/email/auth-custom/verify-reauth'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1399,6 +1411,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns/$id/edit'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
+    | '/lovable/email/auth-custom/verify-reauth'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1500,6 +1513,7 @@ export interface RootRouteChildren {
   AdminCampaignsIdEditRoute: typeof AdminCampaignsIdEditRoute
   ApiPublicWebhooksResendRoute: typeof ApiPublicWebhooksResendRoute
   LovableEmailAuthCustomDispatchRoute: typeof LovableEmailAuthCustomDispatchRoute
+  LovableEmailAuthCustomVerifyReauthRoute: typeof LovableEmailAuthCustomVerifyReauthRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -2279,6 +2293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/auth-custom/verify-reauth': {
+      id: '/lovable/email/auth-custom/verify-reauth'
+      path: '/lovable/email/auth-custom/verify-reauth'
+      fullPath: '/lovable/email/auth-custom/verify-reauth'
+      preLoaderRoute: typeof LovableEmailAuthCustomVerifyReauthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth-custom/dispatch': {
       id: '/lovable/email/auth-custom/dispatch'
       path: '/lovable/email/auth-custom/dispatch'
@@ -2493,6 +2514,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminCampaignsIdEditRoute: AdminCampaignsIdEditRoute,
   ApiPublicWebhooksResendRoute: ApiPublicWebhooksResendRoute,
   LovableEmailAuthCustomDispatchRoute: LovableEmailAuthCustomDispatchRoute,
+  LovableEmailAuthCustomVerifyReauthRoute:
+    LovableEmailAuthCustomVerifyReauthRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
