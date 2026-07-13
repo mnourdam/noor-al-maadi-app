@@ -18,6 +18,7 @@ import * as React from 'react'
 import { render } from 'react-email'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createFileRoute } from '@tanstack/react-router'
+import { corsPreflight, withCors } from '@/lib/serverCors'
 
 import { SignupEmail } from '@/lib/email-templates/signup'
 import { RecoveryEmail } from '@/lib/email-templates/recovery'
@@ -250,7 +251,9 @@ function renderTextTemplate(
 export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
   server: {
     handlers: {
+      OPTIONS: async ({ request }) => corsPreflight(request),
       POST: async ({ request }) => {
+        const inner = async (): Promise<Response> => {
         const mode = (process.env.AUTH_EMAIL_MODE || 'custom').toLowerCase()
         if (mode !== 'custom') {
           return Response.json(
@@ -447,6 +450,16 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
           message_id: messageId,
           action: body.action,
         })
+        }
+        try {
+          return withCors(request, await inner())
+        } catch (err) {
+          console.error('auth-custom: unhandled', err)
+          return withCors(
+            request,
+            Response.json({ error: 'internal' }, { status: 500 }),
+          )
+        }
       },
     },
   },

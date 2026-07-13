@@ -85,7 +85,15 @@ async function bootMainApp(root: HTMLElement) {
   try {
     // Install Google-OAuth deep-link listener BEFORE first render so an OS
     // resume that delivers `app.lovable.irth://auth/callback?...` is captured.
-    void import("./lib/native-auth").then((m) => m.installNativeAuthDeepLinkListener());
+    console.info("[native-auth] boot: requesting listener install");
+    void import("./lib/native-auth").then((m) => {
+      console.info("[native-auth] boot: calling installNativeAuthDeepLinkListener");
+      return m.installNativeAuthDeepLinkListener();
+    }).then(() => {
+      console.info("[native-auth] boot: App.addListener(appUrlOpen) registered");
+    }).catch((err) => {
+      console.error("[native-auth] boot: install threw", err);
+    });
 
     const router = getRouter();
     createRoot(root).render(<RouterProvider router={router} />);

@@ -116,14 +116,26 @@ function collectDeepLinkParams(url: URL): URLSearchParams {
 // drive the rest (profile sync, FCM token registration, redirects).
 let listenerInstalled = false;
 export async function installNativeAuthDeepLinkListener(): Promise<void> {
-  if (listenerInstalled) return;
+  if (listenerInstalled) {
+    console.info("[native-auth] listener already installed — skipping");
+    return;
+  }
   listenerInstalled = true;
+  console.info("[native-auth] listener installed");
   try {
     const { App } = await import("@capacitor/app");
     await App.addListener("appUrlOpen", async (event: { url: string }) => {
+      console.info("[native-auth] appUrlOpen fired");
       const url = event?.url ?? "";
-      console.info("[native-auth] appUrlOpen received:", url);
-      if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) return;
+      console.info("[native-auth] url=", url ? sanitizeOAuthUrl(url) : "(empty)");
+      if (!url) {
+        console.info("[native-auth] ignored because url was empty");
+        return;
+      }
+      if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) {
+        console.info(`[native-auth] ignored because url did not start with ${NATIVE_DEEP_LINK_SCHEME}://`);
+        return;
+      }
 
       let exchangedOk = false;
       let exchangeError: string | null = null;
@@ -159,8 +171,10 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
 
         if (errorDescription) {
           exchangeError = errorDescription;
+          console.info("[native-auth] ignored because provider returned error:", errorDescription);
           console.error("[native-auth] provider error", errorDescription, "payload=", describeSearchParams(params));
         } else if (accessToken && refreshToken) {
+          console.info("[native-auth] parsed hash tokens (implicit flow)");
           console.info("[native-auth] setSession from hash tokens");
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -171,26 +185,18 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
             console.error("[native-auth] setSession failed", error.message);
           } else {
             exchangedOk = !!data.session;
-            console.info("[native-auth] setSession OK user=", data.session?.user?.id);
+            console.info("[native-auth] setSession OK");
           }
         } else if (code) {
-          console.info("[pkce-exchange-start]", {
-            ts: new Date().toISOString(),
-            platform: "android",
-            codePresent: true,
-          });
-          console.info("[native-auth] exchangeCodeForSession start code.len=", code.length);
+          console.info("[native-auth] parsed code (len=", code.length, ")");
+          console.info("[native-auth] exchanging code");
           const nativeClient = getNativePkceSupabaseClient();
           const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
           if (error) {
             exchangeError = error.message;
-            console.error("[pkce-exchange-failure]", {
-              ts: new Date().toISOString(),
-              platform: "android",
-              reason: error.message,
-            });
             console.error("[native-auth] exchange failed:", error.message);
           } else {
+            console.info("[native-auth] exchange success");
             if (data.session) {
               const { error: setMainSessionError } = await supabase.auth.setSession({
                 access_token: data.session.access_token,
@@ -199,37 +205,21 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
               if (setMainSessionError) {
                 exchangeError = setMainSessionError.message;
                 console.error("[native-auth] main client setSession failed:", setMainSessionError.message);
+              } else {
+                console.info("[native-auth] main client setSession OK");
               }
             }
             exchangedOk = !!data.session && !exchangeError;
-            console.info("[pkce-exchange-success]", {
-              ts: new Date().toISOString(),
-              platform: "android",
-              sessionEstablished: exchangedOk,
-            });
-            console.info(
-              "[native-auth] exchange OK user=",
-              data.session?.user?.id,
-              "email=",
-              data.session?.user?.email,
-            );
           }
         } else {
           exchangeError = "الرابط لا يحتوي على رمز مصادقة";
+          console.info("[native-auth] ignored because deep link had no code / token / error");
           console.warn("[native-auth] deep link had no code/token/error payload=", describeSearchParams(params));
         }
 
         if (exchangedOk) {
           const { data: sess } = await supabase.auth.getSession();
-          console.info("[auth-session-established]", {
-            ts: new Date().toISOString(),
-            platform: "android",
-            hasUser: Boolean(sess.session?.user?.id),
-          });
-          console.info(
-            "[native-auth] getSession after exchange -> user=",
-            sess.session?.user?.id ?? "(none)",
-          );
+          console.info("[native-auth] getSession after exchange hasUser=", Boolean(sess.session?.user?.id));
           if (!sess.session) {
             exchangedOk = false;
             exchangeError = exchangeError ?? "لم يتم حفظ الجلسة داخل التطبيق";
@@ -240,24 +230,18 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         console.error("[native-auth] deep-link handler crashed:", exchangeError);
       } finally {
         try {
+          console.info("[native-auth] browser closing");
           const { Browser } = await import("@capacitor/browser");
           await Browser.close();
-          console.info("[browser-close-success]", {
-            ts: new Date().toISOString(),
-            platform: "android",
-          });
+          console.info("[native-auth] browser closed");
         } catch (closeErr) {
-          console.warn("[browser-close-failure]", {
-            ts: new Date().toISOString(),
-            platform: "android",
-            reason: closeErr instanceof Error ? closeErr.message : String(closeErr),
-          });
+          console.warn(
+            "[native-auth] browser close failed:",
+            closeErr instanceof Error ? closeErr.message : String(closeErr),
+          );
         }
 
         if (exchangedOk) {
-          // Compare the tapped intent (signin vs signup) against the actual
-          // outcome so the global GoogleAuthResultDialog can show a friendly
-          // note after the WebView reloads into /profile.
           try {
             const { data: sess } = await supabase.auth.getSession();
             const intent = getAndClearGoogleAuthIntent();
@@ -266,20 +250,18 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
             );
           } catch { /* ignore */ }
 
-          // Wait for the account provider to see SIGNED_IN before we navigate,
-          // so /profile does not render a Guest flash while onAuthStateChange
-          // is still propagating.
-          await waitForSignedIn(3000);
+          console.info("[native-auth] waitForSignedIn start");
+          const signedIn = await waitForSignedIn(3000);
+          console.info("[native-auth] waitForSignedIn done result=", signedIn);
           try {
             if (typeof window !== "undefined") {
-              // Full reload is the most reliable way to force the router,
-              // account provider, and all queries to re-hydrate with the
-              // freshly persisted Supabase session inside the APK WebView.
               const dest = consumeAuthOrigin("/profile");
+              console.info("[native-auth] navigating to", dest);
               window.location.replace(dest);
             }
           } catch { /* ignore */ }
         } else {
+          console.info("[native-auth] not navigating — exchange did not succeed");
           try {
             if (typeof window !== "undefined") {
               const msg = exchangeError
