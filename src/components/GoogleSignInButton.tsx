@@ -64,12 +64,24 @@ export function GoogleSignInButton({
           hasIntent: Boolean(intent),
         });
         console.info("[google-oauth] branch=NATIVE (Capacitor)");
-        const r = await signInWithGoogleNative();
+        // Bounded race so a hung native bridge (e.g. a stalled Preferences
+        // call) can never leave the button spinning forever.
+        const timeoutMs = 12000;
+        const nativeCall = signInWithGoogleNative();
+        const timeoutSentinel = new Promise<{ ok: false; error: string; timedOut: true }>((resolve) => {
+          setTimeout(() => resolve({ ok: false, error: "timeout", timedOut: true }), timeoutMs);
+        });
+        const r = await Promise.race([nativeCall, timeoutSentinel]);
         if (!r.ok) {
-          onError?.(r.error ?? "تعذر تسجيل الدخول عبر Google.");
+          const msg =
+            "timedOut" in r
+              ? "استغرقت العملية وقتاً طويلاً. أعد المحاولة."
+              : r.error ?? "تعذر تسجيل الدخول عبر Google.";
+          onError?.(msg);
         }
         return;
       }
+
 
       // Web flow — direct Supabase Google OAuth (custom credentials).
       const origin =
