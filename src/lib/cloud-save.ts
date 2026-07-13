@@ -162,6 +162,30 @@ export async function signUpWithEmail(args: { email: string; password: string; u
   const { email, password, username, referralCode, displayName } = args;
   const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
   const name = (displayName ?? username).trim();
+
+  // Feature-flagged auth email pipeline.
+  // custom (default): server-side generateLink() + custom pgmq queue + Resend.
+  //                  User is created via Admin API; no session is returned.
+  // legacy:           supabase.auth.signUp → Send Email Hook → legacy queue.
+  const mode = ((import.meta.env.VITE_AUTH_EMAIL_MODE as string | undefined) ?? "custom").toLowerCase();
+  if (mode === "custom") {
+    const { requestSignupEmail } = await import("@/lib/auth-emails");
+    try {
+      await requestSignupEmail({
+        email: email.trim(),
+        password,
+        username: username.trim(),
+        displayName: name,
+        referralCode: referralCode?.trim().toUpperCase(),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { data: { user: null, session: null }, error: { message } as { message: string } };
+    }
+    // No client session is created in custom mode — user must confirm via email.
+    return { data: { user: null, session: null }, error: null };
+  }
+
   return supabase.auth.signUp({
     email,
     password,
