@@ -65,35 +65,53 @@ function memDel(key: string): void {
 
 class NativePreferencesStorage implements AsyncSupabaseStorage {
   async getItem(key: string): Promise<string | null> {
+    const t0 = Date.now();
     try {
+      const { recordTrace } = await import("@/lib/diag-trace");
+      recordTrace("native-auth", "prefs-get-start", key);
       const P = await prefs();
       const { value } = await withTimeout(P.get({ key }), PREF_TIMEOUT_MS, `get:${key}`);
+      recordTrace("native-auth", "prefs-get-success", `${key}:${Date.now() - t0}ms:len=${value?.length ?? 0}`);
       if (value != null) { mem.set(key, value); return value; }
-      // Preferences empty → fall back to any mirrored value we still have.
       return memGet(key);
     } catch (err) {
-      try { console.warn("[nativeAuthStorage] getItem fallback", key, (err as Error)?.message); } catch { /* ignore */ }
+      try {
+        const { recordTrace } = await import("@/lib/diag-trace");
+        recordTrace("native-auth", "prefs-get-fallback", `${key}:${Date.now() - t0}ms:${(err as Error)?.message}`);
+      } catch { /* ignore */ }
       return memGet(key);
     }
   }
   async setItem(key: string, value: string): Promise<void> {
-    // Always write the mirror first so gotrue-js can proceed even if the
-    // native bridge is slow / hung.
     memSet(key, value);
+    const t0 = Date.now();
     try {
+      const { recordTrace } = await import("@/lib/diag-trace");
+      recordTrace("native-auth", "prefs-set-start", `${key}:len=${value.length}`);
       const P = await prefs();
       await withTimeout(P.set({ key, value }), PREF_TIMEOUT_MS, `set:${key}`);
+      recordTrace("native-auth", "prefs-set-success", `${key}:${Date.now() - t0}ms`);
     } catch (err) {
-      try { console.warn("[nativeAuthStorage] setItem fallback", key, (err as Error)?.message); } catch { /* ignore */ }
+      try {
+        const { recordTrace } = await import("@/lib/diag-trace");
+        recordTrace("native-auth", "prefs-set-fallback", `${key}:${Date.now() - t0}ms:${(err as Error)?.message}`);
+      } catch { /* ignore */ }
     }
   }
   async removeItem(key: string): Promise<void> {
     memDel(key);
+    const t0 = Date.now();
     try {
+      const { recordTrace } = await import("@/lib/diag-trace");
+      recordTrace("native-auth", "prefs-remove-start", key);
       const P = await prefs();
       await withTimeout(P.remove({ key }), PREF_TIMEOUT_MS, `remove:${key}`);
+      recordTrace("native-auth", "prefs-remove-success", `${key}:${Date.now() - t0}ms`);
     } catch (err) {
-      try { console.warn("[nativeAuthStorage] removeItem fallback", key, (err as Error)?.message); } catch { /* ignore */ }
+      try {
+        const { recordTrace } = await import("@/lib/diag-trace");
+        recordTrace("native-auth", "prefs-remove-fallback", `${key}:${Date.now() - t0}ms:${(err as Error)?.message}`);
+      } catch { /* ignore */ }
     }
   }
 }
