@@ -24,6 +24,14 @@ import { RecoveryEmail } from '@/lib/email-templates/recovery'
 import { MagicLinkEmail } from '@/lib/email-templates/magic-link'
 import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
+import {
+  REAUTH_MAX_ATTEMPTS,
+  REAUTH_PURPOSE,
+  REAUTH_RATE_LIMIT_PER_HOUR,
+  REAUTH_TTL_MINUTES,
+  generateSixDigitCode,
+  hashReauthCode,
+} from '@/lib/reauth-otp'
 
 const SITE_NAME_AR = 'إرث'
 const SITE_NAME_LATIN = 'Irth'
