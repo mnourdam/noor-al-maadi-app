@@ -253,10 +253,10 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
     handlers: {
       OPTIONS: async ({ request }) => corsPreflight(request),
       POST: async ({ request }) => {
-        const respond = (r: Response) => withCors(request, r)
+        const inner = async (): Promise<Response> => {
         const mode = (process.env.AUTH_EMAIL_MODE || 'custom').toLowerCase()
         if (mode !== 'custom') {
-          return respond(Response.json(
+          return Response.json(
             { error: 'auth_email_mode_disabled', mode },
             { status: 503 },
           )
