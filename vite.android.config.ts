@@ -10,6 +10,24 @@ import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import path from "node:path";
+import { execSync } from "node:child_process";
+
+function readSha(): string {
+  try {
+    return (
+      process.env.GITHUB_SHA ||
+      process.env.LOVABLE_COMMIT_SHA ||
+      execSync("git rev-parse HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+        .toString()
+        .trim()
+    );
+  } catch {
+    return "unknown";
+  }
+}
+const BUILD_SHA = readSha();
+const BUILD_TIME = new Date().toISOString();
+const BUILD_TYPE = process.env.ANDROID_BUILD_TYPE || "debug";
 
 export default defineConfig({
   root: path.resolve(__dirname, "android-web"),
@@ -56,6 +74,10 @@ export default defineConfig({
     "import.meta.env.TSS_DEV_SSR_STYLES_ENABLED": JSON.stringify("false"),
     "import.meta.env.TSS_DEV_SSR_STYLES_BASEPATH": JSON.stringify("/"),
     "import.meta.env.TSS_INLINE_CSS_ENABLED": JSON.stringify("false"),
+    __BUILD_SHA__: JSON.stringify(BUILD_SHA),
+    __BUILD_TIME__: JSON.stringify(BUILD_TIME),
+    __BUILD_TYPE__: JSON.stringify(BUILD_TYPE),
+    __BUILD_TARGET__: JSON.stringify("android"),
   },
   css: { transformer: "lightningcss" },
   build: {

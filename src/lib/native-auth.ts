@@ -17,6 +17,7 @@ import {
   stashGoogleAuthResult,
 } from "@/lib/googleAuthResult";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
+import { recordTrace } from "@/lib/diag-trace";
 
 // Published bounce endpoint that returns an HTML page which immediately
 // redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
@@ -44,6 +45,7 @@ export function isCapacitorNative(): boolean {
 }
 
 export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: string }> {
+  recordTrace("native-auth", "native-auth-start");
   console.info("[native-auth] branch=NATIVE redirectTo=", NATIVE_REDIRECT_URL);
   try {
     const { Browser } = await import("@capacitor/browser");
@@ -64,6 +66,7 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
 
     if (error) {
       console.error("[native-auth] signInWithOAuth failed", error.message);
+      recordTrace("native-auth", "pkce-exchange-failure", error.message);
       return { ok: false, error: error.message };
     }
     const oauthUrl = data.url;
@@ -71,6 +74,7 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
 
     logPkceVerifierState("after signInWithOAuth");
     console.info("[native-auth] opening custom tab", sanitizeOAuthUrl(oauthUrl));
+    recordTrace("native-auth", "browser-opened");
     await Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" });
     return { ok: true };
   } catch (e) {
@@ -115,6 +119,9 @@ function collectDeepLinkParams(url: URL): URLSearchParams {
 // session inside the app, closes the Custom Tab, and lets onAuthStateChange
 // drive the rest (profile sync, FCM token registration, redirects).
 let listenerInstalled = false;
+let listenerRegistered = false;
+export function isNativeAuthListenerInstalled(): boolean { return listenerInstalled; }
+export function isNativeAuthListenerRegistered(): boolean { return listenerRegistered; }
 export async function installNativeAuthDeepLinkListener(): Promise<void> {
   if (listenerInstalled) {
     console.info("[native-auth] listener already installed — skipping");
@@ -126,14 +133,18 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
     const { App } = await import("@capacitor/app");
     await App.addListener("appUrlOpen", async (event: { url: string }) => {
       console.info("[native-auth] appUrlOpen fired");
+      recordTrace("native-auth", "app-url-open");
+      recordTrace("deep-link", "appUrlOpen-fired");
       const url = event?.url ?? "";
       console.info("[native-auth] url=", url ? sanitizeOAuthUrl(url) : "(empty)");
       if (!url) {
         console.info("[native-auth] ignored because url was empty");
+        recordTrace("deep-link", "ignored-empty-url");
         return;
       }
       if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) {
         console.info(`[native-auth] ignored because url did not start with ${NATIVE_DEEP_LINK_SCHEME}://`);
+        recordTrace("deep-link", "ignored-wrong-scheme");
         return;
       }
 
@@ -142,6 +153,7 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
       try {
         const u = new URL(url);
         const params = collectDeepLinkParams(u);
+        recordTrace("deep-link", "parsed", `scheme=${u.protocol.replace(":", "")};host=${u.host};path=${u.pathname}`);
         console.info("[app-url-open]", {
           ts: new Date().toISOString(),
           platform: "android",
@@ -162,6 +174,8 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         const refreshToken = params.get("refresh_token");
         const errorDescription =
           params.get("error_description") || params.get("error");
+        if (code) recordTrace("native-auth", "code-detected");
+
 
         // Sanity: log whether the PKCE verifier is present in this instance's
         // localStorage. If it's missing here, `exchangeCodeForSession` will
@@ -190,24 +204,16 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         } else if (code) {
           console.info("[native-auth] parsed code (len=", code.length, ")");
           console.info("[native-auth] exchanging code");
+          recordTrace("native-auth", "pkce-exchange-start");
           const nativeClient = getNativePkceSupabaseClient();
           const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
           if (error) {
             exchangeError = error.message;
             console.error("[native-auth] exchange failed:", error.message);
+            recordTrace("native-auth", "pkce-exchange-failure", error.message);
           } else {
             console.info("[native-auth] exchange success");
-            // NOTE: We intentionally do NOT call `supabase.auth.setSession()`
-            // on the main client here. `setSession` triggers a GET
-            // `/auth/v1/user` network request, which reliably fails with
-            // `TypeError: Failed to fetch` on Capacitor Android right after
-            // the Chrome Custom Tab hands control back to the WebView
-            // (network stack race on resume). Since the native PKCE client
-            // and the main client share the same default storage key
-            // (`sb-<project-ref>-auth-token` in localStorage), the session
-            // written by `exchangeCodeForSession` is already visible to the
-            // main client. A pure-storage `getSession()` re-hydrates it
-            // without any fetch.
+            recordTrace("native-auth", "pkce-exchange-success");
             const { data: mainSess } = await supabase.auth.getSession();
             exchangedOk = !!mainSess.session;
             if (!exchangedOk) {
@@ -215,6 +221,7 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
               console.error("[native-auth] main client getSession returned no session after exchange");
             } else {
               console.info("[native-auth] main client hydrated from shared storage");
+              recordTrace("native-auth", "session-established");
             }
           }
 
@@ -241,6 +248,7 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           const { Browser } = await import("@capacitor/browser");
           await Browser.close();
           console.info("[native-auth] browser closed");
+          recordTrace("native-auth", "browser-close");
         } catch (closeErr) {
           console.warn(
             "[native-auth] browser close failed:",
@@ -282,6 +290,7 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         }
       }
     });
+    listenerRegistered = true;
   } catch (e) {
     console.error("[native-auth] listener install failed", e);
   }

@@ -13,6 +13,7 @@
 import { supabase } from '@/integrations/supabase/client'
 import { isCapacitorNative } from '@/lib/native-auth'
 import { getServerApiUrl } from '@/lib/serverApi'
+import { recordTrace } from '@/lib/diag-trace'
 
 // Web origin used for email verification links so recipients can open them
 // on any device (desktop, mobile browser). When the request originates from
@@ -65,17 +66,27 @@ async function dispatch(args: DispatchArgs): Promise<void> {
     headers.Authorization = `Bearer ${token}`
   }
   const url = getServerApiUrl('/lovable/email/auth-custom/dispatch')
+  recordTrace('signup', 'resolved-endpoint', url)
   try {
     console.log('[auth-custom-dispatch-start]', {
       action: args.action,
       host: new URL(url, typeof window !== 'undefined' ? window.location.origin : 'https://localhost').host,
     })
   } catch { /* ignore */ }
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(args),
-  })
+  recordTrace('signup', 'fetch-start', args.action)
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(args),
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? `${e.name}:${e.message}` : String(e)
+    recordTrace('signup', 'fetch-error', msg)
+    throw e
+  }
+  recordTrace('signup', 'fetch-response-status', res.status)
   try {
     console.log('[auth-custom-dispatch-response]', {
       action: args.action,
@@ -95,10 +106,12 @@ async function dispatch(args: DispatchArgs): Promise<void> {
       try { message = await res.text() } catch { /* ignore */ }
     }
     console.warn('[auth-emails] dispatch failed', { action: args.action, status: res.status, code, message })
+    recordTrace('signup', 'dispatch-failed', code)
     const err = new Error(translateDispatchError(code, message)) as Error & { code?: string }
     err.code = code
     throw err
   }
+  recordTrace('signup', 'dispatch-success', args.action)
 }
 
 /** Map server error codes + provider messages to friendly Arabic copy. */
