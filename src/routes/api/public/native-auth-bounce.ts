@@ -22,8 +22,22 @@ export const Route = createFileRoute("/api/public/native-auth-bounce")({
         // Never print raw OAuth codes/tokens to logs. The payload is preserved
         // below, but logs show shape + value lengths so the APK hand-off can be
         // debugged safely on real devices.
+        console.info("[native-bounce-hit]", {
+          ts: new Date().toISOString(),
+          platform: "server",
+          stage: "bounce-endpoint",
+          hasCode: params.has("code"),
+          hasState: params.has("state"),
+          hasError: params.has("error"),
+        });
         console.info("[native-bounce] incoming", sanitizeOAuthUrl(url));
         console.info("[native-bounce] query", describeSearchParams(params));
+        console.info("[native-deeplink-issued]", {
+          ts: new Date().toISOString(),
+          platform: "server",
+          scheme: "app.lovable.irth",
+          hasCode: params.has("code"),
+        });
         console.info("[native-bounce] generated", sanitizeOAuthUrl(customScheme));
 
         const html = `<!doctype html>
