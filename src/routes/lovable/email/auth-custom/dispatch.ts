@@ -24,6 +24,14 @@ import { RecoveryEmail } from '@/lib/email-templates/recovery'
 import { MagicLinkEmail } from '@/lib/email-templates/magic-link'
 import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
+import {
+  REAUTH_MAX_ATTEMPTS,
+  REAUTH_PURPOSE,
+  REAUTH_RATE_LIMIT_PER_HOUR,
+  REAUTH_TTL_MINUTES,
+  generateSixDigitCode,
+  hashReauthCode,
+} from '@/lib/reauth-otp'
 
 const SITE_NAME_AR = 'إرث'
 const SITE_NAME_LATIN = 'Irth'
@@ -131,21 +139,8 @@ async function generateLink(
     return { url: data.properties?.action_link ?? '', email: body.newEmail }
   }
 
-  if (action === 'reauthentication') {
-    // `reauthentication` is supported by the Auth Admin API but not typed in the JS SDK.
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: 'reauthentication' as unknown as 'magiclink',
-      email,
-      options: { redirectTo },
-    })
-    if (error) throw error
-    return {
-      url: data.properties?.action_link ?? '',
-      token: data.properties?.email_otp,
-      email,
-    }
-  }
-
+  // reauthentication is handled directly in the POST handler using the
+  // Irth-native OTP pipeline (no admin.generateLink support in Supabase).
   throw new Error(`Unsupported action: ${action}`)
 }
 
@@ -222,10 +217,11 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
           return Response.json({ error: 'invalid_action' }, { status: 400 })
         }
 
-        const admin = createClient(supabaseUrl, serviceKey)
+        const admin: SupabaseClient<any, any> = createClient(supabaseUrl, serviceKey)
 
-        // If the action requires auth, validate bearer & get the caller's email.
+        // If the action requires auth, validate bearer & get the caller's email/id.
         let callerEmail: string | undefined
+        let callerUserId: string | undefined
         if (AUTH_REQUIRED[body.action]) {
           const authHeader = request.headers.get('Authorization')
           if (!authHeader?.startsWith('Bearer ')) {
@@ -237,29 +233,87 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
             return Response.json({ error: 'unauthorized' }, { status: 401 })
           }
           callerEmail = user.email ?? undefined
+          callerUserId = user.id
         }
 
+        // Build the delivery payload. For reauthentication we generate a native
+        // Irth OTP; other actions call Supabase generateLink.
         let link: { url: string; token?: string; email: string }
-        try {
-          link = await generateLink(admin, body, callerEmail)
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          console.error('auth-custom: generateLink failed', {
-            action: body.action,
-            error: msg,
+        if (body.action === 'reauthentication') {
+          if (!callerUserId || !callerEmail) {
+            return Response.json({ error: 'unauthorized' }, { status: 401 })
+          }
+          // Rate limit: max REAUTH_RATE_LIMIT_PER_HOUR challenges per user per hour.
+          const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+          const { count: recentCount, error: countErr } = await admin
+            .from('reauth_challenges')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', callerUserId)
+            .eq('purpose', REAUTH_PURPOSE)
+            .gte('created_at', sinceIso)
+          if (countErr) {
+            console.error('auth-custom: reauth rate check failed', countErr)
+            return Response.json({ error: 'rate_check_failed' }, { status: 500 })
+          }
+          if ((recentCount ?? 0) >= REAUTH_RATE_LIMIT_PER_HOUR) {
+            return Response.json(
+              { error: 'rate_limited', retry_after_seconds: 3600 },
+              { status: 429 },
+            )
+          }
+
+          const code = generateSixDigitCode()
+          const codeHash = await hashReauthCode(callerUserId, code)
+          const expiresAt = new Date(
+            Date.now() + REAUTH_TTL_MINUTES * 60 * 1000,
+          ).toISOString()
+          const requesterIp =
+            request.headers.get('cf-connecting-ip') ??
+            request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+            null
+
+          const { error: insertErr } = await admin
+            .from('reauth_challenges')
+            .insert({
+              user_id: callerUserId,
+              purpose: REAUTH_PURPOSE,
+              code_hash: codeHash,
+              expires_at: expiresAt,
+              max_attempts: REAUTH_MAX_ATTEMPTS,
+              requester_ip: requesterIp,
+            })
+          if (insertErr) {
+            console.error('auth-custom: reauth insert failed', insertErr)
+            return Response.json({ error: 'issue_challenge_failed' }, { status: 500 })
+          }
+
+          console.log('auth-custom: reauth challenge issued', {
+            user_id: callerUserId,
+            recipient: redact(callerEmail),
+            expires_at: expiresAt,
           })
-          return Response.json(
-            { error: 'generate_link_failed', message: msg },
-            { status: 400 },
-          )
+
+          link = { url: '', token: code, email: callerEmail }
+        } else {
+          try {
+            link = await generateLink(admin, body, callerEmail)
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            console.error('auth-custom: generateLink failed', {
+              action: body.action,
+              error: msg,
+            })
+            return Response.json(
+              { error: 'generate_link_failed', message: msg },
+              { status: 400 },
+            )
+          }
+
+          if (!link.url) {
+            return Response.json({ error: 'no_action_link' }, { status: 500 })
+          }
         }
 
-        if (!link.url && body.action !== 'reauthentication') {
-          return Response.json(
-            { error: 'no_action_link' },
-            { status: 500 },
-          )
-        }
 
         const html = await renderTemplate(body.action, {
           url: link.url,

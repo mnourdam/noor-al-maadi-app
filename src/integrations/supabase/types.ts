@@ -1384,6 +1384,48 @@ export type Database = {
           },
         ]
       }
+      reauth_challenges: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          locked_at: string | null
+          max_attempts: number
+          purpose: string
+          requester_ip: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          locked_at?: string | null
+          max_attempts?: number
+          purpose?: string
+          requester_ip?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          locked_at?: string | null
+          max_attempts?: number
+          purpose?: string
+          requester_ip?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       referral_rewards: {
         Row: {
           created_at: string
@@ -2149,6 +2191,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      reauth_challenges_cleanup: { Args: never; Returns: undefined }
       record_notification_click: {
         Args: { p_notification_id: string }
         Returns: undefined
