@@ -21,20 +21,27 @@ import { recordTrace } from '@/lib/diag-trace'
 // into the app's custom scheme; on web the same URL works unchanged.
 const WEB_CALLBACK_ORIGIN = 'https://irth-develop.lovable.app'
 
+// For APK signup/recovery/magic-link emails we must survive Supabase's
+// verify → redirect_to hand-off. Supabase's allow-list matching strips
+// query strings, so a `?native=1` marker on /auth/callback is dropped.
+// The bounce endpoint is a dedicated PATH (already used by Google OAuth)
+// that serves an HTML page which forwards `?code=…&type=…` into the
+// `app.lovable.irth://auth/callback` custom scheme via both
+// `location.replace` and `intent://…` — proven-working on Android.
+const NATIVE_EMAIL_REDIRECT = `${WEB_CALLBACK_ORIGIN}/api/public/native-auth-bounce`
+
 function buildRedirectTo(path: string): string | undefined {
-  // Always use the stable web callback origin — email recipients may open
-  // the link on a different device than the sender.
-  const base = `${WEB_CALLBACK_ORIGIN}${path}`
   try {
     if (isCapacitorNative()) {
-      const u = new URL(base)
-      u.searchParams.set('native', '1')
-      return u.toString()
+      // Path-based marker (survives Supabase allow-list matching). The bounce
+      // endpoint preserves whatever query Supabase appends (code, type, next).
+      return NATIVE_EMAIL_REDIRECT
     }
   } catch {
     /* SSR / no window — fall through */
   }
-  return base
+  // Web: use the callback path directly (unchanged behavior).
+  return `${WEB_CALLBACK_ORIGIN}${path}`
 }
 
 export type AuthEmailMode = 'custom' | 'legacy'
