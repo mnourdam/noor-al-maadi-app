@@ -251,10 +251,12 @@ function renderTextTemplate(
 export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
   server: {
     handlers: {
+      OPTIONS: async ({ request }) => corsPreflight(request),
       POST: async ({ request }) => {
+        const respond = (r: Response) => withCors(request, r)
         const mode = (process.env.AUTH_EMAIL_MODE || 'custom').toLowerCase()
         if (mode !== 'custom') {
-          return Response.json(
+          return respond(Response.json(
             { error: 'auth_email_mode_disabled', mode },
             { status: 503 },
           )
