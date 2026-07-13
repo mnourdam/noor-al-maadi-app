@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
+import { BUILD_TYPE } from "@/lib/build-info";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
