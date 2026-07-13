@@ -38,6 +38,7 @@ const SITE_NAME_LATIN = 'Irth'
 const SENDER_DOMAIN = 'mail.dosur1444.com'
 const FROM_DOMAIN = 'mail.dosur1444.com'
 const FROM_ADDRESS = `${SITE_NAME_AR} <no-reply@${FROM_DOMAIN}>`
+const REPLY_TO_ADDRESS = 'info@dosur1444.com'
 
 type Action = 'signup' | 'recovery' | 'magiclink' | 'email_change' | 'reauthentication'
 
