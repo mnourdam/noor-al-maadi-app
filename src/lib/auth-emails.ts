@@ -46,9 +46,49 @@ async function dispatch(args: DispatchArgs): Promise<void> {
     body: JSON.stringify(args),
   })
   if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`auth_email_dispatch_failed (${res.status}): ${text}`)
+    // Parse structured server error so callers can show clean Arabic copy
+    // instead of the raw JSON body.
+    let code = `http_${res.status}`
+    let message = ''
+    try {
+      const payload = (await res.clone().json()) as { error?: string; message?: string }
+      if (payload?.error) code = payload.error
+      if (payload?.message) message = payload.message
+    } catch {
+      try { message = await res.text() } catch { /* ignore */ }
+    }
+    console.warn('[auth-emails] dispatch failed', { action: args.action, status: res.status, code, message })
+    const err = new Error(translateDispatchError(code, message)) as Error & { code?: string }
+    err.code = code
+    throw err
   }
+}
+
+/** Map server error codes + provider messages to friendly Arabic copy. */
+function translateDispatchError(code: string, message: string): string {
+  const m = (message || '').toLowerCase()
+  if (code === 'generate_link_failed') {
+    if (m.includes('weak') || m.includes('pwned') || m.includes('easy to guess') || (m.includes('password') && (m.includes('short') || m.includes('length')))) {
+      return 'كلمة المرور ضعيفة أو شائعة. اختر كلمة مرور أقوى (٨ أحرف على الأقل مع أرقام ورموز).'
+    }
+    if (m.includes('already registered') || m.includes('user already') || m.includes('already exists')) {
+      return 'هذا البريد مسجّل مسبقاً. جرّب تسجيل الدخول أو استعادة كلمة المرور.'
+    }
+    if (m.includes('invalid') && m.includes('email')) {
+      return 'البريد الإلكتروني غير صالح.'
+    }
+    return message ? `تعذّر إنشاء الحساب: ${message}` : 'تعذّر إنشاء الحساب. حاول مرة أخرى.'
+  }
+  if (code === 'rate_limited' || code === 'http_429') {
+    return 'تم إرسال عدد كبير من الطلبات. انتظر قليلاً ثم حاول مجدداً.'
+  }
+  if (code === 'unauthorized' || code === 'http_401') {
+    return 'الجلسة منتهية. سجّل الدخول مرة أخرى.'
+  }
+  if (code === 'no_action_link') {
+    return 'تعذّر توليد رابط التأكيد. حاول مرة أخرى.'
+  }
+  return message || 'تعذّر إتمام العملية. حاول مرة أخرى.'
 }
 
 // ============================================================
