@@ -28,6 +28,8 @@ import { getDurableAuthStorage } from "@/lib/nativeAuthStorage";
 // scheme, hence the bounce page instead of `/auth/callback?native=1`.
 const NATIVE_REDIRECT_URL =
   "https://irth-develop.lovable.app/api/public/native-auth-bounce";
+const NATIVE_AUTH_STORAGE_KEY = "irth-native-auth";
+const NATIVE_CODE_VERIFIER_KEY = `${NATIVE_AUTH_STORAGE_KEY}-code-verifier`;
 
 // Custom scheme registered in AndroidManifest.xml (intent-filter on
 // MainActivity). Matches Capacitor's appId.
@@ -104,9 +106,9 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
       return { ok: false, error: `listener-install:${listener.error}` };
     }
 
-    // Client creation touches the durable storage adapter at import time
-    // but does NOT hit Preferences — instrument separately so a hang here
-    // is visible in the trace.
+    // Client creation touches the durable storage adapter at import time.
+    // The adapter is localStorage + memory only, so no Capacitor plugin can
+    // block before Browser.open().
     const clientInit = await tracedAwait(
       "pkce-client-init",
       async () => getNativePkceSupabaseClient(),
@@ -117,9 +119,14 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
     }
     const nativeClient = clientInit.value;
 
+    const storageTest = await nativeStorageSelfTest();
+    if (!storageTest.ok) {
+      return { ok: false, error: storageTest.error };
+    }
+
     // signInWithOAuth internally reads/writes the PKCE verifier via the
-    // storage adapter. If Preferences is hanging, this stage will time out
-    // and the trace makes it obvious which await failed.
+    // storage adapter. The adapter is intentionally localStorage + memory only
+    // on native so no Capacitor plugin can block Browser.open().
     const oauth = await tracedAwait(
       "signInWithOAuth",
       () =>
@@ -149,7 +156,13 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
     }
     recordTrace("native-auth", "signInWithOAuth-url", `len=${oauthUrl.length}`);
 
-    logPkceVerifierState("after signInWithOAuth");
+    const verifier = readLocalStorageValue(NATIVE_CODE_VERIFIER_KEY);
+    const verifierLen = verifier?.length ?? 0;
+    recordTrace("native-auth", "pkce-verifier-present", `after signInWithOAuth:len=${verifierLen}`);
+    if (!verifier) {
+      return { ok: false, error: "تعذر حفظ رمز الأمان لتسجيل الدخول عبر Google. أعد المحاولة." };
+    }
+
     console.info("[native-auth] opening custom tab", sanitizeOAuthUrl(oauthUrl));
     const open = await tracedAwait(
       "browser-open",
@@ -180,15 +193,14 @@ function getNativePkceSupabaseClient(): SupabaseClient<Database> {
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Missing Supabase config for native OAuth.");
   }
-  // Durable storage adapter — backed by @capacitor/preferences on Android
-  // so PKCE verifiers survive Custom Tab / Activity teardown. The
-  // storageKey is deliberately distinct from the main `supabase` client's
-  // default key so the two clients cannot fight over the same slot.
+  // Durable storage adapter — backed by window.localStorage with an in-memory
+  // fallback. The storageKey is deliberately distinct from the main `supabase`
+  // client's default key so the two clients cannot fight over the same slot.
   
   nativePkceClient = createClient<Database>(supabaseUrl, supabaseKey, {
     auth: {
       storage: getDurableAuthStorage() as unknown as Storage,
-      storageKey: "irth-native-auth",
+      storageKey: NATIVE_AUTH_STORAGE_KEY,
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
@@ -308,9 +320,9 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           } else {
             console.info("[native-auth] exchange success");
             recordTrace("native-auth", "pkce-exchange-success");
-            // The native PKCE client now owns durable Preferences-backed
-            // storage, so the main `supabase` client (localStorage-backed)
-            // will NOT auto-hydrate. Copy the tokens across explicitly.
+            // The native PKCE client owns a separate storageKey, so the main
+            // `supabase` client will NOT auto-hydrate. Copy the tokens across
+            // explicitly.
             const session = data.session;
             if (session?.access_token && session?.refresh_token) {
               const { error: setErr } = await supabase.auth.setSession({
@@ -407,7 +419,7 @@ function logPkceVerifierState(stage: string): void {
     // The native PKCE client uses storageKey "irth-native-auth"; gotrue-js
     // stores its verifier under `${storageKey}-code-verifier`.
     void getDurableAuthStorage()
-      .getItem("irth-native-auth-code-verifier")
+      .getItem(NATIVE_CODE_VERIFIER_KEY)
       .then((value) => {
         const len = value ? value.length : 0;
         console.info("[native-auth] pkce verifier", stage, `<len:${len}>`);
@@ -415,6 +427,36 @@ function logPkceVerifierState(stage: string): void {
       })
       .catch(() => { /* ignore */ });
   } catch { /* ignore */ }
+}
+
+async function nativeStorageSelfTest(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const storage = getDurableAuthStorage();
+  const key = `${NATIVE_AUTH_STORAGE_KEY}-self-test`;
+  const value = `ok-${Date.now()}`;
+  try {
+    await storage.setItem(key, value);
+    const roundTrip = await storage.getItem(key);
+    await storage.removeItem(key);
+    if (roundTrip !== value) {
+      recordTrace("native-auth", "storage-self-test-failure", "roundtrip-mismatch");
+      return { ok: false, error: "تعذر تجهيز التخزين الآمن لتسجيل الدخول عبر Google. أعد المحاولة." };
+    }
+    recordTrace("native-auth", "storage-self-test-success");
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    recordTrace("native-auth", "storage-self-test-failure", msg.slice(0, 80));
+    return { ok: false, error: "تعذر تجهيز التخزين الآمن لتسجيل الدخول عبر Google. أعد المحاولة." };
+  }
+}
+
+function readLocalStorageValue(key: string): string | null {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 function sanitizeOAuthUrl(input: URL | string): string {
