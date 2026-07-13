@@ -106,9 +106,9 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
       return { ok: false, error: `listener-install:${listener.error}` };
     }
 
-    // Client creation touches the durable storage adapter at import time
-    // but does NOT hit Preferences — instrument separately so a hang here
-    // is visible in the trace.
+    // Client creation touches the durable storage adapter at import time.
+    // The adapter is localStorage + memory only, so no Capacitor plugin can
+    // block before Browser.open().
     const clientInit = await tracedAwait(
       "pkce-client-init",
       async () => getNativePkceSupabaseClient(),
@@ -193,10 +193,9 @@ function getNativePkceSupabaseClient(): SupabaseClient<Database> {
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Missing Supabase config for native OAuth.");
   }
-  // Durable storage adapter — backed by @capacitor/preferences on Android
-  // so PKCE verifiers survive Custom Tab / Activity teardown. The
-  // storageKey is deliberately distinct from the main `supabase` client's
-  // default key so the two clients cannot fight over the same slot.
+  // Durable storage adapter — backed by window.localStorage with an in-memory
+  // fallback. The storageKey is deliberately distinct from the main `supabase`
+  // client's default key so the two clients cannot fight over the same slot.
   
   nativePkceClient = createClient<Database>(supabaseUrl, supabaseKey, {
     auth: {
@@ -321,9 +320,9 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           } else {
             console.info("[native-auth] exchange success");
             recordTrace("native-auth", "pkce-exchange-success");
-            // The native PKCE client now owns durable Preferences-backed
-            // storage, so the main `supabase` client (localStorage-backed)
-            // will NOT auto-hydrate. Copy the tokens across explicitly.
+            // The native PKCE client owns a separate storageKey, so the main
+            // `supabase` client will NOT auto-hydrate. Copy the tokens across
+            // explicitly.
             const session = data.session;
             if (session?.access_token && session?.refresh_token) {
               const { error: setErr } = await supabase.auth.setSession({
