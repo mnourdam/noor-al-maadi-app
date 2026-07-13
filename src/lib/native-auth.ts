@@ -130,6 +130,18 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
       try {
         const u = new URL(url);
         const params = collectDeepLinkParams(u);
+        console.info("[app-url-open]", {
+          ts: new Date().toISOString(),
+          platform: "android",
+          stage: "deep-link-received",
+          scheme: u.protocol.replace(":", ""),
+          host: u.host,
+          hasCode: params.has("code"),
+          hasState: params.has("state"),
+          hasAccessToken: params.has("access_token"),
+          hasError: params.has("error") || params.has("error_description"),
+          nativeMarker: params.get("native") === "1",
+        });
         console.info("[native-auth] appUrlOpen sanitized:", sanitizeOAuthUrl(url));
         console.info("[native-auth] appUrlOpen payload shape:", describeSearchParams(params));
 
@@ -162,11 +174,21 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
             console.info("[native-auth] setSession OK user=", data.session?.user?.id);
           }
         } else if (code) {
+          console.info("[pkce-exchange-start]", {
+            ts: new Date().toISOString(),
+            platform: "android",
+            codePresent: true,
+          });
           console.info("[native-auth] exchangeCodeForSession start code.len=", code.length);
           const nativeClient = getNativePkceSupabaseClient();
           const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
           if (error) {
             exchangeError = error.message;
+            console.error("[pkce-exchange-failure]", {
+              ts: new Date().toISOString(),
+              platform: "android",
+              reason: error.message,
+            });
             console.error("[native-auth] exchange failed:", error.message);
           } else {
             if (data.session) {
@@ -180,6 +202,11 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
               }
             }
             exchangedOk = !!data.session && !exchangeError;
+            console.info("[pkce-exchange-success]", {
+              ts: new Date().toISOString(),
+              platform: "android",
+              sessionEstablished: exchangedOk,
+            });
             console.info(
               "[native-auth] exchange OK user=",
               data.session?.user?.id,
@@ -194,6 +221,11 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
 
         if (exchangedOk) {
           const { data: sess } = await supabase.auth.getSession();
+          console.info("[auth-session-established]", {
+            ts: new Date().toISOString(),
+            platform: "android",
+            hasUser: Boolean(sess.session?.user?.id),
+          });
           console.info(
             "[native-auth] getSession after exchange -> user=",
             sess.session?.user?.id ?? "(none)",
@@ -210,7 +242,17 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         try {
           const { Browser } = await import("@capacitor/browser");
           await Browser.close();
-        } catch { /* ignore */ }
+          console.info("[browser-close-success]", {
+            ts: new Date().toISOString(),
+            platform: "android",
+          });
+        } catch (closeErr) {
+          console.warn("[browser-close-failure]", {
+            ts: new Date().toISOString(),
+            platform: "android",
+            reason: closeErr instanceof Error ? closeErr.message : String(closeErr),
+          });
+        }
 
         if (exchangedOk) {
           // Compare the tapped intent (signin vs signup) against the actual
