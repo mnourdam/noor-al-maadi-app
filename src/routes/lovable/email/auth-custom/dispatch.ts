@@ -450,6 +450,16 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
           message_id: messageId,
           action: body.action,
         })
+        }
+        try {
+          return withCors(request, await inner())
+        } catch (err) {
+          console.error('auth-custom: unhandled', err)
+          return withCors(
+            request,
+            Response.json({ error: 'internal' }, { status: 500 }),
+          )
+        }
       },
     },
   },
