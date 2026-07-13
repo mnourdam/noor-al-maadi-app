@@ -131,21 +131,8 @@ async function generateLink(
     return { url: data.properties?.action_link ?? '', email: body.newEmail }
   }
 
-  if (action === 'reauthentication') {
-    // `reauthentication` is supported by the Auth Admin API but not typed in the JS SDK.
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: 'reauthentication' as unknown as 'magiclink',
-      email,
-      options: { redirectTo },
-    })
-    if (error) throw error
-    return {
-      url: data.properties?.action_link ?? '',
-      token: data.properties?.email_otp,
-      email,
-    }
-  }
-
+  // reauthentication is handled directly in the POST handler using the
+  // Irth-native OTP pipeline (no admin.generateLink support in Supabase).
   throw new Error(`Unsupported action: ${action}`)
 }
 
