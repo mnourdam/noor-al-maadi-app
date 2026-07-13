@@ -261,7 +261,7 @@ export const Route = createFileRoute('/lovable/email/auth-custom/dispatch')({
           )
         }
 
-        const html = renderTemplate(body.action, {
+        const html = await renderTemplate(body.action, {
           url: link.url,
           token: link.token,
           oldEmail: callerEmail,
