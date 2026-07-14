@@ -14,6 +14,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import {
   QUEST_COMPLETED_EVENT,
+  MIN_READ_MS,
+  recordEntityOpen,
   reportEntityRead,
 } from "@/lib/daily-quest";
 import { useAccount } from "@/lib/account";
@@ -159,20 +161,52 @@ function EntityPage() {
 
   const entity = query.data ?? null;
 
-  // Daily Quest completion — fires ONCE per (userKey, day) when the
-  // reader meaningfully reaches the "شبكة الترابط" section OR scrolls
-  // past ~88% of the article. Reading a DIFFERENT entity is a no-op
-  // because `reportEntityRead` checks the target id inside the module.
+  // Daily Quest completion — fires ONCE per (userKey, day) when BOTH
+  // conditions are true:
+  //   1) the reader reaches the "شبكة الترابط" section OR scrolls
+  //      past ~88% of the article, AND
+  //   2) they've dwelled on this page for at least MIN_READ_MS.
+  // The dwell timer starts after the entity finishes rendering
+  // (post-mount), so quick drag-to-bottom cannot complete the quest.
+  // Reading a DIFFERENT entity is a no-op because `reportEntityRead`
+  // checks the target id inside the module.
   const { user } = useAccount();
   const userKey = user?.id ?? "guest";
   const relNetworkRef = useRef<HTMLElement | null>(null);
   const questFiredRef = useRef<string | null>(null);
   useEffect(() => {
     if (!entity?.id) return;
-    // Reset guard when navigating to a different entity.
+    // Reset guards when navigating to a different entity.
     if (questFiredRef.current && questFiredRef.current !== entity.id) {
       questFiredRef.current = null;
     }
+    // Record that the user opened this article — powers the Daily
+    // Quest "never opened" priority tier.
+    recordEntityOpen(userKey, entity.id);
+
+    const mountedAt = Date.now();
+    let thresholdMet = false;
+    let pendingTimer: number | null = null;
+
+    const tryFire = () => {
+      if (questFiredRef.current === entity.id) return;
+      const remaining = MIN_READ_MS - (Date.now() - mountedAt);
+      if (remaining > 0) {
+        // Threshold reached but the reader hasn't dwelled long enough.
+        // Arm a single deferred fire and re-check on the deadline.
+        if (pendingTimer == null) {
+          pendingTimer = window.setTimeout(() => {
+            pendingTimer = null;
+            // Only complete if the user is still on this route (guard
+            // still applies since the effect cleanup nulls the ref).
+            if (thresholdMet) fire();
+          }, remaining);
+        }
+        return;
+      }
+      fire();
+    };
+
     const fire = () => {
       if (questFiredRef.current === entity.id) return;
       const r = reportEntityRead(userKey, entity.id);
@@ -182,7 +216,6 @@ function EntityPage() {
           window.dispatchEvent(new CustomEvent(QUEST_COMPLETED_EVENT, { detail: r.state }));
         } catch { /* ignore */ }
       } else if (r.state?.rewarded) {
-        // Already completed today — mark guard so listeners stay quiet.
         questFiredRef.current = entity.id;
       }
     };
@@ -194,7 +227,7 @@ function EntityPage() {
       observer = new IntersectionObserver(
         (entries) => {
           for (const en of entries) {
-            if (en.isIntersecting) { fire(); observer?.disconnect(); break; }
+            if (en.isIntersecting) { thresholdMet = true; tryFire(); observer?.disconnect(); break; }
           }
         },
         { threshold: 0.35, rootMargin: "0px 0px -10% 0px" },
@@ -209,8 +242,8 @@ function EntityPage() {
       const scrolled = window.scrollY + window.innerHeight;
       const total = doc.scrollHeight;
       if (total > 0 && scrolled / total >= 0.88) {
-        fire();
-        window.removeEventListener("scroll", onScroll);
+        thresholdMet = true;
+        tryFire();
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -220,6 +253,7 @@ function EntityPage() {
     return () => {
       observer?.disconnect();
       window.removeEventListener("scroll", onScroll);
+      if (pendingTimer != null) window.clearTimeout(pendingTimer);
     };
   }, [entity?.id, userKey]);
 

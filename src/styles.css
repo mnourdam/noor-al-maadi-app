@@ -1117,3 +1117,40 @@ body[data-app-scope="player"] [data-allow-select="true"] * {
   -webkit-touch-callout: default;
 }
 
+/* ============================================================
+   Daily Quest — reward celebration
+   GPU-only. Auto-disabled under prefers-reduced-motion.
+   ============================================================ */
+@keyframes dq-shimmer-kf {
+  0%   { transform: translate3d(-100%, 0, 0) skewX(-20deg); opacity: 0; }
+  20%  { opacity: 0.8; }
+  100% { transform: translate3d(320%, 0, 0) skewX(-20deg); opacity: 0; }
+}
+@keyframes dq-pop-kf {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+@keyframes dq-float-kf {
+  0%   { transform: translate3d(0, 8px, 0) scale(0.9); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate3d(0, -42px, 0) scale(1.02); opacity: 0; }
+}
+@keyframes dq-spark-kf {
+  0%   { transform: translate3d(-50%, -50%, 0) rotate(var(--dq-a)) translateY(0) scale(1); opacity: 1; }
+  100% { transform: translate3d(-50%, -50%, 0) rotate(var(--dq-a)) translateY(-56px) scale(0.2); opacity: 0; }
+}
+.dq-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,225,170,0.35) 50%, transparent 100%);
+  animation: dq-shimmer-kf 1.6s ease-out 1;
+}
+.dq-pop { animation: dq-pop-kf 0.55s ease-out 1; }
+.dq-float { animation: dq-float-kf 1.8s ease-out 1 forwards; }
+.dq-spark {
+  box-shadow: 0 0 6px rgba(255, 210, 130, 0.9), 0 0 12px rgba(212, 175, 55, 0.6);
+  animation: dq-spark-kf 1.2s ease-out 1 forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dq-shimmer, .dq-pop, .dq-float, .dq-spark { animation: none !important; }
+}
+
