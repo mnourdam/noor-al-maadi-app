@@ -29,18 +29,31 @@ const COPY: Record<GoogleAuthResultKind, Copy> = {
     body: "مرحبًا بك في إرث.\nتم إنشاء حسابك بنجاح، ويمكنك الآن بدء رحلتك التاريخية.",
     primary: "ابدأ الرحلة",
   },
+  identity_linked: {
+    id: "google-identity-linked",
+    title: "تم ربط حسابك",
+    body: "وجدنا حسابًا مسجلًا بهذا البريد، وتم ربطه بحساب Google بنجاح.\nيمكنك الآن تسجيل الدخول باستخدام البريد الإلكتروني أو Google.",
+    primary: "متابعة",
+  },
+  existing_account_signin: {
+    id: "google-existing-account-signin",
+    title: "لديك حساب مسبقًا",
+    body: "تم تسجيل دخولك إلى حسابك الحالي.",
+    primary: "متابعة",
+  },
 };
 
 function present(kind: GoogleAuthResultKind) {
   const c = COPY[kind];
   openAuthDialog({
     id: c.id,
-    tone: kind === "new_signup_via_signin" ? "success" : "info",
+    tone: kind === "new_signup_via_signin" || kind === "identity_linked" ? "success" : "info",
     title: c.title,
     body: c.body,
     primary: { label: c.primary, onClick: () => closeAuthDialog() },
   });
 }
+
 
 export function GoogleAuthResultDialog() {
   useEffect(() => {

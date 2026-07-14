@@ -18,7 +18,9 @@ import type { User } from "@supabase/supabase-js";
 export type GoogleAuthIntent = "signin" | "signup";
 export type GoogleAuthResultKind =
   | "existing_signin_via_signup"
-  | "new_signup_via_signin";
+  | "new_signup_via_signin"
+  | "identity_linked"
+  | "existing_account_signin";
 
 const INTENT_KEY = "irth.google_auth_intent.v1";
 const RESULT_KEY = "irth.google_auth_result.v1";
@@ -92,7 +94,12 @@ export function consumeGoogleAuthResult(): GoogleAuthResultKind | null {
   if (!s) return null;
   try {
     const v = s.getItem(RESULT_KEY);
-    if (v === "existing_signin_via_signup" || v === "new_signup_via_signin") {
+    if (
+      v === "existing_signin_via_signup" ||
+      v === "new_signup_via_signin" ||
+      v === "identity_linked" ||
+      v === "existing_account_signin"
+    ) {
       s.removeItem(RESULT_KEY);
       return v;
     }
@@ -101,3 +108,54 @@ export function consumeGoogleAuthResult(): GoogleAuthResultKind | null {
 }
 
 export const GOOGLE_AUTH_RESULT_STORAGE_KEY = RESULT_KEY;
+
+/**
+ * After a successful Google OAuth exchange, decide which branded dialog to
+ * show and audit the identity link idempotently.
+ *
+ * Rules:
+ * - If Supabase auto-linked Google onto a pre-existing email/password
+ *   account (i.e. the RPC reports `first_time_link: true`), show
+ *   "تم ربط حسابك" — this happens at most once per (user, provider).
+ * - If the user already has multiple identities but we've audited before,
+ *   show "لديك حساب مسبقًا" (silent-continue for repeat Google sign-ins is
+ *   also acceptable; we prefer explicit reassurance on APK).
+ * - If the user is brand new (isNewlyCreatedUser), fall back to the
+ *   existing intent-based dialog (created / existing-via-signup).
+ * - On RPC failure, degrade to the intent-based logic; never crash.
+ */
+export async function resolveGoogleAuthResult(args: {
+  user: import("@supabase/supabase-js").User | null | undefined;
+  intent: GoogleAuthIntent | null;
+  supabase: import("@supabase/supabase-js").SupabaseClient;
+}): Promise<GoogleAuthResultKind | null> {
+  const { user, intent, supabase } = args;
+  if (!user) return null;
+
+  const providers = Array.isArray(user.identities)
+    ? user.identities.map((i) => i.provider).filter(Boolean)
+    : [];
+  const hasMultipleProviders = new Set(providers).size >= 2;
+  const isNew = isNewlyCreatedUser(user);
+
+  // Brand-new account (single-identity signup) → keep the existing UX.
+  if (isNew && !hasMultipleProviders) {
+    return computeGoogleAuthResult(user, intent);
+  }
+
+  // Attempt idempotent audit + first-time detection.
+  try {
+    const { data, error } = await supabase.rpc("record_identity_link", {
+      p_provider: "google",
+    });
+    if (!error && data && typeof data === "object") {
+      const firstTime = (data as { first_time_link?: boolean }).first_time_link === true;
+      if (firstTime) return "identity_linked";
+      // Audited before, multi-provider user → this is a repeat Google sign-in.
+      if (hasMultipleProviders) return "existing_account_signin";
+    }
+  } catch { /* ignore — fall through to intent-based logic */ }
+
+  return computeGoogleAuthResult(user, intent);
+}
+
