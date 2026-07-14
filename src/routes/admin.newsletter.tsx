@@ -6,6 +6,7 @@ import { AdminGate } from "@/lib/admin-guard";
 import {
   fetchNewsletterStats, listNewsletterSubscribers,
   adminUnsubscribeNewsletter, adminResubscribeNewsletter,
+  NEWSLETTER_DOI_ENABLED,
   type NewsletterStats, type AdminSubscriberRow, type NewsletterFilter,
 } from "@/lib/newsletter";
 import { maskEmail } from "@/lib/authDialog";
@@ -74,7 +75,7 @@ function NewsletterAdminPage() {
     return Array.from(set).sort();
   }, [rows]);
 
-  const doiWarning = stats && stats.confirmed === 0 && stats.total > 0;
+  
 
   async function onUnsubscribe(row: AdminSubscriberRow) {
     const reason = window.prompt("سبب إلغاء الاشتراك (سيُسجَّل في سجل الأدمِن):", "طلب المستخدم");
@@ -152,27 +153,68 @@ function NewsletterAdminPage() {
         </div>
       )}
 
-      {doiWarning && (
-        <div className="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-6 text-amber-100">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <div>
-            <b>تنبيه: لا يوجد Double Opt-In حقيقي حاليًا.</b> الدالة <code>set_my_newsletter_subscription</code> لا تُفعّل رابط تأكيد بالبريد، لذلك عمود <code>confirmed</code> يبقى false. الأعداد "المؤكَّد" و"النشِط" ستكون صفرًا حتى يُبنى تدفّق DOI (رابط تأكيد فريد + endpoint تأكيد + انتهاء صلاحية).
-            <br/>لا تُصدِّر قوائم تسويقية إلى مزوّد خارجي قبل تشغيل DOI فعليًا.
-          </div>
-        </div>
-      )}
+      <DoiStatusPanel />
 
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-        <Stat label="الإجمالي" value={stats?.total} />
-        <Stat label="نشِط ومؤكَّد" value={stats?.active} />
-        <Stat label="مؤكَّد" value={stats?.confirmed} />
-        <Stat label="غير مؤكَّد" value={stats?.unconfirmed} />
-        <Stat label="ألغى الاشتراك" value={stats?.unsubscribed} />
-        <Stat label="بدون حساب" value={stats?.anonymous} />
-        <Stat label="بحساب" value={stats?.authenticated} />
-        <Stat label="آخر ٧ أيام" value={stats?.last7} />
-        <Stat label="آخر ٣٠ يومًا" value={stats?.last30} />
-        <Stat label="على قائمة الحظر" value={stats?.suppressed} />
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <StatBig
+          label="مشتركون (Subscribed)"
+          value={stats?.total}
+          hint="عدد الصفوف حيث subscribed=true أو أُلغيت لاحقًا — أي كل من ضغط الاشتراك في أي وقت."
+        />
+        <StatBig
+          label="مؤكَّدون (Confirmed)"
+          value={stats?.confirmed}
+          hint={NEWSLETTER_DOI_ENABLED
+            ? "أكّدوا اشتراكهم عبر رابط البريد. مؤهَّلون للتصدير التسويقي."
+            : "confirmed=true. حاليًا لا يوجد رابط تأكيد فعلي، لذلك سيبقى صفرًا حتى يُفعَّل DOI."}
+          tone="emerald"
+        />
+        <StatBig
+          label="بانتظار التأكيد (Pending)"
+          value={stats?.unconfirmed}
+          hint={NEWSLETTER_DOI_ENABLED
+            ? "أرسل لهم رابط تأكيد ولم يضغطوا بعد. غير مؤهَّلين للتسويق."
+            : "confirmed=false — لا يمكن اعتبارهم موافقة صريحة على البريد التسويقي حتى يُفعَّل DOI."}
+          tone="amber"
+        />
+        <StatBig
+          label="ألغوا الاشتراك (Unsubscribed)"
+          value={stats?.unsubscribed}
+          hint="ضغطوا 'إلغاء الاشتراك' أو أُلغي يدويًا من الإدارة. لا يجوز إعادة إرسال شيء لهم."
+          tone="rose"
+        />
+        <StatBig
+          label="محظورون (Suppressed)"
+          value={stats?.suppressed}
+          hint="Bounce/complaint. يمنعهم مزود البريد من الاستقبال — يجب استبعادهم دائمًا."
+          tone="rose"
+        />
+        <StatBig
+          label="ضيوف (Anonymous)"
+          value={stats?.anonymous}
+          hint="اشتركوا بدون تسجيل دخول (user_id فارغ). البريد فقط."
+        />
+        <StatBig
+          label="أعضاء (Authenticated)"
+          value={stats?.authenticated}
+          hint="اشتركوا وهم مسجّلون داخل التطبيق (user_id مربوط)."
+        />
+        <StatBig
+          label="نشطون فعلاً"
+          value={stats?.active}
+          hint="subscribed=true و confirmed=true و ليسوا على قائمة الحظر. هذه القائمة الوحيدة الآمنة للتصدير التسويقي."
+          tone="emerald"
+        />
+        <StatBig
+          label="آخر ٧ أيام"
+          value={stats?.last7}
+          hint="عدد الاشتراكات الجديدة في آخر أسبوع."
+        />
+        <StatBig
+          label="آخر ٣٠ يومًا"
+          value={stats?.last30}
+          hint="عدد الاشتراكات الجديدة في آخر شهر."
+        />
       </section>
 
       <section className="rounded border border-white/10 bg-slate-900/40 p-3 space-y-2">
@@ -293,6 +335,81 @@ function NewsletterAdminPage() {
 
       <p className="text-[10px] leading-6 text-muted-foreground">
         كل إجراءات الإدارة تُسجَّل في <code>admin_audit_log</code>. إعادة الاشتراك اليدوية تتطلّب دليل موافقة صريح ولا تعمل مع عناوين محظورة.
+      </p>
+    </div>
+  );
+}
+
+function StatBig({
+  label, value, hint, tone = "gold",
+}: {
+  label: string; value: number | undefined; hint: string;
+  tone?: "gold" | "emerald" | "amber" | "rose";
+}) {
+  const toneClass = {
+    gold: "border-amber-500/20 text-amber-200",
+    emerald: "border-emerald-500/30 text-emerald-200",
+    amber: "border-amber-500/40 text-amber-100",
+    rose: "border-rose-500/30 text-rose-200",
+  }[tone];
+  return (
+    <div className={`rounded-lg border ${toneClass} bg-slate-900/50 p-3 space-y-1`}>
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-xs font-semibold">{label}</div>
+        <div className="text-2xl font-bold tabular-nums">{value ?? "—"}</div>
+      </div>
+      <p className="text-[11px] leading-5 text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
+function DoiStatusPanel() {
+  if (NEWSLETTER_DOI_ENABLED) {
+    return (
+      <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 text-xs leading-6 text-emerald-100 space-y-2">
+        <div className="flex items-center gap-2 font-bold text-sm">
+          <ShieldAlert className="h-4 w-4" /> Double Opt-In مُفعَّل
+        </div>
+        <p>
+          عندما يشترك اللاعب من داخل التطبيق، يُرسَل له بريد تأكيد يحتوي على رابط فريد. لا يُعتبر <b>مؤكَّدًا</b> ولا يدخل ضمن قوائم التصدير التسويقي حتى يضغط الرابط.
+        </p>
+        <ol className="ms-4 list-decimal space-y-1">
+          <li>اللاعب يفعّل خانة النشرة → تُنشأ صفوف <code>subscribed=true, confirmed=false</code>.</li>
+          <li>يُرسَل بريد تأكيد عبر Resend يحتوي رمزًا موقّعًا محدود الصلاحية.</li>
+          <li>يضغط الرابط → endpoint التأكيد يعيّن <code>confirmed=true, confirmed_at=now()</code>.</li>
+          <li>لوحة الإدارة تعكس ذلك تلقائيًا.</li>
+        </ol>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-xs leading-6 text-amber-100 space-y-2">
+      <div className="flex items-center gap-2 font-bold text-sm">
+        <AlertTriangle className="h-4 w-4" /> Double Opt-In غير مُفعَّل حاليًا
+      </div>
+      <p>
+        عندما يشترك اللاعب اليوم، يصبح الاشتراك ساريًا فورًا بدون بريد تأكيد. لذلك عمود <code>confirmed</code> يبقى false ولا يجوز تصدير القائمة لأي مزوّد تسويقي خارجي بوصفها موافقة صريحة.
+      </p>
+      <div className="rounded border border-amber-400/30 bg-black/20 p-2 space-y-1">
+        <div className="font-semibold text-amber-200">التدفّق الحالي (DOI مُعطَّل):</div>
+        <ol className="ms-4 list-decimal">
+          <li>اللاعب يفعّل خانة النشرة.</li>
+          <li>يُنشأ صف <code>subscribed=true, confirmed=false</code> فورًا.</li>
+          <li>لا يُرسَل بريد تأكيد.</li>
+        </ol>
+      </div>
+      <div className="rounded border border-emerald-400/20 bg-black/20 p-2 space-y-1">
+        <div className="font-semibold text-emerald-200">التدفّق عند تفعيل DOI مستقبلاً:</div>
+        <ol className="ms-4 list-decimal">
+          <li>اللاعب يفعّل خانة النشرة → <code>subscribed=true, confirmed=false</code>.</li>
+          <li>يُرسَل بريد تأكيد عبر Resend مع رمز فريد ينتهي بعد ٢٤ ساعة.</li>
+          <li>الضغط على الرابط يستدعي endpoint التأكيد.</li>
+          <li>يُحدَّث الصف إلى <code>confirmed=true, confirmed_at=now()</code>.</li>
+          <li>يصبح مؤهَّلاً للتصدير التسويقي.</li>
+        </ol>
+      </div>
+      <p className="text-[11px]">
+        للتفعيل لاحقًا: عيِّن <code>VITE_NEWSLETTER_DOI_ENABLED=1</code> بعد بناء endpoint التأكيد وقالب البريد. الواجهة الإدارية جاهزة تلقائيًا.
       </p>
     </div>
   );

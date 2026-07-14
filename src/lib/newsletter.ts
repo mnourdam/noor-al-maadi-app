@@ -1,5 +1,29 @@
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Double Opt-In (DOI) feature flag.
+ *
+ * When DOI is DISABLED (current default):
+ *   - Subscribing sets `subscribed=true, confirmed=false` immediately.
+ *   - No confirmation email is sent.
+ *   - The row is considered "pending confirmation" for reporting purposes,
+ *     but marketing exports MUST NOT be sent to a third-party provider
+ *     until real DOI is enabled and the user has confirmed by clicking a link.
+ *
+ * When DOI is ENABLED (future):
+ *   - Subscribing sets `subscribed=true, confirmed=false` and enqueues a
+ *     confirmation email with a signed, single-use, time-limited token.
+ *   - Clicking the confirmation link hits a dedicated endpoint that
+ *     populates `confirmed=true, confirmed_at=now()`.
+ *   - Only then is the subscriber eligible for a marketing export.
+ *
+ * Toggle via `VITE_NEWSLETTER_DOI_ENABLED=1` — server code that eventually
+ * sends the confirmation email should mirror the same flag on the server.
+ */
+export const NEWSLETTER_DOI_ENABLED: boolean =
+  ((import.meta as unknown as { env?: Record<string, string> }).env
+    ?.VITE_NEWSLETTER_DOI_ENABLED ?? "") === "1";
+
 export interface NewsletterSubscription {
   id?: string;
   email: string | null;

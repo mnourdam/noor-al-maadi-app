@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers } from "lucide-react";
+import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -19,25 +19,28 @@ interface Stats {
   events: number | null;
   notifications: number | null;
   devices: number | null;
+  newsletter: number | null;
 }
 
 function AdminHub() {
-  const [stats, setStats] = useState<Stats>({ facts: null, events: null, notifications: null, devices: null });
+  const [stats, setStats] = useState<Stats>({ facts: null, events: null, notifications: null, devices: null, newsletter: null });
 
   useEffect(() => {
     (async () => {
       const opts = { count: "exact" as const, head: true };
-      const [f, e, n, d] = await Promise.all([
+      const [f, e, n, d, ns] = await Promise.all([
         supabase.from("daily_facts" as any).select("*", opts),
         supabase.from("today_in_history_events" as any).select("*", opts),
         supabase.from("notifications" as any).select("*", opts),
         supabase.from("device_tokens" as any).select("*", opts).eq("enabled", true),
+        supabase.from("newsletter_subscribers" as any).select("*", opts).eq("subscribed", true),
       ]);
       setStats({
         facts: f.count ?? 0,
         events: e.count ?? 0,
         notifications: n.count ?? 0,
         devices: d.count ?? 0,
+        newsletter: ns.count ?? 0,
       });
     })();
   }, []);
@@ -80,6 +83,9 @@ function AdminHub() {
             desc="إدارة البلاغات والاقتراحات وتصحيحات المعلومات والرد على المستخدمين." />
           <AdminCard to="/admin/notifications" icon={<Bell className="h-5 w-5" />} title="إدارة الإشعارات"
             desc="إنشاء وإرسال إشعارات يدوية والاطلاع على المسودات." />
+          <AdminCard to="/admin/newsletter" icon={<Mail className="h-5 w-5" />} title="النشرة البريدية"
+            desc="اشتراكات النشرة، حالة Double Opt-In، وتصدير القوائم للإرسال عبر مزوّد خارجي."
+            badge={stats.newsletter} />
           <AdminCard to="/admin/content" icon={<BookOpen className="h-5 w-5" />} title="محتوى الإشعارات التلقائية"
             desc="إدارة المعلومات اليومية وأحداث في مثل هذا اليوم." />
           <AdminCard to="/admin/import" icon={<Upload className="h-5 w-5" />} title="استيراد المحتوى"
@@ -152,8 +158,8 @@ function StatCard({ label, value }: { label: string; value: number | null }) {
 }
 
 function AdminCard({
-  to, icon, title, desc, comingSoon,
-}: { to?: string; icon: React.ReactNode; title: string; desc: string; comingSoon?: boolean }) {
+  to, icon, title, desc, comingSoon, badge,
+}: { to?: string; icon: React.ReactNode; title: string; desc: string; comingSoon?: boolean; badge?: number | null }) {
   const body = (
     <div className={`group h-full rounded-xl border p-5 transition ${
       comingSoon
@@ -164,6 +170,11 @@ function AdminCard({
         {icon}
         <h2 className="text-base font-semibold">{title}</h2>
         {comingSoon && <span className="ml-auto rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300">قريبًا</span>}
+        {!comingSoon && typeof badge === "number" && (
+          <span className="ml-auto rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-xs font-bold tabular-nums text-amber-200">
+            {badge}
+          </span>
+        )}
       </div>
       <p className="text-sm text-slate-400">{desc}</p>
     </div>
