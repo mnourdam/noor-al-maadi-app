@@ -257,6 +257,7 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
 
       let exchangedOk = false;
       let exchangeError: string | null = null;
+      let isRecoveryLink = false;
       try {
         const u = new URL(url);
         const params = collectDeepLinkParams(u);
