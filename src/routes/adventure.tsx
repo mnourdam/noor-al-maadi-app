@@ -7,6 +7,7 @@ import {
 import { AppShell, Screen } from "@/components/AppShell";
 import {
   selectDailyChallenges,
+  fetchMyCompletedGameIds,
   fetchMyDailyCompletedGameIds,
   type GameRow,
 } from "@/lib/games/store";
@@ -39,10 +40,13 @@ function AdventurePage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const completed = await fetchMyDailyCompletedGameIds();
-      const sel = await selectDailyChallenges(2, { completedIds: completed });
+      const [allTimeCompleted, todayCompleted] = await Promise.all([
+        fetchMyCompletedGameIds(),
+        fetchMyDailyCompletedGameIds(),
+      ]);
+      const sel = await selectDailyChallenges(2, { completedIds: allTimeCompleted });
       if (cancelled) return;
-      setCompletedIds(completed);
+      setCompletedIds(todayCompleted);
       setPicks(sel.picks);
       setAllCompleted(sel.allCompleted);
     })().catch(() => {

@@ -8,6 +8,36 @@ import { PasswordField } from "@/components/ui/PasswordField";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
 import { BUILD_TYPE } from "@/lib/build-info";
+import { openAuthDialog, maskEmail } from "@/lib/authDialog";
+
+type ResendKind = "signup" | "recovery";
+type Mode = "signin" | "signup" | "forgot";
+
+
+/** Map raw auth-provider errors to friendly Arabic dialog copy. */
+function classifyAuthError(msg: string, mode: Mode): { title: string; body: string; retry?: boolean; toLogin?: boolean } {
+  const m = (msg || "").toLowerCase();
+  if (m.includes("already") && m.includes("registered")) {
+    return { title: "الحساب موجود بالفعل", body: "هذا البريد مسجّل مسبقاً في إرث. يمكنك تسجيل الدخول باستخدامه أو استعادة كلمة المرور.", toLogin: true };
+  }
+  if (m.includes("password") && (m.includes("weak") || m.includes("short") || m.includes("6") || m.includes("8"))) {
+    return { title: "كلمة المرور ضعيفة", body: "اختر كلمة مرور أطول وأقوى — ٨ أحرف على الأقل مع مزج الأحرف والأرقام.", retry: true };
+  }
+  if (m.includes("invalid") && m.includes("credent")) {
+    return { title: "بيانات الدخول غير صحيحة", body: "تأكد من البريد وكلمة المرور ثم حاول مجدداً.", retry: true };
+  }
+  if (m.includes("network") || m.includes("fetch") || m.includes("offline")) {
+    return { title: "تعذّر الاتصال", body: "تحقّق من اتصال الإنترنت ثم أعد المحاولة.", retry: true };
+  }
+  if (m.includes("rate") || m.includes("too many") || m.includes("429")) {
+    return { title: "الرجاء الانتظار قليلاً", body: "تم إرسال عدد كبير من المحاولات. انتظر دقيقة ثم أعد المحاولة." };
+  }
+  return {
+    title: mode === "signup" ? "تعذّر إنشاء الحساب" : mode === "forgot" ? "تعذّر إرسال رابط الاستعادة" : "تعذّر تسجيل الدخول",
+    body: "حدث خطأ غير متوقع. يرجى المحاولة لاحقاً.",
+    retry: true,
+  };
+}
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
@@ -15,7 +45,7 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-type Mode = "signin" | "signup" | "forgot";
+
 
 
 function AuthPage() {
@@ -39,7 +69,7 @@ function AuthPage() {
     }
   }, [user, navigate]);
 
-  // Surface a clean Arabic toast if the native Google OAuth flow bounced
+  // Surface a branded Irth dialog if the native Google OAuth flow bounced
   // back here after failing to complete the PKCE exchange.
   useEffect(() => {
     let flagged = false;
@@ -58,11 +88,52 @@ function AuthPage() {
       }
     } catch { /* ignore */ }
     if (flagged) {
-      void import("sonner").then(({ toast }) => {
-        toast.error("تعذر إكمال تسجيل الدخول عبر Google. حاول مرة أخرى.");
-      }).catch(() => { /* ignore */ });
+      openAuthDialog({
+        id: "google-oauth-bounce",
+        tone: "error",
+        title: "تعذّر تسجيل الدخول عبر Google",
+        body: "لم نتمكن من إكمال تسجيل الدخول عبر Google. تحقّق من اتصال الإنترنت ثم حاول مجدداً.",
+        primary: { label: "إعادة المحاولة" },
+      });
     }
   }, []);
+
+  async function requestResend(kind: ResendKind, email: string) {
+    const authEmailMode = ((import.meta.env.VITE_AUTH_EMAIL_MODE as string | undefined) ?? "custom").toLowerCase();
+    try {
+      if (kind === "recovery") {
+        if (authEmailMode === "custom") {
+          const { requestPasswordResetEmail } = await import("@/lib/auth-emails");
+          await requestPasswordResetEmail(email);
+        } else {
+          const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?type=recovery` : undefined;
+          await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+        }
+      } else {
+        const { data, error: rerr } = await supabase.auth.resend({ type: "signup", email });
+        void data;
+        if (rerr) throw rerr;
+      }
+      openAuthDialog({
+        id: `resent-${kind}-${email}`,
+        tone: "success",
+        title: "تم إرسال الرابط",
+        body: "أرسلنا رابطاً جديداً إلى بريدك الإلكتروني. تحقّق من صندوق الوارد.",
+        detail: maskEmail(email),
+        primary: { label: "حسنًا" },
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const cls = classifyAuthError(msg, "forgot");
+      openAuthDialog({
+        id: `resend-error-${Date.now()}`,
+        tone: "error",
+        title: cls.title,
+        body: cls.body,
+        primary: { label: "إعادة المحاولة", onClick: () => void requestResend(kind, email), keepOpen: true },
+      });
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,7 +149,13 @@ function AuthPage() {
 
     try {
       if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        setError("لا يوجد اتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.");
+        openAuthDialog({
+          id: "offline",
+          tone: "warning",
+          title: "لا يوجد اتصال بالإنترنت",
+          body: "تحقّق من الشبكة ثم أعد المحاولة.",
+          primary: { label: "إعادة المحاولة" },
+        });
         return;
       }
       if (mode === "forgot") {
@@ -93,13 +170,29 @@ function AuthPage() {
               ? `${window.location.origin}/auth/callback?type=recovery`
               : undefined;
             const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-            if (resetErr) { setError(resetErr.message); return; }
+            if (resetErr) throw resetErr;
           }
         } catch (err) {
-          setError(err instanceof Error ? err.message : String(err));
+          const msg = err instanceof Error ? err.message : String(err);
+          const cls = classifyAuthError(msg, "forgot");
+          openAuthDialog({
+            id: `forgot-error-${Date.now()}`,
+            tone: "error",
+            title: cls.title,
+            body: cls.body,
+            primary: { label: "إعادة المحاولة" },
+          });
           return;
         }
-        setInfo("أرسلنا رابط إعادة تعيين كلمة المرور إلى بريدك. تحقّق من صندوق الوارد ومجلد الرسائل غير المرغوب فيها.");
+        openAuthDialog({
+          id: `recovery-sent-${email}`,
+          tone: "success",
+          title: "أرسلنا رابط الاستعادة",
+          body: "تحقّق من بريدك الإلكتروني واضغط رابط الاستعادة لتعيين كلمة مرور جديدة.",
+          detail: maskEmail(email),
+          primary: { label: "حسنًا" },
+          secondary: { label: "إعادة إرسال الرابط", onClick: () => void requestResend("recovery", email), keepOpen: true },
+        });
         return;
       }
       let r: { ok: boolean; error?: string };
@@ -109,19 +202,48 @@ function AuthPage() {
         r = await signIn(email, password);
       }
       if (!r.ok) {
-        setError(r.error ?? (mode === "signup" ? "تعذر إنشاء الحساب" : "تعذر تسجيل الدخول"));
+        const cls = classifyAuthError(r.error ?? "", mode);
+        openAuthDialog({
+          id: `auth-error-${Date.now()}`,
+          tone: "error",
+          title: cls.title,
+          body: cls.body,
+          primary: { label: cls.retry ? "إعادة المحاولة" : "حسنًا" },
+          secondary: cls.toLogin ? { label: "العودة لتسجيل الدخول", onClick: () => setMode("signin") } : undefined,
+        });
         return;
       }
-      if (mode === "signup" && r.error) { setInfo(r.error); return; }
+      // Signup with email confirmation required — r.error carries the info string.
+      if (mode === "signup" && r.error) {
+        openAuthDialog({
+          id: `signup-sent-${email}`,
+          tone: "info",
+          title: "تحقق من بريدك الإلكتروني",
+          body: "أرسلنا رابط التحقق إلى بريدك الإلكتروني. افتح الرسالة واضغط رابط التأكيد لإكمال إنشاء حسابك.",
+          detail: maskEmail(email),
+          primary: { label: "حسنًا" },
+          secondary: { label: "إعادة إرسال الرابط", onClick: () => void requestResend("signup", email), keepOpen: true },
+        });
+        return;
+      }
       const dest = consumeAuthOrigin("/profile");
       navigate({ to: dest as "/profile" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError(msg || "حدث خطأ غير متوقع.");
+      const cls = classifyAuthError(msg, mode);
+      openAuthDialog({
+        id: `auth-throw-${Date.now()}`,
+        tone: "error",
+        title: cls.title,
+        body: cls.body,
+        primary: { label: "إعادة المحاولة" },
+      });
     } finally {
       setBusy(false);
     }
   }
+
+
 
   const inputStyle: React.CSSProperties = {
     width: "100%",

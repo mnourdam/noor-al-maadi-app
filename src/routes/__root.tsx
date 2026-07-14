@@ -21,6 +21,7 @@ import { SplashSequence } from "../components/splash/SplashSequence";
 import { AndroidBackHandler } from "../components/AndroidBackHandler";
 import { InAppBanner } from "../components/notifications/InAppBanner";
 import { GoogleAuthResultDialog } from "../components/GoogleAuthResultDialog";
+import { IrthAuthDialog } from "../components/IrthAuthDialog";
 import { RecoveryModeGuard } from "../components/RecoveryModeGuard";
 import { useIsOffline } from "../components/fallbacks";
 import { WifiOff } from "lucide-react";
@@ -354,6 +355,7 @@ function RootComponent() {
           <AndroidBackHandler />
           <InAppBanner />
           <GoogleAuthResultDialog />
+          <IrthAuthDialog />
           <RecoveryModeGuard />
           <GlobalOfflinePill />
         </AccountProvider>
