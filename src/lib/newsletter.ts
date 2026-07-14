@@ -37,3 +37,82 @@ export async function setMyNewsletterSubscription(
   if (error) throw error;
   return (data as unknown) as NewsletterSubscription;
 }
+
+// =========================================================
+// Admin API (owner/admin only, enforced by DB function)
+// =========================================================
+
+export interface NewsletterStats {
+  total: number;
+  active: number;
+  confirmed: number;
+  unconfirmed: number;
+  unsubscribed: number;
+  anonymous: number;
+  authenticated: number;
+  last7: number;
+  last30: number;
+  suppressed: number;
+}
+
+export interface AdminSubscriberRow {
+  id: string;
+  email: string;
+  user_id: string | null;
+  subscribed: boolean;
+  confirmed: boolean;
+  source: string | null;
+  confirmed_at: string | null;
+  unsubscribed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  is_suppressed: boolean;
+  suppression_reason: string | null;
+}
+
+export type NewsletterFilter =
+  | "all" | "active" | "confirmed" | "unconfirmed"
+  | "unsubscribed" | "anonymous" | "authenticated" | "suppressed";
+
+export async function fetchNewsletterStats(): Promise<NewsletterStats> {
+  const { data, error } = await supabase.rpc("admin_newsletter_stats");
+  if (error) throw error;
+  return (data as unknown) as NewsletterStats;
+}
+
+export async function listNewsletterSubscribers(params: {
+  filter?: NewsletterFilter;
+  search?: string | null;
+  source?: string | null;
+  from?: string | null;
+  to?: string | null;
+  limit?: number;
+  offset?: number;
+}): Promise<AdminSubscriberRow[]> {
+  const { data, error } = await supabase.rpc("admin_list_newsletter_subscribers", {
+    p_filter: params.filter ?? "all",
+    p_search: params.search ?? null,
+    p_source: params.source ?? null,
+    p_from: params.from ?? null,
+    p_to: params.to ?? null,
+    p_limit: params.limit ?? 200,
+    p_offset: params.offset ?? 0,
+  });
+  if (error) throw error;
+  return ((data as unknown) as AdminSubscriberRow[]) ?? [];
+}
+
+export async function adminUnsubscribeNewsletter(id: string, reason?: string): Promise<void> {
+  const { error } = await supabase.rpc("admin_unsubscribe_newsletter", {
+    p_id: id, p_reason: reason ?? null,
+  });
+  if (error) throw error;
+}
+
+export async function adminResubscribeNewsletter(id: string, consentEvidence: string): Promise<void> {
+  const { error } = await supabase.rpc("admin_resubscribe_newsletter", {
+    p_id: id, p_consent_evidence: consentEvidence,
+  });
+  if (error) throw error;
+}
+
