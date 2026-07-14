@@ -91,13 +91,14 @@ export async function listNewsletterSubscribers(params: {
 }): Promise<AdminSubscriberRow[]> {
   const { data, error } = await supabase.rpc("admin_list_newsletter_subscribers", {
     p_filter: params.filter ?? "all",
-    p_search: params.search ?? null,
-    p_source: params.source ?? null,
-    p_from: params.from ?? null,
-    p_to: params.to ?? null,
+    p_search: params.search ?? undefined,
+    p_source: params.source ?? undefined,
+    p_from: params.from ?? undefined,
+    p_to: params.to ?? undefined,
     p_limit: params.limit ?? 200,
     p_offset: params.offset ?? 0,
   });
+
   if (error) throw error;
   return ((data as unknown) as AdminSubscriberRow[]) ?? [];
 }
