@@ -15,12 +15,9 @@ import {
   buildDailyQuestRewardKey,
   deriveStableDeltaId,
   grantDailyQuestReward,
-  type CanonicalGrantResult,
 } from "@/lib/daily-quest-reward";
 import { useProfile } from "@/lib/profile";
 import { useAccount } from "@/lib/account";
-import { peekAll } from "@/lib/offline/outbox";
-import { BUILD_TARGET, BUILD_TYPE } from "@/lib/build-info";
 import { Reveal } from "@/components/motion/MotionPrimitives";
 
 function prefersReducedMotion(): boolean {
@@ -80,137 +77,6 @@ interface RewardFloat {
   tone: "xp" | "dinar";
 }
 
-interface RewardDiagnostics {
-  visible: boolean;
-  mode: "guest" | "authenticated";
-  userKey: string;
-  authenticatedUserPresent: boolean;
-  questDate: string;
-  entityId: string;
-  completed: boolean;
-  rewarded: boolean;
-  rewardedBeforeGrant: boolean;
-  deltaId: string;
-  lastGrantAttemptAt: string | null;
-  grantRan: boolean;
-  path: "none" | "guest_local" | "authenticated_rpc";
-  rpcStatus: "not_called" | "success" | "error" | "queued";
-  rpcOutcome: "pending" | "applied" | "already_applied" | "queued" | "unauthenticated" | "error" | "skipped";
-  rpcError: string | null;
-  rpcBody: string;
-  deltaRowExists: boolean | null;
-  serverBeforeXp: number | null;
-  serverBeforeDinars: number | null;
-  serverXp: number | null;
-  serverDinars: number | null;
-  localBeforeXp: number;
-  localBeforeDinars: number;
-  localXp: number;
-  localDinars: number;
-  headerXp: number;
-  headerDinars: number;
-  headerStore: string;
-  headerSubscribedSameStore: boolean;
-  applyServerStatsFired: boolean;
-  addPointsFired: boolean;
-  addDinarsFired: boolean;
-  outboxItemPresent: boolean | null;
-}
-
-const isDailyQuestDebugVisible = () => {
-  if (BUILD_TARGET === "android" && BUILD_TYPE === "debug") return true;
-  try {
-    return typeof window !== "undefined" && window.localStorage.getItem("irth.debug.dailyQuestReward") === "1";
-  } catch {
-    return false;
-  }
-};
-
-function outcomeFromResult(result: CanonicalGrantResult): RewardDiagnostics["rpcOutcome"] {
-  if (result.outcome === "granted") return "applied";
-  if (result.outcome === "already_granted") return "already_applied";
-  if (result.outcome === "queued") return "queued";
-  if (result.outcome === "unauthenticated") return "unauthenticated";
-  return "pending";
-}
-
-function yesNo(value: boolean | null | undefined): string {
-  if (value === null || typeof value === "undefined") return "غير معروف";
-  return value ? "نعم" : "لا";
-}
-
-function statValue(value: number | string | null | undefined): string {
-  if (value === null || typeof value === "undefined" || value === "") return "—";
-  return String(value);
-}
-
-function DailyQuestRewardDiagnostics({ diagnostics }: { diagnostics: RewardDiagnostics }) {
-  const retry = () => {
-    window.dispatchEvent(new CustomEvent("irth:daily-quest:reward-retry", {
-      detail: { userKey: diagnostics.userKey },
-    }));
-  };
-
-  const rows: Array<[string, string]> = [
-    ["الوضع", diagnostics.mode === "authenticated" ? "حساب مسجّل" : "ضيف"],
-    ["userKey", diagnostics.userKey],
-    ["جلسة موثّقة", yesNo(diagnostics.authenticatedUserPresent)],
-    ["تاريخ المهمة", diagnostics.questDate],
-    ["معرّف الهدف", diagnostics.entityId],
-    ["completed", yesNo(diagnostics.completed)],
-    ["rewarded قبل المنح", yesNo(diagnostics.rewardedBeforeGrant)],
-    ["rewarded الآن", yesNo(diagnostics.rewarded)],
-    ["delta_id", diagnostics.deltaId],
-    ["آخر محاولة", statValue(diagnostics.lastGrantAttemptAt)],
-    ["grantReward()", yesNo(diagnostics.grantRan)],
-    ["المسار", diagnostics.path === "authenticated_rpc" ? "RPC موثّق" : diagnostics.path === "guest_local" ? "محلي للضيف" : "—"],
-    ["حالة RPC", diagnostics.rpcStatus],
-    ["نتيجة RPC", diagnostics.rpcOutcome],
-    ["خطأ RPC", statValue(diagnostics.rpcError)],
-    ["نص RPC", statValue(diagnostics.rpcBody)],
-    ["صف delta موجود", yesNo(diagnostics.deltaRowExists)],
-    ["XP الخادم قبل", statValue(diagnostics.serverBeforeXp)],
-    ["دنانير الخادم قبل", statValue(diagnostics.serverBeforeDinars)],
-    ["XP الخادم الآن", statValue(diagnostics.serverXp)],
-    ["دنانير الخادم الآن", statValue(diagnostics.serverDinars)],
-    ["XP المحلي قبل", statValue(diagnostics.localBeforeXp)],
-    ["دنانير المحلي قبل", statValue(diagnostics.localBeforeDinars)],
-    ["XP المحلي الآن", statValue(diagnostics.localXp)],
-    ["دنانير المحلي الآن", statValue(diagnostics.localDinars)],
-    ["XP الشريط العلوي", statValue(diagnostics.headerXp)],
-    ["دنانير الشريط العلوي", statValue(diagnostics.headerDinars)],
-    ["مخزن الشريط", diagnostics.headerStore],
-    ["نفس نسخة المخزن", yesNo(diagnostics.headerSubscribedSameStore)],
-    ["applyServerStats", yesNo(diagnostics.applyServerStatsFired)],
-    ["addPoints", yesNo(diagnostics.addPointsFired)],
-    ["addDinars", yesNo(diagnostics.addDinarsFired)],
-    ["عنصر outbox", yesNo(diagnostics.outboxItemPresent)],
-  ];
-
-  return (
-    <div className="mt-3 rounded-2xl border border-amber-300/35 bg-black/55 p-3 text-start text-[11px] text-amber-50/90">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="font-bold text-gold">تشخيص مكافأة مهمة اليوم</p>
-        <button
-          type="button"
-          onClick={retry}
-          className="rounded-xl border border-gold/45 bg-gold/10 px-2.5 py-1 text-[10px] font-bold text-gold active:scale-[0.98]"
-        >
-          إعادة محاولة مزامنة مكافأة مهمة اليوم
-        </button>
-      </div>
-      <dl className="grid grid-cols-[minmax(7rem,auto)_1fr] gap-x-2 gap-y-1 overflow-hidden">
-        {rows.map(([label, value]) => (
-          <div key={label} className="contents">
-            <dt className="text-amber-200/70">{label}</dt>
-            <dd className="min-w-0 break-words font-mono text-[10px] text-amber-50">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
 /** Home-screen "Goal of the Day" card driven by the Daily Quest system. */
 export function DailyQuestCard() {
   const { user, loadingSession, syncing } = useAccount();
@@ -229,20 +95,9 @@ export function DailyQuestCard() {
   const grantInflightRef = useRef<string | null>(null);
   const floatIdRef = useRef(0);
   const profileRef = useRef(profile);
-  const [diagnostics, setDiagnostics] = useState<RewardDiagnostics | null>(null);
 
   useEffect(() => {
     profileRef.current = profile;
-    setDiagnostics((prev) => prev
-      ? {
-          ...prev,
-          localXp: profile.points,
-          localDinars: profile.dinars ?? 0,
-          headerXp: profile.points,
-          headerDinars: profile.dinars ?? 0,
-        }
-      : prev,
-    );
   }, [profile]);
 
   const refresh = useCallback(() => {
@@ -305,19 +160,6 @@ export function DailyQuestCard() {
       window.setTimeout(() => setCelebrate(false), reduced ? 600 : 2600);
     };
 
-    const refreshOutboxDiagnostic = async (deltaId: string) => {
-      if (!user) {
-        setDiagnostics((prev) => prev ? { ...prev, outboxItemPresent: false } : prev);
-        return;
-      }
-      try {
-        const items = await peekAll(user.id);
-        setDiagnostics((prev) => prev ? { ...prev, outboxItemPresent: items.some((item) => item.id === deltaId) } : prev);
-      } catch {
-        setDiagnostics((prev) => prev ? { ...prev, outboxItemPresent: null } : prev);
-      }
-    };
-
     const grantReward = async (q: QuestState, opts: { force?: boolean } = {}) => {
       if (!q.completed) return;
       if (q.rewarded && !opts.force) return;
@@ -329,50 +171,6 @@ export function DailyQuestCard() {
       if (grantInflightRef.current === entityId) return;
       grantInflightRef.current = entityId;
       const localDate = q.date || localDateKey();
-      const localBefore = profileRef.current;
-      const deltaId = await deriveStableDeltaId(buildDailyQuestRewardKey({
-        userId: user?.id ?? "guest",
-        localDate,
-        entityId,
-      }));
-
-      const baseDiagnostics: RewardDiagnostics = {
-        visible: isDailyQuestDebugVisible(),
-        mode: user ? "authenticated" : "guest",
-        userKey,
-        authenticatedUserPresent: !!user,
-        questDate: localDate,
-        entityId,
-        completed: q.completed,
-        rewarded: q.rewarded,
-        rewardedBeforeGrant: q.rewarded,
-        deltaId,
-        lastGrantAttemptAt: new Date().toISOString(),
-        grantRan: true,
-        path: user ? "authenticated_rpc" : "guest_local",
-        rpcStatus: "not_called",
-        rpcOutcome: "pending",
-        rpcError: null,
-        rpcBody: "",
-        deltaRowExists: null,
-        serverBeforeXp: null,
-        serverBeforeDinars: null,
-        serverXp: null,
-        serverDinars: null,
-        localBeforeXp: localBefore.points,
-        localBeforeDinars: localBefore.dinars ?? 0,
-        localXp: localBefore.points,
-        localDinars: localBefore.dinars ?? 0,
-        headerXp: localBefore.points,
-        headerDinars: localBefore.dinars ?? 0,
-        headerStore: "useProfile → hakaya.profile.v2",
-        headerSubscribedSameStore: true,
-        applyServerStatsFired: false,
-        addPointsFired: false,
-        addDinarsFired: false,
-        outboxItemPresent: null,
-      };
-      setDiagnostics(baseDiagnostics);
 
       try {
         // Guest — no cloud account. Grant locally and use the localStorage
@@ -381,42 +179,14 @@ export function DailyQuestCard() {
         // `daily_quest:<uid>:...` delta_id the server has never seen, so
         // the historical guest grant does not double-credit the account.
         if (!user) {
-          if (q.rewarded) {
-            setDiagnostics((prev) => prev ? {
-              ...prev,
-              rpcOutcome: "skipped",
-              rpcBody: "guest reward already marked locally",
-              outboxItemPresent: false,
-            } : prev);
-            return;
-          }
+          if (q.rewarded) return;
           addPoints(q.xp);
           addDinars(q.dinars);
           const rewarded = markQuestRewarded(userKey);
-          setDiagnostics((prev) => prev ? {
-            ...prev,
-            rewarded: !!rewarded?.rewarded,
-            localXp: localBefore.points + q.xp,
-            localDinars: (localBefore.dinars ?? 0) + q.dinars,
-            headerXp: localBefore.points + q.xp,
-            headerDinars: (localBefore.dinars ?? 0) + q.dinars,
-            rpcOutcome: "applied",
-            rpcBody: "guest local profile update",
-            addPointsFired: true,
-            addDinarsFired: true,
-            outboxItemPresent: false,
-          } : prev);
           if (rewarded?.rewarded) playCelebration(q);
           return;
         }
 
-        console.info("[daily-quest-reward] attempting grant", {
-          userId: user.id,
-          date: localDate,
-          entityId,
-          xp: q.xp,
-          dinars: q.dinars,
-        });
         const result = await grantDailyQuestReward({
           userId: user.id,
           localDate,
@@ -424,24 +194,6 @@ export function DailyQuestCard() {
           xp: q.xp,
           dinars: q.dinars,
         });
-        console.info("[daily-quest-reward] outcome", {
-          outcome: result.outcome,
-          deltaId: result.deltaId,
-        });
-
-        setDiagnostics((prev) => prev ? {
-          ...prev,
-          deltaId: result.deltaId,
-          rpcStatus: result.rpcStatus,
-          rpcOutcome: outcomeFromResult(result),
-          rpcError: result.rpcError ?? null,
-          rpcBody: result.rpcBody ? JSON.stringify(result.rpcBody) : "",
-          deltaRowExists: typeof result.deltaRowExists === "boolean" ? result.deltaRowExists : null,
-          serverBeforeXp: result.serverStatsBefore?.xp ?? null,
-          serverBeforeDinars: result.serverStatsBefore?.dinars ?? null,
-          serverXp: result.serverStatsAfter?.xp ?? result.serverStats?.xp ?? null,
-          serverDinars: result.serverStatsAfter?.dinars ?? result.serverStats?.dinars ?? null,
-        } : prev);
 
         if (result.outcome === "granted") {
           // Server confirmed a first-time grant. Prefer the authoritative
@@ -456,30 +208,11 @@ export function DailyQuestCard() {
               hearts: result.serverStats.hearts,
               streak: result.serverStats.streak,
             });
-            setDiagnostics((prev) => prev ? {
-              ...prev,
-              applyServerStatsFired: true,
-              localXp: result.serverStats?.xp ?? prev.localXp,
-              localDinars: result.serverStats?.dinars ?? prev.localDinars,
-              headerXp: result.serverStats?.xp ?? prev.headerXp,
-              headerDinars: result.serverStats?.dinars ?? prev.headerDinars,
-            } : prev);
           } else {
             addPoints(q.xp);
             addDinars(q.dinars);
-            setDiagnostics((prev) => prev ? {
-              ...prev,
-              addPointsFired: true,
-              addDinarsFired: true,
-              localXp: localBefore.points + q.xp,
-              localDinars: (localBefore.dinars ?? 0) + q.dinars,
-              headerXp: localBefore.points + q.xp,
-              headerDinars: (localBefore.dinars ?? 0) + q.dinars,
-            } : prev);
           }
           const rewarded = markQuestRewarded(userKey);
-          setDiagnostics((prev) => prev ? { ...prev, rewarded: !!rewarded?.rewarded } : prev);
-          void refreshOutboxDiagnostic(result.deltaId);
           if (rewarded?.rewarded) playCelebration(q);
           return;
         }
@@ -487,28 +220,14 @@ export function DailyQuestCard() {
           // Server already had this delta. Re-sync authoritative stats
           // instead of adding locally, otherwise a device that lost its
           // localStorage `rewarded` flag would double-count client-side.
-          if (!result.serverStats) {
-            console.warn("[daily-quest-reward] already_granted without profile rehydrate; keeping rewarded=false");
-            void refreshOutboxDiagnostic(result.deltaId);
-            return;
-          }
+          if (!result.serverStats) return;
           applyServerStats({
             xp: result.serverStats.xp,
             dinars: result.serverStats.dinars,
             hearts: result.serverStats.hearts,
             streak: result.serverStats.streak,
           });
-          const rewarded = markQuestRewarded(userKey);
-          setDiagnostics((prev) => prev ? {
-            ...prev,
-            rewarded: !!rewarded?.rewarded,
-            applyServerStatsFired: true,
-            localXp: result.serverStats?.xp ?? prev.localXp,
-            localDinars: result.serverStats?.dinars ?? prev.localDinars,
-            headerXp: result.serverStats?.xp ?? prev.headerXp,
-            headerDinars: result.serverStats?.dinars ?? prev.headerDinars,
-          } : prev);
-          void refreshOutboxDiagnostic(result.deltaId);
+          markQuestRewarded(userKey);
           // No celebration on already_granted — it's a silent reconcile.
           return;
         }
@@ -516,8 +235,6 @@ export function DailyQuestCard() {
           // Offline / RPC failure. Keep `rewarded=false` so the next
           // mount or outbox-flush event retries. The queued item carries
           // the same stable delta_id, so eventual flush cannot duplicate.
-          console.info("[daily-quest-reward] queued for retry");
-          void refreshOutboxDiagnostic(result.deltaId);
           return;
         }
         // unauthenticated — the session lapsed between UI check and RPC.
@@ -550,17 +267,10 @@ export function DailyQuestCard() {
       const cur = getTodayQuest(userKey);
       if (cur && cur.completed && !cur.rewarded) void grantReward(cur);
     };
-    const onManualRetry = (event: Event) => {
-      const detail = (event as CustomEvent<{ userKey?: string }>).detail;
-      if (detail?.userKey && detail.userKey !== userKey) return;
-      const cur = getTodayQuest(userKey);
-      if (cur?.completed) void grantReward(cur, { force: true });
-    };
 
     window.addEventListener(QUEST_UPDATED_EVENT, onUpdate);
     window.addEventListener(QUEST_COMPLETED_EVENT, onCompleted as EventListener);
     window.addEventListener("irth:outbox:flushed", onOutboxFlushed);
-    window.addEventListener("irth:daily-quest:reward-retry", onManualRetry as EventListener);
     // Also retry when the browser regains connectivity.
     window.addEventListener("online", onOutboxFlushed);
 
@@ -572,7 +282,6 @@ export function DailyQuestCard() {
       window.removeEventListener(QUEST_UPDATED_EVENT, onUpdate);
       window.removeEventListener(QUEST_COMPLETED_EVENT, onCompleted as EventListener);
       window.removeEventListener("irth:outbox:flushed", onOutboxFlushed);
-      window.removeEventListener("irth:daily-quest:reward-retry", onManualRetry as EventListener);
       window.removeEventListener("online", onOutboxFlushed);
       window.clearTimeout(tid);
     };
@@ -582,68 +291,17 @@ export function DailyQuestCard() {
   const completed = !!state?.completed;
   const showSkeleton = !poolReady || (!state && !loadingSession);
 
+  // Reference deltaId derivation so the stable-key module stays wired
+  // (used by outbox reconciliation and any future retry surface). No
+  // side effects — this is a no-op in production render paths.
   useEffect(() => {
     if (!state?.completed || !state.target) return;
-    if (diagnostics && diagnostics.entityId === state.target.entityId && diagnostics.questDate === state.date && diagnostics.userKey === userKey) {
-      return;
-    }
-    let cancelled = false;
-    const local = profileRef.current;
     void deriveStableDeltaId(buildDailyQuestRewardKey({
       userId: user?.id ?? "guest",
       localDate: state.date || localDateKey(),
       entityId: state.target.entityId,
-    })).then(async (deltaId) => {
-      if (cancelled) return;
-      let outboxItemPresent: boolean | null = false;
-      if (user) {
-        try {
-          const items = await peekAll(user.id);
-          outboxItemPresent = items.some((item) => item.id === deltaId);
-        } catch {
-          outboxItemPresent = null;
-        }
-      }
-      if (cancelled) return;
-      setDiagnostics({
-        visible: isDailyQuestDebugVisible(),
-        mode: user ? "authenticated" : "guest",
-        userKey,
-        authenticatedUserPresent: !!user,
-        questDate: state.date || localDateKey(),
-        entityId: state.target!.entityId,
-        completed: state.completed,
-        rewarded: state.rewarded,
-        rewardedBeforeGrant: state.rewarded,
-        deltaId,
-        lastGrantAttemptAt: null,
-        grantRan: false,
-        path: "none",
-        rpcStatus: "not_called",
-        rpcOutcome: state.rewarded ? "skipped" : "pending",
-        rpcError: null,
-        rpcBody: state.rewarded ? "rewarded flag already present before diagnostics" : "",
-        deltaRowExists: null,
-        serverBeforeXp: null,
-        serverBeforeDinars: null,
-        serverXp: null,
-        serverDinars: null,
-        localBeforeXp: local.points,
-        localBeforeDinars: local.dinars ?? 0,
-        localXp: local.points,
-        localDinars: local.dinars ?? 0,
-        headerXp: local.points,
-        headerDinars: local.dinars ?? 0,
-        headerStore: "useProfile → hakaya.profile.v2",
-        headerSubscribedSameStore: true,
-        applyServerStatsFired: false,
-        addPointsFired: false,
-        addDinarsFired: false,
-        outboxItemPresent,
-      });
-    });
-    return () => { cancelled = true; };
-  }, [state, diagnostics, user, userKey]);
+    })).catch(() => { /* ignore */ });
+  }, [state, user]);
 
   // Anchor the exact recommended entity ID for navigation — never
   // recompute from anything else so hydration cannot re-roll it.
@@ -872,7 +530,6 @@ export function DailyQuestCard() {
                 ارجع للمقال
               </Link>
             </div>
-            {diagnostics?.visible && <DailyQuestRewardDiagnostics diagnostics={diagnostics} />}
           </div>
         ) : (
           <Link
