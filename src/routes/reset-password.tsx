@@ -82,7 +82,7 @@ function ResetPasswordPage() {
     if (!canSubmit) return;
     setError(null);
     setInfo(null);
-    if (!strength.ok) {
+    if (!policyOk) {
       setError("كلمة المرور لا تستوفي المتطلبات.");
       return;
     }
@@ -95,11 +95,12 @@ function ResetPasswordPage() {
       const { error: err } = await supabase.auth.updateUser({ password });
       if (err) {
         // Do NOT clear recovery mode on failure — user must retry.
+        const weak = isWeakPasswordError(err.message);
         openAuthDialog({
           id: `reset-error-${Date.now()}`,
           tone: "error",
-          title: "تعذّر تحديث كلمة المرور",
-          body: "حدث خطأ أثناء تحديث كلمة المرور. تأكد من قوة كلمة المرور وحاول مجدداً.",
+          title: weak ? WEAK_PASSWORD_COPY.title : "تعذّر تحديث كلمة المرور",
+          body: weak ? WEAK_PASSWORD_COPY.body : "حدث خطأ أثناء تحديث كلمة المرور. حاول مجدداً.",
           primary: { label: "إعادة المحاولة" },
         });
         return;
