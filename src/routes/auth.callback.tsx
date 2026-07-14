@@ -8,6 +8,8 @@ import {
   stashGoogleAuthResult,
 } from "@/lib/googleAuthResult";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
+import { setRecoveryMode } from "@/lib/recoveryMode";
+
 
 type SearchParams = {
   code?: string;
@@ -76,6 +78,7 @@ function AuthCallbackPage() {
       const errCode = search.error_code || hashParams.error_code || search.error || hashParams.error;
       const errDesc = search.error_description || hashParams.error_description;
       const type = search.type || hashParams.type;
+      const isRecovery = type === "recovery";
 
       // Handle error params from Supabase
       if (errCode) {
@@ -94,11 +97,19 @@ function AuthCallbackPage() {
         return;
       }
 
+      // Recovery: set the persistent flag BEFORE the code exchange so the
+      // root guard blocks every protected route even if the WebView is
+      // recreated between exchange and navigation.
+      if (isRecovery) setRecoveryMode(true);
+
       // PKCE code exchange flow
       if (search.code) {
         const { error } = await supabase.auth.exchangeCodeForSession(search.code);
         if (!alive) return;
         if (error) {
+          // Recovery link failed — clear the flag so the user is not
+          // trapped on the reset screen with no session.
+          if (isRecovery) setRecoveryMode(false);
           const m = error.message.toLowerCase();
           if (m.includes("expired")) { setStatus("expired"); setMessage("انتهت صلاحية الرابط."); }
           else if (m.includes("invalid") || m.includes("used")) { setStatus("invalid"); setMessage("الرابط غير صالح أو مستخدم."); }
@@ -107,13 +118,14 @@ function AuthCallbackPage() {
         }
       }
 
-      // Recovery flow → push to reset-password
-      if (type === "recovery") {
+      // Recovery flow → push to reset-password. Flag is already set.
+      if (isRecovery) {
         if (!alive) return;
         setStatus("recovery");
-        setTimeout(() => navigate({ to: "/reset-password" }), 400);
+        setTimeout(() => navigate({ to: "/reset-password", replace: true }), 400);
         return;
       }
+
 
       // Hash-based token session (signup/magic link)
       const { data } = await supabase.auth.getSession();
