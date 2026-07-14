@@ -70,8 +70,11 @@ export function computeGoogleAuthResult(
 ): GoogleAuthResultKind | null {
   if (!user || !intent) return null;
   const isNew = isNewlyCreatedUser(user);
+  // Case 1: tapped signup but the account already existed → friendly notice.
   if (intent === "signup" && !isNew) return "existing_signin_via_signup";
-  if (intent === "signin" && isNew) return "new_signup_via_signin";
+  // Case 2 (signin + new) and Case 4 (signup + new): show "account created".
+  if (isNew) return "new_signup_via_signin";
+  // Case 3: signin + existing → no dialog, silent continue.
   return null;
 }
 
