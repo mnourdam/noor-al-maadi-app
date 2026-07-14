@@ -216,7 +216,7 @@ export function DailyChallengesSection() {
   if (!picks.length) return null;
 
   return (
-    <section className="mt-6 px-5">
+    <section className="mt-6 px-5 sm:px-6 md:px-8">
       <div className="mb-3 flex items-end justify-between">
         <div>
           <p className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.3em] text-gold/80">
