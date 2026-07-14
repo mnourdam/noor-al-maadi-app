@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  computeGoogleAuthResult,
   getAndClearGoogleAuthIntent,
+  resolveGoogleAuthResult,
   stashGoogleAuthResult,
 } from "@/lib/googleAuthResult";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
