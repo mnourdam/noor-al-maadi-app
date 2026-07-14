@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Calendar } from "lucide-react";
+import { useEffect } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
+import { notifyQuestProgress } from "@/lib/daily-quest";
 
 export const Route = createFileRoute("/on-this-day")({
   head: () => ({ meta: [{ title: "في مثل هذا اليوم" }] }),
@@ -10,6 +12,13 @@ export const Route = createFileRoute("/on-this-day")({
 
 function OnThisDayPage() {
   const { loading, selected, others } = useTodayInHistoryEvent();
+
+  // Reading today's historical event satisfies the "read today's event"
+  // quest. Dedupe is handled per (userKey, localDate) in daily-quest.ts.
+  useEffect(() => {
+    if (selected?.id) notifyQuestProgress("read_today_event", 1);
+  }, [selected?.id]);
+
 
   return (
     <AppShell>
