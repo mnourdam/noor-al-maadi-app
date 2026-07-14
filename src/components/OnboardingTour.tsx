@@ -89,6 +89,7 @@ export function OnboardingTour() {
       try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
     }
     setOpen(false);
+    try { window.dispatchEvent(new CustomEvent(ONBOARDING_COMPLETED_EVENT)); } catch { /* ignore */ }
   }
 
   const node = (
