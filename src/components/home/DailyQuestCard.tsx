@@ -171,7 +171,7 @@ export function DailyQuestCard() {
           addPoints(q.xp);
           addDinars(q.dinars);
           const rewarded = markQuestRewarded(userKey);
-          if (rewarded?.rewarded) celebrate(q);
+          if (rewarded?.rewarded) playCelebration(q);
           return;
         }
 
@@ -200,7 +200,7 @@ export function DailyQuestCard() {
           addPoints(q.xp);
           addDinars(q.dinars);
           const rewarded = markQuestRewarded(userKey);
-          if (rewarded?.rewarded) celebrate(q);
+          if (rewarded?.rewarded) playCelebration(q);
           return;
         }
         if (result.outcome === "already_granted") {
