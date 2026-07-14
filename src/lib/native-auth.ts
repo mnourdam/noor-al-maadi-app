@@ -399,12 +399,18 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
             } catch { /* ignore */ }
           } else {
             try {
-              const { data: sess } = await supabase.auth.getSession();
+              // Get the authenticated user (revalidates with Auth) so we
+              // see the merged `identities[]` from Supabase's auto-linker.
+              const { data: userRes } = await supabase.auth.getUser();
               const intent = getAndClearGoogleAuthIntent();
-              stashGoogleAuthResult(
-                computeGoogleAuthResult(sess.session?.user, intent),
-              );
+              const kind = await resolveGoogleAuthResult({
+                user: userRes.user,
+                intent,
+                supabase,
+              });
+              stashGoogleAuthResult(kind);
             } catch { /* ignore */ }
+
 
             console.info("[native-auth] waitForSignedIn start");
             const signedIn = await waitForSignedIn(3000);
