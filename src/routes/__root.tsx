@@ -355,6 +355,7 @@ function RootComponent() {
           <AndroidBackHandler />
           <InAppBanner />
           <GoogleAuthResultDialog />
+          <IrthAuthDialog />
           <RecoveryModeGuard />
           <GlobalOfflinePill />
         </AccountProvider>
