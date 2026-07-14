@@ -8,6 +8,34 @@ import { PasswordField } from "@/components/ui/PasswordField";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
 import { BUILD_TYPE } from "@/lib/build-info";
+import { openAuthDialog, maskEmail } from "@/lib/authDialog";
+
+type ResendKind = "signup" | "recovery";
+
+/** Map raw auth-provider errors to friendly Arabic dialog copy. */
+function classifyAuthError(msg: string, mode: Mode): { title: string; body: string; retry?: boolean; toLogin?: boolean } {
+  const m = (msg || "").toLowerCase();
+  if (m.includes("already") && m.includes("registered")) {
+    return { title: "الحساب موجود بالفعل", body: "هذا البريد مسجّل مسبقاً في إرث. يمكنك تسجيل الدخول باستخدامه أو استعادة كلمة المرور.", toLogin: true };
+  }
+  if (m.includes("password") && (m.includes("weak") || m.includes("short") || m.includes("6") || m.includes("8"))) {
+    return { title: "كلمة المرور ضعيفة", body: "اختر كلمة مرور أطول وأقوى — ٨ أحرف على الأقل مع مزج الأحرف والأرقام.", retry: true };
+  }
+  if (m.includes("invalid") && m.includes("credent")) {
+    return { title: "بيانات الدخول غير صحيحة", body: "تأكد من البريد وكلمة المرور ثم حاول مجدداً.", retry: true };
+  }
+  if (m.includes("network") || m.includes("fetch") || m.includes("offline")) {
+    return { title: "تعذّر الاتصال", body: "تحقّق من اتصال الإنترنت ثم أعد المحاولة.", retry: true };
+  }
+  if (m.includes("rate") || m.includes("too many") || m.includes("429")) {
+    return { title: "الرجاء الانتظار قليلاً", body: "تم إرسال عدد كبير من المحاولات. انتظر دقيقة ثم أعد المحاولة." };
+  }
+  return {
+    title: mode === "signup" ? "تعذّر إنشاء الحساب" : mode === "forgot" ? "تعذّر إرسال رابط الاستعادة" : "تعذّر تسجيل الدخول",
+    body: "حدث خطأ غير متوقع. يرجى المحاولة لاحقاً.",
+    retry: true,
+  };
+}
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
