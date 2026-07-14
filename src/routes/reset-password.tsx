@@ -5,11 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { setRecoveryMode } from "@/lib/recoveryMode";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
+import { openAuthDialog } from "@/lib/authDialog";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({ meta: [{ title: "تعيين كلمة مرور جديدة" }] }),
   component: ResetPasswordPage,
 });
+
 
 interface StrengthReport {
   score: 0 | 1 | 2 | 3 | 4;
