@@ -134,7 +134,15 @@ function AuthCallbackPage() {
       if (!alive) return;
       if (data.session) {
         const intent = getAndClearGoogleAuthIntent();
-        stashGoogleAuthResult(computeGoogleAuthResult(data.session.user, intent));
+        // Re-fetch the user to get merged `identities[]` after Supabase's
+        // auto-linker attached Google to a pre-existing email/password user.
+        const { data: userRes } = await supabase.auth.getUser();
+        const kind = await resolveGoogleAuthResult({
+          user: userRes.user ?? data.session.user,
+          intent,
+          supabase,
+        });
+        stashGoogleAuthResult(kind);
         setStatus("success");
         setMessage("تم تأكيد بريدك الإلكتروني بنجاح. مرحباً بك في إرث!");
         const stored = consumeAuthOrigin("");
