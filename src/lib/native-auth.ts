@@ -385,32 +385,44 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         }
 
         if (exchangedOk) {
-          try {
-            const { data: sess } = await supabase.auth.getSession();
-            const intent = getAndClearGoogleAuthIntent();
-            stashGoogleAuthResult(
-              computeGoogleAuthResult(sess.session?.user, intent),
-            );
-          } catch { /* ignore */ }
+          // Password recovery: do NOT surface Google-auth dialogs and force
+          // the user into the mandatory reset-password screen. RecoveryMode
+          // is already set; the guard would redirect anyway, but navigating
+          // explicitly avoids a flash of home/profile.
+          if (isRecoveryLink) {
+            recordTrace("native-auth", "recovery-navigate-reset");
+            try {
+              if (typeof window !== "undefined") {
+                window.location.replace("/reset-password");
+              }
+            } catch { /* ignore */ }
+          } else {
+            try {
+              const { data: sess } = await supabase.auth.getSession();
+              const intent = getAndClearGoogleAuthIntent();
+              stashGoogleAuthResult(
+                computeGoogleAuthResult(sess.session?.user, intent),
+              );
+            } catch { /* ignore */ }
 
-          console.info("[native-auth] waitForSignedIn start");
-          const signedIn = await waitForSignedIn(3000);
-          console.info("[native-auth] waitForSignedIn done result=", signedIn);
-          try {
-            if (typeof window !== "undefined") {
-              const dest = consumeAuthOrigin("/profile");
-              console.info("[native-auth] navigating to", dest);
-              window.location.replace(dest);
-            }
-          } catch { /* ignore */ }
+            console.info("[native-auth] waitForSignedIn start");
+            const signedIn = await waitForSignedIn(3000);
+            console.info("[native-auth] waitForSignedIn done result=", signedIn);
+            try {
+              if (typeof window !== "undefined") {
+                const dest = consumeAuthOrigin("/profile");
+                console.info("[native-auth] navigating to", dest);
+                window.location.replace(dest);
+              }
+            } catch { /* ignore */ }
+          }
         } else {
+          // Failed exchange — clear recovery lock so a fresh link retry
+          // is possible from /auth.
+          if (isRecoveryLink) setRecoveryMode(false);
           console.info("[native-auth] not navigating — exchange did not succeed");
           try {
             if (typeof window !== "undefined") {
-              // Do not surface raw provider error text (may leak tokens or
-              // debug detail). Log a redacted message and route the user
-              // back to /auth with a flag so the auth screen can show a
-              // clean Arabic toast via sonner.
               console.warn("[native-auth] surfacing OAuth failure to user; exchangeError=", exchangeError ? "(present)" : "(none)");
               try { window.sessionStorage.setItem("irth.oauth_error.v1", "1"); } catch { /* ignore */ }
               window.location.replace("/auth?oauth_error=1");
