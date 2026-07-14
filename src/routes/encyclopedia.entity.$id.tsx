@@ -11,13 +11,8 @@ import {
   Map as MapIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
-import {
-  QUEST_COMPLETED_EVENT,
-  MIN_READ_MS,
-  recordEntityOpen,
-  reportEntityRead,
-} from "@/lib/daily-quest";
+import { useRef } from "react";
+import { useDailyQuestEntityReadCompletion } from "@/hooks/useDailyQuestEntityReadCompletion";
 import { useAccount } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
@@ -161,101 +156,18 @@ function EntityPage() {
 
   const entity = query.data ?? null;
 
-  // Daily Quest completion — fires ONCE per (userKey, day) when BOTH
-  // conditions are true:
-  //   1) the reader reaches the "شبكة الترابط" section OR scrolls
-  //      past ~88% of the article, AND
-  //   2) they've dwelled on this page for at least MIN_READ_MS.
-  // The dwell timer starts after the entity finishes rendering
-  // (post-mount), so quick drag-to-bottom cannot complete the quest.
-  // Reading a DIFFERENT entity is a no-op because `reportEntityRead`
-  // checks the target id inside the module.
+  // Daily Quest completion — shared hook covers dwell + intersection +
+  // 88 % scroll fallback for every encyclopedia detail route.
   const { user } = useAccount();
   const userKey = user?.id ?? "guest";
   const relNetworkRef = useRef<HTMLElement | null>(null);
-  const questFiredRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!entity?.id) return;
-    // Reset guards when navigating to a different entity.
-    if (questFiredRef.current && questFiredRef.current !== entity.id) {
-      questFiredRef.current = null;
-    }
-    // Record that the user opened this article — powers the Daily
-    // Quest "never opened" priority tier.
-    recordEntityOpen(userKey, entity.id);
+  useDailyQuestEntityReadCompletion({
+    entityId: entity?.id ?? null,
+    userKey,
+    relationshipSectionRef: relNetworkRef,
+  });
 
-    const mountedAt = Date.now();
-    let thresholdMet = false;
-    let pendingTimer: number | null = null;
 
-    const tryFire = () => {
-      if (questFiredRef.current === entity.id) return;
-      const remaining = MIN_READ_MS - (Date.now() - mountedAt);
-      if (remaining > 0) {
-        // Threshold reached but the reader hasn't dwelled long enough.
-        // Arm a single deferred fire and re-check on the deadline.
-        if (pendingTimer == null) {
-          pendingTimer = window.setTimeout(() => {
-            pendingTimer = null;
-            // Only complete if the user is still on this route (guard
-            // still applies since the effect cleanup nulls the ref).
-            if (thresholdMet) fire();
-          }, remaining);
-        }
-        return;
-      }
-      fire();
-    };
-
-    const fire = () => {
-      if (questFiredRef.current === entity.id) return;
-      const r = reportEntityRead(userKey, entity.id);
-      if (r.justCompleted && r.state) {
-        questFiredRef.current = entity.id;
-        try {
-          window.dispatchEvent(new CustomEvent(QUEST_COMPLETED_EVENT, { detail: r.state }));
-        } catch { /* ignore */ }
-      } else if (r.state?.rewarded) {
-        questFiredRef.current = entity.id;
-      }
-    };
-
-    // Primary: IntersectionObserver on the relationship-network section.
-    let observer: IntersectionObserver | null = null;
-    const el = relNetworkRef.current;
-    if (el && typeof IntersectionObserver !== "undefined") {
-      observer = new IntersectionObserver(
-        (entries) => {
-          for (const en of entries) {
-            if (en.isIntersecting) { thresholdMet = true; tryFire(); observer?.disconnect(); break; }
-          }
-        },
-        { threshold: 0.35, rootMargin: "0px 0px -10% 0px" },
-      );
-      observer.observe(el);
-    }
-
-    // Fallback: scroll past ~88% of the document.
-    const onScroll = () => {
-      if (questFiredRef.current === entity.id) return;
-      const doc = document.documentElement;
-      const scrolled = window.scrollY + window.innerHeight;
-      const total = doc.scrollHeight;
-      if (total > 0 && scrolled / total >= 0.88) {
-        thresholdMet = true;
-        tryFire();
-      }
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    // Kick once in case the article is short enough to already be at bottom.
-    onScroll();
-
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener("scroll", onScroll);
-      if (pendingTimer != null) window.clearTimeout(pendingTimer);
-    };
-  }, [entity?.id, userKey]);
 
 
   const relatedQuery = useQuery({

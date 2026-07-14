@@ -1,5 +1,7 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useDailyQuestEntityReadCompletion } from "@/hooks/useDailyQuestEntityReadCompletion";
+import { useAccount } from "@/lib/account";
 import {
   ChevronRight,
   Database,
@@ -132,6 +134,18 @@ function StatePage() {
   const state = stateQuery.data && isDisplayableEntity(stateQuery.data) && stateQuery.data.entity_type === "state"
     ? stateQuery.data
     : null;
+
+  // Daily Quest completion — same shared hook as the generic entity
+  // route. Anchors on the "التاريخ المرتبط" section below, with the
+  // 88 % scroll fallback covering short states without related rows.
+  const { user } = useAccount();
+  const userKey = user?.id ?? "guest";
+  const relNetworkRef = useRef<HTMLElement | null>(null);
+  useDailyQuestEntityReadCompletion({
+    entityId: state?.id ?? null,
+    userKey,
+    relationshipSectionRef: relNetworkRef,
+  });
 
 
   const relatedQuery = useQuery({
@@ -287,7 +301,8 @@ function StatePage() {
 
         {/* ───────── Related knowledge graph ───────── */}
         {totalEntities > 0 && (
-          <section className="mt-8">
+          <section ref={relNetworkRef} className="mt-8" data-quest-section="relationship-network">
+
             <div className="mb-3 flex items-center gap-2">
               <h2 className="font-display text-base font-bold">التاريخ المرتبط</h2>
               <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
