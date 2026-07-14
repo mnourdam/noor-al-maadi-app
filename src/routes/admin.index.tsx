@@ -83,6 +83,9 @@ function AdminHub() {
             desc="إدارة البلاغات والاقتراحات وتصحيحات المعلومات والرد على المستخدمين." />
           <AdminCard to="/admin/notifications" icon={<Bell className="h-5 w-5" />} title="إدارة الإشعارات"
             desc="إنشاء وإرسال إشعارات يدوية والاطلاع على المسودات." />
+          <AdminCard to="/admin/newsletter" icon={<Mail className="h-5 w-5" />} title="النشرة البريدية"
+            desc="اشتراكات النشرة، حالة Double Opt-In، وتصدير القوائم للإرسال عبر مزوّد خارجي."
+            badge={stats.newsletter} />
           <AdminCard to="/admin/content" icon={<BookOpen className="h-5 w-5" />} title="محتوى الإشعارات التلقائية"
             desc="إدارة المعلومات اليومية وأحداث في مثل هذا اليوم." />
           <AdminCard to="/admin/import" icon={<Upload className="h-5 w-5" />} title="استيراد المحتوى"
