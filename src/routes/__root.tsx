@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ProfileProvider } from "../lib/profile";
 import { AccountProvider } from "../lib/account";
 import { FirstLaunchGate } from "../components/FirstLaunchGate";
+import { OnboardingTour } from "../components/OnboardingTour";
 import { Toaster } from "../components/ui/sonner";
 import { AchievementWatcher } from "../components/AchievementWatcher";
 import { LevelUpWatcher } from "../components/LevelUpWatcher";
