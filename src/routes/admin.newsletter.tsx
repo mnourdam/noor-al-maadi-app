@@ -271,10 +271,12 @@ function NewsletterAdminPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => exportCsv("marketing")}
-            className="inline-flex items-center gap-1 rounded bg-amber-500 px-3 py-1.5 text-xs font-semibold text-slate-950">
-            <Download className="h-3.5 w-3.5" /> تصدير التسويقي (نشِط + مؤكَّد + غير محظور)
-          </button>
+          {NEWSLETTER_DOI_ENABLED && (
+            <button onClick={() => exportCsv("marketing")}
+              className="inline-flex items-center gap-1 rounded bg-amber-500 px-3 py-1.5 text-xs font-semibold text-slate-950">
+              <Download className="h-3.5 w-3.5" /> تصدير التسويقي (نشِط + مؤكَّد + غير محظور)
+            </button>
+          )}
           <button onClick={() => exportCsv("all")}
             className="inline-flex items-center gap-1 rounded border border-white/10 px-3 py-1.5 text-xs">
             <Download className="h-3.5 w-3.5" /> تصدير كل السجلات
