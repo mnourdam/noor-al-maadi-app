@@ -18,7 +18,7 @@ import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notificati
 import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
-import { OnboardingTour } from "@/components/OnboardingTour";
+
 import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
