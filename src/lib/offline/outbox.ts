@@ -94,8 +94,34 @@ export async function enqueue(
   kind: OutboxKind,
   payload: Record<string, unknown>,
 ): Promise<OutboxItem> {
+  return enqueueInternal(userId, kind, payload, uuid());
+}
+
+/**
+ * Enqueue a mutation with a caller-supplied stable id. The id doubles as
+ * the server-side idempotency key (e.g. `apply_profile_delta.p_delta_id`).
+ * Repeated calls with the same id are a no-op: the existing queued row is
+ * overwritten with the same payload, so a duplicate flush cannot double-
+ * grant. This is the offline path for canonical, atomic reward grants
+ * (Daily Quest, streak milestones, etc.).
+ */
+export async function enqueueWithId(
+  userId: string,
+  id: string,
+  kind: OutboxKind,
+  payload: Record<string, unknown>,
+): Promise<OutboxItem> {
+  return enqueueInternal(userId, kind, payload, id);
+}
+
+async function enqueueInternal(
+  userId: string,
+  kind: OutboxKind,
+  payload: Record<string, unknown>,
+  id: string,
+): Promise<OutboxItem> {
   const item: OutboxItem = {
-    id: uuid(),
+    id,
     userId,
     kind,
     payload,
@@ -107,12 +133,15 @@ export async function enqueue(
     const db = await openDB();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE, "readwrite");
+      // `put` upserts by keyPath (id). Re-enqueueing with the same stable id
+      // is idempotent — the second write overwrites the first with the same
+      // payload; it does NOT create a duplicate row.
       tx.objectStore(STORE).put(item);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error ?? new Error("idb-put-failed"));
     });
   } catch {
-    const all = lsReadAll();
+    const all = lsReadAll().filter((i) => i.id !== item.id);
     all.push(item);
     lsWriteAll(all);
   }

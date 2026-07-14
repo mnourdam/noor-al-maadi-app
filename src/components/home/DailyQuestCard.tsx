@@ -8,8 +8,10 @@ import {
   entityTypeLabel,
   getTodayQuest,
   markQuestRewarded,
+  localDateKey,
   type QuestState,
 } from "@/lib/daily-quest";
+import { grantDailyQuestReward } from "@/lib/daily-quest-reward";
 import { useProfile } from "@/lib/profile";
 import { useAccount } from "@/lib/account";
 import { Reveal } from "@/components/motion/MotionPrimitives";
@@ -74,7 +76,7 @@ interface RewardFloat {
 /** Home-screen "Goal of the Day" card driven by the Daily Quest system. */
 export function DailyQuestCard() {
   const { user, loadingSession } = useAccount();
-  const { addPoints, addDinars } = useProfile();
+  const { addPoints, addDinars, applyServerStats } = useProfile();
 
   const userKey = user?.id ?? "guest";
 
@@ -82,7 +84,11 @@ export function DailyQuestCard() {
   const [poolReady, setPoolReady] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [floats, setFloats] = useState<RewardFloat[]>([]);
-  const grantedRef = useRef(false);
+  /** In-flight guard for the canonical RPC grant. Prevents two concurrent
+   *  attempts from the same mount (event + mount reconciliation). Server
+   *  idempotency (primary key on delta_id) still guarantees uniqueness
+   *  across mounts, tabs, and devices. */
+  const grantInflightRef = useRef<string | null>(null);
   const floatIdRef = useRef(0);
 
   const refresh = useCallback(() => {
@@ -101,36 +107,34 @@ export function DailyQuestCard() {
   useEffect(() => {
     if (!poolReady || loadingSession) return;
     refresh();
-    // Reset the per-mount reward guard when the account changes so a
-    // fresh sign-in can still receive their own quest reward.
-    grantedRef.current = false;
+    // Reset the in-flight guard when the account changes so a fresh
+    // sign-in can attempt its own reward RPC.
+    grantInflightRef.current = null;
 
-    // Canonical reward grant. Idempotent: `markQuestRewarded` only flips
-    // `rewarded=true` once on the persisted quest state; a second call
-    // returns the same already-rewarded object without re-crediting.
-    //
-    // IMPORTANT: reward MUST be granted here, not on the article route.
-    // Completion is detected from the entity-reading hook, which lives on
-    // the article page — but the economy hooks (`addPoints`/`addDinars`)
-    // are wired here, and this is the only surface that stays mounted
-    // across sign-in/out. If the completion event fires while the user is
-    // on the article page, no one listens; on next Home mount we
-    // reconcile the persisted `completed && !rewarded` state below.
-    const grantReward = (q: QuestState) => {
-      if (!q.completed || q.rewarded) return;
-      if (grantedRef.current) return;
-      // Order: grant economy first, THEN flip rewarded=true. If the
-      // grant throws we keep rewarded=false so a later mount retries.
-      try {
-        addPoints(q.xp);
-        addDinars(q.dinars);
-      } catch (err) {
-        console.warn("[daily-quest] reward grant failed, will retry", err);
-        return;
-      }
-      const rewarded = markQuestRewarded(userKey);
-      if (!rewarded || !rewarded.rewarded) return;
-      grantedRef.current = true;
+    /**
+     * Canonical atomic reward grant.
+     *
+     * Server side: `apply_profile_delta` RPC — inserts the idempotency
+     * row into `applied_profile_deltas (PRIMARY KEY delta_id)` AND
+     * updates `profiles.xp + dinars` inside a single transaction. A
+     * duplicate delta_id returns `{applied:false}` and mutates nothing,
+     * so XP and dinars can never partially grant and can never be
+     * granted twice.
+     *
+     * The delta_id is a deterministic UUIDv5-shape hash of a stable
+     * reward key `daily_quest:<uid>:<localDate>:<entityId>` — every
+     * attempt for the same (user, day, quest) collapses to the same
+     * primary key regardless of device, mount, or online/offline.
+     *
+     * Client flow:
+     *   • Guest (no user) → local-only path (keyed by localStorage
+     *     `rewarded` flag on the persisted quest).
+     *   • Signed-in → RPC. `granted` mirrors locally; `already_granted`
+     *     re-syncs from `profiles` to avoid drift; `queued` leaves
+     *     `rewarded=false` and will retry on the next mount / outbox
+     *     flush event.
+     */
+    const playCelebration = (q: QuestState) => {
       const reduced = prefersReducedMotion();
       setCelebrate(true);
       vibrateSuccess();
@@ -147,24 +151,116 @@ export function DailyQuestCard() {
       window.setTimeout(() => setCelebrate(false), reduced ? 600 : 2600);
     };
 
+    const grantReward = async (q: QuestState) => {
+      if (!q.completed || q.rewarded) return;
+      if (!q.target) return;
+      // Coalesce concurrent attempts for the same quest from the same
+      // mount (event + mount reconciliation). Server idempotency still
+      // guards cross-mount/cross-device duplicates.
+      const entityId = q.target.entityId;
+      if (grantInflightRef.current === entityId) return;
+      grantInflightRef.current = entityId;
+
+      try {
+        // Guest — no cloud account. Grant locally and use the localStorage
+        // `rewarded` flag as the idempotency guard. If this guest later
+        // signs in, the account's first daily-quest RPC call uses a fresh
+        // `daily_quest:<uid>:...` delta_id the server has never seen, so
+        // the historical guest grant does not double-credit the account.
+        if (!user) {
+          addPoints(q.xp);
+          addDinars(q.dinars);
+          const rewarded = markQuestRewarded(userKey);
+          if (rewarded?.rewarded) playCelebration(q);
+          return;
+        }
+
+        const localDate = q.date || localDateKey();
+        console.info("[daily-quest-reward] attempting grant", {
+          userId: user.id,
+          date: localDate,
+          entityId,
+          xp: q.xp,
+          dinars: q.dinars,
+        });
+        const result = await grantDailyQuestReward({
+          userId: user.id,
+          localDate,
+          entityId,
+          xp: q.xp,
+          dinars: q.dinars,
+        });
+        console.info("[daily-quest-reward] outcome", {
+          outcome: result.outcome,
+          deltaId: result.deltaId,
+        });
+
+        if (result.outcome === "granted") {
+          // Server confirmed a first-time grant — mirror locally.
+          addPoints(q.xp);
+          addDinars(q.dinars);
+          const rewarded = markQuestRewarded(userKey);
+          if (rewarded?.rewarded) playCelebration(q);
+          return;
+        }
+        if (result.outcome === "already_granted") {
+          // Server already had this delta. Re-sync authoritative stats
+          // instead of adding locally, otherwise a device that lost its
+          // localStorage `rewarded` flag would double-count client-side.
+          if (result.serverStats) {
+            applyServerStats({
+              xp: result.serverStats.xp,
+              dinars: result.serverStats.dinars,
+              hearts: result.serverStats.hearts,
+              streak: result.serverStats.streak,
+            });
+          }
+          markQuestRewarded(userKey);
+          // No celebration on already_granted — it's a silent reconcile.
+          return;
+        }
+        if (result.outcome === "queued") {
+          // Offline / RPC failure. Keep `rewarded=false` so the next
+          // mount or outbox-flush event retries. The queued item carries
+          // the same stable delta_id, so eventual flush cannot duplicate.
+          console.info("[daily-quest-reward] queued for retry");
+          return;
+        }
+        // unauthenticated — the session lapsed between UI check and RPC.
+        // Do nothing; next mount re-evaluates.
+      } finally {
+        grantInflightRef.current = null;
+      }
+    };
+
     // Reconcile on mount: if the article page completed the quest while
     // Home was unmounted, the persisted state has `completed=true` and
-    // `rewarded=false` — grant now.
+    // `rewarded=false` — attempt the canonical grant now.
     const initial = getTodayQuest(userKey);
-    if (initial) grantReward(initial);
+    if (initial) void grantReward(initial);
 
     const onUpdate = () => {
       refresh();
       const cur = getTodayQuest(userKey);
-      if (cur) grantReward(cur);
+      if (cur) void grantReward(cur);
     };
     const onCompleted = (e: Event) => {
       const next = (e as CustomEvent<QuestState>).detail;
       if (!next) return;
-      grantReward(next);
+      void grantReward(next);
+    };
+    // Retry the RPC when the outbox drains — a queued attempt may have
+    // just succeeded, in which case the server now returns
+    // `already_granted` and we finalize local state + rewarded flag.
+    const onOutboxFlushed = () => {
+      const cur = getTodayQuest(userKey);
+      if (cur && cur.completed && !cur.rewarded) void grantReward(cur);
     };
     window.addEventListener(QUEST_UPDATED_EVENT, onUpdate);
     window.addEventListener(QUEST_COMPLETED_EVENT, onCompleted as EventListener);
+    window.addEventListener("irth:outbox:flushed", onOutboxFlushed);
+    // Also retry when the browser regains connectivity.
+    window.addEventListener("online", onOutboxFlushed);
 
     // Refresh at local midnight so a new mission appears without reload.
     const now = new Date();
@@ -173,9 +269,11 @@ export function DailyQuestCard() {
     return () => {
       window.removeEventListener(QUEST_UPDATED_EVENT, onUpdate);
       window.removeEventListener(QUEST_COMPLETED_EVENT, onCompleted as EventListener);
+      window.removeEventListener("irth:outbox:flushed", onOutboxFlushed);
+      window.removeEventListener("online", onOutboxFlushed);
       window.clearTimeout(tid);
     };
-  }, [userKey, poolReady, loadingSession, refresh, addPoints, addDinars]);
+  }, [user, userKey, poolReady, loadingSession, refresh, addPoints, addDinars, applyServerStats]);
 
   const target = state?.target ?? null;
   const completed = !!state?.completed;
