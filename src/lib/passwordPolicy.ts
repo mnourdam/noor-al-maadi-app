@@ -94,7 +94,55 @@ export type HibpResult =
   | { status: "pwned"; count: number }
   | { status: "skipped"; reason: string };
 
+// Per-hash result cache (definitive answer for a given password).
 const hibpCache = new Map<string, HibpResult>();
+// Per-prefix range-response cache — the HIBP range API returns the same
+// ~800 suffix lines for every password sharing the SHA-1 prefix, so we
+// keep that response for the whole session and reuse it for any other
+// password that hashes to the same prefix. This means editing a password
+// and returning to a previous value never re-hits the network, and even
+// unrelated passwords that happen to share a prefix skip the request.
+const hibpPrefixCache = new Map<string, Map<string, number>>();
+// De-duplicate concurrent range fetches for the same prefix.
+const hibpPrefixInflight = new Map<string, Promise<Map<string, number> | null>>();
+
+function parseRangeBody(text: string): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const line of text.split(/\r?\n/)) {
+    const idx = line.indexOf(":");
+    if (idx <= 0) continue;
+    const s = line.slice(0, idx).trim().toUpperCase();
+    const c = parseInt(line.slice(idx + 1).trim(), 10) || 0;
+    if (s) map.set(s, c);
+  }
+  return map;
+}
+
+async function fetchRange(prefix: string, signal?: AbortSignal): Promise<Map<string, number> | null> {
+  const cached = hibpPrefixCache.get(prefix);
+  if (cached) return cached;
+  const inflight = hibpPrefixInflight.get(prefix);
+  if (inflight) return inflight;
+  const p = (async () => {
+    try {
+      const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+        method: "GET",
+        signal,
+        headers: { "Add-Padding": "true" },
+      });
+      if (!res.ok) return null;
+      const map = parseRangeBody(await res.text());
+      hibpPrefixCache.set(prefix, map);
+      return map;
+    } catch {
+      return null;
+    } finally {
+      hibpPrefixInflight.delete(prefix);
+    }
+  })();
+  hibpPrefixInflight.set(prefix, p);
+  return p;
+}
 
 export async function checkHibp(pwd: string, signal?: AbortSignal): Promise<HibpResult> {
   if (typeof crypto === "undefined" || !crypto.subtle) {
@@ -108,35 +156,16 @@ export async function checkHibp(pwd: string, signal?: AbortSignal): Promise<Hibp
   if (cached) return cached;
   const prefix = hash.slice(0, 5);
   const suffix = hash.slice(5);
-  try {
-    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
-      method: "GET",
-      signal,
-      headers: { "Add-Padding": "true" },
-    });
-    if (!res.ok) {
-      const r: HibpResult = { status: "skipped", reason: `http-${res.status}` };
-      hibpCache.set(hash, r);
-      return r;
-    }
-    const text = await res.text();
-    let count = 0;
-    for (const line of text.split(/\r?\n/)) {
-      const idx = line.indexOf(":");
-      if (idx <= 0) continue;
-      const s = line.slice(0, idx).trim().toUpperCase();
-      if (s === suffix) {
-        count = parseInt(line.slice(idx + 1).trim(), 10) || 1;
-        break;
-      }
-    }
-    const r: HibpResult = count > 0 ? { status: "pwned", count } : { status: "safe" };
-    hibpCache.set(hash, r);
-    return r;
-  } catch (err) {
-    const reason = err instanceof Error ? err.name : "fetch-error";
-    return { status: "skipped", reason };
+  const range = await fetchRange(prefix, signal);
+  if (signal?.aborted) return { status: "skipped", reason: "aborted" };
+  if (!range) {
+    // Do not cache network failures — retry next time the user pauses.
+    return { status: "skipped", reason: "unavailable" };
   }
+  const count = range.get(suffix) ?? 0;
+  const r: HibpResult = count > 0 ? { status: "pwned", count } : { status: "safe" };
+  hibpCache.set(hash, r);
+  return r;
 }
 
 // ---- Combined full-policy check ------------------------------------
