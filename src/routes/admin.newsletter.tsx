@@ -291,7 +291,7 @@ function NewsletterAdminPage() {
               <th className="p-2">البريد</th>
               <th className="p-2">المستخدم</th>
               <th className="p-2">الحالة</th>
-              <th className="p-2">مؤكَّد</th>
+              {NEWSLETTER_DOI_ENABLED && <th className="p-2">مؤكَّد</th>}
               <th className="p-2">المصدر</th>
               <th className="p-2">تاريخ الاشتراك</th>
               <th className="p-2">آخر تحديث</th>
@@ -300,9 +300,9 @@ function NewsletterAdminPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="p-4 text-center text-muted-foreground"><RefreshCw className="inline h-4 w-4 animate-spin" /></td></tr>
+              <tr><td colSpan={NEWSLETTER_DOI_ENABLED ? 8 : 7} className="p-4 text-center text-muted-foreground"><RefreshCw className="inline h-4 w-4 animate-spin" /></td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">لا نتائج</td></tr>
+              <tr><td colSpan={NEWSLETTER_DOI_ENABLED ? 8 : 7} className="p-4 text-center text-muted-foreground">لا نتائج</td></tr>
             ) : rows.map(r => {
               const status = r.unsubscribed_at ? "ألغى" : r.subscribed ? "مشترك" : "متوقّف";
               return (
