@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import {
   selectDailyChallenges,
+  fetchMyCompletedGameIds,
   fetchMyDailyCompletedGameIds,
   type GameRow,
 } from "@/lib/games/store";
