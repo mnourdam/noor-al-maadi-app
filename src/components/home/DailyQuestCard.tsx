@@ -105,31 +105,63 @@ export function DailyQuestCard() {
     // fresh sign-in can still receive their own quest reward.
     grantedRef.current = false;
 
-    const onUpdate = () => refresh();
+    // Canonical reward grant. Idempotent: `markQuestRewarded` only flips
+    // `rewarded=true` once on the persisted quest state; a second call
+    // returns the same already-rewarded object without re-crediting.
+    //
+    // IMPORTANT: reward MUST be granted here, not on the article route.
+    // Completion is detected from the entity-reading hook, which lives on
+    // the article page — but the economy hooks (`addPoints`/`addDinars`)
+    // are wired here, and this is the only surface that stays mounted
+    // across sign-in/out. If the completion event fires while the user is
+    // on the article page, no one listens; on next Home mount we
+    // reconcile the persisted `completed && !rewarded` state below.
+    const grantReward = (q: QuestState) => {
+      if (!q.completed || q.rewarded) return;
+      if (grantedRef.current) return;
+      // Order: grant economy first, THEN flip rewarded=true. If the
+      // grant throws we keep rewarded=false so a later mount retries.
+      try {
+        addPoints(q.xp);
+        addDinars(q.dinars);
+      } catch (err) {
+        console.warn("[daily-quest] reward grant failed, will retry", err);
+        return;
+      }
+      const rewarded = markQuestRewarded(userKey);
+      if (!rewarded || !rewarded.rewarded) return;
+      grantedRef.current = true;
+      const reduced = prefersReducedMotion();
+      setCelebrate(true);
+      vibrateSuccess();
+      playSuccessChime();
+      if (!reduced) {
+        const idA = ++floatIdRef.current;
+        const idB = ++floatIdRef.current;
+        setFloats([
+          { id: idA, tone: "xp", label: `+${q.xp} خبرة` },
+          { id: idB, tone: "dinar", label: `+${q.dinars} دينار` },
+        ]);
+        window.setTimeout(() => setFloats([]), 2000);
+      }
+      window.setTimeout(() => setCelebrate(false), reduced ? 600 : 2600);
+    };
+
+    // Reconcile on mount: if the article page completed the quest while
+    // Home was unmounted, the persisted state has `completed=true` and
+    // `rewarded=false` — grant now.
+    const initial = getTodayQuest(userKey);
+    if (initial) grantReward(initial);
+
+    const onUpdate = () => {
+      refresh();
+      const cur = getTodayQuest(userKey);
+      if (cur) grantReward(cur);
+    };
     const onCompleted = (e: Event) => {
       const next = (e as CustomEvent<QuestState>).detail;
-      if (!next || next.rewarded) return;
-      if (grantedRef.current) return;
-      const rewarded = markQuestRewarded(userKey);
-      if (rewarded && rewarded.rewarded) {
-        grantedRef.current = true;
-        addPoints(next.xp);
-        addDinars(next.dinars);
-        const reduced = prefersReducedMotion();
-        setCelebrate(true);
-        vibrateSuccess();
-        playSuccessChime();
-        if (!reduced) {
-          const idA = ++floatIdRef.current;
-          const idB = ++floatIdRef.current;
-          setFloats([
-            { id: idA, tone: "xp", label: `+${next.xp} خبرة` },
-            { id: idB, tone: "dinar", label: `+${next.dinars} دينار` },
-          ]);
-          window.setTimeout(() => setFloats([]), 2000);
-        }
-        window.setTimeout(() => setCelebrate(false), reduced ? 600 : 2600);
-      }
+      if (!next) return;
+      grantReward(next);
     };
     window.addEventListener(QUEST_UPDATED_EVENT, onUpdate);
     window.addEventListener(QUEST_COMPLETED_EVENT, onCompleted as EventListener);
