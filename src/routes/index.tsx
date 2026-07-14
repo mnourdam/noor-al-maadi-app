@@ -814,11 +814,16 @@ function HomeFull() {
         {stats.recent.length > 0 ? (
           <div className="relative">
             <div
-              className="-mx-5 flex flex-nowrap items-stretch gap-3 overflow-x-auto overscroll-x-contain px-5 pe-12 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-end:3rem] sm:-mx-6 sm:gap-4 sm:px-6 sm:pe-16 md:-mx-8 md:gap-5 md:px-8 md:pe-20"
+              className="-mx-5 flex flex-nowrap items-stretch gap-3 overflow-x-auto overscroll-x-contain px-5 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-start:1.25rem] sm:-mx-6 sm:gap-4 sm:px-6 sm:[scroll-padding-inline-start:1.5rem] md:-mx-8 md:gap-5 md:px-8 md:[scroll-padding-inline-start:2rem]"
               aria-label="آخر الاكتشافات"
             >
-              {stats.recent.slice(0, 8).map((r) => (
-                <div key={r.key} className="w-48 flex-none snap-start sm:w-56 md:w-64 lg:w-72">
+              {stats.recent.slice(0, 8).map((r, i, arr) => (
+                <div
+                  key={r.key}
+                  className={`w-48 flex-none snap-start sm:w-56 md:w-64 lg:w-72 ${
+                    i === arr.length - 1 ? "pe-5 sm:pe-6 md:pe-8" : ""
+                  }`}
+                >
                   <RecentCard item={r} />
                 </div>
               ))}
