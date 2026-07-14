@@ -319,7 +319,7 @@ function NewsletterAdminPage() {
                     {r.user_id ? r.user_id.slice(0, 8) + "…" : <span className="text-muted-foreground">ضيف</span>}
                   </td>
                   <td className="p-2">{status}</td>
-                  <td className="p-2">{r.confirmed ? "نعم" : "لا"}</td>
+                  {NEWSLETTER_DOI_ENABLED && <td className="p-2">{r.confirmed ? "نعم" : "لا"}</td>}
                   <td className="p-2">{r.source ?? "—"}</td>
                   <td className="p-2 whitespace-nowrap">{new Date(r.created_at).toLocaleDateString("ar")}</td>
                   <td className="p-2 whitespace-nowrap">{new Date(r.updated_at).toLocaleDateString("ar")}</td>
