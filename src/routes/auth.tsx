@@ -58,11 +58,36 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [passwordValue, setPasswordValue] = useState("");
+  const [hibp, setHibp] = useState<HibpResult | null>(null);
+  const [hibpPending, setHibpPending] = useState(false);
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
   const referralRef = useRef<HTMLInputElement>(null);
+
+  const sync = useMemo(() => evaluatePassword(passwordValue), [passwordValue]);
+  useEffect(() => {
+    if (mode !== "signup") { setHibp(null); setHibpPending(false); return; }
+    setHibp(null);
+    if (!sync.syncOk) { setHibpPending(false); return; }
+    const controller = new AbortController();
+    setHibpPending(true);
+    const t = setTimeout(() => {
+      checkHibp(passwordValue, controller.signal)
+        .then((r) => setHibp(r))
+        .catch(() => setHibp({ status: "skipped", reason: "error" }))
+        .finally(() => setHibpPending(false));
+    }, 350);
+    return () => { controller.abort(); clearTimeout(t); setHibpPending(false); };
+  }, [passwordValue, sync.syncOk, mode]);
+
+  const hibpBlocked = hibp?.status === "pwned";
+  const signupPolicyOk = sync.syncOk && !hibpBlocked && !hibpPending;
+  const signupProblems = hibpBlocked
+    ? [...sync.problems, "هذه الكلمة ظهرت في تسريبات معروفة — اختر كلمة مختلفة"]
+    : sync.problems;
 
   useEffect(() => {
     if (user) {
