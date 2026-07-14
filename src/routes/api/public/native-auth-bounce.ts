@@ -106,8 +106,8 @@ export const Route = createFileRoute("/api/public/native-auth-bounce")({
     } catch(_){}
     // Fire the intent AFTER first paint so the user sees the "returning…"
     // card and Chrome doesn't record a failed load on the initial response.
-    // `intent://` is understood by Chrome as an OS hand-off, so it never
-    // renders ERR_CONNECTION_CLOSED even when the app is briefly slow.
+    // The intent:// URL is understood by Chrome as an OS hand-off, so it
+    // never renders ERR_CONNECTION_CLOSED even when the app is briefly slow.
     function launch(){
       try { window.location.href = intent; } catch(_){}
     }
