@@ -996,7 +996,6 @@ function HomeFull() {
         </Reveal>
       )}
 
-      <OnboardingTour />
     </AppShell>
   );
 }
