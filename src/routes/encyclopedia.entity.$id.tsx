@@ -11,8 +11,12 @@ import {
   Map as MapIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { notifyQuestProgress } from "@/lib/daily-quest";
+import { useEffect, useRef } from "react";
+import {
+  QUEST_COMPLETED_EVENT,
+  reportEntityRead,
+} from "@/lib/daily-quest";
+import { useAccount } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 
