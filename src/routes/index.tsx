@@ -281,13 +281,17 @@ function HomeFull() {
       };
     });
 
-    // Priority — keep this rule, it is the correct UX:
+    // Priority — the Hero must always guide the player forward:
     //   1) earliest STARTED but not complete campaign
-    //   2) earliest unfinished campaign overall
-    //   3) last campaign in the chronological list (everything complete)
+    //   2) earliest unfinished campaign overall (next unlocked to play)
+    //   3) otherwise NO campaign selection — every published campaign is
+    //      complete. Falling back to the last (completed) campaign would
+    //      show "Continue A · 100%" which is misleading; hero simply skips
+    //      the campaign slide and other slides (today-in-history, latest
+    //      discovery) fill the carousel instead.
     const startedPick = enriched.find((e) => e.hasStarted && !e.isComplete);
     const fallbackPick = enriched.find((e) => !e.isComplete);
-    const selected = startedPick ?? fallbackPick ?? enriched[enriched.length - 1] ?? enriched[0];
+    const selected = startedPick ?? fallbackPick ?? null;
 
     if (typeof window !== "undefined" && (window as any).__IRTH_HERO_DEBUG !== false) {
       try {
