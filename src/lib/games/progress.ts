@@ -56,5 +56,8 @@ export async function recordCompletion(
     /* offline — best_score falls back to the passed value */
   }
   await recordGameComplete({ gameId, stageIndex, score });
+  // Notify the Daily Quest system — only the first-time completion counts,
+  // so replaying a challenge cannot re-complete "أكمل تحديًا واحدًا".
+  if (!alreadyCompleted) notifyQuestProgress("complete_challenge", 1);
   return { firstTime: !alreadyCompleted };
 }
