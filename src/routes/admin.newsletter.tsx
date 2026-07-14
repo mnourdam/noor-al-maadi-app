@@ -75,7 +75,7 @@ function NewsletterAdminPage() {
     return Array.from(set).sort();
   }, [rows]);
 
-  const doiWarning = stats && stats.confirmed === 0 && stats.total > 0;
+  
 
   async function onUnsubscribe(row: AdminSubscriberRow) {
     const reason = window.prompt("سبب إلغاء الاشتراك (سيُسجَّل في سجل الأدمِن):", "طلب المستخدم");
