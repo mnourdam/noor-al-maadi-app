@@ -135,6 +135,18 @@ function StatePage() {
     ? stateQuery.data
     : null;
 
+  // Daily Quest completion — same shared hook as the generic entity
+  // route. Anchors on the "التاريخ المرتبط" section below, with the
+  // 88 % scroll fallback covering short states without related rows.
+  const { user } = useAccount();
+  const userKey = user?.id ?? "guest";
+  const relNetworkRef = useRef<HTMLElement | null>(null);
+  useDailyQuestEntityReadCompletion({
+    entityId: state?.id ?? null,
+    userKey,
+    relationshipSectionRef: relNetworkRef,
+  });
+
 
   const relatedQuery = useQuery({
     queryKey: ["encyclopedia", "state-related", state?.id ?? ""],
