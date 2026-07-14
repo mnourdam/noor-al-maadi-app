@@ -261,7 +261,7 @@ export function DailyChallengesSection() {
           completed={completedIds.has(picks[0].id)}
         />
       ) : (
-        <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-5" max={2}>
+        <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-5 sm:gap-4 md:gap-5" max={2}>
           <div className="sm:col-span-3">
             <ChallengeCard
               game={picks[0]}
