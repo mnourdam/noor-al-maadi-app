@@ -7,6 +7,7 @@ import {
 import { AppShell, Screen } from "@/components/AppShell";
 import {
   selectDailyChallenges,
+  fetchMyCompletedGameIds,
   fetchMyDailyCompletedGameIds,
   type GameRow,
 } from "@/lib/games/store";
