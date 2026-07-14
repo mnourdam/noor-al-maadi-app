@@ -301,7 +301,8 @@ function StatePage() {
 
         {/* ───────── Related knowledge graph ───────── */}
         {totalEntities > 0 && (
-          <section className="mt-8">
+          <section ref={relNetworkRef} className="mt-8" data-quest-section="relationship-network">
+
             <div className="mb-3 flex items-center gap-2">
               <h2 className="font-display text-base font-bold">التاريخ المرتبط</h2>
               <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
