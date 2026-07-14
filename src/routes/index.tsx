@@ -57,9 +57,13 @@ type HeroSlide =
 
 function HomeFull() {
   const { profile } = useProfile();
-  const { account, user, lastSyncAt } = useAccount();
+  const { account, user, lastSyncAt, displayName: resolvedDisplayName } = useAccount();
 
-  const displayName = account?.username ?? (user ? profile.name : profile.name);
+  // Priority: display_name → full_name → username → email prefix.
+  // `useAccount()` already resolves this chain from account row +
+  // user_metadata; only fall back to the profile name for pure-offline
+  // (never-signed-in) sessions.
+  const displayName = user ? resolvedDisplayName : (profile.name || "ضيف");
   const [mounted, setMounted] = useState(false);
   const { selected: todayEvent, others: todayOthers } = useTodayInHistoryEvent();
   const todayEvents = useMemo<TodayInHistoryEvent[]>(
