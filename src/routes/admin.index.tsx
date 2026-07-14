@@ -158,8 +158,8 @@ function StatCard({ label, value }: { label: string; value: number | null }) {
 }
 
 function AdminCard({
-  to, icon, title, desc, comingSoon,
-}: { to?: string; icon: React.ReactNode; title: string; desc: string; comingSoon?: boolean }) {
+  to, icon, title, desc, comingSoon, badge,
+}: { to?: string; icon: React.ReactNode; title: string; desc: string; comingSoon?: boolean; badge?: number | null }) {
   const body = (
     <div className={`group h-full rounded-xl border p-5 transition ${
       comingSoon
@@ -170,6 +170,11 @@ function AdminCard({
         {icon}
         <h2 className="text-base font-semibold">{title}</h2>
         {comingSoon && <span className="ml-auto rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300">قريبًا</span>}
+        {!comingSoon && typeof badge === "number" && (
+          <span className="ml-auto rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-xs font-bold tabular-nums text-amber-200">
+            {badge}
+          </span>
+        )}
       </div>
       <p className="text-sm text-slate-400">{desc}</p>
     </div>
