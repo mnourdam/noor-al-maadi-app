@@ -2,22 +2,22 @@
 // Daily Quest — one deterministic encyclopedia-driven mission per
 // local calendar day.
 //
-// Design highlights:
-//  - The mission targets ONE specific canonical encyclopedia entity
-//    picked deterministically from (userKey, localDate). Same account
-//    on the same device on the same local day → same entity, always.
-//  - Recent-history exclusion keeps the last 30 entities out of the
-//    pool until the pool is exhausted; then it recycles.
-//  - Selection is done against the offline snapshot so the quest
-//    works offline. `isDisplayableEntity` guarantees only enabled,
-//    canonical, content-bearing entities are picked (never archived,
-//    merged, redirected, or stub rows).
-//  - Completion is entity-scoped: reading a DIFFERENT article never
-//    advances the quest — the target `entityId` must match.
-//  - Rewards are granted exactly once via a `rewarded` flag persisted
-//    in localStorage; refresh / cold restart cannot re-credit.
-//  - Architecture is generic over quest kinds so we can add
-//    `visit_atlas`, `read_today_event`, `complete_chapter`, etc.
+// This module owns:
+//   • Selection: deterministic weighted pick per (userKey, localDate).
+//     Weighting favors historically important types, rich content,
+//     featured entities, and iconic battles/figures/states.
+//   • Priority tiers: never-opened → opened-not-completed →
+//     completed-long-ago → everything else. Falls back gracefully
+//     when a tier is empty.
+//   • Persistence: today's quest, per-user recommendation history,
+//     and per-entity open/completion telemetry — all in localStorage.
+//   • Reading gate: exports a minimum on-page dwell time consumed by
+//     the entity route so quick scroll-to-bottom never completes.
+//   • Reward idempotency: `rewarded` flag persists across refresh.
+//
+// Same account, same device, same local day → same entity, always.
+// Reading a different entity is a no-op. The completion event is
+// fired exactly once per (userKey, day).
 // ============================================================
 
 import {
@@ -33,12 +33,12 @@ export const QUEST_UPDATED_EVENT = "irth:daily-quest:updated";
 export const QUEST_COMPLETED_EVENT = "irth:daily-quest:completed";
 export const QUEST_PROGRESS_EVENT = "irth:daily-quest:progress";
 
-/** Every kind the system knows about. Only `read_encyclopedia_entity`
- *  is currently offered; the rest are reserved so we can extend later
- *  without breaking persisted state. */
+/** Minimum time (ms) the user must dwell on the recommended article
+ *  before completion is allowed. Consumed by the entity route. */
+export const MIN_READ_MS = 12_000;
+
 export type QuestKind =
   | "read_encyclopedia_entity"
-  // Reserved for future rotations — do not remove these strings.
   | "complete_challenge"
   | "read_today_event"
   | "visit_atlas_location"
@@ -53,18 +53,17 @@ export interface QuestTarget {
 
 export interface QuestState {
   version: 2;
-  date: string;          // local YYYY-MM-DD
+  date: string;
   kind: QuestKind;
   target: QuestTarget | null;
-  progress: number;      // 0 or 1 for read_encyclopedia_entity
-  goal: number;          // usually 1
+  progress: number;
+  goal: number;
   xp: number;
   dinars: number;
   completed: boolean;
   rewarded: boolean;
 }
 
-/** Arabic type label used on the card. */
 const TYPE_LABEL: Record<string, string> = {
   figure:   "شخصية",
   scholar:  "شخصية",
@@ -76,21 +75,27 @@ const TYPE_LABEL: Record<string, string> = {
   artifact: "أثر",
 };
 
-/** Types eligible for the daily read quest. */
-const ELIGIBLE_TYPES = new Set<string>([
-  "figure",
-  "scholar",
-  "state",
-  "city",
-  "battle",
-  "event",
-  "landmark",
-  "artifact",
-]);
+/** Type-level base weights — iconic battles, major states, and famous
+ *  figures rank higher than landmarks/artifacts. Kept deterministic. */
+const TYPE_WEIGHT: Record<string, number> = {
+  state:    5.0,
+  battle:   4.5,
+  figure:   4.0,
+  scholar:  3.8,
+  city:     3.0,
+  event:    2.8,
+  landmark: 2.2,
+  artifact: 2.0,
+};
+
+const ELIGIBLE_TYPES = new Set<string>(Object.keys(TYPE_WEIGHT));
 
 const READ_QUEST_XP = 10;
 const READ_QUEST_DINARS = 3;
 const RECENT_HISTORY_LIMIT = 30;
+/** After this many days a completed entity is considered "long ago"
+ *  and re-enters the pool at a low priority. */
+const COMPLETED_COOLDOWN_DAYS = 45;
 
 // ---------- Local date + hash helpers -----------------------------
 
@@ -110,13 +115,21 @@ function stableHash(s: string): number {
   return h >>> 0;
 }
 
-function stateKey(userKey: string): string {
-  return `irth.daily-quest.${userKey}.v2`;
+/** Deterministic PRNG seeded from a hash — used for weighted picks. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-function historyKey(userKey: string): string {
-  return `irth.daily-quest.history.${userKey}.v1`;
-}
+function stateKey(userKey: string): string   { return `irth.daily-quest.${userKey}.v2`; }
+function historyKey(userKey: string): string { return `irth.daily-quest.history.${userKey}.v1`; }
+function readsKey(userKey: string): string   { return `irth.daily-quest.reads.${userKey}.v1`; }
 
 // ---------- Persistence -------------------------------------------
 
@@ -131,10 +144,15 @@ function readState(userKey: string): QuestState | null {
   } catch { return null; }
 }
 
+/** Skip the write when the payload is byte-identical to what's already
+ *  on disk. Prevents pointless storage churn on every re-render. */
 function writeState(userKey: string, s: QuestState) {
   try {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(stateKey(userKey), JSON.stringify(s));
+    const key = stateKey(userKey);
+    const next = JSON.stringify(s);
+    if (window.localStorage.getItem(key) === next) return;
+    window.localStorage.setItem(key, next);
     window.dispatchEvent(new CustomEvent(QUEST_UPDATED_EVENT));
   } catch { /* ignore */ }
 }
@@ -159,7 +177,128 @@ function pushHistory(userKey: string, entityId: string): void {
   } catch { /* ignore */ }
 }
 
-// ---------- Selection ---------------------------------------------
+// ---------- Per-entity read telemetry -----------------------------
+// Tracks which entities the user has opened and which they've
+// completed, plus timestamps. Used by the recommendation tiering.
+
+interface EntityRead {
+  opens: number;
+  lastOpenedAt: number;
+  completedAt: number | null;
+}
+type ReadsMap = Record<string, EntityRead>;
+
+function readReads(userKey: string): ReadsMap {
+  try {
+    if (typeof window === "undefined") return {};
+    const raw = window.localStorage.getItem(readsKey(userKey));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? (parsed as ReadsMap) : {};
+  } catch { return {}; }
+}
+
+function writeReads(userKey: string, map: ReadsMap): void {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(readsKey(userKey), JSON.stringify(map));
+  } catch { /* ignore */ }
+}
+
+/** Record that the user opened an entity article. Idempotent per call. */
+export function recordEntityOpen(userKey: string, entityId: string): void {
+  if (!entityId) return;
+  const map = readReads(userKey);
+  const cur = map[entityId] ?? { opens: 0, lastOpenedAt: 0, completedAt: null };
+  const now = Date.now();
+  // Coalesce rapid re-opens (route re-mounts, HMR) inside a 60s window.
+  if (now - cur.lastOpenedAt < 60_000 && cur.opens > 0) return;
+  map[entityId] = { ...cur, opens: cur.opens + 1, lastOpenedAt: now };
+  writeReads(userKey, map);
+}
+
+function markEntityCompleted(userKey: string, entityId: string): void {
+  const map = readReads(userKey);
+  const cur = map[entityId] ?? { opens: 1, lastOpenedAt: Date.now(), completedAt: null };
+  if (cur.completedAt) return;
+  map[entityId] = { ...cur, completedAt: Date.now() };
+  writeReads(userKey, map);
+}
+
+// ---------- Scoring & Selection -----------------------------------
+
+function bodyRichness(body: unknown): number {
+  if (!body) return 0;
+  if (typeof body === "string") return Math.min(1, body.length / 800);
+  if (typeof body !== "object") return 0;
+  const b = body as Record<string, unknown>;
+  let n = 0;
+  if (Array.isArray(b.sections)) n += b.sections.length * 0.6;
+  if (Array.isArray(b.blocks))   n += b.blocks.length * 0.4;
+  if (Array.isArray(b.timeline)) n += b.timeline.length * 0.2;
+  if (Array.isArray(b.facts))    n += b.facts.length * 0.1;
+  if (typeof b.overview === "string")     n += Math.min(1.5, b.overview.length / 500);
+  if (typeof b.introduction === "string") n += Math.min(1.5, b.introduction.length / 500);
+  return Math.min(6, n);
+}
+
+function isFeatured(meta: unknown): boolean {
+  if (!meta || typeof meta !== "object") return false;
+  const m = meta as Record<string, unknown>;
+  return m.featured === true || m.is_featured === true || m.hero === true;
+}
+
+/** Non-negative weight; higher = more likely to be picked. */
+function scoreEntity(e: SupabaseEncyclopediaEntity): number {
+  let w = TYPE_WEIGHT[e.entity_type] ?? 1.0;
+  w += bodyRichness(e.body);                                     // rich articles
+  if (typeof e.summary === "string" && e.summary.length >= 120) w += 0.6;
+  if (e.image_url || e.image_path) w += 0.8;                     // has hero image
+  if (isFeatured(e.metadata)) w += 3.0;                          // curator flag
+  if (Array.isArray(e.aliases) && e.aliases.length > 0) w += 0.4; // recognizable
+  return w;
+}
+
+/** Deterministic weighted pick from `pool` using `seed`. */
+function weightedPick(
+  pool: SupabaseEncyclopediaEntity[],
+  weights: number[],
+  seed: number,
+): SupabaseEncyclopediaEntity | null {
+  if (pool.length === 0) return null;
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (total <= 0) return pool[seed % pool.length] ?? null;
+  const rand = mulberry32(seed);
+  const target = rand() * total;
+  let acc = 0;
+  for (let i = 0; i < pool.length; i++) {
+    acc += weights[i];
+    if (target <= acc) return pool[i];
+  }
+  return pool[pool.length - 1] ?? null;
+}
+
+interface Tiered {
+  neverOpened: SupabaseEncyclopediaEntity[];
+  openedIncomplete: SupabaseEncyclopediaEntity[];
+  completedLongAgo: SupabaseEncyclopediaEntity[];
+  everything: SupabaseEncyclopediaEntity[];
+}
+
+function tierPool(pool: SupabaseEncyclopediaEntity[], reads: ReadsMap): Tiered {
+  const now = Date.now();
+  const cooldown = COMPLETED_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+  const neverOpened: SupabaseEncyclopediaEntity[] = [];
+  const openedIncomplete: SupabaseEncyclopediaEntity[] = [];
+  const completedLongAgo: SupabaseEncyclopediaEntity[] = [];
+  for (const e of pool) {
+    const r = reads[e.id];
+    if (!r || r.opens === 0) neverOpened.push(e);
+    else if (!r.completedAt) openedIncomplete.push(e);
+    else if (now - r.completedAt >= cooldown) completedLongAgo.push(e);
+  }
+  return { neverOpened, openedIncomplete, completedLongAgo, everything: pool };
+}
 
 function eligiblePool(): SupabaseEncyclopediaEntity[] {
   const all = localEncyclopediaAll() as unknown as SupabaseEncyclopediaEntity[];
@@ -168,21 +307,28 @@ function eligiblePool(): SupabaseEncyclopediaEntity[] {
   );
 }
 
-/** Deterministic pick — excludes recent history until the pool is exhausted. */
 function pickEntityFor(userKey: string, date: string): SupabaseEncyclopediaEntity | null {
   const pool = eligiblePool();
   if (pool.length === 0) return null;
+  // Stable ordering so weighted picks are reproducible.
   const sorted = [...pool].sort((a, b) => a.id.localeCompare(b.id));
-  const history = new Set(readHistory(userKey));
-  const preferred = sorted.filter((e) => !history.has(e.id));
-  const source = preferred.length > 0 ? preferred : sorted;
-  const idx = stableHash(`${userKey}|${date}|read_encyclopedia_entity`) % source.length;
-  return source[idx] ?? null;
+  const recent = new Set(readHistory(userKey));
+  const fresh = sorted.filter((e) => !recent.has(e.id));
+  const base = fresh.length > 0 ? fresh : sorted;
+  const reads = readReads(userKey);
+  const tiers = tierPool(base, reads);
+  const seed = stableHash(`${userKey}|${date}|read_encyclopedia_entity`);
+  const candidates =
+    tiers.neverOpened.length > 0     ? tiers.neverOpened :
+    tiers.openedIncomplete.length > 0 ? tiers.openedIncomplete :
+    tiers.completedLongAgo.length > 0 ? tiers.completedLongAgo :
+    tiers.everything;
+  const weights = candidates.map(scoreEntity);
+  return weightedPick(candidates, weights, seed);
 }
 
 // ---------- Public API --------------------------------------------
 
-/** Ensure the offline snapshot is loaded before selection. */
 export async function ensureQuestPoolReady(): Promise<void> {
   await ensureLocalSnapshotLoaded();
 }
@@ -192,8 +338,9 @@ export function getTodayQuest(userKey: string): QuestState | null {
   const date = localDateKey();
   const existing = readState(userKey);
   if (existing && existing.date === date) {
-    // Guard: if the persisted target is no longer displayable (data update
-    // hid the row), reselect.
+    // Guard: if the persisted target is no longer displayable (snapshot
+    // updated to hide the row), reselect. Otherwise return as-is — the
+    // recommendation MUST NOT re-roll during the same day.
     if (existing.target) {
       const all = localEncyclopediaAll() as unknown as SupabaseEncyclopediaEntity[];
       const row = all.find((e) => e.id === existing.target!.entityId);
@@ -247,6 +394,7 @@ export function reportEntityRead(userKey: string, entityId: string): QuestAdvanc
   if (cur.completed) return { state: cur, justCompleted: false };
   const next: QuestState = { ...cur, progress: cur.goal, completed: true };
   writeState(userKey, next);
+  markEntityCompleted(userKey, entityId);
   return { state: next, justCompleted: true };
 }
 
@@ -262,12 +410,6 @@ export function markQuestRewarded(userKey: string): QuestState | null {
 
 // ---------- Legacy / future kinds (no-op advance) ------------------
 
-/**
- * Kept for the older call sites (games/on-this-day). Since the current
- * daily quest is entity-scoped, these signals are silently ignored;
- * they remain part of the API so future quest rotations can consume
- * them without a second refactor.
- */
 export function notifyQuestProgress(_kind: QuestKind, _delta = 1): void {
   /* reserved for future kinds — intentionally no-op today */
 }
