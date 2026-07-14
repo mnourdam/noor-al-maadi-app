@@ -1,13 +1,42 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { PasswordField } from "@/components/ui/PasswordField";
+import { setRecoveryMode } from "@/lib/recoveryMode";
+import { consumeAuthOrigin } from "@/lib/authOrigin";
 
 export const Route = createFileRoute("/reset-password")({
-  head: () => ({ meta: [{ title: "إعادة تعيين كلمة المرور" }] }),
+  head: () => ({ meta: [{ title: "تعيين كلمة مرور جديدة" }] }),
   component: ResetPasswordPage,
 });
+
+interface StrengthReport {
+  score: 0 | 1 | 2 | 3 | 4;
+  problems: string[]; // Arabic guidance for anything still missing
+  ok: boolean;
+}
+
+function evaluateStrength(pwd: string): StrengthReport {
+  const problems: string[] = [];
+  if (pwd.length < 8) problems.push("٨ أحرف على الأقل");
+  if (!/[a-z]/.test(pwd) && !/[\u0600-\u06FF]/.test(pwd)) problems.push("حرف صغير (a-z)");
+  if (!/[A-Z]/.test(pwd) && !/[\u0600-\u06FF]/.test(pwd)) problems.push("حرف كبير (A-Z)");
+  if (!/\d/.test(pwd)) problems.push("رقم واحد على الأقل");
+
+  let score: StrengthReport["score"] = 0;
+  if (pwd.length >= 8) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/\d/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd) || pwd.length >= 12) score++;
+  const clamped = Math.min(4, score) as StrengthReport["score"];
+
+  return {
+    score: clamped,
+    problems,
+    ok: problems.length === 0,
+  };
+}
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -16,6 +45,8 @@ function ResetPasswordPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const passwordRef = useRef<HTMLInputElement>(null);
 
   // Supabase appends the recovery tokens to the URL hash. The client picks
@@ -29,7 +60,7 @@ function ResetPasswordPage() {
       setReady(true);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         setHasSession(!!session);
         setReady(true);
       }
@@ -37,17 +68,41 @@ function ResetPasswordPage() {
     return () => { alive = false; sub.subscription.unsubscribe(); };
   }, []);
 
+  const strength = useMemo(() => evaluateStrength(password), [password]);
+  const passwordsMatch = password.length > 0 && password === confirm;
+  const canSubmit = ready && hasSession && strength.ok && passwordsMatch && !busy;
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (busy) return;
-    const password = passwordRef.current?.value ?? "";
-    if (password.length < 6) { setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل"); return; }
-    setBusy(true); setError(null); setInfo(null);
+    if (!canSubmit) return;
+    setError(null);
+    setInfo(null);
+    if (!strength.ok) {
+      setError("كلمة المرور لا تستوفي المتطلبات.");
+      return;
+    }
+    if (!passwordsMatch) {
+      setError("كلمتا المرور غير متطابقتين.");
+      return;
+    }
+    setBusy(true);
     try {
       const { error: err } = await supabase.auth.updateUser({ password });
-      if (err) { setError(err.message); return; }
-      setInfo("تم تحديث كلمة المرور بنجاح. سيتم تحويلك إلى حسابك…");
-      setTimeout(() => navigate({ to: "/profile" }), 1200);
+      if (err) {
+        // Do NOT clear recovery mode on failure — user must retry.
+        setError(err.message || "تعذر تحديث كلمة المرور. حاول مجدداً.");
+        return;
+      }
+      // Success → clear the recovery lock, then refresh the session so the
+      // app treats the user as a normally signed-in account.
+      setRecoveryMode(false);
+      try { await supabase.auth.refreshSession(); } catch { /* best-effort */ }
+      setInfo("تم تحديث كلمة المرور بنجاح");
+      // Prefer the stored auth-origin (single-use); fall back to profile.
+      const dest = consumeAuthOrigin("/profile");
+      setTimeout(() => navigate({ to: dest as "/profile", replace: true }), 900);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
@@ -59,41 +114,101 @@ function ResetPasswordPage() {
     color: "white", outline: "none",
   };
 
+  const strengthLabel = ["ضعيفة جداً", "ضعيفة", "متوسطة", "جيدة", "قوية"][strength.score];
+  const strengthColor = [
+    "bg-rose-500",
+    "bg-rose-400",
+    "bg-amber-400",
+    "bg-emerald-400",
+    "bg-emerald-500",
+  ][strength.score];
+
   return (
     <AppShell>
-      <Screen title="إعادة تعيين كلمة المرور" subtitle="اختر كلمة مرور جديدة لحسابك">
+      <Screen title="تعيين كلمة مرور جديدة" subtitle="اختر كلمة مرور جديدة لحسابك قبل المتابعة">
         <div className="rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
           {!ready ? (
             <p className="text-sm text-muted-foreground">جاري التحقق من الرابط…</p>
           ) : !hasSession ? (
             <div className="space-y-3 text-sm">
               <p className="text-rose-300">
-                الرابط غير صالح أو انتهت صلاحيته. الرجاء طلب رابط جديد.
+                انتهت صلاحية رابط الاستعادة أو تم استخدامه.
               </p>
-              <Link to="/auth" search={{ ref: undefined }} className="block text-center text-gold hover:underline">
-                العودة لصفحة تسجيل الدخول
+              <Link
+                to="/auth"
+                search={{ ref: undefined }}
+                className="block w-full rounded-xl bg-gradient-gold py-2.5 text-center text-sm font-bold text-primary-foreground shadow-gold"
+              >
+                إرسال رابط جديد
               </Link>
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-3" autoComplete="on">
+              <p className="text-[12px] text-amber-200/90">
+                لأمان حسابك، يجب تعيين كلمة مرور جديدة قبل متابعة استخدام التطبيق.
+              </p>
+
               <label className="block">
                 <span className="mb-1 block text-[11px] text-muted-foreground">كلمة المرور الجديدة</span>
                 <PasswordField
                   ref={passwordRef}
                   name="new-password"
                   required
-                  minLength={6}
+                  minLength={8}
                   autoComplete="new-password"
                   style={inputStyle}
-                  placeholder="6 أحرف على الأقل"
+                  placeholder="٨ أحرف على الأقل"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </label>
+
+              {password.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>قوة كلمة المرور</span>
+                    <span>{strengthLabel}</span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className={`h-full transition-all ${strengthColor}`}
+                      style={{ width: `${(strength.score / 4) * 100}%` }}
+                    />
+                  </div>
+                  {strength.problems.length > 0 && (
+                    <ul className="mt-1 space-y-0.5 text-[11px] text-amber-200/80">
+                      {strength.problems.map((p) => (
+                        <li key={p}>• يجب أن تحتوي على {p}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              <label className="block">
+                <span className="mb-1 block text-[11px] text-muted-foreground">تأكيد كلمة المرور</span>
+                <PasswordField
+                  name="confirm-password"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  style={inputStyle}
+                  placeholder="أعد إدخال كلمة المرور"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                />
+                {confirm.length > 0 && !passwordsMatch && (
+                  <p className="mt-1 text-[11px] text-rose-300">كلمتا المرور غير متطابقتين</p>
+                )}
+              </label>
+
               {error && <p className="text-xs text-rose-300">{error}</p>}
               {info && <p className="text-xs text-emerald-300">{info}</p>}
+
               <button
                 type="submit"
-                disabled={busy}
-                className="w-full rounded-xl bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-60"
+                disabled={!canSubmit}
+                className="w-full rounded-xl bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {busy ? "جاري التحديث…" : "تحديث كلمة المرور"}
               </button>
