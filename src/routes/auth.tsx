@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
-import { BUILD_TYPE } from "@/lib/build-info";
+// BUILD_TYPE import removed with the auth diagnostics button.
 import { openAuthDialog, maskEmail } from "@/lib/authDialog";
 
 type ResendKind = "signup" | "recovery";
