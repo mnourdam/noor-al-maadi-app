@@ -1,10 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { GameMode, GameStatus } from "./types";
 
-// Stable daily seed (UTC date). Same number for everyone on the same day.
+// Daily seed based on the player's LOCAL calendar date. Rotates once per
+// local day so timezone differences never cause an intra-day reshuffle.
 function dailySeed(): number {
   const d = new Date();
-  return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 }
 
 // Deterministic hash combining the daily seed with a stable per-item key.
@@ -15,6 +16,7 @@ function dayHash(key: string): number {
   }
   return h;
 }
+
 
 export interface GameRow {
   id: string;
