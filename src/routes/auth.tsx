@@ -45,7 +45,7 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-type Mode = "signin" | "signup" | "forgot";
+
 
 
 function AuthPage() {
