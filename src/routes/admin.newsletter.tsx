@@ -153,27 +153,68 @@ function NewsletterAdminPage() {
         </div>
       )}
 
-      {doiWarning && (
-        <div className="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-6 text-amber-100">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <div>
-            <b>تنبيه: لا يوجد Double Opt-In حقيقي حاليًا.</b> الدالة <code>set_my_newsletter_subscription</code> لا تُفعّل رابط تأكيد بالبريد، لذلك عمود <code>confirmed</code> يبقى false. الأعداد "المؤكَّد" و"النشِط" ستكون صفرًا حتى يُبنى تدفّق DOI (رابط تأكيد فريد + endpoint تأكيد + انتهاء صلاحية).
-            <br/>لا تُصدِّر قوائم تسويقية إلى مزوّد خارجي قبل تشغيل DOI فعليًا.
-          </div>
-        </div>
-      )}
+      <DoiStatusPanel />
 
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-        <Stat label="الإجمالي" value={stats?.total} />
-        <Stat label="نشِط ومؤكَّد" value={stats?.active} />
-        <Stat label="مؤكَّد" value={stats?.confirmed} />
-        <Stat label="غير مؤكَّد" value={stats?.unconfirmed} />
-        <Stat label="ألغى الاشتراك" value={stats?.unsubscribed} />
-        <Stat label="بدون حساب" value={stats?.anonymous} />
-        <Stat label="بحساب" value={stats?.authenticated} />
-        <Stat label="آخر ٧ أيام" value={stats?.last7} />
-        <Stat label="آخر ٣٠ يومًا" value={stats?.last30} />
-        <Stat label="على قائمة الحظر" value={stats?.suppressed} />
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <StatBig
+          label="مشتركون (Subscribed)"
+          value={stats?.total}
+          hint="عدد الصفوف حيث subscribed=true أو أُلغيت لاحقًا — أي كل من ضغط الاشتراك في أي وقت."
+        />
+        <StatBig
+          label="مؤكَّدون (Confirmed)"
+          value={stats?.confirmed}
+          hint={NEWSLETTER_DOI_ENABLED
+            ? "أكّدوا اشتراكهم عبر رابط البريد. مؤهَّلون للتصدير التسويقي."
+            : "confirmed=true. حاليًا لا يوجد رابط تأكيد فعلي، لذلك سيبقى صفرًا حتى يُفعَّل DOI."}
+          tone="emerald"
+        />
+        <StatBig
+          label="بانتظار التأكيد (Pending)"
+          value={stats?.unconfirmed}
+          hint={NEWSLETTER_DOI_ENABLED
+            ? "أرسل لهم رابط تأكيد ولم يضغطوا بعد. غير مؤهَّلين للتسويق."
+            : "confirmed=false — لا يمكن اعتبارهم موافقة صريحة على البريد التسويقي حتى يُفعَّل DOI."}
+          tone="amber"
+        />
+        <StatBig
+          label="ألغوا الاشتراك (Unsubscribed)"
+          value={stats?.unsubscribed}
+          hint="ضغطوا 'إلغاء الاشتراك' أو أُلغي يدويًا من الإدارة. لا يجوز إعادة إرسال شيء لهم."
+          tone="rose"
+        />
+        <StatBig
+          label="محظورون (Suppressed)"
+          value={stats?.suppressed}
+          hint="Bounce/complaint. يمنعهم مزود البريد من الاستقبال — يجب استبعادهم دائمًا."
+          tone="rose"
+        />
+        <StatBig
+          label="ضيوف (Anonymous)"
+          value={stats?.anonymous}
+          hint="اشتركوا بدون تسجيل دخول (user_id فارغ). البريد فقط."
+        />
+        <StatBig
+          label="أعضاء (Authenticated)"
+          value={stats?.authenticated}
+          hint="اشتركوا وهم مسجّلون داخل التطبيق (user_id مربوط)."
+        />
+        <StatBig
+          label="نشطون فعلاً"
+          value={stats?.active}
+          hint="subscribed=true و confirmed=true و ليسوا على قائمة الحظر. هذه القائمة الوحيدة الآمنة للتصدير التسويقي."
+          tone="emerald"
+        />
+        <StatBig
+          label="آخر ٧ أيام"
+          value={stats?.last7}
+          hint="عدد الاشتراكات الجديدة في آخر أسبوع."
+        />
+        <StatBig
+          label="آخر ٣٠ يومًا"
+          value={stats?.last30}
+          hint="عدد الاشتراكات الجديدة في آخر شهر."
+        />
       </section>
 
       <section className="rounded border border-white/10 bg-slate-900/40 p-3 space-y-2">
