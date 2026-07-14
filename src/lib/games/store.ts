@@ -155,11 +155,14 @@ export async function fetchMyDailyCompletedGameIds(): Promise<Set<string>> {
  * Pick daily challenges for the Home / Adventure screens.
  *
  * Selection rules (in order):
- *   1. Stable per UTC day — same picks across reloads, same for all players.
- *   2. ALWAYS from distinct game modes (sample without replacement on mode).
- *   3. If fewer modes exist than `count`, returns fewer picks (never duplicates a mode).
- *   4. Completed games still appear — callers render a "completed" badge instead
- *      of hiding the card, so the player sees today's pair until the daily reset.
+ *   1. Exclude every game the current player has already completed
+ *      (all-time). Pass those ids in via `opts.completedIds`.
+ *   2. Prefer two picks from two DIFFERENT game modes — deterministic per
+ *      UTC day so the same picks persist across reloads/restarts.
+ *   3. If fewer than `count` modes have uncompleted games, fall back to
+ *      picking additional uncompleted games from any mode (never repeats
+ *      the same game). Diversity is secondary to avoiding completed games.
+ *   4. `allCompleted` is true when no uncompleted games remain.
  */
 export interface DailyChallengeSelection {
   picks: GameRow[];
@@ -177,9 +180,16 @@ export async function selectDailyChallenges(
     return { picks: [], allCompleted: false, totalPublished: 0 };
   }
 
-  // Group by mode so we can sample without replacement on game type.
+  const completed = opts.completedIds ?? new Set<string>();
+  const eligible = published.filter((g) => !completed.has(g.id));
+
+  if (!eligible.length) {
+    return { picks: [], allCompleted: true, totalPublished };
+  }
+
+  // Group ELIGIBLE (uncompleted) games by mode.
   const byMode = new Map<GameMode, GameRow[]>();
-  for (const g of published) {
+  for (const g of eligible) {
     const arr = byMode.get(g.mode) ?? [];
     arr.push(g);
     byMode.set(g.mode, arr);
@@ -191,18 +201,32 @@ export async function selectDailyChallenges(
   );
 
   const picks: GameRow[] = [];
+  const chosenIds = new Set<string>();
   for (const m of modes) {
     if (picks.length >= count) break;
     const games = byMode.get(m)!;
     const chosen = [...games].sort(
       (a, b) => dayHash(a.slug) - dayHash(b.slug),
     )[0];
-    if (chosen) picks.push(chosen);
+    if (chosen && !chosenIds.has(chosen.id)) {
+      picks.push(chosen);
+      chosenIds.add(chosen.id);
+    }
   }
 
-  const completed = opts.completedIds ?? new Set<string>();
-  const allCompleted =
-    picks.length > 0 && picks.every((g) => completed.has(g.id));
+  // Fallback: if mode diversity couldn't fill `count`, fill from remaining
+  // uncompleted games regardless of mode (deterministic order per day).
+  if (picks.length < count) {
+    const remaining = eligible
+      .filter((g) => !chosenIds.has(g.id))
+      .sort((a, b) => dayHash(a.id) - dayHash(b.id));
+    for (const g of remaining) {
+      if (picks.length >= count) break;
+      picks.push(g);
+      chosenIds.add(g.id);
+    }
+  }
 
-  return { picks, allCompleted, totalPublished };
+  return { picks, allCompleted: picks.length === 0, totalPublished };
 }
+
