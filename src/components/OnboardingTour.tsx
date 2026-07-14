@@ -204,10 +204,14 @@ export function OnboardingTour() {
           onPointerCancel={endDrag}
         >
           <div ref={trackRef} className="flex w-full" style={trackStyle} dir="ltr">
-            {STEPS.map((s, idx) => {
+            {STEPS.map((_, revIdx) => {
+              // Render right-to-left: rightmost slot is logical index 0.
+              const idx = STEPS.length - 1 - revIdx;
+              const s = STEPS[idx];
               const active = idx === i && !dragging;
               return (
                 <div key={idx} className="w-full shrink-0 px-1" dir="rtl">
+
                   <div
                     className={`mb-4 grid size-16 place-items-center rounded-2xl bg-gold/15 text-3xl transition-all duration-500 ${
                       active ? "opacity-100 scale-100" : "opacity-80 scale-95"
