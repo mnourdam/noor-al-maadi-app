@@ -407,11 +407,18 @@ async function runStreakReminder(admin: any, baseUrl: string, serviceKey: string
 }
 
 // ---------- Job 6: hearts fully regenerated ----------
-// Sends one notification per regeneration cycle. Cycle bookkeeping is stored in
-// `details.hearts` on the latest run row:
-//   • If hearts=5 now AND last run did not record hearts=5 → send (cycle close).
-//   • If hearts<5 now AND last run recorded hearts=5 → insert a silent
-//     watermark row so the next full→5 transition is eligible again.
+// Sends AT MOST one notification per depletion→refill cycle, and NEVER on
+// initial state (a fresh account that has never lost a heart must not be
+// pinged with "قلوبك اكتملت" just because we saw them for the first time).
+//
+// Cycle bookkeeping is stored in `details.hearts` on the latest run row:
+//   • First time we see the user with hearts=5 and no prior row →
+//     record a silent watermark {hearts:5}. No notification (initial state).
+//   • hearts=5 now AND last recorded value was <5 → cycle closed, SEND.
+//   • hearts<5 now AND last recorded value was 5 → depletion begun,
+//     record a silent watermark {hearts:<current>} so the next refill is
+//     eligible to fire exactly once.
+//   • Otherwise → nothing to do.
 async function runHeartsFullReminder(admin: any, baseUrl: string, serviceKey: string, dryRun: boolean) {
   const jobKey = "hearts_full";
   const runDate = todayISODate();
@@ -445,23 +452,35 @@ async function runHeartsFullReminder(admin: any, baseUrl: string, serviceKey: st
       .order("created_at", { ascending: false })
       .limit(1);
     const lastHearts = prior?.[0]?.details?.hearts ?? null;
-    const fullNow = (p.hearts ?? 5) >= 5;
+    const currentHearts = p.hearts ?? 5;
+    const fullNow = currentHearts >= 5;
 
     if (!fullNow) {
-      // Reset watermark exactly once when transitioning from full → not-full.
-      if (lastHearts === 5) {
-        if (!dryRun) {
-          await recordRun(admin, perKey, runDate, "watermark", null, { hearts: p.hearts });
-          watermarks++;
-        }
+      // Transitioning from full → not-full: lay down a watermark so the next
+      // refill is eligible to fire exactly once. Also handles the case where
+      // the last watermark was already <5: just refresh the value silently.
+      if (!dryRun) {
+        await recordRun(admin, perKey, runDate, "watermark", null, { hearts: currentHearts });
+        watermarks++;
       } else {
         skipped++;
       }
       continue;
     }
 
-    // hearts now full
-    if (lastHearts === 5) { skipped++; continue; } // already announced
+    // hearts now full — only notify when we've observed a real depletion cycle.
+    // Initial state (no prior row) or already-announced full state must NOT fire.
+    if (lastHearts === null) {
+      // Initial observation for this user: silent watermark, never notify.
+      if (!dryRun) {
+        await recordRun(admin, perKey, runDate, "watermark", null, { hearts: 5 });
+        watermarks++;
+      } else {
+        skipped++;
+      }
+      continue;
+    }
+    if (lastHearts >= 5) { skipped++; continue; } // already announced this cycle
     if (dryRun) { results.push({ user_id: p.id, would_send: true }); continue; }
 
     const send = await invokeSendNotification(baseUrl, serviceKey, {
