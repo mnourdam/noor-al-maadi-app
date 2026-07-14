@@ -6,6 +6,7 @@ import { AdminGate } from "@/lib/admin-guard";
 import {
   fetchNewsletterStats, listNewsletterSubscribers,
   adminUnsubscribeNewsletter, adminResubscribeNewsletter,
+  NEWSLETTER_DOI_ENABLED,
   type NewsletterStats, type AdminSubscriberRow, type NewsletterFilter,
 } from "@/lib/newsletter";
 import { maskEmail } from "@/lib/authDialog";
