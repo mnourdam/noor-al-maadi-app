@@ -76,7 +76,7 @@ interface RewardFloat {
 /** Home-screen "Goal of the Day" card driven by the Daily Quest system. */
 export function DailyQuestCard() {
   const { user, loadingSession } = useAccount();
-  const { addPoints, addDinars } = useProfile();
+  const { addPoints, addDinars, applyServerStats } = useProfile();
 
   const userKey = user?.id ?? "guest";
 
@@ -84,7 +84,11 @@ export function DailyQuestCard() {
   const [poolReady, setPoolReady] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [floats, setFloats] = useState<RewardFloat[]>([]);
-  const grantedRef = useRef(false);
+  /** In-flight guard for the canonical RPC grant. Prevents two concurrent
+   *  attempts from the same mount (event + mount reconciliation). Server
+   *  idempotency (primary key on delta_id) still guarantees uniqueness
+   *  across mounts, tabs, and devices. */
+  const grantInflightRef = useRef<string | null>(null);
   const floatIdRef = useRef(0);
 
   const refresh = useCallback(() => {
