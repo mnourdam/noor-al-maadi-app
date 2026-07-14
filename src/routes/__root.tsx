@@ -348,6 +348,7 @@ function RootComponent() {
       <ProfileProvider>
         <AccountProvider>
           <Outlet />
+          <OnboardingTour />
           <FirstLaunchGate />
           <AchievementWatcher />
           <LevelUpWatcher />
