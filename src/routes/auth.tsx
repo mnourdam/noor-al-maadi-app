@@ -422,6 +422,11 @@ function AuthPage() {
                         ))}
                       </ul>
                     )}
+                    {sync.syncOk && !hibpPending && hibp?.status === "skipped" && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        تعذر التحقق من تسرب كلمة المرور حالياً.
+                      </p>
+                    )}
                   </div>
                 )}
                 {mode === "signup" && passwordValue.length === 0 && (

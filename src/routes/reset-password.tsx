@@ -142,6 +142,7 @@ function ResetPasswordPage() {
     color: "white", outline: "none",
   };
 
+  const hibpSkipped = hibp?.status === "skipped";
   const strengthLabel = hibpPending
     ? "جاري التحقق…"
     : hibpBlocked
@@ -156,6 +157,9 @@ function ResetPasswordPage() {
         "bg-emerald-400",
         "bg-emerald-500",
       ][sync.score];
+  const hibpNotice = sync.syncOk && !hibpPending && hibpSkipped
+    ? "تعذر التحقق من تسرب كلمة المرور حالياً."
+    : null;
 
   return (
     <AppShell>
@@ -215,6 +219,9 @@ function ResetPasswordPage() {
                         <li key={p}>• {p.startsWith("هذه") ? p : `يجب أن تحتوي على ${p}`}</li>
                       ))}
                     </ul>
+                  )}
+                  {hibpNotice && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">{hibpNotice}</p>
                   )}
                 </div>
               )}
