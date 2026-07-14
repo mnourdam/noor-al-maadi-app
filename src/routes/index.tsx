@@ -31,6 +31,7 @@ import { useQuery } from "@tanstack/react-query";
 import useEmblaCarousel from "embla-carousel-react";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
+import { DailyQuestCard } from "@/components/home/DailyQuestCard";
 import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
 import { scheduleIdle, decodeImage, perfMark } from "@/lib/idle";
 
@@ -57,9 +58,13 @@ type HeroSlide =
 
 function HomeFull() {
   const { profile } = useProfile();
-  const { account, user, lastSyncAt } = useAccount();
+  const { user, lastSyncAt, displayName: resolvedDisplayName } = useAccount();
 
-  const displayName = account?.username ?? (user ? profile.name : profile.name);
+  // Priority: display_name → full_name → username → email prefix.
+  // `useAccount()` already resolves this chain from account row +
+  // user_metadata; only fall back to the profile name for pure-offline
+  // (never-signed-in) sessions.
+  const displayName = user ? resolvedDisplayName : (profile.name || "ضيف");
   const [mounted, setMounted] = useState(false);
   const { selected: todayEvent, others: todayOthers } = useTodayInHistoryEvent();
   const todayEvents = useMemo<TodayInHistoryEvent[]>(
@@ -281,13 +286,17 @@ function HomeFull() {
       };
     });
 
-    // Priority — keep this rule, it is the correct UX:
+    // Priority — the Hero must always guide the player forward:
     //   1) earliest STARTED but not complete campaign
-    //   2) earliest unfinished campaign overall
-    //   3) last campaign in the chronological list (everything complete)
+    //   2) earliest unfinished campaign overall (next unlocked to play)
+    //   3) otherwise NO campaign selection — every published campaign is
+    //      complete. Falling back to the last (completed) campaign would
+    //      show "Continue A · 100%" which is misleading; hero simply skips
+    //      the campaign slide and other slides (today-in-history, latest
+    //      discovery) fill the carousel instead.
     const startedPick = enriched.find((e) => e.hasStarted && !e.isComplete);
     const fallbackPick = enriched.find((e) => !e.isComplete);
-    const selected = startedPick ?? fallbackPick ?? enriched[enriched.length - 1] ?? enriched[0];
+    const selected = startedPick ?? fallbackPick ?? null;
 
     if (typeof window !== "undefined" && (window as any).__IRTH_HERO_DEBUG !== false) {
       try {
@@ -791,34 +800,8 @@ function HomeFull() {
         </Reveal>
       )}
 
-      {/* ============ 3. DAILY GOAL — today's objective + reward ============ */}
-      {recommendation && (
-        <Reveal>
-          <section className="mt-12 px-5">
-            <SectionHeader icon={<Target className="size-3.5" />} eyebrow="هدف اليوم" title="ابدأ من هنا" />
-            <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 p-5 shadow-elegant">
-              <div className="arabesque-layer" />
-              <div className="absolute -left-10 -top-10 size-40 rounded-full bg-gold/15 blur-3xl" />
-              <div className="relative">
-                <p className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.25em] text-gold">
-                  {recommendation.icon} {recommendation.eyebrow}
-                </p>
-                <p className="font-display mt-1 text-lg font-bold leading-snug shimmer-text">{recommendation.title}</p>
-                <p className="mt-1 text-[12px] text-white/65">{recommendation.subtitle}</p>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
-                    <Sparkles className="size-3" /> {recommendation.xp} خبرة
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
-                    <Coins className="size-3" /> {recommendation.dinars} دينار
-                  </span>
-                </div>
-                <div className="mt-5">{recommendation.link}</div>
-              </div>
-            </div>
-          </section>
-        </Reveal>
-      )}
+      {/* ============ 3. DAILY QUEST — one mission per local day ============ */}
+      <DailyQuestCard />
 
       {/* ============ 3b. DAILY CHALLENGES (games) ============ */}
       <Reveal>

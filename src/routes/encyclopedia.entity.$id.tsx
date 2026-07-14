@@ -11,6 +11,8 @@ import {
   Map as MapIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { notifyQuestProgress } from "@/lib/daily-quest";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 
@@ -152,6 +154,15 @@ function EntityPage() {
 
 
   const entity = query.data ?? null;
+
+  // Daily-quest hook: reading (viewing) an encyclopedia article satisfies
+  // the "read one article" mission. Fires once per successful entity load;
+  // the quest module dedupes per (userKey, localDate) so re-opening doesn't
+  // re-credit.
+  useEffect(() => {
+    if (entity?.id) notifyQuestProgress("read_article", 1);
+  }, [entity?.id]);
+
 
   const relatedQuery = useQuery({
     queryKey: ["encyclopedia", "graph", entity?.id ?? ""],
