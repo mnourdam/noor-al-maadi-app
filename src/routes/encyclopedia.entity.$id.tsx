@@ -14,6 +14,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import {
   QUEST_COMPLETED_EVENT,
+  MIN_READ_MS,
+  recordEntityOpen,
   reportEntityRead,
 } from "@/lib/daily-quest";
 import { useAccount } from "@/lib/account";
