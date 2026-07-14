@@ -142,14 +142,20 @@ function ResetPasswordPage() {
     color: "white", outline: "none",
   };
 
-  const strengthLabel = ["ضعيفة جداً", "ضعيفة", "متوسطة", "جيدة", "قوية"][strength.score];
-  const strengthColor = [
-    "bg-rose-500",
-    "bg-rose-400",
-    "bg-amber-400",
-    "bg-emerald-400",
-    "bg-emerald-500",
-  ][strength.score];
+  const strengthLabel = hibpPending
+    ? "جاري التحقق…"
+    : hibpBlocked
+      ? "مسرّبة"
+      : ["ضعيفة جداً", "ضعيفة", "متوسطة", "جيدة", "قوية"][sync.score];
+  const strengthColor = hibpBlocked
+    ? "bg-rose-500"
+    : [
+        "bg-rose-500",
+        "bg-rose-400",
+        "bg-amber-400",
+        "bg-emerald-400",
+        "bg-emerald-500",
+      ][sync.score];
 
   return (
     <AppShell>
