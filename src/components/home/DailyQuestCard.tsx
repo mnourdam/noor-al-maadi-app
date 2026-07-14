@@ -134,7 +134,7 @@ export function DailyQuestCard() {
      *     `rewarded=false` and will retry on the next mount / outbox
      *     flush event.
      */
-    const celebrate = (q: QuestState) => {
+    const playCelebration = (q: QuestState) => {
       const reduced = prefersReducedMotion();
       setCelebrate(true);
       vibrateSuccess();
