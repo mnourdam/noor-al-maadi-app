@@ -224,6 +224,17 @@ function AuthPage() {
       }
       let r: { ok: boolean; error?: string };
       if (mode === "signup") {
+        // Canonical policy gate — mirrors reset-password and server rules.
+        if (!signupPolicyOk) {
+          openAuthDialog({
+            id: `signup-weak-${Date.now()}`,
+            tone: "error",
+            title: WEAK_PASSWORD_COPY.title,
+            body: WEAK_PASSWORD_COPY.body,
+            primary: { label: "حسنًا" },
+          });
+          return;
+        }
         r = await signUp({ email, password, username, displayName: username, referralCode: referral || undefined });
       } else {
         r = await signIn(email, password);
