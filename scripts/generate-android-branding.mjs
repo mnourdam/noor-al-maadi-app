@@ -328,6 +328,7 @@ function verifyOutputs() {
     join(RES, "drawable-anydpi-v24", "ic_launcher_monochrome.xml"),
     join(RES, "drawable", "ic_stat_notify.xml"),
     join(RES, "drawable", "ic_splash_icon.xml"),
+    join(RES, "drawable-anydpi-v26", "ic_splash_icon.xml"),
     join(RES, "mipmap-anydpi-v26", "ic_launcher.xml"),
     join(RES, "mipmap-anydpi-v26", "ic_launcher_round.xml"),
     join(RES, "values", "ic_launcher_background.xml"),
