@@ -8,8 +8,10 @@ import {
   entityTypeLabel,
   getTodayQuest,
   markQuestRewarded,
+  localDateKey,
   type QuestState,
 } from "@/lib/daily-quest";
+import { grantDailyQuestReward } from "@/lib/daily-quest-reward";
 import { useProfile } from "@/lib/profile";
 import { useAccount } from "@/lib/account";
 import { Reveal } from "@/components/motion/MotionPrimitives";
