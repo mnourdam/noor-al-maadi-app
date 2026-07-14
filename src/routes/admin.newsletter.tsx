@@ -157,28 +157,40 @@ function NewsletterAdminPage() {
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <StatBig
-          label="مشتركون (Subscribed)"
+          label="إجمالي المشتركين"
           value={stats?.total}
-          hint="عدد الصفوف حيث subscribed=true أو أُلغيت لاحقًا — أي كل من ضغط الاشتراك في أي وقت."
+          hint="كل من ضغط الاشتراك في أي وقت (يشمل من ألغى لاحقًا)."
         />
         <StatBig
-          label="مؤكَّدون (Confirmed)"
-          value={stats?.confirmed}
+          label={NEWSLETTER_DOI_ENABLED ? "نشِط ومؤكَّد" : "نشِط"}
+          value={
+            NEWSLETTER_DOI_ENABLED
+              ? stats?.active
+              : (stats ? Math.max(0, (stats.total ?? 0) - (stats.unsubscribed ?? 0) - (stats.suppressed ?? 0)) : undefined)
+          }
           hint={NEWSLETTER_DOI_ENABLED
-            ? "أكّدوا اشتراكهم عبر رابط البريد. مؤهَّلون للتصدير التسويقي."
-            : "confirmed=true. حاليًا لا يوجد رابط تأكيد فعلي، لذلك سيبقى صفرًا حتى يُفعَّل DOI."}
+            ? "subscribed=true و confirmed=true و ليسوا على قائمة الحظر. هذه القائمة الوحيدة الآمنة للتصدير التسويقي."
+            : "مشتركون حاليًا، لم يُلغوا ولم يُحظروا. لا يُعتبرون موافقة صريحة قابلة للتسويق حتى يُفعَّل DOI."}
           tone="emerald"
         />
+        {NEWSLETTER_DOI_ENABLED && (
+          <>
+            <StatBig
+              label="مؤكَّدون (Confirmed)"
+              value={stats?.confirmed}
+              hint="أكّدوا اشتراكهم عبر رابط البريد. مؤهَّلون للتصدير التسويقي."
+              tone="emerald"
+            />
+            <StatBig
+              label="بانتظار التأكيد (Pending)"
+              value={stats?.unconfirmed}
+              hint="أُرسل لهم رابط تأكيد ولم يضغطوا بعد. غير مؤهَّلين للتسويق."
+              tone="amber"
+            />
+          </>
+        )}
         <StatBig
-          label="بانتظار التأكيد (Pending)"
-          value={stats?.unconfirmed}
-          hint={NEWSLETTER_DOI_ENABLED
-            ? "أرسل لهم رابط تأكيد ولم يضغطوا بعد. غير مؤهَّلين للتسويق."
-            : "confirmed=false — لا يمكن اعتبارهم موافقة صريحة على البريد التسويقي حتى يُفعَّل DOI."}
-          tone="amber"
-        />
-        <StatBig
-          label="ألغوا الاشتراك (Unsubscribed)"
+          label="ألغوا الاشتراك"
           value={stats?.unsubscribed}
           hint="ضغطوا 'إلغاء الاشتراك' أو أُلغي يدويًا من الإدارة. لا يجوز إعادة إرسال شيء لهم."
           tone="rose"
@@ -200,12 +212,6 @@ function NewsletterAdminPage() {
           hint="اشتركوا وهم مسجّلون داخل التطبيق (user_id مربوط)."
         />
         <StatBig
-          label="نشطون فعلاً"
-          value={stats?.active}
-          hint="subscribed=true و confirmed=true و ليسوا على قائمة الحظر. هذه القائمة الوحيدة الآمنة للتصدير التسويقي."
-          tone="emerald"
-        />
-        <StatBig
           label="آخر ٧ أيام"
           value={stats?.last7}
           hint="عدد الاشتراكات الجديدة في آخر أسبوع."
@@ -223,7 +229,11 @@ function NewsletterAdminPage() {
             <label className="block text-[10px] text-muted-foreground">مرشِّح</label>
             <select value={filter} onChange={e => setFilter(e.target.value as NewsletterFilter)}
               className="rounded border border-white/10 bg-background px-2 py-1 text-xs">
-              {Object.entries(FILTER_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+              {(Object.entries(FILTER_LABELS) as [NewsletterFilter, string][])
+                .filter(([k]) => NEWSLETTER_DOI_ENABLED
+                  ? true
+                  : k !== "confirmed" && k !== "unconfirmed" && k !== "active")
+                .map(([k,v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           <div>
@@ -261,10 +271,12 @@ function NewsletterAdminPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => exportCsv("marketing")}
-            className="inline-flex items-center gap-1 rounded bg-amber-500 px-3 py-1.5 text-xs font-semibold text-slate-950">
-            <Download className="h-3.5 w-3.5" /> تصدير التسويقي (نشِط + مؤكَّد + غير محظور)
-          </button>
+          {NEWSLETTER_DOI_ENABLED && (
+            <button onClick={() => exportCsv("marketing")}
+              className="inline-flex items-center gap-1 rounded bg-amber-500 px-3 py-1.5 text-xs font-semibold text-slate-950">
+              <Download className="h-3.5 w-3.5" /> تصدير التسويقي (نشِط + مؤكَّد + غير محظور)
+            </button>
+          )}
           <button onClick={() => exportCsv("all")}
             className="inline-flex items-center gap-1 rounded border border-white/10 px-3 py-1.5 text-xs">
             <Download className="h-3.5 w-3.5" /> تصدير كل السجلات
@@ -279,7 +291,7 @@ function NewsletterAdminPage() {
               <th className="p-2">البريد</th>
               <th className="p-2">المستخدم</th>
               <th className="p-2">الحالة</th>
-              <th className="p-2">مؤكَّد</th>
+              {NEWSLETTER_DOI_ENABLED && <th className="p-2">مؤكَّد</th>}
               <th className="p-2">المصدر</th>
               <th className="p-2">تاريخ الاشتراك</th>
               <th className="p-2">آخر تحديث</th>
@@ -288,9 +300,9 @@ function NewsletterAdminPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="p-4 text-center text-muted-foreground"><RefreshCw className="inline h-4 w-4 animate-spin" /></td></tr>
+              <tr><td colSpan={NEWSLETTER_DOI_ENABLED ? 8 : 7} className="p-4 text-center text-muted-foreground"><RefreshCw className="inline h-4 w-4 animate-spin" /></td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">لا نتائج</td></tr>
+              <tr><td colSpan={NEWSLETTER_DOI_ENABLED ? 8 : 7} className="p-4 text-center text-muted-foreground">لا نتائج</td></tr>
             ) : rows.map(r => {
               const status = r.unsubscribed_at ? "ألغى" : r.subscribed ? "مشترك" : "متوقّف";
               return (
@@ -307,7 +319,7 @@ function NewsletterAdminPage() {
                     {r.user_id ? r.user_id.slice(0, 8) + "…" : <span className="text-muted-foreground">ضيف</span>}
                   </td>
                   <td className="p-2">{status}</td>
-                  <td className="p-2">{r.confirmed ? "نعم" : "لا"}</td>
+                  {NEWSLETTER_DOI_ENABLED && <td className="p-2">{r.confirmed ? "نعم" : "لا"}</td>}
                   <td className="p-2">{r.source ?? "—"}</td>
                   <td className="p-2 whitespace-nowrap">{new Date(r.created_at).toLocaleDateString("ar")}</td>
                   <td className="p-2 whitespace-nowrap">{new Date(r.updated_at).toLocaleDateString("ar")}</td>
