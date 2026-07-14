@@ -46,16 +46,24 @@ const STEPS: Step[] = [
 ];
 
 export function OnboardingTour() {
+  const { user, loadingSession } = useAccount();
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    if (loadingSession) return;
+    // Signed-in users never see onboarding. Persist the flag so the
+    // auth-choice gate doesn't wait on it either.
+    if (user) {
+      try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
+      return;
+    }
     try {
       if (!localStorage.getItem(STORAGE_KEY)) setOpen(true);
     } catch { /* ignore */ }
-  }, []);
+  }, [user, loadingSession]);
 
   // Lock body scroll while the dialog is open so the background never moves.
   useEffect(() => {
