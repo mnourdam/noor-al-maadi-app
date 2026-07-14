@@ -133,26 +133,30 @@ function AuthCallbackPage() {
       const { data } = await supabase.auth.getSession();
       if (!alive) return;
       if (data.session) {
-        // Compare the tapped intent against the actual outcome so the
-        // global GoogleAuthResultDialog can show a friendly note when
-        // "sign up" landed on an existing account, or "sign in" created
-        // a brand-new one.
         const intent = getAndClearGoogleAuthIntent();
         stashGoogleAuthResult(computeGoogleAuthResult(data.session.user, intent));
         setStatus("success");
         setMessage("تم تأكيد بريدك الإلكتروني بنجاح. مرحباً بك في إرث!");
-        // Prefer the stored origin (single-use). Fallback to ?next=, then "/".
         const stored = consumeAuthOrigin("");
         const nextParam = typeof search.next === "string" && search.next.startsWith("/") && !search.next.startsWith("//") ? search.next : "";
         const dest = stored || nextParam || "/";
-        setTimeout(() => navigate({ to: dest as "/" }), 1500);
+        openAuthDialog({
+          id: "email-verified",
+          tone: "success",
+          title: "تم تأكيد بريدك",
+          body: "اكتمل إنشاء حسابك، ويمكنك الآن متابعة رحلتك في إرث.",
+          primary: {
+            label: "متابعة",
+            onClick: () => navigate({ to: dest as "/" }),
+          },
+        });
       } else {
-        // No session, no error, no code → likely already verified or stale link
         setStatus("already_verified");
         setMessage("الرابط لا يحتوي على جلسة جديدة. ربما تم تأكيد الحساب مسبقاً.");
       }
     })();
     return () => { alive = false; };
+
   }, [search, navigate]);
 
   const tone =
