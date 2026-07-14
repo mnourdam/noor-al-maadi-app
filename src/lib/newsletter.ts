@@ -105,7 +105,7 @@ export async function listNewsletterSubscribers(params: {
 
 export async function adminUnsubscribeNewsletter(id: string, reason?: string): Promise<void> {
   const { error } = await supabase.rpc("admin_unsubscribe_newsletter", {
-    p_id: id, p_reason: reason ?? null,
+    p_id: id, p_reason: reason ?? undefined,
   });
   if (error) throw error;
 }
