@@ -146,7 +146,7 @@ export async function grantDailyQuestReward(params: {
         // of double-adding.
         const { data: prof } = await supabase
           .from("profiles")
-          .select("xp, dinars, hearts, streak_days")
+          .select("xp, dinars, hearts, streak")
           .eq("id", userId)
           .maybeSingle();
         return {
@@ -157,7 +157,7 @@ export async function grantDailyQuestReward(params: {
                 xp: (prof as { xp: number | null }).xp,
                 dinars: (prof as { dinars: number | null }).dinars,
                 hearts: (prof as { hearts: number | null }).hearts,
-                streak: (prof as { streak_days: number | null }).streak_days,
+                streak: (prof as { streak: number | null }).streak,
               }
             : undefined,
         };
