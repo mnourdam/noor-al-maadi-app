@@ -190,10 +190,18 @@ export function DailyChallengesSection() {
     if (androidStable) return;
     let cancelled = false;
     (async () => {
-      const completed = await fetchMyDailyCompletedGameIds();
-      const sel = await selectDailyChallenges(2, { completedIds: completed });
+      // Wait for BOTH the player's all-time completion set (used to exclude
+      // completed challenges from the pool) AND today's completion set (used
+      // to render the "أُنجز اليوم" badge on today's stable picks when the
+      // player completes one during the day). Selection is only finalized
+      // after both are hydrated so a completed challenge never flashes in.
+      const [allTimeCompleted, todayCompleted] = await Promise.all([
+        fetchMyCompletedGameIds(),
+        fetchMyDailyCompletedGameIds(),
+      ]);
+      const sel = await selectDailyChallenges(2, { completedIds: allTimeCompleted });
       if (cancelled) return;
-      setCompletedIds(completed);
+      setCompletedIds(todayCompleted);
       setPicks(sel.picks);
       setAllCompleted(sel.allCompleted);
     })().catch(() => {
