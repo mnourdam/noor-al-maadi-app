@@ -956,6 +956,27 @@ export type Database = {
         }
         Relationships: []
       }
+      identity_link_audit: {
+        Row: {
+          id: string
+          linked_at: string
+          provider: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          linked_at?: string
+          provider: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          linked_at?: string
+          provider?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investigations: {
         Row: {
           created_at: string
@@ -2227,6 +2248,7 @@ export type Database = {
         }[]
       }
       reauth_challenges_cleanup: { Args: never; Returns: undefined }
+      record_identity_link: { Args: { p_provider: string }; Returns: Json }
       record_notification_click: {
         Args: { p_notification_id: string }
         Returns: undefined
