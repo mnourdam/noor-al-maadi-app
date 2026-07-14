@@ -340,6 +340,81 @@ function NewsletterAdminPage() {
   );
 }
 
+function StatBig({
+  label, value, hint, tone = "gold",
+}: {
+  label: string; value: number | undefined; hint: string;
+  tone?: "gold" | "emerald" | "amber" | "rose";
+}) {
+  const toneClass = {
+    gold: "border-amber-500/20 text-amber-200",
+    emerald: "border-emerald-500/30 text-emerald-200",
+    amber: "border-amber-500/40 text-amber-100",
+    rose: "border-rose-500/30 text-rose-200",
+  }[tone];
+  return (
+    <div className={`rounded-lg border ${toneClass} bg-slate-900/50 p-3 space-y-1`}>
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-xs font-semibold">{label}</div>
+        <div className="text-2xl font-bold tabular-nums">{value ?? "—"}</div>
+      </div>
+      <p className="text-[11px] leading-5 text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
+function DoiStatusPanel() {
+  if (NEWSLETTER_DOI_ENABLED) {
+    return (
+      <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 text-xs leading-6 text-emerald-100 space-y-2">
+        <div className="flex items-center gap-2 font-bold text-sm">
+          <ShieldAlert className="h-4 w-4" /> Double Opt-In مُفعَّل
+        </div>
+        <p>
+          عندما يشترك اللاعب من داخل التطبيق، يُرسَل له بريد تأكيد يحتوي على رابط فريد. لا يُعتبر <b>مؤكَّدًا</b> ولا يدخل ضمن قوائم التصدير التسويقي حتى يضغط الرابط.
+        </p>
+        <ol className="ms-4 list-decimal space-y-1">
+          <li>اللاعب يفعّل خانة النشرة → تُنشأ صفوف <code>subscribed=true, confirmed=false</code>.</li>
+          <li>يُرسَل بريد تأكيد عبر Resend يحتوي رمزًا موقّعًا محدود الصلاحية.</li>
+          <li>يضغط الرابط → endpoint التأكيد يعيّن <code>confirmed=true, confirmed_at=now()</code>.</li>
+          <li>لوحة الإدارة تعكس ذلك تلقائيًا.</li>
+        </ol>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-xs leading-6 text-amber-100 space-y-2">
+      <div className="flex items-center gap-2 font-bold text-sm">
+        <AlertTriangle className="h-4 w-4" /> Double Opt-In غير مُفعَّل حاليًا
+      </div>
+      <p>
+        عندما يشترك اللاعب اليوم، يصبح الاشتراك ساريًا فورًا بدون بريد تأكيد. لذلك عمود <code>confirmed</code> يبقى false ولا يجوز تصدير القائمة لأي مزوّد تسويقي خارجي بوصفها موافقة صريحة.
+      </p>
+      <div className="rounded border border-amber-400/30 bg-black/20 p-2 space-y-1">
+        <div className="font-semibold text-amber-200">التدفّق الحالي (DOI مُعطَّل):</div>
+        <ol className="ms-4 list-decimal">
+          <li>اللاعب يفعّل خانة النشرة.</li>
+          <li>يُنشأ صف <code>subscribed=true, confirmed=false</code> فورًا.</li>
+          <li>لا يُرسَل بريد تأكيد.</li>
+        </ol>
+      </div>
+      <div className="rounded border border-emerald-400/20 bg-black/20 p-2 space-y-1">
+        <div className="font-semibold text-emerald-200">التدفّق عند تفعيل DOI مستقبلاً:</div>
+        <ol className="ms-4 list-decimal">
+          <li>اللاعب يفعّل خانة النشرة → <code>subscribed=true, confirmed=false</code>.</li>
+          <li>يُرسَل بريد تأكيد عبر Resend مع رمز فريد ينتهي بعد ٢٤ ساعة.</li>
+          <li>الضغط على الرابط يستدعي endpoint التأكيد.</li>
+          <li>يُحدَّث الصف إلى <code>confirmed=true, confirmed_at=now()</code>.</li>
+          <li>يصبح مؤهَّلاً للتصدير التسويقي.</li>
+        </ol>
+      </div>
+      <p className="text-[11px]">
+        للتفعيل لاحقًا: عيِّن <code>VITE_NEWSLETTER_DOI_ENABLED=1</code> بعد بناء endpoint التأكيد وقالب البريد. الواجهة الإدارية جاهزة تلقائيًا.
+      </p>
+    </div>
+  );
+}
+
 function Stat({ label, value }: { label: string; value: number | undefined }) {
   return (
     <div className="rounded border border-white/10 bg-slate-900/40 p-2">
