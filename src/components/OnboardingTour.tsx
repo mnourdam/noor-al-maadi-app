@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Swords, BookOpen, Map as MapIcon, Calendar, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { useAccount } from "@/lib/account";
 
 const STORAGE_KEY = "irth.onboarded.v1";
+export const ONBOARDING_COMPLETED_EVENT = "irth:onboarding-completed";
 
 interface Step {
   title: string;
