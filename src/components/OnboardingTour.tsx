@@ -122,9 +122,13 @@ export function OnboardingTour() {
     }
     if (s.locked !== "x") return;
     e.preventDefault();
-    // Rubber-band at edges
+    // Rubber-band at edges. In Arabic RTL:
+    //   • swipe right (dx > 0) advances to the next slide
+    //   • swipe left  (dx < 0) returns to the previous slide
+    // At the first slide there is no previous → resist leftward drag.
+    // At the last slide there is no next     → resist rightward drag.
     let d = dx;
-    if ((i === 0 && d > 0) || (i === STEPS.length - 1 && d < 0)) d *= 0.35;
+    if ((i === 0 && d < 0) || (i === STEPS.length - 1 && d > 0)) d *= 0.35;
     setDrag(d);
   };
 
@@ -141,25 +145,32 @@ export function OnboardingTour() {
     if (s.locked !== "x") return;
     const flick = Math.abs(velocity) > 0.5;
     const threshold = w * 0.2;
-    if (dx < 0 && (Math.abs(dx) > threshold || flick)) {
-      // swipe left → next
+    // RTL gesture semantics — hard-coded, independent of navigator.language,
+    // device locale, or the OS reading direction reported to the WebView.
+    if (dx > 0 && (dx > threshold || flick)) {
+      // swipe right → next
       goTo(i + 1);
-    } else if (dx > 0 && (dx > threshold || flick)) {
-      // swipe right → previous
+    } else if (dx < 0 && (Math.abs(dx) > threshold || flick)) {
+      // swipe left → previous
       goTo(i - 1);
     }
   };
 
-  // Slides laid out LTR in the track (index 0 leftmost). "Next" moves track left.
-  const baseOffset = -i * 100; // percentage
+  // Slides rendered right-to-left: logical index 0 sits at the rightmost
+  // visual slot, so translating the track rightward reveals the next
+  // (higher-index) slide — matching an Arabic RTL swipe-right → next.
+  const visualIndex = STEPS.length - 1 - i;
+  const baseOffset = -visualIndex * 100; // percentage
   const dragPct = widthRef.current ? (drag / widthRef.current) * 100 : 0;
   const trackStyle: React.CSSProperties = {
     transform: `translate3d(calc(${baseOffset}% + ${dragPct}%), 0, 0)`,
     transition: dragging ? "none" : "transform 380ms cubic-bezier(0.22, 1, 0.36, 1)",
   };
 
-  // Progress indicator reflects drag
-  const progressIndex = i - (widthRef.current ? drag / widthRef.current : 0);
+  // Progress indicator reflects drag in the RTL sense: dragging right
+  // (positive drag) advances toward index + 1.
+  const progressIndex = i + (widthRef.current ? drag / widthRef.current : 0);
+
 
   const node = (
     <div
