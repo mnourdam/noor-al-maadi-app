@@ -155,6 +155,15 @@ function EntityPage() {
 
   const entity = query.data ?? null;
 
+  // Daily-quest hook: reading (viewing) an encyclopedia article satisfies
+  // the "read one article" mission. Fires once per successful entity load;
+  // the quest module dedupes per (userKey, localDate) so re-opening doesn't
+  // re-credit.
+  useEffect(() => {
+    if (entity?.id) notifyQuestProgress("read_article", 1);
+  }, [entity?.id]);
+
+
   const relatedQuery = useQuery({
     queryKey: ["encyclopedia", "graph", entity?.id ?? ""],
     enabled: !!entity,
