@@ -19,25 +19,28 @@ interface Stats {
   events: number | null;
   notifications: number | null;
   devices: number | null;
+  newsletter: number | null;
 }
 
 function AdminHub() {
-  const [stats, setStats] = useState<Stats>({ facts: null, events: null, notifications: null, devices: null });
+  const [stats, setStats] = useState<Stats>({ facts: null, events: null, notifications: null, devices: null, newsletter: null });
 
   useEffect(() => {
     (async () => {
       const opts = { count: "exact" as const, head: true };
-      const [f, e, n, d] = await Promise.all([
+      const [f, e, n, d, ns] = await Promise.all([
         supabase.from("daily_facts" as any).select("*", opts),
         supabase.from("today_in_history_events" as any).select("*", opts),
         supabase.from("notifications" as any).select("*", opts),
         supabase.from("device_tokens" as any).select("*", opts).eq("enabled", true),
+        supabase.from("newsletter_subscribers" as any).select("*", opts).eq("subscribed", true),
       ]);
       setStats({
         facts: f.count ?? 0,
         events: e.count ?? 0,
         notifications: n.count ?? 0,
         devices: d.count ?? 0,
+        newsletter: ns.count ?? 0,
       });
     })();
   }, []);
