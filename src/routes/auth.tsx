@@ -390,11 +390,43 @@ function AuthPage() {
                   spellCheck={false}
                   style={inputStyle}
                   placeholder={mode === "signup" ? "٨ أحرف على الأقل" : "٦ أحرف على الأقل"}
+                  value={mode === "signup" ? passwordValue : undefined}
+                  onChange={mode === "signup" ? (e) => setPasswordValue(e.target.value) : undefined}
                 />
-                {mode === "signup" && (
+                {mode === "signup" && passwordValue.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span>قوة كلمة المرور</span>
+                      <span>
+                        {hibpPending
+                          ? "جاري التحقق…"
+                          : hibpBlocked
+                            ? "مسرّبة"
+                            : ["ضعيفة جداً", "ضعيفة", "متوسطة", "جيدة", "قوية"][sync.score]}
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full transition-all ${
+                          hibpBlocked
+                            ? "bg-rose-500"
+                            : ["bg-rose-500", "bg-rose-400", "bg-amber-400", "bg-emerald-400", "bg-emerald-500"][sync.score]
+                        }`}
+                        style={{ width: `${(sync.score / 4) * 100}%` }}
+                      />
+                    </div>
+                    {signupProblems.length > 0 && (
+                      <ul className="mt-1 space-y-0.5 text-[11px] text-amber-200/80">
+                        {signupProblems.map((p: string) => (
+                          <li key={p}>• {p.startsWith("هذه") ? p : `يجب أن تحتوي على ${p}`}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+                {mode === "signup" && passwordValue.length === 0 && (
                   <span className="mt-1 block text-[10px] leading-relaxed text-muted-foreground">
-                    استخدم ٨ أحرف على الأقل، وتجنّب الكلمات الشائعة أو المتسلسلة (مثل 123456 أو password).
-                    يُفضّل مزج أحرف كبيرة وصغيرة وأرقام ورموز.
+                    استخدم ٨ أحرف على الأقل مع مزج أحرف كبيرة وصغيرة وأرقام، وتجنّب الكلمات الشائعة أو المسرّبة.
                   </span>
                 )}
               </label>
