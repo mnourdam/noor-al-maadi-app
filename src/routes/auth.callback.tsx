@@ -9,6 +9,8 @@ import {
 } from "@/lib/googleAuthResult";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
 import { setRecoveryMode } from "@/lib/recoveryMode";
+import { openAuthDialog } from "@/lib/authDialog";
+
 
 
 type SearchParams = {
