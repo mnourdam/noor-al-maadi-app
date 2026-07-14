@@ -428,7 +428,8 @@ function EntityPage() {
 
           {/* ───────── Related rooms in the museum ───────── */}
           <Ornament label="غرف أخرى في المتحف" />
-          <section>
+          <section ref={relNetworkRef} data-quest-section="relationship-network">
+
             <div className="mb-3 flex items-center gap-2">
               <Network className="size-4 text-gold" />
               <h2 className="font-display text-base font-bold">شبكة التاريخ المرتبط</h2>
