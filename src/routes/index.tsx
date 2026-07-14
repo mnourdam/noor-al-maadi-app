@@ -799,34 +799,8 @@ function HomeFull() {
         </Reveal>
       )}
 
-      {/* ============ 3. DAILY GOAL — today's objective + reward ============ */}
-      {recommendation && (
-        <Reveal>
-          <section className="mt-12 px-5">
-            <SectionHeader icon={<Target className="size-3.5" />} eyebrow="هدف اليوم" title="ابدأ من هنا" />
-            <div className="parchment-dark relative overflow-hidden rounded-3xl border border-gold/30 p-5 shadow-elegant">
-              <div className="arabesque-layer" />
-              <div className="absolute -left-10 -top-10 size-40 rounded-full bg-gold/15 blur-3xl" />
-              <div className="relative">
-                <p className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.25em] text-gold">
-                  {recommendation.icon} {recommendation.eyebrow}
-                </p>
-                <p className="font-display mt-1 text-lg font-bold leading-snug shimmer-text">{recommendation.title}</p>
-                <p className="mt-1 text-[12px] text-white/65">{recommendation.subtitle}</p>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
-                    <Sparkles className="size-3" /> {recommendation.xp} خبرة
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-black/30 px-2.5 py-1 text-[11px] text-gold">
-                    <Coins className="size-3" /> {recommendation.dinars} دينار
-                  </span>
-                </div>
-                <div className="mt-5">{recommendation.link}</div>
-              </div>
-            </div>
-          </section>
-        </Reveal>
-      )}
+      {/* ============ 3. DAILY QUEST — one mission per local day ============ */}
+      <DailyQuestCard />
 
       {/* ============ 3b. DAILY CHALLENGES (games) ============ */}
       <Reveal>
