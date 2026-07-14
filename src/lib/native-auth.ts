@@ -12,8 +12,8 @@ import { Capacitor } from "@capacitor/core";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
-  computeGoogleAuthResult,
   getAndClearGoogleAuthIntent,
+  resolveGoogleAuthResult,
   stashGoogleAuthResult,
 } from "@/lib/googleAuthResult";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
