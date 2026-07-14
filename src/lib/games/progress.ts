@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { recordGameComplete } from "@/lib/offline/record";
+import { notifyQuestProgress } from "@/lib/daily-quest";
 
 export interface GameProgressRow {
   id: string;
