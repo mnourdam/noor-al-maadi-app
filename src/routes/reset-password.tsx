@@ -206,13 +206,13 @@ function ResetPasswordPage() {
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                     <div
                       className={`h-full transition-all ${strengthColor}`}
-                      style={{ width: `${(strength.score / 4) * 100}%` }}
+                      style={{ width: `${(sync.score / 4) * 100}%` }}
                     />
                   </div>
-                  {strength.problems.length > 0 && (
+                  {problems.length > 0 && (
                     <ul className="mt-1 space-y-0.5 text-[11px] text-amber-200/80">
-                      {strength.problems.map((p) => (
-                        <li key={p}>• يجب أن تحتوي على {p}</li>
+                      {problems.map((p: string) => (
+                        <li key={p}>• {p.startsWith("هذه") ? p : `يجب أن تحتوي على ${p}`}</li>
                       ))}
                     </ul>
                   )}
