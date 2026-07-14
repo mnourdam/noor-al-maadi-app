@@ -8,6 +8,8 @@ import {
   stashGoogleAuthResult,
 } from "@/lib/googleAuthResult";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
+import { setRecoveryMode } from "@/lib/recoveryMode";
+
 
 type SearchParams = {
   code?: string;
