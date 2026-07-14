@@ -11,6 +11,8 @@ import { BUILD_TYPE } from "@/lib/build-info";
 import { openAuthDialog, maskEmail } from "@/lib/authDialog";
 
 type ResendKind = "signup" | "recovery";
+type Mode = "signin" | "signup" | "forgot";
+
 
 /** Map raw auth-provider errors to friendly Arabic dialog copy. */
 function classifyAuthError(msg: string, mode: Mode): { title: string; body: string; retry?: boolean; toLogin?: boolean } {
