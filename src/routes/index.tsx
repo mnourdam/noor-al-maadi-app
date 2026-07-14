@@ -57,7 +57,7 @@ type HeroSlide =
 
 function HomeFull() {
   const { profile } = useProfile();
-  const { account, user, lastSyncAt, displayName: resolvedDisplayName } = useAccount();
+  const { user, lastSyncAt, displayName: resolvedDisplayName } = useAccount();
 
   // Priority: display_name → full_name → username → email prefix.
   // `useAccount()` already resolves this chain from account row +
