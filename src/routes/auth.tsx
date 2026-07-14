@@ -14,14 +14,16 @@ type ResendKind = "signup" | "recovery";
 type Mode = "signin" | "signup" | "forgot";
 
 
+import { evaluatePassword, checkHibp, isWeakPasswordError, WEAK_PASSWORD_COPY, type HibpResult } from "@/lib/passwordPolicy";
+
 /** Map raw auth-provider errors to friendly Arabic dialog copy. */
 function classifyAuthError(msg: string, mode: Mode): { title: string; body: string; retry?: boolean; toLogin?: boolean } {
   const m = (msg || "").toLowerCase();
   if (m.includes("already") && m.includes("registered")) {
     return { title: "الحساب موجود بالفعل", body: "هذا البريد مسجّل مسبقاً في إرث. يمكنك تسجيل الدخول باستخدامه أو استعادة كلمة المرور.", toLogin: true };
   }
-  if (m.includes("password") && (m.includes("weak") || m.includes("short") || m.includes("6") || m.includes("8"))) {
-    return { title: "كلمة المرور ضعيفة", body: "اختر كلمة مرور أطول وأقوى — ٨ أحرف على الأقل مع مزج الأحرف والأرقام.", retry: true };
+  if (isWeakPasswordError(msg)) {
+    return { title: WEAK_PASSWORD_COPY.title, body: WEAK_PASSWORD_COPY.body, retry: true };
   }
   if (m.includes("invalid") && m.includes("credent")) {
     return { title: "بيانات الدخول غير صحيحة", body: "تأكد من البريد وكلمة المرور ثم حاول مجدداً.", retry: true };
