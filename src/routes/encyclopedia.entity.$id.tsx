@@ -11,8 +11,12 @@ import {
   Map as MapIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { notifyQuestProgress } from "@/lib/daily-quest";
+import { useEffect, useRef } from "react";
+import {
+  QUEST_COMPLETED_EVENT,
+  reportEntityRead,
+} from "@/lib/daily-quest";
+import { useAccount } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 
@@ -155,13 +159,69 @@ function EntityPage() {
 
   const entity = query.data ?? null;
 
-  // Daily-quest hook: reading (viewing) an encyclopedia article satisfies
-  // the "read one article" mission. Fires once per successful entity load;
-  // the quest module dedupes per (userKey, localDate) so re-opening doesn't
-  // re-credit.
+  // Daily Quest completion — fires ONCE per (userKey, day) when the
+  // reader meaningfully reaches the "شبكة الترابط" section OR scrolls
+  // past ~88% of the article. Reading a DIFFERENT entity is a no-op
+  // because `reportEntityRead` checks the target id inside the module.
+  const { user } = useAccount();
+  const userKey = user?.id ?? "guest";
+  const relNetworkRef = useRef<HTMLElement | null>(null);
+  const questFiredRef = useRef<string | null>(null);
   useEffect(() => {
-    if (entity?.id) notifyQuestProgress("read_article", 1);
-  }, [entity?.id]);
+    if (!entity?.id) return;
+    // Reset guard when navigating to a different entity.
+    if (questFiredRef.current && questFiredRef.current !== entity.id) {
+      questFiredRef.current = null;
+    }
+    const fire = () => {
+      if (questFiredRef.current === entity.id) return;
+      const r = reportEntityRead(userKey, entity.id);
+      if (r.justCompleted && r.state) {
+        questFiredRef.current = entity.id;
+        try {
+          window.dispatchEvent(new CustomEvent(QUEST_COMPLETED_EVENT, { detail: r.state }));
+        } catch { /* ignore */ }
+      } else if (r.state?.rewarded) {
+        // Already completed today — mark guard so listeners stay quiet.
+        questFiredRef.current = entity.id;
+      }
+    };
+
+    // Primary: IntersectionObserver on the relationship-network section.
+    let observer: IntersectionObserver | null = null;
+    const el = relNetworkRef.current;
+    if (el && typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        (entries) => {
+          for (const en of entries) {
+            if (en.isIntersecting) { fire(); observer?.disconnect(); break; }
+          }
+        },
+        { threshold: 0.35, rootMargin: "0px 0px -10% 0px" },
+      );
+      observer.observe(el);
+    }
+
+    // Fallback: scroll past ~88% of the document.
+    const onScroll = () => {
+      if (questFiredRef.current === entity.id) return;
+      const doc = document.documentElement;
+      const scrolled = window.scrollY + window.innerHeight;
+      const total = doc.scrollHeight;
+      if (total > 0 && scrolled / total >= 0.88) {
+        fire();
+        window.removeEventListener("scroll", onScroll);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    // Kick once in case the article is short enough to already be at bottom.
+    onScroll();
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [entity?.id, userKey]);
 
 
   const relatedQuery = useQuery({
@@ -368,7 +428,8 @@ function EntityPage() {
 
           {/* ───────── Related rooms in the museum ───────── */}
           <Ornament label="غرف أخرى في المتحف" />
-          <section>
+          <section ref={relNetworkRef} data-quest-section="relationship-network">
+
             <div className="mb-3 flex items-center gap-2">
               <Network className="size-4 text-gold" />
               <h2 className="font-display text-base font-bold">شبكة التاريخ المرتبط</h2>
