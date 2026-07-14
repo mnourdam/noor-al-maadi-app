@@ -455,7 +455,7 @@ function AuthPage() {
 
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || (mode === "signup" && (!signupPolicyOk || passwordValue.length === 0))}
               className="w-full rounded-xl bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-60"
             >
               {busy
