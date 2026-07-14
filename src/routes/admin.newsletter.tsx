@@ -157,28 +157,40 @@ function NewsletterAdminPage() {
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <StatBig
-          label="مشتركون (Subscribed)"
+          label="إجمالي المشتركين"
           value={stats?.total}
-          hint="عدد الصفوف حيث subscribed=true أو أُلغيت لاحقًا — أي كل من ضغط الاشتراك في أي وقت."
+          hint="كل من ضغط الاشتراك في أي وقت (يشمل من ألغى لاحقًا)."
         />
         <StatBig
-          label="مؤكَّدون (Confirmed)"
-          value={stats?.confirmed}
+          label={NEWSLETTER_DOI_ENABLED ? "نشِط ومؤكَّد" : "نشِط"}
+          value={
+            NEWSLETTER_DOI_ENABLED
+              ? stats?.active
+              : (stats ? Math.max(0, (stats.total ?? 0) - (stats.unsubscribed ?? 0) - (stats.suppressed ?? 0)) : undefined)
+          }
           hint={NEWSLETTER_DOI_ENABLED
-            ? "أكّدوا اشتراكهم عبر رابط البريد. مؤهَّلون للتصدير التسويقي."
-            : "confirmed=true. حاليًا لا يوجد رابط تأكيد فعلي، لذلك سيبقى صفرًا حتى يُفعَّل DOI."}
+            ? "subscribed=true و confirmed=true و ليسوا على قائمة الحظر. هذه القائمة الوحيدة الآمنة للتصدير التسويقي."
+            : "مشتركون حاليًا، لم يُلغوا ولم يُحظروا. لا يُعتبرون موافقة صريحة قابلة للتسويق حتى يُفعَّل DOI."}
           tone="emerald"
         />
+        {NEWSLETTER_DOI_ENABLED && (
+          <>
+            <StatBig
+              label="مؤكَّدون (Confirmed)"
+              value={stats?.confirmed}
+              hint="أكّدوا اشتراكهم عبر رابط البريد. مؤهَّلون للتصدير التسويقي."
+              tone="emerald"
+            />
+            <StatBig
+              label="بانتظار التأكيد (Pending)"
+              value={stats?.unconfirmed}
+              hint="أُرسل لهم رابط تأكيد ولم يضغطوا بعد. غير مؤهَّلين للتسويق."
+              tone="amber"
+            />
+          </>
+        )}
         <StatBig
-          label="بانتظار التأكيد (Pending)"
-          value={stats?.unconfirmed}
-          hint={NEWSLETTER_DOI_ENABLED
-            ? "أرسل لهم رابط تأكيد ولم يضغطوا بعد. غير مؤهَّلين للتسويق."
-            : "confirmed=false — لا يمكن اعتبارهم موافقة صريحة على البريد التسويقي حتى يُفعَّل DOI."}
-          tone="amber"
-        />
-        <StatBig
-          label="ألغوا الاشتراك (Unsubscribed)"
+          label="ألغوا الاشتراك"
           value={stats?.unsubscribed}
           hint="ضغطوا 'إلغاء الاشتراك' أو أُلغي يدويًا من الإدارة. لا يجوز إعادة إرسال شيء لهم."
           tone="rose"
@@ -198,12 +210,6 @@ function NewsletterAdminPage() {
           label="أعضاء (Authenticated)"
           value={stats?.authenticated}
           hint="اشتركوا وهم مسجّلون داخل التطبيق (user_id مربوط)."
-        />
-        <StatBig
-          label="نشطون فعلاً"
-          value={stats?.active}
-          hint="subscribed=true و confirmed=true و ليسوا على قائمة الحظر. هذه القائمة الوحيدة الآمنة للتصدير التسويقي."
-          tone="emerald"
         />
         <StatBig
           label="آخر ٧ أيام"
