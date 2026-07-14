@@ -1856,6 +1856,31 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_newsletter_subscribers: {
+        Args: {
+          p_filter?: string
+          p_from?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_source?: string
+          p_to?: string
+        }
+        Returns: {
+          confirmed: boolean
+          confirmed_at: string
+          created_at: string
+          email: string
+          id: string
+          is_suppressed: boolean
+          source: string
+          subscribed: boolean
+          suppression_reason: string
+          unsubscribed_at: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       admin_list_users: {
         Args: {
           p_filter?: string
@@ -1869,6 +1894,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_newsletter_stats: { Args: never; Returns: Json }
       admin_notification_stats: {
         Args: { p_notification_id: string }
         Returns: Json
@@ -1891,6 +1917,10 @@ export type Database = {
         Args: { p_as_draft?: boolean; p_id: string; p_version: number }
         Returns: Json
       }
+      admin_resubscribe_newsletter: {
+        Args: { p_consent_evidence: string; p_id: string }
+        Returns: Json
+      }
       admin_revoke_role: {
         Args: {
           p_reason?: string
@@ -1910,6 +1940,10 @@ export type Database = {
       }
       admin_set_account_status: {
         Args: { p_reason: string; p_status: string; p_user_id: string }
+        Returns: Json
+      }
+      admin_unsubscribe_newsletter: {
+        Args: { p_id: string; p_reason?: string }
         Returns: Json
       }
       admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
@@ -2035,6 +2069,7 @@ export type Database = {
       }
       is_content_admin: { Args: never; Returns: boolean }
       is_content_editor: { Args: never; Returns: boolean }
+      is_newsletter_admin: { Args: never; Returns: boolean }
       is_user_manager: { Args: never; Returns: boolean }
       is_username_available: { Args: { p_username: string }; Returns: boolean }
       leaderboard_around: {

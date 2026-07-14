@@ -53,17 +53,31 @@ export function OnboardingTour() {
 
   useEffect(() => {
     setMounted(true);
-    if (loadingSession) return;
+    try { localStorage.setItem("irth.diag.onboarding.mounted", "1"); } catch { /* */ }
+    if (loadingSession) {
+      try { localStorage.setItem("irth.diag.onboarding.skipReason", "loading-session"); } catch { /* */ }
+      return;
+    }
+    try { localStorage.setItem("irth.diag.auth.hydrated", "1"); } catch { /* */ }
     // Signed-in users never see onboarding. Persist the flag so the
     // auth-choice gate doesn't wait on it either.
     if (user) {
-      try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(STORAGE_KEY, "1");
+        localStorage.setItem("irth.diag.onboarding.skipReason", "authenticated");
+      } catch { /* ignore */ }
       return;
     }
     try {
-      if (!localStorage.getItem(STORAGE_KEY)) setOpen(true);
+      if (!localStorage.getItem(STORAGE_KEY)) {
+        localStorage.setItem("irth.diag.onboarding.skipReason", "showing");
+        setOpen(true);
+      } else {
+        localStorage.setItem("irth.diag.onboarding.skipReason", "flag-already-set");
+      }
     } catch { /* ignore */ }
   }, [user, loadingSession]);
+
 
   // Lock body scroll while the dialog is open so the background never moves.
   useEffect(() => {

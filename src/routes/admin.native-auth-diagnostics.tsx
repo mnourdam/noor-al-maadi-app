@@ -324,9 +324,78 @@ function NativeAuthDiagnostics() {
       <Section title="Signup trace">
         <TraceView entries={signupTrace} onClear={() => { clearTrace("signup"); refreshTraces(); }} />
       </Section>
+
+      <Section title="First-launch experience (debug only)">
+        <FirstLaunchDiagnostics />
+      </Section>
     </div>
   );
 }
+
+function readLs(k: string): string {
+  try { return localStorage.getItem(k) ?? "(unset)"; } catch { return "(err)"; }
+}
+
+function FirstLaunchDiagnostics() {
+  const [, force] = useState(0);
+  const isDebug = BUILD_TYPE === "debug" || import.meta.env.DEV;
+  const rows: Array<[string, string]> = [
+    ["onboarding component mounted", readLs("irth.diag.onboarding.mounted")],
+    ["auth state hydrated", readLs("irth.diag.auth.hydrated")],
+    ["irth.onboarded.v1", readLs("irth.onboarded.v1")],
+    ["irth.firstLaunch.choice.v1", readLs("irth.firstLaunch.choice.v1")],
+    ["onboarding skip reason", readLs("irth.diag.onboarding.skipReason")],
+    ["first-launch dialog skip reason", readLs("irth.diag.firstLaunch.skipReason")],
+    ["allowBackup (manifest)", "false (data_extraction_rules excludes all)"],
+  ];
+
+  function resetFirstLaunch() {
+    try {
+      localStorage.removeItem("irth.onboarded.v1");
+      localStorage.removeItem("irth.firstLaunch.choice.v1");
+      localStorage.removeItem("irth.diag.onboarding.mounted");
+      localStorage.removeItem("irth.diag.onboarding.skipReason");
+      localStorage.removeItem("irth.diag.firstLaunch.skipReason");
+      localStorage.removeItem("irth.diag.auth.hydrated");
+    } catch { /* ignore */ }
+    // Reload without clearing other user data.
+    try { window.location.href = "/"; } catch { window.location.reload(); }
+  }
+
+  return (
+    <>
+      <Table rows={rows} />
+      {isDebug ? (
+        <button
+          onClick={resetFirstLaunch}
+          style={{
+            marginTop: 12,
+            background: "#d4a056",
+            color: "#0b1424",
+            border: "none",
+            borderRadius: 6,
+            padding: "10px 14px",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          إعادة اختبار تجربة أول تشغيل
+        </button>
+      ) : (
+        <p style={{ marginTop: 8, opacity: 0.6, fontSize: 11 }}>
+          Reset control is disabled in production builds.
+        </p>
+      )}
+      <button onClick={() => force(v => v + 1)} style={{
+        marginTop: 8, background: "transparent", color: "#93c5fd",
+        border: "1px solid #1f2937", borderRadius: 6, padding: "4px 8px", fontSize: 12,
+      }}>
+        Refresh flags
+      </button>
+    </>
+  );
+}
+
 
 const preStyle: React.CSSProperties = {
   background: "#111827",

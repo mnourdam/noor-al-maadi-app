@@ -43,11 +43,15 @@ export function FirstLaunchGate() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (loadingSession) return;
+    const setReason = (r: string) => {
+      try { window.localStorage.setItem("irth.diag.firstLaunch.skipReason", r); } catch { /* */ }
+    };
+    if (loadingSession) { setReason("loading-session"); return; }
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       // Offline-first: first launch with no connection must still allow the
       // bundled encyclopedia/campaign/museum snapshot to be browsed.
       try { window.localStorage.setItem(GUEST_CHOICE_KEY, "guest"); } catch { /* */ }
+      setReason("offline");
       setOpen(false);
       return;
     }
@@ -55,19 +59,23 @@ export function FirstLaunchGate() {
       // Signed-in users never see the gate. Also record their choice
       // implicitly so the gate doesn't pop on sign-out.
       try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
+      setReason("authenticated");
       setOpen(false);
       return;
     }
     // Wait until onboarding has finished (or was previously completed) so the
     // very-first-launch experience is: onboarding → auth-choice dialog.
     if (!onboardingDone) {
+      setReason("waiting-for-onboarding");
       setOpen(false);
       return;
     }
     let saved: string | null = null;
     try { saved = window.localStorage.getItem(GUEST_CHOICE_KEY); } catch { /* */ }
+    setReason(saved ? `existing-choice:${saved}` : "showing");
     setOpen(!saved);
   }, [user, loadingSession, onboardingDone]);
+
 
   if (!open) return null;
 
