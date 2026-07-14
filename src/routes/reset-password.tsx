@@ -92,23 +92,45 @@ function ResetPasswordPage() {
       const { error: err } = await supabase.auth.updateUser({ password });
       if (err) {
         // Do NOT clear recovery mode on failure — user must retry.
-        setError(err.message || "تعذر تحديث كلمة المرور. حاول مجدداً.");
+        openAuthDialog({
+          id: `reset-error-${Date.now()}`,
+          tone: "error",
+          title: "تعذّر تحديث كلمة المرور",
+          body: "حدث خطأ أثناء تحديث كلمة المرور. تأكد من قوة كلمة المرور وحاول مجدداً.",
+          primary: { label: "إعادة المحاولة" },
+        });
         return;
       }
       // Success → clear the recovery lock, then refresh the session so the
       // app treats the user as a normally signed-in account.
       setRecoveryMode(false);
       try { await supabase.auth.refreshSession(); } catch { /* best-effort */ }
-      setInfo("تم تحديث كلمة المرور بنجاح");
-      // Prefer the stored auth-origin (single-use); fall back to profile.
       const dest = consumeAuthOrigin("/profile");
-      setTimeout(() => navigate({ to: dest as "/profile", replace: true }), 900);
+      openAuthDialog({
+        id: "password-updated",
+        tone: "success",
+        title: "تم تحديث كلمة المرور",
+        body: "تم اعتماد كلمة المرور الجديدة وتسجيل دخولك بنجاح.",
+        primary: {
+          label: "متابعة",
+          onClick: () => navigate({ to: dest as "/profile", replace: true }),
+        },
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      openAuthDialog({
+        id: `reset-throw-${Date.now()}`,
+        tone: "error",
+        title: "تعذّر تحديث كلمة المرور",
+        body: "حدث خطأ غير متوقع. حاول مجدداً.",
+        primary: { label: "إعادة المحاولة" },
+      });
+      void msg;
     } finally {
       setBusy(false);
     }
   }
+
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "12px 14px", fontSize: 16, borderRadius: 12,
