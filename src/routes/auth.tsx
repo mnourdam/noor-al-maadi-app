@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,14 +14,16 @@ type ResendKind = "signup" | "recovery";
 type Mode = "signin" | "signup" | "forgot";
 
 
+import { evaluatePassword, checkHibp, isWeakPasswordError, WEAK_PASSWORD_COPY, type HibpResult } from "@/lib/passwordPolicy";
+
 /** Map raw auth-provider errors to friendly Arabic dialog copy. */
 function classifyAuthError(msg: string, mode: Mode): { title: string; body: string; retry?: boolean; toLogin?: boolean } {
   const m = (msg || "").toLowerCase();
   if (m.includes("already") && m.includes("registered")) {
     return { title: "الحساب موجود بالفعل", body: "هذا البريد مسجّل مسبقاً في إرث. يمكنك تسجيل الدخول باستخدامه أو استعادة كلمة المرور.", toLogin: true };
   }
-  if (m.includes("password") && (m.includes("weak") || m.includes("short") || m.includes("6") || m.includes("8"))) {
-    return { title: "كلمة المرور ضعيفة", body: "اختر كلمة مرور أطول وأقوى — ٨ أحرف على الأقل مع مزج الأحرف والأرقام.", retry: true };
+  if (isWeakPasswordError(msg)) {
+    return { title: WEAK_PASSWORD_COPY.title, body: WEAK_PASSWORD_COPY.body, retry: true };
   }
   if (m.includes("invalid") && m.includes("credent")) {
     return { title: "بيانات الدخول غير صحيحة", body: "تأكد من البريد وكلمة المرور ثم حاول مجدداً.", retry: true };
@@ -56,11 +58,36 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [passwordValue, setPasswordValue] = useState("");
+  const [hibp, setHibp] = useState<HibpResult | null>(null);
+  const [hibpPending, setHibpPending] = useState(false);
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
   const referralRef = useRef<HTMLInputElement>(null);
+
+  const sync = useMemo(() => evaluatePassword(passwordValue), [passwordValue]);
+  useEffect(() => {
+    if (mode !== "signup") { setHibp(null); setHibpPending(false); return; }
+    setHibp(null);
+    if (!sync.syncOk) { setHibpPending(false); return; }
+    const controller = new AbortController();
+    setHibpPending(true);
+    const t = setTimeout(() => {
+      checkHibp(passwordValue, controller.signal)
+        .then((r) => setHibp(r))
+        .catch(() => setHibp({ status: "skipped", reason: "error" }))
+        .finally(() => setHibpPending(false));
+    }, 350);
+    return () => { controller.abort(); clearTimeout(t); setHibpPending(false); };
+  }, [passwordValue, sync.syncOk, mode]);
+
+  const hibpBlocked = hibp?.status === "pwned";
+  const signupPolicyOk = sync.syncOk && !hibpBlocked && !hibpPending;
+  const signupProblems = hibpBlocked
+    ? [...sync.problems, "هذه الكلمة ظهرت في تسريبات معروفة — اختر كلمة مختلفة"]
+    : sync.problems;
 
   useEffect(() => {
     if (user) {
@@ -197,6 +224,17 @@ function AuthPage() {
       }
       let r: { ok: boolean; error?: string };
       if (mode === "signup") {
+        // Canonical policy gate — mirrors reset-password and server rules.
+        if (!signupPolicyOk) {
+          openAuthDialog({
+            id: `signup-weak-${Date.now()}`,
+            tone: "error",
+            title: WEAK_PASSWORD_COPY.title,
+            body: WEAK_PASSWORD_COPY.body,
+            primary: { label: "حسنًا" },
+          });
+          return;
+        }
         r = await signUp({ email, password, username, displayName: username, referralCode: referral || undefined });
       } else {
         r = await signIn(email, password);
@@ -352,11 +390,43 @@ function AuthPage() {
                   spellCheck={false}
                   style={inputStyle}
                   placeholder={mode === "signup" ? "٨ أحرف على الأقل" : "٦ أحرف على الأقل"}
+                  value={mode === "signup" ? passwordValue : undefined}
+                  onChange={mode === "signup" ? (e) => setPasswordValue(e.target.value) : undefined}
                 />
-                {mode === "signup" && (
+                {mode === "signup" && passwordValue.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span>قوة كلمة المرور</span>
+                      <span>
+                        {hibpPending
+                          ? "جاري التحقق…"
+                          : hibpBlocked
+                            ? "مسرّبة"
+                            : ["ضعيفة جداً", "ضعيفة", "متوسطة", "جيدة", "قوية"][sync.score]}
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full transition-all ${
+                          hibpBlocked
+                            ? "bg-rose-500"
+                            : ["bg-rose-500", "bg-rose-400", "bg-amber-400", "bg-emerald-400", "bg-emerald-500"][sync.score]
+                        }`}
+                        style={{ width: `${(sync.score / 4) * 100}%` }}
+                      />
+                    </div>
+                    {signupProblems.length > 0 && (
+                      <ul className="mt-1 space-y-0.5 text-[11px] text-amber-200/80">
+                        {signupProblems.map((p: string) => (
+                          <li key={p}>• {p.startsWith("هذه") ? p : `يجب أن تحتوي على ${p}`}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+                {mode === "signup" && passwordValue.length === 0 && (
                   <span className="mt-1 block text-[10px] leading-relaxed text-muted-foreground">
-                    استخدم ٨ أحرف على الأقل، وتجنّب الكلمات الشائعة أو المتسلسلة (مثل 123456 أو password).
-                    يُفضّل مزج أحرف كبيرة وصغيرة وأرقام ورموز.
+                    استخدم ٨ أحرف على الأقل مع مزج أحرف كبيرة وصغيرة وأرقام، وتجنّب الكلمات الشائعة أو المسرّبة.
                   </span>
                 )}
               </label>
@@ -385,7 +455,7 @@ function AuthPage() {
 
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || (mode === "signup" && (!signupPolicyOk || passwordValue.length === 0))}
               className="w-full rounded-xl bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-60"
             >
               {busy

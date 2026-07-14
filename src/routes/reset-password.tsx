@@ -6,39 +6,19 @@ import { PasswordField } from "@/components/ui/PasswordField";
 import { setRecoveryMode } from "@/lib/recoveryMode";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
 import { openAuthDialog } from "@/lib/authDialog";
+import {
+  evaluatePassword,
+  checkHibp,
+  isWeakPasswordError,
+  WEAK_PASSWORD_COPY,
+  type HibpResult,
+} from "@/lib/passwordPolicy";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({ meta: [{ title: "تعيين كلمة مرور جديدة" }] }),
   component: ResetPasswordPage,
 });
 
-
-interface StrengthReport {
-  score: 0 | 1 | 2 | 3 | 4;
-  problems: string[]; // Arabic guidance for anything still missing
-  ok: boolean;
-}
-
-function evaluateStrength(pwd: string): StrengthReport {
-  const problems: string[] = [];
-  if (pwd.length < 8) problems.push("٨ أحرف على الأقل");
-  if (!/[a-z]/.test(pwd) && !/[\u0600-\u06FF]/.test(pwd)) problems.push("حرف صغير (a-z)");
-  if (!/[A-Z]/.test(pwd) && !/[\u0600-\u06FF]/.test(pwd)) problems.push("حرف كبير (A-Z)");
-  if (!/\d/.test(pwd)) problems.push("رقم واحد على الأقل");
-
-  let score: StrengthReport["score"] = 0;
-  if (pwd.length >= 8) score++;
-  if (/[A-Z]/.test(pwd)) score++;
-  if (/\d/.test(pwd)) score++;
-  if (/[^A-Za-z0-9]/.test(pwd) || pwd.length >= 12) score++;
-  const clamped = Math.min(4, score) as StrengthReport["score"];
-
-  return {
-    score: clamped,
-    problems,
-    ok: problems.length === 0,
-  };
-}
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -49,6 +29,8 @@ function ResetPasswordPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [hibp, setHibp] = useState<HibpResult | null>(null);
+  const [hibpPending, setHibpPending] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   // Supabase appends the recovery tokens to the URL hash. The client picks
@@ -70,16 +52,37 @@ function ResetPasswordPage() {
     return () => { alive = false; sub.subscription.unsubscribe(); };
   }, []);
 
-  const strength = useMemo(() => evaluateStrength(password), [password]);
+  const sync = useMemo(() => evaluatePassword(password), [password]);
+
+  // Async HIBP check — debounced. Only runs once the sync rules pass.
+  useEffect(() => {
+    setHibp(null);
+    if (!sync.syncOk) { setHibpPending(false); return; }
+    const controller = new AbortController();
+    setHibpPending(true);
+    const t = setTimeout(() => {
+      checkHibp(password, controller.signal)
+        .then((r) => { setHibp(r); })
+        .catch(() => { setHibp({ status: "skipped", reason: "error" }); })
+        .finally(() => { setHibpPending(false); });
+    }, 350);
+    return () => { controller.abort(); clearTimeout(t); setHibpPending(false); };
+  }, [password, sync.syncOk]);
+
+  const hibpBlocked = hibp?.status === "pwned";
+  const problems = hibpBlocked
+    ? [...sync.problems, "هذه الكلمة ظهرت في تسريبات معروفة — اختر كلمة مختلفة"]
+    : sync.problems;
+  const policyOk = sync.syncOk && !hibpBlocked && !hibpPending;
   const passwordsMatch = password.length > 0 && password === confirm;
-  const canSubmit = ready && hasSession && strength.ok && passwordsMatch && !busy;
+  const canSubmit = ready && hasSession && policyOk && passwordsMatch && !busy;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
     setError(null);
     setInfo(null);
-    if (!strength.ok) {
+    if (!policyOk) {
       setError("كلمة المرور لا تستوفي المتطلبات.");
       return;
     }
@@ -92,11 +95,12 @@ function ResetPasswordPage() {
       const { error: err } = await supabase.auth.updateUser({ password });
       if (err) {
         // Do NOT clear recovery mode on failure — user must retry.
+        const weak = isWeakPasswordError(err.message);
         openAuthDialog({
           id: `reset-error-${Date.now()}`,
           tone: "error",
-          title: "تعذّر تحديث كلمة المرور",
-          body: "حدث خطأ أثناء تحديث كلمة المرور. تأكد من قوة كلمة المرور وحاول مجدداً.",
+          title: weak ? WEAK_PASSWORD_COPY.title : "تعذّر تحديث كلمة المرور",
+          body: weak ? WEAK_PASSWORD_COPY.body : "حدث خطأ أثناء تحديث كلمة المرور. حاول مجدداً.",
           primary: { label: "إعادة المحاولة" },
         });
         return;
@@ -138,14 +142,20 @@ function ResetPasswordPage() {
     color: "white", outline: "none",
   };
 
-  const strengthLabel = ["ضعيفة جداً", "ضعيفة", "متوسطة", "جيدة", "قوية"][strength.score];
-  const strengthColor = [
-    "bg-rose-500",
-    "bg-rose-400",
-    "bg-amber-400",
-    "bg-emerald-400",
-    "bg-emerald-500",
-  ][strength.score];
+  const strengthLabel = hibpPending
+    ? "جاري التحقق…"
+    : hibpBlocked
+      ? "مسرّبة"
+      : ["ضعيفة جداً", "ضعيفة", "متوسطة", "جيدة", "قوية"][sync.score];
+  const strengthColor = hibpBlocked
+    ? "bg-rose-500"
+    : [
+        "bg-rose-500",
+        "bg-rose-400",
+        "bg-amber-400",
+        "bg-emerald-400",
+        "bg-emerald-500",
+      ][sync.score];
 
   return (
     <AppShell>
@@ -196,13 +206,13 @@ function ResetPasswordPage() {
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                     <div
                       className={`h-full transition-all ${strengthColor}`}
-                      style={{ width: `${(strength.score / 4) * 100}%` }}
+                      style={{ width: `${(sync.score / 4) * 100}%` }}
                     />
                   </div>
-                  {strength.problems.length > 0 && (
+                  {problems.length > 0 && (
                     <ul className="mt-1 space-y-0.5 text-[11px] text-amber-200/80">
-                      {strength.problems.map((p) => (
-                        <li key={p}>• يجب أن تحتوي على {p}</li>
+                      {problems.map((p: string) => (
+                        <li key={p}>• {p.startsWith("هذه") ? p : `يجب أن تحتوي على ${p}`}</li>
                       ))}
                     </ul>
                   )}
