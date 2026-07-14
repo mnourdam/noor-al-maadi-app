@@ -54,16 +54,6 @@ function present(kind: GoogleAuthResultKind) {
   });
 }
 
-function present(kind: GoogleAuthResultKind) {
-  const c = COPY[kind];
-  openAuthDialog({
-    id: c.id,
-    tone: kind === "new_signup_via_signin" ? "success" : "info",
-    title: c.title,
-    body: c.body,
-    primary: { label: c.primary, onClick: () => closeAuthDialog() },
-  });
-}
 
 export function GoogleAuthResultDialog() {
   useEffect(() => {
