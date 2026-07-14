@@ -18,7 +18,9 @@ import type { User } from "@supabase/supabase-js";
 export type GoogleAuthIntent = "signin" | "signup";
 export type GoogleAuthResultKind =
   | "existing_signin_via_signup"
-  | "new_signup_via_signin";
+  | "new_signup_via_signin"
+  | "identity_linked"
+  | "existing_account_signin";
 
 const INTENT_KEY = "irth.google_auth_intent.v1";
 const RESULT_KEY = "irth.google_auth_result.v1";
