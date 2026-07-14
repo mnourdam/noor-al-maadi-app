@@ -45,16 +45,25 @@ export type GrantOutcome =
   | "queued"           // offline / RPC unreachable — outbox will retry
   | "unauthenticated"; // no user session
 
+export interface RewardServerStats {
+  xp: number | null;
+  dinars: number | null;
+  hearts: number | null;
+  streak: number | null;
+}
+
 export interface CanonicalGrantResult {
   outcome: GrantOutcome;
   deltaId: string;
-  /** Authoritative snapshot when the server confirms already_granted. */
-  serverStats?: {
-    xp: number | null;
-    dinars: number | null;
-    hearts: number | null;
-    streak: number | null;
-  };
+  /** Authoritative snapshot after any successful server confirmation. */
+  serverStats?: RewardServerStats;
+  serverStatsBefore?: RewardServerStats;
+  serverStatsAfter?: RewardServerStats;
+  rpcStatus: "not_called" | "success" | "error" | "queued";
+  rpcBody?: { ok?: boolean; applied?: boolean; reason?: string };
+  rpcError?: string | null;
+  deltaRowExists?: boolean;
+  deltaRowError?: string | null;
 }
 
 /** Text encoder cached across calls; SubtleCrypto is available in every
@@ -102,6 +111,31 @@ export function buildDailyQuestRewardKey(params: {
   return `daily_quest:${params.userId}:${params.localDate}:${params.entityId}`;
 }
 
+async function fetchAuthoritativeProfileStats(): Promise<RewardServerStats | undefined> {
+  const { data, error } = await supabase.rpc("get_my_profile");
+  if (error || !data) {
+    if (error) console.warn("[daily-quest-reward] profile rehydrate failed", error.message);
+    return undefined;
+  }
+  const row = data as { xp?: number | null; dinars?: number | null; hearts?: number | null; streak?: number | null };
+  return {
+    xp: row.xp ?? null,
+    dinars: row.dinars ?? null,
+    hearts: row.hearts ?? null,
+    streak: row.streak ?? null,
+  };
+}
+
+async function fetchDeltaRowExists(deltaId: string): Promise<{ exists?: boolean; error?: string | null }> {
+  const { data, error } = await supabase
+    .from("applied_profile_deltas")
+    .select("delta_id")
+    .eq("delta_id", deltaId)
+    .maybeSingle();
+  if (error) return { error: error.message };
+  return { exists: !!data, error: null };
+}
+
 /**
  * Attempt the canonical atomic reward grant. Never throws — every failure
  * mode is captured in the returned `outcome`. Safe to call from mount-time
@@ -124,6 +158,7 @@ export async function grantDailyQuestReward(params: {
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
 
   if (online) {
+    const serverStatsBefore = await fetchAuthoritativeProfileStats();
     try {
       const { data, error } = await supabase.rpc("apply_profile_delta", {
         p_delta_id: deltaId,
@@ -134,37 +169,83 @@ export async function grantDailyQuestReward(params: {
       });
       if (!error) {
         const payload = (data ?? {}) as { ok?: boolean; applied?: boolean; reason?: string };
+        const serverStatsAfter = await fetchAuthoritativeProfileStats();
+        const deltaRow = await fetchDeltaRowExists(deltaId);
         if (payload.ok === false && payload.reason === "unauthenticated") {
-          return { outcome: "unauthenticated", deltaId };
+          return {
+            outcome: "unauthenticated",
+            deltaId,
+            rpcStatus: "success",
+            rpcBody: payload,
+            serverStatsBefore,
+            serverStatsAfter,
+            deltaRowExists: deltaRow.exists,
+            deltaRowError: deltaRow.error,
+          };
         }
         if (payload.applied) {
-          return { outcome: "granted", deltaId };
+          return {
+            outcome: "granted",
+            deltaId,
+            rpcStatus: "success",
+            rpcBody: payload,
+            serverStats: serverStatsAfter,
+            serverStatsBefore,
+            serverStatsAfter,
+            deltaRowExists: deltaRow.exists,
+            deltaRowError: deltaRow.error,
+          };
         }
         // already_applied — server already granted this reward on some
         // earlier call (this device, another device, or a previous flush).
-        // Fetch authoritative stats so the local mirror re-syncs instead
-        // of double-adding.
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("xp, dinars, hearts, streak")
-          .eq("id", userId)
-          .maybeSingle();
         return {
           outcome: "already_granted",
           deltaId,
-          serverStats: prof
-            ? {
-                xp: (prof as { xp: number | null }).xp,
-                dinars: (prof as { dinars: number | null }).dinars,
-                hearts: (prof as { hearts: number | null }).hearts,
-                streak: (prof as { streak: number | null }).streak,
-              }
-            : undefined,
+          rpcStatus: "success",
+          rpcBody: payload,
+          serverStats: serverStatsAfter,
+          serverStatsBefore,
+          serverStatsAfter,
+          deltaRowExists: deltaRow.exists,
+          deltaRowError: deltaRow.error,
         };
       }
       console.warn("[daily-quest-reward] rpc error, queueing", error.message);
+      await enqueueWithId(userId, deltaId, "profile_delta", {
+        xp,
+        dinars,
+        hearts: 0,
+        source: "daily_quest",
+      });
+      void flushOutbox(userId);
+      return {
+        outcome: "queued",
+        deltaId,
+        rpcStatus: "error",
+        rpcError: error.message,
+        serverStatsBefore,
+      };
     } catch (err) {
       console.warn("[daily-quest-reward] rpc threw, queueing", err);
+      const message = err instanceof Error ? err.message : String(err);
+      try {
+        await enqueueWithId(userId, deltaId, "profile_delta", {
+          xp,
+          dinars,
+          hearts: 0,
+          source: "daily_quest",
+        });
+        void flushOutbox(userId);
+      } catch (enqueueErr) {
+        console.warn("[daily-quest-reward] enqueue failed", enqueueErr);
+      }
+      return {
+        outcome: "queued",
+        deltaId,
+        rpcStatus: "error",
+        rpcError: message,
+        serverStatsBefore,
+      };
     }
   }
 
@@ -183,5 +264,5 @@ export async function grantDailyQuestReward(params: {
   } catch (err) {
     console.warn("[daily-quest-reward] enqueue failed", err);
   }
-  return { outcome: "queued", deltaId };
+  return { outcome: "queued", deltaId, rpcStatus: "queued" };
 }
