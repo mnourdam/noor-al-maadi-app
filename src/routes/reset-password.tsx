@@ -220,6 +220,9 @@ function ResetPasswordPage() {
                       ))}
                     </ul>
                   )}
+                  {hibpNotice && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">{hibpNotice}</p>
+                  )}
                 </div>
               )}
 
