@@ -229,7 +229,11 @@ function NewsletterAdminPage() {
             <label className="block text-[10px] text-muted-foreground">مرشِّح</label>
             <select value={filter} onChange={e => setFilter(e.target.value as NewsletterFilter)}
               className="rounded border border-white/10 bg-background px-2 py-1 text-xs">
-              {Object.entries(FILTER_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+              {(Object.entries(FILTER_LABELS) as [NewsletterFilter, string][])
+                .filter(([k]) => NEWSLETTER_DOI_ENABLED
+                  ? true
+                  : k !== "confirmed" && k !== "unconfirmed" && k !== "active")
+                .map(([k,v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           <div>
