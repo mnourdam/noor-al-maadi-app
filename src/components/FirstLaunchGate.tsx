@@ -28,6 +28,18 @@ const GUEST_CHOICE_KEY = "irth.firstLaunch.choice.v1";
 export function FirstLaunchGate() {
   const { user, loadingSession } = useAccount();
   const [open, setOpen] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try { return !!window.localStorage.getItem("irth.onboarded.v1"); } catch { return true; }
+  });
+
+  // Watch for the onboarding-completed event so we can open right after.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = () => setOnboardingDone(true);
+    window.addEventListener("irth:onboarding-completed", handler);
+    return () => window.removeEventListener("irth:onboarding-completed", handler);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -46,10 +58,16 @@ export function FirstLaunchGate() {
       setOpen(false);
       return;
     }
+    // Wait until onboarding has finished (or was previously completed) so the
+    // very-first-launch experience is: onboarding → auth-choice dialog.
+    if (!onboardingDone) {
+      setOpen(false);
+      return;
+    }
     let saved: string | null = null;
     try { saved = window.localStorage.getItem(GUEST_CHOICE_KEY); } catch { /* */ }
     setOpen(!saved);
-  }, [user, loadingSession]);
+  }, [user, loadingSession, onboardingDone]);
 
   if (!open) return null;
 
