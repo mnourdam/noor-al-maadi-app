@@ -279,6 +279,16 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         const code = params.get("code");
         const accessToken = params.get("access_token");
         const refreshToken = params.get("refresh_token");
+        const linkType = params.get("type");
+        const isRecoveryLink = linkType === "recovery";
+        // Recovery: lock the app into password-reset mode BEFORE the PKCE
+        // exchange so that even if `onAuthStateChange` fires SIGNED_IN before
+        // we navigate, the root RecoveryModeGuard force-redirects any route
+        // to `/reset-password` and the user cannot access the account.
+        if (isRecoveryLink) {
+          setRecoveryMode(true);
+          recordTrace("native-auth", "recovery-link-detected");
+        }
         const errorDescription =
           params.get("error_description") || params.get("error");
         if (code) recordTrace("native-auth", "code-detected");
