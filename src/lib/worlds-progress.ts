@@ -639,7 +639,7 @@ export function pickContinueJourney(
   }
 
   // 3. Next unfinished investigation.
-  const invDoneSet = new Set(inputs.investigationsCompleted);
+  const invDoneSet = buildInvestigationDoneSet(inputs.investigationsCompleted);
   const invs = (localInvestigations() as Array<{ slug: string; title: string; difficulty?: string; enabled?: boolean }>)
     .filter((r) => r?.enabled !== false && idx.investigationSlugs.includes(r.slug))
     .sort((a, b) => {
