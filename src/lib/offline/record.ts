@@ -9,7 +9,7 @@
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
-import { enqueue, type OutboxKind } from "./outbox";
+import { enqueue, enqueueWithId, type OutboxKind } from "./outbox";
 import { flushOutbox } from "./flush";
 
 async function currentUserId(): Promise<string | null> {
