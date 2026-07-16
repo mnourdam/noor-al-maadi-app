@@ -49,18 +49,7 @@ export const runImportBatch = createServerFn({ method: "POST" })
       mode: data.mode,
     });
     if (error) throw new Error(error.message);
-    return result as {
-      status: string;
-      batch_id?: string;
-      created?: number;
-      updated?: number;
-      aliased?: number;
-      skipped?: number;
-      failed?: number;
-      conflicts?: number;
-      items?: unknown[];
-      error?: string;
-    };
+    return result as Record<string, any>;
   });
 
 const rollbackInput = z.object({
@@ -72,7 +61,7 @@ const rollbackInput = z.object({
 export const rollbackImportBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => rollbackInput.parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<Record<string, any>> => {
     const { data: result, error } = await context.supabase.rpc("admin_rollback_import_batch" as any, {
       p_batch: data.batch_id,
       p_force: data.force ?? false,

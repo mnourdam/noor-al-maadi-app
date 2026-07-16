@@ -50,7 +50,7 @@ function BatchDetail() {
     <AdminLayout
       title="تفاصيل عملية الاستيراد"
       subtitle="السجل الكامل للاستيراد مع قبل/بعد لكل صف وتراجع آمن مبني على الأدلة."
-      breadcrumbs={[{ label: "سجل الاستيراد", href: "/admin/import-history" }, { label: "تفاصيل" }]}
+      breadcrumbs={[{ label: "سجل الاستيراد", to: "/admin/import-history" }, { label: "تفاصيل" }]}
     >
       <div className="mx-auto max-w-6xl space-y-4">
         {loading && <Loader2 className="mx-auto h-5 w-5 animate-spin" />}
