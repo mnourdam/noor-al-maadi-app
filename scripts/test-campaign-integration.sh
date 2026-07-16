@@ -586,7 +586,17 @@ BEGIN
           jsonb_build_object('id','a','type','true_false','prompt','q','correctAnswer',true)))))))
   ), 'commit');
   bid := (r->>'batch_id')::uuid;
-  UPDATE public.admin_campaigns SET title='LATER-EDIT', data = data || jsonb_build_object('editedByAnother',true) WHERE id=v_cid;
+  -- Simulate a concurrent edit via a second transactional import batch (the
+  -- test role has no direct UPDATE grant on admin_campaigns; the RPC has).
+  PERFORM public.admin_run_campaign_batch(jsonb_build_object(
+    'content_type','campaigns','approved_plan_hash','it-cmp-25b-'||v_cid,
+    'original_payload_hash','p2','publish',false,
+    'items', jsonb_build_array(jsonb_build_object('index',0,'action','update',
+      'target_key', jsonb_build_object('id',v_cid),
+      'data', jsonb_build_object('id',v_cid,'title','LATER-EDIT','chapters', jsonb_build_array(
+        jsonb_build_object('id','ch','title','A','order',1,'activities', jsonb_build_array(
+          jsonb_build_object('id','a','type','true_false','prompt','q','correctAnswer',true)))))))
+  ), 'commit');
   rb := public.admin_rollback_campaign_batch(bid,false);
   RAISE NOTICE 'RES:%', rb->>'status';
 END\$\$; ROLLBACK;
