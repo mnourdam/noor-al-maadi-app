@@ -201,6 +201,7 @@ export function ImportWizard({ engine }: WizardProps) {
       originalPayloadHash: stableHash(raw),
       overwrite, publish,
       allowRemovals: (engine.key === "investigations" || engine.key === "campaigns") ? allowRemovals : false,
+      allowUnarchive: engine.key === "campaigns" ? allowUnarchive : false,
     });
   };
 
