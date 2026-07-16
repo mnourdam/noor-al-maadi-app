@@ -879,3 +879,35 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
 // re-export for admin route
 export { findCandidates, normalizeForCompare, CANDIDATE_REASON_AR };
 export type { DuplicateCandidate };
+
+// ============================================================
+// Phase 3 — Investigations engine with relation validation.
+// Thin wrapper over the legacy engine that attaches a relation
+// report + applies accepted repairs before insert/update.
+// ============================================================
+export function makeInvestigationsEngine<T extends { related_entities?: unknown; slug: string; title: string }>(
+  config: ImportConfig<T>,
+  meta: { key: string; label: string; icon: ReactNode },
+): ImportEngine {
+  const base = makeLegacyEngine(config, meta);
+  return {
+    ...base,
+    async classify(rows, options) {
+      const classified = await base.classify(rows, options);
+      await ensureLocalSnapshotLoaded();
+      return classified.map((row) => {
+        if (row.status === "blocked") return row;
+        const relations = buildInvestigationRelationReport(row.data as any);
+        const extraIssues = relationsToIssues(relations, row.index);
+        const nextIssues = [...row.issues, ...extraIssues];
+        const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
+        return { ...row, relations, issues: nextIssues, status: nowBlocked ? ("blocked" as RowStatus) : row.status };
+      });
+    },
+    async commit(rows, options) {
+      const patched = rows.map((r) => r.relations ? { ...r, data: applyAcceptedRepairs(r.data, r.relations) } : r);
+      const result = await base.commit(patched, options);
+      return { ...result, relationSummary: summarizeRelations(rows.map((r) => r.relations)) };
+    },
+  };
+}
