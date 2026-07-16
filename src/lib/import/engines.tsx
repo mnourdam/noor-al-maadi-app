@@ -440,7 +440,11 @@ export function makeLegacyEngine<T>(config: ImportConfig<T>, meta: {
         }
       }
 
-      return { inserted, updated, skipped, failed, errors: errors.slice(0, 10) };
+      return {
+        inserted, updated, skipped, failed,
+        errors: errors.slice(0, 10),
+        qualitySummary: summarizeQuality(rows.map((r) => r.quality)),
+      };
     },
   };
 }
