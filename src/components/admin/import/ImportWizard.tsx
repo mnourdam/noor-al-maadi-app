@@ -616,6 +616,27 @@ export function ImportWizard({ engine }: WizardProps) {
             </div>
           )}
 
+          {result.qualitySummary && (
+            <div className="rounded-2xl border border-amber-500/20 bg-slate-900/60 p-5">
+              <h3 className="mb-3 flex items-center justify-between text-sm font-bold text-amber-200">
+                <span>تقرير جودة المحتوى</span>
+                <span className="font-mono text-xs text-slate-400">متوسط: {result.qualitySummary.avgScore}٪</span>
+              </h3>
+              <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                <Stat label="جاهز للنشر" value={result.qualitySummary.publishReady} tone="new" />
+                <Stat label="مع ملاحظات" value={result.qualitySummary.publishWithNotes} tone="update" />
+                <Stat label="يحتاج مراجعة" value={result.qualitySummary.needsReview} tone="warning" />
+                <Stat label="يحتاج محتوى" value={result.qualitySummary.needsContent} tone="warning" />
+                <Stat label="مسودة فقط" value={result.qualitySummary.draftOnly} tone="skip" />
+                <Stat label="بلا مصادر" value={result.qualitySummary.missingSources} tone="warning" />
+                <Stat label="تراجع" value={result.qualitySummary.regressions} tone="blocked" />
+                <Stat label="محظور" value={result.qualitySummary.blocked} tone="blocked" />
+              </dl>
+            </div>
+          )}
+
+
+
 
           {result.integrity && result.integrity.length > 0 && (
             <div className="rounded-2xl border border-amber-500/20 bg-slate-900/60 p-5">
