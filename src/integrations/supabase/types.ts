@@ -2003,6 +2003,7 @@ export type Database = {
       }
       admin_campaign_progress_stats: { Args: { p_id: string }; Returns: Json }
       admin_feedback_stats: { Args: never; Returns: Json }
+      admin_import_content_table: { Args: { p_ctype: string }; Returns: string }
       admin_list_campaign_versions: {
         Args: { p_id: string }
         Returns: {
