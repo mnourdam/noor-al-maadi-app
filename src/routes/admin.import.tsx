@@ -26,6 +26,7 @@ import {
   type ImportConfig,
   type ImportEngine,
 } from "@/lib/import/engines";
+import { scoreShortEditorial } from "@/lib/import/quality";
 
 type ImportType =
   | "daily_facts"
