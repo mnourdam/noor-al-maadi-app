@@ -69,6 +69,7 @@ import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum
 import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminMapRouteImport } from './routes/admin.map'
 import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
+import { Route as AdminImportHistoryRouteImport } from './routes/admin.import-history'
 import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminHubBuilderRouteImport } from './routes/admin.hub-builder'
 import { Route as AdminHistoricalHubsAuditRouteImport } from './routes/admin.historical-hubs-audit'
@@ -108,6 +109,7 @@ import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.s
 import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
 import { Route as ApiPublicNativeAuthBounceRouteImport } from './routes/api/public/native-auth-bounce'
+import { Route as AdminImportHistoryIdRouteImport } from './routes/admin.import-history.$id'
 import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
 import { Route as AdminEncyclopediaCleanupReviewRouteImport } from './routes/admin.encyclopedia-cleanup.review'
@@ -429,6 +431,11 @@ const AdminInvestigationsRoute = AdminInvestigationsRouteImport.update({
   path: '/admin/investigations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminImportHistoryRoute = AdminImportHistoryRouteImport.update({
+  id: '/admin/import-history',
+  path: '/admin/import-history',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminImportRoute = AdminImportRouteImport.update({
   id: '/admin/import',
   path: '/admin/import',
@@ -632,6 +639,11 @@ const ApiPublicNativeAuthBounceRoute =
     path: '/api/public/native-auth-bounce',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminImportHistoryIdRoute = AdminImportHistoryIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminImportHistoryRoute,
+} as any)
 const AdminGamesCrosswordGeneratorRoute =
   AdminGamesCrosswordGeneratorRouteImport.update({
     id: '/crossword-generator',
@@ -791,6 +803,7 @@ export interface FileRoutesByFullPath {
   '/admin/historical-hubs-audit': typeof AdminHistoricalHubsAuditRoute
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
+  '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
@@ -833,6 +846,7 @@ export interface FileRoutesByFullPath {
   '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
+  '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
@@ -906,6 +920,7 @@ export interface FileRoutesByTo {
   '/admin/historical-hubs-audit': typeof AdminHistoricalHubsAuditRoute
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
+  '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
@@ -948,6 +963,7 @@ export interface FileRoutesByTo {
   '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
+  '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
@@ -1026,6 +1042,7 @@ export interface FileRoutesById {
   '/admin/historical-hubs-audit': typeof AdminHistoricalHubsAuditRoute
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
+  '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
   '/admin/investigations': typeof AdminInvestigationsRoute
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
@@ -1068,6 +1085,7 @@ export interface FileRoutesById {
   '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
+  '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
@@ -1147,6 +1165,7 @@ export interface FileRouteTypes {
     | '/admin/historical-hubs-audit'
     | '/admin/hub-builder'
     | '/admin/import'
+    | '/admin/import-history'
     | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
@@ -1189,6 +1208,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/review'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
+    | '/admin/import-history/$id'
     | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
@@ -1262,6 +1282,7 @@ export interface FileRouteTypes {
     | '/admin/historical-hubs-audit'
     | '/admin/hub-builder'
     | '/admin/import'
+    | '/admin/import-history'
     | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
@@ -1304,6 +1325,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/review'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
+    | '/admin/import-history/$id'
     | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
@@ -1381,6 +1403,7 @@ export interface FileRouteTypes {
     | '/admin/historical-hubs-audit'
     | '/admin/hub-builder'
     | '/admin/import'
+    | '/admin/import-history'
     | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
@@ -1423,6 +1446,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/review'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
+    | '/admin/import-history/$id'
     | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
@@ -1501,6 +1525,7 @@ export interface RootRouteChildren {
   AdminHistoricalHubsAuditRoute: typeof AdminHistoricalHubsAuditRoute
   AdminHubBuilderRoute: typeof AdminHubBuilderRoute
   AdminImportRoute: typeof AdminImportRoute
+  AdminImportHistoryRoute: typeof AdminImportHistoryRouteWithChildren
   AdminInvestigationsRoute: typeof AdminInvestigationsRoute
   AdminMapRoute: typeof AdminMapRoute
   AdminMigrationRoute: typeof AdminMigrationRoute
@@ -1970,6 +1995,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInvestigationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/import-history': {
+      id: '/admin/import-history'
+      path: '/admin/import-history'
+      fullPath: '/admin/import-history'
+      preLoaderRoute: typeof AdminImportHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/import': {
       id: '/admin/import'
       path: '/admin/import'
@@ -2243,6 +2275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicNativeAuthBounceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/import-history/$id': {
+      id: '/admin/import-history/$id'
+      path: '/$id'
+      fullPath: '/admin/import-history/$id'
+      preLoaderRoute: typeof AdminImportHistoryIdRouteImport
+      parentRoute: typeof AdminImportHistoryRoute
+    }
     '/admin/games/crossword-generator': {
       id: '/admin/games/crossword-generator'
       path: '/crossword-generator'
@@ -2463,6 +2502,17 @@ const AdminGamesRouteWithChildren = AdminGamesRoute._addFileChildren(
   AdminGamesRouteChildren,
 )
 
+interface AdminImportHistoryRouteChildren {
+  AdminImportHistoryIdRoute: typeof AdminImportHistoryIdRoute
+}
+
+const AdminImportHistoryRouteChildren: AdminImportHistoryRouteChildren = {
+  AdminImportHistoryIdRoute: AdminImportHistoryIdRoute,
+}
+
+const AdminImportHistoryRouteWithChildren =
+  AdminImportHistoryRoute._addFileChildren(AdminImportHistoryRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -2518,6 +2568,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminHistoricalHubsAuditRoute: AdminHistoricalHubsAuditRoute,
   AdminHubBuilderRoute: AdminHubBuilderRoute,
   AdminImportRoute: AdminImportRoute,
+  AdminImportHistoryRoute: AdminImportHistoryRouteWithChildren,
   AdminInvestigationsRoute: AdminInvestigationsRoute,
   AdminMapRoute: AdminMapRoute,
   AdminMigrationRoute: AdminMigrationRoute,

@@ -33,6 +33,10 @@ import type {
 } from "@/lib/import/engines";
 import { CANDIDATE_REASON_AR, type DuplicateCandidate } from "@/lib/import/duplicate-detection";
 import { QUALITY_LABEL_AR, SOURCE_STATUS_AR, type QualityReport, type QualityLabel } from "@/lib/import/quality";
+import { buildEncyclopediaPlan, stableHash } from "@/lib/import/plan";
+import { runImportBatch } from "@/lib/import/import-batch.functions";
+import { Link } from "@tanstack/react-router";
+import { FlaskConical, ScrollText, ShieldCheck, Database } from "lucide-react";
 
 type Step = "upload" | "validate" | "preview" | "approve" | "committing" | "report";
 
@@ -67,6 +71,13 @@ export function ImportWizard({ engine }: WizardProps) {
   const [result, setResult] = useState<CommitResult | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | RowStatus | "warnings" | "publish_ready" | "needs_content" | "no_sources" | "regressions">("all");
+  // Phase 5 — Dry Run + transactional commit state
+  const [dryRunReport, setDryRunReport] = useState<any | null>(null);
+  const [dryRunHash, setDryRunHash] = useState<string | null>(null);
+  const [dryRunning, setDryRunning] = useState(false);
+  const [committingStage, setCommittingStage] = useState<string>("");
+  const [committedBatchId, setCommittedBatchId] = useState<string | null>(null);
+  const supportsTransactional = engine.key === "encyclopedia";
 
   useEffect(() => {
     if (engineKey !== engine.key) {
@@ -92,6 +103,9 @@ export function ImportWizard({ engine }: WizardProps) {
     setRows(parsed.rows);
     setTopIssues(parsed.issues);
     setAckWarnings(false);
+    // Any change to the parsed batch invalidates a prior dry-run.
+    setDryRunReport(null);
+    setDryRunHash(null);
   }, [parsed]);
 
   const counts = useMemo(() => {
@@ -172,13 +186,67 @@ export function ImportWizard({ engine }: WizardProps) {
     if (idx > 0) setStep(STEP_ORDER[idx - 1]);
   };
 
+  const buildPlanForCurrent = () => {
+    return buildEncyclopediaPlan(rows, {
+      contentType: "encyclopedia",
+      fileName: null,
+      originalPayloadHash: stableHash(raw),
+      overwrite, publish,
+    });
+  };
+
+  const runDryRun = async () => {
+    setCommitError(null);
+    setDryRunReport(null);
+    setDryRunning(true);
+    try {
+      const plan = buildPlanForCurrent();
+      const res = await runImportBatch({ data: { plan, mode: "dry_run" } });
+      setDryRunReport(res);
+      setDryRunHash(plan.approved_plan_hash);
+    } catch (e) {
+      setCommitError((e as Error).message);
+    } finally {
+      setDryRunning(false);
+    }
+  };
+
   const runCommit = async () => {
     setCommitError(null);
     setResult(null);
+    setCommittedBatchId(null);
     setStep("committing");
     try {
-      const r = await engine.commit(rows, { overwrite, publish, autoRepair });
-      setResult(r);
+      if (supportsTransactional) {
+        setCommittingStage("جاري تجهيز خطة التنفيذ…");
+        const plan = buildPlanForCurrent();
+        // Staleness check: dry-run must match the approved plan hash.
+        if (!dryRunHash || dryRunHash !== plan.approved_plan_hash) {
+          throw new Error("خطة الاستيراد تغيّرت منذ آخر تشغيل تجريبي. شغّل التشغيل التجريبي مجدداً.");
+        }
+        setCommittingStage("جاري تنفيذ الاستيراد داخل عملية واحدة…");
+        const res = await runImportBatch({ data: { plan, mode: "commit" } });
+        setCommittingStage("جاري إنشاء سجل العملية…");
+        if (res.status === "failed") {
+          throw new Error(res.error || "فشل الاستيراد وتم التراجع عن جميع التغييرات.");
+        }
+        if (res.status === "already_committed") {
+          setCommitError("تم تنفيذ هذه الخطة مسبقاً — تحقق من سجل الاستيراد.");
+          setStep("approve");
+          return;
+        }
+        setCommittedBatchId(res.batch_id ?? null);
+        setResult({
+          inserted: res.created ?? 0,
+          updated: res.updated ?? 0,
+          skipped: res.skipped ?? 0,
+          failed: res.failed ?? 0,
+          errors: [],
+        });
+      } else {
+        const r = await engine.commit(rows, { overwrite, publish, autoRepair });
+        setResult(r);
+      }
       setStep("report");
     } catch (e) {
       setCommitError((e as Error).message);
@@ -546,6 +614,39 @@ export function ImportWizard({ engine }: WizardProps) {
               </label>
             )}
 
+            {supportsTransactional && (
+              <div className="mt-4 rounded-md border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-100">
+                <div className="mb-2 flex items-center gap-2 font-semibold">
+                  <FlaskConical className="h-4 w-4" /> تشغيل تجريبي (Dry Run)
+                </div>
+                <p className="mb-2 text-slate-300">
+                  ينفّذ الخطة على الخادم داخل عملية واحدة ثم يتراجع عنها بالكامل — يكشف قيود قاعدة البيانات
+                  والتعارضات دون كتابة أي صف.
+                </p>
+                <button
+                  onClick={() => void runDryRun()}
+                  disabled={dryRunning || hasBlockers}
+                  className="inline-flex items-center gap-2 rounded border border-sky-400/50 bg-sky-500/20 px-3 py-1.5 text-sky-100 hover:border-sky-300 disabled:opacity-50"
+                >
+                  {dryRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
+                  {dryRunning ? "جارٍ التنفيذ التجريبي…" : "تشغيل تجريبي الآن"}
+                </button>
+                {dryRunReport && (
+                  <div className="mt-3 rounded border border-sky-500/40 bg-slate-950/40 p-2 text-[11px] text-sky-100">
+                    <div className="mb-1 font-semibold">نتيجة التشغيل التجريبي (لم يُكتب أي صف):</div>
+                    <ul className="list-inside list-disc space-y-0.5">
+                      <li>سيُنشأ: {dryRunReport.created ?? 0}</li>
+                      <li>سيُعدَّل: {dryRunReport.updated ?? 0}</li>
+                      <li>سيُتخطى: {dryRunReport.skipped ?? 0}</li>
+                      <li>سيفشل: {dryRunReport.failed ?? 0}</li>
+                      {dryRunReport.conflicts ? <li className="text-amber-300">تعارضات إصدار: {dryRunReport.conflicts}</li> : null}
+                    </ul>
+                    <div className="mt-1 text-slate-400">Hash: <span className="font-mono">{dryRunHash?.slice(0, 12)}</span></div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {commitError && (
               <div className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
                 <AlertTriangle className="me-1 inline h-4 w-4" /> {commitError}
@@ -555,14 +656,20 @@ export function ImportWizard({ engine }: WizardProps) {
 
           <NavBar
             onBack={back}
-            forwardLabel={`تنفيذ الاستيراد (${eligibleCount})`}
-            forwardIcon={<Upload className="h-4 w-4" />}
+            forwardLabel={supportsTransactional ? `تنفيذ آمن داخل عملية واحدة (${eligibleCount})` : `تنفيذ الاستيراد (${eligibleCount})`}
+            forwardIcon={supportsTransactional ? <ShieldCheck className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
             onForward={runCommit}
-            forwardDisabled={hasBlockers || eligibleCount === 0 || (hasWarnings && !ackWarnings)}
+            forwardDisabled={
+              hasBlockers ||
+              eligibleCount === 0 ||
+              (hasWarnings && !ackWarnings) ||
+              (supportsTransactional && !dryRunReport)
+            }
             forwardHint={
               hasBlockers ? "يجب معالجة المحظورات."
               : eligibleCount === 0 ? "لا يوجد ما يُستورد."
               : hasWarnings && !ackWarnings ? "أقرّ بالتحذيرات قبل المتابعة."
+              : (supportsTransactional && !dryRunReport) ? "شغّل التشغيل التجريبي قبل التنفيذ."
               : undefined
             }
             forwardTone="primary"
@@ -573,7 +680,8 @@ export function ImportWizard({ engine }: WizardProps) {
       {/* ---------- Committing ---------- */}
       {step === "committing" && (
         <section className="flex items-center justify-center rounded-2xl border border-amber-500/20 bg-slate-900/60 p-10 text-amber-200">
-          <Loader2 className="me-2 h-5 w-5 animate-spin" /> جارٍ تنفيذ الاستيراد…
+          <Loader2 className="me-2 h-5 w-5 animate-spin" />
+          <span>{committingStage || "جارٍ تنفيذ الاستيراد…"}</span>
         </section>
       )}
 
@@ -597,6 +705,19 @@ export function ImportWizard({ engine }: WizardProps) {
                 <ul className="list-inside list-disc space-y-0.5">
                   {result.errors.map((e, i) => <li key={i}>{e}</li>)}
                 </ul>
+              </div>
+            )}
+            {committedBatchId && (
+              <div className="mt-3 flex items-center gap-2 text-xs">
+                <Database className="h-3.5 w-3.5 text-sky-300" />
+                <span className="text-slate-300">سجل العملية:</span>
+                <Link
+                  to="/admin/import-history/$id"
+                  params={{ id: committedBatchId }}
+                  className="inline-flex items-center gap-1 rounded border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-sky-100 hover:border-sky-300"
+                >
+                  <ScrollText className="h-3.5 w-3.5" /> فتح التفاصيل + إمكانية التراجع
+                </Link>
               </div>
             )}
           </div>
