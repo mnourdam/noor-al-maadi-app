@@ -776,14 +776,16 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
       // detection degrades gracefully rather than blocking imports.
       const { data, error } = await supabase
         .from("encyclopedia_entities" as any)
-        .select("id, entity_type, slug, title, subtitle, metadata, enabled")
+        .select("id, entity_type, slug, title, subtitle, metadata, enabled, body")
         .limit(10000);
       if (error) throw new Error(error.message);
 
-      const corpus: ExistingIndexRow[] = (((data ?? []) as unknown) as Array<{
+      const rawCorpus = (((data ?? []) as unknown) as Array<{
         id: string; entity_type: string; slug: string;
         title: string; subtitle: string | null; metadata: any; enabled: boolean;
-      }>).map((r) => ({
+        body: any;
+      }>);
+      const corpus: ExistingIndexRow[] = rawCorpus.map((r) => ({
         id: r.id,
         entity_type: r.entity_type,
         slug: r.slug,
@@ -791,6 +793,9 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
         subtitle: r.subtitle,
         metadata: r.metadata,
       }));
+      // Key existing rows by (entity_type,slug) for regression lookup.
+      const bySlug = new Map<string, { body: any; metadata: any }>();
+      for (const r of rawCorpus) bySlug.set(`${r.entity_type}|${r.slug}`, { body: r.body, metadata: r.metadata });
       const idx = buildExistingIndex(corpus);
 
       return baseClassified.map((row) => {
