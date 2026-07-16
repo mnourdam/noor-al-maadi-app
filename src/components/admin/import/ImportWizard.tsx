@@ -347,6 +347,9 @@ export function ImportWizard({ engine }: WizardProps) {
                         ))}
                       </ul>
                     )}
+                    {r.candidates && r.candidates.length > 0 && (
+                      <CandidatePanel row={r} onOverride={(a) => setRowOverride(r.index, a)} />
+                    )}
                   </div>
                 </li>
               ))}
