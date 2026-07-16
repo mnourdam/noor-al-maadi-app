@@ -1030,13 +1030,21 @@ export function makeInvestigationsEngine<T extends { related_entities?: unknown;
         const extraIssues = relationsToIssues(relations, row.index);
         const nextIssues = [...row.issues, ...extraIssues];
         const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
-        return { ...row, relations, issues: nextIssues, status: nowBlocked ? ("blocked" as RowStatus) : row.status };
+        let out: PreviewRow = { ...row, relations, issues: nextIssues, status: nowBlocked ? ("blocked" as RowStatus) : row.status };
+        if (out.status !== "blocked" && out.status !== "skip") {
+          out = applyQuality(out, scoreInvestigation(row.data as any), { publish: !!options.publish });
+        }
+        return out;
       });
     },
     async commit(rows, options) {
       const patched = rows.map((r) => r.relations ? { ...r, data: applyAcceptedRepairs(r.data, r.relations) } : r);
       const result = await base.commit(patched, options);
-      return { ...result, relationSummary: summarizeRelations(rows.map((r) => r.relations)) };
+      return {
+        ...result,
+        relationSummary: summarizeRelations(rows.map((r) => r.relations)),
+        qualitySummary: summarizeQuality(rows.map((r) => r.quality)),
+      };
     },
   };
 }
