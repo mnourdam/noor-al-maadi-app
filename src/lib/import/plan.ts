@@ -114,6 +114,8 @@ export function buildTransactionalPlan(rows: PreviewRow[], meta: {
   originalPayloadHash: string;
   overwrite: boolean;
   publish: boolean;
+  /** Phase 5.5b: explicit approval to drop existing nested step IDs on update. */
+  allowRemovals?: boolean;
 }): ApprovedPlan {
   const items: PlanItem[] = [];
   for (const r of rows) {
@@ -144,7 +146,11 @@ export function buildTransactionalPlan(rows: PreviewRow[], meta: {
       incoming_id: undefined,
     });
   }
-  const canonical = canonicalJSON({ contentType: meta.contentType, items });
+  const canonical = canonicalJSON({
+    contentType: meta.contentType,
+    items,
+    allowRemovals: !!meta.allowRemovals,
+  });
   const planHash = stableHash(canonical);
   return {
     content_type: meta.contentType,
@@ -153,7 +159,10 @@ export function buildTransactionalPlan(rows: PreviewRow[], meta: {
     approved_plan_hash: planHash,
     overwrite: meta.overwrite,
     publish: meta.publish,
-    metadata: { row_count: rows.length },
+    metadata: {
+      row_count: rows.length,
+      allow_removals: !!meta.allowRemovals,
+    },
     items,
   };
 }
