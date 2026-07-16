@@ -48,9 +48,8 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   // newly published campaigns without blocking the current read.
   if (typeof navigator === "undefined" || navigator.onLine !== false) {
     void supabase
-      .from("admin_campaigns")
+      .from("campaigns_public" as any)
       .select("id, slug, data")
-      .eq("status", "published")
       .then(({ data, error }) => {
         if (error || !data) return;
         try {
@@ -69,9 +68,8 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   // Local empty (rare — e.g. snapshot still loading). Fall through to network.
   try {
     const { data, error } = await supabase
-      .from("admin_campaigns")
-      .select("id, slug, data")
-      .eq("status", "published");
+      .from("campaigns_public" as any)
+      .select("id, slug, data");
     if (!error && data) return toCampaigns(data as any[]);
   } catch (err) {
     console.warn("[supabaseCampaigns] live list failed:", err);
@@ -82,8 +80,9 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
 /**
  * Resolve a campaign by UUID id or slug.
  * - mode: "published" (default) → local-first, live snapshot only.
- * - mode: "draft" → editor preview; always reads `draft_data` from Supabase
- *   (admin/editor RLS required). Never returns local cache.
+ * - mode: "draft" → editor preview; always reads `draft_data` via the
+ *   admin-only RPC `admin_get_campaign_full`. Non-admins get null.
+ *   Never returns local cache.
  */
 export async function fetchCampaignByIdOrSlug(
   idOrSlug: string,
@@ -93,20 +92,27 @@ export async function fetchCampaignByIdOrSlug(
   const mode = opts?.mode ?? "published";
 
   if (mode === "draft") {
+    // Draft data lives on admin_campaigns.draft_data, which is not readable
+    // by anon/authenticated at the column-grant level. Go through the
+    // admin-gated RPC. The RPC accepts a UUID id; when the input looks like
+    // a slug we resolve it via a published lookup first, then re-query by id.
     try {
-      let row = await supabase
-        .from("admin_campaigns")
-        .select("id, slug, draft_data")
-        .eq("id", idOrSlug)
-        .maybeSingle();
-      if (!row.data) {
-        row = await supabase
-          .from("admin_campaigns")
-          .select("id, slug, draft_data")
+      let targetId = idOrSlug;
+      // Simple heuristic: UUIDs contain a dash pattern; otherwise treat as slug
+      // and resolve to an id via the public view first.
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(idOrSlug)) {
+        const bySlug = await supabase
+          .from("campaigns_public" as any)
+          .select("id")
           .eq("slug", idOrSlug)
           .maybeSingle();
+        if (bySlug.data?.id) targetId = bySlug.data.id;
       }
-      const c = ((row.data as any)?.draft_data ?? null) as Campaign | null;
+      const rpc = await supabase.rpc("admin_get_campaign_full" as any, { p_id: targetId });
+      if (rpc.error) return null;
+      const rows = (rpc.data as any[]) ?? [];
+      const row = rows[0];
+      const c = (row?.draft_data ?? null) as Campaign | null;
       // Preview always renders — status can be draft/published/archived.
       return c ? { ...c, status: "published" } as Campaign : null;
     } catch (err) {
@@ -126,13 +132,13 @@ export async function fetchCampaignByIdOrSlug(
   // Local miss — try network (may be a freshly published campaign).
   try {
     let row = await supabase
-      .from("admin_campaigns")
+      .from("campaigns_public" as any)
       .select("id, slug, data")
       .eq("id", idOrSlug)
       .maybeSingle();
     if (!row.data) {
       row = await supabase
-        .from("admin_campaigns")
+        .from("campaigns_public" as any)
         .select("id, slug, data")
         .eq("slug", idOrSlug)
         .maybeSingle();
@@ -148,6 +154,7 @@ export async function fetchCampaignByIdOrSlug(
   }
   return null;
 }
+
 
 // -------------------- Publish-event invalidation --------------------
 
