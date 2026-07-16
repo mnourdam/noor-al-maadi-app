@@ -131,6 +131,13 @@ async function countCampaignsForSlug(slug: string): Promise<number> {
   let count = 0;
   for (const c of data) {
     const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
+    // Preferred: canonical worldSlug (populated on 90%+ of published campaigns).
+    const ws = typeof cm.worldSlug === "string" ? cm.worldSlug : null;
+    if (ws) {
+      if (ws === slug) count++;
+      continue;
+    }
+    // Fallback for legacy imports without worldSlug: scan related-entity refs.
     const cmeta = (cm.metadata && typeof cm.metadata === "object"
       ? (cm.metadata as Record<string, unknown>)
       : {});
@@ -144,6 +151,7 @@ async function countCampaignsForSlug(slug: string): Promise<number> {
   }
   return count;
 }
+
 
 export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
   await ensureLocalSnapshotLoaded();
