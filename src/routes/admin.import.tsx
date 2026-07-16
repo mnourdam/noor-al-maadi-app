@@ -14,7 +14,9 @@ import {
   Sword,
   Landmark,
   Search,
+  ScrollText,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { AdminGate } from "@/lib/admin-guard";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { ImportWizard } from "@/components/admin/import/ImportWizard";
@@ -79,6 +81,12 @@ function ImportPage() {
           <TypeBtn active={active === "campaigns"} onClick={() => setActive("campaigns")} icon={<Sword className="h-4 w-4" />}>حملات</TypeBtn>
           <TypeBtn active={active === "encyclopedia"} onClick={() => setActive("encyclopedia")} icon={<Landmark className="h-4 w-4" />}>الموسوعة</TypeBtn>
           <TypeBtn active={active === "investigations"} onClick={() => setActive("investigations")} icon={<Search className="h-4 w-4" />}>التحقيقات</TypeBtn>
+          <Link
+            to="/admin/import-history"
+            className="ms-auto inline-flex items-center gap-2 rounded-md border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-sm text-sky-200 hover:border-sky-300"
+          >
+            <ScrollText className="h-4 w-4" /> سجل الاستيراد
+          </Link>
         </nav>
 
         <ImportWizard key={active} engine={engine} />
