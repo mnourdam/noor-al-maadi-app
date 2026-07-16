@@ -436,8 +436,17 @@ export function ImportWizard({ engine }: WizardProps) {
                         ))}
                       </ul>
                     )}
+                    {r.quality && (
+                      <QualityPanel
+                        row={r}
+                        onToggleDraft={(on) => setImportAsDraft(r.index, on)}
+                      />
+                    )}
                     {r.candidates && r.candidates.length > 0 && (
                       <CandidatePanel row={r} onOverride={(a) => setRowOverride(r.index, a)} />
+                    )}
+                    {r.relations && (r.relations.resolutions.length > 0 || r.relations.batchIssues.length > 0) && (
+                      <RelationsPanel row={r} onToggle={(idx, on) => setResolutionAccept(r.index, idx, on)} />
                     )}
                     {r.relations && (r.relations.resolutions.length > 0 || r.relations.batchIssues.length > 0) && (
                       <RelationsPanel row={r} onToggle={(idx, on) => setResolutionAccept(r.index, idx, on)} />
