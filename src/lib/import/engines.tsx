@@ -798,11 +798,25 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
       for (const r of rawCorpus) bySlug.set(`${r.entity_type}|${r.slug}`, { body: r.body, metadata: r.metadata });
       const idx = buildExistingIndex(corpus);
 
+      const publishFlag = !!options.publish;
       return baseClassified.map((row) => {
         if (row.status === "blocked") return row;
         const item = row.data as EncRowLike;
         const candidates = findCandidates(item, idx);
-        if (candidates.length === 0) return { ...row, candidates: [] };
+        if (candidates.length === 0) {
+          // No duplicates → still score quality + regression.
+          const existing = row.status === "update" ? bySlug.get(`${item.entity_type}|${item.slug}`) : undefined;
+          const q = scoreEncyclopedia(item as any);
+          if (existing) q.regression = detectRegression(existing, { body: item.metadata ? (item as any).body : {}, metadata: item.metadata });
+          const relations = buildEncyclopediaRelationReport(item as any, options.autoRepair !== false);
+          const relationIssues = relationsToIssues(relations, row.index);
+          let out: PreviewRow = { ...row, candidates: [], relations, issues: [...row.issues, ...relationIssues] };
+          const nowBlockedRel = out.issues.some((i) => i.severity === "blocker");
+          if (nowBlockedRel) out = { ...out, status: "blocked" as RowStatus };
+          if (out.status !== "blocked") out = applyQuality(out, q, { publish: publishFlag });
+          return out;
+        }
+
 
         const nextIssues: Issue[] = [...row.issues];
         // Best identifier vs best fuzzy — we treat them separately so a
