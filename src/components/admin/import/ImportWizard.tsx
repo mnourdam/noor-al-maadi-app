@@ -254,6 +254,19 @@ export function ImportWizard({ engine }: WizardProps) {
           failed: res.failed ?? 0,
           errors: [],
         });
+        // Fix 5: emit the same content-invalidation signal the editor uses,
+        // so /admin/campaigns, /admin/campaign-order and open player tabs
+        // (via BroadcastChannel) refetch immediately after a campaign import.
+        if (engine.key === "campaigns") {
+          const items = Array.isArray(res.items) ? (res.items as any[]) : [];
+          for (const it of items) {
+            const id = it?.campaign_id;
+            const result = it?.result;
+            if (typeof id === "string" && id && (result === "inserted" || result === "updated")) {
+              notifyContentInvalidated(id, publish ? "publish" : "draft");
+            }
+          }
+        }
       } else {
         // Phase 5.5c — every supported type is transactional. Anything else
         // is fail-closed to prevent legacy row-by-row browser writes.
