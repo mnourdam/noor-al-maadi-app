@@ -101,13 +101,14 @@ export async function fetchCampaignByIdOrSlug(
       // Simple heuristic: UUIDs contain a dash pattern; otherwise treat as slug
       // and resolve to an id via the public view first.
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(idOrSlug)) {
-        const bySlug = await supabase
+        const bySlug: any = await supabase
           .from("campaigns_public" as any)
           .select("id")
           .eq("slug", idOrSlug)
           .maybeSingle();
-        if (bySlug.data?.id) targetId = bySlug.data.id;
+        if (bySlug?.data?.id) targetId = bySlug.data.id;
       }
+
       const rpc = await supabase.rpc("admin_get_campaign_full" as any, { p_id: targetId });
       if (rpc.error) return null;
       const rows = (rpc.data as any[]) ?? [];
