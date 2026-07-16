@@ -132,24 +132,25 @@ export async function fetchCampaignByIdOrSlug(
 
   // Local miss — try network (may be a freshly published campaign).
   try {
-    let row = await supabase
+    let row: any = await supabase
       .from("campaigns_public" as any)
       .select("id, slug, data")
       .eq("id", idOrSlug)
       .maybeSingle();
-    if (!row.data) {
+    if (!row?.data) {
       row = await supabase
         .from("campaigns_public" as any)
         .select("id, slug, data")
         .eq("slug", idOrSlug)
         .maybeSingle();
     }
-    if (!row.error) {
-      const c = (row.data?.data ?? null) as Campaign | null;
+    if (!row?.error) {
+      const c = (row?.data?.data ?? null) as Campaign | null;
       if (c && c.status === "published") return c;
     } else {
       console.warn("[supabaseCampaigns] resolve failed:", row.error.message);
     }
+
   } catch (err) {
     console.warn("[supabaseCampaigns] resolve crashed:", err);
   }
