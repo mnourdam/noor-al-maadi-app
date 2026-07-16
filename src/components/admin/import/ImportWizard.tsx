@@ -190,6 +190,10 @@ export function ImportWizard({ engine }: WizardProps) {
     return rows.filter((r) => r.status === filter);
   }, [rows, filter]);
 
+  const setRowOverride = (index: number, action: RowAction | undefined) => {
+    setRows((prev) => prev.map((r) => r.index === index ? { ...r, override: action } : r));
+  };
+
   return (
     <div className="space-y-6">
       <Stepper current={step} />
