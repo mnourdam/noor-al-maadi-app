@@ -255,7 +255,7 @@ BEGIN
         jsonb_build_object('index',0,'action','update',
           'target_key', jsonb_build_object('id', v_id::text),
           'data', jsonb_build_object(
-            'slug', v_slug,'title','x','difficulty','easy',
+            'slug', v_slug,'title','xx','difficulty','easy',
             'reward','{}'::jsonb,'related_entities','[]'::jsonb,
             'steps', jsonb_build_array(
               jsonb_build_object('type','question','prompt','P1','options', jsonb_build_array('a','b'),'correctAnswer',0),
@@ -288,7 +288,7 @@ BEGIN
       'original_payload_hash','p','overwrite',false,'publish',false,
       'items', jsonb_build_array(
         jsonb_build_object('index',0,'action','new','data', jsonb_build_object(
-          'slug', v_slug,'title','x','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
+          'slug', v_slug,'title','xx','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
           'steps', jsonb_build_array(
             jsonb_build_object('type','question','id','same-id','prompt','P1','options', jsonb_build_array('a','b'),'correctAnswer',0),
             jsonb_build_object('type','question','id','same-id','prompt','P2','options', jsonb_build_array('c','d'),'correctAnswer',1)
@@ -317,7 +317,7 @@ BEGIN
       'original_payload_hash','p','overwrite',false,'publish',false,
       'items', jsonb_build_array(
         jsonb_build_object('index',0,'action','new','data', jsonb_build_object(
-          'slug', v_slug,'title','x','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
+          'slug', v_slug,'title','xx','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
           'steps', jsonb_build_array(
             jsonb_build_object('type','question','prompt','','options', jsonb_build_array('a','b'),'correctAnswer',0)
           )))
@@ -345,7 +345,7 @@ BEGIN
       'original_payload_hash','p','overwrite',false,'publish',false,
       'items', jsonb_build_array(
         jsonb_build_object('index',0,'action','new','data', jsonb_build_object(
-          'slug', v_slug,'title','x','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
+          'slug', v_slug,'title','xx','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
           'steps', jsonb_build_array(
             jsonb_build_object('type','question','prompt','P','options', jsonb_build_array('only-one'),'correctAnswer',0)
           )))
@@ -373,7 +373,7 @@ BEGIN
       'original_payload_hash','p','overwrite',false,'publish',false,
       'items', jsonb_build_array(
         jsonb_build_object('index',0,'action','new','data', jsonb_build_object(
-          'slug', v_slug,'title','x','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
+          'slug', v_slug,'title','xx','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
           'steps', jsonb_build_array(
             jsonb_build_object('type','question','prompt','P','options', jsonb_build_array('a','b'))
           )))
@@ -401,7 +401,7 @@ BEGIN
       'original_payload_hash','p','overwrite',false,'publish',false,
       'items', jsonb_build_array(
         jsonb_build_object('index',0,'action','new','data', jsonb_build_object(
-          'slug', v_slug,'title','x','difficulty','easy',
+          'slug', v_slug,'title','xx','difficulty','easy',
           'reward', jsonb_build_object('xp', -50),
           'related_entities','[]'::jsonb,
           'steps', jsonb_build_array(
@@ -431,7 +431,7 @@ BEGIN
       'original_payload_hash','p','overwrite',false,'publish',false,
       'items', jsonb_build_array(
         jsonb_build_object('index',0,'action','new','data', jsonb_build_object(
-          'slug', v_slug,'title','x','difficulty','easy','reward','{}'::jsonb,
+          'slug', v_slug,'title','xx','difficulty','easy','reward','{}'::jsonb,
           'related_entities', jsonb_build_array(jsonb_build_object('id','00000000-0000-0000-0000-000000000000','label','ghost')),
           'steps', jsonb_build_array(
             jsonb_build_object('type','question','prompt','P','options', jsonb_build_array('a','b'),'correctAnswer',0)
@@ -503,7 +503,7 @@ BEGIN
           'target_key', jsonb_build_object('id', v_id::text),
           'version_signal','1999-01-01T00:00:00Z',
           'data', jsonb_build_object(
-            'slug', v_slug,'title','y','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
+            'slug', v_slug,'title','yy','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
             'steps', jsonb_build_array(
               jsonb_build_object('type','question','prompt','P','options', jsonb_build_array('a','b'),'correctAnswer',0)
             )
@@ -726,7 +726,7 @@ BEGIN
         jsonb_build_object('index',0,'action','update',
           'target_key', jsonb_build_object('id', v_id::text),
           'data', jsonb_build_object(
-            'slug', v_slug,'title','x','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
+            'slug', v_slug,'title','xx','difficulty','easy','reward','{}'::jsonb,'related_entities','[]'::jsonb,
             'steps', jsonb_build_array(
               jsonb_build_object('type','question','id','keeper','prompt','K','options', jsonb_build_array('a','b'),'correctAnswer',0)
             )
