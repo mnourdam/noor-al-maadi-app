@@ -1102,3 +1102,89 @@ function ResolutionRow({ res, accepted, onToggle }: {
     </li>
   );
 }
+
+// ============================================================
+// Phase 4 — Quality badge + per-row quality panel.
+// Reads r.quality (populated by the engine's classify() step).
+// ============================================================
+
+const QUALITY_TONE: Record<QualityLabel, string> = {
+  publish_ready:      "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+  publish_with_notes: "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  needs_review:       "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  needs_content:      "border-rose-500/40 bg-rose-500/10 text-rose-200",
+  draft_only:         "border-slate-500/40 bg-slate-500/10 text-slate-200",
+  blocked:            "border-red-500/40 bg-red-500/10 text-red-200",
+};
+
+function QualityBadge({ q }: { q: QualityReport }) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] ${QUALITY_TONE[q.label]}`}>
+      <span className="font-mono">{q.score}٪</span>
+      <span>{QUALITY_LABEL_AR[q.label]}</span>
+    </span>
+  );
+}
+
+function QualityPanel({ row, onToggleDraft }: {
+  row: PreviewRow;
+  onToggleDraft: (on: boolean) => void;
+}) {
+  const q = row.quality!;
+  const [open, setOpen] = useState(false);
+  const sourceTone =
+    q.sourceStatus === "verified"   ? "text-emerald-300" :
+    q.sourceStatus === "acceptable" ? "text-slate-300"   :
+    q.sourceStatus === "weak"       ? "text-amber-300"   : "text-red-300";
+  return (
+    <div className="mt-2 rounded-md border border-slate-700/60 bg-slate-950/40 p-2 text-[11px]">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 text-right"
+      >
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold text-slate-200">الجودة · {q.score}٪ · {QUALITY_LABEL_AR[q.label]}</span>
+          <span className={`text-[10px] ${sourceTone}`}>{SOURCE_STATUS_AR[q.sourceStatus]}</span>
+          {q.regression && (
+            <span className="rounded bg-red-500/20 px-1 text-[10px] text-red-200">
+              تراجع {q.regression.before}→{q.regression.after}٪
+            </span>
+          )}
+        </span>
+        <span className="text-slate-500">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1">
+          {q.missingRequired.length > 0 && (
+            <div className="text-red-300">مطلوب مفقود: {q.missingRequired.join("، ")}</div>
+          )}
+          {q.missingOptional.length > 0 && (
+            <div className="text-slate-400">اختياري مفقود: {q.missingOptional.join("، ")}</div>
+          )}
+          {q.reasons.length > 0 && (
+            <ul className="space-y-0.5 text-slate-400">
+              {q.reasons.map((r, i) => <li key={i}>• {r}</li>)}
+            </ul>
+          )}
+          {q.regression && (
+            <div className="rounded border border-red-500/30 bg-red-500/5 p-1.5 text-red-200">
+              فقدان محتوى: {q.regression.losses.join("، ")}
+            </div>
+          )}
+          {!q.publishEligible && (
+            <label className="mt-1 inline-flex items-center gap-1.5 rounded border border-slate-600 px-1.5 py-0.5 text-[10px] text-slate-200">
+              <input
+                type="checkbox"
+                checked={!!row.importAsDraft}
+                onChange={(e) => onToggleDraft(e.target.checked)}
+                className="accent-amber-500"
+              />
+              استيراد كمسودة
+            </label>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
