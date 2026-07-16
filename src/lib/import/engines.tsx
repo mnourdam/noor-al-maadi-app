@@ -572,7 +572,11 @@ export function makeCampaignEngine(meta: {
         const extraSkipIssue: Issue[] = (!nowBlocked && exists && !options.overwrite)
           ? [{ severity: "info", message: "الحملة موجودة — سيُتخطّى (فعّل الاستبدال للتحديث).", itemIndex: row.index, code: "existing.skip" }]
           : [];
-        return { ...row, status: nextStatus, relations, issues: [...nextIssues, ...extraSkipIssue] };
+        let out: PreviewRow = { ...row, status: nextStatus, relations, issues: [...nextIssues, ...extraSkipIssue] };
+        if (out.status !== "skip" && out.status !== "blocked") {
+          out = applyQuality(out, scoreCampaign(c as any), { publish: !!options.publish });
+        }
+        return out;
       });
     },
 
