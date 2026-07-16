@@ -769,6 +769,11 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
           });
         }
 
+        // Phase 3 — encyclopedia relation report (metadata refs + atlas).
+        const relations = buildEncyclopediaRelationReport(item as any);
+        const relationIssues = relationsToIssues(relations, row.index);
+        for (const ri of relationIssues) nextIssues.push(ri);
+
         // If we injected a new blocker, flip status.
         const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
         return {
@@ -776,6 +781,7 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
           status: nowBlocked ? ("blocked" as RowStatus) : row.status,
           issues: nextIssues,
           candidates,
+          relations,
         };
       });
     },
