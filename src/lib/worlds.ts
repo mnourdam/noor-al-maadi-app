@@ -171,8 +171,9 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
   const campRows = localCampaignRows.length > 0
     ? localCampaignRows
     : (typeof navigator === "undefined" || navigator.onLine !== false)
-      ? ((await supabase.from("admin_campaigns").select("data").limit(500)).data ?? [])
+      ? (((await supabase.from("campaigns_public" as any).select("data").limit(500)) as any).data ?? [])
       : [];
+
   const campCount = new Map<string, number>();
   for (const c of campRows) {
     const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
