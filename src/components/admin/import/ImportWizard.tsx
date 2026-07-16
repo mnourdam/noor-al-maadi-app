@@ -61,6 +61,7 @@ export function ImportWizard({ engine }: WizardProps) {
   const [classifyError, setClassifyError] = useState<string | null>(null);
   const [overwrite, setOverwrite] = useState(false);
   const [publish, setPublish] = useState(false);
+  const [autoRepair, setAutoRepair] = useState(true);
   const [ackWarnings, setAckWarnings] = useState(false);
   const [result, setResult] = useState<CommitResult | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
