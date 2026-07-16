@@ -534,7 +534,7 @@ const ENGINES: Record<ImportType, ImportEngine> = {
     label: "مسودات إشعارات",
     icon: <Bell className="h-5 w-5" />,
   }),
-  encyclopedia: makeLegacyEngine(encyclopediaConfig, {
+  encyclopedia: makeEncyclopediaEngine(encyclopediaConfig, {
     key: "encyclopedia",
     label: "الموسوعة",
     icon: <Landmark className="h-5 w-5" />,
