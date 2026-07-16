@@ -44,6 +44,10 @@ export default defineConfig({
         __dirname,
         "./src/shims/tanstack-react-start-server.android.ts",
       ),
+      "@tanstack/react-start": path.resolve(
+        __dirname,
+        "./src/shims/tanstack-react-start.android.ts",
+      ),
       "@/lib/teamUsers.functions": path.resolve(
         __dirname,
         "./src/shims/teamUsers.functions.android.ts",
@@ -124,6 +128,22 @@ export default defineConfig({
         const routePath = id.slice("\0irth-android-stub:".length);
         return `import { createFileRoute } from "@tanstack/react-router";\n` +
           `export const Route = createFileRoute(${JSON.stringify(routePath)})({});\n`;
+      },
+    },
+    {
+      name: "irth-android-forbid-node-server-runtime",
+      enforce: "pre" as const,
+      resolveId(source) {
+        if (
+          source === "node:async_hooks" ||
+          source === "async_hooks" ||
+          source === "@tanstack/start-storage-context" ||
+          source.startsWith("@tanstack/start-server-core") ||
+          source.startsWith("@tanstack/react-start-server")
+        ) {
+          throw new Error(`Android client bundle attempted to import server-only module: ${source}`);
+        }
+        return null;
       },
     },
     tanstackRouter({
