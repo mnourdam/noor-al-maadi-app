@@ -999,6 +999,7 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
         failed: baseResult.failed + aliasFailed,
         errors: [...baseResult.errors, ...aliasErrors].slice(0, 20),
         relationSummary: summarizeRelations(rows.map((r) => r.relations)),
+        qualitySummary: summarizeQuality(rows.map((r) => r.quality)),
       };
     },
   };
