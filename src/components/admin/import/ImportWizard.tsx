@@ -611,6 +611,39 @@ export function ImportWizard({ engine }: WizardProps) {
               </label>
             )}
 
+            {supportsTransactional && (
+              <div className="mt-4 rounded-md border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-100">
+                <div className="mb-2 flex items-center gap-2 font-semibold">
+                  <FlaskConical className="h-4 w-4" /> تشغيل تجريبي (Dry Run)
+                </div>
+                <p className="mb-2 text-slate-300">
+                  ينفّذ الخطة على الخادم داخل عملية واحدة ثم يتراجع عنها بالكامل — يكشف قيود قاعدة البيانات
+                  والتعارضات دون كتابة أي صف.
+                </p>
+                <button
+                  onClick={() => void runDryRun()}
+                  disabled={dryRunning || hasBlockers}
+                  className="inline-flex items-center gap-2 rounded border border-sky-400/50 bg-sky-500/20 px-3 py-1.5 text-sky-100 hover:border-sky-300 disabled:opacity-50"
+                >
+                  {dryRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
+                  {dryRunning ? "جارٍ التنفيذ التجريبي…" : "تشغيل تجريبي الآن"}
+                </button>
+                {dryRunReport && (
+                  <div className="mt-3 rounded border border-sky-500/40 bg-slate-950/40 p-2 text-[11px] text-sky-100">
+                    <div className="mb-1 font-semibold">نتيجة التشغيل التجريبي (لم يُكتب أي صف):</div>
+                    <ul className="list-inside list-disc space-y-0.5">
+                      <li>سيُنشأ: {dryRunReport.created ?? 0}</li>
+                      <li>سيُعدَّل: {dryRunReport.updated ?? 0}</li>
+                      <li>سيُتخطى: {dryRunReport.skipped ?? 0}</li>
+                      <li>سيفشل: {dryRunReport.failed ?? 0}</li>
+                      {dryRunReport.conflicts ? <li className="text-amber-300">تعارضات إصدار: {dryRunReport.conflicts}</li> : null}
+                    </ul>
+                    <div className="mt-1 text-slate-400">Hash: <span className="font-mono">{dryRunHash?.slice(0, 12)}</span></div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {commitError && (
               <div className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
                 <AlertTriangle className="me-1 inline h-4 w-4" /> {commitError}
@@ -620,14 +653,20 @@ export function ImportWizard({ engine }: WizardProps) {
 
           <NavBar
             onBack={back}
-            forwardLabel={`تنفيذ الاستيراد (${eligibleCount})`}
-            forwardIcon={<Upload className="h-4 w-4" />}
+            forwardLabel={supportsTransactional ? `تنفيذ آمن داخل عملية واحدة (${eligibleCount})` : `تنفيذ الاستيراد (${eligibleCount})`}
+            forwardIcon={supportsTransactional ? <ShieldCheck className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
             onForward={runCommit}
-            forwardDisabled={hasBlockers || eligibleCount === 0 || (hasWarnings && !ackWarnings)}
+            forwardDisabled={
+              hasBlockers ||
+              eligibleCount === 0 ||
+              (hasWarnings && !ackWarnings) ||
+              (supportsTransactional && !dryRunReport)
+            }
             forwardHint={
               hasBlockers ? "يجب معالجة المحظورات."
               : eligibleCount === 0 ? "لا يوجد ما يُستورد."
               : hasWarnings && !ackWarnings ? "أقرّ بالتحذيرات قبل المتابعة."
+              : (supportsTransactional && !dryRunReport) ? "شغّل التشغيل التجريبي قبل التنفيذ."
               : undefined
             }
             forwardTone="primary"
@@ -638,7 +677,8 @@ export function ImportWizard({ engine }: WizardProps) {
       {/* ---------- Committing ---------- */}
       {step === "committing" && (
         <section className="flex items-center justify-center rounded-2xl border border-amber-500/20 bg-slate-900/60 p-10 text-amber-200">
-          <Loader2 className="me-2 h-5 w-5 animate-spin" /> جارٍ تنفيذ الاستيراد…
+          <Loader2 className="me-2 h-5 w-5 animate-spin" />
+          <span>{committingStage || "جارٍ تنفيذ الاستيراد…"}</span>
         </section>
       )}
 
