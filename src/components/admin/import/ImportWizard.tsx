@@ -256,6 +256,15 @@ export function ImportWizard({ engine }: WizardProps) {
                 <RefreshCcw className="h-3.5 w-3.5" /> مسح
               </button>
             )}
+            <label className="ms-auto inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-600 bg-slate-950/40 px-3 py-1.5 text-xs text-slate-200">
+              <input
+                type="checkbox"
+                checked={autoRepair}
+                onChange={(e) => setAutoRepair(e.target.checked)}
+                className="accent-amber-500"
+              />
+              اقتراح إصلاحات تلقائية للمراجع
+            </label>
           </div>
 
           <textarea
