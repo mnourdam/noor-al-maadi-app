@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useMemo, useRef } from "react";
-import { useDailyQuestEntityReadCompletion } from "@/hooks/useDailyQuestEntityReadCompletion";
+import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
 import { useAccount } from "@/lib/account";
 import {
   ChevronRight,
@@ -141,8 +141,10 @@ function StatePage() {
   const { user } = useAccount();
   const userKey = user?.id ?? "guest";
   const relNetworkRef = useRef<HTMLElement | null>(null);
-  useDailyQuestEntityReadCompletion({
+  useEntityReadCompletion({
     entityId: state?.id ?? null,
+    entitySlug: state?.slug ?? null,
+    entityType: state?.entity_type ?? "state",
     userKey,
     relationshipSectionRef: relNetworkRef,
   });

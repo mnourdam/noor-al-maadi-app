@@ -221,6 +221,32 @@ export async function flushPending(): Promise<void> {
           ok = true;
         } else if (op.kind === "collection") {
           await addCollectionItems(op.items);
+          // Preferred behavior: a reward unlock also marks the entity as
+          // discovered (encyclopedia read ledger). Reading never marks
+          // ownership, but ownership implies discovery. Guest-safe and
+          // idempotent — see @/lib/entityDiscoveries.
+          try {
+            const [{ markEntityDiscovered }, { supabase }, { localEncyclopediaAll }] = await Promise.all([
+              import("@/lib/entityDiscoveries"),
+              import("@/integrations/supabase/client"),
+              import("@/lib/local-first-store"),
+            ]);
+            const { data } = await supabase.auth.getSession();
+            const userKey = data.session?.user?.id ?? "guest";
+            const all = localEncyclopediaAll() as Array<{ id: string; slug: string; entity_type: string }>;
+            const bySlug = new Map(all.map((r) => [r.slug.toLowerCase(), r]));
+            for (const it of op.items) {
+              const ent = bySlug.get(String(it.itemId).toLowerCase());
+              if (!ent) continue;
+              markEntityDiscovered({
+                userKey,
+                entityId: ent.id,
+                entitySlug: ent.slug,
+                entityType: ent.entity_type,
+                source: "campaign",
+              });
+            }
+          } catch { /* discovery mirror best-effort */ }
           ok = true;
         }
       } catch { ok = false; }

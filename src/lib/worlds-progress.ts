@@ -205,10 +205,20 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
 export function invalidateWorldIndex(): void { _indexCache = null; }
 
 // ------------------------------------------------------------
-// Discovered slugs (user_collection)
+// Discovered slugs — now sourced from `user_entity_discoveries`
+// (encyclopedia reads), NOT from `user_collection` (ownership).
+// The old museum set moved to `useMuseumSlugs` below.
 // ------------------------------------------------------------
 
-export function useDiscoveredSlugs(): Set<string> {
+import { useDiscoveredSlugs as useEntityDiscoveredSlugs } from "@/lib/entityDiscoveries";
+export const useDiscoveredSlugs = useEntityDiscoveredSlugs;
+
+/**
+ * Museum ownership set — rows in `user_collection` for the current user.
+ * Kept intentionally independent from encyclopedia discovery: reading an
+ * artifact page must never mark it as collected.
+ */
+export function useMuseumSlugs(): Set<string> {
   const [uid, setUid] = useState<string | null>(null);
   const [slugs, setSlugs] = useState<Set<string>>(() => new Set());
   const [reloadTick, setReloadTick] = useState(0);
@@ -261,6 +271,73 @@ export function useDiscoveredSlugs(): Set<string> {
   }, [uid, reloadTick]);
 
   return slugs;
+}
+
+// ------------------------------------------------------------
+// Per-user investigation-completed mirror.
+// ------------------------------------------------------------
+// `profile.investigationsCompleted` lives in a single device-global
+// localStorage key. During SIGN_IN/SIGN_OUT transitions the array
+// briefly carries the previous account's data before cloud_saves
+// finish hydrating — that leak would flash into Worlds progress.
+//
+// Strategy: partition by uid (or "guest") in a separate mirror. For
+// ~1.2s after every auth change Worlds reads from the mirror only,
+// then trusts `profile.investigationsCompleted` again and writes it
+// back to the current uid's mirror. This prevents any cross-account
+// flash without touching the profile store or its conflict flow.
+// ------------------------------------------------------------
+
+function investigationsMirrorKey(uid: string | null): string {
+  return `irth.investigations.${uid ?? "guest"}.v1`;
+}
+
+function readInvestigationsMirror(uid: string | null): string[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(investigationsMirrorKey(uid));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((s): s is string => typeof s === "string") : [];
+  } catch { return []; }
+}
+
+function writeInvestigationsMirror(uid: string | null, arr: string[]): void {
+  if (typeof localStorage === "undefined") return;
+  try { localStorage.setItem(investigationsMirrorKey(uid), JSON.stringify(arr)); } catch { /* quota */ }
+}
+
+function usePerUserInvestigationsCompleted(profileArr: string[]): string[] {
+  const [uid, setUid] = useState<string | null>(null);
+  const [stable, setStable] = useState(false);
+  const [mirror, setMirror] = useState<string[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setUid(data.session?.user?.id ?? null);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUid(session?.user?.id ?? null);
+      setStable(false);
+    });
+    return () => { alive = false; sub.subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => { setMirror(readInvestigationsMirror(uid)); }, [uid]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setStable(true), 1200);
+    return () => window.clearTimeout(t);
+  }, [uid]);
+
+  useEffect(() => {
+    if (!stable) return;
+    writeInvestigationsMirror(uid, profileArr ?? []);
+  }, [stable, uid, profileArr]);
+
+  return stable ? (profileArr ?? []) : mirror;
 }
 
 // ------------------------------------------------------------
@@ -345,11 +422,42 @@ function findCampaignRow(id: string): { data: any } | null {
   return rows.find((r) => r?.data?.id === id) ?? null;
 }
 
+/**
+ * Build a case-insensitive completion set that accepts either legacy
+ * investigation IDs or canonical slugs. Legacy id → slug pairs are read
+ * from the offline snapshot so completions written pre-normalization
+ * still count.
+ */
+function buildInvestigationDoneSet(entries: string[]): Set<string> {
+  const invs = localInvestigations() as Array<{ id?: string; slug?: string }>;
+  const idToSlug = new Map<string, string>();
+  const slugToId = new Map<string, string>();
+  for (const inv of invs) {
+    if (inv?.id && inv?.slug) {
+      idToSlug.set(String(inv.id), String(inv.slug));
+      slugToId.set(String(inv.slug), String(inv.id));
+    }
+  }
+  const out = new Set<string>();
+  for (const raw of entries) {
+    if (typeof raw !== "string" || !raw) continue;
+    out.add(raw);
+    const mappedSlug = idToSlug.get(raw);
+    if (mappedSlug) out.add(mappedSlug);
+    const mappedId = slugToId.get(raw);
+    if (mappedId) out.add(mappedId);
+  }
+  return out;
+}
+
 export function computeWorldProgress(
   worldSlug: string,
   inputs: {
     index: Map<string, WorldEntityIndex>;
+    /** Slugs the player has *read* — encyclopedia discovery ledger. */
     discovered: Set<string>;
+    /** Slugs the player *owns* — user_collection museum set. */
+    museum: Set<string>;
     cloudCampaign: Map<string, Set<string>>;
     investigationsCompleted: string[];
   },
@@ -366,16 +474,16 @@ export function computeWorldProgress(
   };
   if (!idx) return empty;
 
-  // Entities
+  // Entities (discovery = read)
   const total = idx.entities.length;
   let discovered = 0;
   for (const e of idx.entities) if (inputs.discovered.has(e.slug.toLowerCase())) discovered++;
 
-  // Museum (artifact subset)
+  // Museum (artifact subset, ownership only — user_collection)
   const artifacts = idx.byBucket.artifact;
   const artifactTotal = artifacts.length;
   let artifactDiscovered = 0;
-  for (const e of artifacts) if (inputs.discovered.has(e.slug.toLowerCase())) artifactDiscovered++;
+  for (const e of artifacts) if (inputs.museum.has(e.slug.toLowerCase())) artifactDiscovered++;
 
   // Campaigns
   const campTotal = idx.campaignIds.length;
@@ -400,9 +508,9 @@ export function computeWorldProgress(
     if (doneN === chapters.length) campDone++;
   }
 
-  // Investigations
+  // Investigations — accept both legacy IDs and canonical slugs.
   const invTotal = idx.investigationSlugs.length;
-  const invDoneSet = new Set(inputs.investigationsCompleted);
+  const invDoneSet = buildInvestigationDoneSet(inputs.investigationsCompleted);
   let invDone = 0;
   for (const s of idx.investigationSlugs) if (invDoneSet.has(s)) invDone++;
 
@@ -463,7 +571,10 @@ export function pickContinueJourney(
   worldSlug: string,
   inputs: {
     index: Map<string, WorldEntityIndex>;
+    /** Encyclopedia read set. */
     discovered: Set<string>;
+    /** Museum ownership set. */
+    museum: Set<string>;
     cloudCampaign: Map<string, Set<string>>;
     investigationsCompleted: string[];
   },
@@ -528,7 +639,7 @@ export function pickContinueJourney(
   }
 
   // 3. Next unfinished investigation.
-  const invDoneSet = new Set(inputs.investigationsCompleted);
+  const invDoneSet = buildInvestigationDoneSet(inputs.investigationsCompleted);
   const invs = (localInvestigations() as Array<{ slug: string; title: string; difficulty?: string; enabled?: boolean }>)
     .filter((r) => r?.enabled !== false && idx.investigationSlugs.includes(r.slug))
     .sort((a, b) => {
@@ -651,7 +762,9 @@ export function useStableSectionOrder(current: SectionKey[], signature: string):
 export function useWorldProgress(worldSlug: string) {
   const { profile } = useProfile();
   const discovered = useDiscoveredSlugs();
+  const museum = useMuseumSlugs();
   const cloudCampaign = useCloudCampaignProgress();
+  const investigationsCompleted = usePerUserInvestigationsCompleted(profile.investigationsCompleted ?? []);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -683,21 +796,24 @@ export function useWorldProgress(worldSlug: string) {
     const inputs = {
       index,
       discovered,
+      museum,
       cloudCampaign,
-      investigationsCompleted: profile.investigationsCompleted ?? [],
+      investigationsCompleted,
     };
     const progress = computeWorldProgress(worldSlug, inputs);
     const recommendation = pickContinueJourney(worldSlug, inputs);
     const rankedSections = rankWorldSections(progress);
     return { ready: true, index, progress, recommendation, rankedSections };
-  }, [ready, worldSlug, discovered, cloudCampaign, profile.investigationsCompleted]);
+  }, [ready, worldSlug, discovered, museum, cloudCampaign, investigationsCompleted]);
 }
 
 /** Compact per-world progress for the index page. */
 export function useAllWorldsProgress() {
   const { profile } = useProfile();
   const discovered = useDiscoveredSlugs();
+  const museum = useMuseumSlugs();
   const cloudCampaign = useCloudCampaignProgress();
+  const investigationsCompleted = usePerUserInvestigationsCompleted(profile.investigationsCompleted ?? []);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -712,8 +828,9 @@ export function useAllWorldsProgress() {
     const inputs = {
       index,
       discovered,
+      museum,
       cloudCampaign,
-      investigationsCompleted: profile.investigationsCompleted ?? [],
+      investigationsCompleted,
     };
     const byWorld = new Map<string, { progress: WorldProgress; recommendation: Recommendation }>();
     for (const h of WORLD_HUBS) {

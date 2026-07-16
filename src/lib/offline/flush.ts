@@ -45,6 +45,31 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         return { ok: true };
       }
 
+      case "entity_discovery": {
+        const p = item.payload as {
+          entityId: string; entitySlug: string; entityType: string;
+          source?: string | null; viewedAt?: string | null;
+        };
+        const viewedAt = p.viewedAt ?? new Date().toISOString();
+        // Upsert: first_discovered_at is preserved by the DB (NOT included in
+        // the update set on conflict). last_viewed_at moves forward.
+        const { error } = await (supabase as any)
+          .from("user_entity_discoveries")
+          .upsert(
+            {
+              user_id: uid,
+              entity_id: p.entityId,
+              entity_slug: p.entitySlug,
+              entity_type: p.entityType,
+              source: p.source ?? null,
+              last_viewed_at: viewedAt,
+            },
+            { onConflict: "user_id,entity_id", ignoreDuplicates: false },
+          );
+        if (error) return { ok: false, error: error.message };
+        return { ok: true };
+      }
+
       case "game_complete": {
         const p = item.payload as { gameId: string; stageIndex: number; score: number };
         const { error } = await supabase.from("game_progress").upsert(

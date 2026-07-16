@@ -1877,6 +1877,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_entity_discoveries: {
+        Row: {
+          entity_id: string
+          entity_slug: string
+          entity_type: string
+          first_discovered_at: string
+          last_viewed_at: string
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          entity_id: string
+          entity_slug: string
+          entity_type: string
+          first_discovered_at?: string
+          last_viewed_at?: string
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          entity_id?: string
+          entity_slug?: string
+          entity_type?: string
+          first_discovered_at?: string
+          last_viewed_at?: string
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_entity_discoveries_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "encyclopedia_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           granted_at: string

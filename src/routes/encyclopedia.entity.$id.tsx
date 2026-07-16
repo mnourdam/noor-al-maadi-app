@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
-import { useDailyQuestEntityReadCompletion } from "@/hooks/useDailyQuestEntityReadCompletion";
+import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
 import { useAccount } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
@@ -161,8 +161,10 @@ function EntityPage() {
   const { user } = useAccount();
   const userKey = user?.id ?? "guest";
   const relNetworkRef = useRef<HTMLElement | null>(null);
-  useDailyQuestEntityReadCompletion({
+  useEntityReadCompletion({
     entityId: entity?.id ?? null,
+    entitySlug: entity?.slug ?? null,
+    entityType: entity?.entity_type ?? null,
     userKey,
     relationshipSectionRef: relNetworkRef,
   });
