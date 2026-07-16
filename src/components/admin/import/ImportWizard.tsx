@@ -538,6 +538,22 @@ export function ImportWizard({ engine }: WizardProps) {
             )}
           </div>
 
+          {result.relationSummary && (
+            <div className="rounded-2xl border border-amber-500/20 bg-slate-900/60 p-5">
+              <h3 className="mb-3 text-sm font-bold text-amber-200">تقرير المراجع</h3>
+              <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                <Stat label="مراجع مفحوصة" value={result.relationSummary.checked} tone="neutral" />
+                <Stat label="تم إصلاحه" value={result.relationSummary.repaired} tone="update" />
+                <Stat label="غير محلول" value={result.relationSummary.unresolved} tone="blocked" />
+                <Stat label="إعادة توجيه قياسية" value={result.relationSummary.canonicalRemaps} tone="new" />
+                <Stat label="إعادة توجيه بأسماء بديلة" value={result.relationSummary.aliasRemaps} tone="new" />
+                <Stat label="مراجع مكسورة" value={result.relationSummary.brokenRefs} tone="blocked" />
+                <Stat label="تحذيرات نوع" value={result.relationSummary.crossTypeWarnings} tone="warning" />
+              </dl>
+            </div>
+          )}
+
+
           {result.integrity && result.integrity.length > 0 && (
             <div className="rounded-2xl border border-amber-500/20 bg-slate-900/60 p-5">
               <h3 className="mb-3 text-sm font-bold text-amber-200">تقرير سلامة المحتوى</h3>
