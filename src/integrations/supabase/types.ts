@@ -137,6 +137,152 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_import_batches: {
+        Row: {
+          admin_user_id: string
+          alias_count: number
+          approved_plan_hash: string
+          blocker_count: number
+          completed_at: string | null
+          content_type: string
+          create_count: number
+          created_at: string
+          draft_count: number
+          error_summary: string | null
+          file_name: string | null
+          id: string
+          item_count: number
+          metadata: Json
+          mode: string
+          original_payload_hash: string | null
+          quality_average: number | null
+          relation_remap_count: number
+          skip_count: number
+          started_at: string
+          status: string
+          update_count: number
+          updated_at: string
+          warning_count: number
+        }
+        Insert: {
+          admin_user_id: string
+          alias_count?: number
+          approved_plan_hash: string
+          blocker_count?: number
+          completed_at?: string | null
+          content_type: string
+          create_count?: number
+          created_at?: string
+          draft_count?: number
+          error_summary?: string | null
+          file_name?: string | null
+          id?: string
+          item_count?: number
+          metadata?: Json
+          mode: string
+          original_payload_hash?: string | null
+          quality_average?: number | null
+          relation_remap_count?: number
+          skip_count?: number
+          started_at?: string
+          status?: string
+          update_count?: number
+          updated_at?: string
+          warning_count?: number
+        }
+        Update: {
+          admin_user_id?: string
+          alias_count?: number
+          approved_plan_hash?: string
+          blocker_count?: number
+          completed_at?: string | null
+          content_type?: string
+          create_count?: number
+          created_at?: string
+          draft_count?: number
+          error_summary?: string | null
+          file_name?: string | null
+          id?: string
+          item_count?: number
+          metadata?: Json
+          mode?: string
+          original_payload_hash?: string | null
+          quality_average?: number | null
+          relation_remap_count?: number
+          skip_count?: number
+          started_at?: string
+          status?: string
+          update_count?: number
+          updated_at?: string
+          warning_count?: number
+        }
+        Relationships: []
+      }
+      admin_import_items: {
+        Row: {
+          accepted_repairs: Json | null
+          action: string
+          after_snapshot: Json | null
+          batch_id: string
+          before_snapshot: Json | null
+          classification: string | null
+          content_type: string
+          created_at: string
+          error_message: string | null
+          id: string
+          incoming_id: string | null
+          incoming_slug: string | null
+          issues: Json | null
+          item_index: number
+          result: string
+          target_record_id: string | null
+        }
+        Insert: {
+          accepted_repairs?: Json | null
+          action: string
+          after_snapshot?: Json | null
+          batch_id: string
+          before_snapshot?: Json | null
+          classification?: string | null
+          content_type: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          incoming_id?: string | null
+          incoming_slug?: string | null
+          issues?: Json | null
+          item_index: number
+          result?: string
+          target_record_id?: string | null
+        }
+        Update: {
+          accepted_repairs?: Json | null
+          action?: string
+          after_snapshot?: Json | null
+          batch_id?: string
+          before_snapshot?: Json | null
+          classification?: string | null
+          content_type?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          incoming_id?: string | null
+          incoming_slug?: string | null
+          issues?: Json | null
+          item_index?: number
+          result?: string
+          target_record_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_import_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "admin_import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_taxonomy: {
         Row: {
           archived: boolean
@@ -1948,6 +2094,14 @@ export type Database = {
           p_role: Database["public"]["Enums"]["app_role"]
           p_user_id: string
         }
+        Returns: Json
+      }
+      admin_rollback_import_batch: {
+        Args: { p_batch: string; p_force?: boolean }
+        Returns: Json
+      }
+      admin_run_import_batch: {
+        Args: { mode: string; plan: Json }
         Returns: Json
       }
       admin_save_campaign_draft: {
