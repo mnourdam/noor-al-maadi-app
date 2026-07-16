@@ -176,7 +176,7 @@ export function ImportWizard({ engine }: WizardProps) {
     setResult(null);
     setStep("committing");
     try {
-      const r = await engine.commit(rows, { overwrite, publish });
+      const r = await engine.commit(rows, { overwrite, publish, autoRepair });
       setResult(r);
       setStep("report");
     } catch (e) {
