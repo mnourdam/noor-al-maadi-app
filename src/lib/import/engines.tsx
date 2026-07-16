@@ -22,6 +22,15 @@ import {
   type CampaignIntegrityReport,
 } from "@/lib/contentIntegrity";
 import type { Campaign } from "@/types/campaign";
+import { ensureLocalSnapshotLoaded } from "@/lib/local-first-store";
+import {
+  applyAcceptedRepairs,
+  buildCampaignRelationReport,
+  buildEncyclopediaRelationReport,
+  buildInvestigationRelationReport,
+  summarizeRelations,
+  type RelationReport,
+} from "./relations-report";
 
 // ---------- Shared types ----------
 
