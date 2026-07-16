@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Globe2, ChevronLeft, Sparkles } from "lucide-react";
+import { Globe2, ChevronLeft, Sparkles, Compass } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { fetchWorldsIndex } from "@/lib/worlds";
+import { useAllWorldsProgress } from "@/lib/worlds-progress";
 
 export const Route = createFileRoute("/worlds/")({
   head: () => ({
@@ -14,6 +15,19 @@ export const Route = createFileRoute("/worlds/")({
   component: WorldsIndex,
 });
 
+function recLabel(r: ReturnType<typeof useAllWorldsProgress>["byWorld"] extends Map<string, infer V> ? V : never | undefined): string {
+  if (!r) return "";
+  const rec = r.recommendation;
+  switch (rec.kind) {
+    case "campaign_resume": return `تابع: ${rec.title}`;
+    case "campaign_start":  return `ابدأ: ${rec.title}`;
+    case "investigation":   return `تحقيق: ${rec.title}`;
+    case "entity":          return `اكتشف: ${rec.title}`;
+    case "artifact":        return `اقتنِ: ${rec.title}`;
+    case "world_complete":  return "مكتمل ✦";
+  }
+}
+
 function WorldsIndex() {
   const { data, isLoading } = useQuery({
     queryKey: ["worlds-index"],
@@ -21,15 +35,17 @@ function WorldsIndex() {
     queryFn: fetchWorldsIndex,
   });
 
+  const { byWorld } = useAllWorldsProgress();
+
   return (
     <AppShell>
       <div className="px-5 pt-8 pb-12">
         <div className="flex items-center gap-2 text-[11px] tracking-[0.3em] text-gold/80">
           <Globe2 className="size-3.5" /> عوالم إرث
         </div>
-        <h1 className="font-display mt-2 text-3xl font-bold">سافر عبر الحضارات</h1>
+        <h1 className="font-display mt-2 text-3xl font-bold">مسيرتك عبر الحضارات</h1>
         <p className="mt-1 text-[12px] text-muted-foreground">
-          الخط الزمني يمضي عبر القرون. العوالم تتيح لك دخول حضارة بعينها واستكشاف شخصياتها ومدنها ومعاركها.
+          كل عالمٍ يقود رحلتك التالية. تابع من حيث توقّفت أو ابدأ اكتشافًا جديدًا.
         </p>
 
         {isLoading ? (
@@ -41,6 +57,9 @@ function WorldsIndex() {
         ) : (
           <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {data.map((w) => {
+              const prog = byWorld.get(w.hub.slug);
+              const overall = prog?.progress.overallPct ?? 0;
+              const entities = prog?.progress.entities;
               const period = (w.entity.metadata as { period?: unknown } | null)?.period;
               return (
                 <Link
@@ -62,19 +81,41 @@ function WorldsIndex() {
                           <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{w.entity.subtitle}</p>
                         )}
                       </div>
+                      <div className="grid size-12 shrink-0 place-items-center rounded-full border border-gold/40 bg-black/50">
+                        <span className="font-display text-[13px] font-bold text-gold">{overall}%</span>
+                      </div>
                     </div>
+
+                    {/* Progress bar */}
+                    <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-gold/60 to-gold"
+                        style={{ width: `${overall}%`, transition: "width 400ms ease" }}
+                      />
+                    </div>
+
                     {typeof period === "string" && period && (
                       <p className="mt-3 text-[11px] text-white/70">{period}</p>
                     )}
-                    <div className="mt-4 flex flex-wrap gap-2 text-[10px]">
-                      <span className="rounded-full border border-white/10 bg-black/40 px-2 py-0.5">
-                        {w.relatedCount} كيان مرتبط
-                      </span>
+
+                    <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
+                      {entities && entities.total > 0 && (
+                        <span className="rounded-full border border-white/10 bg-black/40 px-2 py-0.5">
+                          اكتُشف {entities.discovered} من {entities.total}
+                        </span>
+                      )}
                       <span className="rounded-full border border-white/10 bg-black/40 px-2 py-0.5">
                         {w.campaignsCount} حملة
                       </span>
                     </div>
-                    <div className="mt-4 inline-flex items-center gap-1 text-[11px] text-gold group-hover:gap-2 transition-all">
+
+                    {prog && (
+                      <p className="mt-3 flex items-center gap-1.5 text-[11px] text-gold/90">
+                        <Compass className="size-3.5" /> {recLabel(prog)}
+                      </p>
+                    )}
+
+                    <div className="mt-3 inline-flex items-center gap-1 text-[11px] text-gold group-hover:gap-2 transition-all">
                       ادخل العالم <ChevronLeft className="size-3.5" />
                     </div>
                   </div>
@@ -89,7 +130,7 @@ function WorldsIndex() {
             <Sparkles className="size-3.5" /> نصيحة
           </div>
           <p className="mt-1 text-[12px] text-muted-foreground">
-            الخط الزمني = السفر عبر الزمن. العوالم = السفر عبر الحضارات.
+            الخط الزمني = السفر عبر الزمن. العوالم = السفر عبر الحضارات ومتابعة تقدّمك.
           </p>
         </div>
       </div>
