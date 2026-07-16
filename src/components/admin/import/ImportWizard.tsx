@@ -707,6 +707,19 @@ export function ImportWizard({ engine }: WizardProps) {
                 </ul>
               </div>
             )}
+            {committedBatchId && (
+              <div className="mt-3 flex items-center gap-2 text-xs">
+                <Database className="h-3.5 w-3.5 text-sky-300" />
+                <span className="text-slate-300">سجل العملية:</span>
+                <Link
+                  to="/admin/import-history/$id"
+                  params={{ id: committedBatchId }}
+                  className="inline-flex items-center gap-1 rounded border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-sky-100 hover:border-sky-300"
+                >
+                  <ScrollText className="h-3.5 w-3.5" /> فتح التفاصيل + إمكانية التراجع
+                </Link>
+              </div>
+            )}
           </div>
 
           {result.relationSummary && (
