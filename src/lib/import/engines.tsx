@@ -804,9 +804,12 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
       }
 
       // Rebuild sanitized PreviewRow[] and delegate insert/update to base engine.
+      // Phase 3 — apply accepted relation repairs to each row's data first.
+      const withRepairs = (r: PreviewRow): PreviewRow =>
+        r.relations ? { ...r, data: applyAcceptedRepairs(r.data, r.relations) } : r;
       const forBase: PreviewRow[] = [];
-      for (const r of asNew) forBase.push({ ...r, status: "new", issues: [] });
-      for (const r of asUpdate) forBase.push({ ...r, status: "update", issues: [] });
+      for (const r of asNew) forBase.push({ ...withRepairs(r), status: "new", issues: [] });
+      for (const r of asUpdate) forBase.push({ ...withRepairs(r), status: "update", issues: [] });
       for (const r of asSkip) forBase.push({ ...r, status: "skip", issues: [] });
       // Blocked rows without override → carry through as skipped in the report.
       for (const r of stillBlocked) forBase.push({ ...r, status: "skip", issues: [] });
