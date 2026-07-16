@@ -15,9 +15,9 @@ export const Route = createFileRoute("/worlds/")({
   component: WorldsIndex,
 });
 
-function recLabel(r: ReturnType<typeof useAllWorldsProgress>["byWorld"] extends Map<string, infer V> ? V : never | undefined): string {
-  if (!r) return "";
-  const rec = r.recommendation;
+import type { Recommendation } from "@/lib/worlds-progress";
+function recLabel(rec: Recommendation | undefined): string {
+  if (!rec) return "";
   switch (rec.kind) {
     case "campaign_resume": return `تابع: ${rec.title}`;
     case "campaign_start":  return `ابدأ: ${rec.title}`;
@@ -27,6 +27,7 @@ function recLabel(r: ReturnType<typeof useAllWorldsProgress>["byWorld"] extends 
     case "world_complete":  return "مكتمل ✦";
   }
 }
+
 
 function WorldsIndex() {
   const { data, isLoading } = useQuery({
