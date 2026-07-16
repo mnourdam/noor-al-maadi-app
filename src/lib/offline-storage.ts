@@ -143,15 +143,59 @@ async function idbDelete(): Promise<void> {
   db.close();
 }
 
-/** Normalize legacy v1 shape (flat keys) into v2. */
+/** Sensitive keys that must never persist in offline caches (schema v3+).
+ *  Older caches (v1/v2) may have leaked these; we strip them on every load. */
+const SENSITIVE_CAMPAIGN_KEYS = [
+  "draft_data",
+  "updated_by",
+  "last_editor_email",
+  "has_unpublished_changes",
+] as const;
+
+function sanitizeCampaignRow(row: any): any {
+  if (!row || typeof row !== "object") return row;
+  let hit = false;
+  for (const k of SENSITIVE_CAMPAIGN_KEYS) if (k in row) { hit = true; break; }
+  if (!hit) return row;
+  const clone: any = {};
+  for (const key of Object.keys(row)) {
+    if ((SENSITIVE_CAMPAIGN_KEYS as readonly string[]).includes(key)) continue;
+    clone[key] = row[key];
+  }
+  return clone;
+}
+
+function sanitizeCollections(collections: Record<string, any[]> | undefined | null): Record<string, any[]> {
+  const out: Record<string, any[]> = {};
+  if (!collections) return out;
+  for (const [k, rows] of Object.entries(collections)) {
+    if (k === "admin_campaigns" && Array.isArray(rows)) {
+      out[k] = rows.map(sanitizeCampaignRow);
+    } else {
+      out[k] = rows as any[];
+    }
+  }
+  return out;
+}
+
+/** Normalize legacy v1 shape (flat keys) into v2/v3, sanitizing sensitive
+ *  campaign columns from any legacy cache. */
 function normalize(raw: any): OfflineSnapshot | null {
   if (!raw || typeof raw !== "object") return null;
   if (raw.collections && raw.content_counts) {
-    // Already v2-shaped; fill in schema_version if missing.
-    return {
+    const snap: OfflineSnapshot = {
       schema_version: typeof raw.schema_version === "number" ? raw.schema_version : SNAPSHOT_SCHEMA_VERSION,
       ...raw,
     } as OfflineSnapshot;
+    snap.collections = sanitizeCollections(snap.collections);
+    // Recompute counts to keep the persistence-guard invariant that
+    // content_counts[k] === collections[k].length after sanitisation.
+    const counts: Record<string, number> = { ...(snap.content_counts ?? {}) };
+    for (const [k, v] of Object.entries(snap.collections)) {
+      if (Array.isArray(v)) counts[k] = v.length;
+    }
+    snap.content_counts = counts;
+    return snap;
   }
   // Legacy flat v1
   const collections: Record<string, any[]> = {};
@@ -165,16 +209,18 @@ function normalize(raw: any): OfflineSnapshot | null {
   for (const [k, target] of Object.entries(map)) {
     if (Array.isArray(raw[k])) collections[target] = raw[k];
   }
+  const sanitized = sanitizeCollections(collections);
   const counts: Record<string, number> = {};
-  for (const [k, v] of Object.entries(collections)) counts[k] = (v as any[]).length;
+  for (const [k, v] of Object.entries(sanitized)) counts[k] = (v as any[]).length;
   return {
     snapshot_version: typeof raw.version === "number" ? raw.version : 1,
     schema_version: 1,
     generated_at: raw.generated_at ?? new Date(0).toISOString(),
     content_counts: counts,
-    collections,
+    collections: sanitized,
   };
 }
+
 
 export async function saveSnapshot(snap: OfflineSnapshot): Promise<void> {
   if (!snapshotPersistable(snap)) {
