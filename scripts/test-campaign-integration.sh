@@ -251,7 +251,7 @@ BEGIN
           jsonb_build_object('type','true_false','prompt','new_act','correctAnswer',true))),
         jsonb_build_object('title','brand_new_chapter','order',2,'activities', jsonb_build_array(
           jsonb_build_object('type','true_false','prompt','pp','correctAnswer',true)))
-      ))))))
+      )))))))
   ), 'commit');
   n_ch := (SELECT jsonb_array_length(draft_data->'chapters') FROM public.admin_campaigns WHERE id=v_cid);
   RAISE NOTICE 'RES:%', r->>'status';
