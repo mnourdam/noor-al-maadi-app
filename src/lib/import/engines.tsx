@@ -31,6 +31,16 @@ import {
   summarizeRelations,
   type RelationReport,
 } from "./relations-report";
+import {
+  scoreEncyclopedia,
+  scoreCampaign,
+  scoreInvestigation,
+  scoreShortEditorial,
+  detectRegression,
+  summarizeQuality,
+  type QualityReport,
+  type QualityBatchSummary,
+} from "./quality";
 
 // ---------- Shared types ----------
 
