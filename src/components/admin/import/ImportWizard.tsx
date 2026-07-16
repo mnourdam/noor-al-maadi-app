@@ -207,6 +207,19 @@ export function ImportWizard({ engine }: WizardProps) {
     setRows((prev) => prev.map((r) => r.index === index ? { ...r, override: action } : r));
   };
 
+  const setResolutionAccept = (rowIndex: number, resIndex: number, accepted: boolean) => {
+    setRows((prev) => prev.map((r) => {
+      if (r.index !== rowIndex || !r.relations) return r;
+      return {
+        ...r,
+        relations: {
+          ...r.relations,
+          accepted: { ...r.relations.accepted, [resIndex]: accepted },
+        },
+      };
+    }));
+  };
+
   return (
     <div className="space-y-6">
       <Stepper current={step} />
