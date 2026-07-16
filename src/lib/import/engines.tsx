@@ -786,7 +786,7 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
             .eq("id", target.existingId)
             .maybeSingle();
           if (readErr) throw readErr;
-          const md = (existing?.metadata as any) ?? {};
+          const md = ((existing as any)?.metadata as any) ?? {};
           const prev: string[] = Array.isArray(md.aliases) ? md.aliases.filter((x: any) => typeof x === "string") : [];
           const merged = new Set(prev.map((x) => x));
           const incomingAliases: string[] = Array.isArray(item.metadata?.aliases)
