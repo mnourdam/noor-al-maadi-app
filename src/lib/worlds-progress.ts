@@ -571,7 +571,10 @@ export function pickContinueJourney(
   worldSlug: string,
   inputs: {
     index: Map<string, WorldEntityIndex>;
+    /** Encyclopedia read set. */
     discovered: Set<string>;
+    /** Museum ownership set. */
+    museum: Set<string>;
     cloudCampaign: Map<string, Set<string>>;
     investigationsCompleted: string[];
   },
