@@ -664,6 +664,7 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
       // First run the base classifier to establish new/update/skip against
       // exact (entity_type, slug) — that's Irth's canonical exact-match rule.
       const baseClassified = await base.classify(rows, options);
+      await ensureLocalSnapshotLoaded();
 
       const eligible = baseClassified.filter((r) => r.status !== "blocked");
       if (eligible.length === 0) return baseClassified;
