@@ -350,32 +350,34 @@ export function makeLegacyEngine<T>(config: ImportConfig<T>, meta: {
       if (error) throw new Error(error.message);
       const existing = (data ?? []) as any[];
       const seen = new Set<string>();
+      const publish = !!options.publish;
       return rows.map((row) => {
         if (row.status === "blocked") return row;
+        let out: PreviewRow = row;
         if (seen.has(row.key)) {
-          return { ...row, status: "skip" as RowStatus };
+          out = { ...row, status: "skip" as RowStatus };
+        } else {
+          seen.add(row.key);
+          const match = existing.find((e) => config.matchExisting(e, row.data as T));
+          if (!match) out = { ...row, status: "new" as RowStatus };
+          else if (options.overwrite && config.allowOverwrite) out = { ...row, status: "update" as RowStatus };
+          else out = {
+            ...row,
+            status: "skip" as RowStatus,
+            issues: [
+              ...row.issues,
+              { severity: "info", message: "موجود مسبقاً — سيُتخطّى (فعّل الاستبدال لتحديثه).", itemIndex: row.index, code: "existing.skip" },
+            ],
+          };
         }
-        seen.add(row.key);
-        const match = existing.find((e) => config.matchExisting(e, row.data as T));
-        if (!match) return { ...row, status: "new" as RowStatus };
-        if (options.overwrite && config.allowOverwrite) {
-          return { ...row, status: "update" as RowStatus };
+        if (meta.scoreRow && out.status !== "skip") {
+          const q = meta.scoreRow(out.data as T);
+          if (q) out = applyQuality(out, q, { publish });
         }
-        return {
-          ...row,
-          status: "skip" as RowStatus,
-          issues: [
-            ...row.issues,
-            {
-              severity: "info",
-              message: "موجود مسبقاً — سيُتخطّى (فعّل الاستبدال لتحديثه).",
-              itemIndex: row.index,
-              code: "existing.skip",
-            },
-          ],
-        };
+        return out;
       });
     },
+
 
     async commit(rows, options) {
       const toInsert: T[] = [];
