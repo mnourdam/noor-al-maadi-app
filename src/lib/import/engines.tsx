@@ -467,7 +467,7 @@ export function makeCampaignEngine(meta: {
         seen.add(row.key);
         const c = row.data as Campaign;
         const exists = existingIds.has(c.id);
-        const relations = buildCampaignRelationReport(c);
+        const relations = buildCampaignRelationReport(c, options.autoRepair !== false);
         const relationIssues = relationsToIssues(relations, row.index);
         const nextIssues = [...row.issues, ...relationIssues];
         const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
@@ -770,7 +770,7 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
         }
 
         // Phase 3 — encyclopedia relation report (metadata refs + atlas).
-        const relations = buildEncyclopediaRelationReport(item as any);
+        const relations = buildEncyclopediaRelationReport(item as any, options.autoRepair !== false);
         const relationIssues = relationsToIssues(relations, row.index);
         for (const ri of relationIssues) nextIssues.push(ri);
 
@@ -897,7 +897,7 @@ export function makeInvestigationsEngine<T extends { related_entities?: unknown;
       await ensureLocalSnapshotLoaded();
       return classified.map((row) => {
         if (row.status === "blocked") return row;
-        const relations = buildInvestigationRelationReport(row.data as any);
+        const relations = buildInvestigationRelationReport(row.data as any, options.autoRepair !== false);
         const extraIssues = relationsToIssues(relations, row.index);
         const nextIssues = [...row.issues, ...extraIssues];
         const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
