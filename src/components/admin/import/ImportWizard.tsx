@@ -122,9 +122,21 @@ export function ImportWizard({ engine }: WizardProps) {
     return items;
   }, [rows, topIssues]);
 
-  const hasBlockers = blockers.length > 0;
+  // Blockers are gated at the batch level, but Phase 2 lets admins resolve
+  // duplicate blockers per-row via `override`. A row-level blocker with an
+  // explicit action no longer blocks the batch.
+  const unresolvedBlockers = useMemo(() => {
+    const items: Issue[] = [];
+    for (const iss of topIssues) if (iss.severity === "blocker") items.push(iss);
+    for (const r of rows) {
+      if (r.override) continue;
+      for (const iss of r.issues) if (iss.severity === "blocker") items.push(iss);
+    }
+    return items;
+  }, [rows, topIssues]);
+  const hasBlockers = unresolvedBlockers.length > 0;
   const hasWarnings = counts.warnings > 0;
-  const eligibleCount = counts.new + counts.update;
+  const eligibleCount = counts.new + counts.update + rows.filter((r) => r.override && r.override !== "skip").length;
 
   const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
