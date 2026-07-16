@@ -54,3 +54,28 @@ export async function recordProfileDelta(p: {
 }): Promise<void> {
   await record("profile_delta", p);
 }
+
+/**
+ * Encyclopedia read/discovery. Uses a caller-supplied stable idempotency
+ * key so replays cannot create duplicate rows even across offline flushes.
+ * Guest: no-op (nothing written to Supabase). The local mirror is handled
+ * by `@/lib/entityDiscoveries` separately.
+ */
+export async function recordEntityDiscovery(p: {
+  entityId: string;
+  entitySlug: string;
+  entityType: string;
+  source?: string;
+}): Promise<void> {
+  const uid = await currentUserId();
+  if (!uid) return;
+  const id = `entity_discovery:${uid}:${p.entityId}`;
+  await enqueueWithId(uid, id, "entity_discovery", {
+    entityId: p.entityId,
+    entitySlug: p.entitySlug,
+    entityType: p.entityType,
+    source: p.source ?? "encyclopedia",
+    viewedAt: new Date().toISOString(),
+  });
+  void flushOutbox(uid);
+}
