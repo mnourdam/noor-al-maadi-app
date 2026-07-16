@@ -66,7 +66,7 @@ export function ImportWizard({ engine }: WizardProps) {
   const [ackWarnings, setAckWarnings] = useState(false);
   const [result, setResult] = useState<CommitResult | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | RowStatus | "warnings">("all");
+  const [filter, setFilter] = useState<"all" | RowStatus | "warnings" | "publish_ready" | "needs_content" | "no_sources" | "regressions">("all");
 
   useEffect(() => {
     if (engineKey !== engine.key) {
