@@ -462,7 +462,10 @@ export function makeCampaignEngine(meta: {
 
     async commit(rows, options) {
       const eligible = rows.filter((r) => r.status === "new" || r.status === "update");
-      const validCampaigns: Campaign[] = eligible.map((r) => r.data as Campaign);
+      const validCampaigns: Campaign[] = eligible.map((r) => {
+        const c = r.data as Campaign;
+        return r.relations ? applyAcceptedRepairs(c, r.relations) : c;
+      });
       let skipped = rows.filter((r) => r.status === "skip").length;
       let inserted = 0;
       let updated = 0;
