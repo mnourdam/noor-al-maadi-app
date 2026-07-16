@@ -155,7 +155,7 @@ export function ImportWizard({ engine }: WizardProps) {
     setClassifyError(null);
     setClassifying(true);
     try {
-      const next = await engine.classify(rows, { overwrite, publish });
+      const next = await engine.classify(rows, { overwrite, publish, autoRepair });
       setRows(next);
       setStep("preview");
     } catch (e) {
