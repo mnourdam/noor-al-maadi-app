@@ -762,7 +762,9 @@ export function useStableSectionOrder(current: SectionKey[], signature: string):
 export function useWorldProgress(worldSlug: string) {
   const { profile } = useProfile();
   const discovered = useDiscoveredSlugs();
+  const museum = useMuseumSlugs();
   const cloudCampaign = useCloudCampaignProgress();
+  const investigationsCompleted = usePerUserInvestigationsCompleted(profile.investigationsCompleted ?? []);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -794,21 +796,24 @@ export function useWorldProgress(worldSlug: string) {
     const inputs = {
       index,
       discovered,
+      museum,
       cloudCampaign,
-      investigationsCompleted: profile.investigationsCompleted ?? [],
+      investigationsCompleted,
     };
     const progress = computeWorldProgress(worldSlug, inputs);
     const recommendation = pickContinueJourney(worldSlug, inputs);
     const rankedSections = rankWorldSections(progress);
     return { ready: true, index, progress, recommendation, rankedSections };
-  }, [ready, worldSlug, discovered, cloudCampaign, profile.investigationsCompleted]);
+  }, [ready, worldSlug, discovered, museum, cloudCampaign, investigationsCompleted]);
 }
 
 /** Compact per-world progress for the index page. */
 export function useAllWorldsProgress() {
   const { profile } = useProfile();
   const discovered = useDiscoveredSlugs();
+  const museum = useMuseumSlugs();
   const cloudCampaign = useCloudCampaignProgress();
+  const investigationsCompleted = usePerUserInvestigationsCompleted(profile.investigationsCompleted ?? []);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -823,8 +828,9 @@ export function useAllWorldsProgress() {
     const inputs = {
       index,
       discovered,
+      museum,
       cloudCampaign,
-      investigationsCompleted: profile.investigationsCompleted ?? [],
+      investigationsCompleted,
     };
     const byWorld = new Map<string, { progress: WorldProgress; recommendation: Recommendation }>();
     for (const h of WORLD_HUBS) {
