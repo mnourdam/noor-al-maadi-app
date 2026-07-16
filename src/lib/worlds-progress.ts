@@ -205,10 +205,19 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
 export function invalidateWorldIndex(): void { _indexCache = null; }
 
 // ------------------------------------------------------------
-// Discovered slugs (user_collection)
+// Discovered slugs — now sourced from `user_entity_discoveries`
+// (encyclopedia reads), NOT from `user_collection` (ownership).
+// The old museum set moved to `useMuseumSlugs` below.
 // ------------------------------------------------------------
 
-export function useDiscoveredSlugs(): Set<string> {
+export { useDiscoveredSlugs } from "@/lib/entityDiscoveries";
+
+/**
+ * Museum ownership set — rows in `user_collection` for the current user.
+ * Kept intentionally independent from encyclopedia discovery: reading an
+ * artifact page must never mark it as collected.
+ */
+export function useMuseumSlugs(): Set<string> {
   const [uid, setUid] = useState<string | null>(null);
   const [slugs, setSlugs] = useState<Set<string>>(() => new Set());
   const [reloadTick, setReloadTick] = useState(0);
@@ -261,6 +270,73 @@ export function useDiscoveredSlugs(): Set<string> {
   }, [uid, reloadTick]);
 
   return slugs;
+}
+
+// ------------------------------------------------------------
+// Per-user investigation-completed mirror.
+// ------------------------------------------------------------
+// `profile.investigationsCompleted` lives in a single device-global
+// localStorage key. During SIGN_IN/SIGN_OUT transitions the array
+// briefly carries the previous account's data before cloud_saves
+// finish hydrating — that leak would flash into Worlds progress.
+//
+// Strategy: partition by uid (or "guest") in a separate mirror. For
+// ~1.2s after every auth change Worlds reads from the mirror only,
+// then trusts `profile.investigationsCompleted` again and writes it
+// back to the current uid's mirror. This prevents any cross-account
+// flash without touching the profile store or its conflict flow.
+// ------------------------------------------------------------
+
+function investigationsMirrorKey(uid: string | null): string {
+  return `irth.investigations.${uid ?? "guest"}.v1`;
+}
+
+function readInvestigationsMirror(uid: string | null): string[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(investigationsMirrorKey(uid));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((s): s is string => typeof s === "string") : [];
+  } catch { return []; }
+}
+
+function writeInvestigationsMirror(uid: string | null, arr: string[]): void {
+  if (typeof localStorage === "undefined") return;
+  try { localStorage.setItem(investigationsMirrorKey(uid), JSON.stringify(arr)); } catch { /* quota */ }
+}
+
+function usePerUserInvestigationsCompleted(profileArr: string[]): string[] {
+  const [uid, setUid] = useState<string | null>(null);
+  const [stable, setStable] = useState(false);
+  const [mirror, setMirror] = useState<string[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setUid(data.session?.user?.id ?? null);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUid(session?.user?.id ?? null);
+      setStable(false);
+    });
+    return () => { alive = false; sub.subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => { setMirror(readInvestigationsMirror(uid)); }, [uid]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setStable(true), 1200);
+    return () => window.clearTimeout(t);
+  }, [uid]);
+
+  useEffect(() => {
+    if (!stable) return;
+    writeInvestigationsMirror(uid, profileArr ?? []);
+  }, [stable, uid, profileArr]);
+
+  return stable ? (profileArr ?? []) : mirror;
 }
 
 // ------------------------------------------------------------
