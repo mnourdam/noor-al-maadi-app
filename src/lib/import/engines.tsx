@@ -411,7 +411,7 @@ export function makeCampaignEngine(meta: {
         .select("id")
         .in("id", ids);
       if (error) throw new Error(error.message);
-      const existingIds = new Set(((data ?? []) as { id: string }[]).map((r) => r.id));
+      const existingIds = new Set((((data ?? []) as unknown) as { id: string }[]).map((r) => r.id));
       const seen = new Set<string>();
       return rows.map((row) => {
         if (row.status === "blocked") return row;
