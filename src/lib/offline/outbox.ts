@@ -14,7 +14,8 @@
 // ============================================================
 
 export type OutboxKind =
-  | "collection_add"        // user_collection upsert
+  | "collection_add"        // user_collection upsert (ownership/awards)
+  | "entity_discovery"      // user_entity_discoveries upsert (encyclopedia reads)
   | "game_complete"         // game_progress upsert
   | "chapter_progress"      // user_campaign_progress upsert
   | "profile_delta";        // apply_profile_delta RPC (idempotent XP/dinars/hearts)
