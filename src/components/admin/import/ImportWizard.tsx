@@ -70,6 +70,8 @@ export function ImportWizard({ engine }: WizardProps) {
   const [autoRepair, setAutoRepair] = useState(true);
   // Phase 5.5b: destructive-removal opt-in (used by investigations RPC).
   const [allowRemovals, setAllowRemovals] = useState(false);
+  // Phase 5 close-out: explicit opt-in to un-archive a campaign via publish import.
+  const [allowUnarchive, setAllowUnarchive] = useState(false);
   const [ackWarnings, setAckWarnings] = useState(false);
   const [result, setResult] = useState<CommitResult | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
