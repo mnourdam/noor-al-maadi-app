@@ -709,6 +709,17 @@ export function ImportWizard({ engine }: WizardProps) {
                     نشر فور الاستيراد
                   </label>
                 )}
+                {engine.key === "investigations" && (
+                  <label className="inline-flex items-center gap-2 rounded-md border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-100">
+                    <input
+                      type="checkbox"
+                      checked={allowRemovals}
+                      onChange={(e) => { setAllowRemovals(e.target.checked); setDryRunHash(null); }}
+                      className="accent-rose-500"
+                    />
+                    السماح بحذف أسئلة موجودة (مدمّر)
+                  </label>
+                )}
               </div>
             )}
 
