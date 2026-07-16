@@ -398,7 +398,17 @@ export function ImportWizard({ engine }: WizardProps) {
             <FilterChip label={`تخطّي (${counts.skip})`} active={filter === "skip"} onClick={() => setFilter("skip")} tone="skip" />
             <FilterChip label={`محظور (${counts.blocked})`} active={filter === "blocked"} onClick={() => setFilter("blocked")} tone="blocked" />
             <FilterChip label={`تحذيرات (${counts.warnings})`} active={filter === "warnings"} onClick={() => setFilter("warnings")} tone="warning" />
+            {qualityStats.scored > 0 && <>
+              <FilterChip label={`جاهز للنشر (${qualityStats.publishReady})`} active={filter === "publish_ready"} onClick={() => setFilter("publish_ready")} tone="new" />
+              <FilterChip label={`يحتاج محتوى (${qualityStats.needsContent})`} active={filter === "needs_content"} onClick={() => setFilter("needs_content")} tone="warning" />
+              <FilterChip label={`بلا مصادر (${qualityStats.noSources})`} active={filter === "no_sources"} onClick={() => setFilter("no_sources")} tone="warning" />
+              {qualityStats.regressions > 0 && (
+                <FilterChip label={`تراجع (${qualityStats.regressions})`} active={filter === "regressions"} onClick={() => setFilter("regressions")} tone="blocked" />
+              )}
+              <span className="ms-auto text-[10px] text-slate-400">متوسط الجودة: <span className="font-mono text-amber-200">{qualityStats.avg}٪</span></span>
+            </>}
           </div>
+
 
           <div className="overflow-hidden rounded-xl border border-slate-800">
             <ul className="max-h-[520px] divide-y divide-slate-800 overflow-auto">
