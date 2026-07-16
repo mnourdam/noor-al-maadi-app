@@ -22,6 +22,15 @@ import {
   type CampaignIntegrityReport,
 } from "@/lib/contentIntegrity";
 import type { Campaign } from "@/types/campaign";
+import { ensureLocalSnapshotLoaded } from "@/lib/local-first-store";
+import {
+  applyAcceptedRepairs,
+  buildCampaignRelationReport,
+  buildEncyclopediaRelationReport,
+  buildInvestigationRelationReport,
+  summarizeRelations,
+  type RelationReport,
+} from "./relations-report";
 
 // ---------- Shared types ----------
 
@@ -63,6 +72,8 @@ export interface PreviewRow {
   override?: RowAction;
   /** Phase 2 — admin acknowledgement note when overriding warnings. */
   overrideNote?: string;
+  /** Phase 3 — relation validation report. */
+  relations?: import("./relations-report").RelationReport;
 }
 
 export interface CommitResult {
@@ -74,6 +85,8 @@ export interface CommitResult {
   errors: string[];
   /** Optional integrity reports (currently campaigns only). */
   integrity?: CampaignIntegrityReport[];
+  /** Phase 3 — aggregate relation summary across the batch. */
+  relationSummary?: import("./relations-report").RelationSummary;
 }
 
 export interface CommitOptions {
@@ -81,6 +94,8 @@ export interface CommitOptions {
   overwrite: boolean;
   /** Publish immediately (campaigns only). */
   publish?: boolean;
+  /** Phase 3 — compute automatic repair suggestions (never applies them). */
+  autoRepair?: boolean;
 }
 
 export interface ImportEngine {
@@ -128,6 +143,29 @@ export interface ImportConfig<T> {
   allowOverwrite?: boolean;
   conflictTarget?: string;
   overwriteFields?: string[];
+}
+
+// ---------- Phase 3 helpers: relation report → row issues ----------
+
+/**
+ * Convert a RelationReport into row-level Issue entries. Missing/broken
+ * refs surface as warnings by default (never blockers) so admins can still
+ * import and repair later; batch-level errors (dup ids, cycles) become
+ * blockers as they indicate structural problems.
+ */
+export function relationsToIssues(rep: RelationReport, itemIndex: number): Issue[] {
+  const out: Issue[] = [];
+  for (const b of rep.batchIssues) {
+    out.push({ severity: b.level === "error" ? "blocker" : "warning", message: b.message, itemIndex, path: b.path, code: "batch.integrity" });
+  }
+  const c = rep.counts;
+  if (c.missing > 0) out.push({ severity: "warning", message: `مراجع مفقودة: ${c.missing}`, itemIndex, code: "rel.missing" });
+  if (c.ambiguous > 0) out.push({ severity: "warning", message: `مراجع غامضة: ${c.ambiguous}`, itemIndex, code: "rel.ambiguous" });
+  if (c.disabled + c.archived > 0) out.push({ severity: "warning", message: `مراجع معطّلة/مؤرشفة: ${c.disabled + c.archived}`, itemIndex, code: "rel.stale" });
+  if (c.remapped > 0) out.push({ severity: "info", message: `مراجع بحاجة لإعادة توجيه: ${c.remapped}`, itemIndex, code: "rel.remap" });
+  if (c.type_mismatch > 0) out.push({ severity: "warning", message: `نوع لا يطابق: ${c.type_mismatch}`, itemIndex, code: "rel.type_mismatch" });
+  if (rep.duplicates.size > 0) out.push({ severity: "info", message: `مراجع مكرّرة: ${rep.duplicates.size}`, itemIndex, code: "rel.duplicate" });
+  return out;
 }
 
 // ---------- Adapter: legacy ImportConfig → ImportEngine ----------
@@ -413,6 +451,8 @@ export function makeCampaignEngine(meta: {
       if (rows.length === 0) return rows;
       const eligible = rows.filter((r) => r.status !== "blocked");
       if (eligible.length === 0) return rows;
+      // Phase 3 — snapshot must be loaded before any relation resolution.
+      await ensureLocalSnapshotLoaded();
       const ids = eligible.map((r) => (r.data as Campaign).id);
       const { data, error } = await supabase
         .from("admin_campaigns" as any)
@@ -427,27 +467,28 @@ export function makeCampaignEngine(meta: {
         seen.add(row.key);
         const c = row.data as Campaign;
         const exists = existingIds.has(c.id);
-        if (!exists) return { ...row, status: "new" as RowStatus };
-        if (options.overwrite) return { ...row, status: "update" as RowStatus };
-        return {
-          ...row,
-          status: "skip" as RowStatus,
-          issues: [
-            ...row.issues,
-            {
-              severity: "info",
-              message: "الحملة موجودة — سيُتخطّى (فعّل الاستبدال للتحديث).",
-              itemIndex: row.index,
-              code: "existing.skip",
-            },
-          ],
-        };
+        const relations = buildCampaignRelationReport(c, options.autoRepair !== false);
+        const relationIssues = relationsToIssues(relations, row.index);
+        const nextIssues = [...row.issues, ...relationIssues];
+        const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
+        const nextStatus: RowStatus = nowBlocked
+          ? "blocked"
+          : !exists ? "new"
+          : options.overwrite ? "update"
+          : "skip";
+        const extraSkipIssue: Issue[] = (!nowBlocked && exists && !options.overwrite)
+          ? [{ severity: "info", message: "الحملة موجودة — سيُتخطّى (فعّل الاستبدال للتحديث).", itemIndex: row.index, code: "existing.skip" }]
+          : [];
+        return { ...row, status: nextStatus, relations, issues: [...nextIssues, ...extraSkipIssue] };
       });
     },
 
     async commit(rows, options) {
       const eligible = rows.filter((r) => r.status === "new" || r.status === "update");
-      const validCampaigns: Campaign[] = eligible.map((r) => r.data as Campaign);
+      const validCampaigns: Campaign[] = eligible.map((r) => {
+        const c = r.data as Campaign;
+        return r.relations ? applyAcceptedRepairs(c, r.relations) : c;
+      });
       let skipped = rows.filter((r) => r.status === "skip").length;
       let inserted = 0;
       let updated = 0;
@@ -564,7 +605,8 @@ export function makeCampaignEngine(meta: {
         integrity.push(runCampaignIntegrity(enriched));
       }
 
-      return { inserted, updated, skipped, failed, errors: errors.slice(0, 10), integrity };
+      const relationSummary = summarizeRelations(rows.map((r) => r.relations));
+      return { inserted, updated, skipped, failed, errors: errors.slice(0, 10), integrity, relationSummary };
     },
   };
 }
@@ -622,6 +664,7 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
       // First run the base classifier to establish new/update/skip against
       // exact (entity_type, slug) — that's Irth's canonical exact-match rule.
       const baseClassified = await base.classify(rows, options);
+      await ensureLocalSnapshotLoaded();
 
       const eligible = baseClassified.filter((r) => r.status !== "blocked");
       if (eligible.length === 0) return baseClassified;
@@ -726,6 +769,11 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
           });
         }
 
+        // Phase 3 — encyclopedia relation report (metadata refs + atlas).
+        const relations = buildEncyclopediaRelationReport(item as any, options.autoRepair !== false);
+        const relationIssues = relationsToIssues(relations, row.index);
+        for (const ri of relationIssues) nextIssues.push(ri);
+
         // If we injected a new blocker, flip status.
         const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
         return {
@@ -733,6 +781,7 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
           status: nowBlocked ? ("blocked" as RowStatus) : row.status,
           issues: nextIssues,
           candidates,
+          relations,
         };
       });
     },
@@ -755,9 +804,12 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
       }
 
       // Rebuild sanitized PreviewRow[] and delegate insert/update to base engine.
+      // Phase 3 — apply accepted relation repairs to each row's data first.
+      const withRepairs = (r: PreviewRow): PreviewRow =>
+        r.relations ? { ...r, data: applyAcceptedRepairs(r.data, r.relations) } : r;
       const forBase: PreviewRow[] = [];
-      for (const r of asNew) forBase.push({ ...r, status: "new", issues: [] });
-      for (const r of asUpdate) forBase.push({ ...r, status: "update", issues: [] });
+      for (const r of asNew) forBase.push({ ...withRepairs(r), status: "new", issues: [] });
+      for (const r of asUpdate) forBase.push({ ...withRepairs(r), status: "update", issues: [] });
       for (const r of asSkip) forBase.push({ ...r, status: "skip", issues: [] });
       // Blocked rows without override → carry through as skipped in the report.
       for (const r of stillBlocked) forBase.push({ ...r, status: "skip", issues: [] });
@@ -818,6 +870,7 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
         skipped: baseResult.skipped + stillBlocked.length,
         failed: baseResult.failed + aliasFailed,
         errors: [...baseResult.errors, ...aliasErrors].slice(0, 20),
+        relationSummary: summarizeRelations(rows.map((r) => r.relations)),
       };
     },
   };
@@ -826,3 +879,35 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
 // re-export for admin route
 export { findCandidates, normalizeForCompare, CANDIDATE_REASON_AR };
 export type { DuplicateCandidate };
+
+// ============================================================
+// Phase 3 — Investigations engine with relation validation.
+// Thin wrapper over the legacy engine that attaches a relation
+// report + applies accepted repairs before insert/update.
+// ============================================================
+export function makeInvestigationsEngine<T extends { related_entities?: unknown; slug: string; title: string }>(
+  config: ImportConfig<T>,
+  meta: { key: string; label: string; icon: ReactNode },
+): ImportEngine {
+  const base = makeLegacyEngine(config, meta);
+  return {
+    ...base,
+    async classify(rows, options) {
+      const classified = await base.classify(rows, options);
+      await ensureLocalSnapshotLoaded();
+      return classified.map((row) => {
+        if (row.status === "blocked") return row;
+        const relations = buildInvestigationRelationReport(row.data as any, options.autoRepair !== false);
+        const extraIssues = relationsToIssues(relations, row.index);
+        const nextIssues = [...row.issues, ...extraIssues];
+        const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
+        return { ...row, relations, issues: nextIssues, status: nowBlocked ? ("blocked" as RowStatus) : row.status };
+      });
+    },
+    async commit(rows, options) {
+      const patched = rows.map((r) => r.relations ? { ...r, data: applyAcceptedRepairs(r.data, r.relations) } : r);
+      const result = await base.commit(patched, options);
+      return { ...result, relationSummary: summarizeRelations(rows.map((r) => r.relations)) };
+    },
+  };
+}
