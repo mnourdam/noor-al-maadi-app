@@ -389,7 +389,7 @@ export function makeCampaignEngine(meta: {
           subtitle: `${c.id} · ${c.chapters.length} فصول`,
           render: (
             <div>
-              <div className="text-xs text-amber-300">{c.id}{c.period ? ` · ${c.period}` : ""}</div>
+              <div className="text-xs text-amber-300">{c.id}{c.era ? ` · ${c.era}` : ""}</div>
               <div className="font-medium">{c.title}{c.subtitle ? ` — ${c.subtitle}` : ""}</div>
               <div className="text-xs text-slate-400">{c.chapters.length} فصول · {c.difficulty ?? "—"}</div>
             </div>
