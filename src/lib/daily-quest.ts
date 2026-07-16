@@ -35,7 +35,7 @@ export const QUEST_PROGRESS_EVENT = "irth:daily-quest:progress";
 
 /** Minimum time (ms) the user must dwell on the recommended article
  *  before completion is allowed. Consumed by the entity route. */
-export const MIN_READ_MS = 12_000;
+export const MIN_READ_MS = 20_000;
 
 export type QuestKind =
   | "read_encyclopedia_entity"
