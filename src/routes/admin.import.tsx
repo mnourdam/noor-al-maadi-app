@@ -540,7 +540,7 @@ const ENGINES: Record<ImportType, ImportEngine> = {
     label: "الموسوعة",
     icon: <Landmark className="h-5 w-5" />,
   }),
-  investigations: makeLegacyEngine(investigationsConfig, {
+  investigations: makeInvestigationsEngine(investigationsConfig, {
     key: "investigations",
     label: "التحقيقات",
     icon: <Search className="h-5 w-5" />,
