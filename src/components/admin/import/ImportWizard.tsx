@@ -27,9 +27,11 @@ import type {
   Issue,
   PreviewRow,
   RowStatus,
+  RowAction,
   CommitResult,
   Severity,
 } from "@/lib/import/engines";
+import { CANDIDATE_REASON_AR, type DuplicateCandidate } from "@/lib/import/duplicate-detection";
 
 type Step = "upload" | "validate" | "preview" | "approve" | "committing" | "report";
 
@@ -120,9 +122,21 @@ export function ImportWizard({ engine }: WizardProps) {
     return items;
   }, [rows, topIssues]);
 
-  const hasBlockers = blockers.length > 0;
+  // Blockers are gated at the batch level, but Phase 2 lets admins resolve
+  // duplicate blockers per-row via `override`. A row-level blocker with an
+  // explicit action no longer blocks the batch.
+  const unresolvedBlockers = useMemo(() => {
+    const items: Issue[] = [];
+    for (const iss of topIssues) if (iss.severity === "blocker") items.push(iss);
+    for (const r of rows) {
+      if (r.override) continue;
+      for (const iss of r.issues) if (iss.severity === "blocker") items.push(iss);
+    }
+    return items;
+  }, [rows, topIssues]);
+  const hasBlockers = unresolvedBlockers.length > 0;
   const hasWarnings = counts.warnings > 0;
-  const eligibleCount = counts.new + counts.update;
+  const eligibleCount = counts.new + counts.update + rows.filter((r) => r.override && r.override !== "skip").length;
 
   const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -187,6 +201,10 @@ export function ImportWizard({ engine }: WizardProps) {
     if (filter === "warnings") return rows.filter((r) => r.issues.some((i) => i.severity === "warning"));
     return rows.filter((r) => r.status === filter);
   }, [rows, filter]);
+
+  const setRowOverride = (index: number, action: RowAction | undefined) => {
+    setRows((prev) => prev.map((r) => r.index === index ? { ...r, override: action } : r));
+  };
 
   return (
     <div className="space-y-6">
@@ -340,6 +358,9 @@ export function ImportWizard({ engine }: WizardProps) {
                           </li>
                         ))}
                       </ul>
+                    )}
+                    {r.candidates && r.candidates.length > 0 && (
+                      <CandidatePanel row={r} onOverride={(a) => setRowOverride(r.index, a)} />
                     )}
                   </div>
                 </li>
@@ -700,5 +721,135 @@ function NavBar({ onBack, onForward, forwardLabel, forwardDisabled, forwardHint,
         </button>
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// Phase 2 — Candidate panel: side-by-side comparison + per-row
+// admin decision (New / Update / Skip / Alias / Ignore warning).
+// ============================================================
+function CandidatePanel({ row, onOverride }: {
+  row: PreviewRow;
+  onOverride: (a: RowAction | undefined) => void;
+}) {
+  const list = row.candidates ?? [];
+  if (list.length === 0) return null;
+  const primary = list[0];
+  const incoming: any = row.data ?? {};
+  const current: RowAction | undefined = row.override;
+  const hasBlocker = row.issues.some((i) => i.severity === "blocker");
+  const hasWarning = row.issues.some((i) => i.severity === "warning");
+
+  return (
+    <div className="mt-2 rounded-md border border-amber-500/20 bg-slate-950/40 p-2 text-[11px]">
+      <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-amber-200/90">
+        <span className="font-semibold">مرشحون مطابقون ({list.length}):</span>
+        {list.slice(0, 4).map((c) => (
+          <CandidateChip key={c.existingId} c={c} />
+        ))}
+      </div>
+      <SideBySide incoming={incoming} candidate={primary} />
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <span className="text-[10px] text-slate-400">الإجراء:</span>
+        <ActionBtn label="استيراد كجديد" v="new" cur={current} onClick={onOverride} tone="new" />
+        <ActionBtn label="تحديث الموجود" v="update" cur={current} onClick={onOverride} tone="update" />
+        <ActionBtn label="اسم بديل" v="alias" cur={current} onClick={onOverride} tone="alias" />
+        <ActionBtn label="تخطّي" v="skip" cur={current} onClick={onOverride} tone="skip" />
+        {current && (
+          <button
+            onClick={() => onOverride(undefined)}
+            className="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-slate-200"
+          >
+            إعادة تعيين
+          </button>
+        )}
+        {current && (hasBlocker || hasWarning) && (
+          <span className="text-[10px] text-amber-300">
+            {hasBlocker ? "تجاوز المحظور بقرار المسؤول." : "تجاوز التحذير بقرار المسؤول."}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CandidateChip({ c }: { c: DuplicateCandidate }) {
+  const pct = Math.round(c.score * 100);
+  const tone =
+    c.severity === "exact" ? "border-red-400/40 bg-red-500/10 text-red-200"
+    : c.severity === "high" ? "border-amber-400/40 bg-amber-500/10 text-amber-200"
+    : "border-slate-500/40 bg-slate-500/10 text-slate-200";
+  return (
+    <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 ${tone}`}>
+      <span className="font-mono">{pct}٪</span>
+      <span className="truncate max-w-[16ch]">{c.existingTitle}</span>
+      <span className="text-[9px] opacity-70">{c.existingType}/{c.existingSlug}</span>
+      {c.crossType && <span className="rounded bg-amber-500/20 px-1 text-[9px]">نوع مختلف</span>}
+      <span className="text-[9px] opacity-70">
+        {c.reasons.map((r) => CANDIDATE_REASON_AR[r]).join(" · ")}
+      </span>
+    </span>
+  );
+}
+
+function SideBySide({ incoming, candidate }: { incoming: any; candidate: DuplicateCandidate }) {
+  const fields: Array<[string, any, any]> = [
+    ["العنوان", incoming.title, candidate.existingTitle],
+    ["العنوان الفرعي", incoming.subtitle ?? "—", candidate.existingSubtitle ?? "—"],
+    ["النوع", incoming.entity_type, candidate.existingType],
+    ["slug", incoming.slug, candidate.existingSlug],
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2 rounded border border-slate-800 bg-slate-950/60 p-2">
+      <div>
+        <div className="mb-1 text-[10px] uppercase tracking-wider text-slate-500">الموجود في القاعدة</div>
+        <ul className="space-y-0.5">
+          {fields.map(([label, _incVal, exVal]) => (
+            <li key={label} className="flex gap-1">
+              <span className="text-slate-500">{label}:</span>
+              <span className="text-slate-200">{String(exVal ?? "—")}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <div className="mb-1 text-[10px] uppercase tracking-wider text-slate-500">المُستورد</div>
+        <ul className="space-y-0.5">
+          {fields.map(([label, incVal, exVal]) => {
+            const changed = String(incVal ?? "") !== String(exVal ?? "");
+            return (
+              <li key={label} className="flex gap-1">
+                <span className="text-slate-500">{label}:</span>
+                <span className={changed ? "text-amber-200" : "text-slate-200"}>{String(incVal ?? "—")}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function ActionBtn({ label, v, cur, onClick, tone }: {
+  label: string;
+  v: RowAction;
+  cur: RowAction | undefined;
+  onClick: (a: RowAction) => void;
+  tone: "new" | "update" | "skip" | "alias";
+}) {
+  const active = cur === v;
+  const toneCls = active
+    ? tone === "new" ? "border-emerald-400 bg-emerald-500/20 text-emerald-100"
+      : tone === "update" ? "border-amber-400 bg-amber-500/20 text-amber-100"
+      : tone === "alias" ? "border-sky-400 bg-sky-500/20 text-sky-100"
+      : "border-slate-500 bg-slate-500/20 text-slate-100"
+    : "border-slate-700 text-slate-300 hover:border-slate-500";
+  return (
+    <button
+      onClick={() => onClick(v)}
+      className={`rounded border px-1.5 py-0.5 text-[10px] transition ${toneCls}`}
+    >
+      {label}
+    </button>
   );
 }

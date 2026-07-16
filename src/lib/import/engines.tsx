@@ -39,6 +39,8 @@ export interface Issue {
 }
 
 export type RowStatus = "new" | "update" | "skip" | "blocked";
+/** Explicit per-row admin decision. `alias` merges into an existing row's aliases. */
+export type RowAction = "new" | "update" | "skip" | "alias";
 
 export interface PreviewRow {
   index: number;
@@ -55,6 +57,12 @@ export interface PreviewRow {
   data: unknown;
   /** Stable dedupe key for within-batch duplicate detection. */
   key: string;
+  /** Phase 2 — duplicate candidates found in the DB (encyclopedia). */
+  candidates?: import("./duplicate-detection").DuplicateCandidate[];
+  /** Phase 2 — admin decision override that beats `status` at commit time. */
+  override?: RowAction;
+  /** Phase 2 — admin acknowledgement note when overriding warnings. */
+  overrideNote?: string;
 }
 
 export interface CommitResult {
@@ -560,3 +568,261 @@ export function makeCampaignEngine(meta: {
     },
   };
 }
+
+// ============================================================
+// Phase 2 — Encyclopedia engine with duplicate detection.
+//
+// Wraps the legacy encyclopedia config so JSON contracts stay identical,
+// but overrides classify() to attach DuplicateCandidate[] to each row
+// and downgrade/upgrade severity based on match strength:
+//
+//   exact identifier  (slug / canonical_id / external_id) → blocker
+//   exact normalized name                                 → blocker
+//   score ≥ 0.90                                          → warning
+//   score ≥ 0.75                                          → info
+//
+// Cross-type conflicts (same entity name under another entity_type)
+// never block automatically — they surface as warnings.
+//
+// commit() honors PreviewRow.override so admins can decide per-row:
+//   new     → force insert (bypass same-slug block only for candidate
+//             hits that are NOT slug matches; a real slug collision stays
+//             a blocker).
+//   update  → upsert (requires config.allowOverwrite).
+//   skip    → do nothing.
+//   alias   → merge the incoming title into the target row's
+//             metadata.aliases (no destructive rewrite).
+// ============================================================
+import {
+  buildExistingIndex,
+  findCandidates,
+  normalizeForCompare,
+  CANDIDATE_REASON_AR,
+  type DuplicateCandidate,
+  type ExistingIndexRow,
+} from "./duplicate-detection";
+
+interface EncRowLike {
+  entity_type: string;
+  slug: string;
+  title: string;
+  subtitle?: string | null;
+  metadata?: any;
+}
+
+export function makeEncyclopediaEngine<T extends EncRowLike>(
+  config: ImportConfig<T>,
+  meta: { key: string; label: string; icon: ReactNode },
+): ImportEngine {
+  const base = makeLegacyEngine(config, meta);
+  return {
+    ...base,
+
+    async classify(rows, options) {
+      // First run the base classifier to establish new/update/skip against
+      // exact (entity_type, slug) — that's Irth's canonical exact-match rule.
+      const baseClassified = await base.classify(rows, options);
+
+      const eligible = baseClassified.filter((r) => r.status !== "blocked");
+      if (eligible.length === 0) return baseClassified;
+
+      // Load a corpus for candidate detection. Cap generously (encyclopedia
+      // is a few thousand rows). If cap is hit we still proceed — fuzzy
+      // detection degrades gracefully rather than blocking imports.
+      const { data, error } = await supabase
+        .from("encyclopedia_entities" as any)
+        .select("id, entity_type, slug, title, subtitle, metadata, enabled")
+        .limit(10000);
+      if (error) throw new Error(error.message);
+
+      const corpus: ExistingIndexRow[] = (((data ?? []) as unknown) as Array<{
+        id: string; entity_type: string; slug: string;
+        title: string; subtitle: string | null; metadata: any; enabled: boolean;
+      }>).map((r) => ({
+        id: r.id,
+        entity_type: r.entity_type,
+        slug: r.slug,
+        title: r.title,
+        subtitle: r.subtitle,
+        metadata: r.metadata,
+      }));
+      const idx = buildExistingIndex(corpus);
+
+      return baseClassified.map((row) => {
+        if (row.status === "blocked") return row;
+        const item = row.data as EncRowLike;
+        const candidates = findCandidates(item, idx);
+        if (candidates.length === 0) return { ...row, candidates: [] };
+
+        const nextIssues: Issue[] = [...row.issues];
+        // Best identifier vs best fuzzy — we treat them separately so a
+        // slug-hit stays a blocker even if fuzzy score is lower.
+        const idHit = candidates.find(
+          (c) => c.reasons.includes("slug") ||
+                 c.reasons.includes("canonical_id") ||
+                 c.reasons.includes("external_id"),
+        );
+        const nameHit = candidates.find(
+          (c) => c.reasons.includes("exact_name") || c.reasons.includes("alias_match"),
+        );
+        const bestFuzzy = candidates.find((c) => c.severity !== "exact");
+
+        // Exact identifier match → blocker unless admin flips overwrite.
+        if (idHit && !options.overwrite) {
+          nextIssues.push({
+            severity: "blocker",
+            message: `تكرار مطابق (${idHit.reasons.map((r) => CANDIDATE_REASON_AR[r]).join(" · ")}) — ${idHit.existingTitle}`,
+            itemIndex: row.index,
+            code: "dup.exact_id",
+          });
+        } else if (idHit && options.overwrite) {
+          nextIssues.push({
+            severity: "info",
+            message: `سيُحدَّث الكيان الموجود (${idHit.reasons.map((r) => CANDIDATE_REASON_AR[r]).join(" · ")}).`,
+            itemIndex: row.index,
+            code: "dup.will_update",
+          });
+        }
+
+        // Exact normalized-name match on a different slug → treat as blocker
+        // by default: admin must explicitly choose new/update/alias/skip.
+        if (!idHit && nameHit) {
+          nextIssues.push({
+            severity: "blocker",
+            message: `اسم مطابق لكيان موجود بمُعرّف مختلف — ${nameHit.existingTitle} (${nameHit.existingType}/${nameHit.existingSlug}). اختر إجراءً للصف.`,
+            itemIndex: row.index,
+            code: "dup.exact_name",
+          });
+        }
+
+        // Fuzzy tiers.
+        if (!idHit && !nameHit && bestFuzzy) {
+          const pct = Math.round(bestFuzzy.score * 100);
+          if (bestFuzzy.severity === "high") {
+            nextIssues.push({
+              severity: "warning",
+              message: `تشابه ${pct}٪ مع ${bestFuzzy.existingTitle} (${bestFuzzy.existingType}/${bestFuzzy.existingSlug}).`,
+              itemIndex: row.index,
+              code: "dup.high",
+            });
+          } else {
+            nextIssues.push({
+              severity: "info",
+              message: `تشابه محتمل ${pct}٪ مع ${bestFuzzy.existingTitle} (${bestFuzzy.existingType}/${bestFuzzy.existingSlug}).`,
+              itemIndex: row.index,
+              code: "dup.medium",
+            });
+          }
+        }
+
+        // Cross-type note (info-only; never blocks alone).
+        const crossType = candidates.find((c) => c.crossType && c.score >= 0.9);
+        if (crossType) {
+          nextIssues.push({
+            severity: "warning",
+            message: `تعارض عبر الأنواع — يوجد "${crossType.existingTitle}" كـ ${crossType.existingType}، والمُستورد كـ ${item.entity_type}.`,
+            itemIndex: row.index,
+            code: "dup.cross_type",
+          });
+        }
+
+        // If we injected a new blocker, flip status.
+        const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
+        return {
+          ...row,
+          status: nowBlocked ? ("blocked" as RowStatus) : row.status,
+          issues: nextIssues,
+          candidates,
+        };
+      });
+    },
+
+    async commit(rows, options) {
+      // Split rows by admin override.
+      const asNew: PreviewRow[] = [];
+      const asUpdate: PreviewRow[] = [];
+      const asAlias: PreviewRow[] = [];
+      const asSkip: PreviewRow[] = [];
+      const stillBlocked: PreviewRow[] = [];
+
+      for (const r of rows) {
+        const action = r.override ?? (r.status === "blocked" ? "skip" : r.status);
+        if (r.status === "blocked" && !r.override) { stillBlocked.push(r); continue; }
+        if (action === "new") asNew.push(r);
+        else if (action === "update") asUpdate.push(r);
+        else if (action === "alias") asAlias.push(r);
+        else asSkip.push(r);
+      }
+
+      // Rebuild sanitized PreviewRow[] and delegate insert/update to base engine.
+      const forBase: PreviewRow[] = [];
+      for (const r of asNew) forBase.push({ ...r, status: "new", issues: [] });
+      for (const r of asUpdate) forBase.push({ ...r, status: "update", issues: [] });
+      for (const r of asSkip) forBase.push({ ...r, status: "skip", issues: [] });
+      // Blocked rows without override → carry through as skipped in the report.
+      for (const r of stillBlocked) forBase.push({ ...r, status: "skip", issues: [] });
+
+      // The base commit path only performs updates when options.overwrite is on;
+      // per-row explicit "update" must succeed regardless. So we pass overwrite=true
+      // when the batch contains any explicit updates.
+      const baseResult = await base.commit(forBase, {
+        ...options,
+        overwrite: options.overwrite || asUpdate.length > 0,
+      });
+
+      // Alias merges — additive to metadata.aliases on the matched existing row.
+      let aliasMerged = 0;
+      let aliasFailed = 0;
+      const aliasErrors: string[] = [];
+      for (const r of asAlias) {
+        const item = r.data as EncRowLike;
+        const target = (r.candidates ?? []).find((c) => c.severity === "exact")
+          ?? (r.candidates ?? [])[0];
+        if (!target) { aliasFailed++; aliasErrors.push(`#${r.index + 1}: لا يوجد مرشح للربط.`); continue; }
+        try {
+          const { data: existing, error: readErr } = await supabase
+            .from("encyclopedia_entities" as any)
+            .select("metadata")
+            .eq("id", target.existingId)
+            .maybeSingle();
+          if (readErr) throw readErr;
+          const md = ((existing as any)?.metadata as any) ?? {};
+          const prev: string[] = Array.isArray(md.aliases) ? md.aliases.filter((x: any) => typeof x === "string") : [];
+          const merged = new Set(prev.map((x) => x));
+          const incomingAliases: string[] = Array.isArray(item.metadata?.aliases)
+            ? item.metadata.aliases.filter((x: any) => typeof x === "string")
+            : [];
+          for (const a of [item.title, ...incomingAliases]) {
+            const norm = normalizeForCompare(a);
+            if (!norm) continue;
+            if (norm === normalizeForCompare(target.existingTitle)) continue;
+            merged.add(String(a).trim());
+          }
+          const nextAliases = Array.from(merged);
+          const nextMeta = { ...md, aliases: nextAliases };
+          const { error: writeErr } = await supabase
+            .from("encyclopedia_entities" as any)
+            .update({ metadata: nextMeta })
+            .eq("id", target.existingId);
+          if (writeErr) throw writeErr;
+          aliasMerged++;
+        } catch (e) {
+          aliasFailed++;
+          aliasErrors.push(`#${r.index + 1}: ${(e as Error).message}`);
+        }
+      }
+
+      return {
+        inserted: baseResult.inserted,
+        updated: baseResult.updated + aliasMerged,
+        skipped: baseResult.skipped + stillBlocked.length,
+        failed: baseResult.failed + aliasFailed,
+        errors: [...baseResult.errors, ...aliasErrors].slice(0, 20),
+      };
+    },
+  };
+}
+
+// re-export for admin route
+export { findCandidates, normalizeForCompare, CANDIDATE_REASON_AR };
+export type { DuplicateCandidate };
