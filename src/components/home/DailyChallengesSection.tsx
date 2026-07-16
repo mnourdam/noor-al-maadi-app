@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import {
   selectDailyChallenges,
+  listPublishedGames,
   fetchMyCompletedGameIds,
   fetchMyDailyCompletedGameIds,
   type GameRow,
@@ -14,6 +15,8 @@ import { MODE_LABELS_AR, type GameMode } from "@/lib/games/types";
 import { extractMuseumUnlocks } from "@/lib/games/museumUnlocks";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { Reveal, Stagger } from "@/components/motion/MotionPrimitives";
+import { supabase } from "@/integrations/supabase/client";
+import { localDateKey } from "@/lib/daily-quest";
 
 const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   crossword: Feather,
@@ -180,30 +183,89 @@ function ChallengeCard({
   );
 }
 
+/**
+ * Read/write today's frozen challenge pick IDs.
+ *
+ * We persist the chosen game IDs per (userKey, localDate) so that once
+ * the player completes today's picks, refreshing does not roll two new
+ * challenges. The player must return the next local day to see fresh
+ * picks. At the next day rollover the entry is stale and a new pick set
+ * is generated using selectDailyChallenges (which still excludes every
+ * all-time completed challenge).
+ */
+function frozenPicksKey(userKey: string, date: string): string {
+  return `irth.daily-challenges.${userKey}.${date}`;
+}
+
+function readFrozenPickIds(userKey: string, date: string): string[] | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(frozenPicksKey(userKey, date));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : null;
+  } catch { return null; }
+}
+
+function writeFrozenPickIds(userKey: string, date: string, ids: string[]): void {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(frozenPicksKey(userKey, date), JSON.stringify(ids));
+  } catch { /* ignore */ }
+}
+
 export function DailyChallengesSection() {
   const androidStable = isAndroidUltraStableMode();
   const [picks, setPicks] = useState<GameRow[] | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [allCompleted, setAllCompleted] = useState(false);
+  const [todaysPicksDone, setTodaysPicksDone] = useState(false);
 
   useEffect(() => {
     if (androidStable) return;
     let cancelled = false;
     (async () => {
-      // Wait for BOTH the player's all-time completion set (used to exclude
-      // completed challenges from the pool) AND today's completion set (used
-      // to render the "أُنجز اليوم" badge on today's stable picks when the
-      // player completes one during the day). Selection is only finalized
-      // after both are hydrated so a completed challenge never flashes in.
-      const [allTimeCompleted, todayCompleted] = await Promise.all([
+      const [{ data: u }, allTimeCompleted, todayCompleted, published] = await Promise.all([
+        supabase.auth.getUser(),
         fetchMyCompletedGameIds(),
         fetchMyDailyCompletedGameIds(),
+        listPublishedGames(),
       ]);
-      const sel = await selectDailyChallenges(2, { completedIds: allTimeCompleted });
+      const userKey = u.user?.id ?? "guest";
+      const date = localDateKey();
+
+      // Try to hydrate today's frozen picks first.
+      const frozenIds = readFrozenPickIds(userKey, date);
+      let finalPicks: GameRow[] = [];
+      let allDone = false;
+
+      if (frozenIds && frozenIds.length > 0) {
+        const byId = new Map(published.map((g) => [g.id, g]));
+        finalPicks = frozenIds.map((id) => byId.get(id)).filter((g): g is GameRow => !!g);
+      }
+
+      if (finalPicks.length === 0) {
+        // First visit today (or stale/missing frozen picks) — select fresh.
+        const sel = await selectDailyChallenges(2, { completedIds: allTimeCompleted });
+        finalPicks = sel.picks;
+        allDone = sel.allCompleted;
+        if (finalPicks.length > 0) {
+          writeFrozenPickIds(userKey, date, finalPicks.map((g) => g.id));
+        }
+      }
+
+      // Today's picks are "done" when every frozen pick is in the all-time
+      // completed set (they've been completed at any point — the frozen
+      // list is regenerated tomorrow).
+      const picksDone =
+        finalPicks.length > 0 &&
+        finalPicks.every((g) => allTimeCompleted.has(g.id));
+
       if (cancelled) return;
       setCompletedIds(todayCompleted);
-      setPicks(sel.picks);
-      setAllCompleted(sel.allCompleted);
+      setPicks(finalPicks);
+      setAllCompleted(allDone);
+      setTodaysPicksDone(picksDone);
     })().catch(() => {
       if (!cancelled) setPicks([]);
     });
@@ -213,7 +275,7 @@ export function DailyChallengesSection() {
   }, [androidStable]);
 
   if (picks === null) return null;
-  if (!picks.length) return null;
+  if (!picks.length && !allCompleted) return null;
 
   return (
     <section className="mt-6 px-5 sm:px-6 md:px-8">
@@ -247,9 +309,26 @@ export function DailyChallengesSection() {
               </div>
               <h3 className="font-display mt-3 text-base font-bold text-emerald-50">أحسنت!</h3>
               <p className="mt-1 text-[12px] leading-6 text-white/70">
-                لقد أنهيت تحديات اليوم.
+                لقد أنهيت جميع التحديات المتاحة.
                 <br />
-                عد غدًا لاكتشاف تحديين جديدين.
+                ترقّب تحديات جديدة قريبًا.
+              </p>
+            </div>
+          </div>
+        </Reveal>
+      ) : todaysPicksDone ? (
+        <Reveal>
+          <div className="parchment-dark relative overflow-hidden rounded-3xl border border-emerald-400/30 p-5 text-center shadow-elegant motion-unlock-glow">
+            <div className="arabesque-layer opacity-50" />
+            <div className="relative">
+              <div className="mx-auto grid size-12 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
+                <Check className="size-6 text-emerald-300" strokeWidth={2} />
+              </div>
+              <h3 className="font-display mt-3 text-base font-bold text-emerald-50">
+                لقد أتممت تحديات اليوم.
+              </h3>
+              <p className="mt-1 text-[12px] leading-6 text-white/70">
+                عد غدًا لاكتشاف تحديات جديدة.
               </p>
             </div>
           </div>

@@ -51,10 +51,8 @@ export function useDailyQuestEntityReadCompletion({
     // Telemetry: powers the daily-quest "never opened" priority tier.
     recordEntityOpen(userKey, entityId);
 
-    const mountedAt = Date.now();
-    let thresholdMet = false;
-    let pendingTimer: number | null = null;
     let cancelled = false;
+    let dwellTimer: number | null = null;
 
     const fire = () => {
       if (cancelled) return;
@@ -75,22 +73,18 @@ export function useDailyQuestEntityReadCompletion({
       }
     };
 
-    const tryFire = () => {
-      if (questFiredRef.current === entityId) return;
-      const remaining = MIN_READ_MS - (Date.now() - mountedAt);
-      if (remaining > 0) {
-        if (pendingTimer == null) {
-          pendingTimer = window.setTimeout(() => {
-            pendingTimer = null;
-            if (thresholdMet) fire();
-          }, remaining);
-        }
-        return;
-      }
-      fire();
-    };
+    // Completion condition is now A OR B:
+    //   A. Player dwells on the article for at least MIN_READ_MS (20s), OR
+    //   B. Player reaches the relationship section / ~88 % scroll threshold.
+    // Whichever fires first completes the quest.
 
-    // Primary: relationship-section intersection.
+    // A) Dwell timer — unconditional after MIN_READ_MS.
+    dwellTimer = window.setTimeout(() => {
+      dwellTimer = null;
+      fire();
+    }, MIN_READ_MS);
+
+    // B1) Relationship-section intersection.
     let observer: IntersectionObserver | null = null;
     const el = relationshipSectionRef.current;
     if (el && typeof IntersectionObserver !== "undefined") {
@@ -98,8 +92,7 @@ export function useDailyQuestEntityReadCompletion({
         (entries) => {
           for (const en of entries) {
             if (en.isIntersecting) {
-              thresholdMet = true;
-              tryFire();
+              fire();
               observer?.disconnect();
               break;
             }
@@ -110,15 +103,14 @@ export function useDailyQuestEntityReadCompletion({
       observer.observe(el);
     }
 
-    // Fallback: ≥ 88 % of the document scrolled.
+    // B2) Fallback: ≥ 88 % of the document scrolled.
     const onScroll = () => {
       if (questFiredRef.current === entityId) return;
       const doc = document.documentElement;
       const scrolled = window.scrollY + window.innerHeight;
       const total = doc.scrollHeight;
       if (total > 0 && scrolled / total >= 0.88) {
-        thresholdMet = true;
-        tryFire();
+        fire();
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -129,7 +121,7 @@ export function useDailyQuestEntityReadCompletion({
       cancelled = true;
       observer?.disconnect();
       window.removeEventListener("scroll", onScroll);
-      if (pendingTimer != null) window.clearTimeout(pendingTimer);
+      if (dwellTimer != null) window.clearTimeout(dwellTimer);
     };
   }, [entityId, userKey, relationshipSectionRef]);
 }
