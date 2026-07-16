@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import {
   selectDailyChallenges,
+  listPublishedGames,
   fetchMyCompletedGameIds,
   fetchMyDailyCompletedGameIds,
   type GameRow,
@@ -14,6 +15,8 @@ import { MODE_LABELS_AR, type GameMode } from "@/lib/games/types";
 import { extractMuseumUnlocks } from "@/lib/games/museumUnlocks";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { Reveal, Stagger } from "@/components/motion/MotionPrimitives";
+import { supabase } from "@/integrations/supabase/client";
+import { localDateKey } from "@/lib/daily-quest";
 
 const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   crossword: Feather,
