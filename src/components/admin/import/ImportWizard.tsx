@@ -201,8 +201,27 @@ export function ImportWizard({ engine }: WizardProps) {
   const filteredRows = useMemo(() => {
     if (filter === "all") return rows;
     if (filter === "warnings") return rows.filter((r) => r.issues.some((i) => i.severity === "warning"));
+    if (filter === "publish_ready") return rows.filter((r) => r.quality?.label === "publish_ready" || r.quality?.label === "publish_with_notes");
+    if (filter === "needs_content") return rows.filter((r) => r.quality?.label === "needs_content" || r.quality?.label === "needs_review");
+    if (filter === "no_sources") return rows.filter((r) => r.quality?.sourceStatus === "missing");
+    if (filter === "regressions") return rows.filter((r) => !!r.quality?.regression);
     return rows.filter((r) => r.status === filter);
   }, [rows, filter]);
+
+  const qualityStats = useMemo(() => {
+    let publishReady = 0, needsContent = 0, noSources = 0, regressions = 0, sum = 0, n = 0;
+    for (const r of rows) {
+      const q = r.quality;
+      if (!q) continue;
+      n++;
+      sum += q.score;
+      if (q.label === "publish_ready" || q.label === "publish_with_notes") publishReady++;
+      if (q.label === "needs_content" || q.label === "needs_review") needsContent++;
+      if (q.sourceStatus === "missing") noSources++;
+      if (q.regression) regressions++;
+    }
+    return { publishReady, needsContent, noSources, regressions, avg: n ? Math.round(sum / n) : 0, scored: n };
+  }, [rows]);
 
   const setRowOverride = (index: number, action: RowAction | undefined) => {
     setRows((prev) => prev.map((r) => r.index === index ? { ...r, override: action } : r));
