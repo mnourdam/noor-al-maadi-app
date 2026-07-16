@@ -67,7 +67,7 @@ export const rollbackImportBatch = createServerFn({ method: "POST" })
       p_force: data.force ?? false,
     });
     if (error) throw new Error(error.message);
-    return result as { status: string; batch_id: string; rolled?: number; conflicts?: number; missing?: number; items?: unknown[] };
+    return result as Record<string, any>;
   });
 
 const listInput = z.object({
