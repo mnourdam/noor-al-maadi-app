@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useMemo, useRef } from "react";
-import { useDailyQuestEntityReadCompletion } from "@/hooks/useDailyQuestEntityReadCompletion";
+import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
 import { useAccount } from "@/lib/account";
 import {
   ChevronRight,
