@@ -27,9 +27,11 @@ import type {
   Issue,
   PreviewRow,
   RowStatus,
+  RowAction,
   CommitResult,
   Severity,
 } from "@/lib/import/engines";
+import { CANDIDATE_REASON_AR, type DuplicateCandidate } from "@/lib/import/duplicate-detection";
 
 type Step = "upload" | "validate" | "preview" | "approve" | "committing" | "report";
 
