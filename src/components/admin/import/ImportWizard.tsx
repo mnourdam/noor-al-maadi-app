@@ -227,6 +227,28 @@ export function ImportWizard({ engine }: WizardProps) {
     setRows((prev) => prev.map((r) => r.index === index ? { ...r, override: action } : r));
   };
 
+  const setImportAsDraft = (index: number, on: boolean) => {
+    setRows((prev) => prev.map((r) => {
+      if (r.index !== index) return r;
+      // Recompute issues: strip publish-only blockers when draft is on.
+      const nextIssues = r.issues.map((iss) => {
+        if (!on) return iss;
+        if (iss.code === "quality.missing_required" || iss.code === "quality.below_threshold" || iss.code === "quality.sources_missing") {
+          return { ...iss, severity: "warning" as Severity };
+        }
+        return iss;
+      });
+      const wasBlockedByQuality = r.issues.some((i) => i.severity === "blocker" && (i.code?.startsWith("quality.") ?? false));
+      const stillBlocked = nextIssues.some((i) => i.severity === "blocker");
+      return {
+        ...r,
+        importAsDraft: on,
+        issues: nextIssues,
+        status: on && wasBlockedByQuality && !stillBlocked ? (r.override === "update" ? "update" : "new") : r.status,
+      };
+    }));
+  };
+
   const setResolutionAccept = (rowIndex: number, resIndex: number, accepted: boolean) => {
     setRows((prev) => prev.map((r) => {
       if (r.index !== rowIndex || !r.relations) return r;
