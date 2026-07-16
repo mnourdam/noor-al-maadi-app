@@ -380,16 +380,21 @@ ROLLBACK;
 " "STATUS:rolled_back.*TITLE:orig-title"
 
 # --- 15. Rollback conflict after later edit ---
+# We simulate a concurrent edit by running a second transactional import that
+# updates the same row (bumping updated_at). This mirrors what happens in
+# production when another admin/import touches the row between the first
+# import and the rollback attempt — and avoids relying on direct table UPDATE
+# privileges the sandbox test user does not hold.
 run_test "15. rollback conflicts when row edited after import" "
 BEGIN;
 $AUTH_ADMIN
 DO \$\$
-DECLARE r JSONB; batch UUID; v_slug TEXT := 'it-rbc-'||gen_random_uuid(); tid UUID;
+DECLARE r JSONB; batch UUID; v_slug TEXT := 'it-rbc-'||gen_random_uuid();
 BEGIN
   r := public.admin_run_import_batch(
     jsonb_build_object(
       'content_type','encyclopedia',
-      'approved_plan_hash','it-rbc-'||v_slug,
+      'approved_plan_hash','it-rbc-1-'||v_slug,
       'original_payload_hash','p','overwrite',false,'publish',false,
       'items', jsonb_build_array(jsonb_build_object(
         'index',0,'action','new',
@@ -399,8 +404,22 @@ BEGIN
     'commit'
   );
   batch := (r->>'batch_id')::uuid;
-  -- Simulate a subsequent edit that mutates updated_at
-  UPDATE public.encyclopedia_entities SET title='edited-by-someone', updated_at=now()+interval '1 minute' WHERE slug = v_slug;
+  -- Wait so the follow-up update produces a strictly later updated_at.
+  PERFORM pg_sleep(0.05);
+  -- Simulate a concurrent edit via a second transactional import.
+  PERFORM public.admin_run_import_batch(
+    jsonb_build_object(
+      'content_type','encyclopedia',
+      'approved_plan_hash','it-rbc-2-'||v_slug,
+      'original_payload_hash','p','overwrite',true,'publish',false,
+      'items', jsonb_build_array(jsonb_build_object(
+        'index',0,'action','update',
+        'target_key', jsonb_build_object('entity_type','figure','slug',v_slug),
+        'data', jsonb_build_object('entity_type','figure','slug',v_slug,'title','edited-elsewhere','body','{}','metadata','{}','enabled',true)
+      ))
+    ),
+    'commit'
+  );
   r := public.admin_rollback_import_batch(batch, false);
   RAISE NOTICE 'STATUS:%', r->>'status';
   RAISE NOTICE 'CONFLICTS:%', r->>'conflicts';
