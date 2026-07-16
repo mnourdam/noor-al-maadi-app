@@ -197,6 +197,7 @@ export function ImportWizard({ engine }: WizardProps) {
       fileName: null,
       originalPayloadHash: stableHash(raw),
       overwrite, publish,
+      allowRemovals: engine.key === "investigations" ? allowRemovals : false,
     });
   };
 
