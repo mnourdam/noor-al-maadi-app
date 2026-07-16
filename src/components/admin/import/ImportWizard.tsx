@@ -67,6 +67,8 @@ export function ImportWizard({ engine }: WizardProps) {
   const [overwrite, setOverwrite] = useState(false);
   const [publish, setPublish] = useState(false);
   const [autoRepair, setAutoRepair] = useState(true);
+  // Phase 5.5b: destructive-removal opt-in (used by investigations RPC).
+  const [allowRemovals, setAllowRemovals] = useState(false);
   const [ackWarnings, setAckWarnings] = useState(false);
   const [result, setResult] = useState<CommitResult | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
