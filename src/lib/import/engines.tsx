@@ -605,7 +605,8 @@ export function makeCampaignEngine(meta: {
         integrity.push(runCampaignIntegrity(enriched));
       }
 
-      return { inserted, updated, skipped, failed, errors: errors.slice(0, 10), integrity };
+      const relationSummary = summarizeRelations(rows.map((r) => r.relations));
+      return { inserted, updated, skipped, failed, errors: errors.slice(0, 10), integrity, relationSummary };
     },
   };
 }
