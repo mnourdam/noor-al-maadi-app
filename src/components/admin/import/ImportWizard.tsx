@@ -183,13 +183,67 @@ export function ImportWizard({ engine }: WizardProps) {
     if (idx > 0) setStep(STEP_ORDER[idx - 1]);
   };
 
+  const buildPlanForCurrent = () => {
+    return buildEncyclopediaPlan(rows, {
+      contentType: "encyclopedia",
+      fileName: null,
+      originalPayloadHash: stableHash(raw),
+      overwrite, publish,
+    });
+  };
+
+  const runDryRun = async () => {
+    setCommitError(null);
+    setDryRunReport(null);
+    setDryRunning(true);
+    try {
+      const plan = buildPlanForCurrent();
+      const res = await runImportBatch({ data: { plan, mode: "dry_run" } });
+      setDryRunReport(res);
+      setDryRunHash(plan.approved_plan_hash);
+    } catch (e) {
+      setCommitError((e as Error).message);
+    } finally {
+      setDryRunning(false);
+    }
+  };
+
   const runCommit = async () => {
     setCommitError(null);
     setResult(null);
+    setCommittedBatchId(null);
     setStep("committing");
     try {
-      const r = await engine.commit(rows, { overwrite, publish, autoRepair });
-      setResult(r);
+      if (supportsTransactional) {
+        setCommittingStage("جاري تجهيز خطة التنفيذ…");
+        const plan = buildPlanForCurrent();
+        // Staleness check: dry-run must match the approved plan hash.
+        if (!dryRunHash || dryRunHash !== plan.approved_plan_hash) {
+          throw new Error("خطة الاستيراد تغيّرت منذ آخر تشغيل تجريبي. شغّل التشغيل التجريبي مجدداً.");
+        }
+        setCommittingStage("جاري تنفيذ الاستيراد داخل عملية واحدة…");
+        const res = await runImportBatch({ data: { plan, mode: "commit" } });
+        setCommittingStage("جاري إنشاء سجل العملية…");
+        if (res.status === "failed") {
+          throw new Error(res.error || "فشل الاستيراد وتم التراجع عن جميع التغييرات.");
+        }
+        if (res.status === "already_committed") {
+          setCommitError("تم تنفيذ هذه الخطة مسبقاً — تحقق من سجل الاستيراد.");
+          setStep("approve");
+          return;
+        }
+        setCommittedBatchId(res.batch_id ?? null);
+        setResult({
+          inserted: res.created ?? 0,
+          updated: res.updated ?? 0,
+          skipped: res.skipped ?? 0,
+          failed: res.failed ?? 0,
+          errors: [],
+        });
+      } else {
+        const r = await engine.commit(rows, { overwrite, publish, autoRepair });
+        setResult(r);
+      }
       setStep("report");
     } catch (e) {
       setCommitError((e as Error).message);
