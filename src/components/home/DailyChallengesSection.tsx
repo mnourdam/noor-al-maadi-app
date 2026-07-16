@@ -275,7 +275,7 @@ export function DailyChallengesSection() {
   }, [androidStable]);
 
   if (picks === null) return null;
-  if (!picks.length) return null;
+  if (!picks.length && !allCompleted) return null;
 
   return (
     <section className="mt-6 px-5 sm:px-6 md:px-8">
@@ -309,9 +309,26 @@ export function DailyChallengesSection() {
               </div>
               <h3 className="font-display mt-3 text-base font-bold text-emerald-50">أحسنت!</h3>
               <p className="mt-1 text-[12px] leading-6 text-white/70">
-                لقد أنهيت تحديات اليوم.
+                لقد أنهيت جميع التحديات المتاحة.
                 <br />
-                عد غدًا لاكتشاف تحديين جديدين.
+                ترقّب تحديات جديدة قريبًا.
+              </p>
+            </div>
+          </div>
+        </Reveal>
+      ) : todaysPicksDone ? (
+        <Reveal>
+          <div className="parchment-dark relative overflow-hidden rounded-3xl border border-emerald-400/30 p-5 text-center shadow-elegant motion-unlock-glow">
+            <div className="arabesque-layer opacity-50" />
+            <div className="relative">
+              <div className="mx-auto grid size-12 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
+                <Check className="size-6 text-emerald-300" strokeWidth={2} />
+              </div>
+              <h3 className="font-display mt-3 text-base font-bold text-emerald-50">
+                لقد أتممت تحديات اليوم.
+              </h3>
+              <p className="mt-1 text-[12px] leading-6 text-white/70">
+                عد غدًا لاكتشاف تحديات جديدة.
               </p>
             </div>
           </div>
