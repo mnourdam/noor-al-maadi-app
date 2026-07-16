@@ -422,11 +422,42 @@ function findCampaignRow(id: string): { data: any } | null {
   return rows.find((r) => r?.data?.id === id) ?? null;
 }
 
+/**
+ * Build a case-insensitive completion set that accepts either legacy
+ * investigation IDs or canonical slugs. Legacy id → slug pairs are read
+ * from the offline snapshot so completions written pre-normalization
+ * still count.
+ */
+function buildInvestigationDoneSet(entries: string[]): Set<string> {
+  const invs = localInvestigations() as Array<{ id?: string; slug?: string }>;
+  const idToSlug = new Map<string, string>();
+  const slugToId = new Map<string, string>();
+  for (const inv of invs) {
+    if (inv?.id && inv?.slug) {
+      idToSlug.set(String(inv.id), String(inv.slug));
+      slugToId.set(String(inv.slug), String(inv.id));
+    }
+  }
+  const out = new Set<string>();
+  for (const raw of entries) {
+    if (typeof raw !== "string" || !raw) continue;
+    out.add(raw);
+    const mappedSlug = idToSlug.get(raw);
+    if (mappedSlug) out.add(mappedSlug);
+    const mappedId = slugToId.get(raw);
+    if (mappedId) out.add(mappedId);
+  }
+  return out;
+}
+
 export function computeWorldProgress(
   worldSlug: string,
   inputs: {
     index: Map<string, WorldEntityIndex>;
+    /** Slugs the player has *read* — encyclopedia discovery ledger. */
     discovered: Set<string>;
+    /** Slugs the player *owns* — user_collection museum set. */
+    museum: Set<string>;
     cloudCampaign: Map<string, Set<string>>;
     investigationsCompleted: string[];
   },
@@ -443,16 +474,16 @@ export function computeWorldProgress(
   };
   if (!idx) return empty;
 
-  // Entities
+  // Entities (discovery = read)
   const total = idx.entities.length;
   let discovered = 0;
   for (const e of idx.entities) if (inputs.discovered.has(e.slug.toLowerCase())) discovered++;
 
-  // Museum (artifact subset)
+  // Museum (artifact subset, ownership only — user_collection)
   const artifacts = idx.byBucket.artifact;
   const artifactTotal = artifacts.length;
   let artifactDiscovered = 0;
-  for (const e of artifacts) if (inputs.discovered.has(e.slug.toLowerCase())) artifactDiscovered++;
+  for (const e of artifacts) if (inputs.museum.has(e.slug.toLowerCase())) artifactDiscovered++;
 
   // Campaigns
   const campTotal = idx.campaignIds.length;
