@@ -103,6 +103,9 @@ export function ImportWizard({ engine }: WizardProps) {
     setRows(parsed.rows);
     setTopIssues(parsed.issues);
     setAckWarnings(false);
+    // Any change to the parsed batch invalidates a prior dry-run.
+    setDryRunReport(null);
+    setDryRunHash(null);
   }, [parsed]);
 
   const counts = useMemo(() => {
