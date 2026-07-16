@@ -145,6 +145,29 @@ export interface ImportConfig<T> {
   overwriteFields?: string[];
 }
 
+// ---------- Phase 3 helpers: relation report → row issues ----------
+
+/**
+ * Convert a RelationReport into row-level Issue entries. Missing/broken
+ * refs surface as warnings by default (never blockers) so admins can still
+ * import and repair later; batch-level errors (dup ids, cycles) become
+ * blockers as they indicate structural problems.
+ */
+export function relationsToIssues(rep: RelationReport, itemIndex: number): Issue[] {
+  const out: Issue[] = [];
+  for (const b of rep.batchIssues) {
+    out.push({ severity: b.level === "error" ? "blocker" : "warning", message: b.message, itemIndex, path: b.path, code: "batch.integrity" });
+  }
+  const c = rep.counts;
+  if (c.missing > 0) out.push({ severity: "warning", message: `مراجع مفقودة: ${c.missing}`, itemIndex, code: "rel.missing" });
+  if (c.ambiguous > 0) out.push({ severity: "warning", message: `مراجع غامضة: ${c.ambiguous}`, itemIndex, code: "rel.ambiguous" });
+  if (c.disabled + c.archived > 0) out.push({ severity: "warning", message: `مراجع معطّلة/مؤرشفة: ${c.disabled + c.archived}`, itemIndex, code: "rel.stale" });
+  if (c.remapped > 0) out.push({ severity: "info", message: `مراجع بحاجة لإعادة توجيه: ${c.remapped}`, itemIndex, code: "rel.remap" });
+  if (c.type_mismatch > 0) out.push({ severity: "warning", message: `نوع لا يطابق: ${c.type_mismatch}`, itemIndex, code: "rel.type_mismatch" });
+  if (rep.duplicates.size > 0) out.push({ severity: "info", message: `مراجع مكرّرة: ${rep.duplicates.size}`, itemIndex, code: "rel.duplicate" });
+  return out;
+}
+
 // ---------- Adapter: legacy ImportConfig → ImportEngine ----------
 
 export function makeLegacyEngine<T>(config: ImportConfig<T>, meta: {
