@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
-import { useDailyQuestEntityReadCompletion } from "@/hooks/useDailyQuestEntityReadCompletion";
+import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
 import { useAccount } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
