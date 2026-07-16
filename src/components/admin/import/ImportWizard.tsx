@@ -895,3 +895,126 @@ function ActionBtn({ label, v, cur, onClick, tone }: {
     </button>
   );
 }
+
+// ============================================================
+// Phase 3 — Relations panel: per-row report with old→new arrow
+// and per-suggestion accept toggle. Reads RelationReport directly
+// from the row; toggling calls back into the wizard state.
+// ============================================================
+import type { RelationReport, RelationResolution } from "@/lib/import/relations-report";
+
+const STATUS_TONE: Record<RelationResolution["status"], string> = {
+  valid: "text-emerald-300",
+  remapped: "text-amber-300",
+  type_mismatch: "text-amber-300",
+  archived: "text-orange-300",
+  disabled: "text-orange-300",
+  ambiguous: "text-amber-300",
+  missing: "text-red-300",
+};
+
+const STATUS_LABEL: Record<RelationResolution["status"], string> = {
+  valid: "صالح",
+  remapped: "إعادة توجيه",
+  type_mismatch: "نوع مختلف",
+  archived: "مؤرشف",
+  disabled: "معطّل",
+  ambiguous: "غامض",
+  missing: "مفقود",
+};
+
+function RelationsPanel({ row, onToggle }: {
+  row: PreviewRow;
+  onToggle: (resolutionIndex: number, accepted: boolean) => void;
+}) {
+  const rep = row.relations!;
+  const [open, setOpen] = useState(false);
+  const counts = rep.counts;
+  const total = rep.resolutions.length;
+  const summary =
+    total === 0
+      ? "لا توجد مراجع"
+      : `${counts.valid} ✓ · ${counts.remapped + counts.type_mismatch + counts.archived + counts.disabled + counts.ambiguous} ⚠ · ${counts.missing} ✖`;
+
+  return (
+    <div className="mt-2 rounded-md border border-slate-700/60 bg-slate-950/40 p-2 text-[11px]">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 text-right"
+      >
+        <span className="font-semibold text-slate-200">المراجع · {summary}</span>
+        <span className="text-slate-500">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          {rep.batchIssues.length > 0 && (
+            <ul className="space-y-0.5 rounded border border-red-500/30 bg-red-500/5 p-2 text-red-200">
+              {rep.batchIssues.map((b, i) => (
+                <li key={i}>{b.level === "error" ? "✖" : "⚠"} {b.message}</li>
+              ))}
+            </ul>
+          )}
+          {rep.resolutions.length === 0 && rep.batchIssues.length === 0 && (
+            <p className="text-slate-500">لا توجد مراجع للتحقّق منها.</p>
+          )}
+          {rep.resolutions.length > 0 && (
+            <ul className="divide-y divide-slate-800 rounded border border-slate-800">
+              {rep.resolutions.map((res, i) => (
+                <ResolutionRow key={i} res={res} accepted={!!rep.accepted[i]} onToggle={(v) => onToggle(i, v)} />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResolutionRow({ res, accepted, onToggle }: {
+  res: RelationResolution;
+  accepted: boolean;
+  onToggle: (v: boolean) => void;
+}) {
+  return (
+    <li className="flex flex-wrap items-start gap-2 p-1.5">
+      <span className={`shrink-0 rounded border border-slate-700 px-1.5 py-0.5 text-[10px] ${STATUS_TONE[res.status]}`}>
+        {STATUS_LABEL[res.status]}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-slate-400">{res.ref.path}</div>
+        <div className="flex flex-wrap items-center gap-1 text-slate-200">
+          <code className="rounded bg-slate-800/60 px-1 font-mono text-[10px]">{res.ref.raw}</code>
+          {res.suggestRewrite && res.rewriteTo && (
+            <>
+              <span className="text-slate-500">←</span>
+              <code className="rounded bg-emerald-500/10 px-1 font-mono text-[10px] text-emerald-200">{res.rewriteTo}</code>
+            </>
+          )}
+          {res.target && !res.suggestRewrite && res.status === "valid" && (
+            <span className="text-slate-500">→ {res.target.title || res.target.slug}</span>
+          )}
+        </div>
+        {res.note && <div className="mt-0.5 text-slate-500">{res.note}</div>}
+        {res.candidates && res.candidates.length > 0 && !res.target && (
+          <div className="mt-0.5 flex flex-wrap gap-1 text-slate-500">
+            <span>مرشحون:</span>
+            {res.candidates.slice(0, 4).map((c) => (
+              <span key={c.id} className="rounded bg-slate-800/40 px-1 text-[10px]">{c.title || c.slug}</span>
+            ))}
+          </div>
+        )}
+      </div>
+      {res.suggestRewrite && (
+        <label className="inline-flex items-center gap-1 text-[10px] text-slate-300">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="accent-amber-500"
+          />
+          تطبيق الإصلاح
+        </label>
+      )}
+    </li>
+  );
+}
