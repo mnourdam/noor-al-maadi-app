@@ -123,6 +123,8 @@ export function buildTransactionalPlan(rows: PreviewRow[], meta: {
   publish: boolean;
   /** Phase 5.5b/c: explicit approval to drop existing nested step/chapter IDs on update. */
   allowRemovals?: boolean;
+  /** Phase 5 close-out: explicit approval to un-archive campaigns on publish import. */
+  allowUnarchive?: boolean;
 }): ApprovedPlan {
   const items: PlanItem[] = [];
   for (const r of rows) {
@@ -160,6 +162,7 @@ export function buildTransactionalPlan(rows: PreviewRow[], meta: {
     contentType: meta.contentType,
     items,
     allowRemovals: !!meta.allowRemovals,
+    allowUnarchive: !!meta.allowUnarchive,
   });
   const planHash = stableHash(canonical);
   return {
@@ -172,6 +175,7 @@ export function buildTransactionalPlan(rows: PreviewRow[], meta: {
     metadata: {
       row_count: rows.length,
       allow_removals: !!meta.allowRemovals,
+      allow_unarchive: !!meta.allowUnarchive,
     },
     items,
   };

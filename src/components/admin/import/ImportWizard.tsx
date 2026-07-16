@@ -35,6 +35,7 @@ import { CANDIDATE_REASON_AR, type DuplicateCandidate } from "@/lib/import/dupli
 import { QUALITY_LABEL_AR, SOURCE_STATUS_AR, type QualityReport, type QualityLabel } from "@/lib/import/quality";
 import { buildTransactionalPlan, stableHash, isTransactionalContentType } from "@/lib/import/plan";
 import { runImportBatch, runCampaignBatch } from "@/lib/import/import-batch.functions";
+import { notifyContentInvalidated } from "@/lib/adminCampaignsApi";
 import { Link } from "@tanstack/react-router";
 import { FlaskConical, ScrollText, ShieldCheck, Database, Download } from "lucide-react";
 
@@ -69,6 +70,8 @@ export function ImportWizard({ engine }: WizardProps) {
   const [autoRepair, setAutoRepair] = useState(true);
   // Phase 5.5b: destructive-removal opt-in (used by investigations RPC).
   const [allowRemovals, setAllowRemovals] = useState(false);
+  // Phase 5 close-out: explicit opt-in to un-archive a campaign via publish import.
+  const [allowUnarchive, setAllowUnarchive] = useState(false);
   const [ackWarnings, setAckWarnings] = useState(false);
   const [result, setResult] = useState<CommitResult | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
@@ -198,6 +201,7 @@ export function ImportWizard({ engine }: WizardProps) {
       originalPayloadHash: stableHash(raw),
       overwrite, publish,
       allowRemovals: (engine.key === "investigations" || engine.key === "campaigns") ? allowRemovals : false,
+      allowUnarchive: engine.key === "campaigns" ? allowUnarchive : false,
     });
   };
 
@@ -250,6 +254,19 @@ export function ImportWizard({ engine }: WizardProps) {
           failed: res.failed ?? 0,
           errors: [],
         });
+        // Fix 5: emit the same content-invalidation signal the editor uses,
+        // so /admin/campaigns, /admin/campaign-order and open player tabs
+        // (via BroadcastChannel) refetch immediately after a campaign import.
+        if (engine.key === "campaigns") {
+          const items = Array.isArray(res.items) ? (res.items as any[]) : [];
+          for (const it of items) {
+            const id = it?.campaign_id;
+            const result = it?.result;
+            if (typeof id === "string" && id && (result === "inserted" || result === "updated")) {
+              notifyContentInvalidated(id, publish ? "publish" : "draft");
+            }
+          }
+        }
       } else {
         // Phase 5.5c — every supported type is transactional. Anything else
         // is fail-closed to prevent legacy row-by-row browser writes.
@@ -715,6 +732,17 @@ export function ImportWizard({ engine }: WizardProps) {
                     {engine.key === "investigations"
                       ? "السماح بحذف أسئلة موجودة (مدمّر)"
                       : "السماح بحذف فصول تحتوي تقدّم لاعبين (مدمّر)"}
+                  </label>
+                )}
+                {engine.key === "campaigns" && (
+                  <label className="inline-flex items-center gap-2 rounded-md border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-100">
+                    <input
+                      type="checkbox"
+                      checked={allowUnarchive}
+                      onChange={(e) => { setAllowUnarchive(e.target.checked); setDryRunHash(null); }}
+                      className="accent-rose-500"
+                    />
+                    السماح بإلغاء أرشفة الحملات عند النشر
                   </label>
                 )}
               </div>
