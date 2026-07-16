@@ -32,19 +32,22 @@ export function isSuppressingPush() { return suppressPush; }
 // ------------------------- Pull -------------------------
 
 export async function pullCampaignsFromCloud(): Promise<Campaign[] | null> {
+  // Read through the public safe view. Draft-only rows are intentionally
+  // absent; the local admin UIs load full rows via admin_get_campaign_full.
   const { data, error } = await supabase
-    .from("admin_campaigns")
+    .from("campaigns_public" as any)
     .select("id, data")
     .order("updated_at", { ascending: false });
   if (error) {
     console.warn("[cloudSync] pull campaigns failed:", error.message);
     return null;
   }
-  const rows = (data ?? []).map(r => r.data as unknown as Campaign);
+  const rows = ((data as any[]) ?? []).map(r => r.data as unknown as Campaign);
   suppressPush = true;
   try { saveCampaigns(rows); } finally { suppressPush = false; }
   return rows;
 }
+
 
 export async function pullRegistryFromCloud(): Promise<ContentRegistryItem[] | null> {
   const { data, error } = await supabase
