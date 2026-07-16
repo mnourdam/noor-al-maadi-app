@@ -33,10 +33,10 @@ import type {
 } from "@/lib/import/engines";
 import { CANDIDATE_REASON_AR, type DuplicateCandidate } from "@/lib/import/duplicate-detection";
 import { QUALITY_LABEL_AR, SOURCE_STATUS_AR, type QualityReport, type QualityLabel } from "@/lib/import/quality";
-import { buildEncyclopediaPlan, stableHash } from "@/lib/import/plan";
+import { buildTransactionalPlan, stableHash, isTransactionalContentType } from "@/lib/import/plan";
 import { runImportBatch } from "@/lib/import/import-batch.functions";
 import { Link } from "@tanstack/react-router";
-import { FlaskConical, ScrollText, ShieldCheck, Database } from "lucide-react";
+import { FlaskConical, ScrollText, ShieldCheck, Database, Download } from "lucide-react";
 
 type Step = "upload" | "validate" | "preview" | "approve" | "committing" | "report";
 
@@ -77,7 +77,7 @@ export function ImportWizard({ engine }: WizardProps) {
   const [dryRunning, setDryRunning] = useState(false);
   const [committingStage, setCommittingStage] = useState<string>("");
   const [committedBatchId, setCommittedBatchId] = useState<string | null>(null);
-  const supportsTransactional = engine.key === "encyclopedia";
+  const supportsTransactional = isTransactionalContentType(engine.key);
 
   useEffect(() => {
     if (engineKey !== engine.key) {
@@ -187,8 +187,11 @@ export function ImportWizard({ engine }: WizardProps) {
   };
 
   const buildPlanForCurrent = () => {
-    return buildEncyclopediaPlan(rows, {
-      contentType: "encyclopedia",
+    if (!isTransactionalContentType(engine.key)) {
+      throw new Error(`نوع المحتوى «${engine.key}» لا يدعم الاستيراد المعاملي بعد.`);
+    }
+    return buildTransactionalPlan(rows, {
+      contentType: engine.key,
       fileName: null,
       originalPayloadHash: stableHash(raw),
       overwrite, publish,
@@ -244,6 +247,13 @@ export function ImportWizard({ engine }: WizardProps) {
           errors: [],
         });
       } else {
+        // Phase 5.5a — fail closed. The only remaining non-transactional
+        // type is `campaigns`, which Phase 5.5c will move to a dedicated
+        // RPC. Never silently fall back to row-by-row writes for any
+        // type that should be transactional.
+        if (engine.key !== "campaigns") {
+          throw new Error("لا يتوفر مسار استيراد آمن لهذا النوع — تواصل مع فريق التطوير.");
+        }
         const r = await engine.commit(rows, { overwrite, publish, autoRepair });
         setResult(r);
       }
@@ -329,6 +339,105 @@ export function ImportWizard({ engine }: WizardProps) {
       };
     }));
   };
+
+  // -------- Phase 5.5a — Dry Run export (JSON + CSV) --------
+  const buildDryRunExportRows = () => {
+    if (!dryRunReport) return [];
+    const itemsById = new Map<number, any>();
+    for (const it of (dryRunReport.items ?? []) as any[]) {
+      const idx = typeof it?.index === "number" ? it.index : Number(it?.index);
+      if (Number.isFinite(idx)) itemsById.set(idx, it);
+    }
+    return rows.map((r) => {
+      const it = itemsById.get(r.index) ?? {};
+      const action: string = r.override ?? (r.status === "blocked" ? "skip" : r.status);
+      const blockers = r.issues.filter((i) => i.severity === "blocker").map((i) => i.message);
+      const warnings = r.issues.filter((i) => i.severity === "warning").map((i) => i.message);
+      const acceptedRepairs = r.relations
+        ? Object.entries(r.relations.accepted).filter(([, v]) => v).length
+        : 0;
+      const relationRemaps = (r.relations?.counts?.remapped ?? 0);
+      const projected =
+        it?.result ??
+        (action === "new" ? "would_insert"
+          : action === "update" ? "would_update"
+          : action === "alias" ? "would_alias"
+          : "would_skip");
+      return {
+        index: r.index,
+        title: r.title,
+        content_type: engine.key,
+        classification: r.status,
+        action,
+        target_id: it?.target_record_id ?? r.existingId ?? null,
+        quality_score: r.quality?.score ?? null,
+        quality_label: r.quality?.label ?? null,
+        blockers,
+        warnings,
+        accepted_repairs: acceptedRepairs,
+        relation_remaps: relationRemaps,
+        projected_result: projected,
+        error: it?.error ?? null,
+      };
+    });
+  };
+
+  const triggerDownload = (name: string, blob: Blob) => {
+    if (typeof window === "undefined") return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const exportDryRunJSON = () => {
+    if (!dryRunReport) return;
+    const payload = {
+      batch_id: dryRunReport.batch_id ?? null,
+      approved_plan_hash: dryRunHash,
+      content_type: engine.key,
+      mode: "dry_run",
+      totals: {
+        created: dryRunReport.created ?? 0,
+        updated: dryRunReport.updated ?? 0,
+        skipped: dryRunReport.skipped ?? 0,
+        failed: dryRunReport.failed ?? 0,
+        conflicts: dryRunReport.conflicts ?? 0,
+      },
+      items: buildDryRunExportRows(),
+    };
+    triggerDownload(
+      `dry-run-${engine.key}-${(dryRunHash ?? "unknown").slice(0, 12)}.json`,
+      new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
+    );
+  };
+
+  const exportDryRunCSV = () => {
+    if (!dryRunReport) return;
+    const items = buildDryRunExportRows();
+    const cols = [
+      "index", "title", "content_type", "classification", "action",
+      "target_id", "quality_score", "quality_label",
+      "blockers", "warnings",
+      "accepted_repairs", "relation_remaps", "projected_result", "error",
+    ] as const;
+    const esc = (v: unknown): string => {
+      if (v == null) return "";
+      const s = Array.isArray(v) ? v.join(" | ") : String(v);
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const header = cols.join(",");
+    const lines = items.map((it) => cols.map((c) => esc((it as any)[c])).join(","));
+    // Prepend UTF-8 BOM so Excel opens Arabic correctly.
+    const csv = "\uFEFF" + [header, ...lines].join("\r\n") + "\r\n";
+    triggerDownload(
+      `dry-run-${engine.key}-${(dryRunHash ?? "unknown").slice(0, 12)}.csv`,
+      new Blob([csv], { type: "text/csv;charset=utf-8" }),
+    );
+  };
+
 
   return (
     <div className="space-y-6">
@@ -641,7 +750,23 @@ export function ImportWizard({ engine }: WizardProps) {
                       <li>سيفشل: {dryRunReport.failed ?? 0}</li>
                       {dryRunReport.conflicts ? <li className="text-amber-300">تعارضات إصدار: {dryRunReport.conflicts}</li> : null}
                     </ul>
-                    <div className="mt-1 text-slate-400">Hash: <span className="font-mono">{dryRunHash?.slice(0, 12)}</span></div>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-slate-400">Hash: <span className="font-mono">{dryRunHash?.slice(0, 12)}</span></div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={exportDryRunJSON}
+                          className="inline-flex items-center gap-1 rounded border border-sky-400/50 bg-slate-900 px-2 py-1 text-[11px] text-sky-100 hover:border-sky-300"
+                        >
+                          <Download className="h-3 w-3" /> تصدير JSON
+                        </button>
+                        <button
+                          onClick={exportDryRunCSV}
+                          className="inline-flex items-center gap-1 rounded border border-sky-400/50 bg-slate-900 px-2 py-1 text-[11px] text-sky-100 hover:border-sky-300"
+                        >
+                          <Download className="h-3 w-3" /> تصدير CSV
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

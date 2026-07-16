@@ -90,6 +90,21 @@ export interface PreviewRow {
   importAsDraft?: boolean;
   /** Phase 4 — admin note when overriding quality/regression warnings. */
   qualityAckNote?: string;
+  /**
+   * Phase 5.5a — DB primary-key of the matched existing row, when
+   * classify() found one. Simple content types (daily_facts,
+   * today_in_history_events, notifications, investigations) need
+   * this so the transactional RPC can target the row by id.
+   */
+  existingId?: string;
+  /**
+   * Phase 5.5a — value captured from the matched row at preview time
+   * that the RPC compares against the current DB row to detect
+   * concurrent edits. `updated_at` when the table has it, else
+   * `created_at`. NULL for tables/rows without either — the RPC
+   * skips the staleness check in that case.
+   */
+  existingVersionSignal?: string | null;
 }
 
 export interface CommitResult {
@@ -342,7 +357,12 @@ export function makeLegacyEngine<T>(config: ImportConfig<T>, meta: {
       const eligible = rows.filter((r) => r.status !== "blocked");
       if (eligible.length === 0) return rows;
       const filter = config.buildDedupeFilter(eligible.map((r) => r.data as T));
-      let q = supabase.from(config.table as any).select(config.dedupeColumns.join(","));
+      // Phase 5.5a — always include id + timestamps so the transactional
+      // RPC can target the matched row by id and detect stale updates.
+      const selectCols = Array.from(new Set([
+        "id", "updated_at", "created_at", ...config.dedupeColumns,
+      ])).join(",");
+      let q = supabase.from(config.table as any).select(selectCols);
       for (const [col, vals] of Object.entries(filter)) {
         q = q.in(col, vals as any[]);
       }
@@ -360,15 +380,26 @@ export function makeLegacyEngine<T>(config: ImportConfig<T>, meta: {
           seen.add(row.key);
           const match = existing.find((e) => config.matchExisting(e, row.data as T));
           if (!match) out = { ...row, status: "new" as RowStatus };
-          else if (options.overwrite && config.allowOverwrite) out = { ...row, status: "update" as RowStatus };
-          else out = {
-            ...row,
-            status: "skip" as RowStatus,
-            issues: [
-              ...row.issues,
-              { severity: "info", message: "موجود مسبقاً — سيُتخطّى (فعّل الاستبدال لتحديثه).", itemIndex: row.index, code: "existing.skip" },
-            ],
-          };
+          else {
+            const versionSignal: string | null =
+              (typeof match.updated_at === "string" && match.updated_at) ||
+              (typeof match.created_at === "string" && match.created_at) ||
+              null;
+            const withMatch: PreviewRow = {
+              ...row,
+              existingId: typeof match.id === "string" ? match.id : row.existingId,
+              existingVersionSignal: versionSignal,
+            };
+            if (options.overwrite && config.allowOverwrite) out = { ...withMatch, status: "update" as RowStatus };
+            else out = {
+              ...withMatch,
+              status: "skip" as RowStatus,
+              issues: [
+                ...row.issues,
+                { severity: "info", message: "موجود مسبقاً — سيُتخطّى (فعّل الاستبدال لتحديثه).", itemIndex: row.index, code: "existing.skip" },
+              ],
+            };
+          }
         }
         if (meta.scoreRow && out.status !== "skip") {
           const q = meta.scoreRow(out.data as T);
