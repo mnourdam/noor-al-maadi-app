@@ -32,6 +32,7 @@ import type {
   Severity,
 } from "@/lib/import/engines";
 import { CANDIDATE_REASON_AR, type DuplicateCandidate } from "@/lib/import/duplicate-detection";
+import { QUALITY_LABEL_AR, SOURCE_STATUS_AR, type QualityReport, type QualityLabel } from "@/lib/import/quality";
 
 type Step = "upload" | "validate" | "preview" | "approve" | "committing" | "report";
 
