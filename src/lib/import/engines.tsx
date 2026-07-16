@@ -84,6 +84,12 @@ export interface PreviewRow {
   overrideNote?: string;
   /** Phase 3 — relation validation report. */
   relations?: import("./relations-report").RelationReport;
+  /** Phase 4 — content quality report. */
+  quality?: QualityReport;
+  /** Phase 4 — admin flag: import even though publish would fail. */
+  importAsDraft?: boolean;
+  /** Phase 4 — admin note when overriding quality/regression warnings. */
+  qualityAckNote?: string;
 }
 
 export interface CommitResult {
