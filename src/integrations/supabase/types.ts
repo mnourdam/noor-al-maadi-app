@@ -2001,6 +2001,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_campaign_progress_impact: {
+        Args: { v_campaign_id: string; v_incoming: Json }
+        Returns: Json
+      }
       admin_campaign_progress_stats: { Args: { p_id: string }; Returns: Json }
       admin_feedback_stats: { Args: never; Returns: Json }
       admin_import_content_table: { Args: { p_ctype: string }; Returns: string }
@@ -2062,6 +2066,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_merge_campaign_stable_ids: {
+        Args: { v_existing: Json; v_incoming: Json }
+        Returns: Json
+      }
       admin_merge_investigation_stable_ids: {
         Args: { v_before: Json; v_data: Json }
         Returns: Json
@@ -2101,8 +2109,16 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_rollback_campaign_batch: {
+        Args: { p_batch: string; p_force?: boolean }
+        Returns: Json
+      }
       admin_rollback_import_batch: {
         Args: { p_batch: string; p_force?: boolean }
+        Returns: Json
+      }
+      admin_run_campaign_batch: {
+        Args: { p_mode: string; plan: Json }
         Returns: Json
       }
       admin_run_import_batch: {
@@ -2127,6 +2143,7 @@ export type Database = {
         Returns: Json
       }
       admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
+      admin_validate_campaign_payload: { Args: { v_data: Json }; Returns: Json }
       admin_validate_investigation_payload: {
         Args: { v_allow_removals: boolean; v_before: Json; v_data: Json }
         Returns: undefined

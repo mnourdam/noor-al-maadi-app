@@ -580,17 +580,20 @@ export function makeCampaignEngine(meta: {
       const ids = eligible.map((r) => (r.data as Campaign).id);
       const { data, error } = await supabase
         .from("admin_campaigns" as any)
-        .select("id")
+        .select("id, updated_at")
         .in("id", ids);
       if (error) throw new Error(error.message);
-      const existingIds = new Set((((data ?? []) as unknown) as { id: string }[]).map((r) => r.id));
+      const existingMap = new Map<string, string>(
+        (((data ?? []) as unknown) as { id: string; updated_at: string }[]).map((r) => [r.id, r.updated_at]),
+      );
       const seen = new Set<string>();
       return rows.map((row) => {
         if (row.status === "blocked") return row;
         if (seen.has(row.key)) return { ...row, status: "skip" as RowStatus };
         seen.add(row.key);
         const c = row.data as Campaign;
-        const exists = existingIds.has(c.id);
+        const existingUpdatedAt = existingMap.get(c.id);
+        const exists = !!existingUpdatedAt;
         const relations = buildCampaignRelationReport(c, options.autoRepair !== false);
         const relationIssues = relationsToIssues(relations, row.index);
         const nextIssues = [...row.issues, ...relationIssues];
@@ -603,7 +606,14 @@ export function makeCampaignEngine(meta: {
         const extraSkipIssue: Issue[] = (!nowBlocked && exists && !options.overwrite)
           ? [{ severity: "info", message: "الحملة موجودة — سيُتخطّى (فعّل الاستبدال للتحديث).", itemIndex: row.index, code: "existing.skip" }]
           : [];
-        let out: PreviewRow = { ...row, status: nextStatus, relations, issues: [...nextIssues, ...extraSkipIssue] };
+        let out: PreviewRow = {
+          ...row,
+          status: nextStatus,
+          relations,
+          issues: [...nextIssues, ...extraSkipIssue],
+          existingId: exists ? c.id : undefined,
+          existingVersionSignal: existingUpdatedAt ?? null,
+        };
         if (out.status !== "skip" && out.status !== "blocked") {
           out = applyQuality(out, scoreCampaign(c as any), { publish: !!options.publish });
         }

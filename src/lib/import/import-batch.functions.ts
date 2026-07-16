@@ -52,6 +52,35 @@ export const runImportBatch = createServerFn({ method: "POST" })
     return result as Record<string, any>;
   });
 
+/** Phase 5.5c — dedicated campaign transactional RPC. Same envelope, different function. */
+export const runCampaignBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => runInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: result, error } = await context.supabase.rpc("admin_run_campaign_batch" as any, {
+      plan: data.plan as any,
+      p_mode: data.mode,
+    });
+    if (error) throw new Error(error.message);
+    return result as Record<string, any>;
+  });
+
+const rollbackCampaignInput = z.object({
+  batch_id: z.string().uuid(),
+  force: z.boolean().optional(),
+});
+export const rollbackCampaignBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => rollbackCampaignInput.parse(input))
+  .handler(async ({ data, context }): Promise<Record<string, any>> => {
+    const { data: result, error } = await context.supabase.rpc("admin_rollback_campaign_batch" as any, {
+      p_batch: data.batch_id,
+      p_force: data.force ?? false,
+    });
+    if (error) throw new Error(error.message);
+    return result as Record<string, any>;
+  });
+
 const rollbackInput = z.object({
   batch_id: z.string().uuid(),
   force: z.boolean().optional(),

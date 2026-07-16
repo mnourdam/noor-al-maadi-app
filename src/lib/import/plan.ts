@@ -90,6 +90,7 @@ export const TRANSACTIONAL_CONTENT_TYPES = [
   "today_in_history_events",
   "notifications",
   "investigations",
+  "campaigns",
 ] as const;
 export type TransactionalContentType = typeof TRANSACTIONAL_CONTENT_TYPES[number];
 
@@ -100,6 +101,12 @@ export function isTransactionalContentType(x: string): x is TransactionalContent
 function simpleTargetKey(row: PreviewRow): Record<string, unknown> | undefined {
   if (!row.existingId) return undefined;
   return { id: row.existingId };
+}
+
+function campaignTargetKey(row: PreviewRow): Record<string, unknown> | undefined {
+  // Campaigns use text ids that live inside the payload itself.
+  const d = (row.data ?? {}) as { id?: string };
+  return d.id ? { id: d.id } : undefined;
 }
 
 /**
@@ -114,7 +121,7 @@ export function buildTransactionalPlan(rows: PreviewRow[], meta: {
   originalPayloadHash: string;
   overwrite: boolean;
   publish: boolean;
-  /** Phase 5.5b: explicit approval to drop existing nested step IDs on update. */
+  /** Phase 5.5b/c: explicit approval to drop existing nested step/chapter IDs on update. */
   allowRemovals?: boolean;
 }): ApprovedPlan {
   const items: PlanItem[] = [];
@@ -128,6 +135,9 @@ export function buildTransactionalPlan(rows: PreviewRow[], meta: {
     if (meta.contentType === "encyclopedia") {
       targetKey = encyclopediaTargetKey(patched);
       versionSignal = versionSignalFromEncyclopedia(r);
+    } else if (meta.contentType === "campaigns") {
+      targetKey = campaignTargetKey(r);
+      versionSignal = r.existingVersionSignal ?? null;
     } else {
       targetKey = simpleTargetKey(r);
       versionSignal = r.existingVersionSignal ?? null;

@@ -34,7 +34,7 @@ import type {
 import { CANDIDATE_REASON_AR, type DuplicateCandidate } from "@/lib/import/duplicate-detection";
 import { QUALITY_LABEL_AR, SOURCE_STATUS_AR, type QualityReport, type QualityLabel } from "@/lib/import/quality";
 import { buildTransactionalPlan, stableHash, isTransactionalContentType } from "@/lib/import/plan";
-import { runImportBatch } from "@/lib/import/import-batch.functions";
+import { runImportBatch, runCampaignBatch } from "@/lib/import/import-batch.functions";
 import { Link } from "@tanstack/react-router";
 import { FlaskConical, ScrollText, ShieldCheck, Database, Download } from "lucide-react";
 
@@ -197,7 +197,7 @@ export function ImportWizard({ engine }: WizardProps) {
       fileName: null,
       originalPayloadHash: stableHash(raw),
       overwrite, publish,
-      allowRemovals: engine.key === "investigations" ? allowRemovals : false,
+      allowRemovals: (engine.key === "investigations" || engine.key === "campaigns") ? allowRemovals : false,
     });
   };
 
@@ -207,7 +207,8 @@ export function ImportWizard({ engine }: WizardProps) {
     setDryRunning(true);
     try {
       const plan = buildPlanForCurrent();
-      const res = await runImportBatch({ data: { plan, mode: "dry_run" } });
+      const rpc = engine.key === "campaigns" ? runCampaignBatch : runImportBatch;
+      const res = await rpc({ data: { plan, mode: "dry_run" } });
       setDryRunReport(res);
       setDryRunHash(plan.approved_plan_hash);
     } catch (e) {
@@ -226,12 +227,12 @@ export function ImportWizard({ engine }: WizardProps) {
       if (supportsTransactional) {
         setCommittingStage("جاري تجهيز خطة التنفيذ…");
         const plan = buildPlanForCurrent();
-        // Staleness check: dry-run must match the approved plan hash.
         if (!dryRunHash || dryRunHash !== plan.approved_plan_hash) {
           throw new Error("خطة الاستيراد تغيّرت منذ آخر تشغيل تجريبي. شغّل التشغيل التجريبي مجدداً.");
         }
         setCommittingStage("جاري تنفيذ الاستيراد داخل عملية واحدة…");
-        const res = await runImportBatch({ data: { plan, mode: "commit" } });
+        const rpc = engine.key === "campaigns" ? runCampaignBatch : runImportBatch;
+        const res = await rpc({ data: { plan, mode: "commit" } });
         setCommittingStage("جاري إنشاء سجل العملية…");
         if (res.status === "failed") {
           throw new Error(res.error || "فشل الاستيراد وتم التراجع عن جميع التغييرات.");
@@ -250,15 +251,9 @@ export function ImportWizard({ engine }: WizardProps) {
           errors: [],
         });
       } else {
-        // Phase 5.5a — fail closed. The only remaining non-transactional
-        // type is `campaigns`, which Phase 5.5c will move to a dedicated
-        // RPC. Never silently fall back to row-by-row writes for any
-        // type that should be transactional.
-        if (engine.key !== "campaigns") {
-          throw new Error("لا يتوفر مسار استيراد آمن لهذا النوع — تواصل مع فريق التطوير.");
-        }
-        const r = await engine.commit(rows, { overwrite, publish, autoRepair });
-        setResult(r);
+        // Phase 5.5c — every supported type is transactional. Anything else
+        // is fail-closed to prevent legacy row-by-row browser writes.
+        throw new Error("لا يتوفر مسار استيراد آمن لهذا النوع — تواصل مع فريق التطوير.");
       }
       setStep("report");
     } catch (e) {
@@ -709,7 +704,7 @@ export function ImportWizard({ engine }: WizardProps) {
                     نشر فور الاستيراد
                   </label>
                 )}
-                {engine.key === "investigations" && (
+                {(engine.key === "investigations" || engine.key === "campaigns") && (
                   <label className="inline-flex items-center gap-2 rounded-md border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-100">
                     <input
                       type="checkbox"
@@ -717,7 +712,9 @@ export function ImportWizard({ engine }: WizardProps) {
                       onChange={(e) => { setAllowRemovals(e.target.checked); setDryRunHash(null); }}
                       className="accent-rose-500"
                     />
-                    السماح بحذف أسئلة موجودة (مدمّر)
+                    {engine.key === "investigations"
+                      ? "السماح بحذف أسئلة موجودة (مدمّر)"
+                      : "السماح بحذف فصول تحتوي تقدّم لاعبين (مدمّر)"}
                   </label>
                 )}
               </div>
