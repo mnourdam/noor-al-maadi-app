@@ -44,14 +44,15 @@ export interface CampaignProgressStats {
 // -------------------- Reads --------------------
 
 export async function fetchAdminCampaign(id: string): Promise<AdminCampaignRow | null> {
-  const { data, error } = await supabase
-    .from("admin_campaigns" as any)
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  // draft_data is not readable via direct SELECT on admin_campaigns
+  // (column-level GRANTs exclude it). Go through the admin-gated RPC,
+  // which requires is_content_admin() and returns the full row.
+  const { data, error } = await supabase.rpc("admin_get_campaign_full" as any, { p_id: id });
   if (error) throw error;
-  return (data as unknown as AdminCampaignRow) ?? null;
+  const rows = (data as AdminCampaignRow[]) ?? [];
+  return rows[0] ?? null;
 }
+
 
 export async function listCampaignVersions(id: string): Promise<CampaignVersion[]> {
   const { data, error } = await supabase.rpc("admin_list_campaign_versions" as any, { p_id: id });
