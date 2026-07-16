@@ -161,8 +161,10 @@ function EntityPage() {
   const { user } = useAccount();
   const userKey = user?.id ?? "guest";
   const relNetworkRef = useRef<HTMLElement | null>(null);
-  useDailyQuestEntityReadCompletion({
+  useEntityReadCompletion({
     entityId: entity?.id ?? null,
+    entitySlug: entity?.slug ?? null,
+    entityType: entity?.entity_type ?? null,
     userKey,
     relationshipSectionRef: relNetworkRef,
   });
