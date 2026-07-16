@@ -194,7 +194,7 @@ BEGIN
           jsonb_build_object('type','true_false','prompt','y','correctAnswer',true))),
         jsonb_build_object('title','A','order',2,'activities', jsonb_build_array(
           jsonb_build_object('type','true_false','prompt','x','correctAnswer',true)))
-      )))))
+      ))))))
   ), 'commit');
   first_id := (SELECT draft_data->'chapters'->0->>'id' FROM public.admin_campaigns WHERE id=v_cid);
   RAISE NOTICE 'RES:%', r->>'status';
