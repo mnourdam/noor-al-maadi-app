@@ -734,6 +734,17 @@ export function ImportWizard({ engine }: WizardProps) {
                       : "السماح بحذف فصول تحتوي تقدّم لاعبين (مدمّر)"}
                   </label>
                 )}
+                {engine.key === "campaigns" && (
+                  <label className="inline-flex items-center gap-2 rounded-md border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-100">
+                    <input
+                      type="checkbox"
+                      checked={allowUnarchive}
+                      onChange={(e) => { setAllowUnarchive(e.target.checked); setDryRunHash(null); }}
+                      className="accent-rose-500"
+                    />
+                    السماح بإلغاء أرشفة الحملات عند النشر
+                  </label>
+                )}
               </div>
             )}
 
