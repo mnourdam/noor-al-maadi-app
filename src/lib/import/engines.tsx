@@ -897,13 +897,20 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
 
         // If we injected a new blocker, flip status.
         const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
-        return {
+        let out: PreviewRow = {
           ...row,
           status: nowBlocked ? ("blocked" as RowStatus) : row.status,
           issues: nextIssues,
           candidates,
           relations,
         };
+        if (out.status !== "blocked") {
+          const existing = out.status === "update" ? bySlug.get(`${item.entity_type}|${item.slug}`) : undefined;
+          const q = scoreEncyclopedia(item as any);
+          if (existing) q.regression = detectRegression(existing, { body: (item as any).body ?? {}, metadata: item.metadata });
+          out = applyQuality(out, q, { publish: publishFlag });
+        }
+        return out;
       });
     },
 
