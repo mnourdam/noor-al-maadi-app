@@ -46,7 +46,7 @@ export const runImportBatch = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("admin_run_import_batch" as any, {
       plan: data.plan as any,
-      mode: data.mode,
+      p_mode: data.mode,
     });
     if (error) throw new Error(error.message);
     return result as Record<string, any>;

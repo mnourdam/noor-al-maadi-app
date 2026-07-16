@@ -1,9 +1,15 @@
 // ============================================================
-// Phase 5 — Approved plan builder + checksum.
+// Phase 5 / 5.5a — Approved plan builder + checksum.
 //
 // Turns a set of approved PreviewRow entries into the JSON envelope
 // the server RPC admin_run_import_batch expects, and computes stable
 // checksums for idempotency + Dry-Run staleness detection.
+//
+// Phase 5.5a adds a generic plan builder for every non-campaign
+// content type. Simple types (daily_facts, today_in_history_events,
+// notifications, investigations) use { id } as the target key on
+// update — populated from PreviewRow.existingId, which the legacy
+// engine attaches during classify().
 // ============================================================
 import type { PreviewRow } from "./engines";
 import { applyAcceptedRepairs } from "./relations-report";
@@ -34,7 +40,6 @@ export interface ApprovedPlan {
 
 /** Small, stable, non-cryptographic hash (FNV-1a 64) for browser use. */
 export function stableHash(input: string): string {
-  // FNV-1a 32-bit doubled — good enough for idempotency keys.
   let h1 = 0x811c9dc5, h2 = 0x811c9dc5;
   for (let i = 0; i < input.length; i++) {
     h1 ^= input.charCodeAt(i);
@@ -59,25 +64,52 @@ export function canonicalJSON(value: unknown): string {
   return JSON.stringify(walk(value));
 }
 
-/** Extract a target key from the row for lookup on commit. */
 function encyclopediaTargetKey(data: unknown): Record<string, unknown> {
   const d = (data ?? {}) as Record<string, unknown>;
   return { entity_type: d.entity_type, slug: d.slug };
 }
 
-/** Version signal captured at preview time; null when we don't have one yet. */
-function versionSignalFromRow(row: PreviewRow): string | null {
+function versionSignalFromEncyclopedia(row: PreviewRow): string | null {
   const cands = row.candidates ?? [];
   const target = cands.find((c) => c.severity === "exact") ?? cands[0];
   return (target as unknown as { updatedAt?: string } | undefined)?.updatedAt ?? null;
 }
 
+// ------------------------------------------------------------
+// Content-type-aware target key + version signal.
+// ------------------------------------------------------------
+
 /**
- * Build a plan for the encyclopedia engine.
- * Rows already carry admin overrides + accepted relation repairs.
+ * Content types that route through the transactional server RPC.
+ * Campaigns are intentionally excluded — Phase 5.5c introduces the
+ * dedicated campaign RPC and stable-ID protection.
  */
-export function buildEncyclopediaPlan(rows: PreviewRow[], meta: {
-  contentType: string;
+export const TRANSACTIONAL_CONTENT_TYPES = [
+  "encyclopedia",
+  "daily_facts",
+  "today_in_history_events",
+  "notifications",
+  "investigations",
+] as const;
+export type TransactionalContentType = typeof TRANSACTIONAL_CONTENT_TYPES[number];
+
+export function isTransactionalContentType(x: string): x is TransactionalContentType {
+  return (TRANSACTIONAL_CONTENT_TYPES as readonly string[]).includes(x);
+}
+
+function simpleTargetKey(row: PreviewRow): Record<string, unknown> | undefined {
+  if (!row.existingId) return undefined;
+  return { id: row.existingId };
+}
+
+/**
+ * Build an approved plan for any transactional content type.
+ * Rows already carry admin overrides + accepted relation repairs;
+ * legacy engine classify() populates existingId + existingVersionSignal
+ * for simple types so updates target the correct DB row.
+ */
+export function buildTransactionalPlan(rows: PreviewRow[], meta: {
+  contentType: TransactionalContentType;
   fileName?: string | null;
   originalPayloadHash: string;
   overwrite: boolean;
@@ -88,12 +120,23 @@ export function buildEncyclopediaPlan(rows: PreviewRow[], meta: {
     const action: PlanItem["action"] =
       r.override ?? (r.status === "blocked" ? "skip" : r.status);
     const patched = r.relations ? applyAcceptedRepairs(r.data, r.relations) : r.data;
+
+    let targetKey: Record<string, unknown> | undefined;
+    let versionSignal: string | null = null;
+    if (meta.contentType === "encyclopedia") {
+      targetKey = encyclopediaTargetKey(patched);
+      versionSignal = versionSignalFromEncyclopedia(r);
+    } else {
+      targetKey = simpleTargetKey(r);
+      versionSignal = r.existingVersionSignal ?? null;
+    }
+
     items.push({
       index: r.index,
       action,
       data: patched,
-      target_key: encyclopediaTargetKey(patched),
-      version_signal: versionSignalFromRow(r),
+      target_key: targetKey,
+      version_signal: versionSignal,
       accepted_repairs: r.relations ? { count: r.relations.counts?.remapped ?? 0 } : null,
       classification: r.status,
       issues: r.issues,
@@ -113,4 +156,15 @@ export function buildEncyclopediaPlan(rows: PreviewRow[], meta: {
     metadata: { row_count: rows.length },
     items,
   };
+}
+
+/** Backwards-compat alias for the previous exported name. */
+export function buildEncyclopediaPlan(rows: PreviewRow[], meta: {
+  contentType: string;
+  fileName?: string | null;
+  originalPayloadHash: string;
+  overwrite: boolean;
+  publish: boolean;
+}): ApprovedPlan {
+  return buildTransactionalPlan(rows, { ...meta, contentType: "encyclopedia" });
 }

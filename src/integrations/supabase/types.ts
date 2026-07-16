@@ -2101,7 +2101,7 @@ export type Database = {
         Returns: Json
       }
       admin_run_import_batch: {
-        Args: { mode: string; plan: Json }
+        Args: { p_mode: string; plan: Json }
         Returns: Json
       }
       admin_save_campaign_draft: {
