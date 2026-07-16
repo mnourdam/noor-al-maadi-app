@@ -21,6 +21,7 @@ import { ImportWizard } from "@/components/admin/import/ImportWizard";
 import {
   makeLegacyEngine,
   makeCampaignEngine,
+  makeEncyclopediaEngine,
   type ImportConfig,
   type ImportEngine,
 } from "@/lib/import/engines";
