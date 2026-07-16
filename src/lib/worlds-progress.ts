@@ -508,9 +508,9 @@ export function computeWorldProgress(
     if (doneN === chapters.length) campDone++;
   }
 
-  // Investigations
+  // Investigations — accept both legacy IDs and canonical slugs.
   const invTotal = idx.investigationSlugs.length;
-  const invDoneSet = new Set(inputs.investigationsCompleted);
+  const invDoneSet = buildInvestigationDoneSet(inputs.investigationsCompleted);
   let invDone = 0;
   for (const s of idx.investigationSlugs) if (invDoneSet.has(s)) invDone++;
 
