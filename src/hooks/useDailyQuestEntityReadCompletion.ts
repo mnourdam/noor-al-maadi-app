@@ -121,7 +121,7 @@ export function useDailyQuestEntityReadCompletion({
       cancelled = true;
       observer?.disconnect();
       window.removeEventListener("scroll", onScroll);
-      if (pendingTimer != null) window.clearTimeout(pendingTimer);
+      if (dwellTimer != null) window.clearTimeout(dwellTimer);
     };
   }, [entityId, userKey, relationshipSectionRef]);
 }
