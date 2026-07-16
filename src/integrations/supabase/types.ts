@@ -1924,6 +1924,42 @@ export type Database = {
       }
     }
     Views: {
+      campaigns_public: {
+        Row: {
+          content_version: number | null
+          created_at: string | null
+          data: Json | null
+          id: string | null
+          published_at: string | null
+          slug: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          content_version?: number | null
+          created_at?: string | null
+          data?: Json | null
+          id?: string | null
+          published_at?: string | null
+          slug?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          content_version?: number | null
+          created_at?: string | null
+          data?: Json | null
+          id?: string | null
+          published_at?: string | null
+          slug?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       public_profiles: {
         Row: {
           artifacts_collected: number | null
@@ -2007,6 +2043,30 @@ export type Database = {
       }
       admin_campaign_progress_stats: { Args: { p_id: string }; Returns: Json }
       admin_feedback_stats: { Args: never; Returns: Json }
+      admin_get_campaign_full: {
+        Args: { p_id: string }
+        Returns: {
+          content_version: number
+          created_at: string
+          data: Json
+          draft_data: Json | null
+          has_unpublished_changes: boolean
+          id: string
+          last_editor_email: string | null
+          published_at: string | null
+          slug: string | null
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "admin_campaigns"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_import_content_table: { Args: { p_ctype: string }; Returns: string }
       admin_list_campaign_versions: {
         Args: { p_id: string }
@@ -2017,6 +2077,30 @@ export type Database = {
           title: string
           version: number
         }[]
+      }
+      admin_list_campaigns_full: {
+        Args: never
+        Returns: {
+          content_version: number
+          created_at: string
+          data: Json
+          draft_data: Json | null
+          has_unpublished_changes: boolean
+          id: string
+          last_editor_email: string | null
+          published_at: string | null
+          slug: string | null
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "admin_campaigns"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       admin_list_feedback_issues: {
         Args: {
