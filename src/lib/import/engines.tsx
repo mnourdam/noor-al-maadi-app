@@ -117,6 +117,72 @@ export interface CommitOptions {
   autoRepair?: boolean;
 }
 
+// ---------- Phase 4 helpers: quality → row issues ----------
+
+/**
+ * Convert a QualityReport into row-level Issue entries + adjust status.
+ *   • Publish-mode fatal (missing required, placeholder body) → blocker.
+ *   • Publish-mode below threshold or missing sources → blocker unless
+ *     admin sets `importAsDraft` on the row.
+ *   • Draft-eligible only → warning (never blocker).
+ *   • Regression detected → warning.
+ * The gating never silently downgrades a failed publish item to draft;
+ * the admin must flip `importAsDraft` explicitly (see CommitOptions).
+ */
+export function qualityToIssues(q: QualityReport, itemIndex: number, opts: { publish: boolean; importAsDraft: boolean }): Issue[] {
+  const out: Issue[] = [];
+  for (const m of q.missingRequired) {
+    out.push({
+      severity: opts.publish && !opts.importAsDraft ? "blocker" : "warning",
+      message: `حقل مطلوب مفقود: ${m}.`,
+      itemIndex, code: "quality.missing_required",
+    });
+  }
+  for (const r of q.reasons) {
+    out.push({ severity: "warning", message: r, itemIndex, code: "quality.reason" });
+  }
+  for (const m of q.missingOptional) {
+    out.push({ severity: "info", message: `اختياري مفقود: ${m}.`, itemIndex, code: "quality.missing_optional" });
+  }
+  if (q.sourceStatus === "missing" && opts.publish && !opts.importAsDraft) {
+    out.push({ severity: "blocker", message: "لا يمكن النشر بلا مصادر — استورد كمسودة أو أضف مصادر.", itemIndex, code: "quality.sources_missing" });
+  } else if (q.sourceStatus === "missing") {
+    out.push({ severity: "warning", message: "لا توجد مصادر — سيُستورد كمسودة.", itemIndex, code: "quality.sources_missing_draft" });
+  } else if (q.sourceStatus === "weak") {
+    out.push({ severity: "info", message: "المصادر ضعيفة — يُوصى بإضافة مؤلف أو رابط.", itemIndex, code: "quality.sources_weak" });
+  }
+  if (opts.publish && !opts.importAsDraft && !q.publishEligible) {
+    out.push({
+      severity: "blocker",
+      message: `الجودة (${q.score}٪) دون عتبة النشر — استورد كمسودة أو حسّن المحتوى.`,
+      itemIndex, code: "quality.below_threshold",
+    });
+  }
+  if (q.regression) {
+    out.push({
+      severity: "warning",
+      message: `تراجع محتوى: ${q.regression.losses.join("، ")}.`,
+      itemIndex, code: "quality.regression",
+    });
+  }
+  return out;
+}
+
+/** Applies quality gating to a row: attaches issues, flips status when blockers appear. */
+function applyQuality(row: PreviewRow, q: QualityReport, opts: { publish: boolean; }): PreviewRow {
+  const importAsDraft = !!row.importAsDraft;
+  const issues = qualityToIssues(q, row.index, { publish: opts.publish, importAsDraft });
+  const nextIssues = [...row.issues, ...issues];
+  const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
+  return {
+    ...row,
+    quality: q,
+    issues: nextIssues,
+    status: nowBlocked ? ("blocked" as RowStatus) : row.status,
+  };
+}
+
+
 export interface ImportEngine {
   /** Stable engine key, matches the URL ?type= param. */
   key: string;
