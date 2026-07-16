@@ -13,7 +13,7 @@
  *   }
  */
 
-export const SNAPSHOT_SCHEMA_VERSION = 2;
+export const SNAPSHOT_SCHEMA_VERSION = 3;
 
 /**
  * Hard floor for the player-facing public encyclopedia dataset. This is a
