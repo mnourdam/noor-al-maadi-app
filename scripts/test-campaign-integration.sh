@@ -273,7 +273,7 @@ BEGIN
           jsonb_build_object('id','a','type','true_false','prompt','q','correctAnswer',true))),
         jsonb_build_object('id','dup','title','B','order',2,'activities', jsonb_build_array(
           jsonb_build_object('id','b','type','true_false','prompt','q','correctAnswer',true)))
-      )))))
+      ))))))
   ), 'commit');
   RAISE NOTICE 'RES:%', r->>'status';
 END\$\$; ROLLBACK;
