@@ -699,7 +699,12 @@ export function makeCampaignEngine(meta: {
       }
 
       const relationSummary = summarizeRelations(rows.map((r) => r.relations));
-      return { inserted, updated, skipped, failed, errors: errors.slice(0, 10), integrity, relationSummary };
+      return {
+        inserted, updated, skipped, failed,
+        errors: errors.slice(0, 10),
+        integrity, relationSummary,
+        qualitySummary: summarizeQuality(rows.map((r) => r.quality)),
+      };
     },
   };
 }
