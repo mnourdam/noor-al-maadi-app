@@ -213,11 +213,11 @@ export async function fetchPublishedFeed(): Promise<{
   if (local.length === 0) {
     try {
       const { data, error } = await supabase
-        .from("admin_campaigns")
-        .select("id, slug, data")
-        .eq("status", "published");
+        .from("campaigns_public" as any)
+        .select("id, slug, data");
       if (!error && data) local = data as any[];
     } catch { /* ignore */ }
+
   }
   const campaigns = toCampaigns(local);
   const dividers = toDividers(local);
