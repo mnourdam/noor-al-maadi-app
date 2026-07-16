@@ -2062,6 +2062,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_merge_investigation_stable_ids: {
+        Args: { v_before: Json; v_data: Json }
+        Returns: Json
+      }
       admin_newsletter_stats: { Args: never; Returns: Json }
       admin_notification_stats: {
         Args: { p_notification_id: string }
@@ -2123,6 +2127,10 @@ export type Database = {
         Returns: Json
       }
       admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
+      admin_validate_investigation_payload: {
+        Args: { v_allow_removals: boolean; v_before: Json; v_data: Json }
+        Returns: undefined
+      }
       advance_referral_stage: { Args: { p_stage: number }; Returns: Json }
       analytics_atlas: { Args: never; Returns: Json }
       analytics_content_health: { Args: never; Returns: Json }

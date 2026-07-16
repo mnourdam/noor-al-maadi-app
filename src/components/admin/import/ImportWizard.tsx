@@ -67,6 +67,8 @@ export function ImportWizard({ engine }: WizardProps) {
   const [overwrite, setOverwrite] = useState(false);
   const [publish, setPublish] = useState(false);
   const [autoRepair, setAutoRepair] = useState(true);
+  // Phase 5.5b: destructive-removal opt-in (used by investigations RPC).
+  const [allowRemovals, setAllowRemovals] = useState(false);
   const [ackWarnings, setAckWarnings] = useState(false);
   const [result, setResult] = useState<CommitResult | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
@@ -195,6 +197,7 @@ export function ImportWizard({ engine }: WizardProps) {
       fileName: null,
       originalPayloadHash: stableHash(raw),
       overwrite, publish,
+      allowRemovals: engine.key === "investigations" ? allowRemovals : false,
     });
   };
 
@@ -704,6 +707,17 @@ export function ImportWizard({ engine }: WizardProps) {
                       className="accent-amber-500"
                     />
                     نشر فور الاستيراد
+                  </label>
+                )}
+                {engine.key === "investigations" && (
+                  <label className="inline-flex items-center gap-2 rounded-md border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-100">
+                    <input
+                      type="checkbox"
+                      checked={allowRemovals}
+                      onChange={(e) => { setAllowRemovals(e.target.checked); setDryRunHash(null); }}
+                      className="accent-rose-500"
+                    />
+                    السماح بحذف أسئلة موجودة (مدمّر)
                   </label>
                 )}
               </div>
