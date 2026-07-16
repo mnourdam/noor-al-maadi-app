@@ -62,9 +62,10 @@ export const COLLECTIONS: CollectionDef[] = [
   { key: "encyclopedia_entities", table: "encyclopedia_entities",
     filter: (q) => q.eq("enabled", true), required: true,
     label: "الموسوعة (شخصيات، دول، مدن، معارك، أحداث)" },
-  { key: "admin_campaigns", table: "admin_campaigns",
-    filter: (q) => q.eq("status", "published"), required: true,
+  { key: "admin_campaigns", table: "campaigns_public",
+    required: true,
     label: "الحملات المنشورة (مع الفصول والأنشطة داخل data)" },
+
   { key: "investigations", table: "investigations",
     filter: (q) => q.eq("enabled", true), required: false,
     label: "التحقيقات" },

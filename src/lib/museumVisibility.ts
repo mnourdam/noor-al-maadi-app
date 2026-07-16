@@ -73,12 +73,15 @@ export async function fetchCampaignArtifactRefSet(): Promise<Set<string>> {
   let from = 0;
   // Loop pagination — campaigns are few but be safe.
   while (true) {
-    const { data, error } = await supabase
-      .from("admin_campaigns")
+    const res: any = await supabase
+      .from("campaigns_public" as any)
       .select("data")
       .range(from, from + PAGE - 1);
+    const { data, error } = res;
     if (error || !data) break;
     for (const row of data as Array<{ data: any }>) {
+
+
       collectArtifactRefs(row?.data, refs);
     }
     if (data.length < PAGE) break;
