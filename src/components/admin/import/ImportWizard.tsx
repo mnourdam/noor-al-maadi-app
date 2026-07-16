@@ -35,6 +35,7 @@ import { CANDIDATE_REASON_AR, type DuplicateCandidate } from "@/lib/import/dupli
 import { QUALITY_LABEL_AR, SOURCE_STATUS_AR, type QualityReport, type QualityLabel } from "@/lib/import/quality";
 import { buildTransactionalPlan, stableHash, isTransactionalContentType } from "@/lib/import/plan";
 import { runImportBatch, runCampaignBatch } from "@/lib/import/import-batch.functions";
+import { notifyContentInvalidated } from "@/lib/adminCampaignsApi";
 import { Link } from "@tanstack/react-router";
 import { FlaskConical, ScrollText, ShieldCheck, Database, Download } from "lucide-react";
 
