@@ -525,16 +525,19 @@ const ENGINES: Record<ImportType, ImportEngine> = {
     key: "daily_facts",
     label: "معلومات يومية",
     icon: <BookOpen className="h-5 w-5" />,
+    scoreRow: (r) => scoreShortEditorial(r),
   }),
   today_in_history_events: makeLegacyEngine(todayEventsConfig, {
     key: "today_in_history_events",
     label: "أحداث تاريخية",
     icon: <CalendarDays className="h-5 w-5" />,
+    scoreRow: (r) => scoreShortEditorial(r),
   }),
   notifications: makeLegacyEngine(notificationsConfig, {
     key: "notifications",
     label: "مسودات إشعارات",
     icon: <Bell className="h-5 w-5" />,
+    scoreRow: (r) => scoreShortEditorial(r),
   }),
   encyclopedia: makeEncyclopediaEngine(encyclopediaConfig, {
     key: "encyclopedia",
