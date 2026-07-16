@@ -71,6 +71,13 @@ export function ImportWizard({ engine }: WizardProps) {
   const [result, setResult] = useState<CommitResult | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | RowStatus | "warnings" | "publish_ready" | "needs_content" | "no_sources" | "regressions">("all");
+  // Phase 5 — Dry Run + transactional commit state
+  const [dryRunReport, setDryRunReport] = useState<any | null>(null);
+  const [dryRunHash, setDryRunHash] = useState<string | null>(null);
+  const [dryRunning, setDryRunning] = useState(false);
+  const [committingStage, setCommittingStage] = useState<string>("");
+  const [committedBatchId, setCommittedBatchId] = useState<string | null>(null);
+  const supportsTransactional = engine.key === "encyclopedia";
 
   useEffect(() => {
     if (engineKey !== engine.key) {
