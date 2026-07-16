@@ -63,6 +63,8 @@ export interface PreviewRow {
   override?: RowAction;
   /** Phase 2 — admin acknowledgement note when overriding warnings. */
   overrideNote?: string;
+  /** Phase 3 — relation validation report. */
+  relations?: import("./relations-report").RelationReport;
 }
 
 export interface CommitResult {
@@ -74,6 +76,8 @@ export interface CommitResult {
   errors: string[];
   /** Optional integrity reports (currently campaigns only). */
   integrity?: CampaignIntegrityReport[];
+  /** Phase 3 — aggregate relation summary across the batch. */
+  relationSummary?: import("./relations-report").RelationSummary;
 }
 
 export interface CommitOptions {
@@ -81,6 +85,8 @@ export interface CommitOptions {
   overwrite: boolean;
   /** Publish immediately (campaigns only). */
   publish?: boolean;
+  /** Phase 3 — compute automatic repair suggestions (never applies them). */
+  autoRepair?: boolean;
 }
 
 export interface ImportEngine {
