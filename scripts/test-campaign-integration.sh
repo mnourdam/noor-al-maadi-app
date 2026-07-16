@@ -220,8 +220,8 @@ BEGIN
       'target_key', jsonb_build_object('id',v_cid),
       'data', jsonb_build_object('id',v_cid,'title','t','chapters', jsonb_build_array(
         jsonb_build_object('id','ch','title','ch','order',1,'activities', jsonb_build_array(
-          jsonb_build_object('id','act-fix','type','multiple_choice','prompt','new','options',jsonb_build_array('a','b','c'),'correctAnswer',0))
-        ))))))
+          jsonb_build_object('id','act-fix','type','multiple_choice','prompt','new','options',jsonb_build_array('a','b','c'),'correctAnswer',0)
+        )))))))
   ), 'commit');
   aid := (SELECT draft_data->'chapters'->0->'activities'->0->>'id' FROM public.admin_campaigns WHERE id=v_cid);
   RAISE NOTICE 'RES:%', r->>'status';
