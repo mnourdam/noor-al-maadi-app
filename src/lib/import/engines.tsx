@@ -39,6 +39,8 @@ export interface Issue {
 }
 
 export type RowStatus = "new" | "update" | "skip" | "blocked";
+/** Explicit per-row admin decision. `alias` merges into an existing row's aliases. */
+export type RowAction = "new" | "update" | "skip" | "alias";
 
 export interface PreviewRow {
   index: number;
@@ -55,6 +57,12 @@ export interface PreviewRow {
   data: unknown;
   /** Stable dedupe key for within-batch duplicate detection. */
   key: string;
+  /** Phase 2 — duplicate candidates found in the DB (encyclopedia). */
+  candidates?: import("./duplicate-detection").DuplicateCandidate[];
+  /** Phase 2 — admin decision override that beats `status` at commit time. */
+  override?: RowAction;
+  /** Phase 2 — admin acknowledgement note when overriding warnings. */
+  overrideNote?: string;
 }
 
 export interface CommitResult {
