@@ -112,7 +112,7 @@ function WorldsIndex() {
 
                     {prog && (
                       <p className="mt-3 flex items-center gap-1.5 text-[11px] text-gold/90">
-                        <Compass className="size-3.5" /> {recLabel(prog)}
+                        <Compass className="size-3.5" /> {recLabel(prog.recommendation)}
                       </p>
                     )}
 
