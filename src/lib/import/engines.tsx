@@ -102,7 +102,10 @@ export interface CommitResult {
   /** Optional integrity reports (currently campaigns only). */
   integrity?: CampaignIntegrityReport[];
   /** Phase 3 — aggregate relation summary across the batch. */
+  /** Phase 3 — aggregate relation summary across the batch. */
   relationSummary?: import("./relations-report").RelationSummary;
+  /** Phase 4 — aggregate content-quality summary. */
+  qualitySummary?: QualityBatchSummary;
 }
 
 export interface CommitOptions {
