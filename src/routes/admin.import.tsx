@@ -22,6 +22,7 @@ import {
   makeLegacyEngine,
   makeCampaignEngine,
   makeEncyclopediaEngine,
+  makeInvestigationsEngine,
   type ImportConfig,
   type ImportEngine,
 } from "@/lib/import/engines";
