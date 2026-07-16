@@ -870,6 +870,7 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
         skipped: baseResult.skipped + stillBlocked.length,
         failed: baseResult.failed + aliasFailed,
         errors: [...baseResult.errors, ...aliasErrors].slice(0, 20),
+        relationSummary: summarizeRelations(rows.map((r) => r.relations)),
       };
     },
   };
