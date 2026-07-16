@@ -185,6 +185,13 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
   const campCount = new Map<string, number>();
   for (const c of campRows) {
     const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
+    // Preferred: canonical worldSlug directly on the campaign.
+    const ws = typeof cm.worldSlug === "string" ? cm.worldSlug : null;
+    if (ws) {
+      if (WORLD_SLUGS.has(ws)) campCount.set(ws, (campCount.get(ws) ?? 0) + 1);
+      continue;
+    }
+    // Fallback: entity-ref scan for legacy imports missing worldSlug.
     const cmeta = (cm.metadata && typeof cm.metadata === "object"
       ? (cm.metadata as Record<string, unknown>)
       : {});
@@ -198,6 +205,7 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
       if (all.has(s)) campCount.set(s, (campCount.get(s) ?? 0) + 1);
     }
   }
+
 
   const out: WorldSummary[] = [];
   for (const hub of WORLD_HUBS) {
