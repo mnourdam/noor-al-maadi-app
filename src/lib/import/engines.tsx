@@ -259,6 +259,8 @@ export function makeLegacyEngine<T>(config: ImportConfig<T>, meta: {
   key: string;
   label: string;
   icon: ReactNode;
+  /** Phase 4 — optional per-row quality scorer. */
+  scoreRow?: (row: T) => QualityReport | undefined;
 }): ImportEngine {
   return {
     key: meta.key,
