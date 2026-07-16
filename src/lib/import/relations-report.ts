@@ -65,38 +65,35 @@ function tally(res: RelationResolution[]): RelationReport["counts"] {
 
 // ---------- Public API ----------
 
-export function buildCampaignRelationReport(c: Campaign): RelationReport {
+function initialAccepted(resolutions: RelationResolution[], autoAccept: boolean): Record<number, boolean> {
+  const out: Record<number, boolean> = {};
+  if (!autoAccept) return out;
+  resolutions.forEach((r, i) => {
+    if (r.suggestRewrite && r.confidence === "high") out[i] = true;
+  });
+  return out;
+}
+
+export function buildCampaignRelationReport(c: Campaign, autoAccept = true): RelationReport {
   const refs = extractCampaignRefs(c);
   const duplicates = findDuplicateRefs(refs);
   const resolutions = refs.map(resolveRelation);
   const batchIssues = checkCampaignBatch(c);
-  const accepted: Record<number, boolean> = {};
-  resolutions.forEach((r, i) => {
-    if (r.suggestRewrite && r.confidence === "high") accepted[i] = true;
-  });
-  return { resolutions, batchIssues, duplicates, accepted, counts: tally(resolutions) };
+  return { resolutions, batchIssues, duplicates, accepted: initialAccepted(resolutions, autoAccept), counts: tally(resolutions) };
 }
 
-export function buildEncyclopediaRelationReport(row: { entity_type?: string; metadata?: any }): RelationReport {
+export function buildEncyclopediaRelationReport(row: { entity_type?: string; metadata?: any }, autoAccept = true): RelationReport {
   const refs = extractEncyclopediaRefs(row);
   const duplicates = findDuplicateRefs(refs);
   const resolutions = refs.map(resolveRelation);
-  const accepted: Record<number, boolean> = {};
-  resolutions.forEach((r, i) => {
-    if (r.suggestRewrite && r.confidence === "high") accepted[i] = true;
-  });
-  return { resolutions, batchIssues: [], duplicates, accepted, counts: tally(resolutions) };
+  return { resolutions, batchIssues: [], duplicates, accepted: initialAccepted(resolutions, autoAccept), counts: tally(resolutions) };
 }
 
-export function buildInvestigationRelationReport(row: { related_entities?: unknown }): RelationReport {
+export function buildInvestigationRelationReport(row: { related_entities?: unknown }, autoAccept = true): RelationReport {
   const refs = extractInvestigationRefs(row);
   const duplicates = findDuplicateRefs(refs);
   const resolutions = refs.map(resolveRelation);
-  const accepted: Record<number, boolean> = {};
-  resolutions.forEach((r, i) => {
-    if (r.suggestRewrite && r.confidence === "high") accepted[i] = true;
-  });
-  return { resolutions, batchIssues: [], duplicates, accepted, counts: tally(resolutions) };
+  return { resolutions, batchIssues: [], duplicates, accepted: initialAccepted(resolutions, autoAccept), counts: tally(resolutions) };
 }
 
 // ---------- Aggregate ----------
