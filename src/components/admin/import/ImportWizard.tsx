@@ -419,6 +419,8 @@ export function ImportWizard({ engine }: WizardProps) {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs text-slate-500">#{r.index + 1}</span>
                       {r.subtitle && <span className="rounded bg-slate-800/60 px-1.5 py-0.5 text-[10px] text-slate-300">{r.subtitle}</span>}
+                      {r.quality && <QualityBadge q={r.quality} />}
+                      {r.importAsDraft && <span className="rounded bg-slate-500/20 px-1.5 py-0.5 text-[10px] text-slate-200">مسودة</span>}
                     </div>
                     <div className="mt-1 text-slate-100">{r.render}</div>
                     {r.issues.length > 0 && (
