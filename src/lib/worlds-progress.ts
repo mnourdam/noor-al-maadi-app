@@ -210,7 +210,8 @@ export function invalidateWorldIndex(): void { _indexCache = null; }
 // The old museum set moved to `useMuseumSlugs` below.
 // ------------------------------------------------------------
 
-export { useDiscoveredSlugs } from "@/lib/entityDiscoveries";
+import { useDiscoveredSlugs as useEntityDiscoveredSlugs } from "@/lib/entityDiscoveries";
+export const useDiscoveredSlugs = useEntityDiscoveredSlugs;
 
 /**
  * Museum ownership set — rows in `user_collection` for the current user.
