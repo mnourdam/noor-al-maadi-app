@@ -428,6 +428,8 @@ export function makeCampaignEngine(meta: {
       if (rows.length === 0) return rows;
       const eligible = rows.filter((r) => r.status !== "blocked");
       if (eligible.length === 0) return rows;
+      // Phase 3 — snapshot must be loaded before any relation resolution.
+      await ensureLocalSnapshotLoaded();
       const ids = eligible.map((r) => (r.data as Campaign).id);
       const { data, error } = await supabase
         .from("admin_campaigns" as any)
@@ -442,21 +444,19 @@ export function makeCampaignEngine(meta: {
         seen.add(row.key);
         const c = row.data as Campaign;
         const exists = existingIds.has(c.id);
-        if (!exists) return { ...row, status: "new" as RowStatus };
-        if (options.overwrite) return { ...row, status: "update" as RowStatus };
-        return {
-          ...row,
-          status: "skip" as RowStatus,
-          issues: [
-            ...row.issues,
-            {
-              severity: "info",
-              message: "الحملة موجودة — سيُتخطّى (فعّل الاستبدال للتحديث).",
-              itemIndex: row.index,
-              code: "existing.skip",
-            },
-          ],
-        };
+        const relations = buildCampaignRelationReport(c);
+        const relationIssues = relationsToIssues(relations, row.index);
+        const nextIssues = [...row.issues, ...relationIssues];
+        const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
+        const nextStatus: RowStatus = nowBlocked
+          ? "blocked"
+          : !exists ? "new"
+          : options.overwrite ? "update"
+          : "skip";
+        const extraSkipIssue: Issue[] = (!nowBlocked && exists && !options.overwrite)
+          ? [{ severity: "info", message: "الحملة موجودة — سيُتخطّى (فعّل الاستبدال للتحديث).", itemIndex: row.index, code: "existing.skip" }]
+          : [];
+        return { ...row, status: nextStatus, relations, issues: [...nextIssues, ...extraSkipIssue] };
       });
     },
 
