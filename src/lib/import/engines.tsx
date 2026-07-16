@@ -31,6 +31,16 @@ import {
   summarizeRelations,
   type RelationReport,
 } from "./relations-report";
+import {
+  scoreEncyclopedia,
+  scoreCampaign,
+  scoreInvestigation,
+  scoreShortEditorial,
+  detectRegression,
+  summarizeQuality,
+  type QualityReport,
+  type QualityBatchSummary,
+} from "./quality";
 
 // ---------- Shared types ----------
 
@@ -74,6 +84,12 @@ export interface PreviewRow {
   overrideNote?: string;
   /** Phase 3 — relation validation report. */
   relations?: import("./relations-report").RelationReport;
+  /** Phase 4 — content quality report. */
+  quality?: QualityReport;
+  /** Phase 4 — admin flag: import even though publish would fail. */
+  importAsDraft?: boolean;
+  /** Phase 4 — admin note when overriding quality/regression warnings. */
+  qualityAckNote?: string;
 }
 
 export interface CommitResult {
@@ -86,7 +102,10 @@ export interface CommitResult {
   /** Optional integrity reports (currently campaigns only). */
   integrity?: CampaignIntegrityReport[];
   /** Phase 3 — aggregate relation summary across the batch. */
+  /** Phase 3 — aggregate relation summary across the batch. */
   relationSummary?: import("./relations-report").RelationSummary;
+  /** Phase 4 — aggregate content-quality summary. */
+  qualitySummary?: QualityBatchSummary;
 }
 
 export interface CommitOptions {
@@ -97,6 +116,72 @@ export interface CommitOptions {
   /** Phase 3 — compute automatic repair suggestions (never applies them). */
   autoRepair?: boolean;
 }
+
+// ---------- Phase 4 helpers: quality → row issues ----------
+
+/**
+ * Convert a QualityReport into row-level Issue entries + adjust status.
+ *   • Publish-mode fatal (missing required, placeholder body) → blocker.
+ *   • Publish-mode below threshold or missing sources → blocker unless
+ *     admin sets `importAsDraft` on the row.
+ *   • Draft-eligible only → warning (never blocker).
+ *   • Regression detected → warning.
+ * The gating never silently downgrades a failed publish item to draft;
+ * the admin must flip `importAsDraft` explicitly (see CommitOptions).
+ */
+export function qualityToIssues(q: QualityReport, itemIndex: number, opts: { publish: boolean; importAsDraft: boolean }): Issue[] {
+  const out: Issue[] = [];
+  for (const m of q.missingRequired) {
+    out.push({
+      severity: opts.publish && !opts.importAsDraft ? "blocker" : "warning",
+      message: `حقل مطلوب مفقود: ${m}.`,
+      itemIndex, code: "quality.missing_required",
+    });
+  }
+  for (const r of q.reasons) {
+    out.push({ severity: "warning", message: r, itemIndex, code: "quality.reason" });
+  }
+  for (const m of q.missingOptional) {
+    out.push({ severity: "info", message: `اختياري مفقود: ${m}.`, itemIndex, code: "quality.missing_optional" });
+  }
+  if (q.sourceStatus === "missing" && opts.publish && !opts.importAsDraft) {
+    out.push({ severity: "blocker", message: "لا يمكن النشر بلا مصادر — استورد كمسودة أو أضف مصادر.", itemIndex, code: "quality.sources_missing" });
+  } else if (q.sourceStatus === "missing") {
+    out.push({ severity: "warning", message: "لا توجد مصادر — سيُستورد كمسودة.", itemIndex, code: "quality.sources_missing_draft" });
+  } else if (q.sourceStatus === "weak") {
+    out.push({ severity: "info", message: "المصادر ضعيفة — يُوصى بإضافة مؤلف أو رابط.", itemIndex, code: "quality.sources_weak" });
+  }
+  if (opts.publish && !opts.importAsDraft && !q.publishEligible) {
+    out.push({
+      severity: "blocker",
+      message: `الجودة (${q.score}٪) دون عتبة النشر — استورد كمسودة أو حسّن المحتوى.`,
+      itemIndex, code: "quality.below_threshold",
+    });
+  }
+  if (q.regression) {
+    out.push({
+      severity: "warning",
+      message: `تراجع محتوى: ${q.regression.losses.join("، ")}.`,
+      itemIndex, code: "quality.regression",
+    });
+  }
+  return out;
+}
+
+/** Applies quality gating to a row: attaches issues, flips status when blockers appear. */
+function applyQuality(row: PreviewRow, q: QualityReport, opts: { publish: boolean; }): PreviewRow {
+  const importAsDraft = !!row.importAsDraft;
+  const issues = qualityToIssues(q, row.index, { publish: opts.publish, importAsDraft });
+  const nextIssues = [...row.issues, ...issues];
+  const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
+  return {
+    ...row,
+    quality: q,
+    issues: nextIssues,
+    status: nowBlocked ? ("blocked" as RowStatus) : row.status,
+  };
+}
+
 
 export interface ImportEngine {
   /** Stable engine key, matches the URL ?type= param. */
@@ -174,6 +259,8 @@ export function makeLegacyEngine<T>(config: ImportConfig<T>, meta: {
   key: string;
   label: string;
   icon: ReactNode;
+  /** Phase 4 — optional per-row quality scorer. */
+  scoreRow?: (row: T) => QualityReport | undefined;
 }): ImportEngine {
   return {
     key: meta.key,
@@ -263,32 +350,34 @@ export function makeLegacyEngine<T>(config: ImportConfig<T>, meta: {
       if (error) throw new Error(error.message);
       const existing = (data ?? []) as any[];
       const seen = new Set<string>();
+      const publish = !!options.publish;
       return rows.map((row) => {
         if (row.status === "blocked") return row;
+        let out: PreviewRow = row;
         if (seen.has(row.key)) {
-          return { ...row, status: "skip" as RowStatus };
+          out = { ...row, status: "skip" as RowStatus };
+        } else {
+          seen.add(row.key);
+          const match = existing.find((e) => config.matchExisting(e, row.data as T));
+          if (!match) out = { ...row, status: "new" as RowStatus };
+          else if (options.overwrite && config.allowOverwrite) out = { ...row, status: "update" as RowStatus };
+          else out = {
+            ...row,
+            status: "skip" as RowStatus,
+            issues: [
+              ...row.issues,
+              { severity: "info", message: "موجود مسبقاً — سيُتخطّى (فعّل الاستبدال لتحديثه).", itemIndex: row.index, code: "existing.skip" },
+            ],
+          };
         }
-        seen.add(row.key);
-        const match = existing.find((e) => config.matchExisting(e, row.data as T));
-        if (!match) return { ...row, status: "new" as RowStatus };
-        if (options.overwrite && config.allowOverwrite) {
-          return { ...row, status: "update" as RowStatus };
+        if (meta.scoreRow && out.status !== "skip") {
+          const q = meta.scoreRow(out.data as T);
+          if (q) out = applyQuality(out, q, { publish });
         }
-        return {
-          ...row,
-          status: "skip" as RowStatus,
-          issues: [
-            ...row.issues,
-            {
-              severity: "info",
-              message: "موجود مسبقاً — سيُتخطّى (فعّل الاستبدال لتحديثه).",
-              itemIndex: row.index,
-              code: "existing.skip",
-            },
-          ],
-        };
+        return out;
       });
     },
+
 
     async commit(rows, options) {
       const toInsert: T[] = [];
@@ -351,7 +440,11 @@ export function makeLegacyEngine<T>(config: ImportConfig<T>, meta: {
         }
       }
 
-      return { inserted, updated, skipped, failed, errors: errors.slice(0, 10) };
+      return {
+        inserted, updated, skipped, failed,
+        errors: errors.slice(0, 10),
+        qualitySummary: summarizeQuality(rows.map((r) => r.quality)),
+      };
     },
   };
 }
@@ -479,7 +572,11 @@ export function makeCampaignEngine(meta: {
         const extraSkipIssue: Issue[] = (!nowBlocked && exists && !options.overwrite)
           ? [{ severity: "info", message: "الحملة موجودة — سيُتخطّى (فعّل الاستبدال للتحديث).", itemIndex: row.index, code: "existing.skip" }]
           : [];
-        return { ...row, status: nextStatus, relations, issues: [...nextIssues, ...extraSkipIssue] };
+        let out: PreviewRow = { ...row, status: nextStatus, relations, issues: [...nextIssues, ...extraSkipIssue] };
+        if (out.status !== "skip" && out.status !== "blocked") {
+          out = applyQuality(out, scoreCampaign(c as any), { publish: !!options.publish });
+        }
+        return out;
       });
     },
 
@@ -606,7 +703,12 @@ export function makeCampaignEngine(meta: {
       }
 
       const relationSummary = summarizeRelations(rows.map((r) => r.relations));
-      return { inserted, updated, skipped, failed, errors: errors.slice(0, 10), integrity, relationSummary };
+      return {
+        inserted, updated, skipped, failed,
+        errors: errors.slice(0, 10),
+        integrity, relationSummary,
+        qualitySummary: summarizeQuality(rows.map((r) => r.quality)),
+      };
     },
   };
 }
@@ -674,14 +776,16 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
       // detection degrades gracefully rather than blocking imports.
       const { data, error } = await supabase
         .from("encyclopedia_entities" as any)
-        .select("id, entity_type, slug, title, subtitle, metadata, enabled")
+        .select("id, entity_type, slug, title, subtitle, metadata, enabled, body")
         .limit(10000);
       if (error) throw new Error(error.message);
 
-      const corpus: ExistingIndexRow[] = (((data ?? []) as unknown) as Array<{
+      const rawCorpus = (((data ?? []) as unknown) as Array<{
         id: string; entity_type: string; slug: string;
         title: string; subtitle: string | null; metadata: any; enabled: boolean;
-      }>).map((r) => ({
+        body: any;
+      }>);
+      const corpus: ExistingIndexRow[] = rawCorpus.map((r) => ({
         id: r.id,
         entity_type: r.entity_type,
         slug: r.slug,
@@ -689,13 +793,30 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
         subtitle: r.subtitle,
         metadata: r.metadata,
       }));
+      // Key existing rows by (entity_type,slug) for regression lookup.
+      const bySlug = new Map<string, { body: any; metadata: any }>();
+      for (const r of rawCorpus) bySlug.set(`${r.entity_type}|${r.slug}`, { body: r.body, metadata: r.metadata });
       const idx = buildExistingIndex(corpus);
 
+      const publishFlag = !!options.publish;
       return baseClassified.map((row) => {
         if (row.status === "blocked") return row;
         const item = row.data as EncRowLike;
         const candidates = findCandidates(item, idx);
-        if (candidates.length === 0) return { ...row, candidates: [] };
+        if (candidates.length === 0) {
+          // No duplicates → still score quality + regression.
+          const existing = row.status === "update" ? bySlug.get(`${item.entity_type}|${item.slug}`) : undefined;
+          const q = scoreEncyclopedia(item as any);
+          if (existing) q.regression = detectRegression(existing, { body: item.metadata ? (item as any).body : {}, metadata: item.metadata });
+          const relations = buildEncyclopediaRelationReport(item as any, options.autoRepair !== false);
+          const relationIssues = relationsToIssues(relations, row.index);
+          let out: PreviewRow = { ...row, candidates: [], relations, issues: [...row.issues, ...relationIssues] };
+          const nowBlockedRel = out.issues.some((i) => i.severity === "blocker");
+          if (nowBlockedRel) out = { ...out, status: "blocked" as RowStatus };
+          if (out.status !== "blocked") out = applyQuality(out, q, { publish: publishFlag });
+          return out;
+        }
+
 
         const nextIssues: Issue[] = [...row.issues];
         // Best identifier vs best fuzzy — we treat them separately so a
@@ -776,13 +897,20 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
 
         // If we injected a new blocker, flip status.
         const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
-        return {
+        let out: PreviewRow = {
           ...row,
           status: nowBlocked ? ("blocked" as RowStatus) : row.status,
           issues: nextIssues,
           candidates,
           relations,
         };
+        if (out.status !== "blocked") {
+          const existing = out.status === "update" ? bySlug.get(`${item.entity_type}|${item.slug}`) : undefined;
+          const q = scoreEncyclopedia(item as any);
+          if (existing) q.regression = detectRegression(existing, { body: (item as any).body ?? {}, metadata: item.metadata });
+          out = applyQuality(out, q, { publish: publishFlag });
+        }
+        return out;
       });
     },
 
@@ -871,6 +999,7 @@ export function makeEncyclopediaEngine<T extends EncRowLike>(
         failed: baseResult.failed + aliasFailed,
         errors: [...baseResult.errors, ...aliasErrors].slice(0, 20),
         relationSummary: summarizeRelations(rows.map((r) => r.relations)),
+        qualitySummary: summarizeQuality(rows.map((r) => r.quality)),
       };
     },
   };
@@ -901,13 +1030,21 @@ export function makeInvestigationsEngine<T extends { related_entities?: unknown;
         const extraIssues = relationsToIssues(relations, row.index);
         const nextIssues = [...row.issues, ...extraIssues];
         const nowBlocked = nextIssues.some((i) => i.severity === "blocker");
-        return { ...row, relations, issues: nextIssues, status: nowBlocked ? ("blocked" as RowStatus) : row.status };
+        let out: PreviewRow = { ...row, relations, issues: nextIssues, status: nowBlocked ? ("blocked" as RowStatus) : row.status };
+        if (out.status !== "blocked" && out.status !== "skip") {
+          out = applyQuality(out, scoreInvestigation(row.data as any), { publish: !!options.publish });
+        }
+        return out;
       });
     },
     async commit(rows, options) {
       const patched = rows.map((r) => r.relations ? { ...r, data: applyAcceptedRepairs(r.data, r.relations) } : r);
       const result = await base.commit(patched, options);
-      return { ...result, relationSummary: summarizeRelations(rows.map((r) => r.relations)) };
+      return {
+        ...result,
+        relationSummary: summarizeRelations(rows.map((r) => r.relations)),
+        qualitySummary: summarizeQuality(rows.map((r) => r.quality)),
+      };
     },
   };
 }

@@ -32,6 +32,7 @@ import type {
   Severity,
 } from "@/lib/import/engines";
 import { CANDIDATE_REASON_AR, type DuplicateCandidate } from "@/lib/import/duplicate-detection";
+import { QUALITY_LABEL_AR, SOURCE_STATUS_AR, type QualityReport, type QualityLabel } from "@/lib/import/quality";
 
 type Step = "upload" | "validate" | "preview" | "approve" | "committing" | "report";
 
@@ -65,7 +66,7 @@ export function ImportWizard({ engine }: WizardProps) {
   const [ackWarnings, setAckWarnings] = useState(false);
   const [result, setResult] = useState<CommitResult | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | RowStatus | "warnings">("all");
+  const [filter, setFilter] = useState<"all" | RowStatus | "warnings" | "publish_ready" | "needs_content" | "no_sources" | "regressions">("all");
 
   useEffect(() => {
     if (engineKey !== engine.key) {
@@ -200,11 +201,52 @@ export function ImportWizard({ engine }: WizardProps) {
   const filteredRows = useMemo(() => {
     if (filter === "all") return rows;
     if (filter === "warnings") return rows.filter((r) => r.issues.some((i) => i.severity === "warning"));
+    if (filter === "publish_ready") return rows.filter((r) => r.quality?.label === "publish_ready" || r.quality?.label === "publish_with_notes");
+    if (filter === "needs_content") return rows.filter((r) => r.quality?.label === "needs_content" || r.quality?.label === "needs_review");
+    if (filter === "no_sources") return rows.filter((r) => r.quality?.sourceStatus === "missing");
+    if (filter === "regressions") return rows.filter((r) => !!r.quality?.regression);
     return rows.filter((r) => r.status === filter);
   }, [rows, filter]);
 
+  const qualityStats = useMemo(() => {
+    let publishReady = 0, needsContent = 0, noSources = 0, regressions = 0, sum = 0, n = 0;
+    for (const r of rows) {
+      const q = r.quality;
+      if (!q) continue;
+      n++;
+      sum += q.score;
+      if (q.label === "publish_ready" || q.label === "publish_with_notes") publishReady++;
+      if (q.label === "needs_content" || q.label === "needs_review") needsContent++;
+      if (q.sourceStatus === "missing") noSources++;
+      if (q.regression) regressions++;
+    }
+    return { publishReady, needsContent, noSources, regressions, avg: n ? Math.round(sum / n) : 0, scored: n };
+  }, [rows]);
+
   const setRowOverride = (index: number, action: RowAction | undefined) => {
     setRows((prev) => prev.map((r) => r.index === index ? { ...r, override: action } : r));
+  };
+
+  const setImportAsDraft = (index: number, on: boolean) => {
+    setRows((prev) => prev.map((r) => {
+      if (r.index !== index) return r;
+      // Recompute issues: strip publish-only blockers when draft is on.
+      const nextIssues = r.issues.map((iss) => {
+        if (!on) return iss;
+        if (iss.code === "quality.missing_required" || iss.code === "quality.below_threshold" || iss.code === "quality.sources_missing") {
+          return { ...iss, severity: "warning" as Severity };
+        }
+        return iss;
+      });
+      const wasBlockedByQuality = r.issues.some((i) => i.severity === "blocker" && (i.code?.startsWith("quality.") ?? false));
+      const stillBlocked = nextIssues.some((i) => i.severity === "blocker");
+      return {
+        ...r,
+        importAsDraft: on,
+        issues: nextIssues,
+        status: on && wasBlockedByQuality && !stillBlocked ? (r.override === "update" ? "update" : "new") : r.status,
+      };
+    }));
   };
 
   const setResolutionAccept = (rowIndex: number, resIndex: number, accepted: boolean) => {
@@ -356,7 +398,17 @@ export function ImportWizard({ engine }: WizardProps) {
             <FilterChip label={`تخطّي (${counts.skip})`} active={filter === "skip"} onClick={() => setFilter("skip")} tone="skip" />
             <FilterChip label={`محظور (${counts.blocked})`} active={filter === "blocked"} onClick={() => setFilter("blocked")} tone="blocked" />
             <FilterChip label={`تحذيرات (${counts.warnings})`} active={filter === "warnings"} onClick={() => setFilter("warnings")} tone="warning" />
+            {qualityStats.scored > 0 && <>
+              <FilterChip label={`جاهز للنشر (${qualityStats.publishReady})`} active={filter === "publish_ready"} onClick={() => setFilter("publish_ready")} tone="new" />
+              <FilterChip label={`يحتاج محتوى (${qualityStats.needsContent})`} active={filter === "needs_content"} onClick={() => setFilter("needs_content")} tone="warning" />
+              <FilterChip label={`بلا مصادر (${qualityStats.noSources})`} active={filter === "no_sources"} onClick={() => setFilter("no_sources")} tone="warning" />
+              {qualityStats.regressions > 0 && (
+                <FilterChip label={`تراجع (${qualityStats.regressions})`} active={filter === "regressions"} onClick={() => setFilter("regressions")} tone="blocked" />
+              )}
+              <span className="ms-auto text-[10px] text-slate-400">متوسط الجودة: <span className="font-mono text-amber-200">{qualityStats.avg}٪</span></span>
+            </>}
           </div>
+
 
           <div className="overflow-hidden rounded-xl border border-slate-800">
             <ul className="max-h-[520px] divide-y divide-slate-800 overflow-auto">
@@ -367,6 +419,8 @@ export function ImportWizard({ engine }: WizardProps) {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs text-slate-500">#{r.index + 1}</span>
                       {r.subtitle && <span className="rounded bg-slate-800/60 px-1.5 py-0.5 text-[10px] text-slate-300">{r.subtitle}</span>}
+                      {r.quality && <QualityBadge q={r.quality} />}
+                      {r.importAsDraft && <span className="rounded bg-slate-500/20 px-1.5 py-0.5 text-[10px] text-slate-200">مسودة</span>}
                     </div>
                     <div className="mt-1 text-slate-100">{r.render}</div>
                     {r.issues.length > 0 && (
@@ -382,8 +436,17 @@ export function ImportWizard({ engine }: WizardProps) {
                         ))}
                       </ul>
                     )}
+                    {r.quality && (
+                      <QualityPanel
+                        row={r}
+                        onToggleDraft={(on) => setImportAsDraft(r.index, on)}
+                      />
+                    )}
                     {r.candidates && r.candidates.length > 0 && (
                       <CandidatePanel row={r} onOverride={(a) => setRowOverride(r.index, a)} />
+                    )}
+                    {r.relations && (r.relations.resolutions.length > 0 || r.relations.batchIssues.length > 0) && (
+                      <RelationsPanel row={r} onToggle={(idx, on) => setResolutionAccept(r.index, idx, on)} />
                     )}
                     {r.relations && (r.relations.resolutions.length > 0 || r.relations.batchIssues.length > 0) && (
                       <RelationsPanel row={r} onToggle={(idx, on) => setResolutionAccept(r.index, idx, on)} />
@@ -552,6 +615,27 @@ export function ImportWizard({ engine }: WizardProps) {
               </dl>
             </div>
           )}
+
+          {result.qualitySummary && (
+            <div className="rounded-2xl border border-amber-500/20 bg-slate-900/60 p-5">
+              <h3 className="mb-3 flex items-center justify-between text-sm font-bold text-amber-200">
+                <span>تقرير جودة المحتوى</span>
+                <span className="font-mono text-xs text-slate-400">متوسط: {result.qualitySummary.avgScore}٪</span>
+              </h3>
+              <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                <Stat label="جاهز للنشر" value={result.qualitySummary.publishReady} tone="new" />
+                <Stat label="مع ملاحظات" value={result.qualitySummary.publishWithNotes} tone="update" />
+                <Stat label="يحتاج مراجعة" value={result.qualitySummary.needsReview} tone="warning" />
+                <Stat label="يحتاج محتوى" value={result.qualitySummary.needsContent} tone="warning" />
+                <Stat label="مسودة فقط" value={result.qualitySummary.draftOnly} tone="skip" />
+                <Stat label="بلا مصادر" value={result.qualitySummary.missingSources} tone="warning" />
+                <Stat label="تراجع" value={result.qualitySummary.regressions} tone="blocked" />
+                <Stat label="محظور" value={result.qualitySummary.blocked} tone="blocked" />
+              </dl>
+            </div>
+          )}
+
+
 
 
           {result.integrity && result.integrity.length > 0 && (
@@ -1018,3 +1102,89 @@ function ResolutionRow({ res, accepted, onToggle }: {
     </li>
   );
 }
+
+// ============================================================
+// Phase 4 — Quality badge + per-row quality panel.
+// Reads r.quality (populated by the engine's classify() step).
+// ============================================================
+
+const QUALITY_TONE: Record<QualityLabel, string> = {
+  publish_ready:      "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+  publish_with_notes: "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  needs_review:       "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  needs_content:      "border-rose-500/40 bg-rose-500/10 text-rose-200",
+  draft_only:         "border-slate-500/40 bg-slate-500/10 text-slate-200",
+  blocked:            "border-red-500/40 bg-red-500/10 text-red-200",
+};
+
+function QualityBadge({ q }: { q: QualityReport }) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] ${QUALITY_TONE[q.label]}`}>
+      <span className="font-mono">{q.score}٪</span>
+      <span>{QUALITY_LABEL_AR[q.label]}</span>
+    </span>
+  );
+}
+
+function QualityPanel({ row, onToggleDraft }: {
+  row: PreviewRow;
+  onToggleDraft: (on: boolean) => void;
+}) {
+  const q = row.quality!;
+  const [open, setOpen] = useState(false);
+  const sourceTone =
+    q.sourceStatus === "verified"   ? "text-emerald-300" :
+    q.sourceStatus === "acceptable" ? "text-slate-300"   :
+    q.sourceStatus === "weak"       ? "text-amber-300"   : "text-red-300";
+  return (
+    <div className="mt-2 rounded-md border border-slate-700/60 bg-slate-950/40 p-2 text-[11px]">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 text-right"
+      >
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold text-slate-200">الجودة · {q.score}٪ · {QUALITY_LABEL_AR[q.label]}</span>
+          <span className={`text-[10px] ${sourceTone}`}>{SOURCE_STATUS_AR[q.sourceStatus]}</span>
+          {q.regression && (
+            <span className="rounded bg-red-500/20 px-1 text-[10px] text-red-200">
+              تراجع {q.regression.before}→{q.regression.after}٪
+            </span>
+          )}
+        </span>
+        <span className="text-slate-500">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1">
+          {q.missingRequired.length > 0 && (
+            <div className="text-red-300">مطلوب مفقود: {q.missingRequired.join("، ")}</div>
+          )}
+          {q.missingOptional.length > 0 && (
+            <div className="text-slate-400">اختياري مفقود: {q.missingOptional.join("، ")}</div>
+          )}
+          {q.reasons.length > 0 && (
+            <ul className="space-y-0.5 text-slate-400">
+              {q.reasons.map((r, i) => <li key={i}>• {r}</li>)}
+            </ul>
+          )}
+          {q.regression && (
+            <div className="rounded border border-red-500/30 bg-red-500/5 p-1.5 text-red-200">
+              فقدان محتوى: {q.regression.losses.join("، ")}
+            </div>
+          )}
+          {!q.publishEligible && (
+            <label className="mt-1 inline-flex items-center gap-1.5 rounded border border-slate-600 px-1.5 py-0.5 text-[10px] text-slate-200">
+              <input
+                type="checkbox"
+                checked={!!row.importAsDraft}
+                onChange={(e) => onToggleDraft(e.target.checked)}
+                className="accent-amber-500"
+              />
+              استيراد كمسودة
+            </label>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
