@@ -386,7 +386,7 @@ function WorldDetailPage() {
                   {ENCY_SUBSECTIONS.map((k) => {
                     const items = data.sections[k];
                     if (!items || items.length === 0) return null;
-                    return <ContentSection key={k} sectionKey={k} items={items} />;
+                    return <ContentSection key={k} worldSlug={slug} sectionKey={k} items={items} />;
                   })}
                 </>
               )}
@@ -394,7 +394,7 @@ function WorldDetailPage() {
                 <InvestigationsSection worldSlug={slug} progress={progress} />
               )}
               {key === "museum" && data.sections.artifact.length > 0 && (
-                <ContentSection sectionKey="artifact" items={data.sections.artifact} />
+                <ContentSection worldSlug={slug} sectionKey="artifact" items={data.sections.artifact} />
               )}
             </div>
           ))}
