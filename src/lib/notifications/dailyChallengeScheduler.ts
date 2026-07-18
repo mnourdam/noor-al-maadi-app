@@ -110,7 +110,7 @@ export function computeNextSchedule(
 
   // Candidate minute for this period.
   let minute = deriveMinute(userKey, period);
-  let fireAt = localMidnightOfDayIndex(anchorDayIndex) + minute * 60_000;
+  let fireAt = localMidnightOfDayIndex(anchorDayIndex) + (WINDOW_START_MIN + minute) * 60_000;
 
   // If the computed fire time is already in the past for this
   // period, advance to the next period so we always schedule the
@@ -119,7 +119,7 @@ export function computeNextSchedule(
     period += 1;
     anchorDayIndex = period * PERIOD_DAYS + offset;
     minute = deriveMinute(userKey, period);
-    fireAt = localMidnightOfDayIndex(anchorDayIndex) + minute * 60_000;
+    fireAt = localMidnightOfDayIndex(anchorDayIndex) + (WINDOW_START_MIN + minute) * 60_000;
   }
 
   // No-repeat correction (minute) against the *previous* period
@@ -131,13 +131,13 @@ export function computeNextSchedule(
     previous.minute === minute
   ) {
     minute = (minute + COLLISION_MINUTE_OFFSET) % WINDOW_LENGTH_MIN;
-    fireAt = localMidnightOfDayIndex(anchorDayIndex) + minute * 60_000;
+    fireAt = localMidnightOfDayIndex(anchorDayIndex) + (WINDOW_START_MIN + minute) * 60_000;
     // If the correction just pushed us into the past, roll one more period.
     if (fireAt <= nowMs) {
       period += 1;
       anchorDayIndex = period * PERIOD_DAYS + offset;
       minute = deriveMinute(userKey, period);
-      fireAt = localMidnightOfDayIndex(anchorDayIndex) + minute * 60_000;
+      fireAt = localMidnightOfDayIndex(anchorDayIndex) + (WINDOW_START_MIN + minute) * 60_000;
     }
   }
 
