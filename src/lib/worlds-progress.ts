@@ -35,7 +35,7 @@ import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 // ------------------------------------------------------------
 
 export type EntityBucket =
-  | "figure" | "city" | "event" | "battle" | "landmark" | "artifact" | "state";
+  | "figure" | "city" | "event" | "battle" | "landmark" | "artifact" | "state" | "scholar";
 
 export type WorldEntityIndex = {
   slug: string;                    // world slug
