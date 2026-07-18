@@ -339,8 +339,10 @@ check("sign-out step 1: pending cancelled + meta cleared",
 globalThis.__fakeSupabase = { auth: { getUser: async () => ({ data: { user: null } }) } };
 await rescheduleDailyChallenge("guest");
 const guestMetaJson = storage.get("irth.dailyChallengeReminder.lastMeta.v1");
+const guestMeta = guestMetaJson ? JSON.parse(guestMetaJson) : null;
 check("sign-out step 2: guest schedule evaluated cleanly",
-  pendingIds.size === 1 && JSON.parse(guestMetaJson).userKey === "guest");
+  pendingIds.size === 1 && guestMeta?.userKey === "guest",
+  { pending: pendingIds.size, meta: guestMeta });
 
 // C9. Deep link constant matches what schedule() payload carried.
 resetHarness();
