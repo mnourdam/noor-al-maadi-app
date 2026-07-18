@@ -78,13 +78,25 @@ function GamePlayPage() {
       const g = await getGameBySlug(slug);
       setGame(g);
       if (g) {
-        const p = await getMyProgress(g.id);
-        setAlreadyCompleted(!!p?.completed);
+        const { data } = await supabase.auth.getUser();
+        if (data.user?.id) {
+          const p = await getMyProgress(g.id);
+          setAlreadyCompleted(!!p?.completed);
+        } else {
+          // Guest reward guard mirrors the ledger — if a guest has already
+          // completed this game on this device, the replay must show the
+          // "already completed" screen and skip the reward pipeline.
+          const { readGuestCompletedIds } = await import(
+            "@/lib/games/guestCompletions"
+          );
+          setAlreadyCompleted(readGuestCompletedIds().has(g.id));
+        }
       } else {
         setAlreadyCompleted(false);
       }
     })();
   }, [slug]);
+
 
   const stages = useMemo(() => {
     if (!game || game === "loading") return [];
