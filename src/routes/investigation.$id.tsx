@@ -113,10 +113,12 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     // Local optimistic marker — server reward reconciles via cloud_saves.
     markInvestigationCompletedLocal(row.slug);
 
-    // Non-reward client effects (badges/artifacts remain local until
-    // the server progression phase covers them explicitly).
-    if (reward.badge) awardBadge(reward.badge);
-    if (reward.artifact) findArtifact(reward.artifact);
+    // Phase G2 — badges and museum artifacts are now granted
+    // server-side inside `complete_investigation_v2` (idempotent
+    // insert into `public.user_collection`). Do NOT award them
+    // client-side: doing so would race the server unlock and could
+    // cause a mismatched local view. The canonical museum/badge
+    // reads pull from `user_collection` and reconcile after flush.
 
     // Heart restoration — respects cooldown so the same investigation
     // can't be farmed back-to-back for hearts.
