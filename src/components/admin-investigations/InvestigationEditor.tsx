@@ -707,6 +707,29 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
       {showLocalPreview && (
         <LocalPreviewDialog state={state} onClose={() => setShowLocalPreview(false)} />
       )}
+
+      {/* Publish dialog */}
+      {showPublish && (
+        <PublishDialog
+          state={state}
+          dirty={dirty}
+          hasPersistedDraft={state.hydratedFromDraft || state.lifecycle.has_unpublished_changes}
+          busy={busy === "publish"}
+          onCancel={() => setShowPublish(false)}
+          onConfirm={(note) => runPublish(note)}
+        />
+      )}
+
+      {/* Version history dialog */}
+      {showVersions && (
+        <VersionsDialog
+          investigationId={state.id}
+          currentVersion={state.lifecycle.content_version}
+          busy={busy === "restore"}
+          onClose={() => setShowVersions(false)}
+          onRestoreToDraft={runRestoreToDraft}
+        />
+      )}
     </Shell>
   );
 }
