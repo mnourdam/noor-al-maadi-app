@@ -554,18 +554,21 @@ export function computeWorldProgress(
 
 // ------------------------------------------------------------
 // Continue Journey — deterministic recommender.
+//
+// The campaign phases (A/B) are DELEGATED to
+// `campaignRecommendationService.pickCampaignRecommendation` so
+// Home Hero and Worlds share ONE decision engine.  Tier C
+// (world_complete) and the non-campaign fallbacks (investigation
+// / entity / artifact) remain here because they are world-shaped.
 // ------------------------------------------------------------
 
-const BUCKET_PRIORITY: EntityBucket[] = ["state", "figure", "city", "battle", "event", "landmark", "artifact"];
+import {
+  pickCampaignRecommendation,
+  buildProgressLookup,
+} from "@/lib/campaignRecommendationService";
+import type { Campaign as ImportedCampaignForRec } from "@/types/campaign";
 
-function campaignSortKey(row: { data: any } | null): number {
-  const d = row?.data ?? {};
-  const co = typeof d.chronological_order === "number" ? d.chronological_order : null;
-  if (co != null && Number.isFinite(co)) return co;
-  const sy = typeof d.sort_year === "number" ? d.sort_year : null;
-  if (sy != null && Number.isFinite(sy)) return 1_000_000 + sy;
-  return Number.POSITIVE_INFINITY;
-}
+const BUCKET_PRIORITY: EntityBucket[] = ["state", "figure", "city", "battle", "event", "landmark", "artifact"];
 
 export function pickContinueJourney(
   worldSlug: string,
@@ -582,61 +585,40 @@ export function pickContinueJourney(
   const idx = inputs.index.get(worldSlug);
   if (!idx) return { kind: "world_complete" };
 
-  // Gather campaign rows once, sorted deterministically.
-  const campRows = idx.campaignIds
-    .map((id) => ({ id, row: findCampaignRow(id) }))
-    .filter((x): x is { id: string; row: { data: any } } => !!x.row)
-    .sort((a, b) => {
-      const ka = campaignSortKey(a.row); const kb = campaignSortKey(b.row);
-      if (ka !== kb) return ka - kb;
-      return String(a.row.data?.slug ?? a.id).localeCompare(String(b.row.data?.slug ?? b.id));
-    });
-
-  // 1. Resume in-flight campaign — has some completed chapters but not all.
-  for (const { id, row } of campRows) {
-    const chapters = campaignChapters(row).sort(
-      (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0),
-    );
-    if (chapters.length === 0) continue;
-    const cloudDone = inputs.cloudCampaign.get(id) ?? new Set<string>();
-    const local = getCampaignProgress(id);
-    let doneN = 0; let firstUndone: string | null = null;
-    for (const ch of chapters) {
-      const done = cloudDone.has(ch.id) || !!local.chapters[ch.id]?.completed;
-      if (done) doneN++;
-      else if (firstUndone == null) firstUndone = ch.id;
-    }
-    if (doneN > 0 && doneN < chapters.length && firstUndone) {
+  // 1+2. Campaign tier — delegate to the shared recommendation service.
+  const worldCampaignRows = idx.campaignIds
+    .map((id) => findCampaignRow(id))
+    .filter((r): r is { data: any } => !!r)
+    .map((r) => r.data as ImportedCampaignForRec);
+  const campaignRec = pickCampaignRecommendation({
+    campaigns: worldCampaignRows,
+    getProgress: buildProgressLookup(inputs.cloudCampaign),
+  });
+  if (campaignRec) {
+    const c = campaignRec.campaign;
+    const slug = String(c.slug ?? c.id);
+    if (campaignRec.priority === "resume" && campaignRec.chapter) {
       return {
         kind: "campaign_resume",
-        campaignId: id,
-        campaignSlug: String(row.data?.slug ?? id),
-        chapterId: firstUndone,
-        title: String(row.data?.title ?? ""),
+        campaignId: c.id,
+        campaignSlug: slug,
+        chapterId: campaignRec.chapter.id,
+        title: String(c.title ?? ""),
         to: {
           path: "/campaigns/imported/$id/chapter/$chapter",
-          params: { id: String(row.data?.slug ?? id), chapter: firstUndone },
+          params: { id: slug, chapter: campaignRec.chapter.id },
         },
       };
     }
-  }
-
-  // 2. Start first uncompleted campaign (fully untouched OR first in order).
-  for (const { id, row } of campRows) {
-    const chapters = campaignChapters(row);
-    if (chapters.length === 0) continue;
-    const cloudDone = inputs.cloudCampaign.get(id) ?? new Set<string>();
-    const local = getCampaignProgress(id);
-    const fullDone = chapters.every((ch) => cloudDone.has(ch.id) || !!local.chapters[ch.id]?.completed);
-    if (fullDone) continue;
     return {
       kind: "campaign_start",
-      campaignId: id,
-      campaignSlug: String(row.data?.slug ?? id),
-      title: String(row.data?.title ?? ""),
-      to: { path: "/campaigns/imported/$id", params: { id: String(row.data?.slug ?? id) } },
+      campaignId: c.id,
+      campaignSlug: slug,
+      title: String(c.title ?? ""),
+      to: { path: "/campaigns/imported/$id", params: { id: slug } },
     };
   }
+
 
   // 3. Next unfinished investigation.
   const invDoneSet = buildInvestigationDoneSet(inputs.investigationsCompleted);
