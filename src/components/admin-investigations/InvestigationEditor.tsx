@@ -1,16 +1,21 @@
 // ============================================================
-// Phase C — Structured Investigation Editor.
+// Phases C + D — Structured Investigation Editor with lifecycle.
 //
-// Loads the row via admin_get_investigation_full, exposes a
-// structured Arabic RTL editor for General / Steps / Rewards /
-// Related Entities, validates client-side, and saves through the
-// transactional import RPC (admin_run_import_batch). There is no
-// direct-write fallback: if the RPC fails, the save fails.
+// • Loads via admin_get_investigation_full (returns published +
+//   draft_data + lifecycle metadata).
+// • Editing operates on the DRAFT (draft_data if present, else the
+//   published snapshot).
+// • Save Draft → admin_save_investigation_draft (no player impact).
+// • Publish   → admin_publish_investigation (atomic; snapshots a new
+//   immutable version and clears draft_data).
+// • Version History → list / preview / restore-to-draft (never
+//   auto-publishes). All server-side; there is no direct-write
+//   fallback anywhere on this page.
 // ============================================================
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft, Save, PlayCircle, RotateCcw, Eye, AlertTriangle,
+  ArrowLeft, Save, UploadCloud, History as HistoryIcon, RotateCcw, Eye, AlertTriangle,
   Trash2, Copy, Plus, ChevronUp, ChevronDown, CheckCircle2, Info, Loader2, ExternalLink,
 } from "lucide-react";
 import { Link, useNavigate, useBlocker } from "@tanstack/react-router";
@@ -22,11 +27,13 @@ import {
 import { scoreInvestigation } from "@/lib/import/quality";
 import { buildInvestigationRelationReport } from "@/lib/import/relations-report";
 import {
-  buildInvestigationEditorPlan,
-  dryRunInvestigationEditor,
-  commitInvestigationEditor,
-  type RunResult,
-} from "@/lib/investigations/editor-plan";
+  saveInvestigationDraft,
+  publishInvestigation,
+  listInvestigationVersions,
+  getInvestigationVersion,
+  restoreInvestigationVersionToDraft,
+  type InvestigationVersionRow,
+} from "@/lib/investigations/adminApi";
 import { canonicalJSON } from "@/lib/import/plan";
 
 // ---------------- Types ----------------
