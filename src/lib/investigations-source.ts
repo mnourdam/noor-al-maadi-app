@@ -168,7 +168,17 @@ export function useSupabaseInvestigation(slug: string | undefined) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  }, [slug, refreshTick]);
+
+  // Refresh already-open detail pages when this investigation is republished.
+  useEffect(() => onInvestigationPublished((changedId, kind) => {
+    if (kind !== "publish") return;
+    if (!slug) return;
+    if (!changedId || changedId === slug || changedId === row?.id) {
+      setRefreshTick((n) => n + 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [slug, row?.id]);
 
   return { row, error };
 }
