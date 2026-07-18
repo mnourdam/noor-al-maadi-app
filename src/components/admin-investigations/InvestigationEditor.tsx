@@ -13,7 +13,7 @@ import {
   ArrowLeft, Save, PlayCircle, RotateCcw, Eye, AlertTriangle,
   Trash2, Copy, Plus, ChevronUp, ChevronDown, CheckCircle2, Info, Loader2, ExternalLink,
 } from "lucide-react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useBlocker } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import {
   normalizeInvestigationRow,
@@ -245,7 +245,9 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
   const [dryReport, setDryReport] = useState<RunResult | null>(null);
   const [dryHash, setDryHash] = useState<string | null>(null);
   const [removalApproved, setRemovalApproved] = useState(false);
-  const [showRemovalDialog, setShowRemovalDialog] = useState<false | "confirm">(false);
+  /** Stable step ID pending removal — resolved to a current index at confirm
+   * time so reorders between open and confirm cannot target the wrong step. */
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const [showLocalPreview, setShowLocalPreview] = useState(false);
   const notifyRef = useRef<number | null>(null);
 
@@ -288,16 +290,20 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
     setDryHash(null);
   }, [state, removalApproved]);
 
-  // Unsaved-change protection (browser + tab close).
-  useEffect(() => {
-    if (!dirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+  // Unsaved-change protection covers ALL navigation paths:
+  //  • internal <Link> / programmatic navigate()
+  //  • browser back / forward (router history)
+  //  • Android hardware back — AndroidBackHandler calls
+  //    router.history.back(), which TanStack Router routes through the
+  //    same blocker registry.
+  //  • hard reload / tab close via enableBeforeUnload.
+  // A clean editor produces no prompt; a dirty editor renders the
+  // Arabic resolver dialog below.
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirty,
+    enableBeforeUnload: () => dirty,
+    withResolver: true,
+  });
 
   // ---- Validation, quality, relations ----
   const validation = useMemo(
@@ -358,30 +364,37 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
     next.splice(idx + 1, 0, copy);
     return { ...s, steps: next };
   });
-  const removeStep = (idx: number) => setState((s) => {
-    if (!s) return s;
+  const removeStep = (idx: number) => {
+    if (!state) return;
+    const target = state.steps[idx];
+    if (!target) return;
     // Newly-added (not persisted) → no destructive approval required.
-    const target = s.steps[idx];
     if (!target.__persisted) {
-      const next = s.steps.slice(); next.splice(idx, 1);
-      return { ...s, steps: next };
+      setState((s) => {
+        if (!s) return s;
+        const next = s.steps.slice();
+        next.splice(idx, 1);
+        return { ...s, steps: next };
+      });
+      return;
     }
-    // Persisted → require dialog approval, then commit removal.
-    setShowRemovalDialog("confirm");
-    (window as any).__pendingRemoveIdx = idx;
-    return s;
-  });
+    // Persisted → require dialog approval, keyed by stable step id so
+    // reorders between "open" and "confirm" cannot target the wrong row.
+    setPendingRemoveId(target.id);
+  };
 
   const confirmRemoval = () => {
-    const idx = (window as any).__pendingRemoveIdx as number | undefined;
-    if (typeof idx !== "number") { setShowRemovalDialog(false); return; }
+    const targetId = pendingRemoveId;
+    if (!targetId) { setPendingRemoveId(null); return; }
     setState((s) => {
       if (!s) return s;
+      const idx = s.steps.findIndex((st) => st.id === targetId);
+      if (idx < 0) return s;
       const next = s.steps.slice();
       next.splice(idx, 1);
       return { ...s, steps: next };
     });
-    setShowRemovalDialog(false);
+    setPendingRemoveId(null);
     setRemovalApproved(true);
     notify("info", "تم تسجيل موافقة الحذف. يجب تشغيل التشغيل التجريبي مجدداً قبل الحفظ.");
   };
@@ -394,7 +407,8 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
   };
 
   const goBack = () => {
-    if (dirty && !confirm("لديك تغييرات غير محفوظة. الخروج بدون حفظ؟")) return;
+    // The `useBlocker` resolver above prompts on dirty state — no need
+    // for a second confirm() here. A clean editor navigates immediately.
     navigate({ to: "/admin/investigations", search: {} });
   };
 
@@ -609,13 +623,25 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
         </div>
       )}
 
-      {/* Removal confirmation dialog */}
-      {showRemovalDialog && (
+      {/* Removal confirmation dialog — keyed by stable step id */}
+      {pendingRemoveId && (
         <RemovalDialog
-          step={initialState?.steps.find((s) => s.id === (state.steps[(window as any).__pendingRemoveIdx]?.id ?? "")) ??
-                initialState?.steps[(window as any).__pendingRemoveIdx] ?? null}
-          onCancel={() => setShowRemovalDialog(false)}
+          step={
+            initialState?.steps.find((s) => s.id === pendingRemoveId) ??
+            state.steps.find((s) => s.id === pendingRemoveId) ??
+            null
+          }
+          onCancel={() => setPendingRemoveId(null)}
           onConfirm={confirmRemoval}
+        />
+      )}
+
+      {/* Unsaved-changes navigation blocker (covers Link, navigate,
+          browser back, Android back, hard reload/tab close). */}
+      {blocker.status === "blocked" && (
+        <UnsavedChangesDialog
+          onStay={blocker.reset}
+          onDiscard={blocker.proceed}
         />
       )}
 
@@ -931,6 +957,32 @@ function RemovalDialog({ step, onCancel, onConfirm }: {
           <button onClick={onConfirm} disabled={!ok}
             className="rounded-lg border border-red-500/50 bg-red-500/20 px-3 py-1.5 text-xs font-bold text-red-100 disabled:opacity-40">
             تأكيد الحذف
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UnsavedChangesDialog({ onStay, onDiscard }: { onStay: () => void; onDiscard: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={onStay}>
+      <div dir="rtl" onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl border border-amber-500/40 bg-slate-950 p-5 shadow-2xl">
+        <h3 className="mb-2 flex items-center gap-2 text-base font-bold text-amber-100">
+          <AlertTriangle className="h-4 w-4" /> تغييرات غير محفوظة
+        </h3>
+        <p className="mb-4 text-sm leading-7 text-slate-300">
+          لديك تعديلات لم يتم حفظها على هذا التحقيق. هل ترغب في تجاهلها ومغادرة المحرر؟
+        </p>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button onClick={onStay}
+            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-100 hover:border-amber-400">
+            متابعة التعديل
+          </button>
+          <button onClick={onDiscard}
+            className="rounded-lg border border-red-500/50 bg-red-500/20 px-3 py-1.5 text-xs font-bold text-red-100 hover:bg-red-500/30">
+            تجاهل التغييرات والمغادرة
           </button>
         </div>
       </div>
