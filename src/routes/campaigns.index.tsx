@@ -87,6 +87,15 @@ function CampaignsHubFull() {
         />
       </div>
       <Screen title="الحملات" subtitle="رحلةٌ زمنيّة عبر العصور">
+        {worldSlug && (
+          <div className="mb-4">
+            <WorldFilterChip
+              worldTitle={worldTitle}
+              onRemove={() => navigate({ search: { world: "" } })}
+            />
+          </div>
+        )}
+
         {isLoading && (
           <div className="px-2 py-10 text-center text-sm text-muted-foreground">جاري التحميل…</div>
         )}
@@ -119,8 +128,17 @@ function CampaignsHubFull() {
 
         {!isLoading && totalCampaigns === 0 && (
           <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
-            <Swords className="mx-auto mb-3 size-8 text-gold/70" />
-            <p className="font-display text-base font-bold text-gold">لا توجد حملات منشورة حاليًا.</p>
+            {worldSlug ? (
+              <>
+                <Globe2 className="mx-auto mb-3 size-8 text-gold/70" />
+                <p className="font-display text-base font-bold text-gold">لا توجد حملات متاحة في هذا العالم حاليًا</p>
+              </>
+            ) : (
+              <>
+                <Swords className="mx-auto mb-3 size-8 text-gold/70" />
+                <p className="font-display text-base font-bold text-gold">لا توجد حملات منشورة حاليًا.</p>
+              </>
+            )}
           </div>
         )}
       </Screen>
