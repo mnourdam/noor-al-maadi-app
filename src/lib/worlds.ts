@@ -17,10 +17,18 @@ import {
   buildWorldIndex,
   getWorldCampaignIds,
 } from "@/lib/worlds-progress";
-import { WORLD_HUBS, WORLD_SLUGS } from "@/lib/worlds-constants";
+import { WORLD_HUBS, WORLD_SLUGS, PUBLIC_WORLD_HUBS } from "@/lib/worlds-constants";
 import type { WorldHub } from "@/lib/worlds-constants";
 
-export { WORLD_ERA, WORLD_HUBS, WORLD_SLUGS } from "@/lib/worlds-constants";
+export {
+  WORLD_ERA,
+  WORLD_HUBS,
+  WORLD_SLUGS,
+  PUBLIC_WORLD_ORDER,
+  PUBLIC_WORLD_SLUGS,
+  PUBLIC_WORLD_HUBS,
+  isPublicWorld,
+} from "@/lib/worlds-constants";
 export type { WorldHub } from "@/lib/worlds-constants";
 
 export function findHub(slug: string): WorldHub | null {
