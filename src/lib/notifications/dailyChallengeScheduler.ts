@@ -204,38 +204,57 @@ export type SuppressionReason =
   | "todays_picks_done"
   | "all_eligible_exhausted";
 
+export interface DailyStateShape {
+  totalPublished: number;
+  allEligibleExhausted: boolean;
+  todaysPicksDone: boolean;
+}
+
 /**
- * Determine whether scheduling should be suppressed *right now*.
- * Order is deliberate: cheapest / most-decisive first.
- *
- * To add a new rule, push another async checker into the local
- * `SUPPRESSORS` list — each returns a `SuppressionReason` string
- * or `null`.
+ * Pure suppression rule — deterministic given inputs. Runtime code
+ * loads the real prefs / daily state; tests inject fakes.
+ * Order matters: cheapest / most-decisive first.
+ */
+export function evaluateSuppression(inputs: {
+  prefs: NotificationPrefs;
+  permissionGranted: boolean;
+  dailyState: DailyStateShape | null;
+}): SuppressionReason | null {
+  const { prefs, permissionGranted, dailyState } = inputs;
+  if (prefs.master === false) return "master_disabled";
+  if (prefs.dailyChallenge === false) return "category_muted";
+  if (!permissionGranted) return "permission_not_granted";
+  if (dailyState) {
+    if (dailyState.totalPublished === 0) return "no_published_games";
+    if (dailyState.allEligibleExhausted) return "all_eligible_exhausted";
+    if (dailyState.todaysPicksDone) return "todays_picks_done";
+  }
+  return null;
+}
+
+/**
+ * Runtime wrapper — loads canonical prefs and the daily-challenge
+ * state from the app's real sources, then defers to
+ * `evaluateSuppression`. Failures in either loader are treated as
+ * "allow" so a transient network hiccup does not silently mute
+ * the reminder.
  */
 export async function suppressionReason(
   opts: { permissionGranted: boolean },
 ): Promise<SuppressionReason | null> {
-  // 1. Master + per-category mute (best-effort — treat load errors as allow).
-  try {
-    const prefs = await fetchMyPreferences();
-    if (prefs && prefs["master"] === false) return "master_disabled";
-    if (prefs && prefs["daily_reminder"] === false) return "category_muted";
-  } catch { /* prefs unavailable → allow */ }
-
-  // 2. OS-level permission.
-  if (!opts.permissionGranted) return "permission_not_granted";
-
-  // 3. Content-based rules — pull the canonical daily-challenge
-  //    state (already used by Home & Adventure Hall).
+  const prefs = readCanonicalNotificationPrefs();
+  let dailyState: DailyStateShape | null = null;
   try {
     const state = await loadDailyChallengeState();
-    if (state.totalPublished === 0) return "no_published_games";
-    if (state.allEligibleExhausted) return "all_eligible_exhausted";
-    if (state.todaysPicksDone) return "todays_picks_done";
+    dailyState = {
+      totalPublished: state.totalPublished,
+      allEligibleExhausted: state.allEligibleExhausted,
+      todaysPicksDone: state.todaysPicksDone,
+    };
   } catch { /* content check unavailable → allow */ }
-
-  return null;
+  return evaluateSuppression({ prefs, permissionGranted: opts.permissionGranted, dailyState });
 }
+
 
 // ─── Native bridge helpers ──────────────────────────────────
 
