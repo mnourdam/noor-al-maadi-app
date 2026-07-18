@@ -2,7 +2,7 @@ import { createFileRoute, useParams } from "@tanstack/react-router";
 import { AdminGate } from "@/lib/admin-guard";
 import { InvestigationEditor } from "@/components/admin-investigations/InvestigationEditor";
 
-export const Route = createFileRoute("/admin/investigations/$id/edit")({
+export const Route = createFileRoute("/admin/investigations_/$id/edit")({
   head: () => ({
     meta: [
       { title: "محرر التحقيقات — إرث" },
