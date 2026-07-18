@@ -216,7 +216,7 @@ function HomeFull() {
     if (chapter) {
       const local = getCampaignProgress(campaign.id);
       const doneIds = local.chapters[chapter.id]?.completedActivityIds ?? [];
-      nextActivity = chapter.activities.find((a) => !doneIds.includes(a.id)) ?? null;
+      nextActivity = chapter.activities.find((a: CampaignActivity) => !doneIds.includes(a.id)) ?? null;
     }
     return {
       campaign,
