@@ -262,7 +262,11 @@ export function CrosswordRenderer({
       const target = cells.find(({ r, c }) => {
         const k = cellKey(r, c);
         const exp = grid.get(k)?.expected;
-        return exp && (entries[k] ?? "") !== exp;
+        // Reveal target = a cell whose entered letter is not yet an
+        // accepted orthographic equivalent. This keeps the reveal
+        // consistent with `check()` — never re-reveal a cell the
+        // player already got right in a tolerated form.
+        return !!exp && !cellsEqual(exp, entries[k] ?? "");
       });
       if (target) {
         const k = cellKey(target.r, target.c);
