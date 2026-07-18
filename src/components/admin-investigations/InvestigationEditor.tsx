@@ -272,10 +272,10 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
   const [rawRow, setRawRow] = useState<any | null>(null);
   const [initialState, setInitialState] = useState<EditorState | null>(null);
   const [state, setState] = useState<EditorState | null>(null);
-  const [busy, setBusy] = useState<null | "dry" | "save">(null);
+  const [busy, setBusy] = useState<null | "save" | "publish" | "restore">(null);
   const [toast, setToast] = useState<{ kind: "ok" | "err" | "info"; msg: string } | null>(null);
-  const [dryReport, setDryReport] = useState<RunResult | null>(null);
-  const [dryHash, setDryHash] = useState<string | null>(null);
+  const [showVersions, setShowVersions] = useState(false);
+  const [showPublish, setShowPublish] = useState(false);
   const [removalApproved, setRemovalApproved] = useState(false);
   /** Stable step ID pending removal — resolved to a current index at confirm
    * time so reorders between open and confirm cannot target the wrong step. */
