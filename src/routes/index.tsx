@@ -73,6 +73,13 @@ function HomeFull() {
     [todayEvent, todayOthers],
   );
   const stats = useRealCollectionStats();
+  // Unified discovery feed — encyclopedia reads + museum acquisitions,
+  // canonically deduplicated. Single source for Hero + Home carousel.
+  const unifiedDiscoveries = useUnifiedDiscoveryFeed(8);
+  const recentDiscoveries = useMemo<UnifiedUnlock[]>(
+    () => unifiedDiscoveries.map(adaptDiscoveryToUnlock),
+    [unifiedDiscoveries],
+  );
   const [unread, setUnread] = useState(0);
 
   // Perf-lite detection — drives reduced visual layers (no embers, single
