@@ -1267,6 +1267,7 @@ function SettingsTab({
         <SettingToggle icon={<Compass className="size-4" />} label="تنبيهات العودة" desc="فضول تاريخي إن غبت يومًا كاملاً" value={prefs.reengagement && prefs.master} onChange={(v) => setNotificationPrefs({ reengagement: v })} />
         <SettingToggle icon={<Crown className="size-4" />} label="إشعارات الحملات" desc="عند فتح حملة جديدة أو سرّية" value={prefs.campaign && prefs.master} onChange={(v) => setNotificationPrefs({ campaign: v })} />
         <SettingToggle icon={<Sparkles className="size-4" />} label="إشعارات المواسم" desc="بدء موسم جديد أو مكافأة جاهزة" value={prefs.season && prefs.master} onChange={(v) => setNotificationPrefs({ season: v })} />
+        <SettingToggle icon={<Flame className="size-4" />} label="تذكير التحدي اليومي" desc="تذكير محلي على جهازك كل يومين تقريبًا" value={(prefs.dailyChallenge ?? true) && prefs.master} onChange={(v) => setNotificationPrefs({ dailyChallenge: v })} />
       </SettingsGroup>
 
       {/* Newsletter (Irth news & updates) — optional, independent of auth emails */}

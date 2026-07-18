@@ -30,6 +30,13 @@ export interface NotificationPrefs {
   season: boolean;
   campaign: boolean;
   friend?: boolean;
+  /**
+   * Phase 2c — controls the on-device Daily Challenge reminder
+   * scheduled by `dailyChallengeScheduler.ts`. Kept in the SAME
+   * `NotificationPrefs` shape as every other category so the
+   * settings UI and the scheduler share a single source of truth.
+   */
+  dailyChallenge?: boolean;
 }
 
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
@@ -39,7 +46,9 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   season: false, // LC1: season notifications disabled by default (feature hidden post-beta).
   campaign: true,
   friend: true,
+  dailyChallenge: true,
 };
+
 
 export interface InAppNotification {
   id: string;
@@ -78,6 +87,37 @@ function write<T>(k: string, v: T): boolean {
 export function isUnread(n: InAppNotification): boolean {
   return !n.readAt && !n.read;
 }
+
+/**
+ * Canonical reader for the current user's notification preferences.
+ *
+ * Reads the SAME `hakaya.profile.v2` storage slot that the settings
+ * UI writes through `setNotificationPrefs` in `src/lib/profile.tsx`.
+ * There is intentionally NO second server-side preference source
+ * for the on-device Daily Challenge reminder — the scheduler must
+ * go through this helper so a toggle in the settings screen takes
+ * effect immediately.
+ */
+const PROFILE_STORAGE_KEY = "hakaya.profile.v2";
+export function readCanonicalNotificationPrefs(): NotificationPrefs {
+  if (typeof localStorage === "undefined") return { ...DEFAULT_NOTIFICATION_PREFS };
+  try {
+    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_NOTIFICATION_PREFS };
+    const parsed = JSON.parse(raw) as { settings?: { notifications?: boolean; notificationPrefs?: Partial<NotificationPrefs> } };
+    const nested = parsed?.settings?.notificationPrefs ?? {};
+    const merged: NotificationPrefs = { ...DEFAULT_NOTIFICATION_PREFS, ...nested };
+    // The top-level `settings.notifications` flag is the legacy master
+    // switch. When explicitly false it always wins.
+    if (parsed?.settings && parsed.settings.notifications === false) {
+      merged.master = false;
+    }
+    return merged;
+  } catch {
+    return { ...DEFAULT_NOTIFICATION_PREFS };
+  }
+}
+
 
 function emitUpdated() {
   if (typeof window !== "undefined") {

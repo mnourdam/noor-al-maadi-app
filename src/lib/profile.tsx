@@ -452,13 +452,23 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     setBio: (bio) => update((p) => ({ ...p, bio })),
     setFavorites: (patch) => update((p) => ({ ...p, ...patch })),
     setAvatar: (id) => update((p) => ({ ...p, avatarId: id })),
-    setNotificationPrefs: (patch) => update((p) => ({
-      ...p,
-      settings: {
-        ...p.settings,
-        notificationPrefs: { ...DEFAULT_NOTIFICATION_PREFS, ...(p.settings.notificationPrefs ?? {}), ...patch },
-      },
-    })),
+    setNotificationPrefs: (patch) => {
+      update((p) => ({
+        ...p,
+        settings: {
+          ...p.settings,
+          notificationPrefs: { ...DEFAULT_NOTIFICATION_PREFS, ...(p.settings.notificationPrefs ?? {}), ...patch },
+        },
+      }));
+      // Notify the Daily Challenge scheduler (and any other listeners)
+      // that preferences changed so they can reschedule/cancel
+      // immediately. This is the single canonical event; the scheduler
+      // reads the same profile-local prefs as the settings UI.
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("irth:notification-preferences-updated"));
+      }
+    },
+
 
     // ============= Engagement v1 =============
     loseHeart: () => {
