@@ -509,12 +509,12 @@ function HomeFull() {
   type Activity = { key: string; icon: ReactNode; eyebrow: string; title: string; to: string };
   const recentActivity = useMemo<Activity[]>(() => {
     const acts: Activity[] = [];
-    if (stats.recent[0]) {
-      const r = stats.recent[0];
+    if (recentDiscoveries[0]) {
+      const r = recentDiscoveries[0];
       acts.push({
         key: `disc:${r.key}`,
         icon: <Gem className="size-3.5" />,
-        eyebrow: `اكتشاف · ${r.kind}`,
+        eyebrow: r.kind,
         title: r.title,
         to: r.to ?? "/collection",
       });
