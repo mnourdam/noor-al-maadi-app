@@ -7,6 +7,7 @@ import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import { fetchGatedProfileById, derivePublicStats, type PublicProfile } from "@/lib/social";
 import { evaluateAchievements } from "@/lib/app-constants";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { Avatar } from "@/components/Avatar";
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 
