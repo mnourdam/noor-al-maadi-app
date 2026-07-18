@@ -336,6 +336,11 @@ function WorldDetailPage() {
           )}
         </div>
 
+        {/* Mini timeline — derived only from real dated Event entities in
+            this world. Hidden when fewer than 3 dated events exist. No
+            fabricated milestones. */}
+        <MiniTimeline events={data.sections.event} />
+
         {/* Connected worlds */}
         {data.connectedWorlds.length > 0 && (
           <section className="mt-8">
