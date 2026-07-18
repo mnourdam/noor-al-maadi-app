@@ -18,6 +18,7 @@ import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notificati
 import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
+import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscoveries";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
