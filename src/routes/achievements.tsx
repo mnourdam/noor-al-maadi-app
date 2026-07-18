@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { ChevronLeft, Trophy, Lock } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useProfile } from "@/lib/profile";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import {
   ACHIEVEMENTS,
   ACHIEVEMENT_CATEGORIES,
@@ -17,7 +18,11 @@ export const Route = createFileRoute("/achievements")({
 
 function AchievementsPage() {
   const { profile } = useProfile();
-  const evals = useMemo(() => evaluateAchievements(profile), [profile]);
+  const canonicalInv = useCanonicalInvestigationProgress();
+  const evals = useMemo(
+    () => evaluateAchievements(profile, { investigationsCompletedCount: canonicalInv.count }),
+    [profile, canonicalInv.count],
+  );
   const earnedAt = profile.achievementsEarned ?? {};
 
   const earnedCount = evals.filter((e) => e.earned).length;
