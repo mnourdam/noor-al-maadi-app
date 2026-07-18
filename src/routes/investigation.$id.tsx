@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, ChevronRight, Check, X, Trophy, Coins, BookOpen, Heart, Star, Loader2, Lightbulb, Lock } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
@@ -14,6 +14,7 @@ import {
 import { useProfile } from "@/lib/profile";
 import { displayName } from "@/lib/display-names";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
+import { recordInvestigationCompletion, useInvestigationProgress, migrateLegacyInvestigationCompletions } from "@/lib/investigations/progress";
 
 export const Route = createFileRoute("/investigation/$id")({
   head: () => ({ meta: [{ title: "تحقيق تاريخي" }] }),
@@ -53,7 +54,7 @@ function InvestigationPage() {
 // ============================================================
 function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
-    profile, completeInvestigation, addDinars, awardBadge, findArtifact,
+    profile, markInvestigationCompletedLocal, awardBadge, findArtifact,
     recoverHeartFromActivity,
   } = useProfile();
 
@@ -64,7 +65,18 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const reward = (row.reward ?? {}) as InvestigationReward;
   const related: string[] = Array.isArray(row.related_entities) ? row.related_entities : [];
 
-  const alreadyDone = profile.investigationsCompleted.includes(row.slug);
+  const serverProgress = useInvestigationProgress();
+  const alreadyDone =
+    serverProgress.completedIds.has(row.id) ||
+    profile.investigationsCompleted.includes(row.slug);
+
+  // Phase G — fire-and-forget legacy migration on first mount for the
+  // signed-in user. Idempotent: internally deduped by a per-uid ledger
+  // and by the server RPC, so replays never re-grant rewards.
+  useEffect(() => {
+    void migrateLegacyInvestigationCompletions(profile.investigationsCompleted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
@@ -90,29 +102,37 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   };
 
   const grantRewards = () => {
-    // Economy cap — investigations are rich content but must not eclipse
-    // multi-campaign progression. Excess authored XP is silently dropped.
-    const xp = Math.min(150, Math.max(0, Number(reward.xp ?? 0)));
-    // Coin cap — keep Dinar economy in step with capped XP.
-    const coins = Math.min(50, Math.max(0, Number(reward.coins ?? 0)));
-    const hearts = Math.max(0, Number(reward.hearts ?? 0));
+    // Phase G — server-authoritative. Enqueue a durable, idempotent
+    // completion; the RPC reads the reward from the published row,
+    // enforces caps, and grants XP/dinars/hearts exactly once via the
+    // applied_profile_deltas ledger. Client values are advisory only.
+    const totalQuestionLike = steps.filter((s) => s.type === "question" || s.type === "decision").length;
+    void recordInvestigationCompletion({
+      investigationId: row.id,
+      investigationSlug: row.slug,
+      score: correctCount,
+      correctCount: correctCount,
+    });
 
-    completeInvestigation(row.slug, xp); // adds xp + auto-coins from xp/4
-    const autoCoins = Math.max(1, Math.floor(xp / 4));
-    const deltaCoins = Math.max(0, coins - autoCoins);
-    if (deltaCoins > 0) addDinars(deltaCoins);
+    // Local optimistic marker — server reward reconciles via cloud_saves.
+    markInvestigationCompletedLocal(row.slug);
 
+    // Non-reward client effects (badges/artifacts remain local until
+    // the server progression phase covers them explicitly).
     if (reward.badge) awardBadge(reward.badge);
     if (reward.artifact) findArtifact(reward.artifact);
 
     // Heart restoration — respects cooldown so the same investigation
     // can't be farmed back-to-back for hearts.
+    const hearts = Math.max(0, Number(reward.hearts ?? 0));
     let gained = 0;
     for (let i = 0; i < hearts; i++) {
       const out = recoverHeartFromActivity({ kind: "investigation", id: `${row.slug}:${i}` });
       if (out.ok) gained++;
     }
     setHeartGain(gained);
+    // referenced to keep totalQuestionLike used
+    void totalQuestionLike;
   };
 
   const onNext = () => {

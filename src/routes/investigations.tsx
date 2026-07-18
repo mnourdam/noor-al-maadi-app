@@ -30,6 +30,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 import { useProfile } from "@/lib/profile";
+import { useInvestigationProgress } from "@/lib/investigations/progress";
 
 const investigationsSearchSchema = z.object({
   world: fallback(z.string(), "").default(""),
@@ -43,6 +44,7 @@ export const Route = createFileRoute("/investigations")({
 
 function InvestigationsIndex() {
   const { profile } = useProfile();
+  const serverProgress = useInvestigationProgress();
   const { rows } = useSupabaseInvestigations();
   const navigate = useNavigate({ from: "/investigations" });
   const rawWorld = Route.useSearch().world;
@@ -108,11 +110,14 @@ function InvestigationsIndex() {
           {shuffledItems.map((item) => {
             if (item.kind === "supabase") {
               const inv = item.row;
+              const done =
+                serverProgress.completedIds.has(inv.id) ||
+                profile.investigationsCompleted.includes(inv.slug);
               return (
                 <SupabaseRow
                   key={`s:${inv.id}`}
                   inv={inv}
-                  done={profile.investigationsCompleted.includes(inv.slug)}
+                  done={done}
                 />
               );
             }

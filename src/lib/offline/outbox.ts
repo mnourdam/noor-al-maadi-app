@@ -18,7 +18,9 @@ export type OutboxKind =
   | "entity_discovery"      // user_entity_discoveries upsert (encyclopedia reads)
   | "game_complete"         // game_progress upsert
   | "chapter_progress"      // user_campaign_progress upsert
-  | "profile_delta";        // apply_profile_delta RPC (idempotent XP/dinars/hearts)
+  | "profile_delta"         // apply_profile_delta RPC (idempotent XP/dinars/hearts)
+  | "investigation_complete" // complete_investigation_v2 RPC (server-authoritative)
+  | "investigation_backfill"; // backfill_investigation_completion RPC (legacy migration)
 
 export interface OutboxItem {
   id: string;               // uuid, doubles as idempotency key

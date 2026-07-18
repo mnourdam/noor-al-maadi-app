@@ -145,6 +145,48 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         return { ok: true };
       }
 
+      case "investigation_complete": {
+        const p = item.payload as {
+          investigationId: string; score?: number; correctCount?: number;
+        };
+        const { data: res, error } = await supabase.rpc("complete_investigation_v2" as any, {
+          p_investigation_id: p.investigationId,
+          p_delta_id: item.id,
+          p_score: Math.max(0, p.score ?? 0),
+          p_correct_count: Math.max(0, p.correctCount ?? 0),
+        });
+        if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) {
+          // Investigation not found on server (disabled / removed). Drop the
+          // item so it doesn't jam the queue — nothing to record.
+          if (payload.reason === "investigation_not_found") return { ok: true };
+          return { ok: false, error: payload.reason ?? "rpc-not-ok" };
+        }
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:investigation-progress:changed"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
+      case "investigation_backfill": {
+        const p = item.payload as { legacyKey: string };
+        const { data: res, error } = await supabase.rpc("backfill_investigation_completion" as any, {
+          p_legacy_key: p.legacyKey,
+        });
+        if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean };
+        if (!payload.ok) return { ok: false, error: "rpc-not-ok" };
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:investigation-progress:changed"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
       default:
         return { ok: false, error: "unknown-kind" };
     }
