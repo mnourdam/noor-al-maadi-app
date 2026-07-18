@@ -596,6 +596,9 @@ class SafeRow extends React.Component<
     }
     return <Row view={view} onPreview={onPreview} onToggle={onToggle} />;
   }
+}
+
+
 
 
 function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
