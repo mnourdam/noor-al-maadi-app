@@ -336,7 +336,7 @@ await cancelDailyChallenge("signed_out");
 clearLastMeta();
 check("sign-out step 1: pending cancelled + meta cleared",
   pendingIds.size === 0 && !storage.get("irth.dailyChallengeReminder.lastMeta.v1"));
-globalThis.__fakeSupabase = { auth: { getUser: async () => ({ data: { user: null } }) } };
+globalThis.__fakeSupabase.auth.getUser = async () => ({ data: { user: null } });
 await rescheduleDailyChallenge("guest");
 const guestMetaJson = storage.get("irth.dailyChallengeReminder.lastMeta.v1");
 const guestMeta = guestMetaJson ? JSON.parse(guestMetaJson) : null;
