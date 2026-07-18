@@ -51,13 +51,13 @@ interface LastMeta {
 // ─── Pure helpers (used by tests + runtime) ─────────────────
 
 /**
- * Milliseconds-since-epoch → integer local day index. Uses the
- * device's own midnight so DST transitions don't shift days.
+ * Milliseconds-since-epoch → integer *local* day index. We do it
+ * via getFullYear/getMonth/getDate → Date.UTC so the returned
+ * integer is a stable local-calendar day (no DST/TZ drift).
  */
 export function localDayIndex(nowMs: number): number {
   const d = new Date(nowMs);
-  d.setHours(0, 0, 0, 0);
-  return Math.floor(d.getTime() / 86_400_000);
+  return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000);
 }
 
 /**
@@ -78,13 +78,20 @@ export function periodFor(userKey: string, nowMs: number): {
   return { period, offset, anchorDayIndex };
 }
 
-/** Convert a local day index back to that day's local-midnight ms. */
+/**
+ * Convert a local-day index back to that day's local-midnight ms.
+ * Uses UTC year/month/day components (that's the frame the index
+ * was minted in) and reconstructs a local-time midnight so DST
+ * edges resolve to the device's own wall-clock 00:00.
+ */
 export function localMidnightOfDayIndex(dayIndex: number): number {
-  const ms = dayIndex * 86_400_000;
-  const d = new Date(ms);
-  // dayIndex was derived from a local-midnight date; reconstruct
-  // via a local-time constructor so DST edges resolve correctly.
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
+  const anchorUtc = new Date(dayIndex * 86_400_000);
+  return new Date(
+    anchorUtc.getUTCFullYear(),
+    anchorUtc.getUTCMonth(),
+    anchorUtc.getUTCDate(),
+    0, 0, 0, 0,
+  ).getTime();
 }
 
 /**
