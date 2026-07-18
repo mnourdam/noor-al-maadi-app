@@ -27,7 +27,13 @@ import {
   selectDailyChallenges,
   type GameRow,
 } from "@/lib/games/store";
+import {
+  readGuestCompletedIds,
+  GUEST_COMPLETIONS_EVENT,
+  GUEST_COMPLETIONS_STORAGE_KEY,
+} from "@/lib/games/guestCompletions";
 import { useEffect, useState } from "react";
+
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
