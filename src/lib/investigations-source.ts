@@ -139,7 +139,7 @@ export function useSupabaseInvestigation(slug: string | undefined) {
 
       try {
         const { data, error } = await supabase
-          .from("investigations" as any)
+          .from("investigations_public" as any)
           .select("*")
           .eq("slug", slug)
           .maybeSingle();
