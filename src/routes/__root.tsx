@@ -282,7 +282,13 @@ function RootComponent() {
             }).catch(() => {});
             if (event === "SIGNED_IN") {
               import("../lib/importedCampaignProgress")
-                .then((m) => m.hydrateLegacyProgressFromCloud()).catch(() => {});
+                .then((m) => m.hydrateLegacyProgressFromCloud())
+                .catch(() => {})
+                .finally(() => {
+                  import("../lib/campaignReconciliation")
+                    .then((m) => m.reconcileLegacyCampaignProgress())
+                    .catch(() => {});
+                });
             }
           }
         });
