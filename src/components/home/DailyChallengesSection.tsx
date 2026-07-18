@@ -1,22 +1,14 @@
-import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Feather, Hourglass, ScrollText, Link2, Archive,
   Sparkles, Coins, Clock, Package, ChevronLeft, Trophy, Play, Check,
 } from "lucide-react";
-import {
-  selectDailyChallenges,
-  listPublishedGames,
-  fetchMyCompletedGameIds,
-  fetchMyDailyCompletedGameIds,
-  type GameRow,
-} from "@/lib/games/store";
+import { type GameRow } from "@/lib/games/store";
 import { MODE_LABELS_AR, type GameMode } from "@/lib/games/types";
 import { extractMuseumUnlocks } from "@/lib/games/museumUnlocks";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { Reveal, Stagger } from "@/components/motion/MotionPrimitives";
-import { supabase } from "@/integrations/supabase/client";
-import { localDateKey } from "@/lib/daily-quest";
+import { useDailyChallengeState } from "@/lib/games/dailyChallengeService";
 
 const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   crossword: Feather,
