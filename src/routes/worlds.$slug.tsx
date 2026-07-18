@@ -1,17 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight, Globe2, Users, Building2, Calendar,
   Swords, Landmark, Gem, ArrowLeft, ArrowRight, Compass,
-  BookOpen, Search, Trophy, CheckCircle2, Clock,
+  BookOpen, Search, Trophy, CheckCircle2, Clock, Star,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
   fetchWorldDetail,
   fetchWorldsIndex,
-  WORLD_HUBS,
+  PUBLIC_WORLD_HUBS,
+  isPublicWorld,
   findHub,
   type WorldSectionKey,
 } from "@/lib/worlds";
