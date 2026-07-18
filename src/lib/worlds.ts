@@ -17,7 +17,7 @@ import {
   buildWorldIndex,
   getWorldCampaignIds,
 } from "@/lib/worlds-progress";
-import { WORLD_HUBS } from "@/lib/worlds-constants";
+import { WORLD_HUBS, WORLD_SLUGS } from "@/lib/worlds-constants";
 import type { WorldHub } from "@/lib/worlds-constants";
 
 export { WORLD_ERA, WORLD_HUBS, WORLD_SLUGS } from "@/lib/worlds-constants";
