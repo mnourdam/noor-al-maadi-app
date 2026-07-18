@@ -70,6 +70,14 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     serverProgress.completedIds.has(row.id) ||
     profile.investigationsCompleted.includes(row.slug);
 
+  // Phase G — fire-and-forget legacy migration on first mount for the
+  // signed-in user. Idempotent: internally deduped by a per-uid ledger
+  // and by the server RPC, so replays never re-grant rewards.
+  useEffect(() => {
+    void migrateLegacyInvestigationCompletions(profile.investigationsCompleted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
