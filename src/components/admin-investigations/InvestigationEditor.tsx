@@ -58,6 +58,13 @@ interface Reward {
   badge?: string;
   artifact?: string;
 }
+interface Lifecycle {
+  content_version: number;
+  published_at: string | null;
+  has_unpublished_changes: boolean;
+  last_editor_email: string | null;
+  last_draft_saved_at: string | null;
+}
 interface EditorState {
   id: string;
   slug: string;
@@ -70,6 +77,9 @@ interface EditorState {
   steps: Step[];
   related: string[];
   updated_at: string | null;
+  lifecycle: Lifecycle;
+  /** True when this state was hydrated from `draft_data` (else from the published snapshot). */
+  hydratedFromDraft: boolean;
 }
 
 const STEP_TYPES: { key: StepType; label: string }[] = [
