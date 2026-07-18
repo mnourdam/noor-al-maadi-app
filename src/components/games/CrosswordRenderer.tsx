@@ -74,9 +74,14 @@ function clueCells(clue: CrosswordClue): { r: number; c: number }[] {
   return cells;
 }
 
-function normalizeCrosswordText(s: string): string {
-  return s.trim().toLowerCase().replace(/[ًٌٍَُِّْـ\s]/g, "").replace(/[إأآ]/g, "ا").replace(/[ى]/g, "ي").replace(/[ة]/g, "ه");
-}
+// Phase 2d — Arabic-tolerant answer matching. All comparison logic
+// lives in `@/lib/games/answer-normalize`. This renderer never
+// rewrites the authored answer; it only asks whether an entered
+// character / word is orthographically equivalent.
+//
+// `cellsEqual`   → per-cell validation (main path + reveal).
+// `isAcceptedAnswer` → word-level check for the Android plain-input
+//                       flow, honoring `clue.acceptable` aliases.
 
 export function CrosswordRenderer({
   stage, onComplete, onWrong, attemptsLeft, maxAttempts, onPaidHint,
