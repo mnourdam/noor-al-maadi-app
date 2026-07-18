@@ -187,14 +187,12 @@ function mapLegacyChapterId(
 
 interface CloudSnapshot {
   cloudCompletedByCampaign: Map<string, Set<string>>;
-  campaignCompleteDeltaIds: Set<string>; // set of campaignIds proven by profile-delta ledger
   collectionSlugs: Set<string>;
 }
 
 async function fetchCloudSnapshot(uid: string): Promise<CloudSnapshot> {
-  const [progressRes, deltaRes, collectionRes] = await Promise.all([
+  const [progressRes, collectionRes] = await Promise.all([
     supabase.from("user_campaign_progress").select("campaign_id, chapter_id, completed_at").eq("user_id", uid),
-    supabase.from("applied_profile_deltas").select("delta_id, source").eq("user_id", uid),
     supabase.from("user_collection").select("item_id, source_campaign_id").eq("user_id", uid),
   ]);
 
@@ -206,22 +204,12 @@ async function fetchCloudSnapshot(uid: string): Promise<CloudSnapshot> {
     set.add(row.chapter_id);
   }
 
-  const campaignCompleteDeltaIds = new Set<string>();
-  for (const row of deltaRes.data ?? []) {
-    const id = String(row.delta_id ?? "");
-    // Historical convention: `campaign-complete:<cid>` or `campaign:<cid>:complete`.
-    let cid: string | null = null;
-    if (id.startsWith("campaign-complete:")) cid = id.slice("campaign-complete:".length);
-    else if (id.startsWith("campaign:") && id.endsWith(":complete")) cid = id.slice("campaign:".length, -":complete".length);
-    if (cid) campaignCompleteDeltaIds.add(cid);
-  }
-
   const collectionSlugs = new Set<string>();
   for (const row of collectionRes.data ?? []) {
     if (row.item_id) collectionSlugs.add(String(row.item_id).toLowerCase());
   }
 
-  return { cloudCompletedByCampaign, campaignCompleteDeltaIds, collectionSlugs };
+  return { cloudCompletedByCampaign, collectionSlugs };
 }
 
 // -------------------- Main entry --------------------
