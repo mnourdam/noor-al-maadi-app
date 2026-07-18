@@ -136,13 +136,30 @@ function CompletedBanner() {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-emerald-400/30 irth-title-card p-8 text-center">
       <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
+        <Check className="h-7 w-7 text-emerald-300" strokeWidth={2} />
+      </div>
+      <h3 className="mt-4 text-lg font-bold text-emerald-100">أتممت تحديات اليوم ✓</h3>
+      <p className="mt-2 text-sm leading-7 text-slate-300">
+        أحسنت! أنجزت تحديي اليوم. عد غدًا لتفتح تحديات جديدة.
+      </p>
+      <p className="mt-3 text-[11px] leading-6 text-slate-500">
+        تتجدد التحديات عند بداية يوم جديد.
+      </p>
+    </div>
+  );
+}
+
+function ExhaustedBanner() {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-emerald-400/30 irth-title-card p-8 text-center">
+      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
         <Trophy className="h-7 w-7 text-emerald-300" strokeWidth={1.4} />
       </div>
-      <h3 className="mt-4 text-lg font-bold text-emerald-100">أحسنت!</h3>
+      <h3 className="mt-4 text-lg font-bold text-emerald-100">أتممت جميع التحديات المتاحة</h3>
       <p className="mt-2 text-sm leading-7 text-slate-300">
-        لقد أنهيت تحديات اليوم.
+        إنجاز رائع! لقد أنهيت كل تحديات القاعة المتاحة حاليًا.
         <br />
-        عد غدًا لاكتشاف تحديين جديدين.
+        سنضيف لك تحديات جديدة قريبًا.
       </p>
     </div>
   );
