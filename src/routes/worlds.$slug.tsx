@@ -375,7 +375,7 @@ function WorldDetailPage() {
                 </>
               )}
               {key === "investigations" && progress.investigations.total > 0 && (
-                <InvestigationsSection progress={progress} />
+                <InvestigationsSection worldSlug={slug} progress={progress} />
               )}
               {key === "museum" && data.sections.artifact.length > 0 && (
                 <ContentSection sectionKey="artifact" items={data.sections.artifact} />
