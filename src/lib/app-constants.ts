@@ -210,10 +210,19 @@ export function evaluateAchievements(p: {
   regionsUnlocked: string[]; streak: number; campaignsCompleted: string[]; points: number;
   unlockedEras?: string[]; savedStories?: string[]; missionsCompleted?: string[];
   dinars?: number; titlesEarned?: string[]; badges?: string[];
+}, overrides?: {
+  /**
+   * Canonical investigation-completion count. Callers with access to
+   * `useCanonicalInvestigationProgress` should ALWAYS pass this to avoid
+   * under-counting when local `investigationsCompleted` is a legacy
+   * mirror that hasn't yet been backfilled from server rows.
+   */
+  investigationsCompletedCount?: number;
 }): AchievementProgress[] {
   const lvl = levelFor(p.points).level;
   const collection = p.artifactsFound.length + p.charactersUnlocked.length;
-  const legendCombo = Math.min(p.storiesRead.length, 30) + Math.min(p.investigationsCompleted.length, 30) + Math.min(p.timelinesCompleted.length, 30);
+  const investigationsCount = overrides?.investigationsCompletedCount ?? p.investigationsCompleted.length;
+  const legendCombo = Math.min(p.storiesRead.length, 30) + Math.min(investigationsCount, 30) + Math.min(p.timelinesCompleted.length, 30);
   const legendMaster = Math.min(p.campaignsCompleted.length, 10) + Math.min(p.artifactsFound.length, 100) + Math.min(p.streak, 100);
   const legendEternal = (lvl >= 50 ? 50 : Math.floor(lvl / 1)) + Math.min(p.streak, 365);
   const map: Record<string, number> = {
