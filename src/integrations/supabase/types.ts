@@ -283,6 +283,63 @@ export type Database = {
           },
         ]
       }
+      admin_investigation_versions: {
+        Row: {
+          created_at: string
+          data: Json
+          editor_email: string | null
+          editor_id: string | null
+          id: string
+          investigation_id: string
+          note: string | null
+          slug: string | null
+          source: string
+          title: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          editor_email?: string | null
+          editor_id?: string | null
+          id?: string
+          investigation_id: string
+          note?: string | null
+          slug?: string | null
+          source?: string
+          title?: string | null
+          version: number
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          editor_email?: string | null
+          editor_id?: string | null
+          id?: string
+          investigation_id?: string
+          note?: string | null
+          slug?: string | null
+          source?: string
+          title?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_investigation_versions_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: false
+            referencedRelation: "investigations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_investigation_versions_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: false
+            referencedRelation: "investigations_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_taxonomy: {
         Row: {
           archived: boolean
@@ -1125,11 +1182,17 @@ export type Database = {
       }
       investigations: {
         Row: {
+          content_version: number
           created_at: string
           description: string | null
           difficulty: string
+          draft_data: Json | null
           enabled: boolean
+          has_unpublished_changes: boolean
           id: string
+          last_draft_saved_at: string | null
+          last_editor_email: string | null
+          published_at: string | null
           related_entities: Json
           reward: Json
           slug: string
@@ -1137,13 +1200,20 @@ export type Database = {
           subtitle: string | null
           title: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          content_version?: number
           created_at?: string
           description?: string | null
           difficulty?: string
+          draft_data?: Json | null
           enabled?: boolean
+          has_unpublished_changes?: boolean
           id?: string
+          last_draft_saved_at?: string | null
+          last_editor_email?: string | null
+          published_at?: string | null
           related_entities?: Json
           reward?: Json
           slug: string
@@ -1151,13 +1221,20 @@ export type Database = {
           subtitle?: string | null
           title: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          content_version?: number
           created_at?: string
           description?: string | null
           difficulty?: string
+          draft_data?: Json | null
           enabled?: boolean
+          has_unpublished_changes?: boolean
           id?: string
+          last_draft_saved_at?: string | null
+          last_editor_email?: string | null
+          published_at?: string | null
           related_entities?: Json
           reward?: Json
           slug?: string
@@ -1165,6 +1242,7 @@ export type Database = {
           subtitle?: string | null
           title?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -1998,6 +2076,57 @@ export type Database = {
         }
         Relationships: []
       }
+      investigations_public: {
+        Row: {
+          content_version: number | null
+          created_at: string | null
+          description: string | null
+          difficulty: string | null
+          enabled: boolean | null
+          id: string | null
+          published_at: string | null
+          related_entities: Json | null
+          reward: Json | null
+          slug: string | null
+          steps: Json | null
+          subtitle: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          content_version?: number | null
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
+          enabled?: boolean | null
+          id?: string | null
+          published_at?: string | null
+          related_entities?: Json | null
+          reward?: Json | null
+          slug?: string | null
+          steps?: Json | null
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          content_version?: number | null
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
+          enabled?: boolean | null
+          id?: string | null
+          published_at?: string | null
+          related_entities?: Json | null
+          reward?: Json | null
+          slug?: string | null
+          steps?: Json | null
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       public_profiles: {
         Row: {
           artifacts_collected: number | null
@@ -2109,6 +2238,10 @@ export type Database = {
         Args: { p_id_or_slug: string }
         Returns: Json
       }
+      admin_get_investigation_version: {
+        Args: { p_id: string; p_version: number }
+        Returns: Json
+      }
       admin_import_content_table: { Args: { p_ctype: string }; Returns: string }
       admin_list_campaign_versions: {
         Args: { p_id: string }
@@ -2153,6 +2286,17 @@ export type Database = {
           p_status?: string
         }
         Returns: Json
+      }
+      admin_list_investigation_versions: {
+        Args: { p_id: string }
+        Returns: {
+          created_at: string
+          editor_email: string
+          note: string
+          source: string
+          title: string
+          version: number
+        }[]
       }
       admin_list_investigations: {
         Args: never
@@ -2227,6 +2371,15 @@ export type Database = {
         Args: { p_id: string; p_note?: string }
         Returns: Json
       }
+      admin_publish_investigation: {
+        Args: {
+          p_allow_removals?: boolean
+          p_id: string
+          p_note?: string
+          p_version_signal?: string
+        }
+        Returns: Json
+      }
       admin_repair_chapter_completions_stickiness: {
         Args: never
         Returns: {
@@ -2239,6 +2392,10 @@ export type Database = {
       }
       admin_restore_campaign_version: {
         Args: { p_as_draft?: boolean; p_id: string; p_version: number }
+        Returns: Json
+      }
+      admin_restore_investigation_version_to_draft: {
+        Args: { p_id: string; p_version: number }
         Returns: Json
       }
       admin_resubscribe_newsletter: {
@@ -2275,6 +2432,15 @@ export type Database = {
           p_id: string
           p_slug: string
           p_title: string
+        }
+        Returns: Json
+      }
+      admin_save_investigation_draft: {
+        Args: {
+          p_allow_removals?: boolean
+          p_draft: Json
+          p_id: string
+          p_version_signal?: string
         }
         Returns: Json
       }
