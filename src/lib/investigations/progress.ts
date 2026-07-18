@@ -118,8 +118,21 @@ function writeLedger(uid: string, set: Set<string>): void {
 }
 
 /**
- * For every legacy key not yet queued, enqueue an idempotent backfill.
- * Safe to run repeatedly and safe offline. Never re-grants rewards.
+ * Batched, idempotent legacy backfill.
+ *
+ * Enqueues ONE outbox item carrying every not-yet-migrated legacy key for
+ * the current user. The outbox id is deterministic in the set of pending
+ * keys, so re-running with the same input (offline, then online, then a
+ * second app open) collapses onto the same durable row and never re-grants.
+ * The server RPC (`backfill_investigation_completions`) grants zero XP,
+ * dinars, or hearts — completion is recorded with `legacy_key` set.
+ *
+ * A per-uid localStorage ledger of already-queued keys is kept purely as
+ * a client-side optimisation to avoid re-enqueuing on every render. The
+ * durable safety net is the server RPC + outbox stable-id, not the ledger.
+ *
+ * Safe when signed-out (no-op), safe offline (queued and flushed on
+ * reconnect), safe for signed-in users with an empty legacy array.
  */
 export async function migrateLegacyInvestigationCompletions(
   legacyKeys: string[],
@@ -127,19 +140,25 @@ export async function migrateLegacyInvestigationCompletions(
   const uid = await currentUserId();
   if (!uid || !legacyKeys?.length) return;
   const ledger = readLedger(uid);
-  let changed = false;
+  const pending: string[] = [];
   for (const raw of legacyKeys) {
     if (typeof raw !== "string" || !raw) continue;
     if (ledger.has(raw)) continue;
-    // Deterministic stable id for the backfill outbox row.
-    const id = await stableDeltaId(uid, `backfill:${raw}`);
-    await enqueueWithId(uid, id, "investigation_backfill", { legacyKey: raw });
-    ledger.add(raw);
-    changed = true;
+    pending.push(raw);
   }
-  if (changed) writeLedger(uid, ledger);
+  if (pending.length === 0) return;
+  // Stable batch id — hash of the sorted pending set. Repeated calls with
+  // the same pending set collapse onto the same outbox row.
+  const sorted = [...pending].sort().join("|");
+  const batchId = await stableDeltaId(uid, `backfill_batch:${sorted}`);
+  await enqueueWithId(uid, batchId, "investigation_backfill_batch", {
+    legacyKeys: pending,
+  });
+  for (const k of pending) ledger.add(k);
+  writeLedger(uid, ledger);
   void flushOutbox(uid);
 }
+
 
 // ------------------------------------------------------------
 // Read side — server progress hook.
