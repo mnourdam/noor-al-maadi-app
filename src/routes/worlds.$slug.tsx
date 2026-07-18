@@ -27,6 +27,7 @@ import {
 import { useProfile } from "@/lib/profile";
 import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
 import { useSupabaseInvestigations, countQuestions } from "@/lib/investigations-source";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import { sortCampaignsChronological } from "@/lib/campaignChronology";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
@@ -425,9 +426,9 @@ const DIFF_RANK: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
 function CampaignsSection({ worldSlug, progress }: { worldSlug: string; progress: WP }) {
   const { data } = useQuery({ queryKey: ["campaigns", "feed"], queryFn: fetchPublishedFeed });
   const { campaignIds } = useWorldMembership(worldSlug);
-  const { profile } = useProfile();
   const cloudCampaign = useCloudCampaignProgress();
-  const invalidatedTick = profile.investigationsCompleted?.length ?? 0; // dep to re-render on progress change
+  const canonicalInv = useCanonicalInvestigationProgress();
+  const invalidatedTick = canonicalInv.count; // dep to re-render on progress change
 
   const ordered = useMemo(() => {
     const list = (data?.campaigns ?? []).filter((c) => campaignIds.has(c.id));
@@ -581,14 +582,13 @@ function CampaignsSection({ worldSlug, progress }: { worldSlug: string; progress
 
 function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; progress: WP }) {
   const { rows } = useSupabaseInvestigations();
-  const { profile } = useProfile();
+  const canonicalInv = useCanonicalInvestigationProgress();
   const { investigationSlugs } = useWorldMembership(worldSlug);
 
   const ordered = useMemo(() => {
-    const done = new Set(profile.investigationsCompleted ?? []);
     const list = (rows ?? []).filter((r) => investigationSlugs.has(r.slug));
     return list
-      .map((r) => ({ r, done: done.has(r.slug) }))
+      .map((r) => ({ r, done: canonicalInv.matches(r.slug) || canonicalInv.matches(r.id) }))
       .sort((a, b) => {
         if (a.done !== b.done) return a.done ? 1 : -1;
         const da = DIFF_RANK[a.r.difficulty ?? ""] ?? 3;
@@ -596,7 +596,7 @@ function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; pro
         if (da !== db) return da - db;
         return a.r.slug.localeCompare(b.r.slug);
       });
-  }, [rows, investigationSlugs, profile.investigationsCompleted]);
+  }, [rows, investigationSlugs, canonicalInv]);
 
   const shown = ordered.slice(0, 6);
 

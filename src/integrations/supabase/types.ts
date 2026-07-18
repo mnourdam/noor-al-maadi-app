@@ -2563,6 +2563,10 @@ export type Database = {
         Args: { p_legacy_key: string }
         Returns: Json
       }
+      backfill_investigation_completions: {
+        Args: { p_legacy_keys: string[] }
+        Returns: Json
+      }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       claim_streak_reward: { Args: { p_days: number }; Returns: Json }
       clear_my_notifications: { Args: never; Returns: undefined }

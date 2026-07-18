@@ -15,6 +15,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useProfile } from "./profile";
+import { useCanonicalInvestigationProgress } from "./investigations/progress";
 import { listRegistry } from "./contentRegistryStorage";
 import { displayName } from "./display-names";
 import { supabase } from "@/integrations/supabase/client";
@@ -176,6 +177,7 @@ function useSupabaseCollection() {
 
 export function useRealCollectionStats() {
   const { profile } = useProfile();
+  const canonicalInv = useCanonicalInvestigationProgress();
   const { rows: supaRows, validSlugs, slugTitles, canonicalSlugFor } = useSupabaseCollection();
 
   // Registry is consulted only for display metadata (Arabic name/image)
@@ -265,7 +267,7 @@ export function useRealCollectionStats() {
   const eventsDiscovered =
     profile.storiesRead.length +
     profile.timelinesCompleted.length +
-    profile.investigationsCompleted.length;
+    canonicalInv.count;
   const battlesCompleted = profile.missionsCompleted.length;
 
   return {

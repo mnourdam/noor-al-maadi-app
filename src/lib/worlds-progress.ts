@@ -29,6 +29,7 @@ import { entitySortKey } from "@/lib/entityChronology";
 import { WORLD_ERA, WORLD_HUBS, WORLD_SLUGS } from "@/lib/worlds";
 import { useProfile } from "@/lib/profile";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 
 // ------------------------------------------------------------
 // Types
@@ -500,6 +501,11 @@ function findCampaignRow(id: string, idx?: WorldEntityIndex): { data: any } | nu
  * investigation IDs or canonical slugs. Legacy id → slug pairs are read
  * from the offline snapshot so completions written pre-normalization
  * still count.
+ *
+ * Prefer to feed `computeWorldProgress` with the ready-made
+ * `investigationDoneKeys` set from `useCanonicalInvestigationProgress`
+ * — this helper stays as a fallback for pure server-free call sites
+ * (e.g. tests, one-off scripts).
  */
 function buildInvestigationDoneSet(entries: string[]): Set<string> {
   const invs = localInvestigations() as Array<{ id?: string; slug?: string }>;
@@ -523,6 +529,7 @@ function buildInvestigationDoneSet(entries: string[]): Set<string> {
   return out;
 }
 
+
 export function computeWorldProgress(
   worldSlug: string,
   inputs: {
@@ -532,7 +539,12 @@ export function computeWorldProgress(
     /** Slugs the player *owns* — user_collection museum set. */
     museum: Set<string>;
     cloudCampaign: Map<string, Set<string>>;
-    investigationsCompleted: string[];
+    /**
+     * Canonical investigation completion set — union of UUIDs and slugs
+     * as produced by `useCanonicalInvestigationProgress`. Cheap `.has()`
+     * lookup covers legacy IDs, canonical UUIDs, and canonical slugs.
+     */
+    investigationDoneKeys: Set<string>;
   },
 ): WorldProgress {
   const idx = inputs.index.get(worldSlug);
@@ -581,9 +593,10 @@ export function computeWorldProgress(
     if (doneN === chapters.length) campDone++;
   }
 
-  // Investigations — accept both legacy IDs and canonical slugs.
+  // Investigations — canonical `.has()` matcher already covers legacy
+  // IDs, canonical UUIDs, and canonical slugs.
   const invTotal = idx.investigationSlugs.length;
-  const invDoneSet = buildInvestigationDoneSet(inputs.investigationsCompleted);
+  const invDoneSet = inputs.investigationDoneKeys;
   let invDone = 0;
   for (const s of idx.investigationSlugs) if (invDoneSet.has(s)) invDone++;
 
@@ -652,7 +665,8 @@ export function pickContinueJourney(
     /** Museum ownership set. */
     museum: Set<string>;
     cloudCampaign: Map<string, Set<string>>;
-    investigationsCompleted: string[];
+    /** Canonical completion set — see `computeWorldProgress`. */
+    investigationDoneKeys: Set<string>;
   },
 ): Recommendation {
   const idx = inputs.index.get(worldSlug);
@@ -694,7 +708,7 @@ export function pickContinueJourney(
 
 
   // 3. Next unfinished investigation.
-  const invDoneSet = buildInvestigationDoneSet(inputs.investigationsCompleted);
+  const invDoneSet = inputs.investigationDoneKeys;
   const invs = (localInvestigations() as Array<{ slug: string; title: string; difficulty?: string; enabled?: boolean }>)
     .filter((r) => r?.enabled !== false && idx.investigationSlugs.includes(r.slug))
     .sort((a, b) => {
@@ -815,11 +829,11 @@ export function useStableSectionOrder(current: SectionKey[], signature: string):
 // ------------------------------------------------------------
 
 export function useWorldProgress(worldSlug: string) {
-  const { profile } = useProfile();
   const discovered = useDiscoveredSlugs();
   const museum = useMuseumSlugs();
   const cloudCampaign = useCloudCampaignProgress();
-  const investigationsCompleted = usePerUserInvestigationsCompleted(profile.investigationsCompleted ?? []);
+  const canonicalInv = useCanonicalInvestigationProgress();
+  const investigationDoneKeys = canonicalInv.completedKeys;
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -853,22 +867,22 @@ export function useWorldProgress(worldSlug: string) {
       discovered,
       museum,
       cloudCampaign,
-      investigationsCompleted,
+      investigationDoneKeys,
     };
     const progress = computeWorldProgress(worldSlug, inputs);
     const recommendation = pickContinueJourney(worldSlug, inputs);
     const rankedSections = rankWorldSections(progress);
     return { ready: true, index, progress, recommendation, rankedSections };
-  }, [ready, worldSlug, discovered, museum, cloudCampaign, investigationsCompleted]);
+  }, [ready, worldSlug, discovered, museum, cloudCampaign, investigationDoneKeys]);
 }
 
 /** Compact per-world progress for the index page. */
 export function useAllWorldsProgress() {
-  const { profile } = useProfile();
   const discovered = useDiscoveredSlugs();
   const museum = useMuseumSlugs();
   const cloudCampaign = useCloudCampaignProgress();
-  const investigationsCompleted = usePerUserInvestigationsCompleted(profile.investigationsCompleted ?? []);
+  const canonicalInv = useCanonicalInvestigationProgress();
+  const investigationDoneKeys = canonicalInv.completedKeys;
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -885,7 +899,7 @@ export function useAllWorldsProgress() {
       discovered,
       museum,
       cloudCampaign,
-      investigationsCompleted,
+      investigationDoneKeys,
     };
     const byWorld = new Map<string, { progress: WorldProgress; recommendation: Recommendation }>();
     for (const h of WORLD_HUBS) {
@@ -894,5 +908,5 @@ export function useAllWorldsProgress() {
       byWorld.set(h.slug, { progress, recommendation });
     }
     return { ready: true, byWorld };
-  }, [ready, discovered, museum, cloudCampaign, investigationsCompleted]);
+  }, [ready, discovered, museum, cloudCampaign, investigationDoneKeys]);
 }

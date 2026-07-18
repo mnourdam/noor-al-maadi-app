@@ -30,7 +30,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 import { useProfile } from "@/lib/profile";
-import { useInvestigationProgress } from "@/lib/investigations/progress";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 
 const investigationsSearchSchema = z.object({
   world: fallback(z.string(), "").default(""),
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/investigations")({
 
 function InvestigationsIndex() {
   const { profile } = useProfile();
-  const serverProgress = useInvestigationProgress();
+  const canonicalProgress = useCanonicalInvestigationProgress();
   const { rows } = useSupabaseInvestigations();
   const navigate = useNavigate({ from: "/investigations" });
   const rawWorld = Route.useSearch().world;
@@ -111,8 +111,8 @@ function InvestigationsIndex() {
             if (item.kind === "supabase") {
               const inv = item.row;
               const done =
-                serverProgress.completedIds.has(inv.id) ||
-                profile.investigationsCompleted.includes(inv.slug);
+                canonicalProgress.matches(inv.id) ||
+                canonicalProgress.matches(inv.slug);
               return (
                 <SupabaseRow
                   key={`s:${inv.id}`}
@@ -122,7 +122,7 @@ function InvestigationsIndex() {
               );
             }
             const inv = item.row;
-            const done = profile.investigationsCompleted.includes(inv.id);
+            const done = canonicalProgress.matches(inv.id);
             return (
               <Link
                 key={`l:${inv.id}`}

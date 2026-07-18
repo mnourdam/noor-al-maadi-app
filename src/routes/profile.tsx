@@ -23,6 +23,7 @@ import {
   type AchievementCategory, type AchievementDef, type AchievementRarity,
 } from "@/lib/app-constants";
 import { useProfile } from "@/lib/profile";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
 import { AccountSection } from "@/components/AccountSection";
 import { CommunityHubSection } from "@/components/CommunityHubSection";
@@ -683,9 +684,10 @@ function AchievementMini({ def, earned, pct }: { def: AchievementDef; earned: bo
 function ProgressTab({
   profile, lvl,
 }: { profile: ReturnType<typeof useProfile>["profile"]; lvl: ReturnType<typeof levelFor> }) {
+  const canonicalInv = useCanonicalInvestigationProgress();
   const items: { icon: typeof BookOpen; label: string; current: number; goal: number; tone?: string }[] = [
     { icon: Swords,   label: "حملات تاريخية", current: profile.campaignsCompleted.length, goal: 20 },
-    { icon: Search,   label: "تحقيقات",        current: profile.investigationsCompleted.length, goal: 60 },
+    { icon: Search,   label: "تحقيقات",        current: canonicalInv.count, goal: 60 },
     { icon: BookOpen, label: "قصص مُنهاة",     current: profile.storiesRead.length, goal: 60 },
     { icon: Hourglass,label: "خطوط زمنية",     current: profile.timelinesCompleted.length, goal: 30 },
     { icon: Compass,  label: "قرارات",         current: profile.decisionsCompleted.length, goal: 40 },

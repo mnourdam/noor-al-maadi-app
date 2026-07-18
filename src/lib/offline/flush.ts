@@ -187,6 +187,32 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         return { ok: true };
       }
 
+      case "investigation_backfill_batch": {
+        const p = item.payload as { legacyKeys: string[] };
+        const keys = Array.isArray(p?.legacyKeys)
+          ? p.legacyKeys.filter((s): s is string => typeof s === "string" && s.length > 0)
+          : [];
+        if (keys.length === 0) return { ok: true };
+        const { data: res, error } = await supabase.rpc(
+          "backfill_investigation_completions" as any,
+          { p_legacy_keys: keys },
+        );
+        if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) {
+          // Unauthenticated flushes are transient — leave the item queued so
+          // the next flush after sign-in picks it up.
+          if (payload.reason === "unauthenticated") return { ok: false, error: "unauthenticated" };
+          return { ok: false, error: payload.reason ?? "rpc-not-ok" };
+        }
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:investigation-progress:changed"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
       default:
         return { ok: false, error: "unknown-kind" };
     }

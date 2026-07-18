@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useProfile } from "@/lib/profile";
 import { ACHIEVEMENTS, evaluateAchievements, type AchievementDef } from "@/lib/app-constants";
 import { supabase } from "@/integrations/supabase/client";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 
 /**
  * Watches profile state and surfaces newly-unlocked achievements through
@@ -32,10 +33,23 @@ const ACHIEVEMENT_XP_BY_RARITY: Record<string, number> = {
 
 export function AchievementWatcher() {
   const { profile, markAchievementEarned, addPoints } = useProfile();
+  const canonicalInv = useCanonicalInvestigationProgress();
   const firstRun = useRef(true);
 
+  // Achievement evaluation must use the canonical investigation count
+  // (server truth ∪ pending outbox ∪ legacy). Fabricate a stable array
+  // of length = canonical count so `evaluateAchievements` — which reads
+  // `.length` internally — sees the right number without changing its
+  // signature. Contents are opaque; only the length is inspected.
+  const profileForEval = useMemo(() => {
+    const count = canonicalInv.count;
+    if (count <= (profile.investigationsCompleted?.length ?? 0)) return profile;
+    const padded = new Array<string>(count).fill("__canonical__");
+    return { ...profile, investigationsCompleted: padded };
+  }, [profile, canonicalInv.count]);
+
   useEffect(() => {
-    const evals = evaluateAchievements(profile);
+    const evals = evaluateAchievements(profileForEval);
     const earnedMap = profile.achievementsEarned ?? {};
 
     for (const e of evals) {
@@ -54,7 +68,7 @@ export function AchievementWatcher() {
     }
     firstRun.current = false;
     // We intentionally depend on the whole profile so any state change re-checks.
-  }, [profile, markAchievementEarned, addPoints]);
+  }, [profileForEval, profile.achievementsEarned, markAchievementEarned, addPoints]);
 
   return null;
 }
