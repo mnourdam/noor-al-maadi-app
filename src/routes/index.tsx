@@ -18,6 +18,7 @@ import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notificati
 import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
+import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscoveries";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
@@ -72,6 +73,13 @@ function HomeFull() {
     [todayEvent, todayOthers],
   );
   const stats = useRealCollectionStats();
+  // Unified discovery feed — encyclopedia reads + museum acquisitions,
+  // canonically deduplicated. Single source for Hero + Home carousel.
+  const unifiedDiscoveries = useUnifiedDiscoveryFeed(8);
+  const recentDiscoveries = useMemo<UnifiedUnlock[]>(
+    () => unifiedDiscoveries.map(adaptDiscoveryToUnlock),
+    [unifiedDiscoveries],
+  );
   const [unread, setUnread] = useState(0);
 
   // Perf-lite detection — drives reduced visual layers (no embers, single
@@ -297,11 +305,11 @@ function HomeFull() {
         subtitle: ev.body,
       });
     });
-    if (stats.recent.length > 0) {
-      const r = stats.recent[0];
+    if (recentDiscoveries.length > 0) {
+      const r = recentDiscoveries[0];
       out.push({
         kind: "discovery", bg: bgAt(2),
-        eyebrow: `آخر اكتشافاتك · ${r.kind}`,
+        eyebrow: `${r.kind}`,
         title: r.title,
         subtitle: r.subtitle ?? "افتح أرشيفك التاريخي واكتشف ما جمعته.",
         icon: r.icon,
@@ -314,7 +322,7 @@ function HomeFull() {
     }
     // LC1 scope cut: Timeline Journey hero slide hidden until content audit completes.
     return out;
-  }, [campaignSel, todayEvents, stats.recent, heroBgs]);
+  }, [campaignSel, todayEvents, recentDiscoveries, heroBgs]);
 
   // Carousel
   const [slideIdx, setSlideIdx] = useState(0);
@@ -501,12 +509,12 @@ function HomeFull() {
   type Activity = { key: string; icon: ReactNode; eyebrow: string; title: string; to: string };
   const recentActivity = useMemo<Activity[]>(() => {
     const acts: Activity[] = [];
-    if (stats.recent[0]) {
-      const r = stats.recent[0];
+    if (recentDiscoveries[0]) {
+      const r = recentDiscoveries[0];
       acts.push({
         key: `disc:${r.key}`,
         icon: <Gem className="size-3.5" />,
-        eyebrow: `اكتشاف · ${r.kind}`,
+        eyebrow: r.kind,
         title: r.title,
         to: r.to ?? "/collection",
       });
@@ -545,7 +553,7 @@ function HomeFull() {
       });
     }
     return acts.slice(0, 4);
-  }, [stats.recent, profile.achievementsEarned, profile.artifactsFound.length, campaignSel]);
+  }, [recentDiscoveries, profile.achievementsEarned, profile.artifactsFound.length, campaignSel]);
 
   return (
     <AppShell>
@@ -707,13 +715,13 @@ function HomeFull() {
       {/* ============ 4. LATEST DISCOVERIES ============ */}
       <section className="mt-12 px-5">
         <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
-        {stats.recent.length > 0 ? (
+        {recentDiscoveries.length > 0 ? (
           <div className="relative">
             <div
               className="-mx-5 flex flex-nowrap items-stretch gap-3 overflow-x-auto overscroll-x-contain px-5 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-start:1.25rem] sm:-mx-6 sm:gap-4 sm:px-6 sm:[scroll-padding-inline-start:1.5rem] md:-mx-8 md:gap-5 md:px-8 md:[scroll-padding-inline-start:2rem]"
               aria-label="آخر الاكتشافات"
             >
-              {stats.recent.slice(0, 8).map((r, i, arr) => (
+              {recentDiscoveries.slice(0, 8).map((r, i, arr) => (
                 <div
                   key={r.key}
                   className={`w-48 flex-none snap-start sm:w-56 md:w-64 lg:w-72 ${
@@ -724,7 +732,7 @@ function HomeFull() {
                 </div>
               ))}
             </div>
-            {stats.recent.length > 2 && (
+            {recentDiscoveries.length > 2 && (
               <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-l from-background/60 to-transparent sm:w-10" />
             )}
           </div>
@@ -923,6 +931,29 @@ function Stat({ icon, label, value, tone }: { icon: React.ReactNode; label: stri
       <span className="text-[9px] tracking-[0.15em] text-white/55">{label}</span>
     </div>
   );
+}
+
+// Emoji + Arabic kind used by RecentCard / Hero — mirrors museum labeling.
+const _DISC_TYPE_TO_ICON: Record<string, string> = {
+  figure: "👤", scholar: "📖", artifact: "🏺",
+  landmark: "🕌", city: "🏛️", battle: "⚔️",
+  event: "📜", state: "🏳️",
+};
+
+function adaptDiscoveryToUnlock(item: DiscoveryItem): UnifiedUnlock {
+  const icon = _DISC_TYPE_TO_ICON[item.entityType] ?? "✨";
+  return {
+    key: item.key,
+    // `kind` is the small eyebrow chip — use the canonical Arabic label
+    // ("اكتشاف موسوعي" / "كنز جديد" / "مكافأة حملة") so Hero + carousel
+    // both describe the event honestly.
+    kind: item.kindLabel as UnifiedUnlock["kind"],
+    title: item.title,
+    subtitle: item.subtitle,
+    icon,
+    to: item.destinationRoute,
+    unlockedAt: item.occurredAt,
+  };
 }
 
 function RecentCard({ item }: { item: UnifiedUnlock }) {
