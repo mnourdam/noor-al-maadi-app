@@ -1,11 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Globe2, ChevronLeft, Sparkles, Compass } from "lucide-react";
+import { Globe2, ChevronLeft, Sparkles, Compass, MapPin } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { fetchWorldsIndex } from "@/lib/worlds";
+import { isPublicWorld } from "@/lib/worlds-constants";
 import { useAllWorldsProgress } from "@/lib/worlds-progress";
 
+type WorldsSearch = { from?: string };
+
 export const Route = createFileRoute("/worlds/")({
+  validateSearch: (raw: Record<string, unknown>): WorldsSearch => {
+    const from = typeof raw.from === "string" && isPublicWorld(raw.from) ? raw.from : undefined;
+    return from ? { from } : {};
+  },
   head: () => ({
     meta: [
       { title: "عوالم إرث — استكشاف الحضارات والعصور" },
