@@ -592,9 +592,10 @@ export function computeWorldProgress(
     if (doneN === chapters.length) campDone++;
   }
 
-  // Investigations — accept both legacy IDs and canonical slugs.
+  // Investigations — canonical `.has()` matcher already covers legacy
+  // IDs, canonical UUIDs, and canonical slugs.
   const invTotal = idx.investigationSlugs.length;
-  const invDoneSet = buildInvestigationDoneSet(inputs.investigationsCompleted);
+  const invDoneSet = inputs.investigationDoneKeys;
   let invDone = 0;
   for (const s of idx.investigationSlugs) if (invDoneSet.has(s)) invDone++;
 
