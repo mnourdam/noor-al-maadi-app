@@ -23,6 +23,7 @@ import {
   type AchievementCategory, type AchievementDef, type AchievementRarity,
 } from "@/lib/app-constants";
 import { useProfile } from "@/lib/profile";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
 import { AccountSection } from "@/components/AccountSection";
 import { CommunityHubSection } from "@/components/CommunityHubSection";
