@@ -291,11 +291,10 @@ export async function reconcileLegacyCampaignProgress(): Promise<ReconciliationR
 
     // ---- Strong evidence ----
     if (ledgerProven) reasons.push("ledger has campaign completion key");
-    if (deltaProven) reasons.push("applied_profile_deltas contains campaign-complete delta");
     if (collectionCovers) reasons.push("all declared campaign unlocks present in user_collection");
     if (cloudCoversAllChapters) reasons.push("cloud user_campaign_progress covers every canonical chapter");
 
-    const isStrong = ledgerProven || deltaProven || collectionCovers || cloudCoversAllChapters;
+    const isStrong = ledgerProven || collectionCovers || cloudCoversAllChapters;
 
     if (isStrong) {
       const actions: string[] = [];
