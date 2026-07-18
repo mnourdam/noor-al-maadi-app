@@ -17,6 +17,7 @@ import { FirstLaunchGate } from "../components/FirstLaunchGate";
 import { OnboardingTour } from "../components/OnboardingTour";
 import { Toaster } from "../components/ui/sonner";
 import { AchievementWatcher } from "../components/AchievementWatcher";
+import { InvestigationLegacyBackfill } from "../components/InvestigationLegacyBackfill";
 import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
 import { AndroidBackHandler } from "../components/AndroidBackHandler";
