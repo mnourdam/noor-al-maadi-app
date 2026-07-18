@@ -1,16 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import {
   Sword, Search, Sparkles, Clock, Coins, Star, Play,
   Crown, Hourglass, Link2, Archive, Feather, ScrollText, Moon, Trophy, Check,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import {
-  selectDailyChallenges,
-  fetchMyCompletedGameIds,
-  fetchMyDailyCompletedGameIds,
-  type GameRow,
-} from "@/lib/games/store";
+import { type GameRow } from "@/lib/games/store";
+import { useDailyChallengeState } from "@/lib/games/dailyChallengeService";
 import { MODE_LABELS_AR, type GameMode } from "@/lib/games/types";
 import "@/components/games/games-premium.css";
 
@@ -33,27 +28,12 @@ const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; stro
 };
 
 function AdventurePage() {
-  const [picks, setPicks] = useState<GameRow[] | null>(null);
-  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
-  const [allCompleted, setAllCompleted] = useState(false);
+  const { state, loading } = useDailyChallengeState();
+  const picks = state?.picks ?? null;
+  const completedIds = state?.completedIds ?? new Set<string>();
+  const todaysPicksDone = state?.todaysPicksDone ?? false;
+  const allEligibleExhausted = state?.allEligibleExhausted ?? false;
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [allTimeCompleted, todayCompleted] = await Promise.all([
-        fetchMyCompletedGameIds(),
-        fetchMyDailyCompletedGameIds(),
-      ]);
-      const sel = await selectDailyChallenges(2, { completedIds: allTimeCompleted });
-      if (cancelled) return;
-      setCompletedIds(todayCompleted);
-      setPicks(sel.picks);
-      setAllCompleted(sel.allCompleted);
-    })().catch(() => {
-      if (!cancelled) setPicks([]);
-    });
-    return () => { cancelled = true; };
-  }, []);
 
   return (
     <AppShell>
