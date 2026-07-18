@@ -178,6 +178,11 @@ function AdminInvestigationsPage() {
 
   useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
+  // Refresh the list whenever an investigation is drafted/published (this
+  // tab or any other tab). Mirrors the campaigns admin behavior.
+  useEffect(() => onInvestigationPublished(() => { refresh(); }), []);
+
+
   // --- Enrich rows via the shared boundary normalizer (display only).
   const worldBySlug = useMemo(() => {
     if (!worldReady) return new Map<string, string>();
