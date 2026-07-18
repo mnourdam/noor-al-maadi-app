@@ -132,6 +132,31 @@ function writeLedger(uid: string, set: Set<string>): void {
  * a client-side optimisation to avoid re-enqueuing on every render. The
  * durable safety net is the server RPC + outbox stable-id, not the ledger.
  *
+ * ---------------- Guest → Sign-in migration policy ----------------
+ * Guest completions live only in `profile.investigationsCompleted`
+ * (device-local). When a guest signs in, this function is invoked by
+ * `<InvestigationLegacyBackfill />` and treats those local keys as
+ * legacy keys of the newly-signed-in account. Contract:
+ *
+ *   • migrate exactly once — per-uid ledger + deterministic outbox id
+ *     make repeated calls collapse onto the same durable row.
+ *   • never duplicate — server RPC uses
+ *     `ON CONFLICT (user_id, investigation_id) DO NOTHING`.
+ *   • never replay rewards — RPC grants 0 XP, 0 dinars, 0 hearts and
+ *     stamps `legacy_key` on the inserted row.
+ *   • never migrate again after successful migration — the ledger
+ *     records every enqueued key; the outbox item itself is stable-id
+ *     upserted; and the server row is unique per (user_id,
+ *     investigation_id).
+ *   • preserve guest data after sign-out — this function does NOT
+ *     mutate `profile.investigationsCompleted`. The device-local array
+ *     stays intact so signing out restores the guest view. The account
+ *     side keeps `user_investigation_progress` as its authoritative
+ *     source.
+ *   • account progress is always authoritative — the canonical service
+ *     reads server rows first, then pending outbox items, then legacy;
+ *     server rows always win.
+ *
  * Safe when signed-out (no-op), safe offline (queued and flushed on
  * reconnect), safe for signed-in users with an empty legacy array.
  */
