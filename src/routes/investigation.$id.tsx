@@ -54,7 +54,7 @@ function InvestigationPage() {
 // ============================================================
 function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
-    profile, markInvestigationCompletedLocal,
+    profile, markInvestigationCompletedLocal, awardBadge,
     recoverHeartFromActivity,
   } = useProfile();
 
