@@ -101,9 +101,16 @@ function WorldsIndex() {
 
                     <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
                       {entities && entities.total > 0 && (
-                        <span className="rounded-full border border-white/10 bg-black/40 px-2 py-0.5">
-                          اكتُشف {entities.discovered} من {entities.total}
-                        </span>
+                        <>
+                          <span className="rounded-full border border-white/10 bg-black/40 px-2 py-0.5 tabular-nums">
+                            اكتُشف {entities.discovered} / {entities.total}
+                          </span>
+                          {entities.total - entities.discovered > 0 && (
+                            <span className="rounded-full border border-gold/25 bg-gold/5 px-2 py-0.5 tabular-nums text-gold/90">
+                              متبقٍّ {entities.total - entities.discovered}
+                            </span>
+                          )}
+                        </>
                       )}
                       <span className="rounded-full border border-white/10 bg-black/40 px-2 py-0.5">
                         {w.campaignsCount} حملة
