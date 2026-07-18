@@ -406,7 +406,7 @@ export function useCanonicalInvestigationProgress(): CanonicalInvestigationProgr
   const { profile } = useProfile();
   const { idToSlug, slugToId } = useInvestigationIdSlugMaps();
 
-  return useMemoCanonical(() => {
+  return useMemo(() => {
     const isSignedIn = !!server.uid;
     const ready = isSignedIn ? (server.ready && (idToSlug.size > 0 || slugToId.size > 0 || true)) : true;
 
