@@ -122,7 +122,7 @@ function InvestigationsIndex() {
               );
             }
             const inv = item.row;
-            const done = profile.investigationsCompleted.includes(inv.id);
+            const done = canonicalProgress.matches(inv.id);
             return (
               <Link
                 key={`l:${inv.id}`}
