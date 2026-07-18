@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { onInvestigationPublished } from "@/lib/investigations/adminApi";
 
 export type InvestigationDifficulty = "easy" | "medium" | "hard";
 
