@@ -894,5 +894,5 @@ export function useAllWorldsProgress() {
       byWorld.set(h.slug, { progress, recommendation });
     }
     return { ready: true, byWorld };
-  }, [ready, discovered, cloudCampaign, profile.investigationsCompleted]);
+  }, [ready, discovered, museum, cloudCampaign, investigationsCompleted]);
 }
