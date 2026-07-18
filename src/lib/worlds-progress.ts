@@ -26,7 +26,7 @@ import {
 import { normalizeEntitySlug } from "@/lib/encyclopedia-source";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { entitySortKey } from "@/lib/entityChronology";
-import { WORLD_ERA, WORLD_HUBS, WORLD_SLUGS } from "@/lib/worlds";
+import { WORLD_ERA, WORLD_HUBS, WORLD_SLUGS } from "@/lib/worlds-constants";
 import { useProfile } from "@/lib/profile";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
