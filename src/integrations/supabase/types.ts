@@ -2537,6 +2537,7 @@ export type Database = {
       my_pending_badges: { Args: never; Returns: Json }
       my_referral_stats: { Args: never; Returns: Json }
       my_unread_notification_count: { Args: never; Returns: number }
+      purchase_heart: { Args: never; Returns: Json }
       rate_feedback_issue: {
         Args: { p_issue_id: string; p_rating: number }
         Returns: undefined

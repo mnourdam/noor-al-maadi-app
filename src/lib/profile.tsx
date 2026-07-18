@@ -33,6 +33,7 @@ function dailyMissionsForDate(_d: Date = new Date()): { id: string }[] {
   return [];
 }
 import { HEART_MAX, getEffectiveHearts, commitHearts, ACTIVITY_COOLDOWN_MS, activityKey, STREAK_MILESTONES, type HeartActivity, type StreakMilestone } from "./hearts";
+import { STARTING_DINARS, HEART_COST_DINARS } from "./economy";
 import { DEFAULT_AVATAR_ID } from "./avatars";
 import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notifications";
 import { androidMeasure, recordAndroidAction } from "./androidFreezeDiagnostics";
@@ -133,7 +134,7 @@ const initial: ProfileState = {
   avatarId: DEFAULT_AVATAR_ID,
   hearts: HEART_MAX,
   heartsAt: Date.now(),
-  dinars: 50,
+  dinars: STARTING_DINARS,
   activityCooldowns: {},
   streakMilestonesClaimed: [],
   hintsPurchased: {},
@@ -517,15 +518,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       return outcome;
     },
     spendDinarsForHeart: () => {
-      const COST = 20;
       let ok = false;
       update((p) => {
         const now = Date.now();
         const eff = getEffectiveHearts(p, now);
         if (eff >= HEART_MAX) return p;
-        if ((p.dinars ?? 0) < COST) return p;
+        if ((p.dinars ?? 0) < HEART_COST_DINARS) return p;
         ok = true;
-        return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - COST };
+        return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - HEART_COST_DINARS };
       });
       return ok;
     },

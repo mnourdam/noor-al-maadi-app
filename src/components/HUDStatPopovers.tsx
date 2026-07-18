@@ -7,6 +7,9 @@ import {
   msUntilNextHeart,
   formatHeartTimer,
 } from "@/lib/hearts";
+import { HEART_COST_DINARS } from "@/lib/economy";
+import { useBuyHeart } from "@/hooks/useBuyHeart";
+import { toast } from "sonner";
 import { levelFor } from "@/lib/progression";
 
 /* ──────────────────────────────────────────────
@@ -48,7 +51,7 @@ function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 /* ──────────────────────────────────────────────
- * Hearts
+ * Hearts — includes atomic purchase action
  * ──────────────────────────────────────────────*/
 export function HeartsPopover({ profile }: { profile: ProfileState }) {
   const [, force] = useState(0);
@@ -60,22 +63,64 @@ export function HeartsPopover({ profile }: { profile: ProfileState }) {
   const hearts = getEffectiveHearts(profile, now);
   const full = hearts >= HEART_MAX;
   const next = msUntilNextHeart(profile, now);
+  const dinars = profile.dinars ?? 0;
+  const canAfford = dinars >= HEART_COST_DINARS;
+  const { buy, inFlight } = useBuyHeart();
+
+  const onBuy = async () => {
+    if (inFlight || full) return;
+    const res = await buy();
+    if (res.status === "purchased") {
+      toast.success("تمت استعادة قلب");
+    } else if (res.status === "insufficient_dinars") {
+      toast.error("رصيدك غير كافٍ", { description: `رصيدك الحالي: ${(res.dinars ?? dinars).toLocaleString("en-US")} دينارًا` });
+    } else if (res.status === "hearts_full") {
+      toast.message("قلوبك مكتملة");
+    } else if (res.status === "unauthorized") {
+      toast.error("يلزم تسجيل الدخول");
+    } else {
+      toast.error("تعذّرت العملية، حاول مجددًا");
+    }
+  };
+
   return (
-    <PopShell icon={<Heart className="size-4" />} title={full ? "القلوب مكتملة" : "استعادة القلوب"}>
-      <p className="text-white/70">
-        {full
-          ? "أنت مستعد لمواصلة رحلتك."
-          : `سيعود القلب التالي بعد: ${formatHeartTimer(next)}`}
-      </p>
+    <PopShell icon={<Heart className="size-4" />} title={full ? "قلوبك مكتملة" : "استعادة قلب"}>
+      {full ? (
+        <p className="text-white/70">أنت مستعد لمواصلة رحلتك.</p>
+      ) : (
+        <p className="text-white/70">
+          يمكنك انتظار امتلاء القلب التالي، أو استعادة قلب الآن مقابل {HEART_COST_DINARS} دينارًا.
+        </p>
+      )}
       <StatRow label="القلوب الحالية" value={`${hearts}/${HEART_MAX}`} />
       {!full && (
-        <p className="pt-1 text-[10.5px] text-white/45">
-          كل قلب يعود تلقائيًا بعد فترة من الزمن.
-        </p>
+        <StatRow label="القلب التالي بعد" value={formatHeartTimer(next)} />
+      )}
+      <StatRow label="رصيدك" value={`${dinars.toLocaleString("en-US")} د.`} />
+      {!full && (
+        <div className="flex flex-col gap-1.5 pt-1">
+          <button
+            type="button"
+            onClick={onBuy}
+            disabled={inFlight || !canAfford}
+            aria-label={`شراء قلب مقابل ${HEART_COST_DINARS} دينارًا`}
+            className="motion-tap inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-gradient-to-l from-amber-500 to-yellow-600 px-3 py-2 text-[13px] font-bold text-navy shadow-sm transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Heart className="size-4" strokeWidth={2} />
+            {inFlight ? "جارٍ الشراء…" : `شراء قلب — ${HEART_COST_DINARS} دينارًا`}
+          </button>
+          {!canAfford && (
+            <p className="text-[10.5px] text-red-300/80">رصيدك غير كافٍ لشراء قلب الآن.</p>
+          )}
+          <p className="text-[10.5px] text-white/45">
+            كل قلب يعود تلقائيًا بعد فترة من الزمن.
+          </p>
+        </div>
       )}
     </PopShell>
   );
 }
+
 
 /* ──────────────────────────────────────────────
  * Dinars
