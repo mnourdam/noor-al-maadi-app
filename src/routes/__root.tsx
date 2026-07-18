@@ -240,7 +240,17 @@ function RootComponent() {
 
     import("../lib/orphanUnlocksMigration").then((m) => m.migrateOrphanUnlocks()).catch(() => {});
     import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
-    import("../lib/importedCampaignProgress").then((m) => m.hydrateLegacyProgressFromCloud()).catch(() => {});
+    import("../lib/importedCampaignProgress")
+      .then((m) => m.hydrateLegacyProgressFromCloud())
+      .catch(() => {})
+      .finally(() => {
+        // Reconciliation runs AFTER cloud hydration so its cloud snapshot
+        // sees any freshly-merged rows. Deterministic + idempotent — safe
+        // to fire on every boot; no-op after the first successful pass.
+        import("../lib/campaignReconciliation")
+          .then((m) => m.reconcileLegacyCampaignProgress())
+          .catch(() => {});
+      });
     import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
 
     const onOnline = () => {
