@@ -200,148 +200,44 @@ function HomeFull() {
 
   const lvl = levelFor(profile.points);
 
-  // ===== Imported campaigns (CANONICAL source: same as /campaigns page) =====
-  // Reads from local-first snapshot + Supabase admin_campaigns via
-  // fetchPublishedCampaigns — identical chronological feed used by the
-  // Campaigns route, so Hero and Campaigns can never disagree on which
-  // campaign is "current".
-  const { data: importedCampaigns = [] } = useQuery({
-    queryKey: ["home-hero-campaigns"],
-    queryFn: fetchPublishedCampaigns,
-    staleTime: 60_000,
-  });
-  const [progressTick, setProgressTick] = useState(0);
-  useEffect(() => {
-    const onFocus = () => setProgressTick((t) => t + 1);
-    const onProgress = () => setProgressTick((t) => t + 1);
-    window.addEventListener("focus", onFocus);
-    window.addEventListener("irth:campaign-progress:updated", onProgress);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener("irth:campaign-progress:updated", onProgress);
+  // ===== Campaign recommendation — SHARED SERVICE =====
+  // Home Hero and Worlds Continue Journey both consume this hook,
+  // so both surfaces can never disagree on "what should the player
+  // do next?".  All decision logic lives in
+  // `src/lib/campaignRecommendationService.ts`.
+  const { recommendation: campaignRec } = useCampaignRecommendation();
+  const campaignSel = useMemo<CampaignSelection | null>(() => {
+    if (!campaignRec) return null;
+    const { campaign, chapter, progress, priority } = campaignRec;
+    // Derive nextActivity for the "Today's Journey" card copy.
+    // Kept out of the shared service so future non-Hero surfaces
+    // don't pay the localStorage read.
+    let nextActivity: CampaignActivity | null = null;
+    if (chapter) {
+      const local = getCampaignProgress(campaign.id);
+      const doneIds = local.chapters[chapter.id]?.completedActivityIds ?? [];
+      nextActivity = chapter.activities.find((a) => !doneIds.includes(a.id)) ?? null;
+    }
+    return {
+      campaign,
+      hasStarted: priority === "resume",
+      // The service never returns a completed campaign, so isComplete
+      // is always false here.  Kept for downstream compatibility.
+      isComplete: false,
+      completedChapters: progress.completedChapters,
+      nextChapter: chapter,
+      nextActivity,
     };
-  }, []);
-
-
-
+  }, [campaignRec]);
   type CampaignSelection = {
     campaign: ImportedCampaign;
-    progress: ReturnType<typeof getCampaignProgress>;
     hasStarted: boolean;
     isComplete: boolean;
     completedChapters: number;
     nextChapter: CampaignChapter | null;
     nextActivity: CampaignActivity | null;
   };
-  const campaignSel = useMemo<CampaignSelection | null>(() => {
-    if (!importedCampaigns.length) return null;
-    // `importedCampaigns` is already chronologically sorted by
-    // `fetchPublishedCampaigns()` — identical feed/order to the Campaigns page.
-    type EnrichedDebug = CampaignSelection & {
-      _debug: {
-        startedChapterIds: string[];
-        chaptersWithActivity: { id: string; activityCount: number }[];
-        rawProgressKeys: string[];
-      };
-    };
-    const enriched: EnrichedDebug[] = importedCampaigns.map((c) => {
-      const p = getCampaignProgress(c.id);
-      const sorted = [...c.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-      const validChapterIds = new Set(sorted.map((ch) => ch.id));
-      const completedChapters = sorted.filter((ch) => p.chapters[ch.id]?.completed).length;
-      const nextChapter = sorted.find((ch) => !p.chapters[ch.id]?.completed) ?? null;
-      const nextActivity = nextChapter
-        ? (nextChapter.activities.find(
-            (a) => !(p.chapters[nextChapter.id]?.completedActivityIds ?? []).includes(a.id),
-          ) ?? null)
-        : null;
 
-      // hasStarted reasoning. We only count progress against chapters that
-      // STILL EXIST in the campaign — stale chapter IDs left over from a
-      // previous import would otherwise inflate `hasStarted` and make the
-      // Hero "resume" a campaign the player never actually opened.
-      const startedChapterIds = Object.entries(p.chapters)
-        .filter(([chid, ch]) => validChapterIds.has(chid) &&
-          (ch.completed || (ch.completedActivityIds?.length ?? 0) > 0))
-        .map(([chid]) => chid);
-      const chaptersWithActivity = Object.entries(p.chapters)
-        .filter(([chid]) => validChapterIds.has(chid))
-        .map(([chid, ch]) => ({ id: chid, activityCount: ch.completedActivityIds?.length ?? 0 }))
-        .filter((x) => x.activityCount > 0);
-      const hasStarted = startedChapterIds.length > 0;
-
-      return {
-        campaign: c,
-        progress: p,
-        hasStarted,
-        isComplete: p.completed,
-        completedChapters,
-        nextChapter,
-        nextActivity,
-        _debug: {
-          startedChapterIds,
-          chaptersWithActivity,
-          rawProgressKeys: Object.keys(p.chapters),
-        },
-      };
-    });
-
-    // Priority — the Hero must always guide the player forward:
-    //   1) earliest STARTED but not complete campaign
-    //   2) earliest unfinished campaign overall (next unlocked to play)
-    //   3) otherwise NO campaign selection — every published campaign is
-    //      complete. Falling back to the last (completed) campaign would
-    //      show "Continue A · 100%" which is misleading; hero simply skips
-    //      the campaign slide and other slides (today-in-history, latest
-    //      discovery) fill the carousel instead.
-    const startedPick = enriched.find((e) => e.hasStarted && !e.isComplete);
-    const fallbackPick = enriched.find((e) => !e.isComplete);
-    const selected = startedPick ?? fallbackPick ?? null;
-
-    if (typeof window !== "undefined" && (window as any).__IRTH_HERO_DEBUG !== false) {
-      try {
-        // eslint-disable-next-line no-console
-        console.groupCollapsed(
-          `[Hero] selection — ${selected?.campaign.title ?? "(none)"} (started=${!!startedPick}, fallback=${!startedPick && !!fallbackPick})`,
-        );
-        // eslint-disable-next-line no-console
-        console.table(
-          enriched.map((e, i) => ({
-            i,
-            id: e.campaign.id,
-            slug: (e.campaign as any).slug ?? "",
-            title: e.campaign.title,
-            hasStarted: e.hasStarted,
-            isComplete: e.isComplete,
-            startedChapters: e._debug.startedChapterIds.length,
-            chaptersWithActivity: e._debug.chaptersWithActivity.length,
-            completedChapters: e.completedChapters,
-            totalChapters: e.campaign.chapters.length,
-          })),
-        );
-        for (const e of enriched.filter((x) => x.hasStarted)) {
-          // eslint-disable-next-line no-console
-          console.log(
-            `[Hero] hasStarted=true for "${e.campaign.title}" (id=${e.campaign.id}) — reason:`,
-            {
-              startedChapterIds: e._debug.startedChapterIds,
-              chaptersWithActivity: e._debug.chaptersWithActivity,
-              rawProgressKeys: e._debug.rawProgressKeys,
-            },
-          );
-        }
-        // eslint-disable-next-line no-console
-        console.log("[Hero] list source: fetchPublishedCampaigns (local-first snapshot, chronological)");
-        // eslint-disable-next-line no-console
-        console.log("[Hero] progress source: getCampaignProgress (irth_campaign_progress + cloud hydration)");
-        // eslint-disable-next-line no-console
-        console.log("[Hero] selected:", selected?.campaign.id, selected?.campaign.title);
-        // eslint-disable-next-line no-console
-        console.groupEnd();
-      } catch { /* ignore */ }
-    }
-    return selected;
-  }, [importedCampaigns, progressTick]);
 
   // ===== Hero background pool =====
   // Deterministic initial value for SSR/first paint, randomized on mount.
