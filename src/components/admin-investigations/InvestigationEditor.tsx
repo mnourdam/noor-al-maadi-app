@@ -123,7 +123,14 @@ function coerceReward(raw: any): Reward {
 }
 
 function toEditorState(raw: any): EditorState {
-  const norm = normalizeInvestigationRow(raw ?? {}).data as any;
+  // `raw` is the RPC envelope: published columns at top-level plus
+  // `draft_data`, lifecycle metadata, etc. Editing operates on the
+  // draft when one exists; otherwise on the published snapshot.
+  const hasDraft = raw && typeof raw === "object" && raw.draft_data && typeof raw.draft_data === "object";
+  const source: any = hasDraft
+    ? { ...raw, ...raw.draft_data, id: raw.id, slug: raw.slug, updated_at: raw.updated_at }
+    : raw ?? {};
+  const norm = normalizeInvestigationRow(source).data as any;
   const rawSteps: any[] = Array.isArray(norm.steps) ? norm.steps : [];
   const steps: Step[] = rawSteps.map((s) => ({
     id: (typeof s?.id === "string" && s.id) || newId(),
@@ -137,8 +144,8 @@ function toEditorState(raw: any): EditorState {
     __persisted: true,
   }));
   return {
-    id: String(norm.id),
-    slug: String(norm.slug),
+    id: String(raw?.id ?? norm.id),
+    slug: String(raw?.slug ?? norm.slug),
     title: String(norm.title ?? ""),
     subtitle: typeof norm.subtitle === "string" ? norm.subtitle : "",
     description: typeof norm.description === "string" ? norm.description : "",
@@ -147,7 +154,15 @@ function toEditorState(raw: any): EditorState {
     reward: coerceReward(norm.reward),
     steps,
     related: Array.isArray(norm.related_entities) ? norm.related_entities.map(String) : [],
-    updated_at: typeof norm.updated_at === "string" ? norm.updated_at : null,
+    updated_at: typeof raw?.updated_at === "string" ? raw.updated_at : null,
+    lifecycle: {
+      content_version: typeof raw?.content_version === "number" ? raw.content_version : 1,
+      published_at: typeof raw?.published_at === "string" ? raw.published_at : null,
+      has_unpublished_changes: raw?.has_unpublished_changes === true,
+      last_editor_email: typeof raw?.last_editor_email === "string" ? raw.last_editor_email : null,
+      last_draft_saved_at: typeof raw?.last_draft_saved_at === "string" ? raw.last_draft_saved_at : null,
+    },
+    hydratedFromDraft: !!hasDraft,
   };
 }
 
