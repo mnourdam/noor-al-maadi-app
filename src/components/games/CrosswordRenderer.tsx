@@ -229,7 +229,7 @@ export function CrosswordRenderer({
     const latest: Record<string, string> = {};
     stage.clues.forEach((clue, idx) => {
       const raw = clueInputRefs.current[idx]?.value ?? "";
-      if (normalizeCrosswordText(raw) === normalizeCrosswordText(clue.answer)) correct++;
+      if (isAcceptedAnswer(raw, clue.answer, clue.acceptable ?? [])) correct++;
       const chars = raw.trim();
       clueCells(clue).forEach(({ r, c }, charIdx) => {
         const ch = chars[charIdx];
