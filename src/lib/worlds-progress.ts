@@ -121,7 +121,7 @@ function snapshotVersion(): number {
 }
 
 function emptyBuckets(): Record<EntityBucket, SupabaseEncyclopediaEntity[]> {
-  return { figure: [], city: [], event: [], battle: [], landmark: [], artifact: [], state: [] };
+  return { figure: [], city: [], event: [], battle: [], landmark: [], artifact: [], state: [], scholar: [] };
 }
 
 /** Build the static world→entity/campaign/investigation index. Memoised. */
