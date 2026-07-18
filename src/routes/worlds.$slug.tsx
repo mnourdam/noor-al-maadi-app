@@ -262,7 +262,11 @@ function WorldDetailPage() {
   return (
     <AppShell>
       <div className="px-5 pt-8 pb-12">
-        <Link to="/worlds" className="inline-flex items-center gap-1 text-[11px] text-gold/80 hover:text-gold">
+        <Link
+          to="/worlds"
+          search={{ from: slug }}
+          className="inline-flex items-center gap-1 text-[11px] text-gold/80 hover:text-gold"
+        >
           <ChevronRight className="size-3.5" /> العوالم
         </Link>
 
