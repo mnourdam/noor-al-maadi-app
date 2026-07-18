@@ -39,7 +39,7 @@ import {
 } from "@/lib/investigations-normalize";
 import { onInvestigationPublished } from "@/lib/investigations/adminApi";
 
-export const Route = createFileRoute("/admin/investigations")({
+export const Route = createFileRoute("/admin/investigations/")({
   head: () => ({
     meta: [
       { title: "إدارة التحقيقات — إرث" },
