@@ -364,30 +364,37 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
     next.splice(idx + 1, 0, copy);
     return { ...s, steps: next };
   });
-  const removeStep = (idx: number) => setState((s) => {
-    if (!s) return s;
+  const removeStep = (idx: number) => {
+    if (!state) return;
+    const target = state.steps[idx];
+    if (!target) return;
     // Newly-added (not persisted) → no destructive approval required.
-    const target = s.steps[idx];
     if (!target.__persisted) {
-      const next = s.steps.slice(); next.splice(idx, 1);
-      return { ...s, steps: next };
+      setState((s) => {
+        if (!s) return s;
+        const next = s.steps.slice();
+        next.splice(idx, 1);
+        return { ...s, steps: next };
+      });
+      return;
     }
-    // Persisted → require dialog approval, then commit removal.
-    setShowRemovalDialog("confirm");
-    (window as any).__pendingRemoveIdx = idx;
-    return s;
-  });
+    // Persisted → require dialog approval, keyed by stable step id so
+    // reorders between "open" and "confirm" cannot target the wrong row.
+    setPendingRemoveId(target.id);
+  };
 
   const confirmRemoval = () => {
-    const idx = (window as any).__pendingRemoveIdx as number | undefined;
-    if (typeof idx !== "number") { setShowRemovalDialog(false); return; }
+    const targetId = pendingRemoveId;
+    if (!targetId) { setPendingRemoveId(null); return; }
     setState((s) => {
       if (!s) return s;
+      const idx = s.steps.findIndex((st) => st.id === targetId);
+      if (idx < 0) return s;
       const next = s.steps.slice();
       next.splice(idx, 1);
       return { ...s, steps: next };
     });
-    setShowRemovalDialog(false);
+    setPendingRemoveId(null);
     setRemovalApproved(true);
     notify("info", "تم تسجيل موافقة الحذف. يجب تشغيل التشغيل التجريبي مجدداً قبل الحفظ.");
   };
@@ -400,7 +407,8 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
   };
 
   const goBack = () => {
-    if (dirty && !confirm("لديك تغييرات غير محفوظة. الخروج بدون حفظ؟")) return;
+    // The `useBlocker` resolver above prompts on dirty state — no need
+    // for a second confirm() here. A clean editor navigates immediately.
     navigate({ to: "/admin/investigations", search: {} });
   };
 
