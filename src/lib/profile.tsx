@@ -518,15 +518,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       return outcome;
     },
     spendDinarsForHeart: () => {
-      const COST = 20;
       let ok = false;
       update((p) => {
         const now = Date.now();
         const eff = getEffectiveHearts(p, now);
         if (eff >= HEART_MAX) return p;
-        if ((p.dinars ?? 0) < COST) return p;
+        if ((p.dinars ?? 0) < HEART_COST_DINARS) return p;
         ok = true;
-        return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - COST };
+        return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - HEART_COST_DINARS };
       });
       return ok;
     },
