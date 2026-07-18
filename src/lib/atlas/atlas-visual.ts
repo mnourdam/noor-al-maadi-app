@@ -6,6 +6,7 @@
 // truth for content while the Atlas remains a pure visualization layer.
 import type { AtlasEntityKind, AtlasEntityRow } from "@/lib/atlas-entities";
 import { ERA_TO_WORLD } from "@/lib/worlds-progress";
+import { WORLD_HUBS } from "@/lib/worlds";
 
 export { ERA_TO_WORLD };
 
