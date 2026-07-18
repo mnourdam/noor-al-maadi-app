@@ -209,7 +209,7 @@ export function CrosswordRenderer({
     const latestEntries = collectEntries();
     setEntries(latestEntries);
     let correct = 0;
-    grid.forEach((info, k) => { if ((latestEntries[k] ?? "") === info.expected) correct++; });
+    grid.forEach((info, k) => { if (cellsEqual(info.expected, latestEntries[k] ?? "")) correct++; });
     const allRight = correct === totalCells;
     if (allRight && !done) {
       setDone(true);
