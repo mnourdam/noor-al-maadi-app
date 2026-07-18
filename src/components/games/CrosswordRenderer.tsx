@@ -3,6 +3,7 @@ import { Check, Sparkles, Feather, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
+import { cellsEqual, isAcceptedAnswer } from "@/lib/games/answer-normalize";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
