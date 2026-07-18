@@ -964,6 +964,32 @@ function RemovalDialog({ step, onCancel, onConfirm }: {
   );
 }
 
+function UnsavedChangesDialog({ onStay, onDiscard }: { onStay: () => void; onDiscard: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={onStay}>
+      <div dir="rtl" onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl border border-amber-500/40 bg-slate-950 p-5 shadow-2xl">
+        <h3 className="mb-2 flex items-center gap-2 text-base font-bold text-amber-100">
+          <AlertTriangle className="h-4 w-4" /> تغييرات غير محفوظة
+        </h3>
+        <p className="mb-4 text-sm leading-7 text-slate-300">
+          لديك تعديلات لم يتم حفظها على هذا التحقيق. هل ترغب في تجاهلها ومغادرة المحرر؟
+        </p>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button onClick={onStay}
+            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-100 hover:border-amber-400">
+            متابعة التعديل
+          </button>
+          <button onClick={onDiscard}
+            className="rounded-lg border border-red-500/50 bg-red-500/20 px-3 py-1.5 text-xs font-bold text-red-100 hover:bg-red-500/30">
+            تجاهل التغييرات والمغادرة
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LocalPreviewDialog({ state, onClose }: { state: EditorState; onClose: () => void }) {
   const payload = useMemo(() => JSON.stringify(toPersistedShape(state), null, 2), [state]);
   return (
