@@ -563,7 +563,7 @@ export function computeWorldProgress(
   let campStarted = 0; let campDone = 0;
   let totalChapters = 0; let completedChapters = 0;
   for (const cid of idx.campaignIds) {
-    const row = findCampaignRow(cid);
+    const row = findCampaignRow(cid, idx);
     const chapters = campaignChapters(row);
     if (chapters.length === 0) continue;
     totalChapters += chapters.length;
