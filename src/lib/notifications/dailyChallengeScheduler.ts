@@ -24,7 +24,8 @@
 
 import { hash32, pickCatalogEntry, CATALOG_LENGTH } from "./dailyChallengeCatalog";
 import { loadDailyChallengeState } from "@/lib/games/dailyChallengeService";
-import { fetchMyPreferences } from "./server";
+import { readCanonicalNotificationPrefs, type NotificationPrefs } from "@/lib/notifications";
+
 
 /** Fixed local-notification id — the single pending reminder. */
 export const DAILY_CHALLENGE_NOTIF_ID = 8801;
