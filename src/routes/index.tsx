@@ -305,11 +305,11 @@ function HomeFull() {
         subtitle: ev.body,
       });
     });
-    if (stats.recent.length > 0) {
-      const r = stats.recent[0];
+    if (recentDiscoveries.length > 0) {
+      const r = recentDiscoveries[0];
       out.push({
         kind: "discovery", bg: bgAt(2),
-        eyebrow: `آخر اكتشافاتك · ${r.kind}`,
+        eyebrow: `${r.kind}`,
         title: r.title,
         subtitle: r.subtitle ?? "افتح أرشيفك التاريخي واكتشف ما جمعته.",
         icon: r.icon,
