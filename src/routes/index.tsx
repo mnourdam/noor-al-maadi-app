@@ -19,7 +19,7 @@ import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
 
-import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
+import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
 import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
