@@ -768,8 +768,12 @@ function RecentUnlocks() {
       figure: "شخصية", scholar: "شخصية", artifact: "أثر",
       battle: "معركة", city: "مدينة", landmark: "معلم", state: "دولة",
     };
-    const lookupEntity = (t: string, slug: string): { slug?: string; title?: string; metadata?: { rarity?: Rarity; collectible?: boolean } } | null => {
-      const probe = (m: { bySlug: Map<string, { slug?: string; title?: string; metadata?: { rarity?: Rarity; collectible?: boolean } }> }) => m.bySlug.get(slug.toLowerCase());
+    type EntShape = { slug?: string; title?: string; metadata?: { rarity?: Rarity; collectible?: boolean } };
+    const lookupEntity = (t: string, slug: string): EntShape | null => {
+      const probe = (m: { bySlug: Map<string, unknown> }): EntShape | null => {
+        const raw = m.bySlug.get(slug.toLowerCase());
+        return (raw ?? null) as EntShape | null;
+      };
       if (t === "figure" || t === "scholar") return probe(supaFigures);
       if (t === "artifact") return probe(supaArtifacts);
       if (t === "landmark") return probe(supaLandmarks);
