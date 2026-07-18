@@ -10,13 +10,11 @@
 //   STRONG  — auto-restore campaign completion + unlock set.
 //             Triggered when ANY of:
 //               A) local ledger has `campaign:<cid>` claim key
-//               B) applied_profile_deltas has a delta whose id
-//                  starts with `campaign-complete:<cid>`
-//               C) every unlock id declared by the campaign
+//               B) every unlock id declared by the campaign
 //                  (campaign.unlocks + finalRewards.unlocks +
 //                  every chapter rewards.unlocks) already exists
 //                  in the player's `user_collection`
-//               D) cloud user_campaign_progress has a completed
+//               C) cloud user_campaign_progress has a completed
 //                  row (completed_at IS NOT NULL) for every
 //                  canonical chapter id
 //   MEDIUM  — deterministic legacy-chapter-id remap only.
