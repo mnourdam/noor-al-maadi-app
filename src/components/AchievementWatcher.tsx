@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useProfile } from "@/lib/profile";
 import { ACHIEVEMENTS, evaluateAchievements, type AchievementDef } from "@/lib/app-constants";
