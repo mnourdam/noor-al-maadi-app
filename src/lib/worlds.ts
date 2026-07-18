@@ -1,18 +1,22 @@
 // Historical Worlds — player-facing exploration hubs.
-// Sources: encyclopedia_entities (hubs + related), admin_campaigns (counts).
-// Connected worlds are derived from related_entities limited to other hub slugs.
-// No hardcoded content beyond initial ordering + glyphs.
+// Membership is delegated to the CANONICAL resolver in
+// `worlds-progress.ts::buildWorldIndex`. This module contains no
+// duplicate era / state-alias / entity-ref mapping.
 
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
-import { normalizeEntitySlug, ENCYCLOPEDIA_ENTITY_COLUMNS } from "@/lib/encyclopedia-source";
-import { resolveRelatedEntities, type RelatedNode } from "@/lib/relationship-graph";
+import { ENCYCLOPEDIA_ENTITY_COLUMNS } from "@/lib/encyclopedia-source";
+import type { RelatedNode } from "@/lib/relationship-graph";
+import { resolveRelatedEntities } from "@/lib/relationship-graph";
 import { sortEntitiesChronological } from "@/lib/entityChronology";
 import {
   ensureLocalSnapshotLoaded,
   localEncyclopediaBySlug,
-  localPublishedCampaigns,
 } from "@/lib/local-first-store";
+import {
+  buildWorldIndex,
+  getWorldCampaignIds,
+} from "@/lib/worlds-progress";
 
 export type WorldHub = {
   slug: string;
