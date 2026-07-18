@@ -828,11 +828,11 @@ export function useStableSectionOrder(current: SectionKey[], signature: string):
 // ------------------------------------------------------------
 
 export function useWorldProgress(worldSlug: string) {
-  const { profile } = useProfile();
   const discovered = useDiscoveredSlugs();
   const museum = useMuseumSlugs();
   const cloudCampaign = useCloudCampaignProgress();
-  const investigationsCompleted = usePerUserInvestigationsCompleted(profile.investigationsCompleted ?? []);
+  const canonicalInv = useCanonicalInvestigationProgress();
+  const investigationDoneKeys = canonicalInv.completedKeys;
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -866,22 +866,22 @@ export function useWorldProgress(worldSlug: string) {
       discovered,
       museum,
       cloudCampaign,
-      investigationsCompleted,
+      investigationDoneKeys,
     };
     const progress = computeWorldProgress(worldSlug, inputs);
     const recommendation = pickContinueJourney(worldSlug, inputs);
     const rankedSections = rankWorldSections(progress);
     return { ready: true, index, progress, recommendation, rankedSections };
-  }, [ready, worldSlug, discovered, museum, cloudCampaign, investigationsCompleted]);
+  }, [ready, worldSlug, discovered, museum, cloudCampaign, investigationDoneKeys]);
 }
 
 /** Compact per-world progress for the index page. */
 export function useAllWorldsProgress() {
-  const { profile } = useProfile();
   const discovered = useDiscoveredSlugs();
   const museum = useMuseumSlugs();
   const cloudCampaign = useCloudCampaignProgress();
-  const investigationsCompleted = usePerUserInvestigationsCompleted(profile.investigationsCompleted ?? []);
+  const canonicalInv = useCanonicalInvestigationProgress();
+  const investigationDoneKeys = canonicalInv.completedKeys;
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -898,7 +898,7 @@ export function useAllWorldsProgress() {
       discovered,
       museum,
       cloudCampaign,
-      investigationsCompleted,
+      investigationDoneKeys,
     };
     const byWorld = new Map<string, { progress: WorldProgress; recommendation: Recommendation }>();
     for (const h of WORLD_HUBS) {
@@ -907,5 +907,5 @@ export function useAllWorldsProgress() {
       byWorld.set(h.slug, { progress, recommendation });
     }
     return { ready: true, byWorld };
-  }, [ready, discovered, museum, cloudCampaign, investigationsCompleted]);
+  }, [ready, discovered, museum, cloudCampaign, investigationDoneKeys]);
 }
