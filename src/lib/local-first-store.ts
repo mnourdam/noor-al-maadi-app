@@ -317,6 +317,27 @@ export function localInvestigationBySlug(slug: string): Row | null {
   return investigationsBySlug.get(slug) ?? null;
 }
 
+/**
+ * Drop an investigation from the in-memory local store so the next
+ * `useSupabaseInvestigation(s)` refresh falls through to Supabase. Called by
+ * the admin lifecycle after publish so player pages read fresh content
+ * immediately, mirroring `invalidateLocalCampaign`.
+ */
+export function invalidateLocalInvestigation(idOrSlug: string): void {
+  if (!idOrSlug) return;
+  // We only index by slug for investigations; match either the slug key or
+  // the row's id defensively.
+  let hit: Row | null = investigationsBySlug.get(idOrSlug) ?? null;
+  if (!hit) {
+    for (const r of investigationsAll) {
+      if (r.id === idOrSlug || r.slug === idOrSlug) { hit = r; break; }
+    }
+  }
+  if (!hit) return;
+  if (hit.slug) investigationsBySlug.delete(hit.slug);
+  investigationsAll = investigationsAll.filter((r) => r !== hit);
+}
+
 export function localTihForMonthDay(month: number, day: number): Row[] {
   return tihByMonthDay.get(`${month}-${day}`) ?? [];
 }
