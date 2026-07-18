@@ -30,7 +30,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 import { useProfile } from "@/lib/profile";
-import { useInvestigationProgress } from "@/lib/investigations/progress";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 
 const investigationsSearchSchema = z.object({
   world: fallback(z.string(), "").default(""),
