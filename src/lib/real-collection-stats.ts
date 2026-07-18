@@ -177,6 +177,7 @@ function useSupabaseCollection() {
 
 export function useRealCollectionStats() {
   const { profile } = useProfile();
+  const canonicalInv = useCanonicalInvestigationProgress();
   const { rows: supaRows, validSlugs, slugTitles, canonicalSlugFor } = useSupabaseCollection();
 
   // Registry is consulted only for display metadata (Arabic name/image)
