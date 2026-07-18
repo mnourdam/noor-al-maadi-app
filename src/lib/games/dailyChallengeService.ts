@@ -146,17 +146,28 @@ async function resolveUserKey(): Promise<string> {
  * pick within the same local day. Called by both Home and Hall.
  */
 export async function loadDailyChallengeState(): Promise<DailyChallengeState> {
-  const [userKey, allTimeCompleted, todayServerCompleted, published] =
-    await Promise.all([
-      resolveUserKey(),
-      fetchMyCompletedGameIds(),
-      fetchMyDailyCompletedGameIds(),
-      listPublishedGames(),
-    ]);
+  const [userKey, serverAllTime, serverToday, published] = await Promise.all([
+    resolveUserKey(),
+    fetchMyCompletedGameIds(),
+    fetchMyDailyCompletedGameIds(),
+    listPublishedGames(),
+  ]);
 
   const date = localDateKey();
   const totalPublished = published.length;
   const byId = new Map(published.map((g) => [g.id, g]));
+
+  // Canonical all-time completed set:
+  //   • authenticated → server `game_progress.completed`
+  //   • guest         → local guest ledger (never touches server, never
+  //                     merged from any account)
+  // Guest ledger is ONLY consulted when userKey === "guest". Signing into
+  // an account causes userKey to flip, and the account's server-side set
+  // becomes the sole source of truth — guest history stays isolated.
+  const allTimeCompleted = new Set<string>(serverAllTime);
+  if (userKey === "guest") {
+    for (const id of readGuestCompletedIds()) allTimeCompleted.add(id);
+  }
 
   // 1. Try today's frozen pair.
   let picks: GameRow[] = readIds(picksKey(userKey, date))
@@ -166,7 +177,8 @@ export async function loadDailyChallengeState(): Promise<DailyChallengeState> {
   let allEligibleExhausted = false;
 
   // 2. First visit today (or the persisted pair no longer resolves) — freeze
-  //    a fresh pair. `selectDailyChallenges` excludes all-time completions.
+  //    a fresh pair. `selectDailyChallenges` excludes all-time completions,
+  //    which for guests now includes the durable ledger.
   if (picks.length === 0) {
     const sel = await selectDailyChallenges(2, {
       completedIds: allTimeCompleted,
@@ -183,13 +195,13 @@ export async function loadDailyChallengeState(): Promise<DailyChallengeState> {
 
   // 3. Compute today's completion set for the frozen pair.
   //    Union of: server today-completed, local today-completed, and any
-  //    pick that is already all-time completed (rare — only possible if
-  //    the same game was completed on another device between page loads).
+  //    pick that is already all-time completed. For guests, the ledger
+  //    IS the "server" — a pick present in it counts as completed.
   const localDone = new Set(readIds(doneKey(userKey, date)));
   const completedIds = new Set<string>();
   for (const g of picks) {
     if (
-      todayServerCompleted.has(g.id) ||
+      serverToday.has(g.id) ||
       localDone.has(g.id) ||
       allTimeCompleted.has(g.id)
     ) {
@@ -202,7 +214,8 @@ export async function loadDailyChallengeState(): Promise<DailyChallengeState> {
 
   // If the pair somehow ended up empty AND every published game is
   // all-time completed, flag exhaustion so surfaces can show the permanent
-  // state instead of a normal "come back tomorrow" message.
+  // state instead of a normal "come back tomorrow" message. This branch
+  // now fires for guests too, using the merged all-time set.
   if (!allEligibleExhausted && picks.length === 0 && totalPublished > 0) {
     allEligibleExhausted = published.every((g) => allTimeCompleted.has(g.id));
   }
@@ -219,6 +232,7 @@ export async function loadDailyChallengeState(): Promise<DailyChallengeState> {
     totalPublished,
   };
 }
+
 
 // ─── React hook ──────────────────────────────────────────────────────────
 
