@@ -13,7 +13,7 @@ import {
   ArrowLeft, Save, PlayCircle, RotateCcw, Eye, AlertTriangle,
   Trash2, Copy, Plus, ChevronUp, ChevronDown, CheckCircle2, Info, Loader2, ExternalLink,
 } from "lucide-react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useBlocker } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import {
   normalizeInvestigationRow,
