@@ -543,28 +543,40 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
             <h1 className="text-xl font-bold text-amber-100">تحرير التحقيق</h1>
             <div className="text-xs text-slate-400" dir="ltr">{state.slug}</div>
           </div>
-          {dirty && <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">تغييرات غير محفوظة</span>}
+          <LifecycleBadges lifecycle={state.lifecycle} hydratedFromDraft={state.hydratedFromDraft} dirty={dirty} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a href={`/investigation/${state.slug}`} target="_blank" rel="noreferrer"
             className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400">
-            <ExternalLink className="h-3.5 w-3.5" /> معاينة (الحفظ الحالي)
+            <ExternalLink className="h-3.5 w-3.5" /> معاينة (الحفظ المنشور)
           </a>
           <button onClick={() => setShowLocalPreview(true)}
             className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400">
-            <Eye className="h-3.5 w-3.5" /> معاينة محلية غير محفوظة
+            <Eye className="h-3.5 w-3.5" /> معاينة محلية
+          </button>
+          <button onClick={() => setShowVersions(true)}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400">
+            <HistoryIcon className="h-3.5 w-3.5" /> سجل الإصدارات
           </button>
           <button onClick={resetLocal} disabled={!dirty}
             className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 disabled:opacity-40">
             <RotateCcw className="h-3.5 w-3.5" /> تجاهل التغييرات
           </button>
-          <button onClick={runDry} disabled={busy !== null || !dirty || validation.blockers.length > 0 || removalPending}
-            className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10 disabled:opacity-40">
-            {busy === "dry" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />} تشغيل تجريبي
+          <button onClick={runSaveDraft} disabled={busy !== null || !dirty || validation.blockers.length > 0 || removalPending}
+            className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-100 hover:bg-amber-500/20 disabled:opacity-40">
+            {busy === "save" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} حفظ المسودة
           </button>
-          <button onClick={runSave} disabled={busy !== null || !dryHash || validation.blockers.length > 0 || removalPending}
+          <button
+            onClick={() => setShowPublish(true)}
+            disabled={
+              busy !== null ||
+              validation.blockers.length > 0 ||
+              removalPending ||
+              // Nothing to publish: no unsaved edits AND no persisted draft AND no dirty flag on the row.
+              (!dirty && !state.hydratedFromDraft && !state.lifecycle.has_unpublished_changes)
+            }
             className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-100 hover:bg-emerald-500/25 disabled:opacity-40">
-            {busy === "save" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} حفظ التغييرات
+            {busy === "publish" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UploadCloud className="h-3.5 w-3.5" />} نشر
           </button>
         </div>
       </header>
@@ -576,8 +588,6 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
         relationReport={relationReport}
         removedCount={removed.length}
         removalApproved={removalApproved}
-        dryReport={dryReport}
-        dryHash={dryHash}
       />
 
       {/* General information */}
