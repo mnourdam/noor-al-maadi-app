@@ -582,14 +582,13 @@ function CampaignsSection({ worldSlug, progress }: { worldSlug: string; progress
 
 function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; progress: WP }) {
   const { rows } = useSupabaseInvestigations();
-  const { profile } = useProfile();
+  const canonicalInv = useCanonicalInvestigationProgress();
   const { investigationSlugs } = useWorldMembership(worldSlug);
 
   const ordered = useMemo(() => {
-    const done = new Set(profile.investigationsCompleted ?? []);
     const list = (rows ?? []).filter((r) => investigationSlugs.has(r.slug));
     return list
-      .map((r) => ({ r, done: done.has(r.slug) }))
+      .map((r) => ({ r, done: canonicalInv.matches(r.slug) || canonicalInv.matches(r.id) }))
       .sort((a, b) => {
         if (a.done !== b.done) return a.done ? 1 : -1;
         const da = DIFF_RANK[a.r.difficulty ?? ""] ?? 3;
@@ -597,7 +596,7 @@ function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; pro
         if (da !== db) return da - db;
         return a.r.slug.localeCompare(b.r.slug);
       });
-  }, [rows, investigationSlugs, profile.investigationsCompleted]);
+  }, [rows, investigationSlugs, canonicalInv]);
 
   const shown = ordered.slice(0, 6);
 
