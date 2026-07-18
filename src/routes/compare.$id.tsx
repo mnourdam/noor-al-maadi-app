@@ -22,6 +22,7 @@ function ComparePage() {
   const { profile } = useProfile();
   const [other, setOther] = useState<PublicProfile | null>(null);
   const [denied, setDenied] = useState(false);
+  const canonicalInvCmp = useCanonicalInvestigationProgress();
 
   useEffect(() => {
     let alive = true;
