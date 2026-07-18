@@ -133,7 +133,29 @@ function GamePlayPage() {
     setStageDone(true);
     if (isLast) {
       setFinalScore(score);
-      const { firstTime } = await recordCompletion(game.id, stageIdx, score);
+
+      // Resolve identity ONCE — determines both the reward-guard source and
+      // the userKey passed to the daily-challenge event.
+      let uid: string | null = null;
+      try {
+        const { data } = await supabase.auth.getUser();
+        uid = data.user?.id ?? null;
+      } catch {
+        uid = null;
+      }
+
+      // Reward guard.
+      //   • Authenticated: server `game_progress.completed` via recordCompletion.
+      //   • Guest: local guest ledger — grants exactly once per game id,
+      //     survives reloads, never touches Supabase.
+      let firstTime = false;
+      if (uid) {
+        const res = await recordCompletion(game.id, stageIdx, score);
+        firstTime = res.firstTime;
+      } else {
+        firstTime = addGuestCompletion(game.id).firstTime;
+      }
+
       if (firstTime) {
         // Economy cap — mini-games contribute XP but must not dwarf campaign work.
         if (game.xp_reward > 0) addPoints(Math.min(game.xp_reward, 40));
@@ -156,12 +178,7 @@ function GamePlayPage() {
       // Canonical daily-challenge event — Home + Hall subscribe to this and
       // will immediately reflect the new completion state. Idempotent, so
       // firing on replay is harmless (rewards are gated by `firstTime`).
-      try {
-        const { data } = await supabase.auth.getUser();
-        markDailyChallengeCompletedLocally(data.user?.id ?? "guest", game.id);
-      } catch {
-        markDailyChallengeCompletedLocally("guest", game.id);
-      }
+      markDailyChallengeCompletedLocally(uid ?? "guest", game.id);
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
