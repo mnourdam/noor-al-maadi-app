@@ -13,7 +13,8 @@
     "build:android:web": "vite build --config vite.android.config.ts && node scripts/finalize-android.mjs",
     "sync:android": "npm run build:android:web && node scripts/generate-android-branding.mjs && npx cap sync android",
     "open:android": "npx cap open android",
-    "apk:debug": "npm run sync:android && node scripts/run-android-gradle.mjs"
+    "apk:debug": "npm run sync:android && node scripts/run-android-gradle.mjs",
+    "check:economy-parity": "node scripts/check-economy-parity.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
