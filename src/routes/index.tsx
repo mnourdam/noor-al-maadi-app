@@ -715,13 +715,13 @@ function HomeFull() {
       {/* ============ 4. LATEST DISCOVERIES ============ */}
       <section className="mt-12 px-5">
         <SectionHeader icon={<Gem className="size-3.5" />} eyebrow="أرشيفك الشخصي" title="آخر ما اكتشفته" />
-        {stats.recent.length > 0 ? (
+        {recentDiscoveries.length > 0 ? (
           <div className="relative">
             <div
               className="-mx-5 flex flex-nowrap items-stretch gap-3 overflow-x-auto overscroll-x-contain px-5 pb-2 no-scrollbar snap-x snap-mandatory [scroll-padding-inline-start:1.25rem] sm:-mx-6 sm:gap-4 sm:px-6 sm:[scroll-padding-inline-start:1.5rem] md:-mx-8 md:gap-5 md:px-8 md:[scroll-padding-inline-start:2rem]"
               aria-label="آخر الاكتشافات"
             >
-              {stats.recent.slice(0, 8).map((r, i, arr) => (
+              {recentDiscoveries.slice(0, 8).map((r, i, arr) => (
                 <div
                   key={r.key}
                   className={`w-48 flex-none snap-start sm:w-56 md:w-64 lg:w-72 ${
@@ -732,7 +732,7 @@ function HomeFull() {
                 </div>
               ))}
             </div>
-            {stats.recent.length > 2 && (
+            {recentDiscoveries.length > 2 && (
               <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-l from-background/60 to-transparent sm:w-10" />
             )}
           </div>
