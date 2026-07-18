@@ -30,6 +30,15 @@ import { readCanonicalNotificationPrefs, type NotificationPrefs } from "@/lib/no
 /** Fixed local-notification id — the single pending reminder. */
 export const DAILY_CHALLENGE_NOTIF_ID = 8801;
 
+/**
+ * Canonical in-app destination for a tapped Daily Challenge
+ * reminder. Kept as a single constant so the schedule payload and
+ * the tap handler always agree. The Challenges Hall (`/adventure`)
+ * is the current stable destination — no in-page anchor is used
+ * because no matching `#daily-challenges` id exists yet.
+ */
+export const DAILY_CHALLENGE_DEEP_LINK = "/adventure";
+
 /** Local-time window (minutes from midnight). Configurable in one place. */
 export const WINDOW_START_MIN = 16 * 60;      // 16:00
 export const WINDOW_END_MIN = 21 * 60 + 30;   // 21:30 (exclusive)
