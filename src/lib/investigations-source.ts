@@ -110,7 +110,13 @@ export function useSupabaseInvestigations() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshTick]);
+
+  // Refresh already-open pages when an admin publishes/drafts an investigation
+  // (same tab via CustomEvent, other tabs via BroadcastChannel).
+  useEffect(() => onInvestigationPublished((_, kind) => {
+    if (kind === "publish") setRefreshTick((n) => n + 1);
+  }), []);
 
   return { rows, error };
 }
@@ -119,6 +125,7 @@ export function useSupabaseInvestigations() {
 export function useSupabaseInvestigation(slug: string | undefined) {
   const [row, setRow] = useState<InvestigationRow | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     if (!slug) {
