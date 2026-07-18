@@ -15,6 +15,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useProfile } from "./profile";
+import { useCanonicalInvestigationProgress } from "./investigations/progress";
 import { listRegistry } from "./contentRegistryStorage";
 import { displayName } from "./display-names";
 import { supabase } from "@/integrations/supabase/client";
