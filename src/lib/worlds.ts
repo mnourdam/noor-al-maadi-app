@@ -69,7 +69,10 @@ function asStringList(v: unknown): string[] {
 
 export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
   await ensureLocalSnapshotLoaded();
-  const slugs = WORLD_HUBS.map((h) => h.slug);
+  // Player-facing index — only the canonical playable worlds. Excluded hubs
+  // (fatimid, mongols, timurid, safavid) remain in the encyclopedia but never
+  // surface as playable worlds.
+  const slugs = PUBLIC_WORLD_HUBS.map((h) => h.slug);
   let rows = slugs
     .map((slug) => localEncyclopediaBySlug(slug, "state"))
     .filter((row): row is SupabaseEncyclopediaEntity => !!row && row.enabled !== false);
@@ -90,7 +93,7 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
 
   // Campaign counts come from the CANONICAL world index. No separate scan.
   const out: WorldSummary[] = [];
-  for (const hub of WORLD_HUBS) {
+  for (const hub of PUBLIC_WORLD_HUBS) {
     const entity = bySlug.get(hub.slug);
     if (!entity) continue;
     const related = asStringList(metaObj(entity).related_entities).length;
