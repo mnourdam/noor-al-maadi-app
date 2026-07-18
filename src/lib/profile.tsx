@@ -134,7 +134,7 @@ const initial: ProfileState = {
   avatarId: DEFAULT_AVATAR_ID,
   hearts: HEART_MAX,
   heartsAt: Date.now(),
-  dinars: 50,
+  dinars: STARTING_DINARS,
   activityCooldowns: {},
   streakMilestonesClaimed: [],
   hintsPurchased: {},
