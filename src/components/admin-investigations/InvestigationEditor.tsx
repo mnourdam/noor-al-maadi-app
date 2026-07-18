@@ -1119,3 +1119,211 @@ function LocalPreviewDialog({ state, onClose }: { state: EditorState; onClose: (
     </div>
   );
 }
+
+// ============================================================
+// Publish confirmation dialog
+// ------------------------------------------------------------
+// Publishing is atomic on the server: draft → published, new
+// immutable version snapshot, draft cleared. This dialog is a
+// safety confirmation with an optional editor note.
+// ============================================================
+function PublishDialog({
+  state, dirty, hasPersistedDraft, busy, onCancel, onConfirm,
+}: {
+  state: EditorState; dirty: boolean; hasPersistedDraft: boolean; busy: boolean;
+  onCancel: () => void; onConfirm: (note: string | null) => void;
+}) {
+  const [note, setNote] = useState("");
+  const [ok, setOk] = useState(false);
+  return (
+    <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/70 p-4" onClick={busy ? undefined : onCancel}>
+      <div dir="rtl" onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-2xl border border-emerald-500/30 bg-slate-950 p-5 shadow-2xl">
+        <h3 className="mb-2 flex items-center gap-2 text-base font-bold text-emerald-100">
+          <UploadCloud className="h-4 w-4" /> نشر التحقيق
+        </h3>
+        <p className="mb-3 text-sm leading-7 text-slate-300">
+          سيتم استبدال الإصدار المرئي للاعبين بالمحتوى الحالي، وسيُحفظ الإصدار السابق في سجل الإصدارات ذرّياً.
+          هذه العملية لا تُعدّل تقدّم اللاعبين ولا تمنح مكافآت.
+        </p>
+        <ul className="mb-3 space-y-0.5 text-xs text-slate-400">
+          <li>• الإصدار الحالي المنشور: {state.lifecycle.published_at ? `#${state.lifecycle.content_version}` : "—"}</li>
+          <li>• الإصدار الجديد بعد النشر: #{state.lifecycle.content_version + 1}</li>
+          {dirty && <li className="text-amber-300">• سيتم حفظ التعديلات كمسودة أولاً ثم نشرها.</li>}
+          {!dirty && hasPersistedDraft && <li className="text-amber-300">• سيتم نشر المسودة المحفوظة.</li>}
+        </ul>
+        <label className="mb-3 block">
+          <span className="mb-1 block text-xs text-slate-400">ملاحظة للسجل (اختيارية)</span>
+          <input value={note} onChange={(e) => setNote(e.target.value)}
+            placeholder="سبب النشر أو تفاصيل التغيير…"
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+        </label>
+        <label className="mb-4 flex items-start gap-2 text-xs text-emerald-200">
+          <input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} className="mt-0.5" />
+          <span>أفهم أن هذا الإجراء يستبدل ما يراه اللاعبون فوراً.</span>
+        </label>
+        <div className="flex justify-end gap-2">
+          <button onClick={onCancel} disabled={busy}
+            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40">
+            إلغاء
+          </button>
+          <button onClick={() => onConfirm(note.trim() || null)} disabled={!ok || busy}
+            className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/50 bg-emerald-500/20 px-3 py-1.5 text-xs font-bold text-emerald-100 disabled:opacity-40">
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UploadCloud className="h-3.5 w-3.5" />} تأكيد النشر
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Version history dialog
+// ------------------------------------------------------------
+// Read-only list with preview + restore-to-draft. Restore NEVER
+// auto-publishes — it hydrates draft_data with the chosen version's
+// payload, and the admin must review and hit "Publish" separately.
+// ============================================================
+function VersionsDialog({
+  investigationId, currentVersion, busy, onClose, onRestoreToDraft,
+}: {
+  investigationId: string; currentVersion: number; busy: boolean;
+  onClose: () => void; onRestoreToDraft: (version: number) => void;
+}) {
+  const [rows, setRows] = useState<InvestigationVersionRow[] | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [previewVersion, setPreviewVersion] = useState<number | null>(null);
+  const [previewData, setPreviewData] = useState<Record<string, unknown> | null>(null);
+  const [previewErr, setPreviewErr] = useState<string | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await listInvestigationVersions(investigationId);
+        if (!cancelled) setRows(list);
+      } catch (e: any) {
+        if (!cancelled) setLoadErr(e?.message ?? "تعذّر تحميل السجل.");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [investigationId]);
+
+  const openPreview = async (version: number) => {
+    setPreviewVersion(version); setPreviewData(null); setPreviewErr(null); setPreviewBusy(true);
+    try {
+      const data = await getInvestigationVersion(investigationId, version);
+      setPreviewData(data);
+    } catch (e: any) {
+      setPreviewErr(e?.message ?? "تعذّر تحميل الإصدار.");
+    } finally { setPreviewBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/70 p-4" onClick={busy ? undefined : onClose}>
+      <div dir="rtl" onClick={(e) => e.stopPropagation()}
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-amber-500/30 bg-slate-950 p-5 text-slate-100 shadow-2xl">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-base font-bold text-amber-100">
+            <HistoryIcon className="h-4 w-4" /> سجل الإصدارات
+          </h3>
+          <button onClick={onClose} disabled={busy}
+            className="rounded-lg border border-slate-700 px-2 py-1 text-xs disabled:opacity-40">إغلاق</button>
+        </div>
+        {loadErr && <div className="mb-2 rounded-lg border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-200">{loadErr}</div>}
+        {!rows && !loadErr && <div className="p-6 text-center text-sm text-slate-400">جارٍ التحميل…</div>}
+        {rows && rows.length === 0 && (
+          <div className="p-6 text-center text-sm text-slate-400">لا توجد إصدارات محفوظة بعد.</div>
+        )}
+        {rows && rows.length > 0 && (
+          <ul className="space-y-2">
+            {rows.map((v) => (
+              <li key={v.version} className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="font-bold text-amber-100">
+                      الإصدار #{v.version}
+                      {v.version === currentVersion && (
+                        <span className="ms-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">
+                          المنشور حالياً
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {new Date(v.created_at).toLocaleString("ar")}{" "}
+                      {v.editor_email && <span dir="ltr">· {v.editor_email}</span>}
+                      {v.source && <span> · {v.source}</span>}
+                    </div>
+                    {v.note && <div className="mt-1 text-xs text-slate-300">{v.note}</div>}
+                    {v.title && <div className="mt-1 text-xs text-slate-500">{v.title}</div>}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => openPreview(v.version)}
+                      className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-amber-400">
+                      <Eye className="me-1 inline h-3 w-3" /> معاينة
+                    </button>
+                    <button onClick={() => setConfirmRestore(v.version)}
+                      disabled={busy || v.version === currentVersion}
+                      className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-100 hover:bg-amber-500/20 disabled:opacity-40"
+                      title={v.version === currentVersion ? "هذا هو الإصدار المنشور حالياً" : "استرجاع هذا الإصدار كمسودة"}>
+                      <RotateCcw className="me-1 inline h-3 w-3" /> استرجاع كمسودة
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {previewVersion !== null && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
+            onClick={() => { setPreviewVersion(null); setPreviewData(null); }}>
+            <div dir="rtl" onClick={(e) => e.stopPropagation()}
+              className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h4 className="text-sm font-bold text-amber-100">معاينة الإصدار #{previewVersion}</h4>
+                <button onClick={() => { setPreviewVersion(null); setPreviewData(null); }}
+                  className="rounded-lg border border-slate-700 px-2 py-1 text-xs">إغلاق</button>
+              </div>
+              {previewBusy && <div className="p-6 text-center text-sm text-slate-400">جارٍ التحميل…</div>}
+              {previewErr && <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-200">{previewErr}</div>}
+              {previewData && (
+                <pre dir="ltr" className="max-h-[70vh] overflow-auto rounded-lg border border-slate-800 bg-slate-950/80 p-3 text-[11px] leading-snug text-slate-200">
+                  {JSON.stringify(previewData, null, 2)}
+                </pre>
+              )}
+            </div>
+          </div>
+        )}
+
+        {confirmRestore !== null && (
+          <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/70 p-4"
+            onClick={busy ? undefined : () => setConfirmRestore(null)}>
+            <div dir="rtl" onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl border border-amber-500/40 bg-slate-950 p-5">
+              <h4 className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-100">
+                <AlertTriangle className="h-4 w-4" /> استرجاع كمسودة
+              </h4>
+              <p className="mb-4 text-sm leading-7 text-slate-300">
+                سيتم استرجاع الإصدار #{confirmRestore} كمسودة. لن يتأثر ما يراه اللاعبون حتى تضغط "نشر" لاحقاً.
+                هل تريد المتابعة؟
+              </p>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setConfirmRestore(null)} disabled={busy}
+                  className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40">إلغاء</button>
+                <button
+                  onClick={() => { const v = confirmRestore; setConfirmRestore(null); onRestoreToDraft(v); }}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1 rounded-lg border border-amber-500/50 bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-100 disabled:opacity-40">
+                  {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />} استرجاع
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
