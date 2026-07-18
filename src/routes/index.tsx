@@ -322,7 +322,7 @@ function HomeFull() {
     }
     // LC1 scope cut: Timeline Journey hero slide hidden until content audit completes.
     return out;
-  }, [campaignSel, todayEvents, stats.recent, heroBgs]);
+  }, [campaignSel, todayEvents, recentDiscoveries, heroBgs]);
 
   // Carousel
   const [slideIdx, setSlideIdx] = useState(0);
