@@ -2005,6 +2005,7 @@ export type Database = {
           id: string
           investigation_id: string
           legacy_key: string | null
+          reward_snapshot: Json | null
           score: number
           status: string
           updated_at: string
@@ -2022,6 +2023,7 @@ export type Database = {
           id?: string
           investigation_id: string
           legacy_key?: string | null
+          reward_snapshot?: Json | null
           score?: number
           status?: string
           updated_at?: string
@@ -2039,6 +2041,7 @@ export type Database = {
           id?: string
           investigation_id?: string
           legacy_key?: string | null
+          reward_snapshot?: Json | null
           score?: number
           status?: string
           updated_at?: string
@@ -2254,10 +2257,6 @@ export type Database = {
           p_issue: string
           p_title: string
         }
-        Returns: undefined
-      }
-      _unlock_investigation_collectibles: {
-        Args: { p_investigation_id: string; p_user_id: string }
         Returns: undefined
       }
       admin_adjust_balance: {

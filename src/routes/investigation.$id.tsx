@@ -54,7 +54,7 @@ function InvestigationPage() {
 // ============================================================
 function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
-    profile, markInvestigationCompletedLocal,
+    profile, markInvestigationCompletedLocal, awardBadge,
     recoverHeartFromActivity,
   } = useProfile();
 
@@ -113,12 +113,19 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     // Local optimistic marker — server reward reconciles via cloud_saves.
     markInvestigationCompletedLocal(row.slug);
 
-    // Phase G2 — badges and museum artifacts are now granted
-    // server-side inside `complete_investigation_v2` (idempotent
-    // insert into `public.user_collection`). Do NOT award them
-    // client-side: doing so would race the server unlock and could
-    // cause a mismatched local view. The canonical museum/badge
-    // reads pull from `user_collection` and reconcile after flush.
+    // Phase G2 (corrective) — server now atomically grants the
+    // museum artifact into `public.user_collection` inside
+    // `complete_investigation_v2`, alongside XP/dinars/hearts, and
+    // stamps an immutable `reward_snapshot` on the completion row.
+    // The client must NOT call `findArtifact` — that would duplicate
+    // the museum unlock into local state ahead of the server.
+    //
+    // Badges have no canonical server store today (`profile.badges`
+    // is a client-local array). Until a follow-up phase adds a real
+    // server badge table, the client keeps granting the badge locally
+    // and the server records it in `reward_snapshot.badge` as future
+    // evidence for a proper migration.
+    if (reward.badge) awardBadge(reward.badge);
 
     // Heart restoration — respects cooldown so the same investigation
     // can't be farmed back-to-back for hearts.
