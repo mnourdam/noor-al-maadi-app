@@ -27,6 +27,7 @@ import {
 import { useProfile } from "@/lib/profile";
 import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
 import { useSupabaseInvestigations, countQuestions } from "@/lib/investigations-source";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import { sortCampaignsChronological } from "@/lib/campaignChronology";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
