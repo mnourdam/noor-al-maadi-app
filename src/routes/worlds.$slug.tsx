@@ -426,9 +426,9 @@ const DIFF_RANK: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
 function CampaignsSection({ worldSlug, progress }: { worldSlug: string; progress: WP }) {
   const { data } = useQuery({ queryKey: ["campaigns", "feed"], queryFn: fetchPublishedFeed });
   const { campaignIds } = useWorldMembership(worldSlug);
-  const { profile } = useProfile();
   const cloudCampaign = useCloudCampaignProgress();
-  const invalidatedTick = profile.investigationsCompleted?.length ?? 0; // dep to re-render on progress change
+  const canonicalInv = useCanonicalInvestigationProgress();
+  const invalidatedTick = canonicalInv.count; // dep to re-render on progress change
 
   const ordered = useMemo(() => {
     const list = (data?.campaigns ?? []).filter((c) => campaignIds.has(c.id));
