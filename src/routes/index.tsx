@@ -21,6 +21,7 @@ import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collectio
 import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscoveries";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
 import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
