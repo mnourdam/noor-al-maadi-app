@@ -379,7 +379,7 @@ export function CrosswordRenderer({
               return <div key={k} className="h-9 w-9 rounded-sm bg-amber-900/30" />;
             }
             const value = entries[k] ?? "";
-            const isCorrect = value && value === info.expected;
+            const isCorrect = !!value && cellsEqual(info.expected, value);
             const isActiveClue = activeKeys.has(k);
             const isActiveCell = activeCell === k;
             return (
