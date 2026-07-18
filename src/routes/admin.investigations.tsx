@@ -121,9 +121,11 @@ const DIFFICULTY_LABEL: Record<string, string> = { easy: "سهل", medium: "مت
 function AdminInvestigationsPage() {
   const [rows, setRows] = useState<ListRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [diag, setDiag] = useState<DiagInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [worldReady, setWorldReady] = useState(false);
+  const [worldErr, setWorldErr] = useState<string | null>(null);
 
   // Filters.
   const [search, setSearch] = useState("");
@@ -148,15 +150,24 @@ function AdminInvestigationsPage() {
   const refresh = async () => {
     setBusy(true);
     setErr(null);
+    setDiag(null);
+    setWorldErr(null);
     try {
-      await ensureLocalSnapshotLoaded();
-      invalidateWorldIndex();
+      try {
+        await ensureLocalSnapshotLoaded();
+        invalidateWorldIndex();
+      } catch (worldE: any) {
+        // World enrichment is best-effort; never block the admin list.
+        setWorldErr(worldE?.message ?? String(worldE));
+      }
       setWorldReady(true);
       const { data, error } = await supabase
         .rpc("admin_list_investigations" as any);
       if (error) throw error;
-      setRows((data ?? []) as ListRow[]);
+      setRows(Array.isArray(data) ? (data as ListRow[]) : []);
     } catch (e: any) {
+      const info = classifyRpcError(e);
+      setDiag(info);
       setErr(e?.message ?? String(e));
       setRows([]);
     } finally {
@@ -168,36 +179,58 @@ function AdminInvestigationsPage() {
 
   // --- Enrich rows via the shared boundary normalizer (display only).
   const worldBySlug = useMemo(() => {
-    // Reuse the canonical resolver; disabled investigations aren't mapped
-    // (matches how Worlds counts them — they're not visible to players).
     if (!worldReady) return new Map<string, string>();
-    const index = buildWorldIndex();
     const map = new Map<string, string>();
-    for (const [worldSlug, entry] of index) {
-      for (const invSlug of entry.investigationSlugs) map.set(invSlug, worldSlug);
+    try {
+      const index = buildWorldIndex();
+      for (const [worldSlug, entry] of index) {
+        for (const invSlug of entry.investigationSlugs) map.set(invSlug, worldSlug);
+      }
+    } catch (e: any) {
+      // Never crash the page if the world index build fails.
+      setWorldErr(e?.message ?? String(e));
     }
     return map;
   }, [worldReady, rows]);
 
   const enriched = useMemo<RowView[]>(() => {
     if (!rows) return [];
-    return rows.map((r) => {
-      const normalized = normalizeInvestigationRow({
-        related_entities: r.related_entities,
-        reward: r.reward,
-      });
-      const reward = summarizeReward(r.reward);
-      const worldSlug = worldBySlug.get(r.slug) ?? null;
-      const eraSlug = worldSlug ? (WORLD_ERA[worldSlug] ?? worldSlug) : null;
-      return {
-        raw: r,
-        warnings: normalized.warnings,
-        hasLegacy: normalized.hasLegacy,
-        hasBlocking: normalized.hasBlockingIssue,
-        reward,
-        worldSlug,
-        eraSlug,
-      };
+    return rows.map((r): RowView => {
+      // Per-row defensive normalization. One bad row must never take down
+      // the entire administration page.
+      try {
+        const normalized = normalizeInvestigationRow({
+          related_entities: r?.related_entities,
+          reward: r?.reward,
+        });
+        const reward = summarizeReward(r?.reward);
+        let worldSlug: string | null = null;
+        try {
+          worldSlug = (r?.slug ? worldBySlug.get(r.slug) : null) ?? null;
+        } catch { worldSlug = null; }
+        const eraSlug = worldSlug ? (WORLD_ERA[worldSlug] ?? worldSlug) : null;
+        return {
+          raw: r,
+          warnings: normalized.warnings,
+          hasLegacy: normalized.hasLegacy,
+          hasBlocking: normalized.hasBlockingIssue,
+          reward,
+          worldSlug,
+          eraSlug,
+          renderError: null,
+        };
+      } catch (rowE: any) {
+        return {
+          raw: r,
+          warnings: [{ kind: "related_entities_malformed", detail: rowE?.message ?? "row enrichment failed" }],
+          hasLegacy: false,
+          hasBlocking: true,
+          reward: { unlocks: 0, legacyCoins: false, conflict: false },
+          worldSlug: null,
+          eraSlug: null,
+          renderError: `ROW_RENDER_FAILED: ${rowE?.message ?? String(rowE)}`,
+        };
+      }
     });
   }, [rows, worldBySlug]);
 
@@ -207,7 +240,7 @@ function AdminInvestigationsPage() {
     let out = enriched.filter((v) => {
       const r = v.raw;
       if (q) {
-        const hay = `${r.title} ${r.subtitle ?? ""} ${r.slug}`.toLowerCase();
+        const hay = `${r.title ?? ""} ${r.subtitle ?? ""} ${r.slug ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       if (difficulty && (r.difficulty ?? "") !== difficulty) return false;
@@ -224,12 +257,12 @@ function AdminInvestigationsPage() {
     out = [...out].sort((a, b) => {
       const ar = a.raw, br = b.raw;
       switch (sortKey) {
-        case "title": return ar.title.localeCompare(br.title, "ar") * dir;
+        case "title": return (ar.title ?? "").localeCompare(br.title ?? "", "ar") * dir;
         case "difficulty":
           return (DIFFICULTIES.indexOf(ar.difficulty as any) - DIFFICULTIES.indexOf(br.difficulty as any)) * dir;
-        case "created_at": return (Date.parse(ar.created_at) - Date.parse(br.created_at)) * dir;
+        case "created_at": return ((Date.parse(ar.created_at ?? "") || 0) - (Date.parse(br.created_at ?? "") || 0)) * dir;
         case "updated_at":
-        default: return (Date.parse(ar.updated_at) - Date.parse(br.updated_at)) * dir;
+        default: return ((Date.parse(ar.updated_at ?? "") || 0) - (Date.parse(br.updated_at ?? "") || 0)) * dir;
       }
     });
     return out;
