@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useProfile } from "@/lib/profile";
 import { ACHIEVEMENTS, evaluateAchievements, type AchievementDef } from "@/lib/app-constants";
 import { supabase } from "@/integrations/supabase/client";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 
 /**
  * Watches profile state and surfaces newly-unlocked achievements through
