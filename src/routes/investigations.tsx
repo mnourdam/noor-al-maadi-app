@@ -111,8 +111,8 @@ function InvestigationsIndex() {
             if (item.kind === "supabase") {
               const inv = item.row;
               const done =
-                serverProgress.completedIds.has(inv.id) ||
-                profile.investigationsCompleted.includes(inv.slug);
+                canonicalProgress.matches(inv.id) ||
+                canonicalProgress.matches(inv.slug);
               return (
                 <SupabaseRow
                   key={`s:${inv.id}`}
