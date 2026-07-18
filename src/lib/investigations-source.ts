@@ -67,6 +67,7 @@ export function countQuestions(steps: InvestigationStep[]): number {
 export function useSupabaseInvestigations() {
   const [rows, setRows] = useState<InvestigationRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
