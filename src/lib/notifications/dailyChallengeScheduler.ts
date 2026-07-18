@@ -369,12 +369,18 @@ export async function rescheduleDailyChallenge(reason: string): Promise<
           // Android may batch the delivery slightly; acceptable for a
           // natural ~2-day, 5.5-hour-window reminder.
           schedule: { at: new Date(fireAt) },
-          extra: {
-            type: "daily_challenge",
-            category: "daily_reminder",
-            deep_link: "/adventure#daily-challenges",
-            local: true,
-          },
+            extra: {
+              type: "daily_challenge",
+              category: "daily_reminder",
+              // Reuse the canonical deep-link semantics: the tap handler
+              // in DailyChallengeReminderScheduler forwards `extra` to
+              // `resolveDeepLink` from `src/lib/notifications/deepLink.ts`
+              // so there is exactly ONE navigation path shared with the
+              // in-app notification list.
+              deep_link: DAILY_CHALLENGE_DEEP_LINK,
+              local: true,
+            },
+
         },
       ],
     });
