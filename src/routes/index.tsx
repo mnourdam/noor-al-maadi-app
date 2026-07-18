@@ -505,7 +505,7 @@ function HomeFull() {
       });
     }
     return goals.slice(0, 3);
-  }, [lvl, campaignSel, profile]);
+  }, [lvl, campaignSel, profile, canonicalInvHome.count]);
 
   // ===== Recent Activity =====
   type Activity = { key: string; icon: ReactNode; eyebrow: string; title: string; to: string };
