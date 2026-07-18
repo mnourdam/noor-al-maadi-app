@@ -500,6 +500,11 @@ function findCampaignRow(id: string, idx?: WorldEntityIndex): { data: any } | nu
  * investigation IDs or canonical slugs. Legacy id → slug pairs are read
  * from the offline snapshot so completions written pre-normalization
  * still count.
+ *
+ * Prefer to feed `computeWorldProgress` with the ready-made
+ * `investigationDoneKeys` set from `useCanonicalInvestigationProgress`
+ * — this helper stays as a fallback for pure server-free call sites
+ * (e.g. tests, one-off scripts).
  */
 function buildInvestigationDoneSet(entries: string[]): Set<string> {
   const invs = localInvestigations() as Array<{ id?: string; slug?: string }>;
@@ -522,6 +527,7 @@ function buildInvestigationDoneSet(entries: string[]): Set<string> {
   }
   return out;
 }
+
 
 export function computeWorldProgress(
   worldSlug: string,
