@@ -91,7 +91,7 @@ function CampaignsHubFull() {
           <div className="mb-4">
             <WorldFilterChip
               worldTitle={worldTitle}
-              onRemove={() => navigate({ search: { world: "" } })}
+              onClear={() => navigate({ search: { world: "" } })}
             />
           </div>
         )}
