@@ -522,9 +522,14 @@ async function runDailyChallengeReminder(admin: any, baseUrl: string, serviceKey
   // flag so it cannot silently double-notify. To re-enable
   // temporarily, set the env var DAILY_CHALLENGE_FCM_ENABLED="true"
   // in the edge-function secrets.
-  if ((Deno.env.get("DAILY_CHALLENGE_FCM_ENABLED") ?? "").toLowerCase() !== "true") {
+  // Strict equality: only the literal string "true" enables the legacy
+  // path. Anything else — absent, empty, "1", "TRUE", "yes" — leaves
+  // the FCM job disabled and returns the shutdown marker used by the
+  // Phase 2c validation pass.
+  if (Deno.env.get("DAILY_CHALLENGE_FCM_ENABLED") !== "true") {
     return { job: jobKey, sent: 0, skipped: "fcm_disabled_client_local_scheduler" };
   }
+
 
   const { count: publishedGames } = await admin
     .from("games")
