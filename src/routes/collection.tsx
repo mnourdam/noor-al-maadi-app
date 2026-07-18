@@ -749,7 +749,6 @@ function CollectionPage() {
 // ============================================================
 function RecentUnlocks() {
   type Recent = { key: string; type: string; slug: string; kind: string; title: string; subtitle: string; rarity: Rarity };
-  const ALLOWED_TYPES = new Set(["figure", "scholar", "artifact", "landmark", "city", "battle"]);
 
   const supaArtifacts = useEncyclopediaSupabaseList("artifact");
   const supaLandmarks = useEncyclopediaSupabaseList("landmark");
@@ -758,86 +757,48 @@ function RecentUnlocks() {
   const supaBattles   = useEncyclopediaSupabaseList("battle");
   const supaStates    = useEncyclopediaSupabaseList("state");
 
-  const [supaRecents, setSupaRecents] = useState<Recent[] | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        if (!cancelled) setSupaRecents([]);
-        return;
-      }
-      try {
-        const { supabase } = await import("@/integrations/supabase/client");
-        const { data: sess } = await supabase.auth.getSession();
-        const uid = sess.session?.user?.id;
-        if (!uid) { if (!cancelled) setSupaRecents([]); return; }
-        const { data, error } = await supabase
-          .from("user_collection")
-          .select("item_id,item_type,unlocked_at,source_campaign_id")
-          .eq("user_id", uid)
-          .order("unlocked_at", { ascending: false })
-          .limit(30);
-        if (error || !data || cancelled) { if (!cancelled) setSupaRecents([]); return; }
+  // Museum "آخر الكنوز" consumes ONLY the canonical museum acquisitions
+  // feed from playerDiscoveries.ts. Reading an entity in the encyclopedia
+  // does not appear here — ownership stays distinct from discovery.
+  const acquisitions = useLatestMuseumAcquisitions(30);
 
-        const campaigns = listCampaigns();
-        const campaignTitle = (cid: string | null) => {
-          if (!cid) return "";
-          const c = campaigns.find(x => x.id === cid);
-          if (c) return `من حملة ${c.title}`;
-          if (cid === "prophetic-mission") return "من حملة البعثة النبوية";
-          return "من حملة";
-        };
-
-        const kindLabel: Record<string, string> = {
-          figure: "شخصية", scholar: "شخصية", artifact: "أثر",
-          battle: "معركة", city: "مدينة", landmark: "معلم", state: "دولة",
-        };
-
-        const lookupEntity = (t: string, slug: string): any => {
-          const probe = (m: { bySlug: Map<string, any> }) => m.bySlug.get(slug.toLowerCase());
-          if (t === "figure" || t === "scholar") return probe(supaFigures);
-          if (t === "artifact") return probe(supaArtifacts);
-          if (t === "landmark") return probe(supaLandmarks);
-          if (t === "city")     return probe(supaCities) ?? probe(supaLandmarks);
-          if (t === "battle")   return probe(supaBattles);
-          if (t === "state")    return probe(supaStates);
-          return null;
-        };
-
-        const hasArabic = (s: string) => /[\u0600-\u06FF]/.test(s);
-        const list: Recent[] = [];
-        for (const row of data as any[]) {
-          const t = row.item_type;
-          if (!ALLOWED_TYPES.has(t) && t !== "state") continue;
-          const ent = lookupEntity(t, row.item_id);
-          if (t === "state" && !(ent?.metadata?.collectible === true)) continue;
-          const title = ent?.title ?? (hasArabic(row.item_id) ? row.item_id : null);
-          if (!title) continue;
-          const subtitleParts: string[] = [];
-          const src = campaignTitle(row.source_campaign_id);
-          if (src) subtitleParts.push(src);
-          const r = (ent?.metadata?.rarity ?? "rare") as Rarity;
-          const rarity: Rarity = (["common","rare","epic","legendary"] as Rarity[]).includes(r) ? r : "rare";
-          list.push({
-            key: `sup-${t}-${row.item_id}`,
-            type: t,
-            slug: ent?.slug ?? row.item_id,
-            kind: kindLabel[t] ?? t,
-            title,
-            subtitle: subtitleParts.join(" · ") || (kindLabel[t] ?? "—"),
-            rarity,
-          });
-          if (list.length >= 3) break;
-        }
-        if (!cancelled) setSupaRecents(list);
-      } catch {
-        if (!cancelled) setSupaRecents([]);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [supaArtifacts, supaLandmarks, supaFigures, supaCities, supaBattles, supaStates]);
-
-  const recents: Recent[] = supaRecents ?? [];
+  const recents: Recent[] = useMemo(() => {
+    const kindLabel: Record<string, string> = {
+      figure: "شخصية", scholar: "شخصية", artifact: "أثر",
+      battle: "معركة", city: "مدينة", landmark: "معلم", state: "دولة",
+    };
+    const lookupEntity = (t: string, slug: string): { slug?: string; title?: string; metadata?: { rarity?: Rarity; collectible?: boolean } } | null => {
+      const probe = (m: { bySlug: Map<string, { slug?: string; title?: string; metadata?: { rarity?: Rarity; collectible?: boolean } }> }) => m.bySlug.get(slug.toLowerCase());
+      if (t === "figure" || t === "scholar") return probe(supaFigures);
+      if (t === "artifact") return probe(supaArtifacts);
+      if (t === "landmark") return probe(supaLandmarks);
+      if (t === "city")     return probe(supaCities) ?? probe(supaLandmarks);
+      if (t === "battle")   return probe(supaBattles);
+      if (t === "state")    return probe(supaStates);
+      return null;
+    };
+    const list: Recent[] = [];
+    for (const a of acquisitions) {
+      const t = a.entityType;
+      const ent = lookupEntity(t, a.slug);
+      if (t === "state" && !(ent?.metadata?.collectible === true)) continue;
+      const subtitleParts: string[] = [];
+      if (a.subtitle) subtitleParts.push(a.subtitle);
+      const r = (ent?.metadata?.rarity ?? "rare") as Rarity;
+      const rarity: Rarity = (["common","rare","epic","legendary"] as Rarity[]).includes(r) ? r : "rare";
+      list.push({
+        key: a.key,
+        type: t,
+        slug: ent?.slug ?? a.slug,
+        kind: kindLabel[t] ?? t,
+        title: a.title,
+        subtitle: subtitleParts.join(" · ") || (kindLabel[t] ?? "—"),
+        rarity,
+      });
+      if (list.length >= 3) break;
+    }
+    return list;
+  }, [acquisitions, supaArtifacts, supaLandmarks, supaFigures, supaCities, supaBattles, supaStates]);
 
   const iconFor = (t: string): LucideGlyph => {
     if (t === "figure" || t === "scholar") return Users;
