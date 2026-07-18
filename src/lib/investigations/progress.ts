@@ -19,7 +19,7 @@
 //     Fully idempotent, resumable, offline-safe.
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { InvestigationRow } from "@/lib/investigations-source";
 import { enqueueWithId } from "@/lib/offline/outbox";
