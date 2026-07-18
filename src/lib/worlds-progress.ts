@@ -486,7 +486,11 @@ function campaignChapters(c: { data: any } | undefined | null): Array<{ id: stri
   return Array.isArray(chs) ? chs.filter((x): x is { id: string } => !!x && typeof x?.id === "string") : [];
 }
 
-function findCampaignRow(id: string): { data: any } | null {
+function findCampaignRow(id: string, idx?: WorldEntityIndex): { data: any } | null {
+  if (idx) {
+    const hit = idx.campaignRowsById.get(id);
+    if (hit) return hit;
+  }
   const rows = localPublishedCampaigns() as Array<{ data: any }>;
   return rows.find((r) => r?.data?.id === id) ?? null;
 }
