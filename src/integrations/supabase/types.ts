@@ -1993,6 +1993,75 @@ export type Database = {
           },
         ]
       }
+      user_investigation_progress: {
+        Row: {
+          artifact_awarded: string | null
+          badge_awarded: string | null
+          completed_at: string | null
+          correct_count: number
+          created_at: string
+          dinars_earned: number
+          hearts_earned: number
+          id: string
+          investigation_id: string
+          legacy_key: string | null
+          score: number
+          status: string
+          updated_at: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          artifact_awarded?: string | null
+          badge_awarded?: string | null
+          completed_at?: string | null
+          correct_count?: number
+          created_at?: string
+          dinars_earned?: number
+          hearts_earned?: number
+          id?: string
+          investigation_id: string
+          legacy_key?: string | null
+          score?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          artifact_awarded?: string | null
+          badge_awarded?: string | null
+          completed_at?: string | null
+          correct_count?: number
+          created_at?: string
+          dinars_earned?: number
+          hearts_earned?: number
+          id?: string
+          investigation_id?: string
+          legacy_key?: string | null
+          score?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_investigation_progress_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: false
+            referencedRelation: "investigations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_investigation_progress_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: false
+            referencedRelation: "investigations_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           granted_at: string
@@ -2490,9 +2559,22 @@ export type Database = {
         Args: { p_assignee: string; p_issue_id: string }
         Returns: undefined
       }
+      backfill_investigation_completion: {
+        Args: { p_legacy_key: string }
+        Returns: Json
+      }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       claim_streak_reward: { Args: { p_days: number }; Returns: Json }
       clear_my_notifications: { Args: never; Returns: undefined }
+      complete_investigation_v2: {
+        Args: {
+          p_correct_count?: number
+          p_delta_id: string
+          p_investigation_id: string
+          p_score?: number
+        }
+        Returns: Json
+      }
       count_my_unread_feedback: { Args: never; Returns: number }
       create_feedback_issue: {
         Args: {

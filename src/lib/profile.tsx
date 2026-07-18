@@ -155,6 +155,13 @@ interface Ctx {
   touchStreak: () => void;
   awardBadge: (id: string) => void;
   completeInvestigation: (id: string, reward: number) => void;
+  /**
+   * Phase G — server-authoritative marker. Adds the slug/id to the
+   * local completions array and bumps the streak, but does NOT grant
+   * XP or dinars locally. The reward is granted server-side via
+   * `complete_investigation_v2` and reconciled through cloud_saves.
+   */
+  markInvestigationCompletedLocal: (id: string) => void;
   completeTimeline: (id: string, reward: number) => void;
   completeDecision: (id: string, reward: number) => void;
   completeMission: (id: string, reward: number) => void;
@@ -393,6 +400,23 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         ),
         dinarsForReward(reward),
       );
+    }),
+    /**
+     * Phase G — Marks completion locally without granting XP/dinars.
+     * The server (complete_investigation_v2) is the reward authority.
+     */
+    markInvestigationCompletedLocal: (id) => update((p) => {
+      if (p.investigationsCompleted.includes(id)) return p;
+      const today = todayKey();
+      let streak = p.streak;
+      let lastActiveDay = p.lastActiveDay;
+      if (lastActiveDay !== today) {
+        const y = new Date(); y.setDate(y.getDate() - 1);
+        const yesterday = todayKey(y);
+        streak = lastActiveDay === yesterday ? streak + 1 : 1;
+        lastActiveDay = today;
+      }
+      return { ...p, investigationsCompleted: [...p.investigationsCompleted, id], streak, lastActiveDay };
     }),
     completeTimeline: (id, reward) => update((p) => p.timelinesCompleted.includes(id) ? p
       : addDinarsTo(addPointsTo({ ...p, timelinesCompleted: [...p.timelinesCompleted, id] }, reward), dinarsForReward(reward))),
