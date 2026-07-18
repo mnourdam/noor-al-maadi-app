@@ -660,7 +660,7 @@ export function pickContinueJourney(
 
   // 1+2. Campaign tier — delegate to the shared recommendation service.
   const worldCampaignRows = idx.campaignIds
-    .map((id) => findCampaignRow(id))
+    .map((id) => findCampaignRow(id, idx))
     .filter((r): r is { data: any } => !!r)
     .map((r) => r.data as ImportedCampaignForRec);
   const campaignRec = pickCampaignRecommendation({
