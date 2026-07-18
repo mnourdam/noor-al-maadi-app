@@ -538,7 +538,12 @@ export function computeWorldProgress(
     /** Slugs the player *owns* — user_collection museum set. */
     museum: Set<string>;
     cloudCampaign: Map<string, Set<string>>;
-    investigationsCompleted: string[];
+    /**
+     * Canonical investigation completion set — union of UUIDs and slugs
+     * as produced by `useCanonicalInvestigationProgress`. Cheap `.has()`
+     * lookup covers legacy IDs, canonical UUIDs, and canonical slugs.
+     */
+    investigationDoneKeys: Set<string>;
   },
 ): WorldProgress {
   const idx = inputs.index.get(worldSlug);
