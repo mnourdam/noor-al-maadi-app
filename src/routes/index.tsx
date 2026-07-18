@@ -933,6 +933,29 @@ function Stat({ icon, label, value, tone }: { icon: React.ReactNode; label: stri
   );
 }
 
+// Emoji + Arabic kind used by RecentCard / Hero — mirrors museum labeling.
+const _DISC_TYPE_TO_ICON: Record<string, string> = {
+  figure: "👤", scholar: "📖", artifact: "🏺",
+  landmark: "🕌", city: "🏛️", battle: "⚔️",
+  event: "📜", state: "🏳️",
+};
+
+function adaptDiscoveryToUnlock(item: DiscoveryItem): UnifiedUnlock {
+  const icon = _DISC_TYPE_TO_ICON[item.entityType] ?? "✨";
+  return {
+    key: item.key,
+    // `kind` is the small eyebrow chip — use the canonical Arabic label
+    // ("اكتشاف موسوعي" / "كنز جديد" / "مكافأة حملة") so Hero + carousel
+    // both describe the event honestly.
+    kind: item.kindLabel as UnifiedUnlock["kind"],
+    title: item.title,
+    subtitle: item.subtitle,
+    icon,
+    to: item.destinationRoute,
+    unlockedAt: item.occurredAt,
+  };
+}
+
 function RecentCard({ item }: { item: UnifiedUnlock }) {
   return (
     <Link
