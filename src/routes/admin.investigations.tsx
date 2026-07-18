@@ -18,7 +18,7 @@
 //   server progress and add completion statistics.
 // ============================================================
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Search, Upload, RefreshCw, Eye, EyeOff, Copy, Trash2,
   CheckCircle2, AlertTriangle, PenSquare, X, ChevronDown, ChevronUp,
@@ -75,11 +75,45 @@ interface RowView {
   reward: ReturnType<typeof summarizeReward>;
   worldSlug: string | null;
   eraSlug: string | null;
+  /** Row-level enrichment / render failure — never crashes the page. */
+  renderError: string | null;
 }
 
 type SortKey = "updated_at" | "created_at" | "title" | "difficulty";
 type SortDir = "asc" | "desc";
 type Toast = { kind: "ok" | "err"; msg: string };
+
+/** Structured diagnostic codes shown to admins — never leak SQL internals. */
+type DiagCode =
+  | "RPC_PERMISSION_DENIED"
+  | "RPC_SHAPE_MISMATCH"
+  | "RPC_NETWORK_ERROR"
+  | "NORMALIZATION_FAILED"
+  | "WORLD_MAPPING_FAILED"
+  | "ROW_RENDER_FAILED"
+  | "UNKNOWN";
+
+interface DiagInfo {
+  code: DiagCode;
+  hint: string;
+  supabaseCode?: string;
+}
+
+function classifyRpcError(e: unknown): DiagInfo {
+  const err = (e ?? {}) as { code?: string; message?: string; details?: string };
+  const code = err.code ?? "";
+  const msg = (err.message ?? "").toLowerCase();
+  if (code === "42501" || msg.includes("not authorized") || msg.includes("permission denied")) {
+    return { code: "RPC_PERMISSION_DENIED", supabaseCode: code, hint: "الجلسة الحالية لا تملك صلاحية مشرف محتوى." };
+  }
+  if (code === "PGRST202" || code === "PGRST200" || msg.includes("could not find") || msg.includes("schema cache")) {
+    return { code: "RPC_SHAPE_MISMATCH", supabaseCode: code, hint: "توقيع الـ RPC لا يطابق ما تنتظره الواجهة." };
+  }
+  if (msg.includes("failed to fetch") || msg.includes("networkerror")) {
+    return { code: "RPC_NETWORK_ERROR", supabaseCode: code, hint: "تعذّر الاتصال بخدمة قاعدة البيانات." };
+  }
+  return { code: "UNKNOWN", supabaseCode: code, hint: err.message ?? "خطأ غير معروف." };
+}
 
 const DIFFICULTIES = ["easy", "medium", "hard"] as const;
 const DIFFICULTY_LABEL: Record<string, string> = { easy: "سهل", medium: "متوسط", hard: "صعب" };
@@ -87,9 +121,11 @@ const DIFFICULTY_LABEL: Record<string, string> = { easy: "سهل", medium: "مت
 function AdminInvestigationsPage() {
   const [rows, setRows] = useState<ListRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [diag, setDiag] = useState<DiagInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [worldReady, setWorldReady] = useState(false);
+  const [worldErr, setWorldErr] = useState<string | null>(null);
 
   // Filters.
   const [search, setSearch] = useState("");
@@ -114,15 +150,24 @@ function AdminInvestigationsPage() {
   const refresh = async () => {
     setBusy(true);
     setErr(null);
+    setDiag(null);
+    setWorldErr(null);
     try {
-      await ensureLocalSnapshotLoaded();
-      invalidateWorldIndex();
+      try {
+        await ensureLocalSnapshotLoaded();
+        invalidateWorldIndex();
+      } catch (worldE: any) {
+        // World enrichment is best-effort; never block the admin list.
+        setWorldErr(worldE?.message ?? String(worldE));
+      }
       setWorldReady(true);
       const { data, error } = await supabase
         .rpc("admin_list_investigations" as any);
       if (error) throw error;
-      setRows((data ?? []) as ListRow[]);
+      setRows(Array.isArray(data) ? (data as ListRow[]) : []);
     } catch (e: any) {
+      const info = classifyRpcError(e);
+      setDiag(info);
       setErr(e?.message ?? String(e));
       setRows([]);
     } finally {
@@ -134,36 +179,58 @@ function AdminInvestigationsPage() {
 
   // --- Enrich rows via the shared boundary normalizer (display only).
   const worldBySlug = useMemo(() => {
-    // Reuse the canonical resolver; disabled investigations aren't mapped
-    // (matches how Worlds counts them — they're not visible to players).
     if (!worldReady) return new Map<string, string>();
-    const index = buildWorldIndex();
     const map = new Map<string, string>();
-    for (const [worldSlug, entry] of index) {
-      for (const invSlug of entry.investigationSlugs) map.set(invSlug, worldSlug);
+    try {
+      const index = buildWorldIndex();
+      for (const [worldSlug, entry] of index) {
+        for (const invSlug of entry.investigationSlugs) map.set(invSlug, worldSlug);
+      }
+    } catch (e: any) {
+      // Never crash the page if the world index build fails.
+      setWorldErr(e?.message ?? String(e));
     }
     return map;
   }, [worldReady, rows]);
 
   const enriched = useMemo<RowView[]>(() => {
     if (!rows) return [];
-    return rows.map((r) => {
-      const normalized = normalizeInvestigationRow({
-        related_entities: r.related_entities,
-        reward: r.reward,
-      });
-      const reward = summarizeReward(r.reward);
-      const worldSlug = worldBySlug.get(r.slug) ?? null;
-      const eraSlug = worldSlug ? (WORLD_ERA[worldSlug] ?? worldSlug) : null;
-      return {
-        raw: r,
-        warnings: normalized.warnings,
-        hasLegacy: normalized.hasLegacy,
-        hasBlocking: normalized.hasBlockingIssue,
-        reward,
-        worldSlug,
-        eraSlug,
-      };
+    return rows.map((r): RowView => {
+      // Per-row defensive normalization. One bad row must never take down
+      // the entire administration page.
+      try {
+        const normalized = normalizeInvestigationRow({
+          related_entities: r?.related_entities,
+          reward: r?.reward,
+        });
+        const reward = summarizeReward(r?.reward);
+        let worldSlug: string | null = null;
+        try {
+          worldSlug = (r?.slug ? worldBySlug.get(r.slug) : null) ?? null;
+        } catch { worldSlug = null; }
+        const eraSlug = worldSlug ? (WORLD_ERA[worldSlug] ?? worldSlug) : null;
+        return {
+          raw: r,
+          warnings: normalized.warnings,
+          hasLegacy: normalized.hasLegacy,
+          hasBlocking: normalized.hasBlockingIssue,
+          reward,
+          worldSlug,
+          eraSlug,
+          renderError: null,
+        };
+      } catch (rowE: any) {
+        return {
+          raw: r,
+          warnings: [{ kind: "related_entities_malformed", detail: rowE?.message ?? "row enrichment failed" }],
+          hasLegacy: false,
+          hasBlocking: true,
+          reward: { unlocks: 0, legacyCoins: false, conflict: false },
+          worldSlug: null,
+          eraSlug: null,
+          renderError: `ROW_RENDER_FAILED: ${rowE?.message ?? String(rowE)}`,
+        };
+      }
     });
   }, [rows, worldBySlug]);
 
@@ -173,7 +240,7 @@ function AdminInvestigationsPage() {
     let out = enriched.filter((v) => {
       const r = v.raw;
       if (q) {
-        const hay = `${r.title} ${r.subtitle ?? ""} ${r.slug}`.toLowerCase();
+        const hay = `${r.title ?? ""} ${r.subtitle ?? ""} ${r.slug ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       if (difficulty && (r.difficulty ?? "") !== difficulty) return false;
@@ -190,12 +257,12 @@ function AdminInvestigationsPage() {
     out = [...out].sort((a, b) => {
       const ar = a.raw, br = b.raw;
       switch (sortKey) {
-        case "title": return ar.title.localeCompare(br.title, "ar") * dir;
+        case "title": return (ar.title ?? "").localeCompare(br.title ?? "", "ar") * dir;
         case "difficulty":
           return (DIFFICULTIES.indexOf(ar.difficulty as any) - DIFFICULTIES.indexOf(br.difficulty as any)) * dir;
-        case "created_at": return (Date.parse(ar.created_at) - Date.parse(br.created_at)) * dir;
+        case "created_at": return ((Date.parse(ar.created_at ?? "") || 0) - (Date.parse(br.created_at ?? "") || 0)) * dir;
         case "updated_at":
-        default: return (Date.parse(ar.updated_at) - Date.parse(br.updated_at)) * dir;
+        default: return ((Date.parse(ar.updated_at ?? "") || 0) - (Date.parse(br.updated_at ?? "") || 0)) * dir;
       }
     });
     return out;
@@ -331,9 +398,32 @@ function AdminInvestigationsPage() {
 
         {err && (
           <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
-            تعذّر التحميل: {err}
+            <div className="flex flex-wrap items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span>تعذّر التحميل.</span>
+              {diag && (
+                <span className="rounded border border-red-400/40 bg-red-500/10 px-1.5 py-0.5 font-mono text-[10px] text-red-100">
+                  {diag.code}{diag.supabaseCode ? ` · ${diag.supabaseCode}` : ""}
+                </span>
+              )}
+            </div>
+            {diag?.hint && <div className="mt-1 text-xs text-red-100/80">{diag.hint}</div>}
+            {import.meta.env.DEV && (
+              <details className="mt-2 text-[11px] text-red-100/70">
+                <summary className="cursor-pointer">تفاصيل تشخيصية</summary>
+                <pre className="mt-1 overflow-auto whitespace-pre-wrap" dir="ltr">{err}</pre>
+              </details>
+            )}
           </div>
         )}
+
+        {worldErr && !err && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-200">
+            <span className="me-1 rounded border border-amber-400/40 bg-amber-500/10 px-1 py-0.5 font-mono text-[10px]">WORLD_MAPPING_FAILED</span>
+            تعذّر تحميل ربط العوالم — سيتم عرض الصفوف دون تعيين عالم.
+          </div>
+        )}
+
 
         {rows === null && !err && (
           <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center text-sm text-slate-400">جارٍ التحميل…</div>
@@ -368,7 +458,7 @@ function AdminInvestigationsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {visible.map((v) => <Row key={v.raw.id} view={v} onPreview={() => openPreview(v.raw.slug)} onToggle={() => toggleEnabled(v.raw)} />)}
+                {visible.map((v) => <SafeRow key={v.raw?.id ?? v.raw?.slug ?? Math.random()} view={v} onPreview={() => openPreview(v.raw.slug)} onToggle={() => toggleEnabled(v.raw)} />)}
               </tbody>
             </table>
           </section>
@@ -466,6 +556,50 @@ function SortHeader({ label, k, sortKey, sortDir, onSort }: {
     </th>
   );
 }
+
+// Per-row error boundary — guarantees one malformed row cannot black-hole
+// the whole administration dashboard.
+class SafeRow extends React.Component<
+  { view: RowView; onPreview: () => void; onToggle: () => void },
+  { error: string | null }
+> {
+  state = { error: null as string | null };
+  static getDerivedStateFromError(err: unknown) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+  componentDidCatch(err: unknown) {
+    // eslint-disable-next-line no-console
+    console.error("[admin.investigations] row render failed", err, this.props.view?.raw);
+  }
+  render() {
+    const { view, onPreview, onToggle } = this.props;
+    const combinedError = this.state.error ?? view.renderError;
+    if (combinedError) {
+      const r = view.raw ?? ({} as ListRow);
+      return (
+        <tr className="bg-red-950/20">
+          <td colSpan={9} className="px-3 py-2 text-xs text-red-200">
+            <div className="flex flex-wrap items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span className="rounded border border-red-400/40 bg-red-500/10 px-1.5 py-0.5 font-mono text-[10px]">
+                ROW_RENDER_FAILED
+              </span>
+              <span className="font-mono text-[11px]">{r.slug ?? r.id ?? "—"}</span>
+              <span className="text-red-100/80">تعذّر عرض هذا الصف — بقية الصفوف تعمل بشكل طبيعي.</span>
+            </div>
+            {import.meta.env.DEV && (
+              <pre dir="ltr" className="mt-1 overflow-auto whitespace-pre-wrap text-[10px] text-red-100/70">{combinedError}</pre>
+            )}
+          </td>
+        </tr>
+      );
+    }
+    return <Row view={view} onPreview={onPreview} onToggle={onToggle} />;
+  }
+}
+
+
+
 
 function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
   return (
