@@ -44,6 +44,13 @@ export type WorldEntityIndex = {
   byBucket: Record<EntityBucket, SupabaseEncyclopediaEntity[]>;
   campaignIds: string[];           // published campaigns in this world
   investigationSlugs: string[];    // investigations mapped to this world
+  /**
+   * Fast id → raw campaign row lookup shared across every consumer that
+   * needs a per-campaign detail (chapters, title, cover). Built once per
+   * snapshot; avoids the O(N²) rescan `findCampaignRow` used to perform
+   * inside `computeWorldProgress` / recommenders.
+   */
+  campaignRowsById: Map<string, { data: any }>;
 };
 
 export type WorldProgress = {
