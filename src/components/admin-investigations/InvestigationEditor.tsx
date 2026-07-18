@@ -7,6 +7,7 @@
 // transactional import RPC (admin_run_import_batch). There is no
 // direct-write fallback: if the RPC fails, the save fails.
 // ============================================================
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Save, PlayCircle, RotateCcw, Eye, AlertTriangle,
