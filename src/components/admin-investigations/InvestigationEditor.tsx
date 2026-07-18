@@ -742,13 +742,12 @@ function Field({ label, required, full, children }: { label: string; required?: 
 }
 
 function ValidationPanel({
-  validation, quality, relationReport, removedCount, removalApproved, dryReport, dryHash,
+  validation, quality, relationReport, removedCount, removalApproved,
 }: {
   validation: Validation;
   quality: ReturnType<typeof scoreInvestigation> | null;
   relationReport: ReturnType<typeof buildInvestigationRelationReport> | null;
   removedCount: number; removalApproved: boolean;
-  dryReport: RunResult | null; dryHash: string | null;
 }) {
   const relIssues = relationReport?.resolutions.filter(
     (r) => r.status !== "valid" && r.status !== "remapped") ?? [];
@@ -767,8 +766,6 @@ function ValidationPanel({
             حذف خطوات مستمرة: {removedCount} {removalApproved ? "(تمت الموافقة)" : "(بحاجة موافقة)"}
           </span>
         )}
-        {dryReport?.ok && dryHash && <span className="text-emerald-300">التشغيل التجريبي: ✓</span>}
-        {dryReport && !dryReport.ok && <span className="text-red-300">التشغيل التجريبي: ✗ {dryReport.error ?? ""}</span>}
       </div>
       {(validation.blockers.length > 0 || validation.warnings.length > 0) && (
         <ul className="mt-2 list-inside list-disc space-y-0.5">
@@ -778,9 +775,42 @@ function ValidationPanel({
       )}
       <p className="mt-2 text-[10px] text-slate-500">
         <Info className="me-1 inline h-3 w-3" />
-        تأثير الحفظ على تقدّم اللاعبين غير متاح في هذه المرحلة (المرحلة G). لا يمنح الحفظ أيّ مكافآت.
+        الحفظ لا يمنح مكافآت للاعبين. النشر يستبدل الإصدار المرئي للاعبين ذرّياً ويحفظ الإصدار السابق في السجل.
       </p>
     </section>
+  );
+}
+
+function LifecycleBadges({
+  lifecycle, hydratedFromDraft, dirty,
+}: {
+  lifecycle: Lifecycle; hydratedFromDraft: boolean; dirty: boolean;
+}) {
+  const publishedLabel = lifecycle.published_at
+    ? `منشور — الإصدار #${lifecycle.content_version}`
+    : "غير منشور";
+  const draftPending = hydratedFromDraft || lifecycle.has_unpublished_changes;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-300">
+        {publishedLabel}
+      </span>
+      {draftPending && (
+        <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
+          مسودة بانتظار النشر
+        </span>
+      )}
+      {dirty && (
+        <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
+          تغييرات غير محفوظة
+        </span>
+      )}
+      {lifecycle.last_editor_email && (
+        <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-400" dir="ltr">
+          {lifecycle.last_editor_email}
+        </span>
+      )}
+    </div>
   );
 }
 
