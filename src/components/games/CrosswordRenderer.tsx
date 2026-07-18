@@ -487,9 +487,10 @@ function ClueList({ title, clues, activeClue, entries, grid, onPick }: {
       <ul className="space-y-1.5 text-sm">
         {clues.map(({ c, i }) => {
           const cells = clueCells(c);
-          const solved = cells.every(({ r, co }: any) => true) && cells.every((p) => {
+          const solved = cells.every((p) => {
             const k = cellKey(p.r, p.c);
-            return (entries[k] ?? "") === grid.get(k)?.expected;
+            const exp = grid.get(k)?.expected;
+            return !!exp && cellsEqual(exp, entries[k] ?? "");
           });
           const isActive = activeClue === i;
           return (
