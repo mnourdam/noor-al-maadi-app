@@ -16,7 +16,7 @@ const config: CapacitorConfig = {
     useLegacyBridge: true,
     resolveServiceWorkerRequests: false,
     webContentsDebuggingEnabled: true,
-    includePlugins: ["@capacitor/app", "@capacitor/push-notifications", "@capacitor/browser", "@capacitor/preferences"],
+    includePlugins: ["@capacitor/app", "@capacitor/push-notifications", "@capacitor/browser", "@capacitor/preferences", "@capacitor/local-notifications"],
   },
   plugins: {
     // Diagnostic native input build: keep Capacitor's core SystemBars plugin
@@ -24,6 +24,14 @@ const config: CapacitorConfig = {
     SystemBars: {
       insetsHandling: "disable",
       hidden: false,
+    },
+    // Phase 2c — Smart Daily Challenge Notifications.
+    // Standard inexact alarm scheduling; no SCHEDULE_EXACT_ALARM required.
+    // The plugin auto-registers a BOOT_COMPLETED receiver so scheduled
+    // notifications persist across device reboots.
+    LocalNotifications: {
+      smallIcon: "ic_stat_notify",
+      iconColor: "#C9A24B",
     },
   },
   server: {
