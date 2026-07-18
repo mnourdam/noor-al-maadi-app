@@ -326,7 +326,7 @@ check("5 rapid reschedules → exactly one pending with id 8801",
 // C8. Sign-out flow: previous identity's schedule is cancelled BEFORE
 //     the guest schedule evaluates. We simulate the two-step handler.
 resetHarness();
-globalThis.__fakeSupabase = { auth: { getUser: async () => ({ data: { user: { id: "user-alice" } } }) } };
+globalThis.__fakeSupabase.auth.getUser = async () => ({ data: { user: { id: "user-alice" } } });
 await rescheduleDailyChallenge("signed_in_alice");
 const aliceMetaJson = storage.get("irth.dailyChallengeReminder.lastMeta.v1");
 check("post-alice schedule: 1 pending + lastMeta persisted",
