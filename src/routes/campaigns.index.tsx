@@ -1,13 +1,19 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, CheckCircle2, ScrollText } from "lucide-react";
+import { useMemo } from "react";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
+import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, CheckCircle2, ScrollText, Globe2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
+import { WorldFilterChip } from "@/components/WorldFilterChip";
 import campaignsHeaderArt from "@/assets/hero/21-islamic-army-banners.jpg?url";
 import { useProfile } from "@/lib/profile";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
+import { fetchWorldsIndex, findHub } from "@/lib/worlds";
+import { useWorldMembership, isValidWorldSlug } from "@/lib/worlds-progress";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
@@ -15,8 +21,13 @@ import type { CampaignDivider } from "@/lib/campaignDividers";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { Reveal, Stagger } from "@/components/motion/MotionPrimitives";
 
+const campaignsSearchSchema = z.object({
+  world: fallback(z.string(), "").default(""),
+});
+
 export const Route = createFileRoute("/campaigns/")({
   head: () => ({ meta: [{ title: "الحملات التاريخية" }] }),
+  validateSearch: zodValidator(campaignsSearchSchema),
   component: CampaignsHub,
 });
 
@@ -28,12 +39,41 @@ function CampaignsHub() {
 
 function CampaignsHubFull() {
   useProfile();
+  const navigate = useNavigate({ from: "/campaigns" });
+  const rawWorld = Route.useSearch().world;
+  const worldSlug = isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
+
   const { data, isLoading } = useQuery({
     queryKey: ["campaigns", "feed"],
     queryFn: fetchPublishedFeed,
   });
-  const sections = data?.sections ?? [];
-  const totalCampaigns = data?.campaigns.length ?? 0;
+  const { data: worldsIndex } = useQuery({
+    queryKey: ["worlds-index"],
+    queryFn: () => fetchWorldsIndex(),
+    enabled: !!worldSlug,
+    staleTime: 60_000,
+  });
+  const worldTitle = useMemo(() => {
+    if (!worldSlug) return "";
+    return worldsIndex?.find((w) => w.hub.slug === worldSlug)?.entity.title ?? worldSlug;
+  }, [worldsIndex, worldSlug]);
+
+  const { campaignIds, ready: membershipReady } = useWorldMembership(worldSlug);
+
+  const sections = useMemo(() => {
+    const base = data?.sections ?? [];
+    if (!worldSlug) return base;
+    if (!membershipReady) return base;
+    return base
+      .map((s) => ({ ...s, campaigns: s.campaigns.filter((c) => campaignIds.has(c.id)) }))
+      .filter((s) => s.campaigns.length > 0);
+  }, [data, worldSlug, membershipReady, campaignIds]);
+  const totalCampaigns = useMemo(() => {
+    if (!worldSlug) return data?.campaigns.length ?? 0;
+    if (!data || !membershipReady) return 0;
+    return data.campaigns.filter((c) => campaignIds.has(c.id)).length;
+  }, [data, worldSlug, membershipReady, campaignIds]);
+
 
   return (
     <AppShell>
@@ -47,6 +87,15 @@ function CampaignsHubFull() {
         />
       </div>
       <Screen title="الحملات" subtitle="رحلةٌ زمنيّة عبر العصور">
+        {worldSlug && (
+          <div className="mb-4">
+            <WorldFilterChip
+              worldTitle={worldTitle}
+              onClear={() => navigate({ search: { world: "" } })}
+            />
+          </div>
+        )}
+
         {isLoading && (
           <div className="px-2 py-10 text-center text-sm text-muted-foreground">جاري التحميل…</div>
         )}
@@ -79,8 +128,17 @@ function CampaignsHubFull() {
 
         {!isLoading && totalCampaigns === 0 && (
           <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
-            <Swords className="mx-auto mb-3 size-8 text-gold/70" />
-            <p className="font-display text-base font-bold text-gold">لا توجد حملات منشورة حاليًا.</p>
+            {worldSlug ? (
+              <>
+                <Globe2 className="mx-auto mb-3 size-8 text-gold/70" />
+                <p className="font-display text-base font-bold text-gold">لا توجد حملات متاحة في هذا العالم حاليًا</p>
+              </>
+            ) : (
+              <>
+                <Swords className="mx-auto mb-3 size-8 text-gold/70" />
+                <p className="font-display text-base font-bold text-gold">لا توجد حملات منشورة حاليًا.</p>
+              </>
+            )}
           </div>
         )}
       </Screen>

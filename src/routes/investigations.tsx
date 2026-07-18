@@ -1,8 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Search, ChevronLeft, Check, Coins, Star, Heart, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
+import { Search, ChevronLeft, Check, Coins, Star, Heart, Loader2, Globe2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
+import { WorldFilterChip } from "@/components/WorldFilterChip";
 
 import { INVESTIGATION_REGISTRY } from "@/lib/investigations";
 import {
@@ -11,6 +15,8 @@ import {
   type InvestigationRow,
   type InvestigationReward,
 } from "@/lib/investigations-source";
+import { fetchWorldsIndex, findHub } from "@/lib/worlds";
+import { useWorldMembership, isValidWorldSlug } from "@/lib/worlds-progress";
 
 // Fresh random seed per app load/session so the order reshuffles on reload.
 const SESSION_SHUFFLE_SEED = Math.random();
@@ -25,14 +31,35 @@ function shuffle<T>(arr: T[]): T[] {
 }
 import { useProfile } from "@/lib/profile";
 
+const investigationsSearchSchema = z.object({
+  world: fallback(z.string(), "").default(""),
+});
+
 export const Route = createFileRoute("/investigations")({
   head: () => ({ meta: [{ title: "التحقيقات التاريخية" }] }),
+  validateSearch: zodValidator(investigationsSearchSchema),
   component: InvestigationsIndex,
 });
 
 function InvestigationsIndex() {
   const { profile } = useProfile();
   const { rows } = useSupabaseInvestigations();
+  const navigate = useNavigate({ from: "/investigations" });
+  const rawWorld = Route.useSearch().world;
+  const worldSlug = isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
+
+  const { data: worldsIndex } = useQuery({
+    queryKey: ["worlds-index"],
+    queryFn: () => fetchWorldsIndex(),
+    enabled: !!worldSlug,
+    staleTime: 60_000,
+  });
+  const worldTitle = useMemo(() => {
+    if (!worldSlug) return "";
+    return worldsIndex?.find((w) => w.hub.slug === worldSlug)?.entity.title ?? worldSlug;
+  }, [worldsIndex, worldSlug]);
+  const { investigationSlugs, ready: membershipReady } = useWorldMembership(worldSlug);
+
 
   // Hide legacy items whose slug/id was overridden by a Supabase investigation.
   const supabaseSlugs = new Set((rows ?? []).map((r) => r.slug));
@@ -47,14 +74,29 @@ function InvestigationsIndex() {
       ...(rows ?? []).map((r) => ({ kind: "supabase" as const, row: r })),
       ...legacyVisible.map((r) => ({ kind: "legacy" as const, row: r })),
     ];
-    return shuffle(combined);
+    const shuffled = shuffle(combined);
+    if (!worldSlug) return shuffled;
+    if (!membershipReady) return [];
+    return shuffled.filter((it) => {
+      const slug = it.kind === "supabase" ? it.row.slug : it.row.id;
+      return investigationSlugs.has(slug);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows?.length, legacyVisible.length, SESSION_SHUFFLE_SEED]);
+  }, [rows?.length, legacyVisible.length, SESSION_SHUFFLE_SEED, worldSlug, membershipReady, investigationSlugs]);
 
   return (
     <AppShell>
       <ReadingScale>
       <Screen title="التحقيقات التاريخية" subtitle="اكشف القرائن، استنتج الإجابة، واربح القلوب والدنانير">
+
+        {worldSlug && (
+          <div className="mb-4">
+            <WorldFilterChip
+              worldTitle={worldTitle}
+              onClear={() => navigate({ search: { world: "" } })}
+            />
+          </div>
+        )}
 
         {rows === null && (
           <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
@@ -98,9 +140,16 @@ function InvestigationsIndex() {
             );
           })}
 
-          {rows !== null && rows.length === 0 && legacyVisible.length === 0 && (
-            <div className="rounded-2xl border border-white/10 bg-surface p-6 text-center text-sm text-muted-foreground">
-              لا توجد تحقيقات متاحة حاليًا.
+          {rows !== null && shuffledItems.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
+              {worldSlug ? (
+                <>
+                  <Globe2 className="mx-auto mb-3 size-8 text-gold/70" />
+                  <p className="font-display text-base font-bold text-gold">لا توجد تحقيقات متاحة في هذا العالم حاليًا</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">لا توجد تحقيقات متاحة حاليًا.</p>
+              )}
             </div>
           )}
         </div>

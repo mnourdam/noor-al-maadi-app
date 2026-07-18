@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight, Globe2, Users, Building2, Calendar,
   Swords, Landmark, Gem, ArrowLeft, ArrowRight, Compass,
-  BookOpen, Search, Trophy,
+  BookOpen, Search, Trophy, CheckCircle2, Clock,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
@@ -19,10 +19,16 @@ import type { RelatedNode } from "@/lib/relationship-graph";
 import {
   useWorldProgress,
   useStableSectionOrder,
+  useWorldMembership,
   type Recommendation,
   type SectionKey,
 } from "@/lib/worlds-progress";
 import { useProfile } from "@/lib/profile";
+import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
+import { useSupabaseInvestigations, countQuestions } from "@/lib/investigations-source";
+import { getCampaignProgress } from "@/lib/importedCampaignProgress";
+import { sortCampaignsChronological } from "@/lib/campaignChronology";
+import type { Campaign as ImportedCampaign } from "@/types/campaign";
 
 export const Route = createFileRoute("/worlds/$slug")({
   head: ({ params }) => ({
@@ -369,7 +375,7 @@ function WorldDetailPage() {
                 </>
               )}
               {key === "investigations" && progress.investigations.total > 0 && (
-                <InvestigationsSection progress={progress} />
+                <InvestigationsSection worldSlug={slug} progress={progress} />
               )}
               {key === "museum" && data.sections.artifact.length > 0 && (
                 <ContentSection sectionKey="artifact" items={data.sections.artifact} />
@@ -411,7 +417,58 @@ function WorldDetailPage() {
   );
 }
 
-function CampaignsSection({ worldSlug: _slug, progress }: { worldSlug: string; progress: import("@/lib/worlds-progress").WorldProgress }) {
+type WP = import("@/lib/worlds-progress").WorldProgress;
+
+const DIFF_RANK: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
+
+function CampaignsSection({ worldSlug, progress }: { worldSlug: string; progress: WP }) {
+  const { data } = useQuery({ queryKey: ["campaigns", "feed"], queryFn: fetchPublishedFeed });
+  const { campaignIds } = useWorldMembership(worldSlug);
+  const { profile } = useProfile();
+  const invalidatedTick = profile.investigationsCompleted?.length ?? 0; // dep to re-render on progress change
+
+  const ordered = useMemo(() => {
+    const list = (data?.campaigns ?? []).filter((c) => campaignIds.has(c.id));
+    type Row = {
+      c: ImportedCampaign;
+      status: "in_progress" | "unstarted" | "completed";
+      pct: number;
+      completedCh: number;
+      totalCh: number;
+      nextChapterId: string | null;
+      nextChapterTitle: string | null;
+    };
+    const rows: Row[] = list.map((c) => {
+      const chapters = c.chapters ?? [];
+      const prog = getCampaignProgress(c.id);
+      const total = chapters.length;
+      let done = 0;
+      let nextId: string | null = null;
+      let nextTitle: string | null = null;
+      for (const ch of chapters) {
+        if (prog.chapters[ch.id]?.completed) done++;
+        else if (!nextId) { nextId = ch.id; nextTitle = ch.title ?? null; }
+      }
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      const status: Row["status"] =
+        total > 0 && done === total ? "completed"
+        : done > 0 ? "in_progress"
+        : "unstarted";
+      return { c, status, pct, completedCh: done, totalCh: total, nextChapterId: nextId, nextChapterTitle: nextTitle };
+    });
+    // in-progress → unstarted (chronological) → completed
+    const bucket = (s: Row["status"]) => s === "in_progress" ? 0 : s === "unstarted" ? 1 : 2;
+    return rows.sort((a, b) => {
+      const ba = bucket(a.status); const bb = bucket(b.status);
+      if (ba !== bb) return ba - bb;
+      const sorted = sortCampaignsChronological([a.c, b.c]);
+      return sorted[0].id === a.c.id ? -1 : 1;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, campaignIds, invalidatedTick]);
+
+  const shown = ordered.slice(0, 6);
+
   return (
     <section className="mt-8">
       <div className="mb-3 flex items-center gap-2">
@@ -421,23 +478,122 @@ function CampaignsSection({ worldSlug: _slug, progress }: { worldSlug: string; p
           {progress.campaigns.completed} / {progress.campaigns.total}
         </span>
       </div>
-      <Link to="/campaigns" className="block rounded-2xl border border-gold/25 bg-black/30 p-4 transition hover:border-gold/55">
-        <p className="text-[12px] text-muted-foreground">
-          {progress.campaigns.started === 0
-            ? "لم تبدأ أي حملة في هذا العالم بعد."
-            : progress.campaigns.completed < progress.campaigns.total
-              ? `أنجزت ${progress.campaigns.completed} من ${progress.campaigns.total} حملات — تابع الرحلة.`
-              : "أكملت جميع حملات هذا العالم."}
-        </p>
-        <p className="mt-2 inline-flex items-center gap-1 text-[12px] text-gold">
-          استعراض الحملات <ChevronRight className="size-3.5" />
-        </p>
-      </Link>
+
+      {ordered.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-gold/20 bg-black/20 p-4 text-center text-[12px] text-muted-foreground">
+          لا توجد حملات متاحة في هذا العالم حاليًا
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {shown.map((r) => {
+            const label = r.status === "completed" ? "مكتملة" : r.status === "in_progress" ? "قيد التقدم" : "لم تبدأ";
+            const cta =
+              r.status === "completed" ? "مراجعة الحملة"
+              : r.status === "in_progress" ? "تابع الحملة"
+              : "ابدأ الحملة";
+            const to = r.status === "in_progress" && r.nextChapterId
+              ? { path: "/campaigns/imported/$id/chapter/$chapter" as const, params: { id: r.c.slug ?? r.c.id, chapter: r.nextChapterId } }
+              : { path: "/campaigns/imported/$id" as const, params: { id: r.c.slug ?? r.c.id } };
+            return (
+              <Link
+                key={r.c.id}
+                to={to.path}
+                params={to.params}
+                className={`block rounded-2xl border p-3 transition ${
+                  r.status === "completed"
+                    ? "border-emerald-400/40 bg-emerald-500/5 hover:border-emerald-400/70"
+                    : "border-gold/25 bg-black/30 hover:border-gold/55"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {r.c.coverImage ? (
+                    <img
+                      src={r.c.coverImage}
+                      alt=""
+                      loading="lazy"
+                      className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-white/10"
+                    />
+                  ) : (
+                    <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
+                      <Trophy className="size-6 text-gold/80" />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ${
+                        r.status === "completed" ? "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                        : r.status === "in_progress" ? "border border-gold/40 bg-gold/10 text-gold"
+                        : "border border-white/10 bg-black/40 text-muted-foreground"
+                      }`}>
+                        {r.status === "completed" && <CheckCircle2 className="size-3" />}
+                        {r.status === "in_progress" && <Clock className="size-3" />}
+                        {label}
+                      </span>
+                      {r.totalCh > 0 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {r.completedCh} / {r.totalCh} فصول
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-display mt-1 truncate text-[13px] font-bold">{r.c.title}</p>
+                    {r.status === "in_progress" && r.nextChapterTitle && (
+                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                        الفصل التالي: {r.nextChapterTitle}
+                      </p>
+                    )}
+                    {r.totalCh > 0 && (
+                      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5">
+                        <div
+                          className={`h-full rounded-full ${r.status === "completed" ? "bg-emerald-400/70" : "bg-gradient-to-r from-gold/60 to-gold"}`}
+                          style={{ width: `${r.pct}%` }}
+                        />
+                      </div>
+                    )}
+                    <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-gold">
+                      {cta} <ChevronRight className="size-3.5" />
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {ordered.length > 0 && (
+        <Link
+          to="/campaigns"
+          search={{ world: worldSlug }}
+          className="mt-3 inline-flex items-center gap-1 text-[12px] text-gold hover:underline"
+        >
+          عرض جميع الحملات <ChevronRight className="size-3.5" />
+        </Link>
+      )}
     </section>
   );
 }
 
-function InvestigationsSection({ progress }: { progress: import("@/lib/worlds-progress").WorldProgress }) {
+function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; progress: WP }) {
+  const { rows } = useSupabaseInvestigations();
+  const { profile } = useProfile();
+  const { investigationSlugs } = useWorldMembership(worldSlug);
+
+  const ordered = useMemo(() => {
+    const done = new Set(profile.investigationsCompleted ?? []);
+    const list = (rows ?? []).filter((r) => investigationSlugs.has(r.slug));
+    return list
+      .map((r) => ({ r, done: done.has(r.slug) }))
+      .sort((a, b) => {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        const da = DIFF_RANK[a.r.difficulty ?? ""] ?? 3;
+        const db = DIFF_RANK[b.r.difficulty ?? ""] ?? 3;
+        if (da !== db) return da - db;
+        return a.r.slug.localeCompare(b.r.slug);
+      });
+  }, [rows, investigationSlugs, profile.investigationsCompleted]);
+
+  const shown = ordered.slice(0, 6);
+
   return (
     <section className="mt-8">
       <div className="mb-3 flex items-center gap-2">
@@ -447,18 +603,76 @@ function InvestigationsSection({ progress }: { progress: import("@/lib/worlds-pr
           {progress.investigations.completed} / {progress.investigations.total}
         </span>
       </div>
-      <Link to="/investigations" className="block rounded-2xl border border-gold/25 bg-black/30 p-4 transition hover:border-gold/55">
-        <p className="text-[12px] text-muted-foreground">
-          {progress.investigations.completed === 0
-            ? "تحقيقات هذا العالم بانتظار المحقّق."
-            : progress.investigations.completed < progress.investigations.total
-              ? `حللت ${progress.investigations.completed} من ${progress.investigations.total} تحقيقات.`
-              : "حللت كل تحقيقات هذا العالم."}
-        </p>
-        <p className="mt-2 inline-flex items-center gap-1 text-[12px] text-gold">
-          استعراض التحقيقات <ChevronRight className="size-3.5" />
-        </p>
-      </Link>
+
+      {ordered.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-gold/20 bg-black/20 p-4 text-center text-[12px] text-muted-foreground">
+          لا توجد تحقيقات متاحة في هذا العالم حاليًا
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {shown.map(({ r, done }) => {
+            const steps = Array.isArray(r.steps) ? r.steps : [];
+            const qCount = countQuestions(steps);
+            const diffLabel = r.difficulty === "easy" ? "سهل" : r.difficulty === "medium" ? "متوسط" : r.difficulty === "hard" ? "صعب" : null;
+            const briefing = r.subtitle ?? null;
+            return (
+              <Link
+                key={r.slug}
+                to="/investigation/$id"
+                params={{ id: r.slug }}
+                className={`block rounded-2xl border p-3 transition ${done ? "border-emerald-400/40 bg-emerald-500/5" : "border-white/10 bg-surface hover:border-gold/40"}`}
+              >
+                <div className="flex items-start gap-3">
+                  {(r as { cover_image?: string }).cover_image ? (
+                    <img
+                      src={(r as { cover_image?: string }).cover_image!}
+                      alt=""
+                      loading="lazy"
+                      className="size-12 shrink-0 rounded-xl object-cover ring-1 ring-white/10"
+                    />
+                  ) : (
+                    <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-gold/10 text-gold ring-1 ring-white/10">
+                      <Search className="size-5" />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ${done ? "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200" : "border border-white/10 bg-black/40 text-muted-foreground"}`}>
+                        {done ? <><CheckCircle2 className="size-3" /> منتهي</> : "غير منتهي"}
+                      </span>
+                      {diffLabel && (
+                        <span className="rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[10px] text-muted-foreground">
+                          {diffLabel}
+                        </span>
+                      )}
+                      {qCount > 0 && (
+                        <span className="text-[10px] text-muted-foreground">{qCount} سؤال</span>
+                      )}
+                    </div>
+                    <p className="font-display mt-1 truncate text-[13px] font-bold">{r.title}</p>
+                    {briefing && (
+                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{briefing}</p>
+                    )}
+                    <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-gold">
+                      {done ? "أعد استكشاف التحقيق" : "ابدأ التحقيق"} <ChevronRight className="size-3.5" />
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {ordered.length > 0 && (
+        <Link
+          to="/investigations"
+          search={{ world: worldSlug }}
+          className="mt-3 inline-flex items-center gap-1 text-[12px] text-gold hover:underline"
+        >
+          عرض جميع التحقيقات <ChevronRight className="size-3.5" />
+        </Link>
+      )}
     </section>
   );
 }

@@ -205,6 +205,62 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
 export function invalidateWorldIndex(): void { _indexCache = null; }
 
 // ------------------------------------------------------------
+// Shared world-membership selectors (Phase 1d).
+// SINGLE SOURCE OF TRUTH for "which campaigns / investigations
+// belong to this world?". Reused by:
+//   • World progress counts (existing)
+//   • World detail sections
+//   • /campaigns?world=<slug> filter
+//   • /investigations?world=<slug> filter
+//   • Continue Journey
+// ------------------------------------------------------------
+
+/** Static check: is `slug` a known canonical world hub? */
+export function isValidWorldSlug(slug: unknown): slug is string {
+  return typeof slug === "string" && WORLD_SLUGS.has(slug);
+}
+
+/** Campaign ids that belong to `worldSlug` per the shared index. */
+export function getWorldCampaignIds(worldSlug: string): Set<string> {
+  const idx = buildWorldIndex().get(worldSlug);
+  return new Set(idx?.campaignIds ?? []);
+}
+
+/** Investigation slugs that belong to `worldSlug` per the shared index. */
+export function getWorldInvestigationSlugs(worldSlug: string): Set<string> {
+  const idx = buildWorldIndex().get(worldSlug);
+  return new Set(idx?.investigationSlugs ?? []);
+}
+
+/**
+ * React hook returning the world's membership sets after the local
+ * snapshot has loaded. Consumers filter their already-fetched
+ * campaign/investigation lists with these sets — no duplicate mapping.
+ */
+export function useWorldMembership(worldSlug: string | null | undefined): {
+  ready: boolean;
+  campaignIds: Set<string>;
+  investigationSlugs: Set<string>;
+} {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    ensureLocalSnapshotLoaded().then(() => { if (alive) setReady(true); });
+    return () => { alive = false; };
+  }, []);
+  return useMemo(() => {
+    if (!ready || !worldSlug || !WORLD_SLUGS.has(worldSlug)) {
+      return { ready, campaignIds: new Set<string>(), investigationSlugs: new Set<string>() };
+    }
+    return {
+      ready: true,
+      campaignIds: getWorldCampaignIds(worldSlug),
+      investigationSlugs: getWorldInvestigationSlugs(worldSlug),
+    };
+  }, [ready, worldSlug]);
+}
+
+// ------------------------------------------------------------
 // Discovered slugs — now sourced from `user_entity_discoveries`
 // (encyclopedia reads), NOT from `user_collection` (ownership).
 // The old museum set moved to `useMuseumSlugs` below.
