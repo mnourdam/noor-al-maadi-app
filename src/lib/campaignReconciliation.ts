@@ -252,7 +252,6 @@ export async function reconcileLegacyCampaignProgress(): Promise<ReconciliationR
     const canonicalChapterIds = new Set(campaign.chapters.map(c => c.id));
     const declaredSlugs = declaredUnlockSlugs(campaign);
     const cloudCompleted = cloud.cloudCompletedByCampaign.get(campaign.id) ?? new Set<string>();
-    const deltaProven = cloud.campaignCompleteDeltaIds.has(campaign.id);
     const ledgerCampaignKey = `campaign:${campaign.id}`;
     const ledgerProven = Boolean(ledgerKeys[ledgerCampaignKey]);
     const collectionCovers =
