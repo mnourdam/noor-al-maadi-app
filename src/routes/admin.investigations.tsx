@@ -18,7 +18,7 @@
 //   server progress and add completion statistics.
 // ============================================================
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Search, Upload, RefreshCw, Eye, EyeOff, Copy, Trash2,
   CheckCircle2, AlertTriangle, PenSquare, X, ChevronDown, ChevronUp,
