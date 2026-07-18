@@ -3,6 +3,7 @@ import { Check, Sparkles, Feather, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { CrosswordStage, CrosswordClue } from "@/lib/games/types";
 import { validateCrosswordStage } from "@/lib/games/crossword-validate";
+import { cellsEqual, isAcceptedAnswer } from "@/lib/games/answer-normalize";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { sfx } from "./sfx";
 import { AttemptsChip } from "./AttemptsChip";
@@ -74,9 +75,14 @@ function clueCells(clue: CrosswordClue): { r: number; c: number }[] {
   return cells;
 }
 
-function normalizeCrosswordText(s: string): string {
-  return s.trim().toLowerCase().replace(/[ًٌٍَُِّْـ\s]/g, "").replace(/[إأآ]/g, "ا").replace(/[ى]/g, "ي").replace(/[ة]/g, "ه");
-}
+// Phase 2d — Arabic-tolerant answer matching. All comparison logic
+// lives in `@/lib/games/answer-normalize`. This renderer never
+// rewrites the authored answer; it only asks whether an entered
+// character / word is orthographically equivalent.
+//
+// `cellsEqual`   → per-cell validation (main path + reveal).
+// `isAcceptedAnswer` → word-level check for the Android plain-input
+//                       flow, honoring `clue.acceptable` aliases.
 
 export function CrosswordRenderer({
   stage, onComplete, onWrong, attemptsLeft, maxAttempts, onPaidHint,
@@ -203,7 +209,7 @@ export function CrosswordRenderer({
     const latestEntries = collectEntries();
     setEntries(latestEntries);
     let correct = 0;
-    grid.forEach((info, k) => { if ((latestEntries[k] ?? "") === info.expected) correct++; });
+    grid.forEach((info, k) => { if (cellsEqual(info.expected, latestEntries[k] ?? "")) correct++; });
     const allRight = correct === totalCells;
     if (allRight && !done) {
       setDone(true);
@@ -223,7 +229,7 @@ export function CrosswordRenderer({
     const latest: Record<string, string> = {};
     stage.clues.forEach((clue, idx) => {
       const raw = clueInputRefs.current[idx]?.value ?? "";
-      if (normalizeCrosswordText(raw) === normalizeCrosswordText(clue.answer)) correct++;
+      if (isAcceptedAnswer(raw, clue.answer, clue.acceptable ?? [])) correct++;
       const chars = raw.trim();
       clueCells(clue).forEach(({ r, c }, charIdx) => {
         const ch = chars[charIdx];
@@ -256,7 +262,11 @@ export function CrosswordRenderer({
       const target = cells.find(({ r, c }) => {
         const k = cellKey(r, c);
         const exp = grid.get(k)?.expected;
-        return exp && (entries[k] ?? "") !== exp;
+        // Reveal target = a cell whose entered letter is not yet an
+        // accepted orthographic equivalent. This keeps the reveal
+        // consistent with `check()` — never re-reveal a cell the
+        // player already got right in a tolerated form.
+        return !!exp && !cellsEqual(exp, entries[k] ?? "");
       });
       if (target) {
         const k = cellKey(target.r, target.c);
@@ -369,7 +379,7 @@ export function CrosswordRenderer({
               return <div key={k} className="h-9 w-9 rounded-sm bg-amber-900/30" />;
             }
             const value = entries[k] ?? "";
-            const isCorrect = value && value === info.expected;
+            const isCorrect = !!value && cellsEqual(info.expected, value);
             const isActiveClue = activeKeys.has(k);
             const isActiveCell = activeCell === k;
             return (
@@ -477,9 +487,10 @@ function ClueList({ title, clues, activeClue, entries, grid, onPick }: {
       <ul className="space-y-1.5 text-sm">
         {clues.map(({ c, i }) => {
           const cells = clueCells(c);
-          const solved = cells.every(({ r, co }: any) => true) && cells.every((p) => {
+          const solved = cells.every((p) => {
             const k = cellKey(p.r, p.c);
-            return (entries[k] ?? "") === grid.get(k)?.expected;
+            const exp = grid.get(k)?.expected;
+            return !!exp && cellsEqual(exp, entries[k] ?? "");
           });
           const isActive = activeClue === i;
           return (

@@ -50,6 +50,9 @@ const crosswordClue = z.object({
   answer: z.string().min(1).max(40),
   hint: z.string().min(1).max(300),
   related: z.string().optional(),
+  // Phase 2d — optional authored aliases; empty array is fine, and
+  // omitting the field entirely preserves the pre-2d JSON contract.
+  acceptable: z.array(z.string().min(1).max(40)).max(10).optional(),
 });
 
 const crosswordStage = z
