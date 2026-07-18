@@ -29,6 +29,7 @@ import { entitySortKey } from "@/lib/entityChronology";
 import { WORLD_ERA, WORLD_HUBS, WORLD_SLUGS } from "@/lib/worlds";
 import { useProfile } from "@/lib/profile";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 
 // ------------------------------------------------------------
 // Types
