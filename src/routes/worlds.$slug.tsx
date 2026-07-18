@@ -772,32 +772,153 @@ function ContentSection({
         </Link>
       )}
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {rest.map((n) => (
-          <Link
-            key={n.entity.id}
-            to="/encyclopedia/entity/$id"
-            params={{ id: n.entity.slug }}
-            className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
-          >
-            <span className="grid size-11 place-items-center rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
-              {meta.glyph}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-display truncate text-[13px] font-bold">{n.entity.title}</p>
-              {n.entity.subtitle && (
-                <p className="truncate text-[10px] text-muted-foreground">{n.entity.subtitle}</p>
-              )}
-            </div>
-            <ChevronRight className="size-4 text-gold/60 group-hover:text-gold" />
-          </Link>
-        ))}
-      </div>
+      {/* Figure hierarchy: canonical order already applied by the loader
+          (timeline_order → year → alphabetical). We promote the first few
+          non-Prophet figures as larger "featured" cards; the rest fall
+          back to the normal compact grid. No fabricated ranking. */}
+      {sectionKey === "figure" && rest.length > 0 ? (
+        <>
+          {(() => {
+            const FEATURED = 3;
+            const featured = rest.slice(0, FEATURED);
+            const remainder = rest.slice(FEATURED);
+            return (
+              <>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {featured.map((n) => (
+                    <Link
+                      key={n.entity.id}
+                      to="/encyclopedia/entity/$id"
+                      params={{ id: n.entity.slug }}
+                      className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-black/50 to-transparent p-3 transition hover:border-gold/60"
+                    >
+                      <span className="grid size-12 place-items-center rounded-xl bg-black/50 text-2xl ring-1 ring-gold/25">
+                        {meta.glyph}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-display truncate text-[14px] font-bold text-gold-foreground">{n.entity.title}</p>
+                        {n.entity.subtitle && (
+                          <p className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">{n.entity.subtitle}</p>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                {remainder.length > 0 && (
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {remainder.map((n) => (
+                      <Link
+                        key={n.entity.id}
+                        to="/encyclopedia/entity/$id"
+                        params={{ id: n.entity.slug }}
+                        className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
+                      >
+                        <span className="grid size-11 place-items-center rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
+                          {meta.glyph}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display truncate text-[13px] font-bold">{n.entity.title}</p>
+                          {n.entity.subtitle && (
+                            <p className="truncate text-[10px] text-muted-foreground">{n.entity.subtitle}</p>
+                          )}
+                        </div>
+                        <ChevronRight className="size-4 text-gold/60 group-hover:text-gold" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </>
+      ) : (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {rest.map((n) => (
+            <Link
+              key={n.entity.id}
+              to="/encyclopedia/entity/$id"
+              params={{ id: n.entity.slug }}
+              className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
+            >
+              <span className="grid size-11 place-items-center rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
+                {meta.glyph}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-display truncate text-[13px] font-bold">{n.entity.title}</p>
+                {n.entity.subtitle && (
+                  <p className="truncate text-[10px] text-muted-foreground">{n.entity.subtitle}</p>
+                )}
+              </div>
+              <ChevronRight className="size-4 text-gold/60 group-hover:text-gold" />
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
 
-/** Rich Prev/Next world card — real completion % from canonical progress. */
+/** Mini timeline — real, dated Event entities only. Hidden if fewer than
+ *  3 events carry a chronology signal (timeline_year or timeline_start_year).
+ *  Never fabricated. */
+function MiniTimeline({ events }: { events: RelatedNode[] }) {
+  const dated = events
+    .map((n) => {
+      const y = n.entity.timeline_year ?? n.entity.timeline_start_year ?? null;
+      return typeof y === "number" && Number.isFinite(y) ? { n, y } : null;
+    })
+    .filter((x): x is { n: RelatedNode; y: number } => x !== null)
+    .sort((a, b) => a.y - b.y);
+
+  if (dated.length < 3) return null;
+
+  // Prefer up to 6 evenly-distributed points across the span (first, last,
+  // and interior samples). Preserves chronological arc without cherry-picking.
+  const MAX = 6;
+  const picks: { n: RelatedNode; y: number }[] = [];
+  if (dated.length <= MAX) {
+    picks.push(...dated);
+  } else {
+    for (let i = 0; i < MAX; i++) {
+      const idx = Math.round((i * (dated.length - 1)) / (MAX - 1));
+      picks.push(dated[idx]);
+    }
+  }
+
+  const label = (y: number): string => (y > 622 ? `${y}م` : `${y}هـ`);
+
+  return (
+    <section className="mt-6" aria-label="خط زمني موجز">
+      <div className="mb-2 flex items-center gap-2">
+        <Clock className="size-3.5 text-gold" />
+        <h2 className="font-display text-[13px] font-bold">خط زمني موجز</h2>
+      </div>
+      <div className="relative overflow-x-auto">
+        <ol className="flex min-w-full items-stretch gap-3 pb-2">
+          {picks.map(({ n, y }, i) => (
+            <li key={n.entity.id} className="flex min-w-[140px] flex-col">
+              <Link
+                to="/encyclopedia/entity/$id"
+                params={{ id: n.entity.slug }}
+                className="group flex h-full flex-col rounded-2xl border border-gold/25 bg-black/30 p-2.5 transition hover:border-gold/55"
+              >
+                <span className="inline-flex w-fit items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[10px] font-bold tabular-nums text-gold">
+                  {label(y)}
+                </span>
+                <p className="font-display mt-1.5 line-clamp-2 text-[12px] font-bold text-white/90 group-hover:text-gold">
+                  {n.entity.title}
+                </p>
+                {i < picks.length - 1 && (
+                  <span className="mt-auto pt-1 text-[10px] text-gold/50">→</span>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
 function WorldNavCard({
   direction,
   hub,
