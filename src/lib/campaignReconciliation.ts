@@ -232,7 +232,6 @@ export async function reconcileLegacyCampaignProgress(): Promise<ReconciliationR
 
   let cloud: CloudSnapshot = {
     cloudCompletedByCampaign: new Map(),
-    campaignCompleteDeltaIds: new Set(),
     collectionSlugs: new Set(),
   };
   if (uid && online) {
