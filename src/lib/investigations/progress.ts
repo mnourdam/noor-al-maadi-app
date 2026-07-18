@@ -275,3 +275,236 @@ export function makeInvestigationCompletionMatcher(
     return false;
   };
 }
+
+// ============================================================
+// Canonical Investigation Progress (Phase G1)
+// ------------------------------------------------------------
+// The ONE progress hook every consumer (Worlds, Home hero,
+// Achievements, Statistics, investigation player, list page,
+// museum stats) MUST read from.
+//
+// Signed-in truth source:
+//   1. server rows in `user_investigation_progress`
+//   2. + pending offline outbox items (`investigation_complete`
+//      and `investigation_backfill_batch`) so an offline
+//      completion counts immediately
+//   3. + the legacy `profile.investigationsCompleted` array,
+//      resolved via the local snapshot slug↔id map (final
+//      safety net until the batched backfill lands)
+//
+// Guest truth source:
+//   • the legacy `profile.investigationsCompleted` array only,
+//     resolved via slug↔id.  No server writes for guests.
+//
+// The hook returns:
+//   • completedIds     — canonical UUID set
+//   • completedSlugs   — canonical slug set (same completions)
+//   • completedKeys    — union of both — cheap `.has(rawKey)`
+//                        matcher for legacy call sites
+//   • count            — the ONE number all counters must use
+//   • ready            — false during initial hydration
+//   • source           — 'server' when the uid is present,
+//                        'local' for guests
+// ============================================================
+
+import { useProfile } from "@/lib/profile";
+import { ensureLocalSnapshotLoaded, localInvestigations } from "@/lib/local-first-store";
+import { peekAll } from "@/lib/offline/outbox";
+
+export interface CanonicalInvestigationProgress {
+  ready: boolean;
+  source: "server" | "local";
+  uid: string | null;
+  completedIds: Set<string>;
+  completedSlugs: Set<string>;
+  completedKeys: Set<string>;
+  count: number;
+  matches: (idOrSlug: string) => boolean;
+}
+
+interface InvIdSlugMaps {
+  idToSlug: Map<string, string>;
+  slugToId: Map<string, string>;
+}
+
+function useInvestigationIdSlugMaps(): InvIdSlugMaps {
+  const [maps, setMaps] = useState<InvIdSlugMaps>({ idToSlug: new Map(), slugToId: new Map() });
+  useEffect(() => {
+    let alive = true;
+    ensureLocalSnapshotLoaded().then(() => {
+      if (!alive) return;
+      const invs = localInvestigations() as Array<{ id?: string; slug?: string }>;
+      const idToSlug = new Map<string, string>();
+      const slugToId = new Map<string, string>();
+      for (const inv of invs) {
+        if (inv?.id && inv?.slug) {
+          idToSlug.set(String(inv.id), String(inv.slug));
+          slugToId.set(String(inv.slug), String(inv.id));
+        }
+      }
+      setMaps({ idToSlug, slugToId });
+    });
+    return () => { alive = false; };
+  }, []);
+  return maps;
+}
+
+/**
+ * Pending outbox contributions — used only to keep the canonical set
+ * consistent with what has already been queued locally. Read on flush /
+ * outbox-change events.
+ */
+function usePendingCompletionInvestigationIds(uid: string | null): Set<string> {
+  const [ids, setIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!uid) { setIds(new Set()); return; }
+    let alive = true;
+    const reload = async () => {
+      try {
+        const items = await peekAll(uid);
+        const next = new Set<string>();
+        for (const it of items) {
+          if (it.kind === "investigation_complete") {
+            const invId = (it.payload as { investigationId?: string })?.investigationId;
+            if (invId) next.add(String(invId));
+          }
+        }
+        if (alive) setIds(next);
+      } catch { /* ignore */ }
+    };
+    void reload();
+    const onChange = () => { void reload(); };
+    if (typeof window !== "undefined") {
+      window.addEventListener("irth:outbox:changed", onChange as EventListener);
+      window.addEventListener("irth:outbox:flushed", onChange as EventListener);
+    }
+    return () => {
+      alive = false;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("irth:outbox:changed", onChange as EventListener);
+        window.removeEventListener("irth:outbox:flushed", onChange as EventListener);
+      }
+    };
+  }, [uid]);
+  return ids;
+}
+
+const EMPTY_CANONICAL: CanonicalInvestigationProgress = {
+  ready: false,
+  source: "local",
+  uid: null,
+  completedIds: new Set(),
+  completedSlugs: new Set(),
+  completedKeys: new Set(),
+  count: 0,
+  matches: () => false,
+};
+
+export function useCanonicalInvestigationProgress(): CanonicalInvestigationProgress {
+  const server = useInvestigationProgress();
+  const pending = usePendingCompletionInvestigationIds(server.uid);
+  const { profile } = useProfile();
+  const { idToSlug, slugToId } = useInvestigationIdSlugMaps();
+
+  return useMemoCanonical(() => {
+    const isSignedIn = !!server.uid;
+    const ready = isSignedIn ? (server.ready && (idToSlug.size > 0 || slugToId.size > 0 || true)) : true;
+
+    const ids = new Set<string>();
+    const slugs = new Set<string>();
+
+    // 1. server completions (signed-in truth).
+    if (isSignedIn) {
+      for (const id of server.completedIds) {
+        ids.add(id);
+        const s = idToSlug.get(id);
+        if (s) slugs.add(s);
+      }
+      // 2. pending offline completions — treat as complete for UI.
+      for (const id of pending) {
+        ids.add(id);
+        const s = idToSlug.get(id);
+        if (s) slugs.add(s);
+      }
+    }
+
+    // 3. legacy profile array — final safety net.
+    //    For guests this is the ONLY source.  For signed-in users it
+    //    covers the window before the batched backfill lands.
+    const legacy = Array.isArray(profile?.investigationsCompleted)
+      ? (profile!.investigationsCompleted as string[])
+      : [];
+    for (const raw of legacy) {
+      if (typeof raw !== "string" || !raw) continue;
+      // UUID → keep as id, resolve slug.
+      if (slugToId.get(raw)) {
+        // raw is a slug; also record its id.
+        slugs.add(raw);
+        const mapped = slugToId.get(raw);
+        if (mapped) ids.add(mapped);
+        continue;
+      }
+      const mappedSlug = idToSlug.get(raw);
+      if (mappedSlug) {
+        ids.add(raw);
+        slugs.add(mappedSlug);
+        continue;
+      }
+      // Unknown mapping — count it under both sets so legacy strings
+      // still gate UI ("done" chips) even before snapshot resolves.
+      ids.add(raw);
+      slugs.add(raw);
+    }
+
+    const keys = new Set<string>();
+    for (const s of ids) keys.add(s);
+    for (const s of slugs) keys.add(s);
+
+    // Canonical count: use the union of canonical ids and any legacy
+    // keys we could not map — collapsed via the keys set so the same
+    // completion cannot double-count when it appears in both forms.
+    const canonicalCount = (() => {
+      const seen = new Set<string>();
+      for (const id of ids) seen.add(`id:${id}`);
+      for (const s of slugs) {
+        // If this slug has a mapped id already counted, skip.
+        const mid = slugToId.get(s);
+        if (mid && ids.has(mid)) continue;
+        seen.add(`slug:${s}`);
+      }
+      return seen.size;
+    })();
+
+    const matches = (raw: string) => {
+      if (!raw) return false;
+      if (keys.has(raw)) return true;
+      const mid = slugToId.get(raw);
+      if (mid && ids.has(mid)) return true;
+      const ms = idToSlug.get(raw);
+      if (ms && slugs.has(ms)) return true;
+      return false;
+    };
+
+    return {
+      ready,
+      source: isSignedIn ? "server" : "local",
+      uid: server.uid,
+      completedIds: ids,
+      completedSlugs: slugs,
+      completedKeys: keys,
+      count: canonicalCount,
+      matches,
+    } as CanonicalInvestigationProgress;
+  }, [server.uid, server.ready, server.completedIds, pending, profile?.investigationsCompleted, idToSlug, slugToId]);
+}
+
+// Local re-export of React.useMemo under a stable name so the giant
+// dependency array above reads cleanly. Kept here to avoid re-importing
+// React at the top and drifting from the existing minimal imports.
+import { useMemo as useMemoCanonical } from "react";
+
+// Voluntary EMPTY export so callers can render a zero-state without
+// having to construct the empty shape themselves.
+export function emptyCanonicalInvestigationProgress(): CanonicalInvestigationProgress {
+  return EMPTY_CANONICAL;
+}
