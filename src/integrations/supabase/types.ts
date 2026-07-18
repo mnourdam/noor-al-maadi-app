@@ -2256,6 +2256,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      _unlock_investigation_collectibles: {
+        Args: { p_investigation_id: string; p_user_id: string }
+        Returns: undefined
+      }
       admin_adjust_balance: {
         Args: {
           p_delta: number
