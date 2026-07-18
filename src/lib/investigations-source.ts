@@ -14,6 +14,11 @@ export type InvestigationDifficulty = "easy" | "medium" | "hard";
 export interface InvestigationReward {
   hearts?: number;
   xp?: number;
+  /** Canonical currency field (Phase B). */
+  dinars?: number;
+  /** @deprecated Legacy alias for `dinars`. Read via the shared
+   * normalizer in `src/lib/investigations-normalize.ts`; new writes
+   * must use `dinars`. */
   coins?: number;
   badge?: string;
   artifact?: string;
