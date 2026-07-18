@@ -68,6 +68,7 @@ import { Route as AdminNativeAuthDiagnosticsRouteImport } from './routes/admin.n
 import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum-provenance'
 import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminMapRouteImport } from './routes/admin.map'
+import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
 import { Route as AdminImportHistoryRouteImport } from './routes/admin.import-history'
 import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminHubBuilderRouteImport } from './routes/admin.hub-builder'
@@ -427,6 +428,11 @@ const AdminMapRoute = AdminMapRouteImport.update({
   path: '/admin/map',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminInvestigationsRoute = AdminInvestigationsRouteImport.update({
+  id: '/admin/investigations',
+  path: '/admin/investigations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminImportHistoryRoute = AdminImportHistoryRouteImport.update({
   id: '/admin/import-history',
   path: '/admin/import-history',
@@ -585,9 +591,9 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
 } as any)
 const AdminInvestigationsIndexRoute =
   AdminInvestigationsIndexRouteImport.update({
-    id: '/admin/investigations/',
-    path: '/admin/investigations/',
-    getParentRoute: () => rootRouteImport,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminInvestigationsRoute,
   } as any)
 const AdminGamesIndexRoute = AdminGamesIndexRouteImport.update({
   id: '/',
@@ -740,9 +746,9 @@ const ApiPublicWebhooksResendRoute = ApiPublicWebhooksResendRouteImport.update({
 } as any)
 const AdminInvestigationsIdEditRoute =
   AdminInvestigationsIdEditRouteImport.update({
-    id: '/admin/investigations/$id/edit',
-    path: '/admin/investigations/$id/edit',
-    getParentRoute: () => rootRouteImport,
+    id: '/$id/edit',
+    path: '/$id/edit',
+    getParentRoute: () => AdminInvestigationsRoute,
   } as any)
 const AdminCampaignsIdEditRoute = AdminCampaignsIdEditRouteImport.update({
   id: '/admin/campaigns/$id/edit',
@@ -812,6 +818,7 @@ export interface FileRoutesByFullPath {
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
+  '/admin/investigations': typeof AdminInvestigationsRouteWithChildren
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
@@ -1053,6 +1060,7 @@ export interface FileRoutesById {
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
+  '/admin/investigations': typeof AdminInvestigationsRouteWithChildren
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
@@ -1177,6 +1185,7 @@ export interface FileRouteTypes {
     | '/admin/hub-builder'
     | '/admin/import'
     | '/admin/import-history'
+    | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
     | '/admin/museum-provenance'
@@ -1417,6 +1426,7 @@ export interface FileRouteTypes {
     | '/admin/hub-builder'
     | '/admin/import'
     | '/admin/import-history'
+    | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
     | '/admin/museum-provenance'
@@ -1540,6 +1550,7 @@ export interface RootRouteChildren {
   AdminHubBuilderRoute: typeof AdminHubBuilderRoute
   AdminImportRoute: typeof AdminImportRoute
   AdminImportHistoryRoute: typeof AdminImportHistoryRouteWithChildren
+  AdminInvestigationsRoute: typeof AdminInvestigationsRouteWithChildren
   AdminMapRoute: typeof AdminMapRoute
   AdminMigrationRoute: typeof AdminMigrationRoute
   AdminMuseumProvenanceRoute: typeof AdminMuseumProvenanceRoute
@@ -1575,9 +1586,7 @@ export interface RootRouteChildren {
   GamesModeSlugRoute: typeof GamesModeSlugRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   AdminCampaignsIndexRoute: typeof AdminCampaignsIndexRoute
-  AdminInvestigationsIndexRoute: typeof AdminInvestigationsIndexRoute
   AdminCampaignsIdEditRoute: typeof AdminCampaignsIdEditRoute
-  AdminInvestigationsIdEditRoute: typeof AdminInvestigationsIdEditRoute
   ApiPublicWebhooksResendRoute: typeof ApiPublicWebhooksResendRoute
   LovableEmailAuthCustomDispatchRoute: typeof LovableEmailAuthCustomDispatchRoute
   LovableEmailAuthCustomVerifyReauthRoute: typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -2003,6 +2012,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMapRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/investigations': {
+      id: '/admin/investigations'
+      path: '/admin/investigations'
+      fullPath: '/admin/investigations'
+      preLoaderRoute: typeof AdminInvestigationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/import-history': {
       id: '/admin/import-history'
       path: '/admin/import-history'
@@ -2215,10 +2231,10 @@ declare module '@tanstack/react-router' {
     }
     '/admin/investigations/': {
       id: '/admin/investigations/'
-      path: '/admin/investigations'
+      path: '/'
       fullPath: '/admin/investigations/'
       preLoaderRoute: typeof AdminInvestigationsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminInvestigationsRoute
     }
     '/admin/games/': {
       id: '/admin/games/'
@@ -2411,10 +2427,10 @@ declare module '@tanstack/react-router' {
     }
     '/admin/investigations/$id/edit': {
       id: '/admin/investigations/$id/edit'
-      path: '/admin/investigations/$id/edit'
+      path: '/$id/edit'
       fullPath: '/admin/investigations/$id/edit'
       preLoaderRoute: typeof AdminInvestigationsIdEditRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminInvestigationsRoute
     }
     '/admin/campaigns/$id/edit': {
       id: '/admin/campaigns/$id/edit'
@@ -2535,6 +2551,19 @@ const AdminImportHistoryRouteChildren: AdminImportHistoryRouteChildren = {
 const AdminImportHistoryRouteWithChildren =
   AdminImportHistoryRoute._addFileChildren(AdminImportHistoryRouteChildren)
 
+interface AdminInvestigationsRouteChildren {
+  AdminInvestigationsIndexRoute: typeof AdminInvestigationsIndexRoute
+  AdminInvestigationsIdEditRoute: typeof AdminInvestigationsIdEditRoute
+}
+
+const AdminInvestigationsRouteChildren: AdminInvestigationsRouteChildren = {
+  AdminInvestigationsIndexRoute: AdminInvestigationsIndexRoute,
+  AdminInvestigationsIdEditRoute: AdminInvestigationsIdEditRoute,
+}
+
+const AdminInvestigationsRouteWithChildren =
+  AdminInvestigationsRoute._addFileChildren(AdminInvestigationsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -2591,6 +2620,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminHubBuilderRoute: AdminHubBuilderRoute,
   AdminImportRoute: AdminImportRoute,
   AdminImportHistoryRoute: AdminImportHistoryRouteWithChildren,
+  AdminInvestigationsRoute: AdminInvestigationsRouteWithChildren,
   AdminMapRoute: AdminMapRoute,
   AdminMigrationRoute: AdminMigrationRoute,
   AdminMuseumProvenanceRoute: AdminMuseumProvenanceRoute,
@@ -2626,9 +2656,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesModeSlugRoute: GamesModeSlugRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   AdminCampaignsIndexRoute: AdminCampaignsIndexRoute,
-  AdminInvestigationsIndexRoute: AdminInvestigationsIndexRoute,
   AdminCampaignsIdEditRoute: AdminCampaignsIdEditRoute,
-  AdminInvestigationsIdEditRoute: AdminInvestigationsIdEditRoute,
   ApiPublicWebhooksResendRoute: ApiPublicWebhooksResendRoute,
   LovableEmailAuthCustomDispatchRoute: LovableEmailAuthCustomDispatchRoute,
   LovableEmailAuthCustomVerifyReauthRoute:
