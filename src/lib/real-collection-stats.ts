@@ -267,7 +267,7 @@ export function useRealCollectionStats() {
   const eventsDiscovered =
     profile.storiesRead.length +
     profile.timelinesCompleted.length +
-    profile.investigationsCompleted.length;
+    canonicalInv.count;
   const battlesCompleted = profile.missionsCompleted.length;
 
   return {
