@@ -458,7 +458,7 @@ function AdminInvestigationsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {visible.map((v) => <Row key={v.raw.id} view={v} onPreview={() => openPreview(v.raw.slug)} onToggle={() => toggleEnabled(v.raw)} />)}
+                {visible.map((v) => <SafeRow key={v.raw?.id ?? v.raw?.slug ?? Math.random()} view={v} onPreview={() => openPreview(v.raw.slug)} onToggle={() => toggleEnabled(v.raw)} />)}
               </tbody>
             </table>
           </section>
