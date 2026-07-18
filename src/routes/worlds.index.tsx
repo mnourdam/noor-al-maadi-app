@@ -37,6 +37,7 @@ function recLabel(rec: Recommendation | undefined): string {
 
 
 function WorldsIndex() {
+  const { from } = Route.useSearch();
   const { data, isLoading } = useQuery({
     queryKey: ["worlds-index"],
     staleTime: 60_000,
