@@ -30,6 +30,13 @@ export interface NotificationPrefs {
   season: boolean;
   campaign: boolean;
   friend?: boolean;
+  /**
+   * Phase 2c — controls the on-device Daily Challenge reminder
+   * scheduled by `dailyChallengeScheduler.ts`. Kept in the SAME
+   * `NotificationPrefs` shape as every other category so the
+   * settings UI and the scheduler share a single source of truth.
+   */
+  dailyChallenge?: boolean;
 }
 
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
@@ -39,7 +46,9 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   season: false, // LC1: season notifications disabled by default (feature hidden post-beta).
   campaign: true,
   friend: true,
+  dailyChallenge: true,
 };
+
 
 export interface InAppNotification {
   id: string;
