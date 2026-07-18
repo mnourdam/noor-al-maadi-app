@@ -245,7 +245,9 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
   const [dryReport, setDryReport] = useState<RunResult | null>(null);
   const [dryHash, setDryHash] = useState<string | null>(null);
   const [removalApproved, setRemovalApproved] = useState(false);
-  const [showRemovalDialog, setShowRemovalDialog] = useState<false | "confirm">(false);
+  /** Stable step ID pending removal — resolved to a current index at confirm
+   * time so reorders between open and confirm cannot target the wrong step. */
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const [showLocalPreview, setShowLocalPreview] = useState(false);
   const notifyRef = useRef<number | null>(null);
 
