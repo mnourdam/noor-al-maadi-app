@@ -22,6 +22,7 @@ import {
   useStableSectionOrder,
   useWorldMembership,
   useCloudCampaignProgress,
+  useAllWorldsProgress,
   type Recommendation,
   type SectionKey,
 } from "@/lib/worlds-progress";
