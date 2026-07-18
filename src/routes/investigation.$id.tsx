@@ -345,7 +345,8 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
 
   const scope = investigationScopeKey(inv.id);
   const revealed = hintsRevealed(scope);
-  const alreadyDone = profile.investigationsCompleted.includes(inv.id);
+  const canonicalProgress = useCanonicalInvestigationProgress();
+  const alreadyDone = canonicalProgress.matches(inv.id);
 
   const [qIndex, setQIndex] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
