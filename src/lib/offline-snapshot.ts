@@ -66,7 +66,7 @@ export const COLLECTIONS: CollectionDef[] = [
     required: true,
     label: "الحملات المنشورة (مع الفصول والأنشطة داخل data)" },
 
-  { key: "investigations", table: "investigations",
+  { key: "investigations", table: "investigations_public",
     filter: (q) => q.eq("enabled", true), required: false,
     label: "التحقيقات" },
   { key: "today_in_history_events", table: "today_in_history_events",
