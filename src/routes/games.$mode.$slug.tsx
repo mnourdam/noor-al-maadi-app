@@ -12,6 +12,7 @@ import { ReadingScale } from "@/components/ReadingScale";
 import { getGameBySlug, type GameRow } from "@/lib/games/store";
 import { recordCompletion, getMyProgress } from "@/lib/games/progress";
 import { markDailyChallengeCompletedLocally } from "@/lib/games/dailyChallengeService";
+import { addGuestCompletion } from "@/lib/games/guestCompletions";
 import { supabase } from "@/integrations/supabase/client";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, GAME_MODES, type GameMode } from "@/lib/games/types";
 import { GameStageRenderer } from "@/components/games/GameStageRenderer";
@@ -77,13 +78,25 @@ function GamePlayPage() {
       const g = await getGameBySlug(slug);
       setGame(g);
       if (g) {
-        const p = await getMyProgress(g.id);
-        setAlreadyCompleted(!!p?.completed);
+        const { data } = await supabase.auth.getUser();
+        if (data.user?.id) {
+          const p = await getMyProgress(g.id);
+          setAlreadyCompleted(!!p?.completed);
+        } else {
+          // Guest reward guard mirrors the ledger — if a guest has already
+          // completed this game on this device, the replay must show the
+          // "already completed" screen and skip the reward pipeline.
+          const { readGuestCompletedIds } = await import(
+            "@/lib/games/guestCompletions"
+          );
+          setAlreadyCompleted(readGuestCompletedIds().has(g.id));
+        }
       } else {
         setAlreadyCompleted(false);
       }
     })();
   }, [slug]);
+
 
   const stages = useMemo(() => {
     if (!game || game === "loading") return [];
@@ -132,7 +145,29 @@ function GamePlayPage() {
     setStageDone(true);
     if (isLast) {
       setFinalScore(score);
-      const { firstTime } = await recordCompletion(game.id, stageIdx, score);
+
+      // Resolve identity ONCE — determines both the reward-guard source and
+      // the userKey passed to the daily-challenge event.
+      let uid: string | null = null;
+      try {
+        const { data } = await supabase.auth.getUser();
+        uid = data.user?.id ?? null;
+      } catch {
+        uid = null;
+      }
+
+      // Reward guard.
+      //   • Authenticated: server `game_progress.completed` via recordCompletion.
+      //   • Guest: local guest ledger — grants exactly once per game id,
+      //     survives reloads, never touches Supabase.
+      let firstTime = false;
+      if (uid) {
+        const res = await recordCompletion(game.id, stageIdx, score);
+        firstTime = res.firstTime;
+      } else {
+        firstTime = addGuestCompletion(game.id).firstTime;
+      }
+
       if (firstTime) {
         // Economy cap — mini-games contribute XP but must not dwarf campaign work.
         if (game.xp_reward > 0) addPoints(Math.min(game.xp_reward, 40));
@@ -155,12 +190,7 @@ function GamePlayPage() {
       // Canonical daily-challenge event — Home + Hall subscribe to this and
       // will immediately reflect the new completion state. Idempotent, so
       // firing on replay is harmless (rewards are gated by `firstTime`).
-      try {
-        const { data } = await supabase.auth.getUser();
-        markDailyChallengeCompletedLocally(data.user?.id ?? "guest", game.id);
-      } catch {
-        markDailyChallengeCompletedLocally("guest", game.id);
-      }
+      markDailyChallengeCompletedLocally(uid ?? "guest", game.id);
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
