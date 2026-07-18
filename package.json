@@ -15,7 +15,8 @@
     "open:android": "npx cap open android",
     "apk:debug": "npm run sync:android && node scripts/run-android-gradle.mjs",
     "check:economy-parity": "node scripts/check-economy-parity.mjs",
-    "test:daily-challenge-scheduler": "node --import tsx scripts/test-daily-challenge-scheduler.mjs"
+    "test:daily-challenge-scheduler": "node --import tsx scripts/test-daily-challenge-scheduler.mjs",
+    "test:answer-matching": "node --experimental-strip-types scripts/test-arabic-answer-matching.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
