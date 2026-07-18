@@ -83,8 +83,12 @@ export function useSupabaseInvestigations() {
       }
 
       try {
+        // Player-facing reads MUST go through the security-invoker view
+        // `investigations_public`, which excludes `draft_data` and other
+        // admin-only lifecycle columns. The base table's SELECT policy
+        // no longer grants those columns to anon/authenticated.
         const { data, error } = await supabase
-          .from("investigations" as any)
+          .from("investigations_public" as any)
           .select("*")
           .eq("enabled", true)
           .order("updated_at", { ascending: false });
@@ -135,7 +139,7 @@ export function useSupabaseInvestigation(slug: string | undefined) {
 
       try {
         const { data, error } = await supabase
-          .from("investigations" as any)
+          .from("investigations_public" as any)
           .select("*")
           .eq("slug", slug)
           .maybeSingle();
