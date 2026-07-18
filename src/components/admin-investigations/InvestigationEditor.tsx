@@ -291,7 +291,7 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
 
   // ---- Load ----
   const load = useCallback(async () => {
-    setLoading(true); setLoadError(null); setDryReport(null); setDryHash(null);
+    setLoading(true); setLoadError(null);
     try {
       const { data, error } = await supabase.rpc("admin_get_investigation_full" as any, {
         p_id_or_slug: investigationId,
@@ -302,6 +302,7 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
       const s = toEditorState(data);
       setInitialState(s);
       setState(s);
+      setRemovalApproved(false);
     } catch (e: any) {
       setLoadError(e?.message ?? "تعذّر تحميل التحقيق.");
     } finally {
@@ -315,12 +316,6 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
     if (!initialState || !state) return false;
     return canonicalJSON(toPersistedShape(initialState)) !== canonicalJSON(toPersistedShape(state));
   }, [initialState, state]);
-
-  // Invalidate any dry-run when state changes or removal approval flips.
-  useEffect(() => {
-    setDryReport(null);
-    setDryHash(null);
-  }, [state, removalApproved]);
 
   // Unsaved-change protection covers ALL navigation paths:
   //  • internal <Link> / programmatic navigate()
