@@ -44,7 +44,7 @@ export const Route = createFileRoute("/investigations")({
 
 function InvestigationsIndex() {
   const { profile } = useProfile();
-  const serverProgress = useInvestigationProgress();
+  const canonicalProgress = useCanonicalInvestigationProgress();
   const { rows } = useSupabaseInvestigations();
   const navigate = useNavigate({ from: "/investigations" });
   const rawWorld = Route.useSearch().world;
