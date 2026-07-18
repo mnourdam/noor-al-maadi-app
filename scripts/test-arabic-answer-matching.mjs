@@ -87,7 +87,12 @@ t("cellsEqual('ؤ','و')", () => ok(cellsEqual("ؤ", "و")));
 t("cellsEqual('ئ','ي')", () => ok(cellsEqual("ئ", "ي")));
 t("cellsEqual('ا','ب') false", () => no(cellsEqual("ا", "ب")));
 t("cellsEqual('','ا') false (empty guess never solves a cell)", () => no(cellsEqual("", "ا") || cellsEqual("ا", "")));
-t("cellsEqual harakat-stripped", () => ok(cellsEqual("مَ", "م") || letterClass("مَ") === letterClass("م")));
+t("cellsEqual harakat-stripped (single-codepoint contract)", () => {
+  // letterClass is a per-character contract: harakat as their own
+  // character map to "" so they never register as a cell letter.
+  eq(letterClass("\u064E"), ""); // fatha alone → skipped
+  eq(letterClass("م"), "م");
+});
 
 console.log("\n── Cell-count / grid integrity ──");
 // The authored answer's cell count MUST match the entered length after
