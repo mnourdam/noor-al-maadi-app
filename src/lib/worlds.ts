@@ -185,96 +185,38 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
   }
   if (!entity) return null;
 
-  const related = await resolveRelatedEntities(entity);
+  // Sections come DIRECTLY from the canonical world index. This is the
+  // same set counted by World progress totals — no separate related-graph
+  // filter, no era/state alias duplication. Guarantees numeric parity
+  // between "we count N cities in this world" and "we display N city
+  // cards inside this world".
+  const idx = buildWorldIndex().get(slug);
+  const wrap = (e: SupabaseEncyclopediaEntity): RelatedNode => ({
+    entity: e,
+    score: 0,
+    reason: "explicit",
+  });
 
   const sections: Record<WorldSectionKey, RelatedNode[]> = {
-    figure: [],
-    city: [],
-    event: [],
-    battle: [],
-    landmark: [],
-    artifact: [],
+    figure: (idx?.byBucket.figure ?? []).map(wrap),
+    city:   (idx?.byBucket.city   ?? []).map(wrap),
+    event:  (idx?.byBucket.event  ?? []).map(wrap),
+    battle: (idx?.byBucket.battle ?? []).map(wrap),
+    landmark: (idx?.byBucket.landmark ?? []).map(wrap),
+    artifact: (idx?.byBucket.artifact ?? []).map(wrap),
   };
-  const scholars: RelatedNode[] = [];
-  const states: RelatedNode[] = [];
-
-
-
-  // Strict world membership filter. The relationship resolver pulls in
-  // entities via campaigns, geography, and atlas links — none of which
-  // guarantee historical belonging. We accept a related entity for THIS
-  // world only when at least one explicit signal confirms it:
-  //   1. listed in this hub's own related / related_entities
-  //   2. entity.metadata.era matches the hub era
-  //   3. entity.metadata.state | affiliation | world | worldSlug matches
-  //      this hub's slug (or an accepted alias)
-  // Everything else is treated as ambiguous and surfaced for admin review
-  // instead of leaking onto the player-facing world page.
-  const hubMeta = metaObj(entity);
-  const explicitAllow = new Set<string>([
-    ...asStringList(hubMeta.related_entities).map(stripPrefix),
-    ...asStringList(hubMeta.related).map(stripPrefix),
-  ]);
-  const hubEra = WORLD_ERA[slug] ?? slug;
-  const acceptedStateRefs = new Set<string>(WORLD_STATE_ALIASES[slug] ?? [slug]);
-
-  const ambiguous: RelatedNode[] = [];
-  const belongs = (n: RelatedNode): boolean => {
-    const m = metaObj(n.entity);
-    if (explicitAllow.has(n.entity.slug)) return true;
-    const era = typeof m.era === "string" ? m.era.toLowerCase() : "";
-    if (era && era === hubEra) return true;
-    const refFields = ["state", "affiliation", "world", "worldSlug", "world_slug"];
-    for (const f of refFields) {
-      const v = m[f];
-      if (typeof v === "string" && acceptedStateRefs.has(v.toLowerCase())) return true;
-    }
-    const rel = asStringList(m.related_entities).map(stripPrefix);
-    if (rel.includes(slug)) return true;
-    return false;
-  };
-
-  for (const n of related) {
-    const t = n.entity.entity_type;
-    if (t === "state") {
-      // Connected worlds are handled separately below.
-      states.push(n);
-      continue;
-    }
-    if (!belongs(n)) {
-      ambiguous.push(n);
-      continue;
-    }
-    if (t === "scholar") scholars.push(n);
-    else if ((SECTION_KEYS as string[]).includes(t)) {
-      sections[t as WorldSectionKey].push(n);
-    }
-  }
-  // Fold scholars into the figures section so player UI stays tidy.
+  const scholars: RelatedNode[] = (idx?.byBucket.scholar ?? []).map(wrap);
+  // Fold scholars into figures for the UI (unchanged behavior).
   sections.figure = [...sections.figure, ...scholars];
 
-  // Sprint 2 — Historical Chronology Engine.
-  // Every section is ordered deterministically by timeline_order →
-  // timeline_year → timeline_start_year → metadata year. Never by
-  // relationship score, created_at, or insertion order.
+  // Deterministic chronological order per section.
   for (const k of SECTION_KEYS) {
     sections[k] = sortEntitiesChronological(sections[k]);
   }
 
-  if (ambiguous.length > 0 && typeof console !== "undefined") {
-    // Admin-review signal: never silently include ambiguous entities, but
-    // make them discoverable for triage.
-    console.warn(
-      `[worlds] ${ambiguous.length} ambiguous related entities suppressed for world "${slug}":`,
-      ambiguous.slice(0, 25).map((n) => `${n.entity.entity_type}:${n.entity.slug}`),
-    );
-  }
-
-  // Admin-review signal: count entities missing any chronology signal so
-  // the admin review surface can flag them for backfill.
+  // Admin-review signal: entities missing any chronology signal.
   const missingChronology = SECTION_KEYS.reduce(
     (sum, k) => sum + sections[k].filter((n) => !Number.isFinite(
-      // entitySortKey returns +Infinity when nothing is known
       (n.entity.timeline_order ?? 0) ||
       (n.entity.timeline_year ?? 0) ||
       (n.entity.timeline_start_year ?? 0),
@@ -287,12 +229,17 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
     );
   }
 
-
+  // Connected worlds are derived from the hub entity's own related states
+  // (a graph edge, not membership). Still handled via resolveRelatedEntities
+  // limited to state-type siblings that are themselves canonical hubs.
+  const related = await resolveRelatedEntities(entity);
+  const states: RelatedNode[] = related.filter((n) => n.entity.entity_type === "state");
   const connectedWorlds: SupabaseEncyclopediaEntity[] = states
     .filter((n) => WORLD_SLUGS.has(n.entity.slug) && n.entity.slug !== slug)
     .map((n) => n.entity);
 
-  const campaignsCount = await countCampaignsForSlug(slug);
+  const campaignsCount = getWorldCampaignIds(slug).size;
+
 
   const stats: Record<WorldSectionKey, number> = {
     figure: sections.figure.length,
