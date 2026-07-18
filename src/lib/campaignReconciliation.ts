@@ -266,7 +266,6 @@ export async function reconcileLegacyCampaignProgress(): Promise<ReconciliationR
       campaign.id,
       campaign.chapters.map(c => c.id).sort().join(","),
       [...cloudCompleted].sort().join(","),
-      deltaProven ? "1" : "0",
       ledgerProven ? "1" : "0",
       declaredSlugs.join(","),
       declaredSlugs.filter(s => cloud.collectionSlugs.has(s)).join(","),
