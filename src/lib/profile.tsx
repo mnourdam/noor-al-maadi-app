@@ -33,6 +33,7 @@ function dailyMissionsForDate(_d: Date = new Date()): { id: string }[] {
   return [];
 }
 import { HEART_MAX, getEffectiveHearts, commitHearts, ACTIVITY_COOLDOWN_MS, activityKey, STREAK_MILESTONES, type HeartActivity, type StreakMilestone } from "./hearts";
+import { STARTING_DINARS, HEART_COST_DINARS } from "./economy";
 import { DEFAULT_AVATAR_ID } from "./avatars";
 import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notifications";
 import { androidMeasure, recordAndroidAction } from "./androidFreezeDiagnostics";
