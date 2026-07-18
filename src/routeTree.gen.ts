@@ -127,7 +127,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthCustomVerifyReauthRouteImport } from './routes/lovable/email/auth-custom/verify-reauth'
 import { Route as LovableEmailAuthCustomDispatchRouteImport } from './routes/lovable/email/auth-custom/dispatch'
 import { Route as ApiPublicWebhooksResendRouteImport } from './routes/api/public/webhooks/resend'
-import { Route as AdminInvestigationsIdEditRouteImport } from './routes/admin.investigations_.$id.edit'
+import { Route as AdminInvestigationsIdEditRouteImport } from './routes/admin.investigations.$id.edit'
 import { Route as AdminCampaignsIdEditRouteImport } from './routes/admin.campaigns.$id.edit'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
 
@@ -746,9 +746,9 @@ const ApiPublicWebhooksResendRoute = ApiPublicWebhooksResendRouteImport.update({
 } as any)
 const AdminInvestigationsIdEditRoute =
   AdminInvestigationsIdEditRouteImport.update({
-    id: '/admin/investigations_/$id/edit',
-    path: '/admin/investigations/$id/edit',
-    getParentRoute: () => rootRouteImport,
+    id: '/$id/edit',
+    path: '/$id/edit',
+    getParentRoute: () => AdminInvestigationsRoute,
   } as any)
 const AdminCampaignsIdEditRoute = AdminCampaignsIdEditRouteImport.update({
   id: '/admin/campaigns/$id/edit',
@@ -1115,7 +1115,7 @@ export interface FileRoutesById {
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/investigations/': typeof AdminInvestigationsIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
-  '/admin/investigations_/$id/edit': typeof AdminInvestigationsIdEditRoute
+  '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
   '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -1481,7 +1481,7 @@ export interface FileRouteTypes {
     | '/admin/games/'
     | '/admin/investigations/'
     | '/admin/campaigns/$id/edit'
-    | '/admin/investigations_/$id/edit'
+    | '/admin/investigations/$id/edit'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
     | '/lovable/email/auth-custom/verify-reauth'
@@ -1587,7 +1587,6 @@ export interface RootRouteChildren {
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   AdminCampaignsIndexRoute: typeof AdminCampaignsIndexRoute
   AdminCampaignsIdEditRoute: typeof AdminCampaignsIdEditRoute
-  AdminInvestigationsIdEditRoute: typeof AdminInvestigationsIdEditRoute
   ApiPublicWebhooksResendRoute: typeof ApiPublicWebhooksResendRoute
   LovableEmailAuthCustomDispatchRoute: typeof LovableEmailAuthCustomDispatchRoute
   LovableEmailAuthCustomVerifyReauthRoute: typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -2426,12 +2425,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksResendRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/investigations_/$id/edit': {
-      id: '/admin/investigations_/$id/edit'
-      path: '/admin/investigations/$id/edit'
+    '/admin/investigations/$id/edit': {
+      id: '/admin/investigations/$id/edit'
+      path: '/$id/edit'
       fullPath: '/admin/investigations/$id/edit'
       preLoaderRoute: typeof AdminInvestigationsIdEditRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminInvestigationsRoute
     }
     '/admin/campaigns/$id/edit': {
       id: '/admin/campaigns/$id/edit'
@@ -2554,10 +2553,12 @@ const AdminImportHistoryRouteWithChildren =
 
 interface AdminInvestigationsRouteChildren {
   AdminInvestigationsIndexRoute: typeof AdminInvestigationsIndexRoute
+  AdminInvestigationsIdEditRoute: typeof AdminInvestigationsIdEditRoute
 }
 
 const AdminInvestigationsRouteChildren: AdminInvestigationsRouteChildren = {
   AdminInvestigationsIndexRoute: AdminInvestigationsIndexRoute,
+  AdminInvestigationsIdEditRoute: AdminInvestigationsIdEditRoute,
 }
 
 const AdminInvestigationsRouteWithChildren =
@@ -2656,7 +2657,6 @@ const rootRouteChildren: RootRouteChildren = {
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   AdminCampaignsIndexRoute: AdminCampaignsIndexRoute,
   AdminCampaignsIdEditRoute: AdminCampaignsIdEditRoute,
-  AdminInvestigationsIdEditRoute: AdminInvestigationsIdEditRoute,
   ApiPublicWebhooksResendRoute: ApiPublicWebhooksResendRoute,
   LovableEmailAuthCustomDispatchRoute: LovableEmailAuthCustomDispatchRoute,
   LovableEmailAuthCustomVerifyReauthRoute:
