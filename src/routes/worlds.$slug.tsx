@@ -692,8 +692,32 @@ function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; pro
   );
 }
 
-function ContentSection({ sectionKey, items }: { sectionKey: WorldSectionKey; items: RelatedNode[] }) {
+/** Slug of the Prophet ﷺ entity. Always pinned first inside the Prophetic
+ *  world. Rendered with a premium gold card and NO face depiction. */
+const PROPHET_SLUG = "prophet-muhammad";
+
+function ContentSection({
+  worldSlug,
+  sectionKey,
+  items,
+}: {
+  worldSlug: string;
+  sectionKey: WorldSectionKey;
+  items: RelatedNode[];
+}) {
   const meta = SECTION_META[sectionKey];
+
+  // Inside the Prophetic world, the Prophet ﷺ must always appear first with
+  // a premium gold treatment. Pinning is derived from real encyclopedia data
+  // — if the entity is missing from `items`, no card is fabricated.
+  const isPropheticFigures = worldSlug === "prophetic" && sectionKey === "figure";
+  const propheticFirst = isPropheticFigures
+    ? items.find((n) => n.entity.slug === PROPHET_SLUG) ?? null
+    : null;
+  const rest = propheticFirst
+    ? items.filter((n) => n.entity.slug !== PROPHET_SLUG)
+    : items;
+
   return (
     <section className="mt-8" data-subsection={sectionKey}>
       <div className="mb-3 flex items-center gap-2">
@@ -703,8 +727,44 @@ function ContentSection({ sectionKey, items }: { sectionKey: WorldSectionKey; it
           {items.length}
         </span>
       </div>
+
+      {propheticFirst && (
+        <Link
+          to="/encyclopedia/entity/$id"
+          params={{ id: propheticFirst.entity.slug }}
+          data-role="prophet-card"
+          className="relative mb-3 block overflow-hidden rounded-3xl border border-gold/60 bg-gradient-to-br from-gold/30 via-black/60 to-black/40 p-4 shadow-[0_0_40px_-10px_rgba(212,175,55,0.55)] ring-1 ring-gold/40 transition hover:border-gold hover:shadow-[0_0_60px_-8px_rgba(212,175,55,0.75)]"
+        >
+          <div className="pointer-events-none absolute -left-8 -top-8 size-40 rounded-full bg-gold/30 blur-3xl" />
+          <div className="pointer-events-none absolute -right-10 -bottom-10 size-40 rounded-full bg-gold/15 blur-3xl" />
+          <div className="relative flex items-center gap-4">
+            <span
+              aria-hidden="true"
+              className="grid size-16 shrink-0 place-items-center rounded-2xl border border-gold/70 bg-black/70 ring-1 ring-gold/40"
+            >
+              {/* No face depiction — a calligraphic star glyph only. */}
+              <Star className="size-7 text-gold" strokeWidth={1.5} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="inline-flex items-center gap-1.5 rounded-full border border-gold/60 bg-black/50 px-2.5 py-0.5 text-[10px] font-bold tracking-[0.2em] text-gold">
+                رسول الله ﷺ
+              </p>
+              <p className="font-display mt-1 truncate text-[15px] font-bold text-gold-foreground">
+                {propheticFirst.entity.title}
+              </p>
+              {propheticFirst.entity.subtitle && (
+                <p className="mt-0.5 truncate text-[11px] text-white/70">
+                  {propheticFirst.entity.subtitle}
+                </p>
+              )}
+            </div>
+            <ChevronRight className="size-4 text-gold" />
+          </div>
+        </Link>
+      )}
+
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {items.map((n) => (
+        {rest.map((n) => (
           <Link
             key={n.entity.id}
             to="/encyclopedia/entity/$id"
@@ -725,6 +785,57 @@ function ContentSection({ sectionKey, items }: { sectionKey: WorldSectionKey; it
         ))}
       </div>
     </section>
+  );
+}
+
+/** Rich Prev/Next world card — real completion % from canonical progress. */
+function WorldNavCard({
+  direction,
+  hub,
+  title,
+  pct,
+}: {
+  direction: "prev" | "next";
+  hub: { slug: string; glyph: string };
+  title: string | undefined;
+  pct: number | undefined;
+}) {
+  const isPrev = direction === "prev";
+  const displayPct = typeof pct === "number" ? pct : null;
+  return (
+    <Link
+      to="/worlds/$slug"
+      params={{ slug: hub.slug }}
+      className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-gold/20 bg-black/30 p-3 transition hover:border-gold/55"
+    >
+      {isPrev && <ArrowRight className="size-4 shrink-0 text-gold/70" />}
+      <span
+        aria-hidden="true"
+        className="grid size-11 shrink-0 place-items-center rounded-xl bg-black/50 text-2xl ring-1 ring-white/10"
+      >
+        {hub.glyph}
+      </span>
+      <div className={`min-w-0 flex-1 ${isPrev ? "text-right" : "text-left"}`}>
+        <p className="text-[10px] tracking-[0.2em] text-muted-foreground">
+          {isPrev ? "العالم السابق" : "العالم التالي"}
+        </p>
+        <p className="font-display truncate text-[13px] font-bold leading-snug">
+          {title ?? "—"}
+        </p>
+        <div className="mt-1.5 flex items-center gap-2">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/5">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-gold/60 to-gold"
+              style={{ width: `${displayPct ?? 0}%`, transition: "width 400ms ease" }}
+            />
+          </div>
+          {displayPct !== null && (
+            <span className="tabular-nums text-[10px] text-gold/80">{displayPct}%</span>
+          )}
+        </div>
+      </div>
+      {!isPrev && <ArrowLeft className="size-4 shrink-0 text-gold/70" />}
+    </Link>
   );
 }
 
