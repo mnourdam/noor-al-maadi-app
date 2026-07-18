@@ -138,6 +138,7 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
       byBucket: emptyBuckets(),
       campaignIds: [],
       investigationSlugs: [],
+      campaignRowsById: new Map(),
     });
   }
 
@@ -155,17 +156,22 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
   }
 
   // 2. Campaigns → world via canonical worldSlug (fallback: entity refs).
+  // Also populate `campaignRowsById` on the winning world so downstream
+  // consumers get O(1) row lookup without rescanning the campaign list.
   const camps = localPublishedCampaigns() as Array<{ data: any }>;
   for (const c of camps) {
     const d = (c?.data ?? {}) as Record<string, unknown>;
+    const cid = typeof d.id === "string" ? d.id : null;
+    const assign = (ws: string) => {
+      const idx = byWorld.get(ws);
+      if (!idx || !cid) return;
+      idx.campaignIds.push(cid);
+      idx.campaignRowsById.set(cid, c);
+    };
     const ws = typeof d.worldSlug === "string" && WORLD_SLUGS.has(d.worldSlug as string)
       ? (d.worldSlug as string)
       : null;
-    if (ws) {
-      const idx = byWorld.get(ws);
-      if (idx && typeof d.id === "string") idx.campaignIds.push(d.id);
-      continue;
-    }
+    if (ws) { assign(ws); continue; }
     // Fallback: pick the world matched by the majority of core/supporting refs.
     const meta = (d.metadata && typeof d.metadata === "object" ? d.metadata : {}) as Record<string, unknown>;
     const refs: string[] = [];
@@ -182,7 +188,7 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
     }
     let best: string | null = null; let bestN = 0;
     for (const [ws2, n] of tally) if (n > bestN) { best = ws2; bestN = n; }
-    if (best && typeof d.id === "string") byWorld.get(best)!.campaignIds.push(d.id);
+    if (best) assign(best);
   }
 
   // 3. Investigations → world via majority era of related_entities.
