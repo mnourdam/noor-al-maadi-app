@@ -65,24 +65,6 @@ export const WORLD_ERA: Record<string, string> = {
   safavid: "safavid",
 };
 
-// State-reference aliases an entity may use to declare it belongs to a hub.
-const WORLD_STATE_ALIASES: Record<string, string[]> = {
-  "ayyubid-state": ["ayyubid", "ayyubid-state", "ayyubid-sultanate"],
-  "mamluk-sultanate": ["mamluk", "mamluks", "mamluk-sultanate"],
-  ottoman: ["ottoman", "ottomans", "ottoman-empire", "ottoman-state"],
-  umayyad: ["umayyad", "umayyads", "umayyad-caliphate", "umayyad-state"],
-  abbasid: ["abbasid", "abbasids", "abbasid-caliphate", "abbasid-state"],
-  andalus: ["andalus", "al-andalus", "andalus-state"],
-  rashidun: ["rashidun", "rashidun-caliphate"],
-  seljuk: ["seljuk", "seljuks", "seljuk-empire", "seljuk-state"],
-  zengid: ["zengid", "zengids"],
-  mongols: ["mongols", "mongol", "mongol-empire", "ilkhanid", "ilkhanate", "golden-horde"],
-  timurid: ["timurid", "timurids", "timurid-empire", "timurid-state"],
-  fatimid: ["fatimid", "fatimids", "fatimid-caliphate", "fatimid-state"],
-  safavid: ["safavid", "safavids", "safavid-empire", "safavid-state"],
-  prophetic: ["prophetic"],
-};
-
 export function findHub(slug: string): WorldHub | null {
   return WORLD_HUBS.find((h) => h.slug === slug) ?? null;
 }
@@ -118,44 +100,6 @@ function asStringList(v: unknown): string[] {
   return out;
 }
 
-function stripPrefix(s: string): string {
-  const colon = s.includes(":") ? s.split(":").pop()! : s;
-  return normalizeEntitySlug(colon);
-}
-
-async function countCampaignsForSlug(slug: string): Promise<number> {
-  await ensureLocalSnapshotLoaded();
-  const local = localPublishedCampaigns() as Array<{ data: any }>;
-  const data = local.length > 0
-    ? local
-    : (typeof navigator === "undefined" || navigator.onLine !== false)
-      ? (((await supabase.from("campaigns_public" as any).select("data").limit(500)) as any).data ?? [])
-      : [];
-
-  let count = 0;
-  for (const c of data) {
-    const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
-    // Preferred: canonical worldSlug (populated on 90%+ of published campaigns).
-    const ws = typeof cm.worldSlug === "string" ? cm.worldSlug : null;
-    if (ws) {
-      if (ws === slug) count++;
-      continue;
-    }
-    // Fallback for legacy imports without worldSlug: scan related-entity refs.
-    const cmeta = (cm.metadata && typeof cm.metadata === "object"
-      ? (cm.metadata as Record<string, unknown>)
-      : {});
-    const all = [
-      ...asStringList(cm.core_entities),
-      ...asStringList(cmeta.core_entities),
-      ...asStringList(cm.supporting_entities),
-      ...asStringList(cmeta.supporting_entities),
-    ].map(stripPrefix);
-    if (all.includes(slug)) count++;
-  }
-  return count;
-}
-
 
 export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
   await ensureLocalSnapshotLoaded();
@@ -178,39 +122,7 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
     bySlug.set(r.slug, r);
   }
 
-  // Count campaigns once per hub (cheap: 500 rows, in-memory filter per hub).
-  const localCampaignRows = localPublishedCampaigns() as Array<{ data: any }>;
-  const campRows = localCampaignRows.length > 0
-    ? localCampaignRows
-    : (typeof navigator === "undefined" || navigator.onLine !== false)
-      ? (((await supabase.from("campaigns_public" as any).select("data").limit(500)) as any).data ?? [])
-      : [];
-
-  const campCount = new Map<string, number>();
-  for (const c of campRows) {
-    const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
-    // Preferred: canonical worldSlug directly on the campaign.
-    const ws = typeof cm.worldSlug === "string" ? cm.worldSlug : null;
-    if (ws) {
-      if (WORLD_SLUGS.has(ws)) campCount.set(ws, (campCount.get(ws) ?? 0) + 1);
-      continue;
-    }
-    // Fallback: entity-ref scan for legacy imports missing worldSlug.
-    const cmeta = (cm.metadata && typeof cm.metadata === "object"
-      ? (cm.metadata as Record<string, unknown>)
-      : {});
-    const all = new Set([
-      ...asStringList(cm.core_entities),
-      ...asStringList(cmeta.core_entities),
-      ...asStringList(cm.supporting_entities),
-      ...asStringList(cmeta.supporting_entities),
-    ].map(stripPrefix));
-    for (const s of slugs) {
-      if (all.has(s)) campCount.set(s, (campCount.get(s) ?? 0) + 1);
-    }
-  }
-
-
+  // Campaign counts come from the CANONICAL world index. No separate scan.
   const out: WorldSummary[] = [];
   for (const hub of WORLD_HUBS) {
     const entity = bySlug.get(hub.slug);
@@ -220,12 +132,14 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
       hub,
       entity,
       relatedCount: related,
-      campaignsCount: campCount.get(hub.slug) ?? 0,
+      campaignsCount: getWorldCampaignIds(hub.slug).size,
     });
   }
   out.sort((a, b) => a.hub.order - b.hub.order);
   return out;
 }
+
+
 
 export type WorldSectionKey =
   | "figure"
