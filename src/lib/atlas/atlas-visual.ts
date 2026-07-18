@@ -5,14 +5,10 @@
 // from that. This keeps `encyclopedia_entities` as the single source of
 // truth for content while the Atlas remains a pure visualization layer.
 import type { AtlasEntityKind, AtlasEntityRow } from "@/lib/atlas-entities";
-import { WORLD_HUBS, WORLD_ERA } from "@/lib/worlds";
+import { ERA_TO_WORLD } from "@/lib/worlds-progress";
+import { WORLD_HUBS } from "@/lib/worlds";
 
-/** era id → world hub slug. Reverse of WORLD_ERA. */
-export const ERA_TO_WORLD: Record<string, string> = (() => {
-  const out: Record<string, string> = {};
-  for (const [world, era] of Object.entries(WORLD_ERA)) out[era] = world;
-  return out;
-})();
+export { ERA_TO_WORLD };
 
 export function worldForEntity(e: { era: string | null }): string | null {
   if (!e.era) return null;

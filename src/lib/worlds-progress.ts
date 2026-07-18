@@ -35,7 +35,7 @@ import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 // ------------------------------------------------------------
 
 export type EntityBucket =
-  | "figure" | "city" | "event" | "battle" | "landmark" | "artifact" | "state";
+  | "figure" | "city" | "event" | "battle" | "landmark" | "artifact" | "state" | "scholar";
 
 export type WorldEntityIndex = {
   slug: string;                    // world slug
@@ -79,7 +79,7 @@ export type Recommendation =
 // to include the same conflated tags handled there).
 // ------------------------------------------------------------
 
-const ERA_TO_WORLD: Record<string, string> = (() => {
+export const ERA_TO_WORLD: Record<string, string> = (() => {
   const out: Record<string, string> = {};
   for (const [world, era] of Object.entries(WORLD_ERA)) out[era] = world;
   // Historical era aliases that the encyclopedia uses interchangeably.
@@ -121,7 +121,7 @@ function snapshotVersion(): number {
 }
 
 function emptyBuckets(): Record<EntityBucket, SupabaseEncyclopediaEntity[]> {
-  return { figure: [], city: [], event: [], battle: [], landmark: [], artifact: [], state: [] };
+  return { figure: [], city: [], event: [], battle: [], landmark: [], artifact: [], state: [], scholar: [] };
 }
 
 /** Build the static world→entity/campaign/investigation index. Memoised. */

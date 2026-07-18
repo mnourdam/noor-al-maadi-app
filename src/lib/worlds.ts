@@ -1,18 +1,22 @@
 // Historical Worlds — player-facing exploration hubs.
-// Sources: encyclopedia_entities (hubs + related), admin_campaigns (counts).
-// Connected worlds are derived from related_entities limited to other hub slugs.
-// No hardcoded content beyond initial ordering + glyphs.
+// Membership is delegated to the CANONICAL resolver in
+// `worlds-progress.ts::buildWorldIndex`. This module contains no
+// duplicate era / state-alias / entity-ref mapping.
 
 import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
-import { normalizeEntitySlug, ENCYCLOPEDIA_ENTITY_COLUMNS } from "@/lib/encyclopedia-source";
-import { resolveRelatedEntities, type RelatedNode } from "@/lib/relationship-graph";
+import { ENCYCLOPEDIA_ENTITY_COLUMNS } from "@/lib/encyclopedia-source";
+import type { RelatedNode } from "@/lib/relationship-graph";
+import { resolveRelatedEntities } from "@/lib/relationship-graph";
 import { sortEntitiesChronological } from "@/lib/entityChronology";
 import {
   ensureLocalSnapshotLoaded,
   localEncyclopediaBySlug,
-  localPublishedCampaigns,
 } from "@/lib/local-first-store";
+import {
+  buildWorldIndex,
+  getWorldCampaignIds,
+} from "@/lib/worlds-progress";
 
 export type WorldHub = {
   slug: string;
@@ -61,24 +65,6 @@ export const WORLD_ERA: Record<string, string> = {
   safavid: "safavid",
 };
 
-// State-reference aliases an entity may use to declare it belongs to a hub.
-const WORLD_STATE_ALIASES: Record<string, string[]> = {
-  "ayyubid-state": ["ayyubid", "ayyubid-state", "ayyubid-sultanate"],
-  "mamluk-sultanate": ["mamluk", "mamluks", "mamluk-sultanate"],
-  ottoman: ["ottoman", "ottomans", "ottoman-empire", "ottoman-state"],
-  umayyad: ["umayyad", "umayyads", "umayyad-caliphate", "umayyad-state"],
-  abbasid: ["abbasid", "abbasids", "abbasid-caliphate", "abbasid-state"],
-  andalus: ["andalus", "al-andalus", "andalus-state"],
-  rashidun: ["rashidun", "rashidun-caliphate"],
-  seljuk: ["seljuk", "seljuks", "seljuk-empire", "seljuk-state"],
-  zengid: ["zengid", "zengids"],
-  mongols: ["mongols", "mongol", "mongol-empire", "ilkhanid", "ilkhanate", "golden-horde"],
-  timurid: ["timurid", "timurids", "timurid-empire", "timurid-state"],
-  fatimid: ["fatimid", "fatimids", "fatimid-caliphate", "fatimid-state"],
-  safavid: ["safavid", "safavids", "safavid-empire", "safavid-state"],
-  prophetic: ["prophetic"],
-};
-
 export function findHub(slug: string): WorldHub | null {
   return WORLD_HUBS.find((h) => h.slug === slug) ?? null;
 }
@@ -114,44 +100,6 @@ function asStringList(v: unknown): string[] {
   return out;
 }
 
-function stripPrefix(s: string): string {
-  const colon = s.includes(":") ? s.split(":").pop()! : s;
-  return normalizeEntitySlug(colon);
-}
-
-async function countCampaignsForSlug(slug: string): Promise<number> {
-  await ensureLocalSnapshotLoaded();
-  const local = localPublishedCampaigns() as Array<{ data: any }>;
-  const data = local.length > 0
-    ? local
-    : (typeof navigator === "undefined" || navigator.onLine !== false)
-      ? (((await supabase.from("campaigns_public" as any).select("data").limit(500)) as any).data ?? [])
-      : [];
-
-  let count = 0;
-  for (const c of data) {
-    const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
-    // Preferred: canonical worldSlug (populated on 90%+ of published campaigns).
-    const ws = typeof cm.worldSlug === "string" ? cm.worldSlug : null;
-    if (ws) {
-      if (ws === slug) count++;
-      continue;
-    }
-    // Fallback for legacy imports without worldSlug: scan related-entity refs.
-    const cmeta = (cm.metadata && typeof cm.metadata === "object"
-      ? (cm.metadata as Record<string, unknown>)
-      : {});
-    const all = [
-      ...asStringList(cm.core_entities),
-      ...asStringList(cmeta.core_entities),
-      ...asStringList(cm.supporting_entities),
-      ...asStringList(cmeta.supporting_entities),
-    ].map(stripPrefix);
-    if (all.includes(slug)) count++;
-  }
-  return count;
-}
-
 
 export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
   await ensureLocalSnapshotLoaded();
@@ -174,39 +122,7 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
     bySlug.set(r.slug, r);
   }
 
-  // Count campaigns once per hub (cheap: 500 rows, in-memory filter per hub).
-  const localCampaignRows = localPublishedCampaigns() as Array<{ data: any }>;
-  const campRows = localCampaignRows.length > 0
-    ? localCampaignRows
-    : (typeof navigator === "undefined" || navigator.onLine !== false)
-      ? (((await supabase.from("campaigns_public" as any).select("data").limit(500)) as any).data ?? [])
-      : [];
-
-  const campCount = new Map<string, number>();
-  for (const c of campRows) {
-    const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
-    // Preferred: canonical worldSlug directly on the campaign.
-    const ws = typeof cm.worldSlug === "string" ? cm.worldSlug : null;
-    if (ws) {
-      if (WORLD_SLUGS.has(ws)) campCount.set(ws, (campCount.get(ws) ?? 0) + 1);
-      continue;
-    }
-    // Fallback: entity-ref scan for legacy imports missing worldSlug.
-    const cmeta = (cm.metadata && typeof cm.metadata === "object"
-      ? (cm.metadata as Record<string, unknown>)
-      : {});
-    const all = new Set([
-      ...asStringList(cm.core_entities),
-      ...asStringList(cmeta.core_entities),
-      ...asStringList(cm.supporting_entities),
-      ...asStringList(cmeta.supporting_entities),
-    ].map(stripPrefix));
-    for (const s of slugs) {
-      if (all.has(s)) campCount.set(s, (campCount.get(s) ?? 0) + 1);
-    }
-  }
-
-
+  // Campaign counts come from the CANONICAL world index. No separate scan.
   const out: WorldSummary[] = [];
   for (const hub of WORLD_HUBS) {
     const entity = bySlug.get(hub.slug);
@@ -216,12 +132,14 @@ export async function fetchWorldsIndex(): Promise<WorldSummary[]> {
       hub,
       entity,
       relatedCount: related,
-      campaignsCount: campCount.get(hub.slug) ?? 0,
+      campaignsCount: getWorldCampaignIds(hub.slug).size,
     });
   }
   out.sort((a, b) => a.hub.order - b.hub.order);
   return out;
 }
+
+
 
 export type WorldSectionKey =
   | "figure"
@@ -267,96 +185,38 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
   }
   if (!entity) return null;
 
-  const related = await resolveRelatedEntities(entity);
+  // Sections come DIRECTLY from the canonical world index. This is the
+  // same set counted by World progress totals — no separate related-graph
+  // filter, no era/state alias duplication. Guarantees numeric parity
+  // between "we count N cities in this world" and "we display N city
+  // cards inside this world".
+  const idx = buildWorldIndex().get(slug);
+  const wrap = (e: SupabaseEncyclopediaEntity): RelatedNode => ({
+    entity: e,
+    score: 0,
+    reason: "explicit",
+  });
 
   const sections: Record<WorldSectionKey, RelatedNode[]> = {
-    figure: [],
-    city: [],
-    event: [],
-    battle: [],
-    landmark: [],
-    artifact: [],
+    figure: (idx?.byBucket.figure ?? []).map(wrap),
+    city:   (idx?.byBucket.city   ?? []).map(wrap),
+    event:  (idx?.byBucket.event  ?? []).map(wrap),
+    battle: (idx?.byBucket.battle ?? []).map(wrap),
+    landmark: (idx?.byBucket.landmark ?? []).map(wrap),
+    artifact: (idx?.byBucket.artifact ?? []).map(wrap),
   };
-  const scholars: RelatedNode[] = [];
-  const states: RelatedNode[] = [];
-
-
-
-  // Strict world membership filter. The relationship resolver pulls in
-  // entities via campaigns, geography, and atlas links — none of which
-  // guarantee historical belonging. We accept a related entity for THIS
-  // world only when at least one explicit signal confirms it:
-  //   1. listed in this hub's own related / related_entities
-  //   2. entity.metadata.era matches the hub era
-  //   3. entity.metadata.state | affiliation | world | worldSlug matches
-  //      this hub's slug (or an accepted alias)
-  // Everything else is treated as ambiguous and surfaced for admin review
-  // instead of leaking onto the player-facing world page.
-  const hubMeta = metaObj(entity);
-  const explicitAllow = new Set<string>([
-    ...asStringList(hubMeta.related_entities).map(stripPrefix),
-    ...asStringList(hubMeta.related).map(stripPrefix),
-  ]);
-  const hubEra = WORLD_ERA[slug] ?? slug;
-  const acceptedStateRefs = new Set<string>(WORLD_STATE_ALIASES[slug] ?? [slug]);
-
-  const ambiguous: RelatedNode[] = [];
-  const belongs = (n: RelatedNode): boolean => {
-    const m = metaObj(n.entity);
-    if (explicitAllow.has(n.entity.slug)) return true;
-    const era = typeof m.era === "string" ? m.era.toLowerCase() : "";
-    if (era && era === hubEra) return true;
-    const refFields = ["state", "affiliation", "world", "worldSlug", "world_slug"];
-    for (const f of refFields) {
-      const v = m[f];
-      if (typeof v === "string" && acceptedStateRefs.has(v.toLowerCase())) return true;
-    }
-    const rel = asStringList(m.related_entities).map(stripPrefix);
-    if (rel.includes(slug)) return true;
-    return false;
-  };
-
-  for (const n of related) {
-    const t = n.entity.entity_type;
-    if (t === "state") {
-      // Connected worlds are handled separately below.
-      states.push(n);
-      continue;
-    }
-    if (!belongs(n)) {
-      ambiguous.push(n);
-      continue;
-    }
-    if (t === "scholar") scholars.push(n);
-    else if ((SECTION_KEYS as string[]).includes(t)) {
-      sections[t as WorldSectionKey].push(n);
-    }
-  }
-  // Fold scholars into the figures section so player UI stays tidy.
+  const scholars: RelatedNode[] = (idx?.byBucket.scholar ?? []).map(wrap);
+  // Fold scholars into figures for the UI (unchanged behavior).
   sections.figure = [...sections.figure, ...scholars];
 
-  // Sprint 2 — Historical Chronology Engine.
-  // Every section is ordered deterministically by timeline_order →
-  // timeline_year → timeline_start_year → metadata year. Never by
-  // relationship score, created_at, or insertion order.
+  // Deterministic chronological order per section.
   for (const k of SECTION_KEYS) {
     sections[k] = sortEntitiesChronological(sections[k]);
   }
 
-  if (ambiguous.length > 0 && typeof console !== "undefined") {
-    // Admin-review signal: never silently include ambiguous entities, but
-    // make them discoverable for triage.
-    console.warn(
-      `[worlds] ${ambiguous.length} ambiguous related entities suppressed for world "${slug}":`,
-      ambiguous.slice(0, 25).map((n) => `${n.entity.entity_type}:${n.entity.slug}`),
-    );
-  }
-
-  // Admin-review signal: count entities missing any chronology signal so
-  // the admin review surface can flag them for backfill.
+  // Admin-review signal: entities missing any chronology signal.
   const missingChronology = SECTION_KEYS.reduce(
     (sum, k) => sum + sections[k].filter((n) => !Number.isFinite(
-      // entitySortKey returns +Infinity when nothing is known
       (n.entity.timeline_order ?? 0) ||
       (n.entity.timeline_year ?? 0) ||
       (n.entity.timeline_start_year ?? 0),
@@ -369,12 +229,17 @@ export async function fetchWorldDetail(slug: string): Promise<WorldDetail | null
     );
   }
 
-
+  // Connected worlds are derived from the hub entity's own related states
+  // (a graph edge, not membership). Still handled via resolveRelatedEntities
+  // limited to state-type siblings that are themselves canonical hubs.
+  const related = await resolveRelatedEntities(entity);
+  const states: RelatedNode[] = related.filter((n) => n.entity.entity_type === "state");
   const connectedWorlds: SupabaseEncyclopediaEntity[] = states
     .filter((n) => WORLD_SLUGS.has(n.entity.slug) && n.entity.slug !== slug)
     .map((n) => n.entity);
 
-  const campaignsCount = await countCampaignsForSlug(slug);
+  const campaignsCount = getWorldCampaignIds(slug).size;
+
 
   const stats: Record<WorldSectionKey, number> = {
     figure: sections.figure.length,
