@@ -398,9 +398,32 @@ function AdminInvestigationsPage() {
 
         {err && (
           <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
-            تعذّر التحميل: {err}
+            <div className="flex flex-wrap items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span>تعذّر التحميل.</span>
+              {diag && (
+                <span className="rounded border border-red-400/40 bg-red-500/10 px-1.5 py-0.5 font-mono text-[10px] text-red-100">
+                  {diag.code}{diag.supabaseCode ? ` · ${diag.supabaseCode}` : ""}
+                </span>
+              )}
+            </div>
+            {diag?.hint && <div className="mt-1 text-xs text-red-100/80">{diag.hint}</div>}
+            {import.meta.env.DEV && (
+              <details className="mt-2 text-[11px] text-red-100/70">
+                <summary className="cursor-pointer">تفاصيل تشخيصية</summary>
+                <pre className="mt-1 overflow-auto whitespace-pre-wrap" dir="ltr">{err}</pre>
+              </details>
+            )}
           </div>
         )}
+
+        {worldErr && !err && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-200">
+            <span className="me-1 rounded border border-amber-400/40 bg-amber-500/10 px-1 py-0.5 font-mono text-[10px]">WORLD_MAPPING_FAILED</span>
+            تعذّر تحميل ربط العوالم — سيتم عرض الصفوف دون تعيين عالم.
+          </div>
+        )}
+
 
         {rows === null && !err && (
           <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-8 text-center text-sm text-slate-400">جارٍ التحميل…</div>
