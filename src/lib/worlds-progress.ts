@@ -664,7 +664,8 @@ export function pickContinueJourney(
     /** Museum ownership set. */
     museum: Set<string>;
     cloudCampaign: Map<string, Set<string>>;
-    investigationsCompleted: string[];
+    /** Canonical completion set — see `computeWorldProgress`. */
+    investigationDoneKeys: Set<string>;
   },
 ): Recommendation {
   const idx = inputs.index.get(worldSlug);
