@@ -68,7 +68,7 @@ export function AchievementWatcher() {
     }
     firstRun.current = false;
     // We intentionally depend on the whole profile so any state change re-checks.
-  }, [profile, markAchievementEarned, addPoints]);
+  }, [profileForEval, profile.achievementsEarned, markAchievementEarned, addPoints]);
 
   return null;
 }
