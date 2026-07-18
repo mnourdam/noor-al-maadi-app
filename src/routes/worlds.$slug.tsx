@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight, Globe2, Users, Building2, Calendar,
   Swords, Landmark, Gem, ArrowLeft, ArrowRight, Compass,
-  BookOpen, Search, Trophy,
+  BookOpen, Search, Trophy, CheckCircle2, Clock,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
@@ -19,10 +19,16 @@ import type { RelatedNode } from "@/lib/relationship-graph";
 import {
   useWorldProgress,
   useStableSectionOrder,
+  useWorldMembership,
   type Recommendation,
   type SectionKey,
 } from "@/lib/worlds-progress";
 import { useProfile } from "@/lib/profile";
+import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
+import { useSupabaseInvestigations, countQuestions } from "@/lib/investigations-source";
+import { getCampaignProgress } from "@/lib/importedCampaignProgress";
+import { sortCampaignsChronological } from "@/lib/campaignChronology";
+import type { Campaign as ImportedCampaign } from "@/types/campaign";
 
 export const Route = createFileRoute("/worlds/$slug")({
   head: ({ params }) => ({
