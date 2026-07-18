@@ -32,9 +32,17 @@ export interface CrosswordClue {
   direction: "across" | "down";
   row: number; // 0-indexed
   col: number;
-  answer: string; // letters only, Arabic
+  answer: string; // letters only, Arabic — displayed as authored
   hint: string;
   related?: string; // encyclopedia entity id/slug
+  /**
+   * Phase 2d — optional accepted alternate spellings for word-level
+   * validation (paste input, Android plain-input flow). Never used to
+   * rewrite the grid; the authored `answer` is always what the player
+   * sees revealed. Absent by default → fully backward-compatible
+   * with existing crossword content.
+   */
+  acceptable?: string[];
 }
 
 export interface CrosswordStage {
