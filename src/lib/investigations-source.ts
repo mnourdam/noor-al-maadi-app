@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { onInvestigationPublished } from "@/lib/investigations/adminApi";
 
 export type InvestigationDifficulty = "easy" | "medium" | "hard";
 
@@ -66,6 +67,7 @@ export function countQuestions(steps: InvestigationStep[]): number {
 export function useSupabaseInvestigations() {
   const [rows, setRows] = useState<InvestigationRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,7 +110,13 @@ export function useSupabaseInvestigations() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshTick]);
+
+  // Refresh already-open pages when an admin publishes/drafts an investigation
+  // (same tab via CustomEvent, other tabs via BroadcastChannel).
+  useEffect(() => onInvestigationPublished((_, kind) => {
+    if (kind === "publish") setRefreshTick((n) => n + 1);
+  }), []);
 
   return { rows, error };
 }
@@ -117,6 +125,7 @@ export function useSupabaseInvestigations() {
 export function useSupabaseInvestigation(slug: string | undefined) {
   const [row, setRow] = useState<InvestigationRow | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     if (!slug) {
@@ -159,7 +168,17 @@ export function useSupabaseInvestigation(slug: string | undefined) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  }, [slug, refreshTick]);
+
+  // Refresh already-open detail pages when this investigation is republished.
+  useEffect(() => onInvestigationPublished((changedId, kind) => {
+    if (kind !== "publish") return;
+    if (!slug) return;
+    if (!changedId || changedId === slug || changedId === row?.id) {
+      setRefreshTick((n) => n + 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [slug, row?.id]);
 
   return { row, error };
 }

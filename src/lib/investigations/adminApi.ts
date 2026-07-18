@@ -104,3 +104,51 @@ export function notifyInvestigationInvalidated(id: string, kind: "draft" | "publ
     ch.close();
   } catch { /* older browsers */ }
 }
+
+// -------------------- Publish-event invalidation --------------------
+//
+// Mirrors the campaigns pattern (see `onCampaignPublished` in
+// `src/lib/supabaseCampaigns.ts`). Consumers subscribe once; the singleton
+// listener busts the local in-memory investigation cache so the very next
+// `useSupabaseInvestigation(s)` refresh reads freshly-published data from
+// Supabase, then fans out to registered listeners (admin list / player
+// hooks) for immediate re-render of already-open pages.
+
+type InvestigationPublishListener = (id: string, kind: "draft" | "publish") => void;
+const _investigationPublishListeners = new Set<InvestigationPublishListener>();
+let _investigationPublishInstalled = false;
+
+function ensureInvestigationPublishListener() {
+  if (_investigationPublishInstalled || typeof window === "undefined") return;
+  _investigationPublishInstalled = true;
+  const handle = async (id: string, kind: "draft" | "publish") => {
+    if (id) {
+      // Best-effort: bust the local snapshot copy so the next player fetch
+      // falls through to Supabase.
+      try {
+        const { invalidateLocalInvestigation } = await import("@/lib/local-first-store");
+        invalidateLocalInvestigation(id);
+      } catch { /* noop */ }
+    }
+    _investigationPublishListeners.forEach((fn) => {
+      try { fn(id, kind); } catch { /* noop */ }
+    });
+  };
+  window.addEventListener("irth:investigation-published", (e: any) => {
+    handle(e?.detail?.id, e?.detail?.kind ?? "publish");
+  });
+  try {
+    const ch = new BroadcastChannel("irth-investigations");
+    ch.onmessage = (m) => handle(m?.data?.id, m?.data?.kind ?? "publish");
+  } catch { /* noop */ }
+}
+
+/**
+ * Subscribe to investigation publish/draft notifications. Returns an
+ * unsubscribe function. Mirrors `onCampaignPublished`.
+ */
+export function onInvestigationPublished(fn: InvestigationPublishListener): () => void {
+  ensureInvestigationPublishListener();
+  _investigationPublishListeners.add(fn);
+  return () => { _investigationPublishListeners.delete(fn); };
+}

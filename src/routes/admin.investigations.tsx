@@ -37,6 +37,7 @@ import {
   summarizeReward,
   type InvestigationBoundaryWarning,
 } from "@/lib/investigations-normalize";
+import { onInvestigationPublished } from "@/lib/investigations/adminApi";
 
 export const Route = createFileRoute("/admin/investigations")({
   head: () => ({
@@ -176,6 +177,11 @@ function AdminInvestigationsPage() {
   };
 
   useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  // Refresh the list whenever an investigation is drafted/published (this
+  // tab or any other tab). Mirrors the campaigns admin behavior.
+  useEffect(() => onInvestigationPublished(() => { refresh(); }), []);
+
 
   // --- Enrich rows via the shared boundary normalizer (display only).
   const worldBySlug = useMemo(() => {
