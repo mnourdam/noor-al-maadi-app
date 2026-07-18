@@ -70,13 +70,25 @@ function WorldsIndex() {
               const overall = prog?.progress.overallPct ?? 0;
               const entities = prog?.progress.entities;
               const period = (w.entity.metadata as { period?: unknown } | null)?.period;
+              const isHere = from === w.hub.slug;
               return (
                 <Link
                   key={w.hub.slug}
                   to="/worlds/$slug"
                   params={{ slug: w.hub.slug }}
-                  className="group relative overflow-hidden rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-black/40 to-transparent p-5 transition hover:border-gold/55"
+                  aria-current={isHere ? "page" : undefined}
+                  className={
+                    "group relative overflow-hidden rounded-3xl border p-5 transition " +
+                    (isHere
+                      ? "border-gold/70 bg-gradient-to-br from-gold/20 via-black/40 to-transparent shadow-[0_0_40px_-10px_rgba(212,175,55,0.55)] ring-1 ring-gold/50"
+                      : "border-gold/25 bg-gradient-to-br from-gold/10 via-black/40 to-transparent hover:border-gold/55")
+                  }
                 >
+                  {isHere && (
+                    <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full border border-gold/60 bg-black/70 px-2 py-0.5 text-[9px] font-bold tracking-[0.2em] text-gold">
+                      <MapPin className="size-2.5" /> أنت هنا
+                    </span>
+                  )}
                   <div className="absolute -left-10 -top-10 size-32 rounded-full bg-gold/15 blur-3xl" />
                   <div className="relative">
                     <div className="flex items-start gap-3">
