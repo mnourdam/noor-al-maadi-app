@@ -21,6 +21,7 @@ import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
 import { AndroidBackHandler } from "../components/AndroidBackHandler";
 import { InAppBanner } from "../components/notifications/InAppBanner";
+import { DailyChallengeReminderScheduler } from "../components/DailyChallengeReminderScheduler";
 import { GoogleAuthResultDialog } from "../components/GoogleAuthResultDialog";
 import { IrthAuthDialog } from "../components/IrthAuthDialog";
 import { RecoveryModeGuard } from "../components/RecoveryModeGuard";
@@ -372,6 +373,7 @@ function RootComponent() {
           <SplashSequence />
           <AndroidBackHandler />
           <InAppBanner />
+          <DailyChallengeReminderScheduler />
           <GoogleAuthResultDialog />
           <IrthAuthDialog />
           <RecoveryModeGuard />

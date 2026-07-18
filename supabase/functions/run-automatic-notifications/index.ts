@@ -515,6 +515,17 @@ async function runDailyChallengeReminder(admin: any, baseUrl: string, serviceKey
   const runDate = todayISODate();
   const startOfToday = new Date(`${runDate}T00:00:00.000Z`).toISOString();
 
+  // Phase 2c — the canonical daily-challenge reminder now runs on
+  // each device via @capacitor/local-notifications (see
+  // src/lib/notifications/dailyChallengeScheduler.ts). The legacy
+  // server-driven FCM job is kept behind an explicit fail-closed
+  // flag so it cannot silently double-notify. To re-enable
+  // temporarily, set the env var DAILY_CHALLENGE_FCM_ENABLED="true"
+  // in the edge-function secrets.
+  if ((Deno.env.get("DAILY_CHALLENGE_FCM_ENABLED") ?? "").toLowerCase() !== "true") {
+    return { job: jobKey, sent: 0, skipped: "fcm_disabled_client_local_scheduler" };
+  }
+
   const { count: publishedGames } = await admin
     .from("games")
     .select("id", { count: "exact", head: true })
