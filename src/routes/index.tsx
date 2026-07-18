@@ -483,7 +483,7 @@ function HomeFull() {
         });
       }
     }
-    const evals = evaluateAchievements(profile);
+    const evals = evaluateAchievements(profile, { investigationsCompletedCount: canonicalInvHome.count });
     const earnedMap = profile.achievementsEarned ?? {};
     const nearest = evals
       .filter((e) => !e.earned && !earnedMap[e.id])
