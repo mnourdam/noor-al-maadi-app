@@ -20,7 +20,8 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 function q(sql) {
-  return execSync(`psql -tA -c ${JSON.stringify(sql)}`, { encoding: "utf8" }).trim();
+  const flat = sql.replace(/\s+/g, " ").trim();
+  return execSync(`psql -tA -c ${JSON.stringify(flat)}`, { encoding: "utf8" }).trim();
 }
 
 function readConst(path, name) {
