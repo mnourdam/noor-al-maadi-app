@@ -287,6 +287,7 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
       if (!e.key) return;
       if (
         e.key.startsWith("irth.daily-challenges.") ||
+        e.key === GUEST_COMPLETIONS_STORAGE_KEY ||
         e.key.startsWith("supabase.auth.token")
       ) {
         bump();
@@ -294,9 +295,14 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
     };
 
     window.addEventListener(CHANGE_EVENT, onCompleted as EventListener);
+    window.addEventListener(
+      GUEST_COMPLETIONS_EVENT,
+      onCompleted as EventListener,
+    );
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("storage", onStorage);
     window.addEventListener("focus", bump);
+
 
     // Schedule refresh at local midnight — plus a 1s cushion so the local
     // date has already flipped when we reload.
