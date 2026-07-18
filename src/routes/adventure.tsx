@@ -41,16 +41,18 @@ function AdventurePage() {
         <div dir="rtl" className="space-y-10">
           <section>
             <SectionHeader icon={<Sparkles className="h-4 w-4" />} title="تحدي اليوم" hint="يتجدّد كل صباح" />
-            {picks === null ? (
+            {loading || picks === null ? (
               <p className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
                 جارٍ التحميل…
               </p>
+            ) : allEligibleExhausted ? (
+              <ExhaustedBanner />
+            ) : todaysPicksDone ? (
+              <CompletedBanner />
             ) : !picks.length ? (
               <p className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
                 لم تُنشر تحديات بعد. تابع قريبًا.
               </p>
-            ) : allCompleted ? (
-              <CompletedBanner />
             ) : (
               <div className="space-y-4">
                 {picks.map((g) => (
@@ -60,16 +62,21 @@ function AdventurePage() {
             )}
           </section>
 
-          {/* Teaser — no more challenges today */}
-          <section>
-            <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-950 via-slate-900/60 to-slate-950 p-6 text-center">
-              <Moon className="mx-auto h-7 w-7 text-amber-300/80" strokeWidth={1.3} />
-              <p className="mt-3 text-sm leading-7 text-amber-100/90">
-                تتجدد التحديات عند بزوغ فجر الغد إن شاء الله.
-              </p>
-              <div className="mx-auto mt-3 h-px w-40 bg-gradient-to-l from-transparent via-amber-500/40 to-transparent" />
-            </div>
-          </section>
+          {/* Rotation reminder — hidden once every eligible challenge is done,
+              since a "come back tomorrow" line is misleading when nothing new
+              will unlock without new content. */}
+          {!allEligibleExhausted && (
+            <section>
+              <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-950 via-slate-900/60 to-slate-950 p-6 text-center">
+                <Moon className="mx-auto h-7 w-7 text-amber-300/80" strokeWidth={1.3} />
+                <p className="mt-3 text-sm leading-7 text-amber-100/90">
+                  تتجدد التحديات عند بداية يوم جديد.
+                </p>
+                <div className="mx-auto mt-3 h-px w-40 bg-gradient-to-l from-transparent via-amber-500/40 to-transparent" />
+              </div>
+            </section>
+          )}
+
 
           {/* Museum hall */}
           <section className="relative overflow-hidden rounded-2xl border border-amber-500/30 irth-title-card p-6 sm:p-8">
