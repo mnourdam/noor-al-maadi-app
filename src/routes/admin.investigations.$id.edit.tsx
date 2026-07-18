@@ -17,6 +17,6 @@ export const Route = createFileRoute("/admin/investigations/$id/edit")({
 });
 
 function EditorRoute() {
-  const { id } = useParams({ from: "/admin/investigations_/$id/edit" });
+  const { id } = useParams({ from: "/admin/investigations/$id/edit" });
   return <InvestigationEditor investigationId={id} />;
 }
