@@ -629,7 +629,7 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
 
 // ---------------- Sub-components ----------------
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children }: { children: ReactNode }) {
   return (
     <div dir="rtl" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-6 text-slate-100">
       <div className="mx-auto max-w-5xl space-y-5">{children}</div>
@@ -637,7 +637,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
       <h2 className="mb-3 text-sm font-bold text-amber-200">{title}</h2>
@@ -646,7 +646,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, required, full, children }: { label: string; required?: boolean; full?: boolean; children: React.ReactNode }) {
+function Field({ label, required, full, children }: { label: string; required?: boolean; full?: boolean; children: ReactNode }) {
   return (
     <label className={`block ${full ? "md:col-span-2" : ""}`}>
       <span className="mb-1 block text-xs text-slate-400">
