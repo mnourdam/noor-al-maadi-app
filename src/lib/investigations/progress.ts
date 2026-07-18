@@ -498,10 +498,6 @@ export function useCanonicalInvestigationProgress(): CanonicalInvestigationProgr
   }, [server.uid, server.ready, server.completedIds, pending, profile?.investigationsCompleted, idToSlug, slugToId]);
 }
 
-// Local re-export of React.useMemo under a stable name so the giant
-// dependency array above reads cleanly. Kept here to avoid re-importing
-// React at the top and drifting from the existing minimal imports.
-import { useMemo as useMemoCanonical } from "react";
 
 // Voluntary EMPTY export so callers can render a zero-state without
 // having to construct the empty shape themselves.
