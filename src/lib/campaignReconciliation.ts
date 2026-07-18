@@ -10,13 +10,11 @@
 //   STRONG  — auto-restore campaign completion + unlock set.
 //             Triggered when ANY of:
 //               A) local ledger has `campaign:<cid>` claim key
-//               B) applied_profile_deltas has a delta whose id
-//                  starts with `campaign-complete:<cid>`
-//               C) every unlock id declared by the campaign
+//               B) every unlock id declared by the campaign
 //                  (campaign.unlocks + finalRewards.unlocks +
 //                  every chapter rewards.unlocks) already exists
 //                  in the player's `user_collection`
-//               D) cloud user_campaign_progress has a completed
+//               C) cloud user_campaign_progress has a completed
 //                  row (completed_at IS NOT NULL) for every
 //                  canonical chapter id
 //   MEDIUM  — deterministic legacy-chapter-id remap only.
@@ -189,14 +187,12 @@ function mapLegacyChapterId(
 
 interface CloudSnapshot {
   cloudCompletedByCampaign: Map<string, Set<string>>;
-  campaignCompleteDeltaIds: Set<string>; // set of campaignIds proven by profile-delta ledger
   collectionSlugs: Set<string>;
 }
 
 async function fetchCloudSnapshot(uid: string): Promise<CloudSnapshot> {
-  const [progressRes, deltaRes, collectionRes] = await Promise.all([
+  const [progressRes, collectionRes] = await Promise.all([
     supabase.from("user_campaign_progress").select("campaign_id, chapter_id, completed_at").eq("user_id", uid),
-    supabase.from("applied_profile_deltas").select("delta_id, source").eq("user_id", uid),
     supabase.from("user_collection").select("item_id, source_campaign_id").eq("user_id", uid),
   ]);
 
@@ -208,22 +204,12 @@ async function fetchCloudSnapshot(uid: string): Promise<CloudSnapshot> {
     set.add(row.chapter_id);
   }
 
-  const campaignCompleteDeltaIds = new Set<string>();
-  for (const row of deltaRes.data ?? []) {
-    const id = String(row.delta_id ?? "");
-    // Historical convention: `campaign-complete:<cid>` or `campaign:<cid>:complete`.
-    let cid: string | null = null;
-    if (id.startsWith("campaign-complete:")) cid = id.slice("campaign-complete:".length);
-    else if (id.startsWith("campaign:") && id.endsWith(":complete")) cid = id.slice("campaign:".length, -":complete".length);
-    if (cid) campaignCompleteDeltaIds.add(cid);
-  }
-
   const collectionSlugs = new Set<string>();
   for (const row of collectionRes.data ?? []) {
     if (row.item_id) collectionSlugs.add(String(row.item_id).toLowerCase());
   }
 
-  return { cloudCompletedByCampaign, campaignCompleteDeltaIds, collectionSlugs };
+  return { cloudCompletedByCampaign, collectionSlugs };
 }
 
 // -------------------- Main entry --------------------
@@ -246,7 +232,6 @@ export async function reconcileLegacyCampaignProgress(): Promise<ReconciliationR
 
   let cloud: CloudSnapshot = {
     cloudCompletedByCampaign: new Map(),
-    campaignCompleteDeltaIds: new Set(),
     collectionSlugs: new Set(),
   };
   if (uid && online) {
@@ -267,7 +252,6 @@ export async function reconcileLegacyCampaignProgress(): Promise<ReconciliationR
     const canonicalChapterIds = new Set(campaign.chapters.map(c => c.id));
     const declaredSlugs = declaredUnlockSlugs(campaign);
     const cloudCompleted = cloud.cloudCompletedByCampaign.get(campaign.id) ?? new Set<string>();
-    const deltaProven = cloud.campaignCompleteDeltaIds.has(campaign.id);
     const ledgerCampaignKey = `campaign:${campaign.id}`;
     const ledgerProven = Boolean(ledgerKeys[ledgerCampaignKey]);
     const collectionCovers =
@@ -282,7 +266,6 @@ export async function reconcileLegacyCampaignProgress(): Promise<ReconciliationR
       campaign.id,
       campaign.chapters.map(c => c.id).sort().join(","),
       [...cloudCompleted].sort().join(","),
-      deltaProven ? "1" : "0",
       ledgerProven ? "1" : "0",
       declaredSlugs.join(","),
       declaredSlugs.filter(s => cloud.collectionSlugs.has(s)).join(","),
@@ -308,11 +291,10 @@ export async function reconcileLegacyCampaignProgress(): Promise<ReconciliationR
 
     // ---- Strong evidence ----
     if (ledgerProven) reasons.push("ledger has campaign completion key");
-    if (deltaProven) reasons.push("applied_profile_deltas contains campaign-complete delta");
     if (collectionCovers) reasons.push("all declared campaign unlocks present in user_collection");
     if (cloudCoversAllChapters) reasons.push("cloud user_campaign_progress covers every canonical chapter");
 
-    const isStrong = ledgerProven || deltaProven || collectionCovers || cloudCoversAllChapters;
+    const isStrong = ledgerProven || collectionCovers || cloudCoversAllChapters;
 
     if (isStrong) {
       const actions: string[] = [];
