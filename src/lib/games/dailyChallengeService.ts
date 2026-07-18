@@ -313,6 +313,10 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
 
     return () => {
       window.removeEventListener(CHANGE_EVENT, onCompleted as EventListener);
+      window.removeEventListener(
+        GUEST_COMPLETIONS_EVENT,
+        onCompleted as EventListener,
+      );
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", bump);
