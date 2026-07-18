@@ -439,60 +439,81 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
     navigate({ to: "/admin/investigations", search: {} });
   };
 
-  // ---- Dry-run ----
-  const runDry = async () => {
+  // ---- Server-side stale-detection helper --------------------
+  const isStaleErr = (msg: string) =>
+    /stale|version[_\s\-]?signal|updated.*by another|modified.*by another|قام مشرف|قديم/i.test(msg);
+
+  // ---- Save Draft --------------------------------------------
+  // Never touches player-visible content. Server re-validates the
+  // payload and enforces stable-ID protection + removal safety.
+  const runSaveDraft = async () => {
     if (!state || !initialState) return;
-    if (validation.blockers.length) { notify("err", "أصلح مشاكل التحقق قبل التشغيل التجريبي."); return; }
+    if (validation.blockers.length) { notify("err", "أصلح مشاكل التحقق أولاً."); return; }
     if (removalPending) { notify("err", "يوجد حذف يتطلب موافقة صريحة."); return; }
-    setBusy("dry"); setDryReport(null); setDryHash(null);
+    setBusy("save");
     try {
-      const { plan, planHash } = buildInvestigationEditorPlan({
-        id: state.id, slug: state.slug,
+      await saveInvestigationDraft({
+        id: state.id,
         draft: toPersistedShape(state),
         versionSignal: initialState.updated_at,
         allowRemovals: removed.length > 0 && removalApproved,
       });
-      const res = await dryRunInvestigationEditor(plan);
-      setDryReport(res);
-      if (res.ok) { setDryHash(planHash); notify("ok", "نجح التشغيل التجريبي — يمكن الحفظ الآن."); }
-      else if (res.stale) notify("err", "قام مشرف آخر بتحديث التحقيق. أعِد التحميل قبل المتابعة.");
-      else notify("err", res.error ?? "فشل التشغيل التجريبي.");
+      notify("ok", "تم حفظ المسودة (لم يتأثر ما يراه اللاعبون).");
+      await load();
     } catch (e: any) {
-      notify("err", e?.message ?? "خطأ في التشغيل التجريبي.");
+      const msg = e?.message ?? "فشل حفظ المسودة.";
+      notify("err", isStaleErr(msg) ? "قام مشرف آخر بتحديث التحقيق. أعِد التحميل قبل المتابعة." : msg);
     } finally { setBusy(null); }
   };
 
-  // ---- Commit ----
-  const runSave = async () => {
+  // ---- Publish (atomic promote-draft-to-published) -----------
+  const runPublish = async (note: string | null) => {
     if (!state || !initialState) return;
-    if (validation.blockers.length) { notify("err", "أصلح مشاكل التحقق أولاً."); return; }
-    if (removalPending) { notify("err", "يوجد حذف يتطلب موافقة صريحة."); return; }
-    const { plan, planHash } = buildInvestigationEditorPlan({
-      id: state.id, slug: state.slug,
-      draft: toPersistedShape(state),
-      versionSignal: initialState.updated_at,
-      allowRemovals: removed.length > 0 && removalApproved,
-    });
-    if (!dryHash || dryHash !== planHash) {
-      notify("err", "تغيّرت الخطة منذ آخر تشغيل تجريبي. شغّل التشغيل التجريبي مجدداً.");
-      return;
-    }
-    setBusy("save");
+    if (validation.blockers.length) { notify("err", "أصلح مشاكل التحقق قبل النشر."); return; }
+    if (removalPending) { notify("err", "يوجد حذف يتطلب موافقة صريحة قبل النشر."); return; }
+    setBusy("publish");
     try {
-      const res = await commitInvestigationEditor(plan);
-      if (!res.ok) {
-        if (res.stale) notify("err", "قام مشرف آخر بتحديث التحقيق. أعِد التحميل قبل المتابعة.");
-        else notify("err", res.error ?? "فشل الحفظ داخل معاملة الخادم.");
-        return;
+      // If there are unsaved edits, persist them as a draft first so
+      // publish always uses the *current* editor payload. Publish then
+      // promotes that draft atomically.
+      if (dirty) {
+        await saveInvestigationDraft({
+          id: state.id,
+          draft: toPersistedShape(state),
+          versionSignal: initialState.updated_at,
+          allowRemovals: removed.length > 0 && removalApproved,
+        });
       }
-      notify("ok", "تم حفظ التحقيق بنجاح.");
-      // Refresh authoritative row.
+      const res = await publishInvestigation({
+        id: state.id,
+        note,
+        allowRemovals: removed.length > 0 && removalApproved,
+        versionSignal: dirty ? null : initialState.updated_at,
+      });
+      if (res.mode === "noop") notify("info", "لا تغييرات لنشرها.");
+      else notify("ok", `تم النشر — الإصدار #${res.version}.`);
+      setShowPublish(false);
       await load();
-      setRemovalApproved(false);
     } catch (e: any) {
-      notify("err", e?.message ?? "فشل الحفظ.");
+      const msg = e?.message ?? "فشل النشر داخل معاملة الخادم.";
+      notify("err", isStaleErr(msg) ? "قام مشرف آخر بتحديث التحقيق. أعِد التحميل قبل المتابعة." : msg);
     } finally { setBusy(null); }
   };
+
+  // ---- Restore a historical version to draft (never auto-publishes) ----
+  const runRestoreToDraft = async (version: number) => {
+    if (!state) return;
+    setBusy("restore");
+    try {
+      const res = await restoreInvestigationVersionToDraft(state.id, version);
+      notify("ok", `تم إحضار الإصدار #${res.restored_from} كمسودة. راجعها ثم انشر عند الجاهزية.`);
+      setShowVersions(false);
+      await load();
+    } catch (e: any) {
+      notify("err", e?.message ?? "فشل استرجاع الإصدار.");
+    } finally { setBusy(null); }
+  };
+
 
   // ---- Render ----
   if (loading) return <Shell><div className="p-10 text-center text-slate-400">جارٍ التحميل…</div></Shell>;
