@@ -400,33 +400,28 @@ function WorldDetailPage() {
           ))}
         </div>
 
-        {/* Prev / Next world */}
+        {/* Prev / Next world — canonical PUBLIC_WORLD_ORDER only. Each card
+            reflects real per-world completion from the canonical progress
+            service; no placeholder values. */}
         <div className="mt-10 grid grid-cols-2 gap-2">
           {prevHub ? (
-            <Link to="/worlds/$slug" params={{ slug: prevHub.slug }}
-              className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 p-3 text-right">
-              <ArrowRight className="size-4 text-gold/70" />
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-muted-foreground">العالم السابق</p>
-                <p className="font-display text-[12px] font-bold leading-snug break-words">
-                  {prevHub.glyph} {titleBySlug.get(prevHub.slug) ?? ""}
-                </p>
-              </div>
-            </Link>
+            <WorldNavCard
+              direction="prev"
+              hub={prevHub}
+              title={titleBySlug.get(prevHub.slug)}
+              pct={byWorld.get(prevHub.slug)?.progress.overallPct}
+            />
           ) : <div />}
           {nextHub ? (
-            <Link to="/worlds/$slug" params={{ slug: nextHub.slug }}
-              className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-              <div className="min-w-0 flex-1 text-left">
-                <p className="text-[10px] text-muted-foreground">العالم التالي</p>
-                <p className="font-display text-[12px] font-bold leading-snug break-words">
-                  {nextHub.glyph} {titleBySlug.get(nextHub.slug) ?? ""}
-                </p>
-              </div>
-              <ArrowLeft className="size-4 text-gold/70" />
-            </Link>
+            <WorldNavCard
+              direction="next"
+              hub={nextHub}
+              title={titleBySlug.get(nextHub.slug)}
+              pct={byWorld.get(nextHub.slug)?.progress.overallPct}
+            />
           ) : <div />}
         </div>
+
 
       </div>
     </AppShell>
