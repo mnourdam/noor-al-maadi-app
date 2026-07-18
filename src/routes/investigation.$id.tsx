@@ -65,18 +65,14 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const reward = (row.reward ?? {}) as InvestigationReward;
   const related: string[] = Array.isArray(row.related_entities) ? row.related_entities : [];
 
-  const serverProgress = useInvestigationProgress();
+  const canonicalProgress = useCanonicalInvestigationProgress();
   const alreadyDone =
-    serverProgress.completedIds.has(row.id) ||
-    profile.investigationsCompleted.includes(row.slug);
+    canonicalProgress.matches(row.id) || canonicalProgress.matches(row.slug);
 
-  // Phase G — fire-and-forget legacy migration on first mount for the
-  // signed-in user. Idempotent: internally deduped by a per-uid ledger
-  // and by the server RPC, so replays never re-grant rewards.
-  useEffect(() => {
-    void migrateLegacyInvestigationCompletions(profile.investigationsCompleted);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Phase G1 — legacy migration is now driven globally by
+  // <InvestigationLegacyBackfill /> at the app root. Nothing to trigger
+  // from the player screen; the canonical hook already reflects any
+  // pending backfill via the outbox.
 
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
