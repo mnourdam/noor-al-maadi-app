@@ -151,6 +151,15 @@ function GamePlayPage() {
           }
         }
       }
+      // Canonical daily-challenge event — Home + Hall subscribe to this and
+      // will immediately reflect the new completion state. Idempotent, so
+      // firing on replay is harmless (rewards are gated by `firstTime`).
+      try {
+        const { data } = await supabase.auth.getUser();
+        markDailyChallengeCompletedLocally(data.user?.id ?? "guest", game.id);
+      } catch {
+        markDailyChallengeCompletedLocally("guest", game.id);
+      }
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
