@@ -36,20 +36,13 @@ export function AchievementWatcher() {
   const canonicalInv = useCanonicalInvestigationProgress();
   const firstRun = useRef(true);
 
-  // Achievement evaluation must use the canonical investigation count
-  // (server truth ∪ pending outbox ∪ legacy). Fabricate a stable array
-  // of length = canonical count so `evaluateAchievements` — which reads
-  // `.length` internally — sees the right number without changing its
-  // signature. Contents are opaque; only the length is inspected.
-  const profileForEval = useMemo(() => {
-    const count = canonicalInv.count;
-    if (count <= (profile.investigationsCompleted?.length ?? 0)) return profile;
-    const padded = new Array<string>(count).fill("__canonical__");
-    return { ...profile, investigationsCompleted: padded };
-  }, [profile, canonicalInv.count]);
-
+  // Achievement evaluation uses the canonical investigation count directly
+  // via `evaluateAchievements`' `overrides` parameter — no more relying on
+  // callers to pad `profile.investigationsCompleted`.
   useEffect(() => {
-    const evals = evaluateAchievements(profileForEval);
+    const evals = evaluateAchievements(profile, {
+      investigationsCompletedCount: canonicalInv.count,
+    });
     const earnedMap = profile.achievementsEarned ?? {};
 
     for (const e of evals) {
@@ -67,8 +60,7 @@ export function AchievementWatcher() {
       }
     }
     firstRun.current = false;
-    // We intentionally depend on the whole profile so any state change re-checks.
-  }, [profileForEval, profile.achievementsEarned, markAchievementEarned, addPoints]);
+  }, [profile, canonicalInv.count, markAchievementEarned, addPoints]);
 
   return null;
 }
