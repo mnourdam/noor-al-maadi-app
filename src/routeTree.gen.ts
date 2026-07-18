@@ -126,6 +126,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthCustomVerifyReauthRouteImport } from './routes/lovable/email/auth-custom/verify-reauth'
 import { Route as LovableEmailAuthCustomDispatchRouteImport } from './routes/lovable/email/auth-custom/dispatch'
 import { Route as ApiPublicWebhooksResendRouteImport } from './routes/api/public/webhooks/resend'
+import { Route as AdminInvestigationsIdEditRouteImport } from './routes/admin.investigations.$id.edit'
 import { Route as AdminCampaignsIdEditRouteImport } from './routes/admin.campaigns.$id.edit'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
 
@@ -736,6 +737,12 @@ const ApiPublicWebhooksResendRoute = ApiPublicWebhooksResendRouteImport.update({
   path: '/api/public/webhooks/resend',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminInvestigationsIdEditRoute =
+  AdminInvestigationsIdEditRouteImport.update({
+    id: '/$id/edit',
+    path: '/$id/edit',
+    getParentRoute: () => AdminInvestigationsRoute,
+  } as any)
 const AdminCampaignsIdEditRoute = AdminCampaignsIdEditRouteImport.update({
   id: '/admin/campaigns/$id/edit',
   path: '/admin/campaigns/$id/edit',
@@ -804,7 +811,7 @@ export interface FileRoutesByFullPath {
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
-  '/admin/investigations': typeof AdminInvestigationsRoute
+  '/admin/investigations': typeof AdminInvestigationsRouteWithChildren
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
@@ -858,6 +865,7 @@ export interface FileRoutesByFullPath {
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
+  '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
   '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -921,7 +929,7 @@ export interface FileRoutesByTo {
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
-  '/admin/investigations': typeof AdminInvestigationsRoute
+  '/admin/investigations': typeof AdminInvestigationsRouteWithChildren
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
@@ -975,6 +983,7 @@ export interface FileRoutesByTo {
   '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games': typeof AdminGamesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
+  '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
   '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -1043,7 +1052,7 @@ export interface FileRoutesById {
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
-  '/admin/investigations': typeof AdminInvestigationsRoute
+  '/admin/investigations': typeof AdminInvestigationsRouteWithChildren
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
@@ -1097,6 +1106,7 @@ export interface FileRoutesById {
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
+  '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
   '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -1220,6 +1230,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/'
     | '/admin/games/'
     | '/admin/campaigns/$id/edit'
+    | '/admin/investigations/$id/edit'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
     | '/lovable/email/auth-custom/verify-reauth'
@@ -1337,6 +1348,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup'
     | '/admin/games'
     | '/admin/campaigns/$id/edit'
+    | '/admin/investigations/$id/edit'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
     | '/lovable/email/auth-custom/verify-reauth'
@@ -1458,6 +1470,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/'
     | '/admin/games/'
     | '/admin/campaigns/$id/edit'
+    | '/admin/investigations/$id/edit'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
     | '/lovable/email/auth-custom/verify-reauth'
@@ -1526,7 +1539,7 @@ export interface RootRouteChildren {
   AdminHubBuilderRoute: typeof AdminHubBuilderRoute
   AdminImportRoute: typeof AdminImportRoute
   AdminImportHistoryRoute: typeof AdminImportHistoryRouteWithChildren
-  AdminInvestigationsRoute: typeof AdminInvestigationsRoute
+  AdminInvestigationsRoute: typeof AdminInvestigationsRouteWithChildren
   AdminMapRoute: typeof AdminMapRoute
   AdminMigrationRoute: typeof AdminMigrationRoute
   AdminMuseumProvenanceRoute: typeof AdminMuseumProvenanceRoute
@@ -2394,6 +2407,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksResendRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/investigations/$id/edit': {
+      id: '/admin/investigations/$id/edit'
+      path: '/$id/edit'
+      fullPath: '/admin/investigations/$id/edit'
+      preLoaderRoute: typeof AdminInvestigationsIdEditRouteImport
+      parentRoute: typeof AdminInvestigationsRoute
+    }
     '/admin/campaigns/$id/edit': {
       id: '/admin/campaigns/$id/edit'
       path: '/admin/campaigns/$id/edit'
@@ -2513,6 +2533,17 @@ const AdminImportHistoryRouteChildren: AdminImportHistoryRouteChildren = {
 const AdminImportHistoryRouteWithChildren =
   AdminImportHistoryRoute._addFileChildren(AdminImportHistoryRouteChildren)
 
+interface AdminInvestigationsRouteChildren {
+  AdminInvestigationsIdEditRoute: typeof AdminInvestigationsIdEditRoute
+}
+
+const AdminInvestigationsRouteChildren: AdminInvestigationsRouteChildren = {
+  AdminInvestigationsIdEditRoute: AdminInvestigationsIdEditRoute,
+}
+
+const AdminInvestigationsRouteWithChildren =
+  AdminInvestigationsRoute._addFileChildren(AdminInvestigationsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -2569,7 +2600,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminHubBuilderRoute: AdminHubBuilderRoute,
   AdminImportRoute: AdminImportRoute,
   AdminImportHistoryRoute: AdminImportHistoryRouteWithChildren,
-  AdminInvestigationsRoute: AdminInvestigationsRoute,
+  AdminInvestigationsRoute: AdminInvestigationsRouteWithChildren,
   AdminMapRoute: AdminMapRoute,
   AdminMigrationRoute: AdminMigrationRoute,
   AdminMuseumProvenanceRoute: AdminMuseumProvenanceRoute,
@@ -2619,13 +2650,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

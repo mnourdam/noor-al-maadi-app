@@ -536,8 +536,11 @@ function Row({ view, onPreview, onToggle }: { view: RowView; onPreview: () => vo
       <td className="px-3 py-2">
         <div className="flex justify-end gap-1.5">
           <IconBtn onClick={onPreview} icon={Eye} label="معاينة" />
-          <IconBtn onClick={() => { /* Phase C */ }}
-            icon={PenSquare} label="تحرير" disabled title="سيتاح مع المحرّر المنظم — المرحلة C" />
+          <Link to="/admin/investigations/$id/edit" params={{ id: r.id }}
+            title="تحرير في المحرّر المنظم"
+            className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-700 text-slate-300 hover:border-amber-400 hover:text-amber-300">
+            <PenSquare className="h-3.5 w-3.5" />
+          </Link>
           <IconBtn onClick={() => { /* Phase C/D */ }}
             icon={Copy} label="نسخ" disabled title="سيتاح بعد استقرار المعرّفات — المرحلة C/D" />
           <IconBtn onClick={onToggle} icon={r.enabled ? EyeOff : Eye}
