@@ -1,17 +1,42 @@
+// ============================================================
+// /admin/investigations — Phase B management list
+//
+// - Uses admin-only RPCs (admin_list_investigations,
+//   admin_get_investigation_full, admin_set_investigation_enabled).
+//   The old unsafe raw INSERT/UPDATE/DELETE editor has been removed.
+// - Reuses the canonical world resolver (`buildWorldIndex`) instead
+//   of duplicating investigation → World mapping.
+// - Uses the shared boundary normalizer for read-only display of
+//   legacy `coins` → `dinars` and legacy object related_entities.
+//   Never mutates DB rows on view.
+// - "Preview" opens a read-only inspector.
+// - "Edit" navigates to the (future) structured editor placeholder.
+// - "Duplicate" and "Delete" are intentionally disabled until the
+//   stable-ID-aware paths land in Phase C/D.
+// - `profiles.investigations_completed` is deprecated (never
+//   authoritative); NOT surfaced here. Phase G will establish real
+//   server progress and add completion statistics.
+// ============================================================
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Search, Upload, RefreshCw, Eye, EyeOff, Trash2, Plus, Save, X,
-  CheckCircle2, AlertTriangle, FileJson,
+  Search, Upload, RefreshCw, Eye, EyeOff, Copy, Trash2,
+  CheckCircle2, AlertTriangle, PenSquare, X, ChevronDown, ChevronUp,
+  Info, Filter, ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import {
-  type InvestigationRow,
-  type InvestigationReward,
-  type InvestigationStep,
-  countQuestions,
-} from "@/lib/investigations-source";
+  buildWorldIndex,
+  invalidateWorldIndex,
+} from "@/lib/worlds-progress";
+import { ensureLocalSnapshotLoaded } from "@/lib/local-first-store";
+import { WORLD_HUBS, WORLD_ERA } from "@/lib/worlds";
+import {
+  normalizeInvestigationRow,
+  summarizeReward,
+  type InvestigationBoundaryWarning,
+} from "@/lib/investigations-normalize";
 
 export const Route = createFileRoute("/admin/investigations")({
   head: () => ({
@@ -23,57 +48,210 @@ export const Route = createFileRoute("/admin/investigations")({
   component: () => <AdminGate><AdminInvestigationsPage /></AdminGate>,
 });
 
-interface Toast { kind: "ok" | "err"; msg: string }
+// ------------------------------------------------------------
+// Types matching the admin_list_investigations RPC row.
+// ------------------------------------------------------------
+interface ListRow {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  difficulty: string | null;
+  enabled: boolean;
+  reward: Record<string, unknown> | null;
+  step_count: number;
+  question_count: number;
+  related_count: number;
+  related_entities: unknown[]; // may contain legacy objects
+  created_at: string;
+  updated_at: string;
+}
+
+interface RowView {
+  raw: ListRow;
+  warnings: InvestigationBoundaryWarning[];
+  hasLegacy: boolean;
+  hasBlocking: boolean;
+  reward: ReturnType<typeof summarizeReward>;
+  worldSlug: string | null;
+  eraSlug: string | null;
+}
+
+type SortKey = "updated_at" | "created_at" | "title" | "difficulty";
+type SortDir = "asc" | "desc";
+type Toast = { kind: "ok" | "err"; msg: string };
+
+const DIFFICULTIES = ["easy", "medium", "hard"] as const;
+const DIFFICULTY_LABEL: Record<string, string> = { easy: "سهل", medium: "متوسط", hard: "صعب" };
 
 function AdminInvestigationsPage() {
-  const [rows, setRows] = useState<InvestigationRow[] | null>(null);
+  const [rows, setRows] = useState<ListRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [editing, setEditing] = useState<InvestigationRow | "new" | null>(null);
+  const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [worldReady, setWorldReady] = useState(false);
+
+  // Filters.
+  const [search, setSearch] = useState("");
+  const [difficulty, setDifficulty] = useState<"" | typeof DIFFICULTIES[number]>("");
+  const [worldFilter, setWorldFilter] = useState<string>(""); // "", "__none__", or a world slug
+  const [statusFilter, setStatusFilter] = useState<"" | "enabled" | "disabled">("");
+
+  // Sort.
+  const [sortKey, setSortKey] = useState<SortKey>("updated_at");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const [preview, setPreview] = useState<string | null>(null); // slug for preview
+  const [previewData, setPreviewData] = useState<unknown | null>(null);
+  const [previewErr, setPreviewErr] = useState<string | null>(null);
 
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3200);
   };
 
+  // Load list + prime the local snapshot so buildWorldIndex resolves.
   const refresh = async () => {
-    const { data, error } = await supabase
-      .from("investigations" as any)
-      .select("*")
-      .order("updated_at", { ascending: false });
-    if (error) { setErr(error.message); return; }
-    setRows((data ?? []) as unknown as InvestigationRow[]);
+    setBusy(true);
     setErr(null);
+    try {
+      await ensureLocalSnapshotLoaded();
+      invalidateWorldIndex();
+      setWorldReady(true);
+      const { data, error } = await supabase
+        .rpc("admin_list_investigations" as any);
+      if (error) throw error;
+      setRows((data ?? []) as ListRow[]);
+    } catch (e: any) {
+      setErr(e?.message ?? String(e));
+      setRows([]);
+    } finally {
+      setBusy(false);
+    }
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
-  const visible = useMemo(() => {
+  // --- Enrich rows via the shared boundary normalizer (display only).
+  const worldBySlug = useMemo(() => {
+    // Reuse the canonical resolver; disabled investigations aren't mapped
+    // (matches how Worlds counts them — they're not visible to players).
+    if (!worldReady) return new Map<string, string>();
+    const index = buildWorldIndex();
+    const map = new Map<string, string>();
+    for (const [worldSlug, entry] of index) {
+      for (const invSlug of entry.investigationSlugs) map.set(invSlug, worldSlug);
+    }
+    return map;
+  }, [worldReady, rows]);
+
+  const enriched = useMemo<RowView[]>(() => {
     if (!rows) return [];
+    return rows.map((r) => {
+      const normalized = normalizeInvestigationRow({
+        related_entities: r.related_entities,
+        reward: r.reward,
+      });
+      const reward = summarizeReward(r.reward);
+      const worldSlug = worldBySlug.get(r.slug) ?? null;
+      const eraSlug = worldSlug ? (WORLD_ERA[worldSlug] ?? worldSlug) : null;
+      return {
+        raw: r,
+        warnings: normalized.warnings,
+        hasLegacy: normalized.hasLegacy,
+        hasBlocking: normalized.hasBlockingIssue,
+        reward,
+        worldSlug,
+        eraSlug,
+      };
+    });
+  }, [rows, worldBySlug]);
+
+  // --- Filters + sort.
+  const visible = useMemo<RowView[]>(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter((r) =>
-      !q || r.title.toLowerCase().includes(q) || r.slug.toLowerCase().includes(q),
-    );
-  }, [rows, search]);
+    let out = enriched.filter((v) => {
+      const r = v.raw;
+      if (q) {
+        const hay = `${r.title} ${r.subtitle ?? ""} ${r.slug}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (difficulty && (r.difficulty ?? "") !== difficulty) return false;
+      if (statusFilter === "enabled" && !r.enabled) return false;
+      if (statusFilter === "disabled" && r.enabled) return false;
+      if (worldFilter === "__none__") {
+        if (v.worldSlug) return false;
+      } else if (worldFilter) {
+        if (v.worldSlug !== worldFilter) return false;
+      }
+      return true;
+    });
+    const dir = sortDir === "asc" ? 1 : -1;
+    out = [...out].sort((a, b) => {
+      const ar = a.raw, br = b.raw;
+      switch (sortKey) {
+        case "title": return ar.title.localeCompare(br.title, "ar") * dir;
+        case "difficulty":
+          return (DIFFICULTIES.indexOf(ar.difficulty as any) - DIFFICULTIES.indexOf(br.difficulty as any)) * dir;
+        case "created_at": return (Date.parse(ar.created_at) - Date.parse(br.created_at)) * dir;
+        case "updated_at":
+        default: return (Date.parse(ar.updated_at) - Date.parse(br.updated_at)) * dir;
+      }
+    });
+    return out;
+  }, [enriched, search, difficulty, worldFilter, statusFilter, sortKey, sortDir]);
 
-  const toggleEnabled = async (r: InvestigationRow) => {
-    const { error } = await supabase
-      .from("investigations" as any)
-      .update({ enabled: !r.enabled })
-      .eq("id", r.id);
-    if (error) return notify("err", error.message);
-    notify("ok", !r.enabled ? "تم التفعيل." : "تم التعطيل.");
-    refresh();
+  // --- Stats (Phase B: only DB-provable numbers).
+  const stats = useMemo(() => {
+    const byDifficulty: Record<string, number> = { easy: 0, medium: 0, hard: 0, unknown: 0 };
+    const byWorld: Record<string, number> = {};
+    let enabled = 0, disabled = 0, malformed = 0, legacy = 0;
+    for (const v of enriched) {
+      const d = (v.raw.difficulty ?? "").toLowerCase();
+      byDifficulty[d in byDifficulty ? d : "unknown"]++;
+      const w = v.worldSlug ?? "__none__";
+      byWorld[w] = (byWorld[w] ?? 0) + 1;
+      if (v.raw.enabled) enabled++; else disabled++;
+      if (v.hasBlocking) malformed++;
+      if (v.hasLegacy) legacy++;
+    }
+    return { total: enriched.length, enabled, disabled, malformed, legacy, byDifficulty, byWorld };
+  }, [enriched]);
+
+  // --- Actions.
+  const toggleEnabled = async (r: ListRow) => {
+    try {
+      const { error } = await supabase.rpc("admin_set_investigation_enabled" as any, {
+        p_id: r.id,
+        p_enabled: !r.enabled,
+      });
+      if (error) throw error;
+      notify("ok", !r.enabled ? "تم تفعيل التحقيق." : "تم تعطيل التحقيق.");
+      refresh();
+    } catch (e: any) {
+      notify("err", e?.message ?? "تعذّر تحديث الحالة.");
+    }
   };
 
-  const remove = async (r: InvestigationRow) => {
-    if (!confirm(`حذف "${r.title}"؟ لا يمكن التراجع.`)) return;
-    const { error } = await supabase.from("investigations" as any).delete().eq("id", r.id);
-    if (error) return notify("err", error.message);
-    notify("ok", "تم الحذف.");
-    refresh();
+  const openPreview = async (slug: string) => {
+    setPreview(slug);
+    setPreviewData(null);
+    setPreviewErr(null);
+    try {
+      const { data, error } = await supabase.rpc("admin_get_investigation_full" as any, {
+        p_id_or_slug: slug,
+      });
+      if (error) throw error;
+      setPreviewData(data);
+    } catch (e: any) {
+      setPreviewErr(e?.message ?? "تعذّر التحميل.");
+    }
   };
+
+  const clearFilters = () => {
+    setSearch(""); setDifficulty(""); setWorldFilter(""); setStatusFilter("");
+  };
+  const anyFilterActive = !!(search || difficulty || worldFilter || statusFilter);
 
   return (
     <div dir="rtl" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-slate-100">
@@ -83,36 +261,73 @@ function AdminInvestigationsPage() {
             <Search className="h-7 w-7 text-amber-400" />
             <div>
               <h1 className="text-2xl font-bold text-amber-100">إدارة التحقيقات</h1>
-              <p className="text-sm text-slate-400">تحقيقات تاريخية قابلة للعب من Supabase</p>
+              <p className="text-sm text-slate-400">قراءة آمنة عبر واجهات المشرف — التحرير المباشر معطّل حتى المحرّر المنظم.</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link to="/admin" className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300">
               ← لوحة الإدارة
             </Link>
-            <button onClick={refresh}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300">
-              <RefreshCw className="h-3.5 w-3.5" /> تحديث
+            <button onClick={refresh} disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-50">
+              <RefreshCw className={`h-3.5 w-3.5 ${busy ? "animate-spin" : ""}`} /> تحديث
             </button>
             <Link to="/admin/import" search={{ type: "investigations" } as any}
               className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
               <Upload className="h-3.5 w-3.5" /> استيراد JSON
             </Link>
-            <button onClick={() => setEditing("new")}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400">
-              <Plus className="h-3.5 w-3.5" /> إضافة
-            </button>
           </div>
         </header>
 
-        <div className="flex items-center gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="بحث بالعنوان أو slug..."
-            className="ms-auto w-full max-w-xs rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-amber-400/50"
-          />
-        </div>
+        <StatsPanel stats={stats} />
+
+        {/* Filters */}
+        <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-3">
+          <div className="mb-2 flex items-center gap-1.5 text-xs text-slate-400">
+            <Filter className="h-3.5 w-3.5" /> مرشحات
+          </div>
+          <div className="grid gap-2 md:grid-cols-4">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="بحث بالعنوان أو slug…"
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-amber-400/50"
+            />
+            <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as any)}
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm">
+              <option value="">كل الصعوبات</option>
+              {DIFFICULTIES.map((d) => <option key={d} value={d}>{DIFFICULTY_LABEL[d]}</option>)}
+            </select>
+            <select value={worldFilter} onChange={(e) => setWorldFilter(e.target.value)}
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm">
+              <option value="">كل العوالم</option>
+              <option value="__none__">بدون عالم</option>
+              {WORLD_HUBS.map((h) => (
+                <option key={h.slug} value={h.slug}>{h.glyph} {h.slug} · {WORLD_ERA[h.slug] ?? h.slug}</option>
+              ))}
+            </select>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm">
+              <option value="">مفعّل ومعطّل</option>
+              <option value="enabled">مفعّل فقط</option>
+              <option value="disabled">معطّل فقط</option>
+            </select>
+          </div>
+          {anyFilterActive && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+              {search && <Chip onRemove={() => setSearch("")}>بحث: {search}</Chip>}
+              {difficulty && <Chip onRemove={() => setDifficulty("")}>صعوبة: {DIFFICULTY_LABEL[difficulty]}</Chip>}
+              {worldFilter === "__none__"
+                ? <Chip onRemove={() => setWorldFilter("")}>بدون عالم</Chip>
+                : worldFilter && <Chip onRemove={() => setWorldFilter("")}>عالم: {worldFilter}</Chip>}
+              {statusFilter && <Chip onRemove={() => setStatusFilter("")}>{statusFilter === "enabled" ? "مفعّل" : "معطّل"}</Chip>}
+              <button onClick={clearFilters}
+                className="rounded-full border border-slate-700 px-2 py-0.5 text-slate-400 hover:border-amber-400/40 hover:text-amber-300">
+                مسح الكل
+              </button>
+            </div>
+          )}
+        </section>
 
         {err && (
           <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
@@ -131,7 +346,7 @@ function AdminInvestigationsPage() {
               {rows.length === 0 ? "لا توجد تحقيقات بعد" : "لا توجد نتائج مطابقة"}
             </p>
             {rows.length === 0 && (
-              <p className="mt-1 text-sm text-slate-400">أضف تحقيقًا يدويًا أو استورد JSON.</p>
+              <p className="mt-1 text-sm text-slate-400">استورد JSON للبدء.</p>
             )}
           </div>
         )}
@@ -141,65 +356,31 @@ function AdminInvestigationsPage() {
             <table className="w-full text-right text-sm">
               <thead className="bg-slate-900/80 text-xs text-slate-400">
                 <tr>
-                  <th className="px-3 py-2">العنوان</th>
+                  <SortHeader label="العنوان" k="title" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
                   <th className="px-3 py-2">Slug</th>
-                  <th className="px-3 py-2">صعوبة</th>
-                  <th className="px-3 py-2">خطوات</th>
+                  <SortHeader label="صعوبة" k="difficulty" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
+                  <th className="px-3 py-2">عالم / عصر</th>
+                  <th className="px-3 py-2">محتوى</th>
                   <th className="px-3 py-2">مكافأة</th>
                   <th className="px-3 py-2">الحالة</th>
+                  <SortHeader label="حُدّث" k="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {visible.map((r) => {
-                  const reward = (r.reward ?? {}) as InvestigationReward;
-                  const steps = Array.isArray(r.steps) ? r.steps : [];
-                  return (
-                    <tr key={r.id} className="hover:bg-slate-900/60">
-                      <td className="px-3 py-2">
-                        <div className="font-medium text-slate-100">{r.title}</div>
-                        {r.subtitle && <div className="text-xs text-slate-400">{r.subtitle}</div>}
-                      </td>
-                      <td className="px-3 py-2 font-mono text-xs text-slate-400">{r.slug}</td>
-                      <td className="px-3 py-2 text-xs text-amber-300">{r.difficulty}</td>
-                      <td className="px-3 py-2 text-xs text-slate-300">
-                        {steps.length} · أسئلة {countQuestions(steps)}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-slate-300">
-                        {reward.hearts ? `❤️${reward.hearts} ` : ""}
-                        {reward.xp ? `XP+${reward.xp} ` : ""}
-                        {reward.coins ? `🪙${reward.coins}` : ""}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className={`rounded-full border px-2 py-0.5 text-[10px] ${
-                          r.enabled
-                            ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
-                            : "border-slate-600 bg-slate-800 text-slate-400"
-                        }`}>{r.enabled ? "مفعّل" : "معطّل"}</span>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex justify-end gap-1.5">
-                          <IconBtn onClick={() => setEditing(r)} icon={Save} label="تحرير" />
-                          <IconBtn onClick={() => toggleEnabled(r)} icon={r.enabled ? EyeOff : Eye}
-                            label={r.enabled ? "تعطيل" : "تفعيل"} />
-                          <IconBtn onClick={() => remove(r)} icon={Trash2} label="حذف" danger />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {visible.map((v) => <Row key={v.raw.id} view={v} onPreview={() => openPreview(v.raw.slug)} onToggle={() => toggleEnabled(v.raw)} />)}
               </tbody>
             </table>
           </section>
         )}
       </div>
 
-      {editing && (
-        <InvestigationEditor
-          value={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
-          onSaved={(msg) => { notify("ok", msg); setEditing(null); refresh(); }}
-          onError={(msg) => notify("err", msg)}
+      {preview && (
+        <PreviewModal
+          slug={preview}
+          data={previewData}
+          error={previewErr}
+          onClose={() => { setPreview(null); setPreviewData(null); setPreviewErr(null); }}
         />
       )}
 
@@ -219,154 +400,206 @@ function AdminInvestigationsPage() {
   );
 }
 
-function InvestigationEditor({ value, onClose, onSaved, onError }: {
-  value: InvestigationRow | null;
-  onClose: () => void;
-  onSaved: (msg: string) => void;
-  onError: (msg: string) => void;
+// ------------------------------------------------------------
+// Sub-components.
+// ------------------------------------------------------------
+function StatsPanel({ stats }: { stats: {
+  total: number; enabled: number; disabled: number; malformed: number; legacy: number;
+  byDifficulty: Record<string, number>; byWorld: Record<string, number>;
+} }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="rounded-xl border border-slate-800 bg-slate-900/40">
+      <button onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-4 py-3 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-slate-300">الإجمالي: <b className="text-amber-200">{stats.total}</b></span>
+          <span className="text-emerald-300">مفعّل: {stats.enabled}</span>
+          <span className="text-slate-400">معطّل: {stats.disabled}</span>
+          {stats.legacy > 0 && <span className="text-amber-300">صيغة قديمة: {stats.legacy}</span>}
+          {stats.malformed > 0 && <span className="text-red-300">تحذيرات: {stats.malformed}</span>}
+        </div>
+        {open ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+      </button>
+      {open && (
+        <div className="border-t border-slate-800 px-4 py-3 text-xs text-slate-300">
+          <div className="mb-2 flex flex-wrap gap-2">
+            {DIFFICULTIES.map((d) => (
+              <span key={d} className="rounded-full border border-slate-700 px-2 py-0.5">
+                {DIFFICULTY_LABEL[d]}: {stats.byDifficulty[d] ?? 0}
+              </span>
+            ))}
+            {(stats.byDifficulty.unknown ?? 0) > 0 && (
+              <span className="rounded-full border border-slate-700 px-2 py-0.5">غير محدّد: {stats.byDifficulty.unknown}</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(stats.byWorld)
+              .sort(([, a], [, b]) => (b as number) - (a as number))
+              .map(([w, n]) => (
+                <span key={w} className="rounded-full border border-slate-700 px-2 py-0.5">
+                  {w === "__none__" ? "بدون عالم" : w}: {n}
+                </span>
+              ))}
+          </div>
+          <p className="mt-3 flex items-start gap-1.5 text-[11px] text-slate-500">
+            <Info className="mt-0.5 h-3 w-3" />
+            لا تُعرض إحصائيات إكمال اللاعبين — تعتمد على مصدر تقدم من الخادم (المرحلة G).
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SortHeader({ label, k, sortKey, sortDir, onSort }: {
+  label: string; k: SortKey; sortKey: SortKey; sortDir: SortDir; onSort: (k: SortKey) => void;
 }) {
-  const isNew = !value;
-  const [form, setForm] = useState({
-    slug: value?.slug ?? "",
-    title: value?.title ?? "",
-    subtitle: value?.subtitle ?? "",
-    description: value?.description ?? "",
-    difficulty: value?.difficulty ?? "easy",
-    enabled: value?.enabled ?? true,
-    reward: JSON.stringify(value?.reward ?? { hearts: 1, xp: 30, coins: 15 }, null, 2),
-    steps: JSON.stringify(value?.steps ?? [], null, 2),
-    related_entities: JSON.stringify(value?.related_entities ?? [], null, 2),
-  });
-  const [busy, setBusy] = useState(false);
+  const active = sortKey === k;
+  return (
+    <th className="px-3 py-2">
+      <button onClick={() => onSort(k)}
+        className={`inline-flex items-center gap-1 ${active ? "text-amber-300" : "text-slate-400 hover:text-amber-200"}`}>
+        {label}
+        {active ? (sortDir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />) : null}
+      </button>
+    </th>
+  );
+}
 
-  const save = async () => {
-    if (!form.slug.trim()) return onError("slug مطلوب.");
-    if (!/^[a-z0-9-]+$/.test(form.slug)) return onError("slug يجب أن يكون أحرف صغيرة وأرقام و-.");
-    if (!form.title.trim()) return onError("العنوان مطلوب.");
-    let reward: any, steps: any, related: any;
-    try { reward = JSON.parse(form.reward || "{}"); } catch (e: any) { return onError(`reward ليس JSON صحيح: ${e.message}`); }
-    try { steps = JSON.parse(form.steps || "[]"); } catch (e: any) { return onError(`steps ليس JSON صحيح: ${e.message}`); }
-    try { related = JSON.parse(form.related_entities || "[]"); } catch (e: any) { return onError(`related_entities ليس JSON صحيح: ${e.message}`); }
-    if (!Array.isArray(steps)) return onError("steps يجب أن يكون مصفوفة.");
-    if (!Array.isArray(related)) return onError("related_entities يجب أن يكون مصفوفة.");
+function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">
+      {children}
+      <button onClick={onRemove} className="text-amber-200/70 hover:text-amber-100">
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  );
+}
 
-    setBusy(true);
-    const payload: any = {
-      slug: form.slug.trim(),
-      title: form.title.trim(),
-      subtitle: form.subtitle.trim() || null,
-      description: form.description.trim() || null,
-      difficulty: form.difficulty,
-      reward,
-      steps,
-      related_entities: related,
-      enabled: form.enabled,
-    };
-    const { error } = isNew
-      ? await supabase.from("investigations" as any).insert(payload)
-      : await supabase.from("investigations" as any).update(payload).eq("id", value!.id);
-    setBusy(false);
-    if (error) return onError(error.message);
-    onSaved(isNew ? "تمت الإضافة." : "تم الحفظ.");
-  };
+function Row({ view, onPreview, onToggle }: { view: RowView; onPreview: () => void; onToggle: () => void }) {
+  const r = view.raw;
+  const rw = view.reward;
+  return (
+    <tr className="hover:bg-slate-900/60">
+      <td className="px-3 py-2">
+        <div className="flex items-center gap-2">
+          <div>
+            <div className="font-medium text-slate-100">{r.title}</div>
+            {r.subtitle && <div className="text-xs text-slate-400">{r.subtitle}</div>}
+          </div>
+          {view.hasBlocking && (
+            <span title={view.warnings.map((w) => w.detail ?? w.kind).join(" · ")}
+              className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-200">
+              تحذير
+            </span>
+          )}
+          {view.hasLegacy && !view.hasBlocking && (
+            <span title={view.warnings.map((w) => w.detail ?? w.kind).join(" · ")}
+              className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-200">
+              صيغة قديمة
+            </span>
+          )}
+        </div>
+      </td>
+      <td className="px-3 py-2 font-mono text-xs text-slate-400" dir="ltr">{r.slug}</td>
+      <td className="px-3 py-2 text-xs text-amber-300">{DIFFICULTY_LABEL[r.difficulty ?? ""] ?? r.difficulty ?? "—"}</td>
+      <td className="px-3 py-2 text-xs text-slate-300">
+        {view.worldSlug ? (
+          <>
+            <div>{view.worldSlug}</div>
+            <div className="text-[10px] text-slate-500">{view.eraSlug}</div>
+          </>
+        ) : (
+          <span className="text-slate-500">—</span>
+        )}
+      </td>
+      <td className="px-3 py-2 text-xs text-slate-300">
+        <div>خطوات {r.step_count}</div>
+        <div className="text-[10px] text-slate-500">أسئلة {r.question_count} · مراجع {r.related_count}</div>
+      </td>
+      <td className="px-3 py-2 text-xs text-slate-300">
+        {rw.xp ? <span className="me-1">XP+{rw.xp}</span> : null}
+        {typeof rw.dinars === "number" ? <span className="me-1">🪙{rw.dinars}</span> : null}
+        {rw.hearts ? <span className="me-1">❤️{rw.hearts}</span> : null}
+        {rw.unlocks > 0 ? <span className="me-1">🎁{rw.unlocks}</span> : null}
+      </td>
+      <td className="px-3 py-2">
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] ${
+          r.enabled
+            ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+            : "border-slate-600 bg-slate-800 text-slate-400"
+        }`}>{r.enabled ? "مفعّل" : "معطّل"}</span>
+      </td>
+      <td className="px-3 py-2 text-[11px] text-slate-500">{formatDate(r.updated_at)}</td>
+      <td className="px-3 py-2">
+        <div className="flex justify-end gap-1.5">
+          <IconBtn onClick={onPreview} icon={Eye} label="معاينة" />
+          <IconBtn onClick={() => { /* Phase C */ }}
+            icon={PenSquare} label="تحرير" disabled title="سيتاح مع المحرّر المنظم — المرحلة C" />
+          <IconBtn onClick={() => { /* Phase C/D */ }}
+            icon={Copy} label="نسخ" disabled title="سيتاح بعد استقرار المعرّفات — المرحلة C/D" />
+          <IconBtn onClick={onToggle} icon={r.enabled ? EyeOff : Eye}
+            label={r.enabled ? "تعطيل" : "تفعيل"} />
+          <IconBtn onClick={() => { /* removed */ }}
+            icon={Trash2} label="حذف" disabled danger
+            title="الحذف المباشر غير آمن — سيُستبدل بمسار مدقّق لاحقًا" />
+        </div>
+      </td>
+    </tr>
+  );
+}
 
+function PreviewModal({ slug, data, error, onClose }: {
+  slug: string; data: unknown | null; error: string | null; onClose: () => void;
+}) {
+  const pretty = useMemo(() => {
+    if (!data) return null;
+    try { return JSON.stringify(data, null, 2); } catch { return String(data); }
+  }, [data]);
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div dir="rtl" onClick={(e) => e.stopPropagation()}
         className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-amber-500/30 bg-slate-950 p-6 text-slate-100 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-amber-100">{isNew ? "تحقيق جديد" : `تحرير: ${value!.title}`}</h2>
-          <button onClick={onClose} className="rounded-lg border border-slate-700 p-1.5 text-slate-400 hover:text-amber-300">
-            <X className="h-4 w-4" />
-          </button>
+          <div>
+            <h2 className="text-lg font-bold text-amber-100">معاينة</h2>
+            <p className="mt-0.5 font-mono text-xs text-slate-400" dir="ltr">{slug}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <a href={`/investigation/${slug}`} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:border-amber-400 hover:text-amber-300">
+              <ExternalLink className="h-3 w-3" /> فتح في اللعبة
+            </a>
+            <button onClick={onClose} className="rounded-lg border border-slate-700 p-1.5 text-slate-400 hover:text-amber-300">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <Field label="Slug *">
-            <input value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-              placeholder="saqifah-investigation" dir="ltr"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm" />
-          </Field>
-          <Field label="الصعوبة">
-            <select value={form.difficulty}
-              onChange={(e) => setForm((f) => ({ ...f, difficulty: e.target.value }))}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
-              <option value="easy">سهل</option>
-              <option value="medium">متوسط</option>
-              <option value="hard">صعب</option>
-            </select>
-          </Field>
-          <Field label="العنوان *">
-            <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
-          </Field>
-          <Field label="العنوان الفرعي">
-            <input value={form.subtitle} onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
-          </Field>
-        </div>
-
-        <div className="mt-3">
-          <Field label="الوصف">
-            <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              rows={3}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
-          </Field>
-        </div>
-
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <Field label="reward (JSON)">
-            <textarea value={form.reward} onChange={(e) => setForm((f) => ({ ...f, reward: e.target.value }))}
-              rows={6} dir="ltr"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs" />
-          </Field>
-          <Field label="related_entities (JSON array)">
-            <textarea value={form.related_entities} onChange={(e) => setForm((f) => ({ ...f, related_entities: e.target.value }))}
-              rows={6} dir="ltr"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs" />
-          </Field>
-        </div>
-
-        <div className="mt-3">
-          <Field label="steps (JSON array)">
-            <textarea value={form.steps} onChange={(e) => setForm((f) => ({ ...f, steps: e.target.value }))}
-              rows={12} dir="ltr"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs" />
-          </Field>
-        </div>
-
-        <label className="mt-3 flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={form.enabled}
-            onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))} />
-          مفعّل (مرئي للجميع)
-        </label>
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm">إلغاء</button>
-          <button onClick={save} disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-1.5 text-sm font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50">
-            <Save className="h-4 w-4" /> {busy ? "جارٍ الحفظ…" : "حفظ"}
-          </button>
-        </div>
+        {error && (
+          <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>
+        )}
+        {!data && !error && <div className="text-sm text-slate-400">جارٍ التحميل…</div>}
+        {pretty && (
+          <pre dir="ltr" className="max-h-[70vh] overflow-auto rounded-lg border border-slate-800 bg-slate-950/80 p-3 text-[11px] leading-snug text-slate-200">
+{pretty}
+          </pre>
+        )}
       </div>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function IconBtn({ onClick, icon: Icon, label, danger, disabled, title }: {
+  onClick: () => void; icon: any; label: string; danger?: boolean; disabled?: boolean; title?: string;
+}) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-[11px] text-slate-400">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function IconBtn({ onClick, icon: Icon, label, danger }: { onClick: () => void; icon: any; label: string; danger?: boolean }) {
-  return (
-    <button onClick={onClick}
+    <button onClick={onClick} disabled={disabled} title={title ?? label}
       className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] transition ${
-        danger
+        disabled
+          ? "cursor-not-allowed border-slate-800 text-slate-600"
+          : danger
           ? "border-red-400/30 text-red-300 hover:bg-red-500/10"
           : "border-slate-700 text-slate-300 hover:border-amber-400/40 hover:text-amber-300"
       }`}>
@@ -375,5 +608,9 @@ function IconBtn({ onClick, icon: Icon, label, danger }: { onClick: () => void; 
   );
 }
 
-// Silence unused FileJson import warning in some build configs.
-void FileJson;
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("ar", { year: "numeric", month: "short", day: "numeric" });
+  } catch { return iso; }
+}
