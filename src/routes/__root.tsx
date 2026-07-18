@@ -369,6 +369,7 @@ function RootComponent() {
           <OnboardingTour />
           <FirstLaunchGate />
           <AchievementWatcher />
+          <InvestigationLegacyBackfill />
           <LevelUpWatcher />
           <Toaster position="top-center" richColors closeButton />
           <SplashSequence />
