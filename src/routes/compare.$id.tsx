@@ -7,6 +7,7 @@ import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import { fetchGatedProfileById, derivePublicStats, type PublicProfile } from "@/lib/social";
 import { evaluateAchievements } from "@/lib/app-constants";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { Avatar } from "@/components/Avatar";
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 
@@ -21,6 +22,7 @@ function ComparePage() {
   const { profile } = useProfile();
   const [other, setOther] = useState<PublicProfile | null>(null);
   const [denied, setDenied] = useState(false);
+  const canonicalInvCmp = useCanonicalInvestigationProgress();
 
   useEffect(() => {
     let alive = true;
@@ -38,10 +40,10 @@ function ComparePage() {
     return {
       username: account?.username ?? profile.name,
       ...s,
-      achievements: evaluateAchievements(profile).filter((a) => a.earned).length,
+      achievements: evaluateAchievements(profile, { investigationsCompletedCount: canonicalInvCmp.count }).filter((a) => a.earned).length,
       avatarId: profile.avatarId ?? DEFAULT_AVATAR_ID,
     };
-  }, [profile, account]);
+  }, [profile, account, canonicalInvCmp.count]);
 
   if (!user) {
     return (

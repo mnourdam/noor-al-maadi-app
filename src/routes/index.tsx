@@ -21,6 +21,7 @@ import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collectio
 import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscoveries";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
+import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
 import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
@@ -207,6 +208,7 @@ function HomeFull() {
 
 
   const lvl = levelFor(profile.points);
+  const canonicalInvHome = useCanonicalInvestigationProgress();
 
   // ===== Campaign recommendation — SHARED SERVICE =====
   // Home Hero and Worlds Continue Journey both consume this hook,
@@ -481,7 +483,7 @@ function HomeFull() {
         });
       }
     }
-    const evals = evaluateAchievements(profile);
+    const evals = evaluateAchievements(profile, { investigationsCompletedCount: canonicalInvHome.count });
     const earnedMap = profile.achievementsEarned ?? {};
     const nearest = evals
       .filter((e) => !e.earned && !earnedMap[e.id])
@@ -503,7 +505,7 @@ function HomeFull() {
       });
     }
     return goals.slice(0, 3);
-  }, [lvl, campaignSel, profile]);
+  }, [lvl, campaignSel, profile, canonicalInvHome.count]);
 
   // ===== Recent Activity =====
   type Activity = { key: string; icon: ReactNode; eyebrow: string; title: string; to: string };

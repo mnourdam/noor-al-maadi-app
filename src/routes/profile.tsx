@@ -149,7 +149,8 @@ function ProfilePage() {
 
 
   const lvl = levelFor(profile.points);
-  const achievements = evaluateAchievements(profile);
+  const canonicalInvForAch = useCanonicalInvestigationProgress();
+  const achievements = evaluateAchievements(profile, { investigationsCompletedCount: canonicalInvForAch.count });
   const achMap = useMemo(() => new Map(achievements.map((a) => [a.id, a])), [achievements]);
   const earnedCount = achievements.filter((a) => a.earned).length;
 
