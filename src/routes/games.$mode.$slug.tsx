@@ -11,6 +11,7 @@ import { ReadingScale } from "@/components/ReadingScale";
 
 import { getGameBySlug, type GameRow } from "@/lib/games/store";
 import { recordCompletion, getMyProgress } from "@/lib/games/progress";
+import { markDailyChallengeCompletedLocally } from "@/lib/games/dailyChallengeService";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, GAME_MODES, type GameMode } from "@/lib/games/types";
 import { GameStageRenderer } from "@/components/games/GameStageRenderer";
 import { GameTimer, type GameTimerHandle } from "@/components/games/GameTimer";
