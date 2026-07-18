@@ -191,6 +191,12 @@ function useSectionScrollAnchor(order: SectionKey[]) {
 
 function WorldDetailPage() {
   const { slug } = Route.useParams();
+  // Non-playable slugs (e.g. fatimid, mongols, timurid, safavid) redirect
+  // safely to the explorer. Encyclopedia entities that link into these
+  // eras continue to work via /encyclopedia/*.
+  if (!isPublicWorld(slug)) {
+    return <Navigate to="/worlds" replace />;
+  }
   const hub = findHub(slug);
 
   const { data, isLoading } = useQuery({
@@ -209,6 +215,7 @@ function WorldDetailPage() {
   const titleBySlug = new Map((worldsIndex ?? []).map((w) => [w.hub.slug, w.entity.title]));
 
   const { progress, recommendation, rankedSections, ready } = useWorldProgress(slug);
+  const { byWorld } = useAllWorldsProgress();
   const reduceMotion = useReduceMotion();
   const stableOrder = useStableSectionOrder(rankedSections, progress.signature);
   const containerRef = useSectionScrollAnchor(stableOrder);
@@ -220,7 +227,7 @@ function WorldDetailPage() {
           <h1 className="font-display text-xl">العالم غير موجود</h1>
           <p className="mt-2 text-[12px] text-muted-foreground">اختر عالمًا من القائمة.</p>
           <div className="mt-4 grid grid-cols-2 gap-2">
-            {WORLD_HUBS.map((h) => (
+            {PUBLIC_WORLD_HUBS.map((h) => (
               <Link key={h.slug} to="/worlds/$slug" params={{ slug: h.slug }}
                 className="rounded-2xl border border-gold/20 bg-black/30 p-3 text-right">
                 <p className="text-lg">{h.glyph}</p>
@@ -244,8 +251,13 @@ function WorldDetailPage() {
   const period = (data.entity.metadata as { period?: unknown } | null)?.period;
   const periodStr = typeof period === "string" ? period : null;
 
-  const prevHub = WORLD_HUBS.find((h) => h.order === hub.order - 1);
-  const nextHub = WORLD_HUBS.find((h) => h.order === hub.order + 1);
+  // Prev/Next navigation is bound to PUBLIC_WORLD_HUBS. Non-playable worlds
+  // are intentionally skipped.
+  const publicIdx = PUBLIC_WORLD_HUBS.findIndex((h) => h.slug === hub.slug);
+  const prevHub = publicIdx > 0 ? PUBLIC_WORLD_HUBS[publicIdx - 1] : undefined;
+  const nextHub = publicIdx >= 0 && publicIdx < PUBLIC_WORLD_HUBS.length - 1
+    ? PUBLIC_WORLD_HUBS[publicIdx + 1]
+    : undefined;
 
   return (
     <AppShell>
