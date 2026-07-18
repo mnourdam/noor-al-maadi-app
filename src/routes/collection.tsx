@@ -61,6 +61,7 @@ import { pullAllFromCloud } from "@/lib/cloudSync";
 
 import type { ContentRegistryItem } from "@/types/contentRegistry";
 import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
+import { useLatestMuseumAcquisitions } from "@/lib/playerDiscoveries";
 import { listCampaigns } from "@/lib/campaignStorage";
 
 import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
