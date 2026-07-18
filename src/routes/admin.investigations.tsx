@@ -75,11 +75,45 @@ interface RowView {
   reward: ReturnType<typeof summarizeReward>;
   worldSlug: string | null;
   eraSlug: string | null;
+  /** Row-level enrichment / render failure — never crashes the page. */
+  renderError: string | null;
 }
 
 type SortKey = "updated_at" | "created_at" | "title" | "difficulty";
 type SortDir = "asc" | "desc";
 type Toast = { kind: "ok" | "err"; msg: string };
+
+/** Structured diagnostic codes shown to admins — never leak SQL internals. */
+type DiagCode =
+  | "RPC_PERMISSION_DENIED"
+  | "RPC_SHAPE_MISMATCH"
+  | "RPC_NETWORK_ERROR"
+  | "NORMALIZATION_FAILED"
+  | "WORLD_MAPPING_FAILED"
+  | "ROW_RENDER_FAILED"
+  | "UNKNOWN";
+
+interface DiagInfo {
+  code: DiagCode;
+  hint: string;
+  supabaseCode?: string;
+}
+
+function classifyRpcError(e: unknown): DiagInfo {
+  const err = (e ?? {}) as { code?: string; message?: string; details?: string };
+  const code = err.code ?? "";
+  const msg = (err.message ?? "").toLowerCase();
+  if (code === "42501" || msg.includes("not authorized") || msg.includes("permission denied")) {
+    return { code: "RPC_PERMISSION_DENIED", supabaseCode: code, hint: "الجلسة الحالية لا تملك صلاحية مشرف محتوى." };
+  }
+  if (code === "PGRST202" || code === "PGRST200" || msg.includes("could not find") || msg.includes("schema cache")) {
+    return { code: "RPC_SHAPE_MISMATCH", supabaseCode: code, hint: "توقيع الـ RPC لا يطابق ما تنتظره الواجهة." };
+  }
+  if (msg.includes("failed to fetch") || msg.includes("networkerror")) {
+    return { code: "RPC_NETWORK_ERROR", supabaseCode: code, hint: "تعذّر الاتصال بخدمة قاعدة البيانات." };
+  }
+  return { code: "UNKNOWN", supabaseCode: code, hint: err.message ?? "خطأ غير معروف." };
+}
 
 const DIFFICULTIES = ["easy", "medium", "hard"] as const;
 const DIFFICULTY_LABEL: Record<string, string> = { easy: "سهل", medium: "متوسط", hard: "صعب" };
