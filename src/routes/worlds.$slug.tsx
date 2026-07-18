@@ -20,6 +20,7 @@ import {
   useWorldProgress,
   useStableSectionOrder,
   useWorldMembership,
+  useCloudCampaignProgress,
   type Recommendation,
   type SectionKey,
 } from "@/lib/worlds-progress";
@@ -425,6 +426,7 @@ function CampaignsSection({ worldSlug, progress }: { worldSlug: string; progress
   const { data } = useQuery({ queryKey: ["campaigns", "feed"], queryFn: fetchPublishedFeed });
   const { campaignIds } = useWorldMembership(worldSlug);
   const { profile } = useProfile();
+  const cloudCampaign = useCloudCampaignProgress();
   const invalidatedTick = profile.investigationsCompleted?.length ?? 0; // dep to re-render on progress change
 
   const ordered = useMemo(() => {
@@ -440,13 +442,17 @@ function CampaignsSection({ worldSlug, progress }: { worldSlug: string; progress
     };
     const rows: Row[] = list.map((c) => {
       const chapters = c.chapters ?? [];
-      const prog = getCampaignProgress(c.id);
+      const local = getCampaignProgress(c.id);
+      // Merge cloud completions with local — matches computeWorldProgress
+      // so card status and the aggregate campaigns bar never disagree.
+      const cloudDone = cloudCampaign.get(c.id) ?? new Set<string>();
       const total = chapters.length;
       let done = 0;
       let nextId: string | null = null;
       let nextTitle: string | null = null;
       for (const ch of chapters) {
-        if (prog.chapters[ch.id]?.completed) done++;
+        const isDone = cloudDone.has(ch.id) || !!local.chapters[ch.id]?.completed;
+        if (isDone) done++;
         else if (!nextId) { nextId = ch.id; nextTitle = ch.title ?? null; }
       }
       const pct = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -465,7 +471,7 @@ function CampaignsSection({ worldSlug, progress }: { worldSlug: string; progress
       return sorted[0].id === a.c.id ? -1 : 1;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, campaignIds, invalidatedTick]);
+  }, [data, campaignIds, cloudCampaign, invalidatedTick]);
 
   const shown = ordered.slice(0, 6);
 

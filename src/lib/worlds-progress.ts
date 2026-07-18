@@ -44,6 +44,13 @@ export type WorldEntityIndex = {
   byBucket: Record<EntityBucket, SupabaseEncyclopediaEntity[]>;
   campaignIds: string[];           // published campaigns in this world
   investigationSlugs: string[];    // investigations mapped to this world
+  /**
+   * Fast id → raw campaign row lookup shared across every consumer that
+   * needs a per-campaign detail (chapters, title, cover). Built once per
+   * snapshot; avoids the O(N²) rescan `findCampaignRow` used to perform
+   * inside `computeWorldProgress` / recommenders.
+   */
+  campaignRowsById: Map<string, { data: any }>;
 };
 
 export type WorldProgress = {
@@ -131,6 +138,7 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
       byBucket: emptyBuckets(),
       campaignIds: [],
       investigationSlugs: [],
+      campaignRowsById: new Map(),
     });
   }
 
@@ -148,17 +156,22 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
   }
 
   // 2. Campaigns → world via canonical worldSlug (fallback: entity refs).
+  // Also populate `campaignRowsById` on the winning world so downstream
+  // consumers get O(1) row lookup without rescanning the campaign list.
   const camps = localPublishedCampaigns() as Array<{ data: any }>;
   for (const c of camps) {
     const d = (c?.data ?? {}) as Record<string, unknown>;
+    const cid = typeof d.id === "string" ? d.id : null;
+    const assign = (ws: string) => {
+      const idx = byWorld.get(ws);
+      if (!idx || !cid) return;
+      idx.campaignIds.push(cid);
+      idx.campaignRowsById.set(cid, c);
+    };
     const ws = typeof d.worldSlug === "string" && WORLD_SLUGS.has(d.worldSlug as string)
       ? (d.worldSlug as string)
       : null;
-    if (ws) {
-      const idx = byWorld.get(ws);
-      if (idx && typeof d.id === "string") idx.campaignIds.push(d.id);
-      continue;
-    }
+    if (ws) { assign(ws); continue; }
     // Fallback: pick the world matched by the majority of core/supporting refs.
     const meta = (d.metadata && typeof d.metadata === "object" ? d.metadata : {}) as Record<string, unknown>;
     const refs: string[] = [];
@@ -175,7 +188,7 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
     }
     let best: string | null = null; let bestN = 0;
     for (const [ws2, n] of tally) if (n > bestN) { best = ws2; bestN = n; }
-    if (best && typeof d.id === "string") byWorld.get(best)!.campaignIds.push(d.id);
+    if (best) assign(best);
   }
 
   // 3. Investigations → world via majority era of related_entities.
@@ -473,7 +486,11 @@ function campaignChapters(c: { data: any } | undefined | null): Array<{ id: stri
   return Array.isArray(chs) ? chs.filter((x): x is { id: string } => !!x && typeof x?.id === "string") : [];
 }
 
-function findCampaignRow(id: string): { data: any } | null {
+function findCampaignRow(id: string, idx?: WorldEntityIndex): { data: any } | null {
+  if (idx) {
+    const hit = idx.campaignRowsById.get(id);
+    if (hit) return hit;
+  }
   const rows = localPublishedCampaigns() as Array<{ data: any }>;
   return rows.find((r) => r?.data?.id === id) ?? null;
 }
@@ -546,7 +563,7 @@ export function computeWorldProgress(
   let campStarted = 0; let campDone = 0;
   let totalChapters = 0; let completedChapters = 0;
   for (const cid of idx.campaignIds) {
-    const row = findCampaignRow(cid);
+    const row = findCampaignRow(cid, idx);
     const chapters = campaignChapters(row);
     if (chapters.length === 0) continue;
     totalChapters += chapters.length;
@@ -643,7 +660,7 @@ export function pickContinueJourney(
 
   // 1+2. Campaign tier — delegate to the shared recommendation service.
   const worldCampaignRows = idx.campaignIds
-    .map((id) => findCampaignRow(id))
+    .map((id) => findCampaignRow(id, idx))
     .filter((r): r is { data: any } => !!r)
     .map((r) => r.data as ImportedCampaignForRec);
   const campaignRec = pickCampaignRecommendation({
@@ -877,5 +894,5 @@ export function useAllWorldsProgress() {
       byWorld.set(h.slug, { progress, recommendation });
     }
     return { ready: true, byWorld };
-  }, [ready, discovered, cloudCampaign, profile.investigationsCompleted]);
+  }, [ready, discovered, museum, cloudCampaign, investigationsCompleted]);
 }
