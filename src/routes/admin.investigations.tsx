@@ -557,6 +557,47 @@ function SortHeader({ label, k, sortKey, sortDir, onSort }: {
   );
 }
 
+// Per-row error boundary — guarantees one malformed row cannot black-hole
+// the whole administration dashboard.
+class SafeRow extends React.Component<
+  { view: RowView; onPreview: () => void; onToggle: () => void },
+  { error: string | null }
+> {
+  state = { error: null as string | null };
+  static getDerivedStateFromError(err: unknown) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+  componentDidCatch(err: unknown) {
+    // eslint-disable-next-line no-console
+    console.error("[admin.investigations] row render failed", err, this.props.view?.raw);
+  }
+  render() {
+    const { view, onPreview, onToggle } = this.props;
+    const combinedError = this.state.error ?? view.renderError;
+    if (combinedError) {
+      const r = view.raw ?? ({} as ListRow);
+      return (
+        <tr className="bg-red-950/20">
+          <td colSpan={9} className="px-3 py-2 text-xs text-red-200">
+            <div className="flex flex-wrap items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span className="rounded border border-red-400/40 bg-red-500/10 px-1.5 py-0.5 font-mono text-[10px]">
+                ROW_RENDER_FAILED
+              </span>
+              <span className="font-mono text-[11px]">{r.slug ?? r.id ?? "—"}</span>
+              <span className="text-red-100/80">تعذّر عرض هذا الصف — بقية الصفوف تعمل بشكل طبيعي.</span>
+            </div>
+            {import.meta.env.DEV && (
+              <pre dir="ltr" className="mt-1 overflow-auto whitespace-pre-wrap text-[10px] text-red-100/70">{combinedError}</pre>
+            )}
+          </td>
+        </tr>
+      );
+    }
+    return <Row view={view} onPreview={onPreview} onToggle={onToggle} />;
+  }
+
+
 function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">
