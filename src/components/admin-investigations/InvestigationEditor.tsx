@@ -290,16 +290,20 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
     setDryHash(null);
   }, [state, removalApproved]);
 
-  // Unsaved-change protection (browser + tab close).
-  useEffect(() => {
-    if (!dirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+  // Unsaved-change protection covers ALL navigation paths:
+  //  • internal <Link> / programmatic navigate()
+  //  • browser back / forward (router history)
+  //  • Android hardware back — AndroidBackHandler calls
+  //    router.history.back(), which TanStack Router routes through the
+  //    same blocker registry.
+  //  • hard reload / tab close via enableBeforeUnload.
+  // A clean editor produces no prompt; a dirty editor renders the
+  // Arabic resolver dialog below.
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirty,
+    enableBeforeUnload: () => dirty,
+    withResolver: true,
+  });
 
   // ---- Validation, quality, relations ----
   const validation = useMemo(
