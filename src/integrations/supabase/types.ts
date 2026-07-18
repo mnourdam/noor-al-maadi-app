@@ -2105,6 +2105,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_get_investigation_full: {
+        Args: { p_id_or_slug: string }
+        Returns: Json
+      }
       admin_import_content_table: { Args: { p_ctype: string }; Returns: string }
       admin_list_campaign_versions: {
         Args: { p_id: string }
@@ -2149,6 +2153,24 @@ export type Database = {
           p_status?: string
         }
         Returns: Json
+      }
+      admin_list_investigations: {
+        Args: never
+        Returns: {
+          created_at: string
+          difficulty: string
+          enabled: boolean
+          id: string
+          question_count: number
+          related_count: number
+          related_entities: Json
+          reward: Json
+          slug: string
+          step_count: number
+          subtitle: string
+          title: string
+          updated_at: string
+        }[]
       }
       admin_list_newsletter_subscribers: {
         Args: {
@@ -2258,6 +2280,10 @@ export type Database = {
       }
       admin_set_account_status: {
         Args: { p_reason: string; p_status: string; p_user_id: string }
+        Returns: Json
+      }
+      admin_set_investigation_enabled: {
+        Args: { p_enabled: boolean; p_id: string }
         Returns: Json
       }
       admin_unsubscribe_newsletter: {
