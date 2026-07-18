@@ -74,14 +74,29 @@ function InvestigationsIndex() {
       ...(rows ?? []).map((r) => ({ kind: "supabase" as const, row: r })),
       ...legacyVisible.map((r) => ({ kind: "legacy" as const, row: r })),
     ];
-    return shuffle(combined);
+    const shuffled = shuffle(combined);
+    if (!worldSlug) return shuffled;
+    if (!membershipReady) return [];
+    return shuffled.filter((it) => {
+      const slug = it.kind === "supabase" ? it.row.slug : it.row.id;
+      return investigationSlugs.has(slug);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows?.length, legacyVisible.length, SESSION_SHUFFLE_SEED]);
+  }, [rows?.length, legacyVisible.length, SESSION_SHUFFLE_SEED, worldSlug, membershipReady, investigationSlugs]);
 
   return (
     <AppShell>
       <ReadingScale>
       <Screen title="التحقيقات التاريخية" subtitle="اكشف القرائن، استنتج الإجابة، واربح القلوب والدنانير">
+
+        {worldSlug && (
+          <div className="mb-4">
+            <WorldFilterChip
+              worldTitle={worldTitle}
+              onClear={() => navigate({ search: { world: "" } })}
+            />
+          </div>
+        )}
 
         {rows === null && (
           <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
@@ -125,9 +140,16 @@ function InvestigationsIndex() {
             );
           })}
 
-          {rows !== null && rows.length === 0 && legacyVisible.length === 0 && (
-            <div className="rounded-2xl border border-white/10 bg-surface p-6 text-center text-sm text-muted-foreground">
-              لا توجد تحقيقات متاحة حاليًا.
+          {rows !== null && shuffledItems.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
+              {worldSlug ? (
+                <>
+                  <Globe2 className="mx-auto mb-3 size-8 text-gold/70" />
+                  <p className="font-display text-base font-bold text-gold">لا توجد تحقيقات متاحة في هذا العالم حاليًا</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">لا توجد تحقيقات متاحة حاليًا.</p>
+              )}
             </div>
           )}
         </div>
