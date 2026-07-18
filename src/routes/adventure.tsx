@@ -1,16 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import {
   Sword, Search, Sparkles, Clock, Coins, Star, Play,
   Crown, Hourglass, Link2, Archive, Feather, ScrollText, Moon, Trophy, Check,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import {
-  selectDailyChallenges,
-  fetchMyCompletedGameIds,
-  fetchMyDailyCompletedGameIds,
-  type GameRow,
-} from "@/lib/games/store";
+import { type GameRow } from "@/lib/games/store";
+import { useDailyChallengeState } from "@/lib/games/dailyChallengeService";
 import { MODE_LABELS_AR, type GameMode } from "@/lib/games/types";
 import "@/components/games/games-premium.css";
 
@@ -33,27 +28,12 @@ const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; stro
 };
 
 function AdventurePage() {
-  const [picks, setPicks] = useState<GameRow[] | null>(null);
-  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
-  const [allCompleted, setAllCompleted] = useState(false);
+  const { state, loading } = useDailyChallengeState();
+  const picks = state?.picks ?? null;
+  const completedIds = state?.completedIds ?? new Set<string>();
+  const todaysPicksDone = state?.todaysPicksDone ?? false;
+  const allEligibleExhausted = state?.allEligibleExhausted ?? false;
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [allTimeCompleted, todayCompleted] = await Promise.all([
-        fetchMyCompletedGameIds(),
-        fetchMyDailyCompletedGameIds(),
-      ]);
-      const sel = await selectDailyChallenges(2, { completedIds: allTimeCompleted });
-      if (cancelled) return;
-      setCompletedIds(todayCompleted);
-      setPicks(sel.picks);
-      setAllCompleted(sel.allCompleted);
-    })().catch(() => {
-      if (!cancelled) setPicks([]);
-    });
-    return () => { cancelled = true; };
-  }, []);
 
   return (
     <AppShell>
@@ -61,16 +41,18 @@ function AdventurePage() {
         <div dir="rtl" className="space-y-10">
           <section>
             <SectionHeader icon={<Sparkles className="h-4 w-4" />} title="تحدي اليوم" hint="يتجدّد كل صباح" />
-            {picks === null ? (
+            {loading || picks === null ? (
               <p className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
                 جارٍ التحميل…
               </p>
+            ) : allEligibleExhausted ? (
+              <ExhaustedBanner />
+            ) : todaysPicksDone ? (
+              <CompletedBanner />
             ) : !picks.length ? (
               <p className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
                 لم تُنشر تحديات بعد. تابع قريبًا.
               </p>
-            ) : allCompleted ? (
-              <CompletedBanner />
             ) : (
               <div className="space-y-4">
                 {picks.map((g) => (
@@ -80,16 +62,21 @@ function AdventurePage() {
             )}
           </section>
 
-          {/* Teaser — no more challenges today */}
-          <section>
-            <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-950 via-slate-900/60 to-slate-950 p-6 text-center">
-              <Moon className="mx-auto h-7 w-7 text-amber-300/80" strokeWidth={1.3} />
-              <p className="mt-3 text-sm leading-7 text-amber-100/90">
-                تتجدد التحديات عند بزوغ فجر الغد إن شاء الله.
-              </p>
-              <div className="mx-auto mt-3 h-px w-40 bg-gradient-to-l from-transparent via-amber-500/40 to-transparent" />
-            </div>
-          </section>
+          {/* Rotation reminder — hidden once every eligible challenge is done,
+              since a "come back tomorrow" line is misleading when nothing new
+              will unlock without new content. */}
+          {!allEligibleExhausted && (
+            <section>
+              <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-950 via-slate-900/60 to-slate-950 p-6 text-center">
+                <Moon className="mx-auto h-7 w-7 text-amber-300/80" strokeWidth={1.3} />
+                <p className="mt-3 text-sm leading-7 text-amber-100/90">
+                  تتجدد التحديات عند بداية يوم جديد.
+                </p>
+                <div className="mx-auto mt-3 h-px w-40 bg-gradient-to-l from-transparent via-amber-500/40 to-transparent" />
+              </div>
+            </section>
+          )}
+
 
           {/* Museum hall */}
           <section className="relative overflow-hidden rounded-2xl border border-amber-500/30 irth-title-card p-6 sm:p-8">
@@ -149,13 +136,30 @@ function CompletedBanner() {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-emerald-400/30 irth-title-card p-8 text-center">
       <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
+        <Check className="h-7 w-7 text-emerald-300" strokeWidth={2} />
+      </div>
+      <h3 className="mt-4 text-lg font-bold text-emerald-100">أتممت تحديات اليوم ✓</h3>
+      <p className="mt-2 text-sm leading-7 text-slate-300">
+        أحسنت! أنجزت تحديي اليوم. عد غدًا لتفتح تحديات جديدة.
+      </p>
+      <p className="mt-3 text-[11px] leading-6 text-slate-500">
+        تتجدد التحديات عند بداية يوم جديد.
+      </p>
+    </div>
+  );
+}
+
+function ExhaustedBanner() {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-emerald-400/30 irth-title-card p-8 text-center">
+      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-emerald-400/50 bg-emerald-500/15">
         <Trophy className="h-7 w-7 text-emerald-300" strokeWidth={1.4} />
       </div>
-      <h3 className="mt-4 text-lg font-bold text-emerald-100">أحسنت!</h3>
+      <h3 className="mt-4 text-lg font-bold text-emerald-100">أتممت جميع التحديات المتاحة</h3>
       <p className="mt-2 text-sm leading-7 text-slate-300">
-        لقد أنهيت تحديات اليوم.
+        إنجاز رائع! لقد أنهيت كل تحديات القاعة المتاحة حاليًا.
         <br />
-        عد غدًا لاكتشاف تحديين جديدين.
+        سنضيف لك تحديات جديدة قريبًا.
       </p>
     </div>
   );

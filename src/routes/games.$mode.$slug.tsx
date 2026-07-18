@@ -11,6 +11,8 @@ import { ReadingScale } from "@/components/ReadingScale";
 
 import { getGameBySlug, type GameRow } from "@/lib/games/store";
 import { recordCompletion, getMyProgress } from "@/lib/games/progress";
+import { markDailyChallengeCompletedLocally } from "@/lib/games/dailyChallengeService";
+import { supabase } from "@/integrations/supabase/client";
 import { MODE_LABELS_AR, MODE_TAGLINES_AR, GAME_MODES, type GameMode } from "@/lib/games/types";
 import { GameStageRenderer } from "@/components/games/GameStageRenderer";
 import { GameTimer, type GameTimerHandle } from "@/components/games/GameTimer";
@@ -149,6 +151,15 @@ function GamePlayPage() {
             setUnlockToast(items.length);
           }
         }
+      }
+      // Canonical daily-challenge event — Home + Hall subscribe to this and
+      // will immediately reflect the new completion state. Idempotent, so
+      // firing on replay is harmless (rewards are gated by `firstTime`).
+      try {
+        const { data } = await supabase.auth.getUser();
+        markDailyChallengeCompletedLocally(data.user?.id ?? "guest", game.id);
+      } catch {
+        markDailyChallengeCompletedLocally("guest", game.id);
       }
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
