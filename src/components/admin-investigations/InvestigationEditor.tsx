@@ -623,13 +623,25 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
         </div>
       )}
 
-      {/* Removal confirmation dialog */}
-      {showRemovalDialog && (
+      {/* Removal confirmation dialog — keyed by stable step id */}
+      {pendingRemoveId && (
         <RemovalDialog
-          step={initialState?.steps.find((s) => s.id === (state.steps[(window as any).__pendingRemoveIdx]?.id ?? "")) ??
-                initialState?.steps[(window as any).__pendingRemoveIdx] ?? null}
-          onCancel={() => setShowRemovalDialog(false)}
+          step={
+            initialState?.steps.find((s) => s.id === pendingRemoveId) ??
+            state.steps.find((s) => s.id === pendingRemoveId) ??
+            null
+          }
+          onCancel={() => setPendingRemoveId(null)}
           onConfirm={confirmRemoval}
+        />
+      )}
+
+      {/* Unsaved-changes navigation blocker (covers Link, navigate,
+          browser back, Android back, hard reload/tab close). */}
+      {blocker.status === "blocked" && (
+        <UnsavedChangesDialog
+          onStay={blocker.reset}
+          onDiscard={blocker.proceed}
         />
       )}
 
