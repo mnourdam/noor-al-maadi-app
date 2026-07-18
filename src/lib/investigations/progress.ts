@@ -214,49 +214,123 @@ async function fetchProgress(uid: string): Promise<ProgressState> {
   return { uid, ready: true, byId, completedIds: completed };
 }
 
-export function useInvestigationProgress(): ProgressState {
-  const [state, setState] = useState<ProgressState>(EMPTY_STATE);
+// ------------------------------------------------------------
+// Shared session uid (module-level cache + single auth subscription).
+// ------------------------------------------------------------
+// Multiple canonical-progress consumers must share ONE auth listener and
+// ONE uid state, otherwise React Query's queryKey would flap per mount
+// and we'd lose the shared-cache guarantee. A module-level pub/sub
+// gives every hook consumer the same uid reference.
+type UidListener = (uid: string | null) => void;
+let currentAuthUid: string | null | undefined = undefined; // undefined = not-yet-resolved
+const uidListeners = new Set<UidListener>();
+let uidSubscriptionStarted = false;
 
+function startUidSubscription(): void {
+  if (uidSubscriptionStarted) return;
+  uidSubscriptionStarted = true;
+  supabase.auth.getSession().then(({ data }) => {
+    const next = data.session?.user?.id ?? null;
+    currentAuthUid = next;
+    uidListeners.forEach((l) => l(next));
+  }).catch(() => {
+    currentAuthUid = null;
+    uidListeners.forEach((l) => l(null));
+  });
+  supabase.auth.onAuthStateChange((_e, session) => {
+    const next = session?.user?.id ?? null;
+    currentAuthUid = next;
+    uidListeners.forEach((l) => l(next));
+  });
+}
+
+function useAuthUid(): string | null {
+  const [uid, setUid] = useState<string | null>(
+    currentAuthUid === undefined ? null : currentAuthUid,
+  );
   useEffect(() => {
-    let alive = true;
-    let currentUid: string | null = null;
-
-    const reload = async () => {
-      if (!currentUid) {
-        if (alive) setState({ uid: null, ready: true, byId: new Map(), completedIds: new Set() });
-        return;
-      }
-      const next = await fetchProgress(currentUid);
-      if (alive) setState(next);
-    };
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (!alive) return;
-      currentUid = data.session?.user?.id ?? null;
-      void reload();
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      currentUid = session?.user?.id ?? null;
-      void reload();
-    });
-
-    const onChanged = () => { void reload(); };
-    if (typeof window !== "undefined") {
-      window.addEventListener("irth:investigation-progress:changed", onChanged as EventListener);
-      window.addEventListener("irth:outbox:flushed", onChanged as EventListener);
+    startUidSubscription();
+    const listener: UidListener = (next) => setUid(next);
+    uidListeners.add(listener);
+    // If resolution already happened before this effect ran, sync now.
+    if (currentAuthUid !== undefined && currentAuthUid !== uid) {
+      setUid(currentAuthUid);
     }
-
-    return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
-      if (typeof window !== "undefined") {
-        window.removeEventListener("irth:investigation-progress:changed", onChanged as EventListener);
-        window.removeEventListener("irth:outbox:flushed", onChanged as EventListener);
-      }
-    };
+    return () => { uidListeners.delete(listener); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  return uid;
+}
 
-  return state;
+// ------------------------------------------------------------
+// Shared TanStack Query — one server read per uid regardless of
+// how many canonical-progress consumers mount.
+// ------------------------------------------------------------
+// Query key contract:
+//   ["investigation-progress", uid]  — signed-in
+//   ["investigation-progress", null] — guest (never fetched, disabled)
+//
+// Race protection:
+//   • queryKey encodes uid; a stale account-A response resolves into
+//     the ["investigation-progress", A] slot and can NEVER overwrite
+//     ["investigation-progress", B]. React Query gc collects unused
+//     slots.
+//   • fetchProgress() itself performs no cross-mount writes, so there
+//     is no shared mutable state that can leak between accounts.
+//
+// Invalidation: outbox events (irth:outbox:flushed and the canonical
+// irth:investigation-progress:changed) trigger a single
+// invalidateQueries call which every subscribed consumer sees.
+const INVESTIGATION_PROGRESS_QUERY_KEY = "investigation-progress" as const;
+
+const EMPTY_READY_STATE: ProgressState = {
+  uid: null,
+  ready: true,
+  byId: new Map(),
+  completedIds: new Set(),
+};
+
+export function useInvestigationProgress(): ProgressState {
+  const uid = useAuthUid();
+  const queryClient = useQueryClient();
+
+  const { data, isSuccess } = useQuery<ProgressState>({
+    queryKey: [INVESTIGATION_PROGRESS_QUERY_KEY, uid],
+    // fetchProgress() is only ever invoked when enabled → uid is a string.
+    queryFn: () => fetchProgress(uid as string),
+    enabled: !!uid,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    // Do NOT refetch on window focus for this — outbox events already
+    // invalidate the cache authoritatively.
+    refetchOnWindowFocus: false,
+  });
+
+  // One invalidation listener per hook instance is fine; React Query
+  // dedupes the invalidate calls and only re-runs the query once.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: [INVESTIGATION_PROGRESS_QUERY_KEY] });
+    };
+    window.addEventListener("irth:investigation-progress:changed", invalidate as EventListener);
+    window.addEventListener("irth:outbox:flushed", invalidate as EventListener);
+    return () => {
+      window.removeEventListener("irth:investigation-progress:changed", invalidate as EventListener);
+      window.removeEventListener("irth:outbox:flushed", invalidate as EventListener);
+    };
+  }, [queryClient]);
+
+  // Guest: no query is ever fired.
+  if (!uid) return EMPTY_READY_STATE;
+
+  // Signed-in but first fetch not yet resolved — surface not-ready so
+  // canonical service knows to fall back to legacy while loading.
+  if (!isSuccess || !data) {
+    return { uid, ready: false, byId: new Map(), completedIds: new Set() };
+  }
+
+  return data;
 }
 
 /**
