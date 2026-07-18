@@ -40,10 +40,10 @@ function ComparePage() {
     return {
       username: account?.username ?? profile.name,
       ...s,
-      achievements: evaluateAchievements(profile).filter((a) => a.earned).length,
+      achievements: evaluateAchievements(profile, { investigationsCompletedCount: canonicalInvCmp.count }).filter((a) => a.earned).length,
       avatarId: profile.avatarId ?? DEFAULT_AVATAR_ID,
     };
-  }, [profile, account]);
+  }, [profile, account, canonicalInvCmp.count]);
 
   if (!user) {
     return (
