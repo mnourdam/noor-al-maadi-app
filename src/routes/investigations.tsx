@@ -1,8 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Search, ChevronLeft, Check, Coins, Star, Heart, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
+import { Search, ChevronLeft, Check, Coins, Star, Heart, Loader2, Globe2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
+import { WorldFilterChip } from "@/components/WorldFilterChip";
 
 import { INVESTIGATION_REGISTRY } from "@/lib/investigations";
 import {
@@ -11,6 +15,8 @@ import {
   type InvestigationRow,
   type InvestigationReward,
 } from "@/lib/investigations-source";
+import { fetchWorldsIndex, findHub } from "@/lib/worlds";
+import { useWorldMembership, isValidWorldSlug } from "@/lib/worlds-progress";
 
 // Fresh random seed per app load/session so the order reshuffles on reload.
 const SESSION_SHUFFLE_SEED = Math.random();
@@ -25,14 +31,35 @@ function shuffle<T>(arr: T[]): T[] {
 }
 import { useProfile } from "@/lib/profile";
 
+const investigationsSearchSchema = z.object({
+  world: fallback(z.string(), "").default(""),
+});
+
 export const Route = createFileRoute("/investigations")({
   head: () => ({ meta: [{ title: "التحقيقات التاريخية" }] }),
+  validateSearch: zodValidator(investigationsSearchSchema),
   component: InvestigationsIndex,
 });
 
 function InvestigationsIndex() {
   const { profile } = useProfile();
   const { rows } = useSupabaseInvestigations();
+  const navigate = useNavigate({ from: "/investigations" });
+  const rawWorld = Route.useSearch().world;
+  const worldSlug = isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
+
+  const { data: worldsIndex } = useQuery({
+    queryKey: ["worlds-index"],
+    queryFn: () => fetchWorldsIndex(),
+    enabled: !!worldSlug,
+    staleTime: 60_000,
+  });
+  const worldTitle = useMemo(() => {
+    if (!worldSlug) return "";
+    return worldsIndex?.find((w) => w.hub.slug === worldSlug)?.entity.title ?? worldSlug;
+  }, [worldsIndex, worldSlug]);
+  const { investigationSlugs, ready: membershipReady } = useWorldMembership(worldSlug);
+
 
   // Hide legacy items whose slug/id was overridden by a Supabase investigation.
   const supabaseSlugs = new Set((rows ?? []).map((r) => r.slug));
