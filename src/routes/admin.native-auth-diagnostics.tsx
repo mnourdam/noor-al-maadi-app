@@ -340,21 +340,17 @@ function FirstLaunchDiagnostics() {
   const [, force] = useState(0);
   const isDebug = BUILD_TYPE === "debug" || import.meta.env.DEV;
   const rows: Array<[string, string]> = [
-    ["onboarding component mounted", readLs("irth.diag.onboarding.mounted")],
+    ["cinematic opening completed version", readLs("irth.cinematic-opening.completed-version.v1")],
     ["auth state hydrated", readLs("irth.diag.auth.hydrated")],
-    ["irth.onboarded.v1", readLs("irth.onboarded.v1")],
     ["irth.firstLaunch.choice.v1", readLs("irth.firstLaunch.choice.v1")],
-    ["onboarding skip reason", readLs("irth.diag.onboarding.skipReason")],
     ["first-launch dialog skip reason", readLs("irth.diag.firstLaunch.skipReason")],
     ["allowBackup (manifest)", "false (data_extraction_rules excludes all)"],
   ];
 
   function resetFirstLaunch() {
     try {
-      localStorage.removeItem("irth.onboarded.v1");
+      localStorage.removeItem("irth.cinematic-opening.completed-version.v1");
       localStorage.removeItem("irth.firstLaunch.choice.v1");
-      localStorage.removeItem("irth.diag.onboarding.mounted");
-      localStorage.removeItem("irth.diag.onboarding.skipReason");
       localStorage.removeItem("irth.diag.firstLaunch.skipReason");
       localStorage.removeItem("irth.diag.auth.hydrated");
     } catch { /* ignore */ }
