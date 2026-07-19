@@ -377,8 +377,10 @@ export function CinematicOpening() {
           logoUrl={CINEMATIC_LOGO_URL}
           reducedMotion={reducedMotion}
           fadingOut={fadingOut}
+          onComplete={finish}
         />
       )}
+
 
 
       {canSkip && (
