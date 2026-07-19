@@ -448,18 +448,96 @@ export function useNavigateWithOrigin() {
 }
 
 // -----------------------------
-// Exit-confirm signal
+// Exit-confirm signal + dialog
 // -----------------------------
-// Step 1 keeps the existing AndroidBackHandler dialog active. This
-// dispatches a DOM event so a later step can subscribe without another
-// listener race today.
+// The engine is the sole owner of exit confirmation. `useBack` fires the
+// signal when Priority 5 (root exit) is reached; a single internal
+// dialog subscribes and, on confirm, calls Capacitor `App.exitApp()`.
+const EXIT_CONFIRM_EVENT = "irth:navigation:exit-confirm";
+
 function dispatchExitConfirm() {
   try {
-    window.dispatchEvent(new CustomEvent("irth:navigation:exit-confirm"));
+    window.dispatchEvent(new CustomEvent(EXIT_CONFIRM_EVENT));
   } catch {
     /* SSR / non-DOM */
   }
 }
+
+function ExitConfirmDialog() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onSignal = () => setOpen(true);
+    window.addEventListener(EXIT_CONFIRM_EVENT, onSignal);
+    return () => window.removeEventListener(EXIT_CONFIRM_EVENT, onSignal);
+  }, []);
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogContent dir="rtl" className="border-amber-500/30">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-amber-100">
+            هل تريد الخروج من التطبيق؟
+          </AlertDialogTitle>
+          <AlertDialogDescription className="leading-7 text-slate-300">
+            ستُحفظ آخر رحلة لك، ويمكنك العودة في أي وقت.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            onClick={() => setOpen(false)}
+            className="border-slate-700"
+          >
+            لا
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={async () => {
+              try {
+                const { App } = await import("@capacitor/app");
+                App.exitApp();
+              } catch {
+                /* ignore */
+              }
+            }}
+            className="bg-amber-500 text-slate-950 hover:bg-amber-400"
+          >
+            نعم
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+/**
+ * The sole Capacitor `App.backButton` listener in the application.
+ * Forwards every hardware Back press to the engine's `useBack()`.
+ */
+function HardwareBackListener() {
+  const back = useBack();
+  useEffect(() => {
+    const cap = (window as unknown as { Capacitor?: { getPlatform?: () => string } })
+      .Capacitor;
+    if (!cap || cap.getPlatform?.() !== "android") return;
+    let handle: { remove: () => void } | undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { App } = await import("@capacitor/app");
+        const h = await App.addListener("backButton", () => back());
+        if (cancelled) h.remove();
+        else handle = h;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[navigation] failed to register hardware back listener", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      handle?.remove();
+    };
+  }, [back]);
+  return null;
+}
+
 
 // -----------------------------
 // Helpers
