@@ -89,8 +89,10 @@ export function TutorialApkLogViewer() {
   const [tick, setTick] = useState(0);
   const pollRef = useRef<number | null>(null);
 
-  // Tutorial + overlay state via public hooks (safe: never mutates engine).
-  const { snapshot } = useTutorial();
+  // Read-only diagnostics via public debug API (safe: never mutates engine).
+  const [diag, setDiag] = useState<TutorialDiagnostics | null>(() =>
+    tutorialDebug.diagnostics(),
+  );
   const overlayEntries = useOverlayEntries();
   const totalOverlay = useOverlayStackSize();
   const externalOverlay = overlayEntries.filter(
