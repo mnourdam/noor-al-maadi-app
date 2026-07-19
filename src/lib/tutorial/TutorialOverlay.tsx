@@ -188,9 +188,6 @@ export function TutorialOverlay() {
 
   // SVG mask: a full-viewport rect punched by the target rect.
   const cutoutX = targetRect ? targetRect.left - padding : 0;
-
-  // SVG mask: a full-viewport rect punched by the target rect.
-  const cutoutX = targetRect ? targetRect.left - padding : 0;
   const cutoutY = targetRect ? targetRect.top - padding : 0;
   const cutoutW = targetRect ? targetRect.width + padding * 2 : 0;
   const cutoutH = targetRect ? targetRect.height + padding * 2 : 0;
