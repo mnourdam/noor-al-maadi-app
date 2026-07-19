@@ -376,9 +376,9 @@ export function CinematicOpening() {
       aria-label="Cinematic opening"
       data-irth-cinematic-opening=""
       data-phase={phase}
-      onClickCapture={(e) => e.stopPropagation()}
-      onTouchStartCapture={(e) => e.stopPropagation()}
-      onPointerDownCapture={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       style={{
         opacity: fadingOut ? 0 : 1,
         transition: `opacity ${reducedMotion ? 300 : FINAL_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
