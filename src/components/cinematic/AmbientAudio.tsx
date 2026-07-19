@@ -1,84 +1,124 @@
 // ============================================================
-// Cinematic Opening — Ambient Audio Controller
+// Cinematic Opening — Continuous Ambient Audio
 // ------------------------------------------------------------
-// Plays one looping ambient track for the active scene, and
-// crossfades smoothly when the src changes. Uses two <audio>
-// elements ping-ponged. No music, no narration — only whatever
-// URL the scene config provides.
+// Renders a single, continuously-playing <audio> element for the
+// whole cinematic opening. The parent supplies:
+//   • `src`         — stable soundtrack URL (never restarted mid-play)
+//   • `targetVolume` — the desired level for the *current* scene
+//   • `paused`      — true when the app is backgrounded / hidden
+//   • `stopping`    — true when Skip/Finish begins; audio fades to 0
+//
+// Behaviour:
+//   • The audio loops seamlessly.
+//   • Volume is ramped smoothly toward `targetVolume` (no jumps).
+//   • Scene changes never pause, restart, or reload the track.
+//   • Backgrounding pauses playback; foregrounding resumes at the
+//     same position and target volume — no duplicate playback.
+//   • Skip / finish fades to silence, then stops.
 // ============================================================
 
 import { useEffect, useRef } from "react";
 
 interface Props {
   src?: string;
-  volume?: number; // 0..1
-  fadeMs?: number;
+  /** Target playback volume for the current scene, 0..1. */
+  targetVolume: number;
+  /** When true, the audio is paused (background/hidden). */
+  paused?: boolean;
+  /** When true, the audio ramps to 0 and stops. */
+  stopping?: boolean;
+  /** Ramp duration for volume changes between scenes. Default 1500ms. */
+  rampMs?: number;
+  /** Ramp duration for the final fade-to-silence. Default 900ms. */
+  stopRampMs?: number;
 }
 
-export function AmbientAudio({ src, volume = 0.4, fadeMs = 900 }: Props) {
-  const aRef = useRef<HTMLAudioElement | null>(null);
-  const bRef = useRef<HTMLAudioElement | null>(null);
-  const activeRef = useRef<"a" | "b">("a");
-  const currentSrc = useRef<string | undefined>(undefined);
+export function AmbientAudio({
+  src,
+  targetVolume,
+  paused = false,
+  stopping = false,
+  rampMs = 1500,
+  stopRampMs = 900,
+}: Props) {
+  const elRef = useRef<HTMLAudioElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const startedRef = useRef(false);
 
+  // Kick off playback once we have a src (deferred to first user
+  // interaction elsewhere in the app; play() is safe to call and
+  // will simply reject if autoplay is blocked).
   useEffect(() => {
-    if (currentSrc.current === src) return;
-    currentSrc.current = src;
-
-    const nextKey = activeRef.current === "a" ? "b" : "a";
-    const outEl = activeRef.current === "a" ? aRef.current : bRef.current;
-    const inEl = nextKey === "a" ? aRef.current : bRef.current;
-
-    // Stop and fade out the outgoing element.
-    const startOutVol = outEl?.volume ?? 0;
-
-    // Configure and start incoming.
-    if (src && inEl) {
-      try {
-        inEl.src = src;
-        inEl.loop = true;
-        inEl.volume = 0;
-        const p = inEl.play();
-        if (p && typeof p.catch === "function") p.catch(() => { /* autoplay blocked; silent */ });
-      } catch { /* ignore */ }
+    const el = elRef.current;
+    if (!el || !src) return;
+    el.loop = true;
+    if (el.src !== src) {
+      try { el.src = src; } catch { /* ignore */ }
     }
+    el.volume = 0;
+    if (!startedRef.current) {
+      startedRef.current = true;
+      const p = el.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => { /* autoplay blocked — will start once unpaused */ });
+      }
+    }
+  }, [src]);
 
-    const startedAt = performance.now();
-    const target = Math.max(0, Math.min(1, volume));
+  // React to pause/resume without ever changing `src` or currentTime.
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el || !src) return;
+    if (paused || stopping) {
+      try { el.pause(); } catch { /* */ }
+      return;
+    }
+    if (el.paused) {
+      const p = el.play();
+      if (p && typeof p.catch === "function") p.catch(() => { /* */ });
+    }
+  }, [paused, stopping, src]);
 
-    const tick = () => {
-      const t = Math.min(1, (performance.now() - startedAt) / fadeMs);
-      if (outEl) outEl.volume = Math.max(0, startOutVol * (1 - t));
-      if (src && inEl) inEl.volume = target * t;
+  // Smoothly ramp volume toward the current target. On `stopping`
+  // ramp to 0 and, once silent, pause the element.
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el) return;
+    const target = stopping ? 0 : Math.max(0, Math.min(1, targetVolume));
+    const duration = stopping ? stopRampMs : rampMs;
+    const from = el.volume;
+    const start = performance.now();
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const step = () => {
+      const t = Math.min(1, (performance.now() - start) / Math.max(1, duration));
+      // ease-in-out
+      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      const v = from + (target - from) * eased;
+      try { el.volume = Math.max(0, Math.min(1, v)); } catch { /* */ }
       if (t < 1) {
-        rafRef.current = requestAnimationFrame(tick);
+        rafRef.current = requestAnimationFrame(step);
       } else {
-        if (outEl && (!src || outEl !== inEl)) {
-          try { outEl.pause(); } catch { /* */ }
+        rafRef.current = null;
+        if (stopping) {
+          try { el.pause(); } catch { /* */ }
         }
       }
     };
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(tick);
+    rafRef.current = requestAnimationFrame(step);
+    return () => {
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    };
+  }, [targetVolume, stopping, rampMs, stopRampMs]);
 
-    activeRef.current = nextKey;
-  }, [src, volume, fadeMs]);
-
+  // Cleanup on unmount — stop and detach.
   useEffect(() => {
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      [aRef.current, bRef.current].forEach((el) => {
-        if (!el) return;
-        try { el.pause(); el.src = ""; } catch { /* */ }
-      });
+      const el = elRef.current;
+      if (!el) return;
+      try { el.pause(); el.removeAttribute("src"); el.load(); } catch { /* */ }
     };
   }, []);
 
-  return (
-    <>
-      <audio ref={aRef} preload="auto" playsInline />
-      <audio ref={bRef} preload="auto" playsInline />
-    </>
-  );
+  return <audio ref={elRef} preload="auto" playsInline aria-hidden />;
 }
