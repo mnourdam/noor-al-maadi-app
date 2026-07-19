@@ -198,6 +198,15 @@ function WorldDetailPage() {
   if (!isPublicWorld(slug)) {
     return <Navigate to="/worlds" replace />;
   }
+  // Origin stashing — every contextual link out of this world records
+  // its return path so Back lands here (Priority 3), not on the
+  // structural parent (/worlds / /encyclopedia / /investigations).
+  const stashOrigin = useStashOrigin();
+  const worldOrigin = { route: "/worlds/$slug" as const, params: { slug } };
+  const stashInvestigation = (id: string) =>
+    stashOrigin(`/investigation/${id}`, worldOrigin);
+  const stashEntity = (id: string) =>
+    stashOrigin(`/encyclopedia/entity/${id}`, worldOrigin);
   const hub = findHub(slug);
 
   const { data, isLoading } = useQuery({
