@@ -152,7 +152,9 @@ function PathPage() {
                     <Link
                       to="/encyclopedia/entity/$id"
                       params={{ id: s.entity.slug }}
+                      onClick={() => stashOrigin(`/encyclopedia/entity/${s.entity.slug}`)}
                       className={`group flex items-center gap-3 rounded-2xl border p-3 transition ${
+
                         isAnchor
                           ? "border-gold/40 bg-gradient-to-br from-gold/15 via-transparent to-transparent"
                           : "border-white/10 bg-surface hover:border-gold/40 hover:bg-surface-2"
