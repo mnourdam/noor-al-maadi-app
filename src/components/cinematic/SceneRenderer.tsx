@@ -82,7 +82,10 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   const overlay = Math.max(0, Math.min(1, scene.overlayDarkness ?? 0));
   const kenBurns = scene.kenBurns !== false && !reducedMotion;
   const showParticles = !!scene.particles && !reducedMotion;
-  const hasText = !!(scene.title || scene.subtitle);
+  const hasTitle = !!(scene.title || (scene.titleSegments && scene.titleSegments.length));
+  const hasSubtitle = !!(scene.subtitle || (scene.subtitleSegments && scene.subtitleSegments.length));
+  const hasText = hasTitle || hasSubtitle;
+
 
   return (
     <div
