@@ -207,7 +207,7 @@ function useWorldOrigins(slug: string) {
 
 function WorldDetailPage() {
   const { slug } = Route.useParams();
-  const { stashInvestigation, stashEntity } = useWorldOrigins(slug);
+  
   // Non-playable slugs (e.g. fatimid, mongols, timurid, safavid) redirect
   // safely to the explorer. Encyclopedia entities that link into these
   // eras continue to work via /encyclopedia/*.
