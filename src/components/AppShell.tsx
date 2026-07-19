@@ -9,12 +9,13 @@ import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagno
 import { isSectionEnabled } from "@/lib/androidQuietMode";
 
 const tabs = [
-  { to: "/", label: "الرئيسية", icon: Compass },
-  { to: "/campaigns", label: "الحملات", icon: Swords },
-  { to: "/encyclopedia", label: "الموسوعة", icon: BookOpen },
-  { to: "/map", label: "الأطلس", icon: Map },
-  { to: "/collection", label: "المتحف", icon: Library },
-  { to: "/profile", label: "حسابي", icon: User },
+  { to: "/", label: "الرئيسية", icon: Compass, tutorialTargetId: null },
+  { to: "/campaigns", label: "الحملات", icon: Swords, tutorialTargetId: "nav-campaigns" },
+  { to: "/encyclopedia", label: "الموسوعة", icon: BookOpen, tutorialTargetId: "nav-encyclopedia" },
+  // Player-facing label stays "الأطلس"; route remains `/map`.
+  { to: "/map", label: "الأطلس", icon: Map, tutorialTargetId: "nav-atlas" },
+  { to: "/collection", label: "المتحف", icon: Library, tutorialTargetId: "nav-museum" },
+  { to: "/profile", label: "حسابي", icon: User, tutorialTargetId: "nav-profile" },
 ] as const;
 
 const AppShellNestingContext = createContext(false);
