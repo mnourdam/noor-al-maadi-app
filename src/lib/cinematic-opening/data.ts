@@ -175,7 +175,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-4-2-partition-map",
       image: "/cinematic/scene4-2-partition-map.webp",
-      contextLabel: "تقسيم الشرق — ١٩١٦م",
+      contextLabel: "المشرق العربي — مطلع القرن 20م",
       title: "تفرّقت صفحات الحكاية.",
       titleSegments: [
         { text: "تفرّقت " },
