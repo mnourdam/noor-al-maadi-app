@@ -321,7 +321,7 @@ export function CinematicOpening() {
       (audioSettings.ambienceVolume ?? 1)
     : 0;
 
-  if (!mounted || typeof document === "undefined") return null;
+  if (typeof document === "undefined") return null;
   if (phase === "done" || !config) return null;
 
   const node = (
