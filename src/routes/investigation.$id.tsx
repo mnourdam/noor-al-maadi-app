@@ -426,8 +426,10 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
                   key={r.id}
                   to="/encyclopedia/entity/$id"
                   params={{ id: r.id }}
+                  onClick={() => stashOrigin(`/encyclopedia/entity/${r.id}`)}
                   className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold hover:bg-gold/10"
                 >
+
                   <BookOpen className="size-3" /> {r.label}
                 </Link>
               ))}
