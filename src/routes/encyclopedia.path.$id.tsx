@@ -8,6 +8,8 @@ import {
   findExplorationPath,
   EXPLORATION_PATHS,
 } from "@/lib/exploration-paths";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 const TYPE_LABEL: Record<string, string> = {
   state: "دولة",
