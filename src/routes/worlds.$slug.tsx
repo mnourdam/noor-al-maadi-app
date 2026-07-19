@@ -625,6 +625,8 @@ function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; pro
   const { rows } = useSupabaseInvestigations();
   const canonicalInv = useCanonicalInvestigationProgress();
   const { investigationSlugs } = useWorldMembership(worldSlug);
+  const { stashInvestigation } = useWorldOrigins(worldSlug);
+
 
   const ordered = useMemo(() => {
     const list = (rows ?? []).filter((r) => investigationSlugs.has(r.slug));
