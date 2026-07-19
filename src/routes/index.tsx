@@ -567,7 +567,7 @@ function HomeFull() {
 
   return (
     <AppShell>
-      <TutorialHomeDiagBadge />
+
 
 
 
