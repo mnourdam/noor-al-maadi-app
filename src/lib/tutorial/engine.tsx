@@ -879,6 +879,9 @@ export function TutorialProvider({
       if (cancelled) return;
       const el = document.querySelector(selector) as HTMLElement | null;
       if (el) {
+        logTutorialEvent("target-resolved", {
+          reason: `scroll=${currentStep.scroll ?? "none"}`,
+        });
         if (
           currentStep.scroll === "into-view" ||
           currentStep.scroll === "into-view-smooth"
@@ -906,9 +909,16 @@ export function TutorialProvider({
           currentStep.skipIfTargetUnavailable ||
           currentStep.onMissingTarget === "skip"
         ) {
+          logTutorialEvent("target-unresolved-skip", {
+            reason: `elapsed=${Math.round(elapsed)}ms`,
+            apiNextCalled: true,
+          });
           clearWatchdog();
           api.next();
         } else {
+          logTutorialEvent("target-unresolved-retry", {
+            reason: `elapsed=${Math.round(elapsed)}ms — no skipIfTargetUnavailable`,
+          });
           window.setTimeout(tryResolve, 200);
         }
         return;
