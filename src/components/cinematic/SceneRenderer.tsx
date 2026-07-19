@@ -109,7 +109,9 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   // to visible, which triggers the CSS opacity transition — so Scene 1
   // gradually emerges from black instead of appearing abruptly.
   const [entered, setEntered] = useState(false);
-  const [imagePaintReadyForScene, setImagePaintReadyForScene] = useState<string | null>(scene.id);
+  const [imagePaintReadyForScene, setImagePaintReadyForScene] = useState<string | null>(() => (
+    isAndroidWebView() && scene.image ? null : scene.id
+  ));
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
@@ -127,8 +129,12 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
 
   useEffect(() => {
     const isAndroid = isAndroidWebView();
-    if (!active || !scene.image || !isAndroid) {
+    if (!scene.image || !isAndroid) {
       setImagePaintReadyForScene(scene.id);
+      return;
+    }
+    if (!active) {
+      setImagePaintReadyForScene(null);
       return;
     }
 
