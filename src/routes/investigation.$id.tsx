@@ -59,6 +59,8 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     profile, markInvestigationCompletedLocal, awardBadge,
     recoverHeartFromActivity,
   } = useProfile();
+  const stashOrigin = useStashCurrentAsOrigin();
+
 
   const steps: InvestigationStep[] = useMemo(
     () => (Array.isArray(row.steps) ? row.steps : []),
