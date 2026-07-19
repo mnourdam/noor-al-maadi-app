@@ -450,26 +450,55 @@ function FinalLogoReveal({
   logoUrl,
   reducedMotion,
   fadingOut,
-}: { logoUrl: string; reducedMotion: boolean; fadingOut: boolean }) {
-  const [phase, setPhase] = useState<"idle" | "in" | "glow" | "hold" | "glow-out" | "out">("idle");
+  onComplete,
+}: {
+  logoUrl: string;
+  reducedMotion: boolean;
+  fadingOut: boolean;
+  /** Fires exactly once when the reveal has finished on-screen.
+   *  The parent uses this to trigger the overlay fade and Home reveal —
+   *  Home cannot appear before this callback fires. */
+  onComplete: () => void;
+}) {
+  const [phase, setPhase] = useState<"idle" | "in" | "glow" | "hold" | "glow-out" | "out" | "done">("idle");
+  const completedRef = useRef(false);
 
   useEffect(() => {
     if (reducedMotion) {
-      const t1 = window.setTimeout(() => setPhase("in"), 200);
+      // Reduced motion still runs the full reveal (opacity only, no
+      // scale/glow motion) and still fires onComplete — we never skip
+      // the logo. Timeline is compressed but preserves the beats.
+      const t1 = window.setTimeout(() => setPhase("in"),   200);
       const t2 = window.setTimeout(() => setPhase("hold"), 700);
-      return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
+      const t3 = window.setTimeout(() => setPhase("out"),  2800);
+      const t4 = window.setTimeout(() => setPhase("done"), 3600);
+      return () => {
+        window.clearTimeout(t1); window.clearTimeout(t2);
+        window.clearTimeout(t3); window.clearTimeout(t4);
+      };
     }
     const t1 = window.setTimeout(() => setPhase("in"),       700);
     const t2 = window.setTimeout(() => setPhase("glow"),     1900);
     const t3 = window.setTimeout(() => setPhase("hold"),     2600);
     const t4 = window.setTimeout(() => setPhase("glow-out"), 3400);
     const t5 = window.setTimeout(() => setPhase("out"),      4200);
+    // "done" fires only after the logo fade-out has fully completed,
+    // matching the 1200ms opacity transition below (4200 + 1200 = 5400).
+    const t6 = window.setTimeout(() => setPhase("done"),     5400);
     return () => {
       window.clearTimeout(t1); window.clearTimeout(t2);
       window.clearTimeout(t3); window.clearTimeout(t4);
-      window.clearTimeout(t5);
+      window.clearTimeout(t5); window.clearTimeout(t6);
     };
   }, [reducedMotion]);
+
+  useEffect(() => {
+    if (phase === "done" && !completedRef.current) {
+      completedRef.current = true;
+      onComplete();
+    }
+  }, [phase, onComplete]);
+
 
   const logoOpacity = fadingOut || phase === "idle" || phase === "out" ? 0 : 1;
   const glowOpacity =
