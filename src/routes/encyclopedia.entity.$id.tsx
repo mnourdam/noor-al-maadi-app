@@ -13,6 +13,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 import { useAccount } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
