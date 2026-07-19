@@ -189,7 +189,6 @@ export function CinematicOpening() {
   // The black gate stays on screen the entire time; Home never becomes
   // visible because the portal covers the whole viewport at z-[2000].
   useEffect(() => {
-    setMounted(true);
     if (!initialConfig) { dispatchCompleted(); return; }
 
     let cancelled = false;
