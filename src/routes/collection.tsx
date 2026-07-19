@@ -34,6 +34,7 @@
 // ============================================================
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useStashOrigin } from "@/lib/navigation";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { CachedImage } from "@/components/CachedImage";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
@@ -268,6 +269,7 @@ function CollectionPage() {
   const [section, setSection] = useState<SectionId>("figures");
   const [reveal, setReveal] = useState<RevealItem | null>(null);
   const navigate = useNavigate();
+
 
   // Re-pull cloud data once on mount so newly unlocked items show up.
   const [refreshTick, setRefreshTick] = useState(0);
@@ -750,6 +752,12 @@ function CollectionPage() {
 // ============================================================
 function RecentUnlocks() {
   type Recent = { key: string; type: string; slug: string; kind: string; title: string; subtitle: string; rarity: Rarity };
+  // Museum → Entity origin: rendered inside CollectionPage but needs its
+  // own hook call — the earlier declaration is out of scope here.
+  const stashOrigin = useStashOrigin();
+  const stashEntity = (id: string) =>
+    stashOrigin(`/encyclopedia/entity/${id}`, { route: "/collection" as const });
+
 
   const supaArtifacts = useEncyclopediaSupabaseList("artifact");
   const supaLandmarks = useEncyclopediaSupabaseList("landmark");
@@ -839,6 +847,7 @@ function RecentUnlocks() {
                 key={r.key}
                 to="/encyclopedia/entity/$id"
                 params={{ id: r.slug }}
+                onClick={() => stashEntity(r.slug)}
                 className={`relative flex items-center gap-3 overflow-hidden rounded-2xl border bg-gradient-to-bl from-gold/10 via-surface to-transparent p-3 transition hover:border-gold/60
                   ${r.rarity === "legendary" ? "border-gold/40 " + meta.glow :
                     r.rarity === "epic"      ? "border-fuchsia-400/30" :

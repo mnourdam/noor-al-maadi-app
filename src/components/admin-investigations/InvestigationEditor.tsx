@@ -19,6 +19,7 @@ import {
   Trash2, Copy, Plus, ChevronUp, ChevronDown, CheckCircle2, Info, Loader2, ExternalLink,
 } from "lucide-react";
 import { Link, useNavigate, useBlocker } from "@tanstack/react-router";
+import { useBack } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import {
   normalizeInvestigationRow,
@@ -320,9 +321,9 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
   // Unsaved-change protection covers ALL navigation paths:
   //  • internal <Link> / programmatic navigate()
   //  • browser back / forward (router history)
-  //  • Android hardware back — AndroidBackHandler calls
-  //    router.history.back(), which TanStack Router routes through the
-  //    same blocker registry.
+  //  • Android hardware back — AndroidBackHandler forwards the single
+  //    hardware event to the Navigation Engine's `useBack()`, which
+  //    routes through TanStack Router and hits this blocker.
   //  • hard reload / tab close via enableBeforeUnload.
   // A clean editor produces no prompt; a dirty editor renders the
   // Arabic resolver dialog below.
@@ -433,10 +434,12 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
     setRemovalApproved(false);
   };
 
+  const back = useBack();
   const goBack = () => {
-    // The `useBlocker` resolver above prompts on dirty state — no need
-    // for a second confirm() here. A clean editor navigates immediately.
-    navigate({ to: "/admin/investigations", search: {} });
+    // Delegate to the single Navigation Engine. `useBlocker` above still
+    // guards dirty state — the engine invokes router.navigate() which
+    // routes through TanStack's blocker registry.
+    back();
   };
 
   // ---- Server-side stale-detection helper --------------------

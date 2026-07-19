@@ -1,4 +1,5 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { useStashOrigin } from "@/lib/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -189,8 +190,30 @@ function useSectionScrollAnchor(order: SectionKey[]) {
   return container;
 }
 
+/**
+ * Origin stashing — every contextual link out of a world records its
+ * return path so Back lands here (Priority 3), not on the structural
+ * parent (/worlds / /encyclopedia / /investigations). Sections use this
+ * hook so the helpers are in-scope wherever a link is rendered.
+ */
+function useWorldOrigins(slug: string) {
+  const stash = useStashOrigin();
+  const origin = { route: "/worlds/$slug" as const, params: { slug } };
+  return {
+    stashInvestigation: (id: string) => stash(`/investigation/${id}`, origin),
+    stashEntity: (id: string) => stash(`/encyclopedia/entity/${id}`, origin),
+  };
+}
+
 function WorldDetailPage() {
   const { slug } = Route.useParams();
+  
+  // Non-playable slugs (e.g. fatimid, mongols, timurid, safavid) redirect
+  // safely to the explorer. Encyclopedia entities that link into these
+  // eras continue to work via /encyclopedia/*.
+  if (!isPublicWorld(slug)) {
+    return <Navigate to="/worlds" replace />;
+  }
   // Non-playable slugs (e.g. fatimid, mongols, timurid, safavid) redirect
   // safely to the explorer. Encyclopedia entities that link into these
   // eras continue to work via /encyclopedia/*.
@@ -339,7 +362,7 @@ function WorldDetailPage() {
         {/* Mini timeline — derived only from real dated Event entities in
             this world. Hidden when fewer than 3 dated events exist. No
             fabricated milestones. */}
-        <MiniTimeline events={data.sections.event} />
+        <MiniTimeline events={data.sections.event} worldSlug={slug} />
 
         {/* Connected worlds */}
         {data.connectedWorlds.length > 0 && (
@@ -602,6 +625,8 @@ function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; pro
   const { rows } = useSupabaseInvestigations();
   const canonicalInv = useCanonicalInvestigationProgress();
   const { investigationSlugs } = useWorldMembership(worldSlug);
+  const { stashInvestigation } = useWorldOrigins(worldSlug);
+
 
   const ordered = useMemo(() => {
     const list = (rows ?? []).filter((r) => investigationSlugs.has(r.slug));
@@ -644,6 +669,7 @@ function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; pro
                 key={r.slug}
                 to="/investigation/$id"
                 params={{ id: r.slug }}
+                onClick={() => stashInvestigation(r.slug)}
                 className={`block rounded-2xl border p-3 transition ${done ? "border-emerald-400/40 bg-emerald-500/5" : "border-white/10 bg-surface hover:border-gold/40"}`}
               >
                 <div className="flex items-start gap-3">
@@ -715,6 +741,8 @@ function ContentSection({
   items: RelatedNode[];
 }) {
   const meta = SECTION_META[sectionKey];
+  const { stashEntity } = useWorldOrigins(worldSlug);
+
 
   // Inside the Prophetic world, the Prophet ﷺ must always appear first with
   // a premium gold treatment. Pinning is derived from real encyclopedia data
@@ -741,6 +769,7 @@ function ContentSection({
         <Link
           to="/encyclopedia/entity/$id"
           params={{ id: propheticFirst.entity.slug }}
+          onClick={() => stashEntity(propheticFirst.entity.slug)}
           data-role="prophet-card"
           className="relative mb-3 block overflow-hidden rounded-3xl border border-gold/60 bg-gradient-to-br from-gold/30 via-black/60 to-black/40 p-4 shadow-[0_0_40px_-10px_rgba(212,175,55,0.55)] ring-1 ring-gold/40 transition hover:border-gold hover:shadow-[0_0_60px_-8px_rgba(212,175,55,0.75)]"
         >
@@ -790,6 +819,7 @@ function ContentSection({
                       key={n.entity.id}
                       to="/encyclopedia/entity/$id"
                       params={{ id: n.entity.slug }}
+                      onClick={() => stashEntity(n.entity.slug)}
                       className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-black/50 to-transparent p-3 transition hover:border-gold/60"
                     >
                       <span className="grid size-12 place-items-center rounded-xl bg-black/50 text-2xl ring-1 ring-gold/25">
@@ -811,6 +841,7 @@ function ContentSection({
                         key={n.entity.id}
                         to="/encyclopedia/entity/$id"
                         params={{ id: n.entity.slug }}
+                        onClick={() => stashEntity(n.entity.slug)}
                         className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
                       >
                         <span className="grid size-11 place-items-center rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
@@ -838,6 +869,7 @@ function ContentSection({
               key={n.entity.id}
               to="/encyclopedia/entity/$id"
               params={{ id: n.entity.slug }}
+              onClick={() => stashEntity(n.entity.slug)}
               className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
             >
               <span className="grid size-11 place-items-center rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
@@ -861,7 +893,8 @@ function ContentSection({
 /** Mini timeline — real, dated Event entities only. Hidden if fewer than
  *  3 events carry a chronology signal (timeline_year or timeline_start_year).
  *  Never fabricated. */
-function MiniTimeline({ events }: { events: RelatedNode[] }) {
+function MiniTimeline({ events, worldSlug }: { events: RelatedNode[]; worldSlug: string }) {
+  const { stashEntity } = useWorldOrigins(worldSlug);
   const dated = events
     .map((n) => {
       const y = n.entity.timeline_year ?? n.entity.timeline_start_year ?? null;
@@ -900,6 +933,7 @@ function MiniTimeline({ events }: { events: RelatedNode[] }) {
               <Link
                 to="/encyclopedia/entity/$id"
                 params={{ id: n.entity.slug }}
+                onClick={() => stashEntity(n.entity.slug)}
                 className="group flex h-full flex-col rounded-2xl border border-gold/25 bg-black/30 p-2.5 transition hover:border-gold/55"
               >
                 <span className="inline-flex w-fit items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[10px] font-bold tabular-nums text-gold">

@@ -28,4 +28,8 @@ export {
   useNavigateWithOrigin,
   useNavigationOrigin,
   useOverlayDismiss,
+  useStashOrigin,
 } from "./engine";
+
+export { LinkWithOrigin } from "./LinkWithOrigin";
+export type { LinkWithOriginProps } from "./LinkWithOrigin";

@@ -3,7 +3,7 @@ import { Compass, Swords, Map, Library, User, BookOpen } from "lucide-react";
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { HUD } from "./HUD";
 import { FriendNotificationsPoller } from "./FriendNotificationsPoller";
-import { BackNavigationGuard } from "./BackNavigationGuard";
+
 import { AudioInitializer } from "./AudioInitializer";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isSectionEnabled } from "@/lib/androidQuietMode";
@@ -65,7 +65,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <HUD />
         {!androidStable && isSectionEnabled("audio") && <AudioInitializer />}
         {!androidStable && isSectionEnabled("friendPoller") && <FriendNotificationsPoller />}
-        {!androidStable && isSectionEnabled("backNavGuard") && <BackNavigationGuard />}
+        {/* Legacy BackNavigationGuard removed — hardware Back is owned by
+            the Navigation Engine via <AndroidBackHandler>. Web back uses
+            the browser's native history; no sentinel hack required. */}
         <div className="section-flow relative z-20 flex-1">
           <div key={pathname} className="motion-page">{children}</div>
         </div>
