@@ -24,6 +24,7 @@ import { useEffect } from "react";
 import { useRouterState } from "@tanstack/react-router";
 
 import { OPENING_COMPLETED_EVENT } from "@/components/cinematic/CinematicOpening";
+import { loadCinematicOpeningConfig } from "@/lib/cinematic-opening/config";
 import { hasCompleted as openingCompleted } from "@/lib/cinematic-opening/persistence";
 import { subscribeAuthDialog, type AuthDialogOptions } from "@/lib/authDialog";
 import { useAccount } from "@/lib/account";
@@ -34,8 +35,6 @@ import {
   setEligibilityFlag,
 } from "./eligibility";
 
-const OPENING_VERSION_FALLBACK = "1";
-
 export function TutorialFlagPublishers() {
   const { loadingSession } = useAccount();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -45,27 +44,47 @@ export function TutorialFlagPublishers() {
     setEligibilityFlag("sessionReady", !loadingSession);
   }, [loadingSession]);
 
-  // Opening-completed event: fires when the cinematic dispatches its
-  // completion event, AND flips true when the opening's persistence
-  // reports the current version already completed (returning users).
+  // Opening-completed authority.
+  //
+  // The cinematic opening owns exactly one truth: for a given
+  // configured version, has this device completed it? We derive the
+  // tutorial-eligibility flag from that authority using the SAME
+  // config loader + persistence check that CinematicOpening and
+  // FirstLaunchGate use. No hardcoded version, no independent lifecycle
+  // state, no timing hacks.
+  //
+  // - If the opening is not configured (cfg == null) or was already
+  //   completed for its current version, the opening will not play on
+  //   this boot — publish "completed" immediately.
+  // - Otherwise, wait for `OPENING_COMPLETED_EVENT`, which the opening
+  //   dispatches from `finish()` (and once more when persistence has
+  //   just recorded completion). The listener stays attached for the
+  //   lifetime of the mount so it also catches replays.
   useEffect(() => {
     const setDone = () => {
       setEligibilityFlag("openingCompletedEvent", true);
       setEligibilityFlag("cinematicUnmounted", true);
     };
-    // Returning users: opening never actually mounts.
-    try {
-      if (openingCompleted(OPENING_VERSION_FALLBACK)) setDone();
-    } catch {
-      /* ignore */
-    }
-    if (typeof window !== "undefined") {
-      window.addEventListener(OPENING_COMPLETED_EVENT, setDone);
-      return () =>
-        window.removeEventListener(OPENING_COMPLETED_EVENT, setDone);
-    }
-    return undefined;
+    let cancelled = false;
+    if (typeof window === "undefined") return undefined;
+    window.addEventListener(OPENING_COMPLETED_EVENT, setDone);
+    (async () => {
+      try {
+        const cfg = await loadCinematicOpeningConfig();
+        if (cancelled) return;
+        if (!cfg || (!cfg.replayForAllUsers && openingCompleted(cfg.version))) {
+          setDone();
+        }
+      } catch {
+        /* ignore — event path remains authoritative */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      window.removeEventListener(OPENING_COMPLETED_EVENT, setDone);
+    };
   }, []);
+
 
   // First-launch choice: refresh on mount, on focus, on storage, and
   // whenever the pathname changes (choice may have just been made).
