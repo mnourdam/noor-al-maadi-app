@@ -60,6 +60,8 @@ const FINAL_FADE_MS = 1400;
 // Assets are locally bundled. Timeout is a safety net for a completely
 // broken decode; local files should be ready well under this budget.
 const PRELOAD_TIMEOUT_MS = 6000;
+// Soundtrack is bundled locally; the timeout is a safety net only.
+const SOUNDTRACK_PRELOAD_TIMEOUT_MS = 2500;
 export const OPENING_COMPLETED_EVENT = "irth:opening-completed";
 
 function isNativeAndroid(): boolean {
