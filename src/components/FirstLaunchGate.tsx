@@ -28,6 +28,25 @@ import { hasCompleted as openingCompleted } from "@/lib/cinematic-opening/persis
 
 const GUEST_CHOICE_KEY = "irth.firstLaunch.choice.v1";
 
+/**
+ * Publishes a same-document signal that the first-launch auth choice
+ * has been resolved (guest / account / offline / authenticated).
+ * The browser `storage` event does NOT fire in the same document that
+ * performs the write, so subscribers (e.g. the guided tutorial's
+ * eligibility bus) must listen for this event to react immediately
+ * without waiting for focus, route changes, or polling.
+ */
+function publishChoiceResolved(choice: "guest" | "account" | "offline" | "authenticated") {
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(
+      new CustomEvent("irth:first-launch-choice-resolved", { detail: { choice } }),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
 export function FirstLaunchGate() {
   const { user, loadingSession } = useAccount();
   const [open, setOpen] = useState(false);
