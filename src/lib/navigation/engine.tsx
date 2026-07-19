@@ -1,0 +1,504 @@
+// ============================================================
+// Navigation Engine — Step 1 scaffold
+// ------------------------------------------------------------
+// This is the scaffold only. It:
+//   - mounts a single React context provider
+//   - runs the registry validator at boot (dev throws, prod warns)
+//   - exposes the public API: useBack, useOverlayDismiss,
+//     useNavigationOrigin, navigateWithOrigin
+//
+// It does NOT yet:
+//   - take over the Android hardware-back listener
+//   - remove AndroidBackHandler / BackNavigationGuard
+//   - replace in-page back buttons
+//
+// Those are Steps 3–7 of the migration. Step 1 ships the engine
+// so later steps can wire routes to it incrementally without
+// changing behavior yet.
+// ============================================================
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from "react";
+import { useRouter, useRouterState } from "@tanstack/react-router";
+
+import type { NavigationOrigin, RouteId } from "./types";
+import { resolveDeclaration } from "./registry";
+import {
+  formatValidationReport,
+  validateNavigationRegistry,
+} from "./validate";
+
+// -----------------------------
+// Overlay dismiss stack
+// -----------------------------
+
+type OverlayDismisser = () => void;
+
+interface OverlayStack {
+  push(fn: OverlayDismisser): () => void;
+  popAndRun(): boolean;
+  size(): number;
+}
+
+function createOverlayStack(): OverlayStack {
+  const stack: OverlayDismisser[] = [];
+  return {
+    push(fn) {
+      stack.push(fn);
+      return () => {
+        const idx = stack.lastIndexOf(fn);
+        if (idx >= 0) stack.splice(idx, 1);
+      };
+    },
+    popAndRun() {
+      const fn = stack.pop();
+      if (!fn) return false;
+      try {
+        fn();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[navigation] overlay dismisser threw:", err);
+      }
+      return true;
+    },
+    size() {
+      return stack.length;
+    },
+  };
+}
+
+// -----------------------------
+// Origin registry (Priority 3)
+// -----------------------------
+// Keyed by the destination pathname; single-use.
+
+interface OriginStore {
+  set(destinationPath: string, origin: NavigationOrigin): void;
+  take(destinationPath: string): NavigationOrigin | null;
+}
+
+function createOriginStore(): OriginStore {
+  const map = new Map<string, NavigationOrigin>();
+  return {
+    set(dest, origin) {
+      map.set(dest, origin);
+    },
+    take(dest) {
+      const v = map.get(dest);
+      if (v) map.delete(dest);
+      return v ?? null;
+    },
+  };
+}
+
+// -----------------------------
+// Cold-start signal (Priority 4)
+// -----------------------------
+
+interface ColdStartSignal {
+  isColdStart(): boolean;
+  consume(): void;
+}
+
+function createColdStartSignal(): ColdStartSignal {
+  let cold = true;
+  return {
+    isColdStart: () => cold,
+    consume: () => {
+      cold = false;
+    },
+  };
+}
+
+// -----------------------------
+// Context
+// -----------------------------
+
+interface NavigationEngine {
+  overlays: OverlayStack;
+  origins: OriginStore;
+  coldStart: ColdStartSignal;
+}
+
+const NavigationEngineContext = createContext<NavigationEngine | null>(null);
+
+function useEngine(): NavigationEngine {
+  const engine = useContext(NavigationEngineContext);
+  if (!engine) {
+    throw new Error(
+      "[navigation] useBack/useOverlayDismiss called outside <NavigationProvider>.",
+    );
+  }
+  return engine;
+}
+
+// -----------------------------
+// Provider
+// -----------------------------
+
+export interface NavigationProviderProps {
+  children: ReactNode;
+  /**
+   * Optional list of route ids known to the router. When provided, the
+   * validator will additionally check for unregistered / extra routes.
+   * Callers pass `router.flatRoutes.map(r => r.id)` from `useRouter()`.
+   */
+  knownRouteIds?: readonly RouteId[];
+}
+
+export function NavigationProvider({
+  children,
+  knownRouteIds,
+}: NavigationProviderProps) {
+  const engine = useMemo<NavigationEngine>(
+    () => ({
+      overlays: createOverlayStack(),
+      origins: createOriginStore(),
+      coldStart: createColdStartSignal(),
+    }),
+    [],
+  );
+
+  // Validate on mount. Dev = throw so the developer notices immediately.
+  // Prod = console.error, do not crash the app.
+  useEffect(() => {
+    const report = validateNavigationRegistry({ knownRouteIds });
+    if (!report.ok) {
+      const msg = formatValidationReport(report);
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.error(msg);
+        throw new Error(
+          "Navigation registry validation failed. See console for details.",
+        );
+      } else {
+        // eslint-disable-next-line no-console
+        console.error(msg);
+      }
+    }
+  }, [knownRouteIds]);
+
+  return (
+    <NavigationEngineContext.Provider value={engine}>
+      <ColdStartWatcher />
+      {children}
+    </NavigationEngineContext.Provider>
+  );
+}
+
+/**
+ * Flips the cold-start flag on the first in-app navigation so that
+ * Priority 4 (deep-link fallback) is only used for the entry route.
+ */
+function ColdStartWatcher() {
+  const engine = useEngine();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const first = useRef(pathname);
+  useEffect(() => {
+    if (pathname !== first.current) engine.coldStart.consume();
+  }, [pathname, engine]);
+  return null;
+}
+
+// -----------------------------
+// Public hooks
+// -----------------------------
+
+/**
+ * Registers a dismisser while an overlay is open. On Back, the topmost
+ * dismisser fires and routing is skipped. Automatically unregisters on
+ * unmount.
+ */
+export function useOverlayDismiss(dismiss: OverlayDismisser): void {
+  const engine = useEngine();
+  useEffect(() => {
+    return engine.overlays.push(dismiss);
+    // dismiss is captured by reference; callers wrap in useCallback if needed
+  }, [engine, dismiss]);
+}
+
+/**
+ * Reads / writes the navigation origin for the current route.
+ * The engine consumes an origin exactly once, on the first Back.
+ */
+export function useNavigationOrigin() {
+  const engine = useEngine();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return useMemo(
+    () => ({
+      /** Peek without consuming. */
+      peek: () => {
+        const v = engine.origins.take(pathname);
+        if (v) engine.origins.set(pathname, v);
+        return v;
+      },
+      /** Manually stash an origin for the current pathname. */
+      set: (origin: NavigationOrigin) => engine.origins.set(pathname, origin),
+      /** Consume (used internally by useBack). */
+      take: () => engine.origins.take(pathname),
+    }),
+    [engine, pathname],
+  );
+}
+
+/**
+ * The ONLY sanctioned way to trigger Back from UI. Runs the resolution
+ * algorithm documented in the architecture proposal (§2):
+ *   1. overlay dismiss
+ *   2. navigation origin (if supported by current route)
+ *   3. parent route (from registry, params substituted)
+ *   4. fallback route (cold-start deep link)
+ *   5. root -> exit confirmation (delegated; scaffold only logs)
+ */
+export function useBack(): () => void {
+  const engine = useEngine();
+  const router = useRouter();
+  const location = useRouterState({ select: (s) => s.location });
+
+  return useCallback(() => {
+    // Priority 1 — overlays
+    if (engine.overlays.popAndRun()) return;
+
+    const pathname = location.pathname;
+    const routeId = matchRouteId(router, pathname);
+    const decl = routeId ? resolveDeclaration(routeId) : null;
+
+    if (!decl) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[navigation] No registry entry for "${pathname}" (routeId="${routeId ?? "?"}"). Falling back to "/".`,
+      );
+      void router.navigate({ to: "/", replace: true });
+      return;
+    }
+
+    // Priority 5 — root triggers exit-confirm (wired in a later step).
+    if (decl.isRoot) {
+      dispatchExitConfirm();
+      return;
+    }
+
+    const supportsOrigin = decl.supportsOriginOverride ?? decl.kind === "player";
+
+    // Priority 3 — navigation origin
+    if (supportsOrigin) {
+      const origin = engine.origins.take(pathname);
+      if (origin) {
+        void router.navigate({
+          to: origin.route,
+          params: origin.params,
+          search: origin.search,
+          replace: true,
+        } as never);
+        return;
+      }
+    }
+
+    // Priority 2 — declared parent
+    const parentId = decl.parentRoute;
+    if (parentId) {
+      const params = extractParamsForTarget(parentId, location.pathname, router);
+      // Priority 4 folds into 2 here: parent is the same as fallback unless
+      // the route explicitly declared a different one AND we are on a
+      // cold-start deep link with no origin.
+      const target =
+        engine.coldStart.isColdStart() && decl.fallbackRoute
+          ? decl.fallbackRoute
+          : parentId;
+      void router.navigate({ to: target, params, replace: true } as never);
+      return;
+    }
+
+    // Safety net (validator should prevent reaching here)
+    void router.navigate({ to: "/", replace: true });
+  }, [engine, router, location]);
+}
+
+/**
+ * Records a navigation origin and navigates to `to`. On the next Back
+ * press from `to`, the engine returns to `origin` instead of the
+ * declared parent.
+ */
+export function navigateWithOrigin(args: {
+  router: ReturnType<typeof useRouter>;
+  origin: NavigationOrigin;
+  to: RouteId;
+  params?: Record<string, string>;
+  search?: Record<string, unknown>;
+  engine: NavigationEngine;
+}): Promise<void> {
+  const { router, origin, to, params, search, engine } = args;
+  // Approximate the destination pathname by substituting params into `to`.
+  const destPath = substituteParams(to, params);
+  engine.origins.set(destPath, origin);
+  return router.navigate({ to, params, search } as never) as Promise<void>;
+}
+
+/**
+ * Hook variant that captures the current router/engine and returns a
+ * ready-to-use function.
+ */
+export function useNavigateWithOrigin() {
+  const engine = useEngine();
+  const router = useRouter();
+  return useCallback(
+    (args: {
+      origin: NavigationOrigin;
+      to: RouteId;
+      params?: Record<string, string>;
+      search?: Record<string, unknown>;
+    }) => navigateWithOrigin({ router, engine, ...args }),
+    [engine, router],
+  );
+}
+
+// -----------------------------
+// Exit-confirm signal
+// -----------------------------
+// Step 1 keeps the existing AndroidBackHandler dialog active. This
+// dispatches a DOM event so a later step can subscribe without another
+// listener race today.
+function dispatchExitConfirm() {
+  try {
+    window.dispatchEvent(new CustomEvent("irth:navigation:exit-confirm"));
+  } catch {
+    /* SSR / non-DOM */
+  }
+}
+
+// -----------------------------
+// Helpers
+// -----------------------------
+
+/**
+ * Best-effort mapping of a pathname to a registry route id.
+ *
+ * Preference order:
+ *   1. `router.state.matches` — TanStack knows the exact route id.
+ *   2. Registry-based pattern match on the pathname.
+ *
+ * The router-based path is authoritative when available.
+ */
+function matchRouteId(
+  router: ReturnType<typeof useRouter>,
+  pathname: string,
+): RouteId | null {
+  try {
+    const matches = router.state.matches;
+    if (matches && matches.length > 0) {
+      // Deepest match wins.
+      const last = matches[matches.length - 1];
+      const id = (last as { routeId?: string; id?: string }).routeId
+        ?? (last as { id?: string }).id
+        ?? null;
+      if (id && resolveDeclaration(id)) return id;
+    }
+  } catch {
+    /* fall through */
+  }
+  return matchIdFromPathname(pathname);
+}
+
+function matchIdFromPathname(pathname: string): RouteId | null {
+  // Walk the registry once; longer patterns win.
+  let best: { id: RouteId; score: number } | null = null;
+  for (const decl of iterAllDeclarations()) {
+    const score = scorePatternMatch(decl.id, pathname);
+    if (score === -1) continue;
+    if (!best || score > best.score) best = { id: decl.id, score };
+  }
+  return best?.id ?? null;
+}
+
+function scorePatternMatch(pattern: string, pathname: string): number {
+  const p = pattern.split("/").filter(Boolean);
+  const s = pathname.split("/").filter(Boolean);
+  if (p.length !== s.length && !(pattern === "/" && pathname === "/")) return -1;
+  if (pattern === "/") return pathname === "/" ? 0 : -1;
+  let score = 0;
+  for (let i = 0; i < p.length; i++) {
+    if (p[i].startsWith("$")) continue;
+    if (p[i] !== s[i]) return -1;
+    score += 1;
+  }
+  return score;
+}
+
+function extractParamsForTarget(
+  targetPattern: string,
+  currentPathname: string,
+  router: ReturnType<typeof useRouter>,
+): Record<string, string> | undefined {
+  // Try router first — it has typed params for the current match.
+  try {
+    const matches = router.state.matches;
+    if (matches && matches.length > 0) {
+      const merged: Record<string, string> = {};
+      for (const m of matches) {
+        const params = (m as { params?: Record<string, string> }).params;
+        if (params) Object.assign(merged, params);
+      }
+      // Only keep params the target actually needs.
+      const need = extractParamNames(targetPattern);
+      if (need.length === 0) return undefined;
+      const out: Record<string, string> = {};
+      for (const key of need) {
+        if (merged[key] != null) out[key] = String(merged[key]);
+      }
+      if (Object.keys(out).length === need.length) return out;
+    }
+  } catch {
+    /* fall through */
+  }
+  // Fallback: try to lift them from the current pathname.
+  return liftParamsFromPathname(targetPattern, currentPathname);
+}
+
+function extractParamNames(pattern: string): string[] {
+  return pattern
+    .split("/")
+    .filter((seg) => seg.startsWith("$"))
+    .map((seg) => seg.slice(1));
+}
+
+function liftParamsFromPathname(
+  targetPattern: string,
+  currentPathname: string,
+): Record<string, string> | undefined {
+  // Only works when the current pathname is a descendant of the target.
+  const t = targetPattern.split("/").filter(Boolean);
+  const c = currentPathname.split("/").filter(Boolean);
+  if (t.length > c.length) return undefined;
+  const out: Record<string, string> = {};
+  for (let i = 0; i < t.length; i++) {
+    const seg = t[i];
+    if (seg.startsWith("$")) out[seg.slice(1)] = c[i];
+    else if (seg !== c[i]) return undefined;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+function substituteParams(
+  pattern: string,
+  params: Record<string, string> | undefined,
+): string {
+  if (!params) return pattern;
+  return pattern
+    .split("/")
+    .map((seg) => (seg.startsWith("$") ? (params[seg.slice(1)] ?? seg) : seg))
+    .join("/");
+}
+
+function* iterAllDeclarations() {
+  // Lazy import to avoid a top-level circular reference risk if the
+  // registry ever imports engine helpers.
+  const { NAVIGATION_REGISTRY } = require("./registry") as typeof import("./registry");
+  for (const decl of NAVIGATION_REGISTRY) yield decl;
+}
