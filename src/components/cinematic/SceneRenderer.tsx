@@ -109,7 +109,7 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   // to visible, which triggers the CSS opacity transition — so Scene 1
   // gradually emerges from black instead of appearing abruptly.
   const [entered, setEntered] = useState(false);
-  const [imagePaintReady, setImagePaintReady] = useState(true);
+  const [imagePaintReadyForScene, setImagePaintReadyForScene] = useState<string | null>(scene.id);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
@@ -128,7 +128,7 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   useEffect(() => {
     const isAndroid = isAndroidWebView();
     if (!active || !scene.image || !isAndroid) {
-      setImagePaintReady(true);
+      setImagePaintReadyForScene(scene.id);
       return;
     }
 
@@ -138,7 +138,7 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
     let raf3 = 0;
     const scope = `scene:${scene.id}`;
     const el = imgRef.current;
-    setImagePaintReady(false);
+    setImagePaintReadyForScene(null);
     androidDiag(scope, "android image readiness start", {
       src: scene.image,
       metrics: imageMetrics(el),
@@ -170,7 +170,7 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
           raf3 = window.requestAnimationFrame(() => {
             if (cancelled) return;
             androidDiag(scope, "third RAF / presenting complete image", { metrics: imageMetrics(el) });
-            setImagePaintReady(true);
+            setImagePaintReadyForScene(scene.id);
           });
         });
       });
@@ -179,7 +179,7 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
     const waitForLoad = () => {
       if (!el) {
         androidDiag(scope, "missing DOM image element", { src: scene.image });
-        raf1 = window.requestAnimationFrame(() => setImagePaintReady(true));
+        raf1 = window.requestAnimationFrame(() => setImagePaintReadyForScene(scene.id));
         return;
       }
       const decode = () => {
@@ -245,6 +245,7 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   const hasText = hasTitle || hasSubtitle;
 
   const isAndroid = useMemo(() => isAndroidWebView(), []);
+  const imagePaintReady = !isAndroid || !scene.image || imagePaintReadyForScene === scene.id;
   const visible = active && !fadingOut && entered && (!isAndroid || !scene.image || imagePaintReady);
   const bgPosition =
     (isAndroid && scene.imagePositionAndroid) ||
@@ -257,11 +258,12 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
       fadingOut,
       entered,
       imagePaintReady,
+      imagePaintReadyForScene,
       visible,
       bgPosition,
       metrics: imageMetrics(imgRef.current),
     });
-  }, [scene.id, active, fadingOut, entered, imagePaintReady, visible, bgPosition]);
+  }, [scene.id, active, fadingOut, entered, imagePaintReady, imagePaintReadyForScene, visible, bgPosition]);
 
   return (
     <div
