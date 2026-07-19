@@ -3,7 +3,7 @@ import { Compass, Swords, Map, Library, User, BookOpen } from "lucide-react";
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { HUD } from "./HUD";
 import { FriendNotificationsPoller } from "./FriendNotificationsPoller";
-import { BackNavigationGuard } from "./BackNavigationGuard";
+
 import { AudioInitializer } from "./AudioInitializer";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isSectionEnabled } from "@/lib/androidQuietMode";
