@@ -17,6 +17,8 @@ import {
 } from "@/lib/investigations-source";
 import { fetchWorldsIndex, findHub } from "@/lib/worlds";
 import { useWorldMembership, isValidWorldSlug } from "@/lib/worlds-progress";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 // Fresh random seed per app load/session so the order reshuffles on reload.
 const SESSION_SHUFFLE_SEED = Math.random();
