@@ -118,6 +118,12 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
 
   const visible = active && !fadingOut && entered;
 
+  const isAndroid = useMemo(() => isAndroidWebView(), []);
+  const bgPosition =
+    (isAndroid && scene.imagePositionAndroid) ||
+    scene.imagePosition ||
+    "center";
+
   return (
     <div
       className="absolute inset-0"
@@ -131,8 +137,11 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
           <div
             role={scene.imageAlt ? "img" : undefined}
             aria-label={scene.imageAlt || undefined}
-            className={`absolute inset-0 bg-cover bg-center ${kenBurns ? "cinematic-kenburns" : ""}`}
-            style={{ backgroundImage: `url(${scene.image})` }}
+            className={`absolute inset-0 bg-cover ${kenBurns ? "cinematic-kenburns" : ""} ${isAndroid ? "cinematic-android-kb" : ""}`}
+            style={{
+              backgroundImage: `url(${scene.image})`,
+              backgroundPosition: bgPosition,
+            }}
           />
         </div>
       )}
