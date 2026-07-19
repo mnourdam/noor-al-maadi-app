@@ -444,7 +444,7 @@ function HomeFull() {
         xp, dinars,
         icon: <Crown className="size-4" />,
         link: (
-          <Link to="/campaigns/imported/$id" params={{ id: campaign.id }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+          <Link to="/campaigns/imported/$id" params={{ id: campaign.id }} onClick={() => stashOrigin(`/campaigns/imported/${campaign.id}`)} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
             <Play className="size-4 fill-current" />{hasStarted ? "تابع الرحلة" : "ابدأ الحملة"}
           </Link>
         ),
