@@ -24,6 +24,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
@@ -34,6 +35,17 @@ import {
   formatValidationReport,
   validateNavigationRegistry,
 } from "./validate";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 // -----------------------------
 // Overlay dismiss stack
