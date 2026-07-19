@@ -50,11 +50,13 @@ export function EncyclopediaTimeline({ timeline }: { timeline?: TimelineEvent[] 
                 <Link
                   to="/encyclopedia/entity/$id"
                   params={{ id: ev.related.slug }}
+                  onClick={() => stashOrigin(`/encyclopedia/entity/${ev.related!.slug}`)}
                   className="mt-2 inline-flex items-center gap-1 text-[11px] text-gold/85 underline-offset-4 hover:underline hover:text-gold"
                 >
                   ← {ev.related.label ?? ev.related.slug}
                 </Link>
               )}
+
             </div>
           </li>
         ))}
