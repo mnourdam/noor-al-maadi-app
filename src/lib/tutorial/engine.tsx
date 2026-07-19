@@ -721,12 +721,39 @@ export function TutorialProvider({
       ? effectiveConfig.steps[snap.stepIndex] ?? null
       : null;
 
+  // ------------------------------------------------------------
+  // Target locator + measurement (single atomic task)
+  //
+  // LIFECYCLE OWNERSHIP:
+  //   This effect owns the FULL sequence:
+  //     locating_target → scrolling_to_target → measuring_target
+  //                     → showing_step
+  //   The effect must NOT be keyed to `snap.state` — the task itself
+  //   drives state through those internal phases, and re-running on
+  //   every phase change would cancel the rAF settle loop and the
+  //   watchdog. The task's identity is (stepIndex, targetId, route,
+  //   paused). Cancellation happens only when one of those changes,
+  //   when the tutorial closes (currentStep === null), or on unmount.
+  // ------------------------------------------------------------
   useEffect(() => {
     if (!currentStep) return;
-    if (snap.state !== "locating_target") return;
     if (snap.paused) return;
+    if (pathname !== currentStep.route) return;
+    // Only bootstrap when the engine is in a phase our task should
+    // own. If it's already showing_step (e.g. re-render), do nothing.
+    const initial = store.state;
+    if (
+      initial !== "locating_target" &&
+      initial !== "armed" &&
+      initial !== "transitioning" &&
+      initial !== "scrolling_to_target" &&
+      initial !== "measuring_target"
+    ) {
+      return;
+    }
 
     let cancelled = false;
+    let taskCompleted = false;
     let observer: ResizeObserver | null = null;
     let scrollListener: (() => void) | null = null;
     let currentEl: HTMLElement | null = null;
@@ -738,7 +765,9 @@ export function TutorialProvider({
     const start = performance.now();
     const stepAnalyticsId = currentStep.analyticsId;
 
-    // Per-step watchdog: never trap the player on a dead dim layer.
+    // Per-step watchdog owns the WHOLE task lifetime (locating →
+    // scrolling → measuring). Cleared only on showing_step, on
+    // skip-forward, or on cancellation.
     const STEP_WATCHDOG_MS = 5000;
     logTutorialEvent("locator-effect-started", {
       reason: `selector=${selector}`,
@@ -806,6 +835,7 @@ export function TutorialProvider({
         }
       };
       clearWatchdog();
+      taskCompleted = true;
       transition(store, "showing_step");
     };
 
@@ -859,6 +889,7 @@ export function TutorialProvider({
                     apiNextCalled: true,
                   });
                   clearWatchdog();
+                  taskCompleted = true;
                   api.next();
                   return;
                 }
@@ -883,6 +914,11 @@ export function TutorialProvider({
         logTutorialEvent("target-resolved", {
           reason: `scroll=${currentStep.scroll ?? "none"}`,
         });
+        // Normalize to locating_target before advancing (we may
+        // enter from `armed` or `transitioning`).
+        if (store.state !== "locating_target") {
+          transition(store, "locating_target");
+        }
         if (
           currentStep.scroll === "into-view" ||
           currentStep.scroll === "into-view-smooth"
@@ -915,6 +951,7 @@ export function TutorialProvider({
             apiNextCalled: true,
           });
           clearWatchdog();
+          taskCompleted = true;
           api.next();
         } else {
           logTutorialEvent("target-unresolved-retry", {
@@ -932,14 +969,16 @@ export function TutorialProvider({
     return () => {
       cancelled = true;
       logTutorialEvent("locator-effect-cleanup", {
-        reason: `state=${store.state}`,
+        reason: taskCompleted ? "task-completed" : `aborted-state=${store.state}`,
       });
       clearWatchdog();
       if (rafHandle != null) cancelAnimationFrame(rafHandle);
       if (observer && currentEl) observer.disconnect();
       cleanupScroll();
     };
-  }, [api, store, currentStep, snap.state, snap.paused]);
+    // Intentionally NOT depending on snap.state — the task drives it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, currentStep, snap.paused, pathname]);
 
   // ------------------------------------------------------------
   // Back integration
