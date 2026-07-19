@@ -24,6 +24,7 @@ import { useEffect } from "react";
 import { useRouterState } from "@tanstack/react-router";
 
 import { OPENING_COMPLETED_EVENT } from "@/components/cinematic/CinematicOpening";
+import { loadCinematicOpeningConfig } from "@/lib/cinematic-opening/config";
 import { hasCompleted as openingCompleted } from "@/lib/cinematic-opening/persistence";
 import { subscribeAuthDialog, type AuthDialogOptions } from "@/lib/authDialog";
 import { useAccount } from "@/lib/account";
