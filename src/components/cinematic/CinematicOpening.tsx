@@ -138,7 +138,8 @@ export function CinematicOpening() {
   const finishedRef = useRef(false);
   const reducedMotion = usePrefersReducedMotion();
 
-  // Boot: load + validate config, preload images, decide whether to play.
+  // Boot: load config, run first-launch permission ask, preload all
+  // images (including the final logo) + soundtrack, then start playback.
   useEffect(() => {
     let cancelled = false;
     setMounted(true);
@@ -150,11 +151,21 @@ export function CinematicOpening() {
         dispatchCompleted();
         return;
       }
+
+      // First-launch: OWN the notification permission prompt. Skip web;
+      // any outcome fails forward so the opening never blocks on it.
+      if (isFirstEverLaunch()) {
+        await requestNotificationPermissionOnce();
+        if (cancelled) return;
+      }
+
       const images = cfg.scenes.map((s) => s.image).filter((x): x is string => !!x);
-      const loaded = await preloadImages(images, PRELOAD_TIMEOUT_MS);
+      // Always preload the local logo so Scene 6 never flashes with a
+      // missing image. Preload runs against locally-bundled assets and
+      // is expected to complete quickly.
+      const preloadTargets = Array.from(new Set([...images, CINEMATIC_LOGO_URL]));
+      const loaded = await preloadImages(preloadTargets, PRELOAD_TIMEOUT_MS);
       if (cancelled) return;
-      // Drop scenes whose image is declared but failed to load. Scenes
-      // without an image (title-only cards) are always kept.
       const playable = cfg.scenes.filter((s) => !s.image || loaded.has(s.image));
       if (playable.length === 0) {
         dispatchCompleted();
@@ -165,6 +176,7 @@ export function CinematicOpening() {
     })();
     return () => { cancelled = true; };
   }, []);
+
 
   const scenes = config?.scenes ?? [];
   const currentScene = scenes[index];
