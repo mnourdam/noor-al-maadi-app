@@ -485,16 +485,19 @@ export function TutorialProvider({
     });
   }, [api, store]);
 
-  // First-launch choice flag: publish on mount and re-check on focus.
+  // First-launch choice flag: publish on mount and re-check on focus,
+  // storage (cross-tab), and same-document choice-resolved event.
   useEffect(() => {
     refreshFirstLaunchChoiceFlag();
-    const onFocus = () => refreshFirstLaunchChoiceFlag();
+    const onSignal = () => refreshFirstLaunchChoiceFlag();
     if (typeof window !== "undefined") {
-      window.addEventListener("focus", onFocus);
-      window.addEventListener("storage", onFocus);
+      window.addEventListener("focus", onSignal);
+      window.addEventListener("storage", onSignal);
+      window.addEventListener("irth:first-launch-choice-resolved", onSignal);
       return () => {
-        window.removeEventListener("focus", onFocus);
-        window.removeEventListener("storage", onFocus);
+        window.removeEventListener("focus", onSignal);
+        window.removeEventListener("storage", onSignal);
+        window.removeEventListener("irth:first-launch-choice-resolved", onSignal);
       };
     }
     return undefined;
