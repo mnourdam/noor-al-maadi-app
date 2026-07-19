@@ -49,9 +49,11 @@ function relativeTime(iso: string): string {
 
 function NotificationsCenter() {
   const router = useRouter();
+  const stashOrigin = useStashCurrentAsOrigin();
   const [rows, setRows] = useState<ServerNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<string | null>(null);
+
 
   const refresh = useCallback(async () => {
     const list = await fetchMyNotifications(150);
