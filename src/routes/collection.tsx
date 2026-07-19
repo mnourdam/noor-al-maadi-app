@@ -269,6 +269,12 @@ function CollectionPage() {
   const [section, setSection] = useState<SectionId>("figures");
   const [reveal, setReveal] = useState<RevealItem | null>(null);
   const navigate = useNavigate();
+  // Museum → Entity origin: Back from an entity page returns to /collection
+  // rather than the structural encyclopedia parent.
+  const stashOrigin = useStashOrigin();
+  const stashEntity = (id: string) =>
+    stashOrigin(`/encyclopedia/entity/${id}`, { route: "/collection" as const });
+
 
   // Re-pull cloud data once on mount so newly unlocked items show up.
   const [refreshTick, setRefreshTick] = useState(0);
