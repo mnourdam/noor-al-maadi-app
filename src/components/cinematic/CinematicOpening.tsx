@@ -552,10 +552,17 @@ function FinalLogoReveal({
   // Fail-forward: any error still advances so Home is not blocked.
   useEffect(() => {
     let cancelled = false;
+    let advanced = false;
     let raf1 = 0;
     let raf2 = 0;
+    let safety: number | null = null;
     const advance = () => {
-      if (cancelled) return;
+      if (cancelled || advanced || completedRef.current) return;
+      advanced = true;
+      if (safety != null) {
+        window.clearTimeout(safety);
+        safety = null;
+      }
       androidCinematicDiag("final-logo", "asset decode barrier cleared", {
         complete: probe.complete,
         naturalWidth: probe.naturalWidth,
@@ -581,14 +588,14 @@ function FinalLogoReveal({
     };
     probe.onload = done;
     probe.onerror = advance;
-    probe.src = logoUrl;
     // Safety net — never leave the machine stuck if the platform is broken.
-    const safety = window.setTimeout(advance, 3000);
+    safety = window.setTimeout(advance, 3000);
+    probe.src = logoUrl;
     return () => {
       cancelled = true;
       window.cancelAnimationFrame(raf1);
       if (raf2) window.cancelAnimationFrame(raf2);
-      window.clearTimeout(safety);
+      if (safety != null) window.clearTimeout(safety);
     };
   }, [logoUrl]);
 
