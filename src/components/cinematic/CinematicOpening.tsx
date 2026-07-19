@@ -50,7 +50,7 @@ import { AmbientAudio } from "./AmbientAudio";
 import irthLogo from "@/assets/irth-icon.png.asset.json";
 
 
-const FINAL_FADE_MS = 900;
+const FINAL_FADE_MS = 1400;
 const PRELOAD_TIMEOUT_MS = 3500;
 export const OPENING_COMPLETED_EVENT = "irth:opening-completed";
 
@@ -222,7 +222,8 @@ export function CinematicOpening() {
       aria-label="Cinematic opening"
       style={{
         opacity: fadingOut ? 0 : 1,
-        transition: `opacity ${reducedMotion ? 250 : FINAL_FADE_MS}ms ease-in-out`,
+        transition: `opacity ${reducedMotion ? 300 : FINAL_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
+        willChange: "opacity",
       }}
     >
       {scenes.map((s, i) => (
@@ -238,20 +239,11 @@ export function CinematicOpening() {
       <AmbientAudio src={ambientSrc} volume={ambientVol} />
 
       {currentScene?.showFinalLogo && (
-        <div
-          className="pointer-events-none absolute inset-0 flex items-center justify-center"
-          style={{
-            opacity: fadingOut ? 0 : 1,
-            transition: `opacity ${reducedMotion ? 250 : 1200}ms ease-in-out`,
-          }}
-        >
-          <img
-            src={irthLogo.url}
-            alt="إرث"
-            className="h-40 w-40 select-none drop-shadow-[0_4px_32px_rgba(0,0,0,0.75)] sm:h-52 sm:w-52"
-            draggable={false}
-          />
-        </div>
+        <FinalLogoReveal
+          logoUrl={irthLogo.url}
+          reducedMotion={reducedMotion}
+          fadingOut={fadingOut}
+        />
       )}
 
 
@@ -305,4 +297,82 @@ export function CinematicOpening() {
 
 function dispatchCompleted() {
   try { window.dispatchEvent(new CustomEvent(OPENING_COMPLETED_EVENT)); } catch { /* */ }
+}
+
+/**
+ * Premium logo reveal for the final scene.
+ *
+ * Timeline (scene durationMs = 5000, then FINAL_FADE_MS reveals Home):
+ *   0    → background alone
+ *   700  → logo fades in (1200ms, eased)
+ *   1900 → glow blooms softly and holds
+ *   3400 → glow fades out
+ *   4200 → logo starts fading
+ *   5000 → sequence ends → overlay fades to transparent → Home appears
+ */
+function FinalLogoReveal({
+  logoUrl,
+  reducedMotion,
+  fadingOut,
+}: { logoUrl: string; reducedMotion: boolean; fadingOut: boolean }) {
+  const [phase, setPhase] = useState<"idle" | "in" | "glow" | "hold" | "glow-out" | "out">("idle");
+
+  useEffect(() => {
+    if (reducedMotion) {
+      const t1 = window.setTimeout(() => setPhase("in"), 200);
+      const t2 = window.setTimeout(() => setPhase("hold"), 700);
+      return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
+    }
+    const t1 = window.setTimeout(() => setPhase("in"),       700);
+    const t2 = window.setTimeout(() => setPhase("glow"),     1900);
+    const t3 = window.setTimeout(() => setPhase("hold"),     2600);
+    const t4 = window.setTimeout(() => setPhase("glow-out"), 3400);
+    const t5 = window.setTimeout(() => setPhase("out"),      4200);
+    return () => {
+      window.clearTimeout(t1); window.clearTimeout(t2);
+      window.clearTimeout(t3); window.clearTimeout(t4);
+      window.clearTimeout(t5);
+    };
+  }, [reducedMotion]);
+
+  const logoOpacity = fadingOut || phase === "idle" || phase === "out" ? 0 : 1;
+  const glowOpacity =
+    fadingOut || phase === "glow" || phase === "hold" ? (fadingOut ? 0 : 1) : 0;
+  const logoScale = phase === "idle" ? 0.94 : phase === "out" ? 0.98 : 1;
+  const glowScale = phase === "glow" || phase === "hold" ? 1 : 0.85;
+
+  const ease = "cubic-bezier(0.4, 0, 0.2, 1)";
+
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+      aria-hidden
+    >
+      <div
+        className="absolute h-[520px] w-[520px] rounded-full"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(255,214,140,0.42) 0%, rgba(255,214,140,0.18) 30%, rgba(255,214,140,0) 70%)",
+          opacity: glowOpacity,
+          transform: `scale(${glowScale})`,
+          transition: `opacity 1200ms ${ease}, transform 1600ms ${ease}`,
+          filter: "blur(8px)",
+          willChange: "opacity, transform",
+        }}
+      />
+      <img
+        src={logoUrl}
+        alt="إرث"
+        className="relative h-40 w-40 select-none sm:h-52 sm:w-52"
+        draggable={false}
+        style={{
+          opacity: logoOpacity,
+          transform: `scale(${logoScale})`,
+          transition: `opacity 1200ms ${ease}, transform 1400ms ${ease}`,
+          filter: "drop-shadow(0 4px 32px rgba(0,0,0,0.75))",
+          willChange: "opacity, transform",
+        }}
+      />
+    </div>
+  );
 }

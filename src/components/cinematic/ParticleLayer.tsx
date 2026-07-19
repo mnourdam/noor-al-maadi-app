@@ -24,6 +24,8 @@ interface Particle {
   drift: number;
 }
 
+// Presets tuned for "cinematic polish" — extremely subtle, never
+// resembling a game effect. Lower counts, lower alpha, longer drift.
 const PRESETS: Record<ParticlePreset, {
   color: string;
   count: number;
@@ -31,11 +33,12 @@ const PRESETS: Record<ParticlePreset, {
   duration: [number, number];
   blur: number;
   blend: string;
+  peakOpacity: number; // upper opacity cap even at intensity=1
 }> = {
-  dust:  { color: "rgba(255,240,210,0.55)", count: 22, size: [1, 2], duration: [9, 16], blur: 0.4, blend: "screen" },
-  gold:  { color: "rgba(212,175,90,0.75)",  count: 18, size: [1, 3], duration: [8, 14], blur: 0.6, blend: "screen" },
-  fog:   { color: "rgba(220,220,230,0.10)", count: 6,  size: [180, 320], duration: [22, 32], blur: 40,  blend: "screen" },
-  smoke: { color: "rgba(60,50,45,0.28)",    count: 5,  size: [200, 360], duration: [26, 40], blur: 50,  blend: "multiply" },
+  dust:  { color: "rgba(255,240,210,0.32)", count: 14, size: [1, 2],     duration: [14, 22], blur: 0.6, blend: "screen",   peakOpacity: 0.45 },
+  gold:  { color: "rgba(212,175,90,0.42)",  count: 12, size: [1, 2.5],   duration: [12, 20], blur: 0.8, blend: "screen",   peakOpacity: 0.55 },
+  fog:   { color: "rgba(220,220,230,0.05)", count: 4,  size: [220, 380], duration: [28, 42], blur: 50,  blend: "screen",   peakOpacity: 0.35 },
+  smoke: { color: "rgba(60,50,45,0.14)",    count: 4,  size: [240, 400], duration: [32, 48], blur: 60,  blend: "multiply", peakOpacity: 0.35 },
 };
 
 function seededRandom(seed: number) {
@@ -80,8 +83,9 @@ function ParticleLayerImpl({ preset, intensity = 0.4 }: Props) {
             height: `${p.size}px`,
             background: cfg.color,
             filter: `blur(${cfg.blur}px)`,
-            opacity: 0.5 + clamped * 0.5,
+            opacity: cfg.peakOpacity * (0.55 + clamped * 0.45),
             animation: `cinematic-particle-drift ${p.duration}s linear ${p.delay}s infinite`,
+            willChange: "transform, opacity",
             // @ts-expect-error CSS custom property
             "--drift-x": `${p.drift}px`,
           }}
@@ -90,9 +94,9 @@ function ParticleLayerImpl({ preset, intensity = 0.4 }: Props) {
       <style>{`
         @keyframes cinematic-particle-drift {
           0%   { transform: translate3d(0, 0, 0); opacity: 0; }
-          15%  { opacity: 1; }
-          85%  { opacity: 1; }
-          100% { transform: translate3d(var(--drift-x, 0), -40px, 0); opacity: 0; }
+          25%  { opacity: 1; }
+          75%  { opacity: 1; }
+          100% { transform: translate3d(var(--drift-x, 0), -32px, 0); opacity: 0; }
         }
       `}</style>
     </div>
