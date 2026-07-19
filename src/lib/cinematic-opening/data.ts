@@ -50,7 +50,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-2-cave-hira",
       image: "/cinematic/scene2-cave-hira.webp",
-      contextLabel: "غار حراء — ٦١٠م",
+      contextLabel: "غار حراء — نحو 610م",
       title: "هنا...",
       subtitle: "بدأت أعظم قصة غيّرت وجه العالم.",
       subtitleSegments: [
