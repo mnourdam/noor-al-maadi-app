@@ -26,6 +26,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import { NAVIGATION_REGISTRY } from "./registry";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 
 import type { NavigationOrigin, RouteId } from "./types";
@@ -497,8 +498,5 @@ function substituteParams(
 }
 
 function* iterAllDeclarations() {
-  // Lazy import to avoid a top-level circular reference risk if the
-  // registry ever imports engine helpers.
-  const { NAVIGATION_REGISTRY } = require("./registry") as typeof import("./registry");
   for (const decl of NAVIGATION_REGISTRY) yield decl;
 }
