@@ -500,11 +500,13 @@ function FinalLogoReveal({
   }, [phase, onComplete]);
 
 
-  const logoOpacity = fadingOut || phase === "idle" || phase === "out" ? 0 : 1;
+  const hidden = phase === "idle" || phase === "out" || phase === "done";
+  const logoOpacity = fadingOut || hidden ? 0 : 1;
   const glowOpacity =
     fadingOut || phase === "glow" || phase === "hold" ? (fadingOut ? 0 : 1) : 0;
-  const logoScale = phase === "idle" ? 0.94 : phase === "out" ? 0.98 : 1;
+  const logoScale = phase === "idle" ? 0.94 : hidden ? 0.98 : 1;
   const glowScale = phase === "glow" || phase === "hold" ? 1 : 0.85;
+
 
   const ease = "cubic-bezier(0.4, 0, 0.2, 1)";
 
