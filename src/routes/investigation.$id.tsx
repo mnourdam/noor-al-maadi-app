@@ -15,6 +15,8 @@ import { useProfile } from "@/lib/profile";
 import { displayName } from "@/lib/display-names";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 export const Route = createFileRoute("/investigation/$id")({
   head: () => ({ meta: [{ title: "تحقيق تاريخي" }] }),
@@ -57,6 +59,8 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     profile, markInvestigationCompletedLocal, awardBadge,
     recoverHeartFromActivity,
   } = useProfile();
+  const stashOrigin = useStashCurrentAsOrigin();
+
 
   const steps: InvestigationStep[] = useMemo(
     () => (Array.isArray(row.steps) ? row.steps : []),
@@ -187,8 +191,10 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
                     key={rid}
                     to="/encyclopedia/entity/$id"
                     params={{ id: rid }}
+                    onClick={() => stashOrigin(`/encyclopedia/entity/${rid}`)}
                     className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold hover:bg-gold/10"
                   >
+
                     <BookOpen className="size-3" /> {label && label !== rid ? label : "مرجع تاريخي"}
                   </Link>
                 );
@@ -351,6 +357,8 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
     profile, completeInvestigation, awardBadge, findArtifact, unlockCharacter,
     buyHint, hintsRevealed, addDinars,
   } = useProfile();
+  const stashOrigin = useStashCurrentAsOrigin();
+
 
   const scope = investigationScopeKey(inv.id);
   const revealed = hintsRevealed(scope);
@@ -418,8 +426,10 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
                   key={r.id}
                   to="/encyclopedia/entity/$id"
                   params={{ id: r.id }}
+                  onClick={() => stashOrigin(`/encyclopedia/entity/${r.id}`)}
                   className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold hover:bg-gold/10"
                 >
+
                   <BookOpen className="size-3" /> {r.label}
                 </Link>
               ))}

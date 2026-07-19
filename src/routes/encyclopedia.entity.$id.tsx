@@ -13,6 +13,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 import { useAccount } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
@@ -102,6 +104,8 @@ function Ornament({ label }: { label?: string }) {
 
 function EntityPage() {
   const { id } = Route.useParams();
+  const stashOrigin = useStashCurrentAsOrigin();
+
 
   const query = useQuery({
     queryKey: ["encyclopedia", "entity", id, "v3"],
@@ -449,8 +453,10 @@ function EntityPage() {
                         <Link
                           to="/encyclopedia/entity/$id"
                           params={{ id: n.entity.slug }}
+                          onClick={() => stashOrigin(`/encyclopedia/entity/${n.entity.slug}`)}
                           className="group relative flex items-center gap-4 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-surface/80 via-surface/50 to-black/30 p-4 transition hover:border-gold/40 hover:shadow-[0_20px_50px_-30px_rgba(212,175,90,0.45)]"
                         >
+
                           <span className="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full bg-gold/10 blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                           <span className="relative grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-gold/20 to-gold/5 ring-1 ring-gold/25 text-gold">
                             <NIcon className="size-5" strokeWidth={1.4} />

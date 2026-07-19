@@ -4,8 +4,11 @@
 import { Link } from "@tanstack/react-router";
 import { Clock } from "lucide-react";
 import type { TimelineEvent } from "@/types/encyclopediaArticle";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
 
 export function EncyclopediaTimeline({ timeline }: { timeline?: TimelineEvent[] }) {
+  const stashOrigin = useStashCurrentAsOrigin();
+
   if (!timeline || timeline.length === 0) return null;
   return (
     <section className="mt-10">
@@ -47,11 +50,13 @@ export function EncyclopediaTimeline({ timeline }: { timeline?: TimelineEvent[] 
                 <Link
                   to="/encyclopedia/entity/$id"
                   params={{ id: ev.related.slug }}
+                  onClick={() => stashOrigin(`/encyclopedia/entity/${ev.related!.slug}`)}
                   className="mt-2 inline-flex items-center gap-1 text-[11px] text-gold/85 underline-offset-4 hover:underline hover:text-gold"
                 >
                   ← {ev.related.label ?? ev.related.slug}
                 </Link>
               )}
+
             </div>
           </li>
         ))}

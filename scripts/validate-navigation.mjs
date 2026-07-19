@@ -6,56 +6,42 @@
 //
 // Usage:
 //   node scripts/validate-navigation.mjs
-//   bunx tsx scripts/validate-navigation.mjs
+//   npm run validate:navigation
 //
-// The runtime source for router-known routes is the generated route
-// tree at `src/routeTree.gen.ts` (the same file TanStack Router uses
-// to build the router at runtime). We parse `FileRoutesByFullPath`
-// out of it — never maintain a second copy.
+// This entry point self-bootstraps through `tsx` (a devDependency)
+// so it can import the TypeScript registry directly. The heavy
+// lifting lives in `scripts/validate-navigation.impl.ts`, which
+// parses `src/routeTree.gen.ts` and runs the registry validator.
 //
-// Exits with code 1 (build fails) when the graph is invalid.
+// Exit codes:
+//   0 — registry OK
+//   1 — validation failed / bootstrap failed
 // ============================================================
 
-import { readFileSync } from "node:fs";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, "..");
+const implPath = resolve(__dirname, "validate-navigation.impl.ts");
+const tsxBin = resolve(projectRoot, "node_modules/.bin/tsx");
 
-function readKnownRouteIds() {
-  const genPath = resolve(projectRoot, "src/routeTree.gen.ts");
-  let source;
-  try {
-    source = readFileSync(genPath, "utf8");
-  } catch {
-    return undefined;
-  }
-  const blockMatch = source.match(
-    /interface FileRoutesByFullPath\s*\{([\s\S]*?)\n\}/,
+if (!existsSync(tsxBin)) {
+  console.error(
+    "[validate-navigation] node_modules/.bin/tsx not found. Run `bun install` first.",
   );
-  if (!blockMatch) return undefined;
-  const ids = [];
-  for (const line of blockMatch[1].split("\n")) {
-    const m = line.match(/^\s*'([^']+)':/);
-    if (m) ids.push(m[1]);
-  }
-  return ids;
+  process.exit(1);
 }
 
-const mod = await import(
-  pathToFileURL(resolve(projectRoot, "src/lib/navigation/index.ts")).href
-);
+const result = spawnSync(tsxBin, [implPath], {
+  stdio: "inherit",
+  cwd: projectRoot,
+});
 
-const { validateNavigationRegistry, formatValidationReport } = mod;
-
-const knownRouteIds = readKnownRouteIds();
-if (!knownRouteIds) {
-  console.warn(
-    "[validate-navigation] Could not read src/routeTree.gen.ts — running registry-only checks.",
-  );
+if (result.error) {
+  console.error("[validate-navigation] failed to spawn tsx:", result.error);
+  process.exit(1);
 }
-
-const report = validateNavigationRegistry({ knownRouteIds });
-console.log(formatValidationReport(report));
-if (!report.ok) process.exit(1);
+process.exit(result.status ?? 1);

@@ -14,6 +14,8 @@ import {
   subscribeToMyNotifications,
   type ServerNotification,
 } from "@/lib/notifications/server";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({ meta: [{ title: "مركز الإشعارات — إرث" }] }),
@@ -47,9 +49,11 @@ function relativeTime(iso: string): string {
 
 function NotificationsCenter() {
   const router = useRouter();
+  const stashOrigin = useStashCurrentAsOrigin();
   const [rows, setRows] = useState<ServerNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<string | null>(null);
+
 
   const refresh = useCallback(async () => {
     const list = await fetchMyNotifications(150);
@@ -83,12 +87,16 @@ function NotificationsCenter() {
       payload: n.payload as NotificationPayload,
     });
     const [path, hashPart] = to.split("#");
+    // Stash /notifications as origin so Back from the target returns
+    // here rather than falling through to the target's structural parent.
+    stashOrigin(path || "/");
     try {
       await router.navigate({ to: (path || "/") as "/", hash: hashPart || undefined });
     } catch {
       window.location.href = to;
     }
   };
+
 
   const remove = async (id: string) => {
     setRows((cur) => cur.filter((r) => r.id !== id));

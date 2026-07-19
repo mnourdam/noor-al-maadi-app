@@ -13,6 +13,8 @@ import {
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 function useEncyclopediaEntity(id: string | null) {
   return useQuery<SupabaseEncyclopediaEntity | null>({
@@ -37,6 +39,8 @@ export function AtlasEntityDetailPanel({
 }) {
   const encId = entity.encyclopedia_entity_id ?? null;
   const { data: article, isLoading } = useEncyclopediaEntity(encId);
+  const stashOrigin = useStashCurrentAsOrigin();
+
   const hasCoords = entity.aps_x != null && entity.aps_y != null;
 
   // Live values from the encyclopedia (source of truth) win. The Atlas
@@ -115,8 +119,10 @@ export function AtlasEntityDetailPanel({
             <Link
               to="/encyclopedia/entity/$id"
               params={{ id: encId }}
+              onClick={() => stashOrigin(`/encyclopedia/entity/${encId}`)}
               className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-b from-amber-400 to-amber-500 px-4 py-2 text-[13px] font-bold text-slate-950 shadow hover:from-amber-300 hover:to-amber-400"
             >
+
               <BookOpen className="size-4" /> اقرأ في الموسوعة
             </Link>
           ) : (
