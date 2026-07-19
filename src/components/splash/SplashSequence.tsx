@@ -29,6 +29,8 @@ import { pickSplashArtwork, preloadImage, type SplashFraming } from "./artworkPr
 import { playSplashSfx } from "./splashSfx";
 import { SplashLogoReveal } from "./SplashLogoReveal";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { isFirstEverLaunch } from "@/lib/cinematic-opening/persistence";
+
 
 const SESSION_FLAG = "irth.splash.played.v1";
 // Persistent "recently warm" heartbeat — when the app was active within this
