@@ -3,6 +3,8 @@ import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { iconForType } from "@/lib/encyclopedia-icons";
 import { HighlightedText } from "@/components/HighlightedText";
 import { findHighlightRanges } from "@/lib/encyclopedia-highlight";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 const CARD_CLASS =
   "group block rounded-2xl border border-white/10 bg-surface p-3 text-right transition hover:border-gold/40 hover:bg-surface-2";
