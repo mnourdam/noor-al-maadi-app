@@ -49,6 +49,8 @@ function InvestigationsIndex() {
   const canonicalProgress = useCanonicalInvestigationProgress();
   const { rows } = useSupabaseInvestigations();
   const navigate = useNavigate({ from: "/investigations" });
+  const stashOrigin = useStashCurrentAsOrigin();
+
   const rawWorld = Route.useSearch().world;
   const worldSlug = isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
 
