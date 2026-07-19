@@ -374,21 +374,25 @@ function RootComponent() {
       <ProfileProvider>
         <AccountProvider>
           <NavigationProvider>
-            <Outlet />
-            <CinematicOpening />
-            <FirstLaunchGate />
-            <AchievementWatcher />
-            <InvestigationLegacyBackfill />
-            <LevelUpWatcher />
-            <Toaster position="top-center" richColors closeButton />
-            <SplashSequence />
-            {/* Hardware Back + exit dialog now owned by <NavigationProvider>. */}
-            <InAppBanner />
-            <DailyChallengeReminderScheduler />
-            <GoogleAuthResultDialog />
-            <IrthAuthDialog />
-            <RecoveryModeGuard />
-            <GlobalOfflinePill />
+            <TutorialProvider>
+              <Outlet />
+              <CinematicOpening />
+              <FirstLaunchGate />
+              <AchievementWatcher />
+              <InvestigationLegacyBackfill />
+              <LevelUpWatcher />
+              <Toaster position="top-center" richColors closeButton />
+              <SplashSequence />
+              {/* Hardware Back + exit dialog now owned by <NavigationProvider>. */}
+              <InAppBanner />
+              <DailyChallengeReminderScheduler />
+              <GoogleAuthResultDialog />
+              <IrthAuthDialog />
+              <RecoveryModeGuard />
+              <GlobalOfflinePill />
+              <TutorialFlagPublishers />
+              <TutorialOverlay />
+            </TutorialProvider>
           </NavigationProvider>
         </AccountProvider>
       </ProfileProvider>
