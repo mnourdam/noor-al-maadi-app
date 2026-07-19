@@ -20,13 +20,21 @@ interface Props {
   reducedMotion?: boolean;
 }
 
+// Cinematic easing — smooth acceleration and deceleration.
+// Never "instant", never mechanical.
+const CINEMATIC_EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
+
 function transitionStyle(t: SceneTransition | undefined, active: boolean, fadingOut: boolean): React.CSSProperties {
   const kind = t ?? "crossfade";
-  if (kind === "cut") return { opacity: active && !fadingOut ? 1 : 0, transition: "opacity 0ms" };
-  const durationMs = kind === "fade-from-black" || kind === "fade-to-black" ? 1400 : 1000;
+  // Every scene fades. "cut" is intentionally softened to a short crossfade
+  // so the sequence never has an abrupt visual jump.
+  const durationMs =
+    kind === "fade-from-black" || kind === "fade-to-black" ? 1800 :
+    kind === "cut" ? 600 : 1600;
   return {
     opacity: active && !fadingOut ? 1 : 0,
-    transition: `opacity ${durationMs}ms ease-in-out`,
+    transition: `opacity ${durationMs}ms ${CINEMATIC_EASE}`,
+    willChange: "opacity",
   };
 }
 
