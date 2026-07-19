@@ -39,6 +39,8 @@ export function AtlasEntityDetailPanel({
 }) {
   const encId = entity.encyclopedia_entity_id ?? null;
   const { data: article, isLoading } = useEncyclopediaEntity(encId);
+  const stashOrigin = useStashCurrentAsOrigin();
+
   const hasCoords = entity.aps_x != null && entity.aps_y != null;
 
   // Live values from the encyclopedia (source of truth) win. The Atlas
