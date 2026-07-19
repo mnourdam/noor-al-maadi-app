@@ -14,7 +14,7 @@
 import type { CinematicOpeningConfig } from "./types";
 
 /** Local, bundled logo used by the final scene's overlay layer. */
-export const CINEMATIC_LOGO_URL = "/assets/splash/irth-logo.png";
+export const CINEMATIC_LOGO_URL = "/cinematic/irth-logo.webp";
 
 const GOLD_HIGHLIGHT = true;
 
@@ -219,13 +219,18 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
       particleIntensity: 0.4,
       overlayDarkness: 0.05,
       kenBurns: true,
+      // Portrait 882×1562 — the intended lower composition (the journey line
+      // toward the horizon) is cropped by Android WebView's tighter viewport
+      // fill combined with the Ken Burns upward pan. Bias the fill downward
+      // on Android only so the bottom stays fully visible. Web is unchanged.
+      imagePositionAndroid: "center 72%",
       soundtrackLevel: 0.76,
     },
     {
       id: "scene-6-final-logo",
       image: "/cinematic/scene6-final-logo-bg.webp",
       contextLabel: "إرث — اليوم",
-      durationMs: 5000,
+      durationMs: 6000,
       transitionIn: "crossfade",
       transitionOut: "fade-to-black",
       particles: "gold",

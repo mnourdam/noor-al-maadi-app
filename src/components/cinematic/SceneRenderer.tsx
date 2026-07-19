@@ -6,11 +6,22 @@
 // Purely presentational — driven entirely by the scene object.
 // ============================================================
 
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import type { CinematicScene, RichTextSegment, SceneTransition } from "@/lib/cinematic-opening/types";
 import { ParticleLayer } from "./ParticleLayer";
 
 const GOLD = "#F4D98B";
+
+/** Detect the Capacitor Android WebView at runtime. Web/desktop are false. */
+function isAndroidWebView(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const cap = (window as unknown as {
+      Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string };
+    }).Capacitor;
+    return !!cap?.isNativePlatform?.() && cap.getPlatform?.() === "android";
+  } catch { return false; }
+}
 
 function renderSegments(segments: RichTextSegment[] | undefined, fallback: string | undefined) {
   if (segments && segments.length > 0) {
@@ -107,6 +118,12 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
 
   const visible = active && !fadingOut && entered;
 
+  const isAndroid = useMemo(() => isAndroidWebView(), []);
+  const bgPosition =
+    (isAndroid && scene.imagePositionAndroid) ||
+    scene.imagePosition ||
+    "center";
+
   return (
     <div
       className="absolute inset-0"
@@ -120,8 +137,11 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
           <div
             role={scene.imageAlt ? "img" : undefined}
             aria-label={scene.imageAlt || undefined}
-            className={`absolute inset-0 bg-cover bg-center ${kenBurns ? "cinematic-kenburns" : ""}`}
-            style={{ backgroundImage: `url(${scene.image})` }}
+            className={`absolute inset-0 bg-cover ${kenBurns ? "cinematic-kenburns" : ""} ${isAndroid ? "cinematic-android-kb" : ""}`}
+            style={{
+              backgroundImage: `url(${scene.image})`,
+              backgroundPosition: bgPosition,
+            }}
           />
         </div>
       )}
@@ -219,6 +239,17 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
         @keyframes cinematic-kenburns {
           0%   { transform: scale(1.045) translate3d(0, 0.4%, 0); }
           100% { transform: scale(1.13)  translate3d(0, -1.6%, 0); }
+        }
+        /* Android WebView: softer scale and reduced upward pan so the
+           bottom of tall portrait compositions is never cropped. Applied
+           on top of the base keyframes via a same-name override. */
+        .cinematic-android-kb.cinematic-kenburns {
+          animation-name: cinematic-kenburns-android;
+          transform-origin: center 62%;
+        }
+        @keyframes cinematic-kenburns-android {
+          0%   { transform: scale(1.035) translate3d(0, 0.2%, 0); }
+          100% { transform: scale(1.09)  translate3d(0, -0.6%, 0); }
         }
       `}</style>
     </div>
