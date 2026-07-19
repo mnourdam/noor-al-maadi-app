@@ -19,6 +19,7 @@ import { localSnapshotInfo, ensureLocalSnapshotLoaded, applyLocalSnapshot } from
 import { supabase } from "@/integrations/supabase/client";
 import { peekAll, type OutboxItem } from "@/lib/offline/outbox";
 import { flushOutbox, getLastFlushAt } from "@/lib/offline/flush";
+import { resetCompletion as resetCinematicOpening, readCompletedVersion as readCinematicOpeningVersion } from "@/lib/cinematic-opening/persistence";
 
 export const Route = createFileRoute("/admin/offline-diagnostics")({
   head: () => ({
