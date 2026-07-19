@@ -209,10 +209,10 @@ export function TutorialOverlay() {
         position: "fixed",
         inset: 0,
         zIndex: 2000,
-        pointerEvents: active ? "auto" : "none",
+        pointerEvents: shouldRenderChrome ? "auto" : "none",
       }}
     >
-      {active && (
+      {shouldRenderChrome && (
         <>
           {/* Dimmed backdrop with SVG cutout. */}
           <svg
