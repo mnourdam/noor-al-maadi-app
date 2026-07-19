@@ -190,17 +190,30 @@ function useSectionScrollAnchor(order: SectionKey[]) {
   return container;
 }
 
+/**
+ * Origin stashing — every contextual link out of a world records its
+ * return path so Back lands here (Priority 3), not on the structural
+ * parent (/worlds / /encyclopedia / /investigations). Sections use this
+ * hook so the helpers are in-scope wherever a link is rendered.
+ */
+function useWorldOrigins(slug: string) {
+  const stash = useStashOrigin();
+  const origin = { route: "/worlds/$slug" as const, params: { slug } };
+  return {
+    stashInvestigation: (id: string) => stash(`/investigation/${id}`, origin),
+    stashEntity: (id: string) => stash(`/encyclopedia/entity/${id}`, origin),
+  };
+}
+
 function WorldDetailPage() {
   const { slug } = Route.useParams();
-  // Origin stashing — every contextual link out of this world records
-  // its return path so Back lands here (Priority 3), not on the
-  // structural parent (/worlds / /encyclopedia / /investigations).
-  const stashOrigin = useStashOrigin();
-  const worldOrigin = { route: "/worlds/$slug" as const, params: { slug } };
-  const stashInvestigation = (id: string) =>
-    stashOrigin(`/investigation/${id}`, worldOrigin);
-  const stashEntity = (id: string) =>
-    stashOrigin(`/encyclopedia/entity/${id}`, worldOrigin);
+  const { stashInvestigation, stashEntity } = useWorldOrigins(slug);
+  // Non-playable slugs (e.g. fatimid, mongols, timurid, safavid) redirect
+  // safely to the explorer. Encyclopedia entities that link into these
+  // eras continue to work via /encyclopedia/*.
+  if (!isPublicWorld(slug)) {
+    return <Navigate to="/worlds" replace />;
+  }
   // Non-playable slugs (e.g. fatimid, mongols, timurid, safavid) redirect
   // safely to the explorer. Encyclopedia entities that link into these
   // eras continue to work via /encyclopedia/*.
