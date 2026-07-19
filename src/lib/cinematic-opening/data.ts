@@ -219,6 +219,11 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
       particleIntensity: 0.4,
       overlayDarkness: 0.05,
       kenBurns: true,
+      // Portrait 882×1562 — the intended lower composition (the journey line
+      // toward the horizon) is cropped by Android WebView's tighter viewport
+      // fill combined with the Ken Burns upward pan. Bias the fill downward
+      // on Android only so the bottom stays fully visible. Web is unchanged.
+      imagePositionAndroid: "center 72%",
       soundtrackLevel: 0.76,
     },
     {
