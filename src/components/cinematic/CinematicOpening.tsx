@@ -558,7 +558,7 @@ function FinalLogoReveal({
   const revealing = phase === "revealing_logo";
   const holding = phase === "holding_logo";
   const fading = phase === "fading_final_scene";
-  const visible = revealing || holding;
+  
 
   // Opacity: 1 only during reveal+hold; 0 otherwise (or during parent fade-out).
   const logoOpacityFinal = !fadingOut && (revealing || holding) ? 1 : 0;
