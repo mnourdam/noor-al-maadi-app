@@ -22,14 +22,14 @@ import { Bug, Copy, Trash2, X, RefreshCw } from "lucide-react";
 
 import { useAdminGuard } from "@/lib/admin-guard";
 import {
-  useTutorial,
+  tutorialDebug,
   readTutorialTransitionLog,
   readRawTutorialTransitionLog,
   clearTutorialTransitionLog,
-  useOverlayEntries,
   type TutorialTransitionEntry,
+  type TutorialDiagnostics,
 } from "@/lib/tutorial";
-import { useOverlayStackSize } from "@/lib/navigation";
+import { useOverlayEntries, useOverlayStackSize } from "@/lib/navigation";
 
 const TOP_Z = 2147483000; // above tutorial dim/spotlight (which uses ~50-1000)
 
