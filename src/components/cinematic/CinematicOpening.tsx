@@ -50,7 +50,7 @@ import { AmbientAudio } from "./AmbientAudio";
 import irthLogo from "@/assets/irth-icon.png.asset.json";
 
 
-const FINAL_FADE_MS = 900;
+const FINAL_FADE_MS = 1400;
 const PRELOAD_TIMEOUT_MS = 3500;
 export const OPENING_COMPLETED_EVENT = "irth:opening-completed";
 
