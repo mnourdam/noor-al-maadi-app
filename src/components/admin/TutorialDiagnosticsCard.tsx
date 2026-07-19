@@ -67,6 +67,7 @@ export function TutorialDiagnosticsCard() {
     const o = currentEligibilityOverride();
     setOverride(o == null ? null : o);
     setCompletion(fmtCompletion());
+    setLastStart(readLastStartDiagnostic());
   }, []);
 
   useEffect(() => {
