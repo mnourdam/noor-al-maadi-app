@@ -104,6 +104,8 @@ function Ornament({ label }: { label?: string }) {
 
 function EntityPage() {
   const { id } = Route.useParams();
+  const stashOrigin = useStashCurrentAsOrigin();
+
 
   const query = useQuery({
     queryKey: ["encyclopedia", "entity", id, "v3"],
