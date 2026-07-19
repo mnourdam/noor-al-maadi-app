@@ -14,7 +14,7 @@
 import type { CinematicOpeningConfig } from "./types";
 
 /** Local, bundled logo used by the final scene's overlay layer. */
-export const CINEMATIC_LOGO_URL = "/assets/splash/irth-logo.png";
+export const CINEMATIC_LOGO_URL = "/cinematic/irth-logo.webp";
 
 const GOLD_HIGHLIGHT = true;
 
