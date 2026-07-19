@@ -15,6 +15,8 @@ import { useProfile } from "@/lib/profile";
 import { displayName } from "@/lib/display-names";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 export const Route = createFileRoute("/investigation/$id")({
   head: () => ({ meta: [{ title: "تحقيق تاريخي" }] }),
