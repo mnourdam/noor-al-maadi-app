@@ -74,6 +74,7 @@ export function TutorialDiagnosticsCard() {
     setOverride(o == null ? null : o);
     setCompletion(fmtCompletion());
     setLastStart(readLastStartDiagnostic());
+    setTransitionLog(readTutorialTransitionLog());
   }, []);
 
   useEffect(() => {
