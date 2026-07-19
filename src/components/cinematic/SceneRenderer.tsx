@@ -6,11 +6,22 @@
 // Purely presentational — driven entirely by the scene object.
 // ============================================================
 
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import type { CinematicScene, RichTextSegment, SceneTransition } from "@/lib/cinematic-opening/types";
 import { ParticleLayer } from "./ParticleLayer";
 
 const GOLD = "#F4D98B";
+
+/** Detect the Capacitor Android WebView at runtime. Web/desktop are false. */
+function isAndroidWebView(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const cap = (window as unknown as {
+      Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string };
+    }).Capacitor;
+    return !!cap?.isNativePlatform?.() && cap.getPlatform?.() === "android";
+  } catch { return false; }
+}
 
 function renderSegments(segments: RichTextSegment[] | undefined, fallback: string | undefined) {
   if (segments && segments.length > 0) {
