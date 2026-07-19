@@ -308,6 +308,43 @@ export function useStashOrigin() {
 }
 
 /**
+ * Returns a `(destinationPath) => void` that captures the CURRENT route
+ * (id + params + search) as the origin for `destinationPath`. Used by
+ * shared card components (EncyclopediaCard, campaign/investigation
+ * cards) so callers get contextual Back automatically without threading
+ * an explicit `origin` prop through every list page.
+ */
+export function useStashCurrentAsOrigin() {
+  const engine = useEngine();
+  const router = useRouter();
+  return useCallback(
+    (destinationPath: string) => {
+      try {
+        const matches = router.state.matches;
+        if (!matches || matches.length === 0) return;
+        const last = matches[matches.length - 1] as {
+          routeId?: string;
+          id?: string;
+          params?: Record<string, string>;
+          search?: Record<string, unknown>;
+        };
+        const routeId = (last.routeId ?? last.id ?? "") as RouteId;
+        if (!routeId || !resolveDeclaration(routeId)) return;
+        engine.origins.set(destinationPath, {
+          route: routeId,
+          params: last.params,
+          search: last.search,
+        });
+      } catch {
+        /* ignore */
+      }
+    },
+    [engine, router],
+  );
+}
+
+
+/**
  * The ONLY sanctioned way to trigger Back from UI. Runs the resolution
  * algorithm documented in the architecture proposal (§2):
  *   1. overlay dismiss
