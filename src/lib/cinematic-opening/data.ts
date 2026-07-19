@@ -196,7 +196,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-5-journey",
       image: "/cinematic/scene5-journey.webp",
-      contextLabel: "رحلة إرث",
+      contextLabel: "العالم الإسلامي — عبر القرون",
       title: "لكن الحكاية لم تنتهِ.",
       titleSegments: [
         { text: "لكن " },
