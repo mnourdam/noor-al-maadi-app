@@ -49,7 +49,8 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   }, [active, scene.textDelayMs, scene.textHoldMs, scene.id]);
 
   const overlay = Math.max(0, Math.min(1, scene.overlayDarkness ?? 0));
-  const kenBurns = scene.kenBurns !== false;
+  const kenBurns = scene.kenBurns !== false && !reducedMotion;
+  const showParticles = !!scene.particles && !reducedMotion;
 
   return (
     <div
@@ -75,7 +76,7 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
       )}
 
       {/* Particles */}
-      {scene.particles && (
+      {showParticles && scene.particles && (
         <ParticleLayer preset={scene.particles} intensity={scene.particleIntensity} />
       )}
 
