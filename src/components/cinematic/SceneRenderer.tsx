@@ -7,8 +7,25 @@
 // ============================================================
 
 import { memo, useEffect, useState } from "react";
-import type { CinematicScene, SceneTransition } from "@/lib/cinematic-opening/types";
+import type { CinematicScene, RichTextSegment, SceneTransition } from "@/lib/cinematic-opening/types";
 import { ParticleLayer } from "./ParticleLayer";
+
+const GOLD = "#F4D98B";
+
+function renderSegments(segments: RichTextSegment[] | undefined, fallback: string | undefined) {
+  if (segments && segments.length > 0) {
+    return segments.map((seg, i) => (
+      <span
+        key={i}
+        style={seg.highlight ? { color: GOLD } : undefined}
+      >
+        {seg.text}
+      </span>
+    ));
+  }
+  return fallback ?? null;
+}
+
 
 interface Props {
   scene: CinematicScene;
