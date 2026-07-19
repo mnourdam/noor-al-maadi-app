@@ -336,10 +336,13 @@ export function CinematicOpening() {
     androidCinematicDiag("engine", "skip confirmed / bypassing scene state", { index, sceneId: currentScene?.id });
     finish();
   }, [finish, index, currentScene?.id]);
-  useOverlayDismiss(useMemo(
-    () => (phase !== "done" && !fadingOut ? requestSkip : () => {}),
-    [phase, fadingOut, requestSkip],
-  ), "CinematicOpening");
+  // Only occupy an overlay-stack slot while the cinematic is an active
+  // blocking surface. When phase transitions to "done" (or the final
+  // fade completes), the dismisser unregisters and stackSize returns to
+  // its pre-cinematic value. No inert callback is left behind.
+  const cinematicActive = phase !== "done" && !fadingOut;
+  useOverlayDismiss(requestSkip, "CinematicOpening", cinematicActive);
+
 
 
   const canSkip = phase === "playing" && currentScene?.allowSkip !== false;
