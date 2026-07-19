@@ -102,6 +102,29 @@ export function validateNavigationRegistry(
         });
       }
     }
+
+    // Back-policy sanity
+    if (decl.backPolicy === "force_target") {
+      if (!decl.backPolicyTarget) {
+        issues.push({
+          code: "missing_back_policy_target",
+          routeId: decl.id,
+          message: `Route "${decl.id}" declares backPolicy "force_target" but no backPolicyTarget.`,
+        });
+      } else if (!resolveDeclaration(decl.backPolicyTarget)) {
+        issues.push({
+          code: "invalid_back_policy_target",
+          routeId: decl.id,
+          message: `Route "${decl.id}" backPolicyTarget "${decl.backPolicyTarget}" is not registered.`,
+        });
+      }
+    } else if (decl.backPolicyTarget) {
+      issues.push({
+        code: "invalid_back_policy_target",
+        routeId: decl.id,
+        message: `Route "${decl.id}" declares backPolicyTarget without backPolicy: "force_target".`,
+      });
+    }
   }
 
   // Parent-loop detection (Floyd-style walk with visited set)
@@ -138,7 +161,9 @@ export function validateNavigationRegistry(
   // Cross-check against router-known routes when provided
   if (options.knownRouteIds) {
     const registered = new Set(NAVIGATION_REGISTRY.map((d) => d.id));
-    const known = new Set(options.knownRouteIds);
+    const known = new Set(
+      options.knownRouteIds.map(normalizeKnownRouteId).filter(Boolean) as string[],
+    );
     for (const id of known) {
       if (!registered.has(id) && !isIgnoredRouteId(id)) {
         issues.push({
@@ -163,10 +188,24 @@ export function validateNavigationRegistry(
 }
 
 /**
+ * Normalize a router route id into the form the registry uses:
+ *   - trailing slashes stripped (`/admin/` -> `/admin`), except the root
+ *   - layout-only ids (starting with `__`) dropped
+ *   - server / API / email / lovable tooling ids dropped
+ */
+function normalizeKnownRouteId(id: RouteId): RouteId | null {
+  if (!id) return null;
+  if (id.startsWith("__")) return null;
+  if (isIgnoredRouteId(id)) return null;
+  if (id.length > 1 && id.endsWith("/")) return id.slice(0, -1);
+  return id;
+}
+
+/**
  * Route ids the validator intentionally ignores when cross-checking
  * against the router:
  *   - server / API routes under `/api/`
- *   - the internal `/lovable/*` email tooling routes
+ *   - internal `/lovable/*` and `/email/*` tooling routes
  *   - the `__root` id used by TanStack for the shell
  */
 function isIgnoredRouteId(id: RouteId): boolean {

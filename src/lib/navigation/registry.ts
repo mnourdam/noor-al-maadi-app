@@ -50,9 +50,35 @@ const PLAYER_ROUTES: RouteDeclaration[] = [
 
   // Auth surface
   { id: "/auth", parentRoute: "/", kind: "player", label: "الدخول" },
-  { id: "/auth/callback", parentRoute: "/", kind: "player", label: "استكمال الدخول" },
-  { id: "/reset-password", parentRoute: "/", kind: "player", label: "تغيير كلمة المرور" },
-  { id: "/unsubscribe", parentRoute: "/", kind: "player", label: "إلغاء الاشتراك" },
+  {
+    id: "/auth/callback",
+    parentRoute: "/",
+    kind: "player",
+    label: "استكمال الدخول",
+    // OAuth token exchange is in flight; Back must not interrupt it.
+    // Once the callback resolves it navigates itself.
+    backPolicy: "blocked_while_pending",
+    supportsOriginOverride: false,
+  },
+  {
+    id: "/reset-password",
+    parentRoute: "/",
+    kind: "player",
+    label: "تغيير كلمة المرور",
+    // RecoveryModeGuard owns navigation until the password reset finishes.
+    backPolicy: "blocked_while_pending",
+    supportsOriginOverride: false,
+  },
+  {
+    id: "/unsubscribe",
+    parentRoute: "/",
+    kind: "player",
+    label: "إلغاء الاشتراك",
+    // One-shot email flow: always return safely to Home.
+    backPolicy: "force_target",
+    backPolicyTarget: "/",
+    supportsOriginOverride: false,
+  },
 
   // Campaigns hierarchy
   { id: "/campaigns/imported/$id", parentRoute: "/campaigns", kind: "player", label: "الحملة" },
@@ -99,7 +125,16 @@ const PLAYER_ROUTES: RouteDeclaration[] = [
 
   // Comparison / share
   { id: "/compare/$id", parentRoute: "/", kind: "player", label: "مقارنة" },
-  { id: "/share-card", parentRoute: "/", kind: "player", label: "بطاقة مشاركة" },
+  {
+    id: "/share-card",
+    parentRoute: "/",
+    kind: "player",
+    label: "بطاقة مشاركة",
+    // Off-screen renderer used to generate share images. Never
+    // participates in Back — no origin tracking, no parent resolution.
+    backPolicy: "non_navigable",
+    supportsOriginOverride: false,
+  },
 ];
 
 // -----------------------------
@@ -140,6 +175,7 @@ const ADMIN_SUBPAGES: RouteId[] = [
   "/admin/encyclopedia",
   "/admin/encyclopedia-audit",
   "/admin/encyclopedia-cleanup",
+  "/admin/encyclopedia-cleanup/data-hygiene",
   "/admin/encyclopedia-cleanup/import-preview",
   "/admin/encyclopedia-cleanup/integrity",
   "/admin/encyclopedia-cleanup/redirects",
@@ -180,6 +216,7 @@ const ADMIN_PARENT_OVERRIDES: Readonly<Record<RouteId, RouteId>> = {
   "/admin/import-history/$id": "/admin/import-history",
   "/admin/games/$mode": "/admin/games",
   "/admin/games/crossword-generator": "/admin/games",
+  "/admin/encyclopedia-cleanup/data-hygiene": "/admin/encyclopedia-cleanup",
   "/admin/encyclopedia-cleanup/import-preview": "/admin/encyclopedia-cleanup",
   "/admin/encyclopedia-cleanup/integrity": "/admin/encyclopedia-cleanup",
   "/admin/encyclopedia-cleanup/redirects": "/admin/encyclopedia-cleanup",
