@@ -211,13 +211,23 @@ const FIRST_TARGET_SELECTOR = '[data-tutorial-target="nav-campaigns"]';
 interface LastStartDiagnosticInput {
   reason: string;
   pathname: string;
+  /** Count of overlays that are NOT the tutorial's own dismisser. */
   overlayStackSize: number;
+  /** Raw total size of the navigation overlay stack. */
+  totalOverlayStackSize: number;
+  /** Per-contributor labels (bottom → top). */
+  overlayLabels: readonly string[];
   homeStableFrames: number;
   documentVisible: boolean;
   engineState: string;
   eligible: boolean;
   completed: boolean;
   autoStartResult: AutoStartResult;
+}
+
+export interface OverlayContributor {
+  label: string;
+  count: number;
 }
 
 export interface LastStartDiagnostic {
@@ -240,6 +250,10 @@ export interface LastStartDiagnostic {
   homeStableFrames: number;
   totalOverlayStackSize: number;
   externalOverlayStackSize: number;
+  /** Every raw overlay entry currently on the stack (bottom → top). */
+  overlayStackLabels: readonly string[];
+  /** Grouped contributor counts for quick inspection. */
+  overlayContributors: readonly OverlayContributor[];
   tutorialRegistrationActive: boolean;
   firstTargetExists: boolean;
   firstTargetRect: { x: number; y: number; w: number; h: number } | null;
@@ -276,14 +290,15 @@ export function writeLastStartDiagnostic(input: LastStartDiagnosticInput): void 
     /* ignore */
   }
 
-  // Tutorial's own overlay-stack registration is active when the
-  // engine is not idle/completed OR the skip-confirm dialog is open.
-  const tutorialActive =
-    input.engineState !== "idle" && input.engineState !== "completed";
-  const externalOverlayStackSize = Math.max(
-    0,
-    input.overlayStackSize - (tutorialActive ? 1 : 0),
-  );
+  const tutorialRegistrationActive = input.overlayLabels.includes("TutorialEngine");
+
+  const grouped = new Map<string, number>();
+  for (const l of input.overlayLabels) {
+    grouped.set(l, (grouped.get(l) ?? 0) + 1);
+  }
+  const overlayContributors: OverlayContributor[] = Array.from(
+    grouped.entries(),
+  ).map(([label, count]) => ({ label, count }));
 
   const snap = binding?.api.getSnapshot();
   const record: LastStartDiagnostic = {
@@ -304,9 +319,11 @@ export function writeLastStartDiagnostic(input: LastStartDiagnosticInput): void 
     recoveryGuardInactive: flags.recoveryGuardInactive,
     documentVisible: input.documentVisible,
     homeStableFrames: input.homeStableFrames,
-    totalOverlayStackSize: input.overlayStackSize,
-    externalOverlayStackSize,
-    tutorialRegistrationActive: tutorialActive,
+    totalOverlayStackSize: input.totalOverlayStackSize,
+    externalOverlayStackSize: input.overlayStackSize,
+    overlayStackLabels: [...input.overlayLabels],
+    overlayContributors,
+    tutorialRegistrationActive,
     firstTargetExists,
     firstTargetRect,
     autoStartEffectRan: __tutorialAutoStartTelemetry.autoStartEffectRan,
@@ -322,6 +339,7 @@ export function writeLastStartDiagnostic(input: LastStartDiagnosticInput): void 
     /* ignore */
   }
 }
+
 
 export function readLastStartDiagnostic(): LastStartDiagnostic | null {
   if (typeof window === "undefined") return null;

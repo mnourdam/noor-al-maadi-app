@@ -63,6 +63,18 @@ export function TutorialHomeDiagBadge() {
       <div>reqStart: {__tutorialAutoStartTelemetry.requestStartCalled}</div>
       <div>reqStartResult: {__tutorialAutoStartTelemetry.lastRequestStartResult}</div>
       <div>firstTarget: {firstTargetExists}</div>
+      <div>
+        overlays: {snap?.externalOverlayStackSize ?? "—"}/
+        {snap?.totalOverlayStackSize ?? "—"}
+      </div>
+      {snap && snap.overlayContributors.length > 0 ? (
+        <div style={{ marginTop: 2 }}>
+          {snap.overlayContributors.map((c) => (
+            <div key={c.label}>· {c.label} × {c.count}</div>
+          ))}
+        </div>
+      ) : null}
     </div>
+
   );
 }

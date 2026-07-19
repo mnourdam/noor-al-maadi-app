@@ -28,10 +28,13 @@ export {
   useNavigateWithOrigin,
   useNavigationOrigin,
   useOverlayDismiss,
+  useOverlayEntries,
   useOverlayStackSize,
   useStashOrigin,
   useStashCurrentAsOrigin,
 } from "./engine";
+export type { OverlayEntry } from "./engine";
+
 
 
 export { LinkWithOrigin } from "./LinkWithOrigin";
