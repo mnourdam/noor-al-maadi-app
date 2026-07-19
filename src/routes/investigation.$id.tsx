@@ -357,6 +357,8 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
     profile, completeInvestigation, awardBadge, findArtifact, unlockCharacter,
     buyHint, hintsRevealed, addDinars,
   } = useProfile();
+  const stashOrigin = useStashCurrentAsOrigin();
+
 
   const scope = investigationScopeKey(inv.id);
   const revealed = hintsRevealed(scope);
