@@ -741,6 +741,8 @@ function ContentSection({
   items: RelatedNode[];
 }) {
   const meta = SECTION_META[sectionKey];
+  const { stashEntity } = useWorldOrigins(worldSlug);
+
 
   // Inside the Prophetic world, the Prophet ﷺ must always appear first with
   // a premium gold treatment. Pinning is derived from real encyclopedia data
