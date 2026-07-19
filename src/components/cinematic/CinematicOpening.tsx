@@ -169,7 +169,6 @@ export function CinematicOpening() {
   // black portal can cover Home before the browser paints anything else.
   const initialConfig = useMemo(() => decideShouldPlay(), []);
   const [config] = useState<CinematicOpeningConfig | null>(initialConfig);
-  const [mounted, setMounted] = useState(false);
   // "gate"     — pre-playback: black screen, permission + preload in flight
   // "playing"  — scenes are on screen
   // "done"     — sequence completed and portal has unmounted
