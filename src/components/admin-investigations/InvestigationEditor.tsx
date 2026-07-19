@@ -19,6 +19,7 @@ import {
   Trash2, Copy, Plus, ChevronUp, ChevronDown, CheckCircle2, Info, Loader2, ExternalLink,
 } from "lucide-react";
 import { Link, useNavigate, useBlocker } from "@tanstack/react-router";
+import { useBack } from "@/lib/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import {
   normalizeInvestigationRow,
