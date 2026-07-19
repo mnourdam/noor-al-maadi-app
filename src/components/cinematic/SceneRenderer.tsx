@@ -41,7 +41,7 @@ interface Props {
 // Never "instant", never mechanical.
 const CINEMATIC_EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
-function transitionStyle(t: SceneTransition | undefined, active: boolean, fadingOut: boolean): React.CSSProperties {
+function transitionStyle(t: SceneTransition | undefined, visible: boolean): React.CSSProperties {
   const kind = t ?? "crossfade";
   // Every scene fades. "cut" is intentionally softened to a short crossfade
   // so the sequence never has an abrupt visual jump.
@@ -49,7 +49,7 @@ function transitionStyle(t: SceneTransition | undefined, active: boolean, fading
     kind === "fade-from-black" || kind === "fade-to-black" ? 1800 :
     kind === "cut" ? 600 : 1600;
   return {
-    opacity: active && !fadingOut ? 1 : 0,
+    opacity: visible ? 1 : 0,
     transition: `opacity ${durationMs}ms ${CINEMATIC_EASE}`,
     willChange: "opacity",
   };
