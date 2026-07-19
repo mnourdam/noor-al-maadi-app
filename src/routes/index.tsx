@@ -6,6 +6,7 @@ import {
   Swords, Sparkles, Bell, Gem, Target, Flame, Sunrise, Zap, Award,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { TutorialApkLogViewer } from "@/components/admin/TutorialApkLogViewer";
 
 import { CachedImage } from "@/components/CachedImage";
 import {
@@ -568,6 +569,8 @@ function HomeFull() {
 
   return (
     <AppShell>
+      <TutorialApkLogViewer />
+
       
 
 
