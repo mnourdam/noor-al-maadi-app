@@ -244,9 +244,8 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   const hasSubtitle = !!(scene.subtitle || (scene.subtitleSegments && scene.subtitleSegments.length));
   const hasText = hasTitle || hasSubtitle;
 
-  const visible = active && !fadingOut && entered && (!isAndroid || !scene.image || imagePaintReady);
-
   const isAndroid = useMemo(() => isAndroidWebView(), []);
+  const visible = active && !fadingOut && entered && (!isAndroid || !scene.image || imagePaintReady);
   const bgPosition =
     (isAndroid && scene.imagePositionAndroid) ||
     scene.imagePosition ||
