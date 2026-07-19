@@ -362,7 +362,7 @@ function WorldDetailPage() {
         {/* Mini timeline — derived only from real dated Event entities in
             this world. Hidden when fewer than 3 dated events exist. No
             fabricated milestones. */}
-        <MiniTimeline events={data.sections.event} />
+        <MiniTimeline events={data.sections.event} worldSlug={slug} />
 
         {/* Connected worlds */}
         {data.connectedWorlds.length > 0 && (
