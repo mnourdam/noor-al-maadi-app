@@ -207,11 +207,11 @@ export function TutorialApkLogViewer() {
           </div>
 
           <div className="mb-2 grid grid-cols-1 gap-1 rounded border border-slate-800 bg-slate-900/70 p-2 text-[11px] md:grid-cols-2">
-            <Row k="currentState" v={snapshot.currentState} />
-            <Row k="currentStepId" v={snapshot.currentStepId ?? "—"} />
-            <Row k="currentTargetId" v={snapshot.currentTargetId ?? "—"} />
+            <Row k="currentState" v={diag?.currentState ?? "—"} />
+            <Row k="currentStepId" v={diag?.currentStepId ?? "—"} />
+            <Row k="currentTargetId" v={diag?.currentTargetId ?? "—"} />
             <Row k="currentTargetRect" v={rectStr} />
-            <Row k="waitingReason" v={snapshot.waitingReason ?? "—"} />
+            <Row k="waitingReason" v={diag?.waitingReason ?? "—"} />
             <Row k="overlay total / external" v={`${totalOverlay} / ${externalOverlay}`} />
             <Row
               k="overlay labels"
