@@ -1070,11 +1070,10 @@ function WorldsHomepageSection() {
   const worlds = (data ?? []).slice(0, 4);
   if (worlds.length === 0) return null;
   return (
-    <section
-      className="mt-12 px-5"
-      data-tutorial-target="home-worlds-section"
-    >
-      <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشاف الحضارات" title="عوالم إرث" />
+    <section className="mt-12 px-5">
+      <div data-tutorial-target="home-worlds-section" className="inline-block">
+        <SectionHeader icon={<Compass className="size-3.5" />} eyebrow="استكشاف الحضارات" title="عوالم إرث" />
+      </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {worlds.map((w) => (
           <Link
