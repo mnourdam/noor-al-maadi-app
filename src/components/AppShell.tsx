@@ -77,12 +77,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
           <div className="glass shadow-elegant grid grid-cols-6 items-center gap-1 rounded-2xl border border-white/10 p-1.5">
-            {tabs.map(({ to, label, icon: Icon }) => {
+            {tabs.map(({ to, label, icon: Icon, tutorialTargetId }) => {
               const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
               return (
                 <Link
                   key={to}
                   to={to}
+                  {...(tutorialTargetId
+                    ? { "data-tutorial-target": tutorialTargetId }
+                    : {})}
                   className={`motion-tap flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[10px] transition-all duration-200 ${
                     active ? "bg-gradient-gold text-primary-foreground shadow-gold motion-nav-active" : "text-muted-foreground hover:text-foreground"
                   }`}
