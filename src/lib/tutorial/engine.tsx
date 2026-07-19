@@ -35,7 +35,15 @@ import {
   IRTH_FIRST_TIME_TUTORIAL,
   TUTORIAL_TARGET_RESOLUTION_WINDOW_MS,
 } from "./data";
-import { registerTutorialDebugBinding, writeLastStartDiagnostic, __tutorialAutoStartTelemetry, type AutoStartResult } from "./debug";
+import {
+  registerTutorialDebugBinding,
+  writeLastStartDiagnostic,
+  __tutorialAutoStartTelemetry,
+  logTutorialTransition,
+  logTutorialEvent,
+  resetPerStepInstrumentation,
+  type AutoStartResult,
+} from "./debug";
 import { FIRST_TIME_TUTORIAL_ID, getTutorialConfig } from "./registry";
 import * as persistence from "./persistence";
 import {
