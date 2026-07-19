@@ -13,6 +13,8 @@ import {
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 function useEncyclopediaEntity(id: string | null) {
   return useQuery<SupabaseEncyclopediaEntity | null>({
