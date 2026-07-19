@@ -166,10 +166,32 @@ export function NavigationProvider({
     [],
   );
 
+  // Runtime source of truth for cross-check: the router itself.
+  // When the caller passes an explicit list we respect it; otherwise
+  // we read `router.flatRoutes` — never a hand-maintained copy.
+  const router = useRouter();
+  const routerRouteIds = useMemo<readonly RouteId[] | undefined>(() => {
+    if (knownRouteIds) return knownRouteIds;
+    try {
+      const flat = (router as unknown as {
+        flatRoutes?: ReadonlyArray<{ id?: string; fullPath?: string }>;
+      }).flatRoutes;
+      if (!flat) return undefined;
+      const ids: string[] = [];
+      for (const r of flat) {
+        const id = r.fullPath ?? r.id;
+        if (id) ids.push(id);
+      }
+      return ids;
+    } catch {
+      return undefined;
+    }
+  }, [router, knownRouteIds]);
+
   // Validate on mount. Dev = throw so the developer notices immediately.
-  // Prod = console.error, do not crash the app.
+  // Prod = one structured diagnostic; do not crash normal users.
   useEffect(() => {
-    const report = validateNavigationRegistry({ knownRouteIds });
+    const report = validateNavigationRegistry({ knownRouteIds: routerRouteIds });
     if (!report.ok) {
       const msg = formatValidationReport(report);
       if (import.meta.env.DEV) {
@@ -178,12 +200,15 @@ export function NavigationProvider({
         throw new Error(
           "Navigation registry validation failed. See console for details.",
         );
-      } else {
+      } else if (!prodLogged) {
+        prodLogged = true;
         // eslint-disable-next-line no-console
-        console.error(msg);
+        console.error("[navigation:registry-mismatch]", {
+          issues: report.issues,
+        });
       }
     }
-  }, [knownRouteIds]);
+  }, [routerRouteIds]);
 
   return (
     <NavigationEngineContext.Provider value={engine}>
@@ -192,6 +217,9 @@ export function NavigationProvider({
     </NavigationEngineContext.Provider>
   );
 }
+
+// Prod-side one-shot log guard; validator must not spam.
+let prodLogged = false;
 
 /**
  * Flips the cold-start flag on the first in-app navigation so that
