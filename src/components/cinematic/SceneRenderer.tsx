@@ -115,6 +115,23 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
         <ParticleLayer preset={scene.particles} intensity={scene.particleIntensity} />
       )}
 
+      {/* Top-left historical / date label */}
+      {scene.contextLabel && (
+        <div
+          dir="rtl"
+          className="pointer-events-none absolute top-0 right-0 px-5 py-3 text-[11px] font-medium tracking-[0.18em] text-white/80 drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)] sm:text-xs"
+          style={{
+            paddingTop: "max(0.75rem, calc(env(safe-area-inset-top) + 0.5rem))",
+            paddingRight: "max(1.25rem, env(safe-area-inset-right))",
+            opacity: active && !fadingOut ? 1 : 0,
+            transition: "opacity 1200ms cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        >
+          <span style={{ color: GOLD }}>{scene.contextLabel}</span>
+        </div>
+      )}
+
+
       {/* Subtle readability gradient — only when there is text to read. */}
       {hasText && (
         <div
