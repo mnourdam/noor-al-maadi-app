@@ -202,14 +202,31 @@ export function CinematicOpening() {
 
   const canSkip = currentScene?.allowSkip !== false;
 
-  // Audio gating — respect global audio settings.
+  // Continuous soundtrack — one stable src across the whole opening.
+  // Per-scene `soundtrackLevel` drives the volume envelope; the audio
+  // element is never restarted on scene changes.
   const audioSettings = audioManager.getSettings();
   const soundOn = audioSettings.soundEnabled && audioSettings.ambienceEnabled;
-  const ambientSrc = soundOn && !paused ? currentScene?.ambientAudio : undefined;
-  const ambientVol =
-    (currentScene?.ambientVolume ?? 0.4) *
-    (audioSettings.masterVolume ?? 1) *
-    (audioSettings.ambienceVolume ?? 1);
+  const soundtrackSrc = soundOn ? config?.soundtrack?.url : undefined;
+
+  // Carry the last non-null scene level forward when a scene omits it,
+  // so we never accidentally drop to silence mid-sequence.
+  const soundtrackLevel = useMemo(() => {
+    if (!config) return 0;
+    const fallback = config.soundtrack?.defaultLevel ?? 0.4;
+    let level = fallback;
+    for (let i = 0; i <= index && i < scenes.length; i += 1) {
+      const v = scenes[i]?.soundtrackLevel;
+      if (typeof v === "number") level = v;
+    }
+    return level;
+  }, [config, scenes, index]);
+
+  const ambientTarget = soundOn
+    ? soundtrackLevel *
+      (audioSettings.masterVolume ?? 1) *
+      (audioSettings.ambienceVolume ?? 1)
+    : 0;
 
   if (!mounted || typeof document === "undefined") return null;
   if (!active || !config) return null;
@@ -236,7 +253,12 @@ export function CinematicOpening() {
         />
       ))}
 
-      <AmbientAudio src={ambientSrc} volume={ambientVol} />
+      <AmbientAudio
+        src={soundtrackSrc}
+        targetVolume={ambientTarget}
+        paused={paused}
+        stopping={fadingOut}
+      />
 
       {currentScene?.showFinalLogo && (
         <FinalLogoReveal
