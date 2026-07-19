@@ -2,6 +2,10 @@
   "version": "irth.cinematic-opening.2026-07-19",
   "enabled": true,
   "replayForAllUsers": false,
+  "soundtrack": {
+    "url": "/__l5e/assets-v1/7bd399be-8d71-47d3-96ec-61c96b0b8cf0/cinematic-ambience.m4a",
+    "defaultLevel": 0.3
+  },
   "scenes": [
     {
       "id": "scene-1-mount-al-nour",
@@ -15,7 +19,8 @@
       "particles": "dust",
       "particleIntensity": 0.25,
       "overlayDarkness": 0.15,
-      "kenBurns": true
+      "kenBurns": true,
+      "soundtrackLevel": 0.12
     },
     {
       "id": "scene-2-cave-hira",
@@ -31,7 +36,8 @@
       "particles": "dust",
       "particleIntensity": 0.3,
       "overlayDarkness": 0.1,
-      "kenBurns": true
+      "kenBurns": true,
+      "soundtrackLevel": 0.22
     },
     {
       "id": "scene-3-1-medina",
@@ -45,7 +51,8 @@
       "particles": "dust",
       "particleIntensity": 0.3,
       "overlayDarkness": 0.05,
-      "kenBurns": true
+      "kenBurns": true,
+      "soundtrackLevel": 0.35
     },
     {
       "id": "scene-3-2-qadisiyyah",
@@ -59,7 +66,8 @@
       "particles": "smoke",
       "particleIntensity": 0.35,
       "overlayDarkness": 0.1,
-      "kenBurns": true
+      "kenBurns": true,
+      "soundtrackLevel": 0.5
     },
     {
       "id": "scene-3-3-baghdad-cordoba",
@@ -73,7 +81,8 @@
       "particles": "gold",
       "particleIntensity": 0.3,
       "overlayDarkness": 0.05,
-      "kenBurns": true
+      "kenBurns": true,
+      "soundtrackLevel": 0.65
     },
     {
       "id": "scene-3-4-constantinople",
@@ -87,7 +96,8 @@
       "particles": "fog",
       "particleIntensity": 0.35,
       "overlayDarkness": 0.1,
-      "kenBurns": true
+      "kenBurns": true,
+      "soundtrackLevel": 0.78
     },
     {
       "id": "scene-4-1-abdul-hamid",
@@ -101,7 +111,8 @@
       "particles": "fog",
       "particleIntensity": 0.3,
       "overlayDarkness": 0.15,
-      "kenBurns": true
+      "kenBurns": true,
+      "soundtrackLevel": 0.42
     },
     {
       "id": "scene-4-2-partition-map",
@@ -115,7 +126,8 @@
       "particles": "dust",
       "particleIntensity": 0.25,
       "overlayDarkness": 0.15,
-      "kenBurns": true
+      "kenBurns": true,
+      "soundtrackLevel": 0.18
     },
     {
       "id": "scene-5-journey",
@@ -131,7 +143,8 @@
       "particles": "gold",
       "particleIntensity": 0.4,
       "overlayDarkness": 0.05,
-      "kenBurns": true
+      "kenBurns": true,
+      "soundtrackLevel": 0.55
     },
     {
       "id": "scene-6-final-logo",
@@ -143,7 +156,8 @@
       "particleIntensity": 0.25,
       "overlayDarkness": 0.1,
       "kenBurns": false,
-      "showFinalLogo": true
+      "showFinalLogo": true,
+      "soundtrackLevel": 0.0
     }
   ]
 }
