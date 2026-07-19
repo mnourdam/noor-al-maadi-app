@@ -191,8 +191,10 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
                     key={rid}
                     to="/encyclopedia/entity/$id"
                     params={{ id: rid }}
+                    onClick={() => stashOrigin(`/encyclopedia/entity/${rid}`)}
                     className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold hover:bg-gold/10"
                   >
+
                     <BookOpen className="size-3" /> {label && label !== rid ? label : "مرجع تاريخي"}
                   </Link>
                 );
