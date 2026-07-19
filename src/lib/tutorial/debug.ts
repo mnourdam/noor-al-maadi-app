@@ -176,6 +176,7 @@ export const tutorialDebug: TutorialDebugController = {
       completed: snap.state === "completed",
       overlayPaused: snap.state === "paused_by_overlay",
       waitingReason: waiting,
+      envInputs: inputs,
     } satisfies TutorialDiagnostics;
   },
 };
