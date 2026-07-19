@@ -339,7 +339,8 @@ export function CinematicOpening() {
   useOverlayDismiss(useMemo(
     () => (phase !== "done" && !fadingOut ? requestSkip : () => {}),
     [phase, fadingOut, requestSkip],
-  ));
+  ), "CinematicOpening");
+
 
   const canSkip = phase === "playing" && currentScene?.allowSkip !== false;
 

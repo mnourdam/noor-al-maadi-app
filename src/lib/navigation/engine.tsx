@@ -280,14 +280,33 @@ function ColdStartWatcher() {
  * Registers a dismisser while an overlay is open. On Back, the topmost
  * dismisser fires and routing is skipped. Automatically unregisters on
  * unmount.
+ *
+ * `label` is optional instrumentation metadata (component name / overlay id).
+ * It is logged on REGISTER / UNREGISTER to aid diagnosing overlay leaks.
  */
-export function useOverlayDismiss(dismiss: OverlayDismisser): void {
+export function useOverlayDismiss(
+  dismiss: OverlayDismisser,
+  label?: string,
+): void {
   const engine = useEngine();
   useEffect(() => {
-    return engine.overlays.push(dismiss);
+    const tag = label ?? "unknown";
+    const unregister = engine.overlays.push(dismiss);
+    // eslint-disable-next-line no-console
+    console.log(
+      `[nav-overlay] REGISTER id=${tag} stackSize=${engine.overlays.size()}`,
+    );
+    return () => {
+      unregister();
+      // eslint-disable-next-line no-console
+      console.log(
+        `[nav-overlay] UNREGISTER id=${tag} stackSize=${engine.overlays.size()}`,
+      );
+    };
     // dismiss is captured by reference; callers wrap in useCallback if needed
-  }, [engine, dismiss]);
+  }, [engine, dismiss, label]);
 }
+
 
 /**
  * Reactive count of overlays currently registered on the LIFO stack.

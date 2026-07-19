@@ -774,7 +774,7 @@ export function TutorialProvider({
     if (!running && !skipConfirmOpen) return;
     handleBack();
   }, [running, skipConfirmOpen, handleBack]);
-  useOverlayDismiss(dismisser);
+  useOverlayDismiss(dismisser, "TutorialEngine");
 
   const enabledTotal = useMemo(
     () => enabledCount(effectiveConfig),

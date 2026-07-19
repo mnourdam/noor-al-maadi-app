@@ -28,7 +28,7 @@ const AlertDialog = ({
       {...(isControlled ? { open } : { defaultOpen })}
       onOpenChange={handle}
     >
-      <OverlayDismissRegistration open={current} onClose={() => handle(false)} />
+      <OverlayDismissRegistration open={current} onClose={() => handle(false)} label="shadcn-alert-dialog" />
       {children}
     </AlertDialogPrimitive.Root>
   );
