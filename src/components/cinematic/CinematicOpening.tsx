@@ -369,6 +369,7 @@ export function CinematicOpening() {
           targetVolume={ambientTarget}
           paused={paused}
           stopping={fadingOut}
+          stopRampMs={FINAL_FADE_MS}
         />
       )}
 
