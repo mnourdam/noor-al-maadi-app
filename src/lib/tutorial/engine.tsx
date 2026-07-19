@@ -666,6 +666,8 @@ export function TutorialProvider({
         reason: "auto-start-effect",
         pathname,
         overlayStackSize,
+        totalOverlayStackSize,
+        overlayLabels: overlayEntries.map((e) => e.label),
         homeStableFrames,
         documentVisible,
         engineState: s.state,
@@ -676,6 +678,7 @@ export function TutorialProvider({
     } catch {
       /* ignore */
     }
+
   }, [
     api,
     effectiveConfig.version,
