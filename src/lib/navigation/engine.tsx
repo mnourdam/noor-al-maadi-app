@@ -53,15 +53,25 @@ import {
 
 type OverlayDismisser = () => void;
 
+export interface OverlayEntry {
+  readonly label: string;
+}
+
 interface OverlayStack {
-  push(fn: OverlayDismisser): () => void;
+  push(fn: OverlayDismisser, label: string): () => void;
   popAndRun(): boolean;
   size(): number;
+  entries(): readonly OverlayEntry[];
   subscribe(l: () => void): () => void;
 }
 
+interface InternalEntry {
+  fn: OverlayDismisser;
+  label: string;
+}
+
 function createOverlayStack(): OverlayStack {
-  const stack: OverlayDismisser[] = [];
+  const stack: InternalEntry[] = [];
   const listeners = new Set<() => void>();
   const emit = () => {
     for (const l of Array.from(listeners)) {
@@ -73,11 +83,12 @@ function createOverlayStack(): OverlayStack {
     }
   };
   return {
-    push(fn) {
-      stack.push(fn);
+    push(fn, label) {
+      const entry: InternalEntry = { fn, label };
+      stack.push(entry);
       emit();
       return () => {
-        const idx = stack.lastIndexOf(fn);
+        const idx = stack.lastIndexOf(entry);
         if (idx >= 0) {
           stack.splice(idx, 1);
           emit();
@@ -85,10 +96,10 @@ function createOverlayStack(): OverlayStack {
       };
     },
     popAndRun() {
-      const fn = stack.pop();
-      if (!fn) return false;
+      const entry = stack.pop();
+      if (!entry) return false;
       try {
-        fn();
+        entry.fn();
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error("[navigation] overlay dismisser threw:", err);
@@ -99,6 +110,9 @@ function createOverlayStack(): OverlayStack {
     size() {
       return stack.length;
     },
+    entries() {
+      return stack.map((e) => ({ label: e.label }));
+    },
     subscribe(l) {
       listeners.add(l);
       return () => {
@@ -107,6 +121,7 @@ function createOverlayStack(): OverlayStack {
     },
   };
 }
+
 
 // -----------------------------
 // Origin registry (Priority 3)
