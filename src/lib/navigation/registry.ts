@@ -125,7 +125,16 @@ const PLAYER_ROUTES: RouteDeclaration[] = [
 
   // Comparison / share
   { id: "/compare/$id", parentRoute: "/", kind: "player", label: "مقارنة" },
-  { id: "/share-card", parentRoute: "/", kind: "player", label: "بطاقة مشاركة" },
+  {
+    id: "/share-card",
+    parentRoute: "/",
+    kind: "player",
+    label: "بطاقة مشاركة",
+    // Off-screen renderer used to generate share images. Never
+    // participates in Back — no origin tracking, no parent resolution.
+    backPolicy: "non_navigable",
+    supportsOriginOverride: false,
+  },
 ];
 
 // -----------------------------
