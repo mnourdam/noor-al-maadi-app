@@ -15,6 +15,8 @@ import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
 import { fetchWorldsIndex, findHub } from "@/lib/worlds";
 import { useWorldMembership, isValidWorldSlug } from "@/lib/worlds-progress";
 import { useResolvedUnlocks } from "@/lib/campaignUnlocks";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
 import type { CampaignDivider } from "@/lib/campaignDividers";
