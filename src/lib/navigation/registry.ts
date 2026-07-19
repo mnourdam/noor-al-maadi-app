@@ -175,6 +175,7 @@ const ADMIN_SUBPAGES: RouteId[] = [
   "/admin/encyclopedia",
   "/admin/encyclopedia-audit",
   "/admin/encyclopedia-cleanup",
+  "/admin/encyclopedia-cleanup/data-hygiene",
   "/admin/encyclopedia-cleanup/import-preview",
   "/admin/encyclopedia-cleanup/integrity",
   "/admin/encyclopedia-cleanup/redirects",
