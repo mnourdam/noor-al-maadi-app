@@ -75,7 +75,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-3-1-medina",
       image: "/cinematic/scene3-1-medina.webp",
-      contextLabel: "المدينة المنورة — ٦٢٢م",
+      contextLabel: "المدينة المنورة — 622م",
       title: "من الإيمان...",
       titleSegments: [
         { text: "من " },
