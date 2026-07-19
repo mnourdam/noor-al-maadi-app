@@ -69,11 +69,13 @@ export function AmbientAudio({
   useEffect(() => {
     const el = elRef.current;
     if (!el || !src) return;
-    if (paused && !stopping) {
-      try { el.pause(); } catch { /* */ }
+    if (paused) {
+      if (!stopping) {
+        try { el.pause(); } catch { /* */ }
+      }
       return;
     }
-    if (el.paused) {
+    if (!stopping && el.paused) {
       const p = el.play();
       if (p && typeof p.catch === "function") p.catch(() => { /* */ });
     }
