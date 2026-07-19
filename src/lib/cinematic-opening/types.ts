@@ -44,10 +44,12 @@ export interface CinematicScene {
   transitionIn?: SceneTransition;
   /** Transition OUT of this scene. Default "crossfade". */
   transitionOut?: SceneTransition;
-  /** Ambient audio URL (looping). Crossfaded across scenes. */
-  ambientAudio?: string;
-  /** Ambient audio volume 0..1. Default 0.4. */
-  ambientVolume?: number;
+  /**
+   * Target level 0..1 of the continuous cinematic soundtrack during this
+   * scene. The engine smoothly ramps between scenes; the soundtrack itself
+   * never restarts. If omitted the previous scene's level is retained.
+   */
+  soundtrackLevel?: number;
   /** Particle preset. Omit for none. */
   particles?: ParticlePreset;
   /** Particle intensity 0..1. Default 0.4. */
