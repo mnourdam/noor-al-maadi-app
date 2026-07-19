@@ -216,6 +216,7 @@ const ADMIN_PARENT_OVERRIDES: Readonly<Record<RouteId, RouteId>> = {
   "/admin/import-history/$id": "/admin/import-history",
   "/admin/games/$mode": "/admin/games",
   "/admin/games/crossword-generator": "/admin/games",
+  "/admin/encyclopedia-cleanup/data-hygiene": "/admin/encyclopedia-cleanup",
   "/admin/encyclopedia-cleanup/import-preview": "/admin/encyclopedia-cleanup",
   "/admin/encyclopedia-cleanup/integrity": "/admin/encyclopedia-cleanup",
   "/admin/encyclopedia-cleanup/redirects": "/admin/encyclopedia-cleanup",
