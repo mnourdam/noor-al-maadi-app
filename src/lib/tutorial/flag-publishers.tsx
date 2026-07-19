@@ -69,8 +69,23 @@ export function TutorialFlagPublishers() {
 
   // First-launch choice: refresh on mount, on focus, on storage, and
   // whenever the pathname changes (choice may have just been made).
+  // First-launch choice: refresh on mount, on focus, on storage
+  // (cross-tab), on same-document `irth:first-launch-choice-resolved`
+  // event, and whenever the pathname changes.
   useEffect(() => {
     refreshFirstLaunchChoiceFlag();
+    const onSignal = () => refreshFirstLaunchChoiceFlag();
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", onSignal);
+      window.addEventListener("storage", onSignal);
+      window.addEventListener("irth:first-launch-choice-resolved", onSignal);
+      return () => {
+        window.removeEventListener("focus", onSignal);
+        window.removeEventListener("storage", onSignal);
+        window.removeEventListener("irth:first-launch-choice-resolved", onSignal);
+      };
+    }
+    return undefined;
   }, [pathname]);
 
   // Auth-dialog bus (shared by IrthAuthDialog + GoogleAuthResultDialog).

@@ -28,6 +28,25 @@ import { hasCompleted as openingCompleted } from "@/lib/cinematic-opening/persis
 
 const GUEST_CHOICE_KEY = "irth.firstLaunch.choice.v1";
 
+/**
+ * Publishes a same-document signal that the first-launch auth choice
+ * has been resolved (guest / account / offline / authenticated).
+ * The browser `storage` event does NOT fire in the same document that
+ * performs the write, so subscribers (e.g. the guided tutorial's
+ * eligibility bus) must listen for this event to react immediately
+ * without waiting for focus, route changes, or polling.
+ */
+function publishChoiceResolved(choice: "guest" | "account" | "offline" | "authenticated") {
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(
+      new CustomEvent("irth:first-launch-choice-resolved", { detail: { choice } }),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
 export function FirstLaunchGate() {
   const { user, loadingSession } = useAccount();
   const [open, setOpen] = useState(false);
@@ -63,7 +82,7 @@ export function FirstLaunchGate() {
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       // Offline-first: first launch with no connection must still allow the
       // bundled encyclopedia/campaign/museum snapshot to be browsed.
-      try { window.localStorage.setItem(GUEST_CHOICE_KEY, "guest"); } catch { /* */ }
+      try { window.localStorage.setItem(GUEST_CHOICE_KEY, "guest"); } catch { /* */ } publishChoiceResolved("guest");
       setReason("offline");
       setOpen(false);
       return;
@@ -71,7 +90,7 @@ export function FirstLaunchGate() {
     if (user) {
       // Signed-in users never see the gate. Also record their choice
       // implicitly so the gate doesn't pop on sign-out.
-      try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
+      try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ } publishChoiceResolved("account");
       setReason("authenticated");
       setOpen(false);
       return;
@@ -93,7 +112,7 @@ export function FirstLaunchGate() {
   if (!open) return null;
 
   const chooseGuest = () => {
-    try { window.localStorage.setItem(GUEST_CHOICE_KEY, "guest"); } catch { /* */ }
+    try { window.localStorage.setItem(GUEST_CHOICE_KEY, "guest"); } catch { /* */ } publishChoiceResolved("guest");
     setOpen(false);
   };
 
@@ -119,7 +138,7 @@ export function FirstLaunchGate() {
             <GoogleSignInButton
               label="المتابعة عبر Google"
               onBeforeRedirect={() => {
-                try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
+                try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ } publishChoiceResolved("account");
                 // Startup gate → after auth, land on the home page.
                 setAuthOrigin("/");
               }}
@@ -135,7 +154,7 @@ export function FirstLaunchGate() {
               mode="login"
               origin="/"
               onClick={() => {
-                try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
+                try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ } publishChoiceResolved("account");
                 setOpen(false);
               }}
               className="flex w-full items-center gap-3 rounded-2xl border border-gold/40 bg-gradient-gold px-4 py-3 text-sm font-bold text-primary-foreground shadow-gold"
@@ -147,7 +166,7 @@ export function FirstLaunchGate() {
               mode="signup"
               origin="/"
               onClick={() => {
-                try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ }
+                try { window.localStorage.setItem(GUEST_CHOICE_KEY, "account"); } catch { /* */ } publishChoiceResolved("account");
                 setOpen(false);
               }}
               className="flex w-full items-center gap-3 rounded-2xl border border-gold/40 bg-surface px-4 py-3 text-sm font-bold text-gold"
