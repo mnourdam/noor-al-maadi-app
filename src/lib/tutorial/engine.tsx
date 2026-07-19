@@ -835,6 +835,10 @@ export function TutorialProvider({
         const settled = stableFrames >= SETTLE_FRAMES;
         const timedOut = elapsed >= SETTLE_TIMEOUT_MS;
         if (settled || timedOut) {
+          logTutorialEvent("settle-resolved", {
+            reason: settled ? "stable-frames" : "timeout",
+            scrollSettled: true,
+          });
           requestAnimationFrame(() => {
             if (cancelled) return;
             requestAnimationFrame(() => {
@@ -842,14 +846,24 @@ export function TutorialProvider({
               transition(store, "measuring_target");
               const finalRect = el.getBoundingClientRect();
               if (!rectValid(finalRect)) {
+                logTutorialEvent("rect-invalid-after-settle", {
+                  reason: `rect=${JSON.stringify({ x: finalRect.x, y: finalRect.y, w: finalRect.width, h: finalRect.height })}`,
+                });
                 if (
                   currentStep.skipIfTargetUnavailable ||
                   currentStep.onMissingTarget === "skip"
                 ) {
+                  logTutorialEvent("api-next-called", {
+                    reason: "invalid-rect+skip-if-unavailable",
+                    apiNextCalled: true,
+                  });
                   clearWatchdog();
                   api.next();
                   return;
                 }
+                logTutorialEvent("rect-invalid-no-skip", {
+                  reason: "attaching-anyway (no skipIfTargetUnavailable)",
+                });
               }
               attachMeasurement(el);
             });
