@@ -846,6 +846,7 @@ function RecentUnlocks() {
                 key={r.key}
                 to="/encyclopedia/entity/$id"
                 params={{ id: r.slug }}
+                onClick={() => stashEntity(r.slug)}
                 className={`relative flex items-center gap-3 overflow-hidden rounded-2xl border bg-gradient-to-bl from-gold/10 via-surface to-transparent p-3 transition hover:border-gold/60
                   ${r.rarity === "legendary" ? "border-gold/40 " + meta.glow :
                     r.rarity === "epic"      ? "border-fuchsia-400/30" :
