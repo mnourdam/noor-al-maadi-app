@@ -893,7 +893,8 @@ function ContentSection({
 /** Mini timeline — real, dated Event entities only. Hidden if fewer than
  *  3 events carry a chronology signal (timeline_year or timeline_start_year).
  *  Never fabricated. */
-function MiniTimeline({ events }: { events: RelatedNode[] }) {
+function MiniTimeline({ events, worldSlug }: { events: RelatedNode[]; worldSlug: string }) {
+  const { stashEntity } = useWorldOrigins(worldSlug);
   const dated = events
     .map((n) => {
       const y = n.entity.timeline_year ?? n.entity.timeline_start_year ?? null;
