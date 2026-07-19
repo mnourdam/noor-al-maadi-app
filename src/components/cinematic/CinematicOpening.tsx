@@ -45,6 +45,7 @@ import { AmbientAudio } from "./AmbientAudio";
 
 
 const FINAL_FADE_MS = 1500;
+const FINAL_LOGO_WATCHDOG_MS = 10000;
 // Assets are locally bundled. A generous ceiling — local decodes
 // finish well within a couple hundred ms on a real device; the
 // timeout is only a safety net so a broken WebView can't hang.
@@ -59,6 +60,19 @@ function isNativeAndroid(): boolean {
     }).Capacitor;
     return !!cap?.isNativePlatform?.() && cap.getPlatform?.() === "android";
   } catch { return false; }
+}
+
+function androidCinematicDiag(scope: string, event: string, data?: Record<string, unknown>) {
+  if (!isNativeAndroid()) return;
+  try {
+    console.info(`[Irth Cinematic Android][${scope}] ${event}`, {
+      t: Math.round(performance.now()),
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      visualViewportHeight: window.visualViewport?.height ?? null,
+      ...(data ?? {}),
+    });
+  } catch { /* diagnostics must never affect playback */ }
 }
 
 /** First-launch-only: request notification permission BEFORE the scenes
@@ -180,6 +194,7 @@ export function CinematicOpening() {
   const [paused, setPaused] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const finishedRef = useRef(false);
+  const finishTimerRef = useRef<number | null>(null);
   const reducedMotion = usePrefersReducedMotion();
   // Keep decoded images alive so the browser can't evict textures
   // between the preload pass and the scene painting them.
@@ -231,13 +246,26 @@ export function CinematicOpening() {
   const finish = useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
+    if (finishTimerRef.current) {
+      window.clearTimeout(finishTimerRef.current);
+      finishTimerRef.current = null;
+    }
+    setConfirmOpen(false);
+    setPaused(false);
+    androidCinematicDiag("engine", "finish requested", { index, sceneId: currentScene?.id });
     setFadingOut(true);
-    window.setTimeout(() => {
+    finishTimerRef.current = window.setTimeout(() => {
+      finishTimerRef.current = null;
       if (config) markCompleted(config.version);
       setPhase("done");
       dispatchCompleted();
+      androidCinematicDiag("engine", "finish complete / portal unmounted", { index, sceneId: currentScene?.id });
     }, reducedMotion ? 250 : FINAL_FADE_MS);
-  }, [config, reducedMotion]);
+  }, [config, reducedMotion, index, currentScene?.id]);
+
+  useEffect(() => () => {
+    if (finishTimerRef.current) window.clearTimeout(finishTimerRef.current);
+  }, []);
 
   // Scene timer — cleared on transition, pause, and unmount.
   // For the final scene we DO NOT call finish() directly; instead we
@@ -297,9 +325,17 @@ export function CinematicOpening() {
     if (finishedRef.current) return;
     if (phase !== "playing") return;
     if (currentScene?.allowSkip === false) return;
+    androidCinematicDiag("engine", "skip confirm opened", { index, sceneId: currentScene?.id });
     setConfirmOpen(true);
     setPaused(true);
-  }, [currentScene, phase]);
+  }, [currentScene, phase, index]);
+
+  const skipNow = useCallback(() => {
+    // Skip is intentionally independent of scene timers and the Scene 6 logo
+    // state machine: once confirmed, the parent portal begins its exit fade.
+    androidCinematicDiag("engine", "skip confirmed / bypassing scene state", { index, sceneId: currentScene?.id });
+    finish();
+  }, [finish, index, currentScene?.id]);
   useOverlayDismiss(useMemo(
     () => (phase !== "done" && !fadingOut ? requestSkip : () => {}),
     [phase, fadingOut, requestSkip],
@@ -340,9 +376,9 @@ export function CinematicOpening() {
       aria-label="Cinematic opening"
       data-irth-cinematic-opening=""
       data-phase={phase}
-      onClickCapture={(e) => e.stopPropagation()}
-      onTouchStartCapture={(e) => e.stopPropagation()}
-      onPointerDownCapture={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       style={{
         opacity: fadingOut ? 0 : 1,
         transition: `opacity ${reducedMotion ? 300 : FINAL_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
@@ -387,7 +423,11 @@ export function CinematicOpening() {
       {canSkip && (
         <button
           type="button"
-          onClick={requestSkip}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            requestSkip();
+          }}
           className="absolute right-4 top-4 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-white/25 bg-black/40 px-5 py-2 text-xs tracking-[0.25em] text-white/90 backdrop-blur-sm transition-colors hover:border-white/60 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70"
           style={{ top: "max(1rem, env(safe-area-inset-top))" }}
           aria-label="تخطّي المقدمة"
@@ -403,7 +443,7 @@ export function CinematicOpening() {
           if (!o) setPaused(false);
         }}
       >
-        <AlertDialogContent dir="rtl" className="border-amber-500/30">
+        <AlertDialogContent dir="rtl" className="z-[2101] border-amber-500/30">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-amber-100">تخطّي المقدمة؟</AlertDialogTitle>
             <AlertDialogDescription className="leading-7 text-slate-300">
@@ -418,7 +458,7 @@ export function CinematicOpening() {
               متابعة المشاهدة
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { setConfirmOpen(false); finish(); }}
+              onClick={(event) => { event.preventDefault(); event.stopPropagation(); skipNow(); }}
               className="bg-amber-500 text-slate-950 hover:bg-amber-400"
             >
               تخطّي
@@ -478,17 +518,60 @@ function FinalLogoReveal({
   >("waiting_for_assets");
   const completedRef = useRef(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const phaseRef = useRef(phase);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  const completeOnce = useCallback((reason: string) => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    androidCinematicDiag("final-logo", "complete", { reason, phase: phaseRef.current });
+    onComplete();
+  }, [onComplete]);
+
+  useEffect(() => {
+    androidCinematicDiag("final-logo", "phase", {
+      phase,
+      fadingOut,
+      imgComplete: imgRef.current?.complete ?? null,
+      naturalWidth: imgRef.current?.naturalWidth ?? null,
+      naturalHeight: imgRef.current?.naturalHeight ?? null,
+    });
+  }, [phase, fadingOut]);
+
+  useEffect(() => {
+    const watchdog = window.setTimeout(() => {
+      completeOnce("watchdog-timeout");
+    }, FINAL_LOGO_WATCHDOG_MS);
+    return () => window.clearTimeout(watchdog);
+  }, [completeOnce]);
 
   // Step 1 — decode the logo, then run the double-rAF paint barrier.
   // Fail-forward: any error still advances so Home is not blocked.
   useEffect(() => {
     let cancelled = false;
+    let advanced = false;
     let raf1 = 0;
     let raf2 = 0;
+    let safety: number | null = null;
     const advance = () => {
-      if (cancelled) return;
+      if (cancelled || advanced || completedRef.current) return;
+      advanced = true;
+      if (safety != null) {
+        window.clearTimeout(safety);
+        safety = null;
+      }
+      androidCinematicDiag("final-logo", "asset decode barrier cleared", {
+        complete: probe.complete,
+        naturalWidth: probe.naturalWidth,
+        naturalHeight: probe.naturalHeight,
+      });
       raf1 = window.requestAnimationFrame(() => {
+        androidCinematicDiag("final-logo", "pre-mount RAF 1", {});
         raf2 = window.requestAnimationFrame(() => {
+          androidCinematicDiag("final-logo", "pre-mount RAF 2", {});
           if (!cancelled) setPhase("mounted_waiting_for_paint");
         });
       });
@@ -505,14 +588,14 @@ function FinalLogoReveal({
     };
     probe.onload = done;
     probe.onerror = advance;
-    probe.src = logoUrl;
     // Safety net — never leave the machine stuck if the platform is broken.
-    const safety = window.setTimeout(advance, 3000);
+    safety = window.setTimeout(advance, 3000);
+    probe.src = logoUrl;
     return () => {
       cancelled = true;
       window.cancelAnimationFrame(raf1);
       if (raf2) window.cancelAnimationFrame(raf2);
-      window.clearTimeout(safety);
+      if (safety != null) window.clearTimeout(safety);
     };
   }, [logoUrl]);
 
@@ -523,7 +606,19 @@ function FinalLogoReveal({
     let raf1 = 0;
     let raf2 = 0;
     raf1 = window.requestAnimationFrame(() => {
-      raf2 = window.requestAnimationFrame(() => setPhase("revealing_logo"));
+      androidCinematicDiag("final-logo", "DOM paint RAF 1", {
+        imgComplete: imgRef.current?.complete ?? null,
+        naturalWidth: imgRef.current?.naturalWidth ?? null,
+        naturalHeight: imgRef.current?.naturalHeight ?? null,
+      });
+      raf2 = window.requestAnimationFrame(() => {
+        androidCinematicDiag("final-logo", "DOM paint RAF 2 / reveal begins", {
+          imgComplete: imgRef.current?.complete ?? null,
+          naturalWidth: imgRef.current?.naturalWidth ?? null,
+          naturalHeight: imgRef.current?.naturalHeight ?? null,
+        });
+        setPhase("revealing_logo");
+      });
     });
     return () => {
       window.cancelAnimationFrame(raf1);
@@ -550,10 +645,9 @@ function FinalLogoReveal({
 
   useEffect(() => {
     if (phase === "completed" && !completedRef.current) {
-      completedRef.current = true;
-      onComplete();
+      completeOnce("timeline-completed");
     }
-  }, [phase, onComplete]);
+  }, [phase, completeOnce]);
 
   const revealing = phase === "revealing_logo";
   const holding = phase === "holding_logo";
@@ -594,9 +688,17 @@ function FinalLogoReveal({
         ref={imgRef}
         src={logoUrl}
         alt="إرث"
-        className="relative h-40 w-40 select-none sm:h-52 sm:w-52"
+        className="relative h-44 w-44 select-none p-4 sm:h-56 sm:w-56 sm:p-5"
         draggable={false}
         decoding="sync"
+        onLoad={(event) => {
+          androidCinematicDiag("final-logo", "DOM img onLoad", {
+            complete: event.currentTarget.complete,
+            naturalWidth: event.currentTarget.naturalWidth,
+            naturalHeight: event.currentTarget.naturalHeight,
+          });
+        }}
+        onError={() => androidCinematicDiag("final-logo", "DOM img onError", {})}
         style={{
           opacity: logoOpacityFinal,
           transform: `scale(${logoScale})`,
