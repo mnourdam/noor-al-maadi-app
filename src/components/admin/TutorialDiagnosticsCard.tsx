@@ -318,6 +318,47 @@ export function TutorialDiagnosticsCard() {
         )}
       </div>
 
+      {/* Per-transition instrumentation log */}
+      <div className="mt-3 rounded-lg border border-sky-800/50 bg-sky-950/30 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="text-xs font-semibold text-sky-200">
+            سجل الانتقالات (irth.tutorial.transition-log.v1) — {transitionLog.length}
+          </div>
+          <button
+            onClick={() => {
+              clearTutorialTransitionLog();
+              setTransitionLog([]);
+              toast("تم مسح سجل الانتقالات.");
+            }}
+            className="rounded border border-slate-600/60 bg-slate-800/60 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-700/60"
+          >
+            مسح السجل
+          </button>
+        </div>
+        {transitionLog.length > 0 ? (
+          <pre
+            dir="ltr"
+            className="max-h-[520px] overflow-auto whitespace-pre-wrap break-all rounded bg-slate-950/70 p-2 text-[11px] leading-relaxed text-sky-100"
+          >
+            {transitionLog
+              .map((e) => {
+                const head =
+                  e.kind === "transition"
+                    ? `#${e.seq} +${e.t}ms  ${e.previousState} → ${e.nextState}`
+                    : `#${e.seq} +${e.t}ms  [event] ${e.event}`;
+                const step = `step=${e.currentStepId ?? "—"}(${e.currentStepIndex ?? "—"}) target=${e.targetId ?? "—"} rectOk=${e.targetResolved}`;
+                const flags = `settled=${e.scrollSettled} skipIfUnavail=${e.skipIfTargetUnavailable} watchStart=${e.watchdogStarted} watchFired=${e.watchdogFired} apiNext=${e.apiNextCalled}`;
+                const reason = e.reason ? `\n    reason: ${e.reason}` : "";
+                return `${head}\n    ${step}\n    ${flags}${reason}`;
+              })
+              .join("\n")}
+          </pre>
+        ) : (
+          <p className="text-xs text-slate-400">لا توجد إدخالات بعد.</p>
+        )}
+      </div>
+
+
       <p className="mt-3 text-[11px] text-slate-500">
         يمسح <span className="font-mono">irth.tutorial.irth-first-time.completed-version.v1</span>{" "}
         فقط — لا يؤثر على المقدمة السينمائية أو الحساب أو تقدّم اللاعب.
