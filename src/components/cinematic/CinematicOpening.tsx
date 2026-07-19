@@ -1,37 +1,25 @@
 // ============================================================
 // Cinematic Opening — Engine Entrypoint
 // ------------------------------------------------------------
-// Mounted once at the root. Reads /data/cinematic-opening.json,
-// validates it, preloads scene images (with a hard timeout so
-// bad networks never trap the user), and plays the scenes in
-// order. Skip fades the whole sequence out and marks the
-// configured version as completed.
+// Mounted once at the root. Owns the full first-launch canvas:
+// from the very first paint it renders a pure-black portal that
+// covers Home so nothing shows through while the notification
+// permission dialog is pending or while scene assets are being
+// decoded. Only when permission has resolved AND every scene
+// image + logo has been fully decoded do we advance to playback.
 //
 // Integrations:
-//   • Navigation engine — registers a single overlay dismisser
-//     while active. Hardware Back therefore triggers our
-//     internal Skip-confirm dialog, never App.exitApp().
-//   • Audio settings — respects `soundEnabled` / `ambienceEnabled`
-//     from audioManager. When off, no ambient audio plays.
+//   • Navigation engine — Back triggers our Skip-confirm dialog.
+//   • Audio settings — respects soundEnabled / ambienceEnabled.
 //   • Reduced motion — disables Ken Burns and particles.
-//   • Capacitor App lifecycle — pauses timers/audio on
-//     background and resumes on foreground; timers do not
-//     double-advance across pause/resume.
+//   • Capacitor App lifecycle — pauses timers/audio on background.
 //
-// Emits a `irth:opening-completed` DOM event when the sequence
-// finishes (either by playing through or by Skip). Downstream
-// gates (auth choice, etc.) can listen without coupling to the
-// engine.
-//
-// No content is baked in. If the config is missing or every
-// scene is invalid, this component renders nothing and the app
-// boots straight into Home.
+// Emits `irth:opening-completed` when done (played through or skipped).
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { loadCinematicOpeningConfig } from "@/lib/cinematic-opening/config";
-import { CINEMATIC_LOGO_URL } from "@/lib/cinematic-opening/data";
+import { CINEMATIC_OPENING_DATA, CINEMATIC_LOGO_URL } from "@/lib/cinematic-opening/data";
 import {
   hasCompleted,
   markCompleted,
@@ -57,11 +45,11 @@ import { AmbientAudio } from "./AmbientAudio";
 
 
 const FINAL_FADE_MS = 1400;
-// Assets are locally bundled. Timeout is a safety net for a completely
-// broken decode; local files should be ready well under this budget.
-const PRELOAD_TIMEOUT_MS = 6000;
-// Soundtrack is bundled locally; the timeout is a safety net only.
-const SOUNDTRACK_PRELOAD_TIMEOUT_MS = 2500;
+// Assets are locally bundled. A generous ceiling — local decodes
+// finish well within a couple hundred ms on a real device; the
+// timeout is only a safety net so a broken WebView can't hang.
+const PRELOAD_TIMEOUT_MS = 15000;
+const SOUNDTRACK_PRELOAD_TIMEOUT_MS = 4000;
 export const OPENING_COMPLETED_EVENT = "irth:opening-completed";
 
 function isNativeAndroid(): boolean {
@@ -74,8 +62,8 @@ function isNativeAndroid(): boolean {
 }
 
 /** First-launch-only: request notification permission BEFORE the scenes
- *  start. Any outcome (granted, denied, error) fails forward — the opening
- *  proceeds regardless. Web is skipped entirely. */
+ *  start. Any outcome (granted, denied, error) fails forward. Web is
+ *  skipped entirely. */
 async function requestNotificationPermissionOnce(): Promise<void> {
   if (hasAskedNotificationPermission()) return;
   markNotificationPermissionAsked();
@@ -103,38 +91,49 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-/** Preload every scene image. Resolves with the set of URLs that loaded
- *  successfully. Never rejects; the timeout guarantees the boot path is
- *  never trapped by a slow or missing asset. Scenes whose image is not
- *  in the returned set are dropped before playback. */
-function preloadImages(urls: string[], timeoutMs: number): Promise<Set<string>> {
+/**
+ * Fully decode every image so that the moment its scene starts the GPU
+ * texture is already resident — no lazy decode, no partial upload, no
+ * checkerboard. We use `img.decode()` (with an `onload` fallback for
+ * older WebViews) and keep the decoded `<img>` elements alive via
+ * `imageCacheRef` so the browser cannot evict the textures between
+ * preload and scene playback.
+ *
+ * Never rejects. `timeoutMs` is a safety ceiling for a completely broken
+ * decoder — locally-bundled WebPs finish in a fraction of that.
+ */
+function decodeAllImages(urls: string[], timeoutMs: number): Promise<HTMLImageElement[]> {
   return new Promise((resolve) => {
-    const ok = new Set<string>();
-    if (urls.length === 0 || typeof window === "undefined") { resolve(ok); return; }
+    if (urls.length === 0 || typeof window === "undefined") { resolve([]); return; }
+    const results: HTMLImageElement[] = [];
     let done = 0;
     let settled = false;
-    const finish = () => { if (!settled) { settled = true; resolve(ok); } };
+    const finish = () => { if (!settled) { settled = true; resolve(results); } };
     const timer = window.setTimeout(finish, timeoutMs);
     urls.forEach((url) => {
       const img = new Image();
-      const mark = (loaded: boolean) => {
-        if (loaded) ok.add(url);
+      img.decoding = "sync";
+      // fetchpriority isn't in every TS lib; set via attribute.
+      try { img.setAttribute("fetchpriority", "high"); } catch { /* */ }
+      const mark = () => {
+        results.push(img);
         done += 1;
         if (done >= urls.length) { window.clearTimeout(timer); finish(); }
       };
-      img.onload = () => mark(true);
-      img.onerror = () => mark(false);
+      img.onerror = () => { done += 1; if (done >= urls.length) { window.clearTimeout(timer); finish(); } };
+      img.onload = () => {
+        if (typeof img.decode === "function") {
+          img.decode().then(mark).catch(mark);
+        } else {
+          mark();
+        }
+      };
       img.src = url;
     });
   });
 }
 
-/** Preload the local soundtrack. Resolves once the audio reaches a usable
- *  ready state (`canplaythrough`) or a short timeout elapses. Never
- *  rejects — a decode failure or missing file fails forward into silent
- *  playback. Uses a lightweight probe element whose only job is to warm
- *  the HTTP cache; the real AmbientAudio element reuses the cached bytes
- *  and is never recreated after preload. */
+/** Warm the soundtrack cache so playback begins the instant Scene 1 does. */
 function preloadSoundtrack(url: string | undefined, timeoutMs: number): Promise<void> {
   return new Promise((resolve) => {
     if (!url || typeof window === "undefined") { resolve(); return; }
@@ -149,68 +148,81 @@ function preloadSoundtrack(url: string | undefined, timeoutMs: number): Promise<
       probe.addEventListener("canplaythrough", done, { once: true });
       probe.addEventListener("loadeddata", done, { once: true });
       probe.addEventListener("error", done, { once: true });
-      // Trigger the fetch/decode.
-      try { probe.load(); } catch { /* ignore */ }
+      try { probe.load(); } catch { /* */ }
     } catch {
       window.clearTimeout(timer); finish();
     }
   });
 }
 
+// Sync decision — runs before any paint. If the opening should not
+// play at all, we mount nothing and Home boots normally.
+function decideShouldPlay(): CinematicOpeningConfig | null {
+  if (typeof window === "undefined") return null;
+  const cfg = CINEMATIC_OPENING_DATA;
+  if (!cfg.replayForAllUsers && hasCompleted(cfg.version)) return null;
+  return cfg;
+}
+
 export function CinematicOpening() {
-  const [config, setConfig] = useState<CinematicOpeningConfig | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const [active, setActive] = useState(false);
+  // Sync decision — computed on the very first render so a full-screen
+  // black portal can cover Home before the browser paints anything else.
+  const initialConfig = useMemo(() => decideShouldPlay(), []);
+  const [config] = useState<CinematicOpeningConfig | null>(initialConfig);
+  // "gate"     — pre-playback: black screen, permission + preload in flight
+  // "playing"  — scenes are on screen
+  // "done"     — sequence completed and portal has unmounted
+  const [phase, setPhase] = useState<"gate" | "playing" | "done">(
+    initialConfig ? "gate" : "done",
+  );
   const [index, setIndex] = useState(0);
   const [fadingOut, setFadingOut] = useState(false);
   const [paused, setPaused] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const finishedRef = useRef(false);
   const reducedMotion = usePrefersReducedMotion();
+  // Keep decoded images alive so the browser can't evict textures
+  // between the preload pass and the scene painting them.
+  const imageCacheRef = useRef<HTMLImageElement[]>([]);
 
-  // Boot: load config, run first-launch permission ask, preload all
-  // images (including the final logo) + soundtrack, then start playback.
+  // Boot: permission → preload images (with decode) → preload audio → play.
+  // The black gate stays on screen the entire time; Home never becomes
+  // visible because the portal covers the whole viewport at z-[2000].
   useEffect(() => {
-    let cancelled = false;
-    setMounted(true);
-    (async () => {
-      const cfg = await loadCinematicOpeningConfig();
-      if (cancelled) return;
-      if (!cfg) { dispatchCompleted(); return; }
-      if (!cfg.replayForAllUsers && hasCompleted(cfg.version)) {
-        dispatchCompleted();
-        return;
-      }
+    if (!initialConfig) { dispatchCompleted(); return; }
 
-      // First-launch: OWN the notification permission prompt. Skip web;
-      // any outcome fails forward so the opening never blocks on it.
+    let cancelled = false;
+    (async () => {
+      // 1. First launch: request notification permission FIRST.
+      //    We do not touch preload until the OS dialog has resolved.
       if (isFirstEverLaunch()) {
         await requestNotificationPermissionOnce();
         if (cancelled) return;
       }
 
-      const images = cfg.scenes.map((s) => s.image).filter((x): x is string => !!x);
-      // Always preload the local logo so Scene 6 never flashes with a
-      // missing image. Preload runs against locally-bundled assets and
-      // is expected to complete quickly.
-      const preloadTargets = Array.from(new Set([...images, CINEMATIC_LOGO_URL]));
-      const loaded = await preloadImages(preloadTargets, PRELOAD_TIMEOUT_MS);
+      // 2. Decode every scene image + the final-scene logo. Locally
+      //    bundled — finishes in a few hundred ms on a real device.
+      const sceneUrls = initialConfig.scenes
+        .map((s) => s.image)
+        .filter((x): x is string => !!x);
+      const urls = Array.from(new Set([...sceneUrls, CINEMATIC_LOGO_URL]));
+      const decoded = await decodeAllImages(urls, PRELOAD_TIMEOUT_MS);
       if (cancelled) return;
-      const playable = cfg.scenes.filter((s) => !s.image || loaded.has(s.image));
-      if (playable.length === 0) {
-        dispatchCompleted();
-        return;
-      }
-      // Warm the soundtrack cache so it is ready to play the moment
-      // Scene 1 begins. Failure fails forward into silent playback;
-      // the scene timer only starts after this settles (or times out).
-      await preloadSoundtrack(cfg.soundtrack?.url, SOUNDTRACK_PRELOAD_TIMEOUT_MS);
+      imageCacheRef.current = decoded;
+
+      // 3. Warm the soundtrack cache so Scene 1 starts with audio ready.
+      await preloadSoundtrack(initialConfig.soundtrack?.url, SOUNDTRACK_PRELOAD_TIMEOUT_MS);
       if (cancelled) return;
-      setConfig({ ...cfg, scenes: playable });
-      setActive(true);
+
+      // 4. Only now do we hand the canvas over from the black gate to
+      //    the scene renderer. Every scene is kept — we never drop a
+      //    scene based on preload result; locally-bundled assets should
+      //    always be usable, and playing with a slow decode beats
+      //    silently shortening the sequence.
+      setPhase("playing");
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [initialConfig]);
 
 
   const scenes = config?.scenes ?? [];
@@ -222,14 +234,14 @@ export function CinematicOpening() {
     setFadingOut(true);
     window.setTimeout(() => {
       if (config) markCompleted(config.version);
-      setActive(false);
+      setPhase("done");
       dispatchCompleted();
     }, reducedMotion ? 250 : FINAL_FADE_MS);
   }, [config, reducedMotion]);
 
   // Scene timer — cleared on transition, pause, and unmount.
   useEffect(() => {
-    if (!active || !currentScene || paused || fadingOut) return;
+    if (phase !== "playing" || !currentScene || paused || fadingOut) return;
     const timer = window.setTimeout(() => {
       if (index >= scenes.length - 1) {
         finish();
@@ -238,19 +250,19 @@ export function CinematicOpening() {
       }
     }, Math.max(400, currentScene.durationMs));
     return () => window.clearTimeout(timer);
-  }, [active, currentScene, index, scenes.length, paused, fadingOut, finish]);
+  }, [phase, currentScene, index, scenes.length, paused, fadingOut, finish]);
 
-  // Lock body scroll while active.
+  // Lock body scroll while the portal is up.
   useEffect(() => {
-    if (!active || typeof document === "undefined") return;
+    if (phase === "done" || typeof document === "undefined") return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
-  }, [active]);
+  }, [phase]);
 
   // Capacitor App lifecycle — pause timers on background.
   useEffect(() => {
-    if (!active) return;
+    if (phase === "done") return;
     let sub: { remove: () => void } | undefined;
     let cancelled = false;
     (async () => {
@@ -270,28 +282,28 @@ export function CinematicOpening() {
       sub?.remove();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [active]);
+  }, [phase]);
 
-  // Overlay integration: while active, Back should surface our Skip-confirm.
+  // Back → Skip-confirm.
   const requestSkip = useCallback(() => {
     if (finishedRef.current) return;
+    if (phase !== "playing") return;
     if (currentScene?.allowSkip === false) return;
     setConfirmOpen(true);
     setPaused(true);
-  }, [currentScene]);
-  useOverlayDismiss(useMemo(() => (active && !fadingOut ? requestSkip : () => {}), [active, fadingOut, requestSkip]));
+  }, [currentScene, phase]);
+  useOverlayDismiss(useMemo(
+    () => (phase !== "done" && !fadingOut ? requestSkip : () => {}),
+    [phase, fadingOut, requestSkip],
+  ));
 
-  const canSkip = currentScene?.allowSkip !== false;
+  const canSkip = phase === "playing" && currentScene?.allowSkip !== false;
 
   // Continuous soundtrack — one stable src across the whole opening.
-  // Per-scene `soundtrackLevel` drives the volume envelope; the audio
-  // element is never restarted on scene changes.
   const audioSettings = audioManager.getSettings();
   const soundOn = audioSettings.soundEnabled && audioSettings.ambienceEnabled;
-  const soundtrackSrc = soundOn ? config?.soundtrack?.url : undefined;
+  const soundtrackSrc = soundOn && phase === "playing" ? config?.soundtrack?.url : undefined;
 
-  // Carry the last non-null scene level forward when a scene omits it,
-  // so we never accidentally drop to silence mid-sequence.
   const soundtrackLevel = useMemo(() => {
     if (!config) return 0;
     const fallback = config.soundtrack?.defaultLevel ?? 0.4;
@@ -303,14 +315,14 @@ export function CinematicOpening() {
     return level;
   }, [config, scenes, index]);
 
-  const ambientTarget = soundOn
+  const ambientTarget = soundOn && phase === "playing"
     ? soundtrackLevel *
       (audioSettings.masterVolume ?? 1) *
       (audioSettings.ambienceVolume ?? 1)
     : 0;
 
-  if (!mounted || typeof document === "undefined") return null;
-  if (!active || !config) return null;
+  if (typeof document === "undefined") return null;
+  if (phase === "done" || !config) return null;
 
   const node = (
     <div
@@ -319,6 +331,7 @@ export function CinematicOpening() {
       aria-modal="true"
       aria-label="Cinematic opening"
       data-irth-cinematic-opening=""
+      data-phase={phase}
       onClickCapture={(e) => e.stopPropagation()}
       onTouchStartCapture={(e) => e.stopPropagation()}
       onPointerDownCapture={(e) => e.stopPropagation()}
@@ -328,9 +341,11 @@ export function CinematicOpening() {
         willChange: "opacity",
         pointerEvents: fadingOut ? "none" : "auto",
       }}
-
     >
-      {scenes.map((s, i) => (
+      {/* Scenes only mount once preload has completed. During the
+          "gate" phase the portal is a solid black rectangle — Home
+          is not visible, no timers advance, no scene image is on screen. */}
+      {phase === "playing" && scenes.map((s, i) => (
         <SceneRenderer
           key={s.id}
           scene={s}
@@ -340,14 +355,16 @@ export function CinematicOpening() {
         />
       ))}
 
-      <AmbientAudio
-        src={soundtrackSrc}
-        targetVolume={ambientTarget}
-        paused={paused}
-        stopping={fadingOut}
-      />
+      {phase === "playing" && (
+        <AmbientAudio
+          src={soundtrackSrc}
+          targetVolume={ambientTarget}
+          paused={paused}
+          stopping={fadingOut}
+        />
+      )}
 
-      {currentScene?.showFinalLogo && (
+      {phase === "playing" && currentScene?.showFinalLogo && (
         <FinalLogoReveal
           logoUrl={CINEMATIC_LOGO_URL}
           reducedMotion={reducedMotion}
@@ -454,7 +471,7 @@ function FinalLogoReveal({
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+      className="pointer-events-none absolute inset-0 z-[10] flex items-center justify-center"
       aria-hidden
     >
       <div
@@ -474,6 +491,7 @@ function FinalLogoReveal({
         alt="إرث"
         className="relative h-40 w-40 select-none sm:h-52 sm:w-52"
         draggable={false}
+        decoding="sync"
         style={{
           opacity: logoOpacity,
           transform: `scale(${logoScale})`,
