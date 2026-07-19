@@ -1,10 +1,15 @@
 // ============================================================
-// Guided Tutorial — Bundled configuration
+// Guided Tutorial — Bundled configuration (Phase 2B.5)
 // ------------------------------------------------------------
 // Single source of truth for the first-time tour. Bundled as a
 // TypeScript constant (never fetched at runtime) so Android APK
 // builds work fully offline. Final Arabic copy is embedded here
-// verbatim — no i18n framework, no lookup layer.
+// verbatim.
+//
+// Phase 2B.5 adds three metadata fields per step:
+//   • enabled       — toggle steps in/out without deleting them
+//   • analyticsId   — stable identifier propagated to every hook
+//   • debugColor    — palette hint for future debug tooling
 // ============================================================
 
 import type { TutorialConfig } from "./types";
@@ -29,6 +34,9 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       allowTargetInteraction: false,
       skipIfTargetUnavailable: false,
       onMissingTarget: "wait",
+      enabled: true,
+      analyticsId: "tutorial_campaigns",
+      debugColor: "gold",
     },
     {
       id: "encyclopedia",
@@ -43,6 +51,9 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       allowTargetInteraction: false,
       skipIfTargetUnavailable: false,
       onMissingTarget: "wait",
+      enabled: true,
+      analyticsId: "tutorial_encyclopedia",
+      debugColor: "blue",
     },
     {
       id: "atlas",
@@ -59,6 +70,9 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       allowTargetInteraction: false,
       skipIfTargetUnavailable: false,
       onMissingTarget: "wait",
+      enabled: true,
+      analyticsId: "tutorial_atlas",
+      debugColor: "green",
     },
     {
       id: "museum",
@@ -73,6 +87,9 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       allowTargetInteraction: false,
       skipIfTargetUnavailable: false,
       onMissingTarget: "wait",
+      enabled: true,
+      analyticsId: "tutorial_museum",
+      debugColor: "purple",
     },
     {
       id: "worlds",
@@ -89,6 +106,9 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       // the step is silently skipped in all failure modes.
       skipIfTargetUnavailable: true,
       onMissingTarget: "skip",
+      enabled: true,
+      analyticsId: "tutorial_worlds",
+      debugColor: "orange",
     },
     {
       id: "profile",
@@ -103,13 +123,14 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       allowTargetInteraction: false,
       skipIfTargetUnavailable: false,
       onMissingTarget: "wait",
+      enabled: true,
+      analyticsId: "tutorial_profile",
+      debugColor: "red",
     },
   ],
 } as const;
 
-/** Target-resolution window (ms). If a step's target isn't measurable
- *  within this window, the engine either waits (per `onMissingTarget`
- *  = "wait") or silently skips (per "skip"). */
+/** Target-resolution window (ms). */
 export const TUTORIAL_TARGET_RESOLUTION_WINDOW_MS = 2500;
 
 /** Frames to settle after Home mounts before the tour may start. */
