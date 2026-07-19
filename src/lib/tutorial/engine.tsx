@@ -547,11 +547,16 @@ export function TutorialProvider({
     return undefined;
   }, []);
 
-  const [, forceEligibility] = useState(0);
+  // Eligibility flag bus is module-level state. When any flag flips
+  // we bump `eligibilityTick` so effects that consume eligibility
+  // (auto-start below) re-run — otherwise they'd see the flag values
+  // captured on the last dep change and never observe the flip.
+  const [eligibilityTick, setEligibilityTick] = useState(0);
   useEffect(
-    () => subscribeEligibility(() => forceEligibility((n) => n + 1)),
+    () => subscribeEligibility(() => setEligibilityTick((n) => n + 1)),
     [],
   );
+
 
   // ------------------------------------------------------------
   // Debug binding — registers this engine with the module-level
@@ -612,16 +617,24 @@ export function TutorialProvider({
 
   // ------------------------------------------------------------
   // Auto-start (eligibility)
+  //
+  // IMPORTANT: `computeEligibility` reads from the module-level
+  // eligibility flag bus in addition to the env inputs below. We
+  // must include `eligibilityTick` in the dep list so this effect
+  // re-runs whenever a flag flips — otherwise the effect can be
+  // permanently stuck on a stale "not eligible" decision even
+  // after every real predicate becomes true.
   // ------------------------------------------------------------
   useEffect(() => {
     __tutorialAutoStartTelemetry.autoStartEffectRan += 1;
     const completed = persistence.hasCompleted(effectiveConfig.version);
-    const eligible = computeEligibility({
+    const envInputs = {
       pathname,
       overlayStackSize,
       homeStableFrames,
       documentVisible,
-    });
+    };
+    const eligible = computeEligibility(envInputs);
     const s = api.getSnapshot();
     let result: AutoStartResult;
     if (completed) {
@@ -637,8 +650,8 @@ export function TutorialProvider({
       result = after.state === "idle" ? "invoked-still-idle" : "invoked";
     }
     __tutorialAutoStartTelemetry.lastRequestStartResult = result;
-    // Persist a diagnostic snapshot so it can be inspected from the
-    // Admin Tutorial Diagnostics card after the Android APK flow.
+    // Persist a diagnostic snapshot capturing the EXACT values used
+    // by this effect execution (not a later render's view).
     try {
       writeLastStartDiagnostic({
         reason: "auto-start-effect",
@@ -662,7 +675,9 @@ export function TutorialProvider({
     homeStableFrames,
     documentVisible,
     snap.state,
+    eligibilityTick,
   ]);
+
 
 
   // ------------------------------------------------------------
