@@ -26,11 +26,10 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { NAVIGATION_REGISTRY } from "./registry";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 
 import type { NavigationOrigin, RouteId } from "./types";
-import { resolveDeclaration } from "./registry";
+import { NAVIGATION_REGISTRY, resolveDeclaration } from "./registry";
 import {
   formatValidationReport,
   validateNavigationRegistry,
