@@ -443,7 +443,7 @@ export function CinematicOpening() {
           if (!o) setPaused(false);
         }}
       >
-        <AlertDialogContent dir="rtl" className="border-amber-500/30">
+        <AlertDialogContent dir="rtl" className="z-[2101] border-amber-500/30">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-amber-100">تخطّي المقدمة؟</AlertDialogTitle>
             <AlertDialogDescription className="leading-7 text-slate-300">
@@ -518,13 +518,18 @@ function FinalLogoReveal({
   >("waiting_for_assets");
   const completedRef = useRef(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const phaseRef = useRef(phase);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   const completeOnce = useCallback((reason: string) => {
     if (completedRef.current) return;
     completedRef.current = true;
-    androidCinematicDiag("final-logo", "complete", { reason, phase });
+    androidCinematicDiag("final-logo", "complete", { reason, phase: phaseRef.current });
     onComplete();
-  }, [onComplete, phase]);
+  }, [onComplete]);
 
   useEffect(() => {
     androidCinematicDiag("final-logo", "phase", {
