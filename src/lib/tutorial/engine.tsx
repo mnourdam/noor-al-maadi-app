@@ -207,6 +207,12 @@ function fireStepChanged(
   direction: "forward" | "backward" | "initial",
 ) {
   const step = store.config.steps[rawIndex]!;
+  try {
+    resetPerStepInstrumentation(step.id);
+    logTutorialEvent("step-changed", { reason: direction });
+  } catch {
+    /* ignore */
+  }
   fireHook(store.hooks, "onStepChanged", {
     id: store.config.id,
     version: store.config.version,
