@@ -240,10 +240,17 @@ export function CinematicOpening() {
   }, [config, reducedMotion]);
 
   // Scene timer — cleared on transition, pause, and unmount.
+  // For the final scene we DO NOT call finish() directly; instead we
+  // arm FinalLogoReveal (via its own timeline) and wait for its
+  // explicit onComplete callback. This guarantees Home never becomes
+  // visible before the logo reveal finishes, even if the scene
+  // duration and the reveal timeline ever drift apart.
   useEffect(() => {
     if (phase !== "playing" || !currentScene || paused || fadingOut) return;
+    const isLast = index >= scenes.length - 1;
+    if (isLast && currentScene.showFinalLogo) return;
     const timer = window.setTimeout(() => {
-      if (index >= scenes.length - 1) {
+      if (isLast) {
         finish();
       } else {
         setIndex((i) => i + 1);
@@ -251,6 +258,7 @@ export function CinematicOpening() {
     }, Math.max(400, currentScene.durationMs));
     return () => window.clearTimeout(timer);
   }, [phase, currentScene, index, scenes.length, paused, fadingOut, finish]);
+
 
   // Lock body scroll while the portal is up.
   useEffect(() => {
