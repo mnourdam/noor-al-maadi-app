@@ -22,23 +22,36 @@ import { useAccount } from "@/lib/account";
 import { AuthLink } from "@/components/AuthLink";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { setAuthOrigin } from "@/lib/authOrigin";
+import { OPENING_COMPLETED_EVENT } from "@/components/cinematic/CinematicOpening";
+import { loadCinematicOpeningConfig } from "@/lib/cinematic-opening/config";
+import { hasCompleted as openingCompleted } from "@/lib/cinematic-opening/persistence";
 
 const GUEST_CHOICE_KEY = "irth.firstLaunch.choice.v1";
 
 export function FirstLaunchGate() {
   const { user, loadingSession } = useAccount();
   const [open, setOpen] = useState(false);
-  const [onboardingDone, setOnboardingDone] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    try { return !!window.localStorage.getItem("irth.onboarded.v1"); } catch { return true; }
-  });
+  // Wait until the cinematic opening (if any) has finished before showing.
+  const [openingDone, setOpeningDone] = useState<boolean>(false);
 
-  // Watch for the onboarding-completed event so we can open right after.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const handler = () => setOnboardingDone(true);
-    window.addEventListener("irth:onboarding-completed", handler);
-    return () => window.removeEventListener("irth:onboarding-completed", handler);
+    let cancelled = false;
+    const handler = () => setOpeningDone(true);
+    window.addEventListener(OPENING_COMPLETED_EVENT, handler);
+    // If no opening is configured, or the current version was already
+    // completed on this device, unblock the gate immediately.
+    (async () => {
+      const cfg = await loadCinematicOpeningConfig();
+      if (cancelled) return;
+      if (!cfg || (!cfg.replayForAllUsers && openingCompleted(cfg.version))) {
+        setOpeningDone(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      window.removeEventListener(OPENING_COMPLETED_EVENT, handler);
+    };
   }, []);
 
   useEffect(() => {
