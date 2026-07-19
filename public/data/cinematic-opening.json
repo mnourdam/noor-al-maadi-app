@@ -3,7 +3,7 @@
   "enabled": true,
   "replayForAllUsers": false,
   "soundtrack": {
-    "url": "/__l5e/assets-v1/7bd399be-8d71-47d3-96ec-61c96b0b8cf0/cinematic-ambience.m4a",
+    "url": "/cinematic/cinematic-ambience.m4a",
     "defaultLevel": 0.3
   },
   "scenes": [

@@ -19,6 +19,7 @@ import { localSnapshotInfo, ensureLocalSnapshotLoaded, applyLocalSnapshot } from
 import { supabase } from "@/integrations/supabase/client";
 import { peekAll, type OutboxItem } from "@/lib/offline/outbox";
 import { flushOutbox, getLastFlushAt } from "@/lib/offline/flush";
+import { resetCompletion as resetCinematicOpening, readCompletedVersion as readCinematicOpeningVersion } from "@/lib/cinematic-opening/persistence";
 
 export const Route = createFileRoute("/admin/offline-diagnostics")({
   head: () => ({
@@ -438,6 +439,10 @@ function OfflineDiagnostics() {
           )}
         </section>
 
+        {/* Cinematic Opening — developer replay */}
+        <CinematicOpeningReset />
+
+
 
         {/* Log */}
         {log.length > 0 && (
@@ -470,3 +475,33 @@ function StatBox({
     </div>
   );
 }
+
+function CinematicOpeningReset() {
+  const [version, setVersion] = useState<string | null>(() => readCinematicOpeningVersion());
+  const [notice, setNotice] = useState<string | null>(null);
+  const onReset = () => {
+    resetCinematicOpening();
+    setVersion(readCinematicOpeningVersion());
+    setNotice("تم مسح علامة اكتمال المقدمة السينمائية. ستُعرض عند إعادة تشغيل التطبيق.");
+  };
+  return (
+    <section className="rounded-xl border border-slate-700 bg-slate-950/60 p-4">
+      <h2 className="mb-2 text-sm font-semibold text-amber-200">المقدمة السينمائية (مطوّر فقط)</h2>
+      <p className="mb-3 text-xs text-slate-400">
+        الإصدار المُكتمل الحالي: <span className="font-mono text-slate-200">{version ?? "— (لم تُشاهد)"}</span>
+      </p>
+      <button
+        onClick={onReset}
+        className="inline-flex items-center gap-2 rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/10 px-4 py-2 text-sm text-fuchsia-100 hover:bg-fuchsia-500/20"
+      >
+        <RefreshCw className="h-4 w-4" />
+        إعادة تشغيل المقدمة السينمائية
+      </button>
+      {notice && <p className="mt-2 text-xs text-emerald-300">{notice}</p>}
+      <p className="mt-2 text-[11px] text-slate-500">
+        يمسح فقط <span className="font-mono">irth.cinematic-opening.completed-version.v1</span> — لا يؤثر على تقدّم اللاعب أو الحساب أو الجولة الإرشادية.
+      </p>
+    </section>
+  );
+}
+
