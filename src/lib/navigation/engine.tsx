@@ -9,7 +9,7 @@
 //
 // It does NOT yet:
 //   - take over the Android hardware-back listener
-//   - remove AndroidBackHandler / BackNavigationGuard
+//   - (done) engine owns single hardware listener + exit dialog
 //   - replace in-page back buttons
 //
 // Those are Steps 3–7 of the migration. Step 1 ships the engine
