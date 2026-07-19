@@ -91,6 +91,7 @@ function validateScene(raw: unknown, seenIds: Set<string>, idx: number): Cinemat
   const textDelayMs = positiveInt(r.textDelayMs, 0) ?? undefined;
   const textHoldMsRaw = positiveInt(r.textHoldMs, 0);
   const textHoldMs = textHoldMsRaw === null ? undefined : textHoldMsRaw;
+  const subtitleDelayMs = positiveInt(r.subtitleDelayMs, 0) ?? undefined;
 
   seenIds.add(r.id);
   return {
@@ -102,6 +103,7 @@ function validateScene(raw: unknown, seenIds: Set<string>, idx: number): Cinemat
     durationMs: duration,
     textDelayMs,
     textHoldMs,
+    subtitleDelayMs,
     transitionIn,
     transitionOut,
     ambientAudio,
