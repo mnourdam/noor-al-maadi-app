@@ -357,7 +357,19 @@ export function TutorialDiagnosticsCard() {
         ) : (
           <p className="text-xs text-slate-400">لا توجد إدخالات بعد.</p>
         )}
+        {/* Raw localStorage snapshot — proves whether the storage key
+            itself is populated on the physical device, independent of
+            the in-memory ring buffer. */}
+        <div className="mt-2 text-[10px] text-slate-500">
+          raw localStorage[irth.tutorial.transition-log.v1]:{" "}
+          {(() => {
+            const raw = readRawTutorialTransitionLog();
+            if (raw == null) return "null";
+            return `${raw.length} chars`;
+          })()}
+        </div>
       </div>
+
 
 
       <p className="mt-3 text-[11px] text-slate-500">
