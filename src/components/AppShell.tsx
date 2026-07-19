@@ -65,7 +65,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <HUD />
         {!androidStable && isSectionEnabled("audio") && <AudioInitializer />}
         {!androidStable && isSectionEnabled("friendPoller") && <FriendNotificationsPoller />}
-        {!androidStable && isSectionEnabled("backNavGuard") && <BackNavigationGuard />}
+        {/* Legacy BackNavigationGuard removed — hardware Back is owned by
+            the Navigation Engine via <AndroidBackHandler>. Web back uses
+            the browser's native history; no sentinel hack required. */}
         <div className="section-flow relative z-20 flex-1">
           <div key={pathname} className="motion-page">{children}</div>
         </div>
