@@ -9,6 +9,8 @@ import { useOverlayDismiss } from "./engine";
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Instrumentation label — component name / overlay identifier. */
+  label?: string;
 }
 
 /**
@@ -16,17 +18,24 @@ interface Props {
  * calls `onClose()`. Automatically unregisters when the overlay closes
  * or unmounts.
  */
-export function OverlayDismissRegistration({ open, onClose }: Props) {
+export function OverlayDismissRegistration({ open, onClose, label }: Props) {
   if (!open) return null;
-  return <ActiveOverlayRegistration onClose={onClose} />;
+  return <ActiveOverlayRegistration onClose={onClose} label={label} />;
 }
 
-function ActiveOverlayRegistration({ onClose }: { onClose: () => void }) {
+function ActiveOverlayRegistration({
+  onClose,
+  label,
+}: {
+  onClose: () => void;
+  label?: string;
+}) {
   const ref = useRef(onClose);
   useEffect(() => {
     ref.current = onClose;
   }, [onClose]);
   const stable = useCallback(() => ref.current(), []);
-  useOverlayDismiss(stable);
+  useOverlayDismiss(stable, label ?? "shadcn-overlay");
   return null;
 }
+
