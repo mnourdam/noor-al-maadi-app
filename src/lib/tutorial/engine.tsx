@@ -1,21 +1,19 @@
 // ============================================================
-// Guided Tutorial — Engine (Phase 2A scaffold)
+// Guided Tutorial — Engine (Phase 2B)
 // ------------------------------------------------------------
-// This file ships the state-machine and integration contracts. It
-// does NOT render:
-//   - the spotlight overlay
-//   - the coach-mark UI
-//   - any Arabic copy
+// Provides:
+//   - state machine + snapshot pub/sub
+//   - eligibility-driven auto-start
+//   - target locator (rAF poll for `[data-tutorial-target]`)
+//   - measurement (ResizeObserver + scroll listeners)
+//   - step transitions (forward / backward / skip-if-unavailable)
+//   - pause/resume driven by the overlay stack size
+//   - Back integration via the unified Navigation Engine's LIFO
+//   - Skip confirmation flow
+//   - extension hooks: onTutorialStarted, onStepChanged,
+//     onTutorialSkipped, onTutorialCompleted  (no default impl)
 //
-// It also does NOT add any new Android hardware-back listener,
-// window.history handlers, or page-specific back fallbacks. Back
-// integration is expressed exclusively via the existing Navigation
-// Engine's overlay LIFO — the tutorial registers itself as a
-// single overlay dismisser while running, so the unified engine
-// forwards hardware Back into `handleBack()` below.
-//
-// The provider is safe to mount at the root: while `idle` it does
-// nothing observable.
+// It does NOT install its own Android hardware-back listener.
 // ============================================================
 
 import {
@@ -31,10 +29,11 @@ import {
 
 import { useRouterState } from "@tanstack/react-router";
 
-import { useOverlayDismiss } from "@/lib/navigation";
+import { useOverlayDismiss, useOverlayStackSize } from "@/lib/navigation";
 
 import {
   IRTH_FIRST_TIME_TUTORIAL,
+  TUTORIAL_TARGET_RESOLUTION_WINDOW_MS,
 } from "./data";
 import { FIRST_TIME_TUTORIAL_ID, getTutorialConfig } from "./registry";
 import * as persistence from "./persistence";
@@ -44,10 +43,12 @@ import {
   subscribeEligibility,
 } from "./eligibility";
 import type {
+  TutorialConfig,
   TutorialEngineApi,
   TutorialEngineSnapshot,
   TutorialEngineState,
-  TutorialConfig,
+  TutorialHooks,
+  TutorialStep,
 } from "./types";
 
 // ------------------------------------------------------------
@@ -60,22 +61,13 @@ interface InternalStore {
   stepIndex: number | null;
   paused: boolean;
   pauseReason: string | null;
-  /** Recorded so `resume` can decide whether to restore
-   *  `showing_step` after an overlay pause. */
   preemptedFromShowing: boolean;
+  /** Confirmation dialog for skip is open. */
+  skipConfirmOpen: boolean;
+  /** Measured target rect, when in `showing_step`. */
+  targetRect: DOMRectReadOnly | null;
   listeners: Set<() => void>;
-}
-
-function createStore(config: TutorialConfig): InternalStore {
-  return {
-    config,
-    state: "idle",
-    stepIndex: null,
-    paused: false,
-    pauseReason: null,
-    preemptedFromShowing: false,
-    listeners: new Set(),
-  };
+  hooks: TutorialHooks;
 }
 
 function notify(store: InternalStore) {
@@ -88,7 +80,7 @@ function notify(store: InternalStore) {
   }
 }
 
-function snapshot(store: InternalStore): TutorialEngineSnapshot {
+function snapshotOf(store: InternalStore): TutorialEngineSnapshot {
   return {
     state: store.state,
     stepIndex: store.stepIndex,
@@ -103,13 +95,37 @@ function transition(store: InternalStore, next: TutorialEngineState) {
   notify(store);
 }
 
+function fireHook<K extends keyof TutorialHooks>(
+  hooks: TutorialHooks,
+  name: K,
+  ...args: Parameters<NonNullable<TutorialHooks[K]>>
+) {
+  const fn = hooks[name] as
+    | ((...a: Parameters<NonNullable<TutorialHooks[K]>>) => void)
+    | undefined;
+  if (typeof fn === "function") {
+    try {
+      fn(...args);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[tutorial] extension hook threw:", err);
+    }
+  }
+}
+
 // ------------------------------------------------------------
 // Engine API factory
 // ------------------------------------------------------------
 
-function createEngine(store: InternalStore): TutorialEngineApi {
+function createEngine(store: InternalStore): TutorialEngineApi & {
+  advanceToLocating(): void;
+  setTargetRect(rect: DOMRectReadOnly | null): void;
+  openSkipConfirm(): void;
+  closeSkipConfirm(): void;
+  isSkipConfirmOpen(): boolean;
+} {
   return {
-    getSnapshot: () => snapshot(store),
+    getSnapshot: () => snapshotOf(store),
     subscribe(listener) {
       store.listeners.add(listener);
       return () => {
@@ -123,43 +139,117 @@ function createEngine(store: InternalStore): TutorialEngineApi {
         return;
       }
       transition(store, "armed");
+      store.stepIndex = 0;
+      fireHook(store.hooks, "onTutorialStarted", {
+        id: store.config.id,
+        version: store.config.version,
+      });
+      fireHook(store.hooks, "onStepChanged", {
+        id: store.config.id,
+        version: store.config.version,
+        stepIndex: 0,
+        stepId: store.config.steps[0]!.id,
+        direction: "initial",
+      });
+      transition(store, "locating_target");
+    },
+    advanceToLocating() {
+      transition(store, "locating_target");
+    },
+    setTargetRect(rect) {
+      store.targetRect = rect;
+      notify(store);
+    },
+    openSkipConfirm() {
+      if (store.skipConfirmOpen) return;
+      store.skipConfirmOpen = true;
+      notify(store);
+    },
+    closeSkipConfirm() {
+      if (!store.skipConfirmOpen) return;
+      store.skipConfirmOpen = false;
+      notify(store);
+    },
+    isSkipConfirmOpen() {
+      return store.skipConfirmOpen;
     },
     next() {
       if (store.stepIndex == null) return;
       const last = store.config.steps.length - 1;
       if (store.stepIndex >= last) {
-        // Natural finish
+        // Natural finish.
         persistence.markCompleted(store.config.version);
+        fireHook(store.hooks, "onTutorialCompleted", {
+          id: store.config.id,
+          version: store.config.version,
+        });
         store.stepIndex = null;
+        store.targetRect = null;
         transition(store, "completed");
         return;
       }
-      store.stepIndex = store.stepIndex + 1;
+      const nextIndex = store.stepIndex + 1;
+      store.stepIndex = nextIndex;
+      store.targetRect = null;
+      fireHook(store.hooks, "onStepChanged", {
+        id: store.config.id,
+        version: store.config.version,
+        stepIndex: nextIndex,
+        stepId: store.config.steps[nextIndex]!.id,
+        direction: "forward",
+      });
       transition(store, "transitioning");
+      // Micro-task hop lets consumers render an interstitial before
+      // we re-enter target-location.
+      queueMicrotask(() => transition(store, "locating_target"));
     },
     previous() {
       if (store.stepIndex == null) return;
-      if (store.stepIndex <= 0) return; // Step 1 back is handled by caller
-      store.stepIndex = store.stepIndex - 1;
+      if (store.stepIndex <= 0) return;
+      const prevIndex = store.stepIndex - 1;
+      store.stepIndex = prevIndex;
+      store.targetRect = null;
+      fireHook(store.hooks, "onStepChanged", {
+        id: store.config.id,
+        version: store.config.version,
+        stepIndex: prevIndex,
+        stepId: store.config.steps[prevIndex]!.id,
+        direction: "backward",
+      });
       transition(store, "transitioning");
+      queueMicrotask(() => transition(store, "locating_target"));
     },
     skip() {
+      const atStepIndex = store.stepIndex;
       persistence.markCompleted(store.config.version);
+      fireHook(store.hooks, "onTutorialSkipped", {
+        id: store.config.id,
+        version: store.config.version,
+        atStepIndex,
+      });
       store.stepIndex = null;
       store.paused = false;
       store.pauseReason = null;
+      store.skipConfirmOpen = false;
+      store.targetRect = null;
       transition(store, "completed");
     },
     finish() {
       persistence.markCompleted(store.config.version);
+      fireHook(store.hooks, "onTutorialCompleted", {
+        id: store.config.id,
+        version: store.config.version,
+      });
       store.stepIndex = null;
+      store.targetRect = null;
       transition(store, "completed");
     },
     forceClose() {
-      // No persistence write per product spec.
       store.stepIndex = null;
       store.paused = false;
       store.pauseReason = null;
+      store.skipConfirmOpen = false;
+      store.targetRect = null;
       transition(store, "idle");
     },
     pause(reason) {
@@ -174,10 +264,6 @@ function createEngine(store: InternalStore): TutorialEngineApi {
       if (!store.paused) return;
       store.paused = false;
       store.pauseReason = null;
-      // The engine returns to `locating_target` so the spotlight (a
-      // later phase) re-measures the current step after two stable
-      // frames. If nothing was showing we still fall back to
-      // `locating_target` because measurements may be stale.
       store.preemptedFromShowing = false;
       transition(store, "locating_target");
     },
@@ -189,15 +275,12 @@ function createEngine(store: InternalStore): TutorialEngineApi {
 // ------------------------------------------------------------
 
 interface TutorialContextValue {
-  api: TutorialEngineApi;
+  api: ReturnType<typeof createEngine>;
+  config: TutorialConfig;
   snapshot: TutorialEngineSnapshot;
-  /** Central back-handler used by the Navigation Engine's overlay
-   *  dismiss stack while the tutorial is running. Returns nothing;
-   *  side-effects are the engine transitions.
-   *
-   *  - Step 1 : opens the skip-confirmation flow (implemented in a
-   *             later phase; currently a no-op safe stub).
-   *  - Step 2+: `previous()`. */
+  currentStep: TutorialStep | null;
+  targetRect: DOMRectReadOnly | null;
+  skipConfirmOpen: boolean;
   handleBack: () => void;
 }
 
@@ -213,42 +296,65 @@ export function useTutorial(): TutorialContextValue {
   return ctx;
 }
 
-/** Read-only access to the current snapshot. Safe to call anywhere. */
 export function useTutorialSnapshot(): TutorialEngineSnapshot {
   return useTutorial().snapshot;
 }
 
 export interface TutorialProviderProps {
   children: ReactNode;
-  /** Optional override for tests. Defaults to the first-time tour. */
   config?: TutorialConfig;
+  hooks?: TutorialHooks;
 }
 
-export function TutorialProvider({ children, config }: TutorialProviderProps) {
+export function TutorialProvider({
+  children,
+  config,
+  hooks,
+}: TutorialProviderProps) {
   const effectiveConfig = config ?? getTutorialConfig(FIRST_TIME_TUTORIAL_ID);
 
   const storeRef = useRef<InternalStore | null>(null);
   if (storeRef.current == null) {
-    storeRef.current = createStore(effectiveConfig);
+    storeRef.current = {
+      config: effectiveConfig,
+      state: "idle",
+      stepIndex: null,
+      paused: false,
+      pauseReason: null,
+      preemptedFromShowing: false,
+      skipConfirmOpen: false,
+      targetRect: null,
+      listeners: new Set(),
+      hooks: hooks ?? {},
+    };
+  } else {
+    storeRef.current.hooks = hooks ?? {};
   }
   const store = storeRef.current;
 
-  const apiRef = useRef<TutorialEngineApi | null>(null);
+  const apiRef = useRef<ReturnType<typeof createEngine> | null>(null);
   if (apiRef.current == null) {
     apiRef.current = createEngine(store);
   }
   const api = apiRef.current;
 
-  const [snap, setSnap] = useState<TutorialEngineSnapshot>(() => snapshot(store));
+  const [snap, setSnap] = useState<TutorialEngineSnapshot>(() =>
+    snapshotOf(store),
+  );
+  const [targetRect, setTargetRectState] = useState<DOMRectReadOnly | null>(
+    null,
+  );
+  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
 
   useEffect(() => {
-    const unsub = api.subscribe(() => setSnap(snapshot(store)));
-    return unsub;
+    return api.subscribe(() => {
+      setSnap(snapshotOf(store));
+      setTargetRectState(store.targetRect);
+      setSkipConfirmOpen(store.skipConfirmOpen);
+    });
   }, [api, store]);
 
-  // Publish the first-launch-choice flag on mount and keep it fresh
-  // when the tab regains focus (choice may be recorded by another
-  // subsystem between renders).
+  // First-launch choice flag: publish on mount and re-check on focus.
   useEffect(() => {
     refreshFirstLaunchChoiceFlag();
     const onFocus = () => refreshFirstLaunchChoiceFlag();
@@ -264,34 +370,36 @@ export function TutorialProvider({ children, config }: TutorialProviderProps) {
   }, []);
 
   // ------------------------------------------------------------
-  // Eligibility-driven start
+  // Eligibility inputs
   // ------------------------------------------------------------
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const overlayStackSize = useOverlayStackSize();
   const [homeStableFrames, setHomeStableFrames] = useState(0);
   const [documentVisible, setDocumentVisible] = useState(
-    typeof document === "undefined" ? true : document.visibilityState === "visible",
+    typeof document === "undefined"
+      ? true
+      : document.visibilityState === "visible",
   );
 
-  // Home-stable frame counter (raf x2 after landing on `/`).
   useEffect(() => {
     if (pathname !== "/") {
       setHomeStableFrames(0);
       return;
     }
     let cancelled = false;
-    let raf1 = 0;
-    let raf2 = 0;
-    raf1 = requestAnimationFrame(() => {
+    const raf1 = requestAnimationFrame(() => {
       if (cancelled) return;
-      raf2 = requestAnimationFrame(() => {
+      const raf2 = requestAnimationFrame(() => {
         if (cancelled) return;
         setHomeStableFrames(2);
       });
+      (raf1 as unknown as { _raf2?: number })._raf2 = raf2;
     });
     return () => {
       cancelled = true;
       cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
+      const raf2 = (raf1 as unknown as { _raf2?: number })._raf2;
+      if (typeof raf2 === "number") cancelAnimationFrame(raf2);
     };
   }, [pathname]);
 
@@ -305,26 +413,48 @@ export function TutorialProvider({ children, config }: TutorialProviderProps) {
     return undefined;
   }, []);
 
-  // Overlay stack size: the Navigation Engine owns the stack but does
-  // not currently export its size. For Phase 2A we treat "0" as the
-  // steady-state and rely on our own pause/resume path (below) to
-  // handle registered overlays. This value is left in the eligibility
-  // predicate so a future stack-size accessor can be plugged in
-  // without refactoring the engine.
-  const overlayStackSize = 0;
-
-  // Re-render when any eligibility flag changes so the effect below
-  // re-runs with fresh state.
   const [, forceEligibility] = useState(0);
   useEffect(
     () => subscribeEligibility(() => forceEligibility((n) => n + 1)),
     [],
   );
 
+  // ------------------------------------------------------------
+  // Overlay-driven pause/resume (auth dialogs, etc.)
+  // ------------------------------------------------------------
   useEffect(() => {
-    // Auto-arm on first eligible frame. Do not redirect deep-linked
-    // sessions: if pathname !== "/" the predicate returns false and
-    // the engine simply waits until the user visits Home naturally.
+    const s = api.getSnapshot();
+    const running =
+      s.state !== "idle" &&
+      s.state !== "completed" &&
+      s.state !== "paused_by_overlay";
+    const paused = s.state === "paused_by_overlay";
+    // Overlays include our own skip-confirm dialog; ignore self.
+    const externalCount = overlayStackSize - (skipConfirmOpen ? 1 : 0);
+    if (running && externalCount > 0) {
+      api.pause("overlay-open");
+    } else if (paused && externalCount <= 0) {
+      // Resume after two stable frames.
+      let cancelled = false;
+      const raf1 = requestAnimationFrame(() => {
+        if (cancelled) return;
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          api.resume();
+        });
+      });
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(raf1);
+      };
+    }
+    return undefined;
+  }, [api, overlayStackSize, skipConfirmOpen, snap.state]);
+
+  // ------------------------------------------------------------
+  // Auto-start (eligibility)
+  // ------------------------------------------------------------
+  useEffect(() => {
     if (persistence.hasCompleted(effectiveConfig.version)) return;
     const eligible = computeEligibility({
       pathname,
@@ -335,36 +465,124 @@ export function TutorialProvider({ children, config }: TutorialProviderProps) {
     const s = api.getSnapshot();
     if (eligible && s.state === "idle") {
       api.requestStart();
-      // After `armed`, promote to `locating_target`. Actual DOM
-      // measurement is wired in Phase 2B; Phase 2A merely records
-      // the intent so the state graph is exercised end-to-end.
-      queueMicrotask(() => {
-        const cur = api.getSnapshot();
-        if (cur.state === "armed") {
-          store.stepIndex = 0;
-          transition(store, "locating_target");
-        }
-      });
     }
   }, [
     api,
-    store,
     effectiveConfig.version,
     pathname,
     overlayStackSize,
     homeStableFrames,
     documentVisible,
+    snap.state,
   ]);
 
   // ------------------------------------------------------------
-  // Back integration via the unified Navigation Engine
+  // Target locator + measurement
   // ------------------------------------------------------------
-  //
-  // While the tutorial is actively running (any state other than
-  // `idle` / `completed` / `paused_by_overlay`) it registers a
-  // single overlay dismisser. The Navigation Engine's LIFO forwards
-  // hardware Back to the topmost dismisser, so we get correct Back
-  // handling for free — WITHOUT installing our own listener.
+  const currentStep: TutorialStep | null =
+    snap.stepIndex != null ? effectiveConfig.steps[snap.stepIndex] ?? null : null;
+
+  useEffect(() => {
+    if (!currentStep) return;
+    if (snap.state !== "locating_target") return;
+    if (snap.paused) return;
+
+    let cancelled = false;
+    let observer: ResizeObserver | null = null;
+    let scrollListener: (() => void) | null = null;
+    let currentEl: HTMLElement | null = null;
+    let cleanupScroll = () => {};
+
+    const selector = `[data-tutorial-target="${currentStep.targetId}"]`;
+    const start = performance.now();
+
+    const attachMeasurement = (el: HTMLElement) => {
+      currentEl = el;
+      const measure = () => {
+        if (cancelled) return;
+        const rect = el.getBoundingClientRect();
+        store.targetRect = rect;
+        notify(store);
+      };
+      measure();
+
+      if (typeof ResizeObserver !== "undefined") {
+        observer = new ResizeObserver(() => measure());
+        observer.observe(el);
+      }
+      scrollListener = () => measure();
+      window.addEventListener("scroll", scrollListener, { passive: true, capture: true });
+      window.addEventListener("resize", scrollListener, { passive: true });
+      cleanupScroll = () => {
+        if (scrollListener) {
+          window.removeEventListener("scroll", scrollListener, {
+            capture: true,
+          } as unknown as EventListenerOptions);
+          window.removeEventListener("resize", scrollListener);
+        }
+      };
+      transition(store, "showing_step");
+    };
+
+    const tryResolve = () => {
+      if (cancelled) return;
+      const el = document.querySelector(selector) as HTMLElement | null;
+      if (el) {
+        if (currentStep.scroll === "into-view" ||
+            currentStep.scroll === "into-view-smooth") {
+          try {
+            el.scrollIntoView({
+              behavior:
+                currentStep.scroll === "into-view-smooth" ? "smooth" : "auto",
+              block: "center",
+              inline: "center",
+            });
+          } catch {
+            /* ignore */
+          }
+          transition(store, "scrolling_to_target");
+          // Two rAF barrier so the browser commits the scroll layout.
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (cancelled) return;
+              transition(store, "measuring_target");
+              attachMeasurement(el);
+            });
+          });
+        } else {
+          transition(store, "measuring_target");
+          attachMeasurement(el);
+        }
+        return;
+      }
+      const elapsed = performance.now() - start;
+      if (elapsed >= TUTORIAL_TARGET_RESOLUTION_WINDOW_MS) {
+        // Window elapsed.
+        if (currentStep.skipIfTargetUnavailable ||
+            currentStep.onMissingTarget === "skip") {
+          // Silently advance.
+          api.next();
+        } else {
+          // Wait indefinitely — keep polling at reduced frequency.
+          window.setTimeout(tryResolve, 200);
+        }
+        return;
+      }
+      requestAnimationFrame(tryResolve);
+    };
+
+    tryResolve();
+
+    return () => {
+      cancelled = true;
+      if (observer && currentEl) observer.disconnect();
+      cleanupScroll();
+    };
+  }, [api, store, currentStep, snap.state, snap.paused]);
+
+  // ------------------------------------------------------------
+  // Back integration
+  // ------------------------------------------------------------
   const running =
     snap.state !== "idle" &&
     snap.state !== "completed" &&
@@ -373,27 +591,42 @@ export function TutorialProvider({ children, config }: TutorialProviderProps) {
   const handleBack = useCallback(() => {
     const s = api.getSnapshot();
     if (s.stepIndex == null) return;
+    if (api.isSkipConfirmOpen()) {
+      api.closeSkipConfirm();
+      return;
+    }
     if (s.stepIndex === 0) {
-      // Step 1 back → skip confirmation. The confirmation UI itself
-      // lands in Phase 2B; for now the safe stub is a no-op so Back
-      // is absorbed (the user cannot exit the app or the tour on
-      // Step 1 by mashing Back).
+      api.openSkipConfirm();
       return;
     }
     api.previous();
   }, [api]);
 
-  // The overlay dismiss hook is unconditional — enable/disable is
-  // expressed via a stable dismisser that no-ops when not running.
   const dismisser = useCallback(() => {
-    if (!running) return;
+    if (!running && !skipConfirmOpen) return;
     handleBack();
-  }, [running, handleBack]);
+  }, [running, skipConfirmOpen, handleBack]);
   useOverlayDismiss(dismisser);
 
   const value = useMemo<TutorialContextValue>(
-    () => ({ api, snapshot: snap, handleBack }),
-    [api, snap, handleBack],
+    () => ({
+      api,
+      config: effectiveConfig,
+      snapshot: snap,
+      currentStep,
+      targetRect,
+      skipConfirmOpen,
+      handleBack,
+    }),
+    [
+      api,
+      effectiveConfig,
+      snap,
+      currentStep,
+      targetRect,
+      skipConfirmOpen,
+      handleBack,
+    ],
   );
 
   return (
@@ -402,9 +635,5 @@ export function TutorialProvider({ children, config }: TutorialProviderProps) {
     </TutorialContext.Provider>
   );
 }
-
-// ------------------------------------------------------------
-// Convenience default export for the first-time tour config
-// ------------------------------------------------------------
 
 export const FIRST_TIME_TUTORIAL = IRTH_FIRST_TIME_TUTORIAL;
