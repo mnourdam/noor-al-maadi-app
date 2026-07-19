@@ -281,31 +281,30 @@ function ColdStartWatcher() {
  * dismisser fires and routing is skipped. Automatically unregisters on
  * unmount.
  *
- * `label` is optional instrumentation metadata (component name / overlay id).
- * It is logged on REGISTER / UNREGISTER to aid diagnosing overlay leaks.
+ * `label` is optional metadata (component name / overlay id) — reserved
+ * for diagnostics tooling.
+ *
+ * `enabled` (default `true`) gates whether the dismisser is actually on
+ * the stack. Callers that mount permanently (e.g. cinematic / tutorial
+ * root providers) should pass `false` when the surface is inactive so
+ * that `overlayStackSize` accurately reflects only real blocking
+ * overlays. Toggling `enabled` transparently pushes / pops the entry;
+ * hook ordering stays stable because the hook itself is always called.
  */
 export function useOverlayDismiss(
   dismiss: OverlayDismisser,
   label?: string,
+  enabled: boolean = true,
 ): void {
   const engine = useEngine();
   useEffect(() => {
-    const tag = label ?? "unknown";
-    const unregister = engine.overlays.push(dismiss);
-    // eslint-disable-next-line no-console
-    console.log(
-      `[nav-overlay] REGISTER id=${tag} stackSize=${engine.overlays.size()}`,
-    );
-    return () => {
-      unregister();
-      // eslint-disable-next-line no-console
-      console.log(
-        `[nav-overlay] UNREGISTER id=${tag} stackSize=${engine.overlays.size()}`,
-      );
-    };
+    if (!enabled) return;
+    void label;
+    return engine.overlays.push(dismiss);
     // dismiss is captured by reference; callers wrap in useCallback if needed
-  }, [engine, dismiss, label]);
+  }, [engine, dismiss, label, enabled]);
 }
+
 
 
 /**
