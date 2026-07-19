@@ -46,6 +46,18 @@ export interface CinematicScene {
   subtitleSegments?: RichTextSegment[];
   /** Small top-left contextual label — historical place / date. */
   contextLabel?: string;
+  /**
+   * CSS `background-position` for the scene image (default `center`).
+   * Useful for portrait shots whose intended composition sits lower/higher.
+   */
+  imagePosition?: string;
+  /**
+   * Android-only override for `imagePosition`. Applied inside the Capacitor
+   * Android WebView only; other platforms keep `imagePosition` (or default).
+   * Use to protect the lower composition of tall portraits which the Android
+   * WebView crops differently than desktop browsers.
+   */
+  imagePositionAndroid?: string;
   /** Total visible duration of the scene in milliseconds. */
   durationMs: number;
   /** Delay before text fades in, relative to scene start. Default 0. */
