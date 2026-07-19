@@ -279,6 +279,21 @@ export function useBack(): () => void {
       return;
     }
 
+    // Back-policy overrides (registry-declared, not scattered if-statements).
+    const policy = decl.backPolicy ?? "normal";
+    if (policy === "non_navigable") {
+      // Off-screen / embed route — Back is intentionally ignored.
+      return;
+    }
+    if (policy === "blocked_while_pending") {
+      // Page owns navigation until its in-flight flow resolves.
+      return;
+    }
+    if (policy === "force_target" && decl.backPolicyTarget) {
+      void router.navigate({ to: decl.backPolicyTarget, replace: true } as never);
+      return;
+    }
+
     // Priority 5 — root triggers exit-confirm (wired in a later step).
     if (decl.isRoot) {
       dispatchExitConfirm();
@@ -287,7 +302,7 @@ export function useBack(): () => void {
 
     const supportsOrigin = decl.supportsOriginOverride ?? decl.kind === "player";
 
-    // Priority 3 — navigation origin
+    // Priority 3 — navigation origin (player routes only, by default)
     if (supportsOrigin) {
       const origin = engine.origins.take(pathname);
       if (origin) {
@@ -298,6 +313,20 @@ export function useBack(): () => void {
           replace: true,
         } as never);
         return;
+      }
+    }
+
+    // Admin subtree: prefer real in-app history when it exists so that
+    // deep drill-downs (list → detail → editor) unwind naturally, and
+    // only fall back to the declared admin parent on cold starts.
+    if (decl.kind === "admin" && !decl.isRoot) {
+      if (!engine.coldStart.isColdStart()) {
+        try {
+          router.history.back();
+          return;
+        } catch {
+          /* fall through to declared parent */
+        }
       }
     }
 
@@ -317,7 +346,7 @@ export function useBack(): () => void {
     }
 
     // Safety net (validator should prevent reaching here)
-    void router.navigate({ to: "/", replace: true });
+    void router.navigate({ to: decl.kind === "admin" ? "/admin" : "/", replace: true });
   }, [engine, router, location]);
 }
 
