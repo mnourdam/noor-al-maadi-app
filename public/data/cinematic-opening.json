@@ -48,8 +48,8 @@
       "kenBurns": true
     },
     {
-      "id": "scene-3-4-cordoba",
-      "image": "/cinematic/scene3-4-cordoba.webp",
+      "id": "scene-3-3-baghdad-cordoba",
+      "image": "/cinematic/scene3-3-baghdad-cordoba.webp",
       "durationMs": 4500,
       "transitionIn": "crossfade",
       "transitionOut": "crossfade",
@@ -59,8 +59,8 @@
       "kenBurns": true
     },
     {
-      "id": "scene-3-5-constantinople",
-      "image": "/cinematic/scene3-5-constantinople.webp",
+      "id": "scene-3-4-constantinople",
+      "image": "/cinematic/scene3-4-constantinople.webp",
       "durationMs": 4500,
       "transitionIn": "crossfade",
       "transitionOut": "crossfade",
