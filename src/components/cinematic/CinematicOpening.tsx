@@ -560,17 +560,18 @@ function FinalLogoReveal({
   const fading = phase === "fading_final_scene";
   const visible = revealing || holding;
 
-  const logoOpacity = fadingOut || phase === "waiting_for_assets" || phase === "completed" || fading
-    ? (fading && !fadingOut ? 0 : (fadingOut || phase === "completed" ? 0 : 0))
-    : (visible ? 1 : 0);
-  // Simplify: opacity 1 only during reveal+hold; 0 otherwise.
+  // Opacity: 1 only during reveal+hold; 0 otherwise (or during parent fade-out).
   const logoOpacityFinal = !fadingOut && (revealing || holding) ? 1 : 0;
   const glowOpacityFinal = !fadingOut && holding ? 1 : 0;
-  const logoScale = phase === "waiting_for_assets" || phase === "mounted_waiting_for_paint" ? 0.94 : (fading || phase === "completed") ? 0.98 : 1;
+  const logoScale =
+    phase === "waiting_for_assets" || phase === "mounted_waiting_for_paint"
+      ? 0.94
+      : (fading || phase === "completed")
+      ? 0.98
+      : 1;
   const glowScale = holding ? 1 : 0.85;
 
   const ease = "cubic-bezier(0.4, 0, 0.2, 1)";
-  void logoOpacity; // silence unused
 
   return (
     <div
