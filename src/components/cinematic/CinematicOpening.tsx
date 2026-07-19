@@ -31,7 +31,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { loadCinematicOpeningConfig } from "@/lib/cinematic-opening/config";
-import { hasCompleted, markCompleted } from "@/lib/cinematic-opening/persistence";
+import { CINEMATIC_LOGO_URL } from "@/lib/cinematic-opening/data";
+import {
+  hasCompleted,
+  markCompleted,
+  isFirstEverLaunch,
+  hasAskedNotificationPermission,
+  markNotificationPermissionAsked,
+} from "@/lib/cinematic-opening/persistence";
 import type { CinematicOpeningConfig } from "@/lib/cinematic-opening/types";
 import { audioManager } from "@/lib/audioManager";
 import { useOverlayDismiss } from "@/lib/navigation";
@@ -47,12 +54,39 @@ import {
 } from "@/components/ui/alert-dialog";
 import { SceneRenderer } from "./SceneRenderer";
 import { AmbientAudio } from "./AmbientAudio";
-import irthLogo from "@/assets/irth-icon.png.asset.json";
 
 
 const FINAL_FADE_MS = 1400;
-const PRELOAD_TIMEOUT_MS = 3500;
+// Assets are locally bundled. Timeout is a safety net for a completely
+// broken decode; local files should be ready well under this budget.
+const PRELOAD_TIMEOUT_MS = 6000;
 export const OPENING_COMPLETED_EVENT = "irth:opening-completed";
+
+function isNativeAndroid(): boolean {
+  try {
+    const cap = (globalThis as unknown as {
+      Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string };
+    }).Capacitor;
+    return !!cap?.isNativePlatform?.() && cap.getPlatform?.() === "android";
+  } catch { return false; }
+}
+
+/** First-launch-only: request notification permission BEFORE the scenes
+ *  start. Any outcome (granted, denied, error) fails forward — the opening
+ *  proceeds regardless. Web is skipped entirely. */
+async function requestNotificationPermissionOnce(): Promise<void> {
+  if (hasAskedNotificationPermission()) return;
+  markNotificationPermissionAsked();
+  if (!isNativeAndroid()) return;
+  try {
+    const mod = await import("@capacitor/local-notifications");
+    const LN = mod.LocalNotifications;
+    const status = await LN.checkPermissions();
+    if (status.display === "granted" || status.display === "denied") return;
+    await LN.requestPermissions();
+  } catch { /* fail forward */ }
+}
+
 
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
