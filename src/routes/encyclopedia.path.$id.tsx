@@ -56,6 +56,9 @@ export const Route = createFileRoute("/encyclopedia/path/$id")({
 function PathPage() {
   const { id } = Route.useParams();
   const config = findExplorationPath(id);
+  const stashOrigin = useStashCurrentAsOrigin();
+
+
 
   const journeyQuery = useQuery({
     queryKey: ["exploration-path", id],
