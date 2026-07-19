@@ -137,7 +137,7 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
             paddingBottom: "max(6rem, calc(env(safe-area-inset-bottom) + 5rem))",
           }}
         >
-          {scene.title && (
+          {hasTitle && (
             <h1
               className="font-display text-3xl font-bold leading-tight text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.7)] sm:text-4xl"
               style={{
@@ -147,10 +147,10 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
                 willChange: "opacity, transform",
               }}
             >
-              {scene.title}
+              {renderSegments(scene.titleSegments, scene.title)}
             </h1>
           )}
-          {scene.subtitle && (
+          {hasSubtitle && (
             <p
               className="mt-3 max-w-md text-sm leading-relaxed text-white/90 drop-shadow-[0_1px_10px_rgba(0,0,0,0.65)] sm:text-base"
               style={{
@@ -160,11 +160,13 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
                 willChange: "opacity, transform",
               }}
             >
-              {scene.subtitle}
+              {renderSegments(scene.subtitleSegments, scene.subtitle)}
             </p>
           )}
         </div>
       )}
+
+
 
       <style>{`
         .cinematic-kenburns {
