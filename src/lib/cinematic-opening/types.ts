@@ -20,6 +20,14 @@ export type ParticlePreset =
   | "fog"
   | "smoke";
 
+/** A rich-text segment. When `highlight` is true, the renderer paints the
+ *  segment in the Irth accent gold (#F4D98B). Segments preserve inline flow
+ *  under RTL — they are just spans inside the same title/subtitle line. */
+export interface RichTextSegment {
+  text: string;
+  highlight?: boolean;
+}
+
 /** A single cinematic scene. Everything is optional except duration. */
 export interface CinematicScene {
   /** Stable identifier for logs / analytics. */
@@ -28,10 +36,16 @@ export interface CinematicScene {
   image?: string;
   /** Optional descriptive alt text for a11y. */
   imageAlt?: string;
-  /** Primary title (Arabic). */
+  /** Primary title (Arabic). Plain-text form. */
   title?: string;
-  /** Optional subtitle / secondary line. */
+  /** Optional subtitle / secondary line. Plain-text form. */
   subtitle?: string;
+  /** Optional rich-text segments — takes precedence over `title` when present. */
+  titleSegments?: RichTextSegment[];
+  /** Optional rich-text segments — takes precedence over `subtitle` when present. */
+  subtitleSegments?: RichTextSegment[];
+  /** Small top-left contextual label — historical place / date. */
+  contextLabel?: string;
   /** Total visible duration of the scene in milliseconds. */
   durationMs: number;
   /** Delay before text fades in, relative to scene start. Default 0. */
@@ -64,6 +78,7 @@ export interface CinematicScene {
   showFinalLogo?: boolean;
 
 }
+
 
 /** Top-level configuration consumed by the engine. */
 export interface CinematicOpeningConfig {
