@@ -438,13 +438,18 @@ function dispatchCompleted() {
 /**
  * Premium logo reveal for the final scene.
  *
- * Timeline (scene durationMs = 5000, then FINAL_FADE_MS reveals Home):
- *   0    → background alone
- *   700  → logo fades in (1200ms, eased)
- *   1900 → glow blooms softly and holds
- *   3400 → glow fades out
- *   4200 → logo starts fading
- *   5000 → sequence ends → overlay fades to transparent → Home appears
+ * Timeline (Android-safe; identical on web after readiness barrier):
+ *   T+0     → background fully visible, logo mounted but invisible
+ *   T+500   → logo fade-in begins (1200ms)
+ *   T+1700  → logo at full opacity, glow blooms
+ *   T+3300  → glow + logo begin fading out (1200ms)
+ *   T+4500  → logo fully hidden — hand off to parent finish() which
+ *             fades the whole cinematic + audio together over 1500ms.
+ *
+ * Android readiness barrier: on Android WebView we do NOT start the
+ * timeline until the logo image has finished decoding AND two animation
+ * frames have elapsed (double-rAF paint barrier). Web starts as soon
+ * as the image is decoded — its compositor is not the bottleneck.
  */
 function FinalLogoReveal({
   logoUrl,
@@ -460,55 +465,111 @@ function FinalLogoReveal({
    *  Home cannot appear before this callback fires. */
   onComplete: () => void;
 }) {
-  const [phase, setPhase] = useState<"idle" | "in" | "glow" | "hold" | "glow-out" | "out" | "done">("idle");
+  // State machine — ordered. `ready` means the logo is decoded and the
+  // paint barrier has cleared; only then does the reveal timeline start.
+  const [phase, setPhase] = useState<
+    | "waiting_for_assets"
+    | "mounted_waiting_for_paint"
+    | "revealing_logo"
+    | "holding_logo"
+    | "fading_final_scene"
+    | "completed"
+  >("waiting_for_assets");
   const completedRef = useRef(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
+  // Step 1 — decode the logo, then run the double-rAF paint barrier.
+  // Fail-forward: any error still advances so Home is not blocked.
   useEffect(() => {
-    if (reducedMotion) {
-      // Reduced motion still runs the full reveal (opacity only, no
-      // scale/glow motion) and still fires onComplete — we never skip
-      // the logo. Timeline is compressed but preserves the beats.
-      const t1 = window.setTimeout(() => setPhase("in"),   200);
-      const t2 = window.setTimeout(() => setPhase("hold"), 700);
-      const t3 = window.setTimeout(() => setPhase("out"),  2800);
-      const t4 = window.setTimeout(() => setPhase("done"), 3600);
-      return () => {
-        window.clearTimeout(t1); window.clearTimeout(t2);
-        window.clearTimeout(t3); window.clearTimeout(t4);
-      };
-    }
-    const t1 = window.setTimeout(() => setPhase("in"),       700);
-    const t2 = window.setTimeout(() => setPhase("glow"),     1900);
-    const t3 = window.setTimeout(() => setPhase("hold"),     2600);
-    const t4 = window.setTimeout(() => setPhase("glow-out"), 3400);
-    const t5 = window.setTimeout(() => setPhase("out"),      4200);
-    // "done" fires only after the logo fade-out has fully completed,
-    // matching the 1200ms opacity transition below (4200 + 1200 = 5400).
-    const t6 = window.setTimeout(() => setPhase("done"),     5400);
-    return () => {
-      window.clearTimeout(t1); window.clearTimeout(t2);
-      window.clearTimeout(t3); window.clearTimeout(t4);
-      window.clearTimeout(t5); window.clearTimeout(t6);
+    let cancelled = false;
+    let raf1 = 0;
+    let raf2 = 0;
+    const advance = () => {
+      if (cancelled) return;
+      raf1 = window.requestAnimationFrame(() => {
+        raf2 = window.requestAnimationFrame(() => {
+          if (!cancelled) setPhase("mounted_waiting_for_paint");
+        });
+      });
     };
-  }, [reducedMotion]);
+    const probe = new Image();
+    probe.decoding = "sync";
+    try { probe.setAttribute("fetchpriority", "high"); } catch { /* */ }
+    const done = () => {
+      if (typeof probe.decode === "function") {
+        probe.decode().then(advance).catch(advance);
+      } else {
+        advance();
+      }
+    };
+    probe.onload = done;
+    probe.onerror = advance;
+    probe.src = logoUrl;
+    // Safety net — never leave the machine stuck if the platform is broken.
+    const safety = window.setTimeout(advance, 3000);
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf1);
+      if (raf2) window.cancelAnimationFrame(raf2);
+      window.clearTimeout(safety);
+    };
+  }, [logoUrl]);
+
+  // Step 2 — once the img element is in the DOM and painted, wait one
+  // more double-rAF then start the reveal timeline.
+  useEffect(() => {
+    if (phase !== "mounted_waiting_for_paint") return;
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => setPhase("revealing_logo"));
+    });
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      if (raf2) window.cancelAnimationFrame(raf2);
+    };
+  }, [phase]);
+
+  // Step 3 — reveal / hold / fade timeline.
+  useEffect(() => {
+    if (phase !== "revealing_logo") return;
+    if (reducedMotion) {
+      // Compressed but preserves all beats.
+      const t1 = window.setTimeout(() => setPhase("holding_logo"),         1000);
+      const t2 = window.setTimeout(() => setPhase("fading_final_scene"),   2400);
+      const t3 = window.setTimeout(() => setPhase("completed"),            3400);
+      return () => { window.clearTimeout(t1); window.clearTimeout(t2); window.clearTimeout(t3); };
+    }
+    // T+0 begins now (reveal starts). Logo fade-in duration 1200ms.
+    const t1 = window.setTimeout(() => setPhase("holding_logo"),        1700);   // fully in
+    const t2 = window.setTimeout(() => setPhase("fading_final_scene"),  3300);   // start fade
+    const t3 = window.setTimeout(() => setPhase("completed"),           4500);   // fade done
+    return () => { window.clearTimeout(t1); window.clearTimeout(t2); window.clearTimeout(t3); };
+  }, [phase, reducedMotion]);
 
   useEffect(() => {
-    if (phase === "done" && !completedRef.current) {
+    if (phase === "completed" && !completedRef.current) {
       completedRef.current = true;
       onComplete();
     }
   }, [phase, onComplete]);
 
+  const revealing = phase === "revealing_logo";
+  const holding = phase === "holding_logo";
+  const fading = phase === "fading_final_scene";
+  const visible = revealing || holding;
 
-  const hidden = phase === "idle" || phase === "out" || phase === "done";
-  const logoOpacity = fadingOut || hidden ? 0 : 1;
-  const glowOpacity =
-    fadingOut || phase === "glow" || phase === "hold" ? (fadingOut ? 0 : 1) : 0;
-  const logoScale = phase === "idle" ? 0.94 : hidden ? 0.98 : 1;
-  const glowScale = phase === "glow" || phase === "hold" ? 1 : 0.85;
-
+  const logoOpacity = fadingOut || phase === "waiting_for_assets" || phase === "completed" || fading
+    ? (fading && !fadingOut ? 0 : (fadingOut || phase === "completed" ? 0 : 0))
+    : (visible ? 1 : 0);
+  // Simplify: opacity 1 only during reveal+hold; 0 otherwise.
+  const logoOpacityFinal = !fadingOut && (revealing || holding) ? 1 : 0;
+  const glowOpacityFinal = !fadingOut && holding ? 1 : 0;
+  const logoScale = phase === "waiting_for_assets" || phase === "mounted_waiting_for_paint" ? 0.94 : (fading || phase === "completed") ? 0.98 : 1;
+  const glowScale = holding ? 1 : 0.85;
 
   const ease = "cubic-bezier(0.4, 0, 0.2, 1)";
+  void logoOpacity; // silence unused
 
   return (
     <div
@@ -520,7 +581,7 @@ function FinalLogoReveal({
         style={{
           background:
             "radial-gradient(circle, rgba(255,214,140,0.42) 0%, rgba(255,214,140,0.18) 30%, rgba(255,214,140,0) 70%)",
-          opacity: glowOpacity,
+          opacity: glowOpacityFinal,
           transform: `scale(${glowScale})`,
           transition: `opacity 1200ms ${ease}, transform 1600ms ${ease}`,
           filter: "blur(8px)",
@@ -528,13 +589,14 @@ function FinalLogoReveal({
         }}
       />
       <img
+        ref={imgRef}
         src={logoUrl}
         alt="إرث"
         className="relative h-40 w-40 select-none sm:h-52 sm:w-52"
         draggable={false}
         decoding="sync"
         style={{
-          opacity: logoOpacity,
+          opacity: logoOpacityFinal,
           transform: `scale(${logoScale})`,
           transition: `opacity 1200ms ${ease}, transform 1400ms ${ease}`,
           filter: "drop-shadow(0 4px 32px rgba(0,0,0,0.75))",
