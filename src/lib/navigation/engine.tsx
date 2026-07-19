@@ -57,16 +57,31 @@ interface OverlayStack {
   push(fn: OverlayDismisser): () => void;
   popAndRun(): boolean;
   size(): number;
+  subscribe(l: () => void): () => void;
 }
 
 function createOverlayStack(): OverlayStack {
   const stack: OverlayDismisser[] = [];
+  const listeners = new Set<() => void>();
+  const emit = () => {
+    for (const l of Array.from(listeners)) {
+      try {
+        l();
+      } catch {
+        /* ignore */
+      }
+    }
+  };
   return {
     push(fn) {
       stack.push(fn);
+      emit();
       return () => {
         const idx = stack.lastIndexOf(fn);
-        if (idx >= 0) stack.splice(idx, 1);
+        if (idx >= 0) {
+          stack.splice(idx, 1);
+          emit();
+        }
       };
     },
     popAndRun() {
@@ -78,10 +93,17 @@ function createOverlayStack(): OverlayStack {
         // eslint-disable-next-line no-console
         console.error("[navigation] overlay dismisser threw:", err);
       }
+      emit();
       return true;
     },
     size() {
       return stack.length;
+    },
+    subscribe(l) {
+      listeners.add(l);
+      return () => {
+        listeners.delete(l);
+      };
     },
   };
 }
