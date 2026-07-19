@@ -1,5 +1,5 @@
 // ============================================================
-// Guided Tutorial — Engine (Phase 2B)
+// Guided Tutorial — Engine (Phase 2B.5)
 // ------------------------------------------------------------
 // Provides:
 //   - state machine + snapshot pub/sub
@@ -10,8 +10,8 @@
 //   - pause/resume driven by the overlay stack size
 //   - Back integration via the unified Navigation Engine's LIFO
 //   - Skip confirmation flow
-//   - extension hooks: onTutorialStarted, onStepChanged,
-//     onTutorialSkipped, onTutorialCompleted  (no default impl)
+//   - extension hooks (analyticsId propagated on every payload)
+//   - Phase 2B.5: enabled-only navigation + jumpToStep + debug binding
 //
 // It does NOT install its own Android hardware-back listener.
 // ============================================================
@@ -35,6 +35,7 @@ import {
   IRTH_FIRST_TIME_TUTORIAL,
   TUTORIAL_TARGET_RESOLUTION_WINDOW_MS,
 } from "./data";
+import { registerTutorialDebugBinding } from "./debug";
 import { FIRST_TIME_TUTORIAL_ID, getTutorialConfig } from "./registry";
 import * as persistence from "./persistence";
 import {
@@ -50,6 +51,81 @@ import type {
   TutorialHooks,
   TutorialStep,
 } from "./types";
+import { validateTutorialConfigInDev } from "./validate";
+
+// ------------------------------------------------------------
+// Enabled-step algorithm
+// ------------------------------------------------------------
+//
+// The engine keeps `stepIndex` as the RAW index into `config.steps`
+// (this preserves stable step identity for analytics/persistence).
+// Navigation, however, operates over the ENABLED subset:
+//
+//   • firstEnabledIndex(config)              → start point
+//   • lastEnabledIndex(config)               → natural finish gate
+//   • nextEnabledIndex(config, rawIndex)     → forward step or null
+//   • previousEnabledIndex(config, rawIndex) → backward step or null
+//   • enabledOrdinal(config, rawIndex)       → 1-based position among
+//                                              enabled steps (progress
+//                                              counter)
+//
+// Disabled steps are invisible: they cannot be shown, they cannot be
+// stopped on, and they do not count toward the progress indicator.
+
+function isStepEnabled(s: TutorialStep): boolean {
+  return s.enabled === true;
+}
+
+function firstEnabledIndex(config: TutorialConfig): number | null {
+  for (let i = 0; i < config.steps.length; i++) {
+    if (isStepEnabled(config.steps[i]!)) return i;
+  }
+  return null;
+}
+
+function lastEnabledIndex(config: TutorialConfig): number | null {
+  for (let i = config.steps.length - 1; i >= 0; i--) {
+    if (isStepEnabled(config.steps[i]!)) return i;
+  }
+  return null;
+}
+
+function nextEnabledIndex(
+  config: TutorialConfig,
+  from: number,
+): number | null {
+  for (let i = from + 1; i < config.steps.length; i++) {
+    if (isStepEnabled(config.steps[i]!)) return i;
+  }
+  return null;
+}
+
+function previousEnabledIndex(
+  config: TutorialConfig,
+  from: number,
+): number | null {
+  for (let i = from - 1; i >= 0; i--) {
+    if (isStepEnabled(config.steps[i]!)) return i;
+  }
+  return null;
+}
+
+function enabledCount(config: TutorialConfig): number {
+  let n = 0;
+  for (const s of config.steps) if (isStepEnabled(s)) n++;
+  return n;
+}
+
+function enabledOrdinal(
+  config: TutorialConfig,
+  rawIndex: number,
+): number {
+  let n = 0;
+  for (let i = 0; i <= rawIndex && i < config.steps.length; i++) {
+    if (isStepEnabled(config.steps[i]!)) n++;
+  }
+  return n;
+}
 
 // ------------------------------------------------------------
 // Internal store
@@ -62,9 +138,7 @@ interface InternalStore {
   paused: boolean;
   pauseReason: string | null;
   preemptedFromShowing: boolean;
-  /** Confirmation dialog for skip is open. */
   skipConfirmOpen: boolean;
-  /** Measured target rect, when in `showing_step`. */
   targetRect: DOMRectReadOnly | null;
   listeners: Set<() => void>;
   hooks: TutorialHooks;
@@ -113,17 +187,37 @@ function fireHook<K extends keyof TutorialHooks>(
   }
 }
 
+function fireStepChanged(
+  store: InternalStore,
+  rawIndex: number,
+  direction: "forward" | "backward" | "initial",
+) {
+  const step = store.config.steps[rawIndex]!;
+  fireHook(store.hooks, "onStepChanged", {
+    id: store.config.id,
+    version: store.config.version,
+    stepIndex: rawIndex,
+    stepId: step.id,
+    enabledOrdinal: enabledOrdinal(store.config, rawIndex),
+    enabledTotal: enabledCount(store.config),
+    analyticsId: step.analyticsId,
+    direction,
+  });
+}
+
 // ------------------------------------------------------------
 // Engine API factory
 // ------------------------------------------------------------
 
-function createEngine(store: InternalStore): TutorialEngineApi & {
+interface InternalEngine extends TutorialEngineApi {
   advanceToLocating(): void;
   setTargetRect(rect: DOMRectReadOnly | null): void;
   openSkipConfirm(): void;
   closeSkipConfirm(): void;
   isSkipConfirmOpen(): boolean;
-} {
+}
+
+function createEngine(store: InternalStore): InternalEngine {
   return {
     getSnapshot: () => snapshotOf(store),
     subscribe(listener) {
@@ -138,19 +232,21 @@ function createEngine(store: InternalStore): TutorialEngineApi & {
         transition(store, "completed");
         return;
       }
+      const startIndex = firstEnabledIndex(store.config);
+      if (startIndex == null) {
+        // Validator should have caught this — belt & braces.
+        transition(store, "completed");
+        return;
+      }
       transition(store, "armed");
-      store.stepIndex = 0;
+      store.stepIndex = startIndex;
+      const startStep = store.config.steps[startIndex]!;
       fireHook(store.hooks, "onTutorialStarted", {
         id: store.config.id,
         version: store.config.version,
+        startAnalyticsId: startStep.analyticsId,
       });
-      fireHook(store.hooks, "onStepChanged", {
-        id: store.config.id,
-        version: store.config.version,
-        stepIndex: 0,
-        stepId: store.config.steps[0]!.id,
-        direction: "initial",
-      });
+      fireStepChanged(store, startIndex, "initial");
       transition(store, "locating_target");
     },
     advanceToLocating() {
@@ -175,57 +271,47 @@ function createEngine(store: InternalStore): TutorialEngineApi & {
     },
     next() {
       if (store.stepIndex == null) return;
-      const last = store.config.steps.length - 1;
-      if (store.stepIndex >= last) {
-        // Natural finish.
+      const nextIdx = nextEnabledIndex(store.config, store.stepIndex);
+      if (nextIdx == null) {
+        // No more enabled steps → natural finish.
+        const finalStep = store.config.steps[store.stepIndex]!;
         persistence.markCompleted(store.config.version);
         fireHook(store.hooks, "onTutorialCompleted", {
           id: store.config.id,
           version: store.config.version,
+          finalAnalyticsId: finalStep.analyticsId,
         });
         store.stepIndex = null;
         store.targetRect = null;
         transition(store, "completed");
         return;
       }
-      const nextIndex = store.stepIndex + 1;
-      store.stepIndex = nextIndex;
+      store.stepIndex = nextIdx;
       store.targetRect = null;
-      fireHook(store.hooks, "onStepChanged", {
-        id: store.config.id,
-        version: store.config.version,
-        stepIndex: nextIndex,
-        stepId: store.config.steps[nextIndex]!.id,
-        direction: "forward",
-      });
+      fireStepChanged(store, nextIdx, "forward");
       transition(store, "transitioning");
-      // Micro-task hop lets consumers render an interstitial before
-      // we re-enter target-location.
       queueMicrotask(() => transition(store, "locating_target"));
     },
     previous() {
       if (store.stepIndex == null) return;
-      if (store.stepIndex <= 0) return;
-      const prevIndex = store.stepIndex - 1;
-      store.stepIndex = prevIndex;
+      const prevIdx = previousEnabledIndex(store.config, store.stepIndex);
+      if (prevIdx == null) return;
+      store.stepIndex = prevIdx;
       store.targetRect = null;
-      fireHook(store.hooks, "onStepChanged", {
-        id: store.config.id,
-        version: store.config.version,
-        stepIndex: prevIndex,
-        stepId: store.config.steps[prevIndex]!.id,
-        direction: "backward",
-      });
+      fireStepChanged(store, prevIdx, "backward");
       transition(store, "transitioning");
       queueMicrotask(() => transition(store, "locating_target"));
     },
     skip() {
       const atStepIndex = store.stepIndex;
+      const atStep =
+        atStepIndex != null ? store.config.steps[atStepIndex] ?? null : null;
       persistence.markCompleted(store.config.version);
       fireHook(store.hooks, "onTutorialSkipped", {
         id: store.config.id,
         version: store.config.version,
         atStepIndex,
+        atAnalyticsId: atStep?.analyticsId ?? null,
       });
       store.stepIndex = null;
       store.paused = false;
@@ -235,10 +321,17 @@ function createEngine(store: InternalStore): TutorialEngineApi & {
       transition(store, "completed");
     },
     finish() {
+      // Finish is only correct if we're on the last enabled step, but
+      // we accept the caller's decision (used by natural completion
+      // and by tutorialDebug.finish()).
+      const lastIdx = lastEnabledIndex(store.config);
+      const finalStep =
+        lastIdx != null ? store.config.steps[lastIdx] ?? null : null;
       persistence.markCompleted(store.config.version);
       fireHook(store.hooks, "onTutorialCompleted", {
         id: store.config.id,
         version: store.config.version,
+        finalAnalyticsId: finalStep?.analyticsId ?? "",
       });
       store.stepIndex = null;
       store.targetRect = null;
@@ -267,6 +360,32 @@ function createEngine(store: InternalStore): TutorialEngineApi & {
       store.preemptedFromShowing = false;
       transition(store, "locating_target");
     },
+    jumpToStep(rawIndex) {
+      if (
+        !Number.isInteger(rawIndex) ||
+        rawIndex < 0 ||
+        rawIndex >= store.config.steps.length
+      ) {
+        throw new Error(
+          `[tutorial] jumpToStep: rawIndex ${rawIndex} is out of range.`,
+        );
+      }
+      const step = store.config.steps[rawIndex]!;
+      if (!isStepEnabled(step)) {
+        throw new Error(
+          `[tutorial] jumpToStep: step "${step.id}" (index ${rawIndex}) is disabled.`,
+        );
+      }
+      // Reset transient runtime state; keep persistence untouched so
+      // debug jumping never marks the tutorial completed.
+      store.stepIndex = rawIndex;
+      store.targetRect = null;
+      store.skipConfirmOpen = false;
+      store.paused = false;
+      store.pauseReason = null;
+      fireStepChanged(store, rawIndex, "initial");
+      transition(store, "locating_target");
+    },
   };
 }
 
@@ -275,13 +394,18 @@ function createEngine(store: InternalStore): TutorialEngineApi & {
 // ------------------------------------------------------------
 
 interface TutorialContextValue {
-  api: ReturnType<typeof createEngine>;
+  api: InternalEngine;
   config: TutorialConfig;
   snapshot: TutorialEngineSnapshot;
   currentStep: TutorialStep | null;
   targetRect: DOMRectReadOnly | null;
   skipConfirmOpen: boolean;
   handleBack: () => void;
+  /** 1-based ordinal of the current step among enabled steps.
+   *  Null when the tutorial is idle/completed. */
+  enabledOrdinal: number | null;
+  /** Total number of enabled steps (progress counter denominator). */
+  enabledTotal: number;
 }
 
 const TutorialContext = createContext<TutorialContextValue | null>(null);
@@ -313,6 +437,13 @@ export function TutorialProvider({
 }: TutorialProviderProps) {
   const effectiveConfig = config ?? getTutorialConfig(FIRST_TIME_TUTORIAL_ID);
 
+  // Dev-only validation on first mount. Throws loudly on misconfig.
+  const validatedRef = useRef(false);
+  if (!validatedRef.current) {
+    validateTutorialConfigInDev(effectiveConfig);
+    validatedRef.current = true;
+  }
+
   const storeRef = useRef<InternalStore | null>(null);
   if (storeRef.current == null) {
     storeRef.current = {
@@ -332,7 +463,7 @@ export function TutorialProvider({
   }
   const store = storeRef.current;
 
-  const apiRef = useRef<ReturnType<typeof createEngine> | null>(null);
+  const apiRef = useRef<InternalEngine | null>(null);
   if (apiRef.current == null) {
     apiRef.current = createEngine(store);
   }
@@ -420,6 +551,33 @@ export function TutorialProvider({
   );
 
   // ------------------------------------------------------------
+  // Debug binding — registers this engine with the module-level
+  // debug controller. Diagnostics read from live state (no
+  // duplicate bookkeeping).
+  // ------------------------------------------------------------
+  const envRef = useRef({
+    pathname,
+    overlayStackSize,
+    homeStableFrames,
+    documentVisible,
+  });
+  envRef.current = {
+    pathname,
+    overlayStackSize,
+    homeStableFrames,
+    documentVisible,
+  };
+  useEffect(() => {
+    return registerTutorialDebugBinding({
+      api,
+      config: effectiveConfig,
+      getState: () => store.state,
+      getTargetRect: () => store.targetRect,
+      getEnvInputs: () => envRef.current,
+    });
+  }, [api, effectiveConfig, store]);
+
+  // ------------------------------------------------------------
   // Overlay-driven pause/resume (auth dialogs, etc.)
   // ------------------------------------------------------------
   useEffect(() => {
@@ -429,12 +587,10 @@ export function TutorialProvider({
       s.state !== "completed" &&
       s.state !== "paused_by_overlay";
     const paused = s.state === "paused_by_overlay";
-    // Overlays include our own skip-confirm dialog; ignore self.
     const externalCount = overlayStackSize - (skipConfirmOpen ? 1 : 0);
     if (running && externalCount > 0) {
       api.pause("overlay-open");
     } else if (paused && externalCount <= 0) {
-      // Resume after two stable frames.
       let cancelled = false;
       const raf1 = requestAnimationFrame(() => {
         if (cancelled) return;
@@ -480,7 +636,9 @@ export function TutorialProvider({
   // Target locator + measurement
   // ------------------------------------------------------------
   const currentStep: TutorialStep | null =
-    snap.stepIndex != null ? effectiveConfig.steps[snap.stepIndex] ?? null : null;
+    snap.stepIndex != null
+      ? effectiveConfig.steps[snap.stepIndex] ?? null
+      : null;
 
   useEffect(() => {
     if (!currentStep) return;
@@ -511,7 +669,10 @@ export function TutorialProvider({
         observer.observe(el);
       }
       scrollListener = () => measure();
-      window.addEventListener("scroll", scrollListener, { passive: true, capture: true });
+      window.addEventListener("scroll", scrollListener, {
+        passive: true,
+        capture: true,
+      });
       window.addEventListener("resize", scrollListener, { passive: true });
       cleanupScroll = () => {
         if (scrollListener) {
@@ -528,8 +689,10 @@ export function TutorialProvider({
       if (cancelled) return;
       const el = document.querySelector(selector) as HTMLElement | null;
       if (el) {
-        if (currentStep.scroll === "into-view" ||
-            currentStep.scroll === "into-view-smooth") {
+        if (
+          currentStep.scroll === "into-view" ||
+          currentStep.scroll === "into-view-smooth"
+        ) {
           try {
             el.scrollIntoView({
               behavior:
@@ -541,7 +704,6 @@ export function TutorialProvider({
             /* ignore */
           }
           transition(store, "scrolling_to_target");
-          // Two rAF barrier so the browser commits the scroll layout.
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               if (cancelled) return;
@@ -557,13 +719,12 @@ export function TutorialProvider({
       }
       const elapsed = performance.now() - start;
       if (elapsed >= TUTORIAL_TARGET_RESOLUTION_WINDOW_MS) {
-        // Window elapsed.
-        if (currentStep.skipIfTargetUnavailable ||
-            currentStep.onMissingTarget === "skip") {
-          // Silently advance.
+        if (
+          currentStep.skipIfTargetUnavailable ||
+          currentStep.onMissingTarget === "skip"
+        ) {
           api.next();
         } else {
-          // Wait indefinitely — keep polling at reduced frequency.
           window.setTimeout(tryResolve, 200);
         }
         return;
@@ -595,18 +756,31 @@ export function TutorialProvider({
       api.closeSkipConfirm();
       return;
     }
-    if (s.stepIndex === 0) {
+    // First-enabled-step check (not raw index 0) — if there's no
+    // previous enabled step, this is the "first" step from the
+    // player's perspective and Back should trigger skip-confirm.
+    const prev = previousEnabledIndex(effectiveConfig, s.stepIndex);
+    if (prev == null) {
       api.openSkipConfirm();
       return;
     }
     api.previous();
-  }, [api]);
+  }, [api, effectiveConfig]);
 
   const dismisser = useCallback(() => {
     if (!running && !skipConfirmOpen) return;
     handleBack();
   }, [running, skipConfirmOpen, handleBack]);
   useOverlayDismiss(dismisser);
+
+  const enabledTotal = useMemo(
+    () => enabledCount(effectiveConfig),
+    [effectiveConfig],
+  );
+  const ordinal =
+    snap.stepIndex != null
+      ? enabledOrdinal(effectiveConfig, snap.stepIndex)
+      : null;
 
   const value = useMemo<TutorialContextValue>(
     () => ({
@@ -617,6 +791,8 @@ export function TutorialProvider({
       targetRect,
       skipConfirmOpen,
       handleBack,
+      enabledOrdinal: ordinal,
+      enabledTotal,
     }),
     [
       api,
@@ -626,6 +802,8 @@ export function TutorialProvider({
       targetRect,
       skipConfirmOpen,
       handleBack,
+      ordinal,
+      enabledTotal,
     ],
   );
 
