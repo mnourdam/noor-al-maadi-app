@@ -15,9 +15,11 @@ import { GraduationCap, Play, RefreshCw } from "lucide-react";
 import {
   IRTH_FIRST_TIME_TUTORIAL,
   currentEligibilityOverride,
+  readLastStartDiagnostic,
   readTutorialCompletionRecord,
   resetTutorialCompletion,
   tutorialDebug,
+  type LastStartDiagnostic,
   type TutorialDiagnostics,
 } from "@/lib/tutorial";
 
