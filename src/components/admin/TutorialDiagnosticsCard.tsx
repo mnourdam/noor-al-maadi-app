@@ -57,6 +57,9 @@ export function TutorialDiagnosticsCard() {
     return o == null ? null : o;
   });
   const [completion, setCompletion] = useState<string>(() => fmtCompletion());
+  const [lastStart, setLastStart] = useState<LastStartDiagnostic | null>(() =>
+    readLastStartDiagnostic(),
+  );
   const timerRef = useRef<number | null>(null);
 
   const refresh = useCallback(() => {
