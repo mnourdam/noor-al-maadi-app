@@ -385,8 +385,28 @@ export interface TutorialTransitionEntry {
   pathname: string;
 }
 
-let transitionLog: TutorialTransitionEntry[] = [];
-let transitionSeq = 0;
+// Hydrate the ring buffer from localStorage IMMEDIATELY at module load so
+// that a new app session (module reload) APPENDS to the previous session's
+// log instead of overwriting it on the first push(). Without this, cold
+// launching the APK to check diagnostics destroys the very evidence we
+// are trying to capture.
+function hydrateFromStorage(): TutorialTransitionEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(TRANSITION_LOG_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as TutorialTransitionEntry[]) : [];
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[tutorial.log] hydrate failed:", err);
+    return [];
+  }
+}
+
+let transitionLog: TutorialTransitionEntry[] = hydrateFromStorage();
+let transitionSeq =
+  transitionLog.length > 0 ? transitionLog[transitionLog.length - 1]!.seq : 0;
 let transitionLogT0 = 0;
 
 const perStepFlags = {
@@ -403,18 +423,26 @@ function persistTransitionLog(): void {
       TRANSITION_LOG_KEY,
       JSON.stringify(transitionLog),
     );
-  } catch {
-    /* ignore */
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[tutorial.log] persist failed:", err);
   }
 }
 
 function baseEntry(): Omit<TutorialTransitionEntry, "seq" | "t" | "kind"> {
-  const snap = binding?.api.getSnapshot();
-  const step: TutorialStep | null =
-    snap && snap.stepIndex != null
-      ? binding?.config.steps[snap.stepIndex] ?? null
-      : null;
-  const rect = binding?.getTargetRect() ?? null;
+  let snap: ReturnType<TutorialEngineApi["getSnapshot"]> | undefined;
+  let step: TutorialStep | null = null;
+  let rect: DOMRectReadOnly | null = null;
+  try {
+    snap = binding?.api.getSnapshot();
+    if (snap && snap.stepIndex != null) {
+      step = binding?.config.steps[snap.stepIndex] ?? null;
+    }
+    rect = binding?.getTargetRect() ?? null;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[tutorial.log] baseEntry snapshot failed:", err);
+  }
   return {
     currentStepIndex: snap?.stepIndex ?? null,
     currentStepId: step?.id ?? null,
@@ -439,13 +467,18 @@ function baseEntry(): Omit<TutorialTransitionEntry, "seq" | "t" | "kind"> {
 }
 
 function push(entry: TutorialTransitionEntry): void {
-  transitionLog.push(entry);
-  if (transitionLog.length > TRANSITION_LOG_MAX) {
-    transitionLog = transitionLog.slice(-TRANSITION_LOG_MAX);
+  try {
+    transitionLog.push(entry);
+    if (transitionLog.length > TRANSITION_LOG_MAX) {
+      transitionLog = transitionLog.slice(-TRANSITION_LOG_MAX);
+    }
+    persistTransitionLog();
+    // eslint-disable-next-line no-console
+    console.log("[tutorial.log]", entry);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[tutorial.log] push failed:", err);
   }
-  persistTransitionLog();
-  // eslint-disable-next-line no-console
-  console.log("[tutorial.log]", entry);
 }
 
 export function logTutorialTransition(
@@ -500,15 +533,33 @@ export function resetPerStepInstrumentation(stepId: string | null): void {
   perStepFlags.watchdogFired = false;
 }
 
+/** Prefer the persisted localStorage snapshot as the source of truth so the
+ *  reader never appears empty just because the in-memory ring buffer of the
+ *  current module instance hasn't been touched yet. */
 export function readTutorialTransitionLog(): TutorialTransitionEntry[] {
-  if (transitionLog.length > 0) return transitionLog;
-  if (typeof window === "undefined") return [];
+  if (typeof window !== "undefined") {
+    try {
+      const raw = window.localStorage.getItem(TRANSITION_LOG_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed as TutorialTransitionEntry[];
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[tutorial.log] read failed:", err);
+    }
+  }
+  return transitionLog;
+}
+
+/** Raw JSON string as stored in localStorage, for diagnostics that must
+ *  prove the storage key is (or is not) populated on the physical device. */
+export function readRawTutorialTransitionLog(): string | null {
+  if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(TRANSITION_LOG_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as TutorialTransitionEntry[];
+    return window.localStorage.getItem(TRANSITION_LOG_KEY);
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -524,6 +575,40 @@ export function clearTutorialTransitionLog(): void {
     }
   }
 }
+
+// ------------------------------------------------------------
+// Module-load canary
+// ------------------------------------------------------------
+// Emitted once at debug.ts import time. If diagnostics shows this entry,
+// the module loaded on the device; if the log is truly empty, the running
+// build predates this instrumentation.
+if (typeof window !== "undefined") {
+  try {
+    const now = Date.now();
+    if (transitionLogT0 === 0) transitionLogT0 = now;
+    push({
+      seq: ++transitionSeq,
+      t: now - transitionLogT0,
+      kind: "event",
+      event: "debug-module-loaded",
+      currentStepIndex: null,
+      currentStepId: null,
+      targetId: null,
+      targetResolved: false,
+      targetRect: null,
+      scrollSettled: null,
+      skipIfTargetUnavailable: null,
+      watchdogStarted: false,
+      watchdogFired: false,
+      apiNextCalled: false,
+      reason: `ua=${(typeof navigator !== "undefined" && navigator.userAgent) || ""}`,
+      pathname: window.location.pathname,
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
 
 // ------------------------------------------------------------
 // Development-only window attachment
