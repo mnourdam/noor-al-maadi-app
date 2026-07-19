@@ -175,6 +175,13 @@ export interface TutorialDiagnostics {
   completed: boolean;
   overlayPaused: boolean;
   waitingReason: string | null;
+  /** Environmental inputs consumed by eligibility (Phase 2C+ diagnostics). */
+  envInputs: {
+    pathname: string;
+    overlayStackSize: number;
+    homeStableFrames: number;
+    documentVisible: boolean;
+  };
 }
 
 export interface TutorialEngineApi {
