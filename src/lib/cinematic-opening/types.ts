@@ -76,6 +76,18 @@ export interface CinematicOpeningConfig {
   /** Ordered list of scenes to play. */
   scenes: CinematicScene[];
   /**
+   * Continuous cinematic soundtrack played across the whole opening.
+   * The engine starts it on the first scene and never restarts it on
+   * scene changes; per-scene `soundtrackLevel` values drive the volume
+   * envelope. Omit to run without a soundtrack.
+   */
+  soundtrack?: {
+    /** Audio URL (looping). */
+    url: string;
+    /** Fallback level 0..1 if a scene omits `soundtrackLevel`. Default 0.4. */
+    defaultLevel?: number;
+  };
+  /**
    * When true, the engine renders even for signed-in returning users.
    * Default false — opening plays once per (user × version).
    */
