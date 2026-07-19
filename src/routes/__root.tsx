@@ -29,6 +29,11 @@ import { GoogleAuthResultDialog } from "../components/GoogleAuthResultDialog";
 import { IrthAuthDialog } from "../components/IrthAuthDialog";
 import { RecoveryModeGuard } from "../components/RecoveryModeGuard";
 import { NavigationProvider } from "../lib/navigation";
+import {
+  TutorialProvider,
+  TutorialFlagPublishers,
+  TutorialOverlay,
+} from "../lib/tutorial";
 import { useIsOffline } from "../components/fallbacks";
 import { WifiOff } from "lucide-react";
 
