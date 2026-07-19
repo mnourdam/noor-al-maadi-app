@@ -26,6 +26,7 @@ import { DailyChallengeReminderScheduler } from "../components/DailyChallengeRem
 import { GoogleAuthResultDialog } from "../components/GoogleAuthResultDialog";
 import { IrthAuthDialog } from "../components/IrthAuthDialog";
 import { RecoveryModeGuard } from "../components/RecoveryModeGuard";
+import { NavigationProvider } from "../lib/navigation";
 import { useIsOffline } from "../components/fallbacks";
 import { WifiOff } from "lucide-react";
 
@@ -365,21 +366,23 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ProfileProvider>
         <AccountProvider>
-          <Outlet />
-          <OnboardingTour />
-          <FirstLaunchGate />
-          <AchievementWatcher />
-          <InvestigationLegacyBackfill />
-          <LevelUpWatcher />
-          <Toaster position="top-center" richColors closeButton />
-          <SplashSequence />
-          <AndroidBackHandler />
-          <InAppBanner />
-          <DailyChallengeReminderScheduler />
-          <GoogleAuthResultDialog />
-          <IrthAuthDialog />
-          <RecoveryModeGuard />
-          <GlobalOfflinePill />
+          <NavigationProvider>
+            <Outlet />
+            <OnboardingTour />
+            <FirstLaunchGate />
+            <AchievementWatcher />
+            <InvestigationLegacyBackfill />
+            <LevelUpWatcher />
+            <Toaster position="top-center" richColors closeButton />
+            <SplashSequence />
+            <AndroidBackHandler />
+            <InAppBanner />
+            <DailyChallengeReminderScheduler />
+            <GoogleAuthResultDialog />
+            <IrthAuthDialog />
+            <RecoveryModeGuard />
+            <GlobalOfflinePill />
+          </NavigationProvider>
         </AccountProvider>
       </ProfileProvider>
     </QueryClientProvider>
