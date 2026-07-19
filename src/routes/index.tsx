@@ -6,6 +6,7 @@ import {
   Swords, Sparkles, Bell, Gem, Target, Flame, Sunrise, Zap, Award,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { TutorialHomeDiagBadge } from "@/components/admin/TutorialHomeDiagBadge";
 import { CachedImage } from "@/components/CachedImage";
 import {
   levelFor, currentSeason,
@@ -567,6 +568,8 @@ function HomeFull() {
 
   return (
     <AppShell>
+      <TutorialHomeDiagBadge />
+
 
 
 

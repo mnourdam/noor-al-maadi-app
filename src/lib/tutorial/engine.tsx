@@ -35,7 +35,7 @@ import {
   IRTH_FIRST_TIME_TUTORIAL,
   TUTORIAL_TARGET_RESOLUTION_WINDOW_MS,
 } from "./data";
-import { registerTutorialDebugBinding } from "./debug";
+import { registerTutorialDebugBinding, writeLastStartDiagnostic, __tutorialAutoStartTelemetry, type AutoStartResult } from "./debug";
 import { FIRST_TIME_TUTORIAL_ID, getTutorialConfig } from "./registry";
 import * as persistence from "./persistence";
 import {
@@ -614,7 +614,8 @@ export function TutorialProvider({
   // Auto-start (eligibility)
   // ------------------------------------------------------------
   useEffect(() => {
-    if (persistence.hasCompleted(effectiveConfig.version)) return;
+    __tutorialAutoStartTelemetry.autoStartEffectRan += 1;
+    const completed = persistence.hasCompleted(effectiveConfig.version);
     const eligible = computeEligibility({
       pathname,
       overlayStackSize,
@@ -622,8 +623,36 @@ export function TutorialProvider({
       documentVisible,
     });
     const s = api.getSnapshot();
-    if (eligible && s.state === "idle") {
+    let result: AutoStartResult;
+    if (completed) {
+      result = "skipped-completed";
+    } else if (!eligible) {
+      result = "skipped-not-eligible";
+    } else if (s.state !== "idle") {
+      result = "skipped-not-idle";
+    } else {
+      __tutorialAutoStartTelemetry.requestStartCalled += 1;
       api.requestStart();
+      const after = api.getSnapshot();
+      result = after.state === "idle" ? "invoked-still-idle" : "invoked";
+    }
+    __tutorialAutoStartTelemetry.lastRequestStartResult = result;
+    // Persist a diagnostic snapshot so it can be inspected from the
+    // Admin Tutorial Diagnostics card after the Android APK flow.
+    try {
+      writeLastStartDiagnostic({
+        reason: "auto-start-effect",
+        pathname,
+        overlayStackSize,
+        homeStableFrames,
+        documentVisible,
+        engineState: s.state,
+        eligible,
+        completed,
+        autoStartResult: result,
+      });
+    } catch {
+      /* ignore */
     }
   }, [
     api,
@@ -634,6 +663,7 @@ export function TutorialProvider({
     documentVisible,
     snap.state,
   ]);
+
 
   // ------------------------------------------------------------
   // Target locator + measurement

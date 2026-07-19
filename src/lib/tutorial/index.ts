@@ -54,6 +54,12 @@ export {
 export {
   tutorialDebug,
   currentEligibilityOverride,
+  readLastStartDiagnostic,
+  writeLastStartDiagnostic,
+  __tutorialAutoStartTelemetry,
+  LAST_START_DIAGNOSTIC_KEY,
+  type LastStartDiagnostic,
+  type AutoStartResult,
   type TutorialDebugController,
 } from "./debug";
 

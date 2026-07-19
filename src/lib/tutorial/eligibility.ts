@@ -60,6 +60,10 @@ export function setEligibilityFlag(flag: EligibilityFlag, value: boolean): void 
   emit();
 }
 
+export function getAllEligibilityFlags(): Record<EligibilityFlag, boolean> {
+  return { ...flagState };
+}
+
 export function getEligibilityFlag(flag: EligibilityFlag): boolean {
   return flagState[flag];
 }

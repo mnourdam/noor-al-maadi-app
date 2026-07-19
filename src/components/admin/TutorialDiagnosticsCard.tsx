@@ -15,9 +15,11 @@ import { GraduationCap, Play, RefreshCw } from "lucide-react";
 import {
   IRTH_FIRST_TIME_TUTORIAL,
   currentEligibilityOverride,
+  readLastStartDiagnostic,
   readTutorialCompletionRecord,
   resetTutorialCompletion,
   tutorialDebug,
+  type LastStartDiagnostic,
   type TutorialDiagnostics,
 } from "@/lib/tutorial";
 
@@ -55,6 +57,9 @@ export function TutorialDiagnosticsCard() {
     return o == null ? null : o;
   });
   const [completion, setCompletion] = useState<string>(() => fmtCompletion());
+  const [lastStart, setLastStart] = useState<LastStartDiagnostic | null>(() =>
+    readLastStartDiagnostic(),
+  );
   const timerRef = useRef<number | null>(null);
 
   const refresh = useCallback(() => {
@@ -62,6 +67,7 @@ export function TutorialDiagnosticsCard() {
     const o = currentEligibilityOverride();
     setOverride(o == null ? null : o);
     setCompletion(fmtCompletion());
+    setLastStart(readLastStartDiagnostic());
   }, []);
 
   useEffect(() => {
@@ -286,6 +292,23 @@ export function TutorialDiagnosticsCard() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Last auto-start diagnostic (persisted) */}
+      <div className="mt-3 rounded-lg border border-amber-800/50 bg-amber-950/30 p-3">
+        <div className="mb-2 text-xs font-semibold text-amber-200">
+          آخر لقطة تشخيصية (irth.tutorial.last-start-diagnostic.v1)
+        </div>
+        {lastStart ? (
+          <pre
+            dir="ltr"
+            className="max-h-[420px] overflow-auto whitespace-pre-wrap break-all rounded bg-slate-950/70 p-2 text-[11px] leading-relaxed text-emerald-100"
+          >
+            {JSON.stringify(lastStart, null, 2)}
+          </pre>
+        ) : (
+          <p className="text-xs text-slate-400">لا توجد لقطة محفوظة بعد.</p>
+        )}
       </div>
 
       <p className="mt-3 text-[11px] text-slate-500">
