@@ -119,8 +119,10 @@ export function AtlasEntityDetailPanel({
             <Link
               to="/encyclopedia/entity/$id"
               params={{ id: encId }}
+              onClick={() => stashOrigin(`/encyclopedia/entity/${encId}`)}
               className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-b from-amber-400 to-amber-500 px-4 py-2 text-[13px] font-bold text-slate-950 shadow hover:from-amber-300 hover:to-amber-400"
             >
+
               <BookOpen className="size-4" /> اقرأ في الموسوعة
             </Link>
           ) : (
