@@ -121,16 +121,19 @@ export function EncyclopediaCard({
     return <div className={staticClass}>{Inner}</div>;
   }
 
-  if (entity.entity_type === "state") {
-    return (
-      <Link to="/encyclopedia/state/$id" params={{ id: entity.slug }} className={CARD_CLASS}>
-        {Inner}
-      </Link>
-    );
-  }
+  const stashCurrent = useStashCurrentAsOrigin();
+  const isState = entity.entity_type === "state";
+  const toRoute = isState ? "/encyclopedia/state/$id" : "/encyclopedia/entity/$id";
+  const destPath = `${isState ? "/encyclopedia/state/" : "/encyclopedia/entity/"}${entity.slug}`;
   return (
-    <Link to="/encyclopedia/entity/$id" params={{ id: entity.slug }} className={CARD_CLASS}>
+    <Link
+      to={toRoute}
+      params={{ id: entity.slug }}
+      className={CARD_CLASS}
+      onClick={() => stashCurrent(destPath)}
+    >
       {Inner}
     </Link>
   );
+
 }
