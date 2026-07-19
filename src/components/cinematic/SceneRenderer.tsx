@@ -114,12 +114,16 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
 
       <style>{`
         .cinematic-kenburns {
-          animation: cinematic-kenburns 16s ease-out both;
-          transform-origin: center center;
+          /* Gentle, eased camera drift. Starts and ends softly — never
+             snaps into motion, never stops abruptly. GPU-only transform. */
+          animation: cinematic-kenburns 18s cubic-bezier(0.37, 0, 0.63, 1) both;
+          transform-origin: center 55%;
+          will-change: transform;
+          backface-visibility: hidden;
         }
         @keyframes cinematic-kenburns {
-          0%   { transform: scale(1.05) translate3d(0, 0, 0); }
-          100% { transform: scale(1.15) translate3d(0, -1.5%, 0); }
+          0%   { transform: scale(1.045) translate3d(0, 0.4%, 0); }
+          100% { transform: scale(1.13)  translate3d(0, -1.6%, 0); }
         }
       `}</style>
     </div>
