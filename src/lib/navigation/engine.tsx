@@ -277,6 +277,22 @@ export function useNavigationOrigin() {
 }
 
 /**
+ * Returns a setter that stashes an origin for an arbitrary destination
+ * pathname (not just the current one). Used by `<LinkWithOrigin>` to
+ * record where the user came from before the router commits the
+ * navigation.
+ */
+export function useStashOrigin() {
+  const engine = useEngine();
+  return useCallback(
+    (destinationPath: string, origin: NavigationOrigin) => {
+      engine.origins.set(destinationPath, origin);
+    },
+    [engine],
+  );
+}
+
+/**
  * The ONLY sanctioned way to trigger Back from UI. Runs the resolution
  * algorithm documented in the architecture proposal (§2):
  *   1. overlay dismiss
