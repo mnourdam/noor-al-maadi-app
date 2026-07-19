@@ -290,6 +290,22 @@ export function useOverlayDismiss(dismiss: OverlayDismisser): void {
 }
 
 /**
+ * Reactive count of overlays currently registered on the LIFO stack.
+ * Consumers (e.g. the tutorial engine's eligibility predicate) use
+ * this to defer while any dialog / sheet / drawer / other overlay is
+ * open. Updates on push / popAndRun / unregister.
+ */
+export function useOverlayStackSize(): number {
+  const engine = useEngine();
+  const [size, setSize] = useState<number>(() => engine.overlays.size());
+  useEffect(() => {
+    setSize(engine.overlays.size());
+    return engine.overlays.subscribe(() => setSize(engine.overlays.size()));
+  }, [engine]);
+  return size;
+}
+
+/**
  * Reads / writes the navigation origin for the current route.
  * The engine consumes an origin exactly once, on the first Back.
  */
