@@ -63,6 +63,9 @@ export function TutorialDiagnosticsCard() {
   const [lastStart, setLastStart] = useState<LastStartDiagnostic | null>(() =>
     readLastStartDiagnostic(),
   );
+  const [transitionLog, setTransitionLog] = useState<TutorialTransitionEntry[]>(
+    () => readTutorialTransitionLog(),
+  );
   const timerRef = useRef<number | null>(null);
 
   const refresh = useCallback(() => {
