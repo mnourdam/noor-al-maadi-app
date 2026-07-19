@@ -507,7 +507,16 @@ export function TutorialProvider({
   // Eligibility inputs
   // ------------------------------------------------------------
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const overlayStackSize = useOverlayStackSize();
+  // Enumerate every overlay entry so we can (a) accurately exclude the
+  // tutorial engine's OWN dismisser from "external" counts, and (b)
+  // report every contributor individually in diagnostics.
+  const overlayEntries = useOverlayEntries();
+  const totalOverlayStackSize = overlayEntries.length;
+  const overlayStackSize = useMemo(
+    () => overlayEntries.filter((e) => e.label !== "TutorialEngine").length,
+    [overlayEntries],
+  );
+
   const [homeStableFrames, setHomeStableFrames] = useState(0);
   const [documentVisible, setDocumentVisible] = useState(
     typeof document === "undefined"
