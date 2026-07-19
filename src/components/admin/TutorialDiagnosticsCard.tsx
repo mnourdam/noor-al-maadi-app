@@ -17,10 +17,13 @@ import {
   currentEligibilityOverride,
   readLastStartDiagnostic,
   readTutorialCompletionRecord,
+  readTutorialTransitionLog,
+  clearTutorialTransitionLog,
   resetTutorialCompletion,
   tutorialDebug,
   type LastStartDiagnostic,
   type TutorialDiagnostics,
+  type TutorialTransitionEntry,
 } from "@/lib/tutorial";
 
 const POLL_MS = 400;
