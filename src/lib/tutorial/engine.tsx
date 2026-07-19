@@ -35,7 +35,15 @@ import {
   IRTH_FIRST_TIME_TUTORIAL,
   TUTORIAL_TARGET_RESOLUTION_WINDOW_MS,
 } from "./data";
-import { registerTutorialDebugBinding, writeLastStartDiagnostic, __tutorialAutoStartTelemetry, type AutoStartResult } from "./debug";
+import {
+  registerTutorialDebugBinding,
+  writeLastStartDiagnostic,
+  __tutorialAutoStartTelemetry,
+  logTutorialTransition,
+  logTutorialEvent,
+  resetPerStepInstrumentation,
+  type AutoStartResult,
+} from "./debug";
 import { FIRST_TIME_TUTORIAL_ID, getTutorialConfig } from "./registry";
 import * as persistence from "./persistence";
 import {
@@ -165,7 +173,13 @@ function snapshotOf(store: InternalStore): TutorialEngineSnapshot {
 
 function transition(store: InternalStore, next: TutorialEngineState) {
   if (store.state === next) return;
+  const prev = store.state;
   store.state = next;
+  try {
+    logTutorialTransition(prev, next);
+  } catch {
+    /* ignore */
+  }
   notify(store);
 }
 
@@ -193,6 +207,12 @@ function fireStepChanged(
   direction: "forward" | "backward" | "initial",
 ) {
   const step = store.config.steps[rawIndex]!;
+  try {
+    resetPerStepInstrumentation(step.id);
+    logTutorialEvent("step-changed", { reason: direction });
+  } catch {
+    /* ignore */
+  }
   fireHook(store.hooks, "onStepChanged", {
     id: store.config.id,
     version: store.config.version,
@@ -719,12 +739,21 @@ export function TutorialProvider({
 
     // Per-step watchdog: never trap the player on a dead dim layer.
     const STEP_WATCHDOG_MS = 5000;
+    logTutorialEvent("locator-effect-started", {
+      reason: `selector=${selector}`,
+      watchdogStarted: true,
+    });
     watchdogHandle = window.setTimeout(() => {
       if (cancelled) return;
       // eslint-disable-next-line no-console
       console.warn(
         `[tutorial] step watchdog fired for "${stepAnalyticsId}" — state=${store.state}, hasRect=${store.targetRect != null}. Skipping forward.`,
       );
+      logTutorialEvent("watchdog-fired", {
+        reason: `state=${store.state}, hasRect=${store.targetRect != null}`,
+        apiNextCalled: true,
+        watchdogFired: true,
+      });
       api.next();
     }, STEP_WATCHDOG_MS);
     const clearWatchdog = () => {
@@ -806,6 +835,10 @@ export function TutorialProvider({
         const settled = stableFrames >= SETTLE_FRAMES;
         const timedOut = elapsed >= SETTLE_TIMEOUT_MS;
         if (settled || timedOut) {
+          logTutorialEvent("settle-resolved", {
+            reason: settled ? "stable-frames" : "timeout",
+            scrollSettled: true,
+          });
           requestAnimationFrame(() => {
             if (cancelled) return;
             requestAnimationFrame(() => {
@@ -813,14 +846,24 @@ export function TutorialProvider({
               transition(store, "measuring_target");
               const finalRect = el.getBoundingClientRect();
               if (!rectValid(finalRect)) {
+                logTutorialEvent("rect-invalid-after-settle", {
+                  reason: `rect=${JSON.stringify({ x: finalRect.x, y: finalRect.y, w: finalRect.width, h: finalRect.height })}`,
+                });
                 if (
                   currentStep.skipIfTargetUnavailable ||
                   currentStep.onMissingTarget === "skip"
                 ) {
+                  logTutorialEvent("api-next-called", {
+                    reason: "invalid-rect+skip-if-unavailable",
+                    apiNextCalled: true,
+                  });
                   clearWatchdog();
                   api.next();
                   return;
                 }
+                logTutorialEvent("rect-invalid-no-skip", {
+                  reason: "attaching-anyway (no skipIfTargetUnavailable)",
+                });
               }
               attachMeasurement(el);
             });
@@ -836,6 +879,9 @@ export function TutorialProvider({
       if (cancelled) return;
       const el = document.querySelector(selector) as HTMLElement | null;
       if (el) {
+        logTutorialEvent("target-resolved", {
+          reason: `scroll=${currentStep.scroll ?? "none"}`,
+        });
         if (
           currentStep.scroll === "into-view" ||
           currentStep.scroll === "into-view-smooth"
@@ -863,9 +909,16 @@ export function TutorialProvider({
           currentStep.skipIfTargetUnavailable ||
           currentStep.onMissingTarget === "skip"
         ) {
+          logTutorialEvent("target-unresolved-skip", {
+            reason: `elapsed=${Math.round(elapsed)}ms`,
+            apiNextCalled: true,
+          });
           clearWatchdog();
           api.next();
         } else {
+          logTutorialEvent("target-unresolved-retry", {
+            reason: `elapsed=${Math.round(elapsed)}ms — no skipIfTargetUnavailable`,
+          });
           window.setTimeout(tryResolve, 200);
         }
         return;
@@ -877,6 +930,9 @@ export function TutorialProvider({
 
     return () => {
       cancelled = true;
+      logTutorialEvent("locator-effect-cleanup", {
+        reason: `state=${store.state}`,
+      });
       clearWatchdog();
       if (rafHandle != null) cancelAnimationFrame(rafHandle);
       if (observer && currentEl) observer.disconnect();
