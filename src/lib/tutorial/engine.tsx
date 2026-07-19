@@ -547,11 +547,16 @@ export function TutorialProvider({
     return undefined;
   }, []);
 
-  const [, forceEligibility] = useState(0);
+  // Eligibility flag bus is module-level state. When any flag flips
+  // we bump `eligibilityTick` so effects that consume eligibility
+  // (auto-start below) re-run — otherwise they'd see the flag values
+  // captured on the last dep change and never observe the flip.
+  const [eligibilityTick, setEligibilityTick] = useState(0);
   useEffect(
-    () => subscribeEligibility(() => forceEligibility((n) => n + 1)),
+    () => subscribeEligibility(() => setEligibilityTick((n) => n + 1)),
     [],
   );
+
 
   // ------------------------------------------------------------
   // Debug binding — registers this engine with the module-level
