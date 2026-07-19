@@ -111,6 +111,8 @@ function validateScene(raw: unknown, seenIds: Set<string>, idx: number): Cinemat
     overlayDarkness: clamp01(r.overlayDarkness, undefined),
     kenBurns: r.kenBurns === false ? false : undefined,
     allowSkip: r.allowSkip === false ? false : undefined,
+    showFinalLogo: r.showFinalLogo === true ? true : undefined,
+
   };
 }
 

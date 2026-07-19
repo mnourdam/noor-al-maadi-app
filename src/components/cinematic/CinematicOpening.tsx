@@ -47,6 +47,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { SceneRenderer } from "./SceneRenderer";
 import { AmbientAudio } from "./AmbientAudio";
+import irthLogo from "@/assets/irth-icon.png.asset.json";
+
 
 const FINAL_FADE_MS = 900;
 const PRELOAD_TIMEOUT_MS = 3500;
@@ -234,6 +236,24 @@ export function CinematicOpening() {
       ))}
 
       <AmbientAudio src={ambientSrc} volume={ambientVol} />
+
+      {currentScene?.showFinalLogo && (
+        <div
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          style={{
+            opacity: fadingOut ? 0 : 1,
+            transition: `opacity ${reducedMotion ? 250 : 1200}ms ease-in-out`,
+          }}
+        >
+          <img
+            src={irthLogo.url}
+            alt="إرث"
+            className="h-40 w-40 select-none drop-shadow-[0_4px_32px_rgba(0,0,0,0.75)] sm:h-52 sm:w-52"
+            draggable={false}
+          />
+        </div>
+      )}
+
 
       {canSkip && (
         <button

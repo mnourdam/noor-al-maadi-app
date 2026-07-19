@@ -56,6 +56,9 @@ export interface CinematicScene {
   kenBurns?: boolean;
   /** Whether Skip can end the whole sequence during this scene. Default true. */
   allowSkip?: boolean;
+  /** When true, the engine renders the Irth logo as a UI layer above this scene. */
+  showFinalLogo?: boolean;
+
 }
 
 /** Top-level configuration consumed by the engine. */

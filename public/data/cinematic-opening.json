@@ -1,0 +1,118 @@
+{
+  "version": "irth.cinematic-opening.2026-07-19",
+  "enabled": true,
+  "replayForAllUsers": false,
+  "scenes": [
+    {
+      "id": "scene-1-mount-al-nour",
+      "image": "/cinematic/scene1-mount-al-nour.webp",
+      "durationMs": 6000,
+      "transitionIn": "fade-from-black",
+      "transitionOut": "crossfade",
+      "particles": "dust",
+      "particleIntensity": 0.25,
+      "overlayDarkness": 0.15,
+      "kenBurns": true
+    },
+    {
+      "id": "scene-2-cave-hira",
+      "image": "/cinematic/scene2-cave-hira.webp",
+      "durationMs": 6000,
+      "transitionIn": "crossfade",
+      "transitionOut": "crossfade",
+      "particles": "dust",
+      "particleIntensity": 0.3,
+      "overlayDarkness": 0.1,
+      "kenBurns": true
+    },
+    {
+      "id": "scene-3-1-medina",
+      "image": "/cinematic/scene3-1-medina.webp",
+      "durationMs": 4500,
+      "transitionIn": "crossfade",
+      "transitionOut": "crossfade",
+      "particles": "dust",
+      "particleIntensity": 0.3,
+      "overlayDarkness": 0.05,
+      "kenBurns": true
+    },
+    {
+      "id": "scene-3-2-qadisiyyah",
+      "image": "/cinematic/scene3-2-qadisiyyah.webp",
+      "durationMs": 4500,
+      "transitionIn": "crossfade",
+      "transitionOut": "crossfade",
+      "particles": "smoke",
+      "particleIntensity": 0.35,
+      "overlayDarkness": 0.1,
+      "kenBurns": true
+    },
+    {
+      "id": "scene-3-4-cordoba",
+      "image": "/cinematic/scene3-4-cordoba.webp",
+      "durationMs": 4500,
+      "transitionIn": "crossfade",
+      "transitionOut": "crossfade",
+      "particles": "gold",
+      "particleIntensity": 0.3,
+      "overlayDarkness": 0.05,
+      "kenBurns": true
+    },
+    {
+      "id": "scene-3-5-constantinople",
+      "image": "/cinematic/scene3-5-constantinople.webp",
+      "durationMs": 4500,
+      "transitionIn": "crossfade",
+      "transitionOut": "crossfade",
+      "particles": "fog",
+      "particleIntensity": 0.35,
+      "overlayDarkness": 0.1,
+      "kenBurns": true
+    },
+    {
+      "id": "scene-4-1-abdul-hamid",
+      "image": "/cinematic/scene4-1-abdul-hamid.webp",
+      "durationMs": 5500,
+      "transitionIn": "crossfade",
+      "transitionOut": "crossfade",
+      "particles": "fog",
+      "particleIntensity": 0.3,
+      "overlayDarkness": 0.15,
+      "kenBurns": true
+    },
+    {
+      "id": "scene-4-2-partition-map",
+      "image": "/cinematic/scene4-2-partition-map.webp",
+      "durationMs": 5500,
+      "transitionIn": "crossfade",
+      "transitionOut": "crossfade",
+      "particles": "dust",
+      "particleIntensity": 0.25,
+      "overlayDarkness": 0.15,
+      "kenBurns": true
+    },
+    {
+      "id": "scene-5-journey",
+      "image": "/cinematic/scene5-journey.webp",
+      "durationMs": 6500,
+      "transitionIn": "crossfade",
+      "transitionOut": "crossfade",
+      "particles": "gold",
+      "particleIntensity": 0.4,
+      "overlayDarkness": 0.05,
+      "kenBurns": true
+    },
+    {
+      "id": "scene-6-final-logo",
+      "image": "/cinematic/scene6-final-logo-bg.webp",
+      "durationMs": 5000,
+      "transitionIn": "crossfade",
+      "transitionOut": "fade-to-black",
+      "particles": "gold",
+      "particleIntensity": 0.25,
+      "overlayDarkness": 0.1,
+      "kenBurns": false,
+      "showFinalLogo": true
+    }
+  ]
+}
