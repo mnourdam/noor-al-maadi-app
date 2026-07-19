@@ -59,6 +59,7 @@ export {
   __tutorialAutoStartTelemetry,
   LAST_START_DIAGNOSTIC_KEY,
   readTutorialTransitionLog,
+  readRawTutorialTransitionLog,
   clearTutorialTransitionLog,
   TRANSITION_LOG_KEY,
   type LastStartDiagnostic,
