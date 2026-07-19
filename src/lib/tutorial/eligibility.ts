@@ -1,35 +1,21 @@
 // ============================================================
-// Guided Tutorial — Eligibility
+// Guided Tutorial — Eligibility (Phase 2B.5)
 // ------------------------------------------------------------
-// Pure predicate + a React hook that observes the composite
-// signal. The engine consults `computeEligibility()` before it
-// transitions from `armed` → `waiting_for_eligibility` →
-// `locating_target`.
+// Pure predicate + subsystem flag bus + Phase 2B.5 debug overrides.
 //
-// Eligibility is TRUE only when every one of the following holds:
+// Overrides:
+//   • forceEligibility()   — predicate returns true regardless of
+//                            the flag bus and environmental inputs.
+//   • disableEligibility() — predicate returns false regardless.
+//   • clearEligibilityOverride() — restores normal evaluation.
 //
-//   1. Cinematic Opening is fully unmounted
-//   2. `OPENING_COMPLETED_EVENT` has resolved
-//   3. `irth.firstLaunch.choice.v1` exists in localStorage
-//   4. Session loading is complete
-//   5. No auth dialog is open
-//   6. No Google auth-result dialog is open
-//   7. RecoveryModeGuard is inactive
-//   8. Current pathname is exactly `/`
-//   9. Document is visible
-//  10. Navigation overlay stack is empty
-//  11. Home targets have had at least two stable animation frames
-//
-// Signals 1–7 are surfaced via a small in-process event bus so the
-// engine does not need to reach into unrelated modules directly.
-// Consumers of those subsystems call `setEligibilityFlag(...)` to
-// publish their state; the engine reads the aggregate.
+// Overrides are engine-observable (subscribers are notified when
+// they change). They exist for the debug controller and future
+// admin diagnostics; production code does not call them.
 // ============================================================
 
 import { useEffect, useState } from "react";
-import {
-  TUTORIAL_HOME_STABLE_FRAMES,
-} from "./data";
+import { TUTORIAL_HOME_STABLE_FRAMES } from "./data";
 
 export type EligibilityFlag =
   | "cinematicUnmounted"
@@ -40,10 +26,6 @@ export type EligibilityFlag =
   | "googleAuthResultDialogClosed"
   | "recoveryGuardInactive";
 
-/** Defaults are conservative: everything is FALSE until a subsystem
- *  reports otherwise. The engine will therefore remain in
- *  `waiting_for_eligibility` on a cold boot until the app publishes
- *  its readiness. */
 const DEFAULTS: Record<EligibilityFlag, boolean> = {
   cinematicUnmounted: false,
   openingCompletedEvent: false,
@@ -56,8 +38,11 @@ const DEFAULTS: Record<EligibilityFlag, boolean> = {
 
 type Listener = () => void;
 
-const state: Record<EligibilityFlag, boolean> = { ...DEFAULTS };
+const flagState: Record<EligibilityFlag, boolean> = { ...DEFAULTS };
 const listeners = new Set<Listener>();
+
+type Override = "force" | "disable" | null;
+let override: Override = null;
 
 function emit() {
   for (const l of Array.from(listeners)) {
@@ -69,15 +54,14 @@ function emit() {
   }
 }
 
-/** Publish a boolean signal from a subsystem. Idempotent. */
 export function setEligibilityFlag(flag: EligibilityFlag, value: boolean): void {
-  if (state[flag] === value) return;
-  state[flag] = value;
+  if (flagState[flag] === value) return;
+  flagState[flag] = value;
   emit();
 }
 
 export function getEligibilityFlag(flag: EligibilityFlag): boolean {
-  return state[flag];
+  return flagState[flag];
 }
 
 export function subscribeEligibility(l: Listener): () => void {
@@ -87,29 +71,52 @@ export function subscribeEligibility(l: Listener): () => void {
   };
 }
 
+// ------------------------------------------------------------
+// Debug overrides
+// ------------------------------------------------------------
+
+export function forceEligibilityOverride(): void {
+  if (override === "force") return;
+  override = "force";
+  emit();
+}
+
+export function disableEligibilityOverride(): void {
+  if (override === "disable") return;
+  override = "disable";
+  emit();
+}
+
+export function clearEligibilityOverride(): void {
+  if (override == null) return;
+  override = null;
+  emit();
+}
+
+export function getEligibilityOverride(): Override {
+  return override;
+}
+
 export interface EligibilityInputs {
-  /** Current router pathname. */
   pathname: string;
-  /** Overlay stack size from the Navigation Engine. */
   overlayStackSize: number;
-  /** Frames elapsed since Home mounted its targets. */
   homeStableFrames: number;
-  /** `document.visibilityState === "visible"`. */
   documentVisible: boolean;
 }
 
 /** Pure predicate — no side effects. */
 export function computeEligibility(inputs: EligibilityInputs): boolean {
-  // Composite subsystem readiness
-  if (!state.cinematicUnmounted) return false;
-  if (!state.openingCompletedEvent) return false;
-  if (!state.firstLaunchChoiceRecorded) return false;
-  if (!state.sessionReady) return false;
-  if (!state.authDialogClosed) return false;
-  if (!state.googleAuthResultDialogClosed) return false;
-  if (!state.recoveryGuardInactive) return false;
+  if (override === "force") return true;
+  if (override === "disable") return false;
 
-  // Environmental
+  if (!flagState.cinematicUnmounted) return false;
+  if (!flagState.openingCompletedEvent) return false;
+  if (!flagState.firstLaunchChoiceRecorded) return false;
+  if (!flagState.sessionReady) return false;
+  if (!flagState.authDialogClosed) return false;
+  if (!flagState.googleAuthResultDialogClosed) return false;
+  if (!flagState.recoveryGuardInactive) return false;
+
   if (inputs.pathname !== "/") return false;
   if (!inputs.documentVisible) return false;
   if (inputs.overlayStackSize > 0) return false;
@@ -118,8 +125,30 @@ export function computeEligibility(inputs: EligibilityInputs): boolean {
   return true;
 }
 
-/** React hook wrapper that re-renders when any published flag
- *  changes. Environmental inputs are passed in per render. */
+/** Human-readable reason the tour is currently ineligible — used by
+ *  diagnostics only; returns null when eligible. */
+export function eligibilityWaitingReason(
+  inputs: EligibilityInputs,
+): string | null {
+  if (override === "force") return null;
+  if (override === "disable") return "override:disabled";
+
+  if (!flagState.cinematicUnmounted) return "cinematic-mounted";
+  if (!flagState.openingCompletedEvent) return "opening-not-completed";
+  if (!flagState.firstLaunchChoiceRecorded) return "first-launch-choice-pending";
+  if (!flagState.sessionReady) return "session-loading";
+  if (!flagState.authDialogClosed) return "auth-dialog-open";
+  if (!flagState.googleAuthResultDialogClosed) return "google-auth-result-open";
+  if (!flagState.recoveryGuardInactive) return "recovery-mode-active";
+  if (inputs.pathname !== "/") return `off-home:${inputs.pathname}`;
+  if (!inputs.documentVisible) return "document-hidden";
+  if (inputs.overlayStackSize > 0) return "overlay-open";
+  if (inputs.homeStableFrames < TUTORIAL_HOME_STABLE_FRAMES)
+    return "home-not-stable";
+
+  return null;
+}
+
 export function useEligibility(inputs: EligibilityInputs): boolean {
   const [, force] = useState(0);
   useEffect(() => subscribeEligibility(() => force((n) => n + 1)), []);

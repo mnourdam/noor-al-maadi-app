@@ -1,6 +1,8 @@
 // Guided Tutorial — public barrel.
 export type {
   TutorialConfig,
+  TutorialDebugColor,
+  TutorialDiagnostics,
   TutorialEngineApi,
   TutorialEngineSnapshot,
   TutorialEngineState,
@@ -12,6 +14,7 @@ export type {
   TutorialStep,
   TutorialTargetId,
 } from "./types";
+export { TUTORIAL_DEBUG_COLORS } from "./types";
 
 export {
   FIRST_TIME_TUTORIAL,
@@ -35,10 +38,29 @@ export {
 } from "./persistence";
 
 export {
+  clearEligibilityOverride,
   computeEligibility,
+  disableEligibilityOverride,
+  eligibilityWaitingReason,
+  forceEligibilityOverride,
   getEligibilityFlag,
+  getEligibilityOverride,
   setEligibilityFlag,
   subscribeEligibility,
   type EligibilityFlag,
   type EligibilityInputs,
 } from "./eligibility";
+
+export {
+  tutorialDebug,
+  currentEligibilityOverride,
+  type TutorialDebugController,
+} from "./debug";
+
+export {
+  validateTutorialConfig,
+  validateTutorialConfigInDev,
+  type TutorialValidationIssue,
+  type TutorialValidationOptions,
+  type TutorialValidationResult,
+} from "./validate";

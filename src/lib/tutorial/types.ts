@@ -1,17 +1,16 @@
 // ============================================================
-// Guided Tutorial — Types
+// Guided Tutorial — Types (Phase 2B.5)
 // ------------------------------------------------------------
-// Phase 2A scaffold: data-driven tutorial engine. Only types are
-// declared here — no UI, no target DOM attributes, no Arabic copy
-// wired to the DOM. The engine mounts as a passive state machine
-// and defers all rendering to a later phase (Spotlight/CoachMark).
+// Data-driven tutorial engine. Behavior is unchanged from Phase 2B;
+// this hardening pass adds per-step `enabled`, `analyticsId` and
+// `debugColor` fields, and exposes a richer diagnostics contract
+// for the debug controller (see `./debug.ts`).
 // ============================================================
 
 export type TutorialId = "irth-first-time";
 
 /** Semantic hook that identifies a DOM element that will be
- *  highlighted. Concrete `data-tutorial-target="…"` attributes are
- *  wired in a later phase; only the ids are catalogued now. */
+ *  highlighted. */
 export type TutorialTargetId =
   | "nav-campaigns"
   | "nav-encyclopedia"
@@ -29,72 +28,107 @@ export type TutorialShape = "rounded-rect";
 /** Scroll behavior when locating the target. */
 export type TutorialScrollBehavior = "none" | "into-view" | "into-view-smooth";
 
-/** What to do if the step's target cannot be resolved within the
- *  resolution window. */
-export type TutorialMissingTargetBehavior =
-  | "wait" // keep trying until resolution window elapses
-  | "skip"; // silently advance to the next step
+/** Missing-target policy. */
+export type TutorialMissingTargetBehavior = "wait" | "skip";
+
+/** Debug palette — used only by future debug tooling; never
+ *  rendered during normal gameplay. */
+export type TutorialDebugColor =
+  | "gold"
+  | "blue"
+  | "green"
+  | "purple"
+  | "orange"
+  | "red";
+
+export const TUTORIAL_DEBUG_COLORS: readonly TutorialDebugColor[] = [
+  "gold",
+  "blue",
+  "green",
+  "purple",
+  "orange",
+  "red",
+] as const;
 
 export interface TutorialStep {
   /** Stable step identifier used for logs/analytics/persistence. */
   id: string;
   /** DOM target hook. */
   targetId: TutorialTargetId;
-  /** Route on which the step should be shown. Phase 2A supports
-   *  same-route steps only (all six are `/`). */
+  /** Route on which the step should be shown. */
   route: "/";
   placement: TutorialPlacement;
   shape: TutorialShape;
-  /** Extra padding (px) added around the target for the cutout. */
   padding: number;
   scroll: TutorialScrollBehavior;
-  /** Final coach-mark title (Arabic). No i18n layer — the string is
-   *  rendered verbatim. */
+  /** Final coach-mark title (Arabic). Rendered verbatim. */
   title: string;
   /** Final coach-mark body (Arabic). Rendered verbatim. */
   body: string;
-  /** When false, taps on the spotlighted element are absorbed by the
-   *  overlay so the tour cannot be dismissed accidentally. */
   allowTargetInteraction: boolean;
-  /** If true, resolution failure silently advances to the next
-   *  eligible step instead of waiting/showing an error. */
   skipIfTargetUnavailable: boolean;
-  /** Behavior when target is not yet found within the window. */
   onMissingTarget: TutorialMissingTargetBehavior;
+
+  /** ------------------------------------------------------------
+   *  Phase 2B.5 additions
+   *  ------------------------------------------------------------ */
+
+  /** When false, the step is skipped entirely — invisible to the
+   *  player, ignored by next/previous, and excluded from the
+   *  progress counter. Default (in the registry) is `true`. */
+  enabled: boolean;
+  /** Stable analytics identifier. Propagated to every
+   *  `TutorialHooks` callback. Never reused across steps. */
+  analyticsId: string;
+  /** Debug palette hint — never rendered during normal gameplay. */
+  debugColor: TutorialDebugColor;
 }
 
 // ------------------------------------------------------------
-// Analytics extension hooks (no default implementation)
+// Extension hooks (no default implementation)
 // ------------------------------------------------------------
 
 export interface TutorialHooks {
-  onTutorialStarted?: (info: { id: TutorialId; version: number }) => void;
+  onTutorialStarted?: (info: {
+    id: TutorialId;
+    version: number;
+    /** The analyticsId of the first enabled step actually shown. */
+    startAnalyticsId: string;
+  }) => void;
   onStepChanged?: (info: {
     id: TutorialId;
     version: number;
+    /** Raw index into `config.steps`. */
     stepIndex: number;
     stepId: string;
+    /** Enabled-only ordinal (1-based) and total. */
+    enabledOrdinal: number;
+    enabledTotal: number;
+    /** The step's analyticsId. */
+    analyticsId: string;
     direction: "forward" | "backward" | "initial";
   }) => void;
   onTutorialSkipped?: (info: {
     id: TutorialId;
     version: number;
     atStepIndex: number | null;
+    /** analyticsId of the step the player was viewing when they
+     *  skipped. Null if the tour hadn't shown a step yet. */
+    atAnalyticsId: string | null;
   }) => void;
-  onTutorialCompleted?: (info: { id: TutorialId; version: number }) => void;
+  onTutorialCompleted?: (info: {
+    id: TutorialId;
+    version: number;
+    /** analyticsId of the final enabled step confirmed. */
+    finalAnalyticsId: string;
+  }) => void;
 }
 
 export interface TutorialConfig {
   id: TutorialId;
-  /** Monotonic integer version — bumping this replays the tutorial
-   *  for every device once. */
   version: number;
-  /** Route required for the tour to start. */
   startRoute: "/";
-  /** Persistence scope: device-scoped (never per-account). */
   scope: "device";
-  /** When eligibility becomes true on a non-`startRoute` path, the
-   *  engine defers instead of redirecting. */
   deferOnDeepLink: boolean;
   steps: readonly TutorialStep[];
 }
@@ -118,31 +152,43 @@ export type TutorialEngineState =
 
 export interface TutorialEngineSnapshot {
   state: TutorialEngineState;
-  /** 0-based index into the config's `steps`. Null when not running. */
+  /** Raw index into `config.steps`. Null when not running. */
   stepIndex: number | null;
-  /** True while paused by an overlay (auth dialogs, first-launch,
-   *  RecoveryModeGuard, or any registered navigation overlay). */
   paused: boolean;
-  /** Version of the currently active tutorial config. */
   version: number;
+}
+
+// ------------------------------------------------------------
+// Read-only diagnostics (Phase 2B.5)
+// ------------------------------------------------------------
+
+export interface TutorialDiagnostics {
+  currentState: TutorialEngineState;
+  currentStepIndex: number | null;
+  currentStepId: string | null;
+  currentAnalyticsId: string | null;
+  currentTargetId: TutorialTargetId | null;
+  currentTargetResolved: boolean;
+  currentTargetRect: DOMRectReadOnly | null;
+  eligible: boolean;
+  paused: boolean;
+  completed: boolean;
+  overlayPaused: boolean;
+  waitingReason: string | null;
 }
 
 export interface TutorialEngineApi {
   getSnapshot(): TutorialEngineSnapshot;
   subscribe(listener: () => void): () => void;
-  /** Consumers request start; engine ignores if already running or
-   *  persistence says this version is completed. */
   requestStart(): void;
   next(): void;
   previous(): void;
-  /** Skip via the coach-mark's "تخطي" affordance or confirmed skip. */
   skip(): void;
-  /** Natural finish (last step confirmed). */
   finish(): void;
-  /** Force-close without persisting (used only when the engine is
-   *  torn down mid-flight, e.g. hot reload). */
   forceClose(): void;
-  /** Pause / resume — used by the overlay-observer contract. */
   pause(reason: string): void;
   resume(): void;
+  /** Phase 2B.5 — jump to an arbitrary enabled step (debug only).
+   *  Passing an index that resolves to a disabled step throws. */
+  jumpToStep(rawIndex: number): void;
 }
