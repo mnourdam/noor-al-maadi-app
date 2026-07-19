@@ -654,6 +654,7 @@ function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; pro
                 key={r.slug}
                 to="/investigation/$id"
                 params={{ id: r.slug }}
+                onClick={() => stashInvestigation(r.slug)}
                 className={`block rounded-2xl border p-3 transition ${done ? "border-emerald-400/40 bg-emerald-500/5" : "border-white/10 bg-surface hover:border-gold/40"}`}
               >
                 <div className="flex items-start gap-3">
@@ -751,6 +752,7 @@ function ContentSection({
         <Link
           to="/encyclopedia/entity/$id"
           params={{ id: propheticFirst.entity.slug }}
+          onClick={() => stashEntity(propheticFirst.entity.slug)}
           data-role="prophet-card"
           className="relative mb-3 block overflow-hidden rounded-3xl border border-gold/60 bg-gradient-to-br from-gold/30 via-black/60 to-black/40 p-4 shadow-[0_0_40px_-10px_rgba(212,175,55,0.55)] ring-1 ring-gold/40 transition hover:border-gold hover:shadow-[0_0_60px_-8px_rgba(212,175,55,0.75)]"
         >
@@ -800,6 +802,7 @@ function ContentSection({
                       key={n.entity.id}
                       to="/encyclopedia/entity/$id"
                       params={{ id: n.entity.slug }}
+                      onClick={() => stashEntity(n.entity.slug)}
                       className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-black/50 to-transparent p-3 transition hover:border-gold/60"
                     >
                       <span className="grid size-12 place-items-center rounded-xl bg-black/50 text-2xl ring-1 ring-gold/25">
@@ -821,6 +824,7 @@ function ContentSection({
                         key={n.entity.id}
                         to="/encyclopedia/entity/$id"
                         params={{ id: n.entity.slug }}
+                        onClick={() => stashEntity(n.entity.slug)}
                         className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
                       >
                         <span className="grid size-11 place-items-center rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
@@ -848,6 +852,7 @@ function ContentSection({
               key={n.entity.id}
               to="/encyclopedia/entity/$id"
               params={{ id: n.entity.slug }}
+              onClick={() => stashEntity(n.entity.slug)}
               className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-surface p-3 transition hover:border-gold/40 hover:bg-surface-2"
             >
               <span className="grid size-11 place-items-center rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
@@ -910,6 +915,7 @@ function MiniTimeline({ events }: { events: RelatedNode[] }) {
               <Link
                 to="/encyclopedia/entity/$id"
                 params={{ id: n.entity.slug }}
+                onClick={() => stashEntity(n.entity.slug)}
                 className="group flex h-full flex-col rounded-2xl border border-gold/25 bg-black/30 p-2.5 transition hover:border-gold/55"
               >
                 <span className="inline-flex w-fit items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[10px] font-bold tabular-nums text-gold">
