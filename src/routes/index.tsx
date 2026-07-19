@@ -294,8 +294,10 @@ function HomeFull() {
           <Link
             to="/campaigns/imported/$id"
             params={{ id: campaign.id }}
+            onClick={() => stashOrigin(`/campaigns/imported/${campaign.id}`)}
             className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
           >
+
             <Play className="size-4 fill-current" />{ctaLabel}
           </Link>
         )},
