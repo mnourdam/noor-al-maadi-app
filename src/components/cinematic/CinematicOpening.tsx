@@ -296,7 +296,7 @@ export function CinematicOpening() {
 
       {currentScene?.showFinalLogo && (
         <FinalLogoReveal
-          logoUrl={irthLogo.url}
+          logoUrl={CINEMATIC_LOGO_URL}
           reducedMotion={reducedMotion}
           fadingOut={fadingOut}
         />
