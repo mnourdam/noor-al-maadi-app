@@ -38,6 +38,8 @@ export interface CinematicScene {
   textDelayMs?: number;
   /** How long text stays before fading out. Defaults to remaining time. */
   textHoldMs?: number;
+  /** Extra delay for subtitle after the title starts fading in. Default 700. */
+  subtitleDelayMs?: number;
   /** Transition INTO this scene. Default "crossfade". */
   transitionIn?: SceneTransition;
   /** Transition OUT of this scene. Default "crossfade". */
