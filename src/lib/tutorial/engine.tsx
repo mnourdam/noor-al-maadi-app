@@ -29,7 +29,7 @@ import {
 
 import { useRouterState } from "@tanstack/react-router";
 
-import { useOverlayDismiss, useOverlayStackSize } from "@/lib/navigation";
+import { useOverlayDismiss, useOverlayEntries } from "@/lib/navigation";
 
 import {
   IRTH_FIRST_TIME_TUTORIAL,
