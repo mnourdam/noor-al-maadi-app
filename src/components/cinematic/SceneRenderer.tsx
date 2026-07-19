@@ -251,6 +251,18 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
     scene.imagePosition ||
     "center";
 
+  useEffect(() => {
+    androidDiag(`scene:${scene.id}`, "visibility state", {
+      active,
+      fadingOut,
+      entered,
+      imagePaintReady,
+      visible,
+      bgPosition,
+      metrics: imageMetrics(imgRef.current),
+    });
+  }, [scene.id, active, fadingOut, entered, imagePaintReady, visible, bgPosition]);
+
   return (
     <div
       className="absolute inset-0"
