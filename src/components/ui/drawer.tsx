@@ -29,7 +29,7 @@ const Drawer = ({
       {...(isControlled ? { open } : { defaultOpen })}
       onOpenChange={handle}
     >
-      <OverlayDismissRegistration open={current} onClose={() => handle(false)} />
+      <OverlayDismissRegistration open={current} onClose={() => handle(false)} label="shadcn-drawer" />
       {children}
     </DrawerPrimitive.Root>
   );
