@@ -63,6 +63,9 @@ type HeroSlide =
 function HomeFull() {
   const { profile } = useProfile();
   const { user, lastSyncAt, displayName: resolvedDisplayName } = useAccount();
+  const stashOrigin = useStashCurrentAsOrigin();
+
+
 
   // Priority: display_name → full_name → username → email prefix.
   // `useAccount()` already resolves this chain from account row +
