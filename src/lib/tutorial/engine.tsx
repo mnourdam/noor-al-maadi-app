@@ -177,8 +177,9 @@ function transition(store: InternalStore, next: TutorialEngineState) {
   store.state = next;
   try {
     logTutorialTransition(prev, next);
-  } catch {
-    /* ignore */
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[tutorial] logTutorialTransition threw:", err);
   }
   notify(store);
 }
