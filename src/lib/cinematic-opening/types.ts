@@ -44,10 +44,12 @@ export interface CinematicScene {
   transitionIn?: SceneTransition;
   /** Transition OUT of this scene. Default "crossfade". */
   transitionOut?: SceneTransition;
-  /** Ambient audio URL (looping). Crossfaded across scenes. */
-  ambientAudio?: string;
-  /** Ambient audio volume 0..1. Default 0.4. */
-  ambientVolume?: number;
+  /**
+   * Target level 0..1 of the continuous cinematic soundtrack during this
+   * scene. The engine smoothly ramps between scenes; the soundtrack itself
+   * never restarts. If omitted the previous scene's level is retained.
+   */
+  soundtrackLevel?: number;
   /** Particle preset. Omit for none. */
   particles?: ParticlePreset;
   /** Particle intensity 0..1. Default 0.4. */
@@ -73,6 +75,18 @@ export interface CinematicOpeningConfig {
   version: string;
   /** Ordered list of scenes to play. */
   scenes: CinematicScene[];
+  /**
+   * Continuous cinematic soundtrack played across the whole opening.
+   * The engine starts it on the first scene and never restarts it on
+   * scene changes; per-scene `soundtrackLevel` values drive the volume
+   * envelope. Omit to run without a soundtrack.
+   */
+  soundtrack?: {
+    /** Audio URL (looping). */
+    url: string;
+    /** Fallback level 0..1 if a scene omits `soundtrackLevel`. Default 0.4. */
+    defaultLevel?: number;
+  };
   /**
    * When true, the engine renders even for signed-in returning users.
    * Default false — opening plays once per (user × version).
