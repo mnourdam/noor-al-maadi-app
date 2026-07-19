@@ -314,11 +314,31 @@ export function useOverlayDismiss(
   const engine = useEngine();
   useEffect(() => {
     if (!enabled) return;
-    void label;
-    return engine.overlays.push(dismiss);
+    return engine.overlays.push(dismiss, label ?? "unlabeled");
     // dismiss is captured by reference; callers wrap in useCallback if needed
   }, [engine, dismiss, label, enabled]);
 }
+
+/**
+ * Reactive list of labels currently on the overlay stack. Order is
+ * bottom → top. Useful for diagnostics and for consumers that need to
+ * exclude their own entry (e.g. the tutorial engine must not count its
+ * own dismisser as an "external" overlay).
+ */
+export function useOverlayEntries(): readonly OverlayEntry[] {
+  const engine = useEngine();
+  const [entries, setEntries] = useState<readonly OverlayEntry[]>(() =>
+    engine.overlays.entries(),
+  );
+  useEffect(() => {
+    setEntries(engine.overlays.entries());
+    return engine.overlays.subscribe(() =>
+      setEntries(engine.overlays.entries()),
+    );
+  }, [engine]);
+  return entries;
+}
+
 
 
 
