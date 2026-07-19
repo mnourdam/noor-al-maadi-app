@@ -213,10 +213,13 @@ export function NavigationProvider({
   return (
     <NavigationEngineContext.Provider value={engine}>
       <ColdStartWatcher />
+      <HardwareBackListener />
+      <ExitConfirmDialog />
       {children}
     </NavigationEngineContext.Provider>
   );
 }
+
 
 // Prod-side one-shot log guard; validator must not spam.
 let prodLogged = false;
