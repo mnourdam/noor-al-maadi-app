@@ -434,10 +434,12 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
     setRemovalApproved(false);
   };
 
+  const back = useBack();
   const goBack = () => {
-    // The `useBlocker` resolver above prompts on dirty state — no need
-    // for a second confirm() here. A clean editor navigates immediately.
-    navigate({ to: "/admin/investigations", search: {} });
+    // Delegate to the single Navigation Engine. `useBlocker` above still
+    // guards dirty state — the engine invokes router.navigate() which
+    // routes through TanStack's blocker registry.
+    back();
   };
 
   // ---- Server-side stale-detection helper --------------------
