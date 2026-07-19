@@ -199,6 +199,11 @@ export function CinematicOpening() {
         dispatchCompleted();
         return;
       }
+      // Warm the soundtrack cache so it is ready to play the moment
+      // Scene 1 begins. Failure fails forward into silent playback;
+      // the scene timer only starts after this settles (or times out).
+      await preloadSoundtrack(cfg.soundtrack?.url, SOUNDTRACK_PRELOAD_TIMEOUT_MS);
+      if (cancelled) return;
       setConfig({ ...cfg, scenes: playable });
       setActive(true);
     })();
