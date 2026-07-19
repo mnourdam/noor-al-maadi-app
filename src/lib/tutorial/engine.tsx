@@ -173,7 +173,13 @@ function snapshotOf(store: InternalStore): TutorialEngineSnapshot {
 
 function transition(store: InternalStore, next: TutorialEngineState) {
   if (store.state === next) return;
+  const prev = store.state;
   store.state = next;
+  try {
+    logTutorialTransition(prev, next);
+  } catch {
+    /* ignore */
+  }
   notify(store);
 }
 
