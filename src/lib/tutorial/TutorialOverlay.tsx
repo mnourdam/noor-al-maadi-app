@@ -172,7 +172,7 @@ export function TutorialOverlay() {
   );
 
   if (typeof document === "undefined") return null;
-  if (!active && !skipConfirmOpen) return null;
+  if (!shouldRenderChrome && !skipConfirmOpen) return null;
 
   // Progress + prev/next flags derived from ENABLED steps only.
   // Disabled steps are invisible: they do not count toward the
