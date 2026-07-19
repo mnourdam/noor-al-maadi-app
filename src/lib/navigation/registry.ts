@@ -172,20 +172,31 @@ const ADMIN_SUBPAGES: RouteId[] = [
   "/admin/world-membership-review",
 ];
 
+// Overrides for admin routes whose structural parent would resolve to a
+// non-existent intermediate page. Keep this list short and explicit.
+const ADMIN_PARENT_OVERRIDES: Readonly<Record<RouteId, RouteId>> = {
+  "/admin/campaigns/$id/edit": "/admin/campaigns",
+  "/admin/investigations/$id/edit": "/admin/investigations",
+  "/admin/import-history/$id": "/admin/import-history",
+  "/admin/games/$mode": "/admin/games",
+  "/admin/games/crossword-generator": "/admin/games",
+  "/admin/encyclopedia-cleanup/import-preview": "/admin/encyclopedia-cleanup",
+  "/admin/encyclopedia-cleanup/integrity": "/admin/encyclopedia-cleanup",
+  "/admin/encyclopedia-cleanup/redirects": "/admin/encyclopedia-cleanup",
+  "/admin/encyclopedia-cleanup/review": "/admin/encyclopedia-cleanup",
+};
+
 const ADMIN_ROUTES: RouteDeclaration[] = [
   ADMIN_INDEX,
   ...ADMIN_SUBPAGES.map<RouteDeclaration>((id) => ({
     id,
-    // Nested admin routes (e.g. /admin/campaigns/$id/edit) declare the
-    // structural parent so long chains still step one level at a time.
-    parentRoute: computeAdminParent(id),
+    parentRoute: ADMIN_PARENT_OVERRIDES[id] ?? computeAdminParent(id),
     kind: "admin",
     supportsOriginOverride: false,
   })),
 ];
 
 function computeAdminParent(id: RouteId): RouteId {
-  // Structural parent = strip the last path segment.
   const parts = id.split("/").filter(Boolean);
   if (parts.length <= 1) return "/";
   const parent = "/" + parts.slice(0, -1).join("/");
