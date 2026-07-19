@@ -6,7 +6,7 @@
 // Purely presentational — driven entirely by the scene object.
 // ============================================================
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { CinematicScene, RichTextSegment, SceneTransition } from "@/lib/cinematic-opening/types";
 import { ParticleLayer } from "./ParticleLayer";
 
@@ -21,6 +21,40 @@ function isAndroidWebView(): boolean {
     }).Capacitor;
     return !!cap?.isNativePlatform?.() && cap.getPlatform?.() === "android";
   } catch { return false; }
+}
+
+function androidDiag(scope: string, event: string, data?: Record<string, unknown>) {
+  if (!isAndroidWebView()) return;
+  try {
+    console.info(`[Irth Cinematic Android][${scope}] ${event}`, {
+      t: Math.round(performance.now()),
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      visualViewportHeight: window.visualViewport?.height ?? null,
+      ...(data ?? {}),
+    });
+  } catch { /* diagnostics must never affect playback */ }
+}
+
+function imageMetrics(el: HTMLImageElement | null) {
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  const parent = el.parentElement?.getBoundingClientRect();
+  const cs = window.getComputedStyle(el);
+  return {
+    naturalWidth: el.naturalWidth,
+    naturalHeight: el.naturalHeight,
+    complete: el.complete,
+    renderedWidth: Math.round(rect.width),
+    renderedHeight: Math.round(rect.height),
+    parentWidth: parent ? Math.round(parent.width) : null,
+    parentHeight: parent ? Math.round(parent.height) : null,
+    objectFit: cs.objectFit,
+    objectPosition: cs.objectPosition,
+    transform: cs.transform,
+    transformOrigin: cs.transformOrigin,
+    opacity: cs.opacity,
+  };
 }
 
 function renderSegments(segments: RichTextSegment[] | undefined, fallback: string | undefined) {
@@ -75,6 +109,8 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   // to visible, which triggers the CSS opacity transition — so Scene 1
   // gradually emerges from black instead of appearing abruptly.
   const [entered, setEntered] = useState(false);
+  const [imagePaintReady, setImagePaintReady] = useState(true);
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     if (!active) { setEntered(false); return; }
@@ -88,6 +124,98 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
       if (raf2) window.cancelAnimationFrame(raf2);
     };
   }, [active, scene.id]);
+
+  useEffect(() => {
+    const isAndroid = isAndroidWebView();
+    if (!active || !scene.image || !isAndroid) {
+      setImagePaintReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    let raf1 = 0;
+    let raf2 = 0;
+    let raf3 = 0;
+    const scope = `scene:${scene.id}`;
+    const el = imgRef.current;
+    setImagePaintReady(false);
+    androidDiag(scope, "android image readiness start", {
+      src: scene.image,
+      metrics: imageMetrics(el),
+    });
+
+    const completeAfterPaint = async () => {
+      if (cancelled) return;
+      androidDiag(scope, "decode complete", { metrics: imageMetrics(el) });
+
+      if (typeof window.createImageBitmap === "function" && el?.naturalWidth && el?.naturalHeight) {
+        try {
+          const bitmap = await window.createImageBitmap(el);
+          androidDiag(scope, "ImageBitmap created", {
+            bitmapWidth: bitmap.width,
+            bitmapHeight: bitmap.height,
+          });
+          bitmap.close();
+        } catch (error) {
+          androidDiag(scope, "ImageBitmap failed", { error: String(error) });
+        }
+      } else {
+        androidDiag(scope, "ImageBitmap skipped", { reason: "unsupported-or-not-ready" });
+      }
+
+      raf1 = window.requestAnimationFrame(() => {
+        androidDiag(scope, "first RAF", { metrics: imageMetrics(el) });
+        raf2 = window.requestAnimationFrame(() => {
+          androidDiag(scope, "second RAF / first paint opportunity", { metrics: imageMetrics(el) });
+          raf3 = window.requestAnimationFrame(() => {
+            if (cancelled) return;
+            androidDiag(scope, "third RAF / presenting complete image", { metrics: imageMetrics(el) });
+            setImagePaintReady(true);
+          });
+        });
+      });
+    };
+
+    const waitForLoad = () => {
+      if (!el) {
+        androidDiag(scope, "missing DOM image element", { src: scene.image });
+        raf1 = window.requestAnimationFrame(() => setImagePaintReady(true));
+        return;
+      }
+      const decode = () => {
+        if (typeof el.decode === "function") {
+          el.decode().then(completeAfterPaint).catch((error) => {
+            androidDiag(scope, "decode failed; fail-forward", { error: String(error), metrics: imageMetrics(el) });
+            completeAfterPaint();
+          });
+        } else {
+          completeAfterPaint();
+        }
+      };
+      if (el.complete && el.naturalWidth > 0) {
+        decode();
+        return;
+      }
+      const onLoad = () => {
+        androidDiag(scope, "load event", { metrics: imageMetrics(el) });
+        decode();
+      };
+      const onError = () => {
+        androidDiag(scope, "load error; fail-forward", { metrics: imageMetrics(el) });
+        completeAfterPaint();
+      };
+      el.addEventListener("load", onLoad, { once: true });
+      el.addEventListener("error", onError, { once: true });
+    };
+
+    waitForLoad();
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+      window.cancelAnimationFrame(raf3);
+    };
+  }, [active, scene.id, scene.image]);
 
   useEffect(() => {
     if (!active) { setTitleVisible(false); setSubtitleVisible(false); return; }
@@ -116,7 +244,7 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   const hasSubtitle = !!(scene.subtitle || (scene.subtitleSegments && scene.subtitleSegments.length));
   const hasText = hasTitle || hasSubtitle;
 
-  const visible = active && !fadingOut && entered;
+  const visible = active && !fadingOut && entered && (!isAndroid || !scene.image || imagePaintReady);
 
   const isAndroid = useMemo(() => isAndroidWebView(), []);
   const bgPosition =
@@ -129,20 +257,42 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
       className="absolute inset-0"
       style={transitionStyle(active ? scene.transitionIn : scene.transitionOut, visible)}
       aria-hidden={!active}
+      data-cinematic-scene-id={scene.id}
+      data-cinematic-active={active ? "true" : "false"}
+      data-cinematic-image-ready={imagePaintReady ? "true" : "false"}
     >
 
       {/* Image band */}
       {scene.image && (
         <div className="absolute inset-0 overflow-hidden">
-          <div
-            role={scene.imageAlt ? "img" : undefined}
-            aria-label={scene.imageAlt || undefined}
-            className={`absolute inset-0 bg-cover ${kenBurns ? "cinematic-kenburns" : ""} ${isAndroid ? "cinematic-android-kb" : ""}`}
-            style={{
-              backgroundImage: `url(${scene.image})`,
-              backgroundPosition: bgPosition,
-            }}
-          />
+          {isAndroid ? (
+            <img
+              ref={imgRef}
+              src={scene.image}
+              alt={scene.imageAlt || ""}
+              aria-hidden={scene.imageAlt ? undefined : true}
+              data-cinematic-image="true"
+              className={`absolute inset-0 h-full w-full object-cover ${kenBurns ? "cinematic-kenburns" : ""} cinematic-android-kb`}
+              decoding="sync"
+              draggable={false}
+              style={{ objectPosition: bgPosition }}
+              onLoad={(event) => {
+                androidDiag(`scene:${scene.id}`, "DOM image onLoad", {
+                  metrics: imageMetrics(event.currentTarget),
+                });
+              }}
+            />
+          ) : (
+            <div
+              role={scene.imageAlt ? "img" : undefined}
+              aria-label={scene.imageAlt || undefined}
+              className={`absolute inset-0 bg-cover ${kenBurns ? "cinematic-kenburns" : ""}`}
+              style={{
+                backgroundImage: `url(${scene.image})`,
+                backgroundPosition: bgPosition,
+              }}
+            />
+          )}
         </div>
       )}
 
