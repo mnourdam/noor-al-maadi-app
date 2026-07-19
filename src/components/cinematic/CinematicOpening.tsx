@@ -65,23 +65,27 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-/** Preload every scene image, resolving as soon as all succeed or fail,
- *  or when the timeout elapses — whichever comes first. Never rejects. */
-function preloadImages(urls: string[], timeoutMs: number): Promise<void> {
+/** Preload every scene image. Resolves with the set of URLs that loaded
+ *  successfully. Never rejects; the timeout guarantees the boot path is
+ *  never trapped by a slow or missing asset. Scenes whose image is not
+ *  in the returned set are dropped before playback. */
+function preloadImages(urls: string[], timeoutMs: number): Promise<Set<string>> {
   return new Promise((resolve) => {
-    if (urls.length === 0 || typeof window === "undefined") { resolve(); return; }
+    const ok = new Set<string>();
+    if (urls.length === 0 || typeof window === "undefined") { resolve(ok); return; }
     let done = 0;
     let settled = false;
-    const finish = () => { if (!settled) { settled = true; resolve(); } };
+    const finish = () => { if (!settled) { settled = true; resolve(ok); } };
     const timer = window.setTimeout(finish, timeoutMs);
     urls.forEach((url) => {
       const img = new Image();
-      const mark = () => {
+      const mark = (loaded: boolean) => {
+        if (loaded) ok.add(url);
         done += 1;
         if (done >= urls.length) { window.clearTimeout(timer); finish(); }
       };
-      img.onload = mark;
-      img.onerror = mark;
+      img.onload = () => mark(true);
+      img.onerror = () => mark(false);
       img.src = url;
     });
   });
@@ -111,9 +115,16 @@ export function CinematicOpening() {
         return;
       }
       const images = cfg.scenes.map((s) => s.image).filter((x): x is string => !!x);
-      await preloadImages(images, PRELOAD_TIMEOUT_MS);
+      const loaded = await preloadImages(images, PRELOAD_TIMEOUT_MS);
       if (cancelled) return;
-      setConfig(cfg);
+      // Drop scenes whose image is declared but failed to load. Scenes
+      // without an image (title-only cards) are always kept.
+      const playable = cfg.scenes.filter((s) => !s.image || loaded.has(s.image));
+      if (playable.length === 0) {
+        dispatchCompleted();
+        return;
+      }
+      setConfig({ ...cfg, scenes: playable });
       setActive(true);
     })();
     return () => { cancelled = true; };
