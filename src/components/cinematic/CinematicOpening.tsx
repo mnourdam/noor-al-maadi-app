@@ -240,10 +240,17 @@ export function CinematicOpening() {
   }, [config, reducedMotion]);
 
   // Scene timer — cleared on transition, pause, and unmount.
+  // For the final scene we DO NOT call finish() directly; instead we
+  // arm FinalLogoReveal (via its own timeline) and wait for its
+  // explicit onComplete callback. This guarantees Home never becomes
+  // visible before the logo reveal finishes, even if the scene
+  // duration and the reveal timeline ever drift apart.
   useEffect(() => {
     if (phase !== "playing" || !currentScene || paused || fadingOut) return;
+    const isLast = index >= scenes.length - 1;
+    if (isLast && currentScene.showFinalLogo) return;
     const timer = window.setTimeout(() => {
-      if (index >= scenes.length - 1) {
+      if (isLast) {
         finish();
       } else {
         setIndex((i) => i + 1);
@@ -251,6 +258,7 @@ export function CinematicOpening() {
     }, Math.max(400, currentScene.durationMs));
     return () => window.clearTimeout(timer);
   }, [phase, currentScene, index, scenes.length, paused, fadingOut, finish]);
+
 
   // Lock body scroll while the portal is up.
   useEffect(() => {
@@ -369,8 +377,10 @@ export function CinematicOpening() {
           logoUrl={CINEMATIC_LOGO_URL}
           reducedMotion={reducedMotion}
           fadingOut={fadingOut}
+          onComplete={finish}
         />
       )}
+
 
 
       {canSkip && (
@@ -440,32 +450,63 @@ function FinalLogoReveal({
   logoUrl,
   reducedMotion,
   fadingOut,
-}: { logoUrl: string; reducedMotion: boolean; fadingOut: boolean }) {
-  const [phase, setPhase] = useState<"idle" | "in" | "glow" | "hold" | "glow-out" | "out">("idle");
+  onComplete,
+}: {
+  logoUrl: string;
+  reducedMotion: boolean;
+  fadingOut: boolean;
+  /** Fires exactly once when the reveal has finished on-screen.
+   *  The parent uses this to trigger the overlay fade and Home reveal —
+   *  Home cannot appear before this callback fires. */
+  onComplete: () => void;
+}) {
+  const [phase, setPhase] = useState<"idle" | "in" | "glow" | "hold" | "glow-out" | "out" | "done">("idle");
+  const completedRef = useRef(false);
 
   useEffect(() => {
     if (reducedMotion) {
-      const t1 = window.setTimeout(() => setPhase("in"), 200);
+      // Reduced motion still runs the full reveal (opacity only, no
+      // scale/glow motion) and still fires onComplete — we never skip
+      // the logo. Timeline is compressed but preserves the beats.
+      const t1 = window.setTimeout(() => setPhase("in"),   200);
       const t2 = window.setTimeout(() => setPhase("hold"), 700);
-      return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
+      const t3 = window.setTimeout(() => setPhase("out"),  2800);
+      const t4 = window.setTimeout(() => setPhase("done"), 3600);
+      return () => {
+        window.clearTimeout(t1); window.clearTimeout(t2);
+        window.clearTimeout(t3); window.clearTimeout(t4);
+      };
     }
     const t1 = window.setTimeout(() => setPhase("in"),       700);
     const t2 = window.setTimeout(() => setPhase("glow"),     1900);
     const t3 = window.setTimeout(() => setPhase("hold"),     2600);
     const t4 = window.setTimeout(() => setPhase("glow-out"), 3400);
     const t5 = window.setTimeout(() => setPhase("out"),      4200);
+    // "done" fires only after the logo fade-out has fully completed,
+    // matching the 1200ms opacity transition below (4200 + 1200 = 5400).
+    const t6 = window.setTimeout(() => setPhase("done"),     5400);
     return () => {
       window.clearTimeout(t1); window.clearTimeout(t2);
       window.clearTimeout(t3); window.clearTimeout(t4);
-      window.clearTimeout(t5);
+      window.clearTimeout(t5); window.clearTimeout(t6);
     };
   }, [reducedMotion]);
 
-  const logoOpacity = fadingOut || phase === "idle" || phase === "out" ? 0 : 1;
+  useEffect(() => {
+    if (phase === "done" && !completedRef.current) {
+      completedRef.current = true;
+      onComplete();
+    }
+  }, [phase, onComplete]);
+
+
+  const hidden = phase === "idle" || phase === "out" || phase === "done";
+  const logoOpacity = fadingOut || hidden ? 0 : 1;
   const glowOpacity =
     fadingOut || phase === "glow" || phase === "hold" ? (fadingOut ? 0 : 1) : 0;
-  const logoScale = phase === "idle" ? 0.94 : phase === "out" ? 0.98 : 1;
+  const logoScale = phase === "idle" ? 0.94 : hidden ? 0.98 : 1;
   const glowScale = phase === "glow" || phase === "hold" ? 1 : 0.85;
+
 
   const ease = "cubic-bezier(0.4, 0, 0.2, 1)";
 
