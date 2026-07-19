@@ -251,6 +251,10 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
     (isAndroid && scene.imagePositionAndroid) ||
     scene.imagePosition ||
     "center";
+  const showAndroidDebug = isAndroid && (() => {
+    try { return window.localStorage.getItem("irth.cinematic.debug") === "1"; }
+    catch { return false; }
+  })();
 
   useEffect(() => {
     androidDiag(`scene:${scene.id}`, "visibility state", {
@@ -333,6 +337,19 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
           }}
         >
           <span style={{ color: GOLD }}>{scene.contextLabel}</span>
+        </div>
+      )}
+
+      {showAndroidDebug && active && (
+        <div
+          dir="ltr"
+          className="pointer-events-none absolute bottom-2 left-2 z-[20] max-w-[92vw] rounded bg-black/70 px-2 py-1 font-mono text-[10px] leading-4 text-lime-200"
+        >
+          <div>scene={scene.id}</div>
+          <div>ready={String(imagePaintReady)} active={String(active)} visible={String(visible)}</div>
+          <div>vp={window.innerWidth}×{window.innerHeight} vv={Math.round(window.visualViewport?.height ?? 0)}</div>
+          <div>pos={bgPosition}</div>
+          <div>img={imgRef.current?.naturalWidth ?? 0}×{imgRef.current?.naturalHeight ?? 0}</div>
         </div>
       )}
 
