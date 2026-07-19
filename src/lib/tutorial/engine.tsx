@@ -490,6 +490,14 @@ export function TutorialProvider({
   }
   const api = apiRef.current;
 
+  // Monotonically increasing ownership token for the target-locator
+  // task. Every locator effect run captures a `taskId` from this ref;
+  // any async continuation (rAF, setTimeout, ResizeObserver callback,
+  // scroll handler, watchdog, nested rAFs) must verify it still owns
+  // the ref before mutating engine state. Any mismatch means a newer
+  // step has taken over and the continuation must return silently.
+  const activeTaskIdRef = useRef(0);
+
   const [snap, setSnap] = useState<TutorialEngineSnapshot>(() =>
     snapshotOf(store),
   );
