@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { peekAll, type OutboxItem } from "@/lib/offline/outbox";
 import { flushOutbox, getLastFlushAt } from "@/lib/offline/flush";
 import { resetCompletion as resetCinematicOpening, readCompletedVersion as readCinematicOpeningVersion } from "@/lib/cinematic-opening/persistence";
+import { TutorialDiagnosticsCard } from "@/components/admin/TutorialDiagnosticsCard";
 
 export const Route = createFileRoute("/admin/offline-diagnostics")({
   head: () => ({
@@ -441,6 +442,10 @@ function OfflineDiagnostics() {
 
         {/* Cinematic Opening — developer replay */}
         <CinematicOpeningReset />
+
+        {/* Guided Tutorial — admin diagnostics */}
+        <TutorialDiagnosticsCard />
+
 
 
 
