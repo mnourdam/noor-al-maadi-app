@@ -354,6 +354,178 @@ export function readLastStartDiagnostic(): LastStartDiagnostic | null {
 
 
 // ------------------------------------------------------------
+// Per-transition instrumentation log
+// ------------------------------------------------------------
+// A small ring buffer that captures every engine state transition
+// and every branch decision inside the locator/settle/watchdog
+// pipeline. Persisted to localStorage so we can read it back from
+// the physical APK via the Admin Diagnostics card.
+
+export const TRANSITION_LOG_KEY = "irth.tutorial.transition-log.v1";
+const TRANSITION_LOG_MAX = 120;
+
+export interface TutorialTransitionEntry {
+  seq: number;
+  t: number; // ms since first entry in this session
+  kind: "transition" | "event";
+  event?: string;
+  previousState?: string;
+  nextState?: string;
+  currentStepIndex: number | null;
+  currentStepId: string | null;
+  targetId: string | null;
+  targetResolved: boolean;
+  targetRect: { x: number; y: number; w: number; h: number } | null;
+  scrollSettled: boolean | null;
+  skipIfTargetUnavailable: boolean | null;
+  watchdogStarted: boolean;
+  watchdogFired: boolean;
+  apiNextCalled: boolean;
+  reason: string | null;
+  pathname: string;
+}
+
+let transitionLog: TutorialTransitionEntry[] = [];
+let transitionSeq = 0;
+let transitionLogT0 = 0;
+
+const perStepFlags = {
+  stepId: null as string | null,
+  scrollSettled: null as boolean | null,
+  watchdogStarted: false,
+  watchdogFired: false,
+};
+
+function persistTransitionLog(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      TRANSITION_LOG_KEY,
+      JSON.stringify(transitionLog),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+function baseEntry(): Omit<TutorialTransitionEntry, "seq" | "t" | "kind"> {
+  const snap = binding?.api.getSnapshot();
+  const step: TutorialStep | null =
+    snap && snap.stepIndex != null
+      ? binding?.config.steps[snap.stepIndex] ?? null
+      : null;
+  const rect = binding?.getTargetRect() ?? null;
+  return {
+    currentStepIndex: snap?.stepIndex ?? null,
+    currentStepId: step?.id ?? null,
+    targetId: step?.targetId ?? null,
+    targetResolved: rect != null,
+    targetRect: rect
+      ? {
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          w: Math.round(rect.width),
+          h: Math.round(rect.height),
+        }
+      : null,
+    scrollSettled: perStepFlags.scrollSettled,
+    skipIfTargetUnavailable: step?.skipIfTargetUnavailable ?? null,
+    watchdogStarted: perStepFlags.watchdogStarted,
+    watchdogFired: perStepFlags.watchdogFired,
+    apiNextCalled: false,
+    reason: null,
+    pathname: typeof window !== "undefined" ? window.location.pathname : "",
+  };
+}
+
+function push(entry: TutorialTransitionEntry): void {
+  transitionLog.push(entry);
+  if (transitionLog.length > TRANSITION_LOG_MAX) {
+    transitionLog = transitionLog.slice(-TRANSITION_LOG_MAX);
+  }
+  persistTransitionLog();
+  // eslint-disable-next-line no-console
+  console.log("[tutorial.log]", entry);
+}
+
+export function logTutorialTransition(
+  previousState: string,
+  nextState: string,
+): void {
+  const now = Date.now();
+  if (transitionLogT0 === 0) transitionLogT0 = now;
+  push({
+    seq: ++transitionSeq,
+    t: now - transitionLogT0,
+    kind: "transition",
+    previousState,
+    nextState,
+    ...baseEntry(),
+  });
+}
+
+export function logTutorialEvent(
+  event: string,
+  extra?: {
+    reason?: string | null;
+    apiNextCalled?: boolean;
+    scrollSettled?: boolean;
+    watchdogStarted?: boolean;
+    watchdogFired?: boolean;
+  },
+): void {
+  const now = Date.now();
+  if (transitionLogT0 === 0) transitionLogT0 = now;
+  if (extra?.scrollSettled != null) {
+    perStepFlags.scrollSettled = extra.scrollSettled;
+  }
+  if (extra?.watchdogStarted) perStepFlags.watchdogStarted = true;
+  if (extra?.watchdogFired) perStepFlags.watchdogFired = true;
+  const base = baseEntry();
+  push({
+    seq: ++transitionSeq,
+    t: now - transitionLogT0,
+    kind: "event",
+    event,
+    ...base,
+    apiNextCalled: extra?.apiNextCalled ?? false,
+    reason: extra?.reason ?? null,
+  });
+}
+
+export function resetPerStepInstrumentation(stepId: string | null): void {
+  perStepFlags.stepId = stepId;
+  perStepFlags.scrollSettled = null;
+  perStepFlags.watchdogStarted = false;
+  perStepFlags.watchdogFired = false;
+}
+
+export function readTutorialTransitionLog(): TutorialTransitionEntry[] {
+  if (transitionLog.length > 0) return transitionLog;
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(TRANSITION_LOG_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as TutorialTransitionEntry[];
+  } catch {
+    return [];
+  }
+}
+
+export function clearTutorialTransitionLog(): void {
+  transitionLog = [];
+  transitionSeq = 0;
+  transitionLogT0 = 0;
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.removeItem(TRANSITION_LOG_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+// ------------------------------------------------------------
 // Development-only window attachment
 // ------------------------------------------------------------
 
