@@ -222,7 +222,8 @@ export function CinematicOpening() {
       aria-label="Cinematic opening"
       style={{
         opacity: fadingOut ? 0 : 1,
-        transition: `opacity ${reducedMotion ? 250 : FINAL_FADE_MS}ms ease-in-out`,
+        transition: `opacity ${reducedMotion ? 300 : FINAL_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
+        willChange: "opacity",
       }}
     >
       {scenes.map((s, i) => (
