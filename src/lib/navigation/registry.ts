@@ -50,9 +50,35 @@ const PLAYER_ROUTES: RouteDeclaration[] = [
 
   // Auth surface
   { id: "/auth", parentRoute: "/", kind: "player", label: "الدخول" },
-  { id: "/auth/callback", parentRoute: "/", kind: "player", label: "استكمال الدخول" },
-  { id: "/reset-password", parentRoute: "/", kind: "player", label: "تغيير كلمة المرور" },
-  { id: "/unsubscribe", parentRoute: "/", kind: "player", label: "إلغاء الاشتراك" },
+  {
+    id: "/auth/callback",
+    parentRoute: "/",
+    kind: "player",
+    label: "استكمال الدخول",
+    // OAuth token exchange is in flight; Back must not interrupt it.
+    // Once the callback resolves it navigates itself.
+    backPolicy: "blocked_while_pending",
+    supportsOriginOverride: false,
+  },
+  {
+    id: "/reset-password",
+    parentRoute: "/",
+    kind: "player",
+    label: "تغيير كلمة المرور",
+    // RecoveryModeGuard owns navigation until the password reset finishes.
+    backPolicy: "blocked_while_pending",
+    supportsOriginOverride: false,
+  },
+  {
+    id: "/unsubscribe",
+    parentRoute: "/",
+    kind: "player",
+    label: "إلغاء الاشتراك",
+    // One-shot email flow: always return safely to Home.
+    backPolicy: "force_target",
+    backPolicyTarget: "/",
+    supportsOriginOverride: false,
+  },
 
   // Campaigns hierarchy
   { id: "/campaigns/imported/$id", parentRoute: "/campaigns", kind: "player", label: "الحملة" },
