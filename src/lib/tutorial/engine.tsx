@@ -739,12 +739,21 @@ export function TutorialProvider({
 
     // Per-step watchdog: never trap the player on a dead dim layer.
     const STEP_WATCHDOG_MS = 5000;
+    logTutorialEvent("locator-effect-started", {
+      reason: `selector=${selector}`,
+      watchdogStarted: true,
+    });
     watchdogHandle = window.setTimeout(() => {
       if (cancelled) return;
       // eslint-disable-next-line no-console
       console.warn(
         `[tutorial] step watchdog fired for "${stepAnalyticsId}" — state=${store.state}, hasRect=${store.targetRect != null}. Skipping forward.`,
       );
+      logTutorialEvent("watchdog-fired", {
+        reason: `state=${store.state}, hasRect=${store.targetRect != null}`,
+        apiNextCalled: true,
+        watchdogFired: true,
+      });
       api.next();
     }, STEP_WATCHDOG_MS);
     const clearWatchdog = () => {
