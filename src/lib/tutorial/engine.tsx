@@ -930,6 +930,9 @@ export function TutorialProvider({
 
     return () => {
       cancelled = true;
+      logTutorialEvent("locator-effect-cleanup", {
+        reason: `state=${store.state}`,
+      });
       clearWatchdog();
       if (rafHandle != null) cancelAnimationFrame(rafHandle);
       if (observer && currentEl) observer.disconnect();
