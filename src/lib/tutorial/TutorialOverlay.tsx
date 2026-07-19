@@ -128,6 +128,8 @@ export function TutorialOverlay() {
     currentStep,
     targetRect,
     skipConfirmOpen,
+    enabledOrdinal,
+    enabledTotal,
   } = useTutorial();
   const reducedMotion = useReducedMotion();
 
@@ -166,15 +168,26 @@ export function TutorialOverlay() {
   if (typeof document === "undefined") return null;
   if (!active && !skipConfirmOpen) return null;
 
-  const totalSteps = config.steps.length;
-  const isFirstStep = snapshot.stepIndex === 0;
-  const isLastStep = snapshot.stepIndex === totalSteps - 1;
+  // Progress + prev/next flags derived from ENABLED steps only.
+  // Disabled steps are invisible: they do not count toward the
+  // progress denominator, cannot be reached with prev/next, and do
+  // not affect the "first"/"last" affordance labels.
+  const isFirstStep =
+    snapshot.stepIndex != null && (enabledOrdinal ?? 0) <= 1;
+  const isLastStep =
+    snapshot.stepIndex != null &&
+    enabledOrdinal != null &&
+    enabledOrdinal >= enabledTotal;
   const stepCounter =
-    snapshot.stepIndex != null
-      ? TUTORIAL_COPY.stepCounter(snapshot.stepIndex + 1, totalSteps)
+    enabledOrdinal != null && enabledTotal > 0
+      ? TUTORIAL_COPY.stepCounter(enabledOrdinal, enabledTotal)
       : "";
+  void config; // preserved for future debug-color styling
 
   const padding = currentStep?.padding ?? 8;
+
+  // SVG mask: a full-viewport rect punched by the target rect.
+  const cutoutX = targetRect ? targetRect.left - padding : 0;
 
   // SVG mask: a full-viewport rect punched by the target rect.
   const cutoutX = targetRect ? targetRect.left - padding : 0;
