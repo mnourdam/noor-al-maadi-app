@@ -18,6 +18,7 @@ import {
   readLastStartDiagnostic,
   readTutorialCompletionRecord,
   readTutorialTransitionLog,
+  readRawTutorialTransitionLog,
   clearTutorialTransitionLog,
   resetTutorialCompletion,
   tutorialDebug,
