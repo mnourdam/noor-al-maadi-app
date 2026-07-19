@@ -710,9 +710,42 @@ export function TutorialProvider({
     let scrollListener: (() => void) | null = null;
     let currentEl: HTMLElement | null = null;
     let cleanupScroll = () => {};
+    let rafHandle: number | null = null;
+    let watchdogHandle: number | null = null;
 
     const selector = `[data-tutorial-target="${currentStep.targetId}"]`;
     const start = performance.now();
+    const stepAnalyticsId = currentStep.analyticsId;
+
+    // Per-step watchdog: never trap the player on a dead dim layer.
+    const STEP_WATCHDOG_MS = 5000;
+    watchdogHandle = window.setTimeout(() => {
+      if (cancelled) return;
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[tutorial] step watchdog fired for "${stepAnalyticsId}" — state=${store.state}, hasRect=${store.targetRect != null}. Skipping forward.`,
+      );
+      api.next();
+    }, STEP_WATCHDOG_MS);
+    const clearWatchdog = () => {
+      if (watchdogHandle != null) {
+        clearTimeout(watchdogHandle);
+        watchdogHandle = null;
+      }
+    };
+
+    const rectValid = (r: DOMRect): boolean => {
+      if (r.width <= 0 || r.height <= 0) return false;
+      const vh =
+        (typeof window !== "undefined" && window.visualViewport?.height) ||
+        window.innerHeight;
+      const vw =
+        (typeof window !== "undefined" && window.visualViewport?.width) ||
+        window.innerWidth;
+      if (r.bottom < 0 || r.top > vh) return false;
+      if (r.right < 0 || r.left > vw) return false;
+      return true;
+    };
 
     const attachMeasurement = (el: HTMLElement) => {
       currentEl = el;
@@ -742,7 +775,61 @@ export function TutorialProvider({
           window.removeEventListener("resize", scrollListener);
         }
       };
+      clearWatchdog();
       transition(store, "showing_step");
+    };
+
+    // Scroll-settle detector: sample the target rect on every rAF and
+    // require it stable within tolerance for N consecutive frames.
+    // Bounded safety timeout — never depends on `scrollend` (unreliable
+    // on Android WebView).
+    const SETTLE_TOLERANCE_PX = 0.75;
+    const SETTLE_FRAMES = 3;
+    const SETTLE_TIMEOUT_MS = 2000;
+
+    const waitForSettle = (el: HTMLElement) => {
+      transition(store, "scrolling_to_target");
+      const settleStart = performance.now();
+      let lastTop = el.getBoundingClientRect().top;
+      let stableFrames = 0;
+
+      const tick = () => {
+        if (cancelled) return;
+        const rect = el.getBoundingClientRect();
+        if (Math.abs(rect.top - lastTop) <= SETTLE_TOLERANCE_PX) {
+          stableFrames += 1;
+        } else {
+          stableFrames = 0;
+        }
+        lastTop = rect.top;
+        const elapsed = performance.now() - settleStart;
+        const settled = stableFrames >= SETTLE_FRAMES;
+        const timedOut = elapsed >= SETTLE_TIMEOUT_MS;
+        if (settled || timedOut) {
+          requestAnimationFrame(() => {
+            if (cancelled) return;
+            requestAnimationFrame(() => {
+              if (cancelled) return;
+              transition(store, "measuring_target");
+              const finalRect = el.getBoundingClientRect();
+              if (!rectValid(finalRect)) {
+                if (
+                  currentStep.skipIfTargetUnavailable ||
+                  currentStep.onMissingTarget === "skip"
+                ) {
+                  clearWatchdog();
+                  api.next();
+                  return;
+                }
+              }
+              attachMeasurement(el);
+            });
+          });
+          return;
+        }
+        rafHandle = requestAnimationFrame(tick);
+      };
+      rafHandle = requestAnimationFrame(tick);
     };
 
     const tryResolve = () => {
@@ -763,14 +850,7 @@ export function TutorialProvider({
           } catch {
             /* ignore */
           }
-          transition(store, "scrolling_to_target");
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              if (cancelled) return;
-              transition(store, "measuring_target");
-              attachMeasurement(el);
-            });
-          });
+          waitForSettle(el);
         } else {
           transition(store, "measuring_target");
           attachMeasurement(el);
@@ -783,19 +863,22 @@ export function TutorialProvider({
           currentStep.skipIfTargetUnavailable ||
           currentStep.onMissingTarget === "skip"
         ) {
+          clearWatchdog();
           api.next();
         } else {
           window.setTimeout(tryResolve, 200);
         }
         return;
       }
-      requestAnimationFrame(tryResolve);
+      rafHandle = requestAnimationFrame(tryResolve);
     };
 
     tryResolve();
 
     return () => {
       cancelled = true;
+      clearWatchdog();
+      if (rafHandle != null) cancelAnimationFrame(rafHandle);
       if (observer && currentEl) observer.disconnect();
       cleanupScroll();
     };

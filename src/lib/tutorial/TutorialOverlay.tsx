@@ -151,8 +151,14 @@ export function TutorialOverlay() {
     snapshot.state !== "paused_by_overlay" &&
     currentStep != null;
 
+  // Only reveal the dim + spotlight + coach-mark when the engine has
+  // fully resolved a target for the current step. Rendering the dim
+  // during `transitioning` / `locating_target` / `scrolling_to_target`
+  // / `measuring_target` produces a dead opaque screen with no controls
+  // — the exact freeze reported on Android for the Worlds step.
   const shouldRenderSpotlight =
     active && snapshot.state === "showing_step" && targetRect != null;
+  const shouldRenderChrome = shouldRenderSpotlight;
 
   const placement = useMemo(
     () =>
@@ -166,7 +172,7 @@ export function TutorialOverlay() {
   );
 
   if (typeof document === "undefined") return null;
-  if (!active && !skipConfirmOpen) return null;
+  if (!shouldRenderChrome && !skipConfirmOpen) return null;
 
   // Progress + prev/next flags derived from ENABLED steps only.
   // Disabled steps are invisible: they do not count toward the
@@ -203,10 +209,10 @@ export function TutorialOverlay() {
         position: "fixed",
         inset: 0,
         zIndex: 2000,
-        pointerEvents: active ? "auto" : "none",
+        pointerEvents: shouldRenderChrome ? "auto" : "none",
       }}
     >
-      {active && (
+      {shouldRenderChrome && (
         <>
           {/* Dimmed backdrop with SVG cutout. */}
           <svg
