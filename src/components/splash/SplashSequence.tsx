@@ -55,6 +55,11 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
   const [mounted, setMounted] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     if (isAndroidUltraStableMode()) return false;
+    // First-ever launch: the cinematic opening owns the entire canvas
+    // (black → notification permission → opening → home). The branded
+    // splash must not render on top of it.
+    try { if (isFirstEverLaunch()) return false; } catch { /* */ }
+
     try {
       // Already played in this WebView session → never replay.
       if (window.sessionStorage.getItem(SESSION_FLAG) === "1") return false;
