@@ -117,7 +117,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-3-3-baghdad-cordoba",
       image: "/cinematic/scene3-3-baghdad-cordoba.webp",
-      contextLabel: "بغداد وقرطبة — القرن ٩–١٠م",
+      contextLabel: "بغداد وقرطبة — القرنان 9–10م",
       title: "وازدهر العلم.",
       titleSegments: [
         { text: "وازدهر " },
