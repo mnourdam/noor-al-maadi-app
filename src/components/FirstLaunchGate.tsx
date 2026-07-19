@@ -76,10 +76,10 @@ export function FirstLaunchGate() {
       setOpen(false);
       return;
     }
-    // Wait until onboarding has finished (or was previously completed) so the
-    // very-first-launch experience is: onboarding → auth-choice dialog.
-    if (!onboardingDone) {
-      setReason("waiting-for-onboarding");
+    // Wait until the cinematic opening has finished (or was previously
+    // completed / absent) so first-launch UX is: opening → auth-choice.
+    if (!openingDone) {
+      setReason("waiting-for-opening");
       setOpen(false);
       return;
     }
@@ -87,7 +87,7 @@ export function FirstLaunchGate() {
     try { saved = window.localStorage.getItem(GUEST_CHOICE_KEY); } catch { /* */ }
     setReason(saved ? `existing-choice:${saved}` : "showing");
     setOpen(!saved);
-  }, [user, loadingSession, onboardingDone]);
+  }, [user, loadingSession, openingDone]);
 
 
   if (!open) return null;
