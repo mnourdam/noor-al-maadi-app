@@ -279,15 +279,21 @@ export function CinematicOpening() {
 
   const node = (
     <div
-      className="fixed inset-0 z-[2000] bg-black"
+      className="fixed inset-0 z-[2000] bg-black touch-none select-none"
       role="dialog"
       aria-modal="true"
       aria-label="Cinematic opening"
+      data-irth-cinematic-opening=""
+      onClickCapture={(e) => e.stopPropagation()}
+      onTouchStartCapture={(e) => e.stopPropagation()}
+      onPointerDownCapture={(e) => e.stopPropagation()}
       style={{
         opacity: fadingOut ? 0 : 1,
         transition: `opacity ${reducedMotion ? 300 : FINAL_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
         willChange: "opacity",
+        pointerEvents: fadingOut ? "none" : "auto",
       }}
+
     >
       {scenes.map((s, i) => (
         <SceneRenderer
