@@ -4,8 +4,11 @@
 import { Link } from "@tanstack/react-router";
 import { Clock } from "lucide-react";
 import type { TimelineEvent } from "@/types/encyclopediaArticle";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
 
 export function EncyclopediaTimeline({ timeline }: { timeline?: TimelineEvent[] }) {
+  const stashOrigin = useStashCurrentAsOrigin();
+
   if (!timeline || timeline.length === 0) return null;
   return (
     <section className="mt-10">
