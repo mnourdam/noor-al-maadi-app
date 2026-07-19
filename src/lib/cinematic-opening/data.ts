@@ -224,6 +224,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-6-final-logo",
       image: "/cinematic/scene6-final-logo-bg.webp",
+      contextLabel: "إرث — اليوم",
       durationMs: 5000,
       transitionIn: "crossfade",
       transitionOut: "fade-to-black",
