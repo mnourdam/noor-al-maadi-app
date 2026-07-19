@@ -240,6 +240,17 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
           0%   { transform: scale(1.045) translate3d(0, 0.4%, 0); }
           100% { transform: scale(1.13)  translate3d(0, -1.6%, 0); }
         }
+        /* Android WebView: softer scale and reduced upward pan so the
+           bottom of tall portrait compositions is never cropped. Applied
+           on top of the base keyframes via a same-name override. */
+        .cinematic-android-kb.cinematic-kenburns {
+          animation-name: cinematic-kenburns-android;
+          transform-origin: center 62%;
+        }
+        @keyframes cinematic-kenburns-android {
+          0%   { transform: scale(1.035) translate3d(0, 0.2%, 0); }
+          100% { transform: scale(1.09)  translate3d(0, -0.6%, 0); }
+        }
       `}</style>
     </div>
   );
