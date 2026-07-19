@@ -41,7 +41,7 @@ interface Props {
 // Never "instant", never mechanical.
 const CINEMATIC_EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
 
-function transitionStyle(t: SceneTransition | undefined, active: boolean, fadingOut: boolean): React.CSSProperties {
+function transitionStyle(t: SceneTransition | undefined, visible: boolean): React.CSSProperties {
   const kind = t ?? "crossfade";
   // Every scene fades. "cut" is intentionally softened to a short crossfade
   // so the sequence never has an abrupt visual jump.
@@ -49,7 +49,7 @@ function transitionStyle(t: SceneTransition | undefined, active: boolean, fading
     kind === "fade-from-black" || kind === "fade-to-black" ? 1800 :
     kind === "cut" ? 600 : 1600;
   return {
-    opacity: active && !fadingOut ? 1 : 0,
+    opacity: visible ? 1 : 0,
     transition: `opacity ${durationMs}ms ${CINEMATIC_EASE}`,
     willChange: "opacity",
   };
@@ -58,6 +58,25 @@ function transitionStyle(t: SceneTransition | undefined, active: boolean, fading
 function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   const [titleVisible, setTitleVisible] = useState(false);
   const [subtitleVisible, setSubtitleVisible] = useState(false);
+  // Start hidden so the very first frame of the scene layer is fully
+  // transparent (pure black shows through from the portal beneath).
+  // On the next animation frame after this scene becomes active we flip
+  // to visible, which triggers the CSS opacity transition — so Scene 1
+  // gradually emerges from black instead of appearing abruptly.
+  const [entered, setEntered] = useState(false);
+
+  useEffect(() => {
+    if (!active) { setEntered(false); return; }
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => setEntered(true));
+    });
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      if (raf2) window.cancelAnimationFrame(raf2);
+    };
+  }, [active, scene.id]);
 
   useEffect(() => {
     if (!active) { setTitleVisible(false); setSubtitleVisible(false); return; }
@@ -86,13 +105,15 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   const hasSubtitle = !!(scene.subtitle || (scene.subtitleSegments && scene.subtitleSegments.length));
   const hasText = hasTitle || hasSubtitle;
 
+  const visible = active && !fadingOut && entered;
 
   return (
     <div
       className="absolute inset-0"
-      style={transitionStyle(active ? scene.transitionIn : scene.transitionOut, active, fadingOut)}
+      style={transitionStyle(active ? scene.transitionIn : scene.transitionOut, visible)}
       aria-hidden={!active}
     >
+
       {/* Image band */}
       {scene.image && (
         <div className="absolute inset-0 overflow-hidden">
