@@ -688,7 +688,7 @@ function FinalLogoReveal({
         ref={imgRef}
         src={logoUrl}
         alt="إرث"
-        className="relative h-40 w-40 select-none sm:h-52 sm:w-52"
+        className="relative h-44 w-44 select-none p-4 sm:h-56 sm:w-56 sm:p-5"
         draggable={false}
         decoding="sync"
         onLoad={(event) => {
