@@ -103,7 +103,9 @@ export interface ValidationIssue {
     | "unregistered_route"
     | "extra_registration"
     | "non_root_without_parent"
-    | "root_with_parent";
+    | "root_with_parent"
+    | "invalid_back_policy_target"
+    | "missing_back_policy_target";
   routeId?: RouteId;
   message: string;
 }
