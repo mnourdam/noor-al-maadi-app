@@ -83,8 +83,9 @@ function ParticleLayerImpl({ preset, intensity = 0.4 }: Props) {
             height: `${p.size}px`,
             background: cfg.color,
             filter: `blur(${cfg.blur}px)`,
-            opacity: 0.5 + clamped * 0.5,
+            opacity: cfg.peakOpacity * (0.55 + clamped * 0.45),
             animation: `cinematic-particle-drift ${p.duration}s linear ${p.delay}s infinite`,
+            willChange: "transform, opacity",
             // @ts-expect-error CSS custom property
             "--drift-x": `${p.drift}px`,
           }}
@@ -93,9 +94,9 @@ function ParticleLayerImpl({ preset, intensity = 0.4 }: Props) {
       <style>{`
         @keyframes cinematic-particle-drift {
           0%   { transform: translate3d(0, 0, 0); opacity: 0; }
-          15%  { opacity: 1; }
-          85%  { opacity: 1; }
-          100% { transform: translate3d(var(--drift-x, 0), -40px, 0); opacity: 0; }
+          25%  { opacity: 1; }
+          75%  { opacity: 1; }
+          100% { transform: translate3d(var(--drift-x, 0), -32px, 0); opacity: 0; }
         }
       `}</style>
     </div>
