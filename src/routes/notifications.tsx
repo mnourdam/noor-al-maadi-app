@@ -87,12 +87,16 @@ function NotificationsCenter() {
       payload: n.payload as NotificationPayload,
     });
     const [path, hashPart] = to.split("#");
+    // Stash /notifications as origin so Back from the target returns
+    // here rather than falling through to the target's structural parent.
+    stashOrigin(path || "/");
     try {
       await router.navigate({ to: (path || "/") as "/", hash: hashPart || undefined });
     } catch {
       window.location.href = to;
     }
   };
+
 
   const remove = async (id: string) => {
     setRows((cur) => cur.filter((r) => r.id !== id));
