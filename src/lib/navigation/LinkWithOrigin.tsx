@@ -13,13 +13,11 @@
 
 import { Link } from "@tanstack/react-router";
 import type { ComponentProps, MouseEvent } from "react";
-import { useNavigationOrigin } from "./engine";
+import { useStashOrigin } from "./engine";
 import type { NavigationOrigin } from "./types";
 
 type BaseLinkProps = ComponentProps<typeof Link>;
 
-// Approximate the destination pathname the same way the engine does
-// when navigateWithOrigin() is called imperatively: substitute $params.
 function substituteParams(
   pattern: string,
   params: Record<string, string> | undefined,
@@ -37,23 +35,16 @@ export type LinkWithOriginProps = BaseLinkProps & {
 };
 
 export function LinkWithOrigin(props: LinkWithOriginProps) {
-  const { origin, onClick, to, params, ...rest } = props;
+  const { origin, onClick, to, params } = props;
   const stash = useStashOrigin();
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    onClick?.(e as never);
+    (onClick as ((e: MouseEvent<HTMLAnchorElement>) => void) | undefined)?.(e);
     if (e.defaultPrevented) return;
-    // Ignore cmd/ctrl/shift/middle-click — they open a new tab and
-    // never invoke Back within this window.
-    if (
-      e.metaKey ||
-      e.ctrlKey ||
-      e.shiftKey ||
-      e.altKey ||
-      (e as unknown as { button?: number }).button
-    ) {
-      return;
-    }
+    // Modified clicks (new tab, download, middle-click) never trigger
+    // Back within this window — do not stash.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if ((e as unknown as { button?: number }).button) return;
     const path = substituteParams(
       String(to ?? ""),
       params as Record<string, string> | undefined,
@@ -61,33 +52,11 @@ export function LinkWithOrigin(props: LinkWithOriginProps) {
     stash(path, origin);
   };
 
-  return (
-    <Link
-      to={to as never}
-      params={params as never}
-      onClick={handleClick as never}
-      {...(rest as never)}
-    />
-  );
-}
-
-/**
- * Low-level helper for cases where a <Link> is not appropriate
- * (list rows, imperative flows). Returns a function `(destPath, origin)`
- * that stashes the origin for the destination pathname.
- */
-export function useStashOrigin() {
-  const origins = useNavigationOrigin();
-  return (destPath: string, origin: NavigationOrigin) => {
-    // useNavigationOrigin is scoped to the CURRENT pathname; we need
-    // to write into the destination's slot. Grab the engine directly.
-    // The public API exposes .set() keyed on the current path — so we
-    // temporarily reassign by leveraging engine internals via a fresh
-    // hook call is not possible; instead, dispatch a window event that
-    // the engine listens for. Simpler: expose a dedicated setter on
-    // useNavigationOrigin. We route through it via a small shim.
-    (origins as unknown as {
-      __setForPath?: (dest: string, o: NavigationOrigin) => void;
-    }).__setForPath?.(destPath, origin);
-  };
+  // Cast to `any` at the boundary: TanStack's <Link> uses a heavily
+  // overloaded typed-route generic that resists composition through
+  // a wrapper. We preserve every prop verbatim.
+  const forwarded = { ...props } as Record<string, unknown>;
+  delete forwarded.origin;
+  forwarded.onClick = handleClick;
+  return <Link {...(forwarded as ComponentProps<typeof Link>)} />;
 }
