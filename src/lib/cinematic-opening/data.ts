@@ -159,7 +159,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-4-1-abdul-hamid",
       image: "/cinematic/scene4-1-abdul-hamid.webp",
-      contextLabel: "أواخر القرن ١٩م",
+      contextLabel: "السلطان عبد الحميد الثاني — 1909م",
       title: "ثم...",
       durationMs: 5500,
       textDelayMs: 900,
