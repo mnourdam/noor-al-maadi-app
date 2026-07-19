@@ -9,12 +9,13 @@ import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagno
 import { isSectionEnabled } from "@/lib/androidQuietMode";
 
 const tabs = [
-  { to: "/", label: "الرئيسية", icon: Compass },
-  { to: "/campaigns", label: "الحملات", icon: Swords },
-  { to: "/encyclopedia", label: "الموسوعة", icon: BookOpen },
-  { to: "/map", label: "الأطلس", icon: Map },
-  { to: "/collection", label: "المتحف", icon: Library },
-  { to: "/profile", label: "حسابي", icon: User },
+  { to: "/", label: "الرئيسية", icon: Compass, tutorialTargetId: null },
+  { to: "/campaigns", label: "الحملات", icon: Swords, tutorialTargetId: "nav-campaigns" },
+  { to: "/encyclopedia", label: "الموسوعة", icon: BookOpen, tutorialTargetId: "nav-encyclopedia" },
+  // Player-facing label stays "الأطلس"; route remains `/map`.
+  { to: "/map", label: "الأطلس", icon: Map, tutorialTargetId: "nav-atlas" },
+  { to: "/collection", label: "المتحف", icon: Library, tutorialTargetId: "nav-museum" },
+  { to: "/profile", label: "حسابي", icon: User, tutorialTargetId: "nav-profile" },
 ] as const;
 
 const AppShellNestingContext = createContext(false);
@@ -76,12 +77,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
           <div className="glass shadow-elegant grid grid-cols-6 items-center gap-1 rounded-2xl border border-white/10 p-1.5">
-            {tabs.map(({ to, label, icon: Icon }) => {
+            {tabs.map(({ to, label, icon: Icon, tutorialTargetId }) => {
               const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
               return (
                 <Link
                   key={to}
                   to={to}
+                  {...(tutorialTargetId
+                    ? { "data-tutorial-target": tutorialTargetId }
+                    : {})}
                   className={`motion-tap flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[10px] transition-all duration-200 ${
                     active ? "bg-gradient-gold text-primary-foreground shadow-gold motion-nav-active" : "text-muted-foreground hover:text-foreground"
                   }`}

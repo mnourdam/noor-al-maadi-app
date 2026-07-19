@@ -48,10 +48,11 @@ export interface TutorialStep {
   /** Extra padding (px) added around the target for the cutout. */
   padding: number;
   scroll: TutorialScrollBehavior;
-  /** i18n keys or literal strings. Kept as identifiers only in Phase
-   *  2A — final Arabic copy is wired in a later phase. */
-  titleKey: string;
-  bodyKey: string;
+  /** Final coach-mark title (Arabic). No i18n layer — the string is
+   *  rendered verbatim. */
+  title: string;
+  /** Final coach-mark body (Arabic). Rendered verbatim. */
+  body: string;
   /** When false, taps on the spotlighted element are absorbed by the
    *  overlay so the tour cannot be dismissed accidentally. */
   allowTargetInteraction: boolean;
@@ -60,6 +61,27 @@ export interface TutorialStep {
   skipIfTargetUnavailable: boolean;
   /** Behavior when target is not yet found within the window. */
   onMissingTarget: TutorialMissingTargetBehavior;
+}
+
+// ------------------------------------------------------------
+// Analytics extension hooks (no default implementation)
+// ------------------------------------------------------------
+
+export interface TutorialHooks {
+  onTutorialStarted?: (info: { id: TutorialId; version: number }) => void;
+  onStepChanged?: (info: {
+    id: TutorialId;
+    version: number;
+    stepIndex: number;
+    stepId: string;
+    direction: "forward" | "backward" | "initial";
+  }) => void;
+  onTutorialSkipped?: (info: {
+    id: TutorialId;
+    version: number;
+    atStepIndex: number | null;
+  }) => void;
+  onTutorialCompleted?: (info: { id: TutorialId; version: number }) => void;
 }
 
 export interface TutorialConfig {

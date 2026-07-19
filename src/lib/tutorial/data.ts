@@ -1,20 +1,10 @@
 // ============================================================
 // Guided Tutorial — Bundled configuration
 // ------------------------------------------------------------
-// The single source of truth for the first-time tour. Bundled as a
+// Single source of truth for the first-time tour. Bundled as a
 // TypeScript constant (never fetched at runtime) so Android APK
-// builds work fully offline.
-//
-// Phase 2A ships the STRUCTURAL registration only:
-//   - stable step ids
-//   - target ids
-//   - placement/shape/padding/scroll policy
-//   - `allowTargetInteraction: false` for every step
-//   - `skipIfTargetUnavailable` set only for the Worlds step
-//
-// Final Arabic copy will be wired in a later phase; `titleKey` /
-// `bodyKey` are placeholders that identify the message but are not
-// rendered anywhere yet.
+// builds work fully offline. Final Arabic copy is embedded here
+// verbatim — no i18n framework, no lookup layer.
 // ============================================================
 
 import type { TutorialConfig } from "./types";
@@ -34,8 +24,8 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       shape: "rounded-rect",
       padding: 8,
       scroll: "none",
-      titleKey: "tutorial.step.campaigns.title",
-      bodyKey: "tutorial.step.campaigns.body",
+      title: "الحملات",
+      body: "ابدأ رحلتك بلعب الحملات وعِش قصص الحضارات الإسلامية خطوة بخطوة.",
       allowTargetInteraction: false,
       skipIfTargetUnavailable: false,
       onMissingTarget: "wait",
@@ -48,8 +38,8 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       shape: "rounded-rect",
       padding: 8,
       scroll: "none",
-      titleKey: "tutorial.step.encyclopedia.title",
-      bodyKey: "tutorial.step.encyclopedia.body",
+      title: "الموسوعة",
+      body: "استكشف الأعلام والأحداث والأماكن، وتعمّق في تفاصيل كل حضارة.",
       allowTargetInteraction: false,
       skipIfTargetUnavailable: false,
       onMissingTarget: "wait",
@@ -62,10 +52,10 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       shape: "rounded-rect",
       padding: 8,
       scroll: "none",
-      // Label surfaced to the player remains "الأطلس"; the route
-      // itself remains `/map` and is not renamed.
-      titleKey: "tutorial.step.atlas.title",
-      bodyKey: "tutorial.step.atlas.body",
+      // Player-facing label stays "الأطلس"; the underlying route
+      // remains `/map` and is intentionally not renamed.
+      title: "الأطلس",
+      body: "تنقّل عبر خريطة إرث لتكتشف المدن والمواقع التاريخية.",
       allowTargetInteraction: false,
       skipIfTargetUnavailable: false,
       onMissingTarget: "wait",
@@ -78,8 +68,8 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       shape: "rounded-rect",
       padding: 8,
       scroll: "none",
-      titleKey: "tutorial.step.museum.title",
-      bodyKey: "tutorial.step.museum.body",
+      title: "المتحف",
+      body: "اجمع القطع النادرة التي تكتشفها وتفتحها بإتمام الحملات والتحديات.",
       allowTargetInteraction: false,
       skipIfTargetUnavailable: false,
       onMissingTarget: "wait",
@@ -92,8 +82,8 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       shape: "rounded-rect",
       padding: 12,
       scroll: "into-view-smooth",
-      titleKey: "tutorial.step.worlds.title",
-      bodyKey: "tutorial.step.worlds.body",
+      title: "عوالم إرث",
+      body: "اختر عالماً لتبدأ منه: كل عالم يجمع حملاته وموسوعته وأطلسه ومتحفه في مكان واحد.",
       allowTargetInteraction: false,
       // Worlds query may still be loading, resolve empty, or fail;
       // the step is silently skipped in all failure modes.
@@ -108,8 +98,8 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
       shape: "rounded-rect",
       padding: 8,
       scroll: "none",
-      titleKey: "tutorial.step.profile.title",
-      bodyKey: "tutorial.step.profile.body",
+      title: "حسابي",
+      body: "من هنا تتابع تقدّمك ومكتشفاتك وإنجازاتك، وتضبط إعدادات حسابك.",
       allowTargetInteraction: false,
       skipIfTargetUnavailable: false,
       onMissingTarget: "wait",
@@ -119,9 +109,21 @@ export const IRTH_FIRST_TIME_TUTORIAL: TutorialConfig = {
 
 /** Target-resolution window (ms). If a step's target isn't measurable
  *  within this window, the engine either waits (per `onMissingTarget`
- *  = "wait") or silently skips (per "skip"). Consumed by the engine
- *  when the locate/measure phases are wired in Phase 2B. */
+ *  = "wait") or silently skips (per "skip"). */
 export const TUTORIAL_TARGET_RESOLUTION_WINDOW_MS = 2500;
 
 /** Frames to settle after Home mounts before the tour may start. */
 export const TUTORIAL_HOME_STABLE_FRAMES = 2;
+
+/** Final tutorial copy shared by the coach-mark UI (Arabic). */
+export const TUTORIAL_COPY = {
+  next: "التالي",
+  previous: "السابق",
+  skip: "تخطي",
+  begin: "ابدأ الرحلة",
+  skipConfirmTitle: "هل تريد تخطي الجولة؟",
+  skipConfirmBody: "يمكنك دائماً إعادة اكتشاف كل شيء بنفسك.",
+  skipConfirmContinue: "متابعة الجولة",
+  skipConfirmSkip: "تخطي",
+  stepCounter: (current: number, total: number) => `${current} / ${total}`,
+} as const;

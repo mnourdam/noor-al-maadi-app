@@ -28,6 +28,7 @@ export {
   useNavigateWithOrigin,
   useNavigationOrigin,
   useOverlayDismiss,
+  useOverlayStackSize,
   useStashOrigin,
   useStashCurrentAsOrigin,
 } from "./engine";

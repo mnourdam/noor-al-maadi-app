@@ -57,16 +57,31 @@ interface OverlayStack {
   push(fn: OverlayDismisser): () => void;
   popAndRun(): boolean;
   size(): number;
+  subscribe(l: () => void): () => void;
 }
 
 function createOverlayStack(): OverlayStack {
   const stack: OverlayDismisser[] = [];
+  const listeners = new Set<() => void>();
+  const emit = () => {
+    for (const l of Array.from(listeners)) {
+      try {
+        l();
+      } catch {
+        /* ignore */
+      }
+    }
+  };
   return {
     push(fn) {
       stack.push(fn);
+      emit();
       return () => {
         const idx = stack.lastIndexOf(fn);
-        if (idx >= 0) stack.splice(idx, 1);
+        if (idx >= 0) {
+          stack.splice(idx, 1);
+          emit();
+        }
       };
     },
     popAndRun() {
@@ -78,10 +93,17 @@ function createOverlayStack(): OverlayStack {
         // eslint-disable-next-line no-console
         console.error("[navigation] overlay dismisser threw:", err);
       }
+      emit();
       return true;
     },
     size() {
       return stack.length;
+    },
+    subscribe(l) {
+      listeners.add(l);
+      return () => {
+        listeners.delete(l);
+      };
     },
   };
 }
@@ -265,6 +287,22 @@ export function useOverlayDismiss(dismiss: OverlayDismisser): void {
     return engine.overlays.push(dismiss);
     // dismiss is captured by reference; callers wrap in useCallback if needed
   }, [engine, dismiss]);
+}
+
+/**
+ * Reactive count of overlays currently registered on the LIFO stack.
+ * Consumers (e.g. the tutorial engine's eligibility predicate) use
+ * this to defer while any dialog / sheet / drawer / other overlay is
+ * open. Updates on push / popAndRun / unregister.
+ */
+export function useOverlayStackSize(): number {
+  const engine = useEngine();
+  const [size, setSize] = useState<number>(() => engine.overlays.size());
+  useEffect(() => {
+    setSize(engine.overlays.size());
+    return engine.overlays.subscribe(() => setSize(engine.overlays.size()));
+  }, [engine]);
+  return size;
 }
 
 /**
