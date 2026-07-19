@@ -7,8 +7,25 @@
 // ============================================================
 
 import { memo, useEffect, useState } from "react";
-import type { CinematicScene, SceneTransition } from "@/lib/cinematic-opening/types";
+import type { CinematicScene, RichTextSegment, SceneTransition } from "@/lib/cinematic-opening/types";
 import { ParticleLayer } from "./ParticleLayer";
+
+const GOLD = "#F4D98B";
+
+function renderSegments(segments: RichTextSegment[] | undefined, fallback: string | undefined) {
+  if (segments && segments.length > 0) {
+    return segments.map((seg, i) => (
+      <span
+        key={i}
+        style={seg.highlight ? { color: GOLD } : undefined}
+      >
+        {seg.text}
+      </span>
+    ));
+  }
+  return fallback ?? null;
+}
+
 
 interface Props {
   scene: CinematicScene;
@@ -65,7 +82,10 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   const overlay = Math.max(0, Math.min(1, scene.overlayDarkness ?? 0));
   const kenBurns = scene.kenBurns !== false && !reducedMotion;
   const showParticles = !!scene.particles && !reducedMotion;
-  const hasText = !!(scene.title || scene.subtitle);
+  const hasTitle = !!(scene.title || (scene.titleSegments && scene.titleSegments.length));
+  const hasSubtitle = !!(scene.subtitle || (scene.subtitleSegments && scene.subtitleSegments.length));
+  const hasText = hasTitle || hasSubtitle;
+
 
   return (
     <div
@@ -95,6 +115,24 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
         <ParticleLayer preset={scene.particles} intensity={scene.particleIntensity} />
       )}
 
+      {/* Top-left historical / date label */}
+      {scene.contextLabel && (
+        <div
+          dir="rtl"
+          className="pointer-events-none absolute top-0 left-0 px-5 py-3 text-[11px] font-medium tracking-[0.18em] text-white/80 drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)] sm:text-xs"
+          style={{
+            paddingTop: "max(0.75rem, calc(env(safe-area-inset-top) + 0.5rem))",
+            paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
+
+            opacity: active && !fadingOut ? 1 : 0,
+            transition: "opacity 1200ms cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        >
+          <span style={{ color: GOLD }}>{scene.contextLabel}</span>
+        </div>
+      )}
+
+
       {/* Subtle readability gradient — only when there is text to read. */}
       {hasText && (
         <div
@@ -117,7 +155,7 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
             paddingBottom: "max(6rem, calc(env(safe-area-inset-bottom) + 5rem))",
           }}
         >
-          {scene.title && (
+          {hasTitle && (
             <h1
               className="font-display text-3xl font-bold leading-tight text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.7)] sm:text-4xl"
               style={{
@@ -127,10 +165,10 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
                 willChange: "opacity, transform",
               }}
             >
-              {scene.title}
+              {renderSegments(scene.titleSegments, scene.title)}
             </h1>
           )}
-          {scene.subtitle && (
+          {hasSubtitle && (
             <p
               className="mt-3 max-w-md text-sm leading-relaxed text-white/90 drop-shadow-[0_1px_10px_rgba(0,0,0,0.65)] sm:text-base"
               style={{
@@ -140,11 +178,13 @@ function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
                 willChange: "opacity, transform",
               }}
             >
-              {scene.subtitle}
+              {renderSegments(scene.subtitleSegments, scene.subtitle)}
             </p>
           )}
         </div>
       )}
+
+
 
       <style>{`
         .cinematic-kenburns {

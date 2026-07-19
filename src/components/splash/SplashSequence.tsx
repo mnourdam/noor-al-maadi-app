@@ -29,6 +29,8 @@ import { pickSplashArtwork, preloadImage, type SplashFraming } from "./artworkPr
 import { playSplashSfx } from "./splashSfx";
 import { SplashLogoReveal } from "./SplashLogoReveal";
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { isFirstEverLaunch } from "@/lib/cinematic-opening/persistence";
+
 
 const SESSION_FLAG = "irth.splash.played.v1";
 // Persistent "recently warm" heartbeat — when the app was active within this
@@ -53,6 +55,11 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
   const [mounted, setMounted] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     if (isAndroidUltraStableMode()) return false;
+    // First-ever launch: the cinematic opening owns the entire canvas
+    // (black → notification permission → opening → home). The branded
+    // splash must not render on top of it.
+    try { if (isFirstEverLaunch()) return false; } catch { /* */ }
+
     try {
       // Already played in this WebView session → never replay.
       if (window.sessionStorage.getItem(SESSION_FLAG) === "1") return false;

@@ -31,7 +31,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { loadCinematicOpeningConfig } from "@/lib/cinematic-opening/config";
-import { hasCompleted, markCompleted } from "@/lib/cinematic-opening/persistence";
+import { CINEMATIC_LOGO_URL } from "@/lib/cinematic-opening/data";
+import {
+  hasCompleted,
+  markCompleted,
+  isFirstEverLaunch,
+  hasAskedNotificationPermission,
+  markNotificationPermissionAsked,
+} from "@/lib/cinematic-opening/persistence";
 import type { CinematicOpeningConfig } from "@/lib/cinematic-opening/types";
 import { audioManager } from "@/lib/audioManager";
 import { useOverlayDismiss } from "@/lib/navigation";
@@ -47,12 +54,39 @@ import {
 } from "@/components/ui/alert-dialog";
 import { SceneRenderer } from "./SceneRenderer";
 import { AmbientAudio } from "./AmbientAudio";
-import irthLogo from "@/assets/irth-icon.png.asset.json";
 
 
 const FINAL_FADE_MS = 1400;
-const PRELOAD_TIMEOUT_MS = 3500;
+// Assets are locally bundled. Timeout is a safety net for a completely
+// broken decode; local files should be ready well under this budget.
+const PRELOAD_TIMEOUT_MS = 6000;
 export const OPENING_COMPLETED_EVENT = "irth:opening-completed";
+
+function isNativeAndroid(): boolean {
+  try {
+    const cap = (globalThis as unknown as {
+      Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string };
+    }).Capacitor;
+    return !!cap?.isNativePlatform?.() && cap.getPlatform?.() === "android";
+  } catch { return false; }
+}
+
+/** First-launch-only: request notification permission BEFORE the scenes
+ *  start. Any outcome (granted, denied, error) fails forward — the opening
+ *  proceeds regardless. Web is skipped entirely. */
+async function requestNotificationPermissionOnce(): Promise<void> {
+  if (hasAskedNotificationPermission()) return;
+  markNotificationPermissionAsked();
+  if (!isNativeAndroid()) return;
+  try {
+    const mod = await import("@capacitor/local-notifications");
+    const LN = mod.LocalNotifications;
+    const status = await LN.checkPermissions();
+    if (status.display === "granted" || status.display === "denied") return;
+    await LN.requestPermissions();
+  } catch { /* fail forward */ }
+}
+
 
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
@@ -104,7 +138,8 @@ export function CinematicOpening() {
   const finishedRef = useRef(false);
   const reducedMotion = usePrefersReducedMotion();
 
-  // Boot: load + validate config, preload images, decide whether to play.
+  // Boot: load config, run first-launch permission ask, preload all
+  // images (including the final logo) + soundtrack, then start playback.
   useEffect(() => {
     let cancelled = false;
     setMounted(true);
@@ -116,11 +151,21 @@ export function CinematicOpening() {
         dispatchCompleted();
         return;
       }
+
+      // First-launch: OWN the notification permission prompt. Skip web;
+      // any outcome fails forward so the opening never blocks on it.
+      if (isFirstEverLaunch()) {
+        await requestNotificationPermissionOnce();
+        if (cancelled) return;
+      }
+
       const images = cfg.scenes.map((s) => s.image).filter((x): x is string => !!x);
-      const loaded = await preloadImages(images, PRELOAD_TIMEOUT_MS);
+      // Always preload the local logo so Scene 6 never flashes with a
+      // missing image. Preload runs against locally-bundled assets and
+      // is expected to complete quickly.
+      const preloadTargets = Array.from(new Set([...images, CINEMATIC_LOGO_URL]));
+      const loaded = await preloadImages(preloadTargets, PRELOAD_TIMEOUT_MS);
       if (cancelled) return;
-      // Drop scenes whose image is declared but failed to load. Scenes
-      // without an image (title-only cards) are always kept.
       const playable = cfg.scenes.filter((s) => !s.image || loaded.has(s.image));
       if (playable.length === 0) {
         dispatchCompleted();
@@ -131,6 +176,7 @@ export function CinematicOpening() {
     })();
     return () => { cancelled = true; };
   }, []);
+
 
   const scenes = config?.scenes ?? [];
   const currentScene = scenes[index];
@@ -233,15 +279,21 @@ export function CinematicOpening() {
 
   const node = (
     <div
-      className="fixed inset-0 z-[2000] bg-black"
+      className="fixed inset-0 z-[2000] bg-black touch-none select-none"
       role="dialog"
       aria-modal="true"
       aria-label="Cinematic opening"
+      data-irth-cinematic-opening=""
+      onClickCapture={(e) => e.stopPropagation()}
+      onTouchStartCapture={(e) => e.stopPropagation()}
+      onPointerDownCapture={(e) => e.stopPropagation()}
       style={{
         opacity: fadingOut ? 0 : 1,
         transition: `opacity ${reducedMotion ? 300 : FINAL_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
         willChange: "opacity",
+        pointerEvents: fadingOut ? "none" : "auto",
       }}
+
     >
       {scenes.map((s, i) => (
         <SceneRenderer
@@ -262,7 +314,7 @@ export function CinematicOpening() {
 
       {currentScene?.showFinalLogo && (
         <FinalLogoReveal
-          logoUrl={irthLogo.url}
+          logoUrl={CINEMATIC_LOGO_URL}
           reducedMotion={reducedMotion}
           fadingOut={fadingOut}
         />
