@@ -12,6 +12,8 @@ import {
   ACHIEVEMENTS, evaluateAchievements,
 } from "@/lib/app-constants";
 import { useProfile } from "@/lib/profile";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
 import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS, formatBadgeCount } from "@/lib/notifications";
 import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
