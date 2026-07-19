@@ -377,7 +377,7 @@ function RootComponent() {
             <LevelUpWatcher />
             <Toaster position="top-center" richColors closeButton />
             <SplashSequence />
-            <AndroidBackHandler />
+            {/* Hardware Back + exit dialog now owned by <NavigationProvider>. */}
             <InAppBanner />
             <DailyChallengeReminderScheduler />
             <GoogleAuthResultDialog />
