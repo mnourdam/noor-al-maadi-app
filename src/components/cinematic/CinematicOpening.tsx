@@ -127,6 +127,34 @@ function preloadImages(urls: string[], timeoutMs: number): Promise<Set<string>> 
   });
 }
 
+/** Preload the local soundtrack. Resolves once the audio reaches a usable
+ *  ready state (`canplaythrough`) or a short timeout elapses. Never
+ *  rejects — a decode failure or missing file fails forward into silent
+ *  playback. Uses a lightweight probe element whose only job is to warm
+ *  the HTTP cache; the real AmbientAudio element reuses the cached bytes
+ *  and is never recreated after preload. */
+function preloadSoundtrack(url: string | undefined, timeoutMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    if (!url || typeof window === "undefined") { resolve(); return; }
+    let settled = false;
+    const finish = () => { if (!settled) { settled = true; resolve(); } };
+    const timer = window.setTimeout(finish, timeoutMs);
+    try {
+      const probe = new Audio();
+      probe.preload = "auto";
+      probe.src = url;
+      const done = () => { window.clearTimeout(timer); finish(); };
+      probe.addEventListener("canplaythrough", done, { once: true });
+      probe.addEventListener("loadeddata", done, { once: true });
+      probe.addEventListener("error", done, { once: true });
+      // Trigger the fetch/decode.
+      try { probe.load(); } catch { /* ignore */ }
+    } catch {
+      window.clearTimeout(timer); finish();
+    }
+  });
+}
+
 export function CinematicOpening() {
   const [config, setConfig] = useState<CinematicOpeningConfig | null>(null);
   const [mounted, setMounted] = useState(false);
