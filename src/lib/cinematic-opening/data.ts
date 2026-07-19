@@ -138,7 +138,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-3-4-constantinople",
       image: "/cinematic/scene3-4-constantinople.webp",
-      contextLabel: "القسطنطينية — ١٤٥٣م",
+      contextLabel: "القسطنطينية — 1453م",
       title: "وامتد الأثر.",
       titleSegments: [
         { text: "وامتد " },
