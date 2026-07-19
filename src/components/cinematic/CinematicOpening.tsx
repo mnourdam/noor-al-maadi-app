@@ -115,9 +115,16 @@ export function CinematicOpening() {
         return;
       }
       const images = cfg.scenes.map((s) => s.image).filter((x): x is string => !!x);
-      await preloadImages(images, PRELOAD_TIMEOUT_MS);
+      const loaded = await preloadImages(images, PRELOAD_TIMEOUT_MS);
       if (cancelled) return;
-      setConfig(cfg);
+      // Drop scenes whose image is declared but failed to load. Scenes
+      // without an image (title-only cards) are always kept.
+      const playable = cfg.scenes.filter((s) => !s.image || loaded.has(s.image));
+      if (playable.length === 0) {
+        dispatchCompleted();
+        return;
+      }
+      setConfig({ ...cfg, scenes: playable });
       setActive(true);
     })();
     return () => { cancelled = true; };
