@@ -23,8 +23,8 @@ const PROGRESS_KEYS = [
   "irth.friends.seen.v1",
   "irth:friend-notifications:debug",
 
-  // Onboarding / first-launch gates so the player gets a fresh start
-  "irth.onboarded.v1",
+  // Opening / first-launch gates so the player gets a fresh start
+  "irth.cinematic-opening.completed-version.v1",
   "irth.firstLaunch.choice.v1",
 
   // Offline snapshot of player data

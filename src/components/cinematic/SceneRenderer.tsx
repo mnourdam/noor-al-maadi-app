@@ -16,6 +16,8 @@ interface Props {
   active: boolean;
   /** True while the sequence is fading out (skip / final). */
   fadingOut: boolean;
+  /** When true, disable Ken Burns and particles; keep simple fades. */
+  reducedMotion?: boolean;
 }
 
 function transitionStyle(t: SceneTransition | undefined, active: boolean, fadingOut: boolean): React.CSSProperties {
@@ -28,7 +30,7 @@ function transitionStyle(t: SceneTransition | undefined, active: boolean, fading
   };
 }
 
-function SceneRendererImpl({ scene, active, fadingOut }: Props) {
+function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   const [textVisible, setTextVisible] = useState(false);
 
   useEffect(() => {
@@ -47,7 +49,8 @@ function SceneRendererImpl({ scene, active, fadingOut }: Props) {
   }, [active, scene.textDelayMs, scene.textHoldMs, scene.id]);
 
   const overlay = Math.max(0, Math.min(1, scene.overlayDarkness ?? 0));
-  const kenBurns = scene.kenBurns !== false;
+  const kenBurns = scene.kenBurns !== false && !reducedMotion;
+  const showParticles = !!scene.particles && !reducedMotion;
 
   return (
     <div
@@ -73,7 +76,7 @@ function SceneRendererImpl({ scene, active, fadingOut }: Props) {
       )}
 
       {/* Particles */}
-      {scene.particles && (
+      {showParticles && scene.particles && (
         <ParticleLayer preset={scene.particles} intensity={scene.particleIntensity} />
       )}
 
