@@ -141,9 +141,22 @@ function validate(raw: unknown): CinematicOpeningConfig | null {
     warn("config rejected — no valid scenes after validation");
     return null;
   }
+  const soundtrackRaw = r.soundtrack;
+  let soundtrack: CinematicOpeningConfig["soundtrack"] | undefined;
+  if (soundtrackRaw && typeof soundtrackRaw === "object") {
+    const s = soundtrackRaw as Record<string, unknown>;
+    const url = typeof s.url === "string" && s.url.length > 0 ? s.url : undefined;
+    if (url) {
+      soundtrack = {
+        url,
+        defaultLevel: clamp01(s.defaultLevel, undefined),
+      };
+    }
+  }
   return {
     version,
     scenes,
+    soundtrack,
     replayForAllUsers: r.replayForAllUsers === true,
   };
 }
