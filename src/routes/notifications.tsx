@@ -14,6 +14,8 @@ import {
   subscribeToMyNotifications,
   type ServerNotification,
 } from "@/lib/notifications/server";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({ meta: [{ title: "مركز الإشعارات — إرث" }] }),
