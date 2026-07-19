@@ -20,7 +20,9 @@ import { AchievementWatcher } from "../components/AchievementWatcher";
 import { InvestigationLegacyBackfill } from "../components/InvestigationLegacyBackfill";
 import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
-import { AndroidBackHandler } from "../components/AndroidBackHandler";
+// AndroidBackHandler was folded into NavigationProvider; the engine owns
+// the sole Capacitor `App.backButton` listener and the exit dialog.
+
 import { InAppBanner } from "../components/notifications/InAppBanner";
 import { DailyChallengeReminderScheduler } from "../components/DailyChallengeReminderScheduler";
 import { GoogleAuthResultDialog } from "../components/GoogleAuthResultDialog";
@@ -375,7 +377,7 @@ function RootComponent() {
             <LevelUpWatcher />
             <Toaster position="top-center" richColors closeButton />
             <SplashSequence />
-            <AndroidBackHandler />
+            {/* Hardware Back + exit dialog now owned by <NavigationProvider>. */}
             <InAppBanner />
             <DailyChallengeReminderScheduler />
             <GoogleAuthResultDialog />

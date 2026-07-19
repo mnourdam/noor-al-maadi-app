@@ -17,6 +17,8 @@ import {
 } from "@/lib/investigations-source";
 import { fetchWorldsIndex, findHub } from "@/lib/worlds";
 import { useWorldMembership, isValidWorldSlug } from "@/lib/worlds-progress";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 // Fresh random seed per app load/session so the order reshuffles on reload.
 const SESSION_SHUFFLE_SEED = Math.random();
@@ -47,6 +49,8 @@ function InvestigationsIndex() {
   const canonicalProgress = useCanonicalInvestigationProgress();
   const { rows } = useSupabaseInvestigations();
   const navigate = useNavigate({ from: "/investigations" });
+  const stashOrigin = useStashCurrentAsOrigin();
+
   const rawWorld = Route.useSearch().world;
   const worldSlug = isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
 
@@ -118,7 +122,9 @@ function InvestigationsIndex() {
                   key={`s:${inv.id}`}
                   inv={inv}
                   done={done}
+                  onNavigate={() => stashOrigin(`/investigation/${inv.slug}`)}
                 />
+
               );
             }
             const inv = item.row;
@@ -128,8 +134,10 @@ function InvestigationsIndex() {
                 key={`l:${inv.id}`}
                 to="/investigation/$id"
                 params={{ id: inv.id }}
+                onClick={() => stashOrigin(`/investigation/${inv.id}`)}
                 className={`flex items-center gap-3 rounded-2xl border p-4 ${done ? "border-gold/40 bg-gold/5" : "border-white/10 bg-surface"}`}
               >
+
                 <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
                   <Search className="size-5" />
                 </div>
@@ -165,15 +173,17 @@ function InvestigationsIndex() {
   );
 }
 
-function SupabaseRow({ inv, done }: { inv: InvestigationRow; done: boolean }) {
+function SupabaseRow({ inv, done, onNavigate }: { inv: InvestigationRow; done: boolean; onNavigate?: () => void }) {
   const reward = (inv.reward ?? {}) as InvestigationReward;
   const steps = Array.isArray(inv.steps) ? inv.steps : [];
   return (
     <Link
       to="/investigation/$id"
       params={{ id: inv.slug }}
+      onClick={() => onNavigate?.()}
       className={`flex items-center gap-3 rounded-2xl border p-4 ${done ? "border-gold/40 bg-gold/5" : "border-white/10 bg-surface"}`}
     >
+
       <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
         <Search className="size-5" />
       </div>

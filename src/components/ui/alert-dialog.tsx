@@ -3,8 +3,37 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registration";
 
-const AlertDialog = AlertDialogPrimitive.Root;
+const AlertDialog = ({
+  open,
+  defaultOpen,
+  onOpenChange,
+  children,
+  ...rest
+}: React.ComponentProps<typeof AlertDialogPrimitive.Root>) => {
+  const [uncontrolled, setUncontrolled] = React.useState<boolean>(defaultOpen ?? false);
+  const isControlled = open !== undefined;
+  const current = isControlled ? Boolean(open) : uncontrolled;
+  const handle = React.useCallback(
+    (v: boolean) => {
+      if (!isControlled) setUncontrolled(v);
+      onOpenChange?.(v);
+    },
+    [isControlled, onOpenChange],
+  );
+  return (
+    <AlertDialogPrimitive.Root
+      {...rest}
+      {...(isControlled ? { open } : { defaultOpen })}
+      onOpenChange={handle}
+    >
+      <OverlayDismissRegistration open={current} onClose={() => handle(false)} />
+      {children}
+    </AlertDialogPrimitive.Root>
+  );
+};
+
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
 

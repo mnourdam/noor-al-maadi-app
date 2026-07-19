@@ -10,7 +10,7 @@ import type { ComponentProps } from "react";
  * of how the user arrived (deep link, notification, in-app nav, etc.).
  *
  * The Android hardware back button is handled separately by
- * `AndroidBackHandler`; do not couple the two.
+ * the Navigation Engine; do not couple the two.
  *
  * Typical hierarchy:
  *   /                           → (root, no back)

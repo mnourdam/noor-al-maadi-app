@@ -2,14 +2,40 @@ import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 
 import { cn } from "@/lib/utils";
+import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registration";
 
 const Drawer = ({
   shouldScaleBackground = true,
+  open,
+  defaultOpen,
+  onOpenChange,
+  children,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
-);
+}: React.ComponentProps<typeof DrawerPrimitive.Root>) => {
+  const [uncontrolled, setUncontrolled] = React.useState<boolean>(defaultOpen ?? false);
+  const isControlled = open !== undefined;
+  const current = isControlled ? Boolean(open) : uncontrolled;
+  const handle = React.useCallback(
+    (v: boolean) => {
+      if (!isControlled) setUncontrolled(v);
+      onOpenChange?.(v);
+    },
+    [isControlled, onOpenChange],
+  );
+  return (
+    <DrawerPrimitive.Root
+      shouldScaleBackground={shouldScaleBackground}
+      {...props}
+      {...(isControlled ? { open } : { defaultOpen })}
+      onOpenChange={handle}
+    >
+      <OverlayDismissRegistration open={current} onClose={() => handle(false)} />
+      {children}
+    </DrawerPrimitive.Root>
+  );
+};
 Drawer.displayName = "Drawer";
+
 
 const DrawerTrigger = DrawerPrimitive.Trigger;
 

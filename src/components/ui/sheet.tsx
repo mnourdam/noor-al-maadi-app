@@ -6,8 +6,37 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registration";
 
-const Sheet = SheetPrimitive.Root;
+const Sheet = ({
+  open,
+  defaultOpen,
+  onOpenChange,
+  children,
+  ...rest
+}: React.ComponentProps<typeof SheetPrimitive.Root>) => {
+  const [uncontrolled, setUncontrolled] = React.useState<boolean>(defaultOpen ?? false);
+  const isControlled = open !== undefined;
+  const current = isControlled ? Boolean(open) : uncontrolled;
+  const handle = React.useCallback(
+    (v: boolean) => {
+      if (!isControlled) setUncontrolled(v);
+      onOpenChange?.(v);
+    },
+    [isControlled, onOpenChange],
+  );
+  return (
+    <SheetPrimitive.Root
+      {...rest}
+      {...(isControlled ? { open } : { defaultOpen })}
+      onOpenChange={handle}
+    >
+      <OverlayDismissRegistration open={current} onClose={() => handle(false)} />
+      {children}
+    </SheetPrimitive.Root>
+  );
+};
+
 
 const SheetTrigger = SheetPrimitive.Trigger;
 

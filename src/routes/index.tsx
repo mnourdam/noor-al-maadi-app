@@ -12,6 +12,8 @@ import {
   ACHIEVEMENTS, evaluateAchievements,
 } from "@/lib/app-constants";
 import { useProfile } from "@/lib/profile";
+import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 import { getEffectiveHearts, HEART_MAX } from "@/lib/hearts";
 import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS, formatBadgeCount } from "@/lib/notifications";
 import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
@@ -61,6 +63,9 @@ type HeroSlide =
 function HomeFull() {
   const { profile } = useProfile();
   const { user, lastSyncAt, displayName: resolvedDisplayName } = useAccount();
+  const stashOrigin = useStashCurrentAsOrigin();
+
+
 
   // Priority: display_name → full_name → username → email prefix.
   // `useAccount()` already resolves this chain from account row +
@@ -289,8 +294,10 @@ function HomeFull() {
           <Link
             to="/campaigns/imported/$id"
             params={{ id: campaign.id }}
+            onClick={() => stashOrigin(`/campaigns/imported/${campaign.id}`)}
             className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
           >
+
             <Play className="size-4 fill-current" />{ctaLabel}
           </Link>
         )},
@@ -437,7 +444,7 @@ function HomeFull() {
         xp, dinars,
         icon: <Crown className="size-4" />,
         link: (
-          <Link to="/campaigns/imported/$id" params={{ id: campaign.id }} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
+          <Link to="/campaigns/imported/$id" params={{ id: campaign.id }} onClick={() => stashOrigin(`/campaigns/imported/${campaign.id}`)} className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-5 py-3 text-sm font-bold text-primary-foreground">
             <Play className="size-4 fill-current" />{hasStarted ? "تابع الرحلة" : "ابدأ الحملة"}
           </Link>
         ),
@@ -996,6 +1003,7 @@ function ContinueJourneyCard({ sel }: {
   };
 }) {
   const { campaign, completedChapters, nextChapter, hasStarted } = sel;
+  const stashOrigin = useStashCurrentAsOrigin();
   const total = campaign.chapters.length;
   const pct = total > 0 ? Math.round((completedChapters / total) * 100) : 0;
   const cover = (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) || heroFortress;
@@ -1005,8 +1013,10 @@ function ContinueJourneyCard({ sel }: {
       <Link
         to="/campaigns/imported/$id"
         params={{ id: campaign.id }}
+        onClick={() => stashOrigin(`/campaigns/imported/${campaign.id}`)}
         className="group relative block overflow-hidden rounded-3xl border border-gold/35 shadow-elegant"
       >
+
         <div className="relative h-48 w-full overflow-hidden">
           <CachedImage src={cover} alt="" loading="lazy" decoding="async" className="size-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-transparent" />
