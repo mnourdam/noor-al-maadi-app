@@ -102,7 +102,12 @@ export function TutorialApkLogViewer() {
   // Live-refresh the panel while it is open so freezes are visible.
   useEffect(() => {
     if (!open) return;
-    pollRef.current = window.setInterval(() => setTick((t) => t + 1), 500);
+    // Refresh once immediately so the panel doesn't flash stale state.
+    setDiag(tutorialDebug.diagnostics());
+    pollRef.current = window.setInterval(() => {
+      setDiag(tutorialDebug.diagnostics());
+      setTick((t) => t + 1);
+    }, 500);
     return () => {
       if (pollRef.current != null) {
         window.clearInterval(pollRef.current);
@@ -123,22 +128,18 @@ export function TutorialApkLogViewer() {
   );
 
   const onCopy = useCallback(async () => {
+    const rect = diag?.currentTargetRect ?? null;
     const payload = {
       capturedAt: new Date().toISOString(),
       tutorial: {
-        currentState: snapshot.currentState,
-        currentStepId: snapshot.currentStepId,
-        currentStepIndex: snapshot.currentStepIndex,
-        currentTargetId: snapshot.currentTargetId,
-        currentTargetRect: snapshot.currentTargetRect
-          ? {
-              x: snapshot.currentTargetRect.x,
-              y: snapshot.currentTargetRect.y,
-              width: snapshot.currentTargetRect.width,
-              height: snapshot.currentTargetRect.height,
-            }
+        currentState: diag?.currentState ?? null,
+        currentStepId: diag?.currentStepId ?? null,
+        currentStepIndex: diag?.currentStepIndex ?? null,
+        currentTargetId: diag?.currentTargetId ?? null,
+        currentTargetRect: rect
+          ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
           : null,
-        waitingReason: snapshot.waitingReason,
+        waitingReason: diag?.waitingReason ?? null,
       },
       overlays: {
         total: totalOverlay,
@@ -153,7 +154,7 @@ export function TutorialApkLogViewer() {
     const ok = await copyToClipboard(text);
     if (ok) toast.success("تم نسخ السجل إلى الحافظة.");
     else toast.error("تعذّر نسخ السجل.");
-  }, [snapshot, entries, raw, overlayEntries, totalOverlay, externalOverlay]);
+  }, [diag, entries, raw, overlayEntries, totalOverlay, externalOverlay]);
 
   const onClear = useCallback(() => {
     clearTutorialTransitionLog();
@@ -163,7 +164,7 @@ export function TutorialApkLogViewer() {
 
   if (!isNative || !allowed) return null;
 
-  const rect = snapshot.currentTargetRect;
+  const rect = diag?.currentTargetRect ?? null;
   const rectStr = rect
     ? `x:${Math.round(rect.x)} y:${Math.round(rect.y)} w:${Math.round(rect.width)} h:${Math.round(rect.height)}`
     : "—";
