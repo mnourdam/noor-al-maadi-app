@@ -60,6 +60,8 @@ const FINAL_FADE_MS = 1400;
 // Assets are locally bundled. Timeout is a safety net for a completely
 // broken decode; local files should be ready well under this budget.
 const PRELOAD_TIMEOUT_MS = 6000;
+// Soundtrack is bundled locally; the timeout is a safety net only.
+const SOUNDTRACK_PRELOAD_TIMEOUT_MS = 2500;
 export const OPENING_COMPLETED_EVENT = "irth:opening-completed";
 
 function isNativeAndroid(): boolean {
@@ -127,6 +129,34 @@ function preloadImages(urls: string[], timeoutMs: number): Promise<Set<string>> 
   });
 }
 
+/** Preload the local soundtrack. Resolves once the audio reaches a usable
+ *  ready state (`canplaythrough`) or a short timeout elapses. Never
+ *  rejects — a decode failure or missing file fails forward into silent
+ *  playback. Uses a lightweight probe element whose only job is to warm
+ *  the HTTP cache; the real AmbientAudio element reuses the cached bytes
+ *  and is never recreated after preload. */
+function preloadSoundtrack(url: string | undefined, timeoutMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    if (!url || typeof window === "undefined") { resolve(); return; }
+    let settled = false;
+    const finish = () => { if (!settled) { settled = true; resolve(); } };
+    const timer = window.setTimeout(finish, timeoutMs);
+    try {
+      const probe = new Audio();
+      probe.preload = "auto";
+      probe.src = url;
+      const done = () => { window.clearTimeout(timer); finish(); };
+      probe.addEventListener("canplaythrough", done, { once: true });
+      probe.addEventListener("loadeddata", done, { once: true });
+      probe.addEventListener("error", done, { once: true });
+      // Trigger the fetch/decode.
+      try { probe.load(); } catch { /* ignore */ }
+    } catch {
+      window.clearTimeout(timer); finish();
+    }
+  });
+}
+
 export function CinematicOpening() {
   const [config, setConfig] = useState<CinematicOpeningConfig | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -171,6 +201,11 @@ export function CinematicOpening() {
         dispatchCompleted();
         return;
       }
+      // Warm the soundtrack cache so it is ready to play the moment
+      // Scene 1 begins. Failure fails forward into silent playback;
+      // the scene timer only starts after this settles (or times out).
+      await preloadSoundtrack(cfg.soundtrack?.url, SOUNDTRACK_PRELOAD_TIMEOUT_MS);
+      if (cancelled) return;
       setConfig({ ...cfg, scenes: playable });
       setActive(true);
     })();

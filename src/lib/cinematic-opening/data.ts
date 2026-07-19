@@ -29,7 +29,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-1-mount-al-nour",
       image: "/cinematic/scene1-mount-al-nour.webp",
-      contextLabel: "جبل النور — نحو ٦١٠م",
+      contextLabel: "جبل النور — نحو 610م",
       title: "قبل أكثر من أربعة عشر قرنًا...",
       titleSegments: [
         { text: "قبل أكثر من " },
@@ -50,7 +50,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-2-cave-hira",
       image: "/cinematic/scene2-cave-hira.webp",
-      contextLabel: "غار حراء — ٦١٠م",
+      contextLabel: "غار حراء — نحو 610م",
       title: "هنا...",
       subtitle: "بدأت أعظم قصة غيّرت وجه العالم.",
       subtitleSegments: [
@@ -75,7 +75,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-3-1-medina",
       image: "/cinematic/scene3-1-medina.webp",
-      contextLabel: "المدينة المنورة — ٦٢٢م",
+      contextLabel: "المدينة المنورة — 622م",
       title: "من الإيمان...",
       titleSegments: [
         { text: "من " },
@@ -96,7 +96,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-3-2-qadisiyyah",
       image: "/cinematic/scene3-2-qadisiyyah.webp",
-      contextLabel: "القادسية — ٦٣٦م",
+      contextLabel: "القادسية — 636م",
       title: "وُلد العزم.",
       titleSegments: [
         { text: "وُلد " },
@@ -117,7 +117,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-3-3-baghdad-cordoba",
       image: "/cinematic/scene3-3-baghdad-cordoba.webp",
-      contextLabel: "بغداد وقرطبة — القرن ٩–١٠م",
+      contextLabel: "بغداد وقرطبة — القرنان 9–10م",
       title: "وازدهر العلم.",
       titleSegments: [
         { text: "وازدهر " },
@@ -138,7 +138,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-3-4-constantinople",
       image: "/cinematic/scene3-4-constantinople.webp",
-      contextLabel: "القسطنطينية — ١٤٥٣م",
+      contextLabel: "القسطنطينية — 1453م",
       title: "وامتد الأثر.",
       titleSegments: [
         { text: "وامتد " },
@@ -159,7 +159,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-4-1-abdul-hamid",
       image: "/cinematic/scene4-1-abdul-hamid.webp",
-      contextLabel: "أواخر القرن ١٩م",
+      contextLabel: "السلطان عبد الحميد الثاني — 1909م",
       title: "ثم...",
       durationMs: 5500,
       textDelayMs: 900,
@@ -175,7 +175,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-4-2-partition-map",
       image: "/cinematic/scene4-2-partition-map.webp",
-      contextLabel: "تقسيم الشرق — ١٩١٦م",
+      contextLabel: "المشرق العربي — مطلع القرن 20م",
       title: "تفرّقت صفحات الحكاية.",
       titleSegments: [
         { text: "تفرّقت " },
@@ -196,7 +196,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-5-journey",
       image: "/cinematic/scene5-journey.webp",
-      contextLabel: "رحلة إرث",
+      contextLabel: "العالم الإسلامي — عبر القرون",
       title: "لكن الحكاية لم تنتهِ.",
       titleSegments: [
         { text: "لكن " },
@@ -224,6 +224,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-6-final-logo",
       image: "/cinematic/scene6-final-logo-bg.webp",
+      contextLabel: "إرث — اليوم",
       durationMs: 5000,
       transitionIn: "crossfade",
       transitionOut: "fade-to-black",
