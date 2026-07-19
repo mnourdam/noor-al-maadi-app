@@ -6,7 +6,35 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const Dialog = DialogPrimitive.Root;
+const Dialog = ({
+  open,
+  defaultOpen,
+  onOpenChange,
+  children,
+  ...rest
+}: React.ComponentProps<typeof DialogPrimitive.Root>) => {
+  const [uncontrolled, setUncontrolled] = React.useState<boolean>(defaultOpen ?? false);
+  const isControlled = open !== undefined;
+  const current = isControlled ? Boolean(open) : uncontrolled;
+  const handle = React.useCallback(
+    (v: boolean) => {
+      if (!isControlled) setUncontrolled(v);
+      onOpenChange?.(v);
+    },
+    [isControlled, onOpenChange],
+  );
+  return (
+    <DialogPrimitive.Root
+      {...rest}
+      {...(isControlled ? { open } : { defaultOpen })}
+      onOpenChange={handle}
+    >
+      <OverlayDismissRegistration open={current} onClose={() => handle(false)} />
+      {children}
+    </DialogPrimitive.Root>
+  );
+};
+
 
 const DialogTrigger = DialogPrimitive.Trigger;
 
