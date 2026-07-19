@@ -96,7 +96,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-3-2-qadisiyyah",
       image: "/cinematic/scene3-2-qadisiyyah.webp",
-      contextLabel: "القادسية — ٦٣٦م",
+      contextLabel: "القادسية — 636م",
       title: "وُلد العزم.",
       titleSegments: [
         { text: "وُلد " },
