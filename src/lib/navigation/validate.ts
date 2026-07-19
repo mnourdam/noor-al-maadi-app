@@ -102,6 +102,29 @@ export function validateNavigationRegistry(
         });
       }
     }
+
+    // Back-policy sanity
+    if (decl.backPolicy === "force_target") {
+      if (!decl.backPolicyTarget) {
+        issues.push({
+          code: "missing_back_policy_target",
+          routeId: decl.id,
+          message: `Route "${decl.id}" declares backPolicy "force_target" but no backPolicyTarget.`,
+        });
+      } else if (!resolveDeclaration(decl.backPolicyTarget)) {
+        issues.push({
+          code: "invalid_back_policy_target",
+          routeId: decl.id,
+          message: `Route "${decl.id}" backPolicyTarget "${decl.backPolicyTarget}" is not registered.`,
+        });
+      }
+    } else if (decl.backPolicyTarget) {
+      issues.push({
+        code: "invalid_back_policy_target",
+        routeId: decl.id,
+        message: `Route "${decl.id}" declares backPolicyTarget without backPolicy: "force_target".`,
+      });
+    }
   }
 
   // Parent-loop detection (Floyd-style walk with visited set)
