@@ -757,6 +757,12 @@ function CollectionPage() {
 // ============================================================
 function RecentUnlocks() {
   type Recent = { key: string; type: string; slug: string; kind: string; title: string; subtitle: string; rarity: Rarity };
+  // Museum → Entity origin: rendered inside CollectionPage but needs its
+  // own hook call — the earlier declaration is out of scope here.
+  const stashOrigin = useStashOrigin();
+  const stashEntity = (id: string) =>
+    stashOrigin(`/encyclopedia/entity/${id}`, { route: "/collection" as const });
+
 
   const supaArtifacts = useEncyclopediaSupabaseList("artifact");
   const supaLandmarks = useEncyclopediaSupabaseList("landmark");
