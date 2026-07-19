@@ -122,7 +122,9 @@ function InvestigationsIndex() {
                   key={`s:${inv.id}`}
                   inv={inv}
                   done={done}
+                  onNavigate={() => stashOrigin(`/investigation/${inv.slug}`)}
                 />
+
               );
             }
             const inv = item.row;
