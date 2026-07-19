@@ -44,7 +44,7 @@ import { SceneRenderer } from "./SceneRenderer";
 import { AmbientAudio } from "./AmbientAudio";
 
 
-const FINAL_FADE_MS = 1400;
+const FINAL_FADE_MS = 1500;
 // Assets are locally bundled. A generous ceiling — local decodes
 // finish well within a couple hundred ms on a real device; the
 // timeout is only a safety net so a broken WebView can't hang.
