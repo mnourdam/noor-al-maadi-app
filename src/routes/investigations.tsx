@@ -171,15 +171,17 @@ function InvestigationsIndex() {
   );
 }
 
-function SupabaseRow({ inv, done }: { inv: InvestigationRow; done: boolean }) {
+function SupabaseRow({ inv, done, onNavigate }: { inv: InvestigationRow; done: boolean; onNavigate?: () => void }) {
   const reward = (inv.reward ?? {}) as InvestigationReward;
   const steps = Array.isArray(inv.steps) ? inv.steps : [];
   return (
     <Link
       to="/investigation/$id"
       params={{ id: inv.slug }}
+      onClick={() => onNavigate?.()}
       className={`flex items-center gap-3 rounded-2xl border p-4 ${done ? "border-gold/40 bg-gold/5" : "border-white/10 bg-surface"}`}
     >
+
       <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
         <Search className="size-5" />
       </div>
