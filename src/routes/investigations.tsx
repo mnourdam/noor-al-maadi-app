@@ -134,8 +134,10 @@ function InvestigationsIndex() {
                 key={`l:${inv.id}`}
                 to="/investigation/$id"
                 params={{ id: inv.id }}
+                onClick={() => stashOrigin(`/investigation/${inv.id}`)}
                 className={`flex items-center gap-3 rounded-2xl border p-4 ${done ? "border-gold/40 bg-gold/5" : "border-white/10 bg-surface"}`}
               >
+
                 <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
                   <Search className="size-5" />
                 </div>
