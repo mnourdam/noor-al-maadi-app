@@ -321,9 +321,9 @@ export function InvestigationEditor({ investigationId }: { investigationId: stri
   // Unsaved-change protection covers ALL navigation paths:
   //  • internal <Link> / programmatic navigate()
   //  • browser back / forward (router history)
-  //  • Android hardware back — AndroidBackHandler calls
-  //    router.history.back(), which TanStack Router routes through the
-  //    same blocker registry.
+  //  • Android hardware back — AndroidBackHandler forwards the single
+  //    hardware event to the Navigation Engine's `useBack()`, which
+  //    routes through TanStack Router and hits this blocker.
   //  • hard reload / tab close via enableBeforeUnload.
   // A clean editor produces no prompt; a dirty editor renders the
   // Arabic resolver dialog below.
