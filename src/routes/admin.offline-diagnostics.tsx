@@ -443,6 +443,10 @@ function OfflineDiagnostics() {
         {/* Cinematic Opening — developer replay */}
         <CinematicOpeningReset />
 
+        {/* Guided Tutorial — admin diagnostics */}
+        <TutorialDiagnosticsCard />
+
+
 
 
         {/* Log */}
