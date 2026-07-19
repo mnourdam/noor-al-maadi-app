@@ -439,6 +439,10 @@ function OfflineDiagnostics() {
           )}
         </section>
 
+        {/* Cinematic Opening — developer replay */}
+        <CinematicOpeningReset />
+
+
 
         {/* Log */}
         {log.length > 0 && (
