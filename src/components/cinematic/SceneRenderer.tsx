@@ -16,6 +16,8 @@ interface Props {
   active: boolean;
   /** True while the sequence is fading out (skip / final). */
   fadingOut: boolean;
+  /** When true, disable Ken Burns and particles; keep simple fades. */
+  reducedMotion?: boolean;
 }
 
 function transitionStyle(t: SceneTransition | undefined, active: boolean, fadingOut: boolean): React.CSSProperties {
@@ -28,7 +30,7 @@ function transitionStyle(t: SceneTransition | undefined, active: boolean, fading
   };
 }
 
-function SceneRendererImpl({ scene, active, fadingOut }: Props) {
+function SceneRendererImpl({ scene, active, fadingOut, reducedMotion }: Props) {
   const [textVisible, setTextVisible] = useState(false);
 
   useEffect(() => {
