@@ -29,7 +29,7 @@ export const CINEMATIC_OPENING_DATA: CinematicOpeningConfig = {
     {
       id: "scene-1-mount-al-nour",
       image: "/cinematic/scene1-mount-al-nour.webp",
-      contextLabel: "جبل النور — نحو ٦١٠م",
+      contextLabel: "جبل النور — نحو 610م",
       title: "قبل أكثر من أربعة عشر قرنًا...",
       titleSegments: [
         { text: "قبل أكثر من " },
