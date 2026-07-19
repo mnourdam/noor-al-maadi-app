@@ -490,6 +490,14 @@ export function TutorialProvider({
   }
   const api = apiRef.current;
 
+  // Monotonically increasing ownership token for the target-locator
+  // task. Every locator effect run captures a `taskId` from this ref;
+  // any async continuation (rAF, setTimeout, ResizeObserver callback,
+  // scroll handler, watchdog, nested rAFs) must verify it still owns
+  // the ref before mutating engine state. Any mismatch means a newer
+  // step has taken over and the continuation must return silently.
+  const activeTaskIdRef = useRef(0);
+
   const [snap, setSnap] = useState<TutorialEngineSnapshot>(() =>
     snapshotOf(store),
   );
@@ -752,38 +760,63 @@ export function TutorialProvider({
       return;
     }
 
-    let cancelled = false;
+    // -------- Task ownership --------
+    // Bump the global counter and capture our taskId. Any earlier
+    // task's continuation will now see a mismatch and bail out
+    // before touching engine state, api.next(), transition(), or
+    // attachMeasurement.
+    const taskId = ++activeTaskIdRef.current;
+    const stepIndex = snap.stepIndex;
+    const stepId = currentStep.id;
+    const isActive = () => activeTaskIdRef.current === taskId;
+    const staleGuard = (site: string): boolean => {
+      if (isActive()) return false;
+      logTutorialEvent("task-ignored-stale", {
+        reason: `taskId=${taskId} stepIndex=${stepIndex} stepId=${stepId} site=${site}`,
+      });
+      return true;
+    };
+
     let taskCompleted = false;
     let observer: ResizeObserver | null = null;
     let scrollListener: (() => void) | null = null;
     let currentEl: HTMLElement | null = null;
     let cleanupScroll = () => {};
     let rafHandle: number | null = null;
+    let retryTimeout: number | null = null;
     let watchdogHandle: number | null = null;
 
     const selector = `[data-tutorial-target="${currentStep.targetId}"]`;
     const start = performance.now();
     const stepAnalyticsId = currentStep.analyticsId;
 
+    logTutorialEvent("task-created", {
+      reason: `taskId=${taskId} stepIndex=${stepIndex} stepId=${stepId} selector=${selector}`,
+    });
+
     // Per-step watchdog owns the WHOLE task lifetime (locating →
     // scrolling → measuring). Cleared only on showing_step, on
     // skip-forward, or on cancellation.
     const STEP_WATCHDOG_MS = 5000;
     logTutorialEvent("locator-effect-started", {
-      reason: `selector=${selector}`,
+      reason: `taskId=${taskId} selector=${selector}`,
       watchdogStarted: true,
     });
     watchdogHandle = window.setTimeout(() => {
-      if (cancelled) return;
+      if (staleGuard("watchdog")) return;
       // eslint-disable-next-line no-console
       console.warn(
         `[tutorial] step watchdog fired for "${stepAnalyticsId}" — state=${store.state}, hasRect=${store.targetRect != null}. Skipping forward.`,
       );
       logTutorialEvent("watchdog-fired", {
-        reason: `state=${store.state}, hasRect=${store.targetRect != null}`,
+        reason: `taskId=${taskId} state=${store.state}, hasRect=${store.targetRect != null}`,
         apiNextCalled: true,
         watchdogFired: true,
       });
+      taskCompleted = true;
+      // Invalidate any of our own pending continuations before we
+      // advance — api.next() will kick off a new effect/task.
+      activeTaskIdRef.current = taskId + 1;
       api.next();
     }, STEP_WATCHDOG_MS);
     const clearWatchdog = () => {
@@ -807,9 +840,10 @@ export function TutorialProvider({
     };
 
     const attachMeasurement = (el: HTMLElement) => {
+      if (staleGuard("attachMeasurement")) return;
       currentEl = el;
       const measure = () => {
-        if (cancelled) return;
+        if (staleGuard("measure")) return;
         const rect = el.getBoundingClientRect();
         store.targetRect = rect;
         notify(store);
@@ -848,13 +882,14 @@ export function TutorialProvider({
     const SETTLE_TIMEOUT_MS = 2000;
 
     const waitForSettle = (el: HTMLElement) => {
+      if (staleGuard("waitForSettle-enter")) return;
       transition(store, "scrolling_to_target");
       const settleStart = performance.now();
       let lastTop = el.getBoundingClientRect().top;
       let stableFrames = 0;
 
       const tick = () => {
-        if (cancelled) return;
+        if (staleGuard("settle-tick")) return;
         const rect = el.getBoundingClientRect();
         if (Math.abs(rect.top - lastTop) <= SETTLE_TOLERANCE_PX) {
           stableFrames += 1;
@@ -870,10 +905,10 @@ export function TutorialProvider({
             reason: settled ? "stable-frames" : "timeout",
             scrollSettled: true,
           });
-          requestAnimationFrame(() => {
-            if (cancelled) return;
-            requestAnimationFrame(() => {
-              if (cancelled) return;
+          rafHandle = requestAnimationFrame(() => {
+            if (staleGuard("post-settle-raf-1")) return;
+            rafHandle = requestAnimationFrame(() => {
+              if (staleGuard("post-settle-raf-2")) return;
               transition(store, "measuring_target");
               const finalRect = el.getBoundingClientRect();
               if (!rectValid(finalRect)) {
@@ -890,6 +925,7 @@ export function TutorialProvider({
                   });
                   clearWatchdog();
                   taskCompleted = true;
+                  activeTaskIdRef.current = taskId + 1;
                   api.next();
                   return;
                 }
@@ -908,11 +944,11 @@ export function TutorialProvider({
     };
 
     const tryResolve = () => {
-      if (cancelled) return;
+      if (staleGuard("tryResolve")) return;
       const el = document.querySelector(selector) as HTMLElement | null;
       if (el) {
         logTutorialEvent("target-resolved", {
-          reason: `scroll=${currentStep.scroll ?? "none"}`,
+          reason: `taskId=${taskId} scroll=${currentStep.scroll ?? "none"}`,
         });
         // Normalize to locating_target before advancing (we may
         // enter from `armed` or `transitioning`).
@@ -952,12 +988,17 @@ export function TutorialProvider({
           });
           clearWatchdog();
           taskCompleted = true;
+          activeTaskIdRef.current = taskId + 1;
           api.next();
         } else {
           logTutorialEvent("target-unresolved-retry", {
             reason: `elapsed=${Math.round(elapsed)}ms — no skipIfTargetUnavailable`,
           });
-          window.setTimeout(tryResolve, 200);
+          retryTimeout = window.setTimeout(() => {
+            retryTimeout = null;
+            if (staleGuard("retry-timeout")) return;
+            tryResolve();
+          }, 200);
         }
         return;
       }
@@ -967,18 +1008,30 @@ export function TutorialProvider({
     tryResolve();
 
     return () => {
-      cancelled = true;
+      // Invalidate ownership FIRST so any in-flight async continuation
+      // that fires after cleanup returns immediately at its staleGuard.
+      if (activeTaskIdRef.current === taskId) {
+        activeTaskIdRef.current = taskId + 1;
+      }
+      logTutorialEvent(
+        taskCompleted ? "task-completed" : "task-aborted",
+        {
+          reason: `taskId=${taskId} stepIndex=${stepIndex} stepId=${stepId} state=${store.state}`,
+        },
+      );
       logTutorialEvent("locator-effect-cleanup", {
         reason: taskCompleted ? "task-completed" : `aborted-state=${store.state}`,
       });
       clearWatchdog();
       if (rafHandle != null) cancelAnimationFrame(rafHandle);
+      if (retryTimeout != null) clearTimeout(retryTimeout);
       if (observer && currentEl) observer.disconnect();
       cleanupScroll();
     };
     // Intentionally NOT depending on snap.state — the task drives it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, currentStep, snap.paused, pathname]);
+
 
   // ------------------------------------------------------------
   // Back integration
