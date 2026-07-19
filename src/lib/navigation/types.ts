@@ -52,6 +52,31 @@ export interface RouteDeclaration {
   kind: RouteKind;
 
   /**
+   * Back-button participation policy. Defaults to `"normal"`.
+   *
+   *  - `normal`               – full priority-chain resolution.
+   *  - `blocked_while_pending` – Back is a no-op while the page owns an
+   *                              in-flight, non-interruptible flow
+   *                              (OAuth exchange, forced recovery).
+   *                              The page itself must resolve navigation
+   *                              once its flow completes.
+   *  - `force_target`         – Back always navigates to a fixed target
+   *                              (`backPolicyTarget`), no history or
+   *                              origin guessing.
+   *  - `non_navigable`        – Route is not user-facing (embed / share
+   *                              card). Back is fully ignored; origin
+   *                              tracking and parent resolution are
+   *                              skipped.
+   */
+  backPolicy?: "normal" | "blocked_while_pending" | "force_target" | "non_navigable";
+
+  /**
+   * Target route id for `backPolicy: "force_target"`. Ignored otherwise.
+   * Must resolve inside the registry.
+   */
+  backPolicyTarget?: RouteId;
+
+  /**
    * Free-form label used in validator error messages only. Not shown to
    * end users.
    */
