@@ -38,7 +38,7 @@ import { DailyChallengesSection } from "@/components/home/DailyChallengesSection
 import { DailyQuestCard } from "@/components/home/DailyQuestCard";
 import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
 import { scheduleIdle, decodeImage, perfMark } from "@/lib/idle";
-import { TutorialHomeDiagBadge } from "@/components/admin/TutorialHomeDiagBadge";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -567,7 +567,8 @@ function HomeFull() {
 
   return (
     <AppShell>
-      <TutorialHomeDiagBadge />
+
+
 
 
 

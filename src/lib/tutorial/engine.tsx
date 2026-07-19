@@ -770,11 +770,20 @@ export function TutorialProvider({
     api.previous();
   }, [api, effectiveConfig]);
 
+  // Occupy an overlay-stack slot only while the tutorial is an active
+  // blocking surface: any non-idle / non-completed state (this covers
+  // running steps, paused_by_overlay, and the skip-confirm dialog).
+  // When idle or completed, the tutorial owns no back-affordance and
+  // must not inflate overlayStackSize (which would deadlock its own
+  // eligibility predicate).
+  const tutorialActive =
+    snap.state !== "idle" &&
+    snap.state !== "completed";
   const dismisser = useCallback(() => {
-    if (!running && !skipConfirmOpen) return;
     handleBack();
-  }, [running, skipConfirmOpen, handleBack]);
-  useOverlayDismiss(dismisser, "TutorialEngine");
+  }, [handleBack]);
+  useOverlayDismiss(dismisser, "TutorialEngine", tutorialActive || skipConfirmOpen);
+
 
   const enabledTotal = useMemo(
     () => enabledCount(effectiveConfig),

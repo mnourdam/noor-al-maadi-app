@@ -444,13 +444,8 @@ function OfflineDiagnostics() {
         <CinematicOpeningReset />
 
         {/* Guided Tutorial — admin diagnostics */}
-        <div style={{ background: "red", color: "white", height: 80, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 18 }}>
-          BEFORE TUTORIAL CARD
-        </div>
         <TutorialDiagnosticsCard />
-        <div style={{ background: "blue", color: "white", height: 80, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 18 }}>
-          AFTER TUTORIAL CARD
-        </div>
+
 
 
 
