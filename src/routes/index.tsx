@@ -11,8 +11,9 @@ import { AppShell } from "@/components/AppShell";
 import { CachedImage } from "@/components/CachedImage";
 import {
   levelFor, currentSeason,
-  ACHIEVEMENTS, evaluateAchievements,
+  ACHIEVEMENTS,
 } from "@/lib/app-constants";
+import { useAchievementLegacyEvals } from "@/lib/achievements/v2/driver";
 import { useProfile } from "@/lib/profile";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 
