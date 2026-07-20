@@ -220,6 +220,9 @@ function HomeFull() {
   const lvl = levelFor(profile.points);
   const canonicalInvHome = useCanonicalInvestigationProgress();
   const achViews = useAchievementViews();
+  const nearestAchievement = useNearestAchievement();
+  const latestUnlockedAchievement = useLatestUnlockedAchievement();
+
 
   // ===== Campaign recommendation — SHARED SERVICE =====
   // Home Hero and Worlds Continue Journey both consume this hook,
@@ -496,10 +499,8 @@ function HomeFull() {
         });
       }
     }
-    // Nearest achievement — pick the closest-to-unlock view via v2 engine.
-    const nearest = achViews
-      .filter((v: AchievementView) => v.state === "locked-visible" && v.progress > 0 && v.progress < 1)
-      .sort((a, b) => b.progress - a.progress)[0];
+    // Nearest achievement — shared selector (identical logic on Profile Overview).
+    const nearest = nearestAchievement;
     if (nearest) {
       const remainingPct = Math.max(1, Math.round((1 - nearest.progress) * 100));
       if (remainingPct <= 25) {
@@ -513,7 +514,7 @@ function HomeFull() {
       }
     }
     return goals.slice(0, 3);
-  }, [lvl, campaignSel, achViews]);
+  }, [lvl, campaignSel, nearestAchievement]);
 
   // ===== Recent Activity =====
   type Activity = { key: string; icon: ReactNode; eyebrow: string; title: string; to: string };
@@ -529,9 +530,7 @@ function HomeFull() {
         to: r.to ?? "/collection",
       });
     }
-    const latestEarned = achViews
-      .filter((v) => (v.state === "unlocked" || v.state === "claimed") && v.unlockedAt)
-      .sort((a, b) => new Date(b.unlockedAt!).getTime() - new Date(a.unlockedAt!).getTime())[0];
+    const latestEarned = latestUnlockedAchievement;
     if (latestEarned) {
       acts.push({
         key: `ach:${latestEarned.id}`,
