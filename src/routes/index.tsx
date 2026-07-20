@@ -507,7 +507,7 @@ function HomeFull() {
           label: `إنجاز «${nearest.displayTitle ?? nearest.id}»`,
           remaining: remainingPct,
           unit: "٪ متبقٍّ",
-          to: "/achievements",
+          to: "/profile?tab=achievements",
         });
       }
     }
@@ -537,7 +537,7 @@ function HomeFull() {
         icon: <Trophy className="size-3.5" />,
         eyebrow: "إنجاز جديد",
         title: latestEarned.displayTitle ?? latestEarned.id,
-        to: "/achievements",
+        to: "/profile?tab=achievements",
       });
     }
     if (campaignSel && campaignSel.hasStarted) {

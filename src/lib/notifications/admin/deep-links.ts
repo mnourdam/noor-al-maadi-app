@@ -102,7 +102,7 @@ export const DEEP_LINKS: DeepLinkDef[] = [
   { id: "profile.account", group: "Profile", label: "Account",
     params: NO_PARAMS, build: () => ({ deep_link: "/profile", payload: {} }) },
   { id: "profile.achievements", group: "Profile", label: "Achievements",
-    params: NO_PARAMS, build: () => ({ deep_link: "/achievements", payload: {} }) },
+    params: NO_PARAMS, build: () => ({ deep_link: "/profile?tab=achievements", payload: {} }) },
   { id: "profile.settings", group: "Profile", label: "Settings",
     params: NO_PARAMS, build: () => ({ deep_link: "/profile?tab=settings", payload: {} }) },
 

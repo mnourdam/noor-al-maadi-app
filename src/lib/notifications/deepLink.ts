@@ -110,7 +110,7 @@ export function resolveDeepLink(n: NotificationLike): string {
   if (payload.campaignId)   return `/campaigns/${payload.campaignId}`;
   if (payload.entitySlug)   return `/encyclopedia/${payload.entitySlug}`;
   if (payload.artifactId)   return `/collection?artifact=${payload.artifactId}`;
-  if (payload.achievementId) return `/achievements?id=${payload.achievementId}`;
+  if (payload.achievementId) return `/profile?tab=achievements&achievement=${payload.achievementId}`;
   if (payload.investigationId) return `/investigations/${payload.investigationId}`;
   if (payload.todayEventId) return `/#today-in-history`;
 
@@ -123,7 +123,7 @@ export function resolveDeepLink(n: NotificationLike): string {
     case "campaign":         return "/campaigns";
     case "encyclopedia":     return "/encyclopedia";
     case "investigation":    return "/investigations";
-    case "achievement":      return "/achievements";
+    case "achievement":      return "/profile?tab=achievements";
     case "reward":           return "/profile";
     case "museum":           return "/collection";
     case "today_in_history": return "/#today-in-history";
