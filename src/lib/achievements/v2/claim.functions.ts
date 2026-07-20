@@ -1,14 +1,13 @@
 /**
- * Server-authoritative claim RPC.
+ * Server-authoritative claim + reward-grant RPC.
  *
- * The client sends the ids it believes are newly unlocked; the server
- * re-validates each id against its own registry mirror and canonical
- * snapshot, inserts `user_achievements` rows idempotently, and grants
- * rewards (xp, dinars, titles, museum items) inside a single transaction.
+ * Client submits achievement ids only. The server validates each id
+ * against `public.achievement_registry` (immutable server-side source
+ * of reward truth), inserts `user_achievements` rows idempotently, and
+ * grants XP + dinars + titles atomically inside a single transaction
+ * via the `claim_achievement_rewards` SECURITY DEFINER function.
  *
- * This slice ships the plumbing; server-side revalidation and reward
- * grants will be filled in when we cut over from the legacy engine so
- * that the two systems never both grant rewards at the same time.
+ * The client never dictates reward amounts.
  */
 
 import { createServerFn } from "@tanstack/react-start";
@@ -30,43 +29,39 @@ export const claimAchievements = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => claimSchema.parse(data))
   .handler(async ({ data, context }): Promise<ClaimResult> => {
-    const { ids, engineVersion } = data;
-    const { supabase, userId } = context;
+    const { ids } = data;
+    const { supabase } = context;
 
     if (ids.length === 0) {
       return { inserted: [], alreadyClaimed: [], rejected: [] };
     }
 
-    // Idempotent insert. rewards_granted_at stays NULL for now — the reward
-    // grant transaction is filled in in the cutover slice, so the legacy
-    // engine remains the sole reward source until that switch.
-    const rows = ids.map((id) => ({
-      user_id: userId,
-      achievement_id: id,
-      engine_version: engineVersion,
-    }));
-
-    const { data: inserted, error } = await supabase
-      .from("user_achievements")
-      .upsert(rows, {
-        onConflict: "user_id,achievement_id",
-        ignoreDuplicates: true,
-      })
-      .select("achievement_id");
+    const { data: rows, error } = await supabase.rpc(
+      "claim_achievement_rewards",
+      { _ids: ids },
+    );
 
     if (error) {
       // eslint-disable-next-line no-console
-      console.error("[achievements] claim insert failed", error);
+      console.error("[achievements] claim rpc failed", error);
       return {
         inserted: [],
         alreadyClaimed: [],
-        rejected: ids.map((id) => ({ id, reason: "db_error" })),
+        rejected: ids.map((id) => ({ id, reason: "rpc_error" })),
       };
     }
 
-    const insertedIds = (inserted ?? []).map((r) => r.achievement_id);
-    const alreadyClaimed = ids.filter((id) => !insertedIds.includes(id));
-    return { inserted: insertedIds, alreadyClaimed, rejected: [] };
+    // The RPC returns a single row (table function) with three text[] columns.
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    const inserted: string[] = row?.inserted ?? [];
+    const already: string[] = row?.already_claimed ?? [];
+    const rejected: string[] = row?.rejected ?? [];
+
+    return {
+      inserted,
+      alreadyClaimed: already,
+      rejected: rejected.map((id) => ({ id, reason: "unknown_or_retired_id" })),
+    };
   });
 
 /**
