@@ -165,14 +165,7 @@ function snapshotOf(store: InternalStore): TutorialEngineSnapshot {
 
 function transition(store: InternalStore, next: TutorialEngineState) {
   if (store.state === next) return;
-  const prev = store.state;
   store.state = next;
-  try {
-    logTutorialTransition(prev, next);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("[tutorial] logTutorialTransition threw:", err);
-  }
   notify(store);
 }
 
@@ -200,11 +193,6 @@ function fireStepChanged(
   direction: "forward" | "backward" | "initial",
 ) {
   const step = store.config.steps[rawIndex]!;
-  try {
-    resetPerStepInstrumentation(step.id);
-  } catch {
-    /* ignore */
-  }
   fireHook(store.hooks, "onStepChanged", {
     id: store.config.id,
     version: store.config.version,
