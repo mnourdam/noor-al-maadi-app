@@ -173,7 +173,9 @@ function ProfilePage() {
   const achievementViews = useAchievementViews();
   const achViewMap = useMemo(
     () => new Map<string, AchievementView>(achievementViews.map((v) => [v.id, v])),
+    [achievementViews],
   );
+  const earnedCount = achievementViews.filter(isEarned).length;
 
   // Deep-link: `?achievement=<id>` (e.g. from notifications or the retired
   // /achievements redirect) opens the trophy dialog once views hydrate.
@@ -189,10 +191,7 @@ function ProfilePage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.achievement, achViewMap]);
-  const __achViewMapUnused =
-    [achievementViews],
-  );
-  const earnedCount = achievementViews.filter(isEarned).length;
+
 
   const seasonPct = Math.min(100, Math.round((profile.seasonPoints / CURRENT_SEASON.goalPoints) * 100));
   const seasonReady = profile.seasonPoints >= CURRENT_SEASON.goalPoints && !profile.seasonClaimed;
