@@ -1883,6 +1883,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          client_unlocked_at: string | null
+          definition_version: number
+          engine_version: number
+          rewards_granted_at: string | null
+          rewards_payload: Json
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          client_unlocked_at?: string | null
+          definition_version?: number
+          engine_version?: number
+          rewards_granted_at?: string | null
+          rewards_payload?: Json
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          client_unlocked_at?: string | null
+          definition_version?: number
+          engine_version?: number
+          rewards_granted_at?: string | null
+          rewards_payload?: Json
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_campaign_progress: {
         Row: {
           campaign_id: string
