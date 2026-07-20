@@ -218,7 +218,7 @@ function HomeFull() {
 
   const lvl = levelFor(profile.points);
   const canonicalInvHome = useCanonicalInvestigationProgress();
-  const achEvals = useAchievementLegacyEvals(useProfileEarnedMap());
+  const achEvals = useAchievementLegacyEvals(profile.achievementsEarned);
 
   // ===== Campaign recommendation — SHARED SERVICE =====
   // Home Hero and Worlds Continue Journey both consume this hook,
@@ -495,7 +495,7 @@ function HomeFull() {
         });
       }
     }
-    const evals = evaluateAchievements(profile, { investigationsCompletedCount: canonicalInvHome.count });
+    const evals = achEvals;
     const earnedMap = profile.achievementsEarned ?? {};
     const nearest = evals
       .filter((e) => !e.earned && !earnedMap[e.id])
