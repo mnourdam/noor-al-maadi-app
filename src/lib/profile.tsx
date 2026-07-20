@@ -210,7 +210,9 @@ interface Ctx {
   // Social v1
   grantTitle: (title: string) => void;
   grantArtifact: (id: string) => void;
-  markAchievementEarned: (id: string) => boolean; // returns true if it was newly marked
+  // `markAchievementEarned` was removed in the Achievement Engine v2
+  // finalization slice. Achievement unlocking is now server-authoritative
+  // via `@/lib/achievements/v2` (see `claim_achievements` RPC).
 }
 
 
@@ -735,15 +737,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }),
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
     grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
-    markAchievementEarned: (id) => {
-      let isNew = false;
-      update((p) => {
-        if (p.achievementsEarned?.[id]) return p;
-        isNew = true;
-        return { ...p, achievementsEarned: { ...(p.achievementsEarned ?? {}), [id]: Date.now() } };
-      });
-      return isNew;
-    },
+    // `markAchievementEarned` removed - Achievement Engine v2 owns unlocks.
   }), [profile, update, awardBadge]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;
