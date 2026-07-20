@@ -110,7 +110,7 @@ export function buildRegistry(
     byRarity,
     byFamily,
     byInput: byInputFrozen,
-    byAnyInput: (domains) => {
+    byAnyInput: (domains: readonly CanonicalDomain[]) => {
       const seen = new Set<AchievementId>();
       const out: AchievementDefinition[] = [];
       for (const d of domains) {

@@ -66,9 +66,9 @@ export type SliceProvider<D extends CanonicalDomain> = (
   prev: ProgressSnapshot,
 ) => ProgressSnapshot[D];
 
-type Providers = { [D in CanonicalDomain]?: SliceProvider<D> };
+type AnySliceProvider = (prev: ProgressSnapshot) => ProgressSnapshot[CanonicalDomain];
 
-const providers: Providers = {};
+const providers = new Map<CanonicalDomain, AnySliceProvider>();
 
 /**
  * Register a slice provider for a canonical domain. Providers must be pure
