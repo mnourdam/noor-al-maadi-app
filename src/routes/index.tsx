@@ -13,6 +13,7 @@ import {
   levelFor, currentSeason,
 } from "@/lib/app-constants";
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
+import { useNearestAchievement, useLatestUnlockedAchievement } from "@/lib/achievements/v2/selectors";
 import type { AchievementView } from "@/lib/achievements/v2";
 import { useProfile } from "@/lib/profile";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
