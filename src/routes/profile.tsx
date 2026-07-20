@@ -778,7 +778,7 @@ function CircularProgress({ value, size = 88 }: { value: number; size?: number }
 function AchievementsTab({
   achMap, onOpen,
 }: {
-  achMap: Map<string, ReturnType<typeof evaluateAchievements>[number]>;
+  achMap: Map<string, ReturnType<typeof useAchievementLegacyEvals>[number]>;
   onOpen: (a: AchievementDef) => void;
 }) {
   const grouped = useMemo(() => {
