@@ -657,7 +657,7 @@ function OverviewTab({
       {/* Recent discovery (canonical unified feed) */}
       {recentDiscovery && (
         <Link
-          to={recentDiscovery.href}
+          to={recentDiscovery.destinationRoute}
           className="flex items-center gap-3 rounded-2xl border border-gold/25 bg-surface p-4 hover:border-gold/50 transition-colors"
         >
           <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
