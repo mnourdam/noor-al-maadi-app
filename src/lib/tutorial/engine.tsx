@@ -273,7 +273,9 @@ function createEngine(store: InternalStore): InternalEngine {
       if (store.stepIndex == null) return;
       const nextIdx = nextEnabledIndex(store.config, store.stepIndex);
       if (nextIdx == null) {
-        // No more enabled steps → natural finish.
+        // No more enabled steps → natural finish. Route through
+        // `finishing` so the overlay can smoothly scroll Home to the
+        // top and fade out before the tutorial closes.
         const finalStep = store.config.steps[store.stepIndex]!;
         persistence.markCompleted(store.config.version);
         fireHook(store.hooks, "onTutorialCompleted", {
@@ -283,18 +285,12 @@ function createEngine(store: InternalStore): InternalEngine {
         });
         store.stepIndex = null;
         store.targetRect = null;
-        transition(store, "completed");
+        transition(store, "finishing");
         return;
       }
       store.stepIndex = nextIdx;
       store.targetRect = null;
       fireStepChanged(store, nextIdx, "forward");
-      // Transition to locating_target synchronously. The locator
-      // effect re-runs (currentStep changed) and drives the rest of
-      // the sequence itself. A trailing queueMicrotask here would fire
-      // AFTER the effect has already reached showing_step for
-      // synchronously-resolvable targets (bottom-nav), resetting the
-      // engine back to locating_target and dropping the CoachMark.
       transition(store, "locating_target");
     },
     previous() {
@@ -325,9 +321,8 @@ function createEngine(store: InternalStore): InternalEngine {
       transition(store, "completed");
     },
     finish() {
-      // Finish is only correct if we're on the last enabled step, but
-      // we accept the caller's decision (used by natural completion
-      // and by tutorialDebug.finish()).
+      // Route through `finishing` so the overlay can scroll Home to
+      // the top and fade out before actually closing.
       const lastIdx = lastEnabledIndex(store.config);
       const finalStep =
         lastIdx != null ? store.config.steps[lastIdx] ?? null : null;
@@ -339,6 +334,10 @@ function createEngine(store: InternalStore): InternalEngine {
       });
       store.stepIndex = null;
       store.targetRect = null;
+      transition(store, "finishing");
+    },
+    completeAfterFinishing() {
+      if (store.state !== "finishing") return;
       transition(store, "completed");
     },
     forceClose() {
