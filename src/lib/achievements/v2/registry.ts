@@ -129,13 +129,67 @@ export function buildRegistry(
 
 // ---------- validation ----------
 
+const VALID_CATEGORIES: ReadonlySet<string> = new Set<AchievementCategory>([
+  "campaigns",
+  "investigations",
+  "encyclopedia",
+  "museum",
+  "atlas",
+  "worlds",
+  "economy",
+  "level",
+  "daily",
+  "collection",
+  "special",
+  "seasonal",
+]);
+const VALID_RARITIES: ReadonlySet<string> = new Set<AchievementRarity>([
+  "common",
+  "rare",
+  "epic",
+  "legendary",
+]);
+const VALID_DOMAINS: ReadonlySet<string> = new Set<CanonicalDomain>([
+  "campaigns",
+  "investigations",
+  "encyclopedia",
+  "museum",
+  "atlas",
+  "worlds",
+  "xp",
+  "level",
+  "dinars",
+  "streak",
+  "daily",
+  "games",
+  "titles",
+  "profile",
+]);
+
 export function validate(
   definitions: readonly AchievementDefinition[],
 ): RegistryValidationIssue[] {
   const issues: RegistryValidationIssue[] = [];
   const seenIds = new Set<AchievementId>();
+  const seenAnalytics = new Map<string, AchievementId>();
   const idSet = new Set(definitions.map((d) => d.id));
   const i18nKeys = knownI18nKeys();
+  // sortOrder collisions are scoped to (category, family) — same tier in a
+  // different family is not a real collision.
+  const seenSortKey = new Map<string, AchievementId>();
+  // Icon collisions are only a smell within a category.
+  const seenIconKey = new Map<string, AchievementId>();
+
+  // Flagged-compat isolation: v2 registry MUST NOT re-declare a flagged id.
+  // Loaded lazily to avoid a require cycle when the registry initializes.
+  let flaggedIds: ReadonlySet<string> = new Set();
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require("./definitions/flagged") as { FLAGGED_IDS: ReadonlySet<string> };
+    flaggedIds = mod.FLAGGED_IDS;
+  } catch {
+    /* flagged module optional at validation time */
+  }
 
   for (const d of definitions) {
     // Unique id
@@ -149,7 +203,36 @@ export function validate(
     }
     seenIds.add(d.id);
 
-    // Non-empty inputs
+    // Flagged-compat isolation
+    if (flaggedIds.has(d.id)) {
+      issues.push({
+        level: "error",
+        code: "flagged_id_in_canonical_registry",
+        achievementId: d.id,
+        message:
+          "Flagged compatibility-only id must not appear in the canonical v2 registry.",
+      });
+    }
+
+    // Category / rarity enum validity
+    if (!VALID_CATEGORIES.has(d.category)) {
+      issues.push({
+        level: "error",
+        code: "invalid_category",
+        achievementId: d.id,
+        message: `Unknown category: ${d.category}`,
+      });
+    }
+    if (!VALID_RARITIES.has(d.rarity)) {
+      issues.push({
+        level: "error",
+        code: "invalid_rarity",
+        achievementId: d.id,
+        message: `Unknown rarity: ${d.rarity}`,
+      });
+    }
+
+    // Non-empty inputs, all known
     if (!d.inputs || d.inputs.length === 0) {
       issues.push({
         level: "error",
@@ -157,12 +240,23 @@ export function validate(
         achievementId: d.id,
         message: "Definition must declare at least one canonical input.",
       });
+    } else {
+      for (const dom of d.inputs) {
+        if (!VALID_DOMAINS.has(dom)) {
+          issues.push({
+            level: "error",
+            code: "invalid_input_domain",
+            achievementId: d.id,
+            message: `Unknown canonical input domain: ${dom}`,
+          });
+        }
+      }
     }
 
-    // i18n keys exist
+    // i18n keys exist and are non-empty
     const titleKey = d.i18n.titleKey;
     const descKey = d.i18n.descriptionKey;
-    if (!i18nKeys.has(titleKey)) {
+    if (!titleKey || !i18nKeys.has(titleKey)) {
       issues.push({
         level: "error",
         code: "missing_i18n_key",
@@ -170,7 +264,7 @@ export function validate(
         message: `Missing title key: ${titleKey}`,
       });
     }
-    if (!i18nKeys.has(descKey)) {
+    if (!descKey || !i18nKeys.has(descKey)) {
       issues.push({
         level: "error",
         code: "missing_i18n_key",
@@ -188,6 +282,80 @@ export function validate(
           achievementId: d.id,
           message: `Unknown prerequisite id: ${p}`,
         });
+      }
+    }
+
+    // Rewards sanity (non-negative numeric fields; referenced ids non-empty)
+    if (d.rewards) {
+      const r = d.rewards;
+      if (typeof r.xp === "number" && (!Number.isFinite(r.xp) || r.xp < 0)) {
+        issues.push({
+          level: "error", code: "invalid_reward",
+          achievementId: d.id,
+          message: `Reward xp must be a non-negative finite number (got ${r.xp}).`,
+        });
+      }
+      if (typeof r.dinars === "number" && (!Number.isFinite(r.dinars) || r.dinars < 0)) {
+        issues.push({
+          level: "error", code: "invalid_reward",
+          achievementId: d.id,
+          message: `Reward dinars must be a non-negative finite number (got ${r.dinars}).`,
+        });
+      }
+      for (const [k, v] of [
+        ["titleId", r.titleId] as const,
+        ["museumItemId", r.museumItemId] as const,
+        ["cosmeticId", r.cosmeticId] as const,
+      ]) {
+        if (v !== undefined && (typeof v !== "string" || v.length === 0)) {
+          issues.push({
+            level: "error", code: "invalid_reward",
+            achievementId: d.id,
+            message: `Reward ${k} must be a non-empty string when present.`,
+          });
+        }
+      }
+    }
+
+    // analyticsId uniqueness
+    if (d.analyticsId) {
+      const prev = seenAnalytics.get(d.analyticsId);
+      if (prev && prev !== d.id) {
+        issues.push({
+          level: "error", code: "duplicate_analytics_id",
+          achievementId: d.id,
+          message: `analyticsId "${d.analyticsId}" already used by ${prev}.`,
+        });
+      } else {
+        seenAnalytics.set(d.analyticsId, d.id);
+      }
+    }
+
+    // sortOrder duplicates within (category, family) — soft warning
+    const sortKey = `${d.category}|${d.family ?? ""}|${d.sortOrder}`;
+    const prevSort = seenSortKey.get(sortKey);
+    if (prevSort && prevSort !== d.id) {
+      issues.push({
+        level: "warn", code: "duplicate_sort_order",
+        achievementId: d.id,
+        message: `Duplicate sortOrder ${d.sortOrder} in (${d.category}, ${d.family ?? "-"}) with ${prevSort}.`,
+      });
+    } else {
+      seenSortKey.set(sortKey, d.id);
+    }
+
+    // media.icon duplicates within category — soft warning
+    if (d.media?.icon?.ref) {
+      const iconKey = `${d.category}|${d.media.icon.ref}`;
+      const prevIcon = seenIconKey.get(iconKey);
+      if (prevIcon && prevIcon !== d.id) {
+        issues.push({
+          level: "warn", code: "duplicate_icon",
+          achievementId: d.id,
+          message: `Duplicate icon "${d.media.icon.ref}" in category "${d.category}" (also on ${prevIcon}).`,
+        });
+      } else {
+        seenIconKey.set(iconKey, d.id);
       }
     }
 
