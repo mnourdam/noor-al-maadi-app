@@ -54,18 +54,7 @@ export {
 export {
   tutorialDebug,
   currentEligibilityOverride,
-  readLastStartDiagnostic,
-  writeLastStartDiagnostic,
-  __tutorialAutoStartTelemetry,
-  LAST_START_DIAGNOSTIC_KEY,
-  readTutorialTransitionLog,
-  readRawTutorialTransitionLog,
-  clearTutorialTransitionLog,
-  TRANSITION_LOG_KEY,
-  type LastStartDiagnostic,
-  type AutoStartResult,
   type TutorialDebugController,
-  type TutorialTransitionEntry,
 } from "./debug";
 
 export {
