@@ -202,7 +202,6 @@ function fireStepChanged(
   const step = store.config.steps[rawIndex]!;
   try {
     resetPerStepInstrumentation(step.id);
-    logTutorialEvent("step-changed", { reason: direction });
   } catch {
     /* ignore */
   }
@@ -767,9 +766,6 @@ export function TutorialProvider({
     const isActive = () => activeTaskIdRef.current === taskId;
     const staleGuard = (site: string): boolean => {
       if (isActive()) return false;
-      logTutorialEvent("task-ignored-stale", {
-        reason: `taskId=${taskId} stepIndex=${stepIndex} stepId=${stepId} site=${site}`,
-      });
       return true;
     };
 
@@ -785,19 +781,10 @@ export function TutorialProvider({
     const selector = `[data-tutorial-target="${currentStep.targetId}"]`;
     const start = performance.now();
     const stepAnalyticsId = currentStep.analyticsId;
-
-    logTutorialEvent("task-created", {
-      reason: `taskId=${taskId} stepIndex=${stepIndex} stepId=${stepId} selector=${selector}`,
-    });
-
     // Per-step watchdog owns the WHOLE task lifetime (locating →
     // scrolling → measuring). Cleared only on showing_step, on
     // skip-forward, or on cancellation.
     const STEP_WATCHDOG_MS = 5000;
-    logTutorialEvent("locator-effect-started", {
-      reason: `taskId=${taskId} selector=${selector}`,
-      watchdogStarted: true,
-    });
     watchdogHandle = window.setTimeout(() => {
       if (staleGuard("watchdog")) return;
       // Final synchronous measurement before deciding. If the element
@@ -813,19 +800,11 @@ export function TutorialProvider({
       console.warn(
         `[tutorial] step watchdog fired for "${stepAnalyticsId}" — state=${store.state}, hasRect=${rect != null}, hasSize=${hasSize}.`,
       );
-      logTutorialEvent("watchdog-fired", {
-        reason: `taskId=${taskId} state=${store.state} hasSize=${hasSize}`,
-        watchdogFired: true,
-      });
       if (el && hasSize) {
         clearWatchdog();
         attachMeasurement(el);
         return;
       }
-      logTutorialEvent("api-next-called", {
-        reason: "watchdog-no-usable-element",
-        apiNextCalled: true,
-      });
       taskCompleted = true;
       activeTaskIdRef.current = taskId + 1;
       api.next();
@@ -950,12 +929,6 @@ export function TutorialProvider({
           stableFrames >= SETTLE_FRAMES && movementSatisfied;
         const timedOut = elapsed >= SETTLE_TIMEOUT_MS;
         if (settled || timedOut) {
-          logTutorialEvent("settle-resolved", {
-            reason: settled
-              ? `stable-frames movement=${scrollMoved ? "scroll" : rectMoved ? "rect" : "already-visible"}`
-              : `timeout movement=${scrollMoved || rectMoved ? "yes" : "no"}`,
-            scrollSettled: true,
-          });
           rafHandle = requestAnimationFrame(() => {
             if (staleGuard("post-settle-raf-1")) return;
             rafHandle = requestAnimationFrame(() => {
@@ -966,34 +939,18 @@ export function TutorialProvider({
               // off-screen rect is NOT a skip condition — CoachMark
               // placement clamps separately.
               if (!rectHasSize(finalRect)) {
-                logTutorialEvent("rect-invalid-after-settle", {
-                  reason: `zero-size rect=${JSON.stringify({ x: finalRect.x, y: finalRect.y, w: finalRect.width, h: finalRect.height })}`,
-                });
                 if (
                   currentStep.skipIfTargetUnavailable ||
                   currentStep.onMissingTarget === "skip"
                 ) {
-                  logTutorialEvent("api-next-called", {
-                    reason: "zero-size+skip-if-unavailable",
-                    apiNextCalled: true,
-                  });
                   clearWatchdog();
                   taskCompleted = true;
                   activeTaskIdRef.current = taskId + 1;
                   api.next();
                   return;
                 }
-                logTutorialEvent("rect-invalid-no-skip", {
-                  reason: "attaching-anyway (no skipIfTargetUnavailable)",
-                });
               } else if (!rectIntersects(finalRect)) {
-                logTutorialEvent("post-settle-offscreen", {
-                  reason: `attaching-anyway top=${Math.round(finalRect.top)} bottom=${Math.round(finalRect.bottom)}`,
-                });
               } else {
-                logTutorialEvent("final-rect-valid", {
-                  reason: `top=${Math.round(finalRect.top)} bottom=${Math.round(finalRect.bottom)}`,
-                });
               }
               attachMeasurement(el);
             });
@@ -1009,9 +966,6 @@ export function TutorialProvider({
       if (staleGuard("tryResolve")) return;
       const el = document.querySelector(selector) as HTMLElement | null;
       if (el) {
-        logTutorialEvent("target-resolved", {
-          reason: `taskId=${taskId} scroll=${currentStep.scroll ?? "none"}`,
-        });
         // Normalize to locating_target before advancing (we may
         // enter from `armed` or `transitioning`).
         if (store.state !== "locating_target") {
@@ -1044,18 +998,11 @@ export function TutorialProvider({
           currentStep.skipIfTargetUnavailable ||
           currentStep.onMissingTarget === "skip"
         ) {
-          logTutorialEvent("target-unresolved-skip", {
-            reason: `elapsed=${Math.round(elapsed)}ms`,
-            apiNextCalled: true,
-          });
           clearWatchdog();
           taskCompleted = true;
           activeTaskIdRef.current = taskId + 1;
           api.next();
         } else {
-          logTutorialEvent("target-unresolved-retry", {
-            reason: `elapsed=${Math.round(elapsed)}ms — no skipIfTargetUnavailable`,
-          });
           retryTimeout = window.setTimeout(() => {
             retryTimeout = null;
             if (staleGuard("retry-timeout")) return;
@@ -1075,15 +1022,6 @@ export function TutorialProvider({
       if (activeTaskIdRef.current === taskId) {
         activeTaskIdRef.current = taskId + 1;
       }
-      logTutorialEvent(
-        taskCompleted ? "task-completed" : "task-aborted",
-        {
-          reason: `taskId=${taskId} stepIndex=${stepIndex} stepId=${stepId} state=${store.state}`,
-        },
-      );
-      logTutorialEvent("locator-effect-cleanup", {
-        reason: taskCompleted ? "task-completed" : `aborted-state=${store.state}`,
-      });
       clearWatchdog();
       if (rafHandle != null) cancelAnimationFrame(rafHandle);
       if (retryTimeout != null) clearTimeout(retryTimeout);
