@@ -517,7 +517,7 @@ function HomeFull() {
       });
     }
     return goals.slice(0, 3);
-  }, [lvl, campaignSel, profile, canonicalInvHome.count]);
+  }, [lvl, campaignSel, profile, achEvals]);
 
   // ===== Recent Activity =====
   type Activity = { key: string; icon: ReactNode; eyebrow: string; title: string; to: string };
