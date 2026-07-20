@@ -6,7 +6,7 @@ import { AuthLink } from "@/components/AuthLink";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import { fetchGatedProfileById, derivePublicStats, type PublicProfile } from "@/lib/social";
-import { evaluateAchievements } from "@/lib/app-constants";
+import { useAchievementViews } from "@/lib/achievements/v2/driver";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { Avatar } from "@/components/Avatar";
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
@@ -23,6 +23,7 @@ function ComparePage() {
   const [other, setOther] = useState<PublicProfile | null>(null);
   const [denied, setDenied] = useState(false);
   const canonicalInvCmp = useCanonicalInvestigationProgress();
+  const views = useAchievementViews();
 
   useEffect(() => {
     let alive = true;
@@ -37,13 +38,18 @@ function ComparePage() {
 
   const me = useMemo(() => {
     const s = derivePublicStats(profile);
+    // v2-canonical count: unlocked or claimed views. Legacy
+    // `evaluateAchievements` was removed in the finalization slice.
+    const achievementCount = views.filter(
+      (v) => v.state === "unlocked" || v.state === "claimed",
+    ).length;
     return {
       username: account?.username ?? profile.name,
       ...s,
-      achievements: evaluateAchievements(profile, { investigationsCompletedCount: canonicalInvCmp.count }).filter((a) => a.earned).length,
+      achievements: achievementCount,
       avatarId: profile.avatarId ?? DEFAULT_AVATAR_ID,
     };
-  }, [profile, account, canonicalInvCmp.count]);
+  }, [profile, account, views, canonicalInvCmp.count]);
 
   if (!user) {
     return (

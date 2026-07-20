@@ -1,17 +1,28 @@
 /**
- * Achievement Engine v2 — public entry point.
+ * Achievement Engine v2 — FROZEN public API.
  *
- * This slice exposes the engine surface without wiring it into UI. The
- * legacy engine (`ACHIEVEMENTS` / `evaluateAchievements` / `AchievementWatcher`)
- * remains authoritative until the cutover slice. Import from here only:
+ * Everything re-exported from this module is the stable surface for the rest
+ * of the app. Anything not exported here is INTERNAL and subject to change
+ * without notice. The legacy engine (`evaluateAchievements`, legacy watcher,
+ * `markAchievementEarned`) was removed in the finalization slice; v2 is now
+ * the sole source of truth for unlock, progress, reward, and view state.
  *
- *   import {
- *     registry, evaluate, buildViews, reconcile,
- *     rebuildSnapshot, emptySnapshot,
- *     onAchievementEvent, onAchievementAnalytics,
- *     claimAchievements, fetchUserAchievements,
- *     ENGINE_VERSION,
- *   } from "@/lib/achievements/v2";
+ * Public surface:
+ *   - Types:         AchievementDefinition, AchievementView, AchievementState,
+ *                    AchievementRewards, ProgressSnapshot, EvaluationResult,
+ *                    UserAchievementRecord, CanonicalDomain, AchievementId,
+ *                    AchievementCategory, AchievementRarity
+ *   - Registry:      registry, buildRegistry, validate, ENGINE_VERSION,
+ *                    REGISTRY_VERSION, RegistryValidationIssue
+ *   - Snapshot:      emptySnapshot, rebuildSnapshot, registerSliceProvider
+ *   - Evaluator:     evaluate
+ *   - Reconciler:    reconcile, dispatchClaimTransitions
+ *   - ViewModel:     buildViews
+ *   - Event bus:     onAchievementEvent, onAchievementAnalytics,
+ *                    dispatchAchievementHook + payload types
+ *   - i18n:          resolveI18n, setAchievementLocale, getAchievementLocale
+ *   - Server RPC:    claimAchievements, fetchUserAchievements, ClaimResult
+ *   - React hooks:   AchievementEngineBoot, useAchievementViews (driver.tsx)
  */
 
 export * from "./types";

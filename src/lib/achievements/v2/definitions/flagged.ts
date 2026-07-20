@@ -1,10 +1,19 @@
 /**
- * Legacy achievements that CANNOT be represented canonically today.
+ * Compatibility-only registry — flagged legacy achievements.
  *
- * These IDs stay in the migration audit report and remain persistable on
- * `user_achievements` if a player already earned them, but the v2 engine
- * NEVER evaluates or newly unlocks them — the required canonical services
- * don't exist yet. Do not invent replacement logic.
+ * These 15 ids CANNOT be represented canonically today (they require legacy
+ * profile counters or ledgers that do not exist as canonical services).
+ * The v2 engine MUST NOT evaluate, unlock, or grant rewards for them:
+ *
+ *   - They are NOT exported from `./definitions/index.ts` into `DEFINITIONS`.
+ *   - `registry.ts::validate()` fails hard if any id here is re-declared in
+ *     the canonical registry (see `flagged_id_in_canonical_registry`).
+ *   - No predicate / progress function exists — accidental unlocking is
+ *     structurally impossible.
+ *
+ * Historical unlocks recorded on the legacy `profile.achievementsEarned`
+ * map are still displayed by the profile UI in read-only form (see
+ * `useAchievementLegacyEvals` in `../driver.tsx`).
  *
  * When a canonical service arrives for the underlying domain, port the
  * flagged id into `all.ts` in the same slice as that service.
