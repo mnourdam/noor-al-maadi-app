@@ -17,6 +17,7 @@ import { FirstLaunchGate } from "../components/FirstLaunchGate";
 import { CinematicOpening } from "../components/cinematic/CinematicOpening";
 import { Toaster } from "../components/ui/sonner";
 import { AchievementWatcher } from "../components/AchievementWatcher";
+import { AchievementEngineBoot } from "../lib/achievements/v2/driver";
 import { InvestigationLegacyBackfill } from "../components/InvestigationLegacyBackfill";
 import { LevelUpWatcher } from "../components/LevelUpWatcher";
 import { SplashSequence } from "../components/splash/SplashSequence";
@@ -378,6 +379,7 @@ function RootComponent() {
               <Outlet />
               <CinematicOpening />
               <FirstLaunchGate />
+              <AchievementEngineBoot />
               <AchievementWatcher />
               <InvestigationLegacyBackfill />
               <LevelUpWatcher />

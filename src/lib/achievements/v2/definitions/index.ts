@@ -1,21 +1,14 @@
 /**
- * Achievement definitions — content only, no engine logic.
+ * Achievement definitions — aggregation point.
  *
- * This file is the aggregation point. Each definition file exports one or
- * more `AchievementDefinition`s. Adding a definition = one entry here.
- *
- * NOTE: This slice ships a small sample set to prove the registry pipeline.
- * The full port of the 57 existing definitions happens in the next slice
- * so that the wire-up milestone is reviewable in isolation.
+ * The registry consumes `DEFINITIONS`. Legacy achievements that cannot be
+ * represented canonically are enumerated in `flagged.ts` for the migration
+ * audit and are NEVER evaluated by v2.
  */
 
 import type { AchievementDefinition } from "../types";
-import { campaignFirst } from "./campaigns";
-import { investigationFirst } from "./investigations";
-import { levelFive } from "./level";
+import { CANONICAL_DEFINITIONS } from "./all";
 
-export const DEFINITIONS: readonly AchievementDefinition[] = Object.freeze([
-  campaignFirst,
-  investigationFirst,
-  levelFive,
-]);
+export const DEFINITIONS: readonly AchievementDefinition[] = CANONICAL_DEFINITIONS;
+export { CANONICAL_DEFINITIONS } from "./all";
+export { FLAGGED_LEGACY_ACHIEVEMENTS, FLAGGED_IDS } from "./flagged";
