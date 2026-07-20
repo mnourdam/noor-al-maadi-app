@@ -559,7 +559,7 @@ function HomeFull() {
       });
     }
     return acts.slice(0, 4);
-  }, [recentDiscoveries, achViews, profile.artifactsFound.length, campaignSel]);
+  }, [recentDiscoveries, latestUnlockedAchievement, profile.artifactsFound.length, campaignSel]);
 
   return (
     <AppShell>
