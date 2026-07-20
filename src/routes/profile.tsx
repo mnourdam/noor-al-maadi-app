@@ -709,20 +709,68 @@ function AchievementMini({ view }: { view: AchievementView }) {
 function ProgressTab({
   profile, lvl,
 }: { profile: ReturnType<typeof useProfile>["profile"]; lvl: ReturnType<typeof levelFor> }) {
+  // Canonical inputs — every metric comes from a v2 canonical service.
+  // Do NOT read legacy profile arrays (storiesRead, artifactsFound,
+  // charactersUnlocked, regionsUnlocked, timelinesCompleted, decisionsCompleted).
+  const worldsAgg = useAllWorldsProgress();
   const canonicalInv = useCanonicalInvestigationProgress();
-  const items: { icon: typeof BookOpen; label: string; current: number; goal: number; tone?: string }[] = [
-    { icon: Swords,   label: "حملات تاريخية", current: profile.campaignsCompleted.length, goal: 20 },
-    { icon: Search,   label: "تحقيقات",        current: canonicalInv.count, goal: 60 },
-    { icon: BookOpen, label: "قصص مُنهاة",     current: profile.storiesRead.length, goal: 60 },
-    { icon: Hourglass,label: "خطوط زمنية",     current: profile.timelinesCompleted.length, goal: 30 },
-    { icon: Compass,  label: "قرارات",         current: profile.decisionsCompleted.length, goal: 40 },
-    { icon: MapIcon,  label: "مناطق على الأطلس", current: profile.regionsUnlocked.length, goal: 15 },
-    { icon: ScrollText, label: "عصور مفتوحة", current: profile.unlockedEras.length, goal: 11 },
-    { icon: Landmark, label: "آثار في المتحف", current: profile.artifactsFound.length, goal: 100 },
-    { icon: Users2,   label: "شخصيات",         current: profile.charactersUnlocked.length, goal: 60 },
-  ];
+  const { recommendation: campaignRec } = useCampaignRecommendation();
+  const achCompletion = useAchievementCompletion();
+
+  // Aggregate world roll-ups → totals across every world.
+  const canonical = useMemo(() => {
+    let campaignsCompleted = 0, campaignsTotal = 0;
+    let invCompleted = 0, invTotal = 0;
+    let entitiesDiscovered = 0, entitiesTotal = 0;
+    let museumFound = 0, museumTotal = 0;
+    let worldsComplete = 0;
+    let worldsTotal = 0;
+    if (worldsAgg.ready) {
+      for (const { progress } of worldsAgg.byWorld.values()) {
+        campaignsCompleted += progress.campaigns.completed;
+        campaignsTotal     += progress.campaigns.total;
+        invCompleted       += progress.investigations.completed;
+        invTotal           += progress.investigations.total;
+        entitiesDiscovered += progress.entities.discovered;
+        entitiesTotal      += progress.entities.total;
+        museumFound        += progress.museum.discovered;
+        museumTotal        += progress.museum.total;
+        worldsTotal        += 1;
+        if (progress.overallPct >= 100) worldsComplete += 1;
+      }
+    }
+    // Investigations total: fall back to the canonical hook when world index
+    // hasn't hydrated yet (guest / cold-start).
+    if (invTotal === 0 && canonicalInv.count > invCompleted) {
+      invCompleted = canonicalInv.count;
+    }
+    return {
+      campaigns:      { current: campaignsCompleted, goal: Math.max(campaignsTotal, campaignsCompleted, 1) },
+      investigations: { current: invCompleted,       goal: Math.max(invTotal,       invCompleted,       1) },
+      entities:       { current: entitiesDiscovered, goal: Math.max(entitiesTotal,  entitiesDiscovered, 1) },
+      museum:         { current: museumFound,        goal: Math.max(museumTotal,    museumFound,        1) },
+      worlds:         { current: worldsComplete,     goal: Math.max(worldsTotal,    1) },
+    };
+  }, [worldsAgg, canonicalInv]);
+
+  // Next streak milestone (canonical, from hearts.ts).
+  const nextStreakMs = useMemo(() => STREAK_MILESTONES.find((m) => m.days > profile.streak) ?? null, [profile.streak]);
 
   const xpPct = Math.round(lvl.progress * 100);
+
+  const modules: {
+    icon: typeof BookOpen;
+    label: string;
+    current: number;
+    goal: number;
+    to?: string;
+  }[] = [
+    { icon: Swords,     label: "الحملات التاريخية", current: canonical.campaigns.current,      goal: canonical.campaigns.goal,      to: "/campaigns" },
+    { icon: Search,     label: "التحقيقات",           current: canonical.investigations.current, goal: canonical.investigations.goal, to: "/investigations" },
+    { icon: BookOpen,   label: "الموسوعة",            current: canonical.entities.current,       goal: canonical.entities.goal,       to: "/encyclopedia" },
+    { icon: Landmark,   label: "المتحف",              current: canonical.museum.current,         goal: canonical.museum.goal,         to: "/collection" },
+    { icon: Compass,    label: "العوالم المكتملة",   current: canonical.worlds.current,         goal: canonical.worlds.goal,         to: "/worlds" },
+  ];
 
   return (
     <div className="space-y-4">
@@ -733,24 +781,58 @@ function ProgressTab({
           <div className="min-w-0 flex-1">
             <p className="text-[10px] tracking-[0.18em] text-gold/80">المستوى الحالي</p>
             <p className="font-display text-lg font-bold">{lvl.title}</p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">المستوى {lvl.level} · {profile.points.toLocaleString("en-US")} نقطة</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              المستوى {lvl.level} · {profile.points.toLocaleString("en-US")} نقطة
+            </p>
           </div>
         </div>
       </div>
 
+      {/* Next campaign step — from shared recommendation service. */}
+      {campaignRec && campaignRec.kind !== "all_complete" && (
+        <Link
+          to={campaignRec.kind === "resume"
+            ? "/campaigns/imported/$id/chapter/$chapter"
+            : "/campaigns/imported/$id"}
+          params={campaignRec.kind === "resume"
+            ? { id: campaignRec.campaignSlug, chapter: campaignRec.chapterId }
+            : { id: campaignRec.campaignSlug }}
+          className="group flex items-center gap-3 rounded-2xl border border-gold/30 bg-gradient-to-l from-gold/10 to-transparent p-4 transition-colors hover:border-gold/60"
+        >
+          <div className="grid size-11 place-items-center rounded-2xl bg-gradient-gold text-primary-foreground shadow-elegant">
+            <Swords className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] tracking-[0.18em] text-gold/80">
+              {campaignRec.kind === "resume" ? "استئناف الحملة" : "ابدأ حملة جديدة"}
+            </p>
+            <p className="font-display truncate text-sm font-bold">{campaignRec.campaignTitle}</p>
+            {campaignRec.kind === "resume" && campaignRec.chapterTitle ? (
+              <p className="line-clamp-1 text-[11px] text-muted-foreground">
+                الفصل: {campaignRec.chapterTitle}
+              </p>
+            ) : null}
+          </div>
+          <ChevronLeft className="size-5 text-gold transition-transform group-hover:-translate-x-1" />
+        </Link>
+      )}
+
+      {/* Canonical modules grid */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {items.map((it) => {
+        {modules.map((it) => {
           const Icon = it.icon;
-          const pct = Math.min(100, Math.round((it.current / it.goal) * 100));
-          return (
-            <div key={it.label} className="rounded-2xl border border-white/10 bg-surface p-4">
+          const pct = Math.min(100, Math.round((it.current / Math.max(1, it.goal)) * 100));
+          const body = (
+            <div className="rounded-2xl border border-white/10 bg-surface p-4 transition-colors hover:border-gold/40">
               <div className="flex items-center gap-3">
                 <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold">
                   <Icon className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-sm font-bold truncate">{it.label}</p>
-                  <p className="text-[11px] text-muted-foreground">{it.current.toLocaleString("en-US")} / {it.goal.toLocaleString("en-US")}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {it.current.toLocaleString("en-US")} / {it.goal.toLocaleString("en-US")}
+                  </p>
                 </div>
                 <span className="font-display text-sm text-gold">{pct}%</span>
               </div>
@@ -759,11 +841,65 @@ function ProgressTab({
               </div>
             </div>
           );
+          return it.to ? (
+            <Link key={it.label} to={it.to}>{body}</Link>
+          ) : (
+            <div key={it.label}>{body}</div>
+          );
         })}
+
+        {/* Streak module — from canonical STREAK_MILESTONES. */}
+        <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:col-span-2">
+          <div className="flex items-center gap-3">
+            <div className="grid size-9 place-items-center rounded-xl bg-orange-500/15 text-orange-300">
+              <Flame className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-sm font-bold truncate">سلسلة الأيام</p>
+              <p className="text-[11px] text-muted-foreground">
+                {profile.streak.toLocaleString("en-US")} يوم متتالٍ
+                {nextStreakMs ? ` · التالي: ${nextStreakMs.days}` : ""}
+              </p>
+            </div>
+            {nextStreakMs && (
+              <span className="font-display text-sm text-orange-300">
+                {Math.min(100, Math.round((profile.streak / nextStreakMs.days) * 100))}%
+              </span>
+            )}
+          </div>
+          {nextStreakMs && (
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full bg-gradient-to-l from-orange-400 to-amber-300 transition-[width] duration-700"
+                style={{ width: `${Math.min(100, (profile.streak / nextStreakMs.days) * 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Achievements snapshot (uses the same shared selectors as the trophy hall) */}
+      <div className="rounded-2xl border border-gold/25 bg-surface p-4">
+        <div className="flex items-center gap-3">
+          <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold">
+            <Trophy className="size-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-sm font-bold">الإنجازات</p>
+            <p className="text-[11px] text-muted-foreground">
+              {achCompletion.earned.toLocaleString("en-US")} / {achCompletion.total.toLocaleString("en-US")}
+            </p>
+          </div>
+          <span className="font-display text-sm text-gold">{achCompletion.pct}%</span>
+        </div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${achCompletion.pct}%` }} />
+        </div>
       </div>
     </div>
   );
 }
+
 
 function CircularProgress({ value, size = 88 }: { value: number; size?: number }) {
   const stroke = 8;
