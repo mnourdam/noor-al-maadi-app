@@ -215,6 +215,9 @@ interface InternalEngine extends TutorialEngineApi {
   openSkipConfirm(): void;
   closeSkipConfirm(): void;
   isSkipConfirmOpen(): boolean;
+  /** Overlay-owned finalization: called after the finish scroll-to-top +
+   *  fade-out sequence completes; transitions `finishing → completed`. */
+  completeAfterFinishing(): void;
 }
 
 function createEngine(store: InternalStore): InternalEngine {
