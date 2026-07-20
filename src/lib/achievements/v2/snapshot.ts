@@ -78,7 +78,7 @@ export function registerSliceProvider<D extends CanonicalDomain>(
   domain: D,
   provider: SliceProvider<D>,
 ): void {
-  providers[domain] = provider;
+  providers.set(domain, provider as AnySliceProvider);
 }
 
 /**
@@ -91,17 +91,15 @@ export function rebuildSnapshot(
 ): ProgressSnapshot {
   const domains: CanonicalDomain[] = changedDomains
     ? [...changedDomains]
-    : (Object.keys(providers) as CanonicalDomain[]);
+    : Array.from(providers.keys());
 
   const next: ProgressSnapshot = { ...prev, version: ++versionCounter };
 
   for (const d of domains) {
-    const p = providers[d];
+    const p = providers.get(d);
     if (!p) continue;
-    // Widening cast is safe: providers[d] is typed by domain.
-    (next as unknown as Record<CanonicalDomain, unknown>)[d] = (
-      p as SliceProvider<CanonicalDomain>
-    )(prev);
+    // Widening cast is safe: providers.get(d) is typed by domain at register time.
+    (next as unknown as Record<CanonicalDomain, unknown>)[d] = p(prev);
   }
 
   return next;
