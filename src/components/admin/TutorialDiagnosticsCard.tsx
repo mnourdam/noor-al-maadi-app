@@ -1,10 +1,8 @@
 // ============================================================
-// Admin — Guided Tutorial Diagnostics Card (Phase 2C)
+// Admin — Guided Tutorial Diagnostics Card
 // ------------------------------------------------------------
 // Admin-only surface exposed through /admin/offline-diagnostics.
-// Uses ONLY the public @/lib/tutorial API surface. Never imports
-// engine internals; never mutates persistence for anything other
-// than the tutorial completion key.
+// Uses ONLY the public @/lib/tutorial API surface.
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -15,16 +13,10 @@ import { GraduationCap, Play, RefreshCw } from "lucide-react";
 import {
   IRTH_FIRST_TIME_TUTORIAL,
   currentEligibilityOverride,
-  readLastStartDiagnostic,
   readTutorialCompletionRecord,
-  readTutorialTransitionLog,
-  readRawTutorialTransitionLog,
-  clearTutorialTransitionLog,
   resetTutorialCompletion,
   tutorialDebug,
-  type LastStartDiagnostic,
   type TutorialDiagnostics,
-  type TutorialTransitionEntry,
 } from "@/lib/tutorial";
 
 const POLL_MS = 400;
@@ -61,12 +53,6 @@ export function TutorialDiagnosticsCard() {
     return o == null ? null : o;
   });
   const [completion, setCompletion] = useState<string>(() => fmtCompletion());
-  const [lastStart, setLastStart] = useState<LastStartDiagnostic | null>(() =>
-    readLastStartDiagnostic(),
-  );
-  const [transitionLog, setTransitionLog] = useState<TutorialTransitionEntry[]>(
-    () => readTutorialTransitionLog(),
-  );
   const timerRef = useRef<number | null>(null);
 
   const refresh = useCallback(() => {
@@ -74,8 +60,6 @@ export function TutorialDiagnosticsCard() {
     const o = currentEligibilityOverride();
     setOverride(o == null ? null : o);
     setCompletion(fmtCompletion());
-    setLastStart(readLastStartDiagnostic());
-    setTransitionLog(readTutorialTransitionLog());
   }, []);
 
   useEffect(() => {
@@ -98,7 +82,6 @@ export function TutorialDiagnosticsCard() {
   const goHomeIfNeeded = useCallback(async (): Promise<void> => {
     if (pathname !== "/") {
       await navigate({ to: "/" });
-      // Give the router + Home render a beat to settle.
       await new Promise((r) => window.setTimeout(r, 350));
     }
   }, [navigate, pathname]);
@@ -122,10 +105,7 @@ export function TutorialDiagnosticsCard() {
   }, [refresh]);
 
   const onReset = useCallback(() => {
-    // Public API resets ONLY the completion key + closes engine.
     tutorialDebug.reset();
-    // Defensive: also clear via public persistence API in case the
-    // engine binding was not registered.
     resetTutorialCompletion();
     toast.success("تم إعادة تعيين الجولة.");
     refresh();
@@ -154,15 +134,12 @@ export function TutorialDiagnosticsCard() {
       try {
         await goHomeIfNeeded();
         tutorialDebug.forceEligibility();
-        // Ensure the engine is running before jumping.
         const snap = tutorialDebug.diagnostics();
         if (!snap || snap.currentState === "idle" || snap.completed) {
           tutorialDebug.start();
-          // Let the engine transition out of idle.
           await new Promise((r) => window.setTimeout(r, 200));
         }
         tutorialDebug.jumpToStep(rawIndex);
-        // Give target resolution a moment before we inspect.
         window.setTimeout(() => {
           const d = tutorialDebug.diagnostics();
           if (d && !d.currentTargetResolved) {
@@ -173,7 +150,6 @@ export function TutorialDiagnosticsCard() {
           refresh();
         }, 900);
       } catch (err) {
-        // Never crash the player UI — surface as toast.
         toast.error(
           `فشل الانتقال إلى الخطوة: ${err instanceof Error ? err.message : String(err)}`,
         );
@@ -189,7 +165,6 @@ export function TutorialDiagnosticsCard() {
         <h2 className="text-sm font-semibold">الجولة التعليمية</h2>
       </div>
 
-      {/* Global actions */}
       <div className="mb-3 flex flex-wrap gap-2">
         <ActionButton onClick={onStart} tone="emerald" icon={<Play className="h-3.5 w-3.5" />}>
           تشغيل الجولة
@@ -211,7 +186,6 @@ export function TutorialDiagnosticsCard() {
         </ActionButton>
       </div>
 
-      {/* Step jumps */}
       <div className="mb-4 flex flex-wrap gap-2">
         {steps.map((s, i) => (
           <button
@@ -226,7 +200,6 @@ export function TutorialDiagnosticsCard() {
         ))}
       </div>
 
-      {/* Live diagnostics */}
       <div className="grid grid-cols-1 gap-2 rounded-lg border border-slate-800 bg-slate-950/70 p-3 text-xs md:grid-cols-2">
         <DiagRow label="الحالة الحالية (currentState)" value={diag?.currentState ?? "—"} />
         <DiagRow
@@ -258,7 +231,6 @@ export function TutorialDiagnosticsCard() {
         <DiagRow label="تجاوز الأهلية (override)" value={override ?? "—"} />
       </div>
 
-      {/* Registry summary */}
       <div className="mt-3 grid grid-cols-1 gap-2 rounded-lg border border-slate-800 bg-slate-950/70 p-3 text-xs md:grid-cols-2">
         <DiagRow label="نسخة الجولة (tutorial version)" value={`v${IRTH_FIRST_TIME_TUTORIAL.version}`} />
         <DiagRow
@@ -268,7 +240,6 @@ export function TutorialDiagnosticsCard() {
         <DiagRow label="سجل الإكمال المحفوظ" value={completion} />
       </div>
 
-      {/* Per-step registry table */}
       <div className="mt-3 overflow-x-auto rounded-lg border border-slate-800">
         <table className="w-full text-right text-xs">
           <thead className="border-b border-slate-800 text-slate-400">
@@ -301,76 +272,6 @@ export function TutorialDiagnosticsCard() {
           </tbody>
         </table>
       </div>
-
-      {/* Last auto-start diagnostic (persisted) */}
-      <div className="mt-3 rounded-lg border border-amber-800/50 bg-amber-950/30 p-3">
-        <div className="mb-2 text-xs font-semibold text-amber-200">
-          آخر لقطة تشخيصية (irth.tutorial.last-start-diagnostic.v1)
-        </div>
-        {lastStart ? (
-          <pre
-            dir="ltr"
-            className="max-h-[420px] overflow-auto whitespace-pre-wrap break-all rounded bg-slate-950/70 p-2 text-[11px] leading-relaxed text-emerald-100"
-          >
-            {JSON.stringify(lastStart, null, 2)}
-          </pre>
-        ) : (
-          <p className="text-xs text-slate-400">لا توجد لقطة محفوظة بعد.</p>
-        )}
-      </div>
-
-      {/* Per-transition instrumentation log */}
-      <div className="mt-3 rounded-lg border border-sky-800/50 bg-sky-950/30 p-3">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="text-xs font-semibold text-sky-200">
-            سجل الانتقالات (irth.tutorial.transition-log.v1) — {transitionLog.length}
-          </div>
-          <button
-            onClick={() => {
-              clearTutorialTransitionLog();
-              setTransitionLog([]);
-              toast("تم مسح سجل الانتقالات.");
-            }}
-            className="rounded border border-slate-600/60 bg-slate-800/60 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-700/60"
-          >
-            مسح السجل
-          </button>
-        </div>
-        {transitionLog.length > 0 ? (
-          <pre
-            dir="ltr"
-            className="max-h-[520px] overflow-auto whitespace-pre-wrap break-all rounded bg-slate-950/70 p-2 text-[11px] leading-relaxed text-sky-100"
-          >
-            {transitionLog
-              .map((e) => {
-                const head =
-                  e.kind === "transition"
-                    ? `#${e.seq} +${e.t}ms  ${e.previousState} → ${e.nextState}`
-                    : `#${e.seq} +${e.t}ms  [event] ${e.event}`;
-                const step = `step=${e.currentStepId ?? "—"}(${e.currentStepIndex ?? "—"}) target=${e.targetId ?? "—"} rectOk=${e.targetResolved}`;
-                const flags = `settled=${e.scrollSettled} skipIfUnavail=${e.skipIfTargetUnavailable} watchStart=${e.watchdogStarted} watchFired=${e.watchdogFired} apiNext=${e.apiNextCalled}`;
-                const reason = e.reason ? `\n    reason: ${e.reason}` : "";
-                return `${head}\n    ${step}\n    ${flags}${reason}`;
-              })
-              .join("\n")}
-          </pre>
-        ) : (
-          <p className="text-xs text-slate-400">لا توجد إدخالات بعد.</p>
-        )}
-        {/* Raw localStorage snapshot — proves whether the storage key
-            itself is populated on the physical device, independent of
-            the in-memory ring buffer. */}
-        <div className="mt-2 text-[10px] text-slate-500">
-          raw localStorage[irth.tutorial.transition-log.v1]:{" "}
-          {(() => {
-            const raw = readRawTutorialTransitionLog();
-            if (raw == null) return "null";
-            return `${raw.length} chars`;
-          })()}
-        </div>
-      </div>
-
-
 
       <p className="mt-3 text-[11px] text-slate-500">
         يمسح <span className="font-mono">irth.tutorial.irth-first-time.completed-version.v1</span>{" "}
