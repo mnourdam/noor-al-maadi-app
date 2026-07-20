@@ -7,7 +7,7 @@ import {
   ChevronLeft, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin,
   Coins, Gift, Bell, Music, Zap, LayoutGrid, TrendingUp, Medal, ScrollText,
   Users2, Settings as SettingsIcon, X, BookOpen, Swords, Landmark, Search,
-  Map as MapIcon, Copy, Share2, QrCode, ChevronRight, Lock,
+  Map as MapIcon, Copy, Share2, QrCode, ChevronRight, Lock, Hourglass,
   Type as TypeIcon, Sprout, Inbox, Mail, Package, Gem, Award,
 } from "lucide-react";
 import { z } from "zod";
