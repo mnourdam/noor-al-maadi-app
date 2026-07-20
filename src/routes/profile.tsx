@@ -91,15 +91,31 @@ function ProfilePage() {
   const displayName = user ? (accountDisplayName || "مستخدم إرث") : (profile.name || "ضيف");
   const androidNative = isAndroidNativeApp();
 
-  const [tab, setTab] = useState<TabId>("overview");
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const [tab, setTabState] = useState<TabId>(() => search.tab ?? "overview");
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // URL wins over storage. Otherwise, restore last visited tab.
+    if (search.tab) return;
     const saved = window.localStorage.getItem(TAB_STORAGE_KEY) as TabId | null;
-    if (saved && TABS.some((t) => t.id === saved)) setTab(saved);
+    if (saved && TABS.some((t) => t.id === saved)) setTabState(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (search.tab && search.tab !== tab) setTabState(search.tab);
+  }, [search.tab, tab]);
   useEffect(() => {
     if (typeof window !== "undefined") window.localStorage.setItem(TAB_STORAGE_KEY, tab);
   }, [tab]);
+  const setTab = (next: TabId) => {
+    setTabState(next);
+    void navigate({
+      search: (prev) => ({ ...prev, tab: next === "overview" ? undefined : next }),
+      replace: true,
+    });
+  };
+
 
   const [pickingAvatar, setPickingAvatar] = useState(false);
   const [editingName, setEditingName] = useState(false);
