@@ -518,7 +518,7 @@ function OverviewTab({
   profile, achievements, seasonPct, seasonReady, claimSeason,
 }: {
   profile: ReturnType<typeof useProfile>["profile"];
-  achievements: ReturnType<typeof evaluateAchievements>;
+  achievements: ReturnType<typeof useAchievementLegacyEvals>;
   seasonPct: number;
   seasonReady: boolean;
   claimSeason: ReturnType<typeof useProfile>["claimSeason"];
