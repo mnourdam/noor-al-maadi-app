@@ -546,10 +546,11 @@ function OverviewTab({
   claimSeason: ReturnType<typeof useProfile>["claimSeason"];
   onSeeAllAchievements: () => void;
 }) {
-  const latestEarned = useLatestUnlockedAchievement(views);
-  const nearest = useNearestAchievement(views);
+  void views;
+  const latestEarned = useLatestUnlockedAchievement();
+  const nearest = useNearestAchievement();
   // Canonical discovery feed — replaces legacy profile.artifactsFound/charactersUnlocked scan.
-  const discoveries = useUnifiedDiscoveryFeed({ limit: 1 });
+  const discoveries = useUnifiedDiscoveryFeed(1);
   const recentDiscovery: DiscoveryItem | null = discoveries[0] ?? null;
 
   return (
