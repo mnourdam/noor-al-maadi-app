@@ -173,6 +173,23 @@ function ProfilePage() {
   const achievementViews = useAchievementViews();
   const achViewMap = useMemo(
     () => new Map<string, AchievementView>(achievementViews.map((v) => [v.id, v])),
+  );
+
+  // Deep-link: `?achievement=<id>` (e.g. from notifications or the retired
+  // /achievements redirect) opens the trophy dialog once views hydrate.
+  useEffect(() => {
+    const id = search.achievement;
+    if (!id) return;
+    const view = achViewMap.get(id);
+    if (!view) return;
+    setAchDetail(view);
+    void navigate({
+      search: (prev: z.infer<typeof profileSearchSchema>) => ({ ...prev, achievement: undefined }),
+      replace: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.achievement, achViewMap]);
+  const __achViewMapUnused =
     [achievementViews],
   );
   const earnedCount = achievementViews.filter(isEarned).length;
