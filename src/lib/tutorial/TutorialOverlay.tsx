@@ -315,11 +315,18 @@ export function TutorialOverlay() {
     <div
       dir="rtl"
       aria-hidden={false}
+      ref={(el) => {
+        wrapperRef.current = el;
+        setWrapperEl(el);
+      }}
       style={{
         position: "fixed",
         inset: 0,
         zIndex: 2000,
-        pointerEvents: active ? "auto" : "none",
+        // While the skip-confirmation is open, the wrapper itself must
+        // not intercept pointer events — the AlertDialog (portaled into
+        // this same wrapper below) is the topmost interactive surface.
+        pointerEvents: skipConfirmOpen ? "none" : active ? "auto" : "none",
       }}
     >
       {active && (
