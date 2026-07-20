@@ -7,9 +7,10 @@ import {
   ChevronLeft, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin,
   Coins, Gift, Bell, Music, Zap, LayoutGrid, TrendingUp, Medal, ScrollText,
   Users2, Settings as SettingsIcon, X, BookOpen, Swords, Landmark, Search,
-  Map as MapIcon, Hourglass, Copy, Share2, QrCode, ChevronRight, Lock,
-  Type as TypeIcon, Sprout, Inbox, Mail,
+  Map as MapIcon, Copy, Share2, QrCode, ChevronRight, Lock, Hourglass,
+  Type as TypeIcon, Sprout, Inbox, Mail, Package, Gem, Award,
 } from "lucide-react";
+import { z } from "zod";
 
 import { toWesternDigits } from "@/lib/formatNumber";
 import { useAudioSettings } from "@/hooks/useAudioSettings";
@@ -22,9 +23,18 @@ import {
   CURRENT_SEASON, SEASONS, ERAS,
 } from "@/lib/app-constants";
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
-import type { AchievementCategory, AchievementRarity, AchievementView } from "@/lib/achievements/v2";
+import type { AchievementView } from "@/lib/achievements/v2";
+import {
+  CATEGORY_ICON, CATEGORY_META, CATEGORY_ORDER, RARITY_STYLE, SECRET_STYLE, isEarned,
+} from "@/lib/achievements/v2/presentation";
+import {
+  useAchievementCompletion, useNearestAchievement, useLatestUnlockedAchievement,
+} from "@/lib/achievements/v2/selectors";
 import { useProfile } from "@/lib/profile";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
+import { useAllWorldsProgress } from "@/lib/worlds-progress";
+import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
+import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscoveries";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
 import { AccountSection } from "@/components/AccountSection";
 import { CommunityHubSection } from "@/components/CommunityHubSection";
@@ -41,12 +51,23 @@ import { AndroidTextEntryInput, AndroidTextEntryTextarea, readAndroidTextEntryRe
 import { ReadingScale } from "@/components/ReadingScale";
 
 
+type TabId = "overview" | "progress" | "achievements" | "seasons" | "referrals" | "settings";
+
+const TAB_IDS = ["overview", "progress", "achievements", "seasons", "referrals", "settings"] as const;
+
+const profileSearchSchema = z.object({
+  // `tab` accepts any known tab id (case-insensitive). Legacy `/achievements`
+  // redirects here with `?tab=achievements`; other surfaces may also deep-link
+  // straight to a specific section.
+  tab: z.enum(TAB_IDS).optional(),
+  achievement: z.string().min(1).max(128).optional(),
+}).partial();
+
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
+  validateSearch: (search) => profileSearchSchema.parse(search),
   component: ProfilePage,
 });
-
-type TabId = "overview" | "progress" | "achievements" | "seasons" | "referrals" | "settings";
 
 const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", label: "نظرة", icon: LayoutGrid },
@@ -58,55 +79,8 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: "settings", label: "الإعدادات", icon: SettingsIcon },
 ];
 
-const CATEGORY_ICON: Record<AchievementCategory, typeof BookOpen> = {
-  campaigns:      Swords,
-  investigations: Search,
-  encyclopedia:   BookOpen,
-  museum:         Landmark,
-  atlas:          MapIcon,
-  worlds:         Compass,
-  economy:        Coins,
-  level:          Star,
-  daily:          Flame,
-  collection:     Landmark,
-  special:        Crown,
-  seasonal:       ScrollText,
-};
-
-const CATEGORY_META: Record<AchievementCategory, { name: string; tagline: string }> = {
-  campaigns:      { name: "الحملات التاريخية", tagline: "إنجاز الحملات الكبرى" },
-  investigations: { name: "التحقيقات",          tagline: "قضايا وأسرار" },
-  encyclopedia:   { name: "الموسوعة",           tagline: "الشخصيات والعصور" },
-  museum:         { name: "المتحف",             tagline: "قطع الأثر والتراث" },
-  atlas:          { name: "الأطلس",             tagline: "الأقاليم والأقطار" },
-  worlds:         { name: "العوالم",            tagline: "استكمال العوالم" },
-  economy:        { name: "الثروة والخبرة",    tagline: "الدنانير والنقاط" },
-  level:          { name: "المستوى",            tagline: "رحلة التقدم" },
-  daily:          { name: "المثابرة اليومية",   tagline: "السلاسل والتحديات" },
-  collection:     { name: "الجامع",             tagline: "بناء المجموعة" },
-  special:        { name: "خاصة",               tagline: "الإنجازات المميزة" },
-  seasonal:       { name: "المواسم",            tagline: "إنجازات المواسم" },
-};
-
-const CATEGORY_ORDER: AchievementCategory[] = [
-  "campaigns", "investigations", "museum", "encyclopedia", "atlas",
-  "collection", "level", "economy", "daily", "worlds", "special", "seasonal",
-];
-
-const RARITY_STYLE: Record<AchievementRarity, { ring: string; chip: string; label: string }> = {
-  common:    { ring: "border-white/15",     chip: "bg-white/10 text-foreground/70",       label: "عادي" },
-  rare:      { ring: "border-sky-400/40",   chip: "bg-sky-400/10 text-sky-200",           label: "نادر" },
-  epic:      { ring: "border-violet-400/40",chip: "bg-violet-400/10 text-violet-200",     label: "ملحمي" },
-  legendary: { ring: "border-gold/60",      chip: "bg-gold/15 text-gold",                 label: "أسطوري" },
-};
-
-const SECRET_STYLE = { ring: "border-rose-400/40", chip: "bg-rose-400/10 text-rose-200", label: "سرّي" };
-
-function isEarned(v: AchievementView): boolean {
-  return v.state === "unlocked" || v.state === "claimed";
-}
-
 const TAB_STORAGE_KEY = "irth.profile.tab";
+
 
 function ProfilePage() {
   const {
@@ -117,15 +91,31 @@ function ProfilePage() {
   const displayName = user ? (accountDisplayName || "مستخدم إرث") : (profile.name || "ضيف");
   const androidNative = isAndroidNativeApp();
 
-  const [tab, setTab] = useState<TabId>("overview");
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const [tab, setTabState] = useState<TabId>(() => search.tab ?? "overview");
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // URL wins over storage. Otherwise, restore last visited tab.
+    if (search.tab) return;
     const saved = window.localStorage.getItem(TAB_STORAGE_KEY) as TabId | null;
-    if (saved && TABS.some((t) => t.id === saved)) setTab(saved);
+    if (saved && TABS.some((t) => t.id === saved)) setTabState(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (search.tab && search.tab !== tab) setTabState(search.tab);
+  }, [search.tab, tab]);
   useEffect(() => {
     if (typeof window !== "undefined") window.localStorage.setItem(TAB_STORAGE_KEY, tab);
   }, [tab]);
+  const setTab = (next: TabId) => {
+    setTabState(next);
+    void navigate({
+      search: (prev: z.infer<typeof profileSearchSchema>) => ({ ...prev, tab: next === "overview" ? undefined : next }),
+      replace: true,
+    });
+  };
+
 
   const [pickingAvatar, setPickingAvatar] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -186,6 +176,22 @@ function ProfilePage() {
     [achievementViews],
   );
   const earnedCount = achievementViews.filter(isEarned).length;
+
+  // Deep-link: `?achievement=<id>` (e.g. from notifications or the retired
+  // /achievements redirect) opens the trophy dialog once views hydrate.
+  useEffect(() => {
+    const id = search.achievement;
+    if (!id) return;
+    const view = achViewMap.get(id);
+    if (!view) return;
+    setAchDetail(view);
+    void navigate({
+      search: (prev: z.infer<typeof profileSearchSchema>) => ({ ...prev, achievement: undefined }),
+      replace: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.achievement, achViewMap]);
+
 
   const seasonPct = Math.min(100, Math.round((profile.seasonPoints / CURRENT_SEASON.goalPoints) * 100));
   const seasonReady = profile.seasonPoints >= CURRENT_SEASON.goalPoints && !profile.seasonClaimed;
@@ -460,8 +466,10 @@ function ProfilePage() {
               seasonPct={seasonPct}
               seasonReady={seasonReady}
               claimSeason={claimSeason}
+              onSeeAllAchievements={() => setTab("achievements")}
             />
           )}
+
           {tab === "progress" && <ProgressTab profile={profile} lvl={lvl} />}
           {tab === "achievements" && (
             <AchievementsTab views={achievementViews} onOpen={(v) => setAchDetail(v)} />
@@ -545,33 +553,21 @@ function ProfilePage() {
    OVERVIEW TAB
 ============================================================ */
 function OverviewTab({
-  profile, views, seasonPct, seasonReady, claimSeason,
+  profile, views, seasonPct, seasonReady, claimSeason, onSeeAllAchievements,
 }: {
   profile: ReturnType<typeof useProfile>["profile"];
   views: AchievementView[];
   seasonPct: number;
   seasonReady: boolean;
   claimSeason: ReturnType<typeof useProfile>["claimSeason"];
+  onSeeAllAchievements: () => void;
 }) {
-  const latestEarned = useMemo<AchievementView | null>(() => {
-    const earned = views
-      .filter(isEarned)
-      .filter((v) => v.unlockedAt)
-      .sort((a, b) => new Date(b.unlockedAt!).getTime() - new Date(a.unlockedAt!).getTime());
-    return earned[0] ?? null;
-  }, [views]);
-
-  const nearest = useMemo<AchievementView | null>(() => {
-    return [...views]
-      .filter((v) => !isEarned(v) && v.state !== "locked-secret" && v.state !== "locked-hidden")
-      .filter((v) => v.progress > 0 && v.progress < 1)
-      .sort((a, b) => b.progress - a.progress)[0] ?? null;
-  }, [views]);
-
-  const recentDiscovery =
-    profile.artifactsFound[profile.artifactsFound.length - 1]
-    ?? profile.charactersUnlocked[profile.charactersUnlocked.length - 1]
-    ?? null;
+  void views;
+  const latestEarned = useLatestUnlockedAchievement();
+  const nearest = useNearestAchievement();
+  // Canonical discovery feed — replaces legacy profile.artifactsFound/charactersUnlocked scan.
+  const discoveries = useUnifiedDiscoveryFeed(1);
+  const recentDiscovery: DiscoveryItem | null = discoveries[0] ?? null;
 
   return (
     <div className="space-y-4">
@@ -589,8 +585,7 @@ function OverviewTab({
         <ChevronLeft className="size-5 text-gold transition-transform group-hover:-translate-x-1" />
       </Link>
 
-      {/* Current-season card hidden for LC1 — Seasons deferred post-beta.
-          State (seasonPoints / seasonClaimed / claimSeason) is preserved. */}
+      {/* Current-season card hidden for LC1 — Seasons deferred post-beta. */}
       {false && (
         <div className="grid grid-cols-1 gap-3">
           <div className="relative overflow-hidden rounded-2xl border border-gold/25 bg-surface p-4">
@@ -655,7 +650,13 @@ function OverviewTab({
           <span className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.18em] text-gold/80">
             <Trophy className="size-3.5" /> آخر إنجاز
           </span>
-          <Link to="/achievements" className="text-[10px] text-gold hover:underline">كل الإنجازات</Link>
+          <button
+            type="button"
+            onClick={onSeeAllAchievements}
+            className="text-[10px] text-gold hover:underline"
+          >
+            كل الإنجازات
+          </button>
         </div>
         {latestEarned ? (
           <AchievementMini view={latestEarned} />
@@ -669,22 +670,29 @@ function OverviewTab({
         )}
       </div>
 
-      {/* Recent discovery */}
+      {/* Recent discovery (canonical unified feed) */}
       {recentDiscovery && (
-        <div className="flex items-center gap-3 rounded-2xl border border-gold/25 bg-surface p-4">
+        <Link
+          to={recentDiscovery.destinationRoute}
+          className="flex items-center gap-3 rounded-2xl border border-gold/25 bg-surface p-4 hover:border-gold/50 transition-colors"
+        >
           <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
             <Landmark className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] tracking-[0.18em] text-gold/80">آخر اكتشاف</p>
-            <p className="font-display truncate text-sm font-bold">{recentDiscovery}</p>
+            <p className="font-display truncate text-sm font-bold">{recentDiscovery.title}</p>
+            {recentDiscovery.subtitle ? (
+              <p className="line-clamp-1 text-[11px] text-muted-foreground">{recentDiscovery.subtitle}</p>
+            ) : null}
           </div>
-          <Link to="/collection" className="text-gold"><ChevronLeft className="size-4" /></Link>
-        </div>
+          <ChevronLeft className="size-4 text-gold" />
+        </Link>
       )}
     </div>
   );
 }
+
 
 function AchievementMini({ view }: { view: AchievementView }) {
   const earned = isEarned(view);
@@ -717,20 +725,68 @@ function AchievementMini({ view }: { view: AchievementView }) {
 function ProgressTab({
   profile, lvl,
 }: { profile: ReturnType<typeof useProfile>["profile"]; lvl: ReturnType<typeof levelFor> }) {
+  // Canonical inputs — every metric comes from a v2 canonical service.
+  // Do NOT read legacy profile arrays (storiesRead, artifactsFound,
+  // charactersUnlocked, regionsUnlocked, timelinesCompleted, decisionsCompleted).
+  const worldsAgg = useAllWorldsProgress();
   const canonicalInv = useCanonicalInvestigationProgress();
-  const items: { icon: typeof BookOpen; label: string; current: number; goal: number; tone?: string }[] = [
-    { icon: Swords,   label: "حملات تاريخية", current: profile.campaignsCompleted.length, goal: 20 },
-    { icon: Search,   label: "تحقيقات",        current: canonicalInv.count, goal: 60 },
-    { icon: BookOpen, label: "قصص مُنهاة",     current: profile.storiesRead.length, goal: 60 },
-    { icon: Hourglass,label: "خطوط زمنية",     current: profile.timelinesCompleted.length, goal: 30 },
-    { icon: Compass,  label: "قرارات",         current: profile.decisionsCompleted.length, goal: 40 },
-    { icon: MapIcon,  label: "مناطق على الأطلس", current: profile.regionsUnlocked.length, goal: 15 },
-    { icon: ScrollText, label: "عصور مفتوحة", current: profile.unlockedEras.length, goal: 11 },
-    { icon: Landmark, label: "آثار في المتحف", current: profile.artifactsFound.length, goal: 100 },
-    { icon: Users2,   label: "شخصيات",         current: profile.charactersUnlocked.length, goal: 60 },
-  ];
+  const { recommendation: campaignRec } = useCampaignRecommendation();
+  const achCompletion = useAchievementCompletion();
+
+  // Aggregate world roll-ups → totals across every world.
+  const canonical = useMemo(() => {
+    let campaignsCompleted = 0, campaignsTotal = 0;
+    let invCompleted = 0, invTotal = 0;
+    let entitiesDiscovered = 0, entitiesTotal = 0;
+    let museumFound = 0, museumTotal = 0;
+    let worldsComplete = 0;
+    let worldsTotal = 0;
+    if (worldsAgg.ready) {
+      for (const { progress } of worldsAgg.byWorld.values()) {
+        campaignsCompleted += progress.campaigns.completed;
+        campaignsTotal     += progress.campaigns.total;
+        invCompleted       += progress.investigations.completed;
+        invTotal           += progress.investigations.total;
+        entitiesDiscovered += progress.entities.discovered;
+        entitiesTotal      += progress.entities.total;
+        museumFound        += progress.museum.discovered;
+        museumTotal        += progress.museum.total;
+        worldsTotal        += 1;
+        if (progress.overallPct >= 100) worldsComplete += 1;
+      }
+    }
+    // Investigations total: fall back to the canonical hook when world index
+    // hasn't hydrated yet (guest / cold-start).
+    if (invTotal === 0 && canonicalInv.count > invCompleted) {
+      invCompleted = canonicalInv.count;
+    }
+    return {
+      campaigns:      { current: campaignsCompleted, goal: Math.max(campaignsTotal, campaignsCompleted, 1) },
+      investigations: { current: invCompleted,       goal: Math.max(invTotal,       invCompleted,       1) },
+      entities:       { current: entitiesDiscovered, goal: Math.max(entitiesTotal,  entitiesDiscovered, 1) },
+      museum:         { current: museumFound,        goal: Math.max(museumTotal,    museumFound,        1) },
+      worlds:         { current: worldsComplete,     goal: Math.max(worldsTotal,    1) },
+    };
+  }, [worldsAgg, canonicalInv]);
+
+  // Next streak milestone (canonical, from hearts.ts).
+  const nextStreakMs = useMemo(() => STREAK_MILESTONES.find((m) => m.days > profile.streak) ?? null, [profile.streak]);
 
   const xpPct = Math.round(lvl.progress * 100);
+
+  const modules: {
+    icon: typeof BookOpen;
+    label: string;
+    current: number;
+    goal: number;
+    to?: string;
+  }[] = [
+    { icon: Swords,     label: "الحملات التاريخية", current: canonical.campaigns.current,      goal: canonical.campaigns.goal,      to: "/campaigns" },
+    { icon: Search,     label: "التحقيقات",           current: canonical.investigations.current, goal: canonical.investigations.goal, to: "/investigations" },
+    { icon: BookOpen,   label: "الموسوعة",            current: canonical.entities.current,       goal: canonical.entities.goal,       to: "/encyclopedia" },
+    { icon: Landmark,   label: "المتحف",              current: canonical.museum.current,         goal: canonical.museum.goal,         to: "/collection" },
+    { icon: Compass,    label: "العوالم المكتملة",   current: canonical.worlds.current,         goal: canonical.worlds.goal,         to: "/worlds" },
+  ];
 
   return (
     <div className="space-y-4">
@@ -741,24 +797,55 @@ function ProgressTab({
           <div className="min-w-0 flex-1">
             <p className="text-[10px] tracking-[0.18em] text-gold/80">المستوى الحالي</p>
             <p className="font-display text-lg font-bold">{lvl.title}</p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">المستوى {lvl.level} · {profile.points.toLocaleString("en-US")} نقطة</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              المستوى {lvl.level} · {profile.points.toLocaleString("en-US")} نقطة
+            </p>
           </div>
         </div>
       </div>
 
+      {/* Next campaign step — from shared recommendation service. */}
+      {campaignRec && (
+        <Link
+          to={campaignRec.cta.to.path}
+          params={campaignRec.cta.to.params}
+          className="group flex items-center gap-3 rounded-2xl border border-gold/30 bg-gradient-to-l from-gold/10 to-transparent p-4 transition-colors hover:border-gold/60"
+        >
+          <div className="grid size-11 place-items-center rounded-2xl bg-gradient-gold text-primary-foreground shadow-elegant">
+            <Swords className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] tracking-[0.18em] text-gold/80">
+              {campaignRec.priority === "resume" ? "استئناف الحملة" : "ابدأ حملة جديدة"}
+            </p>
+            <p className="font-display truncate text-sm font-bold">{campaignRec.campaign.title}</p>
+            {campaignRec.chapter?.title ? (
+              <p className="line-clamp-1 text-[11px] text-muted-foreground">
+                الفصل: {campaignRec.chapter.title}
+              </p>
+            ) : null}
+          </div>
+          <ChevronLeft className="size-5 text-gold transition-transform group-hover:-translate-x-1" />
+        </Link>
+      )}
+
+
+      {/* Canonical modules grid */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {items.map((it) => {
+        {modules.map((it) => {
           const Icon = it.icon;
-          const pct = Math.min(100, Math.round((it.current / it.goal) * 100));
-          return (
-            <div key={it.label} className="rounded-2xl border border-white/10 bg-surface p-4">
+          const pct = Math.min(100, Math.round((it.current / Math.max(1, it.goal)) * 100));
+          const body = (
+            <div className="rounded-2xl border border-white/10 bg-surface p-4 transition-colors hover:border-gold/40">
               <div className="flex items-center gap-3">
                 <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold">
                   <Icon className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-sm font-bold truncate">{it.label}</p>
-                  <p className="text-[11px] text-muted-foreground">{it.current.toLocaleString("en-US")} / {it.goal.toLocaleString("en-US")}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {it.current.toLocaleString("en-US")} / {it.goal.toLocaleString("en-US")}
+                  </p>
                 </div>
                 <span className="font-display text-sm text-gold">{pct}%</span>
               </div>
@@ -767,11 +854,65 @@ function ProgressTab({
               </div>
             </div>
           );
+          return it.to ? (
+            <Link key={it.label} to={it.to}>{body}</Link>
+          ) : (
+            <div key={it.label}>{body}</div>
+          );
         })}
+
+        {/* Streak module — from canonical STREAK_MILESTONES. */}
+        <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:col-span-2">
+          <div className="flex items-center gap-3">
+            <div className="grid size-9 place-items-center rounded-xl bg-orange-500/15 text-orange-300">
+              <Flame className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-sm font-bold truncate">سلسلة الأيام</p>
+              <p className="text-[11px] text-muted-foreground">
+                {profile.streak.toLocaleString("en-US")} يوم متتالٍ
+                {nextStreakMs ? ` · التالي: ${nextStreakMs.days}` : ""}
+              </p>
+            </div>
+            {nextStreakMs && (
+              <span className="font-display text-sm text-orange-300">
+                {Math.min(100, Math.round((profile.streak / nextStreakMs.days) * 100))}%
+              </span>
+            )}
+          </div>
+          {nextStreakMs && (
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full bg-gradient-to-l from-orange-400 to-amber-300 transition-[width] duration-700"
+                style={{ width: `${Math.min(100, (profile.streak / nextStreakMs.days) * 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Achievements snapshot (uses the same shared selectors as the trophy hall) */}
+      <div className="rounded-2xl border border-gold/25 bg-surface p-4">
+        <div className="flex items-center gap-3">
+          <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold">
+            <Trophy className="size-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-sm font-bold">الإنجازات</p>
+            <p className="text-[11px] text-muted-foreground">
+              {achCompletion.earned.toLocaleString("en-US")} / {achCompletion.total.toLocaleString("en-US")}
+            </p>
+          </div>
+          <span className="font-display text-sm text-gold">{achCompletion.pct}%</span>
+        </div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${achCompletion.pct}%` }} />
+        </div>
       </div>
     </div>
   );
 }
+
 
 function CircularProgress({ value, size = 88 }: { value: number; size?: number }) {
   const stroke = 8;
