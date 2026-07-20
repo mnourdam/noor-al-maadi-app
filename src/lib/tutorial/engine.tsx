@@ -808,18 +808,33 @@ export function TutorialProvider({
     });
     watchdogHandle = window.setTimeout(() => {
       if (staleGuard("watchdog")) return;
+      // Final synchronous measurement before deciding. If the element
+      // still exists with non-zero size we render anyway — being
+      // partially/entirely off-screen is NOT a reason to skip. Only
+      // skip when the element is genuinely absent or zero-sized.
+      const el =
+        currentEl ??
+        (document.querySelector(selector) as HTMLElement | null);
+      const rect = el ? el.getBoundingClientRect() : null;
+      const hasSize = !!rect && rect.width > 0 && rect.height > 0;
       // eslint-disable-next-line no-console
       console.warn(
-        `[tutorial] step watchdog fired for "${stepAnalyticsId}" — state=${store.state}, hasRect=${store.targetRect != null}. Skipping forward.`,
+        `[tutorial] step watchdog fired for "${stepAnalyticsId}" — state=${store.state}, hasRect=${rect != null}, hasSize=${hasSize}.`,
       );
       logTutorialEvent("watchdog-fired", {
-        reason: `taskId=${taskId} state=${store.state}, hasRect=${store.targetRect != null}`,
-        apiNextCalled: true,
+        reason: `taskId=${taskId} state=${store.state} hasSize=${hasSize}`,
         watchdogFired: true,
       });
+      if (el && hasSize) {
+        clearWatchdog();
+        attachMeasurement(el);
+        return;
+      }
+      logTutorialEvent("api-next-called", {
+        reason: "watchdog-no-usable-element",
+        apiNextCalled: true,
+      });
       taskCompleted = true;
-      // Invalidate any of our own pending continuations before we
-      // advance — api.next() will kick off a new effect/task.
       activeTaskIdRef.current = taskId + 1;
       api.next();
     }, STEP_WATCHDOG_MS);
@@ -830,17 +845,19 @@ export function TutorialProvider({
       }
     };
 
-    const rectValid = (r: DOMRect): boolean => {
-      if (r.width <= 0 || r.height <= 0) return false;
+    /** Element has real, usable size — the only genuine unavailable check. */
+    const rectHasSize = (r: DOMRect): boolean =>
+      r.width > 0 && r.height > 0;
+
+    /** Any portion of the rect intersects the visual viewport. */
+    const rectIntersects = (r: DOMRect): boolean => {
       const vh =
         (typeof window !== "undefined" && window.visualViewport?.height) ||
         window.innerHeight;
       const vw =
         (typeof window !== "undefined" && window.visualViewport?.width) ||
         window.innerWidth;
-      if (r.bottom < 0 || r.top > vh) return false;
-      if (r.right < 0 || r.left > vw) return false;
-      return true;
+      return r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw;
     };
 
     const attachMeasurement = (el: HTMLElement) => {
@@ -877,10 +894,25 @@ export function TutorialProvider({
       transition(store, "showing_step");
     };
 
-    // Scroll-settle detector: sample the target rect on every rAF and
-    // require it stable within tolerance for N consecutive frames.
-    // Bounded safety timeout — never depends on `scrollend` (unreliable
-    // on Android WebView).
+    // Scroll-settle detector.
+    //
+    // A previous version declared "settled" as soon as `rect.top` was
+    // stable for 3 consecutive rAFs. On Android WebView, smooth-scroll
+    // animation frequently does not begin firing until several rAFs
+    // after `scrollIntoView({behavior:"smooth"})` returns — so 3
+    // consecutive frames of the ORIGINAL off-screen rect satisfied
+    // the stability predicate and we advanced with `rect.top >
+    // innerHeight`. That misclassified an in-flight scroll as
+    // "target unavailable" and skipped the step (Museum → Profile,
+    // bypassing Worlds).
+    //
+    // Corrected detector requires BOTH:
+    //   • the target rect AND `window.scrollY` unchanged for N frames
+    //   • the scroll actually progressed at least once since start
+    //     (scrollY or rect moved), OR the element was already
+    //     intersecting the viewport (no movement was needed).
+    // The bounded 2s timeout still guarantees we exit even if the
+    // animation is entirely suppressed.
     const SETTLE_TOLERANCE_PX = 0.75;
     const SETTLE_FRAMES = 3;
     const SETTLE_TIMEOUT_MS = 2000;
@@ -889,24 +921,47 @@ export function TutorialProvider({
       if (staleGuard("waitForSettle-enter")) return;
       transition(store, "scrolling_to_target");
       const settleStart = performance.now();
-      let lastTop = el.getBoundingClientRect().top;
+      const initialRect = el.getBoundingClientRect();
+      const initialScrollY = window.scrollY;
+      const initiallyVisible = rectIntersects(initialRect);
+      let lastTop = initialRect.top;
+      let lastScrollY = initialScrollY;
       let stableFrames = 0;
+      let scrollMoved = false;
+      let rectMoved = false;
 
       const tick = () => {
         if (staleGuard("settle-tick")) return;
         const rect = el.getBoundingClientRect();
-        if (Math.abs(rect.top - lastTop) <= SETTLE_TOLERANCE_PX) {
+        const scrollY = window.scrollY;
+        const topStable =
+          Math.abs(rect.top - lastTop) <= SETTLE_TOLERANCE_PX;
+        const scrollStable =
+          Math.abs(scrollY - lastScrollY) <= SETTLE_TOLERANCE_PX;
+        if (Math.abs(scrollY - initialScrollY) > SETTLE_TOLERANCE_PX)
+          scrollMoved = true;
+        if (Math.abs(rect.top - initialRect.top) > SETTLE_TOLERANCE_PX)
+          rectMoved = true;
+
+        if (topStable && scrollStable) {
           stableFrames += 1;
         } else {
           stableFrames = 0;
         }
         lastTop = rect.top;
+        lastScrollY = scrollY;
+
         const elapsed = performance.now() - settleStart;
-        const settled = stableFrames >= SETTLE_FRAMES;
+        const movementSatisfied =
+          initiallyVisible || scrollMoved || rectMoved;
+        const settled =
+          stableFrames >= SETTLE_FRAMES && movementSatisfied;
         const timedOut = elapsed >= SETTLE_TIMEOUT_MS;
         if (settled || timedOut) {
           logTutorialEvent("settle-resolved", {
-            reason: settled ? "stable-frames" : "timeout",
+            reason: settled
+              ? `stable-frames movement=${scrollMoved ? "scroll" : rectMoved ? "rect" : "already-visible"}`
+              : `timeout movement=${scrollMoved || rectMoved ? "yes" : "no"}`,
             scrollSettled: true,
           });
           rafHandle = requestAnimationFrame(() => {
@@ -915,16 +970,19 @@ export function TutorialProvider({
               if (staleGuard("post-settle-raf-2")) return;
               transition(store, "measuring_target");
               const finalRect = el.getBoundingClientRect();
-              if (!rectValid(finalRect)) {
+              // Only skip when genuinely unusable (zero-sized). An
+              // off-screen rect is NOT a skip condition — CoachMark
+              // placement clamps separately.
+              if (!rectHasSize(finalRect)) {
                 logTutorialEvent("rect-invalid-after-settle", {
-                  reason: `rect=${JSON.stringify({ x: finalRect.x, y: finalRect.y, w: finalRect.width, h: finalRect.height })}`,
+                  reason: `zero-size rect=${JSON.stringify({ x: finalRect.x, y: finalRect.y, w: finalRect.width, h: finalRect.height })}`,
                 });
                 if (
                   currentStep.skipIfTargetUnavailable ||
                   currentStep.onMissingTarget === "skip"
                 ) {
                   logTutorialEvent("api-next-called", {
-                    reason: "invalid-rect+skip-if-unavailable",
+                    reason: "zero-size+skip-if-unavailable",
                     apiNextCalled: true,
                   });
                   clearWatchdog();
@@ -935,6 +993,14 @@ export function TutorialProvider({
                 }
                 logTutorialEvent("rect-invalid-no-skip", {
                   reason: "attaching-anyway (no skipIfTargetUnavailable)",
+                });
+              } else if (!rectIntersects(finalRect)) {
+                logTutorialEvent("post-settle-offscreen", {
+                  reason: `attaching-anyway top=${Math.round(finalRect.top)} bottom=${Math.round(finalRect.bottom)}`,
+                });
+              } else {
+                logTutorialEvent("final-rect-valid", {
+                  reason: `top=${Math.round(finalRect.top)} bottom=${Math.round(finalRect.bottom)}`,
                 });
               }
               attachMeasurement(el);
