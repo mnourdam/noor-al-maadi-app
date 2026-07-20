@@ -789,14 +789,10 @@ function ProgressTab({
       </div>
 
       {/* Next campaign step — from shared recommendation service. */}
-      {campaignRec && campaignRec.kind !== "all_complete" && (
+      {campaignRec && (
         <Link
-          to={campaignRec.kind === "resume"
-            ? "/campaigns/imported/$id/chapter/$chapter"
-            : "/campaigns/imported/$id"}
-          params={campaignRec.kind === "resume"
-            ? { id: campaignRec.campaignSlug, chapter: campaignRec.chapterId }
-            : { id: campaignRec.campaignSlug }}
+          to={campaignRec.cta.to.path}
+          params={campaignRec.cta.to.params}
           className="group flex items-center gap-3 rounded-2xl border border-gold/30 bg-gradient-to-l from-gold/10 to-transparent p-4 transition-colors hover:border-gold/60"
         >
           <div className="grid size-11 place-items-center rounded-2xl bg-gradient-gold text-primary-foreground shadow-elegant">
@@ -804,18 +800,19 @@ function ProgressTab({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] tracking-[0.18em] text-gold/80">
-              {campaignRec.kind === "resume" ? "استئناف الحملة" : "ابدأ حملة جديدة"}
+              {campaignRec.priority === "resume" ? "استئناف الحملة" : "ابدأ حملة جديدة"}
             </p>
-            <p className="font-display truncate text-sm font-bold">{campaignRec.campaignTitle}</p>
-            {campaignRec.kind === "resume" && campaignRec.chapterTitle ? (
+            <p className="font-display truncate text-sm font-bold">{campaignRec.campaign.title}</p>
+            {campaignRec.chapter?.title ? (
               <p className="line-clamp-1 text-[11px] text-muted-foreground">
-                الفصل: {campaignRec.chapterTitle}
+                الفصل: {campaignRec.chapter.title}
               </p>
             ) : null}
           </div>
           <ChevronLeft className="size-5 text-gold transition-transform group-hover:-translate-x-1" />
         </Link>
       )}
+
 
       {/* Canonical modules grid */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
