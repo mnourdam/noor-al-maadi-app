@@ -461,29 +461,68 @@ export function TutorialOverlay() {
         </>
       )}
 
-      <AlertDialog
+      {/*
+       * Skip-confirmation.
+       *
+       * Rendered with Radix primitives directly (not the shadcn wrapper)
+       * so we can (a) portal into THIS tutorial wrapper — inheriting its
+       * z-index: 2000 stacking context so the dialog is guaranteed to
+       * paint above the SVG dim + spotlight + coach-mark — and (b) skip
+       * the shadcn overlay's own bg-black/80 dim, which would stack on
+       * top of the tutorial dim and turn the screen near-black. The
+       * tutorial dim already darkens the scene; we only add a subtle
+       * additional wash on the overlay.
+       *
+       * Layer hierarchy inside the wrapper (all share stacking context 2000):
+       *   - tutorial dim SVG (dom order: first)
+       *   - coach-mark panel (dom order: after dim)
+       *   - skip-confirm overlay + content (dom order: last → topmost)
+       */}
+      <AlertDialogPrimitive.Root
         open={skipConfirmOpen}
         onOpenChange={(open) => {
           if (!open) api.closeSkipConfirm();
         }}
       >
-        <AlertDialogContent dir="rtl" className="text-right">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{TUTORIAL_COPY.skipConfirmTitle}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {TUTORIAL_COPY.skipConfirmBody}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => api.closeSkipConfirm()}>
-              {TUTORIAL_COPY.skipConfirmContinue}
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => api.skip()}>
-              {TUTORIAL_COPY.skipConfirmSkip}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialogPrimitive.Portal container={wrapperEl ?? undefined}>
+          <AlertDialogPrimitive.Overlay
+            className={cn(
+              "absolute inset-0 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            )}
+            style={{ pointerEvents: "auto" }}
+          />
+          <AlertDialogPrimitive.Content
+            dir="rtl"
+            style={{ pointerEvents: "auto" }}
+            className={cn(
+              "absolute left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border bg-background p-6 text-right shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+            )}
+          >
+            <div className="flex flex-col space-y-2">
+              <AlertDialogPrimitive.Title className="text-lg font-semibold">
+                {TUTORIAL_COPY.skipConfirmTitle}
+              </AlertDialogPrimitive.Title>
+              <AlertDialogPrimitive.Description className="text-sm text-muted-foreground">
+                {TUTORIAL_COPY.skipConfirmBody}
+              </AlertDialogPrimitive.Description>
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-2">
+              <AlertDialogPrimitive.Cancel
+                onClick={() => api.closeSkipConfirm()}
+                className="mt-2 inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:mt-0"
+              >
+                {TUTORIAL_COPY.skipConfirmContinue}
+              </AlertDialogPrimitive.Cancel>
+              <AlertDialogPrimitive.Action
+                onClick={() => api.skip()}
+                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {TUTORIAL_COPY.skipConfirmSkip}
+              </AlertDialogPrimitive.Action>
+            </div>
+          </AlertDialogPrimitive.Content>
+        </AlertDialogPrimitive.Portal>
+      </AlertDialogPrimitive.Root>
     </div>
   );
 
