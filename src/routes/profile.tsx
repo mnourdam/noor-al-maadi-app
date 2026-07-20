@@ -111,7 +111,7 @@ function ProfilePage() {
   const setTab = (next: TabId) => {
     setTabState(next);
     void navigate({
-      search: (prev) => ({ ...prev, tab: next === "overview" ? undefined : next }),
+      search: (prev: z.infer<typeof profileSearchSchema>) => ({ ...prev, tab: next === "overview" ? undefined : next }),
       replace: true,
     });
   };
