@@ -203,8 +203,6 @@ export function TutorialOverlay() {
 
   // ---- Finish sequence: scroll home to top, then close ----
   const finishSeqRef = useRef<{ ran: boolean }>({ ran: false });
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const [wrapperEl, setWrapperEl] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!finishing) {
       finishSeqRef.current.ran = false;
@@ -315,18 +313,14 @@ export function TutorialOverlay() {
     <div
       dir="rtl"
       aria-hidden={false}
-      ref={(el) => {
-        wrapperRef.current = el;
-        setWrapperEl(el);
-      }}
       style={{
         position: "fixed",
         inset: 0,
         zIndex: 2000,
-        // While the skip-confirmation is open, the wrapper itself must
-        // not intercept pointer events — the AlertDialog (portaled into
-        // this same wrapper below) is the topmost interactive surface.
-        pointerEvents: skipConfirmOpen ? "none" : active ? "auto" : "none",
+        // The root must remain pointer-interactive while the skip dialog
+        // is open; only the tutorial layers beneath are made inert. The
+        // dialog itself is portaled to document.body, above this root.
+        pointerEvents: active || skipConfirmOpen ? "auto" : "none",
       }}
     >
       {active && (
@@ -338,7 +332,7 @@ export function TutorialOverlay() {
             style={{
               position: "absolute",
               inset: 0,
-              pointerEvents: "auto",
+              pointerEvents: skipConfirmOpen ? "none" : "auto",
               opacity: dimOpacity,
               transition: dimTransition,
             }}
@@ -398,7 +392,8 @@ export function TutorialOverlay() {
                 top: placement.top,
                 insetInlineStart: placement.left,
                 width: placement.width,
-                pointerEvents: coachVisible ? "auto" : "none",
+                pointerEvents:
+                  coachVisible && !skipConfirmOpen ? "auto" : "none",
                 opacity: coachOpacity,
                 transition: coachTransition,
               }}
@@ -465,18 +460,17 @@ export function TutorialOverlay() {
        * Skip-confirmation.
        *
        * Rendered with Radix primitives directly (not the shadcn wrapper)
-       * so we can (a) portal into THIS tutorial wrapper — inheriting its
-       * z-index: 2000 stacking context so the dialog is guaranteed to
-       * paint above the SVG dim + spotlight + coach-mark — and (b) skip
-       * the shadcn overlay's own bg-black/80 dim, which would stack on
-       * top of the tutorial dim and turn the screen near-black. The
-       * tutorial dim already darkens the scene; we only add a subtle
-       * additional wash on the overlay.
+       * and portaled to document.body. This keeps the dialog outside the
+       * tutorial root's pointer-event contract, avoiding ancestor-level
+       * pointer blocking in Android WebViews. The tutorial dim already
+       * darkens the scene, so the Radix backdrop is transparent and only
+       * acts as the top-level pointer shield.
        *
-       * Layer hierarchy inside the wrapper (all share stacking context 2000):
-       *   - tutorial dim SVG (dom order: first)
-       *   - coach-mark panel (dom order: after dim)
-       *   - skip-confirm overlay + content (dom order: last → topmost)
+       * Layer hierarchy:
+       *   - tutorial root: z-index 2000
+       *   - coach-mark: DOM layer inside root (above SVG)
+       *   - skip-confirm backdrop: z-index 2100
+       *   - skip-confirm content: z-index 2101
        */}
       <AlertDialogPrimitive.Root
         open={skipConfirmOpen}
@@ -484,18 +478,18 @@ export function TutorialOverlay() {
           if (!open) api.closeSkipConfirm();
         }}
       >
-        <AlertDialogPrimitive.Portal container={wrapperEl ?? undefined}>
+        <AlertDialogPrimitive.Portal>
           <AlertDialogPrimitive.Overlay
             className={cn(
-              "absolute inset-0 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+              "fixed inset-0 bg-transparent data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
             )}
-            style={{ pointerEvents: "auto" }}
+            style={{ zIndex: 2100, pointerEvents: "auto" }}
           />
           <AlertDialogPrimitive.Content
             dir="rtl"
-            style={{ pointerEvents: "auto" }}
+            style={{ zIndex: 2101, pointerEvents: "auto" }}
             className={cn(
-              "absolute left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border bg-background p-6 text-right shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+              "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border bg-background p-6 text-right shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
             )}
           >
             <div className="flex flex-col space-y-2">
