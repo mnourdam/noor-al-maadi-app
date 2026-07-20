@@ -109,7 +109,9 @@ export function AchievementEngineBoot() {
 
 /**
  * Snapshot hook — subscribes to engine ticks and yields the current
- * `AchievementView[]`. Consumed by every UI surface.
+ * `AchievementView[]`. This is the sole read API for every UI surface
+ * (home, profile, achievements page, notifications). The legacy
+ * `useAchievementLegacyEvals` bridge was deleted in Slice 4.
  */
 export function useAchievementViews(): AchievementView[] {
   const subscribe = (cb: () => void) => onEngineTick(cb);
@@ -128,51 +130,3 @@ export function useAchievementViews(): AchievementView[] {
     });
   }, [version]);
 }
-
-/**
- * Compat hook — mirrors the legacy `AchievementProgress[]` shape used by
- * profile.tsx and index.tsx, but sourced entirely from v2. This is a
- * read-only bridge; nothing writes through the legacy path anymore.
- *
- * For FLAGGED legacy achievements not represented in v2, we still return
- * a row (earned=false, current=0) so legacy UIs iterating `ACHIEVEMENTS`
- * always find a match. If the player already has an `achievementsEarned`
- * timestamp for the flagged id, we preserve it as `earned=true` (read-only).
- */
-export interface LegacyAchProgress {
-  id: string;
-  current: number;
-  earned: boolean;
-}
-
-export function useAchievementLegacyEvals(
-  legacyEarnedMap?: Readonly<Record<string, number>>,
-): LegacyAchProgress[] {
-  const views = useAchievementViews();
-  return useMemo(() => {
-    // Lazy import to avoid a cycle with app-constants.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { ACHIEVEMENTS } = require("@/lib/app-constants") as {
-      ACHIEVEMENTS: readonly { id: string; goal: number }[];
-    };
-    const viewById = new Map(views.map((v) => [v.id, v]));
-    return ACHIEVEMENTS.map((a) => {
-      const v = viewById.get(a.id);
-      if (v) {
-        return {
-          id: a.id,
-          current: Math.round(v.progress * a.goal),
-          earned: v.state === "unlocked" || v.state === "claimed",
-        };
-      }
-      // FLAGGED legacy id: preserve historical earned state read-only.
-      const earnedAt = legacyEarnedMap?.[a.id] ?? 0;
-      return {
-        id: a.id,
-        current: earnedAt > 0 ? a.goal : 0,
-        earned: earnedAt > 0,
-      };
-    });
-  }, [views, legacyEarnedMap]);
-}
-

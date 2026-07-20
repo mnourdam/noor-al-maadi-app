@@ -99,7 +99,9 @@ export interface ProfileState {
   activityCooldowns: Record<string, number>; // key -> ms epoch expiry
   streakMilestonesClaimed: number[];
   hintsPurchased: Record<string, number>; // e.g. "inv:<id>" -> count revealed
-  achievementsEarned: Record<string, number>; // id -> earned-at ms epoch
+  // `achievementsEarned` was removed in the Achievement Engine v2
+  // finalization (Slice 4). Unlock state lives in the `user_achievements`
+  // table and is projected through `useAchievementViews()`.
 }
 
 const initial: ProfileState = {
@@ -138,7 +140,6 @@ const initial: ProfileState = {
   activityCooldowns: {},
   streakMilestonesClaimed: [],
   hintsPurchased: {},
-  achievementsEarned: {},
 };
 
 interface Ctx {

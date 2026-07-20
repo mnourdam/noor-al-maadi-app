@@ -180,15 +180,15 @@ export function validate(
   // Icon collisions are only a smell within a category.
   const seenIconKey = new Map<string, AchievementId>();
 
-  // Flagged-compat isolation: v2 registry MUST NOT re-declare a flagged id.
+  // Retired-id isolation: v2 registry MUST NOT re-declare a retired id.
   // Loaded lazily to avoid a require cycle when the registry initializes.
-  let flaggedIds: ReadonlySet<string> = new Set();
+  let retiredIds: ReadonlySet<string> = new Set();
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require("./definitions/flagged") as { FLAGGED_IDS: ReadonlySet<string> };
-    flaggedIds = mod.FLAGGED_IDS;
+    const mod = require("./definitions/retired") as { RETIRED_IDS: ReadonlySet<string> };
+    retiredIds = mod.RETIRED_IDS;
   } catch {
-    /* flagged module optional at validation time */
+    /* retired module optional at validation time */
   }
 
   for (const d of definitions) {
@@ -203,14 +203,14 @@ export function validate(
     }
     seenIds.add(d.id);
 
-    // Flagged-compat isolation
-    if (flaggedIds.has(d.id)) {
+    // Retired-id isolation
+    if (retiredIds.has(d.id)) {
       issues.push({
         level: "error",
-        code: "flagged_id_in_canonical_registry",
+        code: "retired_id_in_canonical_registry",
         achievementId: d.id,
         message:
-          "Flagged compatibility-only id must not appear in the canonical v2 registry.",
+          "Retired legacy id must not appear in the canonical v2 registry (see definitions/retired.ts).",
       });
     }
 
