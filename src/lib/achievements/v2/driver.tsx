@@ -133,27 +133,46 @@ export function useAchievementViews(): AchievementView[] {
  * Compat hook — mirrors the legacy `AchievementProgress[]` shape used by
  * profile.tsx and index.tsx, but sourced entirely from v2. This is a
  * read-only bridge; nothing writes through the legacy path anymore.
+ *
+ * For FLAGGED legacy achievements not represented in v2, we still return
+ * a row (earned=false, current=0) so legacy UIs iterating `ACHIEVEMENTS`
+ * always find a match. If the player already has an `achievementsEarned`
+ * timestamp for the flagged id, we preserve it as `earned=true` (read-only).
  */
 export interface LegacyAchProgress {
   id: string;
   current: number;
   earned: boolean;
 }
-export function useAchievementLegacyEvals(): LegacyAchProgress[] {
+
+export function useAchievementLegacyEvals(
+  legacyEarnedMap?: Readonly<Record<string, number>>,
+): LegacyAchProgress[] {
   const views = useAchievementViews();
-  return useMemo(
-    () =>
-      views.map((v) => {
-        const def = registry.byId.get(v.id);
-        // Map 0..1 progress back to an absolute count against the legacy
-        // goal so existing UI progress-bars keep the same visual meaning.
-        // `def.progress` is 0..1; we approximate current by inverting the
-        // ratio against a synthetic goal of 1 (already unlocked) or use
-        // the fact that legacy UI cares about (current/goal) — v.progress
-        // is exactly (current/goal).
-        void def;
-        return { id: v.id, current: v.progress, earned: v.state === "unlocked" || v.state === "claimed" };
-      }),
-    [views],
-  );
+  return useMemo(() => {
+    // Lazy import to avoid a cycle with app-constants.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { ACHIEVEMENTS } = require("@/lib/app-constants") as {
+      ACHIEVEMENTS: readonly { id: string; goal: number }[];
+    };
+    const viewById = new Map(views.map((v) => [v.id, v]));
+    return ACHIEVEMENTS.map((a) => {
+      const v = viewById.get(a.id);
+      if (v) {
+        return {
+          id: a.id,
+          current: Math.round(v.progress * a.goal),
+          earned: v.state === "unlocked" || v.state === "claimed",
+        };
+      }
+      // FLAGGED legacy id: preserve historical earned state read-only.
+      const earnedAt = legacyEarnedMap?.[a.id] ?? 0;
+      return {
+        id: a.id,
+        current: earnedAt > 0 ? a.goal : 0,
+        earned: earnedAt > 0,
+      };
+    });
+  }, [views, legacyEarnedMap]);
 }
+
