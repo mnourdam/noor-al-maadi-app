@@ -24,14 +24,22 @@
     -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <!--
+            Dedicated splash-only vector (transparent, gold Irth mark
+            filling ~96dp of the 108dp canvas). We deliberately do NOT
+            reuse @drawable/ic_launcher_foreground here because that vector
+            is scaled to the adaptive-icon 66dp safe zone, which the
+            SplashScreen API then re-frames inside its own 240dp/192dp icon
+            window — producing a boxed app-icon plate on the cold-start
+            frame. Launcher icons continue to use ic_launcher_foreground
+            and remain unchanged.
+        -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
         <!--
             Intentionally NO `windowSplashScreenIconBackgroundColor`.
-            Setting it forces Android to draw an extra plate behind the icon,
-            which on some devices/launchers flashed as a square dark plate
-            during the cold-start frame before the cinematic React splash
-            mounted. The foreground vector contains only the gold mark and
-            transparent pixels.
+            Setting it forces Android to draw an extra plate behind the
+            icon, which reads as a rounded-square launcher shape during the
+            cold-start frame.
         -->
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
