@@ -7,9 +7,10 @@ import {
   ChevronLeft, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin,
   Coins, Gift, Bell, Music, Zap, LayoutGrid, TrendingUp, Medal, ScrollText,
   Users2, Settings as SettingsIcon, X, BookOpen, Swords, Landmark, Search,
-  Map as MapIcon, Hourglass, Copy, Share2, QrCode, ChevronRight, Lock,
-  Type as TypeIcon, Sprout, Inbox, Mail,
+  Map as MapIcon, Copy, Share2, QrCode, ChevronRight, Lock,
+  Type as TypeIcon, Sprout, Inbox, Mail, Package, Gem, Award,
 } from "lucide-react";
+import { z } from "zod";
 
 import { toWesternDigits } from "@/lib/formatNumber";
 import { useAudioSettings } from "@/hooks/useAudioSettings";
@@ -22,9 +23,18 @@ import {
   CURRENT_SEASON, SEASONS, ERAS,
 } from "@/lib/app-constants";
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
-import type { AchievementCategory, AchievementRarity, AchievementView } from "@/lib/achievements/v2";
+import type { AchievementView } from "@/lib/achievements/v2";
+import {
+  CATEGORY_ICON, CATEGORY_META, CATEGORY_ORDER, RARITY_STYLE, SECRET_STYLE, isEarned,
+} from "@/lib/achievements/v2/presentation";
+import {
+  useAchievementCompletion, useNearestAchievement, useLatestUnlockedAchievement,
+} from "@/lib/achievements/v2/selectors";
 import { useProfile } from "@/lib/profile";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
+import { useAllWorldsProgress } from "@/lib/worlds-progress";
+import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
+import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscoveries";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
 import { AccountSection } from "@/components/AccountSection";
 import { CommunityHubSection } from "@/components/CommunityHubSection";
@@ -41,12 +51,23 @@ import { AndroidTextEntryInput, AndroidTextEntryTextarea, readAndroidTextEntryRe
 import { ReadingScale } from "@/components/ReadingScale";
 
 
+type TabId = "overview" | "progress" | "achievements" | "seasons" | "referrals" | "settings";
+
+const TAB_IDS = ["overview", "progress", "achievements", "seasons", "referrals", "settings"] as const;
+
+const profileSearchSchema = z.object({
+  // `tab` accepts any known tab id (case-insensitive). Legacy `/achievements`
+  // redirects here with `?tab=achievements`; other surfaces may also deep-link
+  // straight to a specific section.
+  tab: z.enum(TAB_IDS).optional(),
+  achievement: z.string().min(1).max(128).optional(),
+}).partial();
+
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "حسابي" }] }),
+  validateSearch: (search) => profileSearchSchema.parse(search),
   component: ProfilePage,
 });
-
-type TabId = "overview" | "progress" | "achievements" | "seasons" | "referrals" | "settings";
 
 const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", label: "نظرة", icon: LayoutGrid },
@@ -58,55 +79,8 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: "settings", label: "الإعدادات", icon: SettingsIcon },
 ];
 
-const CATEGORY_ICON: Record<AchievementCategory, typeof BookOpen> = {
-  campaigns:      Swords,
-  investigations: Search,
-  encyclopedia:   BookOpen,
-  museum:         Landmark,
-  atlas:          MapIcon,
-  worlds:         Compass,
-  economy:        Coins,
-  level:          Star,
-  daily:          Flame,
-  collection:     Landmark,
-  special:        Crown,
-  seasonal:       ScrollText,
-};
-
-const CATEGORY_META: Record<AchievementCategory, { name: string; tagline: string }> = {
-  campaigns:      { name: "الحملات التاريخية", tagline: "إنجاز الحملات الكبرى" },
-  investigations: { name: "التحقيقات",          tagline: "قضايا وأسرار" },
-  encyclopedia:   { name: "الموسوعة",           tagline: "الشخصيات والعصور" },
-  museum:         { name: "المتحف",             tagline: "قطع الأثر والتراث" },
-  atlas:          { name: "الأطلس",             tagline: "الأقاليم والأقطار" },
-  worlds:         { name: "العوالم",            tagline: "استكمال العوالم" },
-  economy:        { name: "الثروة والخبرة",    tagline: "الدنانير والنقاط" },
-  level:          { name: "المستوى",            tagline: "رحلة التقدم" },
-  daily:          { name: "المثابرة اليومية",   tagline: "السلاسل والتحديات" },
-  collection:     { name: "الجامع",             tagline: "بناء المجموعة" },
-  special:        { name: "خاصة",               tagline: "الإنجازات المميزة" },
-  seasonal:       { name: "المواسم",            tagline: "إنجازات المواسم" },
-};
-
-const CATEGORY_ORDER: AchievementCategory[] = [
-  "campaigns", "investigations", "museum", "encyclopedia", "atlas",
-  "collection", "level", "economy", "daily", "worlds", "special", "seasonal",
-];
-
-const RARITY_STYLE: Record<AchievementRarity, { ring: string; chip: string; label: string }> = {
-  common:    { ring: "border-white/15",     chip: "bg-white/10 text-foreground/70",       label: "عادي" },
-  rare:      { ring: "border-sky-400/40",   chip: "bg-sky-400/10 text-sky-200",           label: "نادر" },
-  epic:      { ring: "border-violet-400/40",chip: "bg-violet-400/10 text-violet-200",     label: "ملحمي" },
-  legendary: { ring: "border-gold/60",      chip: "bg-gold/15 text-gold",                 label: "أسطوري" },
-};
-
-const SECRET_STYLE = { ring: "border-rose-400/40", chip: "bg-rose-400/10 text-rose-200", label: "سرّي" };
-
-function isEarned(v: AchievementView): boolean {
-  return v.state === "unlocked" || v.state === "claimed";
-}
-
 const TAB_STORAGE_KEY = "irth.profile.tab";
+
 
 function ProfilePage() {
   const {
