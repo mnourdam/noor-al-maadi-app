@@ -463,7 +463,8 @@ export function TutorialOverlay() {
        * and portaled to document.body. This keeps the dialog outside the
        * tutorial root's pointer-event contract, avoiding ancestor-level
        * pointer blocking in Android WebViews. The tutorial dim already
-       * darkens the scene; we only add a subtle additional wash.
+       * darkens the scene, so the Radix backdrop is transparent and only
+       * acts as the top-level pointer shield.
        *
        * Layer hierarchy:
        *   - tutorial root: z-index 2000
@@ -480,7 +481,7 @@ export function TutorialOverlay() {
         <AlertDialogPrimitive.Portal>
           <AlertDialogPrimitive.Overlay
             className={cn(
-              "fixed inset-0 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+              "fixed inset-0 bg-transparent data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
             )}
             style={{ zIndex: 2100, pointerEvents: "auto" }}
           />
