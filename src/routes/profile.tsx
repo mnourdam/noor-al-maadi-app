@@ -537,33 +537,20 @@ function ProfilePage() {
    OVERVIEW TAB
 ============================================================ */
 function OverviewTab({
-  profile, views, seasonPct, seasonReady, claimSeason,
+  profile, views, seasonPct, seasonReady, claimSeason, onSeeAllAchievements,
 }: {
   profile: ReturnType<typeof useProfile>["profile"];
   views: AchievementView[];
   seasonPct: number;
   seasonReady: boolean;
   claimSeason: ReturnType<typeof useProfile>["claimSeason"];
+  onSeeAllAchievements: () => void;
 }) {
-  const latestEarned = useMemo<AchievementView | null>(() => {
-    const earned = views
-      .filter(isEarned)
-      .filter((v) => v.unlockedAt)
-      .sort((a, b) => new Date(b.unlockedAt!).getTime() - new Date(a.unlockedAt!).getTime());
-    return earned[0] ?? null;
-  }, [views]);
-
-  const nearest = useMemo<AchievementView | null>(() => {
-    return [...views]
-      .filter((v) => !isEarned(v) && v.state !== "locked-secret" && v.state !== "locked-hidden")
-      .filter((v) => v.progress > 0 && v.progress < 1)
-      .sort((a, b) => b.progress - a.progress)[0] ?? null;
-  }, [views]);
-
-  const recentDiscovery =
-    profile.artifactsFound[profile.artifactsFound.length - 1]
-    ?? profile.charactersUnlocked[profile.charactersUnlocked.length - 1]
-    ?? null;
+  const latestEarned = useLatestUnlockedAchievement(views);
+  const nearest = useNearestAchievement(views);
+  // Canonical discovery feed — replaces legacy profile.artifactsFound/charactersUnlocked scan.
+  const discoveries = useUnifiedDiscoveryFeed({ limit: 1 });
+  const recentDiscovery: DiscoveryItem | null = discoveries[0] ?? null;
 
   return (
     <div className="space-y-4">
@@ -581,8 +568,7 @@ function OverviewTab({
         <ChevronLeft className="size-5 text-gold transition-transform group-hover:-translate-x-1" />
       </Link>
 
-      {/* Current-season card hidden for LC1 — Seasons deferred post-beta.
-          State (seasonPoints / seasonClaimed / claimSeason) is preserved. */}
+      {/* Current-season card hidden for LC1 — Seasons deferred post-beta. */}
       {false && (
         <div className="grid grid-cols-1 gap-3">
           <div className="relative overflow-hidden rounded-2xl border border-gold/25 bg-surface p-4">
@@ -647,7 +633,13 @@ function OverviewTab({
           <span className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.18em] text-gold/80">
             <Trophy className="size-3.5" /> آخر إنجاز
           </span>
-          <Link to="/achievements" className="text-[10px] text-gold hover:underline">كل الإنجازات</Link>
+          <button
+            type="button"
+            onClick={onSeeAllAchievements}
+            className="text-[10px] text-gold hover:underline"
+          >
+            كل الإنجازات
+          </button>
         </div>
         {latestEarned ? (
           <AchievementMini view={latestEarned} />
@@ -661,22 +653,29 @@ function OverviewTab({
         )}
       </div>
 
-      {/* Recent discovery */}
+      {/* Recent discovery (canonical unified feed) */}
       {recentDiscovery && (
-        <div className="flex items-center gap-3 rounded-2xl border border-gold/25 bg-surface p-4">
+        <Link
+          to={recentDiscovery.href}
+          className="flex items-center gap-3 rounded-2xl border border-gold/25 bg-surface p-4 hover:border-gold/50 transition-colors"
+        >
           <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
             <Landmark className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] tracking-[0.18em] text-gold/80">آخر اكتشاف</p>
-            <p className="font-display truncate text-sm font-bold">{recentDiscovery}</p>
+            <p className="font-display truncate text-sm font-bold">{recentDiscovery.title}</p>
+            {recentDiscovery.subtitle ? (
+              <p className="line-clamp-1 text-[11px] text-muted-foreground">{recentDiscovery.subtitle}</p>
+            ) : null}
           </div>
-          <Link to="/collection" className="text-gold"><ChevronLeft className="size-4" /></Link>
-        </div>
+          <ChevronLeft className="size-4 text-gold" />
+        </Link>
       )}
     </div>
   );
 }
+
 
 function AchievementMini({ view }: { view: AchievementView }) {
   const earned = isEarned(view);
