@@ -309,7 +309,7 @@ export function TutorialOverlay() {
   // While transitioning, the coach-mark is faded to 0 — freeze its
   // buttons regardless of the lock. Also freeze during the finishing
   // fade-out to prevent last-frame double taps.
-  const buttonsInteractive = coachVisible && !buttonLocked;
+  const buttonsInteractive = coachVisible && !buttonLocked && !skipConfirmOpen;
 
   const node = (
     <div
