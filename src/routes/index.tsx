@@ -569,7 +569,7 @@ function HomeFull() {
 
   return (
     <AppShell>
-      <TutorialApkLogViewer />
+      
 
       
 
