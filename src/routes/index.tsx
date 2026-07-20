@@ -11,8 +11,9 @@ import { AppShell } from "@/components/AppShell";
 import { CachedImage } from "@/components/CachedImage";
 import {
   levelFor, currentSeason,
-  ACHIEVEMENTS, evaluateAchievements,
+  ACHIEVEMENTS,
 } from "@/lib/app-constants";
+import { useAchievementLegacyEvals } from "@/lib/achievements/v2/driver";
 import { useProfile } from "@/lib/profile";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 
@@ -217,6 +218,7 @@ function HomeFull() {
 
   const lvl = levelFor(profile.points);
   const canonicalInvHome = useCanonicalInvestigationProgress();
+  const achEvals = useAchievementLegacyEvals(profile.achievementsEarned);
 
   // ===== Campaign recommendation — SHARED SERVICE =====
   // Home Hero and Worlds Continue Journey both consume this hook,
@@ -493,7 +495,7 @@ function HomeFull() {
         });
       }
     }
-    const evals = evaluateAchievements(profile, { investigationsCompletedCount: canonicalInvHome.count });
+    const evals = achEvals;
     const earnedMap = profile.achievementsEarned ?? {};
     const nearest = evals
       .filter((e) => !e.earned && !earnedMap[e.id])
@@ -515,7 +517,7 @@ function HomeFull() {
       });
     }
     return goals.slice(0, 3);
-  }, [lvl, campaignSel, profile, canonicalInvHome.count]);
+  }, [lvl, campaignSel, profile, achEvals]);
 
   // ===== Recent Activity =====
   type Activity = { key: string; icon: ReactNode; eyebrow: string; title: string; to: string };
