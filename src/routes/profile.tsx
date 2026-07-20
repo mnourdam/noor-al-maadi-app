@@ -18,11 +18,11 @@ import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
 import profileHeaderArt from "@/assets/hero/22-scholar-journey.jpg?url";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import {
-  ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, levelFor,
+  levelFor,
   CURRENT_SEASON, SEASONS, ERAS,
-  type AchievementCategory, type AchievementDef, type AchievementRarity,
 } from "@/lib/app-constants";
-import { useAchievementLegacyEvals } from "@/lib/achievements/v2/driver";
+import { useAchievementViews } from "@/lib/achievements/v2/driver";
+import type { AchievementCategory, AchievementRarity, AchievementView } from "@/lib/achievements/v2";
 import { useProfile } from "@/lib/profile";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
@@ -59,24 +59,52 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
 ];
 
 const CATEGORY_ICON: Record<AchievementCategory, typeof BookOpen> = {
-  reading: BookOpen,
-  exploration: Compass,
-  mastery: Search,
-  campaigns: Swords,
-  collection: Landmark,
-  dedication: Flame,
-  wealth: Crown,
-  legendary: Sparkles,
+  campaigns:      Swords,
+  investigations: Search,
+  encyclopedia:   BookOpen,
+  museum:         Landmark,
+  atlas:          MapIcon,
+  worlds:         Compass,
+  economy:        Coins,
+  level:          Star,
+  daily:          Flame,
+  collection:     Landmark,
+  special:        Crown,
+  seasonal:       ScrollText,
 };
 
-const RARITY_STYLE: Record<AchievementRarity, { ring: string; chip: string; label: string }> = {
-  common:    { ring: "border-white/15",     chip: "bg-white/10 text-foreground/70",                 label: "عادي" },
-  uncommon:  { ring: "border-emerald-400/40", chip: "bg-emerald-400/10 text-emerald-200",           label: "غير شائع" },
-  rare:      { ring: "border-sky-400/40",   chip: "bg-sky-400/10 text-sky-200",                     label: "نادر" },
-  epic:      { ring: "border-violet-400/40",chip: "bg-violet-400/10 text-violet-200",               label: "ملحمي" },
-  legendary: { ring: "border-gold/60",      chip: "bg-gold/15 text-gold",                           label: "أسطوري" },
-  secret:    { ring: "border-rose-400/40",  chip: "bg-rose-400/10 text-rose-200",                   label: "سرّي" },
+const CATEGORY_META: Record<AchievementCategory, { name: string; tagline: string }> = {
+  campaigns:      { name: "الحملات التاريخية", tagline: "إنجاز الحملات الكبرى" },
+  investigations: { name: "التحقيقات",          tagline: "قضايا وأسرار" },
+  encyclopedia:   { name: "الموسوعة",           tagline: "الشخصيات والعصور" },
+  museum:         { name: "المتحف",             tagline: "قطع الأثر والتراث" },
+  atlas:          { name: "الأطلس",             tagline: "الأقاليم والأقطار" },
+  worlds:         { name: "العوالم",            tagline: "استكمال العوالم" },
+  economy:        { name: "الثروة والخبرة",    tagline: "الدنانير والنقاط" },
+  level:          { name: "المستوى",            tagline: "رحلة التقدم" },
+  daily:          { name: "المثابرة اليومية",   tagline: "السلاسل والتحديات" },
+  collection:     { name: "الجامع",             tagline: "بناء المجموعة" },
+  special:        { name: "خاصة",               tagline: "الإنجازات المميزة" },
+  seasonal:       { name: "المواسم",            tagline: "إنجازات المواسم" },
 };
+
+const CATEGORY_ORDER: AchievementCategory[] = [
+  "campaigns", "investigations", "museum", "encyclopedia", "atlas",
+  "collection", "level", "economy", "daily", "worlds", "special", "seasonal",
+];
+
+const RARITY_STYLE: Record<AchievementRarity, { ring: string; chip: string; label: string }> = {
+  common:    { ring: "border-white/15",     chip: "bg-white/10 text-foreground/70",       label: "عادي" },
+  rare:      { ring: "border-sky-400/40",   chip: "bg-sky-400/10 text-sky-200",           label: "نادر" },
+  epic:      { ring: "border-violet-400/40",chip: "bg-violet-400/10 text-violet-200",     label: "ملحمي" },
+  legendary: { ring: "border-gold/60",      chip: "bg-gold/15 text-gold",                 label: "أسطوري" },
+};
+
+const SECRET_STYLE = { ring: "border-rose-400/40", chip: "bg-rose-400/10 text-rose-200", label: "سرّي" };
+
+function isEarned(v: AchievementView): boolean {
+  return v.state === "unlocked" || v.state === "claimed";
+}
 
 const TAB_STORAGE_KEY = "irth.profile.tab";
 
@@ -107,7 +135,7 @@ function ProfilePage() {
   const [nameMsg, setNameMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [achDetail, setAchDetail] = useState<AchievementDef | null>(null);
+  const [achDetail, setAchDetail] = useState<AchievementView | null>(null);
 
   // ===== Username editing =====
   const currentUsername = account?.username ?? "";
@@ -152,9 +180,12 @@ function ProfilePage() {
   const lvl = levelFor(profile.points);
   const canonicalInvForAch = useCanonicalInvestigationProgress();
   void canonicalInvForAch; // canonical hook still mounted for cache; v2 engine reads it internally
-  const achievements = useAchievementLegacyEvals(profile.achievementsEarned);
-  const achMap = useMemo(() => new Map(achievements.map((a) => [a.id, a])), [achievements]);
-  const earnedCount = achievements.filter((a) => a.earned).length;
+  const achievementViews = useAchievementViews();
+  const achViewMap = useMemo(
+    () => new Map<string, AchievementView>(achievementViews.map((v) => [v.id, v])),
+    [achievementViews],
+  );
+  const earnedCount = achievementViews.filter(isEarned).length;
 
   const seasonPct = Math.min(100, Math.round((profile.seasonPoints / CURRENT_SEASON.goalPoints) * 100));
   const seasonReady = profile.seasonPoints >= CURRENT_SEASON.goalPoints && !profile.seasonClaimed;
@@ -425,7 +456,7 @@ function ProfilePage() {
           {tab === "overview" && (
             <OverviewTab
               profile={profile}
-              achievements={achievements}
+              views={achievementViews}
               seasonPct={seasonPct}
               seasonReady={seasonReady}
               claimSeason={claimSeason}
@@ -433,7 +464,7 @@ function ProfilePage() {
           )}
           {tab === "progress" && <ProgressTab profile={profile} lvl={lvl} />}
           {tab === "achievements" && (
-            <AchievementsTab achMap={achMap} onOpen={(a) => setAchDetail(a)} />
+            <AchievementsTab views={achievementViews} onOpen={(v) => setAchDetail(v)} />
           )}
           {tab === "seasons" && <SeasonsTab seasonPct={seasonPct} seasonReady={seasonReady} claimSeason={claimSeason} seasonClaimed={profile.seasonClaimed} seasonPoints={profile.seasonPoints} />}
           {tab === "referrals" && <ReferralsTab loggedIn={Boolean(user)} />}
@@ -493,8 +524,7 @@ function ProfilePage() {
         {/* Achievement detail dialog */}
         {achDetail && (
           <AchievementDialog
-            def={achDetail}
-            progress={achMap.get(achDetail.id)}
+            view={achDetail}
             onClose={() => setAchDetail(null)}
           />
         )}
@@ -515,32 +545,28 @@ function ProfilePage() {
    OVERVIEW TAB
 ============================================================ */
 function OverviewTab({
-  profile, achievements, seasonPct, seasonReady, claimSeason,
+  profile, views, seasonPct, seasonReady, claimSeason,
 }: {
   profile: ReturnType<typeof useProfile>["profile"];
-  achievements: ReturnType<typeof useAchievementLegacyEvals>;
+  views: AchievementView[];
   seasonPct: number;
   seasonReady: boolean;
   claimSeason: ReturnType<typeof useProfile>["claimSeason"];
 }) {
-  const latestEarned = useMemo(() => {
-    const earnedAt = profile.achievementsEarned ?? {};
-    const ranked = ACHIEVEMENTS
-      .filter((a) => earnedAt[a.id])
-      .map((a) => ({ a, ts: earnedAt[a.id]! }))
-      .sort((x, y) => y.ts - x.ts);
-    return ranked[0]?.a ?? null;
-  }, [profile.achievementsEarned]);
+  const latestEarned = useMemo<AchievementView | null>(() => {
+    const earned = views
+      .filter(isEarned)
+      .filter((v) => v.unlockedAt)
+      .sort((a, b) => new Date(b.unlockedAt!).getTime() - new Date(a.unlockedAt!).getTime());
+    return earned[0] ?? null;
+  }, [views]);
 
-  const nearest = useMemo(() => {
-    return [...ACHIEVEMENTS]
-      .map((a) => {
-        const p = achievements.find((x) => x.id === a.id)!;
-        return { a, p, pct: p.earned ? -1 : p.current / a.goal };
-      })
-      .filter((x) => !x.p.earned && x.pct > 0 && x.pct < 1)
-      .sort((x, y) => y.pct - x.pct)[0] ?? null;
-  }, [achievements]);
+  const nearest = useMemo<AchievementView | null>(() => {
+    return [...views]
+      .filter((v) => !isEarned(v) && v.state !== "locked-secret" && v.state !== "locked-hidden")
+      .filter((v) => v.progress > 0 && v.progress < 1)
+      .sort((a, b) => b.progress - a.progress)[0] ?? null;
+  }, [views]);
 
   const recentDiscovery =
     profile.artifactsFound[profile.artifactsFound.length - 1]
@@ -632,11 +658,11 @@ function OverviewTab({
           <Link to="/achievements" className="text-[10px] text-gold hover:underline">كل الإنجازات</Link>
         </div>
         {latestEarned ? (
-          <AchievementMini def={latestEarned} earned />
+          <AchievementMini view={latestEarned} />
         ) : nearest ? (
           <>
             <p className="mt-2 text-[11px] text-muted-foreground">أقرب إنجاز للفتح:</p>
-            <AchievementMini def={nearest.a} earned={false} pct={Math.round(nearest.pct * 100)} />
+            <AchievementMini view={nearest} />
           </>
         ) : (
           <p className="mt-3 text-[12px] text-muted-foreground">ابدأ رحلتك لتفتح إنجازك الأول.</p>
@@ -660,17 +686,21 @@ function OverviewTab({
   );
 }
 
-function AchievementMini({ def, earned, pct }: { def: AchievementDef; earned: boolean; pct?: number }) {
-  const Icon = CATEGORY_ICON[def.category];
+function AchievementMini({ view }: { view: AchievementView }) {
+  const earned = isEarned(view);
+  const Icon = CATEGORY_ICON[view.category];
+  const pct = Math.min(100, Math.round(view.progress * 100));
+  const title = view.state === "locked-secret" ? "إنجاز سرّي" : (view.displayTitle ?? view.id);
+  const desc = view.state === "locked-secret" ? "اكتشفه بنفسك خلال رحلتك." : (view.displayDescription ?? "");
   return (
     <div className={`mt-3 flex items-center gap-3 rounded-2xl border p-3 ${earned ? "border-gold/40 bg-gold/5" : "border-white/10 bg-background/40"}`}>
       <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${earned ? "bg-gradient-gold text-primary-foreground" : "bg-gold/10 text-gold"}`}>
         <Icon className="size-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="font-display truncate text-sm font-bold">{def.name}</p>
-        <p className="line-clamp-1 text-[11px] text-muted-foreground">{def.desc}</p>
-        {!earned && typeof pct === "number" && (
+        <p className="font-display truncate text-sm font-bold">{title}</p>
+        <p className="line-clamp-1 text-[11px] text-muted-foreground">{desc}</p>
+        {!earned && pct > 0 && pct < 100 && (
           <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
             <div className="h-full bg-gradient-gold" style={{ width: `${pct}%` }} />
           </div>
@@ -776,21 +806,24 @@ function CircularProgress({ value, size = 88 }: { value: number; size?: number }
    ACHIEVEMENTS TAB
 ============================================================ */
 function AchievementsTab({
-  achMap, onOpen,
+  views, onOpen,
 }: {
-  achMap: Map<string, ReturnType<typeof useAchievementLegacyEvals>[number]>;
-  onOpen: (a: AchievementDef) => void;
+  views: AchievementView[];
+  onOpen: (v: AchievementView) => void;
 }) {
   const grouped = useMemo(() => {
-    return ACHIEVEMENT_CATEGORIES.map((cat) => {
-      const items = ACHIEVEMENTS.filter((a) => a.category === cat.id);
-      const earned = items.filter((a) => achMap.get(a.id)?.earned).length;
+    return CATEGORY_ORDER.map((catId) => {
+      const items = views
+        .filter((v) => v.category === catId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      const earned = items.filter(isEarned).length;
       const pct = items.length ? Math.round((earned / items.length) * 100) : 0;
-      return { cat, items, earned, pct };
-    });
-  }, [achMap]);
+      return { catId, meta: CATEGORY_META[catId], items, earned, pct };
+    }).filter((g) => g.items.length > 0);
+  }, [views]);
 
-  const totalEarned = useMemo(() => Array.from(achMap.values()).filter((x) => x.earned).length, [achMap]);
+  const totalEarned = useMemo(() => views.filter(isEarned).length, [views]);
+  const totalPct = views.length ? Math.round((totalEarned / views.length) * 100) : 0;
 
   return (
     <div className="space-y-4">
@@ -801,25 +834,25 @@ function AchievementsTab({
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-display text-sm font-bold">خزانة الإنجازات</p>
-            <p className="text-[11px] text-muted-foreground">{totalEarned} من {ACHIEVEMENTS.length} مفتوحة</p>
+            <p className="text-[11px] text-muted-foreground">{totalEarned} من {views.length} مفتوحة</p>
           </div>
-          <span className="font-display text-lg text-gold">{Math.round((totalEarned / ACHIEVEMENTS.length) * 100)}%</span>
+          <span className="font-display text-lg text-gold">{totalPct}%</span>
         </div>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${Math.round((totalEarned / ACHIEVEMENTS.length) * 100)}%` }} />
+          <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${totalPct}%` }} />
         </div>
       </div>
 
-      {grouped.map(({ cat, items, earned, pct }) => {
-        const Icon = CATEGORY_ICON[cat.id];
+      {grouped.map(({ catId, meta, items, earned, pct }) => {
+        const Icon = CATEGORY_ICON[catId];
         return (
-          <section key={cat.id} className="rounded-3xl border border-white/10 bg-surface/60 p-4">
+          <section key={catId} className="rounded-3xl border border-white/10 bg-surface/60 p-4">
             <header className="flex items-center gap-3">
               <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
                 <Icon className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-display text-sm font-bold">{cat.name}</p>
+                <p className="font-display text-sm font-bold">{meta.name}</p>
                 <p className="text-[11px] text-muted-foreground">{earned}/{items.length} · {pct}%</p>
               </div>
               <div className="w-20 h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -827,32 +860,30 @@ function AchievementsTab({
               </div>
             </header>
             <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {items.map((a) => {
-                const p = achMap.get(a.id);
-                const earned = Boolean(p?.earned);
-                const pct = Math.min(100, Math.round(((p?.current ?? 0) / a.goal) * 100));
-                const rarity = a.rarity ?? "common";
-                const hidden = (a.hidden_until_unlocked || a.secret) && !earned;
-                const style = RARITY_STYLE[hidden ? "secret" : rarity];
-                const Icon2 = CATEGORY_ICON[a.category];
+              {items.map((v) => {
+                const earnedItem = isEarned(v);
+                const pctItem = Math.min(100, Math.round(v.progress * 100));
+                const secret = v.state === "locked-secret";
+                const style = secret ? SECRET_STYLE : RARITY_STYLE[v.rarity];
+                const ItemIcon = CATEGORY_ICON[v.category];
                 return (
                   <button
-                    key={a.id}
-                    onClick={() => onOpen(a)}
-                    className={`group relative flex flex-col items-center gap-1 rounded-2xl border ${style.ring} p-2.5 text-center transition-all hover:scale-[1.03] hover:border-gold/60 ${earned ? "bg-gold/5" : "bg-background/40"}`}
+                    key={v.id}
+                    onClick={() => onOpen(v)}
+                    className={`group relative flex flex-col items-center gap-1 rounded-2xl border ${style.ring} p-2.5 text-center transition-all hover:scale-[1.03] hover:border-gold/60 ${earnedItem ? "bg-gold/5" : "bg-background/40"}`}
                   >
-                    <div className={`grid size-12 place-items-center rounded-full border ${style.ring} ${earned ? "bg-gradient-gold text-primary-foreground" : "bg-background text-foreground/60"}`}>
-                      {hidden ? <Lock className="size-5" /> : <Icon2 className="size-5" />}
+                    <div className={`grid size-12 place-items-center rounded-full border ${style.ring} ${earnedItem ? "bg-gradient-gold text-primary-foreground" : "bg-background text-foreground/60"}`}>
+                      {secret ? <Lock className="size-5" /> : <ItemIcon className="size-5" />}
                     </div>
                     <p className="font-display line-clamp-1 text-[10px] font-bold leading-tight">
-                      {hidden ? "إنجاز سرّي" : a.name}
+                      {secret ? "إنجاز سرّي" : (v.displayTitle ?? v.id)}
                     </p>
-                    {!earned && !hidden && (
+                    {!earnedItem && !secret && (
                       <div className="w-full h-0.5 overflow-hidden rounded-full bg-white/10">
-                        <div className="h-full bg-gold/60" style={{ width: `${pct}%` }} />
+                        <div className="h-full bg-gold/60" style={{ width: `${pctItem}%` }} />
                       </div>
                     )}
-                    {earned && (
+                    {earnedItem && (
                       <span className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-gradient-gold text-primary-foreground shadow-elegant">
                         <Check className="size-3" />
                       </span>
@@ -869,18 +900,18 @@ function AchievementsTab({
 }
 
 function AchievementDialog({
-  def, progress, onClose,
+  view, onClose,
 }: {
-  def: AchievementDef;
-  progress?: { current: number; earned: boolean };
+  view: AchievementView;
   onClose: () => void;
 }) {
-  const earned = Boolean(progress?.earned);
-  const rarity = def.rarity ?? "common";
-  const hidden = (def.hidden_until_unlocked || def.secret) && !earned;
-  const style = RARITY_STYLE[hidden ? "secret" : rarity];
-  const pct = Math.min(100, Math.round(((progress?.current ?? 0) / def.goal) * 100));
-  const Icon = CATEGORY_ICON[def.category];
+  const earned = isEarned(view);
+  const secret = view.state === "locked-secret" && !earned;
+  const style = secret ? SECRET_STYLE : RARITY_STYLE[view.rarity];
+  const pct = Math.min(100, Math.round(view.progress * 100));
+  const Icon = CATEGORY_ICON[view.category];
+  const rewards = view.rewards ?? {};
+  const hasRewards = Boolean(rewards.xp || rewards.dinars || rewards.titleId || rewards.museumItemId || rewards.cosmeticId);
 
   return (
     <ModalPortal>
@@ -891,39 +922,63 @@ function AchievementDialog({
         </button>
         <div className="flex flex-col items-center text-center">
           <div className={`grid size-20 place-items-center rounded-full border-2 ${style.ring} ${earned ? "bg-gradient-gold text-primary-foreground" : "bg-background text-foreground/60"}`}>
-            {hidden ? <Lock className="size-8" /> : <Icon className="size-8" />}
+            {secret ? <Lock className="size-8" /> : <Icon className="size-8" />}
           </div>
           <span className={`mt-3 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${style.chip}`}>{style.label}</span>
-          <h3 className="font-display mt-2 text-lg font-bold">{hidden ? "إنجاز سرّي" : def.name}</h3>
-          <p className="mt-1 text-[12px] leading-6 text-muted-foreground">{hidden ? "اكتشفه بنفسك خلال رحلتك." : def.desc}</p>
+          <h3 className="font-display mt-2 text-lg font-bold">
+            {secret ? "إنجاز سرّي" : (view.displayTitle ?? view.id)}
+          </h3>
+          <p className="mt-1 text-[12px] leading-6 text-muted-foreground">
+            {secret ? "اكتشفه بنفسك خلال رحلتك." : (view.displayDescription ?? "")}
+          </p>
         </div>
 
-        {!hidden && (
+        {!secret && (
           <div className="mt-5">
             <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
               <span>التقدم</span>
-              <span className="font-display text-gold">{progress?.current ?? 0} / {def.goal}</span>
+              <span className="font-display text-gold">{pct}%</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-white/10">
               <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${pct}%` }} />
             </div>
+            {earned && view.unlockedAt && (
+              <p className="mt-2 text-[10px] text-gold">
+                فُتح في {new Date(view.unlockedAt).toLocaleDateString("ar-EG", { year: "numeric", month: "short", day: "numeric" })}
+              </p>
+            )}
           </div>
         )}
 
-        {def.rewards && def.rewards.length > 0 && !hidden && (
+        {hasRewards && !secret && (
           <div className="mt-5">
             <p className="mb-2 text-[10px] tracking-[0.18em] text-gold/80">المكافآت</p>
             <div className="flex flex-wrap gap-1.5">
-              {def.rewards.map((r, i) => (
-                <span key={i} className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
-                  {r.kind === "xp" && <><Sparkles className="size-3" /> +{r.amount} نقطة</>}
-                  {r.kind === "dinars" && <><Coins className="size-3" /> +{r.amount} دينار</>}
-                  {r.kind === "title" && <><Crown className="size-3" /> لقب: {r.label}</>}
-                  {r.kind === "badge" && <><Medal className="size-3" /> شارة</>}
-                  {r.kind === "avatar" && <><Users2 className="size-3" /> أفاتار</>}
-                  {r.kind === "museum" && <><Landmark className="size-3" /> قطعة متحف</>}
+              {rewards.xp ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
+                  <Sparkles className="size-3" /> +{rewards.xp} نقطة
                 </span>
-              ))}
+              ) : null}
+              {rewards.dinars ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
+                  <Coins className="size-3" /> +{rewards.dinars} دينار
+                </span>
+              ) : null}
+              {rewards.titleId ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
+                  <Crown className="size-3" /> لقب: {rewards.titleId}
+                </span>
+              ) : null}
+              {rewards.museumItemId ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
+                  <Landmark className="size-3" /> قطعة متحف
+                </span>
+              ) : null}
+              {rewards.cosmeticId ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
+                  <Medal className="size-3" /> زخرفة
+                </span>
+              ) : null}
             </div>
           </div>
         )}

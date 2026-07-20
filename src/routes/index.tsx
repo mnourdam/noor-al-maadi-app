@@ -11,9 +11,9 @@ import { AppShell } from "@/components/AppShell";
 import { CachedImage } from "@/components/CachedImage";
 import {
   levelFor, currentSeason,
-  ACHIEVEMENTS,
 } from "@/lib/app-constants";
-import { useAchievementLegacyEvals } from "@/lib/achievements/v2/driver";
+import { useAchievementViews } from "@/lib/achievements/v2/driver";
+import type { AchievementView } from "@/lib/achievements/v2";
 import { useProfile } from "@/lib/profile";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 
@@ -218,7 +218,7 @@ function HomeFull() {
 
   const lvl = levelFor(profile.points);
   const canonicalInvHome = useCanonicalInvestigationProgress();
-  const achEvals = useAchievementLegacyEvals(profile.achievementsEarned);
+  const achViews = useAchievementViews();
 
   // ===== Campaign recommendation — SHARED SERVICE =====
   // Home Hero and Worlds Continue Journey both consume this hook,
@@ -495,29 +495,24 @@ function HomeFull() {
         });
       }
     }
-    const evals = achEvals;
-    const earnedMap = profile.achievementsEarned ?? {};
-    const nearest = evals
-      .filter((e) => !e.earned && !earnedMap[e.id])
-      .map((e) => {
-        const def = ACHIEVEMENTS.find((a) => a.id === e.id);
-        if (!def) return null;
-        const remaining = Math.max(0, def.goal - e.current);
-        return { def, remaining };
-      })
-      .filter((x): x is { def: typeof ACHIEVEMENTS[number]; remaining: number } => x !== null && x.remaining > 0)
-      .sort((a, b) => a.remaining - b.remaining)[0];
-    if (nearest && nearest.remaining <= 20) {
-      goals.push({
-        icon: <Award className="size-3.5" />,
-        label: `إنجاز «${nearest.def.name}»`,
-        remaining: nearest.remaining,
-        unit: "خطوة",
-        to: "/achievements",
-      });
+    // Nearest achievement — pick the closest-to-unlock view via v2 engine.
+    const nearest = achViews
+      .filter((v: AchievementView) => v.state === "locked-visible" && v.progress > 0 && v.progress < 1)
+      .sort((a, b) => b.progress - a.progress)[0];
+    if (nearest) {
+      const remainingPct = Math.max(1, Math.round((1 - nearest.progress) * 100));
+      if (remainingPct <= 25) {
+        goals.push({
+          icon: <Award className="size-3.5" />,
+          label: `إنجاز «${nearest.displayTitle ?? nearest.id}»`,
+          remaining: remainingPct,
+          unit: "٪ متبقٍّ",
+          to: "/achievements",
+        });
+      }
     }
     return goals.slice(0, 3);
-  }, [lvl, campaignSel, profile, achEvals]);
+  }, [lvl, campaignSel, achViews]);
 
   // ===== Recent Activity =====
   type Activity = { key: string; icon: ReactNode; eyebrow: string; title: string; to: string };
@@ -533,20 +528,17 @@ function HomeFull() {
         to: r.to ?? "/collection",
       });
     }
-    const earnedMap = profile.achievementsEarned ?? {};
-    const earnedSorted = Object.entries(earnedMap)
-      .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0));
-    if (earnedSorted.length > 0) {
-      const def = ACHIEVEMENTS.find((a) => a.id === earnedSorted[0][0]);
-      if (def) {
-        acts.push({
-          key: `ach:${def.id}`,
-          icon: <Trophy className="size-3.5" />,
-          eyebrow: "إنجاز جديد",
-          title: def.name,
-          to: "/achievements",
-        });
-      }
+    const latestEarned = achViews
+      .filter((v) => (v.state === "unlocked" || v.state === "claimed") && v.unlockedAt)
+      .sort((a, b) => new Date(b.unlockedAt!).getTime() - new Date(a.unlockedAt!).getTime())[0];
+    if (latestEarned) {
+      acts.push({
+        key: `ach:${latestEarned.id}`,
+        icon: <Trophy className="size-3.5" />,
+        eyebrow: "إنجاز جديد",
+        title: latestEarned.displayTitle ?? latestEarned.id,
+        to: "/achievements",
+      });
     }
     if (campaignSel && campaignSel.hasStarted) {
       acts.push({
@@ -567,7 +559,7 @@ function HomeFull() {
       });
     }
     return acts.slice(0, 4);
-  }, [recentDiscoveries, profile.achievementsEarned, profile.artifactsFound.length, campaignSel]);
+  }, [recentDiscoveries, achViews, profile.artifactsFound.length, campaignSel]);
 
   return (
     <AppShell>
