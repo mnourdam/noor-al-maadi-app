@@ -218,6 +218,7 @@ function HomeFull() {
 
   const lvl = levelFor(profile.points);
   const canonicalInvHome = useCanonicalInvestigationProgress();
+  const achEvals = useAchievementLegacyEvals(useProfileEarnedMap());
 
   // ===== Campaign recommendation — SHARED SERVICE =====
   // Home Hero and Worlds Continue Journey both consume this hook,
