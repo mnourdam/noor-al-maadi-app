@@ -203,101 +203,19 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "ach_legend_eternal", name: "خالد في الإرث",   desc: "ابلغ المستوى العاشر مع 365 يومًا متتاليًا.",  icon: "♾️", goal: 375, category: "legendary", rarity: "legendary", hidden_until_unlocked: true, rewards: [{ kind: "title", label: "الخالد" }] },
 ];
 
-export interface AchievementProgress { id: string; current: number; earned: boolean }
-export function evaluateAchievements(p: {
-  storiesRead: string[]; investigationsCompleted: string[]; decisionsCompleted: string[];
-  timelinesCompleted: string[]; artifactsFound: string[]; charactersUnlocked: string[];
-  regionsUnlocked: string[]; streak: number; campaignsCompleted: string[]; points: number;
-  unlockedEras?: string[]; savedStories?: string[]; missionsCompleted?: string[];
-  dinars?: number; titlesEarned?: string[]; badges?: string[];
-}, overrides?: {
-  /**
-   * Canonical investigation-completion count. Callers with access to
-   * `useCanonicalInvestigationProgress` should ALWAYS pass this to avoid
-   * under-counting when local `investigationsCompleted` is a legacy
-   * mirror that hasn't yet been backfilled from server rows.
-   */
-  investigationsCompletedCount?: number;
-}): AchievementProgress[] {
-  const lvl = levelFor(p.points).level;
-  const collection = p.artifactsFound.length + p.charactersUnlocked.length;
-  const investigationsCount = overrides?.investigationsCompletedCount ?? p.investigationsCompleted.length;
-  const legendCombo = Math.min(p.storiesRead.length, 30) + Math.min(investigationsCount, 30) + Math.min(p.timelinesCompleted.length, 30);
-  const legendMaster = Math.min(p.campaignsCompleted.length, 10) + Math.min(p.artifactsFound.length, 100) + Math.min(p.streak, 100);
-  const legendEternal = (lvl >= 50 ? 50 : Math.floor(lvl / 1)) + Math.min(p.streak, 365);
-  const map: Record<string, number> = {
-    // reading
-    ach_read_5: p.storiesRead.length,
-    ach_read_15: p.storiesRead.length,
-    ach_read_30: p.storiesRead.length,
-    ach_read_60: p.storiesRead.length,
-    ach_read_120: p.storiesRead.length,
-    ach_saved_10: (p.savedStories ?? []).length,
-    // exploration
-    ach_char_6: p.charactersUnlocked.length,
-    ach_char_15: p.charactersUnlocked.length,
-    ach_char_30: p.charactersUnlocked.length,
-    ach_char_60: p.charactersUnlocked.length,
-    ach_region_5: p.regionsUnlocked.length,
-    ach_region_10: p.regionsUnlocked.length,
-    ach_region_15: p.regionsUnlocked.length,
-    ach_eras_5: (p.unlockedEras ?? []).length,
-    ach_eras_10: (p.unlockedEras ?? []).length,
-    // mastery
-    ach_inv_5: investigationsCount,
-    ach_inv_15: investigationsCount,
-    ach_inv_30: investigationsCount,
-    ach_inv_60: investigationsCount,
-    ach_decisions_5: p.decisionsCompleted.length,
-    ach_decisions_15: p.decisionsCompleted.length,
-    ach_decisions_40: p.decisionsCompleted.length,
-    ach_timeline_5: p.timelinesCompleted.length,
-    ach_timeline_15: p.timelinesCompleted.length,
-    ach_timeline_30: p.timelinesCompleted.length,
-    // campaigns
-    ach_campaign_1: p.campaignsCompleted.length,
-    ach_campaign_3: p.campaignsCompleted.length,
-    ach_campaign_5: p.campaignsCompleted.length,
-    ach_campaign_10: p.campaignsCompleted.length,
-    ach_campaign_20: p.campaignsCompleted.length,
-    ach_missions_25: (p.missionsCompleted ?? []).length,
-    // collection
-    ach_artifact_10: p.artifactsFound.length,
-    ach_artifact_25: p.artifactsFound.length,
-    ach_artifact_50: p.artifactsFound.length,
-    ach_artifact_100: p.artifactsFound.length,
-    ach_collection_50: collection,
-    ach_collection_150: collection,
-    ach_collection_300: collection,
-    // dedication
-    ach_streak_7: p.streak,
-    ach_streak_30: p.streak,
-    ach_streak_100: p.streak,
-    ach_streak_365: p.streak,
-    ach_level_5: lvl,
-    ach_level_7: lvl,
-    ach_level_10: lvl,
-    // wealth
-    ach_points_1000: p.points,
-    ach_points_5000: p.points,
-    ach_points_15000: p.points,
-    ach_points_50000: p.points,
-    ach_dinars_500: p.dinars ?? 0,
-    ach_dinars_2000: p.dinars ?? 0,
-    ach_dinars_10000: p.dinars ?? 0,
-    ach_titles_3: (p.titlesEarned ?? []).length,
-    ach_titles_10: (p.titlesEarned ?? []).length,
-    ach_badges_10: (p.badges ?? []).length,
-    // legendary
-    ach_legend_combo: legendCombo,
-    ach_legend_master: legendMaster,
-    ach_legend_eternal: legendEternal,
-  };
-  return ACHIEVEMENTS.map((a) => {
-    const cur = map[a.id] ?? 0;
-    return { id: a.id, current: Math.min(cur, a.goal), earned: cur >= a.goal };
-  });
-}
+// -------------------------------------------------------------------------
+// Legacy `evaluateAchievements` / `AchievementProgress` were removed in the
+// Achievement Engine v2 finalization slice. All achievement unlocking, progress
+// computation, and reward granting now flow through `@/lib/achievements/v2`
+// (canonical Snapshot -> Evaluator -> Reconciler -> server RPC).
+//
+// The `ACHIEVEMENTS` / `ACHIEVEMENT_CATEGORIES` content catalogs above are
+// COMPATIBILITY-ONLY: kept as display metadata (name/desc/icon/goal/category)
+// for the profile achievements-tab UI and the 15 flagged historical entries
+// listed in `src/lib/achievements/v2/definitions/flagged.ts`. They MUST NOT
+// be used to compute unlocks, progress, or grant rewards - that path is
+// deleted. Ported achievements source their state from v2 `AchievementView`s.
+// -------------------------------------------------------------------------
 
 // ============================================================
 // SEASONS — 12 monthly seasons, rotated by Gregorian month.
