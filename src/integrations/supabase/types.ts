@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievement_registry: {
+        Row: {
+          category: string
+          created_at: string
+          dinars: number
+          engine_version: number
+          id: string
+          rarity: string
+          title_id: string | null
+          xp: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          dinars?: number
+          engine_version?: number
+          id: string
+          rarity: string
+          title_id?: string | null
+          xp?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          dinars?: number
+          engine_version?: number
+          id?: string
+          rarity?: string
+          title_id?: string | null
+          xp?: number
+        }
+        Relationships: []
+      }
       admin_audit_log: {
         Row: {
           action: string
@@ -2143,6 +2176,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_titles: {
+        Row: {
+          earned_at: string
+          source_achievement_id: string | null
+          title_id: string
+          user_id: string
+        }
+        Insert: {
+          earned_at?: string
+          source_achievement_id?: string | null
+          title_id: string
+          user_id: string
+        }
+        Update: {
+          earned_at?: string
+          source_achievement_id?: string | null
+          title_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       campaigns_public: {
@@ -2602,6 +2656,14 @@ export type Database = {
       backfill_investigation_completions: {
         Args: { p_legacy_keys: string[] }
         Returns: Json
+      }
+      claim_achievement_rewards: {
+        Args: { _ids: string[] }
+        Returns: {
+          already_claimed: string[]
+          inserted: string[]
+          rejected: string[]
+        }[]
       }
       claim_signup_referral_rewards: { Args: never; Returns: Json }
       claim_streak_reward: { Args: { p_days: number }; Returns: Json }
