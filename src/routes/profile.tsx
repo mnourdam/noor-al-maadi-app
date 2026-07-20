@@ -18,10 +18,11 @@ import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
 import profileHeaderArt from "@/assets/hero/22-scholar-journey.jpg?url";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import {
-  ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, evaluateAchievements, levelFor,
+  ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, levelFor,
   CURRENT_SEASON, SEASONS, ERAS,
   type AchievementCategory, type AchievementDef, type AchievementRarity,
 } from "@/lib/app-constants";
+import { useAchievementLegacyEvals } from "@/lib/achievements/v2/driver";
 import { useProfile } from "@/lib/profile";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { STREAK_MILESTONES, getEffectiveHearts, HEART_MAX, msUntilNextHeart } from "@/lib/hearts";
@@ -150,7 +151,8 @@ function ProfilePage() {
 
   const lvl = levelFor(profile.points);
   const canonicalInvForAch = useCanonicalInvestigationProgress();
-  const achievements = evaluateAchievements(profile, { investigationsCompletedCount: canonicalInvForAch.count });
+  void canonicalInvForAch; // canonical hook still mounted for cache; v2 engine reads it internally
+  const achievements = useAchievementLegacyEvals(profile.achievementsEarned);
   const achMap = useMemo(() => new Map(achievements.map((a) => [a.id, a])), [achievements]);
   const earnedCount = achievements.filter((a) => a.earned).length;
 
