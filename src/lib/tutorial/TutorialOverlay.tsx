@@ -203,6 +203,8 @@ export function TutorialOverlay() {
 
   // ---- Finish sequence: scroll home to top, then close ----
   const finishSeqRef = useRef<{ ran: boolean }>({ ran: false });
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [wrapperEl, setWrapperEl] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!finishing) {
       finishSeqRef.current.ran = false;
