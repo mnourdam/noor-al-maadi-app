@@ -450,8 +450,10 @@ function ProfilePage() {
               seasonPct={seasonPct}
               seasonReady={seasonReady}
               claimSeason={claimSeason}
+              onSeeAllAchievements={() => setTab("achievements")}
             />
           )}
+
           {tab === "progress" && <ProgressTab profile={profile} lvl={lvl} />}
           {tab === "achievements" && (
             <AchievementsTab views={achievementViews} onOpen={(v) => setAchDetail(v)} />
