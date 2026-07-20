@@ -647,50 +647,17 @@ export function TutorialProvider({
   // after every real predicate becomes true.
   // ------------------------------------------------------------
   useEffect(() => {
-    __tutorialAutoStartTelemetry.autoStartEffectRan += 1;
     const completed = persistence.hasCompleted(effectiveConfig.version);
+    if (completed) return;
     const envInputs = {
       pathname,
       overlayStackSize,
       homeStableFrames,
       documentVisible,
     };
-    const eligible = computeEligibility(envInputs);
-    const s = api.getSnapshot();
-    let result: AutoStartResult;
-    if (completed) {
-      result = "skipped-completed";
-    } else if (!eligible) {
-      result = "skipped-not-eligible";
-    } else if (s.state !== "idle") {
-      result = "skipped-not-idle";
-    } else {
-      __tutorialAutoStartTelemetry.requestStartCalled += 1;
-      api.requestStart();
-      const after = api.getSnapshot();
-      result = after.state === "idle" ? "invoked-still-idle" : "invoked";
-    }
-    __tutorialAutoStartTelemetry.lastRequestStartResult = result;
-    // Persist a diagnostic snapshot capturing the EXACT values used
-    // by this effect execution (not a later render's view).
-    try {
-      writeLastStartDiagnostic({
-        reason: "auto-start-effect",
-        pathname,
-        overlayStackSize,
-        totalOverlayStackSize,
-        overlayLabels: overlayEntries.map((e) => e.label),
-        homeStableFrames,
-        documentVisible,
-        engineState: s.state,
-        eligible,
-        completed,
-        autoStartResult: result,
-      });
-    } catch {
-      /* ignore */
-    }
-
+    if (!computeEligibility(envInputs)) return;
+    if (api.getSnapshot().state !== "idle") return;
+    api.requestStart();
   }, [
     api,
     effectiveConfig.version,
