@@ -35,15 +35,7 @@ import {
   IRTH_FIRST_TIME_TUTORIAL,
   TUTORIAL_TARGET_RESOLUTION_WINDOW_MS,
 } from "./data";
-import {
-  registerTutorialDebugBinding,
-  writeLastStartDiagnostic,
-  __tutorialAutoStartTelemetry,
-  logTutorialTransition,
-  logTutorialEvent,
-  resetPerStepInstrumentation,
-  type AutoStartResult,
-} from "./debug";
+import { registerTutorialDebugBinding } from "./debug";
 import { FIRST_TIME_TUTORIAL_ID, getTutorialConfig } from "./registry";
 import * as persistence from "./persistence";
 import {
@@ -173,14 +165,7 @@ function snapshotOf(store: InternalStore): TutorialEngineSnapshot {
 
 function transition(store: InternalStore, next: TutorialEngineState) {
   if (store.state === next) return;
-  const prev = store.state;
   store.state = next;
-  try {
-    logTutorialTransition(prev, next);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("[tutorial] logTutorialTransition threw:", err);
-  }
   notify(store);
 }
 
@@ -208,12 +193,6 @@ function fireStepChanged(
   direction: "forward" | "backward" | "initial",
 ) {
   const step = store.config.steps[rawIndex]!;
-  try {
-    resetPerStepInstrumentation(step.id);
-    logTutorialEvent("step-changed", { reason: direction });
-  } catch {
-    /* ignore */
-  }
   fireHook(store.hooks, "onStepChanged", {
     id: store.config.id,
     version: store.config.version,
@@ -236,6 +215,9 @@ interface InternalEngine extends TutorialEngineApi {
   openSkipConfirm(): void;
   closeSkipConfirm(): void;
   isSkipConfirmOpen(): boolean;
+  /** Overlay-owned finalization: called after the finish scroll-to-top +
+   *  fade-out sequence completes; transitions `finishing → completed`. */
+  completeAfterFinishing(): void;
 }
 
 function createEngine(store: InternalStore): InternalEngine {
@@ -294,7 +276,9 @@ function createEngine(store: InternalStore): InternalEngine {
       if (store.stepIndex == null) return;
       const nextIdx = nextEnabledIndex(store.config, store.stepIndex);
       if (nextIdx == null) {
-        // No more enabled steps → natural finish.
+        // No more enabled steps → natural finish. Route through
+        // `finishing` so the overlay can smoothly scroll Home to the
+        // top and fade out before the tutorial closes.
         const finalStep = store.config.steps[store.stepIndex]!;
         persistence.markCompleted(store.config.version);
         fireHook(store.hooks, "onTutorialCompleted", {
@@ -304,18 +288,12 @@ function createEngine(store: InternalStore): InternalEngine {
         });
         store.stepIndex = null;
         store.targetRect = null;
-        transition(store, "completed");
+        transition(store, "finishing");
         return;
       }
       store.stepIndex = nextIdx;
       store.targetRect = null;
       fireStepChanged(store, nextIdx, "forward");
-      // Transition to locating_target synchronously. The locator
-      // effect re-runs (currentStep changed) and drives the rest of
-      // the sequence itself. A trailing queueMicrotask here would fire
-      // AFTER the effect has already reached showing_step for
-      // synchronously-resolvable targets (bottom-nav), resetting the
-      // engine back to locating_target and dropping the CoachMark.
       transition(store, "locating_target");
     },
     previous() {
@@ -346,9 +324,8 @@ function createEngine(store: InternalStore): InternalEngine {
       transition(store, "completed");
     },
     finish() {
-      // Finish is only correct if we're on the last enabled step, but
-      // we accept the caller's decision (used by natural completion
-      // and by tutorialDebug.finish()).
+      // Route through `finishing` so the overlay can scroll Home to
+      // the top and fade out before actually closing.
       const lastIdx = lastEnabledIndex(store.config);
       const finalStep =
         lastIdx != null ? store.config.steps[lastIdx] ?? null : null;
@@ -360,6 +337,10 @@ function createEngine(store: InternalStore): InternalEngine {
       });
       store.stepIndex = null;
       store.targetRect = null;
+      transition(store, "finishing");
+    },
+    completeAfterFinishing() {
+      if (store.state !== "finishing") return;
       transition(store, "completed");
     },
     forceClose() {
@@ -668,50 +649,17 @@ export function TutorialProvider({
   // after every real predicate becomes true.
   // ------------------------------------------------------------
   useEffect(() => {
-    __tutorialAutoStartTelemetry.autoStartEffectRan += 1;
     const completed = persistence.hasCompleted(effectiveConfig.version);
+    if (completed) return;
     const envInputs = {
       pathname,
       overlayStackSize,
       homeStableFrames,
       documentVisible,
     };
-    const eligible = computeEligibility(envInputs);
-    const s = api.getSnapshot();
-    let result: AutoStartResult;
-    if (completed) {
-      result = "skipped-completed";
-    } else if (!eligible) {
-      result = "skipped-not-eligible";
-    } else if (s.state !== "idle") {
-      result = "skipped-not-idle";
-    } else {
-      __tutorialAutoStartTelemetry.requestStartCalled += 1;
-      api.requestStart();
-      const after = api.getSnapshot();
-      result = after.state === "idle" ? "invoked-still-idle" : "invoked";
-    }
-    __tutorialAutoStartTelemetry.lastRequestStartResult = result;
-    // Persist a diagnostic snapshot capturing the EXACT values used
-    // by this effect execution (not a later render's view).
-    try {
-      writeLastStartDiagnostic({
-        reason: "auto-start-effect",
-        pathname,
-        overlayStackSize,
-        totalOverlayStackSize,
-        overlayLabels: overlayEntries.map((e) => e.label),
-        homeStableFrames,
-        documentVisible,
-        engineState: s.state,
-        eligible,
-        completed,
-        autoStartResult: result,
-      });
-    } catch {
-      /* ignore */
-    }
-
+    if (!computeEligibility(envInputs)) return;
+    if (api.getSnapshot().state !== "idle") return;
+    api.requestStart();
   }, [
     api,
     effectiveConfig.version,
@@ -775,9 +723,6 @@ export function TutorialProvider({
     const isActive = () => activeTaskIdRef.current === taskId;
     const staleGuard = (site: string): boolean => {
       if (isActive()) return false;
-      logTutorialEvent("task-ignored-stale", {
-        reason: `taskId=${taskId} stepIndex=${stepIndex} stepId=${stepId} site=${site}`,
-      });
       return true;
     };
 
@@ -793,19 +738,10 @@ export function TutorialProvider({
     const selector = `[data-tutorial-target="${currentStep.targetId}"]`;
     const start = performance.now();
     const stepAnalyticsId = currentStep.analyticsId;
-
-    logTutorialEvent("task-created", {
-      reason: `taskId=${taskId} stepIndex=${stepIndex} stepId=${stepId} selector=${selector}`,
-    });
-
     // Per-step watchdog owns the WHOLE task lifetime (locating →
     // scrolling → measuring). Cleared only on showing_step, on
     // skip-forward, or on cancellation.
     const STEP_WATCHDOG_MS = 5000;
-    logTutorialEvent("locator-effect-started", {
-      reason: `taskId=${taskId} selector=${selector}`,
-      watchdogStarted: true,
-    });
     watchdogHandle = window.setTimeout(() => {
       if (staleGuard("watchdog")) return;
       // Final synchronous measurement before deciding. If the element
@@ -821,19 +757,11 @@ export function TutorialProvider({
       console.warn(
         `[tutorial] step watchdog fired for "${stepAnalyticsId}" — state=${store.state}, hasRect=${rect != null}, hasSize=${hasSize}.`,
       );
-      logTutorialEvent("watchdog-fired", {
-        reason: `taskId=${taskId} state=${store.state} hasSize=${hasSize}`,
-        watchdogFired: true,
-      });
       if (el && hasSize) {
         clearWatchdog();
         attachMeasurement(el);
         return;
       }
-      logTutorialEvent("api-next-called", {
-        reason: "watchdog-no-usable-element",
-        apiNextCalled: true,
-      });
       taskCompleted = true;
       activeTaskIdRef.current = taskId + 1;
       api.next();
@@ -958,12 +886,6 @@ export function TutorialProvider({
           stableFrames >= SETTLE_FRAMES && movementSatisfied;
         const timedOut = elapsed >= SETTLE_TIMEOUT_MS;
         if (settled || timedOut) {
-          logTutorialEvent("settle-resolved", {
-            reason: settled
-              ? `stable-frames movement=${scrollMoved ? "scroll" : rectMoved ? "rect" : "already-visible"}`
-              : `timeout movement=${scrollMoved || rectMoved ? "yes" : "no"}`,
-            scrollSettled: true,
-          });
           rafHandle = requestAnimationFrame(() => {
             if (staleGuard("post-settle-raf-1")) return;
             rafHandle = requestAnimationFrame(() => {
@@ -974,34 +896,18 @@ export function TutorialProvider({
               // off-screen rect is NOT a skip condition — CoachMark
               // placement clamps separately.
               if (!rectHasSize(finalRect)) {
-                logTutorialEvent("rect-invalid-after-settle", {
-                  reason: `zero-size rect=${JSON.stringify({ x: finalRect.x, y: finalRect.y, w: finalRect.width, h: finalRect.height })}`,
-                });
                 if (
                   currentStep.skipIfTargetUnavailable ||
                   currentStep.onMissingTarget === "skip"
                 ) {
-                  logTutorialEvent("api-next-called", {
-                    reason: "zero-size+skip-if-unavailable",
-                    apiNextCalled: true,
-                  });
                   clearWatchdog();
                   taskCompleted = true;
                   activeTaskIdRef.current = taskId + 1;
                   api.next();
                   return;
                 }
-                logTutorialEvent("rect-invalid-no-skip", {
-                  reason: "attaching-anyway (no skipIfTargetUnavailable)",
-                });
               } else if (!rectIntersects(finalRect)) {
-                logTutorialEvent("post-settle-offscreen", {
-                  reason: `attaching-anyway top=${Math.round(finalRect.top)} bottom=${Math.round(finalRect.bottom)}`,
-                });
               } else {
-                logTutorialEvent("final-rect-valid", {
-                  reason: `top=${Math.round(finalRect.top)} bottom=${Math.round(finalRect.bottom)}`,
-                });
               }
               attachMeasurement(el);
             });
@@ -1017,9 +923,6 @@ export function TutorialProvider({
       if (staleGuard("tryResolve")) return;
       const el = document.querySelector(selector) as HTMLElement | null;
       if (el) {
-        logTutorialEvent("target-resolved", {
-          reason: `taskId=${taskId} scroll=${currentStep.scroll ?? "none"}`,
-        });
         // Normalize to locating_target before advancing (we may
         // enter from `armed` or `transitioning`).
         if (store.state !== "locating_target") {
@@ -1052,18 +955,11 @@ export function TutorialProvider({
           currentStep.skipIfTargetUnavailable ||
           currentStep.onMissingTarget === "skip"
         ) {
-          logTutorialEvent("target-unresolved-skip", {
-            reason: `elapsed=${Math.round(elapsed)}ms`,
-            apiNextCalled: true,
-          });
           clearWatchdog();
           taskCompleted = true;
           activeTaskIdRef.current = taskId + 1;
           api.next();
         } else {
-          logTutorialEvent("target-unresolved-retry", {
-            reason: `elapsed=${Math.round(elapsed)}ms — no skipIfTargetUnavailable`,
-          });
           retryTimeout = window.setTimeout(() => {
             retryTimeout = null;
             if (staleGuard("retry-timeout")) return;
@@ -1083,15 +979,6 @@ export function TutorialProvider({
       if (activeTaskIdRef.current === taskId) {
         activeTaskIdRef.current = taskId + 1;
       }
-      logTutorialEvent(
-        taskCompleted ? "task-completed" : "task-aborted",
-        {
-          reason: `taskId=${taskId} stepIndex=${stepIndex} stepId=${stepId} state=${store.state}`,
-        },
-      );
-      logTutorialEvent("locator-effect-cleanup", {
-        reason: taskCompleted ? "task-completed" : `aborted-state=${store.state}`,
-      });
       clearWatchdog();
       if (rafHandle != null) cancelAnimationFrame(rafHandle);
       if (retryTimeout != null) clearTimeout(retryTimeout);
