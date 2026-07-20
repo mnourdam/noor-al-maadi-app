@@ -1,16 +1,25 @@
 // ============================================================
-// Guided Tutorial — Overlay UI (Phase 2B)
+// Guided Tutorial — Overlay UI (Presentation Polish)
 // ------------------------------------------------------------
-// Renders the dimmed backdrop, SVG spotlight cutout, coach-mark
-// panel (Arabic RTL), and skip-confirmation dialog. Mounted from
-// `TutorialProvider`'s children.
+// Renders one persistent dimmed backdrop, an SVG spotlight cutout
+// that smoothly morphs between step targets, an Arabic RTL
+// coach-mark that crossfades between steps, and the skip-
+// confirmation dialog. Mounted from `TutorialProvider`'s children.
 //
-// Never installs its own Back listener: skip-confirm registers as a
-// standard shadcn AlertDialog, and Back is forwarded through the
-// unified Navigation Engine overlay LIFO.
+// Presentation phases are derived locally from engine state — the
+// engine state machine is unmodified. The dim layer is only
+// unmounted when the tutorial is truly idle/completed; every
+// transition between steps keeps the dim stable and only animates
+// the spotlight cutout position and the coach-mark opacity.
+//
+// The final `finishing` state (entered on natural completion via
+// "ابدأ الرحلة" or debug finish) fades the spotlight/coach-mark
+// out, scrolls the Home page smoothly back to `scrollY = 0`,
+// then fades the dim away and closes the overlay by calling
+// `api.completeAfterFinishing()`.
 // ============================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -26,6 +35,26 @@ import {
 
 import { TUTORIAL_COPY } from "@/lib/tutorial/data";
 import { useTutorial } from "@/lib/tutorial/engine";
+
+// ------------------------------------------------------------
+// Timings (short, eased, non-flashy)
+// ------------------------------------------------------------
+
+const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+// CoachMark: fast fade so step-to-step feels continuous.
+const COACH_FADE_MS = 160;
+// Spotlight cutout morph between step rects.
+const SPOTLIGHT_MORPH_MS = 180;
+// Dim layer: only fades in on first show / out on finish.
+const DIM_FADE_MS = 220;
+// Finish sequence timings.
+const FINISH_FADE_OUT_MS = 180; // spotlight + coachmark fade out
+const FINISH_SCROLL_HOLD_MS = 520; // wait for smooth scroll to progress before fading dim
+const FINISH_DIM_FADE_MS = 260;
+const FINISH_TOTAL_MS =
+  FINISH_FADE_OUT_MS + FINISH_SCROLL_HOLD_MS + FINISH_DIM_FADE_MS;
+// Post-transition button lock-out to prevent double taps.
+const BUTTON_LOCK_MS = 120;
 
 // ------------------------------------------------------------
 // Reduced-motion helper
@@ -50,8 +79,6 @@ function useReducedMotion(): boolean {
 
 interface CoachMarkPos {
   top: number;
-  /** rtl-friendly: we use `insetInlineStart`, but positioning is
-   *  centered horizontally against the viewport. */
   left: number;
   width: number;
   arrow: "up" | "down";
@@ -91,13 +118,17 @@ function computePlacement(
   else if (preferred === "bottom") showAbove = false;
   else showAbove = spaceAbove > spaceBelow;
 
-  // Flip if not enough room and the other side has more.
-  if (showAbove && spaceAbove < COACH_HEIGHT_ESTIMATE + COACH_GAP + COACH_MARGIN &&
-      spaceBelow > spaceAbove) {
+  if (
+    showAbove &&
+    spaceAbove < COACH_HEIGHT_ESTIMATE + COACH_GAP + COACH_MARGIN &&
+    spaceBelow > spaceAbove
+  ) {
     showAbove = false;
-  } else if (!showAbove &&
-      spaceBelow < COACH_HEIGHT_ESTIMATE + COACH_GAP + COACH_MARGIN &&
-      spaceAbove > spaceBelow) {
+  } else if (
+    !showAbove &&
+    spaceBelow < COACH_HEIGHT_ESTIMATE + COACH_GAP + COACH_MARGIN &&
+    spaceAbove > spaceBelow
+  ) {
     showAbove = true;
   }
 
@@ -123,7 +154,6 @@ function computePlacement(
 export function TutorialOverlay() {
   const {
     api,
-    config,
     snapshot,
     currentStep,
     targetRect,
@@ -145,39 +175,103 @@ export function TutorialOverlay() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // ---- Derived presentation state ----
+  const state = snapshot.state;
+  const finishing = state === "finishing";
   const active =
-    snapshot.state !== "idle" &&
-    snapshot.state !== "completed" &&
-    snapshot.state !== "paused_by_overlay" &&
-    currentStep != null;
+    state !== "idle" && state !== "completed" && state !== "paused_by_overlay";
+  // Dim renders whenever the tutorial is active (including all
+  // internal locate/scroll/measure phases and finishing). It is only
+  // faded out at the very end of the finish sequence.
+  const dimVisible = active;
 
-  // Only reveal the dim + spotlight + coach-mark when the engine has
-  // fully resolved a target for the current step. Rendering the dim
-  // during `transitioning` / `locating_target` / `scrolling_to_target`
-  // / `measuring_target` produces a dead opaque screen with no controls
-  // — the exact freeze reported on Android for the Worlds step.
-  const shouldRenderSpotlight =
-    active && snapshot.state === "showing_step" && targetRect != null;
-  const shouldRenderChrome = shouldRenderSpotlight;
+  // The coach-mark is only fully visible while the engine has a
+  // resolved target for the current step. Anything else fades it
+  // toward opacity 0 while the dim/spotlight remain stable.
+  const showingStep = state === "showing_step" && targetRect != null;
+  const coachVisible = showingStep && !finishing;
 
+  // Persist the last known target rect so the spotlight cutout can
+  // morph continuously between steps (or fade out gracefully during
+  // scrolling / finishing) instead of disappearing to a zero-size
+  // rect and re-materializing. When we don't yet have a rect at all
+  // (very first step), the spotlight stays hidden until targetRect
+  // arrives.
+  const [lastRect, setLastRect] = useState<DOMRectReadOnly | null>(null);
+  useEffect(() => {
+    if (targetRect) setLastRect(targetRect);
+  }, [targetRect]);
+  useEffect(() => {
+    if (!active) setLastRect(null);
+  }, [active]);
+  const spotlightRect = targetRect ?? lastRect;
+  const spotlightVisible =
+    active && !finishing && spotlightRect != null;
+
+  // ---- Finish sequence: scroll home to top, then close ----
+  const finishSeqRef = useRef<{ ran: boolean }>({ ran: false });
+  useEffect(() => {
+    if (!finishing) {
+      finishSeqRef.current.ran = false;
+      return;
+    }
+    if (finishSeqRef.current.ran) return;
+    finishSeqRef.current.ran = true;
+
+    // Trigger the scroll immediately so the smooth animation runs in
+    // parallel with the spotlight/coach-mark fade-out.
+    try {
+      if (typeof window !== "undefined") {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: reducedMotion ? "auto" : "smooth",
+        });
+      }
+    } catch {
+      try {
+        window.scrollTo(0, 0);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (reducedMotion) {
+      // Skip through the fade timings — snap-close.
+      const t = window.setTimeout(() => {
+        api.completeAfterFinishing();
+      }, 60);
+      return () => window.clearTimeout(t);
+    }
+
+    const t = window.setTimeout(() => {
+      api.completeAfterFinishing();
+    }, FINISH_TOTAL_MS);
+    return () => window.clearTimeout(t);
+  }, [finishing, reducedMotion, api]);
+
+  // ---- Button interaction lock (prevents double-tap on transitions) ----
+  const [buttonLocked, setButtonLocked] = useState(false);
+  const lockButtons = () => {
+    setButtonLocked(true);
+    window.setTimeout(() => setButtonLocked(false), BUTTON_LOCK_MS);
+  };
+
+  // ---- Compute placement from the CURRENT step's real rect only ----
   const placement = useMemo(
     () =>
       computePlacement(
-        shouldRenderSpotlight ? targetRect : null,
+        showingStep ? targetRect : null,
         currentStep?.placement ?? "top",
         viewport.h,
         viewport.w,
       ),
-    [shouldRenderSpotlight, targetRect, currentStep?.placement, viewport],
+    [showingStep, targetRect, currentStep?.placement, viewport],
   );
 
   if (typeof document === "undefined") return null;
-  if (!shouldRenderChrome && !skipConfirmOpen) return null;
+  if (!active && !skipConfirmOpen) return null;
 
-  // Progress + prev/next flags derived from ENABLED steps only.
-  // Disabled steps are invisible: they do not count toward the
-  // progress denominator, cannot be reached with prev/next, and do
-  // not affect the "first"/"last" affordance labels.
   const isFirstStep =
     snapshot.stepIndex != null && (enabledOrdinal ?? 0) <= 1;
   const isLastStep =
@@ -188,18 +282,39 @@ export function TutorialOverlay() {
     enabledOrdinal != null && enabledTotal > 0
       ? TUTORIAL_COPY.stepCounter(enabledOrdinal, enabledTotal)
       : "";
-  void config; // preserved for future debug-color styling
 
   const padding = currentStep?.padding ?? 8;
-
-  // SVG mask: a full-viewport rect punched by the target rect.
-  const cutoutX = targetRect ? targetRect.left - padding : 0;
-  const cutoutY = targetRect ? targetRect.top - padding : 0;
-  const cutoutW = targetRect ? targetRect.width + padding * 2 : 0;
-  const cutoutH = targetRect ? targetRect.height + padding * 2 : 0;
+  const r = spotlightRect;
+  const cutoutX = r ? r.left - padding : 0;
+  const cutoutY = r ? r.top - padding : 0;
+  const cutoutW = r ? r.width + padding * 2 : 0;
+  const cutoutH = r ? r.height + padding * 2 : 0;
   const cutoutR = 16;
 
-  const transitionMs = reducedMotion ? 0 : 260;
+  // ---- Opacities (drive every visual phase from state) ----
+  // Dim: fully opaque while active; fades out during finishing.
+  const dimOpacity = dimVisible ? (finishing ? 0 : 1) : 0;
+  const spotlightOpacity = spotlightVisible ? 1 : 0;
+  const coachOpacity = coachVisible ? 1 : 0;
+
+  const morphTransition = reducedMotion
+    ? "none"
+    : `x ${SPOTLIGHT_MORPH_MS}ms ${EASE}, y ${SPOTLIGHT_MORPH_MS}ms ${EASE}, width ${SPOTLIGHT_MORPH_MS}ms ${EASE}, height ${SPOTLIGHT_MORPH_MS}ms ${EASE}, opacity ${FINISH_FADE_OUT_MS}ms ${EASE}`;
+
+  const coachTransition = reducedMotion
+    ? "opacity 60ms linear"
+    : `opacity ${COACH_FADE_MS}ms ${EASE}, top ${SPOTLIGHT_MORPH_MS}ms ${EASE}, inset-inline-start ${SPOTLIGHT_MORPH_MS}ms ${EASE}`;
+
+  const dimTransition = reducedMotion
+    ? "none"
+    : `opacity ${finishing ? FINISH_DIM_FADE_MS : DIM_FADE_MS}ms ${EASE} ${
+        finishing ? `${FINISH_FADE_OUT_MS + FINISH_SCROLL_HOLD_MS}ms` : "0ms"
+      }`;
+
+  // While transitioning, the coach-mark is faded to 0 — freeze its
+  // buttons regardless of the lock. Also freeze during the finishing
+  // fade-out to prevent last-frame double taps.
+  const buttonsInteractive = coachVisible && !buttonLocked;
 
   const node = (
     <div
@@ -209,12 +324,12 @@ export function TutorialOverlay() {
         position: "fixed",
         inset: 0,
         zIndex: 2000,
-        pointerEvents: shouldRenderChrome ? "auto" : "none",
+        pointerEvents: active ? "auto" : "none",
       }}
     >
-      {shouldRenderChrome && (
+      {active && (
         <>
-          {/* Dimmed backdrop with SVG cutout. */}
+          {/* Persistent dim + morphing spotlight cutout. */}
           <svg
             width="100%"
             height="100%"
@@ -222,28 +337,27 @@ export function TutorialOverlay() {
               position: "absolute",
               inset: 0,
               pointerEvents: "auto",
-              // `allowTargetInteraction: false` for every step means
-              // the overlay always absorbs taps — no pass-through.
+              opacity: dimOpacity,
+              transition: dimTransition,
             }}
             aria-hidden="true"
           >
             <defs>
               <mask id="irth-tutorial-mask">
                 <rect width="100%" height="100%" fill="white" />
-                {shouldRenderSpotlight && (
-                  <rect
-                    x={cutoutX}
-                    y={cutoutY}
-                    width={cutoutW}
-                    height={cutoutH}
-                    rx={cutoutR}
-                    ry={cutoutR}
-                    fill="black"
-                    style={{
-                      transition: `all ${transitionMs}ms cubic-bezier(0.22, 1, 0.36, 1)`,
-                    }}
-                  />
-                )}
+                <rect
+                  x={cutoutX}
+                  y={cutoutY}
+                  width={cutoutW}
+                  height={cutoutH}
+                  rx={cutoutR}
+                  ry={cutoutR}
+                  fill="black"
+                  style={{
+                    opacity: spotlightOpacity,
+                    transition: morphTransition,
+                  }}
+                />
               </mask>
             </defs>
             <rect
@@ -252,26 +366,25 @@ export function TutorialOverlay() {
               fill="rgba(0,0,0,0.72)"
               mask="url(#irth-tutorial-mask)"
             />
-            {shouldRenderSpotlight && (
-              <rect
-                x={cutoutX}
-                y={cutoutY}
-                width={cutoutW}
-                height={cutoutH}
-                rx={cutoutR}
-                ry={cutoutR}
-                fill="none"
-                stroke="rgba(244, 217, 139, 0.9)"
-                strokeWidth={2}
-                style={{
-                  transition: `all ${transitionMs}ms cubic-bezier(0.22, 1, 0.36, 1)`,
-                  filter: "drop-shadow(0 0 10px rgba(244, 217, 139, 0.35))",
-                }}
-              />
-            )}
+            <rect
+              x={cutoutX}
+              y={cutoutY}
+              width={cutoutW}
+              height={cutoutH}
+              rx={cutoutR}
+              ry={cutoutR}
+              fill="none"
+              stroke="rgba(244, 217, 139, 0.9)"
+              strokeWidth={2}
+              style={{
+                opacity: spotlightOpacity,
+                transition: morphTransition,
+                filter: "drop-shadow(0 0 10px rgba(244, 217, 139, 0.35))",
+              }}
+            />
           </svg>
 
-          {/* Coach-mark panel */}
+          {/* Coach-mark panel — always mounted while active, fades between steps. */}
           {currentStep && (
             <div
               role="dialog"
@@ -283,11 +396,9 @@ export function TutorialOverlay() {
                 top: placement.top,
                 insetInlineStart: placement.left,
                 width: placement.width,
-                pointerEvents: "auto",
-                transition: reducedMotion
-                  ? undefined
-                  : `top ${transitionMs}ms cubic-bezier(0.22, 1, 0.36, 1), inset-inline-start ${transitionMs}ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease`,
-                opacity: shouldRenderSpotlight ? 1 : 0,
+                pointerEvents: coachVisible ? "auto" : "none",
+                opacity: coachOpacity,
+                transition: coachTransition,
               }}
               className="rounded-2xl border border-gold/40 bg-black/90 p-4 text-right shadow-2xl backdrop-blur"
             >
@@ -298,7 +409,8 @@ export function TutorialOverlay() {
                 <button
                   type="button"
                   onClick={() => api.openSkipConfirm()}
-                  className="text-[11px] text-white/60 underline decoration-dotted underline-offset-4 hover:text-white"
+                  disabled={!buttonsInteractive}
+                  className="text-[11px] text-white/60 underline decoration-dotted underline-offset-4 hover:text-white disabled:opacity-40"
                 >
                   {TUTORIAL_COPY.skip}
                 </button>
@@ -318,15 +430,25 @@ export function TutorialOverlay() {
               <div className="mt-3 flex flex-row-reverse items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => (isLastStep ? api.finish() : api.next())}
-                  className="rounded-full bg-gradient-gold px-4 py-2 text-[12px] font-bold text-primary-foreground shadow-gold"
+                  onClick={() => {
+                    if (!buttonsInteractive) return;
+                    lockButtons();
+                    if (isLastStep) api.finish();
+                    else api.next();
+                  }}
+                  disabled={!buttonsInteractive}
+                  className="rounded-full bg-gradient-gold px-4 py-2 text-[12px] font-bold text-primary-foreground shadow-gold disabled:opacity-60"
                 >
                   {isLastStep ? TUTORIAL_COPY.begin : TUTORIAL_COPY.next}
                 </button>
                 <button
                   type="button"
-                  onClick={() => api.previous()}
-                  disabled={isFirstStep}
+                  onClick={() => {
+                    if (!buttonsInteractive) return;
+                    lockButtons();
+                    api.previous();
+                  }}
+                  disabled={!buttonsInteractive || isFirstStep}
                   className="rounded-full border border-white/20 px-4 py-2 text-[12px] text-white/80 disabled:opacity-40"
                 >
                   {TUTORIAL_COPY.previous}
