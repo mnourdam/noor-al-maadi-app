@@ -346,14 +346,14 @@ export function TutorialOverlay() {
               <mask id="irth-tutorial-mask">
                 <rect width="100%" height="100%" fill="white" />
                 <rect
-                  x={cutoutX}
-                  y={cutoutY}
-                  width={cutoutW}
-                  height={cutoutH}
                   rx={cutoutR}
                   ry={cutoutR}
                   fill="black"
                   style={{
+                    x: `${cutoutX}px`,
+                    y: `${cutoutY}px`,
+                    width: `${cutoutW}px`,
+                    height: `${cutoutH}px`,
                     opacity: spotlightOpacity,
                     transition: morphTransition,
                   }}
@@ -367,16 +367,16 @@ export function TutorialOverlay() {
               mask="url(#irth-tutorial-mask)"
             />
             <rect
-              x={cutoutX}
-              y={cutoutY}
-              width={cutoutW}
-              height={cutoutH}
               rx={cutoutR}
               ry={cutoutR}
               fill="none"
               stroke="rgba(244, 217, 139, 0.9)"
               strokeWidth={2}
               style={{
+                x: `${cutoutX}px`,
+                y: `${cutoutY}px`,
+                width: `${cutoutW}px`,
+                height: `${cutoutH}px`,
                 opacity: spotlightOpacity,
                 transition: morphTransition,
                 filter: "drop-shadow(0 0 10px rgba(244, 217, 139, 0.35))",
