@@ -310,8 +310,13 @@ function createEngine(store: InternalStore): InternalEngine {
       store.stepIndex = nextIdx;
       store.targetRect = null;
       fireStepChanged(store, nextIdx, "forward");
-      transition(store, "transitioning");
-      queueMicrotask(() => transition(store, "locating_target"));
+      // Transition to locating_target synchronously. The locator
+      // effect re-runs (currentStep changed) and drives the rest of
+      // the sequence itself. A trailing queueMicrotask here would fire
+      // AFTER the effect has already reached showing_step for
+      // synchronously-resolvable targets (bottom-nav), resetting the
+      // engine back to locating_target and dropping the CoachMark.
+      transition(store, "locating_target");
     },
     previous() {
       if (store.stepIndex == null) return;
@@ -320,8 +325,7 @@ function createEngine(store: InternalStore): InternalEngine {
       store.stepIndex = prevIdx;
       store.targetRect = null;
       fireStepChanged(store, prevIdx, "backward");
-      transition(store, "transitioning");
-      queueMicrotask(() => transition(store, "locating_target"));
+      transition(store, "locating_target");
     },
     skip() {
       const atStepIndex = store.stepIndex;
