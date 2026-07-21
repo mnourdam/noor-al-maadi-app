@@ -13,20 +13,29 @@ export const Route = createFileRoute("/share-card")({
 });
 
 function ShareCardPage() {
-  const { user, account } = useAccount();
+  const { user, account, displayName } = useAccount();
   const { profile } = useProfile();
   const [code, setCode] = useState<string | null>(null);
 
   useEffect(() => { if (user) fetchMyReferralCode(user.id).then(setCode); }, [user]);
 
-
-  const username = account?.username ?? profile.name ?? "صديق التاريخ";
+  const username = account?.username ?? "";
 
   return (
     <AppShell>
       <Screen title="بطاقة الهوية التاريخية" subtitle="شارك إنجازك مع أصدقائك">
         <div className="mb-3"><Link to="/profile" className="inline-flex items-center gap-1 text-sm text-muted-foreground"><ChevronLeft className="size-4" /> رجوع</Link></div>
-        <ShareCard profile={profile} username={username} referralCode={code} />
+        <ShareCard
+          profile={profile}
+          username={username}
+          displayNameSources={{
+            displayName,
+            publicName: account?.display_name ?? null,
+            username: account?.username ?? null,
+            profileName: profile.name,
+          }}
+          referralCode={code}
+        />
       </Screen>
     </AppShell>
   );
