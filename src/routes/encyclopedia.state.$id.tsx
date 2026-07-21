@@ -240,11 +240,7 @@ function StatePage() {
           Icon={Landmark}
           title={state.title}
           subtitle={state.subtitle ? `«${state.subtitle}»` : null}
-          extra={
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
-              <Database className="size-2.5" /> من قاعدة البيانات
-            </span>
-          }
+          extra={null}
           fallback={
             <div className="mt-3 rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/10 via-transparent to-transparent p-4">
               <div className="flex items-start gap-3">
