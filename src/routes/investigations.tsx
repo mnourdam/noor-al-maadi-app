@@ -102,10 +102,46 @@ function InvestigationsIndex() {
   // Local filter state — search, era, difficulty, status. The `world`
   // URL search param stays authoritative for cross-page linking; the
   // era chip is a superset filter that maps to a world membership.
-  const [search, setSearch] = useState("");
-  const [eraKey, setEraKey] = useState<string>(""); // canonical era key
-  const [difficulty, setDifficulty] = useState<CanonicalDifficulty | "">("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  //
+  // Filter state persists in sessionStorage so opening an investigation
+  // and hitting Back restores the exact filter set the user configured.
+  // We intentionally use sessionStorage (not localStorage) so a fresh
+  // app launch starts from the default shuffled browse experience.
+  const FILTER_STORAGE_KEY = "irth.investigations.filters.v1";
+  const persisted = useMemo<{ search: string; era: string; difficulty: string; status: StatusFilter }>(() => {
+    try {
+      if (typeof sessionStorage === "undefined") return { search: "", era: "", difficulty: "", status: "all" };
+      const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
+      if (!raw) return { search: "", era: "", difficulty: "", status: "all" };
+      const p = JSON.parse(raw);
+      return {
+        search: typeof p.search === "string" ? p.search : "",
+        era: typeof p.era === "string" ? p.era : "",
+        difficulty: typeof p.difficulty === "string" ? p.difficulty : "",
+        status: p.status === "solved" || p.status === "unsolved" ? p.status : "all",
+      };
+    } catch { return { search: "", era: "", difficulty: "", status: "all" }; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [search, setSearch] = useState(persisted.search);
+  const [eraKey, setEraKey] = useState<string>(persisted.era);
+  const [difficulty, setDifficulty] = useState<CanonicalDifficulty | "">(
+    (["easy", "medium", "hard", "very_hard"] as const).includes(persisted.difficulty as CanonicalDifficulty)
+      ? (persisted.difficulty as CanonicalDifficulty)
+      : "",
+  );
+  const [status, setStatus] = useState<StatusFilter>(persisted.status);
+
+  // Persist filter set on every change. Cheap JSON write, session-scoped.
+  useEffect(() => {
+    try {
+      if (typeof sessionStorage === "undefined") return;
+      sessionStorage.setItem(
+        FILTER_STORAGE_KEY,
+        JSON.stringify({ search, era: eraKey, difficulty, status }),
+      );
+    } catch { /* quota — ignore */ }
+  }, [search, eraKey, difficulty, status]);
 
   // Investigation → world reverse map (era chips depend on this).
   const worldByInvSlug = useMemo(() => {
