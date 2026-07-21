@@ -76,10 +76,16 @@ function ReferralsPage() {
     );
   }
 
-  async function copy() { if (link) await navigator.clipboard.writeText(link); }
-  async function shareLink() {
+  async function copy() {
     if (!link) return;
-    try { await navigator.share?.({ text: "انضم إلى رحلتك التاريخية في إرث", url: link }); } catch {}
+    const ok = await (await import("@/lib/share/shareService")).copyToClipboard(link);
+    if (ok) (await import("sonner")).toast.success("تم نسخ الرابط");
+    else (await import("sonner")).toast.error("تعذّر النسخ");
+  }
+  async function shareLink() {
+    if (!code) return;
+    const { shareReferral } = await import("@/lib/referrals");
+    await shareReferral(code);
   }
 
   return (

@@ -1,11 +1,18 @@
+// Referral URL + share helpers. Thin wrapper around the centralized share
+// service so every referral surface (Profile → Referrals, /referrals page,
+// share card) behaves identically: same URL resolution, same Arabic
+// feedback, same double-tap guard.
+
 import { supabase } from "@/integrations/supabase/client";
+import { buildReferralUrl } from "./share/publicOrigin";
+import { shareTextAndUrl, type ShareStatus } from "./share/shareService";
 
 export interface MyReferralStats {
   code: string | null;
-  invited: number;        // total invitations linked
-  joined: number;         // signup reward paid (= accounts created via my code)
-  level5: number;         // level-5 reward paid
-  conversion_pct: number; // joined / invited * 100
+  invited: number;
+  joined: number;
+  level5: number;
+  conversion_pct: number;
   total_dinars: number;
 }
 
@@ -46,24 +53,32 @@ export async function redeemReferralCode(code: string): Promise<RedeemResult> {
   return { ok: true };
 }
 
-export function buildReferralShareUrl(code: string): string {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return `${origin}/auth?ref=${encodeURIComponent(code)}`;
+/**
+ * Public referral URL for the given code. Never returns a localhost /
+ * capacitor origin. Returns empty string when the code is empty so
+ * template strings render cleanly.
+ */
+export function buildReferralShareUrl(code: string | null | undefined): string {
+  if (!code) return "";
+  return buildReferralUrl(code) ?? "";
 }
 
-export async function shareReferral(code: string): Promise<"shared" | "copied" | "failed"> {
+const SHARE_TEXT_AR = "انضم إليّ في إرث — رحلة عبر التاريخ الإسلامي";
+
+/**
+ * Share a referral code. Delegates to the centralized share service:
+ *   1. Native / Web Share sheet if available
+ *   2. Clipboard fallback with Arabic toast
+ *   3. Consistent failure toast (never silent)
+ */
+export async function shareReferral(code: string): Promise<ShareStatus> {
   const url = buildReferralShareUrl(code);
-  const text = `انضم إليّ في إرث — رحلة عبر التاريخ الإسلامي.\nاستخدم رمز الإحالة: ${code}\n${url}`;
-  if (typeof navigator !== "undefined" && (navigator as any).share) {
-    try {
-      await (navigator as any).share({ title: "إرث", text, url });
-      return "shared";
-    } catch { /* fall through */ }
-  }
-  try {
-    await navigator.clipboard.writeText(text);
-    return "copied";
-  } catch {
-    return "failed";
-  }
+  if (!url) return "failed";
+  const res = await shareTextAndUrl({
+    jobId: `referral-share-${code}`,
+    title: "إرث",
+    text: `${SHARE_TEXT_AR}\nرمز الإحالة: ${code}`,
+    url,
+  });
+  return res.status;
 }
