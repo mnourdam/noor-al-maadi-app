@@ -52,7 +52,12 @@ export interface RendererProps {
    */
   onResolve: (correct: boolean, meta?: ResolveMeta) => void;
   alreadyDone?: boolean;
+  /** Owning campaign id — required by data-driven Reflective Moments so
+   *  auxiliary state (chosen option, personal note) can be keyed and
+   *  restored on resume. Optional for other renderers. */
+  campaignId?: string;
 }
+
 
 const FALLBACK_WRONG = "إجابة غير صحيحة، حاول مرة أخرى.";
 const FALLBACK_OK = "أحسنت، إجابة صحيحة.";
