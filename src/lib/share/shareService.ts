@@ -99,7 +99,7 @@ export interface ShareTextInput {
  * status and a matching toast. Refuses to share a local/invalid URL.
  */
 export async function shareTextAndUrl(input: ShareTextInput): Promise<ShareResult> {
-  return withGuard(input.jobId, async () => {
+  return withGuard<ShareResult>(input.jobId, async () => {
     if (!input.url || isLocalOrigin(input.url)) {
       errorToast(MSG.invalidUrl);
       return { status: "failed" as const };
@@ -157,7 +157,7 @@ export interface ShareImageInput {
  * a fallback URL is provided, copying it to the clipboard.
  */
 export async function shareImage(input: ShareImageInput): Promise<ShareResult> {
-  return withGuard(input.jobId, async () => {
+  return withGuard<ShareResult>(input.jobId, async () => {
     if (!input.blob || input.blob.size < 512) {
       errorToast(MSG.notReady);
       return { status: "failed" as const };
