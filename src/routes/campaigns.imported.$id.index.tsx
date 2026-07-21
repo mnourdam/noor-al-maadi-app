@@ -358,7 +358,8 @@ function ImportedCampaignOverview() {
                 </Link>
               </div>
             </div>
-          )}
+            );
+          })()}
         </div>
         <FeedbackCTA context={{ campaign_id: id, title: "الحملة" }} />
 
