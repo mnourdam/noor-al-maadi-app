@@ -2,7 +2,6 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import {
   ChevronRight,
   Network,
-  Compass,
   Sparkles,
   Calendar,
   MapPin,
@@ -36,7 +35,6 @@ import {
   resolveRelatedEntities,
   groupRelatedByReason,
 } from "@/lib/relationship-graph";
-import { buildContextBlocks } from "@/lib/context-blocks";
 import { iconForType } from "@/lib/encyclopedia-icons";
 import { canonicalEraLabel, toCanonicalEra } from "@/lib/era-canonical";
 import { localAtlasEntities } from "@/lib/local-first-store";
