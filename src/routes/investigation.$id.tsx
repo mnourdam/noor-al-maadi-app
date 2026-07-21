@@ -312,7 +312,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
             <Trophy className="mx-auto size-7 text-gold" />
             <p className="font-display mt-2 text-lg font-bold text-gold">قضية محلولة!</p>
             <p className="mt-1 text-[12px] text-muted-foreground">
-              {correctCount}/{totalQuestionLike} إجابات صحيحة
+              {resolvedIndices.size}/{totalQuestionLike} إجابات صحيحة
               {!alreadyDone && (
                 <>
                   {reward.xp ? <> · <Star className="inline size-3" /> +{reward.xp}</> : null}
