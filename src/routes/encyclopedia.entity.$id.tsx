@@ -182,9 +182,7 @@ function EntityPage() {
   });
 
   const groups = groupRelatedByReason(relatedQuery.data ?? []);
-  const contextBlocks = entity
-    ? buildContextBlocks(entity, relatedQuery.data ?? [])
-    : [];
+
 
   // Atlas deep-link — restricted to geographic/event types (state, region,
   // city, battle). Never shown for figure/landmark/artifact/event/etc.
