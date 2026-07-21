@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, X, Sparkles, Hourglass, GripVertical, AlertTriangle } from "lucide-react";
 import type { ChronologyStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
