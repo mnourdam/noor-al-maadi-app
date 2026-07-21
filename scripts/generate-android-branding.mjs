@@ -340,13 +340,28 @@ function writeVectors() {
     svgToVector(notifSvg, { widthDp: 24, heightDp: 24, fillOverride: "#FFFFFF" }),
   );
 
-  // Splash icon for the Android 12+ SplashScreen API. Distinct from the
-  // adaptive-icon foreground: fills ~96dp of the canvas (no safe-zone
-  // padding) so the SplashScreen window shows the transparent gold mark
-  // edge-to-edge instead of a small boxed launcher plate. The launch
-  // theme supplies the navy background separately.
-  write(join(RES, "drawable-anydpi-v26", "ic_splash_icon.xml"), splashVector);
-  write(join(RES, "drawable", "ic_splash_icon.xml"), splashVector);
+  // ⚠️ DIAGNOSTIC OVERRIDE — runtime-resource proof test.
+  // Temporarily emit a solid bright RED circle instead of the Irth mark so
+  // we can verify which drawable the Android SplashScreen API actually
+  // resolves on device. If launch still shows the gold boxed logo, then
+  // ic_splash_icon is NOT the runtime resource and we must keep tracing.
+  // Revert this block back to `splashVector` once proven.
+  const redCircleVector = `<?xml version="1.0" encoding="utf-8"?>
+<!-- DIAGNOSTIC: bright red circle to prove runtime splash drawable. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FF0000"
+        android:pathData="M54,14 A40,40 0 1,0 54,94 A40,40 0 1,0 54,14 Z" />
+</vector>
+`;
+  write(join(RES, "drawable-anydpi-v26", "ic_splash_icon.xml"), redCircleVector);
+  write(join(RES, "drawable", "ic_splash_icon.xml"), redCircleVector);
+  // Keep splashVector referenced during the diagnostic so lints don't flag it.
+  void splashVector;
 }
 
 // Post-generation assertion: every drawable referenced by the adaptive icon
