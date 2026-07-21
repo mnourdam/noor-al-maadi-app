@@ -357,112 +357,49 @@ function EntityPage() {
               still renders through EncyclopediaArticleBody above. */}
 
 
-          {/* ───────── Related rooms in the museum ───────── */}
-          <Ornament label="غرف أخرى في المتحف" />
-          <section ref={relNetworkRef} data-quest-section="relationship-network">
-
-            <div className="mb-3 flex items-center gap-2">
-              <Network className="size-4 text-gold" />
-              <h2 className="font-display text-base font-bold">شبكة التاريخ المرتبط</h2>
-              {relatedQuery.data && relatedQuery.data.length > 0 && (
-                <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
-                  {relatedQuery.data.length}
-                </span>
-              )}
-            </div>
-
-            {relatedQuery.isLoading ? (
-              <p className="py-6 text-center text-[12px] text-muted-foreground">
-                جارٍ بناء الشبكة…
-              </p>
-            ) : groups.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-gold/20 bg-black/20 p-6 text-center">
-                <p className="text-[12px] text-muted-foreground">
-                  لا توجد روابط تاريخية متاحة حاليًا.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {groups.map((g) => (
-                  <div key={g.reason}>
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="rounded-full border border-gold/25 bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
-                        {g.label}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {g.items.length}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {g.items.slice(0, 12).map((n) => (
-                        <EncyclopediaCard key={n.entity.id} entity={n.entity} />
-                      ))}
-
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* ───────── Discover more — cinematic recommendation rail ───────── */}
-          {relatedQuery.data && relatedQuery.data.length > 0 && (
+          {/* ───────── Related rooms in the museum ─────────
+              Rendered as a functional relations surface only when at
+              least one meaningful relation exists. The old "empty state"
+              card and the generated "رحلة المعرفة" recommendation rail
+              were removed in Phase 5 — they masqueraded as authored
+              sections and appeared identically on every entity page. */}
+          {!relatedQuery.isLoading && groups.length > 0 && (
             <>
-              <Ornament label="تابع رحلتك" />
-              <section>
-                <div className="mb-4 flex items-center gap-3">
-                  <span className="grid size-9 place-items-center rounded-xl bg-gold/10 ring-1 ring-gold/30 text-gold">
-                    <Compass className="size-4.5" strokeWidth={1.5} />
-                  </span>
-                  <div>
-                    <p className="text-[10px] tracking-[0.32em] text-gold/80">
-                      رحلة المعرفة
-                    </p>
-                    <h2 className="font-display text-lg font-bold">
-                      تابع رحلتك التاريخية
-                    </h2>
-                  </div>
+              <Ornament label="غرف أخرى في المتحف" />
+              <section ref={relNetworkRef} data-quest-section="relationship-network">
+                <div className="mb-3 flex items-center gap-2">
+                  <Network className="size-4 text-gold" />
+                  <h2 className="font-display text-base font-bold">شبكة التاريخ المرتبط</h2>
+                  {relatedQuery.data && relatedQuery.data.length > 0 && (
+                    <span className="ms-auto rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
+                      {relatedQuery.data.length}
+                    </span>
+                  )}
                 </div>
 
-                <ol className="space-y-3">
-                  {relatedQuery.data.slice(0, 3).map((n, i) => {
-                    const NIcon = iconForType(n.entity.entity_type);
-                    return (
-                      <li key={n.entity.id}>
-                        <Link
-                          to="/encyclopedia/entity/$id"
-                          params={{ id: n.entity.slug }}
-                          onClick={() => stashOrigin(`/encyclopedia/entity/${n.entity.slug}`)}
-                          className="group relative flex items-center gap-4 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-surface/80 via-surface/50 to-black/30 p-4 transition hover:border-gold/40 hover:shadow-[0_20px_50px_-30px_rgba(212,175,90,0.45)]"
-                        >
-
-                          <span className="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full bg-gold/10 blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                          <span className="relative grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-gold/20 to-gold/5 ring-1 ring-gold/25 text-gold">
-                            <NIcon className="size-5" strokeWidth={1.4} />
-                          </span>
-                          <div className="relative min-w-0 flex-1">
-                            <p className="text-[10px] tracking-[0.3em] text-gold/80">
-                              محطة {i + 1} ·{" "}
-                              {TYPE_LABEL[n.entity.entity_type] ?? n.entity.entity_type}
-                            </p>
-                            <p className="font-display text-[14.5px] font-bold text-foreground/95">
-                              {n.entity.title}
-                            </p>
-                            {n.entity.subtitle && (
-                              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                                {n.entity.subtitle}
-                              </p>
-                            )}
-                          </div>
-                          <ChevronRight className="relative size-4 text-gold/60 transition group-hover:text-gold group-hover:-translate-x-1 rtl:rotate-180" />
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ol>
+                <div className="space-y-6">
+                  {groups.map((g) => (
+                    <div key={g.reason}>
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="rounded-full border border-gold/25 bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
+                          {g.label}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {g.items.length}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {g.items.slice(0, 12).map((n) => (
+                          <EncyclopediaCard key={n.entity.id} entity={n.entity} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </section>
             </>
           )}
+
 
           {entity && (
             <FeedbackCTA
