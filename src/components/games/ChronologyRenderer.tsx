@@ -170,24 +170,35 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
       </DndContext>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button
-          onClick={check}
-          disabled={done}
-          className="inline-flex min-h-12 items-center gap-1.5 rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
-        >
-          {done ? <><Sparkles className="h-4 w-4" /> اكتمل التسلسل</> : <><Check className="h-4 w-4" /> تحقق</>}
-        </button>
-        {checked && !done && (
+        {awaitingRetry ? (
+          <button
+            onClick={retry}
+            disabled={done}
+            className="inline-flex min-h-12 items-center gap-1.5 rounded-xl border border-amber-400/60 bg-slate-900 px-6 py-3 text-sm font-bold text-amber-200 transition hover:bg-slate-800 disabled:opacity-50"
+          >
+            <Hourglass className="h-4 w-4" /> أعد المحاولة
+          </button>
+        ) : (
+          <button
+            onClick={check}
+            disabled={done}
+            className="inline-flex min-h-12 items-center gap-1.5 rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+          >
+            {done ? <><Sparkles className="h-4 w-4" /> اكتمل التسلسل</> : <><Check className="h-4 w-4" /> تحقق</>}
+          </button>
+        )}
+        {awaitingRetry && (
           <span className="inline-flex items-center gap-1.5 text-xs text-red-300">
-            <X className="h-3 w-3" /> أعد ترتيب البطاقات وحاول مجدّدًا.
+            <X className="h-3 w-3" /> ترتيب غير صحيح — أعد المحاولة للحصول على ترتيب جديد.
           </span>
         )}
-        {!checked && !done && (
+        {!checked && !done && !awaitingRetry && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
             <AlertTriangle className="h-3 w-3 text-amber-300/70" /> رتّب جميع البطاقات ثم اضغط تحقق.
           </span>
         )}
       </div>
+
     </div>
   );
 }
