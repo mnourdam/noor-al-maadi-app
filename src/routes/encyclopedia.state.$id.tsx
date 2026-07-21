@@ -253,9 +253,6 @@ function StatePage() {
                   {state.subtitle && (
                     <p className="mt-1 text-[12px] italic text-white/70">«{state.subtitle}»</p>
                   )}
-                  <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] text-emerald-300">
-                    <Database className="size-2.5" /> من قاعدة البيانات
-                  </span>
                 </div>
               </div>
               {state.summary && (
