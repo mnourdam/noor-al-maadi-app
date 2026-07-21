@@ -148,11 +148,12 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     // enforces caps, and grants XP/dinars/hearts exactly once via the
     // applied_profile_deltas ledger. Client values are advisory only.
     const totalQuestionLike = steps.filter((s) => s.type === "question" || s.type === "decision").length;
+    const correctCount = resolvedIndices.size;
     void recordInvestigationCompletion({
       investigationId: row.id,
       investigationSlug: row.slug,
       score: correctCount,
-      correctCount: correctCount,
+      correctCount,
     });
 
     // Local optimistic marker — server reward reconciles via cloud_saves.
