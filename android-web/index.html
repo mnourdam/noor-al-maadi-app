@@ -35,25 +35,19 @@
       html.android-input-test-boot #irth-boot-splash { display: none !important; }
       #irth-boot-splash {
         position: fixed; inset: 0; z-index: 2147483647;
-        background:
-          radial-gradient(circle at 50% 50%,
-            rgba(212,175,90,0.28) 0%,
-            rgba(212,175,90,0.08) 28%,
-            rgba(5,8,15,0) 62%),
-          #05080f;
+        background: #00FF00;
         display: flex; align-items: center; justify-content: center;
         transition: opacity 280ms ease-out;
       }
       #irth-boot-splash.is-out { opacity: 0; }
-      #irth-boot-splash img {
-        width: 96px; height: 96px;
-        filter: drop-shadow(0 0 22px rgba(212,175,90,0.5));
-        animation: irth-boot-pulse 2.2s ease-in-out infinite;
+      #irth-boot-splash .boot-test-label {
+        font-family: sans-serif;
+        font-size: 72px;
+        font-weight: 900;
+        color: #000000;
+        letter-spacing: 4px;
       }
-      @keyframes irth-boot-pulse {
-        0%,100% { opacity: 0.85; transform: scale(1); }
-        50%     { opacity: 1;    transform: scale(1.05); }
-      }
+
     </style>
     <script>
       // Capacitor's SystemBars plugin injects:
@@ -119,8 +113,9 @@
       }
     </script>
     <div id="irth-boot-splash">
-      <img src="./assets/splash/irth-logo.png" alt="" aria-hidden="true" />
+      <div class="boot-test-label">BOOT TEST</div>
     </div>
+
     <div id="root"></div>
     <script>
       // Safety net: never let the boot overlay stay forever if the JS splash
