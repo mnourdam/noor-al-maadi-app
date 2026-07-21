@@ -69,7 +69,8 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     [row.steps],
   );
   const reward = (row.reward ?? {}) as InvestigationReward;
-  const related: string[] = Array.isArray(row.related_entities) ? row.related_entities : [];
+  const relatedRaw: string[] = Array.isArray(row.related_entities) ? row.related_entities : [];
+  const relatedRefs = useMemo(() => resolveRelatedRefs(relatedRaw), [relatedRaw]);
 
   const canonicalProgress = useCanonicalInvestigationProgress();
   const alreadyDone =
@@ -82,25 +83,43 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
-  const [revealed, setRevealed] = useState(false);
+  // Answer state machine per question-like step:
+  //   "unanswered" → picking, submit enabled once `picked != null`
+  //   "incorrect"  → wrong choice revealed; user must retry (no Next)
+  //   "correct"    → correct choice locked in; Next enabled
+  // Decision steps have no correctAnswer and go straight from
+  // "unanswered" → "correct" on submit.
+  const [answerState, setAnswerState] = useState<"unanswered" | "incorrect" | "correct">("unanswered");
   const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(alreadyDone);
   const [heartGain, setHeartGain] = useState<number>(0);
 
   const step = steps[idx];
   const isLast = idx >= steps.length - 1;
+  const stepNeedsAnswer = !!step && (step.type === "question" || step.type === "decision");
   // Investigations are the recovery path when hearts are empty — they
   // never gate on hearts and never consume hearts.
 
   const onConfirm = () => {
     if (!step) return;
     if (step.type === "question" || step.type === "decision") {
-      if (picked == null || revealed) return;
+      if (picked == null || answerState === "correct") return;
       const correctIndex = step.correctAnswer;
       const isCorrect = typeof correctIndex === "number" ? picked === correctIndex : true;
-      if (isCorrect) setCorrectCount((c) => c + 1);
-      setRevealed(true);
+      if (isCorrect) {
+        // Only count the FIRST successful attempt so retries do not
+        // inflate correctCount past the number of questions.
+        if (answerState === "unanswered") setCorrectCount((c) => c + 1);
+        setAnswerState("correct");
+      } else {
+        setAnswerState("incorrect");
+      }
     }
+  };
+
+  const onRetry = () => {
+    setPicked(null);
+    setAnswerState("unanswered");
   };
 
   const grantRewards = () => {
@@ -119,18 +138,6 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     // Local optimistic marker — server reward reconciles via cloud_saves.
     markInvestigationCompletedLocal(row.slug);
 
-    // Phase G2 (corrective) — server now atomically grants the
-    // museum artifact into `public.user_collection` inside
-    // `complete_investigation_v2`, alongside XP/dinars/hearts, and
-    // stamps an immutable `reward_snapshot` on the completion row.
-    // The client must NOT call `findArtifact` — that would duplicate
-    // the museum unlock into local state ahead of the server.
-    //
-    // Badges have no canonical server store today (`profile.badges`
-    // is a client-local array). Until a follow-up phase adds a real
-    // server badge table, the client keeps granting the badge locally
-    // and the server records it in `reward_snapshot.badge` as future
-    // evidence for a proper migration.
     if (reward.badge) awardBadge(reward.badge);
 
     // Heart restoration — respects cooldown so the same investigation
@@ -142,13 +149,12 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       if (out.ok) gained++;
     }
     setHeartGain(gained);
-    // referenced to keep totalQuestionLike used
     void totalQuestionLike;
   };
 
   const onNext = () => {
     setPicked(null);
-    setRevealed(false);
+    setAnswerState("unanswered");
     if (!isLast) { setIdx((i) => i + 1); return; }
     if (!alreadyDone) grantRewards();
     setFinished(true);
