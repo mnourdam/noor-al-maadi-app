@@ -659,6 +659,36 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
   );
 }
 
+// ---------- Fallback ----------
+// Renders anything we don't know how to score. Author marks completion.
+function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
+  const [resolved, setResolved] = useState(alreadyDone ?? false);
+  return (
+    <div className="motion-page">
+      <ContextBlock text={activity.contextText} />
+      <PromptBlock activity={activity} />
+      {activity.options && activity.options.length > 0 && (
+        <ul className="mb-3 list-disc space-y-1 pr-5 text-[12px] text-muted-foreground">
+          {activity.options.map((o, i) => <li key={i}>{o}</li>)}
+        </ul>
+      )}
+      <p className="text-[11px] text-amber-300/80">
+        نشاطٌ تأمّلي — لا توجد إجابة آلية. يُحتسب عند الإكمال.
+      </p>
+      {!resolved && (
+        <button
+          onClick={() => { setResolved(true); onResolve(true); }}
+          className="motion-tap mt-3 w-full rounded-xl border border-gold/40 bg-gold/10 py-2 text-xs font-bold text-gold"
+        >
+          تم — وضع علامة كمكتمل
+        </button>
+      )}
+      {resolved && <FeedbackBanner kind="ok" text="تم تسجيل الإكمال." />}
+    </div>
+  );
+}
+
+
 // ---------- Reflective Moment ----------
 // Data-driven educational pause. Not a quiz — every response is accepted,
 // and the player can always continue. Three authorable modes:
