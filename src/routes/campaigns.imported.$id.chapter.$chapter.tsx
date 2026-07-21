@@ -36,6 +36,7 @@ import {
   enqueueChapterSync, enqueueCollectionSync, setActivePosition,
   clearActivePositionIf, unlockIdsToCollectionItems,
 } from "@/lib/campaignLedger";
+import { recordCampaignGrant, getCampaignGrantedTotals } from "@/lib/campaignRewardsGranted";
 import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
