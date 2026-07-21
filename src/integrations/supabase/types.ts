@@ -1949,6 +1949,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_campaign_completions: {
+        Row: {
+          campaign_id: string
+          campaign_version: number | null
+          completed_at: string
+          created_at: string
+          id: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          campaign_version?: number | null
+          completed_at?: string
+          created_at?: string
+          id?: string
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          campaign_version?: number | null
+          completed_at?: string
+          created_at?: string
+          id?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_campaign_progress: {
         Row: {
           campaign_id: string
@@ -2927,6 +2960,14 @@ export type Database = {
         }[]
       }
       reauth_challenges_cleanup: { Args: never; Returns: undefined }
+      record_campaign_completion: {
+        Args: {
+          p_campaign_id: string
+          p_campaign_version?: number
+          p_source?: string
+        }
+        Returns: Json
+      }
       record_identity_link: { Args: { p_provider: string }; Returns: Json }
       record_notification_click: {
         Args: { p_notification_id: string }
