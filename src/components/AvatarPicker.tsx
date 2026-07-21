@@ -11,6 +11,8 @@ import {
   type HistoricalAvatar,
 } from "@/lib/avatars";
 import { Avatar } from "./Avatar";
+import { ModalPortal } from "@/components/ModalPortal";
+import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registration";
 
 const RARITY_BADGE: Record<AvatarRarity, string> = {
   common:    "bg-white/10 text-muted-foreground",
@@ -53,8 +55,23 @@ export function AvatarPicker({
   const current = getAvatar(currentId);
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4">
-      <div className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-3xl border border-gold/30 bg-surface shadow-elegant sm:max-h-[85vh] sm:rounded-3xl">
+    <ModalPortal>
+      <OverlayDismissRegistration open onClose={onClose} label="avatar-picker" />
+      <div
+        className="fixed inset-0 z-[200] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+      >
+        <button
+          type="button"
+          aria-label="إغلاق"
+          onClick={onClose}
+          className="absolute inset-0"
+          tabIndex={-1}
+        />
+        <div className="relative flex max-h-[92vh] w-full max-w-md flex-col rounded-t-3xl border border-gold/30 bg-surface shadow-elegant sm:max-h-[85vh] sm:rounded-3xl">
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-3">
@@ -133,5 +150,7 @@ export function AvatarPicker({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
+

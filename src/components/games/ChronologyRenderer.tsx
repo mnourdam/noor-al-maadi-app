@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, X, Sparkles, Hourglass, GripVertical, AlertTriangle } from "lucide-react";
 import type { ChronologyStage } from "@/lib/games/types";
 import { sfx } from "./sfx";
@@ -39,21 +39,57 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+/**
+ * Reshuffle `prev` so the result differs from both `prev` and the sorted
+ * correct order whenever more than one arrangement is possible. Deterministic
+ * fallback prevents infinite loops if the pool is tiny.
+ */
+export function reshuffleDistinct(prev: number[], correct: number[]): number[] {
+  if (prev.length <= 1) return prev.slice();
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const next = shuffle(prev);
+    const sameAsPrev = next.every((v, i) => v === prev[i]);
+    const sameAsCorrect = next.every((v, i) => v === correct[i]);
+    if (!sameAsPrev && !sameAsCorrect) return next;
+  }
+  // Deterministic fallback: rotate by one.
+  const rotated = prev.slice(1).concat(prev[0]);
+  return rotated;
+}
+
 export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const initial = useMemo(() => shuffle(stage.events.map((_, i) => i)), [stage]);
+  const correctOrder = useMemo(
+    () =>
+      stage.events
+        .map((e, i) => ({ i, year: e.year }))
+        .sort((a, b) => a.year - b.year)
+        .map((x) => x.i),
+    [stage],
+  );
   const [order, setOrder] = useState<number[]>(initial);
   const [checked, setChecked] = useState<boolean[] | null>(null);
   const [done, setDone] = useState(false);
+  // `awaitingRetry` is true after an incorrect submit: "تحقق" is hidden
+  // and "أعد المحاولة" is shown. Prevents double-tap re-verification.
+  const [awaitingRetry, setAwaitingRetry] = useState(false);
+  const busyRef = useRef(false);
 
-  useEffect(() => { setOrder(initial); setChecked(null); setDone(false); }, [initial]);
+  useEffect(() => {
+    setOrder(initial);
+    setChecked(null);
+    setDone(false);
+    setAwaitingRetry(false);
+    busyRef.current = false;
+  }, [initial]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    // Long press on touch — natural drag handle
     useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
   );
 
   const onDragEnd = (e: DragEndEvent) => {
+    if (done || awaitingRetry) return;
     const { active, over } = e;
     if (!over || active.id === over.id) return;
     const from = order.indexOf(Number(active.id));
@@ -65,23 +101,34 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
   };
 
   const check = () => {
-    const correctOrder = stage.events
-      .map((e, i) => ({ i, year: e.year }))
-      .sort((a, b) => a.year - b.year)
-      .map((x) => x.i);
+    if (done || awaitingRetry || busyRef.current) return;
+    busyRef.current = true;
     const results = order.map((id, idx) => id === correctOrder[idx]);
     setChecked(results);
     const allRight = results.every(Boolean);
-    if (allRight && !done) {
+    if (allRight) {
       setDone(true);
       sfx("correct");
       sfx("gold_unlock");
       onComplete(100);
-    } else if (!allRight) {
+    } else {
       sfx("wrong");
       onWrong?.();
+      setAwaitingRetry(true);
     }
+    // Release guard on next frame so rapid double-taps collapse to one action.
+    requestAnimationFrame(() => { busyRef.current = false; });
   };
+
+  const retry = () => {
+    if (done || busyRef.current) return;
+    busyRef.current = true;
+    setOrder((prev) => reshuffleDistinct(prev, correctOrder));
+    setChecked(null);
+    setAwaitingRetry(false);
+    requestAnimationFrame(() => { busyRef.current = false; });
+  };
+
 
 
   return (
@@ -123,24 +170,35 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
       </DndContext>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button
-          onClick={check}
-          disabled={done}
-          className="inline-flex min-h-12 items-center gap-1.5 rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
-        >
-          {done ? <><Sparkles className="h-4 w-4" /> اكتمل التسلسل</> : <><Check className="h-4 w-4" /> تحقق</>}
-        </button>
-        {checked && !done && (
+        {awaitingRetry ? (
+          <button
+            onClick={retry}
+            disabled={done}
+            className="inline-flex min-h-12 items-center gap-1.5 rounded-xl border border-amber-400/60 bg-slate-900 px-6 py-3 text-sm font-bold text-amber-200 transition hover:bg-slate-800 disabled:opacity-50"
+          >
+            <Hourglass className="h-4 w-4" /> أعد المحاولة
+          </button>
+        ) : (
+          <button
+            onClick={check}
+            disabled={done}
+            className="inline-flex min-h-12 items-center gap-1.5 rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+          >
+            {done ? <><Sparkles className="h-4 w-4" /> اكتمل التسلسل</> : <><Check className="h-4 w-4" /> تحقق</>}
+          </button>
+        )}
+        {awaitingRetry && (
           <span className="inline-flex items-center gap-1.5 text-xs text-red-300">
-            <X className="h-3 w-3" /> أعد ترتيب البطاقات وحاول مجدّدًا.
+            <X className="h-3 w-3" /> ترتيب غير صحيح — أعد المحاولة للحصول على ترتيب جديد.
           </span>
         )}
-        {!checked && !done && (
+        {!checked && !done && !awaitingRetry && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
             <AlertTriangle className="h-3 w-3 text-amber-300/70" /> رتّب جميع البطاقات ثم اضغط تحقق.
           </span>
         )}
       </div>
+
     </div>
   );
 }
