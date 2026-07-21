@@ -201,6 +201,20 @@ interface Ctx {
   hydrateClaimedStreakRewards: () => Promise<void>;
   // Cloud-save integration
   replaceProfile: (next: ProfileState) => void;
+  /**
+   * Merge a cloud-save snapshot into local state WITHOUT clobbering
+   * progression arrays. Numeric scalars from cloud win (server is
+   * authoritative for xp/dinars/season/streak). String[] progression
+   * arrays are UNIONed with local (and with `extras.stickyCampaignIds`,
+   * the server-side sticky completions ledger). Settings are shallow
+   * merged, with cloud winning on conflict. This is the sole safe path
+   * for `AccountProvider` to hydrate a returning user without erasing
+   * completions earned since the last cloud push (Stability Phase 1).
+   */
+  mergeCloudSave: (
+    cloud: ProfileState,
+    extras?: { stickyCampaignIds?: readonly string[] },
+  ) => void;
   resetProfile: () => void;
   /**
    * Merge authoritative server-side stats (admin edits, cloud reconciliation)
