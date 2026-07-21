@@ -181,29 +181,33 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
         <div className="mt-4 rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
           <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold">
-            <Search className="size-3.5" /> تحقيق تاريخي · {row.difficulty}
+            <Search className="size-3.5" /> تحقيق تاريخي · {displayDifficulty(row.difficulty)}
           </div>
           <h1 className="font-display mt-2 text-lg font-bold leading-snug">{row.title}</h1>
           {row.subtitle && <p className="mt-1 text-[12px] text-gold/90">{row.subtitle}</p>}
           {row.description && <p className="mt-2 text-[12px] leading-7 text-foreground/90">{row.description}</p>}
         </div>
 
-        {related.length > 0 && (
+        {relatedRefs.length > 0 && (
           <section className="mt-5">
             <h2 className="font-display mb-2 text-sm font-bold">مراجع موسوعية</h2>
             <div className="flex flex-wrap gap-2">
-              {related.map((rid) => {
-                const label = displayName(rid);
+              {relatedRefs.map((ref) => {
+                const linkId = ref.linkId;
+                const label = ref.label || displayName(ref.raw) || "مرجع تاريخي";
                 return (
                   <Link
-                    key={rid}
+                    key={ref.raw}
                     to="/encyclopedia/entity/$id"
-                    params={{ id: rid }}
-                    onClick={() => stashOrigin(`/encyclopedia/entity/${rid}`)}
-                    className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold hover:bg-gold/10"
+                    params={{ id: linkId }}
+                    onClick={() => stashOrigin(`/encyclopedia/entity/${linkId}`)}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] hover:bg-gold/10 ${
+                      ref.resolved
+                        ? "border-gold/30 bg-gold/5 text-gold"
+                        : "border-white/10 bg-surface text-muted-foreground"
+                    }`}
                   >
-
-                    <BookOpen className="size-3" /> {label && label !== rid ? label : "مرجع تاريخي"}
+                    <BookOpen className="size-3" /> {label}
                   </Link>
                 );
               })}
@@ -215,17 +219,36 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
           <section className="mt-6">
             <h2 className="font-display mb-2 text-sm font-bold">
               خطوة {(idx + 1).toLocaleString("en-US")}/{steps.length.toLocaleString("en-US")}
-              {(step.type === "question" || step.type === "decision") && (
+              {stepNeedsAnswer && (
                 <span className="ms-2 text-[11px] text-muted-foreground">
                   سؤال {questionLikeIndex}/{totalQuestionLike}
                 </span>
               )}
             </h2>
 
-            <StepCard step={step} picked={picked} setPicked={setPicked} revealed={revealed} heartsOut={false} />
+            <StepCard
+              step={step}
+              picked={picked}
+              setPicked={(n) => {
+                if (answerState === "correct") return;
+                // Picking again after an incorrect attempt resets the reveal
+                // so the user can try again without the previous choice
+                // being frozen as "wrong".
+                if (answerState === "incorrect") setAnswerState("unanswered");
+                setPicked(n);
+              }}
+              revealed={answerState !== "unanswered"}
+              heartsOut={false}
+            />
+
+            {stepNeedsAnswer && answerState === "incorrect" && (
+              <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-[12px] leading-6 text-red-200">
+                إجابة غير صحيحة — راجع القرائن وحاول مرة أخرى. التحقيقات لا تستهلك القلوب.
+              </p>
+            )}
 
             <div className="mt-4">
-              {(step.type === "question" || step.type === "decision") && !revealed ? (
+              {stepNeedsAnswer && answerState === "unanswered" && (
                 <button
                   onClick={onConfirm}
                   disabled={picked == null}
@@ -233,7 +256,16 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
                 >
                   تأكيد الإجابة
                 </button>
-              ) : (
+              )}
+              {stepNeedsAnswer && answerState === "incorrect" && (
+                <button
+                  onClick={onRetry}
+                  className="flex w-full items-center justify-center rounded-2xl border border-gold/40 bg-surface py-3 text-sm font-bold text-gold"
+                >
+                  أعد المحاولة
+                </button>
+              )}
+              {(!stepNeedsAnswer || answerState === "correct") && (
                 <button
                   onClick={onNext}
                   className="flex w-full items-center justify-center rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground"
@@ -244,6 +276,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
             </div>
           </section>
         )}
+
 
         {finished && (
           <section className="mt-6 rounded-3xl border border-gold/30 bg-gradient-to-br from-gold/15 to-transparent p-5 text-center">
