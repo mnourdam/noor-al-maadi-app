@@ -221,19 +221,19 @@ export async function downloadImage(input: {
   blob: Blob;
   filename: string;
 }): Promise<ShareResult> {
-  return withGuard(input.jobId, async () => {
+  return withGuard<ShareResult>(input.jobId, async () => {
     if (!input.blob || input.blob.size < 512) {
       errorToast(MSG.notReady);
-      return { status: "failed" as const };
+      return { status: "failed" };
     }
     const ok = await triggerDownload(input.blob, sanitizeFilename(input.filename));
     if (ok) {
       successToast(MSG.downloaded);
-      return { status: "downloaded" as const };
+      return { status: "downloaded" };
     }
     errorToast(MSG.failed);
-    return { status: "failed" as const };
-  }, { status: "cancelled" as const });
+    return { status: "failed" };
+  }, { status: "cancelled" });
 }
 
 // ─── Internals ─────────────────────────────────────────────────────────
