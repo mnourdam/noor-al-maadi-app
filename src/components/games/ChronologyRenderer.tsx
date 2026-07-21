@@ -39,21 +39,57 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+/**
+ * Reshuffle `prev` so the result differs from both `prev` and the sorted
+ * correct order whenever more than one arrangement is possible. Deterministic
+ * fallback prevents infinite loops if the pool is tiny.
+ */
+export function reshuffleDistinct(prev: number[], correct: number[]): number[] {
+  if (prev.length <= 1) return prev.slice();
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const next = shuffle(prev);
+    const sameAsPrev = next.every((v, i) => v === prev[i]);
+    const sameAsCorrect = next.every((v, i) => v === correct[i]);
+    if (!sameAsPrev && !sameAsCorrect) return next;
+  }
+  // Deterministic fallback: rotate by one.
+  const rotated = prev.slice(1).concat(prev[0]);
+  return rotated;
+}
+
 export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const initial = useMemo(() => shuffle(stage.events.map((_, i) => i)), [stage]);
+  const correctOrder = useMemo(
+    () =>
+      stage.events
+        .map((e, i) => ({ i, year: e.year }))
+        .sort((a, b) => a.year - b.year)
+        .map((x) => x.i),
+    [stage],
+  );
   const [order, setOrder] = useState<number[]>(initial);
   const [checked, setChecked] = useState<boolean[] | null>(null);
   const [done, setDone] = useState(false);
+  // `awaitingRetry` is true after an incorrect submit: "تحقق" is hidden
+  // and "أعد المحاولة" is shown. Prevents double-tap re-verification.
+  const [awaitingRetry, setAwaitingRetry] = useState(false);
+  const busyRef = useRef(false);
 
-  useEffect(() => { setOrder(initial); setChecked(null); setDone(false); }, [initial]);
+  useEffect(() => {
+    setOrder(initial);
+    setChecked(null);
+    setDone(false);
+    setAwaitingRetry(false);
+    busyRef.current = false;
+  }, [initial]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    // Long press on touch — natural drag handle
     useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
   );
 
   const onDragEnd = (e: DragEndEvent) => {
+    if (done || awaitingRetry) return;
     const { active, over } = e;
     if (!over || active.id === over.id) return;
     const from = order.indexOf(Number(active.id));
@@ -65,23 +101,34 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
   };
 
   const check = () => {
-    const correctOrder = stage.events
-      .map((e, i) => ({ i, year: e.year }))
-      .sort((a, b) => a.year - b.year)
-      .map((x) => x.i);
+    if (done || awaitingRetry || busyRef.current) return;
+    busyRef.current = true;
     const results = order.map((id, idx) => id === correctOrder[idx]);
     setChecked(results);
     const allRight = results.every(Boolean);
-    if (allRight && !done) {
+    if (allRight) {
       setDone(true);
       sfx("correct");
       sfx("gold_unlock");
       onComplete(100);
-    } else if (!allRight) {
+    } else {
       sfx("wrong");
       onWrong?.();
+      setAwaitingRetry(true);
     }
+    // Release guard on next frame so rapid double-taps collapse to one action.
+    requestAnimationFrame(() => { busyRef.current = false; });
   };
+
+  const retry = () => {
+    if (done || busyRef.current) return;
+    busyRef.current = true;
+    setOrder((prev) => reshuffleDistinct(prev, correctOrder));
+    setChecked(null);
+    setAwaitingRetry(false);
+    requestAnimationFrame(() => { busyRef.current = false; });
+  };
+
 
 
   return (
