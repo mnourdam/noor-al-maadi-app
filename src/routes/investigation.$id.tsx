@@ -93,6 +93,10 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(alreadyDone);
   const [heartGain, setHeartGain] = useState<number>(0);
+  // Double-tap guard — a second synchronous click before React commits
+  // the state transition must be dropped so Next never advances twice
+  // and grantRewards never fires twice in the same tick.
+  const [advancing, setAdvancing] = useState(false);
 
   const step = steps[idx];
   const isLast = idx >= steps.length - 1;
