@@ -680,6 +680,87 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       ...next,
       settings: { ...initial.settings, ...(next.settings ?? {}) },
     }),
+    mergeCloudSave: (cloud, extras) => setProfile((p) => {
+      const union = (a: readonly string[] | undefined, b: readonly string[] | undefined): string[] => {
+        const s = new Set<string>();
+        for (const x of a ?? []) if (x) s.add(x);
+        for (const x of b ?? []) if (x) s.add(x);
+        return Array.from(s);
+      };
+      const numMax = (a: number | undefined, b: number | undefined, fallback = 0): number =>
+        Math.max(fallback, Math.floor(a ?? fallback), Math.floor(b ?? fallback));
+      const cooldowns: Record<string, number> = { ...(p.activityCooldowns ?? {}) };
+      for (const [k, v] of Object.entries(cloud.activityCooldowns ?? {})) {
+        cooldowns[k] = Math.max(cooldowns[k] ?? 0, Number(v) || 0);
+      }
+      const hints: Record<string, number> = { ...(p.hintsPurchased ?? {}) };
+      for (const [k, v] of Object.entries(cloud.hintsPurchased ?? {})) {
+        hints[k] = Math.max(hints[k] ?? 0, Number(v) || 0);
+      }
+      // Streak: cloud is authoritative but must still respect day-anchored
+      // expiry. Reuse applyServerStats' semantics inline.
+      const target = numMax(p.streak, cloud.streak);
+      const derived = deriveStreak(p.streak, p.lastActiveDay);
+      const nextStreak = derived.status === "expired" ? 0 : target;
+
+      // Hearts: cloud value wins ONLY when it differs from the local
+      // committed value; preserves regen anchor otherwise.
+      const cloudHearts = Math.max(0, Math.min(HEART_MAX, cloud.hearts ?? HEART_MAX));
+      const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
+      const heartsPatch = cloudHearts !== localCommitted
+        ? commitHearts(p, cloudHearts, Date.now())
+        : { hearts: p.hearts, heartsAt: p.heartsAt };
+
+      const dailyDay = cloud.dailyClaimed?.day && cloud.dailyClaimed.day === p.dailyClaimed?.day
+        ? p.dailyClaimed.day
+        : (cloud.dailyClaimed?.day ?? p.dailyClaimed?.day ?? "");
+      const dailyIds = cloud.dailyClaimed?.day === p.dailyClaimed?.day
+        ? union(p.dailyClaimed?.ids, cloud.dailyClaimed?.ids)
+        : (cloud.dailyClaimed?.ids ?? p.dailyClaimed?.ids ?? []);
+
+      return {
+        ...initial,
+        ...p,
+        ...cloud,
+        // Scalars: max so a stale cloud push never regresses local.
+        points: numMax(p.points, cloud.points),
+        seasonPoints: numMax(p.seasonPoints, cloud.seasonPoints),
+        dinars: numMax(p.dinars, cloud.dinars, STARTING_DINARS),
+        streak: nextStreak,
+        hearts: heartsPatch.hearts,
+        heartsAt: heartsPatch.heartsAt,
+        // Union all progression arrays. Include the server sticky
+        // campaign completions ledger so a returning device that never
+        // pushed the fact cannot drop it.
+        storiesOpened: union(p.storiesOpened, cloud.storiesOpened),
+        storiesRead: union(p.storiesRead, cloud.storiesRead),
+        savedStories: union(p.savedStories, cloud.savedStories),
+        puzzlesSolved: union(p.puzzlesSolved, cloud.puzzlesSolved),
+        whoSolved: union(p.whoSolved, cloud.whoSolved),
+        badges: union(p.badges, cloud.badges),
+        unlockedEras: union(p.unlockedEras, cloud.unlockedEras),
+        investigationsCompleted: union(p.investigationsCompleted, cloud.investigationsCompleted),
+        timelinesCompleted: union(p.timelinesCompleted, cloud.timelinesCompleted),
+        decisionsCompleted: union(p.decisionsCompleted, cloud.decisionsCompleted),
+        missionsCompleted: union(p.missionsCompleted, cloud.missionsCompleted),
+        campaignsCompleted: union(
+          union(p.campaignsCompleted, cloud.campaignsCompleted),
+          extras?.stickyCampaignIds,
+        ),
+        artifactsFound: union(p.artifactsFound, cloud.artifactsFound),
+        charactersUnlocked: union(p.charactersUnlocked, cloud.charactersUnlocked),
+        regionsUnlocked: union(p.regionsUnlocked, cloud.regionsUnlocked),
+        titlesEarned: union(p.titlesEarned, cloud.titlesEarned),
+        streakMilestonesClaimed: Array.from(new Set([
+          ...(p.streakMilestonesClaimed ?? []),
+          ...(cloud.streakMilestonesClaimed ?? []),
+        ])).sort((a, b) => a - b),
+        activityCooldowns: cooldowns,
+        hintsPurchased: hints,
+        dailyClaimed: { day: dailyDay, ids: dailyIds },
+        settings: { ...initial.settings, ...(p.settings ?? {}), ...(cloud.settings ?? {}) },
+      } as ProfileState;
+    }),
     resetProfile: () => setProfile(initial),
     applyServerStats: (stats) => update((p) => {
       const now = Date.now();
