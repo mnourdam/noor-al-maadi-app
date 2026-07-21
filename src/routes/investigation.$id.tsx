@@ -7,12 +7,14 @@ import { ReadingScale } from "@/components/ReadingScale";
 import { getInvestigation, investigationScopeKey } from "@/lib/investigations";
 import {
   useSupabaseInvestigation,
+  displayDifficulty,
   type InvestigationRow,
   type InvestigationReward,
   type InvestigationStep,
 } from "@/lib/investigations-source";
 import { useProfile } from "@/lib/profile";
 import { displayName } from "@/lib/display-names";
+import { resolveRelatedRefs } from "@/lib/encyclopedia-refs";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
