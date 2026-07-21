@@ -79,3 +79,16 @@ export async function recordEntityDiscovery(p: {
   });
   void flushOutbox(uid);
 }
+
+/**
+ * Record a sticky campaign completion. Thin wrapper around
+ * `@/lib/campaigns/completions` so gameplay code has one recorder facade.
+ */
+export async function recordCampaignCompletion(p: {
+  campaignId: string;
+  campaignVersion?: number | null;
+  source?: string;
+}): Promise<void> {
+  const { recordCampaignCompletion: impl } = await import("@/lib/campaigns/completions");
+  await impl(p);
+}

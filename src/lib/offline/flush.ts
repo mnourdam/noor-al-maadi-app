@@ -213,6 +213,39 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         return { ok: true };
       }
 
+      case "campaign_completion": {
+        // Sticky, versioned campaign completion. Server dedupes on
+        // (user_id, campaign_id); replays are idempotent. If the campaign
+        // is no longer reachable on the server (deleted content), drop
+        // the item silently so it can't jam the queue.
+        const p = item.payload as {
+          campaignId: string;
+          campaignVersion?: number | null;
+          source?: string | null;
+        };
+        if (!p?.campaignId) return { ok: true };
+        const { data: res, error } = await supabase.rpc(
+          "record_campaign_completion" as any,
+          {
+            p_campaign_id: p.campaignId,
+            p_campaign_version: p.campaignVersion ?? null,
+            p_source: p.source ?? "gameplay",
+          },
+        );
+        if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) {
+          if (payload.reason === "invalid_campaign_id") return { ok: true };
+          return { ok: false, error: payload.reason ?? "rpc-not-ok" };
+        }
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
       default:
         return { ok: false, error: "unknown-kind" };
     }

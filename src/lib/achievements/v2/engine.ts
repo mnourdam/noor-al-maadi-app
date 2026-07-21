@@ -154,6 +154,12 @@ let persisted: Map<AchievementId, UserAchievementRecord> = new Map();
 let alreadyNotified: Set<AchievementId> = new Set();
 let lastClaimedSet: Set<AchievementId> = new Set();
 let bootedForUserId: string | null | undefined = undefined; // undefined = never
+// Historical-vs-live gate. While `false`, doCycle updates snapshot +
+// evaluation but does NOT emit notifications or claim writes. This
+// prevents a signed-in user's historical unlocks from re-firing as
+// "just earned!" notifications on reinstall / cold-start, because
+// canonical inputs land before the server mirror has been fetched.
+let mirrorReady = false;
 
 const NOTIFIED_KEY = "irth.achievements.v2.notified";
 const GUEST_UNLOCKS_KEY = "irth.achievements.v2.guest_unlocks";
@@ -233,9 +239,16 @@ export async function refreshPersistedForUser(userId: string | null): Promise<vo
   if (bootedForUserId === userId) return;
   bootedForUserId = userId;
   inputs.profile.userId = userId;
+  mirrorReady = false;
 
   if (!userId) {
     persisted = loadGuestUnlocks();
+    // Guest state: whatever is persisted locally has already been notified
+    // on the run that unlocked it; we still trust the local `alreadyNotified`
+    // cache but also union with persisted ids to survive a cache wipe.
+    for (const id of persisted.keys()) alreadyNotified.add(id);
+    saveNotified();
+    mirrorReady = true;
     await runCycle(["profile"]);
     return;
   }
@@ -254,10 +267,18 @@ export async function refreshPersistedForUser(userId: string | null): Promise<vo
         },
       ]),
     );
+    // Seed `alreadyNotified` with every server-known unlock. This is the
+    // canonical fix for the reinstall-notification storm: everything the
+    // server already remembers is HISTORICAL, so its unlock event was
+    // dispatched in a prior session and MUST be silent this session even
+    // when the local `alreadyNotified` cache was wiped by reinstall.
+    for (const id of persisted.keys()) alreadyNotified.add(id);
+    saveNotified();
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[achievements] mirror fetch failed; keeping local state", err);
   }
+  mirrorReady = true;
   await runCycle(["profile"]);
 }
 
@@ -309,6 +330,14 @@ async function doCycle(changedDomains: readonly CanonicalDomain[]): Promise<void
     changedDomains,
     prev: evaluation,
   });
+
+  // Pre-hydration: only refresh views; never notify or claim. We still
+  // notifyListeners() so UI progress bars stay reactive.
+  if (!mirrorReady) {
+    notifyListeners();
+    return;
+  }
+
 
   const output = reconcile({
     registry,

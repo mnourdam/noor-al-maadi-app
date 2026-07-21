@@ -111,6 +111,7 @@ export function recordActivity(
   // Campaign completion is STICKY for the same reason.
   cur.chapters[chapter.id] = ch;
   const campaignDone = campaign.chapters.every(c => cur.chapters[c.id]?.completed);
+  const wasCompleted = cur.completed;
   if (campaignDone && !cur.completed) {
     cur.completed = true;
     // Snapshot reward unlock ids for future museum integration.
@@ -125,6 +126,18 @@ export function recordActivity(
   cur.updatedAt = new Date().toISOString();
   all[campaign.id] = cur;
   writeAll(all);
+
+  // Record the sticky completion fact once, at the completion transition.
+  // Best-effort, offline-safe; failures never affect gameplay state.
+  if (campaignDone && !wasCompleted) {
+    void import("@/lib/campaigns/completions")
+      .then(mod => mod.recordCampaignCompletion({
+        campaignId: campaign.id,
+        campaignVersion: (campaign as any).version ?? null,
+        source: "gameplay",
+      }))
+      .catch(() => { /* silent */ });
+  }
   return cur;
 }
 
@@ -149,6 +162,7 @@ export function markActivityComplete(
 
   cur.chapters[chapter.id] = ch;
   const campaignDone = campaign.chapters.every(c => cur.chapters[c.id]?.completed);
+  const wasCompleted = cur.completed;
   if (campaignDone && !cur.completed) {
     cur.completed = true;
     const unlocks = new Set<string>(cur.unlockedRegistryIds);
@@ -160,6 +174,15 @@ export function markActivityComplete(
   cur.updatedAt = new Date().toISOString();
   all[campaign.id] = cur;
   writeAll(all);
+  if (campaignDone && !wasCompleted) {
+    void import("@/lib/campaigns/completions")
+      .then(mod => mod.recordCampaignCompletion({
+        campaignId: campaign.id,
+        campaignVersion: (campaign as any).version ?? null,
+        source: "gameplay",
+      }))
+      .catch(() => { /* silent */ });
+  }
   return cur;
 }
 
