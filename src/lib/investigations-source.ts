@@ -63,6 +63,38 @@ export function countQuestions(steps: InvestigationStep[]): number {
   return steps.filter((s) => s.type === "question" || s.type === "decision").length;
 }
 
+// Canonical difficulty taxonomy — the admin importer may emit any of these
+// raw slugs. UI never renders the raw slug; always route through
+// `displayDifficulty()`.
+export const DIFFICULTY_ORDER = ["easy", "medium", "hard", "very_hard"] as const;
+export type CanonicalDifficulty = typeof DIFFICULTY_ORDER[number];
+
+const DIFFICULTY_LABEL_AR: Record<string, string> = {
+  easy: "سهل",
+  medium: "متوسط",
+  hard: "صعب",
+  very_hard: "صعب جدًا",
+  "very-hard": "صعب جدًا",
+  veryhard: "صعب جدًا",
+  expert: "خبير",
+};
+
+/** Normalize an incoming difficulty tag to a canonical slug. */
+export function canonicalDifficulty(raw: string | null | undefined): CanonicalDifficulty | null {
+  if (!raw) return null;
+  const key = String(raw).toLowerCase().trim().replace(/[\s-]+/g, "_");
+  if ((DIFFICULTY_ORDER as readonly string[]).includes(key)) return key as CanonicalDifficulty;
+  if (key === "veryhard") return "very_hard";
+  return null;
+}
+
+/** Render an Arabic label for any raw difficulty slug. Never returns the raw slug. */
+export function displayDifficulty(raw: string | null | undefined): string {
+  if (!raw) return "غير محدد";
+  const key = String(raw).toLowerCase().trim().replace(/[\s-]+/g, "_");
+  return DIFFICULTY_LABEL_AR[key] ?? "غير محدد";
+}
+
 /** Hook: enabled investigations list — local-first, network refresh. */
 export function useSupabaseInvestigations() {
   const [rows, setRows] = useState<InvestigationRow[] | null>(null);
