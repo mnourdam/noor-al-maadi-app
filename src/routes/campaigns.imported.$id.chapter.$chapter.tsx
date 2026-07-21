@@ -251,6 +251,9 @@ function ImportedChapterPlayer() {
         if (camDelta.coins > 0) addDinars(camDelta.coins);
         const items = unlockIdsToCollectionItems(campaign!.id, null, camDelta.unlocks);
         if (items.length) enqueueCollectionSync(items);
+        recordCampaignGrant(campaign!.id, {
+          xp: camDelta.xp, coins: camDelta.coins, unlocks: camDelta.unlocks,
+        });
       }
       // Surface unlock SFX (best-effort).
       (nextProgress.unlockedRegistryIds ?? []).slice(0, 1).forEach((rid) =>
