@@ -70,7 +70,12 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   );
   const reward = (row.reward ?? {}) as InvestigationReward;
   const relatedRaw: string[] = Array.isArray(row.related_entities) ? row.related_entities : [];
-  const relatedRefs = useMemo(() => resolveRelatedRefs(relatedRaw), [relatedRaw]);
+  // Only resolved refs are player-facing. Unresolved refs are recorded
+  // via the resolver's one-shot diagnostic log for admin review.
+  const relatedRefs = useMemo(
+    () => resolveRelatedRefs(relatedRaw).filter((r) => r.resolved),
+    [relatedRaw],
+  );
 
   const canonicalProgress = useCanonicalInvestigationProgress();
   const alreadyDone =
@@ -83,14 +88,19 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
-  // Answer state machine per question-like step:
+  // Answer state machine per question-like step (see
+  // `src/lib/investigations/answer-machine.ts` for the pure reducer
+  // that these hooks mirror):
   //   "unanswered" → picking, submit enabled once `picked != null`
   //   "incorrect"  → wrong choice revealed; user must retry (no Next)
   //   "correct"    → correct choice locked in; Next enabled
-  // Decision steps have no correctAnswer and go straight from
-  // "unanswered" → "correct" on submit.
+  // Decision steps with no correctAnswer collapse "unanswered" → "correct".
   const [answerState, setAnswerState] = useState<"unanswered" | "incorrect" | "correct">("unanswered");
-  const [correctCount, setCorrectCount] = useState(0);
+  // Set of question-like step indices that have reached `correct` at
+  // least once. A retry that finally succeeds contributes exactly one
+  // entry — the invariant "every correct question counts once" holds
+  // regardless of how many wrong attempts preceded it.
+  const [resolvedIndices, setResolvedIndices] = useState<Set<number>>(() => new Set());
   const [finished, setFinished] = useState(alreadyDone);
   const [heartGain, setHeartGain] = useState<number>(0);
   // Double-tap guard — a second synchronous click before React commits
@@ -111,9 +121,15 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       const correctIndex = step.correctAnswer;
       const isCorrect = typeof correctIndex === "number" ? picked === correctIndex : true;
       if (isCorrect) {
-        // Only count the FIRST successful attempt so retries do not
-        // inflate correctCount past the number of questions.
-        if (answerState === "unanswered") setCorrectCount((c) => c + 1);
+        // Record this index exactly once. Set semantics guarantee that
+        // repeated confirms, re-renders, or "wrong then correct" flows
+        // still contribute a single entry per question.
+        setResolvedIndices((prev) => {
+          if (prev.has(idx)) return prev;
+          const next = new Set(prev);
+          next.add(idx);
+          return next;
+        });
         setAnswerState("correct");
       } else {
         setAnswerState("incorrect");
@@ -132,11 +148,12 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     // enforces caps, and grants XP/dinars/hearts exactly once via the
     // applied_profile_deltas ledger. Client values are advisory only.
     const totalQuestionLike = steps.filter((s) => s.type === "question" || s.type === "decision").length;
+    const correctCount = resolvedIndices.size;
     void recordInvestigationCompletion({
       investigationId: row.id,
       investigationSlug: row.slug,
       score: correctCount,
-      correctCount: correctCount,
+      correctCount,
     });
 
     // Local optimistic marker — server reward reconciles via cloud_saves.
@@ -295,7 +312,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
             <Trophy className="mx-auto size-7 text-gold" />
             <p className="font-display mt-2 text-lg font-bold text-gold">قضية محلولة!</p>
             <p className="mt-1 text-[12px] text-muted-foreground">
-              {correctCount}/{totalQuestionLike} إجابات صحيحة
+              {resolvedIndices.size}/{totalQuestionLike} إجابات صحيحة
               {!alreadyDone && (
                 <>
                   {reward.xp ? <> · <Star className="inline size-3" /> +{reward.xp}</> : null}
