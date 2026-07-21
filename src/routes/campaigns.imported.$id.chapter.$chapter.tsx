@@ -236,6 +236,9 @@ function ImportedChapterPlayer() {
         if (chDelta.coins > 0) addDinars(chDelta.coins);
         const items = unlockIdsToCollectionItems(campaign!.id, chapter!.id, chDelta.unlocks);
         if (items.length) enqueueCollectionSync(items);
+        recordCampaignGrant(campaign!.id, {
+          xp: chDelta.xp, coins: chDelta.coins, unlocks: chDelta.unlocks,
+        });
       }
     }
 
