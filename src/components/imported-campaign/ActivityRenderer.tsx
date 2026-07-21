@@ -907,9 +907,7 @@ export function ActivityRenderer(props: RendererProps) {
     case "decision_choice":       return <DecisionRenderer {...props} />;
     case "match_pairs":           return <MatchPairsRenderer {...props} />;
     case "fill_blank":            return <FillBlankRenderer {...props} />;
-    case "reflection_prompt":     return HIDE_REFLECTIONS
-                                    ? <ReflectionSkippedRenderer {...props} />
-                                    : <ReflectionRenderer {...props} />;
+    case "reflection_prompt":     return <ReflectiveMomentRenderer {...props} campaignId={props.campaignId ?? ""} />;
     default:                      return <FallbackRenderer {...props} />;
   }
 }
