@@ -12,7 +12,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
-import { useStashCurrentAsOrigin } from "@/lib/navigation";
+
 
 import { useAccount } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
@@ -102,7 +102,7 @@ function Ornament({ label }: { label?: string }) {
 
 function EntityPage() {
   const { id } = Route.useParams();
-  void useStashCurrentAsOrigin;
+  
 
 
   const query = useQuery({
