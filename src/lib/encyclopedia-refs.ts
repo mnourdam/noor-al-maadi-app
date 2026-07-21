@@ -52,6 +52,22 @@ export type ResolvedEncyclopediaRef = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Per-session set of unresolved refs so a broken reference is logged
+// exactly once per app load. Admins reading the console (or a wired
+// diagnostics sink) can spot dangling refs without page-flood noise.
+const BROKEN_REFS_SEEN = new Set<string>();
+function logBrokenRef(raw: string): void {
+  if (BROKEN_REFS_SEEN.has(raw)) return;
+  BROKEN_REFS_SEEN.add(raw);
+  try {
+    // eslint-disable-next-line no-console
+    console.warn("[encyclopedia-refs] unresolved related_entity:", raw);
+  } catch { /* ignore */ }
+}
+export function getBrokenEncyclopediaRefs(): string[] {
+  return [...BROKEN_REFS_SEEN];
+}
+
 export function resolveRelatedRef(rawInput: string): ResolvedEncyclopediaRef {
   const raw = String(rawInput ?? "").trim();
   const base: ResolvedEncyclopediaRef = {
@@ -89,8 +105,11 @@ export function resolveRelatedRef(rawInput: string): ResolvedEncyclopediaRef {
   if (!hit) hit = localEncyclopediaById(tail) ?? localEncyclopediaById(raw);
 
   if (!hit) {
-    // Unresolved — fall back to a stable typed label so we never render
-    // the raw slug or a generic placeholder for every ref.
+    // Unresolved — log once per raw ref for admin diagnostics so
+    // broken references surface in dev/console without spamming.
+    logBrokenRef(raw);
+    // Fall back to a stable typed label so we never render the raw
+    // slug or a generic placeholder for every ref.
     const t = typeHint ? TYPE_LABEL_AR[typeHint] ?? "" : "";
     return {
       ...base,
