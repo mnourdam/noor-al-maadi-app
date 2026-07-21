@@ -15,32 +15,22 @@
     </style>
 
     <!--
-        Cold-start theme. Uses the Android 12+ SplashScreen API (the AndroidX
-        core-splashscreen library back-ports it to API 24+). The brand icon is
-        the canonical transparent foreground vector so it never carries a baked
-        black/navy plate; the background remains this theme color only.
-        The post-splash theme then transitions into the cinematic React splash
-        already shipped with the app — this layer only owns the OS hand-off.
+        Cold-start theme (AndroidX core-splashscreen backport for API 24–30).
+        On API 31+ the values-v31 override takes precedence with the platform
+        attributes prefixed with `android:`. The animated icon is a plain
+        transparent vector (ic_splash_icon) sized to Google's 72dp/108dp inner
+        safe zone so no OEM mask draws a plate behind the mark.
     -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <!--
-            Dedicated splash-only vector (transparent, gold Irth mark
-            filling ~96dp of the 108dp canvas). We deliberately do NOT
-            reuse @drawable/ic_launcher_foreground here because that vector
-            is scaled to the adaptive-icon 66dp safe zone, which the
-            SplashScreen API then re-frames inside its own 240dp/192dp icon
-            window — producing a boxed app-icon plate on the cold-start
-            frame. Launcher icons continue to use ic_launcher_foreground
-            and remain unchanged.
-        -->
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
-        <!--
-            Intentionally NO `windowSplashScreenIconBackgroundColor`.
-            Setting it forces Android to draw an extra plate behind the
-            icon, which reads as a rounded-square launcher shape during the
-            cold-start frame.
-        -->
+        <!-- Belt-and-suspenders: force transparent icon plate so no OEM
+             backport draws a rounded-square/circle behind the mark. -->
+        <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <!-- Fallback windowBackground for the cold-start frame if the
+             splash attrs ever fail to resolve — the OS shows a flat navy
+             frame instead of the launcher icon. -->
+        <item name="android:windowBackground">@color/splash_background</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>
