@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Android 12+ platform splash attributes. The unqualified AndroidX
-         attributes remain in values/styles.xml for compatibility; these
-         explicit platform attrs ensure the system cold-start frame resolves
-         the transparent gold foreground instead of falling back to the
-         application launcher bitmap. -->
+    <!--
+        Android 12+ (API 31+) platform splash attributes. The system reads the
+        `android:`-prefixed forms directly, bypassing the AndroidX backport.
+        Every attribute the SplashScreen system inspects is set explicitly so
+        the resolved runtime resource is unambiguous:
+          - animated icon → transparent gold vector (ic_splash_icon)
+          - icon background → transparent (no plate)
+          - splash background → deep navy
+          - windowBackground fallback → deep navy (never launcher icon)
+    -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:windowSplashScreenBackground">@color/splash_background</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/splash_background</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>
