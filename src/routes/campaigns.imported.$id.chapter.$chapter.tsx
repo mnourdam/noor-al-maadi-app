@@ -36,6 +36,7 @@ import {
   enqueueChapterSync, enqueueCollectionSync, setActivePosition,
   clearActivePositionIf, unlockIdsToCollectionItems,
 } from "@/lib/campaignLedger";
+import { recordCampaignGrant, getCampaignGrantedTotals } from "@/lib/campaignRewardsGranted";
 import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
@@ -210,6 +211,8 @@ function ImportedChapterPlayer() {
       }
       if (xpGrant > 0)    addPoints(xpGrant);
       if (coinGrant > 0)  addDinars(coinGrant);
+      // Canonical grant ledger — must mirror exactly what was applied to profile.
+      recordCampaignGrant(campaign!.id, { xp: xpGrant, coins: coinGrant });
       audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
     }
 
@@ -233,6 +236,9 @@ function ImportedChapterPlayer() {
         if (chDelta.coins > 0) addDinars(chDelta.coins);
         const items = unlockIdsToCollectionItems(campaign!.id, chapter!.id, chDelta.unlocks);
         if (items.length) enqueueCollectionSync(items);
+        recordCampaignGrant(campaign!.id, {
+          xp: chDelta.xp, coins: chDelta.coins, unlocks: chDelta.unlocks,
+        });
       }
     }
 
@@ -245,6 +251,9 @@ function ImportedChapterPlayer() {
         if (camDelta.coins > 0) addDinars(camDelta.coins);
         const items = unlockIdsToCollectionItems(campaign!.id, null, camDelta.unlocks);
         if (items.length) enqueueCollectionSync(items);
+        recordCampaignGrant(campaign!.id, {
+          xp: camDelta.xp, coins: camDelta.coins, unlocks: camDelta.unlocks,
+        });
       }
       // Surface unlock SFX (best-effort).
       (nextProgress.unlockedRegistryIds ?? []).slice(0, 1).forEach((rid) =>
@@ -426,17 +435,25 @@ function ImportedChapterPlayer() {
 
       <OutOfHeartsModal open={outOfHeartsOpen} onClose={() => setOutOfHeartsOpen(false)} />
 
-      {camProgress && (
-        <CampaignCompleteModal
-          open={completionOpen}
-          onClose={() => setCompletionOpen(false)}
-          campaignId={campaign.id}
-          campaignTitle={campaign.title}
-          xp={getCampaignProgress(campaign.id).totalXp}
-          coins={getCampaignProgress(campaign.id).totalCoins}
-          unlockIds={getCampaignProgress(campaign.id).unlockedRegistryIds}
-        />
-      )}
+      {camProgress && (() => {
+        const legacy = getCampaignProgress(campaign.id);
+        const totals = getCampaignGrantedTotals(campaign.id, {
+          totalXp: legacy.totalXp,
+          totalCoins: legacy.totalCoins,
+          unlockedRegistryIds: legacy.unlockedRegistryIds,
+        });
+        return (
+          <CampaignCompleteModal
+            open={completionOpen}
+            onClose={() => setCompletionOpen(false)}
+            campaignId={campaign.id}
+            campaignTitle={campaign.title}
+            xp={totals.xp}
+            coins={totals.coins}
+            unlockIds={totals.unlocks}
+          />
+        );
+      })()}
     </AppShell>
   );
 }
