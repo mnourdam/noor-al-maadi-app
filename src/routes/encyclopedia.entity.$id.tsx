@@ -102,7 +102,7 @@ function Ornament({ label }: { label?: string }) {
 
 function EntityPage() {
   const { id } = Route.useParams();
-  const stashOrigin = useStashCurrentAsOrigin();
+  void useStashCurrentAsOrigin;
 
 
   const query = useQuery({
