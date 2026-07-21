@@ -366,8 +366,12 @@ export const REFERRAL_REWARDS = {
 } as const;
 
 export function buildReferralLink(code: string): string {
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://irth-app.lovable.app";
-  return `${origin}/auth?ref=${encodeURIComponent(code)}`;
+  // Centralized public-origin resolver — never emits localhost / capacitor
+  // origins, even in the APK or preview builds.
+  // Lazy import avoids a cycle with modules that import from social.ts.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { buildReferralUrl, PUBLIC_ORIGIN } = require("./share/publicOrigin") as typeof import("./share/publicOrigin");
+  return buildReferralUrl(code) ?? `${PUBLIC_ORIGIN}/auth?ref=${encodeURIComponent(code)}`;
 }
 
 // =========== Global Leaderboard ===========
