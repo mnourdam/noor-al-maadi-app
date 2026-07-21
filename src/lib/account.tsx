@@ -41,7 +41,7 @@ const PUSH_DEBOUNCE_MS = 1500;
 
 export function AccountProvider({ children }: { children: ReactNode }) {
   const androidStable = isAndroidUltraStableMode();
-  const { profile, replaceProfile, applyServerStats, addDinars, awardBadge, login, resetProfile, hydrateClaimedStreakRewards } = useProfile();
+  const { profile, mergeCloudSave, applyServerStats, addDinars, awardBadge, login, resetProfile, hydrateClaimedStreakRewards } = useProfile();
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<AccountProfile | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -178,9 +178,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             setLastSyncAt(Date.now());
           }
         } else {
-          // Cloud is authoritative — silently restore the latest cloud save.
-          // Manual sync is still available from the account settings.
-          replaceProfile(save.data);
+          // Cloud hydrate — MERGE, don't clobber. Union server sticky
+          // campaign completions in so a device that never pushed the
+          // fact (or is coming back after a reinstall) cannot regress
+          // progression arrays. Numeric scalars (xp/dinars/season) take
+          // max; hearts / streak respect their day-anchored rules.
+          let sticky: string[] = [];
+          try {
+            const { fetchServerCompletedIds } = await import("@/lib/campaigns/completions");
+            sticky = Array.from(await fetchServerCompletedIds());
+          } catch { /* offline / transient — proceed without ledger */ }
+          mergeCloudSave(save.data, { stickyCampaignIds: sticky });
           autoPushEnabled.current = true;
           setLastSyncAt(Date.now());
         }
