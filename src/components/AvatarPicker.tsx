@@ -150,5 +150,7 @@ export function AvatarPicker({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
+
