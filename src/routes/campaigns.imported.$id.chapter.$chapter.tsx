@@ -400,6 +400,7 @@ function ImportedChapterPlayer() {
                       activity={activity}
                       onResolve={onResolve}
                       alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct"}
+                      campaignId={campaign.id}
                     />
                   ) : null}
                 </div>

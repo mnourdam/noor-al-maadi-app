@@ -52,7 +52,12 @@ export interface RendererProps {
    */
   onResolve: (correct: boolean, meta?: ResolveMeta) => void;
   alreadyDone?: boolean;
+  /** Owning campaign id — required by data-driven Reflective Moments so
+   *  auxiliary state (chosen option, personal note) can be keyed and
+   *  restored on resume. Optional for other renderers. */
+  campaignId?: string;
 }
+
 
 const FALLBACK_WRONG = "إجابة غير صحيحة، حاول مرة أخرى.";
 const FALLBACK_OK = "أحسنت، إجابة صحيحة.";
@@ -654,122 +659,8 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
   );
 }
 
-// ---------- Reflection ----------
-// Two-phase experience:
-//   Phase 1 — writing: user types their personal reflection and presses
-//   "سجّل تأمّلك". This does NOT advance to the next activity yet.
-//   Phase 2 — reflection view: the question area smoothly fades out and a
-//   contemplative message fades in ("💭 لحظة تأمل"), using the activity's
-//   `feedbackCorrect` (the closest normalized equivalent of the raw JSON
-//   `correct_explanation` field) or a system default. The activity's hint,
-//   when present, is reframed as "💡 فكرة للتأمل". A single elegant
-//   "متابعة الرحلة →" button advances via onResolve(true).
-// XP / coins / heart logic are unchanged — parent still receives a single
-// onResolve(true) call, exactly once.
-const REFLECTION_DEFAULT =
-  "لا توجد إجابة صحيحة أو خاطئة لهذا النشاط، وإنما وُجد ليمنحك فرصة للتأمل قبل متابعة الرحلة.";
-
-function ReflectionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
-  const [val, setVal] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
-  const [phase, setPhase] = useState<"write" | "reflect">(alreadyDone ? "reflect" : "write");
-  const [resolved, setResolved] = useState(alreadyDone ?? false);
-
-  const enterReflection = () => {
-    if (phase === "reflect") return;
-    setVal(textareaRef.current?.value ?? val);
-    setPhase("reflect");
-  };
-
-  const continueJourney = () => {
-    if (resolved) return;
-    setResolved(true);
-    onResolve(true);
-  };
-
-  const reflectionMessage = (activity.feedbackCorrect ?? "").trim() || REFLECTION_DEFAULT;
-  const reflectionHint = (activity.hint ?? "").trim();
-
-  if (phase === "reflect") {
-    return (
-      <div className="motion-page animate-fade-in" key={`reflect:${activity.id}`}>
-        <ContextBlock text={activity.contextText} />
-        <div className="rounded-2xl border border-gold/25 bg-gradient-to-b from-amber-900/15 via-surface/50 to-stone-900/20 p-5 text-center">
-          <p className="font-display text-[13px] font-bold tracking-wide text-gold/90">
-            💭 لحظة تأمل
-          </p>
-          <p className="mt-4 text-[13px] leading-relaxed text-foreground/90">
-            {reflectionMessage}
-          </p>
-          {reflectionHint && (
-            <div className="mt-5 rounded-xl border border-amber-300/25 bg-amber-500/[0.06] px-3 py-3 text-right text-[12px] leading-relaxed text-amber-100/90">
-              <p className="mb-1 font-display text-[11px] font-bold text-amber-200/90">
-                💡 فكرة للتأمل
-              </p>
-              <p>{reflectionHint}</p>
-            </div>
-          )}
-        </div>
-        {!resolved && (
-          <button
-            onClick={continueJourney}
-            className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
-          >
-            متابعة الرحلة ←
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="motion-page animate-fade-in" key={`write:${activity.id}`}>
-      <ContextBlock text={activity.contextText} />
-      <PromptBlock activity={activity} />
-      {isAndroidNativeApp() ? (
-        <textarea
-          ref={textareaRef}
-          defaultValue=""
-          rows={4}
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="تأمّلك الشخصي…"
-          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
-          data-irth-ab-campaign-focus-disabled={disableCampaignFocusLogic ? "true" : undefined}
-          style={{ transform: "none", filter: "none", backdropFilter: "none", transition: "none", animation: "none" }}
-        />
-      ) : (
-        <AndroidSafeTextarea
-          ref={textareaRef}
-          value={val}
-          onValueChange={setVal}
-          commitMode="blur"
-          rows={4}
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="تأمّلك الشخصي…"
-          modalTitle="تأمّل النشاط"
-          modalLabel="اكتب تأملك ثم اضغط حفظ"
-          androidEntryKey={`campaign.reflection.${activity.id}`}
-          data-irth-ab-campaign-focus-disabled={disableCampaignFocusLogic ? "true" : undefined}
-          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-foreground outline-none focus:border-gold/60"
-        />
-      )}
-
-      <button
-        onClick={enterReflection}
-        className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
-      >
-        سجّل تأمّلك
-      </button>
-    </div>
-  );
-}
-
 // ---------- Fallback ----------
+// Renders anything we don't know how to score. Author marks completion.
 function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   return (
@@ -785,7 +676,10 @@ function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
         نشاطٌ تأمّلي — لا توجد إجابة آلية. يُحتسب عند الإكمال.
       </p>
       {!resolved && (
-        <button onClick={() => { setResolved(true); onResolve(true); }} className="motion-tap mt-3 w-full rounded-xl border border-gold/40 bg-gold/10 py-2 text-xs font-bold text-gold">
+        <button
+          onClick={() => { setResolved(true); onResolve(true); }}
+          className="motion-tap mt-3 w-full rounded-xl border border-gold/40 bg-gold/10 py-2 text-xs font-bold text-gold"
+        >
           تم — وضع علامة كمكتمل
         </button>
       )}
@@ -794,29 +688,213 @@ function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   );
 }
 
-// ---------- Beta: skipped reflection ----------
-// Reflection prompts are temporarily hidden behind VITE_BETA_HIDE_REFLECTIONS
-// (default ON for beta). The infrastructure stays — long-term we convert these
-// into an optional "مذكرة المؤرخ" historian journal. We never block chapter
-// completion: the activity auto-resolves so progression continues normally.
-function ReflectionSkippedRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
+
+// ---------- Reflective Moment ----------
+// Data-driven educational pause. Not a quiz — every response is accepted,
+// and the player can always continue. Three authorable modes:
+//   • "continue" — read + press "متابعة الرحلة". No answer captured.
+//   • "choose"   — author-provided reflection choices; any choice is fine.
+//   • "write"    — optional free-text personal reflection (stored locally).
+//
+// Rewards:
+//   Whatever xpReward / coinsReward the author already set is granted by the
+//   parent through `claimActivityReward` when we call `onResolve(true)` —
+//   exactly the same code path every other activity uses. This module does
+//   NOT introduce a new reward economy. `claimActivityReward` is idempotent,
+//   so resuming a completed reflection never double-grants.
+//
+// Persistence:
+//   The parent's imported-campaign progress ledger owns *completion*
+//   (survives app restart, offline replays, resume-after-login). This
+//   renderer owns the *auxiliary* view state — the chosen option and the
+//   personal note — through `saveReflection` / `getReflection`. Free-text
+//   never leaves the device.
+import { getReflection, saveReflection, resolveReflectionMode, reflectionChoices } from "@/lib/reflections";
+
+interface ReflectiveMomentRendererProps extends RendererProps {
+  campaignId: string;
+}
+
+function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId }: ReflectiveMomentRendererProps) {
+  const mode = resolveReflectionMode(activity);
+  const choices = reflectionChoices(activity);
+  const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Load any previously saved auxiliary state so resume shows the player
+  // their prior choice / note. Completion itself is owned by the parent.
+  const prior = useMemo(() => getReflection(campaignId, activity.id), [campaignId, activity.id]);
+  const [choiceIdx, setChoiceIdx] = useState<number | null>(prior?.choiceIndex ?? null);
+  const [text, setText] = useState<string>(prior?.text ?? "");
   const [resolved, setResolved] = useState(alreadyDone ?? false);
-  useEffect(() => {
-    if (!resolved) { setResolved(true); onResolve(true); }
-  }, [resolved, onResolve]);
+
+  const quote = (activity.quote ?? "").trim();
+  const attribution = (activity.quoteAttribution ?? "").trim();
+  const reflectionBody = (activity.feedbackCorrect ?? "").trim();
+  const reflectionHint = (activity.hint ?? "").trim();
+  const allowFreeText = mode === "write" || (mode === "choose" && activity.allowFreeText === true);
+
+  const canContinue =
+    mode === "continue" ? true :
+    mode === "choose"   ? choiceIdx !== null || (allowFreeText && text.trim().length > 0) :
+    /* write */           text.trim().length > 0 || alreadyDone === true; // write allows empty on resume
+
+  const persist = () => {
+    if (mode === "continue") {
+      saveReflection(campaignId, activity.id, { mode });
+      return;
+    }
+    if (mode === "choose") {
+      const idx = choiceIdx;
+      saveReflection(campaignId, activity.id, {
+        mode,
+        choiceIndex: idx ?? undefined,
+        choiceValue: idx != null ? choices[idx] : undefined,
+        text: allowFreeText ? (textareaRef.current?.value ?? text).trim() || undefined : undefined,
+      });
+      return;
+    }
+    // write
+    const t = (textareaRef.current?.value ?? text).trim();
+    saveReflection(campaignId, activity.id, { mode, text: t || undefined });
+  };
+
+  const continueJourney = () => {
+    if (resolved) return;
+    if (!canContinue) return;
+    setResolved(true);
+    persist();
+    onResolve(true);
+  };
+
   return (
-    <div className="motion-page">
+    <div className="motion-page animate-fade-in" key={`reflect:${activity.id}`}>
       <ContextBlock text={activity.contextText} />
-      <PromptBlock activity={activity} />
-      <p className="mt-2 rounded-xl border border-amber-300/20 bg-amber-500/[0.06] px-3 py-2 text-[11px] leading-6 text-amber-200/85">
-        مذكرة المؤرخ — تأمّل اختياري سيُتاح قريبًا في صفحة الملف.
-      </p>
+
+      {/* Reflective card — always shown, replaces the Q&A chrome */}
+      <div className="rounded-2xl border border-gold/25 bg-gradient-to-b from-amber-900/15 via-surface/50 to-stone-900/20 p-5">
+        <p className="text-center font-display text-[13px] font-bold tracking-wide text-gold/90">
+          💭 لحظة تأمل
+        </p>
+
+        {quote && (
+          <figure className="mt-4 border-r-2 border-gold/40 pr-3 text-right">
+            <blockquote className="text-[13px] italic leading-relaxed text-amber-100/90">
+              «{quote}»
+            </blockquote>
+            {attribution && (
+              <figcaption className="mt-1 text-[11px] text-amber-300/70">— {attribution}</figcaption>
+            )}
+          </figure>
+        )}
+
+        {reflectionBody && (
+          <p className="mt-4 text-right text-[13px] leading-relaxed text-foreground/90">
+            {reflectionBody}
+          </p>
+        )}
+
+        <p className="mt-4 text-right font-display text-[13px] font-bold text-foreground/95">
+          {activity.prompt}
+        </p>
+
+        {reflectionHint && (
+          <div className="mt-4 rounded-xl border border-amber-300/25 bg-amber-500/[0.06] px-3 py-3 text-right text-[12px] leading-relaxed text-amber-100/90">
+            <p className="mb-1 font-display text-[11px] font-bold text-amber-200/90">💡 فكرة للتأمل</p>
+            <p>{reflectionHint}</p>
+          </div>
+        )}
+
+        {/* Choose mode — every choice is accepted, no correct answer */}
+        {mode === "choose" && choices.length > 0 && (
+          <ul className="mt-5 space-y-2" role="radiogroup" aria-label="اختيار التأمل">
+            {choices.map((opt, i) => {
+              const selected = choiceIdx === i;
+              return (
+                <li key={`${activity.id}:opt:${i}`}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    disabled={resolved}
+                    onClick={() => setChoiceIdx(i)}
+                    className={`motion-tap w-full rounded-xl border px-3 py-2 text-right text-[13px] leading-relaxed transition-colors ${
+                      selected
+                        ? "border-gold/70 bg-gold/15 text-foreground"
+                        : "border-white/10 bg-black/30 text-foreground/85 hover:border-gold/40"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {/* Write mode OR "choose" + allowFreeText — optional personal note */}
+        {allowFreeText && (
+          <div className="mt-4">
+            <label className="mb-1 block text-right text-[11px] text-muted-foreground">
+              {mode === "write" ? "تأمّلك الشخصي (اختياري)" : "أضف ملاحظة شخصية (اختياري)"}
+            </label>
+            {isAndroidNativeApp() ? (
+              <textarea
+                ref={textareaRef}
+                defaultValue={text}
+                onBlur={(e) => setText(e.currentTarget.value)}
+                rows={4}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="اكتب ما دار في ذهنك…"
+                disabled={resolved}
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-right text-foreground outline-none focus:border-gold/60 disabled:opacity-70"
+                data-irth-ab-campaign-focus-disabled={disableCampaignFocusLogic ? "true" : undefined}
+                style={{ transform: "none", filter: "none", backdropFilter: "none", transition: "none", animation: "none" }}
+              />
+            ) : (
+              <AndroidSafeTextarea
+                ref={textareaRef}
+                value={text}
+                onValueChange={setText}
+                commitMode="blur"
+                rows={4}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="اكتب ما دار في ذهنك…"
+                modalTitle="تأمّلك الشخصي"
+                modalLabel="اكتب تأملك ثم اضغط حفظ"
+                androidEntryKey={`campaign.reflection.${activity.id}`}
+                disabled={resolved}
+                data-irth-ab-campaign-focus-disabled={disableCampaignFocusLogic ? "true" : undefined}
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-right text-foreground outline-none focus:border-gold/60 disabled:opacity-70"
+              />
+            )}
+            <p className="mt-1 text-right text-[10px] text-muted-foreground/70">
+              يُحفظ محليًا على جهازك فقط.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {!resolved && (
+        <button
+          onClick={continueJourney}
+          disabled={!canContinue}
+          className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-50"
+        >
+          متابعة الرحلة ←
+        </button>
+      )}
+      {resolved && (
+        <p className="mt-4 text-center text-[11px] text-emerald-300/80">تم تسجيل تأمّلك.</p>
+      )}
     </div>
   );
 }
 
-const HIDE_REFLECTIONS =
-  (import.meta.env.VITE_BETA_HIDE_REFLECTIONS ?? "true").toString() === "true";
 
 // ---------- Dispatcher ----------
 export function ActivityRenderer(props: RendererProps) {
@@ -829,9 +907,7 @@ export function ActivityRenderer(props: RendererProps) {
     case "decision_choice":       return <DecisionRenderer {...props} />;
     case "match_pairs":           return <MatchPairsRenderer {...props} />;
     case "fill_blank":            return <FillBlankRenderer {...props} />;
-    case "reflection_prompt":     return HIDE_REFLECTIONS
-                                    ? <ReflectionSkippedRenderer {...props} />
-                                    : <ReflectionRenderer {...props} />;
+    case "reflection_prompt":     return <ReflectiveMomentRenderer {...props} campaignId={props.campaignId ?? ""} />;
     default:                      return <FallbackRenderer {...props} />;
   }
 }

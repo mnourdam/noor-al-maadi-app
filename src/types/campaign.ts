@@ -45,7 +45,25 @@ export interface CampaignActivity {
   relatedCity?: string;
   relatedBattle?: string;
   relatedArtifact?: string;
+  // ---- Reflection-only (type === "reflection_prompt") ----
+  /** Optional authored quote surfaced above the prompt. */
+  quote?: string;
+  /** Attribution for the quote (author / source). */
+  quoteAttribution?: string;
+  /**
+   * Reflective-moment response mode.
+   *   - "continue" → read + press "متابعة الرحلة". No answer captured.
+   *   - "choose"   → author-provided reflection choices; every choice accepted.
+   *   - "write"    → free-text personal reflection. Stored locally only.
+   * When omitted the mode is inferred: `options.length ≥ 2` → "choose",
+   * otherwise → "continue". Set `allowFreeText: true` to permit an
+   * additional free-text field alongside "choose".
+   */
+  reflectionMode?: "continue" | "choose" | "write";
+  /** Enables the optional free-text field in "choose" mode. */
+  allowFreeText?: boolean;
 }
+
 
 export interface CampaignReward {
   xp?: number;
