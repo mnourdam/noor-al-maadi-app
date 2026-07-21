@@ -435,17 +435,25 @@ function ImportedChapterPlayer() {
 
       <OutOfHeartsModal open={outOfHeartsOpen} onClose={() => setOutOfHeartsOpen(false)} />
 
-      {camProgress && (
-        <CampaignCompleteModal
-          open={completionOpen}
-          onClose={() => setCompletionOpen(false)}
-          campaignId={campaign.id}
-          campaignTitle={campaign.title}
-          xp={getCampaignProgress(campaign.id).totalXp}
-          coins={getCampaignProgress(campaign.id).totalCoins}
-          unlockIds={getCampaignProgress(campaign.id).unlockedRegistryIds}
-        />
-      )}
+      {camProgress && (() => {
+        const legacy = getCampaignProgress(campaign.id);
+        const totals = getCampaignGrantedTotals(campaign.id, {
+          totalXp: legacy.totalXp,
+          totalCoins: legacy.totalCoins,
+          unlockedRegistryIds: legacy.unlockedRegistryIds,
+        });
+        return (
+          <CampaignCompleteModal
+            open={completionOpen}
+            onClose={() => setCompletionOpen(false)}
+            campaignId={campaign.id}
+            campaignTitle={campaign.title}
+            xp={totals.xp}
+            coins={totals.coins}
+            unlockIds={totals.unlocks}
+          />
+        );
+      })()}
     </AppShell>
   );
 }
