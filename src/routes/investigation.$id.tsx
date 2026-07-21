@@ -157,9 +157,17 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   };
 
   const onNext = () => {
+    if (advancing) return;
+    setAdvancing(true);
     setPicked(null);
     setAnswerState("unanswered");
-    if (!isLast) { setIdx((i) => i + 1); return; }
+    if (!isLast) {
+      setIdx((i) => i + 1);
+      // Release guard on the next tick so React can commit the index
+      // change before another click is accepted.
+      queueMicrotask(() => setAdvancing(false));
+      return;
+    }
     if (!alreadyDone) grantRewards();
     setFinished(true);
   };
