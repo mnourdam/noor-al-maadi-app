@@ -247,6 +247,20 @@ export function getWorldInvestigationSlugs(worldSlug: string): Set<string> {
 }
 
 /**
+ * Reverse index: investigation-slug → world-slug. Built from the shared
+ * world index so filters (era chips) on `/investigations` see the same
+ * membership as `useWorldMembership`. `null` when the investigation is
+ * unmapped (e.g. no known era in its related entities yet).
+ */
+export function getInvestigationWorldMap(): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const [worldSlug, idx] of buildWorldIndex()) {
+    for (const s of idx.investigationSlugs) out.set(s, worldSlug);
+  }
+  return out;
+}
+
+/**
  * React hook returning the world's membership sets after the local
  * snapshot has loaded. Consumers filter their already-fetched
  * campaign/investigation lists with these sets — no duplicate mapping.
