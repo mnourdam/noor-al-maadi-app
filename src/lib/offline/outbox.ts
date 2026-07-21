@@ -21,7 +21,8 @@ export type OutboxKind =
   | "profile_delta"         // apply_profile_delta RPC (idempotent XP/dinars/hearts)
   | "investigation_complete" // complete_investigation_v2 RPC (server-authoritative)
   | "investigation_backfill" // backfill_investigation_completion RPC (single-key legacy)
-  | "investigation_backfill_batch"; // backfill_investigation_completions RPC (batched legacy)
+  | "investigation_backfill_batch" // backfill_investigation_completions RPC (batched legacy)
+  | "campaign_completion";  // record_campaign_completion RPC (sticky, versioned)
 
 export interface OutboxItem {
   id: string;               // uuid, doubles as idempotency key
