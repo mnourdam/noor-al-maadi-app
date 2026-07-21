@@ -99,8 +99,11 @@ export function resolveRelatedRef(rawInput: string): ResolvedEncyclopediaRef {
     };
   }
 
-  const canon = resolveCanonicalLocal(hit) ?? hit;
-  const type = (canon.entity_type ?? typeHint ?? "").toLowerCase();
+  const canon =
+    (resolveCanonicalLocal(hit as unknown as Parameters<typeof resolveCanonicalLocal>[0]) as
+      | Record<string, unknown>
+      | null) ?? (hit as Record<string, unknown>);
+  const type = String((canon as { entity_type?: unknown }).entity_type ?? typeHint ?? "").toLowerCase();
   const typeLabel = TYPE_LABEL_AR[type] ?? "";
   const title = String((canon as { title?: unknown }).title ?? "").trim();
   const label = title
