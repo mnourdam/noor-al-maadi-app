@@ -351,32 +351,11 @@ function EntityPage() {
           {/* ───────── Article body (timeline · facts · sections · related) ───────── */}
           <EncyclopediaArticleBody article={article} />
 
-          {/* ───────── Knowledge-graph context blocks ───────── */}
-          {contextBlocks.length > 0 && (
-            <>
-              <Ornament label="السياق التاريخي" />
-              <section className="space-y-7">
-                {contextBlocks.map((b) => (
-                  <div key={b.id}>
-                    <div className="mb-3 flex items-center gap-2">
-                      <h3 className="font-display text-[14px] font-bold text-foreground/95">
-                        {b.title}
-                      </h3>
-                      <span className="rounded-full border border-gold/20 bg-black/30 px-2 py-0.5 text-[10px] text-gold/80">
-                        {b.items.length}
-                      </span>
-                      <span className="ms-auto h-px flex-1 bg-gradient-to-l from-gold/25 to-transparent" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {b.items.map((n) => (
-                        <EncyclopediaCard key={n.entity.id} entity={n.entity} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </section>
-            </>
-          )}
+          {/* Generated "السياق التاريخي" block removed in Phase 5 —
+              it was a graph-derived recommendation, not authored content,
+              and it repeated across every entity page. Authored context
+              still renders through EncyclopediaArticleBody above. */}
+
 
           {/* ───────── Related rooms in the museum ───────── */}
           <Ornament label="غرف أخرى في المتحف" />
