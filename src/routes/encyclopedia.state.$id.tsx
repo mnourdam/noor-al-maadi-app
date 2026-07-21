@@ -4,7 +4,7 @@ import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
 import { useAccount } from "@/lib/account";
 import {
   ChevronRight,
-  Database,
+  
   Users,
   Building2,
   Swords,
