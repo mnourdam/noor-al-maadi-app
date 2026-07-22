@@ -12,6 +12,7 @@
 import { PROGRESS_KEY } from "./importedCampaignProgress";
 import { listRegistry } from "./contentRegistryStorage";
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
+import { normalizeRarity, type ArtifactRarity } from "@/lib/rarity";
 
 function isBrowser() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
