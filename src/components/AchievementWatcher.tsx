@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
-import { onAchievementTransition } from "@/lib/achievements/v2";
+import { markAchievementsPresented, onAchievementTransition } from "@/lib/achievements/v2";
 import type { AchievementView } from "@/lib/achievements/v2";
 
 /**
@@ -152,6 +152,9 @@ async function notifyAchievementUnlocked(
         target_user_id: uid,
         deep_link: deepLink,
       },
+    });
+    await markAchievementsPresented({
+      data: { ids: [v.id], origin: "live_gameplay_unlock" },
     });
   } catch (err) {
     // eslint-disable-next-line no-console
