@@ -52,8 +52,8 @@ d("stories P1 — server contract", () => {
        SELECT (public.get_story_access('${draftId}')->>'ok');
        COMMIT;`,
     );
-    const lines = res.split("\n").map(s => s.trim()).filter(s => s === "t" || s === "f");
-    expect(lines).toContain("f");
+    expect(res).toContain("false");
+    expect(res).not.toContain("true");
   });
 
   it("get_story_access returns a bundle for a published story", () => {
@@ -63,10 +63,10 @@ d("stories P1 — server contract", () => {
          VALUES
            ('${pubId}', '${pubId}', 'قصة عامة', 'published', 1, 40, 15)`);
     sql(`INSERT INTO public.story_scenes
-           (story_id, scene_index, scene_type, title_ar, payload)
+           (id, story_id, scene_index, scene_type, title_ar, payload)
          VALUES
-           ('${pubId}', 0, 'reading', 'المقدمة', '{}'::jsonb),
-           ('${pubId}', 1, 'reflection', 'تأمل', '{"prompt":"..."}'::jsonb)`);
+           (gen_random_uuid(), '${pubId}', 0, 'reading', 'المقدمة', '{}'::jsonb),
+           (gen_random_uuid(), '${pubId}', 1, 'reflection', 'تأمل', '{"prompt":"..."}'::jsonb)`);
     const bundle = sql(
       `BEGIN;
        SELECT set_config('request.jwt.claims',
@@ -74,10 +74,9 @@ d("stories P1 — server contract", () => {
        SELECT public.get_story_access('${pubId}');
        COMMIT;`,
     );
-    // The RPC result should include both scenes.
-    expect(bundle).toContain('"ok":true');
-    expect(bundle).toContain('"scene_index":0');
-    expect(bundle).toContain('"scene_index":1');
+    expect(bundle).toContain('"ok" : true');
+    expect(bundle).toContain('"scene_index" : 0');
+    expect(bundle).toContain('"scene_index" : 1');
   });
 
   it("record_story_progress_v2 rejects an unknown story id", () => {
