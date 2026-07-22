@@ -93,6 +93,10 @@ function PersistenceDiagnostics() {
     startedAt: getReconciliationStartedAt(),
     terminalAt: getReconciliationTerminalAt(),
   }));
+  const [startupMarks, setStartupMarks] = useState<StartupMark[]>(() => readStartupMarks());
+  const startupSummary = readStartupSummary();
+  const onboardingCounters = readOnboardingCounters();
+
 
   const refresh = useCallback(async () => {
     setLocalCampaignCompletionCount(localCompletedIds().size);
