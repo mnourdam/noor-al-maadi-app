@@ -71,6 +71,11 @@ function AdminEncyclopediaPage() {
   const [editing, setEditing] = useState<Entity | "new" | null>(null);
   const [jsonUpdating, setJsonUpdating] = useState<Entity | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
+  // Phase 7 — Bulk rarity assignment (artifact filter only).
+  const [rarityFilter, setRarityFilter] = useState<"any" | "missing" | "common" | "rare" | "epic" | "legendary">("any");
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [bulkTarget, setBulkTarget] = useState<"common" | "rare" | "epic" | "legendary">("legendary");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
