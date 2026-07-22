@@ -158,6 +158,8 @@ function PersistenceDiagnostics() {
       window.removeEventListener("irth:onboarding:changed", onChange);
       window.removeEventListener("irth:campaign-completions:changed", onChange);
       window.removeEventListener("irth:campaign-progress:changed", onChange);
+      window.removeEventListener("irth:startup-timeline:changed", onChange);
+
       clearInterval(t);
     };
   }, [refresh]);
