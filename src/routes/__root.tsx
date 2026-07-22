@@ -216,6 +216,8 @@ function RootComponent() {
 
   useEffect(() => {
     try { document.getElementById("irth-boot-splash")?.remove(); } catch { /* noop */ }
+    import("@/lib/boot/startup-timeline").then((m) => m.recordStartupMark("react-mounted")).catch(() => {});
+
     // Apply Android/WebView/reduced-motion perf-mode class on <html>.
     import("../lib/perf-mode").then((m) => m.applyPerfMode()).catch(() => {});
 

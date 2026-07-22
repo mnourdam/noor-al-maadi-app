@@ -45,6 +45,13 @@ import {
   getReconciliationStartedAt,
   getReconciliationTerminalAt,
 } from "@/lib/boot/reconciliation";
+import {
+  readStartupMarks,
+  readStartupSummary,
+  readOnboardingCounters,
+  type StartupMark,
+} from "@/lib/boot/startup-timeline";
+
 import { IRTH_FIRST_TIME_TUTORIAL } from "@/lib/tutorial/data";
 import { fetchServerCompletion, readCompletionRecord } from "@/lib/tutorial/persistence";
 import { getAllEligibilityFlags } from "@/lib/tutorial/eligibility";
@@ -86,6 +93,10 @@ function PersistenceDiagnostics() {
     startedAt: getReconciliationStartedAt(),
     terminalAt: getReconciliationTerminalAt(),
   }));
+  const [startupMarks, setStartupMarks] = useState<StartupMark[]>(() => readStartupMarks());
+  const startupSummary = readStartupSummary();
+  const onboardingCounters = readOnboardingCounters();
+
 
   const refresh = useCallback(async () => {
     setLocalCampaignCompletionCount(localCompletedIds().size);
@@ -119,7 +130,9 @@ function PersistenceDiagnostics() {
       startedAt: getReconciliationStartedAt(),
       terminalAt: getReconciliationTerminalAt(),
     });
+    setStartupMarks(readStartupMarks());
   }, [uid]);
+
 
   useEffect(() => {
     void refresh();
@@ -131,7 +144,12 @@ function PersistenceDiagnostics() {
     window.addEventListener("irth:onboarding:changed", onChange);
     window.addEventListener("irth:campaign-completions:changed", onChange);
     window.addEventListener("irth:campaign-progress:changed", onChange);
-    const t = setInterval(refresh, 5000);
+    window.addEventListener("irth:startup-timeline:changed", onChange);
+
+    // Gentle poll — 30s. Server RPCs (tutorial completion) are deduped
+    // and session-cached, so this only re-reads local state on the tick.
+    const t = setInterval(refresh, 30000);
+
     return () => {
       window.removeEventListener("irth:outbox:flushed", onChange);
       window.removeEventListener("irth:outbox:changed", onChange);
@@ -140,6 +158,8 @@ function PersistenceDiagnostics() {
       window.removeEventListener("irth:onboarding:changed", onChange);
       window.removeEventListener("irth:campaign-completions:changed", onChange);
       window.removeEventListener("irth:campaign-progress:changed", onChange);
+      window.removeEventListener("irth:startup-timeline:changed", onChange);
+
       clearInterval(t);
     };
   }, [refresh]);
@@ -275,6 +295,33 @@ function PersistenceDiagnostics() {
           </dl>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Startup timeline</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          <dl className="grid gap-2 text-xs sm:grid-cols-2">
+            <Fact label="js-boot" value={startupSummary.jsBoot ? new Date(startupSummary.jsBoot).toLocaleTimeString() : "unknown"} />
+            <Fact label="react-mounted" value={startupSummary.reactMounted ? new Date(startupSummary.reactMounted).toLocaleTimeString() : "unknown"} />
+            <Fact label="first-usable-frame (ms)" value={startupSummary.firstUsableFrameMs != null ? String(startupSummary.firstUsableFrameMs) : "unknown"} />
+            <Fact label="terminal reconciliation (ms since boot)" value={startupSummary.terminalReconciliationMs != null ? String(startupSummary.terminalReconciliationMs) : "pending"} />
+            <Fact label="onboarding RPCs (total)" value={String(onboardingCounters.total)} />
+            <Fact label="onboarding RPCs (deduped concurrent)" value={String(onboardingCounters.concurrent)} />
+          </dl>
+          <div className="max-h-40 overflow-auto rounded border text-[11px] font-mono">
+            {startupMarks.length === 0 ? (
+              <div className="p-2 text-muted-foreground">No marks yet.</div>
+            ) : startupMarks.map((m, i) => (
+              <div key={i} className="flex gap-2 border-b px-2 py-1 last:border-b-0">
+                <span className="tabular-nums text-muted-foreground">{new Date(m.ts).toLocaleTimeString()}</span>
+                <span className="tabular-nums text-muted-foreground">+{Math.round(m.perf)}ms</span>
+                <span>{m.stage}</span>
+                {m.detail && <span className="text-muted-foreground">{m.detail}</span>}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
 
       <Card>
         <CardHeader><CardTitle className="text-base">Auth</CardTitle></CardHeader>

@@ -19,6 +19,9 @@ import { pushPublicStats, claimSignupReferral, REFERRAL_REWARDS } from "./social
 import { androidMark, androidMeasure, isAndroidUltraStableMode, recordAndroidAction } from "./androidFreezeDiagnostics";
 import { flushOutbox } from "./offline/flush";
 import { setReconciliationState } from "./boot/reconciliation";
+import { withBoundedTimeout } from "./boot/withTimeout";
+import { recordStartupMark } from "./boot/startup-timeline";
+
 
 interface AccountCtx {
   user: User | null;
@@ -78,12 +81,18 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
+      // Invalidate the onboarding hydration cache on every identity
+      // transition so a new UID always re-hydrates once (and only once).
+      void import("@/lib/tutorial/persistence").then((m) => {
+        try { m.invalidateOnboardingCache(); } catch { /* ignore */ }
+      });
       if (event === "SIGNED_OUT") {
         setReconciliationState("idle");
       } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         setReconciliationState(u ? "loading-local" : "idle");
       }
       setUser(u);
+
       if (event === "SIGNED_OUT") {
         autoPushEnabled.current = false;
         setAccount(null);
@@ -144,14 +153,26 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     (async () => {
       const started = performance.now();
       androidMark("account.hydrate.start", { userId: user.id.slice(0, 8) });
+      recordStartupMark("server-reconciliation-started");
       setSyncing(true);
       let reconciled = false;
+      // Soft deadline: if server reconciliation has not reached a terminal
+      // state within 5s, transition to "offline-local" so consumers (tutorial
+      // engine, hero recommendation) unblock. The work continues in the
+      // background and, on eventual success, upgrades to "reconciled".
+      const softTimer = setTimeout(() => {
+        if (cancelled || reconciled) return;
+        recordStartupMark("server-reconciliation-soft-timeout");
+        recordStartupMark("offline-local-entered");
+        setReconciliationState("offline-local", "soft-timeout");
+      }, 5000);
       try {
         const [acc, save] = await Promise.all([
           fetchAccountProfile(user.id),
           fetchCloudSave(user.id),
         ]);
         if (cancelled) return;
+
         setAccount(acc);
         if (!androidStable) void touchLastActive(user.id);
 
@@ -215,12 +236,41 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         // the tour. Priority-Zero (2026-07).
         try {
           const { hydrateOnboardingFromServer } = await import("@/lib/tutorial/persistence");
-          await hydrateOnboardingFromServer("irth-first-time");
-          reconciled = true;
+          const outcome = await withBoundedTimeout(
+            hydrateOnboardingFromServer("irth-first-time"),
+            5000,
+            (late) => {
+              if (cancelled) return;
+              if (late.kind === "success") {
+                recordStartupMark("server-reconciliation-success", "late");
+                setReconciliationState("reconciled");
+              } else if (late.kind === "offline") {
+                recordStartupMark("offline-local-entered", "late");
+                setReconciliationState("offline-local");
+              } else if (late.kind === "failed") {
+                recordStartupMark("server-reconciliation-failed", "late");
+              }
+            },
+          );
+          if (outcome.kind === "success") {
+            reconciled = true;
+            recordStartupMark("server-reconciliation-success");
+          } else if (outcome.kind === "timeout") {
+            recordStartupMark("server-reconciliation-soft-timeout", "onboarding");
+            setReconciliationState("offline-local", "onboarding-timeout");
+          } else if (outcome.kind === "offline") {
+            recordStartupMark("offline-local-entered", "onboarding");
+            setReconciliationState("offline-local");
+          } else {
+            recordStartupMark("server-reconciliation-failed");
+            setReconciliationState("failed", outcome.error instanceof Error ? outcome.error.message : String(outcome.error));
+          }
         } catch (e) {
           const offline = typeof navigator !== "undefined" && navigator.onLine === false;
           setReconciliationState(offline ? "offline-local" : "failed", e instanceof Error ? e.message : String(e));
         }
+
+
 
         // Identity → never show "ضيف" once authenticated. Prefer display_name.
         const identityName = acc?.display_name?.trim()
@@ -247,12 +297,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (!cancelled) setReconciliationState("failed", e instanceof Error ? e.message : String(e));
       } finally {
+        clearTimeout(softTimer);
         androidMeasure("account.hydrate", started);
         if (!cancelled) setSyncing(false);
       }
     })();
     return () => {
       cancelled = true;
+
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, androidStable]);
