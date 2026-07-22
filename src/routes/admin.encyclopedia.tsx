@@ -319,9 +319,11 @@ function AdminEncyclopediaPage() {
             <table className="w-full text-right text-sm">
               <thead className="bg-slate-900/80 text-xs text-slate-400">
                 <tr>
+                  {filter === "artifact" && <th className="w-8 px-2 py-2"></th>}
                   <th className="px-3 py-2">النوع</th>
                   <th className="px-3 py-2">العنوان</th>
                   <th className="px-3 py-2">Slug</th>
+                  {filter === "artifact" && <th className="px-3 py-2">الندرة</th>}
                   <th className="px-3 py-2">الحالة</th>
                   <th className="px-3 py-2">آخر تحديث</th>
                   <th className="px-3 py-2"></th>
@@ -330,6 +332,19 @@ function AdminEncyclopediaPage() {
               <tbody className="divide-y divide-slate-800">
                 {visible.map(e => (
                   <tr key={e.id} className="hover:bg-slate-900/60">
+                    {filter === "artifact" && (
+                      <td className="w-8 px-2 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(e.id)}
+                          onChange={() => setSelected(prev => {
+                            const next = new Set(prev);
+                            if (next.has(e.id)) next.delete(e.id); else next.add(e.id);
+                            return next;
+                          })}
+                        />
+                      </td>
+                    )}
                     <td className="px-3 py-2 text-xs text-amber-300">{TYPE_LABELS[e.entity_type]}</td>
                     <td className="px-3 py-2">
                       <div className="font-medium text-slate-100">{e.title}</div>
