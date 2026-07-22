@@ -220,6 +220,59 @@ function AdminEncyclopediaPage() {
           />
         </div>
 
+        {filter === "artifact" && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-amber-100">
+            <span className="font-bold">ندرة الأثر:</span>
+            {(["any","missing","common","rare","epic","legendary"] as const).map(r => (
+              <button key={r}
+                onClick={() => setRarityFilter(r)}
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
+                  rarityFilter === r
+                    ? "border-amber-400 bg-amber-500/20 text-amber-100"
+                    : "border-slate-700 text-slate-300 hover:border-amber-400/50"
+                }`}
+              >
+                {r === "any" ? "الكل"
+                  : r === "missing" ? "بلا ندرة"
+                  : r === "common" ? "عادي"
+                  : r === "rare" ? "نادر"
+                  : r === "epic" ? "ملحمي" : "أسطوري"}
+              </button>
+            ))}
+            <span className="ms-auto flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => {
+                  const allIds = new Set(visible.map(v => v.id));
+                  const allSelected = visible.every(v => selected.has(v.id));
+                  setSelected(allSelected ? new Set() : allIds);
+                }}
+                className="rounded-lg border border-slate-700 px-2.5 py-1 text-[11px] text-slate-200 hover:border-amber-400"
+              >
+                {visible.every(v => selected.has(v.id)) && visible.length > 0
+                  ? "إلغاء التحديد" : `تحديد الكل (${visible.length})`}
+              </button>
+              <span className="text-slate-400">المحدد: {selectedVisibleIds.length}</span>
+              <select
+                value={bulkTarget}
+                onChange={e => setBulkTarget(e.target.value as any)}
+                className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+              >
+                <option value="common">عادي</option>
+                <option value="rare">نادر</option>
+                <option value="epic">ملحمي</option>
+                <option value="legendary">أسطوري</option>
+              </select>
+              <button
+                onClick={applyBulkRarity}
+                disabled={selectedVisibleIds.length === 0 || bulkBusy}
+                className="rounded-lg bg-amber-500 px-3 py-1 text-[11px] font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40"
+              >
+                {bulkBusy ? "جارٍ التحديث…" : "تعيين الندرة"}
+              </button>
+            </span>
+          </div>
+        )}
+
         {err && (
           <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
             تعذّر التحميل: {err}
