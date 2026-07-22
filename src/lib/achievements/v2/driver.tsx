@@ -47,7 +47,7 @@ function ensureInit() {
  */
 export function AchievementEngineBoot() {
   ensureInit();
-  const { profile } = useProfile();
+  const { profile, hydrated } = useProfile();
   const canonicalInv = useCanonicalInvestigationProgress();
   const authUserIdRef = useRef<string | null | undefined>(undefined);
   const migratedRef = useRef(false);
@@ -145,6 +145,7 @@ export function AchievementEngineBoot() {
 
   // Canonical inputs → engine.
   useEffect(() => {
+    if (!hydrated) return;
     const lvl = levelFor(profile.points).level;
     pushCanonical({
       campaigns: { completedIds: unionedCampaigns },
@@ -166,14 +167,16 @@ export function AchievementEngineBoot() {
     profile.streak,
     profile.titlesEarned,
     canonicalInv.count,
+    hydrated,
   ]);
 
   // Silent baseline gate: live achievement notifications are enabled only
   // after the auth mirror and initial canonical completion sources settle.
   useEffect(() => {
+    if (!hydrated) return;
     if (!achievementSourcesSettled) return;
     void establishAchievementLiveBaseline();
-  }, [achievementSourcesSettled, unionedCampaigns, canonicalInv.count, profile.points, profile.dinars, profile.streak]);
+  }, [hydrated, achievementSourcesSettled, unionedCampaigns, canonicalInv.count, profile.points, profile.dinars, profile.streak]);
 
   return null;
 }
