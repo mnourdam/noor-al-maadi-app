@@ -1,27 +1,48 @@
 import { useEffect, useRef } from "react";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
+import {
+  getPersisted,
+  isMirrorReady,
+  onEngineTick,
+} from "@/lib/achievements/v2/engine";
 import type { AchievementView } from "@/lib/achievements/v2";
 
 /**
  * v2 Notification watcher.
  *
- * The engine (see `engine.ts`) is authoritative for evaluation, unlock
- * persistence, and reward claim. This component's ONLY job is to surface
- * the "just-unlocked" transition to the player through the notification
- * pipeline:
- *   - toast
- *   - in-app banner (`irth:notifications:banner`)
- *   - SFX (`irth:achievement-unlocked`)
- *   - server notification row + push (for signed-in users)
+ * Presents the ONE approved achievement notification per genuine live
+ * unlock transition. Everything historical (server mirror, hydration,
+ * backfill, reinstall restore, guest→account migration, claim RPC
+ * acknowledgement, rerender) is silent.
  *
- * Dedup uses `localStorage` (`irth.achievements.v2.watcher_seen`) so each
- * id notifies exactly once per device, and the first render after cold
- * boot silently backfills already-unlocked ids without spamming.
+ * Suppression model:
+ *   1. Wait for `isMirrorReady()` — the engine only flips this true
+ *      AFTER the server `user_achievements` mirror has been fetched
+ *      (or explicitly skipped for a guest). Historical unlocks land in
+ *      `persisted` before this flag flips.
+ *   2. On the first mirror-ready pass, seed the local "notified" set
+ *      from `getPersisted()` — every id the server already knows about
+ *      is historical by definition, so no notification is emitted for
+ *      those ids this session, even after a fresh install.
+ *   3. Only ids that appear in `views` as `unlocked`/`claimed` AFTER
+ *      that baseline is captured are treated as live transitions and
+ *      surfaced through the approved gold InAppBanner path.
+ *   4. The transition id (`achievement:<uid>:<achievementId>`) is
+ *      stable so a repeat render, claim ack, or realtime echo cannot
+ *      re-fire the banner (InAppBanner dedupes by id).
+ *
+ * Presentation channel:
+ *   - Signed-in user: `send-notification` writes a row that surfaces
+ *     via realtime → the gold InAppBanner. No local toast.
+ *   - Guest: local `irth:notifications:banner` event → the same gold
+ *     banner component. No local toast, no server round-trip.
+ *
+ * The obsolete sonner `toast.success` path (white/green success chip)
+ * is removed — it was the second, unapproved surface for the same
+ * event.
  */
 
-const SEEN_KEY = "irth.achievements.v2.watcher_seen";
 const XP_BY_RARITY: Record<string, number> = {
   common: 25,
   rare: 50,
@@ -29,42 +50,75 @@ const XP_BY_RARITY: Record<string, number> = {
   legendary: 100,
 };
 
-function loadSeen(): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const raw = window.localStorage.getItem(SEEN_KEY);
-    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
-  } catch {
-    return new Set();
-  }
-}
-function saveSeen(seen: Set<string>) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
-  } catch {
-    /* noop */
-  }
-}
-
 export function AchievementWatcher() {
   const views = useAchievementViews();
-  const seenRef = useRef<Set<string>>(loadSeen());
-  const firstRun = useRef(true);
+  // Force this component to re-render whenever the engine ticks, so a
+  // late `mirrorReady` flip (server fetch resolves after mount) still
+  // establishes the baseline.
+  const tickRef = useRef(0);
+  useEffect(() => {
+    const off = onEngineTick(() => {
+      tickRef.current += 1;
+    });
+    return off;
+  }, []);
+
+  // Session-scoped set of transition ids we've already surfaced. Stable
+  // ids (`achievement:<uid>:<id>`) ensure repeat renders / realtime
+  // echoes / claim acknowledgements cannot re-fire.
+  const notifiedTransitionsRef = useRef<Set<string>>(new Set());
+  const baselineCapturedRef = useRef(false);
+  const authUidRef = useRef<string | null>(null);
+
+  // Capture auth uid once for stable transition ids.
+  useEffect(() => {
+    let cancelled = false;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!cancelled) authUidRef.current = data.user?.id ?? null;
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      authUidRef.current = session?.user?.id ?? null;
+    });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
-    const seen = seenRef.current;
-    const unlocked = views.filter(
-      (v) => v.state === "unlocked" || v.state === "claimed",
-    );
-    for (const v of unlocked) {
-      if (seen.has(v.id)) continue;
-      seen.add(v.id);
-      if (firstRun.current) continue; // silent backfill
-      void notifyAchievementUnlocked(v);
+    // Gate: never notify until the engine has established the server
+    // baseline. Pre-baseline unlocks are historical by definition.
+    if (!isMirrorReady()) return;
+
+    const notified = notifiedTransitionsRef.current;
+    const uid = authUidRef.current;
+    const uidTag = uid ?? "guest";
+
+    if (!baselineCapturedRef.current) {
+      baselineCapturedRef.current = true;
+      // Seed baseline from persisted (server-mirrored) ids. These are
+      // historical, so mark them as already-notified for this session.
+      for (const id of getPersisted().keys()) {
+        notified.add(`achievement:${uidTag}:${id}`);
+      }
+      // Also seed anything currently unlocked (guest local state,
+      // instant guest evaluation) — no notification for pre-baseline
+      // unlocks, ever.
+      for (const v of views) {
+        if (v.state === "unlocked" || v.state === "claimed") {
+          notified.add(`achievement:${uidTag}:${v.id}`);
+        }
+      }
+      return;
     }
-    saveSeen(seen);
-    firstRun.current = false;
+
+    for (const v of views) {
+      if (v.state !== "unlocked" && v.state !== "claimed") continue;
+      const transitionId = `achievement:${uidTag}:${v.id}`;
+      if (notified.has(transitionId)) continue;
+      notified.add(transitionId);
+      void notifyAchievementUnlocked(v, transitionId, uid);
+    }
   }, [views]);
 
   return null;
@@ -81,7 +135,11 @@ function rewardSummary(v: AchievementView): string | null {
   return parts.length ? parts.join(" • ") : null;
 }
 
-async function notifyAchievementUnlocked(v: AchievementView) {
+async function notifyAchievementUnlocked(
+  v: AchievementView,
+  transitionId: string,
+  uid: string | null,
+) {
   const name = v.displayTitle ?? "إنجاز";
   const desc = v.displayDescription ?? "";
   const icon = v.media.icon.ref;
@@ -89,28 +147,22 @@ async function notifyAchievementUnlocked(v: AchievementView) {
   const body = rewards ? `حصلت على إنجاز: ${name} — ${rewards}` : `حصلت على إنجاز: ${name}`;
   const deepLink = `/profile?tab=achievements`;
 
-  toast.success(`إنجاز جديد: ${name}`, {
-    description: rewards ? `${desc} • ${rewards}` : desc,
-    icon,
-    duration: 6000,
-  });
-
+  // Approved gold presentation only. Emit a single sound cue.
   if (typeof window !== "undefined") {
     window.dispatchEvent(
       new CustomEvent("irth:achievement-unlocked", { detail: { id: v.id } }),
     );
   }
 
-  try {
-    const { data } = await supabase.auth.getUser();
-    const uid = data.user?.id;
-    if (!uid) {
+  if (!uid) {
+    // Guest: local gold InAppBanner (single path).
+    if (typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("irth:notifications:banner", {
           detail: {
-            id: `local-ach-${v.id}-${Date.now()}`,
+            id: transitionId,
             title: "إنجاز جديد",
-            body,
+            body: rewards ? `${desc || name} • ${rewards}` : desc || name,
             type: "achievement",
             category: "achievement",
             icon,
@@ -119,8 +171,15 @@ async function notifyAchievementUnlocked(v: AchievementView) {
           },
         }),
       );
-      return;
     }
+    return;
+  }
+
+  // Signed-in: writing the notification row is the single presentation
+  // path. Realtime delivers the gold InAppBanner in the foreground and
+  // FCM handles background delivery. No local toast — that produced the
+  // white/green duplicate.
+  try {
     await supabase.functions.invoke("send-notification", {
       body: {
         title: "إنجاز جديد",
