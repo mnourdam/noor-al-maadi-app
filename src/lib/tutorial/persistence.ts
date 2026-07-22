@@ -148,44 +148,106 @@ export function resetCompletion(): void {
 /**
  * Read the server's completion record. Returns null when signed-out,
  * offline, or the row does not exist.
+ *
+ * Deduped: concurrent calls for the same (uid, tutorialId) share one
+ * in-flight promise; terminal results are cached for the session so
+ * ordinary rerenders, route changes, and diagnostics-page refreshes
+ * do not re-hit the RPC. The cache is invalidated automatically on
+ * auth state change via `invalidateOnboardingCache()`.
  */
+type ServerCompletion = { version: number; completedAt: number } | null;
+
+interface CacheEntry {
+  uid: string;
+  tutorialId: string;
+  result: ServerCompletion;
+  at: number;
+}
+
+const inFlight = new Map<string, Promise<ServerCompletion>>();
+const cache = new Map<string, CacheEntry>();
+
+function cacheKey(uid: string, tutorialId: string) {
+  return `${uid}::${tutorialId}`;
+}
+
+export function invalidateOnboardingCache(uid?: string | null): void {
+  if (uid == null) {
+    cache.clear();
+    inFlight.clear();
+    return;
+  }
+  for (const k of Array.from(cache.keys())) if (k.startsWith(`${uid}::`)) cache.delete(k);
+  for (const k of Array.from(inFlight.keys())) if (k.startsWith(`${uid}::`)) inFlight.delete(k);
+}
+
 export async function fetchServerCompletion(
   tutorialId: string,
-): Promise<{ version: number; completedAt: number } | null> {
+  opts: { force?: boolean } = {},
+): Promise<ServerCompletion> {
   const uid = await currentUserId();
   if (!uid) {
     recordTrace("tutorial", "get_tutorial_completion-skip", "no-session");
     return null;
   }
-  try {
-    recordTrace("tutorial", "get_tutorial_completion-start", tutorialId);
-    const { data, error } = await supabase.rpc(
-      "get_tutorial_completion" as any,
-      { p_tutorial_id: tutorialId },
-    );
-    if (error) {
-      recordTrace("tutorial", "get_tutorial_completion-error", error.message);
-      throw new Error(error.message);
+  const key = cacheKey(uid, tutorialId);
+  if (!opts.force) {
+    const hit = cache.get(key);
+    if (hit) return hit.result;
+    const pending = inFlight.get(key);
+    if (pending) {
+      // Second caller during in-flight — record and share the promise.
+      try {
+        const { recordStartupMark } = await import("@/lib/boot/startup-timeline");
+        recordStartupMark("onboarding-request-concurrent", tutorialId);
+      } catch { /* ignore */ }
+      return pending;
     }
-    const p = (data ?? {}) as {
-      ok?: boolean;
-      completed?: boolean;
-      completed_version?: number;
-      completed_at?: string;
-    };
-    recordTrace(
-      "tutorial",
-      "get_tutorial_completion-result",
-      `ok=${!!p.ok};completed=${!!p.completed};version=${p.completed_version ?? "none"}`,
-    );
-    if (!p.ok || !p.completed || typeof p.completed_version !== "number") return null;
-    const at = p.completed_at ? Math.floor(new Date(p.completed_at).getTime() / 1000) : 0;
-    return { version: p.completed_version, completedAt: at };
-  } catch (e) {
-    recordTrace("tutorial", "get_tutorial_completion-exception", e instanceof Error ? e.message : String(e));
-    throw e;
   }
+  const promise = (async (): Promise<ServerCompletion> => {
+    try {
+      recordTrace("tutorial", "get_tutorial_completion-start", tutorialId);
+      try {
+        const { recordStartupMark } = await import("@/lib/boot/startup-timeline");
+        recordStartupMark("onboarding-request", tutorialId);
+      } catch { /* ignore */ }
+      const { data, error } = await supabase.rpc(
+        "get_tutorial_completion" as any,
+        { p_tutorial_id: tutorialId },
+      );
+      if (error) {
+        recordTrace("tutorial", "get_tutorial_completion-error", error.message);
+        throw new Error(error.message);
+      }
+      const p = (data ?? {}) as {
+        ok?: boolean;
+        completed?: boolean;
+        completed_version?: number;
+        completed_at?: string;
+      };
+      recordTrace(
+        "tutorial",
+        "get_tutorial_completion-result",
+        `ok=${!!p.ok};completed=${!!p.completed};version=${p.completed_version ?? "none"}`,
+      );
+      let result: ServerCompletion = null;
+      if (p.ok && p.completed && typeof p.completed_version === "number") {
+        const at = p.completed_at ? Math.floor(new Date(p.completed_at).getTime() / 1000) : 0;
+        result = { version: p.completed_version, completedAt: at };
+      }
+      cache.set(key, { uid, tutorialId, result, at: Date.now() });
+      return result;
+    } catch (e) {
+      recordTrace("tutorial", "get_tutorial_completion-exception", e instanceof Error ? e.message : String(e));
+      throw e;
+    } finally {
+      inFlight.delete(key);
+    }
+  })();
+  inFlight.set(key, promise);
+  return promise;
 }
+
 
 /** Legacy alias — kept so imports elsewhere continue to compile. */
 export const mirrorCompletionToServer = async (
