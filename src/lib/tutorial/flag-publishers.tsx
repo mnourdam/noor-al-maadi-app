@@ -29,6 +29,7 @@ import { hasCompleted as openingCompleted } from "@/lib/cinematic-opening/persis
 import { subscribeAuthDialog, type AuthDialogOptions } from "@/lib/authDialog";
 import { useAccount } from "@/lib/account";
 import { isRecoveryMode } from "@/lib/recoveryMode";
+import { getReconciliationState, subscribeReconciliation } from "@/lib/boot/reconciliation";
 
 import {
   refreshFirstLaunchChoiceFlag,
@@ -36,13 +37,34 @@ import {
 } from "./eligibility";
 
 export function TutorialFlagPublishers() {
-  const { loadingSession } = useAccount();
+  const { loadingSession, user } = useAccount();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // Session-ready flag.
   useEffect(() => {
     setEligibilityFlag("sessionReady", !loadingSession);
   }, [loadingSession]);
+
+  // Tutorial auto-start must not race authenticated onboarding hydration.
+  // Guests have no server mirror, so they are considered reconciled once the
+  // auth session check is done. Signed-in users must wait for AccountProvider's
+  // boot reconciliation to reach the authoritative server result.
+  useEffect(() => {
+    const publish = () => {
+      if (loadingSession) {
+        setEligibilityFlag("onboardingReconciled", false);
+        return;
+      }
+      if (!user) {
+        setEligibilityFlag("onboardingReconciled", true);
+        return;
+      }
+      const s = getReconciliationState();
+      setEligibilityFlag("onboardingReconciled", s === "reconciled" || s === "offline-local");
+    };
+    publish();
+    return subscribeReconciliation(publish);
+  }, [loadingSession, user?.id]);
 
   // Opening-completed authority.
   //

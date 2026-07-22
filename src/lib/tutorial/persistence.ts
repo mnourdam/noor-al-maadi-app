@@ -15,6 +15,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { enqueueWithId, remove as outboxRemove } from "@/lib/offline/outbox";
 import { flushOutbox } from "@/lib/offline/flush";
+import { recordTrace } from "@/lib/diag-trace";
 
 const KEY = "irth.tutorial.irth-first-time.completed-version.v1";
 const DEFAULT_TUTORIAL_ID = "irth-first-time";
@@ -94,6 +95,7 @@ export function markCompleted(version: number): void {
   // Local write first so a crash/exit before server ack preserves the fact.
   void (async () => {
     const uid = await currentUserId();
+    recordTrace("tutorial", "markCompleted-called", `version=${version};authed=${Boolean(uid)}`);
     const record: StoredRecord = {
       version,
       completedAt: Math.floor(Date.now() / 1000),
@@ -107,9 +109,11 @@ export function markCompleted(version: number): void {
       tutorialId: DEFAULT_TUTORIAL_ID,
       version,
     });
+    recordTrace("tutorial", "tutorial_completion-enqueued", `${DEFAULT_TUTORIAL_ID}:v${version}`);
 
     if (typeof navigator === "undefined" || navigator.onLine) {
       try {
+        recordTrace("tutorial", "record_tutorial_completion-start", `${DEFAULT_TUTORIAL_ID}:v${version}`);
         const { data, error } = await supabase.rpc(
           "record_tutorial_completion" as any,
           { p_tutorial_id: DEFAULT_TUTORIAL_ID, p_version: version },
@@ -118,11 +122,18 @@ export function markCompleted(version: number): void {
           const payload = (data ?? {}) as { ok?: boolean };
           if (payload.ok) {
             try { await outboxRemove(outboxId); } catch { /* leave queued */ }
+            recordTrace("tutorial", "record_tutorial_completion-ok", `${DEFAULT_TUTORIAL_ID}:v${version}`);
             return;
           }
+          recordTrace("tutorial", "record_tutorial_completion-not-ok", `${DEFAULT_TUTORIAL_ID}:v${version}`);
+        } else {
+          recordTrace("tutorial", "record_tutorial_completion-error", error.message);
         }
-      } catch { /* fall through */ }
+      } catch (e) {
+        recordTrace("tutorial", "record_tutorial_completion-exception", e instanceof Error ? e.message : String(e));
+      }
     }
+    recordTrace("tutorial", "record_tutorial_completion-queued", `${DEFAULT_TUTORIAL_ID}:v${version}`);
     void flushOutbox(uid);
   })();
 }
@@ -142,23 +153,36 @@ export async function fetchServerCompletion(
   tutorialId: string,
 ): Promise<{ version: number; completedAt: number } | null> {
   const uid = await currentUserId();
-  if (!uid) return null;
+  if (!uid) {
+    recordTrace("tutorial", "get_tutorial_completion-skip", "no-session");
+    return null;
+  }
   try {
+    recordTrace("tutorial", "get_tutorial_completion-start", tutorialId);
     const { data, error } = await supabase.rpc(
       "get_tutorial_completion" as any,
       { p_tutorial_id: tutorialId },
     );
-    if (error) return null;
+    if (error) {
+      recordTrace("tutorial", "get_tutorial_completion-error", error.message);
+      return null;
+    }
     const p = (data ?? {}) as {
       ok?: boolean;
       completed?: boolean;
       completed_version?: number;
       completed_at?: string;
     };
+    recordTrace(
+      "tutorial",
+      "get_tutorial_completion-result",
+      `ok=${!!p.ok};completed=${!!p.completed};version=${p.completed_version ?? "none"}`,
+    );
     if (!p.ok || !p.completed || typeof p.completed_version !== "number") return null;
     const at = p.completed_at ? Math.floor(new Date(p.completed_at).getTime() / 1000) : 0;
     return { version: p.completed_version, completedAt: at };
-  } catch {
+  } catch (e) {
+    recordTrace("tutorial", "get_tutorial_completion-exception", e instanceof Error ? e.message : String(e));
     return null;
   }
 }
@@ -196,6 +220,11 @@ export async function hydrateOnboardingFromServer(
 ): Promise<{ local: number | null; server: number | null }> {
   const uid = await currentUserId();
   const localRec = readRaw();
+  recordTrace(
+    "tutorial",
+    "hydrateOnboarding-start",
+    `authed=${Boolean(uid)};local=${localRec?.version ?? "none"};owner=${localRec?.userId ? "user" : "none"}`,
+  );
   const serverRec = await fetchServerCompletion(tutorialId);
   const localV = localRec?.version ?? null;
   const serverV = serverRec?.version ?? null;
@@ -207,6 +236,7 @@ export async function hydrateOnboardingFromServer(
       completedAt: serverRec?.completedAt ?? Math.floor(Date.now() / 1000),
       userId: uid,
     });
+    recordTrace("tutorial", "hydrateOnboarding-server-won", `server=${serverV};local=${localV ?? "none"}`);
   } else if (localV != null && ownerMatches(localRec, uid) && (serverV == null || localV > serverV)) {
     // Push local up.
     if (uid) {
@@ -216,11 +246,14 @@ export async function hydrateOnboardingFromServer(
       });
       void flushOutbox(uid);
     }
+    recordTrace("tutorial", "hydrateOnboarding-local-pushed", `local=${localV};server=${serverV ?? "none"}`);
   } else if (uid && localRec && !ownerMatches(localRec, uid) && serverV == null) {
     // Different account, and server has nothing — clear leaked state.
     try {
       if (typeof window !== "undefined") window.localStorage.removeItem(KEY);
     } catch { /* ignore */ }
+    recordTrace("tutorial", "hydrateOnboarding-cleared-cross-user", `local=${localV ?? "none"}`);
   }
+  recordTrace("tutorial", "hydrateOnboarding-done", `local=${localV ?? "none"};server=${serverV ?? "none"}`);
   return { local: localV, server: serverV };
 }

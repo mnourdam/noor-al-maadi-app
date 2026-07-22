@@ -18,6 +18,7 @@ import { useProfile, type ProfileState } from "./profile";
 import { pushPublicStats, claimSignupReferral, REFERRAL_REWARDS } from "./social";
 import { androidMark, androidMeasure, isAndroidUltraStableMode, recordAndroidAction } from "./androidFreezeDiagnostics";
 import { flushOutbox } from "./offline/flush";
+import { setReconciliationState } from "./boot/reconciliation";
 
 interface AccountCtx {
   user: User | null;
@@ -70,12 +71,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     androidMark("account.session.start");
     supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
+      setReconciliationState(data.session?.user ? "loading-local" : "idle");
       recordAndroidAction("account.session.resolved", { hasUser: !!data.session?.user });
       setUser(data.session?.user ?? null);
       setLoadingSession(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
+      setReconciliationState(u ? "loading-local" : "idle");
       setUser(u);
       if (event === "SIGNED_OUT") {
         autoPushEnabled.current = false;
@@ -107,6 +110,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    setReconciliationState("loading-server");
 
     // Guard against leaking a previous account's local snapshot into a new
     // user's cloud save. If this device previously belonged to a different
@@ -137,6 +141,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       const started = performance.now();
       androidMark("account.hydrate.start", { userId: user.id.slice(0, 8) });
       setSyncing(true);
+      let reconciled = false;
       try {
         const [acc, save] = await Promise.all([
           fetchAccountProfile(user.id),
@@ -207,7 +212,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         try {
           const { hydrateOnboardingFromServer } = await import("@/lib/tutorial/persistence");
           await hydrateOnboardingFromServer("irth-first-time");
-        } catch { /* silent — engine has bounded local fallback */ }
+          reconciled = true;
+        } catch (e) {
+          const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+          setReconciliationState(offline ? "offline-local" : "failed", e instanceof Error ? e.message : String(e));
+        }
 
         // Identity → never show "ضيف" once authenticated. Prefer display_name.
         const identityName = acc?.display_name?.trim()
@@ -230,6 +239,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             if (r.ok && r.value) setAccount((prev) => prev ? { ...prev, display_name: r.value! } : prev);
           } catch { /* ignore */ }
         }
+        if (reconciled && !cancelled) setReconciliationState("reconciled");
+      } catch (e) {
+        if (!cancelled) setReconciliationState("failed", e instanceof Error ? e.message : String(e));
       } finally {
         androidMeasure("account.hydrate", started);
         if (!cancelled) setSyncing(false);

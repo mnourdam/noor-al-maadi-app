@@ -25,6 +25,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  BACKEND_CONFIG_FINGERPRINT,
+  BUILD_SHA,
+  BUILD_TARGET,
+  BUILD_TIME,
+  BUILD_TYPE,
+  CAMPAIGN_PROGRESS_RPC_CONTRACT,
+  PERSISTENCE_SCHEMA_VERSION,
+  TUTORIAL_ONBOARDING_RPC_CONTRACT,
+} from "@/lib/build-info";
+import { clearTrace, readTrace, type TraceEntry } from "@/lib/diag-trace";
+import {
+  getReconciliationError,
+  getReconciliationState,
+  getReconciliationStartedAt,
+  getReconciliationTerminalAt,
+} from "@/lib/boot/reconciliation";
 
 export const Route = createFileRoute("/admin/persistence-diagnostics")({
   head: () => ({
@@ -48,12 +65,28 @@ function PersistenceDiagnostics() {
   const [lastFlush, setLastFlush] = useState<number>(0);
   const [flushing, setFlushing] = useState(false);
   const [flushResult, setFlushResult] = useState<string | null>(null);
+  const [campaignTrace, setCampaignTrace] = useState<TraceEntry[]>([]);
+  const [tutorialTrace, setTutorialTrace] = useState<TraceEntry[]>([]);
+  const [reconciliation, setReconciliation] = useState(() => ({
+    state: getReconciliationState(),
+    error: getReconciliationError(),
+    startedAt: getReconciliationStartedAt(),
+    terminalAt: getReconciliationTerminalAt(),
+  }));
 
   const refresh = useCallback(async () => {
     if (!uid) { setItems([]); setDead([]); return; }
     try { setItems(await peekAll(uid)); } catch { setItems([]); }
     setDead(listDeadLetters(uid));
     setLastFlush(getLastFlushAt());
+    setCampaignTrace(readTrace("campaign-persistence"));
+    setTutorialTrace(readTrace("tutorial"));
+    setReconciliation({
+      state: getReconciliationState(),
+      error: getReconciliationError(),
+      startedAt: getReconciliationStartedAt(),
+      terminalAt: getReconciliationTerminalAt(),
+    });
   }, [uid]);
 
   useEffect(() => {
@@ -90,6 +123,12 @@ function PersistenceDiagnostics() {
     void refresh();
   };
 
+  const doClearTraces = () => {
+    clearTrace("campaign-persistence");
+    clearTrace("tutorial");
+    void refresh();
+  };
+
   if (!uid) {
     return <div className="p-6 text-sm">Sign in to inspect persistence state.</div>;
   }
@@ -103,6 +142,35 @@ function PersistenceDiagnostics() {
           {lastFlush ? new Date(lastFlush).toLocaleString() : "never"}
         </p>
       </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Build Fingerprint</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid gap-2 text-xs sm:grid-cols-2">
+            {[
+              ["build SHA", BUILD_SHA],
+              ["build time", BUILD_TIME],
+              ["build type", BUILD_TYPE],
+              ["build target", BUILD_TARGET],
+              ["persistence schema", PERSISTENCE_SCHEMA_VERSION],
+              ["campaign RPC", CAMPAIGN_PROGRESS_RPC_CONTRACT],
+              ["tutorial RPC", TUTORIAL_ONBOARDING_RPC_CONTRACT],
+              ["backend config fingerprint", BACKEND_CONFIG_FINGERPRINT],
+              ["reconciliation state", reconciliation.state],
+              ["reconciliation started", reconciliation.startedAt ? new Date(reconciliation.startedAt).toLocaleString() : "never"],
+              ["reconciliation terminal", reconciliation.terminalAt ? new Date(reconciliation.terminalAt).toLocaleString() : "not terminal"],
+              ["reconciliation error", reconciliation.error ?? "none"],
+            ].map(([k, v]) => (
+              <div key={k} className="rounded border bg-muted/20 p-2">
+                <dt className="text-muted-foreground">{k}</dt>
+                <dd dir="ltr" className="mt-1 break-all font-mono text-[11px]">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -168,6 +236,40 @@ function PersistenceDiagnostics() {
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">
+            Runtime Traces <Badge variant="secondary">{campaignTrace.length + tutorialTrace.length}</Badge>
+          </CardTitle>
+          <Button size="sm" variant="outline" onClick={doClearTraces}>Clear traces</Button>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <TraceList title="Campaign persistence" entries={campaignTrace} />
+          <TraceList title="Tutorial decisions" entries={tutorialTrace} />
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+function TraceList({ title, entries }: { title: string; entries: TraceEntry[] }) {
+  return (
+    <section>
+      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
+      {entries.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No trace entries.</p>
+      ) : (
+        <ul dir="ltr" className="max-h-96 space-y-1 overflow-auto rounded border bg-muted/10 p-2 text-left font-mono text-[10px]">
+          {entries.slice().reverse().map((entry, index) => (
+            <li key={`${entry.ts}-${entry.stage}-${index}`} className="border-b border-border/50 pb-1 last:border-b-0">
+              <div className="text-muted-foreground">{entry.ts}</div>
+              <div className="font-semibold">{entry.stage}</div>
+              {entry.detail && <div className="break-all text-muted-foreground">{entry.detail}</div>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

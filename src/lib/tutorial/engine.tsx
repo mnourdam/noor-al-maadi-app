@@ -40,9 +40,12 @@ import { FIRST_TIME_TUTORIAL_ID, getTutorialConfig } from "./registry";
 import * as persistence from "./persistence";
 import {
   computeEligibility,
+  eligibilityWaitingReason,
   refreshFirstLaunchChoiceFlag,
   subscribeEligibility,
 } from "./eligibility";
+import { getReconciliationState } from "@/lib/boot/reconciliation";
+import { recordTrace } from "@/lib/diag-trace";
 import type {
   TutorialConfig,
   TutorialEngineApi,
@@ -575,6 +578,7 @@ export function TutorialProvider({
   // (auto-start below) re-run — otherwise they'd see the flag values
   // captured on the last dep change and never observe the flip.
   const [eligibilityTick, setEligibilityTick] = useState(0);
+  const lastAutoStartTraceRef = useRef("");
   useEffect(
     () => subscribeEligibility(() => setEligibilityTick((n) => n + 1)),
     [],
@@ -650,15 +654,34 @@ export function TutorialProvider({
   // ------------------------------------------------------------
   useEffect(() => {
     const completed = persistence.hasCompleted(effectiveConfig.version);
-    if (completed) return;
     const envInputs = {
       pathname,
       overlayStackSize,
       homeStableFrames,
       documentVisible,
     };
-    if (!computeEligibility(envInputs)) return;
-    if (api.getSnapshot().state !== "idle") return;
+    const traceOnce = (stage: string, detail: string) => {
+      const key = `${stage}:${detail}`;
+      if (lastAutoStartTraceRef.current === key) return;
+      lastAutoStartTraceRef.current = key;
+      recordTrace("tutorial", stage, detail);
+    };
+    const reconciliation = getReconciliationState();
+    if (completed) {
+      traceOnce("auto-start-blocked", `completed-local;reconciliation=${reconciliation}`);
+      return;
+    }
+    const waitingReason = eligibilityWaitingReason(envInputs);
+    if (waitingReason || !computeEligibility(envInputs)) {
+      traceOnce("auto-start-blocked", `${waitingReason ?? "ineligible"};reconciliation=${reconciliation}`);
+      return;
+    }
+    const state = api.getSnapshot().state;
+    if (state !== "idle") {
+      traceOnce("auto-start-blocked", `engine-state=${state};reconciliation=${reconciliation}`);
+      return;
+    }
+    traceOnce("auto-start-requested", `version=${effectiveConfig.version};reconciliation=${reconciliation}`);
     api.requestStart();
   }, [
     api,

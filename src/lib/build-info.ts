@@ -22,3 +22,23 @@ export const BUILD_TYPE: string =
 
 export const BUILD_TARGET: string =
   safe(() => (typeof __BUILD_TARGET__ !== "undefined" ? __BUILD_TARGET__ : ""), "") || "web";
+
+export const PERSISTENCE_SCHEMA_VERSION = "priority-zero-v2";
+export const CAMPAIGN_PROGRESS_RPC_CONTRACT = "record_campaign_progress_v2";
+export const TUTORIAL_ONBOARDING_RPC_CONTRACT = "get_tutorial_completion/record_tutorial_completion";
+
+function hashString(input: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i += 1) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+export const BACKEND_CONFIG_FINGERPRINT: string = safe(() => {
+  const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "";
+  const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ?? "";
+  if (!url || !key) return "missing";
+  return hashString(`${url}|${key.slice(0, 24)}`);
+}, "unknown");

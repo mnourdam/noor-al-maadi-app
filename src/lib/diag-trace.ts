@@ -7,7 +7,12 @@
 // NEVER store tokens, codes, passwords, emails, or session bodies. Only
 // stage names and short safe metadata (status codes, boolean flags).
 
-export type TraceChannel = "native-auth" | "signup" | "deep-link";
+export type TraceChannel =
+  | "native-auth"
+  | "signup"
+  | "deep-link"
+  | "campaign-persistence"
+  | "tutorial";
 
 export interface TraceEntry {
   ts: string;          // ISO timestamp
@@ -15,7 +20,7 @@ export interface TraceEntry {
   detail?: string;     // optional short safe detail
 }
 
-const MAX_ENTRIES = 40;
+const MAX_ENTRIES = 100;
 
 function keyFor(channel: TraceChannel): string {
   return `diag-trace:${channel}`;
