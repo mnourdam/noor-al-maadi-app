@@ -406,18 +406,28 @@ function ImportedChapterPlayer() {
               </div>
             ) : reviewMode ? (
               <ReviewChapterView campaign={campaign} chapter={chapter} />
-            ) : allDone ? (
-              <ChapterCompletePanel
-                campaignId={campaign.id}
-                campaignTitle={campaign.title}
-                chapterId={chapter.id}
-                chapterTitle={chapter.title}
-                xpEarned={chProgress?.xpEarned ?? 0}
-                coinsEarned={chProgress?.coinsEarned ?? 0}
-                heartsLost={chProgress?.heartsLost ?? 0}
-                nextChapter={nextChapterAfter(campaign, chapter)}
-              />
-            ) : (
+            ) : allDone ? (() => {
+              // Canonical chapter totals: exact XP/dinars/unlocks the
+              // player received while completing this chapter (activity
+              // grants after wrong-answer scaling + chapter bonus). Falls
+              // back to authored figures for pre-Phase 8 completions.
+              const chTotals = getChapterGrantedTotals(campaign.id, chapter.id, {
+                xpEarned: chProgress?.xpEarned ?? 0,
+                coinsEarned: chProgress?.coinsEarned ?? 0,
+              });
+              return (
+                <ChapterCompletePanel
+                  campaignId={campaign.id}
+                  campaignTitle={campaign.title}
+                  chapterId={chapter.id}
+                  chapterTitle={chapter.title}
+                  xpEarned={chTotals.xp}
+                  coinsEarned={chTotals.coins}
+                  heartsLost={chProgress?.heartsLost ?? 0}
+                  nextChapter={nextChapterAfter(campaign, chapter)}
+                />
+              );
+            })() : (
               <div>
                 <ProgressBar
                   done={chProgress?.completedActivityIds.length ?? 0}
