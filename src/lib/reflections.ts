@@ -138,6 +138,11 @@ async function syncReflectionToServer(
           user_id: uid,
           campaign_id: campaignId,
           activity_id: activityId,
+          // New canonical scope (Stories P1 staged migration). Legacy
+          // campaign_id/activity_id remain populated for compatibility.
+          source_type: "campaign",
+          source_id: campaignId,
+          context_id: activityId,
           mode: rec.mode,
           choice_index: rec.choiceIndex ?? null,
           choice_value: rec.choiceValue ?? null,
