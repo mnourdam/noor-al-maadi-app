@@ -38,7 +38,7 @@ import {
 } from "@/lib/campaignLedger";
 import { upsertChapterProgress } from "@/lib/progressSync";
 import { recordTrace } from "@/lib/diag-trace";
-import { recordCampaignGrant, getCampaignGrantedTotals } from "@/lib/campaignRewardsGranted";
+import { recordCampaignGrant, getCampaignGrantedTotals, getChapterGrantedTotals } from "@/lib/campaignRewardsGranted";
 import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
