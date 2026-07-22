@@ -45,6 +45,13 @@ import {
   getReconciliationStartedAt,
   getReconciliationTerminalAt,
 } from "@/lib/boot/reconciliation";
+import {
+  readStartupMarks,
+  readStartupSummary,
+  readOnboardingCounters,
+  type StartupMark,
+} from "@/lib/boot/startup-timeline";
+
 import { IRTH_FIRST_TIME_TUTORIAL } from "@/lib/tutorial/data";
 import { fetchServerCompletion, readCompletionRecord } from "@/lib/tutorial/persistence";
 import { getAllEligibilityFlags } from "@/lib/tutorial/eligibility";
