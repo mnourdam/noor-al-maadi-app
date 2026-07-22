@@ -22,6 +22,7 @@ export type EligibilityFlag =
   | "openingCompletedEvent"
   | "firstLaunchChoiceRecorded"
   | "sessionReady"
+  | "onboardingReconciled"
   | "authDialogClosed"
   | "googleAuthResultDialogClosed"
   | "recoveryGuardInactive";
@@ -31,6 +32,7 @@ const DEFAULTS: Record<EligibilityFlag, boolean> = {
   openingCompletedEvent: false,
   firstLaunchChoiceRecorded: false,
   sessionReady: false,
+  onboardingReconciled: false,
   authDialogClosed: true,
   googleAuthResultDialogClosed: true,
   recoveryGuardInactive: true,
@@ -117,6 +119,7 @@ export function computeEligibility(inputs: EligibilityInputs): boolean {
   if (!flagState.openingCompletedEvent) return false;
   if (!flagState.firstLaunchChoiceRecorded) return false;
   if (!flagState.sessionReady) return false;
+  if (!flagState.onboardingReconciled) return false;
   if (!flagState.authDialogClosed) return false;
   if (!flagState.googleAuthResultDialogClosed) return false;
   if (!flagState.recoveryGuardInactive) return false;
@@ -141,6 +144,7 @@ export function eligibilityWaitingReason(
   if (!flagState.openingCompletedEvent) return "opening-not-completed";
   if (!flagState.firstLaunchChoiceRecorded) return "first-launch-choice-pending";
   if (!flagState.sessionReady) return "session-loading";
+  if (!flagState.onboardingReconciled) return "onboarding-not-reconciled";
   if (!flagState.authDialogClosed) return "auth-dialog-open";
   if (!flagState.googleAuthResultDialogClosed) return "google-auth-result-open";
   if (!flagState.recoveryGuardInactive) return "recovery-mode-active";

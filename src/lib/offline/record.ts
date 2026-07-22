@@ -11,6 +11,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { enqueue, enqueueWithId, type OutboxKind } from "./outbox";
 import { flushOutbox } from "./flush";
+import { recordTrace } from "@/lib/diag-trace";
 
 async function currentUserId(): Promise<string | null> {
   try {
@@ -62,13 +63,23 @@ export async function recordChapterProgress(p: {
   score?: number; xpEarned?: number; coinsEarned?: number;
   completed?: boolean;
 }): Promise<{ acknowledged: boolean; reason?: string }> {
+  recordTrace(
+    "campaign-persistence",
+    "recordChapterProgress-called",
+    `${p.campaignId}/${p.chapterId}:${p.status}:completed=${!!p.completed}`,
+  );
   const uid = await currentUserId();
-  if (!uid) return { acknowledged: false, reason: "unauthenticated" };
+  if (!uid) {
+    recordTrace("campaign-persistence", "recordChapterProgress-no-session", `${p.campaignId}/${p.chapterId}`);
+    return { acknowledged: false, reason: "unauthenticated" };
+  }
   const outboxId = `chapter_progress:${uid}:${p.campaignId}:${p.chapterId}`;
   await enqueueWithId(uid, outboxId, "chapter_progress", p);
+  recordTrace("campaign-persistence", "chapter-progress-enqueued", `${p.campaignId}/${p.chapterId}`);
   // Immediate awaited acknowledgement when online.
   if (typeof navigator === "undefined" || navigator.onLine) {
     try {
+      recordTrace("campaign-persistence", "record_campaign_progress_v2-start", `${p.campaignId}/${p.chapterId}`);
       const { data, error } = await supabase.rpc(
         "record_campaign_progress_v2" as any,
         {
@@ -93,14 +104,28 @@ export async function recordChapterProgress(p: {
               window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
             }
           } catch { /* ignore */ }
+          recordTrace("campaign-persistence", "record_campaign_progress_v2-ok", `${p.campaignId}/${p.chapterId}`);
           return { acknowledged: true };
         }
         // Permanent rejection — surface via flush → dead-letter.
+        recordTrace(
+          "campaign-persistence",
+          "record_campaign_progress_v2-not-ok",
+          `${p.campaignId}/${p.chapterId}:${payload.reason ?? "rpc-not-ok"}`,
+        );
         void flushOutbox(uid);
         return { acknowledged: false, reason: payload.reason ?? "rpc-not-ok" };
       }
-    } catch { /* fall through to queued flush */ }
+      recordTrace("campaign-persistence", "record_campaign_progress_v2-error", `${p.campaignId}/${p.chapterId}:${error.message}`);
+    } catch (e) {
+      recordTrace(
+        "campaign-persistence",
+        "record_campaign_progress_v2-exception",
+        `${p.campaignId}/${p.chapterId}:${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
+  recordTrace("campaign-persistence", "recordChapterProgress-queued", `${p.campaignId}/${p.chapterId}`);
   void flushOutbox(uid);
   return { acknowledged: false, reason: "queued" };
 }
