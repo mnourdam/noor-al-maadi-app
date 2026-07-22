@@ -10,6 +10,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { peekAll, remove, bumpAttempt, type OutboxItem } from "./outbox";
+import { recordDeadLetter, isPermanentReason } from "./dead-letter";
 
 let lastFlushAt = 0;
 let inflight: Promise<{ flushed: number; failed: number }> | null = null;
