@@ -97,11 +97,46 @@ function AdminEncyclopediaPage() {
   const visible = useMemo(() => {
     if (!rows) return [];
     const q = search.trim().toLowerCase();
-    return rows.filter(r =>
-      (filter === "all" || r.entity_type === filter) &&
-      (!q || r.title.toLowerCase().includes(q) || r.slug.toLowerCase().includes(q))
+    return rows.filter(r => {
+      if (filter !== "all" && r.entity_type !== filter) return false;
+      if (q && !r.title.toLowerCase().includes(q) && !r.slug.toLowerCase().includes(q)) return false;
+      if (filter === "artifact" && rarityFilter !== "any") {
+        const raw = (r.metadata as any)?.rarity;
+        const valid = raw === "common" || raw === "rare" || raw === "epic" || raw === "legendary";
+        if (rarityFilter === "missing") return !valid;
+        return valid && raw === rarityFilter;
+      }
+      return true;
+    });
+  }, [rows, filter, search, rarityFilter]);
+
+  // Clear selection when filter/rarity changes so hidden rows are never
+  // silently included in a bulk apply.
+  useEffect(() => { setSelected(new Set()); }, [filter, rarityFilter, search]);
+
+  const selectedVisibleIds = useMemo(() => {
+    if (filter !== "artifact") return [];
+    return visible.filter(v => selected.has(v.id)).map(v => v.id);
+  }, [visible, selected, filter]);
+
+  const applyBulkRarity = async () => {
+    if (selectedVisibleIds.length === 0) return;
+    const ok = window.confirm(
+      `تعيين الندرة "${bulkTarget}" على ${selectedVisibleIds.length} أثرًا؟\nسيتم تعديل metadata.rarity فقط، ولن يتأثر ملك اللاعبين.`,
     );
-  }, [rows, filter, search]);
+    if (!ok) return;
+    setBulkBusy(true);
+    const { data, error } = await supabase.rpc("admin_set_artifact_rarity" as any, {
+      _ids: selectedVisibleIds, _rarity: bulkTarget,
+    });
+    setBulkBusy(false);
+    if (error) return notify("err", error.message);
+    const res = (data as any) ?? {};
+    notify("ok", `تم التحديث: ${res.updated ?? 0} · تم التخطي: ${res.skipped ?? 0}`);
+    setSelected(new Set());
+    refresh();
+  };
+
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: rows?.length ?? 0 };
