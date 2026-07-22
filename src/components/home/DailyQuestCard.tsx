@@ -8,6 +8,7 @@ import {
   entityTypeLabel,
   getTodayQuest,
   markQuestRewarded,
+  markQuestCompletedAndRewardedFromServer,
   localDateKey,
   type QuestState,
 } from "@/lib/daily-quest";
@@ -15,6 +16,7 @@ import {
   buildDailyQuestRewardKey,
   deriveStableDeltaId,
   grantDailyQuestReward,
+  isDailyQuestRewardedOnServer,
 } from "@/lib/daily-quest-reward";
 import { useProfile } from "@/lib/profile";
 import { useAccount } from "@/lib/account";
