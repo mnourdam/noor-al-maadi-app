@@ -325,6 +325,10 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     enabled: value?.enabled ?? true,
     body: JSON.stringify(value?.body ?? {}, null, 2),
     metadata: JSON.stringify(value?.metadata ?? {}, null, 2),
+    // Canonical artifact rarity — mirrored from metadata.rarity, merged back
+    // into metadata at save so the JSON textarea and this control stay in sync.
+    rarity: (value?.metadata?.rarity ?? "common") as
+      | "common" | "rare" | "epic" | "legendary",
     timeline_year: value?.timeline_year == null ? "" : String(value.timeline_year),
     timeline_start_year: value?.timeline_start_year == null ? "" : String(value.timeline_start_year),
     timeline_end_year: value?.timeline_end_year == null ? "" : String(value.timeline_end_year),
