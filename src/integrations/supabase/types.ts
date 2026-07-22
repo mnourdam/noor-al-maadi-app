@@ -2209,6 +2209,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_reflections: {
+        Row: {
+          activity_id: string
+          campaign_id: string
+          choice_index: number | null
+          choice_value: string | null
+          created_at: string
+          id: string
+          mode: string
+          note: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          campaign_id: string
+          choice_index?: number | null
+          choice_value?: string | null
+          created_at?: string
+          id?: string
+          mode: string
+          note?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          campaign_id?: string
+          choice_index?: number | null
+          choice_value?: string | null
+          created_at?: string
+          id?: string
+          mode?: string
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           granted_at: string

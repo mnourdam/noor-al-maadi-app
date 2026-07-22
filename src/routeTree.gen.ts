@@ -16,6 +16,7 @@ import { Route as ShareCardRouteImport } from './routes/share-card'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ReflectionsRouteImport } from './routes/reflections'
 import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -165,6 +166,11 @@ const SeasonsRoute = SeasonsRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReflectionsRoute = ReflectionsRouteImport.update({
+  id: '/reflections',
+  path: '/reflections',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReferralsRoute = ReferralsRouteImport.update({
@@ -788,6 +794,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
+  '/reflections': typeof ReflectionsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/seasons': typeof SeasonsRoute
   '/security': typeof SecurityRoute
@@ -910,6 +917,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
+  '/reflections': typeof ReflectionsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/seasons': typeof SeasonsRoute
   '/security': typeof SecurityRoute
@@ -1032,6 +1040,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/referrals': typeof ReferralsRoute
+  '/reflections': typeof ReflectionsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/seasons': typeof SeasonsRoute
   '/security': typeof SecurityRoute
@@ -1158,6 +1167,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/profile'
     | '/referrals'
+    | '/reflections'
     | '/reset-password'
     | '/seasons'
     | '/security'
@@ -1280,6 +1290,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/profile'
     | '/referrals'
+    | '/reflections'
     | '/reset-password'
     | '/seasons'
     | '/security'
@@ -1401,6 +1412,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/profile'
     | '/referrals'
+    | '/reflections'
     | '/reset-password'
     | '/seasons'
     | '/security'
@@ -1526,6 +1538,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   ReferralsRoute: typeof ReferralsRoute
+  ReflectionsRoute: typeof ReflectionsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SeasonsRoute: typeof SeasonsRoute
   SecurityRoute: typeof SecurityRoute
@@ -1660,6 +1673,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reflections': {
+      id: '/reflections'
+      path: '/reflections'
+      fullPath: '/reflections'
+      preLoaderRoute: typeof ReflectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/referrals': {
@@ -2604,6 +2624,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   ReferralsRoute: ReferralsRoute,
+  ReflectionsRoute: ReflectionsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SeasonsRoute: SeasonsRoute,
   SecurityRoute: SecurityRoute,

@@ -231,6 +231,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         // Merge server-side streak reward claims so they can never be
         // re-claimed after a fresh install / cloud restore.
         try { await hydrateClaimedStreakRewards(); } catch { /* noop */ }
+        // Reflective Moments — pull server-mirrored reflections so the
+        // "My Reflections" journal restores after reinstall / new device.
+        // Fire-and-forget; journal continues to render from local mirror
+        // on failure.
+        try {
+          const { hydrateReflectionsFromServer } = await import("@/lib/reflections");
+          void hydrateReflectionsFromServer();
+        } catch { /* noop */ }
         // Tutorial server mirror — reconcile local ⇄ server so a
         // reinstalled/second-device authenticated user does not replay
         // the tour. Priority-Zero (2026-07).
