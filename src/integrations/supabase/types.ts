@@ -1922,6 +1922,11 @@ export type Database = {
           client_unlocked_at: string | null
           definition_version: number
           engine_version: number
+          notified_at: string | null
+          presentation_origin: string | null
+          presented_at: string | null
+          repair_metadata: Json
+          repair_origin: string | null
           rewards_granted_at: string | null
           rewards_payload: Json
           unlocked_at: string
@@ -1932,6 +1937,11 @@ export type Database = {
           client_unlocked_at?: string | null
           definition_version?: number
           engine_version?: number
+          notified_at?: string | null
+          presentation_origin?: string | null
+          presented_at?: string | null
+          repair_metadata?: Json
+          repair_origin?: string | null
           rewards_granted_at?: string | null
           rewards_payload?: Json
           unlocked_at?: string
@@ -1942,6 +1952,11 @@ export type Database = {
           client_unlocked_at?: string | null
           definition_version?: number
           engine_version?: number
+          notified_at?: string | null
+          presentation_origin?: string | null
+          presented_at?: string | null
+          repair_metadata?: Json
+          repair_origin?: string | null
           rewards_granted_at?: string | null
           rewards_payload?: Json
           unlocked_at?: string
@@ -2971,6 +2986,14 @@ export type Database = {
         }
         Returns: string
       }
+      mark_achievement_notified: {
+        Args: { _id: string; _origin?: string }
+        Returns: boolean
+      }
+      mark_achievement_presented: {
+        Args: { _ids: string[]; _origin?: string }
+        Returns: string[]
+      }
       mark_all_notifications_read: { Args: never; Returns: undefined }
       mark_feedback_issue_read: {
         Args: { p_issue_id: string }
@@ -3040,6 +3063,14 @@ export type Database = {
         Returns: Json
       }
       redeem_referral_code: { Args: { p_code: string }; Returns: Json }
+      repair_historical_achievements: {
+        Args: { _ids: string[]; _metadata?: Json }
+        Returns: {
+          existing: string[]
+          rejected: string[]
+          repaired: string[]
+        }[]
+      }
       reply_to_feedback_issue: {
         Args: { p_body: string; p_is_internal?: boolean; p_issue_id: string }
         Returns: string

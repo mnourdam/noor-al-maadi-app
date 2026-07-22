@@ -27,13 +27,16 @@ import {
 import { evaluate } from "./evaluator";
 import { reconcile, dispatchClaimTransitions } from "./reconciler";
 import { registry, ENGINE_VERSION } from "./index";
-import { claimAchievements, fetchUserAchievements } from "./claim.functions";
-import { dispatchAchievementHook } from "./events";
+import { claimAchievements, fetchUserAchievements, repairHistoricalAchievements } from "./claim.functions";
+import { dispatchAchievementHook, dispatchAchievementTransition } from "./events";
+import { recordTrace } from "@/lib/diag-trace";
+import { shouldEmitAchievementNotification } from "./transition-policy";
 import type {
   AchievementId,
   CanonicalDomain,
   EvaluationResult,
   ProgressSnapshot,
+  TransitionOrigin,
   UserAchievementRecord,
 } from "./types";
 
@@ -160,6 +163,8 @@ let bootedForUserId: string | null | undefined = undefined; // undefined = never
 // "just earned!" notifications on reinstall / cold-start, because
 // canonical inputs land before the server mirror has been fetched.
 let mirrorReady = false;
+let liveTransitionsReady = false;
+let baselineInFlight: Promise<void> | null = null;
 
 const NOTIFIED_KEY = "irth.achievements.v2.notified";
 const GUEST_UNLOCKS_KEY = "irth.achievements.v2.guest_unlocks";
@@ -240,6 +245,7 @@ export async function refreshPersistedForUser(userId: string | null): Promise<vo
   bootedForUserId = userId;
   inputs.profile.userId = userId;
   mirrorReady = false;
+  liveTransitionsReady = false;
 
   if (!userId) {
     persisted = loadGuestUnlocks();
@@ -249,7 +255,9 @@ export async function refreshPersistedForUser(userId: string | null): Promise<vo
     for (const id of persisted.keys()) alreadyNotified.add(id);
     saveNotified();
     mirrorReady = true;
-    await runCycle(["profile"]);
+    await runCycle(allDomains(), "startup_hydration");
+    liveTransitionsReady = true;
+    recordAchievementTrace("baseline-ready", { user: "guest", persisted: persisted.size });
     return;
   }
 
@@ -262,6 +270,10 @@ export async function refreshPersistedForUser(userId: string | null): Promise<vo
           achievementId: r.achievement_id,
           unlockedAt: r.unlocked_at ?? new Date().toISOString(),
           rewardsGrantedAt: r.rewards_granted_at ?? null,
+          presentedAt: r.presented_at ?? null,
+          notifiedAt: r.notified_at ?? null,
+          presentationOrigin: r.presentation_origin ?? null,
+          repairOrigin: r.repair_origin ?? null,
           engineVersion: r.engine_version ?? ENGINE_VERSION,
           definitionVersion: r.definition_version ?? 1,
         },
@@ -279,7 +291,7 @@ export async function refreshPersistedForUser(userId: string | null): Promise<vo
     console.warn("[achievements] mirror fetch failed; keeping local state", err);
   }
   mirrorReady = true;
-  await runCycle(["profile"]);
+  notifyListeners();
 }
 
 /**
@@ -292,23 +304,30 @@ export function pushCanonical(patch: Partial<CanonicalInputs>): void {
     changed.push(key as CanonicalDomain);
   }
   if (changed.length === 0) return;
-  void runCycle(changed);
+  void runCycle(changed, liveTransitionsReady ? "live_gameplay_unlock" : "historical_reconciliation");
 }
 
 let cycleInFlight: Promise<void> | null = null;
 let queuedDomains: CanonicalDomain[] | null = null;
+let queuedOrigin: TransitionOrigin = "historical_reconciliation";
 
-async function runCycle(changedDomains: readonly CanonicalDomain[]): Promise<void> {
+async function runCycle(
+  changedDomains: readonly CanonicalDomain[],
+  origin: TransitionOrigin = liveTransitionsReady ? "live_gameplay_unlock" : "historical_reconciliation",
+): Promise<void> {
   if (cycleInFlight) {
     queuedDomains = mergeDomains(queuedDomains, changedDomains);
+    if (origin !== "live_gameplay_unlock") queuedOrigin = origin;
     return;
   }
-  cycleInFlight = doCycle(changedDomains).finally(() => {
+  cycleInFlight = doCycle(changedDomains, origin).finally(() => {
     cycleInFlight = null;
     if (queuedDomains) {
       const next = queuedDomains;
+      const nextOrigin = queuedOrigin;
       queuedDomains = null;
-      void runCycle(next);
+      queuedOrigin = liveTransitionsReady ? "live_gameplay_unlock" : "historical_reconciliation";
+      void runCycle(next, nextOrigin);
     }
   });
   await cycleInFlight;
@@ -323,7 +342,10 @@ function mergeDomains(
   return [...set];
 }
 
-async function doCycle(changedDomains: readonly CanonicalDomain[]): Promise<void> {
+async function doCycle(
+  changedDomains: readonly CanonicalDomain[],
+  origin: TransitionOrigin,
+): Promise<void> {
   snapshot = rebuildSnapshot(snapshot, changedDomains);
   const alreadyUnlockedSet = new Set<AchievementId>(persisted.keys());
   evaluation = evaluate(snapshot, registry, alreadyUnlockedSet, {
@@ -346,7 +368,8 @@ async function doCycle(changedDomains: readonly CanonicalDomain[]): Promise<void
     alreadyNotified,
   });
 
-  // Fire onClaimed hooks for anything that flipped to claimed this cycle.
+  // Claim acknowledgements are explicitly silent; this call is a deprecated
+  // no-op kept for API compatibility.
   const newClaimedThisCycle = output.newlyClaimed.filter(
     (id) => !lastClaimedSet.has(id),
   );
@@ -355,26 +378,66 @@ async function doCycle(changedDomains: readonly CanonicalDomain[]): Promise<void
   }
   lastClaimedSet = new Set(output.newlyClaimed);
 
-  // Mark newly-unlocked ids as notified so we don't re-dispatch on reload.
+  // Mark evaluated ids locally only as an optimization; server presentation
+  // state is the durable truth after sign-in/reinstall.
   for (const id of output.newlyUnlocked) alreadyNotified.add(id);
   saveNotified();
 
   const userId = inputs.profile.userId;
   if (output.newlyUnlocked.length > 0) {
+    if (!liveTransitionsReady) {
+      for (const id of output.newlyUnlocked) {
+        recordTransitionTrace(id, {
+          origin,
+          serverPersistedBeforeEvaluation: false,
+          evaluatorSatisfied: true,
+          reconcilerClassifiedAsNew: true,
+          claimInserted: false,
+          claimExisting: false,
+          transitionClassification: origin,
+          notificationEmitted: false,
+          suppressionReason: "silent_baseline_or_historical_repair",
+        });
+      }
+      if (userId) {
+        await silentlyRepairHistorical(output.newlyUnlocked, origin);
+      } else {
+        for (const id of output.newlyUnlocked) {
+          persisted.set(id, buildLocalRecord(id, true));
+        }
+        saveGuestUnlocks();
+      }
+      notifyListeners();
+      return;
+    }
+
     if (userId) {
       // Signed-in: authoritative claim + refresh mirror.
       try {
         const res = await claimAchievements({
           data: { ids: [...output.newlyUnlocked], engineVersion: ENGINE_VERSION },
         });
+        const insertedSet = new Set(res.inserted);
+        const existingSet = new Set(res.alreadyClaimed);
         for (const id of res.inserted) {
-          persisted.set(id, {
-            achievementId: id,
-            unlockedAt: new Date().toISOString(),
-            rewardsGrantedAt: null,
-            engineVersion: ENGINE_VERSION,
-            definitionVersion: registry.byId.get(id)?.version ?? 1,
-          });
+          const rec = buildLocalRecord(id, false);
+          persisted.set(id, rec);
+          emitLiveTransition(id, rec, true, false);
+        }
+        for (const id of output.newlyUnlocked) {
+          if (!insertedSet.has(id)) {
+            recordTransitionTrace(id, {
+              origin,
+              serverPersistedBeforeEvaluation: false,
+              evaluatorSatisfied: true,
+              reconcilerClassifiedAsNew: true,
+              claimInserted: false,
+              claimExisting: existingSet.has(id),
+              transitionClassification: existingSet.has(id) ? "claim_ack" : origin,
+              notificationEmitted: false,
+              suppressionReason: existingSet.has(id) ? "claim_conflict_existing" : "claim_not_inserted",
+            });
+          }
         }
       } catch (err) {
         // Offline / transient — keep newlyNotified so we don't spam; retry next cycle.
@@ -384,13 +447,9 @@ async function doCycle(changedDomains: readonly CanonicalDomain[]): Promise<void
     } else {
       // Guest: keep unlocks locally so guest→account migration preserves them.
       for (const id of output.newlyUnlocked) {
-        persisted.set(id, {
-          achievementId: id,
-          unlockedAt: new Date().toISOString(),
-          rewardsGrantedAt: null,
-          engineVersion: ENGINE_VERSION,
-          definitionVersion: registry.byId.get(id)?.version ?? 1,
-        });
+        const rec = buildLocalRecord(id, false);
+        persisted.set(id, rec);
+        emitLiveTransition(id, rec, true, false);
       }
       saveGuestUnlocks();
     }
@@ -421,6 +480,29 @@ export function isMirrorReady(): boolean {
   return mirrorReady;
 }
 
+export function isLiveTransitionsReady(): boolean {
+  return liveTransitionsReady;
+}
+
+export async function establishAchievementLiveBaseline(): Promise<void> {
+  if (!mirrorReady) return;
+  if (liveTransitionsReady) return;
+  if (baselineInFlight) return baselineInFlight;
+  baselineInFlight = (async () => {
+    await runCycle(allDomains(), "startup_hydration");
+    liveTransitionsReady = true;
+    recordAchievementTrace("baseline-ready", {
+      user: inputs.profile.userId ? "signed-in" : "guest",
+      persisted: persisted.size,
+      satisfied: evaluation.unlockedIds.size,
+    });
+    notifyListeners();
+  })().finally(() => {
+    baselineInFlight = null;
+  });
+  return baselineInFlight;
+}
+
 /**
  * Guest → account migration: called when a guest signs in with existing
  * local unlocks. Sends them through `claimAchievements`; the RPC is
@@ -435,6 +517,17 @@ export async function migrateGuestUnlocks(): Promise<void> {
     await claimAchievements({
       data: { ids, engineVersion: ENGINE_VERSION },
     });
+    for (const id of ids) {
+      recordTransitionTrace(id, {
+        origin: "guest_migration",
+        serverPersistedBeforeEvaluation: false,
+        evaluatorSatisfied: true,
+        reconcilerClassifiedAsNew: false,
+        transitionClassification: "guest_migration",
+        notificationEmitted: false,
+        suppressionReason: "silent_origin:guest_migration",
+      });
+    }
     window.localStorage.removeItem(GUEST_UNLOCKS_KEY);
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -442,8 +535,139 @@ export async function migrateGuestUnlocks(): Promise<void> {
   }
 }
 
-/** Force-fire onUnlocked for a single id (used by the notification driver). */
+/** Deprecated: force-fire bypass removed. Use live engine transitions only. */
 export function _dispatchUnlockNotification(id: AchievementId): void {
+  recordTransitionTrace(id, {
+    origin: "historical_reconciliation",
+    serverPersistedBeforeEvaluation: persisted.has(id),
+    evaluatorSatisfied: evaluation.unlockedIds.has(id),
+    reconcilerClassifiedAsNew: false,
+    transitionClassification: "historical_reconciliation",
+    notificationEmitted: false,
+    suppressionReason: "deprecated_force_dispatch_blocked",
+  });
+}
+
+function allDomains(): CanonicalDomain[] {
+  return [
+    "campaigns",
+    "investigations",
+    "encyclopedia",
+    "museum",
+    "atlas",
+    "worlds",
+    "xp",
+    "level",
+    "dinars",
+    "streak",
+    "daily",
+    "games",
+    "titles",
+    "profile",
+  ];
+}
+
+function buildLocalRecord(id: AchievementId, silentPresented: boolean): UserAchievementRecord {
+  const now = new Date().toISOString();
+  return {
+    achievementId: id,
+    unlockedAt: now,
+    rewardsGrantedAt: silentPresented ? now : null,
+    presentedAt: silentPresented ? now : null,
+    notifiedAt: silentPresented ? now : null,
+    presentationOrigin: silentPresented ? "historical_repair" : null,
+    repairOrigin: silentPresented ? "historical_repair" : null,
+    engineVersion: ENGINE_VERSION,
+    definitionVersion: registry.byId.get(id)?.version ?? 1,
+  };
+}
+
+async function silentlyRepairHistorical(
+  ids: readonly AchievementId[],
+  origin: TransitionOrigin,
+): Promise<void> {
+  if (ids.length === 0) return;
+  try {
+    const res = await repairHistoricalAchievements({
+      data: {
+        ids: [...ids],
+        metadata: {
+          origin,
+          reward_grant_suppressed: true,
+          reason: "silent_session_baseline",
+        },
+      },
+    });
+    const repaired = new Set(res.repaired);
+    const existing = new Set(res.existing);
+    for (const id of ids) {
+      persisted.set(id, buildLocalRecord(id, true));
+      recordTransitionTrace(id, {
+        origin: repaired.has(id) ? "historical_repair" : "historical_reconciliation",
+        serverPersistedBeforeEvaluation: existing.has(id),
+        evaluatorSatisfied: true,
+        reconcilerClassifiedAsNew: true,
+        claimInserted: false,
+        claimExisting: existing.has(id),
+        transitionClassification: repaired.has(id) ? "historical_repair" : "historical_reconciliation",
+        notificationEmitted: false,
+        suppressionReason: repaired.has(id)
+          ? "historical_missing_row_repaired_silently"
+          : "historical_existing_row_marked_presented",
+      });
+    }
+  } catch (err) {
+    recordAchievementTrace("historical-repair-error", err instanceof Error ? err.message : String(err));
+  }
+}
+
+function emitLiveTransition(
+  id: AchievementId,
+  rec: UserAchievementRecord | null,
+  claimInserted: boolean,
+  claimExisting: boolean,
+): void {
+  const decision = shouldEmitAchievementNotification({
+    id,
+    origin: "live_gameplay_unlock",
+    liveTransitionsReady,
+    serverPersistedBeforeEvaluation: false,
+    evaluatorSatisfied: evaluation.unlockedIds.has(id),
+    reconcilerClassifiedAsNew: true,
+    claimInserted,
+    claimExisting,
+    serverRecord: rec,
+  });
+  recordTransitionTrace(id, {
+    origin: "live_gameplay_unlock",
+    serverPersistedBeforeEvaluation: false,
+    evaluatorSatisfied: evaluation.unlockedIds.has(id),
+    reconcilerClassifiedAsNew: true,
+    claimInserted,
+    claimExisting,
+    transitionClassification: "live_gameplay_unlock",
+    notificationEmitted: decision.notificationEmitted,
+    suppressionReason: decision.suppressionReason,
+  });
+  if (!decision.notificationEmitted) return;
   const def = registry.byId.get(id);
   if (def) dispatchAchievementHook("onUnlocked", def);
+  dispatchAchievementTransition(id, "live_gameplay_unlock");
+}
+
+function recordTransitionTrace(
+  id: AchievementId,
+  detail: Record<string, unknown>,
+): void {
+  recordAchievementTrace("transition", { achievementId: id, ...detail });
+}
+
+function recordAchievementTrace(stage: string, detail?: unknown): void {
+  try {
+    recordTrace(
+      "achievement",
+      stage,
+      typeof detail === "string" ? detail : JSON.stringify(detail ?? {}),
+    );
+  } catch { /* ignore */ }
 }

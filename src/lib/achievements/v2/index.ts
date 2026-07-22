@@ -40,17 +40,20 @@ export type { SliceProvider } from "./snapshot";
 export {
   onAchievementEvent,
   onAchievementAnalytics,
+  onAchievementTransition,
   dispatchAchievementHook,
+  dispatchAchievementTransition,
 } from "./events";
 export type {
   AchievementEventPayload,
   AchievementAnalyticsPayload,
+  AchievementTransitionPayload,
   AchievementLifecycleHook,
 } from "./events";
 export { resolveI18n, setAchievementLocale, getAchievementLocale } from "./i18n";
 export type { LocaleId } from "./i18n";
-export { claimAchievements, fetchUserAchievements } from "./claim.functions";
-export type { ClaimResult } from "./claim.functions";
+export { claimAchievements, fetchUserAchievements, markAchievementsPresented, repairHistoricalAchievements } from "./claim.functions";
+export type { ClaimResult, HistoricalRepairResult } from "./claim.functions";
 
 import { buildRegistry } from "./registry";
 import { DEFINITIONS } from "./definitions";

@@ -82,6 +82,7 @@ function PersistenceDiagnostics() {
   const [copyResult, setCopyResult] = useState<string | null>(null);
   const [campaignTrace, setCampaignTrace] = useState<TraceEntry[]>([]);
   const [tutorialTrace, setTutorialTrace] = useState<TraceEntry[]>([]);
+  const [achievementTrace, setAchievementTrace] = useState<TraceEntry[]>([]);
   const [localCampaignCompletionCount, setLocalCampaignCompletionCount] = useState(0);
   const [serverCampaignCompletionCount, setServerCampaignCompletionCount] = useState<number | null>(null);
   const [tutorialLocalVersion, setTutorialLocalVersion] = useState<number | null>(null);
@@ -124,6 +125,7 @@ function PersistenceDiagnostics() {
     setLastFlush(getLastFlushAt());
     setCampaignTrace(readTrace("campaign-persistence"));
     setTutorialTrace(readTrace("tutorial"));
+    setAchievementTrace(readTrace("achievement"));
     setReconciliation({
       state: getReconciliationState(),
       error: getReconciliationError(),
@@ -188,6 +190,7 @@ function PersistenceDiagnostics() {
   const doClearTraces = () => {
     clearTrace("campaign-persistence");
     clearTrace("tutorial");
+    clearTrace("achievement");
     setCopyResult(null);
     void refresh();
   };
@@ -225,6 +228,7 @@ function PersistenceDiagnostics() {
       deadLetter: dead,
       campaignTrace,
       tutorialTrace,
+      achievementTrace,
     };
   };
 
@@ -463,9 +467,10 @@ function PersistenceDiagnostics() {
           </CardTitle>
           <Button size="sm" variant="outline" onClick={doClearTraces}>Clear traces</Button>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+        <CardContent className="grid gap-4 md:grid-cols-3">
           <TraceList title="Campaign persistence" entries={campaignTrace} />
           <TraceList title="Tutorial decisions" entries={tutorialTrace} />
+          <TraceList title="Achievement transitions" entries={achievementTrace} />
         </CardContent>
       </Card>
     </div>
