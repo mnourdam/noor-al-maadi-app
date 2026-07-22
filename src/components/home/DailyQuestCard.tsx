@@ -8,6 +8,7 @@ import {
   entityTypeLabel,
   getTodayQuest,
   markQuestRewarded,
+  markQuestCompletedAndRewardedFromServer,
   localDateKey,
   type QuestState,
 } from "@/lib/daily-quest";
@@ -15,6 +16,7 @@ import {
   buildDailyQuestRewardKey,
   deriveStableDeltaId,
   grantDailyQuestReward,
+  isDailyQuestRewardedOnServer,
 } from "@/lib/daily-quest-reward";
 import { useProfile } from "@/lib/profile";
 import { useAccount } from "@/lib/account";
@@ -250,6 +252,31 @@ export function DailyQuestCard() {
     const initial = getTodayQuest(userKey);
     if (initial) void grantReward(initial);
 
+    // Account-authoritative completion hydrator.
+    // After reinstall + login, local `completed`/`rewarded` flags are gone
+    // but the server still knows the reward was granted. If today's target
+    // (deterministic per user+day+kind) matches a delta row already applied
+    // on the server, restore the completed-checkmark UI without re-granting.
+    let cancelledHydrate = false;
+    if (user && initial?.target && (!initial.completed || !initial.rewarded)) {
+      const target = initial.target;
+      const localDate = initial.date || localDateKey();
+      void (async () => {
+        try {
+          const applied = await isDailyQuestRewardedOnServer({
+            userId: user.id,
+            localDate,
+            entityId: target.entityId,
+          });
+          if (cancelledHydrate) return;
+          if (applied) {
+            markQuestCompletedAndRewardedFromServer(userKey);
+            refresh();
+          }
+        } catch { /* ignore — next mount / online event retries */ }
+      })();
+    }
+
     const onUpdate = () => {
       refresh();
       const cur = getTodayQuest(userKey);
@@ -279,6 +306,7 @@ export function DailyQuestCard() {
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
     const tid = window.setTimeout(refresh, nextMidnight.getTime() - now.getTime());
     return () => {
+      cancelledHydrate = true;
       window.removeEventListener(QUEST_UPDATED_EVENT, onUpdate);
       window.removeEventListener(QUEST_COMPLETED_EVENT, onCompleted as EventListener);
       window.removeEventListener("irth:outbox:flushed", onOutboxFlushed);

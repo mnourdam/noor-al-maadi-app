@@ -408,6 +408,29 @@ export function markQuestRewarded(userKey: string): QuestState | null {
   return next;
 }
 
+/**
+ * Server-authoritative completion hydrator.
+ *
+ * Daily Reading completion is keyed by (user_id, local_date, entity_id) —
+ * the same tuple that seeds the reward's stable `delta_id`. If the server
+ * shows a matching row in `applied_profile_deltas`, the quest was already
+ * completed and rewarded on some prior install / device, so we upgrade
+ * the local state to `completed=true, rewarded=true` silently.
+ *
+ * Reinstall + login therefore restores the completed-checkmark UI without
+ * re-granting the reward (the stable `delta_id` primary key already
+ * prevents double-grant server-side).
+ */
+export function markQuestCompletedAndRewardedFromServer(userKey: string): QuestState | null {
+  const cur = getTodayQuest(userKey);
+  if (!cur) return null;
+  if (cur.completed && cur.rewarded) return cur;
+  const next: QuestState = { ...cur, progress: cur.goal, completed: true, rewarded: true };
+  writeState(userKey, next);
+  if (cur.target?.entityId) markEntityCompleted(userKey, cur.target.entityId);
+  return next;
+}
+
 // ---------- Legacy / future kinds (no-op advance) ------------------
 
 export function notifyQuestProgress(_kind: QuestKind, _delta = 1): void {
