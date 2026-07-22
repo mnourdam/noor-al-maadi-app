@@ -519,11 +519,11 @@ function CampaignTraceList({ entries }: { entries: TraceEntry[] }) {
             <TraceFact label="operation id" value={String(detail.operationId ?? "—")} />
             <TraceFact label="completed flag sent" value={String(detail.completed ?? (detail.payload as any)?.p_completed ?? "—")} />
             <TraceFact label="score/xp/coins sent" value={traceScore(detail)} />
-            <TraceFact label="local optimistic write result" value={String(detail.localOptimisticWriteResult ?? "see local mirror")} />
+            <TraceFact label="local optimistic write result" value={formatTraceValue(detail.localOptimisticWriteResult ?? "see local mirror")} />
             <TraceFact label="outbox enqueue result" value={entry.stage.includes("enqueued") ? "ok" : String(detail.outboxEnqueueResult ?? "—")} />
-            <TraceFact label="RPC name" value={String(detail.rpc ?? (entry.stage.includes("record_campaign_progress_v2") ? "record_campaign_progress_v2" : "—"))} />
+            <TraceFact label="RPC name" value={String(typeof detail.rpc === "string" ? detail.rpc : entry.stage.includes("record_campaign_progress_v2") ? "record_campaign_progress_v2" : "—")} />
             <TraceFact label="RPC start time" value={String(detail.rpcStartedAt ?? (entry.stage.endsWith("start") ? entry.ts : "—"))} />
-            <TraceFact label="RPC response" value={JSON.stringify(detail.rpcResponse ?? detail.rpc ?? "—")} />
+            <TraceFact label="RPC response" value={formatTraceValue(detail.rpcResponse ?? (typeof detail.rpc === "object" ? detail.rpc : "—"))} />
             <TraceFact label="acknowledged" value={String(detail.acknowledged ?? "—")} />
             <TraceFact label="normalized error" value={String(detail.normalizedError ?? detail.reason ?? "none")} />
             <TraceFact label="local mirror update result" value={String(detail.localMirrorUpdateResult ?? "—")} />
@@ -536,6 +536,13 @@ function CampaignTraceList({ entries }: { entries: TraceEntry[] }) {
       ))}
     </ul>
   );
+}
+
+function formatTraceValue(value: unknown): string {
+  if (value == null) return "—";
+  if (typeof value === "string") return value;
+  try { return JSON.stringify(value); }
+  catch { return String(value); }
 }
 
 function traceScore(detail: Record<string, unknown>): string {
