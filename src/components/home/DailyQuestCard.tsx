@@ -306,6 +306,7 @@ export function DailyQuestCard() {
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
     const tid = window.setTimeout(refresh, nextMidnight.getTime() - now.getTime());
     return () => {
+      cancelledHydrate = true;
       window.removeEventListener(QUEST_UPDATED_EVENT, onUpdate);
       window.removeEventListener(QUEST_COMPLETED_EVENT, onCompleted as EventListener);
       window.removeEventListener("irth:outbox:flushed", onOutboxFlushed);
