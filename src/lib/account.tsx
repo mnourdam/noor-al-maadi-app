@@ -81,12 +81,18 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
+      // Invalidate the onboarding hydration cache on every identity
+      // transition so a new UID always re-hydrates once (and only once).
+      void import("@/lib/tutorial/persistence").then((m) => {
+        try { m.invalidateOnboardingCache(); } catch { /* ignore */ }
+      });
       if (event === "SIGNED_OUT") {
         setReconciliationState("idle");
       } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         setReconciliationState(u ? "loading-local" : "idle");
       }
       setUser(u);
+
       if (event === "SIGNED_OUT") {
         autoPushEnabled.current = false;
         setAccount(null);
