@@ -219,7 +219,7 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
           campaignVersion?: number | null;
           source?: string | null;
         };
-        if (!p?.campaignId) return { ok: true };
+        if (!p?.campaignId) return { ok: false, error: "invalid_campaign_id" };
         const { data: res, error } = await supabase.rpc(
           "record_campaign_completion" as any,
           {
@@ -230,13 +230,30 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         );
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
-        if (!payload.ok) {
-          if (payload.reason === "invalid_campaign_id") return { ok: true };
-          return { ok: false, error: payload.reason ?? "rpc-not-ok" };
-        }
+        if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
         try {
           if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
+      case "tutorial_completion": {
+        const p = item.payload as { tutorialId: string; version: number };
+        if (!p?.tutorialId || typeof p.version !== "number") {
+          return { ok: false, error: "invalid_tutorial_id" };
+        }
+        const { data: res, error } = await supabase.rpc(
+          "record_tutorial_completion" as any,
+          { p_tutorial_id: p.tutorialId, p_version: p.version },
+        );
+        if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:onboarding:changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -260,8 +277,20 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
       const items = await peekAll(userId);
       for (const item of items) {
         const res = await handleItem(item);
-        if (res.ok) { await remove(item.id); flushed++; }
-        else { await bumpAttempt(item.id, res.error ?? null); failed++; }
+        if (res.ok) {
+          await remove(item.id);
+          flushed++;
+        } else if (isPermanentReason(res.error)) {
+          // Priority-Zero §3: never retry a permanent rejection forever.
+          // Never mark as synced. Move to the dead-letter diagnostics store
+          // so admins can see the failure, then drop from the retry queue.
+          recordDeadLetter(item, res.error ?? "permanent");
+          await remove(item.id);
+          failed++;
+        } else {
+          await bumpAttempt(item.id, res.error ?? null);
+          failed++;
+        }
       }
       lastFlushAt = Date.now();
       try {
