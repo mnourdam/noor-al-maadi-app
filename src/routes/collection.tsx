@@ -68,20 +68,18 @@ import { listCampaigns } from "@/lib/campaignStorage";
 import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
 import { classifyArtifact, fetchCampaignArtifactRefSet } from "@/lib/museumVisibility";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
+import {
+  RARITY_STYLE as RARITY_META,
+  RARITY_ORDER,
+  normalizeRarity,
+  rarityFromMetadata as canonicalRarityFromMetadata,
+  type ArtifactRarity as Rarity,
+} from "@/lib/rarity";
 
 export const Route = createFileRoute("/collection")({
   head: () => ({ meta: [{ title: "المتحف · أرشيفك التاريخي" }] }),
   component: CollectionPage,
 });
-
-// ───── Rarity presentation ─────────────────────────────────────
-type Rarity = "common" | "rare" | "epic" | "legendary";
-const RARITY_META: Record<Rarity, { label: string; ring: string; chip: string; glow: string; frame: string }> = {
-  common:    { label: "عادي",    ring: "ring-white/10",       chip: "bg-white/10 text-white/70",                glow: "",                                                       frame: "from-white/5 to-transparent" },
-  rare:      { label: "نادر",    ring: "ring-sky-400/40",     chip: "bg-sky-400/15 text-sky-200",               glow: "shadow-[0_0_28px_-8px_oklch(0.78_0.14_240/45%)]",        frame: "from-sky-400/15 via-sky-400/5 to-transparent" },
-  epic:      { label: "ملحمي",   ring: "ring-fuchsia-400/45", chip: "bg-fuchsia-400/15 text-fuchsia-200",       frame: "from-fuchsia-400/15 via-fuchsia-400/5 to-transparent",  glow: "shadow-[0_0_34px_-8px_oklch(0.7_0.2_320/50%)]" },
-  legendary: { label: "أسطوري",  ring: "ring-gold/60",        chip: "bg-gradient-gold text-primary-foreground", glow: "shadow-gold",                                            frame: "from-gold/25 via-gold/5 to-transparent" },
-};
 
 type RevealItem = CollectibleRevealItem;
 
