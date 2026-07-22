@@ -2640,6 +2640,10 @@ export type Database = {
         Args: { p_reason: string; p_status: string; p_user_id: string }
         Returns: Json
       }
+      admin_set_artifact_rarity: {
+        Args: { _ids: string[]; _rarity: string }
+        Returns: Json
+      }
       admin_set_investigation_enabled: {
         Args: { p_enabled: boolean; p_id: string }
         Returns: Json
