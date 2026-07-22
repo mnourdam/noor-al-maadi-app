@@ -797,8 +797,7 @@ function RecentUnlocks() {
       if (t === "state" && !(ent?.metadata?.collectible === true)) continue;
       const subtitleParts: string[] = [];
       if (a.subtitle) subtitleParts.push(a.subtitle);
-      const r = (ent?.metadata?.rarity ?? "rare") as Rarity;
-      const rarity: Rarity = (["common","rare","epic","legendary"] as Rarity[]).includes(r) ? r : "rare";
+      const rarity: Rarity = normalizeRarity(ent?.metadata?.rarity, "rare");
       list.push({
         key: a.key,
         type: t,
