@@ -214,7 +214,7 @@ function ImportedChapterPlayer() {
       if (xpGrant > 0)    addPoints(xpGrant);
       if (coinGrant > 0)  addDinars(coinGrant);
       // Canonical grant ledger — must mirror exactly what was applied to profile.
-      recordCampaignGrant(campaign!.id, { xp: xpGrant, coins: coinGrant });
+      recordCampaignGrant(campaign!.id, { xp: xpGrant, coins: coinGrant, chapterId: chapter!.id });
       audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
     }
 
