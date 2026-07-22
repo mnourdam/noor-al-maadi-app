@@ -100,6 +100,10 @@ export const PERMANENT_REASONS = new Set<string>([
   "invalid_tutorial_id",
   "invalid_version",
   "investigation_not_found",
+  "invalid_story_id",
+  "invalid_scene_index",
+  "story_not_found",
+  "not_published",
 ]);
 
 export function isPermanentReason(reason: string | null | undefined): boolean {
