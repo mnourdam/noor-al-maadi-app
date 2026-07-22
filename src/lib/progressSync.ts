@@ -30,7 +30,7 @@ export interface ChapterProgressUpsert {
  */
 export async function upsertChapterProgress(
   p: ChapterProgressUpsert,
-): Promise<{ acknowledged: boolean; reason?: string }> {
+): ReturnType<typeof recordChapterProgress> {
   return recordChapterProgress(p);
 }
 

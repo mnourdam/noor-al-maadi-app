@@ -41,6 +41,7 @@ import * as persistence from "./persistence";
 import {
   computeEligibility,
   eligibilityWaitingReason,
+  getAllEligibilityFlags,
   refreshFirstLaunchChoiceFlag,
   subscribeEligibility,
 } from "./eligibility";
@@ -221,6 +222,7 @@ interface InternalEngine extends TutorialEngineApi {
   /** Overlay-owned finalization: called after the finish scroll-to-top +
    *  fade-out sequence completes; transitions `finishing → completed`. */
   completeAfterFinishing(): void;
+  completeFromHydration(): void;
 }
 
 function createEngine(store: InternalStore): InternalEngine {
@@ -344,6 +346,14 @@ function createEngine(store: InternalStore): InternalEngine {
     },
     completeAfterFinishing() {
       if (store.state !== "finishing") return;
+      transition(store, "completed");
+    },
+    completeFromHydration() {
+      store.stepIndex = null;
+      store.paused = false;
+      store.pauseReason = null;
+      store.skipConfirmOpen = false;
+      store.targetRect = null;
       transition(store, "completed");
     },
     forceClose() {
@@ -660,28 +670,56 @@ export function TutorialProvider({
       homeStableFrames,
       documentVisible,
     };
+    const reconciliation = getReconciliationState();
+    const waitingReason = eligibilityWaitingReason(envInputs);
+    const flags = getAllEligibilityFlags();
     const traceOnce = (stage: string, detail: string) => {
       const key = `${stage}:${detail}`;
       if (lastAutoStartTraceRef.current === key) return;
       lastAutoStartTraceRef.current = key;
       recordTrace("tutorial", stage, detail);
     };
-    const reconciliation = getReconciliationState();
-    if (completed) {
-      traceOnce("auto-start-blocked", `completed-local;reconciliation=${reconciliation}`);
+    const traceDecision = (decision: "wait" | "skip-completed" | "start" | "offline-fallback" | "failed", reason?: string) => {
+      traceOnce("auto-start-evaluation", JSON.stringify({
+        decision,
+        reason: reason ?? null,
+        requiredVersion: effectiveConfig.version,
+        localCompletedVersion: persistence.readCompletionRecord()?.version ?? null,
+        reconciliation,
+        waitingReason,
+        envInputs,
+        flags,
+        evaluatedAt: new Date().toISOString(),
+      }));
+    };
+    const readinessBlocked = !flags.sessionReady
+      ? "session-loading"
+      : !flags.onboardingReconciled
+        ? "onboarding-not-reconciled"
+        : null;
+    if (readinessBlocked) {
+      traceDecision(reconciliation === "failed" ? "failed" : "wait", readinessBlocked);
       return;
     }
-    const waitingReason = eligibilityWaitingReason(envInputs);
+    if (completed) {
+      if (api.getSnapshot().state !== "completed") api.completeFromHydration();
+      traceDecision("skip-completed", "completed-local-or-server-hydrated");
+      return;
+    }
+    if (reconciliation === "failed") {
+      traceDecision("failed", getReconciliationState());
+      return;
+    }
     if (waitingReason || !computeEligibility(envInputs)) {
-      traceOnce("auto-start-blocked", `${waitingReason ?? "ineligible"};reconciliation=${reconciliation}`);
+      traceDecision("wait", waitingReason ?? "ineligible");
       return;
     }
     const state = api.getSnapshot().state;
     if (state !== "idle") {
-      traceOnce("auto-start-blocked", `engine-state=${state};reconciliation=${reconciliation}`);
+      traceDecision("wait", `engine-state=${state}`);
       return;
     }
-    traceOnce("auto-start-requested", `version=${effectiveConfig.version};reconciliation=${reconciliation}`);
+    traceDecision(reconciliation === "offline-local" ? "offline-fallback" : "start", `version=${effectiveConfig.version}`);
     api.requestStart();
   }, [
     api,

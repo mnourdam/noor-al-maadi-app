@@ -33,9 +33,11 @@ import { getEffectiveHearts } from "@/lib/hearts";
 import { audioManager } from "@/lib/audioManager";
 import {
   claimActivityReward, claimChapterReward, claimCampaignReward,
-  enqueueChapterSync, enqueueCollectionSync, setActivePosition,
+  enqueueCollectionSync, setActivePosition,
   clearActivePositionIf, unlockIdsToCollectionItems,
 } from "@/lib/campaignLedger";
+import { upsertChapterProgress } from "@/lib/progressSync";
+import { recordTrace } from "@/lib/diag-trace";
 import { recordCampaignGrant, getCampaignGrantedTotals } from "@/lib/campaignRewardsGranted";
 import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
@@ -152,7 +154,7 @@ function ImportedChapterPlayer() {
   const currentAck = activity ? pendingAck[activity.id] : undefined;
   const wrongAttempts = activity ? (wrongFlash[activity.id] ?? 0) : 0;
 
-  const onResolve = (correct: boolean, meta?: { viaReveal?: boolean }) => {
+  const onResolve = async (correct: boolean, meta?: { viaReveal?: boolean }) => {
     if (!activity) return;
     // PR1: hard guard against rapid duplicate submissions.
     if (resolveLockRef.current) return;
@@ -267,9 +269,11 @@ function ImportedChapterPlayer() {
       setActivePosition({ campaignId: campaign!.id, chapterId: chapter!.id, activityId: activity.id });
     }
 
-    // Queue chapter-level Supabase sync (offline-safe).
+    // Server-authoritative chapter sync (offline-safe, awaited when online).
+    // Final chapters MUST send completed=true to record_campaign_progress_v2;
+    // the RPC owns the campaign-complete decision and sticky ledger update.
     const nextCh = nextProgress.chapters[chapter!.id];
-    enqueueChapterSync({
+    const chapterPayload = {
       campaignId: campaign!.id,
       chapterId: chapter!.id,
       status: nextCh?.completed ? "completed" : "unlocked",
@@ -277,7 +281,50 @@ function ImportedChapterPlayer() {
       xpEarned: nextCh?.xpEarned ?? 0,
       coinsEarned: nextCh?.coinsEarned ?? 0,
       completed: nextCh?.completed ?? false,
-    });
+    } as const;
+    recordTrace(
+      "campaign-persistence",
+      newlyCampaign ? "final-chapter-rpc-before" : "chapter-rpc-before",
+      JSON.stringify({
+        campaignId: chapterPayload.campaignId,
+        chapterId: chapterPayload.chapterId,
+        completed: chapterPayload.completed,
+        score: chapterPayload.score,
+        xpEarned: chapterPayload.xpEarned,
+        coinsEarned: chapterPayload.coinsEarned,
+        localOptimisticWriteResult: {
+          chapterCompleted: !!nextCh?.completed,
+          campaignCompleted: !!nextProgress.completed,
+          completedActivityCount: nextCh?.completedActivityIds.length ?? 0,
+        },
+      }),
+    );
+    const ack = await upsertChapterProgress(chapterPayload);
+    recordTrace(
+      "campaign-persistence",
+      newlyCampaign ? "final-chapter-rpc-after" : "chapter-rpc-after",
+      JSON.stringify({
+        campaignId: chapterPayload.campaignId,
+        chapterId: chapterPayload.chapterId,
+        operationId: ack.operationId ?? `chapter_progress:${chapterPayload.campaignId}:${chapterPayload.chapterId}`,
+        completed: chapterPayload.completed,
+        score: chapterPayload.score,
+        xpEarned: chapterPayload.xpEarned,
+        coinsEarned: chapterPayload.coinsEarned,
+        localMirrorUpdateResult: "localStorage-updated-before-rpc",
+        acknowledged: ack.acknowledged,
+        normalizedError: ack.reason ?? "none",
+        rpcResponse: ack.rpc ?? null,
+        finalConfirmation: newlyCampaign ? {
+          chapterCompleted: ack.rpc?.chapter_completed ?? null,
+          chapterCompletedAt: ack.rpc?.chapter_completed_at ?? null,
+          campaignCompleted: ack.rpc?.campaign_completed ?? null,
+          campaignCompletionUpdated: ack.rpc?.campaign_completion_updated ?? null,
+          campaignCompletionCompletedAt: ack.rpc?.campaign_completion_completed_at ?? null,
+          campaignVersion: ack.rpc?.campaign_version ?? null,
+        } : null,
+      }),
+    );
 
     if (newlyCampaign) {
       setTimeout(() => setCompletionOpen(true), 350);

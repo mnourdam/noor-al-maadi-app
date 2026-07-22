@@ -229,14 +229,27 @@ export async function hydrateOnboardingFromServer(
   const localV = localRec?.version ?? null;
   const serverV = serverRec?.version ?? null;
 
-  // Server wins when present.
-  if (serverV != null && (localV == null || serverV > localV || !ownerMatches(localRec, uid))) {
+  // Server wins when present. Even when the numeric version is equal, rewrite
+  // the local record with the authenticated owner so a fresh APK login cannot
+  // race on an ownerless legacy value.
+  if (serverV != null) {
+    const mergedVersion = localV != null && ownerMatches(localRec, uid)
+      ? Math.max(serverV, localV)
+      : serverV;
     writeRaw({
-      version: serverV,
+      version: mergedVersion,
       completedAt: serverRec?.completedAt ?? Math.floor(Date.now() / 1000),
       userId: uid,
     });
-    recordTrace("tutorial", "hydrateOnboarding-server-won", `server=${serverV};local=${localV ?? "none"}`);
+    recordTrace("tutorial", "hydrateOnboarding-server-won", `server=${serverV};local=${localV ?? "none"};written=${mergedVersion}`);
+    if (uid && mergedVersion > serverV) {
+      const outboxId = `tutorial_completion:${uid}:${tutorialId}:${mergedVersion}`;
+      await enqueueWithId(uid, outboxId, "tutorial_completion", {
+        tutorialId, version: mergedVersion,
+      });
+      void flushOutbox(uid);
+      recordTrace("tutorial", "hydrateOnboarding-local-newer-queued", `local=${mergedVersion};server=${serverV}`);
+    }
   } else if (localV != null && ownerMatches(localRec, uid) && (serverV == null || localV > serverV)) {
     // Push local up.
     if (uid) {
@@ -254,6 +267,6 @@ export async function hydrateOnboardingFromServer(
     } catch { /* ignore */ }
     recordTrace("tutorial", "hydrateOnboarding-cleared-cross-user", `local=${localV ?? "none"}`);
   }
-  recordTrace("tutorial", "hydrateOnboarding-done", `local=${localV ?? "none"};server=${serverV ?? "none"}`);
+  recordTrace("tutorial", "hydrateOnboarding-done", `local=${localV ?? "none"};server=${serverV ?? "none"};current=${readRaw()?.version ?? "none"}`);
   return { local: localV, server: serverV };
 }
