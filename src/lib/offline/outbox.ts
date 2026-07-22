@@ -23,7 +23,9 @@ export type OutboxKind =
   | "investigation_backfill" // backfill_investigation_completion RPC (single-key legacy)
   | "investigation_backfill_batch" // backfill_investigation_completions RPC (batched legacy)
   | "campaign_completion"   // record_campaign_completion RPC (sticky, versioned)
-  | "tutorial_completion";  // record_tutorial_completion RPC (durable onboarding mirror)
+  | "tutorial_completion"   // record_tutorial_completion RPC (durable onboarding mirror)
+  | "story_progress"        // record_story_progress_v2 RPC (monotonic per-scene)
+  | "story_completion";     // complete_story_v2 RPC (sticky, version-independent reward)
 
 export interface OutboxItem {
   id: string;               // uuid, doubles as idempotency key
