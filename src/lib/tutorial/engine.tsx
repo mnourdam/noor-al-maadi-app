@@ -672,6 +672,7 @@ export function TutorialProvider({
     };
     const reconciliation = getReconciliationState();
     const waitingReason = eligibilityWaitingReason(envInputs);
+    const flags = getAllEligibilityFlags();
     const traceOnce = (stage: string, detail: string) => {
       const key = `${stage}:${detail}`;
       if (lastAutoStartTraceRef.current === key) return;
@@ -687,10 +688,19 @@ export function TutorialProvider({
         reconciliation,
         waitingReason,
         envInputs,
-        flags: getAllEligibilityFlags(),
+        flags,
         evaluatedAt: new Date().toISOString(),
       }));
     };
+    const readinessBlocked = !flags.sessionReady
+      ? "session-loading"
+      : !flags.onboardingReconciled
+        ? "onboarding-not-reconciled"
+        : null;
+    if (readinessBlocked) {
+      traceDecision(reconciliation === "failed" ? "failed" : "wait", readinessBlocked);
+      return;
+    }
     if (completed) {
       if (api.getSnapshot().state !== "completed") api.completeFromHydration();
       traceDecision("skip-completed", "completed-local-or-server-hydrated");
