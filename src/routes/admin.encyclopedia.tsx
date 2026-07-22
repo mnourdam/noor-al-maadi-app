@@ -364,6 +364,11 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     let body: any, metadata: any;
     try { body = JSON.parse(form.body || "{}"); } catch (e: any) { return onError(`body ليس JSON صحيح: ${e.message}`); }
     try { metadata = JSON.parse(form.metadata || "{}"); } catch (e: any) { return onError(`metadata ليس JSON صحيح: ${e.message}`); }
+    // Artifact rarity is canonical — merge the dedicated selector back into metadata.
+    if (form.entity_type === "artifact") {
+      if (!metadata || typeof metadata !== "object") metadata = {};
+      metadata.rarity = form.rarity;
+    }
     if (form.timeline_category && !TIMELINE_CATEGORIES.includes(form.timeline_category as any)) {
       return onError(`timeline_category يجب أن يكون: ${TIMELINE_CATEGORIES.join(", ")}.`);
     }
