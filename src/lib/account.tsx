@@ -78,7 +78,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
-      setReconciliationState(u ? "loading-local" : "idle");
+      if (event === "SIGNED_OUT") {
+        setReconciliationState("idle");
+      } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+        setReconciliationState(u ? "loading-local" : "idle");
+      }
       setUser(u);
       if (event === "SIGNED_OUT") {
         autoPushEnabled.current = false;

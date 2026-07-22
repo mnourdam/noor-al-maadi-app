@@ -165,7 +165,7 @@ export async function fetchServerCompletion(
     );
     if (error) {
       recordTrace("tutorial", "get_tutorial_completion-error", error.message);
-      return null;
+      throw new Error(error.message);
     }
     const p = (data ?? {}) as {
       ok?: boolean;
@@ -183,7 +183,7 @@ export async function fetchServerCompletion(
     return { version: p.completed_version, completedAt: at };
   } catch (e) {
     recordTrace("tutorial", "get_tutorial_completion-exception", e instanceof Error ? e.message : String(e));
-    return null;
+    throw e;
   }
 }
 
