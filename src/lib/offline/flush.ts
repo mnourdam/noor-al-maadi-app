@@ -259,6 +259,45 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         return { ok: true };
       }
 
+      case "story_progress": {
+        const p = item.payload as { storyId: string; sceneIndex: number };
+        if (!p?.storyId) return { ok: false, error: "invalid_story_id" };
+        if (typeof p.sceneIndex !== "number" || p.sceneIndex < 0) {
+          return { ok: false, error: "invalid_scene_index" };
+        }
+        const { data: res, error } = await supabase.rpc(
+          "record_story_progress_v2" as any,
+          { p_story_id: p.storyId, p_scene_index: p.sceneIndex },
+        );
+        if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:story-progress:changed"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
+      case "story_completion": {
+        const p = item.payload as { storyId: string };
+        if (!p?.storyId) return { ok: false, error: "invalid_story_id" };
+        const { data: res, error } = await supabase.rpc(
+          "complete_story_v2" as any,
+          { p_story_id: p.storyId },
+        );
+        if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:story-completions:changed"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
       default:
         return { ok: false, error: "unknown-kind" };
     }
