@@ -153,14 +153,26 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     (async () => {
       const started = performance.now();
       androidMark("account.hydrate.start", { userId: user.id.slice(0, 8) });
+      recordStartupMark("server-reconciliation-started");
       setSyncing(true);
       let reconciled = false;
+      // Soft deadline: if server reconciliation has not reached a terminal
+      // state within 5s, transition to "offline-local" so consumers (tutorial
+      // engine, hero recommendation) unblock. The work continues in the
+      // background and, on eventual success, upgrades to "reconciled".
+      const softTimer = setTimeout(() => {
+        if (cancelled || reconciled) return;
+        recordStartupMark("server-reconciliation-soft-timeout");
+        recordStartupMark("offline-local-entered");
+        setReconciliationState("offline-local", "soft-timeout");
+      }, 5000);
       try {
         const [acc, save] = await Promise.all([
           fetchAccountProfile(user.id),
           fetchCloudSave(user.id),
         ]);
         if (cancelled) return;
+
         setAccount(acc);
         if (!androidStable) void touchLastActive(user.id);
 
