@@ -15,6 +15,12 @@
 import { toast } from "sonner";
 import { isLocalOrigin } from "./publicOrigin";
 import { isCapacitorNative } from "@/lib/native-auth";
+import {
+  canUseNativeShare,
+  shareTextNative,
+  shareImageNative,
+  saveImageNative,
+} from "./nativeShare";
 
 export type ShareStatus =
   | "shared"     // native / web share sheet accepted
@@ -106,9 +112,21 @@ export async function shareTextAndUrl(input: ShareTextInput): Promise<ShareResul
     }
     const message = `${input.text}\n${input.url}`;
 
-    // Prefer the native share sheet on both native and web when available.
-    // navigator.share exists in the Capacitor WebView (Android Chrome ≥ 89)
-    // so we don't need a Capacitor plugin for text/url sharing.
+    // 1) Native APK: use the real Capacitor Share plugin. The WebView's
+    //    navigator.share does NOT reliably reach every Android receiver;
+    //    the Capacitor bridge does.
+    if (canUseNativeShare()) {
+      try {
+        const s = await shareTextNative({ text: input.text, url: input.url, title: input.title });
+        if (s === "cancelled") return { status: "cancelled" as const };
+        return { status: "shared" as const };
+      } catch (err) {
+        console.warn("[share] native text share failed", err);
+        // fall through to Web Share / clipboard
+      }
+    }
+
+    // 2) Web Share API (browsers that support it).
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
         await navigator.share({
@@ -118,14 +136,14 @@ export async function shareTextAndUrl(input: ShareTextInput): Promise<ShareResul
         });
         return { status: "shared" as const };
       } catch (err) {
-        // AbortError = user cancelled. Anything else falls through to clipboard.
         if ((err as { name?: string } | null)?.name === "AbortError") {
           return { status: "cancelled" as const };
         }
-        // fall through to clipboard fallback
+        // fall through to clipboard
       }
     }
 
+    // 3) Clipboard fallback.
     const copied = await copyToClipboard(message);
     if (copied) {
       successToast(MSG.copiedFallback);
@@ -163,8 +181,35 @@ export async function shareImage(input: ShareImageInput): Promise<ShareResult> {
       return { status: "failed" as const };
     }
     const filename = sanitizeFilename(input.filename);
-    const file = new File([input.blob], filename, { type: input.blob.type || "image/png" });
 
+    // 1) Native APK: write to CACHE and share the real file URI via
+    //    Capacitor Share. The share sheet gets a file:// URI, NOT a blob.
+    if (canUseNativeShare()) {
+      try {
+        const s = await shareImageNative({
+          blob: input.blob,
+          filename,
+          text: input.text,
+          title: input.title,
+        });
+        if (s === "cancelled") return { status: "cancelled" as const };
+        return { status: "shared" as const };
+      } catch (err) {
+        console.warn("[share] native image share failed", err);
+        // fall through to native save (still better than a browser blob)
+        try {
+          await saveImageNative({ blob: input.blob, filename });
+          successToast(MSG.downloaded);
+          return { status: "downloaded" as const };
+        } catch (err2) {
+          console.warn("[share] native image save failed", err2);
+          // fall through to web fallbacks
+        }
+      }
+    }
+
+    // 2) Web Share API with files (browsers that support it).
+    const file = new File([input.blob], filename, { type: input.blob.type || "image/png" });
     if (
       typeof navigator !== "undefined" &&
       typeof navigator.canShare === "function" &&
@@ -187,11 +232,9 @@ export async function shareImage(input: ShareImageInput): Promise<ShareResult> {
       }
     }
 
-    // Download fallback. Works in browsers and modern Android WebView with
-    // Capacitor's default download handling.
+    // 3) Browser download fallback.
     const downloaded = await triggerDownload(input.blob, filename);
     if (downloaded) {
-      // Also copy the public fallback URL so recipients can be messaged.
       if (input.fallbackUrl && !isLocalOrigin(input.fallbackUrl)) {
         await copyToClipboard(input.fallbackUrl);
       }
@@ -226,7 +269,20 @@ export async function downloadImage(input: {
       errorToast(MSG.notReady);
       return { status: "failed" };
     }
-    const ok = await triggerDownload(input.blob, sanitizeFilename(input.filename));
+    const filename = sanitizeFilename(input.filename);
+    // Native: write to Documents via Capacitor Filesystem so the file
+    // persists past the WebView session (unlike a blob:/data: <a download>).
+    if (canUseNativeShare()) {
+      try {
+        await saveImageNative({ blob: input.blob, filename });
+        successToast(MSG.downloaded);
+        return { status: "downloaded" };
+      } catch (err) {
+        console.warn("[share] native save failed", err);
+        // fall through to browser download (rarely reachable in APK)
+      }
+    }
+    const ok = await triggerDownload(input.blob, filename);
     if (ok) {
       successToast(MSG.downloaded);
       return { status: "downloaded" };
