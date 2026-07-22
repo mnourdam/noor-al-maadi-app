@@ -297,12 +297,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (!cancelled) setReconciliationState("failed", e instanceof Error ? e.message : String(e));
       } finally {
+        clearTimeout(softTimer);
         androidMeasure("account.hydrate", started);
         if (!cancelled) setSyncing(false);
       }
     })();
     return () => {
       cancelled = true;
+
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, androidStable]);
