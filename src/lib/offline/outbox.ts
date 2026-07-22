@@ -17,12 +17,13 @@ export type OutboxKind =
   | "collection_add"        // user_collection upsert (ownership/awards)
   | "entity_discovery"      // user_entity_discoveries upsert (encyclopedia reads)
   | "game_complete"         // game_progress upsert
-  | "chapter_progress"      // user_campaign_progress upsert
+  | "chapter_progress"      // record_campaign_progress_v2 RPC (Priority-Zero authoritative path)
   | "profile_delta"         // apply_profile_delta RPC (idempotent XP/dinars/hearts)
   | "investigation_complete" // complete_investigation_v2 RPC (server-authoritative)
   | "investigation_backfill" // backfill_investigation_completion RPC (single-key legacy)
   | "investigation_backfill_batch" // backfill_investigation_completions RPC (batched legacy)
-  | "campaign_completion";  // record_campaign_completion RPC (sticky, versioned)
+  | "campaign_completion"   // record_campaign_completion RPC (sticky, versioned)
+  | "tutorial_completion";  // record_tutorial_completion RPC (durable onboarding mirror)
 
 export interface OutboxItem {
   id: string;               // uuid, doubles as idempotency key
