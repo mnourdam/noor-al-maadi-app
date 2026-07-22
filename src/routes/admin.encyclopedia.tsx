@@ -71,6 +71,11 @@ function AdminEncyclopediaPage() {
   const [editing, setEditing] = useState<Entity | "new" | null>(null);
   const [jsonUpdating, setJsonUpdating] = useState<Entity | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
+  // Phase 7 — Bulk rarity assignment (artifact filter only).
+  const [rarityFilter, setRarityFilter] = useState<"any" | "missing" | "common" | "rare" | "epic" | "legendary">("any");
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [bulkTarget, setBulkTarget] = useState<"common" | "rare" | "epic" | "legendary">("legendary");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
@@ -92,11 +97,46 @@ function AdminEncyclopediaPage() {
   const visible = useMemo(() => {
     if (!rows) return [];
     const q = search.trim().toLowerCase();
-    return rows.filter(r =>
-      (filter === "all" || r.entity_type === filter) &&
-      (!q || r.title.toLowerCase().includes(q) || r.slug.toLowerCase().includes(q))
+    return rows.filter(r => {
+      if (filter !== "all" && r.entity_type !== filter) return false;
+      if (q && !r.title.toLowerCase().includes(q) && !r.slug.toLowerCase().includes(q)) return false;
+      if (filter === "artifact" && rarityFilter !== "any") {
+        const raw = (r.metadata as any)?.rarity;
+        const valid = raw === "common" || raw === "rare" || raw === "epic" || raw === "legendary";
+        if (rarityFilter === "missing") return !valid;
+        return valid && raw === rarityFilter;
+      }
+      return true;
+    });
+  }, [rows, filter, search, rarityFilter]);
+
+  // Clear selection when filter/rarity changes so hidden rows are never
+  // silently included in a bulk apply.
+  useEffect(() => { setSelected(new Set()); }, [filter, rarityFilter, search]);
+
+  const selectedVisibleIds = useMemo(() => {
+    if (filter !== "artifact") return [];
+    return visible.filter(v => selected.has(v.id)).map(v => v.id);
+  }, [visible, selected, filter]);
+
+  const applyBulkRarity = async () => {
+    if (selectedVisibleIds.length === 0) return;
+    const ok = window.confirm(
+      `تعيين الندرة "${bulkTarget}" على ${selectedVisibleIds.length} أثرًا؟\nسيتم تعديل metadata.rarity فقط، ولن يتأثر ملك اللاعبين.`,
     );
-  }, [rows, filter, search]);
+    if (!ok) return;
+    setBulkBusy(true);
+    const { data, error } = await supabase.rpc("admin_set_artifact_rarity" as any, {
+      _ids: selectedVisibleIds, _rarity: bulkTarget,
+    });
+    setBulkBusy(false);
+    if (error) return notify("err", error.message);
+    const res = (data as any) ?? {};
+    notify("ok", `تم التحديث: ${res.updated ?? 0} · تم التخطي: ${res.skipped ?? 0}`);
+    setSelected(new Set());
+    refresh();
+  };
+
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: rows?.length ?? 0 };
@@ -180,6 +220,59 @@ function AdminEncyclopediaPage() {
           />
         </div>
 
+        {filter === "artifact" && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-amber-100">
+            <span className="font-bold">ندرة الأثر:</span>
+            {(["any","missing","common","rare","epic","legendary"] as const).map(r => (
+              <button key={r}
+                onClick={() => setRarityFilter(r)}
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
+                  rarityFilter === r
+                    ? "border-amber-400 bg-amber-500/20 text-amber-100"
+                    : "border-slate-700 text-slate-300 hover:border-amber-400/50"
+                }`}
+              >
+                {r === "any" ? "الكل"
+                  : r === "missing" ? "بلا ندرة"
+                  : r === "common" ? "عادي"
+                  : r === "rare" ? "نادر"
+                  : r === "epic" ? "ملحمي" : "أسطوري"}
+              </button>
+            ))}
+            <span className="ms-auto flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => {
+                  const allIds = new Set(visible.map(v => v.id));
+                  const allSelected = visible.every(v => selected.has(v.id));
+                  setSelected(allSelected ? new Set() : allIds);
+                }}
+                className="rounded-lg border border-slate-700 px-2.5 py-1 text-[11px] text-slate-200 hover:border-amber-400"
+              >
+                {visible.every(v => selected.has(v.id)) && visible.length > 0
+                  ? "إلغاء التحديد" : `تحديد الكل (${visible.length})`}
+              </button>
+              <span className="text-slate-400">المحدد: {selectedVisibleIds.length}</span>
+              <select
+                value={bulkTarget}
+                onChange={e => setBulkTarget(e.target.value as any)}
+                className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100"
+              >
+                <option value="common">عادي</option>
+                <option value="rare">نادر</option>
+                <option value="epic">ملحمي</option>
+                <option value="legendary">أسطوري</option>
+              </select>
+              <button
+                onClick={applyBulkRarity}
+                disabled={selectedVisibleIds.length === 0 || bulkBusy}
+                className="rounded-lg bg-amber-500 px-3 py-1 text-[11px] font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40"
+              >
+                {bulkBusy ? "جارٍ التحديث…" : "تعيين الندرة"}
+              </button>
+            </span>
+          </div>
+        )}
+
         {err && (
           <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
             تعذّر التحميل: {err}
@@ -226,9 +319,11 @@ function AdminEncyclopediaPage() {
             <table className="w-full text-right text-sm">
               <thead className="bg-slate-900/80 text-xs text-slate-400">
                 <tr>
+                  {filter === "artifact" && <th className="w-8 px-2 py-2"></th>}
                   <th className="px-3 py-2">النوع</th>
                   <th className="px-3 py-2">العنوان</th>
                   <th className="px-3 py-2">Slug</th>
+                  {filter === "artifact" && <th className="px-3 py-2">الندرة</th>}
                   <th className="px-3 py-2">الحالة</th>
                   <th className="px-3 py-2">آخر تحديث</th>
                   <th className="px-3 py-2"></th>
@@ -237,12 +332,40 @@ function AdminEncyclopediaPage() {
               <tbody className="divide-y divide-slate-800">
                 {visible.map(e => (
                   <tr key={e.id} className="hover:bg-slate-900/60">
+                    {filter === "artifact" && (
+                      <td className="w-8 px-2 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(e.id)}
+                          onChange={() => setSelected(prev => {
+                            const next = new Set(prev);
+                            if (next.has(e.id)) next.delete(e.id); else next.add(e.id);
+                            return next;
+                          })}
+                        />
+                      </td>
+                    )}
                     <td className="px-3 py-2 text-xs text-amber-300">{TYPE_LABELS[e.entity_type]}</td>
                     <td className="px-3 py-2">
                       <div className="font-medium text-slate-100">{e.title}</div>
                       {e.subtitle && <div className="text-xs text-slate-400">{e.subtitle}</div>}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs text-slate-400">{e.slug}</td>
+                    {filter === "artifact" && (
+                      <td className="px-3 py-2 text-xs">
+                        {(() => {
+                          const raw = (e.metadata as any)?.rarity;
+                          const valid = raw === "common" || raw === "rare" || raw === "epic" || raw === "legendary";
+                          if (!valid) return <span className="text-slate-500">—</span>;
+                          const label = raw === "common" ? "عادي" : raw === "rare" ? "نادر" : raw === "epic" ? "ملحمي" : "أسطوري";
+                          const cls = raw === "legendary" ? "border-gold/50 bg-gold/10 text-amber-200"
+                            : raw === "epic" ? "border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200"
+                            : raw === "rare" ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
+                            : "border-slate-700 bg-slate-800 text-slate-300";
+                          return <span className={`rounded-full border px-2 py-0.5 text-[10px] ${cls}`}>{label}</span>;
+                        })()}
+                      </td>
+                    )}
                     <td className="px-3 py-2">
                       <span className={`rounded-full border px-2 py-0.5 text-[10px] ${
                         e.enabled
@@ -325,6 +448,10 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     enabled: value?.enabled ?? true,
     body: JSON.stringify(value?.body ?? {}, null, 2),
     metadata: JSON.stringify(value?.metadata ?? {}, null, 2),
+    // Canonical artifact rarity — mirrored from metadata.rarity, merged back
+    // into metadata at save so the JSON textarea and this control stay in sync.
+    rarity: (value?.metadata?.rarity ?? "common") as
+      | "common" | "rare" | "epic" | "legendary",
     timeline_year: value?.timeline_year == null ? "" : String(value.timeline_year),
     timeline_start_year: value?.timeline_start_year == null ? "" : String(value.timeline_start_year),
     timeline_end_year: value?.timeline_end_year == null ? "" : String(value.timeline_end_year),
@@ -360,6 +487,11 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
     let body: any, metadata: any;
     try { body = JSON.parse(form.body || "{}"); } catch (e: any) { return onError(`body ليس JSON صحيح: ${e.message}`); }
     try { metadata = JSON.parse(form.metadata || "{}"); } catch (e: any) { return onError(`metadata ليس JSON صحيح: ${e.message}`); }
+    // Artifact rarity is canonical — merge the dedicated selector back into metadata.
+    if (form.entity_type === "artifact") {
+      if (!metadata || typeof metadata !== "object") metadata = {};
+      metadata.rarity = form.rarity;
+    }
     if (form.timeline_category && !TIMELINE_CATEGORIES.includes(form.timeline_category as any)) {
       return onError(`timeline_category يجب أن يكون: ${TIMELINE_CATEGORIES.join(", ")}.`);
     }
@@ -469,6 +601,23 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs" />
           </Field>
         </div>
+
+        {form.entity_type === "artifact" && (
+          <div className="mt-3">
+            <Field label="الندرة">
+              <select
+                value={form.rarity}
+                onChange={e => setForm(f => ({ ...f, rarity: e.target.value as any }))}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+              >
+                <option value="common">عادي</option>
+                <option value="rare">نادر</option>
+                <option value="epic">ملحمي</option>
+                <option value="legendary">أسطوري</option>
+              </select>
+            </Field>
+          </div>
+        )}
 
         <div className="mt-4">
           <EncyclopediaEntityImageUploader

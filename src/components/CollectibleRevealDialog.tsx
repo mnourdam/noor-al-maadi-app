@@ -14,7 +14,13 @@ import { Sparkles, BookOpen, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { audioManager } from "@/lib/audioManager";
 
-export type CollectibleRarity = "common" | "rare" | "epic" | "legendary";
+import {
+  RARITY_STYLE,
+  normalizeRarity,
+  type ArtifactRarity,
+} from "@/lib/rarity";
+
+export type CollectibleRarity = ArtifactRarity;
 
 export interface CollectibleRevealItem {
   rarity: CollectibleRarity;
@@ -34,12 +40,7 @@ export interface CollectibleRevealItem {
   lockedHint?: string;
 }
 
-const RARITY_META: Record<CollectibleRarity, { label: string; chip: string; wash: string }> = {
-  common:    { label: "عادي",   chip: "bg-white/10 text-white/70",                        wash: "from-white/10 to-transparent" },
-  rare:      { label: "نادر",   chip: "bg-sky-400/15 text-sky-200",                       wash: "from-sky-400/20 via-sky-400/5 to-transparent" },
-  epic:      { label: "ملحمي",  chip: "bg-fuchsia-400/15 text-fuchsia-200",               wash: "from-fuchsia-400/20 via-fuchsia-400/5 to-transparent" },
-  legendary: { label: "أسطوري", chip: "bg-gradient-gold text-primary-foreground",         wash: "from-gold/25 via-gold/5 to-transparent" },
-};
+const RARITY_META = RARITY_STYLE;
 
 
 export function CollectibleRevealDialog({
@@ -50,7 +51,7 @@ export function CollectibleRevealDialog({
   onClose: () => void;
 }) {
   const open = !!item;
-  const meta = item ? RARITY_META[item.rarity] : RARITY_META.common;
+  const meta = item ? RARITY_META[normalizeRarity(item.rarity)] : RARITY_META.common;
 
   useEffect(() => {
     if (item && !item.locked) {

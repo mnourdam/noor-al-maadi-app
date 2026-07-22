@@ -12,6 +12,7 @@
 import { PROGRESS_KEY } from "./importedCampaignProgress";
 import { listRegistry } from "./contentRegistryStorage";
 import type { ContentRegistryItem, RegistryItemType } from "@/types/contentRegistry";
+import { normalizeRarity, type ArtifactRarity } from "@/lib/rarity";
 
 function isBrowser() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -139,7 +140,7 @@ export function registryItemIcon(item: ContentRegistryItem): string {
   return (norm && TYPE_ICON[norm]) ?? "✨";
 }
 
-export function registryItemRarity(item: ContentRegistryItem): "common" | "rare" | "epic" | "legendary" {
-  return (item.rarity as any) ?? "common";
+export function registryItemRarity(item: ContentRegistryItem): ArtifactRarity {
+  return normalizeRarity(item.rarity);
 }
 
