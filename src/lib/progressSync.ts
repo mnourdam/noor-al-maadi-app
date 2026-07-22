@@ -22,9 +22,16 @@ export interface ChapterProgressUpsert {
   completed?: boolean;
 }
 
-/** Enqueue one chapter row. Safe to call repeatedly. */
-export async function upsertChapterProgress(p: ChapterProgressUpsert): Promise<void> {
-  await recordChapterProgress(p);
+/**
+ * Priority-Zero: durable enqueue + immediate awaited RPC.
+ * Returns the acknowledgement status so callers that want to prove server
+ * persistence (tests, diagnostics) can inspect it. Legacy call sites can
+ * ignore the return value — the queued item still flushes eventually.
+ */
+export async function upsertChapterProgress(
+  p: ChapterProgressUpsert,
+): Promise<{ acknowledged: boolean; reason?: string }> {
+  return recordChapterProgress(p);
 }
 
 export interface CollectionItemInsert {
