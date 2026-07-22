@@ -239,7 +239,7 @@ function ImportedChapterPlayer() {
         const items = unlockIdsToCollectionItems(campaign!.id, chapter!.id, chDelta.unlocks);
         if (items.length) enqueueCollectionSync(items);
         recordCampaignGrant(campaign!.id, {
-          xp: chDelta.xp, coins: chDelta.coins, unlocks: chDelta.unlocks,
+          xp: chDelta.xp, coins: chDelta.coins, unlocks: chDelta.unlocks, chapterId: chapter!.id,
         });
       }
     }
