@@ -201,6 +201,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         // Merge server-side streak reward claims so they can never be
         // re-claimed after a fresh install / cloud restore.
         try { await hydrateClaimedStreakRewards(); } catch { /* noop */ }
+        // Tutorial server mirror — reconcile local ⇄ server so a
+        // reinstalled/second-device authenticated user does not replay
+        // the tour. Priority-Zero (2026-07).
+        try {
+          const { hydrateOnboardingFromServer } = await import("@/lib/tutorial/persistence");
+          await hydrateOnboardingFromServer("irth-first-time");
+        } catch { /* silent — engine has bounded local fallback */ }
 
         // Identity → never show "ضيف" once authenticated. Prefer display_name.
         const identityName = acc?.display_name?.trim()

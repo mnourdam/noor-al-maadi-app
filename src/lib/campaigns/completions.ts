@@ -96,15 +96,52 @@ export async function recordCampaignCompletion(p: {
     } catch { /* ignore */ }
   }
 
-  // 2) Server ledger (via outbox for offline safety).
+  // 2) Server ledger — durable write contract (Priority-Zero).
+  //    Enqueue FIRST so a crash or offline state cannot lose the fact,
+  //    then attempt the awaited RPC. On success drop the queued item;
+  //    on failure leave it queued for later flush attempts.
   const uid = await currentUserId();
   if (!uid) return;
-  const id = `campaign_completion:${uid}:${cid}`;
-  await enqueueWithId(uid, id, "campaign_completion", {
+  const outboxId = `campaign_completion:${uid}:${cid}`;
+  await enqueueWithId(uid, outboxId, "campaign_completion", {
     campaignId: cid,
     campaignVersion: p.campaignVersion ?? null,
     source: p.source ?? "gameplay",
   });
+
+  // Immediate awaited server acknowledgement when online.
+  if (typeof navigator === "undefined" || navigator.onLine) {
+    try {
+      const { data, error } = await supabase.rpc(
+        "record_campaign_completion" as any,
+        {
+          p_campaign_id: cid,
+          p_campaign_version: p.campaignVersion ?? null,
+          p_source: p.source ?? "gameplay",
+        },
+      );
+      if (!error) {
+        const payload = (data ?? {}) as { ok?: boolean; reason?: string };
+        if (payload.ok || payload.reason === "invalid_campaign_id") {
+          // Server accepted (or refused permanently). Drop the queued copy.
+          try {
+            const { remove } = await import("@/lib/offline/outbox");
+            await remove(outboxId);
+          } catch { /* leave queued — flush will drop it */ }
+        } else if (payload.reason === "unauthenticated") {
+          // Transient — leave queued for post-login flush.
+        } else {
+          console.warn("[campaign-completion] rpc-not-ok", payload.reason, { cid });
+        }
+      } else {
+        console.warn("[campaign-completion] rpc-error", error.message, { cid });
+      }
+    } catch (e) {
+      console.warn("[campaign-completion] rpc-exception", e);
+    }
+  }
+
+  // Best-effort background flush of any other pending items.
   void flushOutbox(uid);
 }
 

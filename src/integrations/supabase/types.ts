@@ -2164,6 +2164,36 @@ export type Database = {
           },
         ]
       }
+      user_onboarding_state: {
+        Row: {
+          completed_at: string
+          completed_version: number
+          created_at: string
+          id: string
+          tutorial_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          completed_version: number
+          created_at?: string
+          id?: string
+          tutorial_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          completed_version?: number
+          created_at?: string
+          id?: string
+          tutorial_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           granted_at: string
@@ -2794,6 +2824,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_tutorial_completion: {
+        Args: { p_tutorial_id: string }
+        Returns: Json
+      }
       grant_level5_reward: { Args: { p_referred_id: string }; Returns: string }
       grant_signup_reward: { Args: { p_referred_id: string }; Returns: string }
       has_role: {
@@ -2887,6 +2921,15 @@ export type Database = {
           xp: number
         }[]
       }
+      list_my_campaign_completions: {
+        Args: never
+        Returns: {
+          campaign_id: string
+          campaign_version: number
+          completed_at: string
+          source: string
+        }[]
+      }
       list_my_feedback_issues: {
         Args: never
         Returns: {
@@ -2972,6 +3015,17 @@ export type Database = {
         }
         Returns: Json
       }
+      record_campaign_progress_v2: {
+        Args: {
+          p_campaign_id: string
+          p_chapter_id: string
+          p_coins_earned?: number
+          p_completed?: boolean
+          p_score?: number
+          p_xp_earned?: number
+        }
+        Returns: Json
+      }
       record_identity_link: { Args: { p_provider: string }; Returns: Json }
       record_notification_click: {
         Args: { p_notification_id: string }
@@ -2980,6 +3034,10 @@ export type Database = {
       record_notification_dismissed: {
         Args: { p_notification_id: string }
         Returns: undefined
+      }
+      record_tutorial_completion: {
+        Args: { p_tutorial_id: string; p_version: number }
+        Returns: Json
       }
       redeem_referral_code: { Args: { p_code: string }; Returns: Json }
       reply_to_feedback_issue: {
