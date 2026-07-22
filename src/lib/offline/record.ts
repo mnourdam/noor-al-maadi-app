@@ -62,7 +62,21 @@ export async function recordChapterProgress(p: {
   status: "locked" | "unlocked" | "completed";
   score?: number; xpEarned?: number; coinsEarned?: number;
   completed?: boolean;
-}): Promise<{ acknowledged: boolean; reason?: string }> {
+}): Promise<{
+  acknowledged: boolean;
+  reason?: string;
+  operationId?: string;
+  rpc?: {
+    ok?: boolean;
+    reason?: string;
+    chapter_completed?: boolean;
+    chapter_completed_at?: string | null;
+    campaign_completed?: boolean;
+    campaign_completion_updated?: boolean;
+    campaign_completion_completed_at?: string | null;
+    campaign_version?: number | null;
+  };
+}> {
   recordTrace(
     "campaign-persistence",
     "recordChapterProgress-called",
@@ -74,12 +88,48 @@ export async function recordChapterProgress(p: {
     return { acknowledged: false, reason: "unauthenticated" };
   }
   const outboxId = `chapter_progress:${uid}:${p.campaignId}:${p.chapterId}`;
+  recordTrace(
+    "campaign-persistence",
+    "chapter-write-operation",
+    JSON.stringify({
+      campaignId: p.campaignId,
+      chapterId: p.chapterId,
+      operationId: outboxId,
+      completed: !!p.completed,
+      score: p.score ?? null,
+      xpEarned: p.xpEarned ?? null,
+      coinsEarned: p.coinsEarned ?? null,
+    }),
+  );
   await enqueueWithId(uid, outboxId, "chapter_progress", p);
-  recordTrace("campaign-persistence", "chapter-progress-enqueued", `${p.campaignId}/${p.chapterId}`);
+  recordTrace(
+    "campaign-persistence",
+    "chapter-progress-enqueued",
+    JSON.stringify({ campaignId: p.campaignId, chapterId: p.chapterId, operationId: outboxId, result: "ok" }),
+  );
   // Immediate awaited acknowledgement when online.
   if (typeof navigator === "undefined" || navigator.onLine) {
     try {
-      recordTrace("campaign-persistence", "record_campaign_progress_v2-start", `${p.campaignId}/${p.chapterId}`);
+      const rpcStartedAt = new Date().toISOString();
+      recordTrace(
+        "campaign-persistence",
+        "record_campaign_progress_v2-start",
+        JSON.stringify({
+          rpc: "record_campaign_progress_v2",
+          rpcStartedAt,
+          campaignId: p.campaignId,
+          chapterId: p.chapterId,
+          operationId: outboxId,
+          payload: {
+            p_campaign_id: p.campaignId,
+            p_chapter_id: p.chapterId,
+            p_completed: !!p.completed,
+            p_score: p.score ?? null,
+            p_xp_earned: p.xpEarned ?? null,
+            p_coins_earned: p.coinsEarned ?? null,
+          },
+        }),
+      );
       const { data, error } = await supabase.rpc(
         "record_campaign_progress_v2" as any,
         {
@@ -92,42 +142,93 @@ export async function recordChapterProgress(p: {
         },
       );
       if (!error) {
-        const payload = (data ?? {}) as { ok?: boolean; reason?: string };
+        const payload = (data ?? {}) as {
+          ok?: boolean;
+          reason?: string;
+          chapter_completed?: boolean;
+          chapter_completed_at?: string | null;
+          campaign_completed?: boolean;
+          campaign_completion_updated?: boolean;
+          campaign_completion_completed_at?: string | null;
+          campaign_version?: number | null;
+        };
         if (payload.ok) {
+          let outboxRemovalResult = "not-attempted";
           try {
             const { remove } = await import("./outbox");
             await remove(outboxId);
-          } catch { /* leave queued */ }
+            outboxRemovalResult = "removed";
+          } catch (e) {
+            outboxRemovalResult = `failed:${e instanceof Error ? e.message : String(e)}`;
+          }
           try {
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("irth:campaign-progress:changed"));
               window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
             }
           } catch { /* ignore */ }
-          recordTrace("campaign-persistence", "record_campaign_progress_v2-ok", `${p.campaignId}/${p.chapterId}`);
-          return { acknowledged: true };
+          recordTrace(
+            "campaign-persistence",
+            "record_campaign_progress_v2-ok",
+            JSON.stringify({
+              campaignId: p.campaignId,
+              chapterId: p.chapterId,
+              operationId: outboxId,
+              acknowledged: true,
+              rpcResponse: payload,
+              outboxAcknowledgement: outboxRemovalResult,
+            }),
+          );
+          return { acknowledged: true, operationId: outboxId, rpc: payload };
         }
         // Permanent rejection — surface via flush → dead-letter.
         recordTrace(
           "campaign-persistence",
           "record_campaign_progress_v2-not-ok",
-          `${p.campaignId}/${p.chapterId}:${payload.reason ?? "rpc-not-ok"}`,
+          JSON.stringify({
+            campaignId: p.campaignId,
+            chapterId: p.chapterId,
+            operationId: outboxId,
+            acknowledged: false,
+            normalizedError: payload.reason ?? "rpc-not-ok",
+            rpcResponse: payload,
+          }),
         );
         void flushOutbox(uid);
-        return { acknowledged: false, reason: payload.reason ?? "rpc-not-ok" };
+        return { acknowledged: false, reason: payload.reason ?? "rpc-not-ok", operationId: outboxId, rpc: payload };
       }
-      recordTrace("campaign-persistence", "record_campaign_progress_v2-error", `${p.campaignId}/${p.chapterId}:${error.message}`);
+      recordTrace(
+        "campaign-persistence",
+        "record_campaign_progress_v2-error",
+        JSON.stringify({
+          campaignId: p.campaignId,
+          chapterId: p.chapterId,
+          operationId: outboxId,
+          acknowledged: false,
+          normalizedError: error.message,
+        }),
+      );
     } catch (e) {
       recordTrace(
         "campaign-persistence",
         "record_campaign_progress_v2-exception",
-        `${p.campaignId}/${p.chapterId}:${e instanceof Error ? e.message : String(e)}`,
+        JSON.stringify({
+          campaignId: p.campaignId,
+          chapterId: p.chapterId,
+          operationId: outboxId,
+          acknowledged: false,
+          normalizedError: e instanceof Error ? e.message : String(e),
+        }),
       );
     }
   }
-  recordTrace("campaign-persistence", "recordChapterProgress-queued", `${p.campaignId}/${p.chapterId}`);
+  recordTrace(
+    "campaign-persistence",
+    "recordChapterProgress-queued",
+    JSON.stringify({ campaignId: p.campaignId, chapterId: p.chapterId, operationId: outboxId, acknowledged: false, reason: "queued" }),
+  );
   void flushOutbox(uid);
-  return { acknowledged: false, reason: "queued" };
+  return { acknowledged: false, reason: "queued", operationId: outboxId };
 }
 
 export async function recordProfileDelta(p: {

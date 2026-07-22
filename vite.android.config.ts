@@ -11,6 +11,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import path from "node:path";
 import { execSync } from "node:child_process";
+import pkg from "./package.json" with { type: "json" };
 
 function readSha(): string {
   try {
@@ -28,6 +29,7 @@ function readSha(): string {
 const BUILD_SHA = readSha();
 const BUILD_TIME = new Date().toISOString();
 const BUILD_TYPE = process.env.ANDROID_BUILD_TYPE || "debug";
+const APP_VERSION = (pkg as { version?: string }).version ?? "1.0";
 
 export default defineConfig({
   root: path.resolve(__dirname, "android-web"),
@@ -82,6 +84,8 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(BUILD_TIME),
     __BUILD_TYPE__: JSON.stringify(BUILD_TYPE),
     __BUILD_TARGET__: JSON.stringify("android"),
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __ANDROID_TARGET_SDK__: JSON.stringify("36"),
   },
   css: { transformer: "lightningcss" },
   build: {

@@ -6,6 +6,7 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { execSync } from "node:child_process";
+import pkg from "./package.json" with { type: "json" };
 
 function readSha(): string {
   try {
@@ -23,6 +24,7 @@ function readSha(): string {
 
 const BUILD_SHA = readSha();
 const BUILD_TIME = new Date().toISOString();
+const APP_VERSION = (pkg as { version?: string }).version ?? "1.0";
 
 export default defineConfig({
   tanstackStart: {
@@ -36,6 +38,8 @@ export default defineConfig({
       __BUILD_TIME__: JSON.stringify(BUILD_TIME),
       __BUILD_TYPE__: JSON.stringify(process.env.NODE_ENV || "production"),
       __BUILD_TARGET__: JSON.stringify("web"),
+      __APP_VERSION__: JSON.stringify(APP_VERSION),
+      __ANDROID_TARGET_SDK__: JSON.stringify("n/a"),
     },
   },
 });
