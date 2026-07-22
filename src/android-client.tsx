@@ -1,4 +1,21 @@
 import { createRoot } from "react-dom/client";
+import { assertProductionPublicOrigin, CONFIGURED_PUBLIC_ORIGIN } from "@/lib/share/publicOrigin";
+
+// Android release invariant: the shareable public origin must be configured.
+// If VITE_PUBLIC_APP_ORIGIN is missing/invalid the APK would silently ship a
+// dev-only fallback origin, so we hard-fail at boot instead. Vite dev builds
+// (import.meta.env.DEV) tolerate the fallback so we can iterate locally.
+try {
+  if (!(import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {
+    assertProductionPublicOrigin();
+  }
+  // eslint-disable-next-line no-console
+  console.info("[android] public origin:", CONFIGURED_PUBLIC_ORIGIN ?? "(dev fallback)");
+} catch (err) {
+  // eslint-disable-next-line no-console
+  console.error("[android:boot] invalid public origin config", err);
+  throw err;
+}
 
 // Surface uncaught errors to Logcat via Capacitor's Console plugin so blank /
 // error-boundary screens are diagnosable on real devices.

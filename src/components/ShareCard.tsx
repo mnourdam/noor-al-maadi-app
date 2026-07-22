@@ -510,11 +510,13 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 async function loadQr(url: string): Promise<HTMLImageElement> {
-  // Medium error-correction leaves a healthy safety margin and keeps
-  // module density readable at ~168px. No logo overlay, keep quiet zone.
+  // Medium error-correction. `margin` in the `qrcode` library is in QR
+  // modules, so 4 is exactly the ISO/IEC 18004 quiet-zone requirement.
+  // Scale is in pixels-per-module — keep the QR module-aligned so it never
+  // gets scaled with interpolation on the card canvas.
   const dataUrl = await QRCode.toDataURL(url, {
     errorCorrectionLevel: "M",
-    margin: 1,
+    margin: 4,
     scale: 8,
     color: { dark: "#0b1228", light: "#ffffff" },
   });

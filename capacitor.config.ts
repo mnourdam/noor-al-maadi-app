@@ -16,7 +16,7 @@ const config: CapacitorConfig = {
     useLegacyBridge: true,
     resolveServiceWorkerRequests: false,
     webContentsDebuggingEnabled: true,
-    includePlugins: ["@capacitor/app", "@capacitor/push-notifications", "@capacitor/browser", "@capacitor/preferences", "@capacitor/local-notifications"],
+    includePlugins: ["@capacitor/app", "@capacitor/push-notifications", "@capacitor/browser", "@capacitor/preferences", "@capacitor/local-notifications", "@capacitor/share", "@capacitor/filesystem"],
   },
   plugins: {
     // Diagnostic native input build: keep Capacitor's core SystemBars plugin
