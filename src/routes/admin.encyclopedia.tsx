@@ -479,6 +479,23 @@ function EntityEditor({ value, onClose, onSaved, onError }: {
           </Field>
         </div>
 
+        {form.entity_type === "artifact" && (
+          <div className="mt-3">
+            <Field label="الندرة">
+              <select
+                value={form.rarity}
+                onChange={e => setForm(f => ({ ...f, rarity: e.target.value as any }))}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+              >
+                <option value="common">عادي</option>
+                <option value="rare">نادر</option>
+                <option value="epic">ملحمي</option>
+                <option value="legendary">أسطوري</option>
+              </select>
+            </Field>
+          </div>
+        )}
+
         <div className="mt-4">
           <EncyclopediaEntityImageUploader
             entityId={value?.id ?? ""}
