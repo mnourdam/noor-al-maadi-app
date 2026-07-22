@@ -351,6 +351,21 @@ function AdminEncyclopediaPage() {
                       {e.subtitle && <div className="text-xs text-slate-400">{e.subtitle}</div>}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs text-slate-400">{e.slug}</td>
+                    {filter === "artifact" && (
+                      <td className="px-3 py-2 text-xs">
+                        {(() => {
+                          const raw = (e.metadata as any)?.rarity;
+                          const valid = raw === "common" || raw === "rare" || raw === "epic" || raw === "legendary";
+                          if (!valid) return <span className="text-slate-500">—</span>;
+                          const label = raw === "common" ? "عادي" : raw === "rare" ? "نادر" : raw === "epic" ? "ملحمي" : "أسطوري";
+                          const cls = raw === "legendary" ? "border-gold/50 bg-gold/10 text-amber-200"
+                            : raw === "epic" ? "border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200"
+                            : raw === "rare" ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
+                            : "border-slate-700 bg-slate-800 text-slate-300";
+                          return <span className={`rounded-full border px-2 py-0.5 text-[10px] ${cls}`}>{label}</span>;
+                        })()}
+                      </td>
+                    )}
                     <td className="px-3 py-2">
                       <span className={`rounded-full border px-2 py-0.5 text-[10px] ${
                         e.enabled
