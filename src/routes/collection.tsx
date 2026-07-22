@@ -254,10 +254,12 @@ function SectionBar({ icon: Icon, title, done, total }: { icon: any; title: stri
 
 // ───── Entity → display helpers ────────────────────────────────
 function rarityFromMetadata(meta: any, fallback: Rarity): Rarity {
-  const r = meta?.rarity;
-  return (r === "common" || r === "rare" || r === "epic" || r === "legendary") ? r : fallback;
+  return canonicalRarityFromMetadata(meta, fallback);
 }
 function defaultRarity(type: string): Rarity {
+  // Non-artifact types keep their prior default (rarity is authored on
+  // artifacts; for other entity types this is a display fallback only).
+  if (type === "artifact") return "common";
   return ["figure", "landmark", "battle"].includes(type) ? "epic" : "rare";
 }
 
