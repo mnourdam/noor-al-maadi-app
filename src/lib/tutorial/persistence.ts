@@ -1,27 +1,28 @@
 // ============================================================
-// Guided Tutorial — Persistence (server-mirrored)
+// Guided Tutorial — Persistence (durable server mirror)
 // ------------------------------------------------------------
-// Stored shape at KEY (JSON):
-//   { "version": 1, "completedAt": 1737302400 }   // unix seconds
+// Local storage still holds the "completed version" so the engine
+// works offline and for guests, but every authenticated completion
+// is ALSO enqueued in the offline outbox with a stable idempotency
+// id AND fired at the server RPC immediately when online. The
+// queued copy is only removed on server acknowledgement.
 //
-// Rules (Priority-Zero rewrite):
-//   - Guests:       localStorage only.
-//   - Authenticated: localStorage + server mirror
-//     (public.user_onboarding_state, per user × tutorial_id).
-//   - Version bump replays the tour once per (device, account).
-//   - Reinstall + login restores completion from the server BEFORE
-//     the engine decides to auto-start (see setOnboardingHydrated).
-//   - Skipping mirrors as a completed row too — the product spec
-//     treats "skip" as completing the current version.
+// Namespacing: local completion carries the owning `userId` (or
+// `null` for guests). Reads by a different user return "not
+// completed" — Account A can never see B's local completion.
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
+import { enqueueWithId, remove as outboxRemove } from "@/lib/offline/outbox";
+import { flushOutbox } from "@/lib/offline/flush";
 
 const KEY = "irth.tutorial.irth-first-time.completed-version.v1";
+const DEFAULT_TUTORIAL_ID = "irth-first-time";
 
 interface StoredRecord {
   version: number;
   completedAt: number; // unix seconds
+  userId?: string | null;
 }
 
 function readRaw(): StoredRecord | null {
@@ -34,14 +35,14 @@ function readRaw(): StoredRecord | null {
       if (typeof parsed?.version === "number" && Number.isFinite(parsed.version)) {
         return {
           version: parsed.version,
-          completedAt:
-            typeof parsed.completedAt === "number" ? parsed.completedAt : 0,
+          completedAt: typeof parsed.completedAt === "number" ? parsed.completedAt : 0,
+          userId: typeof parsed.userId === "string" ? parsed.userId : null,
         };
       }
       return null;
     }
     const n = Number.parseInt(raw, 10);
-    if (Number.isFinite(n)) return { version: n, completedAt: 0 };
+    if (Number.isFinite(n)) return { version: n, completedAt: 0, userId: null };
     return null;
   } catch {
     return null;
@@ -53,9 +54,22 @@ function writeRaw(rec: StoredRecord): void {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(KEY, JSON.stringify(rec));
     }
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
+}
+
+async function currentUserId(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user?.id ?? null;
+  } catch { return null; }
+}
+
+function ownerMatches(rec: StoredRecord | null, uid: string | null): boolean {
+  if (!rec) return false;
+  // Legacy records (before per-user namespacing) have no owner. Trust them
+  // for the current session but they will be overwritten on hydrate.
+  if (rec.userId === undefined || rec.userId === null) return true;
+  return rec.userId === uid;
 }
 
 export function readCompletedVersion(): number | null {
@@ -71,70 +85,64 @@ export function hasCompleted(version: number): boolean {
   return rec != null && rec.version >= version;
 }
 
-/** Local + best-effort immediate server mirror. Server write is
- *  awaited only when a network round-trip is worthwhile; failures
- *  never block gameplay. Retry on next hydrate. */
+/**
+ * Priority-Zero durable write contract for tutorial completion.
+ * Guests: local-only (idempotent). Authenticated: local + queued outbox
+ * op + immediate awaited server RPC. Queued op dropped only on ack.
+ */
 export function markCompleted(version: number): void {
-  const record: StoredRecord = { version, completedAt: Math.floor(Date.now() / 1000) };
-  writeRaw(record);
-  // Fire-and-forget server mirror.
-  void mirrorCompletionToServer("irth-first-time", version).catch(() => {
-    /* silent — hydrate will retry */
-  });
+  // Local write first so a crash/exit before server ack preserves the fact.
+  void (async () => {
+    const uid = await currentUserId();
+    const record: StoredRecord = {
+      version,
+      completedAt: Math.floor(Date.now() / 1000),
+      userId: uid,
+    };
+    writeRaw(record);
+    if (!uid) return;
+
+    const outboxId = `tutorial_completion:${uid}:${DEFAULT_TUTORIAL_ID}:${version}`;
+    await enqueueWithId(uid, outboxId, "tutorial_completion", {
+      tutorialId: DEFAULT_TUTORIAL_ID,
+      version,
+    });
+
+    if (typeof navigator === "undefined" || navigator.onLine) {
+      try {
+        const { data, error } = await supabase.rpc(
+          "record_tutorial_completion" as any,
+          { p_tutorial_id: DEFAULT_TUTORIAL_ID, p_version: version },
+        );
+        if (!error) {
+          const payload = (data ?? {}) as { ok?: boolean };
+          if (payload.ok) {
+            try { await outboxRemove(outboxId); } catch { /* leave queued */ }
+            return;
+          }
+        }
+      } catch { /* fall through */ }
+    }
+    void flushOutbox(uid);
+  })();
 }
 
-/** Admin/diagnostic escape hatch (LOCAL ONLY — does not delete the
- *  server row; sign-in will re-hydrate). */
+/** Admin/diagnostic escape hatch (LOCAL ONLY). */
 export function resetCompletion(): void {
   try {
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(KEY);
-    }
-  } catch {
-    /* ignore */
-  }
+    if (typeof window !== "undefined") window.localStorage.removeItem(KEY);
+  } catch { /* ignore */ }
 }
 
-// ============================================================
-// Server mirror
-// ============================================================
-
-async function isAuthenticated(): Promise<boolean> {
-  try {
-    const { data } = await supabase.auth.getSession();
-    return !!data.session?.user?.id;
-  } catch {
-    return false;
-  }
-}
-
-/** Push a local completion to the server. Idempotent server-side
- *  (INSERT ... ON CONFLICT keeps the greatest version). */
-export async function mirrorCompletionToServer(
-  tutorialId: string,
-  version: number,
-): Promise<{ ok: boolean; reason?: string }> {
-  if (!(await isAuthenticated())) return { ok: false, reason: "unauthenticated" };
-  try {
-    const { data, error } = await supabase.rpc(
-      "record_tutorial_completion" as any,
-      { p_tutorial_id: tutorialId, p_version: version },
-    );
-    if (error) return { ok: false, reason: error.message };
-    const payload = (data ?? {}) as { ok?: boolean; reason?: string };
-    if (!payload.ok) return { ok: false, reason: payload.reason ?? "rpc-not-ok" };
-    return { ok: true };
-  } catch (e: any) {
-    return { ok: false, reason: e?.message ?? "exception" };
-  }
-}
-
-/** Read the server's completion record. Returns null when signed-out,
- *  offline, or the row does not exist. */
+/**
+ * Read the server's completion record. Returns null when signed-out,
+ * offline, or the row does not exist.
+ */
 export async function fetchServerCompletion(
   tutorialId: string,
 ): Promise<{ version: number; completedAt: number } | null> {
-  if (!(await isAuthenticated())) return null;
+  const uid = await currentUserId();
+  if (!uid) return null;
   try {
     const { data, error } = await supabase.rpc(
       "get_tutorial_completion" as any,
@@ -155,24 +163,64 @@ export async function fetchServerCompletion(
   }
 }
 
-/** Reconcile local ⇄ server. If the server has a higher version, mirror
- *  it locally so the engine skips replay. If the local version is higher,
- *  push it up. Called from the account bootstrap. */
+/** Legacy alias — kept so imports elsewhere continue to compile. */
+export const mirrorCompletionToServer = async (
+  tutorialId: string,
+  version: number,
+): Promise<{ ok: boolean; reason?: string }> => {
+  const uid = await currentUserId();
+  if (!uid) return { ok: false, reason: "unauthenticated" };
+  try {
+    const { data, error } = await supabase.rpc(
+      "record_tutorial_completion" as any,
+      { p_tutorial_id: tutorialId, p_version: version },
+    );
+    if (error) return { ok: false, reason: error.message };
+    const payload = (data ?? {}) as { ok?: boolean; reason?: string };
+    if (!payload.ok) return { ok: false, reason: payload.reason ?? "rpc-not-ok" };
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, reason: e?.message ?? "exception" };
+  }
+};
+
+/**
+ * Reconcile local ⇄ server. Server is authoritative when it has a row.
+ * If the local record is owned by a *different* user (namespacing), or
+ * the server has nothing and local has no owner match, local is cleared
+ * so Account B never inherits Account A's completion on the same device.
+ * Called from the account bootstrap; also drains any queued tutorial ops.
+ */
 export async function hydrateOnboardingFromServer(
-  tutorialId = "irth-first-time",
+  tutorialId = DEFAULT_TUTORIAL_ID,
 ): Promise<{ local: number | null; server: number | null }> {
+  const uid = await currentUserId();
   const localRec = readRaw();
   const serverRec = await fetchServerCompletion(tutorialId);
   const localV = localRec?.version ?? null;
   const serverV = serverRec?.version ?? null;
 
-  if (serverV != null && (localV == null || serverV > localV)) {
+  // Server wins when present.
+  if (serverV != null && (localV == null || serverV > localV || !ownerMatches(localRec, uid))) {
     writeRaw({
       version: serverV,
       completedAt: serverRec?.completedAt ?? Math.floor(Date.now() / 1000),
+      userId: uid,
     });
-  } else if (localV != null && (serverV == null || localV > serverV)) {
-    await mirrorCompletionToServer(tutorialId, localV);
+  } else if (localV != null && ownerMatches(localRec, uid) && (serverV == null || localV > serverV)) {
+    // Push local up.
+    if (uid) {
+      const outboxId = `tutorial_completion:${uid}:${tutorialId}:${localV}`;
+      await enqueueWithId(uid, outboxId, "tutorial_completion", {
+        tutorialId, version: localV,
+      });
+      void flushOutbox(uid);
+    }
+  } else if (uid && localRec && !ownerMatches(localRec, uid) && serverV == null) {
+    // Different account, and server has nothing — clear leaked state.
+    try {
+      if (typeof window !== "undefined") window.localStorage.removeItem(KEY);
+    } catch { /* ignore */ }
   }
   return { local: localV, server: serverV };
 }

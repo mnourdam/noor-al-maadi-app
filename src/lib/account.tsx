@@ -438,6 +438,18 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.warn("[account] final flush before signOut failed", err);
       }
+      // Priority-Zero §5: drain the durable outbox so queued chapter
+      // progress / tutorial completions / etc. reach the server BEFORE
+      // the auth token clears. Bounded timeout so sign-out never hangs.
+      try {
+        const { flushOutboxWithTimeout } = await import("./offline/logout-flush");
+        const res = await flushOutboxWithTimeout(currentUser.id, 4000);
+        if (res.pendingAfter > 0) {
+          console.warn("[account] signOut leaving pending outbox ops", res);
+        }
+      } catch (err) {
+        console.warn("[account] logout-flush errored", err);
+      }
     }
     await cloudSignOut();
     setUser(null);

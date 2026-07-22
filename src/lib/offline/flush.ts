@@ -10,6 +10,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { peekAll, remove, bumpAttempt, type OutboxItem } from "./outbox";
+import { recordDeadLetter, isPermanentReason } from "./dead-letter";
 
 let lastFlushAt = 0;
 let inflight: Promise<{ flushed: number; failed: number }> | null = null;
@@ -88,44 +89,39 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
       }
 
       case "chapter_progress": {
+        // Priority-Zero authoritative path — every campaign chapter write
+        // funnels through record_campaign_progress_v2 which atomically:
+        //   • upserts user_campaign_progress with sticky merge semantics
+        //   • stamps user_campaign_completions on the final chapter
+        // Legacy raw upsert removed 2026-07.
         const p = item.payload as {
           campaignId: string; chapterId: string;
-          status: "locked" | "unlocked" | "completed";
           score?: number; xpEarned?: number; coinsEarned?: number;
           completed?: boolean;
         };
-        // Sticky merge — never downgrade a completed chapter back to
-        // "in progress". Read the existing row first so replays / added
-        // activities cannot null out completed_at, cannot lower score,
-        // and cannot roll back xp/coins earned. (P0, 2026-07.)
-        const { data: existing } = await supabase
-          .from("user_campaign_progress")
-          .select("completed_at, score, xp_earned, coins_earned, status")
-          .eq("user_id", uid)
-          .eq("campaign_id", p.campaignId)
-          .eq("chapter_id", p.chapterId)
-          .maybeSingle();
-        const now = new Date().toISOString();
-        const newCompletedAt =
-          (existing as any)?.completed_at ?? (p.completed ? now : null);
-        const mergedStatus =
-          (existing as any)?.status === "completed" || p.completed
-            ? "completed"
-            : p.status;
-        const { error } = await supabase.from("user_campaign_progress").upsert(
+        if (!p?.campaignId || !p?.chapterId) {
+          return { ok: false, error: "invalid_chapter_id" };
+        }
+        const { data: res, error } = await supabase.rpc(
+          "record_campaign_progress_v2" as any,
           {
-            user_id: uid,
-            campaign_id: p.campaignId,
-            chapter_id: p.chapterId,
-            status: mergedStatus,
-            score: Math.max((existing as any)?.score ?? 0, p.score ?? 0),
-            xp_earned: Math.max((existing as any)?.xp_earned ?? 0, p.xpEarned ?? 0),
-            coins_earned: Math.max((existing as any)?.coins_earned ?? 0, p.coinsEarned ?? 0),
-            completed_at: newCompletedAt,
+            p_campaign_id: p.campaignId,
+            p_chapter_id: p.chapterId,
+            p_completed: !!p.completed,
+            p_score: p.score ?? null,
+            p_xp_earned: p.xpEarned ?? null,
+            p_coins_earned: p.coinsEarned ?? null,
           },
-          { onConflict: "user_id,campaign_id,chapter_id" },
         );
         if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:campaign-progress:changed"));
+            window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+          }
+        } catch { /* ignore */ }
         return { ok: true };
       }
 
@@ -223,7 +219,7 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
           campaignVersion?: number | null;
           source?: string | null;
         };
-        if (!p?.campaignId) return { ok: true };
+        if (!p?.campaignId) return { ok: false, error: "invalid_campaign_id" };
         const { data: res, error } = await supabase.rpc(
           "record_campaign_completion" as any,
           {
@@ -234,13 +230,30 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         );
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
-        if (!payload.ok) {
-          if (payload.reason === "invalid_campaign_id") return { ok: true };
-          return { ok: false, error: payload.reason ?? "rpc-not-ok" };
-        }
+        if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
         try {
           if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
+      case "tutorial_completion": {
+        const p = item.payload as { tutorialId: string; version: number };
+        if (!p?.tutorialId || typeof p.version !== "number") {
+          return { ok: false, error: "invalid_tutorial_id" };
+        }
+        const { data: res, error } = await supabase.rpc(
+          "record_tutorial_completion" as any,
+          { p_tutorial_id: p.tutorialId, p_version: p.version },
+        );
+        if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:onboarding:changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -264,8 +277,20 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
       const items = await peekAll(userId);
       for (const item of items) {
         const res = await handleItem(item);
-        if (res.ok) { await remove(item.id); flushed++; }
-        else { await bumpAttempt(item.id, res.error ?? null); failed++; }
+        if (res.ok) {
+          await remove(item.id);
+          flushed++;
+        } else if (isPermanentReason(res.error)) {
+          // Priority-Zero §3: never retry a permanent rejection forever.
+          // Never mark as synced. Move to the dead-letter diagnostics store
+          // so admins can see the failure, then drop from the retry queue.
+          recordDeadLetter(item, res.error ?? "permanent");
+          await remove(item.id);
+          failed++;
+        } else {
+          await bumpAttempt(item.id, res.error ?? null);
+          failed++;
+        }
       }
       lastFlushAt = Date.now();
       try {
