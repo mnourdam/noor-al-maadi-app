@@ -707,11 +707,24 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
       // Hearts: cloud value wins ONLY when it differs from the local
       // committed value; preserves regen anchor otherwise.
+      //
+      // Anchor rule (reinstall/second-device safety): on a fresh install
+      // the local `heartsAt` is `Date.now()` (from `initial`) — newer
+      // than the cloud anchor. Adopting the local anchor would silently
+      // wipe accrued regeneration. When cloud carries a numeric anchor
+      // that is OLDER than the local one, use the cloud anchor as the
+      // starting point so the timer resumes at the correct offset.
       const cloudHearts = Math.max(0, Math.min(HEART_MAX, cloud.hearts ?? HEART_MAX));
       const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
+      const cloudAt = typeof cloud.heartsAt === "number" && Number.isFinite(cloud.heartsAt)
+        ? cloud.heartsAt
+        : null;
+      const anchorSource: ProfileState = cloudAt !== null && cloudAt < (p.heartsAt ?? Date.now())
+        ? ({ ...p, heartsAt: cloudAt } as ProfileState)
+        : p;
       const heartsPatch = cloudHearts !== localCommitted
-        ? commitHearts(p, cloudHearts, Date.now())
-        : { hearts: p.hearts, heartsAt: p.heartsAt };
+        ? commitHearts(anchorSource, cloudHearts, Date.now())
+        : { hearts: anchorSource.hearts, heartsAt: anchorSource.heartsAt };
 
       const dailyDay = cloud.dailyClaimed?.day && cloud.dailyClaimed.day === p.dailyClaimed?.day
         ? p.dailyClaimed.day
