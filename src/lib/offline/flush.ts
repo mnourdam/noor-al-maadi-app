@@ -89,44 +89,39 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
       }
 
       case "chapter_progress": {
+        // Priority-Zero authoritative path — every campaign chapter write
+        // funnels through record_campaign_progress_v2 which atomically:
+        //   • upserts user_campaign_progress with sticky merge semantics
+        //   • stamps user_campaign_completions on the final chapter
+        // Legacy raw upsert removed 2026-07.
         const p = item.payload as {
           campaignId: string; chapterId: string;
-          status: "locked" | "unlocked" | "completed";
           score?: number; xpEarned?: number; coinsEarned?: number;
           completed?: boolean;
         };
-        // Sticky merge — never downgrade a completed chapter back to
-        // "in progress". Read the existing row first so replays / added
-        // activities cannot null out completed_at, cannot lower score,
-        // and cannot roll back xp/coins earned. (P0, 2026-07.)
-        const { data: existing } = await supabase
-          .from("user_campaign_progress")
-          .select("completed_at, score, xp_earned, coins_earned, status")
-          .eq("user_id", uid)
-          .eq("campaign_id", p.campaignId)
-          .eq("chapter_id", p.chapterId)
-          .maybeSingle();
-        const now = new Date().toISOString();
-        const newCompletedAt =
-          (existing as any)?.completed_at ?? (p.completed ? now : null);
-        const mergedStatus =
-          (existing as any)?.status === "completed" || p.completed
-            ? "completed"
-            : p.status;
-        const { error } = await supabase.from("user_campaign_progress").upsert(
+        if (!p?.campaignId || !p?.chapterId) {
+          return { ok: false, error: "invalid_chapter_id" };
+        }
+        const { data: res, error } = await supabase.rpc(
+          "record_campaign_progress_v2" as any,
           {
-            user_id: uid,
-            campaign_id: p.campaignId,
-            chapter_id: p.chapterId,
-            status: mergedStatus,
-            score: Math.max((existing as any)?.score ?? 0, p.score ?? 0),
-            xp_earned: Math.max((existing as any)?.xp_earned ?? 0, p.xpEarned ?? 0),
-            coins_earned: Math.max((existing as any)?.coins_earned ?? 0, p.coinsEarned ?? 0),
-            completed_at: newCompletedAt,
+            p_campaign_id: p.campaignId,
+            p_chapter_id: p.chapterId,
+            p_completed: !!p.completed,
+            p_score: p.score ?? null,
+            p_xp_earned: p.xpEarned ?? null,
+            p_coins_earned: p.coinsEarned ?? null,
           },
-          { onConflict: "user_id,campaign_id,chapter_id" },
         );
         if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:campaign-progress:changed"));
+            window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+          }
+        } catch { /* ignore */ }
         return { ok: true };
       }
 
