@@ -140,10 +140,7 @@ export function registryItemIcon(item: ContentRegistryItem): string {
   return (norm && TYPE_ICON[norm]) ?? "✨";
 }
 
-export function registryItemRarity(item: ContentRegistryItem): "common" | "rare" | "epic" | "legendary" {
-  // Delegated to canonical rarity module so aliases + invalid values map safely.
-  // Kept as a thin re-export to preserve the existing call sites.
-  const { normalizeRarity } = require("@/lib/rarity") as typeof import("@/lib/rarity");
+export function registryItemRarity(item: ContentRegistryItem): ArtifactRarity {
   return normalizeRarity(item.rarity);
 }
 
