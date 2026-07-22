@@ -1853,6 +1853,205 @@ export type Database = {
           },
         ]
       }
+      stories: {
+        Row: {
+          content_version: number
+          cover_media_id: string | null
+          created_at: string
+          dinar_reward: number
+          display_order: number
+          era: string | null
+          id: string
+          metadata: Json
+          published_at: string | null
+          slug: string
+          status: string
+          summary_ar: string | null
+          summary_en: string | null
+          title_ar: string
+          title_en: string | null
+          unlock_spec: Json
+          updated_at: string
+          world_slug: string | null
+          xp_reward: number
+        }
+        Insert: {
+          content_version?: number
+          cover_media_id?: string | null
+          created_at?: string
+          dinar_reward?: number
+          display_order?: number
+          era?: string | null
+          id: string
+          metadata?: Json
+          published_at?: string | null
+          slug: string
+          status?: string
+          summary_ar?: string | null
+          summary_en?: string | null
+          title_ar: string
+          title_en?: string | null
+          unlock_spec?: Json
+          updated_at?: string
+          world_slug?: string | null
+          xp_reward?: number
+        }
+        Update: {
+          content_version?: number
+          cover_media_id?: string | null
+          created_at?: string
+          dinar_reward?: number
+          display_order?: number
+          era?: string | null
+          id?: string
+          metadata?: Json
+          published_at?: string | null
+          slug?: string
+          status?: string
+          summary_ar?: string | null
+          summary_en?: string | null
+          title_ar?: string
+          title_en?: string | null
+          unlock_spec?: Json
+          updated_at?: string
+          world_slug?: string | null
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stories_cover_media_fk"
+            columns: ["cover_media_id"]
+            isOneToOne: false
+            referencedRelation: "story_media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_media: {
+        Row: {
+          byte_size: number
+          checksum_sha256: string
+          created_at: string
+          height: number
+          id: string
+          kind: string
+          metadata: Json
+          mime_type: string
+          preset: string
+          processing_version: number
+          storage_bucket: string
+          storage_path: string
+          story_id: string | null
+          updated_at: string
+          verified: boolean
+          verified_at: string | null
+          verified_by: string | null
+          width: number
+        }
+        Insert: {
+          byte_size: number
+          checksum_sha256: string
+          created_at?: string
+          height: number
+          id?: string
+          kind: string
+          metadata?: Json
+          mime_type?: string
+          preset: string
+          processing_version?: number
+          storage_bucket: string
+          storage_path: string
+          story_id?: string | null
+          updated_at?: string
+          verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
+          width: number
+        }
+        Update: {
+          byte_size?: number
+          checksum_sha256?: string
+          created_at?: string
+          height?: number
+          id?: string
+          kind?: string
+          metadata?: Json
+          mime_type?: string
+          preset?: string
+          processing_version?: number
+          storage_bucket?: string
+          storage_path?: string
+          story_id?: string | null
+          updated_at?: string
+          verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_media_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_scenes: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json
+          primary_media_id: string | null
+          scene_index: number
+          scene_type: string
+          story_id: string
+          title_ar: string | null
+          title_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          payload?: Json
+          primary_media_id?: string | null
+          scene_index: number
+          scene_type: string
+          story_id: string
+          title_ar?: string | null
+          title_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          primary_media_id?: string | null
+          scene_index?: number
+          scene_type?: string
+          story_id?: string
+          title_ar?: string | null
+          title_en?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_scenes_primary_media_fk"
+            columns: ["primary_media_id"]
+            isOneToOne: false
+            referencedRelation: "story_media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_scenes_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -2215,10 +2414,13 @@ export type Database = {
           campaign_id: string
           choice_index: number | null
           choice_value: string | null
+          context_id: string
           created_at: string
           id: string
           mode: string
           note: string | null
+          source_id: string
+          source_type: string
           updated_at: string
           user_id: string
         }
@@ -2227,10 +2429,13 @@ export type Database = {
           campaign_id: string
           choice_index?: number | null
           choice_value?: string | null
+          context_id: string
           created_at?: string
           id?: string
           mode: string
           note?: string | null
+          source_id: string
+          source_type: string
           updated_at?: string
           user_id: string
         }
@@ -2239,10 +2444,13 @@ export type Database = {
           campaign_id?: string
           choice_index?: number | null
           choice_value?: string | null
+          context_id?: string
           created_at?: string
           id?: string
           mode?: string
           note?: string | null
+          source_id?: string
+          source_type?: string
           updated_at?: string
           user_id?: string
         }
@@ -2271,6 +2479,91 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_story_completions: {
+        Row: {
+          content_version_at_completion: number
+          created_at: string
+          first_completed_at: string
+          metadata: Json
+          reward_delta_id: string
+          reward_dinars: number
+          reward_xp: number
+          story_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_version_at_completion: number
+          created_at?: string
+          first_completed_at?: string
+          metadata?: Json
+          reward_delta_id: string
+          reward_dinars?: number
+          reward_xp?: number
+          story_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_version_at_completion?: number
+          created_at?: string
+          first_completed_at?: string
+          metadata?: Json
+          reward_delta_id?: string
+          reward_dinars?: number
+          reward_xp?: number
+          story_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_story_completions_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_story_progress: {
+        Row: {
+          content_version_seen: number
+          created_at: string
+          last_scene_index: number
+          max_scene_index_reached: number
+          story_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_version_seen?: number
+          created_at?: string
+          last_scene_index?: number
+          max_scene_index_reached?: number
+          story_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_version_seen?: number
+          created_at?: string
+          last_scene_index?: number
+          max_scene_index_reached?: number
+          story_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_story_progress_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_streak_reward_claims: {
         Row: {
@@ -2798,6 +3091,7 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_story_v2: { Args: { p_story_id: string }; Returns: Json }
       count_my_unread_feedback: { Args: never; Returns: number }
       create_feedback_issue: {
         Args: {
@@ -2826,6 +3120,10 @@ export type Database = {
       ensure_my_delivery: {
         Args: { p_notification_id: string }
         Returns: string
+      }
+      evaluate_unlock_spec: {
+        Args: { p_spec: Json; p_user_id: string }
+        Returns: boolean
       }
       gen_referral_code: { Args: never; Returns: string }
       get_feedback_issue_thread: { Args: { p_issue_id: string }; Returns: Json }
@@ -2878,6 +3176,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_story_access: { Args: { p_story_id: string }; Returns: Json }
       get_tutorial_completion: {
         Args: { p_tutorial_id: string }
         Returns: Json
@@ -3097,6 +3396,10 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: undefined
       }
+      record_story_progress_v2: {
+        Args: { p_scene_index: number; p_story_id: string }
+        Returns: Json
+      }
       record_tutorial_completion: {
         Args: { p_tutorial_id: string; p_version: number }
         Returns: Json
@@ -3129,6 +3432,7 @@ export type Database = {
         Returns: undefined
       }
       set_my_username: { Args: { p_username: string }; Returns: string }
+      stable_delta_uuid: { Args: { p_key: string }; Returns: string }
       sync_my_public_stats: { Args: { p_stats: Json }; Returns: undefined }
       touch_my_last_active: { Args: never; Returns: undefined }
     }
