@@ -74,9 +74,9 @@ d("stories P1 — server contract", () => {
        SELECT public.get_story_access('${pubId}');
        COMMIT;`,
     );
-    expect(bundle).toContain('"ok" : true');
-    expect(bundle).toContain('"scene_index" : 0');
-    expect(bundle).toContain('"scene_index" : 1');
+    expect(bundle).toContain('"ok": true');
+    expect(bundle).toContain('"scene_index": 0');
+    expect(bundle).toContain('"scene_index": 1');
   });
 
   it("record_story_progress_v2 rejects an unknown story id", () => {
