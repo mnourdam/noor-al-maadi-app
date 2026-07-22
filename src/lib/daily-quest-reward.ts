@@ -137,6 +137,25 @@ async function fetchDeltaRowExists(deltaId: string): Promise<{ exists?: boolean;
 }
 
 /**
+ * Account-authoritative completion probe for Daily Reading.
+ *
+ * Returns `true` iff the server already has a matching row in
+ * `applied_profile_deltas` for the stable `(user, local_date, entity_id)`
+ * delta_id. Used on mount after reinstall to restore the completed UI
+ * without re-granting the reward.
+ */
+export async function isDailyQuestRewardedOnServer(params: {
+  userId: string;
+  localDate: string;
+  entityId: string;
+}): Promise<boolean> {
+  const key = buildDailyQuestRewardKey(params);
+  const deltaId = await deriveStableDeltaId(key);
+  const row = await fetchDeltaRowExists(deltaId);
+  return row.exists === true;
+}
+
+/**
  * Attempt the canonical atomic reward grant. Never throws — every failure
  * mode is captured in the returned `outcome`. Safe to call from mount-time
  * reconciliation, event handlers, and outbox-flush listeners; the RPC's
