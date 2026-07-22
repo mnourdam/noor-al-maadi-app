@@ -24,6 +24,7 @@ import {
   getEvaluation,
   getPersisted,
   initAchievementEngine,
+  establishAchievementLiveBaseline,
   migrateGuestUnlocks,
   onEngineTick,
   pushCanonical,
@@ -51,12 +52,14 @@ export function AchievementEngineBoot() {
   const authUserIdRef = useRef<string | null | undefined>(undefined);
   const migratedRef = useRef(false);
   const [serverCompletedIds, setServerCompletedIds] = useState<readonly string[]>([]);
+  const [achievementSourcesSettled, setAchievementSourcesSettled] = useState(false);
 
   // Auth-driven mirror refresh.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
+        setAchievementSourcesSettled(false);
         const { data } = await supabase.auth.getUser();
         const uid = data.user?.id ?? null;
         if (cancelled) return;
@@ -75,13 +78,16 @@ export function AchievementEngineBoot() {
             if (!cancelled) setServerCompletedIds([...ids]);
           } catch { /* silent */ }
         }
+        if (!cancelled) setAchievementSourcesSettled(true);
       } catch {
         await refreshPersistedForUser(null);
+        if (!cancelled) setAchievementSourcesSettled(true);
       }
     })();
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const uid = session?.user?.id ?? null;
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        setAchievementSourcesSettled(false);
         authUserIdRef.current = uid;
         if (event === "SIGNED_IN" && !migratedRef.current) {
           migratedRef.current = true;
@@ -91,9 +97,14 @@ export function AchievementEngineBoot() {
         if (event === "SIGNED_IN" && uid) {
           void fetchServerCompletedIds().then(ids => {
             if (!cancelled) setServerCompletedIds([...ids]);
-          }).catch(() => { /* silent */ });
+          }).catch(() => { /* silent */ }).finally(() => {
+            if (!cancelled) setAchievementSourcesSettled(true);
+          });
         } else if (event === "SIGNED_OUT") {
           setServerCompletedIds([]);
+          setAchievementSourcesSettled(true);
+        } else {
+          setAchievementSourcesSettled(true);
         }
       }
     });
@@ -156,6 +167,13 @@ export function AchievementEngineBoot() {
     profile.titlesEarned,
     canonicalInv.count,
   ]);
+
+  // Silent baseline gate: live achievement notifications are enabled only
+  // after the auth mirror and initial canonical completion sources settle.
+  useEffect(() => {
+    if (!achievementSourcesSettled) return;
+    void establishAchievementLiveBaseline();
+  }, [achievementSourcesSettled, unionedCampaigns, canonicalInv.count, profile.points, profile.dinars, profile.streak]);
 
   return null;
 }

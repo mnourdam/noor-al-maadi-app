@@ -1,11 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
-import {
-  getPersisted,
-  isMirrorReady,
-  onEngineTick,
-} from "@/lib/achievements/v2/engine";
+import { onAchievementTransition } from "@/lib/achievements/v2";
 import type { AchievementView } from "@/lib/achievements/v2";
 
 /**
@@ -52,22 +48,12 @@ const XP_BY_RARITY: Record<string, number> = {
 
 export function AchievementWatcher() {
   const views = useAchievementViews();
-  // Force this component to re-render whenever the engine ticks, so a
-  // late `mirrorReady` flip (server fetch resolves after mount) still
-  // establishes the baseline.
-  const tickRef = useRef(0);
-  useEffect(() => {
-    const off = onEngineTick(() => {
-      tickRef.current += 1;
-    });
-    return off;
-  }, []);
+  const viewsById = useMemo(() => new Map(views.map((v) => [v.id, v])), [views]);
 
   // Session-scoped set of transition ids we've already surfaced. Stable
   // ids (`achievement:<uid>:<id>`) ensure repeat renders / realtime
   // echoes / claim acknowledgements cannot re-fire.
   const notifiedTransitionsRef = useRef<Set<string>>(new Set());
-  const baselineCapturedRef = useRef(false);
   const authUidRef = useRef<string | null>(null);
 
   // Capture auth uid once for stable transition ids.
@@ -86,40 +72,17 @@ export function AchievementWatcher() {
   }, []);
 
   useEffect(() => {
-    // Gate: never notify until the engine has established the server
-    // baseline. Pre-baseline unlocks are historical by definition.
-    if (!isMirrorReady()) return;
-
-    const notified = notifiedTransitionsRef.current;
-    const uid = authUidRef.current;
-    const uidTag = uid ?? "guest";
-
-    if (!baselineCapturedRef.current) {
-      baselineCapturedRef.current = true;
-      // Seed baseline from persisted (server-mirrored) ids. These are
-      // historical, so mark them as already-notified for this session.
-      for (const id of getPersisted().keys()) {
-        notified.add(`achievement:${uidTag}:${id}`);
-      }
-      // Also seed anything currently unlocked (guest local state,
-      // instant guest evaluation) — no notification for pre-baseline
-      // unlocks, ever.
-      for (const v of views) {
-        if (v.state === "unlocked" || v.state === "claimed") {
-          notified.add(`achievement:${uidTag}:${v.id}`);
-        }
-      }
-      return;
-    }
-
-    for (const v of views) {
-      if (v.state !== "unlocked" && v.state !== "claimed") continue;
-      const transitionId = `achievement:${uidTag}:${v.id}`;
-      if (notified.has(transitionId)) continue;
-      notified.add(transitionId);
+    return onAchievementTransition((transition) => {
+      if (transition.origin !== "live_gameplay_unlock") return;
+      const uid = authUidRef.current;
+      const transitionId = `achievement:${uid ?? "guest"}:${transition.achievementId}`;
+      if (notifiedTransitionsRef.current.has(transitionId)) return;
+      const v = viewsById.get(transition.achievementId);
+      if (!v || (v.state !== "unlocked" && v.state !== "claimed")) return;
+      notifiedTransitionsRef.current.add(transitionId);
       void notifyAchievementUnlocked(v, transitionId, uid);
-    }
-  }, [views]);
+    });
+  }, [viewsById]);
 
   return null;
 }
