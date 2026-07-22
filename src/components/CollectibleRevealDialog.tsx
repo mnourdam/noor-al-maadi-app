@@ -51,7 +51,7 @@ export function CollectibleRevealDialog({
   onClose: () => void;
 }) {
   const open = !!item;
-  const meta = item ? RARITY_META[item.rarity] : RARITY_META.common;
+  const meta = item ? RARITY_META[normalizeRarity(item.rarity)] : RARITY_META.common;
 
   useEffect(() => {
     if (item && !item.locked) {
