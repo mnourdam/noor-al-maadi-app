@@ -60,6 +60,7 @@ import { Route as AdminWorldMembershipReviewRouteImport } from './routes/admin.w
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminUnlockIntegrityRouteImport } from './routes/admin.unlock-integrity'
 import { Route as AdminTaxonomyRouteImport } from './routes/admin.taxonomy'
+import { Route as AdminPersistenceDiagnosticsRouteImport } from './routes/admin.persistence-diagnostics'
 import { Route as AdminOfflineDiagnosticsRouteImport } from './routes/admin.offline-diagnostics'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
@@ -387,6 +388,12 @@ const AdminTaxonomyRoute = AdminTaxonomyRouteImport.update({
   path: '/admin/taxonomy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPersistenceDiagnosticsRoute =
+  AdminPersistenceDiagnosticsRouteImport.update({
+    id: '/admin/persistence-diagnostics',
+    path: '/admin/persistence-diagnostics',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminOfflineDiagnosticsRoute = AdminOfflineDiagnosticsRouteImport.update({
   id: '/admin/offline-diagnostics',
   path: '/admin/offline-diagnostics',
@@ -827,6 +834,7 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
+  '/admin/persistence-diagnostics': typeof AdminPersistenceDiagnosticsRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
@@ -945,6 +953,7 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
+  '/admin/persistence-diagnostics': typeof AdminPersistenceDiagnosticsRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
@@ -1069,6 +1078,7 @@ export interface FileRoutesById {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
+  '/admin/persistence-diagnostics': typeof AdminPersistenceDiagnosticsRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
@@ -1194,6 +1204,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offline'
     | '/admin/offline-diagnostics'
+    | '/admin/persistence-diagnostics'
     | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
@@ -1312,6 +1323,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offline'
     | '/admin/offline-diagnostics'
+    | '/admin/persistence-diagnostics'
     | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
@@ -1435,6 +1447,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offline'
     | '/admin/offline-diagnostics'
+    | '/admin/persistence-diagnostics'
     | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
@@ -1559,6 +1572,7 @@ export interface RootRouteChildren {
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOfflineRoute: typeof AdminOfflineRoute
   AdminOfflineDiagnosticsRoute: typeof AdminOfflineDiagnosticsRoute
+  AdminPersistenceDiagnosticsRoute: typeof AdminPersistenceDiagnosticsRoute
   AdminTaxonomyRoute: typeof AdminTaxonomyRoute
   AdminUnlockIntegrityRoute: typeof AdminUnlockIntegrityRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -1954,6 +1968,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/taxonomy'
       fullPath: '/admin/taxonomy'
       preLoaderRoute: typeof AdminTaxonomyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/persistence-diagnostics': {
+      id: '/admin/persistence-diagnostics'
+      path: '/admin/persistence-diagnostics'
+      fullPath: '/admin/persistence-diagnostics'
+      preLoaderRoute: typeof AdminPersistenceDiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/offline-diagnostics': {
@@ -2629,6 +2650,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOfflineRoute: AdminOfflineRoute,
   AdminOfflineDiagnosticsRoute: AdminOfflineDiagnosticsRoute,
+  AdminPersistenceDiagnosticsRoute: AdminPersistenceDiagnosticsRoute,
   AdminTaxonomyRoute: AdminTaxonomyRoute,
   AdminUnlockIntegrityRoute: AdminUnlockIntegrityRoute,
   AdminUsersRoute: AdminUsersRoute,
