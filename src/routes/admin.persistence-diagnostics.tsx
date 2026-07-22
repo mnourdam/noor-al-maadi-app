@@ -130,7 +130,9 @@ function PersistenceDiagnostics() {
       startedAt: getReconciliationStartedAt(),
       terminalAt: getReconciliationTerminalAt(),
     });
+    setStartupMarks(readStartupMarks());
   }, [uid]);
+
 
   useEffect(() => {
     void refresh();
