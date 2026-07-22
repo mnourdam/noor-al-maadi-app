@@ -1,41 +1,43 @@
 // ============================================================
 // Campaign Rewards Granted — canonical "what was actually granted"
 // ------------------------------------------------------------
-// Phase 2 (Completion Integrity):
+// Phase 2 (Completion Integrity) + Phase 8 (Chapter Breakdown):
 //
 // The completion summary must equal what the player ACTUALLY earned
 // while completing a campaign. Historically the modal read
 // `getCampaignProgress(id).totalXp/totalCoins/unlockedRegistryIds`,
-// which:
-//   - accumulates raw per-activity xp defaults (no wrong-answer
-//     scaling),
-//   - never adds chapter or campaign final rewards, and
-//   - never applies the ledger caps.
-// That produced totals that disagreed with the profile grants.
+// which accumulates raw per-activity xp defaults without wrong-answer
+// scaling and never adds chapter/campaign final rewards.
 //
 // This module is the single canonical write path for
-// "reward actually granted for campaign X". It is called from the
-// three grant sites in the chapter player (activity / chapter /
-// campaign) AFTER any scaling and AFTER the ledger has confirmed the
+// "reward actually granted for campaign X". It is called from every
+// grant site AFTER any scaling and AFTER the ledger has confirmed the
 // claim is first-time. As a result:
 //
 //   Σ recorded XP     ≡ Σ XP passed to profile.addPoints for campaign X
 //   Σ recorded coins  ≡ Σ coins passed to profile.addDinars  for campaign X
 //   recorded unlocks  ≡ unique unlockIds passed to the collection sync
 //
-// The completion summary reads via `getCampaignGrantedTotals(id)` and
-// treats these as truth. When a legacy completion has no grant record
-// (i.e. finished before this file existed), we transparently fall
-// back to the legacy `importedCampaignProgress` totals so historical
-// summaries stay truthful for the version the player completed.
+// Phase 8 adds a per-chapter breakdown so the chapter completion panel
+// reads the same truth as the campaign summary, keeping the two views
+// numerically consistent by construction.
 // ============================================================
 
-const GRANTS_KEY = "irth_campaign_grants_v1";
+const GRANTS_KEY = "irth_campaign_grants_v2";
+const LEGACY_KEY = "irth_campaign_grants_v1";
+
+export interface ChapterGrantTotals {
+  xp: number;
+  coins: number;
+  unlocks: string[];
+}
 
 export interface CampaignGrantTotals {
   xp: number;
   coins: number;
   unlocks: string[];
+  /** Per-chapter breakdown (excludes campaign-final bonus). */
+  perChapter: Record<string, ChapterGrantTotals>;
   updatedAt: string;
 }
 
@@ -49,8 +51,26 @@ function readAll(): GrantsMap {
   if (!isBrowser()) return {};
   try {
     const raw = window.localStorage.getItem(GRANTS_KEY);
-    if (!raw) return {};
-    return (JSON.parse(raw) ?? {}) as GrantsMap;
+    if (raw) return (JSON.parse(raw) ?? {}) as GrantsMap;
+    // One-time migration from v1 (no per-chapter breakdown).
+    const legacyRaw = window.localStorage.getItem(LEGACY_KEY);
+    if (!legacyRaw) return {};
+    const legacy = (JSON.parse(legacyRaw) ?? {}) as Record<
+      string,
+      { xp?: number; coins?: number; unlocks?: string[]; updatedAt?: string }
+    >;
+    const migrated: GrantsMap = {};
+    for (const [id, rec] of Object.entries(legacy)) {
+      migrated[id] = {
+        xp: rec.xp ?? 0,
+        coins: rec.coins ?? 0,
+        unlocks: rec.unlocks ?? [],
+        perChapter: {},
+        updatedAt: rec.updatedAt ?? new Date().toISOString(),
+      };
+    }
+    writeAll(migrated);
+    return migrated;
   } catch {
     return {};
   }
@@ -66,7 +86,26 @@ function writeAll(map: GrantsMap) {
 }
 
 function blank(): CampaignGrantTotals {
-  return { xp: 0, coins: 0, unlocks: [], updatedAt: new Date().toISOString() };
+  return {
+    xp: 0,
+    coins: 0,
+    unlocks: [],
+    perChapter: {},
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function blankChapter(): ChapterGrantTotals {
+  return { xp: 0, coins: 0, unlocks: [] };
+}
+
+export interface GrantDelta {
+  xp?: number;
+  coins?: number;
+  unlocks?: readonly string[];
+  /** Optional chapter scope. When present the delta is also attributed to
+   *  that chapter's per-chapter bucket. Omit for campaign-final bonuses. */
+  chapterId?: string | null;
 }
 
 /**
@@ -77,7 +116,7 @@ function blank(): CampaignGrantTotals {
  */
 export function recordCampaignGrant(
   campaignId: string,
-  delta: { xp?: number; coins?: number; unlocks?: readonly string[] },
+  delta: GrantDelta,
 ): CampaignGrantTotals {
   const all = readAll();
   const cur = all[campaignId] ?? blank();
@@ -89,6 +128,17 @@ export function recordCampaignGrant(
     const set = new Set(cur.unlocks);
     for (const u of delta.unlocks) if (u) set.add(u);
     cur.unlocks = [...set];
+  }
+  if (delta.chapterId) {
+    const chBucket = cur.perChapter[delta.chapterId] ?? blankChapter();
+    chBucket.xp += xp;
+    chBucket.coins += coins;
+    if (delta.unlocks?.length) {
+      const set = new Set(chBucket.unlocks);
+      for (const u of delta.unlocks) if (u) set.add(u);
+      chBucket.unlocks = [...set];
+    }
+    cur.perChapter[delta.chapterId] = chBucket;
   }
   cur.updatedAt = new Date().toISOString();
   all[campaignId] = cur;
@@ -104,15 +154,51 @@ export function recordCampaignGrant(
 export function getCampaignGrantedTotals(
   campaignId: string,
   fallback?: { totalXp?: number; totalCoins?: number; unlockedRegistryIds?: readonly string[] },
-): { xp: number; coins: number; unlocks: string[] } {
+): { xp: number; coins: number; unlocks: string[]; hasCanonicalLedger: boolean } {
   const rec = readAll()[campaignId];
   if (rec) {
-    return { xp: rec.xp, coins: rec.coins, unlocks: [...rec.unlocks] };
+    return {
+      xp: rec.xp,
+      coins: rec.coins,
+      unlocks: [...rec.unlocks],
+      hasCanonicalLedger: true,
+    };
   }
   return {
     xp: Math.max(0, Math.floor(fallback?.totalXp ?? 0)),
     coins: Math.max(0, Math.floor(fallback?.totalCoins ?? 0)),
     unlocks: [...(fallback?.unlockedRegistryIds ?? [])],
+    hasCanonicalLedger: false,
+  };
+}
+
+/**
+ * Canonical read for the chapter-complete panel. Returns the exact
+ * XP / dinars / unlocks that the player received while completing this
+ * chapter (activity grants scaled for wrong answers + chapter bonus).
+ * Falls back to the legacy authored figures when no canonical ledger
+ * exists for the chapter (historical completions pre-Phase 8).
+ */
+export function getChapterGrantedTotals(
+  campaignId: string,
+  chapterId: string,
+  fallback?: { xpEarned?: number; coinsEarned?: number },
+): { xp: number; coins: number; unlocks: string[]; hasCanonicalLedger: boolean } {
+  const rec = readAll()[campaignId];
+  const ch = rec?.perChapter[chapterId];
+  if (ch) {
+    return {
+      xp: ch.xp,
+      coins: ch.coins,
+      unlocks: [...ch.unlocks],
+      hasCanonicalLedger: true,
+    };
+  }
+  return {
+    xp: Math.max(0, Math.floor(fallback?.xpEarned ?? 0)),
+    coins: Math.max(0, Math.floor(fallback?.coinsEarned ?? 0)),
+    unlocks: [],
+    hasCanonicalLedger: false,
   };
 }
 
@@ -121,6 +207,7 @@ export function resetCampaignGrants(campaignId?: string): void {
   if (!isBrowser()) return;
   if (!campaignId) {
     window.localStorage.removeItem(GRANTS_KEY);
+    window.localStorage.removeItem(LEGACY_KEY);
     return;
   }
   const all = readAll();
