@@ -236,12 +236,41 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         // the tour. Priority-Zero (2026-07).
         try {
           const { hydrateOnboardingFromServer } = await import("@/lib/tutorial/persistence");
-          await hydrateOnboardingFromServer("irth-first-time");
-          reconciled = true;
+          const outcome = await withBoundedTimeout(
+            hydrateOnboardingFromServer("irth-first-time"),
+            5000,
+            (late) => {
+              if (cancelled) return;
+              if (late.kind === "success") {
+                recordStartupMark("server-reconciliation-success", "late");
+                setReconciliationState("reconciled");
+              } else if (late.kind === "offline") {
+                recordStartupMark("offline-local-entered", "late");
+                setReconciliationState("offline-local");
+              } else if (late.kind === "failed") {
+                recordStartupMark("server-reconciliation-failed", "late");
+              }
+            },
+          );
+          if (outcome.kind === "success") {
+            reconciled = true;
+            recordStartupMark("server-reconciliation-success");
+          } else if (outcome.kind === "timeout") {
+            recordStartupMark("server-reconciliation-soft-timeout", "onboarding");
+            setReconciliationState("offline-local", "onboarding-timeout");
+          } else if (outcome.kind === "offline") {
+            recordStartupMark("offline-local-entered", "onboarding");
+            setReconciliationState("offline-local");
+          } else {
+            recordStartupMark("server-reconciliation-failed");
+            setReconciliationState("failed", outcome.error instanceof Error ? outcome.error.message : String(outcome.error));
+          }
         } catch (e) {
           const offline = typeof navigator !== "undefined" && navigator.onLine === false;
           setReconciliationState(offline ? "offline-local" : "failed", e instanceof Error ? e.message : String(e));
         }
+
+
 
         // Identity → never show "ضيف" once authenticated. Prefer display_name.
         const identityName = acc?.display_name?.trim()
