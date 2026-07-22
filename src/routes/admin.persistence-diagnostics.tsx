@@ -131,7 +131,10 @@ function PersistenceDiagnostics() {
     window.addEventListener("irth:onboarding:changed", onChange);
     window.addEventListener("irth:campaign-completions:changed", onChange);
     window.addEventListener("irth:campaign-progress:changed", onChange);
-    const t = setInterval(refresh, 5000);
+    // Gentle poll — 30s. Server RPCs (tutorial completion) are deduped
+    // and session-cached, so this only re-reads local state on the tick.
+    const t = setInterval(refresh, 30000);
+
     return () => {
       window.removeEventListener("irth:outbox:flushed", onChange);
       window.removeEventListener("irth:outbox:changed", onChange);
