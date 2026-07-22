@@ -12,7 +12,8 @@ export type TraceChannel =
   | "signup"
   | "deep-link"
   | "campaign-persistence"
-  | "tutorial";
+  | "tutorial"
+  | "achievement";
 
 export interface TraceEntry {
   ts: string;          // ISO timestamp

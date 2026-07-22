@@ -233,9 +233,22 @@ export interface UserAchievementRecord {
   achievementId: AchievementId;
   unlockedAt: string;
   rewardsGrantedAt: string | null;
+  presentedAt?: string | null;
+  notifiedAt?: string | null;
+  presentationOrigin?: TransitionOrigin | string | null;
+  repairOrigin?: TransitionOrigin | string | null;
   engineVersion: number;
   definitionVersion: number;
 }
+
+export type TransitionOrigin =
+  | "startup_hydration"
+  | "historical_reconciliation"
+  | "historical_repair"
+  | "live_gameplay_unlock"
+  | "claim_ack"
+  | "guest_migration"
+  | "definition_backfill";
 
 /**
  * Unified projection consumed by every UI surface.

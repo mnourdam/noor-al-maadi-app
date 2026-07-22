@@ -6,11 +6,10 @@
  *   - `newlyUnlocked` — ids to send to `claim_achievements`
  *   - `newlyClaimed`  — ids whose rewards were just granted
  *
- * Emits event-bus hooks and analytics events through `events.ts`. This is
- * the ONLY place the engine talks to presentation and analytics.
+ * Pure diff only. Presentation is emitted by the engine after it has a
+ * transition origin and, for signed-in users, a successful inserted claim.
  */
 
-import { dispatchAchievementHook } from "./events";
 import type { Registry } from "./registry";
 import type {
   AchievementId,
@@ -38,6 +37,7 @@ export interface ReconciliationOutput {
 export function reconcile(input: ReconciliationInput): ReconciliationOutput {
   const { registry, evaluation, persisted } = input;
   const alreadyNotified = input.alreadyNotified ?? new Set<AchievementId>();
+  void alreadyNotified;
 
   const newlyUnlocked: AchievementId[] = [];
   const newlyClaimed: AchievementId[] = [];
@@ -48,10 +48,8 @@ export function reconcile(input: ReconciliationInput): ReconciliationOutput {
     if (!def) continue;
 
     if (!rec) {
-      // Fresh unlock. Fire onUnlocked once per id per device.
-      if (!alreadyNotified.has(id)) {
-        dispatchAchievementHook("onUnlocked", def);
-      }
+      // Fresh unlock. The engine decides whether this is historical repair
+      // or a live gameplay transition; do not emit from this pure diff.
       newlyUnlocked.push(id);
     } else if (!rec.rewardsGrantedAt) {
       // Row exists but rewards were not granted yet — retry claim safely.
@@ -81,16 +79,13 @@ export function reconcile(input: ReconciliationInput): ReconciliationOutput {
 }
 
 /**
- * Fire onClaimed hooks for ids that transitioned from "unlocked" to
- * "claimed" during this cycle. Kept separate from `reconcile` so callers
- * can compare against last-cycle state.
+ * Deprecated no-op kept for API compatibility. Claim acknowledgements are
+ * never a valid notification origin.
  */
 export function dispatchClaimTransitions(
   registry: Registry,
   transitionedIds: readonly AchievementId[],
 ): void {
-  for (const id of transitionedIds) {
-    const def = registry.byId.get(id);
-    if (def) dispatchAchievementHook("onClaimed", def);
-  }
+  void registry;
+  void transitionedIds;
 }

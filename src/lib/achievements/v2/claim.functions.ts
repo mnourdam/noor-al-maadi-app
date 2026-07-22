@@ -19,10 +19,26 @@ const claimSchema = z.object({
   engineVersion: z.number().int().min(1).max(1000),
 });
 
+const presentationSchema = z.object({
+  ids: z.array(z.string().min(1).max(128)).max(64),
+  origin: z.string().min(1).max(64).default("live_gameplay_unlock"),
+});
+
+const repairSchema = z.object({
+  ids: z.array(z.string().min(1).max(128)).max(128),
+  metadata: z.record(z.unknown()).default({}),
+});
+
 export interface ClaimResult {
   inserted: string[];
   alreadyClaimed: string[];
   rejected: { id: string; reason: string }[];
+}
+
+export interface HistoricalRepairResult {
+  repaired: string[];
+  existing: string[];
+  rejected: string[];
 }
 
 export const claimAchievements = createServerFn({ method: "POST" })
@@ -75,7 +91,7 @@ export const fetchUserAchievements = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("user_achievements")
       .select(
-        "achievement_id, unlocked_at, rewards_granted_at, engine_version, definition_version",
+        "achievement_id, unlocked_at, rewards_granted_at, engine_version, definition_version, presented_at, notified_at, presentation_origin, repair_origin",
       )
       .eq("user_id", userId);
 
@@ -85,4 +101,43 @@ export const fetchUserAchievements = createServerFn({ method: "GET" })
       return [];
     }
     return data ?? [];
+  });
+
+export const markAchievementsPresented = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => presentationSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    if (data.ids.length === 0) return { updated: [] as string[] };
+    const { data: updated, error } = await (context.supabase.rpc as any)(
+      "mark_achievement_presented",
+      { _ids: data.ids, _origin: data.origin },
+    );
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error("[achievements] mark presented failed", error);
+      return { updated: [] as string[], error: "mark_presented_failed" };
+    }
+    return { updated: Array.isArray(updated) ? updated as string[] : [] };
+  });
+
+export const repairHistoricalAchievements = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => repairSchema.parse(data))
+  .handler(async ({ data, context }): Promise<HistoricalRepairResult> => {
+    if (data.ids.length === 0) return { repaired: [], existing: [], rejected: [] };
+    const { data: rows, error } = await (context.supabase.rpc as any)(
+      "repair_historical_achievements",
+      { _ids: data.ids, _metadata: data.metadata },
+    );
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error("[achievements] historical repair failed", error);
+      return { repaired: [], existing: [], rejected: data.ids };
+    }
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    return {
+      repaired: row?.repaired ?? [],
+      existing: row?.existing ?? [],
+      rejected: row?.rejected ?? [],
+    };
   });

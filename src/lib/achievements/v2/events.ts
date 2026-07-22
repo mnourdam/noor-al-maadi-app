@@ -10,7 +10,7 @@
  * `analyticsId`, so analytics wiring is data-driven too.
  */
 
-import type { AchievementEventId, AchievementDefinition } from "./types";
+import type { AchievementEventId, AchievementDefinition, TransitionOrigin } from "./types";
 
 export type AchievementLifecycleHook = "onUnlocked" | "onClaimed" | "onViewed";
 
@@ -31,9 +31,16 @@ export interface AchievementAnalyticsPayload {
 
 type EventListener = (p: AchievementEventPayload) => void;
 type AnalyticsListener = (p: AchievementAnalyticsPayload) => void;
+export interface AchievementTransitionPayload {
+  achievementId: string;
+  origin: TransitionOrigin;
+  at: number;
+}
+type TransitionListener = (p: AchievementTransitionPayload) => void;
 
 const eventListeners = new Set<EventListener>();
 const analyticsListeners = new Set<AnalyticsListener>();
+const transitionListeners = new Set<TransitionListener>();
 
 export function onAchievementEvent(fn: EventListener): () => void {
   eventListeners.add(fn);
@@ -43,6 +50,11 @@ export function onAchievementEvent(fn: EventListener): () => void {
 export function onAchievementAnalytics(fn: AnalyticsListener): () => void {
   analyticsListeners.add(fn);
   return () => analyticsListeners.delete(fn);
+}
+
+export function onAchievementTransition(fn: TransitionListener): () => void {
+  transitionListeners.add(fn);
+  return () => transitionListeners.delete(fn);
 }
 
 function emit(fn: () => void) {
@@ -88,10 +100,23 @@ export function dispatchAchievementHook(
   }
 }
 
+export function dispatchAchievementTransition(
+  achievementId: string,
+  origin: TransitionOrigin,
+): void {
+  const payload: AchievementTransitionPayload = {
+    achievementId,
+    origin,
+    at: Date.now(),
+  };
+  for (const l of transitionListeners) emit(() => l(payload));
+}
+
 /** Test / debug hook — dumps current subscriber counts. */
 export function _debugListenerCounts() {
   return {
     events: eventListeners.size,
     analytics: analyticsListeners.size,
+    transitions: transitionListeners.size,
   };
 }
