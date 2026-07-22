@@ -412,6 +412,16 @@ export function getPersisted(): ReadonlyMap<AchievementId, UserAchievementRecord
 }
 
 /**
+ * True once the server achievement mirror has been fetched (or explicitly
+ * skipped for a guest). Presentation surfaces MUST wait for this before
+ * treating any unlock as "live" — otherwise historical unlocks fire again
+ * on cold-boot / reinstall / logout+login.
+ */
+export function isMirrorReady(): boolean {
+  return mirrorReady;
+}
+
+/**
  * Guest → account migration: called when a guest signs in with existing
  * local unlocks. Sends them through `claimAchievements`; the RPC is
  * idempotent so already-earned rows are skipped.

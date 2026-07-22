@@ -38,7 +38,7 @@ import {
 } from "@/lib/campaignLedger";
 import { upsertChapterProgress } from "@/lib/progressSync";
 import { recordTrace } from "@/lib/diag-trace";
-import { recordCampaignGrant, getCampaignGrantedTotals } from "@/lib/campaignRewardsGranted";
+import { recordCampaignGrant, getCampaignGrantedTotals, getChapterGrantedTotals } from "@/lib/campaignRewardsGranted";
 import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
@@ -214,7 +214,7 @@ function ImportedChapterPlayer() {
       if (xpGrant > 0)    addPoints(xpGrant);
       if (coinGrant > 0)  addDinars(coinGrant);
       // Canonical grant ledger — must mirror exactly what was applied to profile.
-      recordCampaignGrant(campaign!.id, { xp: xpGrant, coins: coinGrant });
+      recordCampaignGrant(campaign!.id, { xp: xpGrant, coins: coinGrant, chapterId: chapter!.id });
       audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
     }
 
@@ -239,7 +239,7 @@ function ImportedChapterPlayer() {
         const items = unlockIdsToCollectionItems(campaign!.id, chapter!.id, chDelta.unlocks);
         if (items.length) enqueueCollectionSync(items);
         recordCampaignGrant(campaign!.id, {
-          xp: chDelta.xp, coins: chDelta.coins, unlocks: chDelta.unlocks,
+          xp: chDelta.xp, coins: chDelta.coins, unlocks: chDelta.unlocks, chapterId: chapter!.id,
         });
       }
     }
@@ -406,18 +406,28 @@ function ImportedChapterPlayer() {
               </div>
             ) : reviewMode ? (
               <ReviewChapterView campaign={campaign} chapter={chapter} />
-            ) : allDone ? (
-              <ChapterCompletePanel
-                campaignId={campaign.id}
-                campaignTitle={campaign.title}
-                chapterId={chapter.id}
-                chapterTitle={chapter.title}
-                xpEarned={chProgress?.xpEarned ?? 0}
-                coinsEarned={chProgress?.coinsEarned ?? 0}
-                heartsLost={chProgress?.heartsLost ?? 0}
-                nextChapter={nextChapterAfter(campaign, chapter)}
-              />
-            ) : (
+            ) : allDone ? (() => {
+              // Canonical chapter totals: exact XP/dinars/unlocks the
+              // player received while completing this chapter (activity
+              // grants after wrong-answer scaling + chapter bonus). Falls
+              // back to authored figures for pre-Phase 8 completions.
+              const chTotals = getChapterGrantedTotals(campaign.id, chapter.id, {
+                xpEarned: chProgress?.xpEarned ?? 0,
+                coinsEarned: chProgress?.coinsEarned ?? 0,
+              });
+              return (
+                <ChapterCompletePanel
+                  campaignId={campaign.id}
+                  campaignTitle={campaign.title}
+                  chapterId={chapter.id}
+                  chapterTitle={chapter.title}
+                  xpEarned={chTotals.xp}
+                  coinsEarned={chTotals.coins}
+                  heartsLost={chProgress?.heartsLost ?? 0}
+                  nextChapter={nextChapterAfter(campaign, chapter)}
+                />
+              );
+            })() : (
               <div>
                 <ProgressBar
                   done={chProgress?.completedActivityIds.length ?? 0}
