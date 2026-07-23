@@ -39,6 +39,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
 import { DailyQuestCard } from "@/components/home/DailyQuestCard";
+import { StoriesRail } from "@/components/stories/StoriesRail";
 import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
 import { scheduleIdle, decodeImage, perfMark } from "@/lib/idle";
 
@@ -715,6 +716,11 @@ function HomeFull() {
           <ContinueJourneyCard sel={campaignSel} />
         </Reveal>
       )}
+
+      {/* ============ 2b. STORIES rail (P4.1) — hidden when empty ============ */}
+      <Reveal>
+        <StoriesRail />
+      </Reveal>
 
       {/* ============ 3. DAILY QUEST — one mission per local day ============ */}
       <DailyQuestCard />

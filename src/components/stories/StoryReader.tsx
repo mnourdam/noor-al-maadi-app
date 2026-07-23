@@ -64,17 +64,31 @@ export function StoryReader({
     : null;
 
   const saveReflection = useCallback(async (text: string) => {
-    // Reflection integration: write to user_reflections keyed by scene.
+    // Reflection integration: write to user_reflections using the shared
+    // `source_type / source_id / context_id` scope (P1 staged migration).
+    // Legacy `campaign_id / activity_id` columns are populated with the
+    // story/scene ids to satisfy the (user_id, campaign_id, activity_id)
+    // uniqueness constraint that predates the new scope.
     const { data: sess } = await supabase.auth.getSession();
     const uid = sess.session?.user?.id;
     if (!uid) return;
-    await supabase.from("user_reflections").insert({
-      user_id: uid,
-      body_ar: text,
-      source: "story",
-      source_id: `${story.id}:${scene?.id ?? "unknown"}`,
-      metadata: { story_id: story.id, scene_index: scene?.scene_index ?? null },
-    } as never);
+    const sceneRef = scene?.id ?? `scene-${scene?.scene_index ?? 0}`;
+    await supabase.from("user_reflections").upsert(
+      {
+        user_id: uid,
+        campaign_id: story.id,
+        activity_id: sceneRef,
+        source_type: "story",
+        source_id: story.id,
+        context_id: sceneRef,
+        mode: "write",
+        note: text,
+      } as never,
+      { onConflict: "user_id,campaign_id,activity_id" } as never,
+    );
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("irth:reflections-changed"));
+    }
   }, [story.id, scene]);
 
   const goNext = async () => {

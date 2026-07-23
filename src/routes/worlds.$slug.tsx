@@ -34,6 +34,7 @@ import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import { sortCampaignsChronological } from "@/lib/campaignChronology";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
+import { WorldStoriesSection } from "@/components/stories/WorldStoriesSection";
 
 export const Route = createFileRoute("/worlds/$slug")({
   head: ({ params }) => ({
@@ -363,6 +364,9 @@ function WorldDetailPage() {
             this world. Hidden when fewer than 3 dated events exist. No
             fabricated milestones. */}
         <MiniTimeline events={data.sections.event} worldSlug={slug} />
+
+        {/* Stories of this world (P4.1). Informational only. */}
+        <WorldStoriesSection worldSlug={slug} />
 
         {/* Connected worlds */}
         {data.connectedWorlds.length > 0 && (
