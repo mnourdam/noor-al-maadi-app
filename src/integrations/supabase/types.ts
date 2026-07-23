@@ -2239,8 +2239,6 @@ export type Database = {
           display_order: number
           id: string
           metadata: Json
-          production_status: Database["public"]["Enums"]["story_production_status"]
-          published_at: string | null
           schema_version: number
           slug: string
           summary_ar: string | null
@@ -2257,8 +2255,6 @@ export type Database = {
           display_order?: number
           id: string
           metadata?: Json
-          production_status: Database["public"]["Enums"]["story_production_status"]
-          published_at?: string | null
           schema_version?: number
           slug: string
           summary_ar?: string | null
@@ -2275,8 +2271,6 @@ export type Database = {
           display_order?: number
           id?: string
           metadata?: Json
-          production_status?: Database["public"]["Enums"]["story_production_status"]
-          published_at?: string | null
           schema_version?: number
           slug?: string
           summary_ar?: string | null
@@ -2385,53 +2379,46 @@ export type Database = {
         Row: {
           created_at: string
           display_order: number
-          from_story_id: string
           id: string
           metadata: Json
-          note_ar: string | null
-          note_en: string | null
-          relation_type: Database["public"]["Enums"]["story_relation_type"]
+          role: string
           schema_version: number
-          to_story_id: string
+          story_id: string
+          target_extra: Json
+          target_id: string
+          target_type: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           display_order?: number
-          from_story_id: string
           id: string
           metadata?: Json
-          note_ar?: string | null
-          note_en?: string | null
-          relation_type: Database["public"]["Enums"]["story_relation_type"]
+          role: string
           schema_version?: number
-          to_story_id: string
+          story_id: string
+          target_extra?: Json
+          target_id: string
+          target_type: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           display_order?: number
-          from_story_id?: string
           id?: string
           metadata?: Json
-          note_ar?: string | null
-          note_en?: string | null
-          relation_type?: Database["public"]["Enums"]["story_relation_type"]
+          role?: string
           schema_version?: number
-          to_story_id?: string
+          story_id?: string
+          target_extra?: Json
+          target_id?: string
+          target_type?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "story_relations_from_story_id_fkey"
-            columns: ["from_story_id"]
-            isOneToOne: false
-            referencedRelation: "stories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "story_relations_to_story_id_fkey"
-            columns: ["to_story_id"]
+            foreignKeyName: "story_relations_story_id_fkey"
+            columns: ["story_id"]
             isOneToOne: false
             referencedRelation: "stories"
             referencedColumns: ["id"]
@@ -2497,46 +2484,43 @@ export type Database = {
       }
       story_sources: {
         Row: {
-          citation_ar: string
-          citation_en: string | null
+          citation: string
           created_at: string
           display_order: number
           id: string
+          kind: string
           metadata: Json
           reference_locator: string | null
-          reliability: Database["public"]["Enums"]["story_source_reliability"]
           schema_version: number
-          source_type: Database["public"]["Enums"]["story_source_type"]
+          source_key: string
           story_id: string
           updated_at: string
           url: string | null
         }
         Insert: {
-          citation_ar: string
-          citation_en?: string | null
+          citation: string
           created_at?: string
           display_order?: number
           id: string
+          kind: string
           metadata?: Json
           reference_locator?: string | null
-          reliability?: Database["public"]["Enums"]["story_source_reliability"]
           schema_version?: number
-          source_type: Database["public"]["Enums"]["story_source_type"]
+          source_key: string
           story_id: string
           updated_at?: string
           url?: string | null
         }
         Update: {
-          citation_ar?: string
-          citation_en?: string | null
+          citation?: string
           created_at?: string
           display_order?: number
           id?: string
+          kind?: string
           metadata?: Json
           reference_locator?: string | null
-          reliability?: Database["public"]["Enums"]["story_source_reliability"]
           schema_version?: number
-          source_type?: Database["public"]["Enums"]["story_source_type"]
+          source_key?: string
           story_id?: string
           updated_at?: string
           url?: string | null
@@ -4289,29 +4273,7 @@ export type Database = {
         | "testing"
         | "completed"
       story_rarity: "standard" | "featured" | "rare" | "legendary"
-      story_relation_type:
-        | "prequel"
-        | "sequel"
-        | "related"
-        | "contradicts"
-        | "clarifies"
-        | "part_of"
       story_snapshot_tier: "core" | "standard" | "on_demand"
-      story_source_reliability:
-        | "authenticated"
-        | "accepted"
-        | "weak"
-        | "disputed"
-        | "unverified"
-      story_source_type:
-        | "quran"
-        | "hadith"
-        | "sirah"
-        | "tarikh"
-        | "academic"
-        | "primary_document"
-        | "archaeology"
-        | "other"
       story_time_precision:
         | "day"
         | "month"
@@ -4523,32 +4485,7 @@ export const Constants = {
         "completed",
       ],
       story_rarity: ["standard", "featured", "rare", "legendary"],
-      story_relation_type: [
-        "prequel",
-        "sequel",
-        "related",
-        "contradicts",
-        "clarifies",
-        "part_of",
-      ],
       story_snapshot_tier: ["core", "standard", "on_demand"],
-      story_source_reliability: [
-        "authenticated",
-        "accepted",
-        "weak",
-        "disputed",
-        "unverified",
-      ],
-      story_source_type: [
-        "quran",
-        "hadith",
-        "sirah",
-        "tarikh",
-        "academic",
-        "primary_document",
-        "archaeology",
-        "other",
-      ],
       story_time_precision: [
         "day",
         "month",
