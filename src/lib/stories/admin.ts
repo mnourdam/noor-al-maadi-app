@@ -44,6 +44,8 @@ export interface AdminStoryBundle {
   story: StoryRow;
   scenes: StorySceneRow[];
   media: StoryMediaRow[];
+  hasPreviousDraft: boolean;
+  previousDraftAt: string | null;
 }
 
 export interface StoryUpsertInput {
