@@ -3,8 +3,8 @@
 // ------------------------------------------------------------
 // The verifier is the only path that can flip a `story_media`
 // row's `verified` column to true. It:
-//   1. Loads the row (admin only).
-//   2. Downloads the storage object with the service role.
+//   1. Authorizes the caller as a content editor.
+//   2. Loads the row + downloads the storage object server-side.
 //   3. Re-computes SHA-256 over the on-disk bytes.
 //   4. Calls `admin_mark_story_media_verified` with the observed
 //      checksum + byte size, which enforces equality in SQL.
@@ -51,7 +51,7 @@ export const verifyStoryMedia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw) => InputSchema.parse(raw))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { supabase } = context;
 
     // CMS gate — owner/admin/editor via the canonical content-editor RPC.
     const { data: isEditor, error: roleErr } = await supabase.rpc("is_content_editor");
