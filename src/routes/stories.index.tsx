@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpenText, ArrowLeft, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, Screen } from "@/components/AppShell";
-import { storyMediaPublicUrl } from "@/lib/stories/media/url";
+import { useStoryMediaUrl } from "@/lib/stories/media/url";
 
 interface PublishedStoryRow {
   id: string;
