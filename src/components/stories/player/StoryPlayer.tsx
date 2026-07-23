@@ -253,23 +253,30 @@ export function StoryPlayer({
       {phase === "intro" && (
         <>
           <KenBurns src={coverUrl} alt={story.title_ar} seed={`cover:${story.id}`} overlay="vignette" />
-          <div className="absolute inset-x-0 bottom-0 z-10 px-8 pb-[calc(env(safe-area-inset-bottom)+96px)]"
+          <div className="absolute inset-x-0 bottom-0 z-10 px-8 pb-[calc(env(safe-area-inset-bottom)+104px)] sm:px-12"
                style={{ animation: "intro-fade 900ms 200ms ease-out both" }}>
-            <p className="mb-2 text-[10px] tracking-[0.36em] text-gold/80">إرث</p>
-            <h1 className="font-display text-[32px] font-bold leading-[1.15] text-white drop-shadow-lg">
-              {story.title_ar}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-white/75">
-              {subtitle && <span>{subtitle}</span>}
-              {subtitle && <span className="opacity-40">·</span>}
-              <span>{durationLabel}</span>
-
+            <div className="w-full max-w-[34rem]">
+              <p className="mb-3 text-[10px] font-medium tracking-[0.42em] text-gold/80">إرث</p>
+              <h1
+                className="font-display font-bold leading-[1.12] text-white"
+                style={{
+                  fontSize: "clamp(28px, 7.6vw, 40px)",
+                  textShadow: "0 2px 18px rgba(0,0,0,0.6)",
+                }}
+              >
+                {story.title_ar}
+              </h1>
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-white/75">
+                {subtitle && <span>{subtitle}</span>}
+                {subtitle && <span className="opacity-40">·</span>}
+                <span>{durationLabel}</span>
+              </div>
+              {story.summary_ar && (
+                <p className="mt-4 text-[clamp(13px,3.4vw,15px)] leading-[1.9] text-white/75">
+                  {story.summary_ar}
+                </p>
+              )}
             </div>
-            {story.summary_ar && (
-              <p className="mt-3 max-w-md text-[13px] leading-relaxed text-white/70">
-                {story.summary_ar}
-              </p>
-            )}
           </div>
           <style>{`@keyframes intro-fade { from { opacity: 0; transform: translateY(12px);} to { opacity: 1; transform: translateY(0);} }`}</style>
         </>
