@@ -1900,22 +1900,49 @@ export type Database = {
       }
       social_comment_contributions: {
         Row: {
+          applied_at: string | null
+          applied_by: string | null
+          archived_at: string | null
+          archived_by: string | null
+          category: Database["public"]["Enums"]["contribution_category"]
           comment_id: string
+          editor_note: string | null
           marked_at: string
           marked_by: string | null
           note: string | null
+          public_notice_text: string | null
+          status: Database["public"]["Enums"]["contribution_status"]
+          updated_at: string
         }
         Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          category?: Database["public"]["Enums"]["contribution_category"]
           comment_id: string
+          editor_note?: string | null
           marked_at?: string
           marked_by?: string | null
           note?: string | null
+          public_notice_text?: string | null
+          status?: Database["public"]["Enums"]["contribution_status"]
+          updated_at?: string
         }
         Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          category?: Database["public"]["Enums"]["contribution_category"]
           comment_id?: string
+          editor_note?: string | null
           marked_at?: string
           marked_by?: string | null
           note?: string | null
+          public_notice_text?: string | null
+          status?: Database["public"]["Enums"]["contribution_status"]
+          updated_at?: string
         }
         Relationships: [
           {
@@ -3375,6 +3402,14 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_contribution_v2: {
+        Args: {
+          p_comment_id: string
+          p_editor_note?: string
+          p_public_notice: string
+        }
+        Returns: Json
+      }
       apply_profile_delta: {
         Args: {
           p_delta_id: string
@@ -3383,6 +3418,10 @@ export type Database = {
           p_source?: string
           p_xp?: number
         }
+        Returns: Json
+      }
+      archive_contribution_v2: {
+        Args: { p_comment_id: string; p_editor_note?: string }
         Returns: Json
       }
       assign_feedback_issue: {
@@ -3642,6 +3681,10 @@ export type Database = {
         }
         Returns: Json
       }
+      list_contribution_queue_v2: {
+        Args: { p_cursor?: string; p_limit?: number; p_status?: string }
+        Returns: Json
+      }
       list_moderation_history_v2: {
         Args: { p_comment_id: string }
         Returns: Json
@@ -3706,6 +3749,13 @@ export type Database = {
       list_my_notifications:
         | { Args: { p_cursor?: string; p_limit?: number }; Returns: Json }
         | { Args: { p_before?: string; p_limit?: number }; Returns: Json }
+      list_public_contributions_v2: {
+        Args: {
+          p_anchor_id: string
+          p_anchor_type: Database["public"]["Enums"]["social_anchor_type"]
+        }
+        Returns: Json
+      }
       list_published_stories: {
         Args: never
         Returns: {
@@ -3743,6 +3793,14 @@ export type Database = {
         Returns: string[]
       }
       mark_all_notifications_read: { Args: never; Returns: Json }
+      mark_contribution_v2: {
+        Args: {
+          p_category: Database["public"]["Enums"]["contribution_category"]
+          p_comment_id: string
+          p_note?: string
+        }
+        Returns: Json
+      }
       mark_feedback_issue_read: {
         Args: { p_issue_id: string }
         Returns: undefined
@@ -3767,6 +3825,10 @@ export type Database = {
         Returns: number
       }
       my_claimed_streak_rewards: { Args: never; Returns: number[] }
+      my_contribution_flags_v2: {
+        Args: { p_comment_ids: string[] }
+        Returns: Json
+      }
       my_pending_badges: { Args: never; Returns: Json }
       my_referral_stats: { Args: never; Returns: Json }
       my_unread_notification_count: { Args: never; Returns: number }
@@ -3871,6 +3933,10 @@ export type Database = {
         Returns: Json
       }
       touch_my_last_active: { Args: never; Returns: undefined }
+      unmark_contribution_v2: {
+        Args: { p_comment_id: string; p_reason?: string }
+        Returns: Json
+      }
       unread_notification_count: { Args: never; Returns: number }
     }
     Enums: {
@@ -3884,6 +3950,13 @@ export type Database = {
         | "region"
         | "route_point"
       atlas_entity_status: "draft" | "review" | "published" | "retired"
+      contribution_category:
+        | "fact_correction"
+        | "additional_context"
+        | "source_reference"
+        | "translation_nuance"
+        | "other"
+      contribution_status: "proposed" | "applied" | "archived"
       game_mode:
         | "crossword"
         | "chronology"
@@ -4044,6 +4117,14 @@ export const Constants = {
         "route_point",
       ],
       atlas_entity_status: ["draft", "review", "published", "retired"],
+      contribution_category: [
+        "fact_correction",
+        "additional_context",
+        "source_reference",
+        "translation_nuance",
+        "other",
+      ],
+      contribution_status: ["proposed", "applied", "archived"],
       game_mode: [
         "crossword",
         "chronology",
