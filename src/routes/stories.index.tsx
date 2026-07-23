@@ -136,13 +136,7 @@ function StoriesIndex() {
                   >
                     {cover ? (
                       <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
-                        <img
-                          src={storyMediaPublicUrl(cover)}
-                          alt={s.title_ar}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-full w-full object-cover transition group-hover:scale-[1.02]"
-                        />
+                        <StoryCoverImg cover={cover} alt={s.title_ar} />
                       </div>
                     ) : (
                       <div className="flex aspect-[16/9] w-full items-center justify-center bg-muted/40">
