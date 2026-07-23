@@ -205,12 +205,12 @@ export function StoryPlayer({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { onExit(); return; }
-      if (phase === "intro" && (e.key === "Enter" || e.key === " ")) { setPhase("playing"); return; }
       if (phase !== "playing") return;
       if (e.key === "ArrowLeft") { void goNext(); }
       else if (e.key === "ArrowRight") { goPrev(); }
       else if (e.key === " ") { e.preventDefault(); setPaused((p) => !p); }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, goNext, goPrev, onExit]);
