@@ -55,6 +55,19 @@ export async function listStoriesSummary(
     } as never);
     if (!error) {
       const rows = (data ?? []) as StorySummary[];
+      // Snapshot reconciliation (Phase A3): drop any stories from the
+      // in-memory offline snapshot that the server no longer lists. This
+      // eliminates "ghost" test/deleted stories that used to surface via
+      // the offline fallback path after a hard delete. Only when the view
+      // is unscoped (no worldSlug) do we hold the authoritative catalog.
+      if (!worldSlug) {
+        void (async () => {
+          try {
+            const { pruneStoriesToAuthoritative } = await import("@/lib/local-first-store");
+            pruneStoriesToAuthoritative(rows.map((r) => r.id));
+          } catch { /* ignore */ }
+        })();
+      }
       // Persist the authoritative unlocked set so a subsequent offline
       // session can preserve "already unlocked yesterday" state. We only
       // update the cache when we have both a uid and a non-scoped view
