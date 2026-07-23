@@ -62,6 +62,9 @@ export function StoryPlayer({
   const [rewardShown, setRewardShown] = useState(false);
   const [grantedXp, setGrantedXp] = useState<number | null>(null);
   const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
+  // Keep the intro layer mounted briefly after phase flips so the
+  // landing cross-fades into scene 1 instead of hard-cutting.
+  const [introMounted, setIntroMounted] = useState(true);
   const completionFiredRef = useRef(false);
   const navigate = useNavigate();
   const { addPoints, addDinars } = useProfile();
@@ -75,7 +78,15 @@ export function StoryPlayer({
   // --- Intro hold, then start ------------------------------------
   useEffect(() => {
     if (phase !== "intro") return;
+    setIntroMounted(true);
     const t = window.setTimeout(() => setPhase("playing"), INTRO_HOLD_MS);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  // Unmount intro layer after the cross-fade completes.
+  useEffect(() => {
+    if (phase === "intro") return;
+    const t = window.setTimeout(() => setIntroMounted(false), 900);
     return () => clearTimeout(t);
   }, [phase]);
 
