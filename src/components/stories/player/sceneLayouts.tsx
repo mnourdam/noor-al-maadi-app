@@ -263,21 +263,34 @@ function ReflectionInline({ onSubmit }: { onSubmit: (t: string) => Promise<void>
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
-  const submit = async () => {
-    if (!text.trim() || busy) return;
+  const submit = async (value: string) => {
+    const t = value.trim();
+    if (!t || busy) return;
     setBusy(true);
-    try { await onSubmit(text.trim()); setSaved(true); }
+    // Optimistically mark saved so the user gets instant feedback even if
+    // the network write is slow. Errors surface via the async catch below.
+    setSaved(true);
+    try { await onSubmit(t); }
+    catch { setSaved(false); }
     finally { setBusy(false); }
   };
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   return (
-    <div dir="rtl" className="rounded-xl border border-gold/25 bg-black/40 p-3 backdrop-blur">
+    <div
+      dir="rtl"
+      className="rounded-xl border border-gold/25 bg-black/40 p-3 backdrop-blur"
+      onPointerDown={stop}
+      onPointerUp={stop}
+      onClick={stop}
+    >
       <textarea
         value={text}
         onChange={(e) => { setText(e.target.value); setSaved(false); }}
         rows={3}
         placeholder="اكتب تأمّلك…"
         className="w-full resize-none rounded-md border border-white/10 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-white/40"
-        onClick={(e) => e.stopPropagation()}
+        onPointerDown={stop}
+        onClick={stop}
       />
       <div className="mt-2 flex items-center justify-between">
         <span className="text-[11px] text-white/60">
@@ -285,7 +298,11 @@ function ReflectionInline({ onSubmit }: { onSubmit: (t: string) => Promise<void>
         </span>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); void submit(); }}
+          // Fire on pointerdown so a single tap always commits — mobile
+          // Safari/Android WebViews often swallow the first click when
+          // the textarea currently owns focus.
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); void submit(text); }}
+          onClick={(e) => { e.stopPropagation(); }}
           disabled={busy || !text.trim()}
           className="rounded-full bg-gold px-3 py-1 text-[12px] font-bold text-black disabled:opacity-40"
         >
@@ -295,3 +312,4 @@ function ReflectionInline({ onSubmit }: { onSubmit: (t: string) => Promise<void>
     </div>
   );
 }
+
