@@ -14,6 +14,7 @@ import {
   Compass, Lock, PlayCircle, ScrollText, Star,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Istazadtu } from "@/components/social/Istazadtu";
 import {
   estimateReadingMinutes, labelPrereqKind, progressFraction, storyState,
   type StorySummary,
