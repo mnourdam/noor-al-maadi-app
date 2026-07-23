@@ -122,6 +122,11 @@ export function StoryLanding({
             )}
           </div>
 
+          {/* Reactions — "استزدتُ" primitive (§P6.1). Online-only. */}
+          <div>
+            <Istazadtu anchorType="story" anchorId={summary.id} />
+          </div>
+
           {summary.summary_ar && (
             <p className="text-[13px] leading-relaxed text-white/85">
               {summary.summary_ar}
