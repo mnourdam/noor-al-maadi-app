@@ -18,7 +18,9 @@ import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
 import { SegmentedProgress } from "./SegmentedProgress";
-import { SceneStage } from "./sceneLayouts";
+import { SceneStage, resolveSceneTransition } from "./sceneLayouts";
+import { readReadingTimeMinutes } from "@/lib/stories/references";
+
 import { KenBurns } from "./KenBurns";
 import { RewardMoment } from "./RewardMoment";
 import { ContinueYourJourney } from "./ContinueYourJourney";
@@ -184,6 +186,7 @@ export function StoryPlayer({
 
   const subtitle = story.era || null;
   const progressEpoch = phase === "intro" ? "intro" : `s${idx}`;
+  const readingMin = readReadingTimeMinutes(story.metadata);
 
   return (
     <div
@@ -230,9 +233,11 @@ export function StoryPlayer({
             <h1 className="font-display text-[32px] font-bold leading-[1.15] text-white drop-shadow-lg">
               {story.title_ar}
             </h1>
-            {subtitle && (
-              <p className="mt-2 text-[13px] text-white/80">{subtitle}</p>
-            )}
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-white/75">
+              {subtitle && <span>{subtitle}</span>}
+              {subtitle && readingMin && <span className="opacity-40">·</span>}
+              {readingMin && <span>≈ {readingMin} دقيقة قراءة</span>}
+            </div>
             {story.summary_ar && (
               <p className="mt-3 max-w-md text-[13px] leading-relaxed text-white/70">
                 {story.summary_ar}
@@ -242,6 +247,7 @@ export function StoryPlayer({
           <style>{`@keyframes intro-fade { from { opacity: 0; transform: translateY(12px);} to { opacity: 1; transform: translateY(0);} }`}</style>
         </>
       )}
+
 
       {(phase === "playing" || phase === "reward") && scene && (
         <TransitionShell scene={scene}>
@@ -292,17 +298,12 @@ export function StoryPlayer({
   );
 }
 
-/** Wraps the stage in a per-scene transition animation. */
+/** Wraps the stage in a per-scene transition animation.
+ *  Honors `payload.transition` when set (dissolve|blur|paper|calm|cut).
+ */
 function TransitionShell({ scene, children }: { scene: StorySceneRow; children: React.ReactNode }) {
-  const cls = (() => {
-    switch (scene.scene_type) {
-      case "document":   return "anim-paper";
-      case "reveal":     return "anim-blur";
-      case "reflection": return "anim-calm";
-      case "perspective":return "anim-dissolve";
-      default:           return "anim-dissolve";
-    }
-  })();
+  const t = resolveSceneTransition(scene);
+  const cls = `anim-${t}`;
   return (
     <div key={scene.id} className={`absolute inset-0 ${cls}`}>
       <style>{`
@@ -310,6 +311,7 @@ function TransitionShell({ scene, children }: { scene: StorySceneRow; children: 
         .anim-paper    { animation: sc-paper 520ms cubic-bezier(0.2,0.9,0.3,1) both; }
         .anim-blur     { animation: sc-blur 620ms ease-out both; }
         .anim-calm     { animation: sc-calm 720ms ease-out both; }
+        .anim-cut      { animation: none; }
         @keyframes sc-dissolve { from { opacity: 0; } to { opacity: 1; } }
         @keyframes sc-paper    { from { opacity: 0; transform: translateY(24px) rotate(-0.6deg);} to { opacity: 1; transform: translateY(0) rotate(0);} }
         @keyframes sc-blur     { from { opacity: 0; filter: blur(14px);} to { opacity: 1; filter: blur(0);} }
@@ -319,3 +321,4 @@ function TransitionShell({ scene, children }: { scene: StorySceneRow; children: 
     </div>
   );
 }
+

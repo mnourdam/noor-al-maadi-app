@@ -38,6 +38,43 @@ function pickLayout(scene: StorySceneRow): LayoutKey {
   }
 }
 
+/**
+ * Resolve the transition class for a scene.
+ * Honors `payload.transition` when it is a known value, otherwise falls back
+ * to a scene-type default. Returned as one of the `.anim-*` class names used
+ * by TransitionShell in StoryPlayer.
+ */
+export type SceneTransition = "dissolve" | "blur" | "paper" | "calm" | "cut";
+const KNOWN_TRANSITIONS: SceneTransition[] = ["dissolve", "blur", "paper", "calm", "cut"];
+export function resolveSceneTransition(scene: StorySceneRow): SceneTransition {
+  const raw = (scene.payload as any)?.transition;
+  if (typeof raw === "string" && (KNOWN_TRANSITIONS as string[]).includes(raw)) {
+    return raw as SceneTransition;
+  }
+  switch (scene.scene_type) {
+    case "document":   return "paper";
+    case "reveal":     return "blur";
+    case "reflection": return "calm";
+    default:           return "dissolve";
+  }
+}
+
+/** Small, quiet source/citation line rendered below narrative body. */
+function Caption({ text, align = "start" }: { text: string; align?: "start" | "center" }) {
+  if (!text.trim()) return null;
+  return (
+    <p
+      className={`mt-3 text-[10px] leading-relaxed tracking-wide text-white/55 ${
+        align === "center" ? "text-center" : ""
+      }`}
+      style={{ fontStyle: "italic" }}
+    >
+      — {text}
+    </p>
+  );
+}
+
+
 function pickMedia(id: string | null, media: StoryMediaRow[]) {
   if (!id) return null;
   return media.find((m) => m.id === id) ?? null;
@@ -55,8 +92,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
     const primaryText =
       str(p?.["body_ar"]) || str(p?.["body"]) ||
       str(p?.["quote_ar"]) || str(p?.["quote"]) ||
-      str(p?.["truth_ar"]) || str(p?.["truth"]) ||
-      str(p?.["caption_ar"]) || str(p?.["caption"]);
+      str(p?.["truth_ar"]) || str(p?.["truth"]);
     if (Array.isArray(p?.["body_ar"])) {
       return (p!["body_ar"] as unknown[]).flatMap((x) =>
         typeof x === "string" ? splitSentences(x) : [],
@@ -66,6 +102,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
   }, [scene]);
 
   const title = scene.title_ar ?? "";
+  const caption = str((scene.payload as any)?.["caption_ar"] ?? (scene.payload as any)?.["caption"]);
 
   if (layout === "A") {
     return (
@@ -78,6 +115,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
             </h2>
           )}
           <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} />
+          <Caption text={caption} />
         </div>
       </LayoutFrame>
     );
@@ -102,6 +140,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
             )}
             {title && <h2 className="mb-3 font-display text-xl font-bold text-white">{title}</h2>}
             <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} />
+            <Caption text={caption} />
           </div>
         </div>
       </LayoutFrame>
@@ -117,6 +156,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
             <Sparkles className="mx-auto mb-4 size-6 text-gold/80" />
             {title && <h2 className="mb-4 font-display text-2xl font-bold text-white">{title}</h2>}
             <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} className="text-center" />
+            <Caption text={caption} align="center" />
           </div>
         </div>
       </LayoutFrame>
@@ -144,6 +184,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
           <div className="max-w-lg text-center">
             {title && <h2 className="mb-2 font-display text-lg font-bold text-gold">{title}</h2>}
             <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} className="text-center" />
+            <Caption text={caption} align="center" />
           </div>
         </div>
         <style>{`@keyframes doc-zoom { 0%{ transform: scale(1.02);} 100%{ transform: scale(1.08);} }`}</style>
@@ -168,6 +209,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
         <div className="absolute inset-x-0 bottom-0 z-10 px-6 pb-[calc(env(safe-area-inset-bottom)+72px)] pt-14">
           {title && <h2 className="mb-3 font-display text-2xl font-bold text-white">{title}</h2>}
           <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} />
+          <Caption text={caption} />
         </div>
       </LayoutFrame>
     );
@@ -198,6 +240,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
             paused={paused}
             className="text-center [&_p]:text-[18px] [&_p]:leading-[2] [&_p]:font-display"
           />
+          <Caption text={caption} align="center" />
           {scene.scene_type === "reflection" && onReflectionSubmit && (
             <div className="mt-6">
               <ReflectionInline onSubmit={onReflectionSubmit} />
@@ -208,6 +251,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
     </LayoutFrame>
   );
 }
+
 
 function LayoutFrame({ children }: { children: React.ReactNode }) {
   return <div className="absolute inset-0 overflow-hidden">{children}</div>;

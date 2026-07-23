@@ -105,6 +105,26 @@ export function computeStoryHealth(
     if (s.primary_media_id) attachedMediaIds.add(s.primary_media_id);
   }
 
+  // Repeated scene media — warn (not blocking) when 3+ scenes share a media asset.
+  const mediaUsage = new Map<string, { sceneIds: string[]; sceneIndices: number[] }>();
+  for (const s of scenes) {
+    if (!s.primary_media_id) continue;
+    const entry = mediaUsage.get(s.primary_media_id) ?? { sceneIds: [], sceneIndices: [] };
+    entry.sceneIds.push(s.id);
+    entry.sceneIndices.push(s.scene_index);
+    mediaUsage.set(s.primary_media_id, entry);
+  }
+  for (const [mediaId, usage] of mediaUsage) {
+    if (usage.sceneIds.length >= 3) {
+      findings.push({
+        severity: "warning",
+        code: "repeated_scene_media",
+        message: `وسائط مُعاد استخدامها في ${usage.sceneIds.length} مشاهد (media ${mediaId}) — مشاهد #${usage.sceneIndices.map((i) => i + 1).join("،")}. يُنصح برفع صور فريدة.`,
+      });
+    }
+  }
+
+
   // Orphan media (uploaded to story but not referenced)
   for (const m of media) {
     if (m.story_id === story.id && !attachedMediaIds.has(m.id)) {

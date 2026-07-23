@@ -103,6 +103,9 @@ export function StoryCard({ story, variant = "grid" }: {
         <h3 className="line-clamp-1 font-display text-[14px] font-bold text-gold">
           {story.title_ar}
         </h3>
+        {story.era && (
+          <div className="text-[10px] tracking-wide text-gold/70">{story.era}</div>
+        )}
         {story.summary_ar && (
           <p className="line-clamp-2 text-[11px] text-muted-foreground">
             {story.summary_ar}
@@ -119,6 +122,7 @@ export function StoryCard({ story, variant = "grid" }: {
           </span>
         </div>
       </div>
+
     </Link>
   );
 }
