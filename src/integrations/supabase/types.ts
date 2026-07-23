@@ -3978,7 +3978,7 @@ export type Database = {
         | "misinformation"
         | "inappropriate"
         | "other"
-      social_anchor_type: "story" | "comment"
+      social_anchor_type: "story" | "comment" | "entity"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4149,7 +4149,7 @@ export const Constants = {
         "inappropriate",
         "other",
       ],
-      social_anchor_type: ["story", "comment"],
+      social_anchor_type: ["story", "comment", "entity"],
     },
   },
 } as const

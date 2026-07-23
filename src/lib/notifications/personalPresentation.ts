@@ -14,30 +14,49 @@ export interface RenderedNotification {
   emoji: string;
 }
 
-function storyTitle(row: PersonalNotificationRow): string {
-  const p = row.payload ?? {};
-  const t = (p as { story_title?: string }).story_title;
-  return t && t.length > 0 ? t : "قصة";
+type AnchorPayload = {
+  anchor_type?: "story" | "entity";
+  anchor_id?: string;
+  anchor_title?: string;
+  // Legacy story keys (kept for backward compatibility with older rows).
+  story_id?: string;
+  story_title?: string;
+};
+
+function anchorTitle(row: PersonalNotificationRow): string {
+  const p = (row.payload ?? {}) as AnchorPayload;
+  const t = p.anchor_title ?? p.story_title;
+  return t && t.length > 0 ? t : "المحتوى";
+}
+
+function anchorLabel(row: PersonalNotificationRow): string {
+  const p = (row.payload ?? {}) as AnchorPayload;
+  return p.anchor_type === "entity" ? "مادّة موسوعية" : "قصة";
 }
 
 function commentHref(row: PersonalNotificationRow): string {
-  const storyId = (row.payload as { story_id?: string }).story_id;
-  return storyId ? `/story/${storyId}` : "/inbox";
+  const p = (row.payload ?? {}) as AnchorPayload;
+  const id = p.anchor_id ?? p.story_id;
+  if (!id) return "/inbox";
+  if (p.anchor_type === "entity") return `/encyclopedia/entity/${id}`;
+  return `/story/${id}`;
 }
 
 export function renderNotification(row: PersonalNotificationRow): RenderedNotification {
-  const story = storyTitle(row);
+  const title = anchorTitle(row);
+  const label = anchorLabel(row);
+  const on = `على ${label}: ${title}`;
   const preview = (row.payload as { comment_preview?: string }).comment_preview ?? "";
   switch (row.kind) {
     case "story_reaction_on_comment": {
       const n = row.count;
-      const title =
+      const t =
         n <= 1
           ? "استزاد قارئ من تأمّلك."
           : `استزاد ${n} قرّاء من تأمّلك.`;
       return {
-        title,
-        body: preview ? `«${preview}»` : `على قصة: ${story}`,
+        title: t,
+        body: preview ? `«${preview}»` : on,
         href: commentHref(row),
         emoji: "📖",
       };
@@ -45,14 +64,14 @@ export function renderNotification(row: PersonalNotificationRow): RenderedNotifi
     case "comment_promoted_editor_note":
       return {
         title: "أصبحت مساهمتك ملاحظة المحرّر.",
-        body: `على قصة: ${story}`,
+        body: on,
         href: commentHref(row),
         emoji: "✨",
       };
     case "comment_marked_contribution":
       return {
         title: "مساهمتك قيد المراجعة التحريرية.",
-        body: `على قصة: ${story} — سنُعلمك حين تُطبَّق.`,
+        body: `${on} — سنُعلمك حين تُطبَّق.`,
         href: commentHref(row),
         emoji: "🌱",
       };
@@ -62,7 +81,7 @@ export function renderNotification(row: PersonalNotificationRow): RenderedNotifi
         title: "ساهمت في تحسين إرث.",
         body: notice
           ? `طُبِّقت مساهمتك: «${notice}»`
-          : `طُبِّقت مساهمتك على قصة: ${story}.`,
+          : `طُبِّقت مساهمتك ${on}.`,
         href: commentHref(row),
         emoji: "🌿",
       };
@@ -71,9 +90,7 @@ export function renderNotification(row: PersonalNotificationRow): RenderedNotifi
       const reason = (row.payload as { reason?: string }).reason;
       return {
         title: "أُخفيت إحدى مساهماتك.",
-        body: reason
-          ? `السبب: ${reason}`
-          : `على قصة: ${story}`,
+        body: reason ? `السبب: ${reason}` : on,
         href: commentHref(row),
         emoji: "🔒",
       };
@@ -81,13 +98,13 @@ export function renderNotification(row: PersonalNotificationRow): RenderedNotifi
     case "comment_restored":
       return {
         title: "أُعيد إظهار مساهمتك.",
-        body: `على قصة: ${story}`,
+        body: on,
         href: commentHref(row),
         emoji: "↩︎",
       };
     case "story_unlocked":
       return {
-        title: `فُتحت قصة جديدة: ${story}.`,
+        title: `فُتحت قصة جديدة: ${title}.`,
         body: "أصبحت متاحة الآن للقراءة.",
         href: commentHref(row),
         emoji: "🗝️",

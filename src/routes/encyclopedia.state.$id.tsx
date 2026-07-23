@@ -22,6 +22,9 @@ import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import { EncyclopediaHero } from "@/components/encyclopedia/EncyclopediaHero";
+import { Istazadtu } from "@/components/social/Istazadtu";
+import { StoryComments } from "@/components/social/StoryComments";
+import { PublicContributionsNotice } from "@/components/social/PublicContributionsNotice";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import {
   fetchEncyclopediaByIdLocalFirst,
@@ -275,6 +278,17 @@ function StatePage() {
             <EncyclopediaArticleBody article={article} />
           </div>
         )}
+
+        {/* ───────── Social layer (P6 Step 8) — reused Story primitives. ───────── */}
+        <section className="mt-6 flex items-center justify-end">
+          <Istazadtu anchorType="entity" anchorId={state.id} />
+        </section>
+        <PublicContributionsNotice anchorType="entity" anchorId={state.id} className="mt-3" />
+        <div className="mt-6">
+          <StoryComments anchorType="entity" anchorId={state.id} />
+        </div>
+
+
 
         {/* ───────── Metadata ───────── */}
         {metaEntries.length > 0 && (

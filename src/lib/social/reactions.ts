@@ -19,7 +19,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /** Anchor types the reaction primitive supports. Extend via migration. */
-export type SocialAnchorType = "story";
+// Anchor types supported by the frozen social primitives. Extend via
+// migration only. "story" and "entity" are player-visible anchors;
+// "comment" is used internally (reactions on comments).
+export type SocialAnchorType = "story" | "entity" | "comment";
 
 export interface ToggleReactionResult {
   ok: boolean;
