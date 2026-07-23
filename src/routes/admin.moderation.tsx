@@ -9,7 +9,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { EyeOff, RotateCcw, Trash2, X, BookMarked, History, Loader2 } from "lucide-react";
+import { EyeOff, RotateCcw, Trash2, X, BookMarked, History, Loader2, Pin, PinOff } from "lucide-react";
 import { AdminGate } from "@/lib/admin-guard";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import {
@@ -92,26 +92,36 @@ function ModerationPage() {
     }
   }
 
-  async function act(commentId: string, action: "hide" | "restore" | "remove") {
+  async function act(commentId: string, action: "hide" | "restore" | "remove" | "pin_note" | "unpin_note") {
     if (busyId) return;
     if (action === "remove" && !confirm("إزالة نهائية للمساهمة؟ لا يمكن التراجع.")) return;
     setBusyId(commentId);
     const res = await moderateComment(commentId, action);
     setBusyId(null);
-    if (!res.ok) { toast.error("فشل الإجراء."); return; }
+    if (!res.ok) {
+      const map: Record<string, string> = {
+        pin_cap_reached: "لا يمكن تثبيت أكثر من ثلاث ملاحظات محرّر لهذه المرساة.",
+        not_visible: "لا يمكن تثبيت مساهمة غير ظاهرة.",
+      };
+      toast.error(map[res.reason ?? ""] ?? "فشل الإجراء.");
+      return;
+    }
     toast.success("تم.");
-    // Refresh row in place: reload history and remove from open queue when actioned.
     setItems((prev) => prev.map((it) =>
       it.comment_id === commentId
-        ? { ...it, comment_status: action === "hide" ? "hidden" : action === "remove" ? "removed" : "visible" }
+        ? {
+            ...it,
+            comment_status: action === "hide" ? "hidden" : action === "remove" ? "removed" : action === "restore" || action === "pin_note" ? "visible" : it.comment_status,
+            editors_note: action === "pin_note" ? true : action === "unpin_note" || action === "hide" || action === "remove" ? false : it.editors_note,
+          }
         : it,
     ));
-    // Refresh history if expanded
     if (expanded === commentId) {
       const h = await listModerationHistory(commentId);
       if (h.ok) setHistory((p) => ({ ...p, [commentId]: h.items }));
     }
   }
+
 
   async function dismissOne(reportId: string, commentId: string) {
     if (busyId) return;
@@ -204,6 +214,16 @@ function ModerationPage() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => void act(it.comment_id, it.editors_note ? "unpin_note" : "pin_note")}
+                    disabled={busyId === it.comment_id || it.comment_status !== "visible"}
+                    className="inline-flex items-center gap-1 rounded-md border border-gold/40 bg-gold/10 px-2 py-1 text-[11px] text-gold hover:bg-gold/20 disabled:opacity-40"
+                    aria-label={it.editors_note ? "إلغاء تثبيت ملاحظة المحرّر" : "تثبيت كملاحظة محرّر"}
+                  >
+                    {it.editors_note ? <PinOff className="size-3" /> : <Pin className="size-3" />}
+                    {it.editors_note ? "إلغاء التثبيت" : "ملاحظة محرّر"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => void openDetail(it.comment_id)}
                     className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[11px] text-foreground/80 hover:border-white/20"
                   >
@@ -211,6 +231,7 @@ function ModerationPage() {
                   </button>
                 </div>
               </div>
+
 
               {expanded === it.comment_id && (
                 <div className="grid gap-3 border-t border-white/10 p-3 md:grid-cols-2">
