@@ -14,15 +14,32 @@ export interface RenderedNotification {
   emoji: string;
 }
 
-function storyTitle(row: PersonalNotificationRow): string {
-  const p = row.payload ?? {};
-  const t = (p as { story_title?: string }).story_title;
-  return t && t.length > 0 ? t : "قصة";
+type AnchorPayload = {
+  anchor_type?: "story" | "entity";
+  anchor_id?: string;
+  anchor_title?: string;
+  // Legacy story keys (kept for backward compatibility with older rows).
+  story_id?: string;
+  story_title?: string;
+};
+
+function anchorTitle(row: PersonalNotificationRow): string {
+  const p = (row.payload ?? {}) as AnchorPayload;
+  const t = p.anchor_title ?? p.story_title;
+  return t && t.length > 0 ? t : "المحتوى";
+}
+
+function anchorLabel(row: PersonalNotificationRow): string {
+  const p = (row.payload ?? {}) as AnchorPayload;
+  return p.anchor_type === "entity" ? "مادّة موسوعية" : "قصة";
 }
 
 function commentHref(row: PersonalNotificationRow): string {
-  const storyId = (row.payload as { story_id?: string }).story_id;
-  return storyId ? `/story/${storyId}` : "/inbox";
+  const p = (row.payload ?? {}) as AnchorPayload;
+  const id = p.anchor_id ?? p.story_id;
+  if (!id) return "/inbox";
+  if (p.anchor_type === "entity") return `/encyclopedia/entity/${id}`;
+  return `/story/${id}`;
 }
 
 export function renderNotification(row: PersonalNotificationRow): RenderedNotification {
