@@ -62,6 +62,14 @@ let investigationsAll: Row[] = [];
 const tihByMonthDay = new Map<string, Row[]>(); // `${m}-${d}` → list
 let dailyFactsAll: Row[] = [];
 
+// Stories (P5) — snapshot-backed lookups for offline reading.
+const storiesById = new Map<string, Row>();
+const storiesBySlug = new Map<string, Row>();
+let storiesAll: Row[] = [];
+const scenesByStory = new Map<string, Row[]>();
+const mediaById = new Map<string, Row>();
+const mediaByStory = new Map<string, Row[]>();
+
 function indexEncyclopedia(rows: Row[]) {
   encyclopediaById.clear();
   encyclopediaBySlug.clear();
