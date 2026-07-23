@@ -194,3 +194,139 @@ export async function adminSetStoryStatus(
   if (error) bad("adminSetStoryStatus", error);
   return (data ?? { ok: false, reason: "empty_response" }) as SetStatusResult;
 }
+
+// ============================================================
+// Story delete impact / delete
+// ============================================================
+
+export interface StoryDeleteImpactItem {
+  id: string;
+  slug: string;
+  title_ar: string;
+  status: StoryStatus;
+  scenes: number;
+  owned_media: number;
+  shared_media: number;
+  progress_rows: number;
+  completions: number;
+  comments: number;
+  reactions: number;
+}
+export interface StoryDeleteImpact {
+  items: StoryDeleteImpactItem[];
+  totals: {
+    stories: number; published: number; draft: number; archived: number;
+    scenes: number; owned_media: number; shared_media: number;
+    progress: number; completions: number; comments: number; reactions: number;
+  };
+}
+export async function adminStoryDeleteImpact(ids: string[]): Promise<StoryDeleteImpact> {
+  const { data, error } = await supabase.rpc(
+    "admin_story_delete_impact" as never,
+    { p_ids: ids } as never,
+  );
+  if (error) bad("adminStoryDeleteImpact", error);
+  return (data ?? { items: [], totals: {} }) as unknown as StoryDeleteImpact;
+}
+
+export type StoryDeleteMode = "archive" | "hard";
+export interface StoryDeleteResult {
+  ok: boolean;
+  reason?: string;
+  mode?: StoryDeleteMode;
+  progress?: number;
+  completions?: number;
+  storage?: Array<{ bucket: string; path: string }>;
+}
+export async function adminDeleteStory(
+  storyId: string,
+  mode: StoryDeleteMode,
+  force = false,
+): Promise<StoryDeleteResult> {
+  const { data, error } = await supabase.rpc(
+    "admin_delete_story" as never,
+    { p_story_id: storyId, p_mode: mode, p_force: force } as never,
+  );
+  if (error) bad("adminDeleteStory", error);
+  return (data ?? { ok: false, reason: "empty_response" }) as StoryDeleteResult;
+}
+
+// ============================================================
+// Slug availability
+// ============================================================
+
+export async function adminSlugAvailable(slug: string, ignoreId?: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc(
+    "admin_slug_available" as never,
+    { p_slug: slug, p_ignore_id: ignoreId ?? null } as never,
+  );
+  if (error) bad("adminSlugAvailable", error);
+  return Boolean(data);
+}
+
+// ============================================================
+// Export / Import
+// ============================================================
+
+export interface StoryExportBundle {
+  version: number;
+  exported_at: string;
+  stories: unknown[];
+}
+export async function adminExportStories(ids: string[] | null): Promise<StoryExportBundle> {
+  const { data, error } = await supabase.rpc(
+    "admin_export_stories" as never,
+    { p_ids: ids } as never,
+  );
+  if (error) bad("adminExportStories", error);
+  return (data ?? { version: 1, exported_at: "", stories: [] }) as StoryExportBundle;
+}
+
+export type ImportKind = "new" | "updated" | "unchanged" | "conflict" | "invalid";
+export interface StoryImportPreviewItem {
+  id: string | null;
+  slug: string | null;
+  title_ar: string | null;
+  kind: ImportKind;
+  issues: string[];
+  missing_media: string[];
+  scene_count: number;
+}
+export interface StoryImportPreview { items: StoryImportPreviewItem[]; }
+
+export async function adminImportStoriesPreview(payload: unknown): Promise<StoryImportPreview> {
+  const { data, error } = await supabase.rpc(
+    "admin_import_stories_preview" as never,
+    { p_payload: payload as never } as never,
+  );
+  if (error) bad("adminImportStoriesPreview", error);
+  return (data ?? { items: [] }) as StoryImportPreview;
+}
+
+export interface ImportApplyOptions {
+  skip_existing?: boolean;
+  sync_scenes?: boolean;
+  publish?: boolean;
+}
+export interface StoryImportApplyItem {
+  id: string | null;
+  ok: boolean;
+  action: "created" | "updated" | "skipped" | "error";
+  scenes?: number;
+  published?: boolean;
+  publish?: unknown;
+  error?: string;
+}
+export interface StoryImportApplyResult { items: StoryImportApplyItem[]; }
+
+export async function adminImportStoriesApply(
+  payload: unknown,
+  options: ImportApplyOptions = {},
+): Promise<StoryImportApplyResult> {
+  const { data, error } = await supabase.rpc(
+    "admin_import_stories_apply" as never,
+    { p_payload: payload as never, p_options: options as never } as never,
+  );
+  if (error) bad("adminImportStoriesApply", error);
+  return (data ?? { items: [] }) as StoryImportApplyResult;
+}
