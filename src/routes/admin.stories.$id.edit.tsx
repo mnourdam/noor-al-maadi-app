@@ -13,6 +13,7 @@
 // ============================================================
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight, Save, Trash2, ImageUp, CheckCircle2, AlertTriangle,
