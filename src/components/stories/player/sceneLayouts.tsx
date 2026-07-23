@@ -92,8 +92,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
     const primaryText =
       str(p?.["body_ar"]) || str(p?.["body"]) ||
       str(p?.["quote_ar"]) || str(p?.["quote"]) ||
-      str(p?.["truth_ar"]) || str(p?.["truth"]) ||
-      str(p?.["caption_ar"]) || str(p?.["caption"]);
+      str(p?.["truth_ar"]) || str(p?.["truth"]);
     if (Array.isArray(p?.["body_ar"])) {
       return (p!["body_ar"] as unknown[]).flatMap((x) =>
         typeof x === "string" ? splitSentences(x) : [],
@@ -103,6 +102,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
   }, [scene]);
 
   const title = scene.title_ar ?? "";
+  const caption = str((scene.payload as any)?.["caption_ar"] ?? (scene.payload as any)?.["caption"]);
 
   if (layout === "A") {
     return (
@@ -115,6 +115,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
             </h2>
           )}
           <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} />
+          <Caption text={caption} />
         </div>
       </LayoutFrame>
     );
@@ -139,6 +140,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
             )}
             {title && <h2 className="mb-3 font-display text-xl font-bold text-white">{title}</h2>}
             <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} />
+            <Caption text={caption} />
           </div>
         </div>
       </LayoutFrame>
@@ -154,6 +156,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
             <Sparkles className="mx-auto mb-4 size-6 text-gold/80" />
             {title && <h2 className="mb-4 font-display text-2xl font-bold text-white">{title}</h2>}
             <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} className="text-center" />
+            <Caption text={caption} align="center" />
           </div>
         </div>
       </LayoutFrame>
@@ -181,6 +184,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
           <div className="max-w-lg text-center">
             {title && <h2 className="mb-2 font-display text-lg font-bold text-gold">{title}</h2>}
             <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} className="text-center" />
+            <Caption text={caption} align="center" />
           </div>
         </div>
         <style>{`@keyframes doc-zoom { 0%{ transform: scale(1.02);} 100%{ transform: scale(1.08);} }`}</style>
@@ -205,6 +209,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
         <div className="absolute inset-x-0 bottom-0 z-10 px-6 pb-[calc(env(safe-area-inset-bottom)+72px)] pt-14">
           {title && <h2 className="mb-3 font-display text-2xl font-bold text-white">{title}</h2>}
           <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} />
+          <Caption text={caption} />
         </div>
       </LayoutFrame>
     );
@@ -235,6 +240,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
             paused={paused}
             className="text-center [&_p]:text-[18px] [&_p]:leading-[2] [&_p]:font-display"
           />
+          <Caption text={caption} align="center" />
           {scene.scene_type === "reflection" && onReflectionSubmit && (
             <div className="mt-6">
               <ReflectionInline onSubmit={onReflectionSubmit} />
@@ -245,6 +251,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
     </LayoutFrame>
   );
 }
+
 
 function LayoutFrame({ children }: { children: React.ReactNode }) {
   return <div className="absolute inset-0 overflow-hidden">{children}</div>;
