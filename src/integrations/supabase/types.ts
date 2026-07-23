@@ -2778,6 +2778,13 @@ export type Database = {
         Returns: Json
       }
       admin_campaign_progress_stats: { Args: { p_id: string }; Returns: Json }
+      admin_delete_story_media: {
+        Args: { p_media_id: string }
+        Returns: {
+          storage_bucket: string
+          storage_path: string
+        }[]
+      }
       admin_feedback_stats: { Args: never; Returns: Json }
       admin_get_campaign_full: {
         Args: { p_id: string }
@@ -2910,6 +2917,19 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_list_story_media_orphans: {
+        Args: { p_min_age_minutes?: number }
+        Returns: {
+          age_minutes: number
+          byte_size: number
+          id: string
+          kind: string
+          preset: string
+          storage_bucket: string
+          storage_path: string
+          verified: boolean
+        }[]
+      }
       admin_list_users: {
         Args: {
           p_filter?: string
@@ -2922,6 +2942,14 @@ export type Database = {
           p_search?: string
         }
         Returns: Json
+      }
+      admin_mark_story_media_verified: {
+        Args: {
+          p_media_id: string
+          p_observed_bytes: number
+          p_observed_checksum: string
+        }
+        Returns: boolean
       }
       admin_merge_campaign_stable_ids: {
         Args: { v_existing: Json; v_incoming: Json }
@@ -2948,6 +2976,23 @@ export type Database = {
           p_version_signal?: string
         }
         Returns: Json
+      }
+      admin_register_story_media: {
+        Args: {
+          p_byte_size: number
+          p_checksum_sha256: string
+          p_height: number
+          p_kind: string
+          p_metadata?: Json
+          p_mime_type: string
+          p_preset: string
+          p_processing_version: number
+          p_storage_bucket: string
+          p_storage_path: string
+          p_story_id: string
+          p_width: number
+        }
+        Returns: string
       }
       admin_repair_chapter_completions_stickiness: {
         Args: never
@@ -3034,6 +3079,10 @@ export type Database = {
       admin_validate_investigation_payload: {
         Args: { v_allow_removals: boolean; v_before: Json; v_data: Json }
         Returns: undefined
+      }
+      admin_validate_story_publish: {
+        Args: { p_story_id: string }
+        Returns: Json
       }
       advance_referral_stage: { Args: { p_stage: number }; Returns: Json }
       analytics_atlas: { Args: never; Returns: Json }
