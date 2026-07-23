@@ -11,19 +11,32 @@ export async function fetchStoryMediaForRuntime(
   story: StoryRow,
   scenes: StorySceneRow[],
 ): Promise<StoryMediaRow[]> {
-  const owned = await listStoryMedia(story.id);
-  const known = new Set(owned.map((m) => m.id));
   const referenced = new Set<string>();
   if (story.cover_media_id) referenced.add(story.cover_media_id);
   for (const s of scenes) {
     if (s.primary_media_id) referenced.add(s.primary_media_id);
   }
-  const missing = [...referenced].filter((id) => !known.has(id));
-  if (missing.length === 0) return owned;
-  const { data, error } = await supabase
-    .from("story_media")
-    .select("*")
-    .in("id", missing);
-  if (error) return owned;
-  return [...owned, ...((data ?? []) as StoryMediaRow[])];
+  const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  if (online) {
+    try {
+      const owned = await listStoryMedia(story.id);
+      const known = new Set(owned.map((m) => m.id));
+      const missing = [...referenced].filter((id) => !known.has(id));
+      if (missing.length === 0) return owned;
+      const { data, error } = await supabase
+        .from("story_media")
+        .select("*")
+        .in("id", missing);
+      if (!error) return [...owned, ...((data ?? []) as StoryMediaRow[])];
+    } catch { /* fall through to offline path */ }
+  }
+  // Offline / RPC failure — hydrate from the local snapshot.
+  try {
+    const {
+      ensureLocalSnapshotLoaded,
+      localStoryMediaForStory,
+    } = await import("@/lib/local-first-store");
+    await ensureLocalSnapshotLoaded();
+    return localStoryMediaForStory(String(story.id), referenced) as unknown as StoryMediaRow[];
+  } catch { return []; }
 }
