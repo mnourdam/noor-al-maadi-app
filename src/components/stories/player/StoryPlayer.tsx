@@ -14,24 +14,24 @@
 
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Pause } from "lucide-react";
+import { X, Pause, ArrowLeft } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
 import type { StoryRow, StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
-import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
 import { SegmentedProgress } from "./SegmentedProgress";
 import { SceneStage, resolveSceneTransition } from "./sceneLayouts";
-import { formatDurationArabic, resolveStoryDurationMs } from "@/lib/stories/duration";
 
-import { KenBurns } from "./KenBurns";
 import { RewardMoment } from "./RewardMoment";
 import { ContinueYourJourney } from "./ContinueYourJourney";
-import { sceneDwellMs, INTRO_HOLD_MS } from "./timing";
+import { sceneDwellMs } from "./timing";
+import { guestHasCompleted, guestMarkCompleted } from "@/lib/stories/guestCompletions";
 
 import { useNavigate } from "@tanstack/react-router";
+
 
 
 interface Props {
