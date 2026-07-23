@@ -160,6 +160,12 @@ export function commentErrorCopyAr(reason?: string): string {
       return "لا يمكن تعديل هذه المساهمة.";
     case "forbidden":
       return "غير مسموح.";
+    case "editors_note_locked":
+      return "لا يمكن حذف ملاحظة محرّر مثبّتة. اطلب من مشرف إلغاء التثبيت أولًا.";
+    case "pin_cap_reached":
+      return "لا يمكن تثبيت أكثر من ثلاث ملاحظات محرّر لهذه المرساة.";
+    case "not_visible":
+      return "لا يمكن تثبيت مساهمة غير ظاهرة.";
     case "anchor_not_found":
       return "القصة غير متاحة الآن.";
     default:
