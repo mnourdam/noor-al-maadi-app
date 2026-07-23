@@ -65,9 +65,10 @@ export function ContinueYourJourney({
   const meta = metaQ.data;
   const refs = meta ? readReferences(meta.metadata) : { primary: [], secondary: [], notes: "" };
   const related = meta ? readRelatedEntities(meta.metadata) : [];
-  const readingMin = meta
-    ? readReadingTimeMinutes(meta.metadata) ?? (finished ? estimateReadingMinutes(finished.scene_count) : null)
+  const durationLabel = finished
+    ? formatDurationArabic(resolveStoryDurationMs({ metadata: meta?.metadata ?? null, sceneCount: finished.scene_count }))
     : null;
+
 
   return (
     <div
