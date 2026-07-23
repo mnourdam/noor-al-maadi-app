@@ -104,7 +104,7 @@ export function renderNotification(row: PersonalNotificationRow): RenderedNotifi
       };
     case "story_unlocked":
       return {
-        title: `فُتحت قصة جديدة: ${story}.`,
+        title: `فُتحت قصة جديدة: ${title}.`,
         body: "أصبحت متاحة الآن للقراءة.",
         href: commentHref(row),
         emoji: "🗝️",
