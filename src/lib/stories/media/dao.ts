@@ -67,6 +67,7 @@ export interface StoryPublishIssue {
 export interface StoryPublishValidation {
   ok: boolean;
   issues: StoryPublishIssue[];
+  warnings: StoryPublishIssue[];
 }
 
 function assertOk<T>(data: T | null, error: { message: string } | null, label: string): T {
