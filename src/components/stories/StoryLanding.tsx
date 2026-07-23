@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Istazadtu } from "@/components/social/Istazadtu";
+import { StoryComments } from "@/components/social/StoryComments";
 import {
   estimateReadingMinutes, labelPrereqKind, progressFraction, storyState,
   type StorySummary,
@@ -208,6 +209,9 @@ export function StoryLanding({
           </div>
         </div>
       </div>
+
+      {/* Story comments — Guided Input Contract (§P6.2). Online-only. */}
+      <StoryComments storyId={summary.id} />
 
       {/* Related Encyclopedia is deferred to reader/completion screens
           to avoid encouraging exit mid-landing. Related Stories only. */}
