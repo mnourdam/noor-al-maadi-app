@@ -1,14 +1,14 @@
 // ============================================================
-// <PersonalInboxBell /> — quiet unread badge with deep link
+// <PersonalInboxBell /> — quiet unread indicator with deep link
 // ------------------------------------------------------------
-// Aligned to P6.3 principles:
-//   * No sound. No toast. No popover with a scrolling feed.
-//   * A small bell with an unread number, linking to /inbox.
-//   * Polls at a slow interval (60s) plus a fetch on mount.
+// FROZEN COMPONENT CONTRACT (P6 Step 3).
+// Communicates "there is something meaningful waiting for you",
+// never "click me". Rules:
+//   * No sound. No toast. No popover feed.
+//   * Subtle unread dot (no numeric explosion in the header).
+//   * No bouncing, pulsing, or attention-seeking animations.
+//   * Polls at a slow interval (60s) plus a fetch on focus/mount.
 //   * Anon users get nothing rendered.
-//
-// Placement is left to the app shell; this component is safe
-// to render anywhere in an authenticated tree.
 // ============================================================
 
 import { useEffect, useState } from "react";
@@ -49,25 +49,27 @@ export function PersonalInboxBell({ className }: Props) {
 
   if (!user) return null;
 
-  const label = count > 0 ? `الصندوق: ${count} غير مقروء` : "الصندوق";
+  const hasUnread = count > 0;
+  const label = hasUnread ? `الصندوق الشخصي: يوجد جديد` : "الصندوق الشخصي";
+
   return (
     <Link
       to="/inbox"
       aria-label={label}
+      title={label}
       className={cn(
-        "relative inline-flex size-9 items-center justify-center rounded-full border border-white/10 bg-black/30 text-foreground/80",
-        "hover:border-gold/40 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "relative inline-flex items-center justify-center text-muted-foreground transition-colors",
+        "hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md",
         className,
       )}
     >
-      <Bell className="size-4" aria-hidden="true" />
-      {count > 0 && (
+      <Bell className="size-4" aria-hidden="true" strokeWidth={1.8} />
+      {hasUnread && (
         <span
-          className="absolute -right-1 -top-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold px-1 text-[10px] font-medium tabular-nums text-background"
-          aria-live="polite"
-        >
-          {count > 99 ? "99+" : count}
-        </span>
+          // Small, static gold dot. No pulse, no bounce, no ring animation.
+          className="pointer-events-none absolute -top-0.5 -left-0.5 size-1.5 rounded-full bg-gold"
+          aria-hidden="true"
+        />
       )}
     </Link>
   );

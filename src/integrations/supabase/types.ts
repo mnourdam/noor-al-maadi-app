@@ -3494,6 +3494,13 @@ export type Database = {
       is_newsletter_admin: { Args: never; Returns: boolean }
       is_user_manager: { Args: never; Returns: boolean }
       is_username_available: { Args: { p_username: string }; Returns: boolean }
+      journey_kind_counts: {
+        Args: never
+        Returns: {
+          kind: Database["public"]["Enums"]["journey_event_kind"]
+          total: number
+        }[]
+      }
       leaderboard_around: {
         Args: {
           p_metric?: string
@@ -3619,6 +3626,22 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      list_my_journey: {
+        Args: {
+          _cursor_id?: string
+          _cursor_ts?: string
+          _kinds?: Database["public"]["Enums"]["journey_event_kind"][]
+          _limit?: number
+        }
+        Returns: {
+          event_id: string
+          kind: Database["public"]["Enums"]["journey_event_kind"]
+          metadata: Json
+          occurred_at: string
+          subject_id: string
+          subject_type: string
+        }[]
       }
       list_my_notifications:
         | { Args: { p_cursor?: string; p_limit?: number }; Returns: Json }
@@ -3800,6 +3823,13 @@ export type Database = {
         | "connections"
         | "memory"
       game_status: "draft" | "published" | "archived"
+      journey_event_kind:
+        | "story_completed"
+        | "campaign_completed"
+        | "investigation_completed"
+        | "achievement_earned"
+        | "encyclopedia_discovery"
+        | "museum_discovery"
       social_anchor_type: "story" | "comment"
     }
     CompositeTypes: {
@@ -3947,6 +3977,14 @@ export const Constants = {
         "memory",
       ],
       game_status: ["draft", "published", "archived"],
+      journey_event_kind: [
+        "story_completed",
+        "campaign_completed",
+        "investigation_completed",
+        "achievement_earned",
+        "encyclopedia_discovery",
+        "museum_discovery",
+      ],
       social_anchor_type: ["story", "comment"],
     },
   },
