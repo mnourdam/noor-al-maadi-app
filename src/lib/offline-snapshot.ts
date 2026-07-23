@@ -280,6 +280,8 @@ export function collectStoryMediaCacheUrls(mediaRows: any[]): Set<string> {
     out.add(`${supabaseUrl}/storage/v1/object/public/${bucket}/${path}?v=${pv}`);
   }
   return out;
+}
+
 
 function pruneOfflineRows(def: CollectionDef, rows: any[]): any[] {
   return rows.map((row) => pruneOfflineRow(def, row));
