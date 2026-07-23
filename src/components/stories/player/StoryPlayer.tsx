@@ -59,11 +59,17 @@ export function StoryPlayer({
   const [idx, setIdx] = useState(Math.min(initialSceneIndex, Math.max(0, ordered.length - 1)));
   const [paused, setPaused] = useState(false);
   const [rewardShown, setRewardShown] = useState(false);
+  const [grantedXp, setGrantedXp] = useState<number | null>(null);
+  const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
+  const completionFiredRef = useRef(false);
   const navigate = useNavigate();
+  const { addPoints, addDinars } = useProfile();
 
   const scene = ordered[idx] ?? null;
   const dwellMs = useMemo(() => scene ? sceneDwellMs(scene) : 4000, [scene]);
   const autoAdvance = scene ? scene.scene_type !== "reflection" : false;
+  const isReflectionScene = scene?.scene_type === "reflection";
+
 
   // --- Intro hold, then start ------------------------------------
   useEffect(() => {
