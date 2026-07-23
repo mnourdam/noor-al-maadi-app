@@ -514,7 +514,7 @@ function ReferencesSection({
           onChange={(e) => setRefs({ ...refs, notes: e.target.value })}
           className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" />
       </label>
-      {onNotify && null}
+      
     </section>
   );
 }
