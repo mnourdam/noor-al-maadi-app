@@ -65,7 +65,6 @@ const STATUS_LABEL: Record<StoryStatus, string> = {
 
 function StoryEditorRoute() {
   const { id } = Route.useParams();
-  const navigate = useNavigate();
   const [bundle, setBundle] = useState<AdminStoryBundle | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
