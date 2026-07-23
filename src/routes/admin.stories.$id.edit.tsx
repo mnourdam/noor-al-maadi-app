@@ -34,7 +34,9 @@ import { suggestSlug } from "@/lib/stories/slug";
 import { computeStoryHealth, summarizeHealth, type HealthFinding } from "@/lib/stories/health";
 import { useAutoSave, type SaveStatus } from "@/hooks/useAutoSave";
 import { SceneRenderer } from "@/components/stories/scenes/SceneRenderer";
+import { SceneStage } from "@/components/stories/player/sceneLayouts";
 import { StoryMediaImage } from "@/components/stories/StoryMediaImage";
+
 import type {
   StoryRow, StorySceneRow, StorySceneType, StoryStatus, UnlockSpec,
 } from "@/lib/stories/types";
