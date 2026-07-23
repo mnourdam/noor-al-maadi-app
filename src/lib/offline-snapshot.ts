@@ -383,6 +383,16 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
       await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
     } catch { /* dev-only path; ignore in prod */ }
   }
+  // Warm the shared image cache with story media covers/scenes so a
+  // freshly-synced install can render them offline.
+  void (async () => {
+    try {
+      const { collectImageUrls, prefetchImages } = await import("./image-cache");
+      const urls = collectImageUrls(snap.collections);
+      for (const u of collectStoryMediaCacheUrls(snap.collections.story_media ?? [])) urls.add(u);
+      await prefetchImages(urls);
+    } catch { /* ignore */ }
+  })();
   return snap;
 }
 
