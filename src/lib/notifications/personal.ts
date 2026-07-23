@@ -21,6 +21,7 @@ export type PersonalNotificationKind =
   | "story_reaction_on_comment"
   | "comment_promoted_editor_note"
   | "comment_marked_contribution"
+  | "comment_contribution_applied"
   | "comment_hidden"
   | "comment_restored"
   | "story_unlocked";

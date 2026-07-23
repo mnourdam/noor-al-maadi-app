@@ -51,11 +51,22 @@ export function renderNotification(row: PersonalNotificationRow): RenderedNotifi
       };
     case "comment_marked_contribution":
       return {
+        title: "مساهمتك قيد المراجعة التحريرية.",
+        body: `على قصة: ${story} — سنُعلمك حين تُطبَّق.`,
+        href: commentHref(row),
+        emoji: "🌱",
+      };
+    case "comment_contribution_applied": {
+      const notice = (row.payload as { public_notice?: string }).public_notice;
+      return {
         title: "ساهمت في تحسين إرث.",
-        body: `مساهمتك على قصة "${story}" أثْرَت المحتوى — شكرًا لك.`,
+        body: notice
+          ? `طُبِّقت مساهمتك: «${notice}»`
+          : `طُبِّقت مساهمتك على قصة: ${story}.`,
         href: commentHref(row),
         emoji: "🌿",
       };
+    }
     case "comment_hidden": {
       const reason = (row.payload as { reason?: string }).reason;
       return {
