@@ -20,12 +20,13 @@ import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
 import { SegmentedProgress } from "./SegmentedProgress";
 import { SceneStage, resolveSceneTransition } from "./sceneLayouts";
-import { readReadingTimeMinutes } from "@/lib/stories/references";
+import { formatDurationArabic, resolveStoryDurationMs } from "@/lib/stories/duration";
 
 import { KenBurns } from "./KenBurns";
 import { RewardMoment } from "./RewardMoment";
 import { ContinueYourJourney } from "./ContinueYourJourney";
-import { sceneDwellMs } from "./timing";
+import { sceneDwellMs, INTRO_HOLD_MS } from "./timing";
+
 import { useNavigate } from "@tanstack/react-router";
 
 
