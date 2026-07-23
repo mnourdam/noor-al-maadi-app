@@ -1927,6 +1927,53 @@ export type Database = {
           },
         ]
       }
+      social_comment_reports: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          note: string | null
+          reason: Database["public"]["Enums"]["report_reason"]
+          reporter_id: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason: Database["public"]["Enums"]["report_reason"]
+          reporter_id: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason?: Database["public"]["Enums"]["report_reason"]
+          reporter_id?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_comment_reports_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "social_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_comments: {
         Row: {
           anchor_id: string
@@ -3391,6 +3438,10 @@ export type Database = {
         Returns: undefined
       }
       delete_own_comment_v2: { Args: { p_comment_id: string }; Returns: Json }
+      dismiss_report_v2: {
+        Args: { p_note?: string; p_report_id: string }
+        Returns: Json
+      }
       edit_story_comment_v2: {
         Args: { p_body: string; p_comment_id: string }
         Returns: Json
@@ -3580,6 +3631,7 @@ export type Database = {
           xp: number
         }[]
       }
+      list_comment_reports_v2: { Args: { p_comment_id: string }; Returns: Json }
       list_comments_v2: {
         Args: {
           p_anchor_id: string
@@ -3588,6 +3640,14 @@ export type Database = {
           p_limit?: number
           p_sort?: string
         }
+        Returns: Json
+      }
+      list_moderation_history_v2: {
+        Args: { p_comment_id: string }
+        Returns: Json
+      }
+      list_moderator_queue_v2: {
+        Args: { p_cursor?: string; p_limit?: number; p_status?: string }
         Returns: Json
       }
       list_my_campaign_completions: {
@@ -3774,6 +3834,14 @@ export type Database = {
         Args: { p_body: string; p_is_internal?: boolean; p_issue_id: string }
         Returns: string
       }
+      report_comment_v2: {
+        Args: {
+          p_comment_id: string
+          p_note?: string
+          p_reason: Database["public"]["Enums"]["report_reason"]
+        }
+        Returns: Json
+      }
       send_friend_request_reminders: { Args: never; Returns: number }
       set_feedback_issue_status: {
         Args: { p_issue_id: string; p_status: string }
@@ -3830,6 +3898,13 @@ export type Database = {
         | "achievement_earned"
         | "encyclopedia_discovery"
         | "museum_discovery"
+      report_reason:
+        | "spam"
+        | "harassment"
+        | "off_topic"
+        | "misinformation"
+        | "inappropriate"
+        | "other"
       social_anchor_type: "story" | "comment"
     }
     CompositeTypes: {
@@ -3984,6 +4059,14 @@ export const Constants = {
         "achievement_earned",
         "encyclopedia_discovery",
         "museum_discovery",
+      ],
+      report_reason: [
+        "spam",
+        "harassment",
+        "off_topic",
+        "misinformation",
+        "inappropriate",
+        "other",
       ],
       social_anchor_type: ["story", "comment"],
     },
