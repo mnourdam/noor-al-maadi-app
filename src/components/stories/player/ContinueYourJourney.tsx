@@ -13,14 +13,15 @@ import { Istazadtu } from "@/components/social/Istazadtu";
 import { StoryComments } from "@/components/social/StoryComments";
 import { PublicContributionsNotice } from "@/components/social/PublicContributionsNotice";
 import { StoryCard } from "@/components/stories/StoryCard";
-import { listStoriesSummary, pickNextStory, estimateReadingMinutes, type StorySummary } from "@/lib/stories/summary";
+import { listStoriesSummary, pickNextStory, type StorySummary } from "@/lib/stories/summary";
 import { supabase } from "@/integrations/supabase/client";
 import {
   readReferences,
   readRelatedEntities,
-  readReadingTimeMinutes,
   type StoryReference,
 } from "@/lib/stories/references";
+import { formatDurationArabic, resolveStoryDurationMs } from "@/lib/stories/duration";
+
 
 interface StoryMetaRow {
   metadata: Record<string, unknown> | null;
@@ -64,9 +65,10 @@ export function ContinueYourJourney({
   const meta = metaQ.data;
   const refs = meta ? readReferences(meta.metadata) : { primary: [], secondary: [], notes: "" };
   const related = meta ? readRelatedEntities(meta.metadata) : [];
-  const readingMin = meta
-    ? readReadingTimeMinutes(meta.metadata) ?? (finished ? estimateReadingMinutes(finished.scene_count) : null)
+  const durationLabel = finished
+    ? formatDurationArabic(resolveStoryDurationMs({ metadata: meta?.metadata ?? null, sceneCount: finished.scene_count }))
     : null;
+
 
   return (
     <div
@@ -84,8 +86,9 @@ export function ContinueYourJourney({
         </h2>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/60">
           {meta?.era && <span>{meta.era}</span>}
-          {meta?.era && readingMin && <span className="opacity-40">·</span>}
-          {readingMin && <span>≈ {readingMin} دقيقة قراءة</span>}
+          {meta?.era && durationLabel && <span className="opacity-40">·</span>}
+          {durationLabel && <span>{durationLabel}</span>}
+
         </div>
         <p className="mt-2 text-[12px] text-white/70">
           القراءة انتهت. هنا تبدأ المحادثة.

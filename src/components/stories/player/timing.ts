@@ -44,7 +44,7 @@ export function sceneSentences(scene: StorySceneRow): string[] {
   return flat;
 }
 
-const BASE_BY_TYPE: Record<StorySceneType, number> = {
+export const BASE_BY_TYPE: Record<StorySceneType, number> = {
   reading: 2200,
   perspective: 2600,
   document: 2800,
@@ -56,10 +56,29 @@ const BASE_BY_TYPE: Record<StorySceneType, number> = {
 export const SENTENCE_STAGGER_MS = 900;
 
 /** Post-final-sentence dwell so the reader can breathe. */
-const SETTLE_MS = 900;
+export const SETTLE_MS = 900;
 
-const MIN_DWELL = 3200;
-const MAX_DWELL = 10_000;
+export const MIN_DWELL = 3200;
+export const MAX_DWELL = 10_000;
+
+// ---- Cinematic runtime constants (single source of truth) ---------------
+/** Intro hold before the first scene renders (matches StoryPlayer). */
+export const INTRO_HOLD_MS = 1100;
+/** Post-completion reward moment before "Continue Your Journey" slides up. */
+export const REWARD_HOLD_MS = 3200;
+/** Average per-scene cross-fade transition cost (dissolve/paper/blur/calm). */
+export const TRANSITION_MS = 500;
+/**
+ * Nominal sentence count assumed for catalog-time estimation only.
+ * The runtime always uses the real payload — this is a documented
+ * approximation for pre-play surfaces that have not loaded scenes yet.
+ */
+export const NOMINAL_SENTENCES_PER_SCENE = 3;
+/**
+ * Nominal budget for reflection/interaction scenes in pre-play estimates.
+ * Runtime still waits for the user — this only prevents ∞ in totals.
+ */
+export const NOMINAL_REFLECTION_MS = 15_000;
 
 /** Full auto-advance duration for a scene. */
 export function sceneDwellMs(scene: StorySceneRow): number {
@@ -68,6 +87,7 @@ export function sceneDwellMs(scene: StorySceneRow): number {
   const raw = base + sents * SENTENCE_STAGGER_MS + SETTLE_MS;
   return Math.max(MIN_DWELL, Math.min(MAX_DWELL + sents * 200, raw));
 }
+
 
 /** Stable per-scene hash for varying Ken Burns direction. */
 export function sceneHash(id: string): number {

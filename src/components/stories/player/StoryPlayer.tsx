@@ -20,12 +20,13 @@ import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
 import { SegmentedProgress } from "./SegmentedProgress";
 import { SceneStage, resolveSceneTransition } from "./sceneLayouts";
-import { readReadingTimeMinutes } from "@/lib/stories/references";
+import { formatDurationArabic, resolveStoryDurationMs } from "@/lib/stories/duration";
 
 import { KenBurns } from "./KenBurns";
 import { RewardMoment } from "./RewardMoment";
 import { ContinueYourJourney } from "./ContinueYourJourney";
-import { sceneDwellMs } from "./timing";
+import { sceneDwellMs, INTRO_HOLD_MS } from "./timing";
+
 import { useNavigate } from "@tanstack/react-router";
 
 
@@ -41,7 +42,7 @@ interface Props {
 
 type Phase = "intro" | "playing" | "reward" | "journey";
 
-const INTRO_HOLD_MS = 1100;
+
 
 export function StoryPlayer({
   story, scenes, media, summary, initialSceneIndex, alreadyCompleted, onExit,
@@ -208,7 +209,10 @@ export function StoryPlayer({
 
   const subtitle = story.era || null;
   const progressEpoch = phase === "intro" ? "intro" : `s${idx}`;
-  const readingMin = readReadingTimeMinutes(story.metadata);
+  const durationLabel = formatDurationArabic(
+    resolveStoryDurationMs({ metadata: story.metadata as Record<string, unknown> | null, scenes: ordered }),
+  );
+
 
   return (
     <div
@@ -257,8 +261,9 @@ export function StoryPlayer({
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-white/75">
               {subtitle && <span>{subtitle}</span>}
-              {subtitle && readingMin && <span className="opacity-40">·</span>}
-              {readingMin && <span>≈ {readingMin} دقيقة قراءة</span>}
+              {subtitle && <span className="opacity-40">·</span>}
+              <span>{durationLabel}</span>
+
             </div>
             {story.summary_ar && (
               <p className="mt-3 max-w-md text-[13px] leading-relaxed text-white/70">

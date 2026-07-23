@@ -28,9 +28,12 @@ import { useQuery } from "@tanstack/react-query";
 import {
   progressFraction,
   storyState,
-  estimateReadingMinutes,
   type StorySummary,
 } from "@/lib/stories/summary";
+import {
+  formatDurationArabic,
+  resolveStoryDurationMs,
+} from "@/lib/stories/duration";
 import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -59,6 +62,22 @@ function useCoverUrl(coverMediaId: string | null): string | null {
   return useStoryMediaUrl(data ?? null);
 }
 
+function useStoryMetadata(storyId: string) {
+  const { data } = useQuery({
+    queryKey: ["story-metadata-mini", storyId],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("stories")
+        .select("metadata")
+        .eq("id", storyId)
+        .maybeSingle();
+      return (data?.metadata ?? null) as Record<string, unknown> | null;
+    },
+  });
+  return data ?? null;
+}
+
 export function StoryCard({
   story,
   variant = "grid",
@@ -68,8 +87,12 @@ export function StoryCard({
 }) {
   const state = storyState(story);
   const pct = Math.round(progressFraction(story) * 100);
-  const mins = estimateReadingMinutes(story.scene_count);
+  const metadata = useStoryMetadata(story.id);
+  const durationLabel = formatDurationArabic(
+    resolveStoryDurationMs({ metadata, sceneCount: story.scene_count }),
+  );
   const cover = useCoverUrl(story.cover_media_id);
+
 
   const widthClass =
     variant === "rail"
@@ -161,8 +184,9 @@ export function StoryCard({
           <div className="mt-2 flex items-center gap-3 text-[10.5px] text-white/85">
             <span className="inline-flex items-center gap-1">
               <Clock3 className="size-3 text-white/70" />
-              {mins} د
+              {durationLabel}
             </span>
+
             {story.xp_reward > 0 && (
               <span className="inline-flex items-center gap-1">
                 <Sparkles className="size-3 text-gold" />
