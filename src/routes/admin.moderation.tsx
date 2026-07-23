@@ -214,6 +214,16 @@ function ModerationPage() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => void act(it.comment_id, it.editors_note ? "unpin_note" : "pin_note")}
+                    disabled={busyId === it.comment_id || it.comment_status !== "visible"}
+                    className="inline-flex items-center gap-1 rounded-md border border-gold/40 bg-gold/10 px-2 py-1 text-[11px] text-gold hover:bg-gold/20 disabled:opacity-40"
+                    aria-label={it.editors_note ? "إلغاء تثبيت ملاحظة المحرّر" : "تثبيت كملاحظة محرّر"}
+                  >
+                    {it.editors_note ? <PinOff className="size-3" /> : <Pin className="size-3" />}
+                    {it.editors_note ? "إلغاء التثبيت" : "ملاحظة محرّر"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => void openDetail(it.comment_id)}
                     className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[11px] text-foreground/80 hover:border-white/20"
                   >
@@ -221,6 +231,7 @@ function ModerationPage() {
                   </button>
                 </div>
               </div>
+
 
               {expanded === it.comment_id && (
                 <div className="grid gap-3 border-t border-white/10 p-3 md:grid-cols-2">
