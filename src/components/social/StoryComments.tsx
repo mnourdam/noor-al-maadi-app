@@ -126,10 +126,10 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
   }, []);
 
   return (
-    <section aria-labelledby={`story-comments-${storyId}`} className={cn("space-y-4", className)}>
+    <section aria-labelledby={`social-comments-${resolvedAnchorId}`} className={cn("space-y-4", className)}>
       <header className="flex items-center justify-between gap-3">
         <h2
-          id={`story-comments-${storyId}`}
+          id={`social-comments-${resolvedAnchorId}`}
           className="inline-flex items-center gap-2 text-sm font-semibold text-foreground"
         >
           <MessagesSquare className="size-4 text-gold" aria-hidden="true" />
