@@ -466,5 +466,5 @@ function PauseHalo({ active }: { active: boolean }) {
     />
   );
 }
-}
+
 
