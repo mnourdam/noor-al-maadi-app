@@ -162,14 +162,15 @@ function useEntityTitles(ids: string[]) {
     queryFn: async () => {
       const { data } = await supabase
         .from("encyclopedia_entities")
-        .select("id, title_ar, title_en, slug")
+        .select("id, title, slug")
         .in("id", ids);
       const map = new Map<string, string>();
-      for (const row of (data ?? []) as { id: string; title_ar: string | null; title_en: string | null; slug: string | null }[]) {
-        map.set(row.id, row.title_ar || row.title_en || row.slug || row.id);
+      for (const row of (data ?? []) as { id: string; title: string | null; slug: string | null }[]) {
+        map.set(row.id, row.title || row.slug || row.id);
       }
       return map;
     },
+
   });
 }
 
