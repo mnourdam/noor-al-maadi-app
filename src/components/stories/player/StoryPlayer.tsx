@@ -1,33 +1,37 @@
 // ============================================================
-// StoryPlayer — cinematic fullscreen runtime (Phase B Rev 2).
+// StoryPlayer — cinematic fullscreen runtime (Post-Freeze Rev)
 // ------------------------------------------------------------
 // State machine:
-//   intro → playing(sceneIdx) → paused → reward → journey
+//   playing(sceneIdx) → paused → reward → journey
 // Contracts preserved:
 //   * recordStoryProgress on every scene view (monotonic)
 //   * completeStory once when leaving the last scene
 //   * Reflection scenes: auto-advance disabled
+// The legacy "intro" cover phase was retired — playback opens
+// directly on Scene 1 because the catalog + landing surfaces
+// already introduce the story with the cover artwork.
 // ============================================================
 
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Pause } from "lucide-react";
+import { X, Pause, ArrowLeft } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
 import type { StoryRow, StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
-import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
 import { SegmentedProgress } from "./SegmentedProgress";
 import { SceneStage, resolveSceneTransition } from "./sceneLayouts";
-import { formatDurationArabic, resolveStoryDurationMs } from "@/lib/stories/duration";
 
-import { KenBurns } from "./KenBurns";
 import { RewardMoment } from "./RewardMoment";
 import { ContinueYourJourney } from "./ContinueYourJourney";
-import { sceneDwellMs, INTRO_HOLD_MS } from "./timing";
+import { sceneDwellMs } from "./timing";
+import { guestHasCompleted, guestMarkCompleted } from "@/lib/stories/guestCompletions";
 
 import { useNavigate } from "@tanstack/react-router";
+
 
 
 interface Props {
@@ -40,7 +44,7 @@ interface Props {
   onExit: () => void;
 }
 
-type Phase = "intro" | "playing" | "reward" | "journey";
+type Phase = "playing" | "reward" | "journey";
 
 
 
@@ -51,44 +55,28 @@ export function StoryPlayer({
     () => [...scenes].sort((a, b) => a.scene_index - b.scene_index),
     [scenes],
   );
-  const cover = story.cover_media_id
-    ? media.find((m) => m.id === story.cover_media_id) ?? null
-    : null;
-  const coverUrl = useStoryMediaUrl(cover ?? null);
 
-  const [phase, setPhase] = useState<Phase>("intro");
+  const [phase, setPhase] = useState<Phase>("playing");
   const [idx, setIdx] = useState(Math.min(initialSceneIndex, Math.max(0, ordered.length - 1)));
   const [paused, setPaused] = useState(false);
   const [rewardShown, setRewardShown] = useState(false);
   const [grantedXp, setGrantedXp] = useState<number | null>(null);
   const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
-  // Keep the intro layer mounted briefly after phase flips so the
-  // landing cross-fades into scene 1 instead of hard-cutting.
-  const [introMounted, setIntroMounted] = useState(true);
   const completionFiredRef = useRef(false);
   const navigate = useNavigate();
-  const { addPoints, addDinars } = useProfile();
+  const { profile, addPoints, addDinars } = useProfile();
+  const isGuest = !profile.loggedIn;
+
+  const queryClient = useQueryClient();
 
   const scene = ordered[idx] ?? null;
   const dwellMs = useMemo(() => scene ? sceneDwellMs(scene) : 4000, [scene]);
   const autoAdvance = scene ? scene.scene_type !== "reflection" : false;
   const isReflectionScene = scene?.scene_type === "reflection";
 
+  // Reference (silences unused-var lint) — media/summary still consumed downstream.
+  void media; void summary; void navigate;
 
-  // --- Intro hold, then start ------------------------------------
-  useEffect(() => {
-    if (phase !== "intro") return;
-    setIntroMounted(true);
-    const t = window.setTimeout(() => setPhase("playing"), INTRO_HOLD_MS);
-    return () => clearTimeout(t);
-  }, [phase]);
-
-  // Unmount intro layer after the cross-fade completes.
-  useEffect(() => {
-    if (phase === "intro") return;
-    const t = window.setTimeout(() => setIntroMounted(false), 900);
-    return () => clearTimeout(t);
-  }, [phase]);
 
   // --- Record scene view (monotonic) -----------------------------
   useEffect(() => {
@@ -139,24 +127,45 @@ export function StoryPlayer({
   const goNext = useCallback(async () => {
     if (!scene) return;
     if (isLast) {
-      // Sticky one-shot completion; server dedupes and returns the
-      // authoritative granted reward. Apply to the local profile so
-      // the HUD reflects the new balance immediately without waiting
-      // for the next cloud reconciliation cycle.
-      setPhase("reward");
-      if (completionFiredRef.current) return;
+      // Sticky one-shot completion. `completionFiredRef` guarantees at most
+      // one grant per mount even if the user double-taps the ending pill
+      // or auto-advance and the tap collide. Guests take a local reward
+      // path (server RPC requires auth) so first-completion still awards
+      // XP + Dinars and replay is silent.
+      if (completionFiredRef.current) { setPhase("reward"); return; }
       completionFiredRef.current = true;
-      const res = await completeStory(story.id);
-      const grantXp = res.result?.reward_granted_xp ?? 0;
-      const grantDin = res.result?.reward_granted_dinars ?? 0;
-      setGrantedXp(grantXp);
-      setGrantedDinars(grantDin);
-      if (grantXp > 0) addPoints(grantXp);
-      if (grantDin > 0) addDinars(grantDin);
+      setPhase("reward");
+
+      const summaryXp = summary?.xp_reward ?? story.xp_reward ?? 0;
+      const summaryDin = summary?.dinar_reward ?? story.dinar_reward ?? 0;
+
+      if (isGuest) {
+        const firstTime = guestMarkCompleted(story.id);
+        const grantXp = firstTime ? summaryXp : 0;
+        const grantDin = firstTime ? summaryDin : 0;
+        setGrantedXp(grantXp);
+        setGrantedDinars(grantDin);
+        if (grantXp > 0) addPoints(grantXp);
+        if (grantDin > 0) addDinars(grantDin);
+      } else {
+        const res = await completeStory(story.id);
+        const grantXp = res.result?.reward_granted_xp ?? 0;
+        const grantDin = res.result?.reward_granted_dinars ?? 0;
+        setGrantedXp(grantXp);
+        setGrantedDinars(grantDin);
+        if (grantXp > 0) addPoints(grantXp);
+        if (grantDin > 0) addDinars(grantDin);
+      }
+
+      // Refresh catalog/rail status pills ("جديدة" → "اكتمل") without a
+      // hard reload. `list_stories_v2` is the source of truth for both
+      // auth (server-completed) and guest (overlay via guestCompletions).
+      try { void queryClient.invalidateQueries({ queryKey: ["stories-summary"] }); } catch { /* ignore */ }
       return;
     }
     setIdx((n) => Math.min(n + 1, ordered.length - 1));
-  }, [isLast, ordered.length, scene, story.id, addPoints, addDinars]);
+  }, [isLast, ordered.length, scene, story.id, story.xp_reward, story.dinar_reward, summary, isGuest, addPoints, addDinars, queryClient]);
+
 
   const goPrev = useCallback(() => {
     setIdx((n) => Math.max(0, n - 1));
@@ -202,8 +211,8 @@ export function StoryPlayer({
       return;
     }
     if (Math.abs(dx) > 40 || Math.abs(dy) > 40) return; // ignore drags
-    if (phase === "intro") { setPhase("playing"); return; }
     if (phase !== "playing") return;
+
     const w = (e.currentTarget as HTMLElement).clientWidth;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const zoneRight = e.clientX - rect.left;
@@ -217,12 +226,12 @@ export function StoryPlayer({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { onExit(); return; }
-      if (phase === "intro" && (e.key === "Enter" || e.key === " ")) { setPhase("playing"); return; }
       if (phase !== "playing") return;
       if (e.key === "ArrowLeft") { void goNext(); }
       else if (e.key === "ArrowRight") { goPrev(); }
       else if (e.key === " ") { e.preventDefault(); setPaused((p) => !p); }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, goNext, goPrev, onExit]);
@@ -234,11 +243,10 @@ export function StoryPlayer({
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const subtitle = story.era || null;
-  const progressEpoch = phase === "intro" ? "intro" : `s${idx}`;
-  const durationLabel = formatDurationArabic(
-    resolveStoryDurationMs({ metadata: story.metadata as Record<string, unknown> | null, scenes: ordered }),
-  );
+  const progressEpoch = `s${idx}`;
+  // Suppress unused warnings — subtitle/era live on the intro layer that
+  // was retired; kept as intentional void reference for future overlays.
+  void story.era;
 
 
   return (
@@ -253,7 +261,7 @@ export function StoryPlayer({
            style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <SegmentedProgress
           total={ordered.length}
-          activeIndex={phase === "intro" ? -1 : idx}
+          activeIndex={idx}
           activeMs={autoAdvance ? dwellMs : 999_999}
           paused={paused || phase !== "playing"}
           epoch={progressEpoch}
@@ -280,44 +288,6 @@ export function StoryPlayer({
       <TapFeedback flash={tapFlash} />
       <PauseHalo active={longPressPulse && paused && phase === "playing"} />
 
-
-
-      {/* Stage — intro layer stays mounted briefly after phase flip so
-          the landing cross-fades into scene 1 instead of hard-cutting. */}
-      {introMounted && (
-        <div
-          className="absolute inset-0 z-[6] transition-opacity duration-[900ms] ease-out"
-          style={{ opacity: phase === "intro" ? 1 : 0, pointerEvents: phase === "intro" ? "auto" : "none" }}
-        >
-          <KenBurns src={coverUrl} alt={story.title_ar} seed={`cover:${story.id}`} overlay="vignette" />
-          <div className="absolute inset-x-0 bottom-0 z-10 px-8 pb-[calc(env(safe-area-inset-bottom)+104px)] sm:px-12"
-               style={{ animation: "intro-fade 900ms 200ms ease-out both" }}>
-            <div className="w-full max-w-[34rem]">
-              <p className="mb-3 text-[10px] font-medium tracking-[0.42em] text-gold/80">إرث</p>
-              <h1
-                className="font-display font-bold leading-[1.12] text-white"
-                style={{
-                  fontSize: "clamp(28px, 7.6vw, 40px)",
-                  textShadow: "0 2px 18px rgba(0,0,0,0.6)",
-                }}
-              >
-                {story.title_ar}
-              </h1>
-              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-white/75">
-                {subtitle && <span>{subtitle}</span>}
-                {subtitle && <span className="opacity-40">·</span>}
-                <span>{durationLabel}</span>
-              </div>
-              {story.summary_ar && (
-                <p className="mt-4 text-[clamp(13px,3.4vw,15px)] leading-[1.9] text-white/75">
-                  {story.summary_ar}
-                </p>
-              )}
-            </div>
-          </div>
-          <style>{`@keyframes intro-fade { from { opacity: 0; transform: translateY(12px);} to { opacity: 1; transform: translateY(0);} }`}</style>
-        </div>
-      )}
 
 
       {(phase === "playing" || phase === "reward") && scene && (
@@ -365,8 +335,9 @@ export function StoryPlayer({
             setGrantedXp(null);
             setGrantedDinars(null);
             completionFiredRef.current = false;
-            setPhase("intro");
+            setPhase("playing");
           }}
+
 
           onClose={() => onExit()}
         />
@@ -387,17 +358,20 @@ export function StoryPlayer({
               animation: "endpulse 2.6s ease-in-out infinite",
             }}
           >
-            اختم الرحلة
+            <span>اختم الرحلة</span>
+            <ArrowLeft className="size-4" aria-hidden />
             <style>{`@keyframes endpulse { 0%,100%{ box-shadow: 0 0 22px rgba(240,190,60,0.22), inset 0 0 0 1px rgba(240,190,60,0.15);} 50%{ box-shadow: 0 0 42px rgba(240,190,60,0.42), inset 0 0 0 1px rgba(240,190,60,0.3);} }`}</style>
           </button>
         ) : (
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); void goNext(); }}
-            className="pointer-events-auto absolute inset-x-0 bottom-6 z-20 mx-auto w-max rounded-full border border-gold/40 bg-black/60 px-4 py-2 text-[12px] text-gold backdrop-blur"
+            className="pointer-events-auto absolute inset-x-0 bottom-6 z-20 mx-auto flex w-max items-center gap-1.5 rounded-full border border-gold/40 bg-black/60 px-4 py-2 text-[12px] text-gold backdrop-blur"
           >
-            متابعة
+            <span>متابعة</span>
+            <ArrowLeft className="size-3.5" aria-hidden />
           </button>
+
         )
       )}
     </div>

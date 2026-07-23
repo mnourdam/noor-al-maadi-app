@@ -66,10 +66,16 @@ export const MIN_DWELL = 3200;
 export const MAX_DWELL = 10_000;
 
 // ---- Cinematic runtime constants (single source of truth) ---------------
-/** Intro hold before the first scene renders (matches StoryPlayer). */
-export const INTRO_HOLD_MS = 1100;
+/**
+ * Intro hold before the first scene renders. Retired in Post-Freeze pass:
+ * playback opens directly on Scene 1 (the cover already introduces the
+ * story on the catalog/landing surfaces). Kept at 0 so any duration
+ * arithmetic that still references it remains additive-safe.
+ */
+export const INTRO_HOLD_MS = 0;
 /** Post-completion reward moment before "Continue Your Journey" slides up. */
 export const REWARD_HOLD_MS = 3200;
+
 /** Average per-scene cross-fade transition cost (dissolve/paper/blur/calm). */
 export const TRANSITION_MS = 500;
 /**

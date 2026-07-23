@@ -36,6 +36,10 @@ import {
 } from "@/lib/stories/duration";
 import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/lib/profile";
+import { guestHasCompleted } from "@/lib/stories/guestCompletions";
+import { useEffect, useState } from "react";
+
 
 interface CoverRow {
   id: string;
@@ -85,8 +89,29 @@ export function StoryCard({
   story: StorySummary;
   variant?: "grid" | "rail";
 }) {
-  const state = storyState(story);
-  const pct = Math.round(progressFraction(story) * 100);
+  const serverState = storyState(story);
+  const { profile } = useProfile();
+  const isGuest = !profile.loggedIn;
+  // Guests have no server row for completion — overlay the local
+  // guest-completion set so the pill flips to "اكتمل" immediately
+  // and on relaunch. Re-check on the guest-completion event so an
+  // in-flight completion updates open card grids without a reload.
+  const [guestDone, setGuestDone] = useState<boolean>(() => isGuest && guestHasCompleted(story.id));
+  useEffect(() => {
+    if (!isGuest) { setGuestDone(false); return; }
+    const check = () => setGuestDone(guestHasCompleted(story.id));
+    check();
+    if (typeof window === "undefined") return;
+    const onChange = () => check();
+    window.addEventListener("irth:guest-story-completed", onChange);
+    window.addEventListener("irth:story-completions:changed", onChange);
+    return () => {
+      window.removeEventListener("irth:guest-story-completed", onChange);
+      window.removeEventListener("irth:story-completions:changed", onChange);
+    };
+  }, [isGuest, story.id]);
+  const state = guestDone && serverState !== "locked" ? "completed" : serverState;
+
   const metadata = useStoryMetadata(story.id);
   const durationLabel = formatDurationArabic(
     resolveStoryDurationMs({ metadata, sceneCount: story.scene_count }),
@@ -94,10 +119,15 @@ export function StoryCard({
   const cover = useCoverUrl(story.cover_media_id);
 
 
+
+
+
+  const pct = Math.round(progressFraction(story) * 100);
   const widthClass =
     variant === "rail"
       ? "w-44 flex-none snap-start sm:w-52"
       : "w-full";
+
 
   return (
     <Link
