@@ -95,16 +95,27 @@ export function ContinueYourJourney({
         </p>
       </div>
 
+      {/* 1) Feel — heart interaction */}
       {finished && (
         <div className="px-6 pt-2">
           <Istazadtu anchorType="story" anchorId={finished.id} />
         </div>
       )}
 
+      {/* 2) Reflect — composer + reader reflections */}
+      {finished && (
+        <div className="px-6 pt-6">
+          <PublicContributionsNotice anchorType="story" anchorId={finished.id} />
+          <StoryComments storyId={finished.id} />
+        </div>
+      )}
+
+      {/* 3) Explore — related entities */}
       {related.length > 0 && (
         <RelatedEntitiesBlock related={related} />
       )}
 
+      {/* 4) Verify — references */}
       {(refs.primary.length > 0 || refs.secondary.length > 0 || refs.notes) && (
         <ReferencesBlock refs={refs} />
       )}
@@ -117,13 +128,6 @@ export function ContinueYourJourney({
             <span className="h-px flex-1 bg-gradient-to-r from-gold/40 to-transparent" />
           </div>
           <StoryCard story={next} />
-        </div>
-      )}
-
-      {finished && (
-        <div className="px-6 pt-8">
-          <PublicContributionsNotice anchorType="story" anchorId={finished.id} />
-          <StoryComments storyId={finished.id} />
         </div>
       )}
 
