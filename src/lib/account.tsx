@@ -111,6 +111,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             }
           }
         } catch { /* ignore */ }
+        // Clear the signed offline-unlock cache so the next signed-in
+        // user cannot inherit the previous user's unlocked-story set.
+        void import("@/lib/stories/unlock-cache").then((m) => {
+          try { m.clearUnlockCache(); } catch { /* ignore */ }
+        });
       }
     });
     return () => {

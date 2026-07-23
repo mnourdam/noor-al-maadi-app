@@ -383,17 +383,43 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
       await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
     } catch { /* dev-only path; ignore in prod */ }
   }
-  // Warm the shared image cache with story media covers/scenes so a
-  // freshly-synced install can render them offline.
-  void (async () => {
-    try {
-      const { collectImageUrls, prefetchImages } = await import("./image-cache");
-      const urls = collectImageUrls(snap.collections);
-      for (const u of collectStoryMediaCacheUrls(snap.collections.story_media ?? [])) urls.add(u);
-      await prefetchImages(urls);
-    } catch { /* ignore */ }
-  })();
+  // Warm the shared image cache. Story "hero" media (cover, first
+  // scene, first document, first reveal) go first so slow networks
+  // still land the important assets before the long tail.
+  void warmSnapshotImageCache(snap.collections);
   return snap;
+}
+
+/**
+ * Priority-first image cache warm-up. Order:
+ *   1. Story priority media (cover / first scene / first document / first reveal)
+ *   2. General snapshot images (encyclopedia thumbnails, atlas, etc.)
+ *   3. Remaining story media (long tail scenes)
+ *
+ * All three phases run through `prefetchImages`, which is idempotent
+ * and cache-aware, so overlapping URLs are only fetched once.
+ */
+async function warmSnapshotImageCache(collections: Record<string, any[]>): Promise<void> {
+  try {
+    const { collectImageUrls, prefetchImages } = await import("./image-cache");
+    const { collectPriorityMediaIds, collectMediaUrlsForIds } = await import("./stories/media/priority");
+    const media = collections.story_media ?? [];
+    const priorityIds = collectPriorityMediaIds(
+      collections.stories ?? [],
+      collections.story_scenes ?? [],
+    );
+    const priorityUrls = collectMediaUrlsForIds(media, priorityIds);
+    if (priorityUrls.size > 0) await prefetchImages(priorityUrls);
+
+    const generalUrls = collectImageUrls(collections);
+    if (generalUrls.size > 0) await prefetchImages(generalUrls);
+
+    const tailUrls = new Set<string>();
+    for (const u of collectStoryMediaCacheUrls(media)) {
+      if (!priorityUrls.has(u)) tailUrls.add(u);
+    }
+    if (tailUrls.size > 0) await prefetchImages(tailUrls);
+  } catch { /* ignore */ }
 }
 
 /**
@@ -486,19 +512,11 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     applyLocalSnapshot(snap);
   } catch { /* ignore */ }
 
-  // Warm the image cache in the background with any new URLs.
-  void (async () => {
-    try {
-      const { collectImageUrls, prefetchImages } = await import("./image-cache");
-      const urls = collectImageUrls(nextCollections);
-      // Story media (P5): stitch bucket+path+processing_version into
-      // stable public URLs so the same encyclopedia image cache serves
-      // stories offline. Version bumps yield new URLs and thus a fresh
-      // fetch — invalidation happens exactly when processing_version moves.
-      for (const u of collectStoryMediaCacheUrls(nextCollections.story_media ?? [])) urls.add(u);
-      await prefetchImages(urls);
-    } catch { /* ignore */ }
-  })();
+  // Warm the image cache in the background: priority story media first,
+  // general snapshot images, then long-tail scene media. Version bumps
+  // yield new URLs (via `?v=<processing_version>`) and thus a fresh
+  // fetch — invalidation happens exactly when processing_version moves.
+  void warmSnapshotImageCache(nextCollections);
 
   console.info(`[offline-sync] incremental: ${totalDeltas} row deltas across ${COLLECTIONS.length} collections`);
   return snap;
@@ -628,16 +646,12 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
     );
 
     // Warm the image cache from whatever content we already have locally
-    // so covers/thumbnails survive going offline mid-session.
+    // so covers/thumbnails survive going offline mid-session. Priority
+    // story media go first via `warmSnapshotImageCache`.
     void (async () => {
-      try {
-        const snap = local ?? (await loadSnapshot());
-        if (!snap?.collections) return;
-        const { collectImageUrls, prefetchImages } = await import("./image-cache");
-        const urls = collectImageUrls(snap.collections);
-        for (const u of collectStoryMediaCacheUrls(snap.collections.story_media ?? [])) urls.add(u);
-        await prefetchImages(urls);
-      } catch { /* ignore */ }
+      const snap = local ?? (await loadSnapshot());
+      if (!snap?.collections) return;
+      await warmSnapshotImageCache(snap.collections);
     })();
   } catch (e) {
     console.warn("[offline-sync] bootstrap failed:", e);
