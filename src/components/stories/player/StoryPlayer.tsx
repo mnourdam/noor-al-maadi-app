@@ -55,44 +55,26 @@ export function StoryPlayer({
     () => [...scenes].sort((a, b) => a.scene_index - b.scene_index),
     [scenes],
   );
-  const cover = story.cover_media_id
-    ? media.find((m) => m.id === story.cover_media_id) ?? null
-    : null;
-  const coverUrl = useStoryMediaUrl(cover ?? null);
 
-  const [phase, setPhase] = useState<Phase>("intro");
+  const [phase, setPhase] = useState<Phase>("playing");
   const [idx, setIdx] = useState(Math.min(initialSceneIndex, Math.max(0, ordered.length - 1)));
   const [paused, setPaused] = useState(false);
   const [rewardShown, setRewardShown] = useState(false);
   const [grantedXp, setGrantedXp] = useState<number | null>(null);
   const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
-  // Keep the intro layer mounted briefly after phase flips so the
-  // landing cross-fades into scene 1 instead of hard-cutting.
-  const [introMounted, setIntroMounted] = useState(true);
   const completionFiredRef = useRef(false);
   const navigate = useNavigate();
-  const { addPoints, addDinars } = useProfile();
+  const { addPoints, addDinars, loggedIn } = useProfile();
+  const queryClient = useQueryClient();
 
   const scene = ordered[idx] ?? null;
   const dwellMs = useMemo(() => scene ? sceneDwellMs(scene) : 4000, [scene]);
   const autoAdvance = scene ? scene.scene_type !== "reflection" : false;
   const isReflectionScene = scene?.scene_type === "reflection";
 
+  // Reference (silences unused-var lint) — media/summary still consumed downstream.
+  void media; void summary; void navigate;
 
-  // --- Intro hold, then start ------------------------------------
-  useEffect(() => {
-    if (phase !== "intro") return;
-    setIntroMounted(true);
-    const t = window.setTimeout(() => setPhase("playing"), INTRO_HOLD_MS);
-    return () => clearTimeout(t);
-  }, [phase]);
-
-  // Unmount intro layer after the cross-fade completes.
-  useEffect(() => {
-    if (phase === "intro") return;
-    const t = window.setTimeout(() => setIntroMounted(false), 900);
-    return () => clearTimeout(t);
-  }, [phase]);
 
   // --- Record scene view (monotonic) -----------------------------
   useEffect(() => {
