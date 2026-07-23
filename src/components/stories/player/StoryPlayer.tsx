@@ -64,7 +64,9 @@ export function StoryPlayer({
   const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
   const completionFiredRef = useRef(false);
   const navigate = useNavigate();
-  const { addPoints, addDinars, loggedIn } = useProfile();
+  const { profile, addPoints, addDinars } = useProfile();
+  const isGuest = !profile.loggedIn;
+
   const queryClient = useQueryClient();
 
   const scene = ordered[idx] ?? null;
