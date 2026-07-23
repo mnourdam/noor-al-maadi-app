@@ -40,6 +40,9 @@ import { iconForType } from "@/lib/encyclopedia-icons";
 import { canonicalEraLabel, toCanonicalEra } from "@/lib/era-canonical";
 import { localAtlasEntities } from "@/lib/local-first-store";
 import { EncyclopediaHero } from "@/components/encyclopedia/EncyclopediaHero";
+import { Istazadtu } from "@/components/social/Istazadtu";
+import { StoryComments } from "@/components/social/StoryComments";
+import { PublicContributionsNotice } from "@/components/social/PublicContributionsNotice";
 
 
 const TYPE_LABEL: Record<string, string> = {
