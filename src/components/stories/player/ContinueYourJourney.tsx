@@ -86,8 +86,9 @@ export function ContinueYourJourney({
         </h2>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/60">
           {meta?.era && <span>{meta.era}</span>}
-          {meta?.era && readingMin && <span className="opacity-40">·</span>}
-          {readingMin && <span>≈ {readingMin} دقيقة قراءة</span>}
+          {meta?.era && durationLabel && <span className="opacity-40">·</span>}
+          {durationLabel && <span>{durationLabel}</span>}
+
         </div>
         <p className="mt-2 text-[12px] text-white/70">
           القراءة انتهت. هنا تبدأ المحادثة.
