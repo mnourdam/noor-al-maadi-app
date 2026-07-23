@@ -260,9 +260,13 @@ export function StoryPlayer({
         </div>
       </div>
 
-      {/* Stage */}
-      {phase === "intro" && (
-        <>
+      {/* Stage — intro layer stays mounted briefly after phase flip so
+          the landing cross-fades into scene 1 instead of hard-cutting. */}
+      {introMounted && (
+        <div
+          className="absolute inset-0 z-[6] transition-opacity duration-[900ms] ease-out"
+          style={{ opacity: phase === "intro" ? 1 : 0, pointerEvents: phase === "intro" ? "auto" : "none" }}
+        >
           <KenBurns src={coverUrl} alt={story.title_ar} seed={`cover:${story.id}`} overlay="vignette" />
           <div className="absolute inset-x-0 bottom-0 z-10 px-8 pb-[calc(env(safe-area-inset-bottom)+104px)] sm:px-12"
                style={{ animation: "intro-fade 900ms 200ms ease-out both" }}>
@@ -290,7 +294,7 @@ export function StoryPlayer({
             </div>
           </div>
           <style>{`@keyframes intro-fade { from { opacity: 0; transform: translateY(12px);} to { opacity: 1; transform: translateY(0);} }`}</style>
-        </>
+        </div>
       )}
 
 
@@ -346,15 +350,33 @@ export function StoryPlayer({
         />
       )}
 
-      {/* Reflection hint — reflection scenes disable auto-advance */}
+      {/* Reflection hint / journey-ending affordance —
+          reflection scenes disable auto-advance so the reader must
+          tap to leave. The last scene gets an emotional "closing"
+          treatment (خاتمة) instead of a generic نص button. */}
       {phase === "playing" && scene?.scene_type === "reflection" && !paused && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); void goNext(); }}
-          className="pointer-events-auto absolute inset-x-0 bottom-6 z-20 mx-auto w-max rounded-full border border-gold/40 bg-black/60 px-4 py-2 text-[12px] text-gold backdrop-blur"
-        >
-          {isLast ? "أنهِ القصة" : "متابعة"}
-        </button>
+        isLast ? (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); void goNext(); }}
+            className="pointer-events-auto absolute inset-x-0 bottom-8 z-20 mx-auto flex w-max items-center gap-2 rounded-full border border-gold/60 bg-gradient-to-b from-black/70 to-black/40 px-6 py-3 text-[13px] font-semibold tracking-[0.24em] text-gold backdrop-blur"
+            style={{
+              boxShadow: "0 0 30px rgba(240,190,60,0.25), inset 0 0 0 1px rgba(240,190,60,0.15)",
+              animation: "endpulse 2.6s ease-in-out infinite",
+            }}
+          >
+            اختم الرحلة
+            <style>{`@keyframes endpulse { 0%,100%{ box-shadow: 0 0 22px rgba(240,190,60,0.22), inset 0 0 0 1px rgba(240,190,60,0.15);} 50%{ box-shadow: 0 0 42px rgba(240,190,60,0.42), inset 0 0 0 1px rgba(240,190,60,0.3);} }`}</style>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); void goNext(); }}
+            className="pointer-events-auto absolute inset-x-0 bottom-6 z-20 mx-auto w-max rounded-full border border-gold/40 bg-black/60 px-4 py-2 text-[12px] text-gold backdrop-blur"
+          >
+            متابعة
+          </button>
+        )
       )}
     </div>
   );
