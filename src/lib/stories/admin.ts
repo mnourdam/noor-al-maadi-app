@@ -181,6 +181,9 @@ export async function adminAttachSceneMedia(
     { p_story_id: storyId, p_scene_id: sceneId, p_media_id: mediaId } as never,
   );
   if (error) bad("adminAttachSceneMedia", error);
+}
+
+
 
 /** Remove a scene from a story. */
 export async function adminDeleteStoryScene(storyId: string, sceneId: string): Promise<void> {
