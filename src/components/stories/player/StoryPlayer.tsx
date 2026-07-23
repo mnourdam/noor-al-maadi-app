@@ -209,7 +209,10 @@ export function StoryPlayer({
 
   const subtitle = story.era || null;
   const progressEpoch = phase === "intro" ? "intro" : `s${idx}`;
-  const readingMin = readReadingTimeMinutes(story.metadata);
+  const durationLabel = formatDurationArabic(
+    resolveStoryDurationMs({ metadata: story.metadata as Record<string, unknown> | null, scenes: ordered }),
+  );
+
 
   return (
     <div
