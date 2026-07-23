@@ -9,7 +9,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { EyeOff, RotateCcw, Trash2, X, BookMarked, History, Loader2 } from "lucide-react";
+import { EyeOff, RotateCcw, Trash2, X, BookMarked, History, Loader2, Pin, PinOff } from "lucide-react";
 import { AdminGate } from "@/lib/admin-guard";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import {
