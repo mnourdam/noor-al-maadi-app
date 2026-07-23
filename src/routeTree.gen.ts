@@ -24,6 +24,7 @@ import { Route as OnThisDayRouteImport } from './routes/on-this-day'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as InvestigationsRouteImport } from './routes/investigations'
+import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as HistoryCalendarRouteImport } from './routes/history-calendar'
 import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as EncyclopediaRouteImport } from './routes/encyclopedia'
@@ -209,6 +210,11 @@ const MapRoute = MapRouteImport.update({
 const InvestigationsRoute = InvestigationsRouteImport.update({
   id: '/investigations',
   path: '/investigations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryCalendarRoute = HistoryCalendarRouteImport.update({
@@ -805,6 +811,7 @@ export interface FileRoutesByFullPath {
   '/encyclopedia': typeof EncyclopediaRouteWithChildren
   '/friends': typeof FriendsRoute
   '/history-calendar': typeof HistoryCalendarRoute
+  '/inbox': typeof InboxRoute
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
@@ -931,6 +938,7 @@ export interface FileRoutesByTo {
   '/content-audit': typeof ContentAuditRoute
   '/friends': typeof FriendsRoute
   '/history-calendar': typeof HistoryCalendarRoute
+  '/inbox': typeof InboxRoute
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
@@ -1057,6 +1065,7 @@ export interface FileRoutesById {
   '/encyclopedia': typeof EncyclopediaRouteWithChildren
   '/friends': typeof FriendsRoute
   '/history-calendar': typeof HistoryCalendarRoute
+  '/inbox': typeof InboxRoute
   '/investigations': typeof InvestigationsRoute
   '/map': typeof MapRoute
   '/notifications': typeof NotificationsRoute
@@ -1187,6 +1196,7 @@ export interface FileRouteTypes {
     | '/encyclopedia'
     | '/friends'
     | '/history-calendar'
+    | '/inbox'
     | '/investigations'
     | '/map'
     | '/notifications'
@@ -1313,6 +1323,7 @@ export interface FileRouteTypes {
     | '/content-audit'
     | '/friends'
     | '/history-calendar'
+    | '/inbox'
     | '/investigations'
     | '/map'
     | '/notifications'
@@ -1438,6 +1449,7 @@ export interface FileRouteTypes {
     | '/encyclopedia'
     | '/friends'
     | '/history-calendar'
+    | '/inbox'
     | '/investigations'
     | '/map'
     | '/notifications'
@@ -1567,6 +1579,7 @@ export interface RootRouteChildren {
   EncyclopediaRoute: typeof EncyclopediaRouteWithChildren
   FriendsRoute: typeof FriendsRoute
   HistoryCalendarRoute: typeof HistoryCalendarRoute
+  InboxRoute: typeof InboxRoute
   InvestigationsRoute: typeof InvestigationsRoute
   MapRoute: typeof MapRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -1768,6 +1781,13 @@ declare module '@tanstack/react-router' {
       path: '/investigations'
       fullPath: '/investigations'
       preLoaderRoute: typeof InvestigationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history-calendar': {
@@ -2677,6 +2697,7 @@ const rootRouteChildren: RootRouteChildren = {
   EncyclopediaRoute: EncyclopediaRouteWithChildren,
   FriendsRoute: FriendsRoute,
   HistoryCalendarRoute: HistoryCalendarRoute,
+  InboxRoute: InboxRoute,
   InvestigationsRoute: InvestigationsRoute,
   MapRoute: MapRoute,
   NotificationsRoute: NotificationsRoute,

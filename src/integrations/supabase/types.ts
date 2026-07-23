@@ -1548,6 +1548,51 @@ export type Database = {
         }
         Relationships: []
       }
+      personal_notifications: {
+        Row: {
+          batch_key: string
+          count: number
+          created_at: string
+          id: string
+          kind: string
+          last_actor_id: string | null
+          payload: Json
+          read_at: string | null
+          subject_id: string
+          subject_type: Database["public"]["Enums"]["social_anchor_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_key: string
+          count?: number
+          created_at?: string
+          id?: string
+          kind: string
+          last_actor_id?: string | null
+          payload?: Json
+          read_at?: string | null
+          subject_id: string
+          subject_type: Database["public"]["Enums"]["social_anchor_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_key?: string
+          count?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          last_actor_id?: string | null
+          payload?: Json
+          read_at?: string | null
+          subject_id?: string
+          subject_type?: Database["public"]["Enums"]["social_anchor_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_status: string
@@ -1849,6 +1894,35 @@ export type Database = {
             columns: ["referrer_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_comment_contributions: {
+        Row: {
+          comment_id: string
+          marked_at: string
+          marked_by: string | null
+          note: string | null
+        }
+        Insert: {
+          comment_id: string
+          marked_at?: string
+          marked_by?: string | null
+          note?: string | null
+        }
+        Update: {
+          comment_id?: string
+          marked_at?: string
+          marked_by?: string | null
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_comment_contributions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: true
+            referencedRelation: "social_comments"
             referencedColumns: ["id"]
           },
         ]
@@ -2839,6 +2913,19 @@ export type Database = {
       }
     }
     Functions: {
+      _emit_personal_notification: {
+        Args: {
+          p_actor: string
+          p_batch_key: string
+          p_batched?: boolean
+          p_kind: string
+          p_payload: Json
+          p_subject_id: string
+          p_subject_type: Database["public"]["Enums"]["social_anchor_type"]
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       _feedback_main_admin_id: { Args: never; Returns: string }
       _feedback_notify_admin: {
         Args: {
@@ -3309,6 +3396,10 @@ export type Database = {
         Returns: Json
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      emit_story_unlock_notification: {
+        Args: { p_story_id: string; p_user_id: string }
+        Returns: Json
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
@@ -3529,10 +3620,9 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      list_my_notifications: {
-        Args: { p_before?: string; p_limit?: number }
-        Returns: Json
-      }
+      list_my_notifications:
+        | { Args: { p_cursor?: string; p_limit?: number }; Returns: Json }
+        | { Args: { p_before?: string; p_limit?: number }; Returns: Json }
       list_published_stories: {
         Args: never
         Returns: {
@@ -3569,15 +3659,12 @@ export type Database = {
         Args: { _ids: string[]; _origin?: string }
         Returns: string[]
       }
-      mark_all_notifications_read: { Args: never; Returns: undefined }
+      mark_all_notifications_read: { Args: never; Returns: Json }
       mark_feedback_issue_read: {
         Args: { p_issue_id: string }
         Returns: undefined
       }
-      mark_notification_read: {
-        Args: { p_notification_id: string }
-        Returns: undefined
-      }
+      mark_notification_read: { Args: { p_id: string }; Returns: Json }
       moderate_comment_v2: {
         Args: {
           p_action: string
@@ -3693,6 +3780,7 @@ export type Database = {
         Returns: Json
       }
       touch_my_last_active: { Args: never; Returns: undefined }
+      unread_notification_count: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "owner" | "admin" | "editor" | "player"
@@ -3712,7 +3800,7 @@ export type Database = {
         | "connections"
         | "memory"
       game_status: "draft" | "published" | "archived"
-      social_anchor_type: "story"
+      social_anchor_type: "story" | "comment"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3859,7 +3947,7 @@ export const Constants = {
         "memory",
       ],
       game_status: ["draft", "published", "archived"],
-      social_anchor_type: ["story"],
+      social_anchor_type: ["story", "comment"],
     },
   },
 } as const
