@@ -46,10 +46,26 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
     );
     if (!error) {
       const payload = (data ?? { ok: false, reason: "empty" }) as StoryAccessBundle;
-      if (payload.ok) return payload;
+      if (payload.ok) {
+        // Refresh the signed unlock cache for this user so an offline
+        // session immediately after this online read still treats the
+        // story as unlocked.
+        try {
+          const uid = await currentUserId();
+          if (uid) {
+            const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
+            const prev = await loadUnlockedIds(uid);
+            prev.add(storyId);
+            await persistUnlockedIds(uid, prev);
+          }
+        } catch { /* ignore */ }
+        return payload;
+      }
     }
   }
-  // Offline fallback — synthesize a permissive bundle from the local snapshot.
+  // Offline fallback — synthesize a permissive bundle from the local
+  // snapshot ONLY when the story was previously unlocked online or its
+  // unlock_spec is `always`. Previously-locked stories stay locked.
   try {
     const {
       ensureLocalSnapshotLoaded,
@@ -58,16 +74,26 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
     } = await import("@/lib/local-first-store");
     await ensureLocalSnapshotLoaded();
     const story = localStoryById(storyId);
-    if (story) {
-      const scenes = localStoryScenes(String(story.id));
-      return {
-        ok: true,
-        story: story as any,
-        scenes: scenes as any,
-        progress: null,
-        completed: false,
-      } as StoryAccessBundle;
+    if (!story) return { ok: false, reason: "offline_and_not_cached" };
+    const alwaysOn = ((story as any).unlock_spec?.type ?? "always") === "always";
+    const uid = await currentUserId();
+    let unlocked = alwaysOn;
+    if (!unlocked && uid) {
+      try {
+        const { loadUnlockedIds } = await import("./unlock-cache");
+        const ids = await loadUnlockedIds(uid);
+        unlocked = ids.has(storyId);
+      } catch { /* ignore */ }
     }
+    if (!unlocked) return { ok: false, reason: "locked" };
+    const scenes = localStoryScenes(String((story as any).id));
+    return {
+      ok: true,
+      story: story as any,
+      scenes: scenes as any,
+      progress: null,
+      completed: false,
+    } as StoryAccessBundle;
   } catch { /* ignore */ }
   return { ok: false, reason: "offline_and_not_cached" };
 }
