@@ -261,8 +261,9 @@ export function StoryPlayer({
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-white/75">
               {subtitle && <span>{subtitle}</span>}
-              {subtitle && readingMin && <span className="opacity-40">·</span>}
-              {readingMin && <span>≈ {readingMin} دقيقة قراءة</span>}
+              {subtitle && <span className="opacity-40">·</span>}
+              <span>{durationLabel}</span>
+
             </div>
             {story.summary_ar && (
               <p className="mt-3 max-w-md text-[13px] leading-relaxed text-white/70">
