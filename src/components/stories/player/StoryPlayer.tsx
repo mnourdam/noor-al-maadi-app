@@ -42,7 +42,7 @@ interface Props {
 
 type Phase = "intro" | "playing" | "reward" | "journey";
 
-const INTRO_HOLD_MS = 1100;
+
 
 export function StoryPlayer({
   story, scenes, media, summary, initialSceneIndex, alreadyCompleted, onExit,
