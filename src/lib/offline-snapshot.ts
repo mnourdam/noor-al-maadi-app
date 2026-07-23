@@ -624,7 +624,9 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
         const snap = local ?? (await loadSnapshot());
         if (!snap?.collections) return;
         const { collectImageUrls, prefetchImages } = await import("./image-cache");
-        await prefetchImages(collectImageUrls(snap.collections));
+        const urls = collectImageUrls(snap.collections);
+        for (const u of collectStoryMediaCacheUrls(snap.collections.story_media ?? [])) urls.add(u);
+        await prefetchImages(urls);
       } catch { /* ignore */ }
     })();
   } catch (e) {
