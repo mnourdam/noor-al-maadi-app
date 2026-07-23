@@ -36,6 +36,7 @@ import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorldsIndexRouteImport } from './routes/worlds.index'
+import { Route as StoriesIndexRouteImport } from './routes/stories.index'
 import { Route as GamesIndexRouteImport } from './routes/games.index'
 import { Route as FeedbackIndexRouteImport } from './routes/feedback.index'
 import { Route as EncyclopediaIndexRouteImport } from './routes/encyclopedia.index'
@@ -268,6 +269,11 @@ const IndexRoute = IndexRouteImport.update({
 const WorldsIndexRoute = WorldsIndexRouteImport.update({
   id: '/worlds/',
   path: '/worlds/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoriesIndexRoute = StoriesIndexRouteImport.update({
+  id: '/stories/',
+  path: '/stories/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GamesIndexRoute = GamesIndexRouteImport.update({
@@ -879,6 +885,7 @@ export interface FileRoutesByFullPath {
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/feedback/': typeof FeedbackIndexRoute
   '/games/': typeof GamesIndexRoute
+  '/stories/': typeof StoriesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
   '/admin/encyclopedia-cleanup/data-hygiene': typeof AdminEncyclopediaCleanupDataHygieneRoute
   '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
@@ -1001,6 +1008,7 @@ export interface FileRoutesByTo {
   '/encyclopedia': typeof EncyclopediaIndexRoute
   '/feedback': typeof FeedbackIndexRoute
   '/games': typeof GamesIndexRoute
+  '/stories': typeof StoriesIndexRoute
   '/worlds': typeof WorldsIndexRoute
   '/admin/encyclopedia-cleanup/data-hygiene': typeof AdminEncyclopediaCleanupDataHygieneRoute
   '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
@@ -1129,6 +1137,7 @@ export interface FileRoutesById {
   '/encyclopedia/': typeof EncyclopediaIndexRoute
   '/feedback/': typeof FeedbackIndexRoute
   '/games/': typeof GamesIndexRoute
+  '/stories/': typeof StoriesIndexRoute
   '/worlds/': typeof WorldsIndexRoute
   '/admin/encyclopedia-cleanup/data-hygiene': typeof AdminEncyclopediaCleanupDataHygieneRoute
   '/admin/encyclopedia-cleanup/import-preview': typeof AdminEncyclopediaCleanupImportPreviewRoute
@@ -1258,6 +1267,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/'
     | '/feedback/'
     | '/games/'
+    | '/stories/'
     | '/worlds/'
     | '/admin/encyclopedia-cleanup/data-hygiene'
     | '/admin/encyclopedia-cleanup/import-preview'
@@ -1380,6 +1390,7 @@ export interface FileRouteTypes {
     | '/encyclopedia'
     | '/feedback'
     | '/games'
+    | '/stories'
     | '/worlds'
     | '/admin/encyclopedia-cleanup/data-hygiene'
     | '/admin/encyclopedia-cleanup/import-preview'
@@ -1507,6 +1518,7 @@ export interface FileRouteTypes {
     | '/encyclopedia/'
     | '/feedback/'
     | '/games/'
+    | '/stories/'
     | '/worlds/'
     | '/admin/encyclopedia-cleanup/data-hygiene'
     | '/admin/encyclopedia-cleanup/import-preview'
@@ -1632,6 +1644,7 @@ export interface RootRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   FeedbackIndexRoute: typeof FeedbackIndexRoute
   GamesIndexRoute: typeof GamesIndexRoute
+  StoriesIndexRoute: typeof StoriesIndexRoute
   WorldsIndexRoute: typeof WorldsIndexRoute
   ApiPublicNativeAuthBounceRoute: typeof ApiPublicNativeAuthBounceRoute
   GamesModeSlugRoute: typeof GamesModeSlugRoute
@@ -1839,6 +1852,13 @@ declare module '@tanstack/react-router' {
       path: '/worlds'
       fullPath: '/worlds/'
       preLoaderRoute: typeof WorldsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stories/': {
+      id: '/stories/'
+      path: '/stories'
+      fullPath: '/stories/'
+      preLoaderRoute: typeof StoriesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/games/': {
@@ -2734,6 +2754,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   FeedbackIndexRoute: FeedbackIndexRoute,
   GamesIndexRoute: GamesIndexRoute,
+  StoriesIndexRoute: StoriesIndexRoute,
   WorldsIndexRoute: WorldsIndexRoute,
   ApiPublicNativeAuthBounceRoute: ApiPublicNativeAuthBounceRoute,
   GamesModeSlugRoute: GamesModeSlugRoute,
