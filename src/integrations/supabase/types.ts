@@ -1937,6 +1937,7 @@ export type Database = {
           kind: string
           metadata: Json
           mime_type: string
+          ownership: string
           preset: string
           processing_version: number
           storage_bucket: string
@@ -1957,6 +1958,7 @@ export type Database = {
           kind: string
           metadata?: Json
           mime_type?: string
+          ownership?: string
           preset: string
           processing_version?: number
           storage_bucket: string
@@ -1977,6 +1979,7 @@ export type Database = {
           kind?: string
           metadata?: Json
           mime_type?: string
+          ownership?: string
           preset?: string
           processing_version?: number
           storage_bucket?: string
@@ -2785,6 +2788,10 @@ export type Database = {
           storage_path: string
         }[]
       }
+      admin_delete_story_scene: {
+        Args: { p_scene_id: string; p_story_id: string }
+        Returns: boolean
+      }
       admin_feedback_stats: { Args: never; Returns: Json }
       admin_get_campaign_full: {
         Args: { p_id: string }
@@ -2818,6 +2825,7 @@ export type Database = {
         Args: { p_id: string; p_version: number }
         Returns: Json
       }
+      admin_get_story_full: { Args: { p_story_id: string }; Returns: Json }
       admin_import_content_table: { Args: { p_ctype: string }; Returns: string }
       admin_list_campaign_versions: {
         Args: { p_id: string }
@@ -2917,6 +2925,27 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_list_stories: {
+        Args: never
+        Returns: {
+          content_version: number
+          cover_media_id: string
+          created_at: string
+          dinar_reward: number
+          display_order: number
+          era: string
+          id: string
+          published_at: string
+          scene_count: number
+          slug: string
+          status: string
+          title_ar: string
+          title_en: string
+          updated_at: string
+          world_slug: string
+          xp_reward: number
+        }[]
+      }
       admin_list_story_media_orphans: {
         Args: { p_min_age_minutes?: number }
         Returns: {
@@ -2924,6 +2953,7 @@ export type Database = {
           byte_size: number
           id: string
           kind: string
+          ownership: string
           preset: string
           storage_bucket: string
           storage_path: string
@@ -2993,6 +3023,10 @@ export type Database = {
           p_width: number
         }
         Returns: string
+      }
+      admin_reorder_story_scenes: {
+        Args: { p_ordered_ids: string[]; p_story_id: string }
+        Returns: boolean
       }
       admin_repair_chapter_completions_stickiness: {
         Args: never
@@ -3070,10 +3104,16 @@ export type Database = {
         Args: { p_enabled: boolean; p_id: string }
         Returns: Json
       }
+      admin_set_story_status: {
+        Args: { p_status: string; p_story_id: string }
+        Returns: Json
+      }
       admin_unsubscribe_newsletter: {
         Args: { p_id: string; p_reason?: string }
         Returns: Json
       }
+      admin_upsert_story: { Args: { p_payload: Json }; Returns: Json }
+      admin_upsert_story_scene: { Args: { p_payload: Json }; Returns: Json }
       admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
       admin_validate_campaign_payload: { Args: { v_data: Json }; Returns: Json }
       admin_validate_investigation_payload: {
@@ -3482,6 +3522,10 @@ export type Database = {
       }
       set_my_username: { Args: { p_username: string }; Returns: string }
       stable_delta_uuid: { Args: { p_key: string }; Returns: string }
+      story_media_reference_count: {
+        Args: { p_media_id: string }
+        Returns: number
+      }
       sync_my_public_stats: { Args: { p_stats: Json }; Returns: undefined }
       touch_my_last_active: { Args: never; Returns: undefined }
     }

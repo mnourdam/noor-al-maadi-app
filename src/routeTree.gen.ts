@@ -101,6 +101,7 @@ import { Route as AdminAtlasImportRouteImport } from './routes/admin.atlas-impor
 import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-entities'
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as AdminStoriesIndexRouteImport } from './routes/admin.stories.index'
 import { Route as AdminInvestigationsIndexRouteImport } from './routes/admin.investigations.index'
 import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
 import { Route as AdminEncyclopediaCleanupIndexRouteImport } from './routes/admin.encyclopedia-cleanup.index'
@@ -129,6 +130,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthCustomVerifyReauthRouteImport } from './routes/lovable/email/auth-custom/verify-reauth'
 import { Route as LovableEmailAuthCustomDispatchRouteImport } from './routes/lovable/email/auth-custom/dispatch'
 import { Route as ApiPublicWebhooksResendRouteImport } from './routes/api/public/webhooks/resend'
+import { Route as AdminStoriesIdEditRouteImport } from './routes/admin.stories.$id.edit'
 import { Route as AdminInvestigationsIdEditRouteImport } from './routes/admin.investigations.$id.edit'
 import { Route as AdminCampaignsIdEditRouteImport } from './routes/admin.campaigns.$id.edit'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
@@ -602,6 +604,11 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   path: '/admin/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminStoriesIndexRoute = AdminStoriesIndexRouteImport.update({
+  id: '/admin/stories/',
+  path: '/admin/stories/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminInvestigationsIndexRoute =
   AdminInvestigationsIndexRouteImport.update({
     id: '/',
@@ -757,6 +764,11 @@ const ApiPublicWebhooksResendRoute = ApiPublicWebhooksResendRouteImport.update({
   path: '/api/public/webhooks/resend',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminStoriesIdEditRoute = AdminStoriesIdEditRouteImport.update({
+  id: '/admin/stories/$id/edit',
+  path: '/admin/stories/$id/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminInvestigationsIdEditRoute =
   AdminInvestigationsIdEditRouteImport.update({
     id: '/$id/edit',
@@ -887,8 +899,10 @@ export interface FileRoutesByFullPath {
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/investigations/': typeof AdminInvestigationsIndexRoute
+  '/admin/stories/': typeof AdminStoriesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
+  '/admin/stories/$id/edit': typeof AdminStoriesIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
   '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -1007,8 +1021,10 @@ export interface FileRoutesByTo {
   '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games': typeof AdminGamesIndexRoute
   '/admin/investigations': typeof AdminInvestigationsIndexRoute
+  '/admin/stories': typeof AdminStoriesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
+  '/admin/stories/$id/edit': typeof AdminStoriesIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
   '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -1133,8 +1149,10 @@ export interface FileRoutesById {
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/investigations/': typeof AdminInvestigationsIndexRoute
+  '/admin/stories/': typeof AdminStoriesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
+  '/admin/stories/$id/edit': typeof AdminStoriesIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
   '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -1260,8 +1278,10 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/'
     | '/admin/games/'
     | '/admin/investigations/'
+    | '/admin/stories/'
     | '/admin/campaigns/$id/edit'
     | '/admin/investigations/$id/edit'
+    | '/admin/stories/$id/edit'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
     | '/lovable/email/auth-custom/verify-reauth'
@@ -1380,8 +1400,10 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup'
     | '/admin/games'
     | '/admin/investigations'
+    | '/admin/stories'
     | '/admin/campaigns/$id/edit'
     | '/admin/investigations/$id/edit'
+    | '/admin/stories/$id/edit'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
     | '/lovable/email/auth-custom/verify-reauth'
@@ -1505,8 +1527,10 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/'
     | '/admin/games/'
     | '/admin/investigations/'
+    | '/admin/stories/'
     | '/admin/campaigns/$id/edit'
     | '/admin/investigations/$id/edit'
+    | '/admin/stories/$id/edit'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
     | '/lovable/email/auth-custom/verify-reauth'
@@ -1613,7 +1637,9 @@ export interface RootRouteChildren {
   GamesModeSlugRoute: typeof GamesModeSlugRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   AdminCampaignsIndexRoute: typeof AdminCampaignsIndexRoute
+  AdminStoriesIndexRoute: typeof AdminStoriesIndexRoute
   AdminCampaignsIdEditRoute: typeof AdminCampaignsIdEditRoute
+  AdminStoriesIdEditRoute: typeof AdminStoriesIdEditRoute
   ApiPublicWebhooksResendRoute: typeof ApiPublicWebhooksResendRoute
   LovableEmailAuthCustomDispatchRoute: typeof LovableEmailAuthCustomDispatchRoute
   LovableEmailAuthCustomVerifyReauthRoute: typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -2270,6 +2296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/stories/': {
+      id: '/admin/stories/'
+      path: '/admin/stories'
+      fullPath: '/admin/stories/'
+      preLoaderRoute: typeof AdminStoriesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/investigations/': {
       id: '/admin/investigations/'
       path: '/'
@@ -2464,6 +2497,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/webhooks/resend'
       fullPath: '/api/public/webhooks/resend'
       preLoaderRoute: typeof ApiPublicWebhooksResendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/stories/$id/edit': {
+      id: '/admin/stories/$id/edit'
+      path: '/admin/stories/$id/edit'
+      fullPath: '/admin/stories/$id/edit'
+      preLoaderRoute: typeof AdminStoriesIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/investigations/$id/edit': {
@@ -2699,7 +2739,9 @@ const rootRouteChildren: RootRouteChildren = {
   GamesModeSlugRoute: GamesModeSlugRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   AdminCampaignsIndexRoute: AdminCampaignsIndexRoute,
+  AdminStoriesIndexRoute: AdminStoriesIndexRoute,
   AdminCampaignsIdEditRoute: AdminCampaignsIdEditRoute,
+  AdminStoriesIdEditRoute: AdminStoriesIdEditRoute,
   ApiPublicWebhooksResendRoute: ApiPublicWebhooksResendRoute,
   LovableEmailAuthCustomDispatchRoute: LovableEmailAuthCustomDispatchRoute,
   LovableEmailAuthCustomVerifyReauthRoute:

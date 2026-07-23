@@ -10,6 +10,17 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { StoryMediaKind } from "./presets";
 
+/**
+ * Ownership boundary for a media row (see migration).
+ *   `story-owned` — bound to exactly one Story. Orphan cleanup may
+ *                   remove the row + object once no story references it.
+ *   `shared`      — reusable across Stories, Encyclopedia and future
+ *                   systems. Never touched by automated orphan cleanup;
+ *                   only removable by an explicit admin action while
+ *                   reference count is zero.
+ */
+export type StoryMediaOwnership = "story-owned" | "shared";
+
 export interface StoryMediaRow {
   id: string;
   story_id: string | null;
@@ -26,10 +37,12 @@ export interface StoryMediaRow {
   verified: boolean;
   verified_at: string | null;
   verified_by: string | null;
+  ownership: StoryMediaOwnership;
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
+
 
 export interface StoryMediaOrphan {
   id: string;
@@ -39,8 +52,10 @@ export interface StoryMediaOrphan {
   kind: StoryMediaKind;
   preset: string;
   verified: boolean;
+  ownership: StoryMediaOwnership;
   age_minutes: number;
 }
+
 
 export interface StoryPublishIssue {
   code: string;
