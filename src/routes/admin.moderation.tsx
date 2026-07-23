@@ -92,26 +92,36 @@ function ModerationPage() {
     }
   }
 
-  async function act(commentId: string, action: "hide" | "restore" | "remove") {
+  async function act(commentId: string, action: "hide" | "restore" | "remove" | "pin_note" | "unpin_note") {
     if (busyId) return;
     if (action === "remove" && !confirm("إزالة نهائية للمساهمة؟ لا يمكن التراجع.")) return;
     setBusyId(commentId);
     const res = await moderateComment(commentId, action);
     setBusyId(null);
-    if (!res.ok) { toast.error("فشل الإجراء."); return; }
+    if (!res.ok) {
+      const map: Record<string, string> = {
+        pin_cap_reached: "لا يمكن تثبيت أكثر من ثلاث ملاحظات محرّر لهذه المرساة.",
+        not_visible: "لا يمكن تثبيت مساهمة غير ظاهرة.",
+      };
+      toast.error(map[res.reason ?? ""] ?? "فشل الإجراء.");
+      return;
+    }
     toast.success("تم.");
-    // Refresh row in place: reload history and remove from open queue when actioned.
     setItems((prev) => prev.map((it) =>
       it.comment_id === commentId
-        ? { ...it, comment_status: action === "hide" ? "hidden" : action === "remove" ? "removed" : "visible" }
+        ? {
+            ...it,
+            comment_status: action === "hide" ? "hidden" : action === "remove" ? "removed" : action === "restore" || action === "pin_note" ? "visible" : it.comment_status,
+            editors_note: action === "pin_note" ? true : action === "unpin_note" || action === "hide" || action === "remove" ? false : it.editors_note,
+          }
         : it,
     ));
-    // Refresh history if expanded
     if (expanded === commentId) {
       const h = await listModerationHistory(commentId);
       if (h.ok) setHistory((p) => ({ ...p, [commentId]: h.items }));
     }
   }
+
 
   async function dismissOne(reportId: string, commentId: string) {
     if (busyId) return;
