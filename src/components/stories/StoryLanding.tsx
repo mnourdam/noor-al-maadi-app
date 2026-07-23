@@ -16,6 +16,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Istazadtu } from "@/components/social/Istazadtu";
 import { StoryComments } from "@/components/social/StoryComments";
+import { PublicContributionsNotice } from "@/components/social/PublicContributionsNotice";
 import {
   estimateReadingMinutes, labelPrereqKind, progressFraction, storyState,
   type StorySummary,
@@ -209,6 +210,9 @@ export function StoryLanding({
           </div>
         </div>
       </div>
+
+      {/* Anonymous transparency notice — applied reader contributions (§P6.7). */}
+      <PublicContributionsNotice anchorType="story" anchorId={summary.id} />
 
       {/* Story comments — Guided Input Contract (§P6.2). Online-only. */}
       <StoryComments storyId={summary.id} />
