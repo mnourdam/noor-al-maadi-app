@@ -117,9 +117,11 @@ export function resolveStoryDurationMs(input: {
   if (input.scenes && input.scenes.length > 0) {
     return storyDurationMsFromScenes(input.scenes);
   }
+  const count = input.sceneCount ?? 0;
+  if (count > 0) return storyDurationMsFromCount(count);
   const override = overrideDurationMs(input.metadata ?? null);
   if (override !== null) return override;
-  return storyDurationMsFromCount(input.sceneCount ?? 0);
+  return storyDurationMsFromCount(0);
 }
 
 /**
