@@ -1853,6 +1853,63 @@ export type Database = {
           },
         ]
       }
+      social_comments: {
+        Row: {
+          anchor_id: string
+          anchor_type: Database["public"]["Enums"]["social_anchor_type"]
+          author_id: string
+          body_text: string
+          created_at: string
+          edit_deadline_at: string
+          edited_at: string | null
+          editors_note: boolean
+          editors_note_rank: number | null
+          helpful_count: number
+          id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          anchor_id: string
+          anchor_type: Database["public"]["Enums"]["social_anchor_type"]
+          author_id: string
+          body_text: string
+          created_at?: string
+          edit_deadline_at?: string
+          edited_at?: string | null
+          editors_note?: boolean
+          editors_note_rank?: number | null
+          helpful_count?: number
+          id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          anchor_id?: string
+          anchor_type?: Database["public"]["Enums"]["social_anchor_type"]
+          author_id?: string
+          body_text?: string
+          created_at?: string
+          edit_deadline_at?: string
+          edited_at?: string | null
+          editors_note?: boolean
+          editors_note_rank?: number | null
+          helpful_count?: number
+          id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       social_reactions: {
         Row: {
           anchor_id: string
@@ -2792,6 +2849,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      _normalize_comment_body: { Args: { p: string }; Returns: string }
+      add_story_comment_v2: {
+        Args: {
+          p_anchor_id: string
+          p_anchor_type: Database["public"]["Enums"]["social_anchor_type"]
+          p_body: string
+        }
+        Returns: Json
+      }
       admin_adjust_balance: {
         Args: {
           p_delta: number
@@ -3237,6 +3303,11 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: undefined
       }
+      delete_own_comment_v2: { Args: { p_comment_id: string }; Returns: Json }
+      edit_story_comment_v2: {
+        Args: { p_body: string; p_comment_id: string }
+        Returns: Json
+      }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
@@ -3411,6 +3482,16 @@ export type Database = {
           xp: number
         }[]
       }
+      list_comments_v2: {
+        Args: {
+          p_anchor_id: string
+          p_anchor_type: Database["public"]["Enums"]["social_anchor_type"]
+          p_cursor?: string
+          p_limit?: number
+          p_sort?: string
+        }
+        Returns: Json
+      }
       list_my_campaign_completions: {
         Args: never
         Returns: {
@@ -3496,6 +3577,15 @@ export type Database = {
       mark_notification_read: {
         Args: { p_notification_id: string }
         Returns: undefined
+      }
+      moderate_comment_v2: {
+        Args: {
+          p_action: string
+          p_comment_id: string
+          p_rank?: number
+          p_reason?: string
+        }
+        Returns: Json
       }
       move_to_dlq: {
         Args: {
