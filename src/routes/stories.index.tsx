@@ -60,7 +60,7 @@ async function loadStories() {
   if (coverIds.length > 0) {
     const { data: mdata } = await supabase
       .from("story_media")
-      .select("id, storage_bucket, storage_path")
+      .select("id, storage_bucket, storage_path, processing_version")
       .in("id", coverIds);
     for (const row of (mdata ?? []) as CoverRow[]) covers[row.id] = row;
   }
