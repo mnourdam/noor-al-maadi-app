@@ -770,40 +770,61 @@ function SceneRow({
             </label>
             <TextField label="العنوان (عربي)" value={form.title_ar} onChange={(v) => setForm({ ...form, title_ar: v })} />
             <TextField label="العنوان (إنجليزي)" value={form.title_en} onChange={(v) => setForm({ ...form, title_en: v })} />
-            <div className="text-xs">
+            <div className="text-xs md:col-span-2">
               <div className="mb-1 flex items-center justify-between">
                 <span>الوسائط الأساسية</span>
                 <input ref={fileRef} type="file" accept="image/*" hidden
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} />
                 <button onClick={() => fileRef.current?.click()} disabled={uploading}
                   className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-50">
-                  <ImageUp className="h-3 w-3" />{uploading ? "جاري الرفع..." : "رفع"}
+                  <ImageUp className="h-3 w-3" />{uploading ? "جاري الرفع..." : "رفع جديد"}
                 </button>
               </div>
-              {attached ? (
-                <div className="flex items-center gap-2 rounded-md border bg-muted/30 p-2">
+              <MediaPicker
+                media={media.filter((m) => m.story_id === scene.story_id)}
+                value={form.primary_media_id}
+                onChange={(id) => setForm({ ...form, primary_media_id: id })}
+              />
+              {attached && (
+                <div className="mt-2 flex items-center gap-2 rounded-md border bg-muted/30 p-2">
                   <StoryMediaImage media={attached} alt="" className="h-12 w-16 rounded object-cover" />
                   <div className="text-muted-foreground">
                     <div className="font-mono">{attached.width}×{attached.height} · {(attached.byte_size / 1024).toFixed(1)} KB</div>
                     <div>{attached.verified ? "متحققة ✓" : "غير متحققة"} · {attached.preset}</div>
                   </div>
                 </div>
-              ) : <div className="rounded-md border bg-muted/30 p-2 text-muted-foreground">لا يوجد مرفق.</div>}
+              )}
             </div>
           </div>
-          <label className="block text-xs">
-            محتوى المشهد (JSON)
-            {parsedPayload === null && (
-              <span className="mr-2 text-destructive">JSON غير صالح — إيقاف الحفظ التلقائي</span>
-            )}
-            <textarea value={form.payload} onChange={(e) => setForm({ ...form, payload: e.target.value })}
-              rows={10} dir="ltr"
-              className={`mt-1 w-full rounded-md border bg-background px-2 py-1.5 font-mono text-xs ${
-                parsedPayload === null ? "border-destructive/50" : ""
-              }`} />
-          </label>
+
+          <StructuredPayloadEditor
+            sceneType={form.scene_type}
+            payload={parsedPayload ?? {}}
+            onChange={(next) => setForm({ ...form, payload: JSON.stringify(next, null, 2) })}
+          />
+
+          <details className="rounded-md border bg-muted/20" open={jsonOpen}
+            onToggle={(e) => setJsonOpen((e.target as HTMLDetailsElement).open)}>
+            <summary className="cursor-pointer px-2 py-1.5 text-xs text-muted-foreground">
+              متقدم — JSON خام
+              {parsedPayload === null && (
+                <span className="mr-2 text-destructive">JSON غير صالح — إيقاف الحفظ التلقائي</span>
+              )}
+            </summary>
+            <div className="p-2">
+              <textarea value={form.payload} onChange={(e) => setForm({ ...form, payload: e.target.value })}
+                rows={10} dir="ltr"
+                className={`mt-1 w-full rounded-md border bg-background px-2 py-1.5 font-mono text-xs ${
+                  parsedPayload === null ? "border-destructive/50" : ""
+                }`} />
+            </div>
+          </details>
         </div>
       )}
+      {preview && (
+        <ScenePreviewModal scene={scene} form={form} media={media} onClose={() => setPreview(false)} />
+      )}
+
       {confirming && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-lg border bg-background p-4 shadow-xl" dir="rtl">
