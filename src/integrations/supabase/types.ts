@@ -3036,6 +3036,14 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_attach_scene_media: {
+        Args: { p_media_id: string; p_scene_id: string; p_story_id: string }
+        Returns: Json
+      }
+      admin_attach_story_cover: {
+        Args: { p_media_id: string; p_story_id: string }
+        Returns: Json
+      }
       admin_campaign_progress_impact: {
         Args: { v_campaign_id: string; v_incoming: Json }
         Returns: Json
