@@ -749,11 +749,14 @@ function SceneRow({
           <div className="font-medium">{scene.title_ar || "(بدون عنوان)"}</div>
         </div>
         <SaveIndicator status={status} error={error} />
+        <button onClick={() => setPreview(true)} title="معاينة المشهد"
+          className="rounded p-1 text-muted-foreground hover:bg-muted"><Eye className="h-4 w-4" /></button>
         <button onClick={onDuplicate} title="نسخ المشهد"
           className="rounded p-1 text-muted-foreground hover:bg-muted"><Copy className="h-4 w-4" /></button>
         <button onClick={() => setConfirming(true)} title="حذف"
           className="rounded p-1 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
       </div>
+
       {open && (
         <div className="space-y-3 border-t p-3">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
