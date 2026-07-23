@@ -73,30 +73,30 @@ export function ContinueYourJourney({
   return (
     <div
       dir="rtl"
-      className="fixed inset-x-0 bottom-0 z-40 max-h-[92dvh] overflow-y-auto rounded-t-3xl border-t border-gold/25 bg-background/98 shadow-[0_-20px_60px_rgba(0,0,0,0.7)] backdrop-blur"
-      style={{ animation: "cyj-slide 420ms cubic-bezier(0.16,1,0.3,1) both" }}
+      className="fixed inset-x-0 bottom-0 z-40 max-h-[92dvh] overflow-y-auto rounded-t-[28px] border-t border-gold/25 bg-background/98 shadow-[0_-24px_70px_rgba(0,0,0,0.75)] backdrop-blur"
+      style={{ animation: "cyj-slide 520ms cubic-bezier(0.16,1,0.3,1) both" }}
     >
-      <style>{`@keyframes cyj-slide { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
-      <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-white/20" />
+      <style>{`@keyframes cyj-slide { from { transform: translateY(100%); opacity: 0.4; } to { transform: translateY(0); opacity: 1; } }`}</style>
+      <div className="mx-auto mt-2.5 h-1.5 w-12 rounded-full bg-white/20" />
 
-      <div className="px-5 pt-4 pb-2">
-        <p className="text-[11px] tracking-[0.32em] text-gold/70">تابع رحلتك</p>
-        <h2 className="mt-1 font-display text-xl font-bold text-gold">
+      {/* Header — quiet, curated, no exclamation. */}
+      <div className="px-6 pt-6 pb-3">
+        <p className="text-[10px] tracking-[0.36em] text-gold/70">تابع رحلتك</p>
+        <h2 className="mt-2 font-display text-[clamp(20px,5.4vw,26px)] font-bold leading-tight text-gold">
           {finished ? `«${finished.title_ar}»` : "قصة أخرى بانتظارك"}
         </h2>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/60">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/60">
           {meta?.era && <span>{meta.era}</span>}
           {meta?.era && durationLabel && <span className="opacity-40">·</span>}
           {durationLabel && <span>{durationLabel}</span>}
-
         </div>
-        <p className="mt-2 text-[12px] text-white/70">
+        <p className="mt-3 text-[12.5px] leading-relaxed text-white/65">
           القراءة انتهت. هنا تبدأ المحادثة.
         </p>
       </div>
 
       {finished && (
-        <div className="px-5 pt-2">
+        <div className="px-6 pt-2">
           <Istazadtu anchorType="story" anchorId={finished.id} />
         </div>
       )}
@@ -110,20 +110,27 @@ export function ContinueYourJourney({
       )}
 
       {next && (
-        <div className="px-5 pt-6">
-          <p className="mb-2 text-[10px] tracking-[0.28em] text-gold/70">قصة قادمة</p>
+        <div className="px-6 pt-8">
+          <div className="mb-3 flex items-center gap-3">
+            <span className="h-px flex-1 bg-gradient-to-l from-gold/40 to-transparent" />
+            <p className="text-[10px] tracking-[0.32em] text-gold/70">قصة قادمة</p>
+            <span className="h-px flex-1 bg-gradient-to-r from-gold/40 to-transparent" />
+          </div>
           <StoryCard story={next} />
         </div>
       )}
 
       {finished && (
-        <div className="px-5 pt-6">
+        <div className="px-6 pt-8">
           <PublicContributionsNotice anchorType="story" anchorId={finished.id} />
           <StoryComments storyId={finished.id} />
         </div>
       )}
 
-      <div className="sticky bottom-0 flex flex-wrap items-center justify-center gap-2 border-t border-white/10 bg-background/95 px-5 py-3 backdrop-blur">
+      <div
+        className="sticky bottom-0 flex flex-wrap items-center justify-center gap-2 border-t border-white/10 bg-background/95 px-5 py-4 backdrop-blur"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
+      >
         <button
           type="button"
           onClick={onClose}
