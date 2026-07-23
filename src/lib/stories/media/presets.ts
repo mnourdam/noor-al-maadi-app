@@ -1,15 +1,23 @@
 // ============================================================
-// Stories P2 — Processing presets
+// Stories P2 — Processing presets (FROZEN)
 // ------------------------------------------------------------
 // A preset is a stable identifier for the (dimension cap, size
 // target, encoder settings) used to produce a `story_media` row.
 // The identifier is written to `story_media.preset` and never
 // re-interpreted — treat it as opaque outside this file.
 //
-// New behaviour ships as a new preset id + a bumped
-// `processing_version`. Existing rows stay valid forever; the
-// player and admin editor render whatever was stored.
+// IMMUTABILITY RULE (do not violate):
+//   Changing dimensions, quality, or the processing algorithm
+//   MUST create a new preset id (bumped suffix, e.g. `.v2`) and
+//   MUST bump `processingVersion`. Never edit an existing preset
+//   in place — old rows already carry the old id/version and the
+//   player will render them for years.
+//
+// Ownership (see `story_media.ownership`) is orthogonal to
+// preset selection: the same preset can produce story-owned or
+// shared bytes.
 // ============================================================
+
 
 import type { ProcessImageOptions } from "@/lib/image-processor";
 
