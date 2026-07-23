@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Pause } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/lib/profile";
 import type { StoryRow, StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
 import { useStoryMediaUrl } from "@/lib/stories/media/url";
@@ -26,6 +27,7 @@ import { RewardMoment } from "./RewardMoment";
 import { ContinueYourJourney } from "./ContinueYourJourney";
 import { sceneDwellMs } from "./timing";
 import { useNavigate } from "@tanstack/react-router";
+
 
 interface Props {
   story: StoryRow;
