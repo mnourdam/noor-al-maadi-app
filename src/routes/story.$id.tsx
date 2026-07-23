@@ -1,23 +1,17 @@
 // ============================================================
-// /story/$id — three-view runtime: Landing → Reader → Completion (P4.1)
+// /story/$id — cinematic Story runtime (Phase B Rev 2)
 // ------------------------------------------------------------
-// - Landing: metadata, prereqs, resume/start button (default view).
-// - Reader:  the P4 StoryReader (unchanged runtime).
-// - Completion: rewarding ending screen with next-story suggestion.
-//
-// Server-side access resolved via `get_story_access`; unlock,
-// prereq resolution, progress and rewards status come from
-// `list_stories_v2` (single fetch, cached).
+// The old three-view (Landing → Reader → Completion) is retired.
+// The route mounts a fullscreen <StoryPlayer/> for accessible stories
+// and an inline compact card for locked / not-found / not-published.
+// Progress + completion contracts unchanged.
 // ============================================================
 
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
-import { ArrowLeft, BookOpen, Lock } from "lucide-react";
+import { ArrowLeft, BookOpen, Lock, Loader2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { StoryReader } from "@/components/stories/StoryReader";
-import { StoryLanding } from "@/components/stories/StoryLanding";
-import { StoryCompletion } from "@/components/stories/StoryCompletion";
+import { StoryPlayer } from "@/components/stories/player/StoryPlayer";
 import { fetchStoryAccess } from "@/lib/stories/progress";
 import { fetchStoryMediaForRuntime } from "@/lib/stories/media/fetch-for-story";
 import { listStoriesSummary } from "@/lib/stories/summary";
@@ -55,13 +49,11 @@ export const Route = createFileRoute("/story/$id")({
   component: StoryRoute,
 });
 
-type View = "landing" | "reader" | "completion";
-
 function StoryRoute() {
   const { id } = useParams({ from: "/story/$id" });
-  const [view, setView] = useState<View>("landing");
+  const navigate = useNavigate();
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["story", id],
     queryFn: () => loadStory(id),
   });
@@ -73,16 +65,11 @@ function StoryRoute() {
   });
   const summary = summariesQ.data?.find((s) => s.id === id) ?? null;
 
-  // Reset view when route id changes.
-  useEffect(() => { setView("landing"); }, [id]);
-
   if (isLoading || summariesQ.isLoading) {
     return (
-      <AppShell>
-        <Screen title="القصة" subtitle="جاري التحميل...">
-          <div className="p-6 text-center text-sm text-muted-foreground">...</div>
-        </Screen>
-      </AppShell>
+      <div className="fixed inset-0 z-[200] grid place-items-center bg-black text-gold">
+        <Loader2 className="size-6 animate-spin" />
+      </div>
     );
   }
 
@@ -101,80 +88,49 @@ function StoryRoute() {
   const bundle = data?.bundle;
   if (!bundle?.ok || !bundle.story || !bundle.scenes) {
     const reason = bundle?.reason ?? "not_found";
-    // If we have a summary (published & visible), the "locked" case shows
-    // the landing page (which knows how to render prereqs). Otherwise a
-    // generic not-found / not-published card.
-    if (reason === "locked" && summary) {
-      return (
-        <AppShell>
-          <StoryLanding summary={summary} onStart={() => { /* locked */ }} />
-        </AppShell>
-      );
-    }
     return (
       <AppShell>
         <Screen title="القصة" subtitle="">
-          <LockedState reason={reason} title={bundle?.story?.title_ar} />
+          <LockedState reason={reason} title={bundle?.story?.title_ar} prereqs={summary?.prereqs} />
         </Screen>
       </AppShell>
     );
   }
 
-  if (view === "landing") {
-    if (!summary) {
-      // Fallback: bundle came through but the summary RPC did not surface
-      // this story (edge case). Enter the reader directly.
-      return renderReader();
-    }
-    return (
-      <AppShell>
-        <StoryLanding summary={summary} onStart={() => setView("reader")} />
-      </AppShell>
-    );
-  }
+  const initial = (() => {
+    const p = bundle.progress;
+    if (!p) return 0;
+    return Math.max(p.last_scene_index ?? 0, p.max_scene_index_reached ?? 0);
+  })();
 
-  if (view === "completion" && summary) {
-    return (
-      <AppShell>
-        <StoryCompletion
-          finished={summary}
-          onReplay={() => { setView("reader"); void refetch(); }}
-        />
-      </AppShell>
-    );
-  }
-
-  return renderReader();
-
-  function renderReader() {
-    return (
-      <AppShell>
-        <StoryReader
-          story={bundle!.story!}
-          scenes={bundle!.scenes!}
-          media={data?.media ?? []}
-          initialProgress={bundle!.progress ?? null}
-          alreadyCompleted={!!bundle!.completed}
-          onCompleted={() => {
-            void refetch();
-            void summariesQ.refetch();
-            setView("completion");
-          }}
-        />
-      </AppShell>
-    );
-  }
+  return (
+    <StoryPlayer
+      story={bundle.story}
+      scenes={bundle.scenes}
+      media={data?.media ?? []}
+      summary={summary}
+      initialSceneIndex={initial}
+      alreadyCompleted={!!bundle.completed}
+      onExit={() => { void navigate({ to: "/stories" }); }}
+    />
+  );
 }
 
-function LockedState({ reason, title }: { reason: string; title?: string }) {
+function LockedState({
+  reason, title, prereqs,
+}: {
+  reason: string;
+  title?: string;
+  prereqs?: { kind: string; ref: string; title: string | null; satisfied: boolean }[];
+}) {
   const label =
-    reason === "locked"      ? "هذه القصة مقفلة"
+    reason === "locked"        ? "هذه القصة مقفلة"
     : reason === "not_published" ? "هذه القصة غير منشورة"
-                              : "لم يتم العثور على القصة";
+                                 : "لم يتم العثور على القصة";
   const hint =
-    reason === "locked"      ? "أنجز الحملات أو التحقيقات المطلوبة لفتحها."
+    reason === "locked"        ? "أنجز الحملات أو التحقيقات المطلوبة لفتحها."
     : reason === "not_published" ? "عد لاحقًا بعد النشر."
-                              : "قد تكون أُزيلت أو أن الرابط غير صحيح.";
+                                 : "قد تكون أُزيلت أو أن الرابط غير صحيح.";
   return (
     <div dir="rtl" className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
       {reason === "locked" ? (
@@ -186,6 +142,15 @@ function LockedState({ reason, title }: { reason: string; title?: string }) {
         {title ? `${title} — ${label}` : label}
       </p>
       <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+      {reason === "locked" && prereqs && prereqs.length > 0 && (
+        <ul className="mx-auto mt-4 max-w-sm space-y-1 text-start text-[12px] text-white/80">
+          {prereqs.map((p) => (
+            <li key={`${p.kind}:${p.ref}`} className={p.satisfied ? "text-emerald-400" : ""}>
+              • {p.title ?? p.ref}
+            </li>
+          ))}
+        </ul>
+      )}
       <Link
         to="/stories"
         className="mt-4 inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 px-4 py-2 text-sm text-gold"

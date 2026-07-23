@@ -13,7 +13,10 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Bell } from "lucide-react";
+// Phase B Rev 2 — icon disambiguation: personal inbox uses a sealed
+// letter (Mail) so it never collides visually with the system
+// notification Bell used elsewhere in the HUD.
+import { Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccount } from "@/lib/account";
 import { useOnline } from "@/hooks/useOnline";
@@ -63,7 +66,7 @@ export function PersonalInboxBell({ className }: Props) {
         className,
       )}
     >
-      <Bell className="size-4" aria-hidden="true" strokeWidth={1.8} />
+      <Mail className="size-4" aria-hidden="true" strokeWidth={1.8} />
       {hasUnread && (
         <span
           // Small, static gold dot. No pulse, no bounce, no ring animation.
