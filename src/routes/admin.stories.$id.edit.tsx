@@ -404,9 +404,14 @@ function MetadataSection({
     setUploadingCover(true);
     try {
       const res = await uploadStoryMedia({ storyId: story.id, kind: "cover", file, metadata: { role: "cover" } });
+      // Persist the attachment immediately via the server-authoritative RPC.
+      // Do NOT rely on autosave here: a slow debounce or a transient
+      // network error was leaving stories.cover_media_id = NULL despite a
+      // fully verified story_media row (the bug that caused Home cards to
+      // collapse and validators to report "no_cover" false positives).
+      await adminAttachStoryCover(story.id, res.mediaId);
       const next = { ...form, cover_media_id: res.mediaId };
       setForm(next);
-      await saver(next);
       onNotify("ok", "تم رفع الغلاف والتحقق منه.");
       await onSaved();
     } catch (e) { onNotify("err", e instanceof Error ? e.message : String(e)); }
