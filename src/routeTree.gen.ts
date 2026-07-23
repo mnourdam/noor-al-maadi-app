@@ -101,6 +101,7 @@ import { Route as AdminAtlasImportRouteImport } from './routes/admin.atlas-impor
 import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-entities'
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as AdminStoriesIndexRouteImport } from './routes/admin.stories.index'
 import { Route as AdminInvestigationsIndexRouteImport } from './routes/admin.investigations.index'
 import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
 import { Route as AdminEncyclopediaCleanupIndexRouteImport } from './routes/admin.encyclopedia-cleanup.index'
@@ -602,6 +603,11 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   path: '/admin/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminStoriesIndexRoute = AdminStoriesIndexRouteImport.update({
+  id: '/admin/stories/',
+  path: '/admin/stories/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminInvestigationsIndexRoute =
   AdminInvestigationsIndexRouteImport.update({
     id: '/',
@@ -887,6 +893,7 @@ export interface FileRoutesByFullPath {
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/investigations/': typeof AdminInvestigationsIndexRoute
+  '/admin/stories/': typeof AdminStoriesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
@@ -1007,6 +1014,7 @@ export interface FileRoutesByTo {
   '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games': typeof AdminGamesIndexRoute
   '/admin/investigations': typeof AdminInvestigationsIndexRoute
+  '/admin/stories': typeof AdminStoriesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
@@ -1133,6 +1141,7 @@ export interface FileRoutesById {
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/investigations/': typeof AdminInvestigationsIndexRoute
+  '/admin/stories/': typeof AdminStoriesIndexRoute
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
@@ -1260,6 +1269,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/'
     | '/admin/games/'
     | '/admin/investigations/'
+    | '/admin/stories/'
     | '/admin/campaigns/$id/edit'
     | '/admin/investigations/$id/edit'
     | '/api/public/webhooks/resend'
@@ -1380,6 +1390,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup'
     | '/admin/games'
     | '/admin/investigations'
+    | '/admin/stories'
     | '/admin/campaigns/$id/edit'
     | '/admin/investigations/$id/edit'
     | '/api/public/webhooks/resend'
@@ -1505,6 +1516,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/'
     | '/admin/games/'
     | '/admin/investigations/'
+    | '/admin/stories/'
     | '/admin/campaigns/$id/edit'
     | '/admin/investigations/$id/edit'
     | '/api/public/webhooks/resend'
@@ -1613,6 +1625,7 @@ export interface RootRouteChildren {
   GamesModeSlugRoute: typeof GamesModeSlugRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   AdminCampaignsIndexRoute: typeof AdminCampaignsIndexRoute
+  AdminStoriesIndexRoute: typeof AdminStoriesIndexRoute
   AdminCampaignsIdEditRoute: typeof AdminCampaignsIdEditRoute
   ApiPublicWebhooksResendRoute: typeof ApiPublicWebhooksResendRoute
   LovableEmailAuthCustomDispatchRoute: typeof LovableEmailAuthCustomDispatchRoute
@@ -2270,6 +2283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/stories/': {
+      id: '/admin/stories/'
+      path: '/admin/stories'
+      fullPath: '/admin/stories/'
+      preLoaderRoute: typeof AdminStoriesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/investigations/': {
       id: '/admin/investigations/'
       path: '/'
@@ -2699,6 +2719,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesModeSlugRoute: GamesModeSlugRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   AdminCampaignsIndexRoute: AdminCampaignsIndexRoute,
+  AdminStoriesIndexRoute: AdminStoriesIndexRoute,
   AdminCampaignsIdEditRoute: AdminCampaignsIdEditRoute,
   ApiPublicWebhooksResendRoute: ApiPublicWebhooksResendRoute,
   LovableEmailAuthCustomDispatchRoute: LovableEmailAuthCustomDispatchRoute,
