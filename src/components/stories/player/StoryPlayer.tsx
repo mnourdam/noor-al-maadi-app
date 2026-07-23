@@ -284,14 +284,27 @@ export function StoryPlayer({
       )}
 
       {/* Reward moment */}
-      {phase === "reward" && !rewardShown && (
-        <RewardMoment
-          xp={alreadyCompleted ? 0 : (summary?.xp_reward ?? story.xp_reward ?? 0)}
-          dinars={alreadyCompleted ? 0 : (summary?.dinar_reward ?? story.dinar_reward ?? 0)}
-          silent={alreadyCompleted}
-          onDone={() => { setRewardShown(true); setPhase("journey"); }}
-        />
-      )}
+      {phase === "reward" && !rewardShown && (() => {
+        // Prefer authoritative granted values from the RPC when known.
+        // Fall back to summary while the network request is in-flight so
+        // the reward moment never blanks out on first-completion.
+        const xp = grantedXp !== null
+          ? grantedXp
+          : (alreadyCompleted ? 0 : (summary?.xp_reward ?? story.xp_reward ?? 0));
+        const din = grantedDinars !== null
+          ? grantedDinars
+          : (alreadyCompleted ? 0 : (summary?.dinar_reward ?? story.dinar_reward ?? 0));
+        const silent = alreadyCompleted || (grantedXp === 0 && grantedDinars === 0);
+        return (
+          <RewardMoment
+            xp={xp}
+            dinars={din}
+            silent={silent}
+            onDone={() => { setRewardShown(true); setPhase("journey"); }}
+          />
+        );
+      })()}
+
 
       {/* Continue Your Journey */}
       {phase === "journey" && (
