@@ -18,11 +18,13 @@ import {
   commentErrorCopyAr,
 } from "@/lib/social/comments";
 import type { SocialCommentRow } from "@/lib/social/comments";
+import { ReportCommentButton } from "./ReportCommentButton";
 
 interface Props {
   row: SocialCommentRow;
   onChange: (row: SocialCommentRow) => void;
   onDelete: (id: string) => void;
+  currentUserId?: string | null;
 }
 
 function formatDateAr(iso: string) {
