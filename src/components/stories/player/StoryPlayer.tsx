@@ -298,17 +298,12 @@ export function StoryPlayer({
   );
 }
 
-/** Wraps the stage in a per-scene transition animation. */
+/** Wraps the stage in a per-scene transition animation.
+ *  Honors `payload.transition` when set (dissolve|blur|paper|calm|cut).
+ */
 function TransitionShell({ scene, children }: { scene: StorySceneRow; children: React.ReactNode }) {
-  const cls = (() => {
-    switch (scene.scene_type) {
-      case "document":   return "anim-paper";
-      case "reveal":     return "anim-blur";
-      case "reflection": return "anim-calm";
-      case "perspective":return "anim-dissolve";
-      default:           return "anim-dissolve";
-    }
-  })();
+  const t = resolveSceneTransition(scene);
+  const cls = `anim-${t}`;
   return (
     <div key={scene.id} className={`absolute inset-0 ${cls}`}>
       <style>{`
@@ -316,6 +311,7 @@ function TransitionShell({ scene, children }: { scene: StorySceneRow; children: 
         .anim-paper    { animation: sc-paper 520ms cubic-bezier(0.2,0.9,0.3,1) both; }
         .anim-blur     { animation: sc-blur 620ms ease-out both; }
         .anim-calm     { animation: sc-calm 720ms ease-out both; }
+        .anim-cut      { animation: none; }
         @keyframes sc-dissolve { from { opacity: 0; } to { opacity: 1; } }
         @keyframes sc-paper    { from { opacity: 0; transform: translateY(24px) rotate(-0.6deg);} to { opacity: 1; transform: translateY(0) rotate(0);} }
         @keyframes sc-blur     { from { opacity: 0; filter: blur(14px);} to { opacity: 1; filter: blur(0);} }
@@ -325,3 +321,4 @@ function TransitionShell({ scene, children }: { scene: StorySceneRow; children: 
     </div>
   );
 }
+
