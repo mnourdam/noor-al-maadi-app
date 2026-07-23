@@ -211,7 +211,7 @@ function StoryEditorRoute() {
 // ------------------------------------------------------------------
 function SaveIndicator({ status, error }: { status: SaveStatus; error: string | null }) {
   if (status === "idle") return null;
-  const map: Record<SaveStatus, { icon: JSX.Element; label: string; className: string }> = {
+  const map: Record<SaveStatus, { icon: React.ReactNode; label: string; className: string }> = {
     idle:    { icon: <Cloud className="h-3.5 w-3.5" />, label: "", className: "" },
     dirty:   { icon: <Cloud className="h-3.5 w-3.5" />, label: "تغييرات غير محفوظة", className: "text-muted-foreground" },
     saving:  { icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />, label: "جاري الحفظ...", className: "text-muted-foreground" },
