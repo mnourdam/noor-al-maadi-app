@@ -44,11 +44,15 @@ export function sceneSentences(scene: StorySceneRow): string[] {
   return flat;
 }
 
+// Emotional pacing calibration (Phase 5.5):
+//   * document scenes read as slightly more deliberate;
+//   * perspective (heavy voice) breathes a beat longer;
+//   * reveal lands a hair quicker so the payoff feels crisp.
 export const BASE_BY_TYPE: Record<StorySceneType, number> = {
   reading: 2200,
-  perspective: 2600,
-  document: 2800,
-  reveal: 2600,
+  perspective: 2750,
+  document: 3100,
+  reveal: 2500,
   reflection: 60_000, // never used — reflections don't auto-advance
 };
 
@@ -56,7 +60,7 @@ export const BASE_BY_TYPE: Record<StorySceneType, number> = {
 export const SENTENCE_STAGGER_MS = 900;
 
 /** Post-final-sentence dwell so the reader can breathe. */
-export const SETTLE_MS = 900;
+export const SETTLE_MS = 1050;
 
 export const MIN_DWELL = 3200;
 export const MAX_DWELL = 10_000;
