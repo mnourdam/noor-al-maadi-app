@@ -425,22 +425,32 @@ function ReflectionInline({ onSubmit }: { onSubmit: (t: string) => Promise<void>
         onClick={stop}
       />
       <div className="mt-4 flex items-center justify-between gap-3">
-        <span className="text-[11px] text-white/55">
-          {saved ? "تم الحفظ ✓" : "خاص بك — يُحفظ في تأمّلاتك."}
+        <span className={`text-[11px] ${saved ? "text-gold" : "text-white/55"}`}>
+          {saved ? "تم الحفظ ✓ — يُحفظ في تأمّلاتك." : "خاص بك — يُحفظ في تأمّلاتك."}
         </span>
-        <button
-          type="button"
-          // Fire on pointerdown so a single tap always commits — mobile
-          // Safari/Android WebViews often swallow the first click when
-          // the textarea currently owns focus.
-          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); void submit(text); }}
-          onClick={(e) => { e.stopPropagation(); }}
-          disabled={busy || !text.trim()}
-          className="rounded-full bg-gold px-5 py-2 text-[13px] font-bold text-black shadow disabled:opacity-40"
-        >
-          {busy ? "..." : "حفظ"}
-        </button>
+        {saved ? (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-4 py-2 text-[13px] font-semibold text-gold"
+            aria-live="polite"
+          >
+            محفوظ ✓
+          </span>
+        ) : (
+          <button
+            type="button"
+            // Fire on pointerdown so a single tap always commits — mobile
+            // Safari/Android WebViews often swallow the first click when
+            // the textarea currently owns focus.
+            onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); void submit(text); }}
+            onClick={(e) => { e.stopPropagation(); }}
+            disabled={busy || !text.trim()}
+            className="rounded-full bg-gold px-5 py-2 text-[13px] font-bold text-black shadow disabled:opacity-40"
+          >
+            {busy ? "..." : "حفظ"}
+          </button>
+        )}
       </div>
+
     </div>
   );
 }
