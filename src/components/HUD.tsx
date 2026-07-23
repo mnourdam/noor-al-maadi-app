@@ -182,6 +182,10 @@ export function HUD() {
               </span>
             )}
           </Link>
+          {/* Personal inbox (P6 Step 3): visually leftmost in the RTL header.
+              Only rendered for authenticated users; the component itself
+              returns null for guests. */}
+          <PersonalInboxBell />
         </div>
       </div>
     </div>
