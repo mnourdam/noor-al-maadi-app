@@ -160,13 +160,24 @@ export function StoryPlayer({
   // --- Gesture layer: tap zones, long-press, swipe-down ----------
   const touchRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const longPressTimer = useRef<number | null>(null);
+  // Ephemeral touch-feedback marker — a subtle radial flash placed
+  // at the tap point acknowledging the interaction.
+  const [tapFlash, setTapFlash] = useState<{ x: number; y: number; kind: "next" | "prev" | "toggle"; key: number } | null>(null);
+  const [longPressPulse, setLongPressPulse] = useState(false);
+
+  const flashAt = (x: number, y: number, kind: "next" | "prev" | "toggle") => {
+    setTapFlash({ x, y, kind, key: performance.now() });
+  };
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (phase !== "playing") return;
     if (isReflectionScene) return; // reflection scenes own their own input
     touchRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    longPressTimer.current = window.setTimeout(() => setPaused(true), 350);
+    longPressTimer.current = window.setTimeout(() => {
+      setPaused(true);
+      setLongPressPulse(true);
+    }, 350);
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
@@ -174,7 +185,7 @@ export function StoryPlayer({
     const start = touchRef.current;
     touchRef.current = null;
     if (isReflectionScene && phase === "playing") return; // ignore taps on reflection scene
-    if (paused) { setPaused(false); return; }
+    if (paused) { setPaused(false); setLongPressPulse(false); return; }
 
     if (!start) return;
     const dx = e.clientX - start.x;
@@ -189,12 +200,12 @@ export function StoryPlayer({
     if (phase === "intro") { setPhase("playing"); return; }
     if (phase !== "playing") return;
     const w = (e.currentTarget as HTMLElement).clientWidth;
-    const zoneRight = e.clientX - (e.currentTarget as HTMLElement).getBoundingClientRect().left;
-    // RTL: right side (higher x in LTR terms) = previous; left side = next
-    // But player is fullscreen; use pointer x relative to element.
-    if (zoneRight < w * 0.25) { void goNext(); }
-    else if (zoneRight > w * 0.75) { goPrev(); }
-    else { setPaused((p) => !p); }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const zoneRight = e.clientX - rect.left;
+    // RTL: left side = next; right side = previous.
+    if (zoneRight < w * 0.25) { flashAt(e.clientX - rect.left, e.clientY - rect.top, "next"); void goNext(); }
+    else if (zoneRight > w * 0.75) { flashAt(e.clientX - rect.left, e.clientY - rect.top, "prev"); goPrev(); }
+    else { flashAt(e.clientX - rect.left, e.clientY - rect.top, "toggle"); setPaused((p) => !p); }
   };
 
   // Keyboard support
