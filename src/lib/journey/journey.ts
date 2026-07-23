@@ -63,8 +63,8 @@ export async function listMyJourney(opts: ListJourneyOptions = {}): Promise<Jour
 
   const { data, error } = await supabase.rpc("list_my_journey", {
     _kinds: kinds as unknown as never,
-    _cursor_ts: opts.cursor?.ts ?? null,
-    _cursor_id: opts.cursor?.id ?? null,
+    _cursor_ts: opts.cursor?.ts ?? undefined,
+    _cursor_id: opts.cursor?.id ?? undefined,
     _limit: limit,
   });
 
