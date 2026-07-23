@@ -271,6 +271,12 @@ export function StoryPlayer({
         </div>
       </div>
 
+      {/* Touch feedback — subtle radial flash at tap point + pause halo. */}
+      <TapFeedback flash={tapFlash} />
+      <PauseHalo active={longPressPulse && paused && phase === "playing"} />
+
+
+
       {/* Stage — intro layer stays mounted briefly after phase flip so
           the landing cross-fades into scene 1 instead of hard-cutting. */}
       {introMounted && (
