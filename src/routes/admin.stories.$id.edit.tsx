@@ -199,8 +199,6 @@ function StoryEditorRoute() {
         </div>
       )}
 
-      {/* Kept for future keyboard shortcut wiring. */}
-      {navigate && null}
     </div>
   );
 }
