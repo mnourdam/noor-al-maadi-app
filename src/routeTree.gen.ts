@@ -71,6 +71,7 @@ import { Route as AdminNotificationsRouteImport } from './routes/admin.notificat
 import { Route as AdminNewsletterRouteImport } from './routes/admin.newsletter'
 import { Route as AdminNativeAuthDiagnosticsRouteImport } from './routes/admin.native-auth-diagnostics'
 import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum-provenance'
+import { Route as AdminModerationRouteImport } from './routes/admin.moderation'
 import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminMapRouteImport } from './routes/admin.map'
 import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
@@ -449,6 +450,11 @@ const AdminNativeAuthDiagnosticsRoute =
 const AdminMuseumProvenanceRoute = AdminMuseumProvenanceRouteImport.update({
   id: '/admin/museum-provenance',
   path: '/admin/museum-provenance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminModerationRoute = AdminModerationRouteImport.update({
+  id: '/admin/moderation',
+  path: '/admin/moderation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminMigrationRoute = AdminMigrationRouteImport.update({
@@ -867,6 +873,7 @@ export interface FileRoutesByFullPath {
   '/admin/investigations': typeof AdminInvestigationsRouteWithChildren
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
+  '/admin/moderation': typeof AdminModerationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/native-auth-diagnostics': typeof AdminNativeAuthDiagnosticsRoute
   '/admin/newsletter': typeof AdminNewsletterRoute
@@ -992,6 +999,7 @@ export interface FileRoutesByTo {
   '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
+  '/admin/moderation': typeof AdminModerationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/native-auth-diagnostics': typeof AdminNativeAuthDiagnosticsRoute
   '/admin/newsletter': typeof AdminNewsletterRoute
@@ -1123,6 +1131,7 @@ export interface FileRoutesById {
   '/admin/investigations': typeof AdminInvestigationsRouteWithChildren
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
+  '/admin/moderation': typeof AdminModerationRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/native-auth-diagnostics': typeof AdminNativeAuthDiagnosticsRoute
   '/admin/newsletter': typeof AdminNewsletterRoute
@@ -1255,6 +1264,7 @@ export interface FileRouteTypes {
     | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
+    | '/admin/moderation'
     | '/admin/museum-provenance'
     | '/admin/native-auth-diagnostics'
     | '/admin/newsletter'
@@ -1380,6 +1390,7 @@ export interface FileRouteTypes {
     | '/admin/import-history'
     | '/admin/map'
     | '/admin/migration'
+    | '/admin/moderation'
     | '/admin/museum-provenance'
     | '/admin/native-auth-diagnostics'
     | '/admin/newsletter'
@@ -1510,6 +1521,7 @@ export interface FileRouteTypes {
     | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
+    | '/admin/moderation'
     | '/admin/museum-provenance'
     | '/admin/native-auth-diagnostics'
     | '/admin/newsletter'
@@ -1641,6 +1653,7 @@ export interface RootRouteChildren {
   AdminInvestigationsRoute: typeof AdminInvestigationsRouteWithChildren
   AdminMapRoute: typeof AdminMapRoute
   AdminMigrationRoute: typeof AdminMigrationRoute
+  AdminModerationRoute: typeof AdminModerationRoute
   AdminMuseumProvenanceRoute: typeof AdminMuseumProvenanceRoute
   AdminNativeAuthDiagnosticsRoute: typeof AdminNativeAuthDiagnosticsRoute
   AdminNewsletterRoute: typeof AdminNewsletterRoute
@@ -2123,6 +2136,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/museum-provenance'
       fullPath: '/admin/museum-provenance'
       preLoaderRoute: typeof AdminMuseumProvenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/moderation': {
+      id: '/admin/moderation'
+      path: '/admin/moderation'
+      fullPath: '/admin/moderation'
+      preLoaderRoute: typeof AdminModerationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/migration': {
@@ -2767,6 +2787,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminInvestigationsRoute: AdminInvestigationsRouteWithChildren,
   AdminMapRoute: AdminMapRoute,
   AdminMigrationRoute: AdminMigrationRoute,
+  AdminModerationRoute: AdminModerationRoute,
   AdminMuseumProvenanceRoute: AdminMuseumProvenanceRoute,
   AdminNativeAuthDiagnosticsRoute: AdminNativeAuthDiagnosticsRoute,
   AdminNewsletterRoute: AdminNewsletterRoute,
