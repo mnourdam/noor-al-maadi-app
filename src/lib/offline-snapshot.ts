@@ -86,6 +86,18 @@ export const COLLECTIONS: CollectionDef[] = [
     required: false,
     label: "سجل المتحف (قديم/اختياري — المتحف يقرأ من الموسوعة)" },
 
+  // Stories (P5) — first-class snapshot content. Anon RLS restricts
+  // stories to status='published', scenes to scenes-of-published-stories,
+  // and media to verified=true, so no additional filter is needed here.
+  { key: "stories", table: "stories",
+    filter: (q) => q.eq("status", "published"), required: false,
+    label: "القصص المنشورة" },
+  { key: "story_scenes", table: "story_scenes",
+    required: false,
+    label: "مشاهد القصص" },
+  { key: "story_media", table: "story_media",
+    filter: (q) => q.eq("verified", true), required: false,
+    label: "وسائط القصص (مُتحقّقة فقط)" },
 ];
 
 /** Collections that DO NOT expose `updated_at` — sync must full-fetch these. */
