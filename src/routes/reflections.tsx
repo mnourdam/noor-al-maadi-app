@@ -156,6 +156,30 @@ function ReflectionsJournalPage() {
           />
         </div>
 
+        {/* Filter tabs — P4.1 */}
+        <div role="tablist" aria-label="نوع التأمل" className="mb-3 inline-flex rounded-full border border-white/10 bg-surface/60 p-1 text-[12px]">
+          {([
+            { id: "all",      label: "الكل" },
+            { id: "campaign", label: "الحملات" },
+            { id: "story",    label: "القصص" },
+          ] as const).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => setTab(t.id)}
+              className={`rounded-full px-3 py-1 transition ${
+                tab === t.id
+                  ? "bg-gold text-black"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-surface p-8 text-center">
             <ScrollText className="mb-3 text-muted-foreground" size={36} aria-hidden />
