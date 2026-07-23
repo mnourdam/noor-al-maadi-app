@@ -1,9 +1,15 @@
 // ============================================================
 // SegmentedProgress — liquid-gold segments for the story player.
-// One segment per scene; the active segment fills over `activeMs`.
+// Phase 5.5 refinement:
+//   * Eased fill (easeOutQuad) — no more linear crawl.
+//   * Completed segments fade to a calmer done-tone via CSS
+//     transition instead of snapping.
+//   * Active segment carries a soft golden halo that grows with
+//     progress, giving the sense of "breath" rather than a bar.
 // ============================================================
 
 import { useEffect, useRef, useState } from "react";
+import { EASE_CINEMATIC, EASE_SOFT } from "./motion";
 
 interface Props {
   total: number;
@@ -13,6 +19,9 @@ interface Props {
   /** Bumped each time the active scene changes to reset the fill. */
   epoch: string | number;
 }
+
+// Softer easing than linear so progress never feels mechanical.
+const easeOutQuad = (p: number) => 1 - Math.pow(1 - p, 2);
 
 export function SegmentedProgress({ total, activeIndex, activeMs, paused, epoch }: Props) {
   const [pct, setPct] = useState(0);
@@ -38,9 +47,9 @@ export function SegmentedProgress({ total, activeIndex, activeMs, paused, epoch 
     }
     const tick = () => {
       const now = performance.now();
-      const p = Math.min(1, (now - startedAtRef.current) / Math.max(1, activeMs));
-      setPct(p);
-      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+      const raw = Math.min(1, (now - startedAtRef.current) / Math.max(1, activeMs));
+      setPct(easeOutQuad(raw));
+      if (raw < 1) rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
@@ -53,15 +62,24 @@ export function SegmentedProgress({ total, activeIndex, activeMs, paused, epoch 
         const isActive = i === activeIndex;
         const fill = isDone ? 100 : isActive ? pct * 100 : 0;
         return (
-          <div key={i} className="relative h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
+          <div
+            key={i}
+            className="relative h-[3px] flex-1 overflow-hidden rounded-full"
+            style={{
+              background: isDone ? "hsl(45 60% 55% / 0.35)" : "rgba(255,255,255,0.15)",
+              transition: `background 360ms ${EASE_SOFT}`,
+            }}
+          >
             <div
               className="absolute inset-y-0 right-0 rounded-full"
               style={{
                 width: `${fill}%`,
                 background:
-                  "linear-gradient(270deg, hsl(45 90% 55% / 0.95), hsl(45 100% 72% / 0.95))",
-                boxShadow: isActive ? "0 0 10px hsl(45 100% 65% / 0.55)" : undefined,
-                transition: isDone ? "width 260ms ease-out" : undefined,
+                  "linear-gradient(270deg, hsl(45 90% 55% / 0.95), hsl(45 100% 74% / 0.98))",
+                boxShadow: isActive
+                  ? `0 0 ${6 + Math.round(pct * 10)}px hsl(45 100% 65% / ${0.35 + pct * 0.35})`
+                  : undefined,
+                transition: isDone ? `width 320ms ${EASE_CINEMATIC}` : undefined,
               }}
             />
           </div>
@@ -69,5 +87,4 @@ export function SegmentedProgress({ total, activeIndex, activeMs, paused, epoch 
       })}
     </div>
   );
-
 }
