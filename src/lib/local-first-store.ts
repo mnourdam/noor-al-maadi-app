@@ -428,3 +428,35 @@ export function localStoryMediaForStory(storyId: string, referencedIds: Iterable
   }
   return Array.from(out.values());
 }
+
+/**
+ * Prune stories from the in-memory snapshot whose IDs are no longer
+ * present in the authoritative server list. This is called by
+ * `listStoriesSummary` on every successful online fetch so that stories
+ * that were hard-deleted server-side (test/duplicate rows) stop leaking
+ * into Home/Worlds via the offline fallback path.
+ *
+ * Only the in-memory indexes are trimmed here — the persisted snapshot
+ * refreshes through its normal pipeline. That's the correct scope: we
+ * want the current session to reflect reality immediately, without
+ * racing the snapshot writer.
+ */
+export function pruneStoriesToAuthoritative(authoritativeIds: Iterable<string>): void {
+  const keep = new Set<string>();
+  for (const id of authoritativeIds) if (id) keep.add(String(id));
+  if (keep.size === 0) return; // never prune to empty on a bad response
+  storiesAll = storiesAll.filter((r) => keep.has(String(r.id)));
+  for (const id of Array.from(storiesById.keys())) {
+    if (!keep.has(id)) storiesById.delete(id);
+  }
+  for (const [slug, row] of Array.from(storiesBySlug.entries())) {
+    if (!keep.has(String(row.id))) storiesBySlug.delete(slug);
+  }
+  for (const id of Array.from(scenesByStory.keys())) {
+    if (!keep.has(id)) scenesByStory.delete(id);
+  }
+  for (const id of Array.from(mediaByStory.keys())) {
+    if (!keep.has(id)) mediaByStory.delete(id);
+  }
+}
+
