@@ -169,10 +169,10 @@ export function StoryComments({ storyId, className }: Props) {
         <div className="space-y-3">
           {sort === "editors_helpful_new" &&
             editorsNotes.map((row) => (
-              <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} />
+              <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} />
             ))}
           {items.map((row) => (
-            <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} />
+            <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} />
           ))}
           {cursor && (
             <div className="flex justify-center pt-1">

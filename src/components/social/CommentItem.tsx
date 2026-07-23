@@ -18,11 +18,13 @@ import {
   commentErrorCopyAr,
 } from "@/lib/social/comments";
 import type { SocialCommentRow } from "@/lib/social/comments";
+import { ReportCommentButton } from "./ReportCommentButton";
 
 interface Props {
   row: SocialCommentRow;
   onChange: (row: SocialCommentRow) => void;
   onDelete: (id: string) => void;
+  currentUserId?: string | null;
 }
 
 function formatDateAr(iso: string) {
@@ -37,7 +39,7 @@ function formatDateAr(iso: string) {
   }
 }
 
-export function CommentItem({ row, onChange, onDelete }: Props) {
+export function CommentItem({ row, onChange, onDelete, currentUserId = null }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.body_text);
   const [pending, setPending] = useState(false);
@@ -133,9 +135,9 @@ export function CommentItem({ row, onChange, onDelete }: Props) {
           {formatDateAr(row.created_at)}
           {row.edited_at && <span className="mr-1"> · معدّل</span>}
         </span>
-        {!editing && row.is_mine && (
+        {!editing && (
           <div className="flex items-center gap-2">
-            {canEdit && (
+            {row.is_mine && canEdit && (
               <button
                 type="button"
                 onClick={() => setEditing(true)}
@@ -146,7 +148,7 @@ export function CommentItem({ row, onChange, onDelete }: Props) {
                 تعديل
               </button>
             )}
-            {canDelete && (
+            {row.is_mine && canDelete && (
               <button
                 type="button"
                 onClick={() => void remove()}
@@ -156,6 +158,13 @@ export function CommentItem({ row, onChange, onDelete }: Props) {
                 <Trash2 className="size-3" aria-hidden="true" />
                 حذف
               </button>
+            )}
+            {!row.is_mine && (
+              <ReportCommentButton
+                commentId={row.id}
+                authorId={row.author_id}
+                currentUserId={currentUserId}
+              />
             )}
           </div>
         )}
