@@ -222,11 +222,10 @@ export function StoryPlayer({
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const subtitle = story.era || null;
-  const progressEpoch = phase === "intro" ? "intro" : `s${idx}`;
-  const durationLabel = formatDurationArabic(
-    resolveStoryDurationMs({ metadata: story.metadata as Record<string, unknown> | null, scenes: ordered }),
-  );
+  const progressEpoch = `s${idx}`;
+  // Suppress unused warnings — subtitle/era live on the intro layer that
+  // was retired; kept as intentional void reference for future overlays.
+  void story.era;
 
 
   return (
@@ -241,7 +240,7 @@ export function StoryPlayer({
            style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <SegmentedProgress
           total={ordered.length}
-          activeIndex={phase === "intro" ? -1 : idx}
+          activeIndex={idx}
           activeMs={autoAdvance ? dwellMs : 999_999}
           paused={paused || phase !== "playing"}
           epoch={progressEpoch}
@@ -268,44 +267,6 @@ export function StoryPlayer({
       <TapFeedback flash={tapFlash} />
       <PauseHalo active={longPressPulse && paused && phase === "playing"} />
 
-
-
-      {/* Stage — intro layer stays mounted briefly after phase flip so
-          the landing cross-fades into scene 1 instead of hard-cutting. */}
-      {introMounted && (
-        <div
-          className="absolute inset-0 z-[6] transition-opacity duration-[900ms] ease-out"
-          style={{ opacity: phase === "intro" ? 1 : 0, pointerEvents: phase === "intro" ? "auto" : "none" }}
-        >
-          <KenBurns src={coverUrl} alt={story.title_ar} seed={`cover:${story.id}`} overlay="vignette" />
-          <div className="absolute inset-x-0 bottom-0 z-10 px-8 pb-[calc(env(safe-area-inset-bottom)+104px)] sm:px-12"
-               style={{ animation: "intro-fade 900ms 200ms ease-out both" }}>
-            <div className="w-full max-w-[34rem]">
-              <p className="mb-3 text-[10px] font-medium tracking-[0.42em] text-gold/80">إرث</p>
-              <h1
-                className="font-display font-bold leading-[1.12] text-white"
-                style={{
-                  fontSize: "clamp(28px, 7.6vw, 40px)",
-                  textShadow: "0 2px 18px rgba(0,0,0,0.6)",
-                }}
-              >
-                {story.title_ar}
-              </h1>
-              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-white/75">
-                {subtitle && <span>{subtitle}</span>}
-                {subtitle && <span className="opacity-40">·</span>}
-                <span>{durationLabel}</span>
-              </div>
-              {story.summary_ar && (
-                <p className="mt-4 text-[clamp(13px,3.4vw,15px)] leading-[1.9] text-white/75">
-                  {story.summary_ar}
-                </p>
-              )}
-            </div>
-          </div>
-          <style>{`@keyframes intro-fade { from { opacity: 0; transform: translateY(12px);} to { opacity: 1; transform: translateY(0);} }`}</style>
-        </div>
-      )}
 
 
       {(phase === "playing" || phase === "reward") && scene && (
