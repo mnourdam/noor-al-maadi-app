@@ -13,7 +13,7 @@
  *   }
  */
 
-export const SNAPSHOT_SCHEMA_VERSION = 3;
+export const SNAPSHOT_SCHEMA_VERSION = 4;
 
 /**
  * Hard floor for the player-facing public encyclopedia dataset. This is a
@@ -32,7 +32,10 @@ export type OfflineCollectionKey =
   | "today_in_history_events"
   | "daily_facts"
   | "atlas_entities"
-  | "content_registry";
+  | "content_registry"
+  | "stories"
+  | "story_scenes"
+  | "story_media";
 
 /** Manifest entry — future-ready, allows incremental delta-sync per collection. */
 export interface CollectionManifestEntry {
