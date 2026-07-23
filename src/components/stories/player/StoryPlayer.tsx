@@ -104,6 +104,11 @@ export function StoryPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, idx, paused, dwellMs, autoAdvance]);
 
+  // --- Sync long-press halo with pause state ---------------------
+  useEffect(() => { if (!paused) setLongPressPulse(false); }, [paused]);
+
+
+
   // --- Reflection save contract (unchanged from P4 reader) -------
   const saveReflection = useCallback(async (text: string) => {
     const { data: sess } = await supabase.auth.getSession();
