@@ -3712,7 +3712,7 @@ export type Database = {
         | "connections"
         | "memory"
       game_status: "draft" | "published" | "archived"
-      social_anchor_type: "story"
+      social_anchor_type: "story" | "comment"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3859,7 +3859,7 @@ export const Constants = {
         "memory",
       ],
       game_status: ["draft", "published", "archived"],
-      social_anchor_type: ["story"],
+      social_anchor_type: ["story", "comment"],
     },
   },
 } as const
