@@ -14,7 +14,7 @@
 //   * Media uploads use the frozen P2 pipeline (uploadStoryMedia).
 // ============================================================
 
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight, Save, Trash2, ImageUp, RefreshCw, CheckCircle2,
