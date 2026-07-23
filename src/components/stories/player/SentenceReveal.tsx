@@ -7,8 +7,9 @@
 //   * layered text-shadow so body reads over bright artwork
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SENTENCE_STAGGER_MS } from "./timing";
+import { protectWidows } from "./typography";
 
 interface Props {
   sentences: string[];
@@ -20,7 +21,10 @@ interface Props {
   variant?: "body" | "quote";
 }
 
-export function SentenceReveal({ sentences, className, epoch, paused, variant = "body" }: Props) {
+export function SentenceReveal({ sentences: raw, className, epoch, paused, variant = "body" }: Props) {
+  // Bind trailing short words with NBSP so paragraphs never end with
+  // an isolated widow like "واحدة" on its own line.
+  const sentences = useMemo(() => protectWidows(raw), [raw]);
   const [shown, setShown] = useState(0);
 
   useEffect(() => {

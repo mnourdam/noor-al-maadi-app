@@ -24,6 +24,7 @@ import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { KenBurns } from "./KenBurns";
 import { SentenceReveal } from "./SentenceReveal";
 import { splitSentences } from "./timing";
+import { computeVerticalLift } from "./typography";
 import { FileText, Sparkles } from "lucide-react";
 
 interface StageProps {
@@ -186,13 +187,19 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
 
   // Consistent bottom padding for phones with home indicators.
   const bottomPad = "pb-[calc(env(safe-area-inset-bottom)+88px)]";
+  // Vertical rebalance — sparse scenes float slightly higher so they
+  // never feel glued to the artwork's bottom edge.
+  const lift = computeVerticalLift(sentences.length);
+  const bottomStyle: React.CSSProperties = {
+    paddingBottom: `calc(env(safe-area-inset-bottom) + 88px + ${lift})`,
+  };
 
   if (layout === "A") {
     return (
       <LayoutFrame>
         <KenBurns src={primaryUrl} alt={title} seed={scene.id} />
         <BottomScrim />
-        <div className={`absolute inset-x-0 bottom-0 z-10 px-6 pt-20 ${bottomPad} sm:px-10`}>
+        <div className="absolute inset-x-0 bottom-0 z-10 px-6 pt-20 sm:px-10" style={bottomStyle}>
           <SceneReadingColumn>
             <SceneTitle>{title}</SceneTitle>
             <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} />
@@ -209,7 +216,10 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
       <LayoutFrame>
         <KenBurns src={primaryUrl} alt={speaker || title} seed={scene.id} blur={8} overlay="vignette" />
         <BottomScrim />
-        <div className={`absolute inset-0 z-10 flex flex-col items-stretch justify-end gap-5 px-6 pt-20 ${bottomPad} sm:flex-row sm:items-center sm:justify-center sm:gap-10 sm:px-10 sm:pb-24`}>
+        <div
+          className="absolute inset-0 z-10 flex flex-col items-stretch justify-end gap-5 px-6 pt-20 sm:flex-row sm:items-center sm:justify-center sm:gap-10 sm:px-10 sm:pb-24"
+          style={bottomStyle}
+        >
           {primaryUrl && (
             <img
               src={primaryUrl}
@@ -296,7 +306,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
           }}
         />
         <style>{`@keyframes map-sweep { 0%{ transform: translateX(0);} 100%{ transform: translateX(-100%);} }`}</style>
-        <div className={`absolute inset-x-0 bottom-0 z-10 px-6 pt-16 ${bottomPad} sm:px-10`}>
+        <div className="absolute inset-x-0 bottom-0 z-10 px-6 pt-16 sm:px-10" style={bottomStyle}>
           <SceneReadingColumn>
             <SceneTitle>{title}</SceneTitle>
             <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} />
