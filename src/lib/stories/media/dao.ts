@@ -111,8 +111,8 @@ export async function registerStoryMedia(input: {
     p_checksum_sha256: input.checksumSha256,
     p_preset: input.preset,
     p_processing_version: input.processingVersion,
-    p_metadata: input.metadata ?? {},
-  });
+    p_metadata: (input.metadata ?? {}) as never,
+  } as never);
   return assertOk(data as string | null, error, "registerStoryMedia");
 }
 
