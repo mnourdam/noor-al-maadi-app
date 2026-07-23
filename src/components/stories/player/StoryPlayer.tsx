@@ -104,6 +104,11 @@ export function StoryPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, idx, paused, dwellMs, autoAdvance]);
 
+  // --- Sync long-press halo with pause state ---------------------
+  useEffect(() => { if (!paused) setLongPressPulse(false); }, [paused]);
+
+
+
   // --- Reflection save contract (unchanged from P4 reader) -------
   const saveReflection = useCallback(async (text: string) => {
     const { data: sess } = await supabase.auth.getSession();
@@ -160,13 +165,24 @@ export function StoryPlayer({
   // --- Gesture layer: tap zones, long-press, swipe-down ----------
   const touchRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const longPressTimer = useRef<number | null>(null);
+  // Ephemeral touch-feedback marker — a subtle radial flash placed
+  // at the tap point acknowledging the interaction.
+  const [tapFlash, setTapFlash] = useState<{ x: number; y: number; kind: "next" | "prev" | "toggle"; key: number } | null>(null);
+  const [longPressPulse, setLongPressPulse] = useState(false);
+
+  const flashAt = (x: number, y: number, kind: "next" | "prev" | "toggle") => {
+    setTapFlash({ x, y, kind, key: performance.now() });
+  };
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (phase !== "playing") return;
     if (isReflectionScene) return; // reflection scenes own their own input
     touchRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    longPressTimer.current = window.setTimeout(() => setPaused(true), 350);
+    longPressTimer.current = window.setTimeout(() => {
+      setPaused(true);
+      setLongPressPulse(true);
+    }, 350);
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
@@ -174,7 +190,7 @@ export function StoryPlayer({
     const start = touchRef.current;
     touchRef.current = null;
     if (isReflectionScene && phase === "playing") return; // ignore taps on reflection scene
-    if (paused) { setPaused(false); return; }
+    if (paused) { setPaused(false); setLongPressPulse(false); return; }
 
     if (!start) return;
     const dx = e.clientX - start.x;
@@ -189,12 +205,12 @@ export function StoryPlayer({
     if (phase === "intro") { setPhase("playing"); return; }
     if (phase !== "playing") return;
     const w = (e.currentTarget as HTMLElement).clientWidth;
-    const zoneRight = e.clientX - (e.currentTarget as HTMLElement).getBoundingClientRect().left;
-    // RTL: right side (higher x in LTR terms) = previous; left side = next
-    // But player is fullscreen; use pointer x relative to element.
-    if (zoneRight < w * 0.25) { void goNext(); }
-    else if (zoneRight > w * 0.75) { goPrev(); }
-    else { setPaused((p) => !p); }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const zoneRight = e.clientX - rect.left;
+    // RTL: left side = next; right side = previous.
+    if (zoneRight < w * 0.25) { flashAt(e.clientX - rect.left, e.clientY - rect.top, "next"); void goNext(); }
+    else if (zoneRight > w * 0.75) { flashAt(e.clientX - rect.left, e.clientY - rect.top, "prev"); goPrev(); }
+    else { flashAt(e.clientX - rect.left, e.clientY - rect.top, "toggle"); setPaused((p) => !p); }
   };
 
   // Keyboard support
@@ -259,6 +275,12 @@ export function StoryPlayer({
           </button>
         </div>
       </div>
+
+      {/* Touch feedback — subtle radial flash at tap point + pause halo. */}
+      <TapFeedback flash={tapFlash} />
+      <PauseHalo active={longPressPulse && paused && phase === "playing"} />
+
+
 
       {/* Stage — intro layer stays mounted briefly after phase flip so
           the landing cross-fades into scene 1 instead of hard-cutting. */}
@@ -391,12 +413,12 @@ function TransitionShell({ scene, children }: { scene: StorySceneRow; children: 
   return (
     <div key={scene.id} className={`absolute inset-0 ${cls}`}>
       <style>{`
-        .anim-dissolve { animation: sc-dissolve 460ms ease-out both; }
-        .anim-paper    { animation: sc-paper 520ms cubic-bezier(0.2,0.9,0.3,1) both; }
-        .anim-blur     { animation: sc-blur 620ms ease-out both; }
-        .anim-calm     { animation: sc-calm 720ms ease-out both; }
+        .anim-dissolve { animation: sc-dissolve 520ms cubic-bezier(0.16,1,0.3,1) both; }
+        .anim-paper    { animation: sc-paper 620ms cubic-bezier(0.2,0.9,0.3,1) both; }
+        .anim-blur     { animation: sc-blur 680ms cubic-bezier(0.16,1,0.3,1) both; }
+        .anim-calm     { animation: sc-calm 820ms cubic-bezier(0.22,0.61,0.36,1) both; }
         .anim-cut      { animation: none; }
-        @keyframes sc-dissolve { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes sc-dissolve { from { opacity: 0; transform: scale(1.015);} to { opacity: 1; transform: scale(1);} }
         @keyframes sc-paper    { from { opacity: 0; transform: translateY(24px) rotate(-0.6deg);} to { opacity: 1; transform: translateY(0) rotate(0);} }
         @keyframes sc-blur     { from { opacity: 0; filter: blur(14px);} to { opacity: 1; filter: blur(0);} }
         @keyframes sc-calm     { from { opacity: 0;} to { opacity: 1;} }
@@ -405,4 +427,49 @@ function TransitionShell({ scene, children }: { scene: StorySceneRow; children: 
     </div>
   );
 }
+
+// ---------------------------------------------------------------
+// Touch feedback primitives — subtle, never flashy.
+// ---------------------------------------------------------------
+
+function TapFeedback({ flash }: { flash: { x: number; y: number; kind: "next" | "prev" | "toggle"; key: number } | null }) {
+  if (!flash) return null;
+  const size = flash.kind === "toggle" ? 140 : 200;
+  const tint =
+    flash.kind === "toggle"
+      ? "rgba(255,255,255,0.18)"
+      : "rgba(240,190,60,0.22)";
+  return (
+    <span
+      key={flash.key}
+      className="pointer-events-none absolute z-[25] rounded-full"
+      style={{
+        left: flash.x - size / 2,
+        top: flash.y - size / 2,
+        width: size,
+        height: size,
+        background: `radial-gradient(circle, ${tint} 0%, rgba(0,0,0,0) 70%)`,
+        animation: "tap-flash 420ms cubic-bezier(0.22,0.61,0.36,1) forwards",
+      }}
+      aria-hidden
+    >
+      <style>{`@keyframes tap-flash { from { opacity: 0.9; transform: scale(0.6);} to { opacity: 0; transform: scale(1);} }`}</style>
+    </span>
+  );
+}
+
+function PauseHalo({ active }: { active: boolean }) {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 z-[24] transition-opacity duration-500 ease-out"
+      style={{
+        opacity: active ? 1 : 0,
+        background:
+          "radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.35) 100%)",
+      }}
+      aria-hidden
+    />
+  );
+}
+
 

@@ -54,6 +54,15 @@ function pickLayout(scene: StorySceneRow): LayoutKey {
 
 export type SceneTransition = "dissolve" | "blur" | "paper" | "calm" | "cut";
 const KNOWN_TRANSITIONS: SceneTransition[] = ["dissolve", "blur", "paper", "calm", "cut"];
+
+/**
+ * Resolve a scene's entry transition.
+ *   1. explicit `payload.transition` always wins;
+ *   2. reflection/document/reveal keep their signature motion;
+ *   3. everything else rotates through dissolve/calm/blur based on
+ *      scene_index so a long story never repeats the same transition
+ *      three times in a row.
+ */
 export function resolveSceneTransition(scene: StorySceneRow): SceneTransition {
   const raw = (scene.payload as any)?.transition;
   if (typeof raw === "string" && (KNOWN_TRANSITIONS as string[]).includes(raw)) {
@@ -63,7 +72,10 @@ export function resolveSceneTransition(scene: StorySceneRow): SceneTransition {
     case "document":   return "paper";
     case "reveal":     return "blur";
     case "reflection": return "calm";
-    default:           return "dissolve";
+    default: {
+      const rotation: SceneTransition[] = ["dissolve", "calm", "dissolve", "blur"];
+      return rotation[scene.scene_index % rotation.length];
+    }
   }
 }
 
