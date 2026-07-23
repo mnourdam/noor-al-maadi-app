@@ -936,8 +936,18 @@ function CreateSceneModal({
 }
 
 // ------------------------------------------------------------------
-// Unlock (+ raw metadata) — kept for advanced editors
+// Unlock (visual builder + advanced JSON)
 // ------------------------------------------------------------------
+type UnlockKind = UnlockSpec["type"];
+const UNLOCK_KIND_LABEL: Record<UnlockKind, string> = {
+  always: "دائمًا مفتوح",
+  and: "شروط متعددة (كلها معًا)",
+  or: "شروط متعددة (أيّها)",
+  campaign_completed: "بعد إتمام حملة",
+  investigation_completed: "بعد إتمام تحقيق",
+  story_completed: "بعد إتمام قصة",
+};
+
 function UnlockSection({
   story, onNotify, onSaved,
 }: {
@@ -945,42 +955,304 @@ function UnlockSection({
   onNotify: (k: "ok" | "err", m: string) => void;
   onSaved: () => Promise<void>;
 }) {
-  const [unlockText, setUnlockText] = useState(JSON.stringify(story.unlock_spec ?? { type: "always" }, null, 2));
+  const [spec, setSpec] = useState<UnlockSpec>(story.unlock_spec ?? { type: "always" });
   const [saving, setSaving] = useState(false);
-  const save = async () => {
-    if (saving) return;
-    let unlock: UnlockSpec;
-    try { unlock = JSON.parse(unlockText || '{"type":"always"}'); }
-    catch { onNotify("err", "شرط الفتح غير صالح (JSON)."); return; }
+  const [advancedText, setAdvancedText] = useState<string>(JSON.stringify(story.unlock_spec ?? { type: "always" }, null, 2));
+
+  const persist = async (next: UnlockSpec) => {
     setSaving(true);
     try {
       await adminUpsertStory({
         id: story.id, slug: story.slug, title_ar: story.title_ar,
-        unlock_spec: unlock, metadata: story.metadata,
+        unlock_spec: next, metadata: story.metadata,
       });
       onNotify("ok", "تم حفظ شرط الفتح.");
+      setAdvancedText(JSON.stringify(next, null, 2));
       await onSaved();
     } catch (e) { onNotify("err", e instanceof Error ? e.message : String(e)); }
     finally { setSaving(false); }
   };
+
+  const saveAdvanced = async () => {
+    let parsed: UnlockSpec;
+    try { parsed = JSON.parse(advancedText || '{"type":"always"}'); }
+    catch { onNotify("err", "JSON غير صالح."); return; }
+    setSpec(parsed);
+    await persist(parsed);
+  };
+
   return (
-    <section className="space-y-2 rounded-lg border p-4">
-      <h2 className="text-sm font-semibold text-muted-foreground">شرط الفتح (unlock_spec)</h2>
-      <textarea value={unlockText} onChange={(e) => setUnlockText(e.target.value)}
-        rows={8} dir="ltr"
-        className="w-full rounded-md border bg-background px-2 py-1.5 font-mono text-xs" />
-      <p className="text-xs text-muted-foreground">
-        الأنواع: <span className="font-mono">always | and | or | campaign_completed | investigation_completed | story_completed</span>
-      </p>
-      <div className="flex justify-end">
-        <button onClick={() => void save()} disabled={saving}
+    <section className="space-y-3 rounded-lg border p-4">
+      <h2 className="text-sm font-semibold text-muted-foreground">شرط الفتح</h2>
+      <UnlockNodeEditor
+        node={spec}
+        onChange={(next) => setSpec(next)}
+      />
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={() => void persist(spec)} disabled={saving}
           className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50">
           <Save className="h-4 w-4" /> {saving ? "جاري..." : "حفظ"}
         </button>
       </div>
+
+      <details className="rounded-md border bg-muted/20">
+        <summary className="cursor-pointer px-2 py-1.5 text-xs text-muted-foreground">متقدم — JSON خام</summary>
+        <div className="space-y-2 p-2">
+          <textarea value={advancedText} onChange={(e) => setAdvancedText(e.target.value)}
+            rows={6} dir="ltr"
+            className="w-full rounded-md border bg-background px-2 py-1.5 font-mono text-xs" />
+          <div className="flex justify-end">
+            <button onClick={() => void saveAdvanced()} disabled={saving}
+              className="rounded-md border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50">
+              حفظ JSON
+            </button>
+          </div>
+        </div>
+      </details>
     </section>
   );
 }
+
+function UnlockNodeEditor({
+  node, onChange,
+}: {
+  node: UnlockSpec;
+  onChange: (next: UnlockSpec) => void;
+}) {
+  const isGroup = node.type === "and" || node.type === "or";
+  const isRef = node.type === "campaign_completed" || node.type === "investigation_completed" || node.type === "story_completed";
+  const refField: "campaign_id" | "investigation_id" | "story_id" | null =
+    node.type === "campaign_completed" ? "campaign_id" :
+    node.type === "investigation_completed" ? "investigation_id" :
+    node.type === "story_completed" ? "story_id" : null;
+  const refPlaceholder =
+    node.type === "campaign_completed" ? "معرف الحملة (campaign_id)" :
+    node.type === "investigation_completed" ? "معرف التحقيق (investigation_id)" :
+    node.type === "story_completed" ? "معرف القصة (story_id / slug)" : "";
+
+  return (
+    <div className="space-y-2 rounded-md border bg-muted/20 p-2">
+      <div className="flex items-center gap-2">
+        <select value={node.type}
+          onChange={(e) => {
+            const t = e.target.value as UnlockKind;
+            const next: UnlockSpec = { type: t };
+            if (t === "and" || t === "or") next.children = node.children ?? [];
+            onChange(next);
+          }}
+          className="rounded-md border bg-background px-2 py-1 text-xs">
+          {(Object.keys(UNLOCK_KIND_LABEL) as UnlockKind[]).map((k) =>
+            <option key={k} value={k}>{UNLOCK_KIND_LABEL[k]}</option>
+          )}
+        </select>
+        {isRef && refField && (
+          <input dir="ltr" placeholder={refPlaceholder}
+            value={(node as any)[refField] ?? ""}
+            onChange={(e) => onChange({ ...node, [refField]: e.target.value } as UnlockSpec)}
+            className="flex-1 rounded-md border bg-background px-2 py-1 font-mono text-xs" />
+        )}
+      </div>
+      {isGroup && (
+        <div className="space-y-2 border-r-2 border-gold/30 pr-3">
+          {(node.children ?? []).map((c, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <div className="flex-1">
+                <UnlockNodeEditor node={c} onChange={(next) => {
+                  const list = (node.children ?? []).slice();
+                  list[i] = next;
+                  onChange({ ...node, children: list });
+                }} />
+              </div>
+              <button onClick={() => {
+                const list = (node.children ?? []).filter((_, k) => k !== i);
+                onChange({ ...node, children: list });
+              }} className="rounded p-1 text-destructive hover:bg-destructive/10" title="إزالة">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+          <button onClick={() => onChange({ ...node, children: [...(node.children ?? []), { type: "always" }] })}
+            className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs hover:bg-muted">
+            <Plus className="h-3 w-3" /> إضافة شرط
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// Structured payload editor — hides raw JSON for common fields.
+// ------------------------------------------------------------------
+function StructuredPayloadEditor({
+  sceneType, payload, onChange,
+}: {
+  sceneType: StorySceneType;
+  payload: Record<string, unknown>;
+  onChange: (next: Record<string, unknown>) => void;
+}) {
+  const setField = (key: string, value: string) => {
+    const next = { ...payload };
+    if (value.trim() === "") delete next[key];
+    else next[key] = value;
+    onChange(next);
+  };
+  const str = (k: string) => (typeof payload[k] === "string" ? (payload[k] as string) : "");
+
+  const showBody = sceneType === "reading" || sceneType === "perspective" || sceneType === "reveal" || sceneType === "document";
+  const showQuote = sceneType === "perspective";
+  const showSpeaker = sceneType === "perspective";
+  const showPrompt = sceneType === "reflection";
+  const showClaimTruth = sceneType === "reveal";
+  const showTranscript = sceneType === "document";
+
+  const template = str("template");
+  const transition = str("transition");
+
+  return (
+    <div className="space-y-2 rounded-md border bg-background p-3">
+      <div className="text-xs font-medium text-muted-foreground">الحقول الاعتيادية</div>
+      {showBody && (
+        <label className="block text-xs">النص (body_ar)
+          <textarea value={str("body_ar") || str("body")} rows={5}
+            onChange={(e) => setField("body_ar", e.target.value)}
+            className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" />
+        </label>
+      )}
+      {showQuote && (
+        <label className="block text-xs">الاقتباس (quote_ar)
+          <textarea value={str("quote_ar") || str("quote")} rows={3}
+            onChange={(e) => setField("quote_ar", e.target.value)}
+            className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" />
+        </label>
+      )}
+      {showSpeaker && (
+        <label className="block text-xs">المتحدث (speaker_ar)
+          <input value={str("speaker_ar") || str("speaker")}
+            onChange={(e) => setField("speaker_ar", e.target.value)}
+            className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" />
+        </label>
+      )}
+      {showPrompt && (
+        <label className="block text-xs">السؤال التأملي (prompt_ar)
+          <textarea value={str("prompt_ar") || str("prompt")} rows={3}
+            onChange={(e) => setField("prompt_ar", e.target.value)}
+            className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" />
+        </label>
+      )}
+      {showClaimTruth && (
+        <>
+          <label className="block text-xs">الادعاء (claim_ar)
+            <textarea value={str("claim_ar") || str("claim")} rows={2}
+              onChange={(e) => setField("claim_ar", e.target.value)}
+              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" />
+          </label>
+          <label className="block text-xs">الحقيقة (truth_ar)
+            <textarea value={str("truth_ar") || str("truth")} rows={3}
+              onChange={(e) => setField("truth_ar", e.target.value)}
+              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" />
+          </label>
+        </>
+      )}
+      {showTranscript && (
+        <label className="block text-xs">النص المكتوب (transcript_ar)
+          <textarea value={str("transcript_ar") || str("transcript")} rows={4}
+            onChange={(e) => setField("transcript_ar", e.target.value)}
+            className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" />
+        </label>
+      )}
+      <label className="block text-xs">المصدر/التعليق (caption_ar) — يظهر بشكل هادئ أسفل النص
+        <input value={str("caption_ar") || str("caption")}
+          onChange={(e) => setField("caption_ar", e.target.value)}
+          className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" />
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block text-xs">القالب (template)
+          <select value={template} onChange={(e) => setField("template", e.target.value)}
+            className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm">
+            <option value="">افتراضي (حسب النوع)</option>
+            <option value="quote">اقتباس (F)</option>
+            <option value="map">خريطة (E)</option>
+          </select>
+        </label>
+        <label className="block text-xs">الانتقال (transition)
+          <select value={transition} onChange={(e) => setField("transition", e.target.value)}
+            className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm">
+            <option value="">افتراضي (حسب النوع)</option>
+            <option value="dissolve">ذوبان</option>
+            <option value="blur">ضبابي</option>
+            <option value="paper">ورقي</option>
+            <option value="calm">هادئ</option>
+            <option value="cut">قطع فوري</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// Existing-media picker — reuse a verified asset from the same story
+// ------------------------------------------------------------------
+function MediaPicker({
+  media, value, onChange,
+}: {
+  media: StoryMediaRow[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  if (media.length === 0) {
+    return <div className="text-[11px] text-muted-foreground">لا وسائط في هذه القصة بعد.</div>;
+  }
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)}
+      className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-xs">
+      <option value="">— بدون —</option>
+      {media.map((m) => (
+        <option key={m.id} value={m.id}>
+          {m.preset} · {m.width}×{m.height} · {(m.byte_size / 1024).toFixed(0)}KB {m.verified ? "✓" : ""}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+// ------------------------------------------------------------------
+// Scene quick preview — canonical SceneStage renderer
+// ------------------------------------------------------------------
+function ScenePreviewModal({
+  scene, form, media, onClose,
+}: {
+  scene: StorySceneRow;
+  form: { scene_type: StorySceneType; title_ar: string; title_en: string; payload: string; primary_media_id: string };
+  media: StoryMediaRow[];
+  onClose: () => void;
+}) {
+  const previewScene: StorySceneRow = useMemo(() => {
+    let parsed: Record<string, unknown> = {};
+    try { parsed = JSON.parse(form.payload || "{}"); } catch { parsed = scene.payload ?? {}; }
+    return {
+      ...scene,
+      scene_type: form.scene_type,
+      title_ar: form.title_ar || null,
+      title_en: form.title_en || null,
+      payload: parsed,
+      primary_media_id: form.primary_media_id || null,
+    };
+  }, [scene, form]);
+  return (
+    <div className="fixed inset-0 z-[60] bg-black">
+      <button onClick={onClose}
+        className="absolute end-3 top-3 z-10 grid size-9 place-items-center rounded-full bg-black/60 text-white">
+        <X className="h-4 w-4" />
+      </button>
+      <div className="absolute inset-0">
+        <SceneStage scene={previewScene} media={media} epoch={`preview:${Date.now()}`} paused={false} />
+      </div>
+    </div>
+  );
+}
+
 
 // ------------------------------------------------------------------
 // Live preview — reuses the player SceneRenderer
