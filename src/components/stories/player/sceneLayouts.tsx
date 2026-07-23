@@ -38,6 +38,43 @@ function pickLayout(scene: StorySceneRow): LayoutKey {
   }
 }
 
+/**
+ * Resolve the transition class for a scene.
+ * Honors `payload.transition` when it is a known value, otherwise falls back
+ * to a scene-type default. Returned as one of the `.anim-*` class names used
+ * by TransitionShell in StoryPlayer.
+ */
+export type SceneTransition = "dissolve" | "blur" | "paper" | "calm" | "cut";
+const KNOWN_TRANSITIONS: SceneTransition[] = ["dissolve", "blur", "paper", "calm", "cut"];
+export function resolveSceneTransition(scene: StorySceneRow): SceneTransition {
+  const raw = (scene.payload as any)?.transition;
+  if (typeof raw === "string" && (KNOWN_TRANSITIONS as string[]).includes(raw)) {
+    return raw as SceneTransition;
+  }
+  switch (scene.scene_type) {
+    case "document":   return "paper";
+    case "reveal":     return "blur";
+    case "reflection": return "calm";
+    default:           return "dissolve";
+  }
+}
+
+/** Small, quiet source/citation line rendered below narrative body. */
+function Caption({ text, align = "start" }: { text: string; align?: "start" | "center" }) {
+  if (!text.trim()) return null;
+  return (
+    <p
+      className={`mt-3 text-[10px] leading-relaxed tracking-wide text-white/55 ${
+        align === "center" ? "text-center" : ""
+      }`}
+      style={{ fontStyle: "italic" }}
+    >
+      — {text}
+    </p>
+  );
+}
+
+
 function pickMedia(id: string | null, media: StoryMediaRow[]) {
   if (!id) return null;
   return media.find((m) => m.id === id) ?? null;
