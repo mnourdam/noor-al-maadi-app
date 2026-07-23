@@ -314,8 +314,9 @@ export function StoryPlayer({
             setGrantedXp(null);
             setGrantedDinars(null);
             completionFiredRef.current = false;
-            setPhase("intro");
+            setPhase("playing");
           }}
+
 
           onClose={() => onExit()}
         />
