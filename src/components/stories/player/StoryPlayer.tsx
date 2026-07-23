@@ -313,8 +313,12 @@ export function StoryPlayer({
           onReplay={() => {
             setIdx(0);
             setRewardShown(false);
+            setGrantedXp(null);
+            setGrantedDinars(null);
+            completionFiredRef.current = false;
             setPhase("intro");
           }}
+
           onClose={() => onExit()}
         />
       )}
