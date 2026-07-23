@@ -186,6 +186,7 @@ export function StoryPlayer({
 
   const subtitle = story.era || null;
   const progressEpoch = phase === "intro" ? "intro" : `s${idx}`;
+  const readingMin = readReadingTimeMinutes(story.metadata);
 
   return (
     <div
@@ -232,9 +233,11 @@ export function StoryPlayer({
             <h1 className="font-display text-[32px] font-bold leading-[1.15] text-white drop-shadow-lg">
               {story.title_ar}
             </h1>
-            {subtitle && (
-              <p className="mt-2 text-[13px] text-white/80">{subtitle}</p>
-            )}
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-white/75">
+              {subtitle && <span>{subtitle}</span>}
+              {subtitle && readingMin && <span className="opacity-40">·</span>}
+              {readingMin && <span>≈ {readingMin} دقيقة قراءة</span>}
+            </div>
             {story.summary_ar && (
               <p className="mt-3 max-w-md text-[13px] leading-relaxed text-white/70">
                 {story.summary_ar}
@@ -244,6 +247,7 @@ export function StoryPlayer({
           <style>{`@keyframes intro-fade { from { opacity: 0; transform: translateY(12px);} to { opacity: 1; transform: translateY(0);} }`}</style>
         </>
       )}
+
 
       {(phase === "playing" || phase === "reward") && scene && (
         <TransitionShell scene={scene}>
