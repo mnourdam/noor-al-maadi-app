@@ -154,7 +154,31 @@ export function ContinueYourJourney({
 
 // ------------------------------------------------------------------
 
+function useEntityTitles(ids: string[]) {
+  return useQuery({
+    queryKey: ["entity-titles", [...ids].sort()],
+    enabled: ids.length > 0,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("encyclopedia_entities")
+        .select("id, title, slug")
+        .in("id", ids);
+      const map = new Map<string, string>();
+      for (const row of (data ?? []) as { id: string; title: string | null; slug: string | null }[]) {
+        map.set(row.id, row.title || row.slug || row.id);
+      }
+      return map;
+    },
+
+  });
+}
+
 function RelatedEntitiesBlock({ related }: { related: { id: string; title_ar?: string | null }[] }) {
+  const missing = related.filter((r) => !r.title_ar).map((r) => r.id);
+  const titlesQ = useEntityTitles(missing);
+  const titleFor = (r: { id: string; title_ar?: string | null }) =>
+    r.title_ar || titlesQ.data?.get(r.id) || r.id;
   return (
     <div className="px-5 pt-6">
       <p className="mb-2 text-[10px] tracking-[0.28em] text-gold/70">استكشف أكثر</p>
@@ -167,7 +191,7 @@ function RelatedEntitiesBlock({ related }: { related: { id: string; title_ar?: s
               className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-surface/60 px-3 py-1.5 text-[12px] text-white/85 hover:border-gold/40 hover:text-gold"
             >
               <BookOpenText className="size-3.5 opacity-70" />
-              {r.title_ar || r.id}
+              {titleFor(r)}
             </Link>
           </li>
         ))}
@@ -175,6 +199,7 @@ function RelatedEntitiesBlock({ related }: { related: { id: string; title_ar?: s
     </div>
   );
 }
+
 
 function ReferencesBlock({
   refs,

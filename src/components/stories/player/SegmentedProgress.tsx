@@ -47,7 +47,7 @@ export function SegmentedProgress({ total, activeIndex, activeMs, paused, epoch 
   }, [paused, activeMs, epoch]);
 
   return (
-    <div dir="ltr" className="pointer-events-none flex w-full items-center gap-1.5 px-4 pt-3">
+    <div dir="rtl" className="pointer-events-none flex w-full items-center gap-1.5 px-4 pt-3">
       {Array.from({ length: total }).map((_, i) => {
         const isDone = i < activeIndex;
         const isActive = i === activeIndex;
@@ -55,11 +55,11 @@ export function SegmentedProgress({ total, activeIndex, activeMs, paused, epoch 
         return (
           <div key={i} className="relative h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
             <div
-              className="absolute inset-y-0 left-0 rounded-full"
+              className="absolute inset-y-0 right-0 rounded-full"
               style={{
                 width: `${fill}%`,
                 background:
-                  "linear-gradient(90deg, hsl(45 90% 55% / 0.95), hsl(45 100% 72% / 0.95))",
+                  "linear-gradient(270deg, hsl(45 90% 55% / 0.95), hsl(45 100% 72% / 0.95))",
                 boxShadow: isActive ? "0 0 10px hsl(45 100% 65% / 0.55)" : undefined,
                 transition: isDone ? "width 260ms ease-out" : undefined,
               }}
@@ -69,4 +69,5 @@ export function SegmentedProgress({ total, activeIndex, activeMs, paused, epoch 
       })}
     </div>
   );
+
 }

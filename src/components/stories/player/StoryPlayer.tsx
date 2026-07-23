@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Pause } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/lib/profile";
 import type { StoryRow, StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
 import { useStoryMediaUrl } from "@/lib/stories/media/url";
@@ -26,6 +27,7 @@ import { RewardMoment } from "./RewardMoment";
 import { ContinueYourJourney } from "./ContinueYourJourney";
 import { sceneDwellMs } from "./timing";
 import { useNavigate } from "@tanstack/react-router";
+
 
 interface Props {
   story: StoryRow;
@@ -57,11 +59,17 @@ export function StoryPlayer({
   const [idx, setIdx] = useState(Math.min(initialSceneIndex, Math.max(0, ordered.length - 1)));
   const [paused, setPaused] = useState(false);
   const [rewardShown, setRewardShown] = useState(false);
+  const [grantedXp, setGrantedXp] = useState<number | null>(null);
+  const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
+  const completionFiredRef = useRef(false);
   const navigate = useNavigate();
+  const { addPoints, addDinars } = useProfile();
 
   const scene = ordered[idx] ?? null;
   const dwellMs = useMemo(() => scene ? sceneDwellMs(scene) : 4000, [scene]);
   const autoAdvance = scene ? scene.scene_type !== "reflection" : false;
+  const isReflectionScene = scene?.scene_type === "reflection";
+
 
   // --- Intro hold, then start ------------------------------------
   useEffect(() => {
@@ -114,14 +122,24 @@ export function StoryPlayer({
   const goNext = useCallback(async () => {
     if (!scene) return;
     if (isLast) {
-      // Trigger the completion contract; RewardMoment renders regardless
-      // (reward is server-idempotent — replays grant zero).
-      void completeStory(story.id);
+      // Sticky one-shot completion; server dedupes and returns the
+      // authoritative granted reward. Apply to the local profile so
+      // the HUD reflects the new balance immediately without waiting
+      // for the next cloud reconciliation cycle.
       setPhase("reward");
+      if (completionFiredRef.current) return;
+      completionFiredRef.current = true;
+      const res = await completeStory(story.id);
+      const grantXp = res.result?.reward_granted_xp ?? 0;
+      const grantDin = res.result?.reward_granted_dinars ?? 0;
+      setGrantedXp(grantXp);
+      setGrantedDinars(grantDin);
+      if (grantXp > 0) addPoints(grantXp);
+      if (grantDin > 0) addDinars(grantDin);
       return;
     }
     setIdx((n) => Math.min(n + 1, ordered.length - 1));
-  }, [isLast, ordered.length, scene, story.id]);
+  }, [isLast, ordered.length, scene, story.id, addPoints, addDinars]);
 
   const goPrev = useCallback(() => {
     setIdx((n) => Math.max(0, n - 1));
@@ -133,15 +151,19 @@ export function StoryPlayer({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (phase !== "playing") return;
+    if (isReflectionScene) return; // reflection scenes own their own input
     touchRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = window.setTimeout(() => setPaused(true), 350);
   };
+
   const onPointerUp = (e: React.PointerEvent) => {
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
     const start = touchRef.current;
     touchRef.current = null;
+    if (isReflectionScene && phase === "playing") return; // ignore taps on reflection scene
     if (paused) { setPaused(false); return; }
+
     if (!start) return;
     const dx = e.clientX - start.x;
     const dy = e.clientY - start.y;
@@ -262,14 +284,27 @@ export function StoryPlayer({
       )}
 
       {/* Reward moment */}
-      {phase === "reward" && !rewardShown && (
-        <RewardMoment
-          xp={alreadyCompleted ? 0 : (summary?.xp_reward ?? story.xp_reward ?? 0)}
-          dinars={alreadyCompleted ? 0 : (summary?.dinar_reward ?? story.dinar_reward ?? 0)}
-          silent={alreadyCompleted}
-          onDone={() => { setRewardShown(true); setPhase("journey"); }}
-        />
-      )}
+      {phase === "reward" && !rewardShown && (() => {
+        // Prefer authoritative granted values from the RPC when known.
+        // Fall back to summary while the network request is in-flight so
+        // the reward moment never blanks out on first-completion.
+        const xp = grantedXp !== null
+          ? grantedXp
+          : (alreadyCompleted ? 0 : (summary?.xp_reward ?? story.xp_reward ?? 0));
+        const din = grantedDinars !== null
+          ? grantedDinars
+          : (alreadyCompleted ? 0 : (summary?.dinar_reward ?? story.dinar_reward ?? 0));
+        const silent = alreadyCompleted || (grantedXp === 0 && grantedDinars === 0);
+        return (
+          <RewardMoment
+            xp={xp}
+            dinars={din}
+            silent={silent}
+            onDone={() => { setRewardShown(true); setPhase("journey"); }}
+          />
+        );
+      })()}
+
 
       {/* Continue Your Journey */}
       {phase === "journey" && (
@@ -278,8 +313,12 @@ export function StoryPlayer({
           onReplay={() => {
             setIdx(0);
             setRewardShown(false);
+            setGrantedXp(null);
+            setGrantedDinars(null);
+            completionFiredRef.current = false;
             setPhase("intro");
           }}
+
           onClose={() => onExit()}
         />
       )}
