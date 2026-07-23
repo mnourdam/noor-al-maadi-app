@@ -716,9 +716,10 @@ function SceneRow({
     try {
       const kind = form.scene_type === "document" ? "document" : "scene";
       const res = await uploadStoryMedia({ storyId: scene.story_id, kind, file, metadata: { scene_id: scene.id } });
+      // Immediate server-side attach — same rationale as the cover path.
+      await adminAttachSceneMedia(scene.story_id, scene.id, res.mediaId);
       const next = { ...form, primary_media_id: res.mediaId };
       setForm(next);
-      await saver(next);
       onNotify("ok", "تم رفع الصورة وربطها.");
       await onChanged();
     } catch (e) { onNotify("err", e instanceof Error ? e.message : String(e)); }
