@@ -161,7 +161,9 @@ export function StoryPlayer({
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
     const start = touchRef.current;
     touchRef.current = null;
+    if (isReflectionScene && phase === "playing") return; // ignore taps on reflection scene
     if (paused) { setPaused(false); return; }
+
     if (!start) return;
     const dx = e.clientX - start.x;
     const dy = e.clientY - start.y;
