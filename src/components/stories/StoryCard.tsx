@@ -36,6 +36,10 @@ import {
 } from "@/lib/stories/duration";
 import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/lib/profile";
+import { guestHasCompleted } from "@/lib/stories/guestCompletions";
+import { useEffect, useState } from "react";
+
 
 interface CoverRow {
   id: string;
