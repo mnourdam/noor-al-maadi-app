@@ -21,10 +21,10 @@ import {
   estimateReadingMinutes, labelPrereqKind, progressFraction, storyState,
   type StorySummary,
 } from "@/lib/stories/summary";
-import { storyMediaPublicUrl } from "@/lib/stories/media/url";
+import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { RelatedStoriesRail } from "@/components/stories/RelatedStoriesRail";
 
-interface CoverRow { id: string; storage_bucket: string; storage_path: string }
+interface CoverRow { id: string; storage_bucket: string; storage_path: string; processing_version: number }
 
 export function StoryLanding({
   summary, onStart,
@@ -37,21 +37,21 @@ export function StoryLanding({
   const mins = estimateReadingMinutes(summary.scene_count);
 
   const { data: cover } = useQuery({
-    queryKey: ["story-cover", summary.cover_media_id],
+    queryKey: ["story-cover-row", summary.cover_media_id],
     enabled: !!summary.cover_media_id,
     staleTime: 5 * 60_000,
     queryFn: async () => {
       if (!summary.cover_media_id) return null;
       const { data } = await supabase
         .from("story_media")
-        .select("id, storage_bucket, storage_path")
+        .select("id, storage_bucket, storage_path, processing_version")
         .eq("id", summary.cover_media_id)
         .maybeSingle();
       return (data as CoverRow | null) ?? null;
     },
   });
 
-  const coverUrl = cover ? storyMediaPublicUrl(cover) : null;
+  const coverUrl = useStoryMediaUrl(cover ?? null);
 
   return (
     <div dir="rtl" className="mx-auto max-w-2xl px-5 pb-10 pt-4">

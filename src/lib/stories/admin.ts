@@ -157,6 +157,34 @@ export async function adminUpsertStoryScene(input: SceneUpsertInput): Promise<St
   return parsed.scene;
 }
 
+/** Immediately attach a verified cover image to a story (server-authoritative,
+ *  bypasses the debounced autosave that previously left cover_media_id NULL). */
+export async function adminAttachStoryCover(
+  storyId: string,
+  mediaId: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc(
+    "admin_attach_story_cover" as never,
+    { p_story_id: storyId, p_media_id: mediaId } as never,
+  );
+  if (error) bad("adminAttachStoryCover", error);
+}
+
+/** Immediately attach a verified image to a scene as its primary media. */
+export async function adminAttachSceneMedia(
+  storyId: string,
+  sceneId: string,
+  mediaId: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc(
+    "admin_attach_scene_media" as never,
+    { p_story_id: storyId, p_scene_id: sceneId, p_media_id: mediaId } as never,
+  );
+  if (error) bad("adminAttachSceneMedia", error);
+}
+
+
+
 /** Remove a scene from a story. */
 export async function adminDeleteStoryScene(storyId: string, sceneId: string): Promise<void> {
   const { error } = await supabase.rpc(

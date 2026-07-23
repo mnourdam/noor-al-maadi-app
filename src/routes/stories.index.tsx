@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpenText, ArrowLeft, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, Screen } from "@/components/AppShell";
-import { storyMediaPublicUrl } from "@/lib/stories/media/url";
+import { useStoryMediaUrl } from "@/lib/stories/media/url";
 
 interface PublishedStoryRow {
   id: string;
@@ -33,6 +33,20 @@ interface CoverRow {
   id: string;
   storage_bucket: string;
   storage_path: string;
+  processing_version: number;
+}
+
+function StoryCoverImg({ cover, alt }: { cover: CoverRow; alt: string }) {
+  const src = useStoryMediaUrl(cover);
+  return (
+    <img
+      src={src ?? undefined}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+    />
+  );
 }
 
 async function loadStories() {
@@ -46,7 +60,7 @@ async function loadStories() {
   if (coverIds.length > 0) {
     const { data: mdata } = await supabase
       .from("story_media")
-      .select("id, storage_bucket, storage_path")
+      .select("id, storage_bucket, storage_path, processing_version")
       .in("id", coverIds);
     for (const row of (mdata ?? []) as CoverRow[]) covers[row.id] = row;
   }
@@ -122,13 +136,7 @@ function StoriesIndex() {
                   >
                     {cover ? (
                       <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
-                        <img
-                          src={storyMediaPublicUrl(cover)}
-                          alt={s.title_ar}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-full w-full object-cover transition group-hover:scale-[1.02]"
-                        />
+                        <StoryCoverImg cover={cover} alt={s.title_ar} />
                       </div>
                     ) : (
                       <div className="flex aspect-[16/9] w-full items-center justify-center bg-muted/40">

@@ -4,7 +4,7 @@
 // pixel-identical.
 
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
-import { storyMediaPublicUrl } from "@/lib/stories/media/url";
+import { useStoryMediaUrl } from "@/lib/stories/media/url";
 
 export function StoryMediaImage({
   media,
@@ -17,11 +17,11 @@ export function StoryMediaImage({
   className?: string;
   priority?: boolean;
 }) {
+  const src = useStoryMediaUrl(media ?? null);
   if (!media) return null;
-  const src = storyMediaPublicUrl(media);
   return (
     <img
-      src={src}
+      src={src ?? undefined}
       alt={alt}
       width={media.width}
       height={media.height}
