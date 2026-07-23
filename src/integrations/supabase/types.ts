@@ -2084,7 +2084,8 @@ export type Database = {
       }
       stories: {
         Row: {
-          category: Database["public"]["Enums"]["story_category"] | null
+          category: Database["public"]["Enums"]["story_category"]
+          collection_order: number | null
           content_version: number
           cover_media_id: string | null
           created_at: string
@@ -2093,12 +2094,15 @@ export type Database = {
           era: string | null
           gregorian_end: string | null
           gregorian_start: string | null
+          hijri_end_day: number | null
+          hijri_end_month: number | null
           hijri_end_year: number | null
+          hijri_start_day: number | null
+          hijri_start_month: number | null
           hijri_start_year: number | null
-          historical_confidence:
-            | Database["public"]["Enums"]["story_historical_confidence"]
-            | null
+          historical_confidence: Database["public"]["Enums"]["story_historical_confidence"]
           id: string
+          length_class: Database["public"]["Enums"]["story_length_class"]
           lock_visibility: Database["public"]["Enums"]["story_lock_visibility"]
           metadata: Json
           previous_draft: Json | null
@@ -2107,11 +2111,15 @@ export type Database = {
           published_at: string | null
           rarity: Database["public"]["Enums"]["story_rarity"]
           reaction_count: number
+          schema_version: number
           slug: string
+          snapshot_tier: Database["public"]["Enums"]["story_snapshot_tier"]
           status: string
           story_collection_id: string | null
           summary_ar: string | null
           summary_en: string | null
+          tags: string[]
+          time_precision: Database["public"]["Enums"]["story_time_precision"]
           title_ar: string
           title_en: string | null
           unlock_spec: Json
@@ -2120,7 +2128,8 @@ export type Database = {
           xp_reward: number
         }
         Insert: {
-          category?: Database["public"]["Enums"]["story_category"] | null
+          category?: Database["public"]["Enums"]["story_category"]
+          collection_order?: number | null
           content_version?: number
           cover_media_id?: string | null
           created_at?: string
@@ -2129,25 +2138,32 @@ export type Database = {
           era?: string | null
           gregorian_end?: string | null
           gregorian_start?: string | null
+          hijri_end_day?: number | null
+          hijri_end_month?: number | null
           hijri_end_year?: number | null
+          hijri_start_day?: number | null
+          hijri_start_month?: number | null
           hijri_start_year?: number | null
-          historical_confidence?:
-            | Database["public"]["Enums"]["story_historical_confidence"]
-            | null
+          historical_confidence?: Database["public"]["Enums"]["story_historical_confidence"]
           id: string
+          length_class?: Database["public"]["Enums"]["story_length_class"]
           lock_visibility?: Database["public"]["Enums"]["story_lock_visibility"]
           metadata?: Json
           previous_draft?: Json | null
           previous_draft_at?: string | null
-          production_status?: Database["public"]["Enums"]["story_production_status"]
+          production_status: Database["public"]["Enums"]["story_production_status"]
           published_at?: string | null
           rarity?: Database["public"]["Enums"]["story_rarity"]
           reaction_count?: number
+          schema_version?: number
           slug: string
+          snapshot_tier?: Database["public"]["Enums"]["story_snapshot_tier"]
           status?: string
           story_collection_id?: string | null
           summary_ar?: string | null
           summary_en?: string | null
+          tags?: string[]
+          time_precision?: Database["public"]["Enums"]["story_time_precision"]
           title_ar: string
           title_en?: string | null
           unlock_spec?: Json
@@ -2156,7 +2172,8 @@ export type Database = {
           xp_reward?: number
         }
         Update: {
-          category?: Database["public"]["Enums"]["story_category"] | null
+          category?: Database["public"]["Enums"]["story_category"]
+          collection_order?: number | null
           content_version?: number
           cover_media_id?: string | null
           created_at?: string
@@ -2165,12 +2182,15 @@ export type Database = {
           era?: string | null
           gregorian_end?: string | null
           gregorian_start?: string | null
+          hijri_end_day?: number | null
+          hijri_end_month?: number | null
           hijri_end_year?: number | null
+          hijri_start_day?: number | null
+          hijri_start_month?: number | null
           hijri_start_year?: number | null
-          historical_confidence?:
-            | Database["public"]["Enums"]["story_historical_confidence"]
-            | null
+          historical_confidence?: Database["public"]["Enums"]["story_historical_confidence"]
           id?: string
+          length_class?: Database["public"]["Enums"]["story_length_class"]
           lock_visibility?: Database["public"]["Enums"]["story_lock_visibility"]
           metadata?: Json
           previous_draft?: Json | null
@@ -2179,11 +2199,15 @@ export type Database = {
           published_at?: string | null
           rarity?: Database["public"]["Enums"]["story_rarity"]
           reaction_count?: number
+          schema_version?: number
           slug?: string
+          snapshot_tier?: Database["public"]["Enums"]["story_snapshot_tier"]
           status?: string
           story_collection_id?: string | null
           summary_ar?: string | null
           summary_en?: string | null
+          tags?: string[]
+          time_precision?: Database["public"]["Enums"]["story_time_precision"]
           title_ar?: string
           title_en?: string | null
           unlock_spec?: Json
@@ -2283,6 +2307,7 @@ export type Database = {
           primary_media_id: string | null
           scene_index: number
           scene_type: string
+          schema_version: number
           story_id: string
           title_ar: string | null
           title_en: string | null
@@ -2295,6 +2320,7 @@ export type Database = {
           primary_media_id?: string | null
           scene_index: number
           scene_type: string
+          schema_version?: number
           story_id: string
           title_ar?: string | null
           title_en?: string | null
@@ -2307,6 +2333,7 @@ export type Database = {
           primary_media_id?: string | null
           scene_index?: number
           scene_type?: string
+          schema_version?: number
           story_id?: string
           title_ar?: string | null
           title_en?: string | null
@@ -4039,26 +4066,43 @@ export type Database = {
         | "other"
       social_anchor_type: "story" | "comment" | "entity"
       story_category:
-        | "seerah"
-        | "sahabah"
-        | "tabieen"
-        | "battles"
-        | "conquests"
-        | "scholars"
-        | "dynasties"
-        | "civilization"
-        | "places"
-        | "artifacts"
-        | "manuscripts"
-        | "events"
-      story_historical_confidence: "established" | "disputed" | "weak"
+        | "event"
+        | "character"
+        | "city"
+        | "landmark"
+        | "battle"
+        | "artifact"
+        | "document"
+        | "daily_life"
+        | "analysis"
+        | "alternate_history"
+      story_historical_confidence:
+        | "established"
+        | "debated"
+        | "speculative"
+        | "alternate"
+      story_length_class: "short" | "standard" | "epic"
       story_lock_visibility: "visible" | "mystery" | "hidden"
       story_production_status:
+        | "idea"
+        | "research"
+        | "writing"
+        | "json_ready"
         | "imported"
-        | "drafting"
-        | "in_review"
+        | "images_in_progress"
+        | "images_linked"
+        | "testing"
         | "completed"
       story_rarity: "standard" | "featured" | "rare" | "legendary"
+      story_snapshot_tier: "core" | "standard" | "on_demand"
+      story_time_precision:
+        | "day"
+        | "month"
+        | "year"
+        | "decade"
+        | "century"
+        | "period"
+        | "unknown"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4231,28 +4275,47 @@ export const Constants = {
       ],
       social_anchor_type: ["story", "comment", "entity"],
       story_category: [
-        "seerah",
-        "sahabah",
-        "tabieen",
-        "battles",
-        "conquests",
-        "scholars",
-        "dynasties",
-        "civilization",
-        "places",
-        "artifacts",
-        "manuscripts",
-        "events",
+        "event",
+        "character",
+        "city",
+        "landmark",
+        "battle",
+        "artifact",
+        "document",
+        "daily_life",
+        "analysis",
+        "alternate_history",
       ],
-      story_historical_confidence: ["established", "disputed", "weak"],
+      story_historical_confidence: [
+        "established",
+        "debated",
+        "speculative",
+        "alternate",
+      ],
+      story_length_class: ["short", "standard", "epic"],
       story_lock_visibility: ["visible", "mystery", "hidden"],
       story_production_status: [
+        "idea",
+        "research",
+        "writing",
+        "json_ready",
         "imported",
-        "drafting",
-        "in_review",
+        "images_in_progress",
+        "images_linked",
+        "testing",
         "completed",
       ],
       story_rarity: ["standard", "featured", "rare", "legendary"],
+      story_snapshot_tier: ["core", "standard", "on_demand"],
+      story_time_precision: [
+        "day",
+        "month",
+        "year",
+        "decade",
+        "century",
+        "period",
+        "unknown",
+      ],
     },
   },
 } as const

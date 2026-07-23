@@ -42,9 +42,9 @@ d("stories P1 — server contract", () => {
   it("get_story_access refuses unpublished stories to anon", () => {
     const draftId = "draft_probe_" + randomUUID().slice(0, 8);
     sql(`INSERT INTO public.stories
-           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward)
+           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, production_status)
          VALUES
-           ('${draftId}', '${draftId}', 'مسودة', 'draft', 1, 10, 5)`);
+           ('${draftId}', '${draftId}', 'مسودة', 'draft', 1, 10, 5, 'imported')`);
     const res = sql(
       `BEGIN;
        SELECT set_config('request.jwt.claims',
@@ -59,9 +59,9 @@ d("stories P1 — server contract", () => {
   it("get_story_access returns a bundle for a published story", () => {
     const pubId = "pub_probe_" + randomUUID().slice(0, 8);
     sql(`INSERT INTO public.stories
-           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward)
+           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, production_status)
          VALUES
-           ('${pubId}', '${pubId}', 'قصة عامة', 'published', 1, 40, 15)`);
+           ('${pubId}', '${pubId}', 'قصة عامة', 'published', 1, 40, 15, 'completed')`);
     sql(`INSERT INTO public.story_scenes
            (id, story_id, scene_index, scene_type, title_ar, payload)
          VALUES
