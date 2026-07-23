@@ -23,16 +23,22 @@ import type {
   SocialCommentRow,
   CommentsPage,
 } from "@/lib/social/comments";
+import type { SocialAnchorType } from "@/lib/social/reactions";
 import { GuidedCommentComposer } from "./GuidedCommentComposer";
 import { CommentItem } from "./CommentItem";
 import { myContributionFlags, type MyContributionFlag } from "@/lib/social/contributions";
 
 interface Props {
-  storyId: string;
+  /** Preferred: explicit anchor. Defaults to "story" for backward-compat. */
+  anchorType?: Exclude<SocialAnchorType, "comment">;
+  anchorId?: string;
+  /** Legacy alias — new callers should use anchorType/anchorId. */
+  storyId?: string;
   className?: string;
 }
 
-export function StoryComments({ storyId, className }: Props) {
+export function StoryComments({ anchorType = "story", anchorId, storyId, className }: Props) {
+  const resolvedAnchorId = anchorId ?? storyId ?? "";
   const { user } = useAccount();
   const online = useOnline();
   const [sort, setSort] = useState<CommentSort>("editors_helpful_new");
@@ -47,9 +53,10 @@ export function StoryComments({ storyId, className }: Props) {
 
   const load = useCallback(
     async (nextSort: CommentSort) => {
+      if (!resolvedAnchorId) return;
       setLoading(true);
       setError(null);
-      const res = await listComments("story", storyId, { sort: nextSort, limit: 20 });
+      const res = await listComments(anchorType, resolvedAnchorId, { sort: nextSort, limit: 20 });
       if ("ok" in res && res.ok) {
         const page = res as CommentsPage;
         setEditorsNotes(page.editors_notes ?? []);
@@ -61,7 +68,7 @@ export function StoryComments({ storyId, className }: Props) {
       }
       setLoading(false);
     },
-    [storyId],
+    [anchorType, resolvedAnchorId],
   );
 
   useEffect(() => {
@@ -69,16 +76,16 @@ export function StoryComments({ storyId, className }: Props) {
   }, [load, sort]);
 
   const loadMore = useCallback(async () => {
-    if (!cursor || loadingMore) return;
+    if (!cursor || loadingMore || !resolvedAnchorId) return;
     setLoadingMore(true);
-    const res = await listComments("story", storyId, { sort, cursor, limit: 20 });
+    const res = await listComments(anchorType, resolvedAnchorId, { sort, cursor, limit: 20 });
     if ("ok" in res && res.ok) {
       const page = res as CommentsPage;
       setItems((prev) => [...prev, ...(page.items ?? [])]);
       setCursor(page.next_cursor ?? null);
     }
     setLoadingMore(false);
-  }, [cursor, loadingMore, sort, storyId]);
+  }, [anchorType, cursor, loadingMore, sort, resolvedAnchorId]);
 
   const myCount = useMemo(() => {
     const all = [...editorsNotes, ...items];
