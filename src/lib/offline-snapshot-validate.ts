@@ -93,6 +93,23 @@ export function validateSnapshot(snap: OfflineSnapshot | null): ValidationReport
         }
       }
     }
+    if (key === "stories") {
+      for (const r of rows) {
+        if ((r as any)?.status !== "published") {
+          add("error", `قصة غير منشورة في اللقطة: ${(r as any)?.slug ?? (r as any)?.id}`, key);
+        }
+      }
+    }
+    if (key === "story_media") {
+      for (const r of rows) {
+        if ((r as any)?.verified !== true) {
+          add("error", `وسيط قصة غير مُتحقّق في اللقطة: ${(r as any)?.id}`, key);
+        }
+        if (!(r as any)?.checksum_sha256 || !(r as any)?.storage_path || !(r as any)?.storage_bucket) {
+          add("error", `وسيط قصة ناقص البيانات: ${(r as any)?.id}`, key);
+        }
+      }
+    }
   }
 
   // Atlas → encyclopedia link integrity.
@@ -102,6 +119,52 @@ export function validateSnapshot(snap: OfflineSnapshot | null): ValidationReport
       const link = (r as any)?.encyclopedia_entity_id;
       if (link && !encIds.has(String(link))) {
         add("warning", `رابط موسوعة مفقود لكيان أطلس: ${(r as any)?.slug ?? (r as any)?.id}`, "atlas_entities");
+      }
+    }
+  }
+
+  // Stories ⇄ scenes ⇄ media integrity (P5).
+  const stories = snap.collections["stories"];
+  const scenes  = snap.collections["story_scenes"];
+  const media   = snap.collections["story_media"];
+  if (Array.isArray(stories)) {
+    const storyIds = new Set(stories.map((s: any) => String(s.id)));
+    const mediaIds = new Set(Array.isArray(media) ? media.map((m: any) => String(m.id)) : []);
+    if (Array.isArray(scenes)) {
+      const seenIdx = new Map<string, Set<number>>();
+      for (const sc of scenes) {
+        const sid = String((sc as any)?.story_id ?? "");
+        if (!storyIds.has(sid)) {
+          add("error", `مشهد يتيم بلا قصة: ${(sc as any)?.id}`, "story_scenes");
+          continue;
+        }
+        const idx = (sc as any)?.scene_index;
+        if (typeof idx !== "number" || idx < 0) {
+          add("error", `فهرس مشهد غير صالح: ${(sc as any)?.id}`, "story_scenes");
+        } else {
+          const set = seenIdx.get(sid) ?? new Set<number>();
+          if (set.has(idx)) add("error", `فهرس مشهد مكرر ${idx} في القصة ${sid}`, "story_scenes");
+          set.add(idx);
+          seenIdx.set(sid, set);
+        }
+        const pmid = (sc as any)?.primary_media_id;
+        if (pmid && !mediaIds.has(String(pmid))) {
+          add("warning", `وسيط مشهد مفقود: ${pmid}`, "story_scenes");
+        }
+      }
+    }
+    for (const s of stories) {
+      const cm = (s as any)?.cover_media_id;
+      if (cm && !mediaIds.has(String(cm))) {
+        add("warning", `غلاف القصة مفقود من الوسائط: ${(s as any)?.slug ?? (s as any)?.id}`, "stories");
+      }
+    }
+    if (Array.isArray(media)) {
+      for (const m of media) {
+        const owner = (m as any)?.story_id;
+        if (owner && !storyIds.has(String(owner))) {
+          add("warning", `وسيط يتيم مرتبط بقصة غير موجودة: ${(m as any)?.id}`, "story_media");
+        }
       }
     }
   }

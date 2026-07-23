@@ -62,6 +62,14 @@ let investigationsAll: Row[] = [];
 const tihByMonthDay = new Map<string, Row[]>(); // `${m}-${d}` → list
 let dailyFactsAll: Row[] = [];
 
+// Stories (P5) — snapshot-backed lookups for offline reading.
+const storiesById = new Map<string, Row>();
+const storiesBySlug = new Map<string, Row>();
+let storiesAll: Row[] = [];
+const scenesByStory = new Map<string, Row[]>();
+const mediaById = new Map<string, Row>();
+const mediaByStory = new Map<string, Row[]>();
+
 function indexEncyclopedia(rows: Row[]) {
   encyclopediaById.clear();
   encyclopediaBySlug.clear();
@@ -150,6 +158,41 @@ function indexDailyFacts(rows: Row[]) {
   dailyFactsAll = rows.filter((r) => r && r.enabled !== false);
 }
 
+function indexStories(rows: Row[]) {
+  storiesById.clear(); storiesBySlug.clear();
+  storiesAll = rows.filter((r) => r && r.status === "published");
+  for (const r of storiesAll) {
+    if (r.id) storiesById.set(String(r.id), r);
+    if (r.slug) storiesBySlug.set(String(r.slug), r);
+  }
+}
+function indexScenes(rows: Row[]) {
+  scenesByStory.clear();
+  for (const r of rows) {
+    const sid = String(r?.story_id ?? "");
+    if (!sid) continue;
+    const list = scenesByStory.get(sid) ?? [];
+    list.push(r);
+    scenesByStory.set(sid, list);
+  }
+  for (const list of scenesByStory.values()) {
+    list.sort((a, b) => (a.scene_index ?? 0) - (b.scene_index ?? 0));
+  }
+}
+function indexStoryMedia(rows: Row[]) {
+  mediaById.clear(); mediaByStory.clear();
+  for (const r of rows) {
+    if (!r?.verified) continue;
+    if (r.id) mediaById.set(String(r.id), r);
+    const sid = r.story_id ? String(r.story_id) : null;
+    if (sid) {
+      const list = mediaByStory.get(sid) ?? [];
+      list.push(r);
+      mediaByStory.set(sid, list);
+    }
+  }
+}
+
 /** Rebuild every index from a snapshot. Safe to call repeatedly. */
 export function applyLocalSnapshot(snap: OfflineSnapshot | null) {
   if (!snap?.collections) return;
@@ -160,6 +203,9 @@ export function applyLocalSnapshot(snap: OfflineSnapshot | null) {
   indexInvestigations(c.investigations ?? []);
   indexTih(c.today_in_history_events ?? []);
   indexDailyFacts(c.daily_facts ?? []);
+  indexStories(c.stories ?? []);
+  indexScenes(c.story_scenes ?? []);
+  indexStoryMedia(c.story_media ?? []);
   _snapshot = snap;
 }
 
@@ -358,4 +404,27 @@ export function localSnapshotInfo() {
     snapshot_version: _snapshot.snapshot_version,
     content_counts: _snapshot.content_counts,
   };
+}
+
+// ---------- Stories (P5) ----------
+export function localStoriesAll(): Row[] { return storiesAll; }
+export function localStoryById(id: string): Row | null {
+  if (!id) return null;
+  return storiesById.get(id) ?? storiesBySlug.get(id) ?? null;
+}
+export function localStoryScenes(storyId: string): Row[] {
+  return scenesByStory.get(storyId) ?? [];
+}
+export function localStoryMediaById(id: string): Row | null {
+  if (!id) return null;
+  return mediaById.get(id) ?? null;
+}
+export function localStoryMediaForStory(storyId: string, referencedIds: Iterable<string> = []): Row[] {
+  const out = new Map<string, Row>();
+  for (const m of mediaByStory.get(storyId) ?? []) out.set(String(m.id), m);
+  for (const id of referencedIds) {
+    const m = mediaById.get(String(id));
+    if (m) out.set(String(m.id), m);
+  }
+  return Array.from(out.values());
 }

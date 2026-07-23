@@ -86,6 +86,18 @@ export const COLLECTIONS: CollectionDef[] = [
     required: false,
     label: "سجل المتحف (قديم/اختياري — المتحف يقرأ من الموسوعة)" },
 
+  // Stories (P5) — first-class snapshot content. Anon RLS restricts
+  // stories to status='published', scenes to scenes-of-published-stories,
+  // and media to verified=true, so no additional filter is needed here.
+  { key: "stories", table: "stories",
+    filter: (q) => q.eq("status", "published"), required: false,
+    label: "القصص المنشورة" },
+  { key: "story_scenes", table: "story_scenes",
+    required: false,
+    label: "مشاهد القصص" },
+  { key: "story_media", table: "story_media",
+    filter: (q) => q.eq("verified", true), required: false,
+    label: "وسائط القصص (مُتحقّقة فقط)" },
 ];
 
 /** Collections that DO NOT expose `updated_at` — sync must full-fetch these. */
@@ -239,8 +251,37 @@ function pruneOfflineRow(def: CollectionDef, row: any): any {
     } = row;
     return playerRow;
   }
+  if (def.key === "story_media") {
+    // Strip auditing UUIDs before persisting to the public offline snapshot.
+    const { verified_by: _v, ...rest } = row;
+    return rest;
+  }
   return row;
 }
+
+/**
+ * Collect cache URLs for verified story_media rows. Each URL is stamped
+ * with `?v=<processing_version>` so a version bump forces a fresh fetch
+ * without inventing a second image cache implementation.
+ */
+export function collectStoryMediaCacheUrls(mediaRows: any[]): Set<string> {
+  const out = new Set<string>();
+  if (!Array.isArray(mediaRows)) return out;
+  // Compute the storage public URL prefix lazily and only once, so the
+  // helper stays synchronous and importable from bootstrap paths.
+  const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL as string | undefined;
+  if (!supabaseUrl) return out;
+  for (const row of mediaRows) {
+    if (!row?.verified) continue;
+    const bucket = row.storage_bucket;
+    const path = row.storage_path;
+    const pv = Number.isFinite(row.processing_version) ? row.processing_version : 1;
+    if (!bucket || !path) continue;
+    out.add(`${supabaseUrl}/storage/v1/object/public/${bucket}/${path}?v=${pv}`);
+  }
+  return out;
+}
+
 
 function pruneOfflineRows(def: CollectionDef, rows: any[]): any[] {
   return rows.map((row) => pruneOfflineRow(def, row));
@@ -342,6 +383,16 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
       await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
     } catch { /* dev-only path; ignore in prod */ }
   }
+  // Warm the shared image cache with story media covers/scenes so a
+  // freshly-synced install can render them offline.
+  void (async () => {
+    try {
+      const { collectImageUrls, prefetchImages } = await import("./image-cache");
+      const urls = collectImageUrls(snap.collections);
+      for (const u of collectStoryMediaCacheUrls(snap.collections.story_media ?? [])) urls.add(u);
+      await prefetchImages(urls);
+    } catch { /* ignore */ }
+  })();
   return snap;
 }
 
@@ -440,6 +491,11 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     try {
       const { collectImageUrls, prefetchImages } = await import("./image-cache");
       const urls = collectImageUrls(nextCollections);
+      // Story media (P5): stitch bucket+path+processing_version into
+      // stable public URLs so the same encyclopedia image cache serves
+      // stories offline. Version bumps yield new URLs and thus a fresh
+      // fetch — invalidation happens exactly when processing_version moves.
+      for (const u of collectStoryMediaCacheUrls(nextCollections.story_media ?? [])) urls.add(u);
       await prefetchImages(urls);
     } catch { /* ignore */ }
   })();
@@ -578,7 +634,9 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
         const snap = local ?? (await loadSnapshot());
         if (!snap?.collections) return;
         const { collectImageUrls, prefetchImages } = await import("./image-cache");
-        await prefetchImages(collectImageUrls(snap.collections));
+        const urls = collectImageUrls(snap.collections);
+        for (const u of collectStoryMediaCacheUrls(snap.collections.story_media ?? [])) urls.add(u);
+        await prefetchImages(urls);
       } catch { /* ignore */ }
     })();
   } catch (e) {
