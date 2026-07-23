@@ -1,0 +1,105 @@
+// ============================================================
+// Presentation helpers for personal notifications.
+// One place to translate (kind, payload, count) into Arabic copy
+// and a deep link — so the inbox, the bell, and future surfaces
+// never drift.
+// ============================================================
+
+import type { PersonalNotificationRow } from "./personal";
+
+export interface RenderedNotification {
+  title: string;
+  body?: string;
+  href: string; // Deep link to the source content.
+  emoji: string;
+}
+
+function storyTitle(row: PersonalNotificationRow): string {
+  const p = row.payload ?? {};
+  const t = (p as { story_title?: string }).story_title;
+  return t && t.length > 0 ? t : "قصة";
+}
+
+function commentHref(row: PersonalNotificationRow): string {
+  const storyId = (row.payload as { story_id?: string }).story_id;
+  return storyId ? `/story/${storyId}` : "/inbox";
+}
+
+export function renderNotification(row: PersonalNotificationRow): RenderedNotification {
+  const story = storyTitle(row);
+  const preview = (row.payload as { comment_preview?: string }).comment_preview ?? "";
+  switch (row.kind) {
+    case "story_reaction_on_comment": {
+      const n = row.count;
+      const title =
+        n <= 1
+          ? "استزاد قارئ من تأمّلك."
+          : `استزاد ${n} قرّاء من تأمّلك.`;
+      return {
+        title,
+        body: preview ? `«${preview}»` : `على قصة: ${story}`,
+        href: commentHref(row),
+        emoji: "📖",
+      };
+    }
+    case "comment_promoted_editor_note":
+      return {
+        title: "أصبحت مساهمتك ملاحظة المحرّر.",
+        body: `على قصة: ${story}`,
+        href: commentHref(row),
+        emoji: "✨",
+      };
+    case "comment_marked_contribution":
+      return {
+        title: "ساهمت في تحسين إرث.",
+        body: `مساهمتك على قصة "${story}" أثْرَت المحتوى — شكرًا لك.`,
+        href: commentHref(row),
+        emoji: "🌿",
+      };
+    case "comment_hidden": {
+      const reason = (row.payload as { reason?: string }).reason;
+      return {
+        title: "أُخفيت إحدى مساهماتك.",
+        body: reason
+          ? `السبب: ${reason}`
+          : `على قصة: ${story}`,
+        href: commentHref(row),
+        emoji: "🔒",
+      };
+    }
+    case "comment_restored":
+      return {
+        title: "أُعيد إظهار مساهمتك.",
+        body: `على قصة: ${story}`,
+        href: commentHref(row),
+        emoji: "↩︎",
+      };
+    case "story_unlocked":
+      return {
+        title: `فُتحت قصة جديدة: ${story}.`,
+        body: "أصبحت متاحة الآن للقراءة.",
+        href: commentHref(row),
+        emoji: "🗝️",
+      };
+    default:
+      return { title: "إشعار جديد.", href: "/inbox", emoji: "•" };
+  }
+}
+
+export function formatRelativeAr(iso: string): string {
+  const d = new Date(iso).getTime();
+  if (!Number.isFinite(d)) return "";
+  const diff = Date.now() - d;
+  const min = Math.round(diff / 60_000);
+  if (min < 1) return "الآن";
+  if (min < 60) return `منذ ${min} د`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `منذ ${hr} س`;
+  const day = Math.round(hr / 24);
+  if (day < 30) return `منذ ${day} يوم`;
+  try {
+    return new Intl.DateTimeFormat("ar", { day: "numeric", month: "short" }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
