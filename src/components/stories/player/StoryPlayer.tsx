@@ -122,14 +122,24 @@ export function StoryPlayer({
   const goNext = useCallback(async () => {
     if (!scene) return;
     if (isLast) {
-      // Trigger the completion contract; RewardMoment renders regardless
-      // (reward is server-idempotent — replays grant zero).
-      void completeStory(story.id);
+      // Sticky one-shot completion; server dedupes and returns the
+      // authoritative granted reward. Apply to the local profile so
+      // the HUD reflects the new balance immediately without waiting
+      // for the next cloud reconciliation cycle.
       setPhase("reward");
+      if (completionFiredRef.current) return;
+      completionFiredRef.current = true;
+      const res = await completeStory(story.id);
+      const grantXp = res.result?.reward_granted_xp ?? 0;
+      const grantDin = res.result?.reward_granted_dinars ?? 0;
+      setGrantedXp(grantXp);
+      setGrantedDinars(grantDin);
+      if (grantXp > 0) addPoints(grantXp);
+      if (grantDin > 0) addDinars(grantDin);
       return;
     }
     setIdx((n) => Math.min(n + 1, ordered.length - 1));
-  }, [isLast, ordered.length, scene, story.id]);
+  }, [isLast, ordered.length, scene, story.id, addPoints, addDinars]);
 
   const goPrev = useCallback(() => {
     setIdx((n) => Math.max(0, n - 1));
@@ -141,10 +151,12 @@ export function StoryPlayer({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (phase !== "playing") return;
+    if (isReflectionScene) return; // reflection scenes own their own input
     touchRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = window.setTimeout(() => setPaused(true), 350);
   };
+
   const onPointerUp = (e: React.PointerEvent) => {
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
     const start = touchRef.current;
