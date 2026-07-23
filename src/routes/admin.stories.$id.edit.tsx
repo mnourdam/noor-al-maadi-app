@@ -29,6 +29,7 @@ import {
 import { validateStoryPublish, type StoryPublishValidation } from "@/lib/stories/media/dao";
 import { uploadStoryMedia } from "@/lib/stories/media/pipeline";
 import { readReferences, writeReferences, type StoryReferences, type StoryReference } from "@/lib/stories/references";
+import { suggestSlug } from "@/lib/stories/slug";
 import { computeStoryHealth, summarizeHealth, type HealthFinding } from "@/lib/stories/health";
 import { useAutoSave, type SaveStatus } from "@/hooks/useAutoSave";
 import { SceneRenderer } from "@/components/stories/scenes/SceneRenderer";
