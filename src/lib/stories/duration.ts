@@ -27,13 +27,17 @@
 // and it uses the same timing constants as the runtime.
 //
 // Precedence for the displayed duration (highest wins):
-//   1. `metadata.reading_time_minutes` — editorial override (backward-
-//      compatible). If authored, it is treated as the final value and
-//      converted to ms. Kept for legacy stories and rare hand-tuned
-//      cases; not the default.
-//   2. `storyDurationMsFromScenes(scenes)` when the caller has loaded
-//      the scene payload (player intro, admin preview).
-//   3. `storyDurationMsFromCount(sceneCount)` for catalog surfaces.
+//   1. `storyDurationMsFromScenes(scenes)` when the caller has loaded
+//      the scene payload (player intro, admin preview). Authoritative —
+//      mirrors the cinematic runtime exactly, so edits to scenes are
+//      reflected automatically.
+//   2. `storyDurationMsFromCount(sceneCount)` for catalog surfaces
+//      where only `scene_count` is known.
+//   3. Editorial override — ONLY when `metadata.use_manual_reading_time`
+//      is explicitly `true` AND `metadata.reading_time_override_minutes`
+//      is a positive number. Without the flag the runtime value always
+//      wins, so a stale field can never desync the displayed duration
+//      from the real cinematic runtime.
 // ============================================================
 
 import {
@@ -82,31 +86,42 @@ export function storyDurationMsFromCount(sceneCount: number): number {
   return INTRO_HOLD_MS + n * perScene + Math.max(0, n - 1) * TRANSITION_MS + REWARD_HOLD_MS;
 }
 
-/** Editorial override from `metadata.reading_time_minutes`, in ms. */
+/**
+ * Editorial override — returns ms ONLY when the author has explicitly
+ * opted in via `metadata.use_manual_reading_time === true` AND provided
+ * a positive `metadata.reading_time_override_minutes`. Any other shape
+ * (including the legacy `reading_time_minutes` field on its own) is
+ * ignored so the runtime value wins by default.
+ */
 export function overrideDurationMs(
   metadata: Record<string, unknown> | null | undefined,
 ): number | null {
-  const raw = metadata?.["reading_time_minutes"];
+  if (!metadata) return null;
+  if (metadata["use_manual_reading_time"] !== true) return null;
+  const raw = metadata["reading_time_override_minutes"];
   const n = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.round(n * 60_000);
 }
 
 /**
- * Resolve the duration to display, honoring the documented precedence.
- * Prefer `scenes` when available; otherwise fall back to `sceneCount`.
+ * Resolve the duration to display, honoring the documented precedence:
+ * runtime scenes → scene-count estimate → explicit editorial override.
+ * The override is checked LAST and only fires when the author flag is set.
  */
 export function resolveStoryDurationMs(input: {
   metadata?: Record<string, unknown> | null;
   scenes?: StorySceneRow[] | null;
   sceneCount?: number | null;
 }): number {
-  const override = overrideDurationMs(input.metadata ?? null);
-  if (override !== null) return override;
   if (input.scenes && input.scenes.length > 0) {
     return storyDurationMsFromScenes(input.scenes);
   }
-  return storyDurationMsFromCount(input.sceneCount ?? 0);
+  const count = input.sceneCount ?? 0;
+  if (count > 0) return storyDurationMsFromCount(count);
+  const override = overrideDurationMs(input.metadata ?? null);
+  if (override !== null) return override;
+  return storyDurationMsFromCount(0);
 }
 
 /**
