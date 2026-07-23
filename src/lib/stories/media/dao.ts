@@ -52,8 +52,10 @@ export interface StoryMediaOrphan {
   kind: StoryMediaKind;
   preset: string;
   verified: boolean;
+  ownership: StoryMediaOwnership;
   age_minutes: number;
 }
+
 
 export interface StoryPublishIssue {
   code: string;
