@@ -158,6 +158,41 @@ function indexDailyFacts(rows: Row[]) {
   dailyFactsAll = rows.filter((r) => r && r.enabled !== false);
 }
 
+function indexStories(rows: Row[]) {
+  storiesById.clear(); storiesBySlug.clear();
+  storiesAll = rows.filter((r) => r && r.status === "published");
+  for (const r of storiesAll) {
+    if (r.id) storiesById.set(String(r.id), r);
+    if (r.slug) storiesBySlug.set(String(r.slug), r);
+  }
+}
+function indexScenes(rows: Row[]) {
+  scenesByStory.clear();
+  for (const r of rows) {
+    const sid = String(r?.story_id ?? "");
+    if (!sid) continue;
+    const list = scenesByStory.get(sid) ?? [];
+    list.push(r);
+    scenesByStory.set(sid, list);
+  }
+  for (const list of scenesByStory.values()) {
+    list.sort((a, b) => (a.scene_index ?? 0) - (b.scene_index ?? 0));
+  }
+}
+function indexStoryMedia(rows: Row[]) {
+  mediaById.clear(); mediaByStory.clear();
+  for (const r of rows) {
+    if (!r?.verified) continue;
+    if (r.id) mediaById.set(String(r.id), r);
+    const sid = r.story_id ? String(r.story_id) : null;
+    if (sid) {
+      const list = mediaByStory.get(sid) ?? [];
+      list.push(r);
+      mediaByStory.set(sid, list);
+    }
+  }
+}
+
 /** Rebuild every index from a snapshot. Safe to call repeatedly. */
 export function applyLocalSnapshot(snap: OfflineSnapshot | null) {
   if (!snap?.collections) return;
@@ -168,6 +203,9 @@ export function applyLocalSnapshot(snap: OfflineSnapshot | null) {
   indexInvestigations(c.investigations ?? []);
   indexTih(c.today_in_history_events ?? []);
   indexDailyFacts(c.daily_facts ?? []);
+  indexStories(c.stories ?? []);
+  indexScenes(c.story_scenes ?? []);
+  indexStoryMedia(c.story_media ?? []);
   _snapshot = snap;
 }
 
