@@ -351,6 +351,16 @@ function EntityPage() {
           {/* ───────── Article body (timeline · facts · sections · related) ───────── */}
           <EncyclopediaArticleBody article={article} />
 
+          {/* ───────── Social layer (P6 Step 8) — reused Story primitives.
+              Only the anchor changes: story → entity. ───────── */}
+          <section className="mt-6 flex items-center justify-end">
+            <Istazadtu anchorType="entity" anchorId={entity.id} />
+          </section>
+          <PublicContributionsNotice anchorType="entity" anchorId={entity.id} className="mt-3" />
+          <div className="mt-6">
+            <StoryComments anchorType="entity" anchorId={entity.id} />
+          </div>
+
           {/* Generated "السياق التاريخي" block removed in Phase 5 —
               it was a graph-derived recommendation, not authored content,
               and it repeated across every entity page. Authored context
