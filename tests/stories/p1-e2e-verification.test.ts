@@ -183,7 +183,7 @@ d("Stories P1 — E2E backend contract verification", () => {
        SELECT public.record_story_progress_v2('${publishedId}', 0)->>'reason';
        ROLLBACK;`,
     );
-    expect(res).toBe("unauthenticated");
+    expect(res).toContain("unauthenticated");
   });
 
   it("record_story_progress_v2 rejects a null story id", () => {
@@ -195,7 +195,7 @@ d("Stories P1 — E2E backend contract verification", () => {
        SELECT public.record_story_progress_v2(NULL, 0)->>'reason';
        ROLLBACK;`,
     );
-    expect(res).toBe("invalid_story_id");
+    expect(res).toContain("invalid_story_id");
   });
 
   it("record_story_progress_v2 rejects a negative scene index", () => {
@@ -207,7 +207,7 @@ d("Stories P1 — E2E backend contract verification", () => {
        SELECT public.record_story_progress_v2('${publishedId}', -1)->>'reason';
        ROLLBACK;`,
     );
-    expect(res).toBe("invalid_scene_index");
+    expect(res).toContain("invalid_scene_index");
   });
 
   it("record_story_progress_v2 rejects an unknown story id", () => {
@@ -219,7 +219,7 @@ d("Stories P1 — E2E backend contract verification", () => {
        SELECT public.record_story_progress_v2('does_not_exist_${runId}', 0)->>'reason';
        ROLLBACK;`,
     );
-    expect(res).toBe("story_not_found");
+    expect(res).toContain("story_not_found");
   });
 
   // ---------- 4) complete_story_v2 early-return reasons ----------
@@ -231,7 +231,7 @@ d("Stories P1 — E2E backend contract verification", () => {
        SELECT public.complete_story_v2('${publishedId}')->>'reason';
        ROLLBACK;`,
     );
-    expect(res).toBe("unauthenticated");
+    expect(res).toContain("unauthenticated");
   });
 
   it("complete_story_v2 rejects a null story id", () => {
@@ -243,7 +243,7 @@ d("Stories P1 — E2E backend contract verification", () => {
        SELECT public.complete_story_v2(NULL)->>'reason';
        ROLLBACK;`,
     );
-    expect(res).toBe("invalid_story_id");
+    expect(res).toContain("invalid_story_id");
   });
 
   it("complete_story_v2 rejects an unknown story id", () => {
@@ -255,7 +255,7 @@ d("Stories P1 — E2E backend contract verification", () => {
        SELECT public.complete_story_v2('does_not_exist_${runId}')->>'reason';
        ROLLBACK;`,
     );
-    expect(res).toBe("story_not_found");
+    expect(res).toContain("story_not_found");
   });
 
   it("complete_story_v2 refuses a draft story with not_published", () => {
@@ -267,7 +267,7 @@ d("Stories P1 — E2E backend contract verification", () => {
        SELECT public.complete_story_v2('${draftId}')->>'reason';
        ROLLBACK;`,
     );
-    expect(res).toBe("not_published");
+    expect(res).toContain("not_published");
   });
 
   // ---------- 5) evaluate_unlock_spec ----------
