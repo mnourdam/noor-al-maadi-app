@@ -210,6 +210,9 @@ export interface StoryDeleteImpactItem {
   progress_rows: number;
   completions: number;
   comments: number;
+  visible_comments: number;
+  hidden_comments: number;
+  removed_comments: number;
   reactions: number;
 }
 export interface StoryDeleteImpact {
@@ -217,7 +220,9 @@ export interface StoryDeleteImpact {
   totals: {
     stories: number; published: number; draft: number; archived: number;
     scenes: number; owned_media: number; shared_media: number;
-    progress: number; completions: number; comments: number; reactions: number;
+    progress: number; completions: number;
+    comments: number; visible_comments: number; hidden_comments: number; removed_comments: number;
+    reactions: number;
   };
 }
 export async function adminStoryDeleteImpact(ids: string[]): Promise<StoryDeleteImpact> {
