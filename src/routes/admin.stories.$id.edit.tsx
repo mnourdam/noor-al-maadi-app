@@ -24,7 +24,8 @@ import { AdminGate } from "@/lib/admin-guard";
 import {
   adminGetStoryFull, adminUpsertStory, adminUpsertStoryScene,
   adminDeleteStoryScene, adminReorderStoryScenes, adminSetStoryStatus,
-  adminRestorePreviousDraft, type AdminStoryBundle,
+  adminRestorePreviousDraft, adminAttachStoryCover, adminAttachSceneMedia,
+  type AdminStoryBundle,
 } from "@/lib/stories/admin";
 import { validateStoryPublish, type StoryPublishValidation } from "@/lib/stories/media/dao";
 import { uploadStoryMedia } from "@/lib/stories/media/pipeline";
