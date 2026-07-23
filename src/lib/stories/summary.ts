@@ -53,47 +53,37 @@ export async function listStoriesSummary(
     const { data, error } = await supabase.rpc("list_stories_v2" as never, {
       p_world_slug: worldSlug ?? null,
     } as never);
-    if (!error) {
-      const rows = (data ?? []) as StorySummary[];
-      // Snapshot reconciliation (Phase A3): drop any stories from the
-      // in-memory offline snapshot that the server no longer lists. This
-      // eliminates "ghost" test/deleted stories that used to surface via
-      // the offline fallback path after a hard delete. Only when the view
-      // is unscoped (no worldSlug) do we hold the authoritative catalog.
-      if (!worldSlug) {
-        void (async () => {
-          try {
-            const { pruneStoriesToAuthoritative } = await import("@/lib/local-first-store");
-            pruneStoriesToAuthoritative(rows.map((r) => r.id));
-          } catch { /* ignore */ }
-        })();
-      }
-      // Persist the authoritative unlocked set so a subsequent offline
-      // session can preserve "already unlocked yesterday" state. We only
-      // update the cache when we have both a uid and a non-scoped view
-      // (worldSlug === null) OR merge into the existing per-uid set.
-      if (uid) {
-        void (async () => {
-          try {
-            const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
-            const prev = await loadUnlockedIds(uid);
-            for (const r of rows) if (r.unlocked) prev.add(r.id);
-            // When we know the full catalog (no world filter), we can also
-            // trim ids the server no longer marks as unlocked. World-scoped
-            // reads only add — they can't authoritatively remove.
-            if (!worldSlug) {
-              const authoritative = new Set(rows.filter((r) => r.unlocked).map((r) => r.id));
-              // Keep the union of "server says unlocked now" AND any id
-              // outside this snapshot (defensive; list_stories_v2 already
-              // returns every visible row).
-              for (const id of [...prev]) if (!authoritative.has(id) && rows.find((r) => r.id === id)) prev.delete(id);
-            }
-            await persistUnlockedIds(uid, prev);
-          } catch { /* ignore */ }
-        })();
-      }
-      return rows;
+    if (error) {
+      // Online but the authoritative RPC failed: DO NOT fall back to the
+      // local snapshot. Falling back would re-surface stale/legacy story
+      // rows and create ghost cards on Home. Surface the error so React
+      // Query treats it as a failure and callers show empty state.
+      throw new Error(error.message);
     }
+    const rows = (data ?? []) as StorySummary[];
+    if (!worldSlug) {
+      void (async () => {
+        try {
+          const { pruneStoriesToAuthoritative } = await import("@/lib/local-first-store");
+          pruneStoriesToAuthoritative(rows.map((r) => r.id));
+        } catch { /* ignore */ }
+      })();
+    }
+    if (uid) {
+      void (async () => {
+        try {
+          const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
+          const prev = await loadUnlockedIds(uid);
+          for (const r of rows) if (r.unlocked) prev.add(r.id);
+          if (!worldSlug) {
+            const authoritative = new Set(rows.filter((r) => r.unlocked).map((r) => r.id));
+            for (const id of [...prev]) if (!authoritative.has(id) && rows.find((r) => r.id === id)) prev.delete(id);
+          }
+          await persistUnlockedIds(uid, prev);
+        } catch { /* ignore */ }
+      })();
+    }
+    return rows;
   }
   // Offline fallback: synthesize catalog entries from the local snapshot.
   // Unlocked flag uses the signed unlock cache so previously-unlocked
