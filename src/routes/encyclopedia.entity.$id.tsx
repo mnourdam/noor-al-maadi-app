@@ -31,6 +31,7 @@ import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
+import { RelatedStoriesRail } from "@/components/stories/RelatedStoriesRail";
 import {
   resolveRelatedEntities,
   groupRelatedByReason,
@@ -396,6 +397,15 @@ function EntityPage() {
             </>
           )}
 
+
+          {/* Related Stories (P4.1) — reader-safe: from landing only. */}
+          {entity && (
+            <RelatedStoriesRail
+              worldSlug={(entity as { world_slug?: string | null }).world_slug ?? null}
+              limit={4}
+              heading="قصص ذات صلة"
+            />
+          )}
 
           {entity && (
             <FeedbackCTA

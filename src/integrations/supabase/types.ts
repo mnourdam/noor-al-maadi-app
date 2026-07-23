@@ -3432,6 +3432,7 @@ export type Database = {
           xp_reward: number
         }[]
       }
+      list_stories_v2: { Args: { p_world_slug?: string }; Returns: Json }
       log_admin_action: {
         Args: {
           p_action: string
