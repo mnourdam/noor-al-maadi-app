@@ -25,6 +25,7 @@ import type {
 } from "@/lib/social/comments";
 import { GuidedCommentComposer } from "./GuidedCommentComposer";
 import { CommentItem } from "./CommentItem";
+import { myContributionFlags, type MyContributionFlag } from "@/lib/social/contributions";
 
 interface Props {
   storyId: string;
@@ -42,6 +43,7 @@ export function StoryComments({ storyId, className }: Props) {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [myFlags, setMyFlags] = useState<Record<string, MyContributionFlag>>({});
 
   const load = useCallback(
     async (nextSort: CommentSort) => {
@@ -82,6 +84,22 @@ export function StoryComments({ storyId, className }: Props) {
     const all = [...editorsNotes, ...items];
     return all.filter((r) => r.is_mine).length;
   }, [editorsNotes, items]);
+
+  // Fetch this user's own contribution flags for the currently loaded comments.
+  useEffect(() => {
+    if (!user) { setMyFlags({}); return; }
+    const mineIds = [...editorsNotes, ...items].filter((r) => r.is_mine).map((r) => r.id);
+    if (mineIds.length === 0) { setMyFlags({}); return; }
+    let cancelled = false;
+    void (async () => {
+      const rows = await myContributionFlags(mineIds);
+      if (cancelled) return;
+      const map: Record<string, MyContributionFlag> = {};
+      for (const r of rows) map[r.comment_id] = r;
+      setMyFlags(map);
+    })();
+    return () => { cancelled = true; };
+  }, [user, editorsNotes, items]);
 
   const onPosted = useCallback((row: SocialCommentRow) => {
     // New comments land at the top of the "newest" surface regardless of sort.
@@ -169,10 +187,10 @@ export function StoryComments({ storyId, className }: Props) {
         <div className="space-y-3">
           {sort === "editors_helpful_new" &&
             editorsNotes.map((row) => (
-              <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} />
+              <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} contributionFlag={myFlags[row.id] ?? null} />
             ))}
           {items.map((row) => (
-            <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} />
+            <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} contributionFlag={myFlags[row.id] ?? null} />
           ))}
           {cursor && (
             <div className="flex justify-center pt-1">
