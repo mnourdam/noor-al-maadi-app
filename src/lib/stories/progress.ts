@@ -32,14 +32,44 @@ async function currentUserId(): Promise<string | null> {
   } catch { return null; }
 }
 
-/** Server-authorized bundle read. Works for anon on published stories. */
+/**
+ * Server-authorized bundle read. Works for anon on published stories.
+ * Falls back to the offline snapshot when the network call fails so a
+ * previously-synced player can open stories offline.
+ */
 export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBundle> {
-  const { data, error } = await supabase.rpc(
-    "get_story_access" as any,
-    { p_story_id: storyId },
-  );
-  if (error) return { ok: false, reason: error.message };
-  return (data ?? { ok: false, reason: "empty" }) as StoryAccessBundle;
+  const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  if (online) {
+    const { data, error } = await supabase.rpc(
+      "get_story_access" as any,
+      { p_story_id: storyId },
+    );
+    if (!error) {
+      const payload = (data ?? { ok: false, reason: "empty" }) as StoryAccessBundle;
+      if (payload.ok) return payload;
+    }
+  }
+  // Offline fallback — synthesize a permissive bundle from the local snapshot.
+  try {
+    const {
+      ensureLocalSnapshotLoaded,
+      localStoryById,
+      localStoryScenes,
+    } = await import("@/lib/local-first-store");
+    await ensureLocalSnapshotLoaded();
+    const story = localStoryById(storyId);
+    if (story) {
+      const scenes = localStoryScenes(String(story.id));
+      return {
+        ok: true,
+        story: story as any,
+        scenes: scenes as any,
+        progress: null,
+        completed: false,
+      } as StoryAccessBundle;
+    }
+  } catch { /* ignore */ }
+  return { ok: false, reason: "offline_and_not_cached" };
 }
 
 /**
