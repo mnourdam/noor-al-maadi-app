@@ -39,7 +39,7 @@ function formatDateAr(iso: string) {
   }
 }
 
-export function CommentItem({ row, onChange, onDelete }: Props) {
+export function CommentItem({ row, onChange, onDelete, currentUserId = null }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.body_text);
   const [pending, setPending] = useState(false);
