@@ -184,8 +184,9 @@ export function StoryCard({
           <div className="mt-2 flex items-center gap-3 text-[10.5px] text-white/85">
             <span className="inline-flex items-center gap-1">
               <Clock3 className="size-3 text-white/70" />
-              {mins} د
+              {durationLabel}
             </span>
+
             {story.xp_reward > 0 && (
               <span className="inline-flex items-center gap-1">
                 <Sparkles className="size-3 text-gold" />
