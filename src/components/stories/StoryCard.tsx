@@ -1,11 +1,30 @@
 // ============================================================
-// StoryCard — shared card used by Home rail, Worlds section,
-// Related Stories rails, and generic catalog contexts (P4.1).
-// Purely presentational; caller decides the wrapper (grid/rail).
+// StoryCard — cinematic story card (Phase 2 redesign).
+// ------------------------------------------------------------
+// Single card used everywhere Stories are surfaced: Home rail,
+// /stories catalog, Worlds section, Related rails, Continue Your
+// Journey. Presentational; caller controls the wrapper.
+//
+// Hierarchy (top → bottom, all over a tall cinematic cover):
+//   1. Cover artwork (portrait, 3:4) with bottom gradient
+//   2. Top-left status pill (اكتمل / استئناف / جديدة)
+//   3. Title (2-line clamp) over the gradient
+//   4. One-line summary (1-line clamp)
+//   5. Meta row: ⏱ duration · ✨ XP · ◈ Dinars
+//   6. Progress bar (in-progress only)
 // ============================================================
 
 import { Link } from "@tanstack/react-router";
-import { BookOpenText, CheckCircle2, Clock, Lock, PlayCircle } from "lucide-react";
+import {
+  BookOpenText,
+  CheckCircle2,
+  Clock3,
+  Coins,
+  Lock,
+  PlayCircle,
+  Sparkles,
+} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import {
   progressFraction,
   storyState,
@@ -13,12 +32,15 @@ import {
   type StorySummary,
 } from "@/lib/stories/summary";
 import { useStoryMediaUrl } from "@/lib/stories/media/url";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-interface CoverRow { id: string; storage_bucket: string; storage_path: string; processing_version: number }
+interface CoverRow {
+  id: string;
+  storage_bucket: string;
+  storage_path: string;
+  processing_version: number;
+}
 
-/** Batch-friendly cover row loader via TanStack Query cache; URL signed by hook. */
 function useCoverUrl(coverMediaId: string | null): string | null {
   const { data } = useQuery({
     queryKey: ["story-cover-row", coverMediaId],
@@ -37,7 +59,10 @@ function useCoverUrl(coverMediaId: string | null): string | null {
   return useStoryMediaUrl(data ?? null);
 }
 
-export function StoryCard({ story, variant = "grid" }: {
+export function StoryCard({
+  story,
+  variant = "grid",
+}: {
   story: StorySummary;
   variant?: "grid" | "rail";
 }) {
@@ -46,83 +71,128 @@ export function StoryCard({ story, variant = "grid" }: {
   const mins = estimateReadingMinutes(story.scene_count);
   const cover = useCoverUrl(story.cover_media_id);
 
-  const widthClass = variant === "rail"
-    ? "w-56 flex-none snap-start sm:w-64"
-    : "w-full";
+  const widthClass =
+    variant === "rail"
+      ? "w-44 flex-none snap-start sm:w-52"
+      : "w-full";
 
   return (
     <Link
+      dir="rtl"
       to="/story/$id"
       params={{ id: story.id }}
-      className={`group block overflow-hidden rounded-2xl border border-gold/20 bg-surface/60 transition hover:border-gold/50 ${widthClass}`}
       aria-label={story.title_ar}
+      className={`group relative block overflow-hidden rounded-2xl border border-gold/25 bg-black/60 shadow-[0_8px_28px_rgba(0,0,0,0.45)] ring-1 ring-inset ring-white/5 transition hover:border-gold/60 hover:shadow-[0_14px_36px_rgba(0,0,0,0.6)] ${widthClass}`}
     >
-      <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
+      {/* Cover — tall cinematic 3:4 */}
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-neutral-900">
         {cover ? (
           <img
             src={cover}
             alt={story.title_ar}
             loading="lazy"
             decoding="async"
-            className={`h-full w-full object-cover transition group-hover:scale-[1.02] ${
-              !story.unlocked ? "opacity-50 blur-[1px]" : ""
+            className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.04] ${
+              !story.unlocked ? "opacity-40 blur-[2px]" : ""
             }`}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-muted/40">
-            <BookOpenText className="size-8 text-gold/50" />
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-black">
+            <BookOpenText className="size-10 text-gold/40" />
           </div>
         )}
-        {state === "locked" && (
-          <div className="absolute inset-0 grid place-items-center bg-black/40">
-            <Lock className="size-6 text-gold/90" />
-          </div>
-        )}
-        {state === "completed" && (
-          <div className="absolute end-2 top-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] text-white">
-            <CheckCircle2 className="size-3" /> اكتمل
-          </div>
-        )}
-        {state === "in_progress" && (
-          <div className="absolute end-2 top-2 inline-flex items-center gap-1 rounded-full bg-gold/90 px-2 py-0.5 text-[10px] text-black">
-            <PlayCircle className="size-3" /> استئناف
-          </div>
-        )}
-        {state === "new" && (
-          <div className="absolute end-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-gold">
-            قصة جديدة
-          </div>
-        )}
-        {state === "in_progress" && pct > 0 && (
-          <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40">
-            <div className="h-full bg-gold" style={{ width: `${pct}%` }} />
-          </div>
-        )}
-      </div>
-      <div className="space-y-1 p-3" dir="rtl">
-        <h3 className="line-clamp-1 font-display text-[14px] font-bold text-gold">
-          {story.title_ar}
-        </h3>
-        {story.era && (
-          <div className="text-[10px] tracking-wide text-gold/70">{story.era}</div>
-        )}
-        {story.summary_ar && (
-          <p className="line-clamp-2 text-[11px] text-muted-foreground">
-            {story.summary_ar}
-          </p>
-        )}
-        <div className="flex items-center justify-between pt-1 text-[10px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <Clock className="size-3" /> ≈{mins} د
-          </span>
-          <span>
-            {story.xp_reward > 0 && <>+{story.xp_reward} XP</>}
-            {story.xp_reward > 0 && story.dinar_reward > 0 && " · "}
-            {story.dinar_reward > 0 && <>+{story.dinar_reward} د</>}
-          </span>
-        </div>
-      </div>
 
+        {/* Strong bottom gradient — legibility for title/summary */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0.92) 100%)",
+          }}
+        />
+
+        {/* Subtle top vignette for pill legibility */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-16"
+          style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0))" }}
+        />
+
+        {/* Status pill — top-start (RTL: top-right) */}
+        <div className="absolute start-2 top-2">
+          {state === "locked" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-gold backdrop-blur">
+              <Lock className="size-3" /> مقفلة
+            </span>
+          )}
+          {state === "completed" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-medium text-white">
+              <CheckCircle2 className="size-3" /> اكتمل
+            </span>
+          )}
+          {state === "in_progress" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-gold/95 px-2 py-0.5 text-[10px] font-bold text-black">
+              <PlayCircle className="size-3" /> استئناف
+            </span>
+          )}
+          {state === "new" && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-gold/50 bg-black/70 px-2 py-0.5 text-[10px] tracking-wide text-gold backdrop-blur">
+              جديدة
+            </span>
+          )}
+        </div>
+
+        {/* Full lock overlay */}
+        {state === "locked" && (
+          <div className="absolute inset-0 grid place-items-center">
+            <Lock className="size-7 text-gold/90 drop-shadow-lg" />
+          </div>
+        )}
+
+        {/* Text block — anchored to bottom over gradient */}
+        <div className="absolute inset-x-0 bottom-0 z-10 p-3">
+          <h3 className="font-display text-[15px] font-bold leading-snug text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] line-clamp-2">
+            {story.title_ar}
+          </h3>
+          {story.summary_ar && (
+            <p className="mt-1 line-clamp-1 text-[11px] leading-relaxed text-white/80">
+              {story.summary_ar}
+            </p>
+          )}
+          <div className="mt-2 flex items-center gap-3 text-[10.5px] text-white/85">
+            <span className="inline-flex items-center gap-1">
+              <Clock3 className="size-3 text-white/70" />
+              {mins} د
+            </span>
+            {story.xp_reward > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <Sparkles className="size-3 text-gold" />
+                {story.xp_reward}
+              </span>
+            )}
+            {story.dinar_reward > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <Coins className="size-3 text-gold" />
+                {story.dinar_reward}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* In-progress bar (RTL: fills from right) */}
+        {state === "in_progress" && pct > 0 && (
+          <div dir="rtl" className="absolute inset-x-0 bottom-0 z-20 h-[3px] bg-black/50">
+            <div
+              className="h-full"
+              style={{
+                width: `${pct}%`,
+                background:
+                  "linear-gradient(270deg, hsl(45 90% 55%), hsl(45 100% 72%))",
+                boxShadow: "0 0 8px hsl(45 100% 65% / 0.55)",
+              }}
+            />
+          </div>
+        )}
+      </div>
     </Link>
   );
 }
