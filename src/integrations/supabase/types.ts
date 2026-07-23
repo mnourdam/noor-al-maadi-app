@@ -1863,6 +1863,8 @@ export type Database = {
           era: string | null
           id: string
           metadata: Json
+          previous_draft: Json | null
+          previous_draft_at: string | null
           published_at: string | null
           slug: string
           status: string
@@ -1884,6 +1886,8 @@ export type Database = {
           era?: string | null
           id: string
           metadata?: Json
+          previous_draft?: Json | null
+          previous_draft_at?: string | null
           published_at?: string | null
           slug: string
           status?: string
@@ -1905,6 +1909,8 @@ export type Database = {
           era?: string | null
           id?: string
           metadata?: Json
+          previous_draft?: Json | null
+          previous_draft_at?: string | null
           published_at?: string | null
           slug?: string
           status?: string
@@ -3046,6 +3052,10 @@ export type Database = {
         Args: { p_id: string; p_version: number }
         Returns: Json
       }
+      admin_restore_previous_draft: {
+        Args: { p_story_id: string }
+        Returns: Json
+      }
       admin_resubscribe_newsletter: {
         Args: { p_consent_evidence: string; p_id: string }
         Returns: Json
@@ -3403,6 +3413,24 @@ export type Database = {
       list_my_notifications: {
         Args: { p_before?: string; p_limit?: number }
         Returns: Json
+      }
+      list_published_stories: {
+        Args: never
+        Returns: {
+          content_version: number
+          cover_media_id: string
+          dinar_reward: number
+          display_order: number
+          era: string
+          id: string
+          published_at: string
+          slug: string
+          summary_ar: string
+          title_ar: string
+          title_en: string
+          world_slug: string
+          xp_reward: number
+        }[]
       }
       log_admin_action: {
         Args: {

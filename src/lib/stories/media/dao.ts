@@ -67,6 +67,7 @@ export interface StoryPublishIssue {
 export interface StoryPublishValidation {
   ok: boolean;
   issues: StoryPublishIssue[];
+  warnings: StoryPublishIssue[];
 }
 
 function assertOk<T>(data: T | null, error: { message: string } | null, label: string): T {
@@ -160,6 +161,6 @@ export async function validateStoryPublish(storyId: string): Promise<StoryPublis
     p_story_id: storyId,
   });
   if (error) throw new Error(`validateStoryPublish: ${error.message}`);
-  const parsed = data as { ok?: boolean; issues?: StoryPublishIssue[] } | null;
-  return { ok: !!parsed?.ok, issues: parsed?.issues ?? [] };
+  const parsed = data as { ok?: boolean; issues?: StoryPublishIssue[]; warnings?: StoryPublishIssue[] } | null;
+  return { ok: !!parsed?.ok, issues: parsed?.issues ?? [], warnings: parsed?.warnings ?? [] };
 }

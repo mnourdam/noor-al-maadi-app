@@ -44,6 +44,8 @@ export interface AdminStoryBundle {
   story: StoryRow;
   scenes: StorySceneRow[];
   media: StoryMediaRow[];
+  hasPreviousDraft: boolean;
+  previousDraftAt: string | null;
 }
 
 export interface StoryUpsertInput {
@@ -100,11 +102,34 @@ export async function adminGetStoryFull(storyId: string): Promise<AdminStoryBund
   );
   if (error) bad("adminGetStoryFull", error);
   const parsed = data as
-    | { ok: true; story: StoryRow; scenes: StorySceneRow[]; media: StoryMediaRow[] }
+    | {
+        ok: true;
+        story: StoryRow;
+        scenes: StorySceneRow[];
+        media: StoryMediaRow[];
+        has_previous_draft?: boolean;
+        previous_draft_at?: string | null;
+      }
     | { ok: false; reason: string }
     | null;
   if (!parsed || parsed.ok !== true) return null;
-  return { story: parsed.story, scenes: parsed.scenes, media: parsed.media };
+  return {
+    story: parsed.story,
+    scenes: parsed.scenes,
+    media: parsed.media,
+    hasPreviousDraft: !!parsed.has_previous_draft,
+    previousDraftAt: parsed.previous_draft_at ?? null,
+  };
+}
+
+/** Restore the last snapshot taken before a publish. Consumes the snapshot. */
+export async function adminRestorePreviousDraft(storyId: string): Promise<{ ok: boolean; reason?: string }> {
+  const { data, error } = await supabase.rpc(
+    "admin_restore_previous_draft" as never,
+    { p_story_id: storyId } as never,
+  );
+  if (error) bad("adminRestorePreviousDraft", error);
+  return (data ?? { ok: false, reason: "empty_response" }) as { ok: boolean; reason?: string };
 }
 
 /** Insert or update a story draft. */
