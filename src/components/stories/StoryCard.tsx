@@ -12,29 +12,29 @@ import {
   estimateReadingMinutes,
   type StorySummary,
 } from "@/lib/stories/summary";
-import { storyMediaPublicUrl } from "@/lib/stories/media/url";
+import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-interface CoverRow { id: string; storage_bucket: string; storage_path: string }
+interface CoverRow { id: string; storage_bucket: string; storage_path: string; processing_version: number }
 
-/** Batch-friendly cover resolver via TanStack Query cache. */
-function useCoverUrl(storyId: string, coverMediaId: string | null): string | null {
+/** Batch-friendly cover row loader via TanStack Query cache; URL signed by hook. */
+function useCoverUrl(coverMediaId: string | null): string | null {
   const { data } = useQuery({
-    queryKey: ["story-cover", coverMediaId],
+    queryKey: ["story-cover-row", coverMediaId],
     enabled: !!coverMediaId,
     staleTime: 5 * 60_000,
     queryFn: async () => {
       if (!coverMediaId) return null;
       const { data } = await supabase
         .from("story_media")
-        .select("id, storage_bucket, storage_path")
+        .select("id, storage_bucket, storage_path, processing_version")
         .eq("id", coverMediaId)
         .maybeSingle();
       return (data as CoverRow | null) ?? null;
     },
   });
-  return data ? storyMediaPublicUrl(data) : null;
+  return useStoryMediaUrl(data ?? null);
 }
 
 export function StoryCard({ story, variant = "grid" }: {
