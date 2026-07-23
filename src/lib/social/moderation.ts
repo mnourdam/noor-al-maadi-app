@@ -67,38 +67,12 @@ export async function listModeratorQueue(
   cursor: string | null = null,
   limit = 30,
 ): Promise<QueuePage | Err> {
-  const requestName = "listModeratorQueue";
-  const rpcName = "list_moderator_queue_v2";
-  const trace = {
-    requestName,
-    rpcName,
-    payload: { p_status: status, p_cursor: cursor, p_limit: limit },
-  };
-  // Temporary QA-003 instrumentation: do not suppress or alter failures.
-  console.info("[qa-003/moderation/start]", trace);
   const { data, error } = await supabase.rpc("list_moderator_queue_v2" as never, {
     p_status: status,
     p_cursor: cursor,
     p_limit: limit,
   } as never);
-  if (error) {
-    console.error("[qa-003/moderation/failure]", {
-      ...trace,
-      success: false,
-      httpStatus: error.code,
-      returnedError: error,
-      message: error.message,
-      stack: new Error(`${requestName} failed`).stack,
-    });
-    return { ok: false, reason: error.message };
-  }
-  console.info("[qa-003/moderation/success]", {
-    ...trace,
-    success: true,
-    httpStatus: 200,
-    returnedError: null,
-    itemCount: ((data as QueuePage | null)?.items ?? []).length,
-  });
+  if (error) return { ok: false, reason: error.message };
   return data as QueuePage;
 }
 
