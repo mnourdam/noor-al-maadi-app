@@ -33,6 +33,20 @@ interface CoverRow {
   id: string;
   storage_bucket: string;
   storage_path: string;
+  processing_version: number;
+}
+
+function StoryCoverImg({ cover, alt }: { cover: CoverRow; alt: string }) {
+  const src = useStoryMediaUrl(cover);
+  return (
+    <img
+      src={src ?? undefined}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+    />
+  );
 }
 
 async function loadStories() {
