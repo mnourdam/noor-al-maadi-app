@@ -816,18 +816,31 @@ function CreateSceneModal({
   storyId: string; nextIndex: number;
   onClose: () => void; onCreated: () => void; onError: (m: string) => void;
 }) {
-  const [id, setId] = useState("");
   const [titleAr, setTitleAr] = useState("");
   const [type, setType] = useState<StorySceneType>("reading");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [customId, setCustomId] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const autoId = useMemo(() => {
+    const base = (suggestSlug(titleAr).trim() || type).replace(/[^a-z0-9_-]/g, "").slice(0, 60) || type;
+    const seq = String(nextIndex + 1).padStart(2, "0");
+    return `scene_${seq}_${base}`.slice(0, 120);
+  }, [titleAr, type, nextIndex]);
+
+  const effectiveId = (customId.trim() || autoId).slice(0, 120);
+
   const submit = async () => {
     if (busy) return;
-    if (!/^[a-z0-9_-]{1,120}$/.test(id.trim())) { onError("المعرف: أحرف صغيرة/أرقام/شرطات."); return; }
+    if (!titleAr.trim()) { onError("العنوان مطلوب."); return; }
+    if (!/^[a-z0-9_-]{1,120}$/.test(effectiveId)) {
+      onError("المعرف الآلي غير صالح — افتح الإعدادات المتقدمة وعدّله."); return;
+    }
     setBusy(true);
     try {
       await adminUpsertStoryScene({
-        id: id.trim(), story_id: storyId, scene_index: nextIndex,
-        scene_type: type, title_ar: titleAr.trim() || null, payload: {},
+        id: effectiveId, story_id: storyId, scene_index: nextIndex,
+        scene_type: type, title_ar: titleAr.trim(), payload: {},
       });
       onCreated();
     } catch (e) { onError(e instanceof Error ? e.message : String(e)); }
@@ -841,12 +854,9 @@ function CreateSceneModal({
           <button onClick={onClose} className="opacity-60 hover:opacity-100"><X className="h-4 w-4" /></button>
         </div>
         <div className="space-y-3">
-          <label className="block text-xs">المعرف الثابت
-            <input value={id} onChange={(e) => setId(e.target.value)} placeholder="scene_intro"
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 font-mono text-sm" />
-          </label>
           <label className="block text-xs">العنوان (عربي)
-            <input value={titleAr} onChange={(e) => setTitleAr(e.target.value)}
+            <input value={titleAr} onChange={(e) => setTitleAr(e.target.value)} autoFocus
+              placeholder="مثال: البداية"
               className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm" />
           </label>
           <label className="block text-xs">النوع
@@ -855,10 +865,30 @@ function CreateSceneModal({
               {SCENE_TYPES.map((t) => <option key={t} value={t}>{SCENE_TYPE_LABEL[t]}</option>)}
             </select>
           </label>
+
+          <div className="rounded-md border bg-muted/20">
+            <button type="button" onClick={() => setAdvancedOpen((v) => !v)}
+              className="flex w-full items-center justify-between px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted">
+              <span>إعدادات متقدمة (اختياري)</span>
+              {advancedOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+            {advancedOpen && (
+              <div className="space-y-1 border-t p-2">
+                <label className="block text-xs">المعرف الثابت
+                  <input value={customId} onChange={(e) => setCustomId(e.target.value)}
+                    placeholder={autoId}
+                    className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 font-mono text-xs" />
+                </label>
+                <div className="text-[11px] text-muted-foreground">
+                  يُنشأ آليًا من العنوان. لا حاجة لتعديله عادةً.
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted">إلغاء</button>
-          <button onClick={() => void submit()} disabled={busy}
+          <button onClick={() => void submit()} disabled={busy || !titleAr.trim()}
             className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50">
             {busy ? "جاري..." : "إنشاء"}
           </button>
