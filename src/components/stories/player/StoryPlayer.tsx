@@ -1,13 +1,17 @@
 // ============================================================
-// StoryPlayer — cinematic fullscreen runtime (Phase B Rev 2).
+// StoryPlayer — cinematic fullscreen runtime (Post-Freeze Rev)
 // ------------------------------------------------------------
 // State machine:
-//   intro → playing(sceneIdx) → paused → reward → journey
+//   playing(sceneIdx) → paused → reward → journey
 // Contracts preserved:
 //   * recordStoryProgress on every scene view (monotonic)
 //   * completeStory once when leaving the last scene
 //   * Reflection scenes: auto-advance disabled
+// The legacy "intro" cover phase was retired — playback opens
+// directly on Scene 1 because the catalog + landing surfaces
+// already introduce the story with the cover artwork.
 // ============================================================
+
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Pause } from "lucide-react";
