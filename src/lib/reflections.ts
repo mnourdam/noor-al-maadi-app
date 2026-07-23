@@ -49,6 +49,10 @@ export interface ReflectionRecord {
   text?: string;
   /** ISO timestamp of last local update. Compared against server `updated_at` on merge. */
   at: string;
+  /** P4.1: canonical source scope. `campaign` (default legacy) or `story`. */
+  kind?: "campaign" | "story";
+  /** For `story` kind, the story id (also mirrored to campaign_id for uniqueness). */
+  sourceId?: string;
 }
 
 export type ReflectionKey = `${string}:${string}`;
@@ -190,7 +194,7 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
     if (!uid) return;
     const { data, error } = await supabase
       .from("user_reflections")
-      .select("campaign_id, activity_id, mode, choice_index, choice_value, note, updated_at")
+      .select("campaign_id, activity_id, mode, choice_index, choice_value, note, updated_at, source_type, source_id")
       .eq("user_id", uid);
     if (error || !data) return;
     const local = readAll();
@@ -204,12 +208,15 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
       const k = keyOf(cid, aid);
       seen.add(k);
       const serverAt = String(row.updated_at ?? "") || new Date().toISOString();
+      const kind = (row.source_type === "story" ? "story" : "campaign") as "story" | "campaign";
       const rec: ReflectionRecord = {
         mode: (row.mode as ReflectionMode) ?? "continue",
         choiceIndex: typeof row.choice_index === "number" ? row.choice_index : undefined,
         choiceValue: row.choice_value ?? undefined,
         text: row.note ?? undefined,
         at: serverAt,
+        kind,
+        sourceId: row.source_id ?? undefined,
       };
       const existing = merged[k];
       if (!existing || (existing.at || "").localeCompare(serverAt) < 0) {

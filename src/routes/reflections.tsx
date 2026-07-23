@@ -70,9 +70,12 @@ function formatDate(iso: string): string {
   }
 }
 
+type FilterTab = "all" | "campaign" | "story";
+
 function ReflectionsJournalPage() {
   const [entries, setEntries] = useState<ReflectionEntry[]>(() => listAllReflections());
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<FilterTab>("all");
 
   // Refresh on external saves (Reflective Moment renderer emits this).
   useEffect(() => {
@@ -90,21 +93,30 @@ function ReflectionsJournalPage() {
 
   const enriched: EnrichedEntry[] = useMemo(() => {
     return entries.map((e) => {
-      const hit = campaignIndex.get(`${e.campaignId}:${e.activityId}`);
+      const isStory = e.kind === "story";
+      const hit = isStory ? null : campaignIndex.get(`${e.campaignId}:${e.activityId}`);
       return {
         ...e,
-        campaignTitle: hit?.campaign.title ?? "حملة غير معروفة",
-        chapterTitle: hit?.chapterTitle ?? "",
-        activityPrompt: hit?.activity.prompt ?? "",
+        campaignTitle: isStory
+          ? "قصة"
+          : hit?.campaign.title ?? "حملة غير معروفة",
+        chapterTitle: isStory ? "" : hit?.chapterTitle ?? "",
+        activityPrompt: isStory ? "" : hit?.activity.prompt ?? "",
       };
     });
   }, [entries, campaignIndex]);
 
+  const scoped = useMemo(() => {
+    if (tab === "all") return enriched;
+    if (tab === "story") return enriched.filter((e) => e.kind === "story");
+    return enriched.filter((e) => e.kind !== "story");
+  }, [enriched, tab]);
+
   const filtered = useMemo(() => {
     const q = query.trim();
-    if (!q) return enriched;
+    if (!q) return scoped;
     const needle = q.toLowerCase();
-    return enriched.filter((e) => {
+    return scoped.filter((e) => {
       const hay = [
         e.campaignTitle,
         e.chapterTitle,
@@ -116,7 +128,7 @@ function ReflectionsJournalPage() {
         .toLowerCase();
       return hay.includes(needle);
     });
-  }, [enriched, query]);
+  }, [scoped, query]);
 
   async function onDelete(e: ReflectionEntry) {
     await deleteReflection(e.campaignId, e.activityId);
