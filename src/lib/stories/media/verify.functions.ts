@@ -14,12 +14,38 @@
 // ============================================================
 
 import { createServerFn } from "@tanstack/react-start";
+import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 
 const InputSchema = z.object({
   mediaId: z.string().uuid(),
 });
+
+function createVerificationAdminClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("server_storage_not_configured");
+
+  return createClient<Database>(url, key, {
+    auth: {
+      storage: undefined,
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+    global: {
+      fetch: (input, init) => {
+        const headers = new Headers(init?.headers);
+        if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`) {
+          headers.delete("Authorization");
+        }
+        headers.set("apikey", key);
+        return fetch(input, { ...init, headers });
+      },
+    },
+  });
+}
 
 export const verifyStoryMedia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -27,28 +53,37 @@ export const verifyStoryMedia = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Admin gate — verified server-side via has_role RPC (RLS-aware).
-    const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
-      _user_id: userId,
-      _role: "admin",
-    });
+    // CMS gate — owner/admin/editor via the canonical content-editor RPC.
+    const { data: isEditor, error: roleErr } = await supabase.rpc("is_content_editor");
     if (roleErr) throw new Error(`role_check_failed: ${roleErr.message}`);
-    if (!isAdmin) throw new Error("forbidden");
+    if (!isEditor) throw new Error("forbidden");
 
-    // Load the row we're about to verify (still under RLS).
+    const supabaseAdmin = createVerificationAdminClient();
+
+    // Load the row we're about to verify after the caller has passed the
+    // content-editor gate. Unverified rows are intentionally hidden from
+    // regular user reads, so the verifier must read this server-side.
     const { data: row, error: rowErr } = await supabase
       .from("story_media")
       .select("id, storage_bucket, storage_path, byte_size, checksum_sha256")
       .eq("id", data.mediaId)
       .maybeSingle();
     if (rowErr) throw new Error(`row_load_failed: ${rowErr.message}`);
-    if (!row) return { verified: false, reason: "not_found" as const };
+    const { data: adminRow, error: adminRowErr } = row
+      ? { data: null, error: null }
+      : await supabaseAdmin
+          .from("story_media")
+          .select("id, storage_bucket, storage_path, byte_size, checksum_sha256")
+          .eq("id", data.mediaId)
+          .maybeSingle();
+    if (adminRowErr) throw new Error(`server_row_load_failed: ${adminRowErr.message}`);
+    const finalRow = row ?? adminRow;
+    if (!finalRow) return { verified: false, reason: "not_found" as const };
 
     // Admin client so we can read private storage bytes.
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: blob, error: dlErr } = await supabaseAdmin.storage
-      .from(row.storage_bucket)
-      .download(row.storage_path);
+      .from(finalRow.storage_bucket)
+      .download(finalRow.storage_path);
     if (dlErr || !blob) {
       return { verified: false, reason: `download_failed:${dlErr?.message ?? "empty"}` };
     }
@@ -60,10 +95,10 @@ export const verifyStoryMedia = createServerFn({ method: "POST" })
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
-    if (observed !== row.checksum_sha256) {
+    if (observed !== finalRow.checksum_sha256) {
       return { verified: false, reason: "checksum_mismatch" as const };
     }
-    if (bytes !== row.byte_size) {
+    if (bytes !== finalRow.byte_size) {
       return { verified: false, reason: "size_mismatch" as const };
     }
 
