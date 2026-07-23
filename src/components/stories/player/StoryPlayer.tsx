@@ -127,24 +127,45 @@ export function StoryPlayer({
   const goNext = useCallback(async () => {
     if (!scene) return;
     if (isLast) {
-      // Sticky one-shot completion; server dedupes and returns the
-      // authoritative granted reward. Apply to the local profile so
-      // the HUD reflects the new balance immediately without waiting
-      // for the next cloud reconciliation cycle.
-      setPhase("reward");
-      if (completionFiredRef.current) return;
+      // Sticky one-shot completion. `completionFiredRef` guarantees at most
+      // one grant per mount even if the user double-taps the ending pill
+      // or auto-advance and the tap collide. Guests take a local reward
+      // path (server RPC requires auth) so first-completion still awards
+      // XP + Dinars and replay is silent.
+      if (completionFiredRef.current) { setPhase("reward"); return; }
       completionFiredRef.current = true;
-      const res = await completeStory(story.id);
-      const grantXp = res.result?.reward_granted_xp ?? 0;
-      const grantDin = res.result?.reward_granted_dinars ?? 0;
-      setGrantedXp(grantXp);
-      setGrantedDinars(grantDin);
-      if (grantXp > 0) addPoints(grantXp);
-      if (grantDin > 0) addDinars(grantDin);
+      setPhase("reward");
+
+      const summaryXp = summary?.xp_reward ?? story.xp_reward ?? 0;
+      const summaryDin = summary?.dinar_reward ?? story.dinar_reward ?? 0;
+
+      if (isGuest) {
+        const firstTime = guestMarkCompleted(story.id);
+        const grantXp = firstTime ? summaryXp : 0;
+        const grantDin = firstTime ? summaryDin : 0;
+        setGrantedXp(grantXp);
+        setGrantedDinars(grantDin);
+        if (grantXp > 0) addPoints(grantXp);
+        if (grantDin > 0) addDinars(grantDin);
+      } else {
+        const res = await completeStory(story.id);
+        const grantXp = res.result?.reward_granted_xp ?? 0;
+        const grantDin = res.result?.reward_granted_dinars ?? 0;
+        setGrantedXp(grantXp);
+        setGrantedDinars(grantDin);
+        if (grantXp > 0) addPoints(grantXp);
+        if (grantDin > 0) addDinars(grantDin);
+      }
+
+      // Refresh catalog/rail status pills ("جديدة" → "اكتمل") without a
+      // hard reload. `list_stories_v2` is the source of truth for both
+      // auth (server-completed) and guest (overlay via guestCompletions).
+      try { void queryClient.invalidateQueries({ queryKey: ["stories-summary"] }); } catch { /* ignore */ }
       return;
     }
     setIdx((n) => Math.min(n + 1, ordered.length - 1));
-  }, [isLast, ordered.length, scene, story.id, addPoints, addDinars]);
+  }, [isLast, ordered.length, scene, story.id, story.xp_reward, story.dinar_reward, summary, isGuest, addPoints, addDinars, queryClient]);
+
 
   const goPrev = useCallback(() => {
     setIdx((n) => Math.max(0, n - 1));
