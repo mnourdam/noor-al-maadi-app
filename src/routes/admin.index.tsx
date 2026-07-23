@@ -81,6 +81,8 @@ function AdminHub() {
             desc="قائمة اللاعبين، البحث والتصفية، إجراءات إدارية موثّقة، وتصدير CSV." />
           <AdminCard to="/admin/community" icon={<MessagesSquare className="h-5 w-5" />} title="مساهمات المجتمع"
             desc="إدارة البلاغات والاقتراحات وتصحيحات المعلومات والرد على المستخدمين." />
+          <AdminCard to="/admin/moderation" icon={<Flag className="h-5 w-5" />} title="طابور الإشراف"
+            desc="بلاغات القرّاء على المساهمات: إخفاء، استعادة، إزالة، وسجلّ إشراف موثّق." />
           <AdminCard to="/admin/notifications" icon={<Bell className="h-5 w-5" />} title="إدارة الإشعارات"
             desc="إنشاء وإرسال إشعارات يدوية والاطلاع على المسودات." />
           <AdminCard to="/admin/newsletter" icon={<Mail className="h-5 w-5" />} title="النشرة البريدية"
