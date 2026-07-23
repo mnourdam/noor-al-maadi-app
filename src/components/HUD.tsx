@@ -8,6 +8,7 @@ import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notificati
 import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PersonalInboxBell } from "./notifications/PersonalInboxBell";
 import { HeartsPopover, DinarsPopover, XPPopover, StreakPopover } from "./HUDStatPopovers";
 import { AnimatedNumber } from "./motion/MotionPrimitives";
 
