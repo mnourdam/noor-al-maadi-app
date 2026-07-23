@@ -27,13 +27,17 @@
 // and it uses the same timing constants as the runtime.
 //
 // Precedence for the displayed duration (highest wins):
-//   1. `metadata.reading_time_minutes` — editorial override (backward-
-//      compatible). If authored, it is treated as the final value and
-//      converted to ms. Kept for legacy stories and rare hand-tuned
-//      cases; not the default.
-//   2. `storyDurationMsFromScenes(scenes)` when the caller has loaded
-//      the scene payload (player intro, admin preview).
-//   3. `storyDurationMsFromCount(sceneCount)` for catalog surfaces.
+//   1. `storyDurationMsFromScenes(scenes)` when the caller has loaded
+//      the scene payload (player intro, admin preview). Authoritative —
+//      mirrors the cinematic runtime exactly, so edits to scenes are
+//      reflected automatically.
+//   2. `storyDurationMsFromCount(sceneCount)` for catalog surfaces
+//      where only `scene_count` is known.
+//   3. Editorial override — ONLY when `metadata.use_manual_reading_time`
+//      is explicitly `true` AND `metadata.reading_time_override_minutes`
+//      is a positive number. Without the flag the runtime value always
+//      wins, so a stale field can never desync the displayed duration
+//      from the real cinematic runtime.
 // ============================================================
 
 import {
