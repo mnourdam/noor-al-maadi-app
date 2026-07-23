@@ -172,8 +172,8 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
       </header>
 
       <GuidedCommentComposer
-        anchorType="story"
-        anchorId={storyId}
+        anchorType={anchorType}
+        anchorId={resolvedAnchorId}
         myCount={myCount}
         onPosted={onPosted}
       />
