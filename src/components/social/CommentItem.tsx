@@ -19,12 +19,15 @@ import {
 } from "@/lib/social/comments";
 import type { SocialCommentRow } from "@/lib/social/comments";
 import { ReportCommentButton } from "./ReportCommentButton";
+import { ContributionBadge } from "./ContributionBadge";
+import type { MyContributionFlag } from "@/lib/social/contributions";
 
 interface Props {
   row: SocialCommentRow;
   onChange: (row: SocialCommentRow) => void;
   onDelete: (id: string) => void;
   currentUserId?: string | null;
+  contributionFlag?: MyContributionFlag | null;
 }
 
 function formatDateAr(iso: string) {
@@ -39,7 +42,7 @@ function formatDateAr(iso: string) {
   }
 }
 
-export function CommentItem({ row, onChange, onDelete, currentUserId = null }: Props) {
+export function CommentItem({ row, onChange, onDelete, currentUserId = null, contributionFlag = null }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.body_text);
   const [pending, setPending] = useState(false);
@@ -83,10 +86,17 @@ export function CommentItem({ row, onChange, onDelete, currentUserId = null }: P
       )}
       aria-label={row.editors_note ? "ملاحظة المحرّر" : "مساهمة قارئ"}
     >
-      {row.editors_note && (
-        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-medium text-gold">
-          <BookMarked className="size-3" aria-hidden="true" />
-          <span>ملاحظة المحرّر</span>
+      {(row.editors_note || (row.is_mine && contributionFlag)) && (
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          {row.editors_note && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-medium text-gold">
+              <BookMarked className="size-3" aria-hidden="true" />
+              <span>ملاحظة المحرّر</span>
+            </span>
+          )}
+          {row.is_mine && contributionFlag && (
+            <ContributionBadge flag={contributionFlag} />
+          )}
         </div>
       )}
 
