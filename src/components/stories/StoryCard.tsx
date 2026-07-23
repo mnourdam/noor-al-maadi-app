@@ -44,7 +44,7 @@ export function StoryCard({ story, variant = "grid" }: {
   const state = storyState(story);
   const pct = Math.round(progressFraction(story) * 100);
   const mins = estimateReadingMinutes(story.scene_count);
-  const cover = useCoverUrl(story.id, story.cover_media_id);
+  const cover = useCoverUrl(story.cover_media_id);
 
   const widthClass = variant === "rail"
     ? "w-56 flex-none snap-start sm:w-64"
