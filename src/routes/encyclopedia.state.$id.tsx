@@ -279,6 +279,17 @@ function StatePage() {
           </div>
         )}
 
+        {/* ───────── Social layer (P6 Step 8) — reused Story primitives. ───────── */}
+        <section className="mt-6 flex items-center justify-end">
+          <Istazadtu anchorType="entity" anchorId={state.id} />
+        </section>
+        <PublicContributionsNotice anchorType="entity" anchorId={state.id} className="mt-3" />
+        <div className="mt-6">
+          <StoryComments anchorType="entity" anchorId={state.id} />
+        </div>
+
+
+
         {/* ───────── Metadata ───────── */}
         {metaEntries.length > 0 && (
           <section className="mt-8">
