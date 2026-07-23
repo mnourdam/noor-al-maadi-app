@@ -13,14 +13,15 @@ import { Istazadtu } from "@/components/social/Istazadtu";
 import { StoryComments } from "@/components/social/StoryComments";
 import { PublicContributionsNotice } from "@/components/social/PublicContributionsNotice";
 import { StoryCard } from "@/components/stories/StoryCard";
-import { listStoriesSummary, pickNextStory, estimateReadingMinutes, type StorySummary } from "@/lib/stories/summary";
+import { listStoriesSummary, pickNextStory, type StorySummary } from "@/lib/stories/summary";
 import { supabase } from "@/integrations/supabase/client";
 import {
   readReferences,
   readRelatedEntities,
-  readReadingTimeMinutes,
   type StoryReference,
 } from "@/lib/stories/references";
+import { formatDurationArabic, resolveStoryDurationMs } from "@/lib/stories/duration";
+
 
 interface StoryMetaRow {
   metadata: Record<string, unknown> | null;
