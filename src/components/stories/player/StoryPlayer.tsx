@@ -358,17 +358,20 @@ export function StoryPlayer({
               animation: "endpulse 2.6s ease-in-out infinite",
             }}
           >
-            اختم الرحلة
+            <span>اختم الرحلة</span>
+            <ArrowLeft className="size-4" aria-hidden />
             <style>{`@keyframes endpulse { 0%,100%{ box-shadow: 0 0 22px rgba(240,190,60,0.22), inset 0 0 0 1px rgba(240,190,60,0.15);} 50%{ box-shadow: 0 0 42px rgba(240,190,60,0.42), inset 0 0 0 1px rgba(240,190,60,0.3);} }`}</style>
           </button>
         ) : (
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); void goNext(); }}
-            className="pointer-events-auto absolute inset-x-0 bottom-6 z-20 mx-auto w-max rounded-full border border-gold/40 bg-black/60 px-4 py-2 text-[12px] text-gold backdrop-blur"
+            className="pointer-events-auto absolute inset-x-0 bottom-6 z-20 mx-auto flex w-max items-center gap-1.5 rounded-full border border-gold/40 bg-black/60 px-4 py-2 text-[12px] text-gold backdrop-blur"
           >
-            متابعة
+            <span>متابعة</span>
+            <ArrowLeft className="size-3.5" aria-hidden />
           </button>
+
         )
       )}
     </div>
