@@ -190,8 +190,8 @@ export function StoryPlayer({
       return;
     }
     if (Math.abs(dx) > 40 || Math.abs(dy) > 40) return; // ignore drags
-    if (phase === "intro") { setPhase("playing"); return; }
     if (phase !== "playing") return;
+
     const w = (e.currentTarget as HTMLElement).clientWidth;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const zoneRight = e.clientX - rect.left;
