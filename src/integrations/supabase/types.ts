@@ -1853,6 +1853,30 @@ export type Database = {
           },
         ]
       }
+      social_reactions: {
+        Row: {
+          anchor_id: string
+          anchor_type: Database["public"]["Enums"]["social_anchor_type"]
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          anchor_id: string
+          anchor_type: Database["public"]["Enums"]["social_anchor_type"]
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          anchor_id?: string
+          anchor_type?: Database["public"]["Enums"]["social_anchor_type"]
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stories: {
         Row: {
           content_version: number
@@ -1866,6 +1890,7 @@ export type Database = {
           previous_draft: Json | null
           previous_draft_at: string | null
           published_at: string | null
+          reaction_count: number
           slug: string
           status: string
           summary_ar: string | null
@@ -1889,6 +1914,7 @@ export type Database = {
           previous_draft?: Json | null
           previous_draft_at?: string | null
           published_at?: string | null
+          reaction_count?: number
           slug: string
           status?: string
           summary_ar?: string | null
@@ -1912,6 +1938,7 @@ export type Database = {
           previous_draft?: Json | null
           previous_draft_at?: string | null
           published_at?: string | null
+          reaction_count?: number
           slug?: string
           status?: string
           summary_ar?: string | null
@@ -3275,6 +3302,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_reactions_for_anchors_v2: {
+        Args: {
+          p_anchor_ids: string[]
+          p_anchor_type: Database["public"]["Enums"]["social_anchor_type"]
+        }
+        Returns: {
+          active: boolean
+          anchor_id: string
+          count: number
+        }[]
+      }
       get_story_access: { Args: { p_story_id: string }; Returns: Json }
       get_tutorial_completion: {
         Args: { p_tutorial_id: string }
@@ -3486,6 +3524,7 @@ export type Database = {
         }[]
       }
       reauth_challenges_cleanup: { Args: never; Returns: undefined }
+      rebuild_reaction_counters: { Args: never; Returns: Json }
       record_campaign_completion: {
         Args: {
           p_campaign_id: string
@@ -3556,6 +3595,13 @@ export type Database = {
         Returns: number
       }
       sync_my_public_stats: { Args: { p_stats: Json }; Returns: undefined }
+      toggle_reaction_v2: {
+        Args: {
+          p_anchor_id: string
+          p_anchor_type: Database["public"]["Enums"]["social_anchor_type"]
+        }
+        Returns: Json
+      }
       touch_my_last_active: { Args: never; Returns: undefined }
     }
     Enums: {
@@ -3576,6 +3622,7 @@ export type Database = {
         | "connections"
         | "memory"
       game_status: "draft" | "published" | "archived"
+      social_anchor_type: "story"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3722,6 +3769,7 @@ export const Constants = {
         "memory",
       ],
       game_status: ["draft", "published", "archived"],
+      social_anchor_type: ["story"],
     },
   },
 } as const
