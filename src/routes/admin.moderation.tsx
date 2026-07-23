@@ -9,7 +9,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { EyeOff, RotateCcw, Trash2, X, BookMarked, History, Loader2, Pin, PinOff } from "lucide-react";
+import { EyeOff, RotateCcw, Trash2, X, BookMarked, History, Loader2, Pin, PinOff, Sprout } from "lucide-react";
 import { AdminGate } from "@/lib/admin-guard";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import {
@@ -25,6 +25,12 @@ import {
   type ReportStatus,
 } from "@/lib/social/moderation";
 import { REPORT_REASONS } from "@/lib/social/reports";
+import {
+  markContribution,
+  contributionErrorCopyAr,
+  CONTRIBUTION_CATEGORIES,
+  type ContributionCategory,
+} from "@/lib/social/contributions";
 
 export const Route = createFileRoute("/admin/moderation")({
   component: () => (
@@ -64,6 +70,7 @@ function ModerationPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [reports, setReports] = useState<Record<string, ReportRow[]>>({});
   const [history, setHistory] = useState<Record<string, AuditRow[]>>({});
+  const [markOpen, setMarkOpen] = useState<string | null>(null);
 
   const load = useCallback(async (reset: boolean) => {
     setLoading(true);
@@ -122,6 +129,16 @@ function ModerationPage() {
     }
   }
 
+
+  async function markAsContribution(commentId: string, category: ContributionCategory) {
+    if (busyId) return;
+    setBusyId(commentId);
+    const res = await markContribution(commentId, category);
+    setBusyId(null);
+    setMarkOpen(null);
+    if (!res.ok) { toast.error(contributionErrorCopyAr(res.reason)); return; }
+    toast.success("عُلّمت كمساهمة تحريرية. أُدرجت في طابور التحرير.");
+  }
 
   async function dismissOne(reportId: string, commentId: string) {
     if (busyId) return;
@@ -222,6 +239,32 @@ function ModerationPage() {
                     {it.editors_note ? <PinOff className="size-3" /> : <Pin className="size-3" />}
                     {it.editors_note ? "إلغاء التثبيت" : "ملاحظة محرّر"}
                   </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setMarkOpen((cur) => cur === it.comment_id ? null : it.comment_id)}
+                      disabled={busyId === it.comment_id || it.comment_status !== "visible"}
+                      className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-40"
+                      aria-label="تعليم كمساهمة"
+                    >
+                      <Sprout className="size-3" /> مساهمة تحريرية
+                    </button>
+                    {markOpen === it.comment_id && (
+                      <div className="absolute left-0 top-full z-20 mt-1 min-w-[220px] rounded-md border border-emerald-500/30 bg-black/95 p-1.5 shadow-xl" dir="rtl">
+                        {CONTRIBUTION_CATEGORIES.map((c) => (
+                          <button
+                            key={c.key}
+                            type="button"
+                            onClick={() => void markAsContribution(it.comment_id, c.key)}
+                            className="block w-full rounded px-2 py-1.5 text-right text-[11px] hover:bg-emerald-500/10"
+                          >
+                            <div className="font-medium text-foreground">{c.label}</div>
+                            <div className="text-[10px] text-muted-foreground">{c.hint}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => void openDetail(it.comment_id)}
@@ -231,6 +274,7 @@ function ModerationPage() {
                   </button>
                 </div>
               </div>
+
 
 
               {expanded === it.comment_id && (
