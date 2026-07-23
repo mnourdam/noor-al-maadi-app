@@ -187,8 +187,9 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
           {error}
         </div>
       ) : total === 0 ? (
-        <div className="rounded-lg border border-dashed border-white/10 bg-black/10 p-4 text-center text-[12px] text-muted-foreground">
-          لا مساهمات بعد — كن أول من يشارك تأمّله.
+        <div className="rounded-lg border border-dashed border-gold/20 bg-black/10 p-5 text-center text-[12px] leading-relaxed text-muted-foreground">
+          <p className="text-foreground/85">لا توجد تأمّلات بعد.</p>
+          <p className="mt-1 text-[11px] text-muted-foreground/85">كن أول من يترك أثرًا هنا.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -220,7 +221,7 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
 
       {!user && total > 0 && (
         <p className="text-center text-[11px] text-muted-foreground">
-          سجّل الدخول لتضيف تأمّلك.
+          سجّل الدخول لتشارك تأمّلك.
         </p>
       )}
     </section>

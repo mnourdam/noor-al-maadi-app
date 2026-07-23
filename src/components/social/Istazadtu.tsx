@@ -1,20 +1,21 @@
 // ============================================================
-// <Istazadtu /> — the single reaction primitive
+// <Istazadtu /> — heart reaction primitive (P6 Polish)
 // ------------------------------------------------------------
-// One tap = "استزدتُ" (I gained more knowledge from this).
-// Anchor-agnostic. Online-only. Signed-in only. Idempotent.
+// The visible interaction is a familiar heart: 🤍 → ❤️.
+// The identity of the reaction, the RPC, and the anchor contract
+// are UNCHANGED — only the presentation changed. One reaction
+// per (user, story). Online-only. Signed-in only. Idempotent.
 //
-// A11y contract (§P6.1.5):
+// A11y (§P6.1.5):
 //   * <button type="button">, real focus ring.
-//   * aria-label describing the action in Arabic.
-//   * aria-pressed reflects the active state for screen readers.
-//   * Count is exposed as an aria-live polite region so assistive
-//     tech announces changes without stealing focus.
-//   * Disabled state carries an aria-describedby hint.
+//   * aria-label: "إضافة إعجاب" / "إزالة الإعجاب".
+//   * aria-pressed reflects the active state.
+//   * Count exposed as aria-live polite so SR announces changes.
+//   * Disabled state carries an aria-describedby hint (offline).
 // ============================================================
 
 import { useCallback, useEffect, useState } from "react";
-import { BookOpen, ChevronUp } from "lucide-react";
+import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import { toggleReaction, fetchReactionStates } from "@/lib/social/reactions";
 import type { SocialAnchorType } from "@/lib/social/reactions";
@@ -27,35 +28,12 @@ interface Props {
   anchorId: string;
   /** Initial count (e.g. from a summary row); refined by the batch fetch. */
   initialCount?: number;
+  /** Visual density. `md` for post-completion, `sm` for inline placements. */
+  size?: "sm" | "md";
   className?: string;
 }
 
-/**
- * The bespoke glyph: an open book with an upward gold arc — knowledge
- * lifting off the page. Rendered inline as SVG so it themes cleanly.
- */
-function IstazadtuGlyph({ active }: { active: boolean }) {
-  return (
-    <span className="relative inline-flex size-4 items-center justify-center" aria-hidden="true">
-      <BookOpen
-        className={cn(
-          "size-4 transition-colors",
-          active ? "fill-gold/10 text-gold" : "text-foreground/80",
-        )}
-        strokeWidth={active ? 2.25 : 1.75}
-      />
-      <ChevronUp
-        className={cn(
-          "absolute -top-1.5 size-3 transition-colors",
-          active ? "text-gold" : "text-gold/60",
-        )}
-        strokeWidth={2.5}
-      />
-    </span>
-  );
-}
-
-export function Istazadtu({ anchorType, anchorId, initialCount, className }: Props) {
+export function Istazadtu({ anchorType, anchorId, initialCount, size = "md", className }: Props) {
   const { user } = useAccount();
   const online = useOnline();
   const [count, setCount] = useState<number>(initialCount ?? 0);
@@ -85,7 +63,7 @@ export function Istazadtu({ anchorType, anchorId, initialCount, className }: Pro
   const onToggle = useCallback(async () => {
     if (pending) return;
     if (!user) {
-      toast.info("سجّل الدخول لإضافة تفاعلك.");
+      toast.info("سجّل الدخول لإضافة إعجابك.");
       return;
     }
     if (!online) return; // control is disabled; belt-and-braces.
@@ -93,7 +71,7 @@ export function Istazadtu({ anchorType, anchorId, initialCount, className }: Pro
     const res = await toggleReaction(anchorType, anchorId);
     setPending(false);
     if (!res.ok) {
-      toast.error("تعذّر تسجيل تفاعلك، حاول مرة أخرى.");
+      toast.error("تعذّر تسجيل إعجابك، حاول مرة أخرى.");
       return;
     }
     if (typeof res.count === "number") setCount(res.count);
@@ -101,10 +79,12 @@ export function Istazadtu({ anchorType, anchorId, initialCount, className }: Pro
   }, [anchorType, anchorId, user, online, pending]);
 
   const disabled = !online || pending || !hydrated;
-  const label = active
-    ? `أنت أضفت "استزدتُ" — انقر للتراجع (${count})`
-    : `استزدتُ من هذا (${count})`;
-  const hintId = `istazadtu-hint-${anchorId}`;
+  const label = active ? "إزالة الإعجاب" : "إضافة إعجاب";
+  const hintId = `heart-hint-${anchorId}`;
+
+  const dims = size === "sm"
+    ? { pad: "px-2.5 py-1", icon: "size-4", text: "text-[11px]" }
+    : { pad: "px-3 py-1.5", icon: "size-[18px]", text: "text-[12px]" };
 
   return (
     <div className="inline-flex flex-col items-start gap-1">
@@ -113,34 +93,41 @@ export function Istazadtu({ anchorType, anchorId, initialCount, className }: Pro
         onClick={() => void onToggle()}
         disabled={disabled}
         aria-pressed={active}
-        aria-label={label}
+        aria-label={`${label} (${count})`}
         aria-describedby={!online ? hintId : undefined}
         className={cn(
-          "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
+          "inline-flex items-center gap-2 rounded-full border transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          dims.pad,
+          dims.text,
+          "font-medium tabular-nums",
           active
-            ? "border-gold/60 bg-gold/15 text-gold hover:bg-gold/20"
-            : "border-white/10 bg-black/30 text-foreground/85 hover:border-gold/40 hover:text-gold",
+            ? "border-rose-400/50 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15"
+            : "border-white/10 bg-black/30 text-foreground/85 hover:border-rose-300/40 hover:text-rose-200",
           disabled && "cursor-not-allowed opacity-60 hover:border-white/10 hover:text-foreground/85",
           className,
         )}
       >
-        <IstazadtuGlyph active={active} />
-        <span>استزدتُ</span>
+        <Heart
+          className={cn(
+            dims.icon,
+            "transition-[fill,color,transform] duration-300 ease-out",
+            active ? "fill-rose-400 text-rose-300" : "fill-transparent text-foreground/80",
+          )}
+          strokeWidth={active ? 2 : 1.75}
+          aria-hidden="true"
+        />
         <span
           aria-live="polite"
           aria-atomic="true"
-          className={cn(
-            "min-w-[1.25rem] rounded-full px-1.5 text-center text-[11px] tabular-nums",
-            active ? "bg-gold/25 text-gold" : "bg-white/10 text-muted-foreground",
-          )}
+          className="min-w-[1ch] text-center"
         >
           {count}
         </span>
       </button>
       {!online && (
         <span id={hintId} className="text-[10px] text-muted-foreground">
-          التفاعل يحتاج اتصالًا بالإنترنت.
+          الإعجاب يحتاج اتصالًا بالإنترنت.
         </span>
       )}
     </div>
