@@ -42,9 +42,9 @@ d("stories P1 — server contract", () => {
   it("get_story_access refuses unpublished stories to anon", () => {
     const draftId = "draft_probe_" + randomUUID().slice(0, 8);
     sql(`INSERT INTO public.stories
-           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward)
+           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, production_status)
          VALUES
-           ('${draftId}', '${draftId}', 'مسودة', 'draft', 1, 10, 5)`);
+           ('${draftId}', '${draftId}', 'مسودة', 'draft', 1, 10, 5, 'imported')`);
     const res = sql(
       `BEGIN;
        SELECT set_config('request.jwt.claims',
