@@ -481,6 +481,11 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     try {
       const { collectImageUrls, prefetchImages } = await import("./image-cache");
       const urls = collectImageUrls(nextCollections);
+      // Story media (P5): stitch bucket+path+processing_version into
+      // stable public URLs so the same encyclopedia image cache serves
+      // stories offline. Version bumps yield new URLs and thus a fresh
+      // fetch — invalidation happens exactly when processing_version moves.
+      for (const u of collectStoryMediaCacheUrls(nextCollections.story_media ?? [])) urls.add(u);
       await prefetchImages(urls);
     } catch { /* ignore */ }
   })();
