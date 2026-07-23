@@ -3041,6 +3041,10 @@ export type Database = {
         Returns: Json
       }
       admin_campaign_progress_stats: { Args: { p_id: string }; Returns: Json }
+      admin_delete_story: {
+        Args: { p_force?: boolean; p_mode?: string; p_story_id: string }
+        Returns: Json
+      }
       admin_delete_story_media: {
         Args: { p_media_id: string }
         Returns: {
@@ -3052,6 +3056,7 @@ export type Database = {
         Args: { p_scene_id: string; p_story_id: string }
         Returns: boolean
       }
+      admin_export_stories: { Args: { p_ids: string[] }; Returns: Json }
       admin_feedback_stats: { Args: never; Returns: Json }
       admin_get_campaign_full: {
         Args: { p_id: string }
@@ -3087,6 +3092,11 @@ export type Database = {
       }
       admin_get_story_full: { Args: { p_story_id: string }; Returns: Json }
       admin_import_content_table: { Args: { p_ctype: string }; Returns: string }
+      admin_import_stories_apply: {
+        Args: { p_options?: Json; p_payload: Json }
+        Returns: Json
+      }
+      admin_import_stories_preview: { Args: { p_payload: Json }; Returns: Json }
       admin_list_campaign_versions: {
         Args: { p_id: string }
         Returns: {
@@ -3372,6 +3382,11 @@ export type Database = {
         Args: { p_status: string; p_story_id: string }
         Returns: Json
       }
+      admin_slug_available: {
+        Args: { p_ignore_id?: string; p_slug: string }
+        Returns: boolean
+      }
+      admin_story_delete_impact: { Args: { p_ids: string[] }; Returns: Json }
       admin_unsubscribe_newsletter: {
         Args: { p_id: string; p_reason?: string }
         Returns: Json
