@@ -44,7 +44,7 @@ interface Props {
   onExit: () => void;
 }
 
-type Phase = "intro" | "playing" | "reward" | "journey";
+type Phase = "playing" | "reward" | "journey";
 
 
 
