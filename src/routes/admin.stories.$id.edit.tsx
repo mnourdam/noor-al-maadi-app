@@ -664,6 +664,8 @@ function SceneRow({
 }) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const [jsonOpen, setJsonOpen] = useState(false);
   const [form, setForm] = useState({
     scene_type: scene.scene_type,
     title_ar: scene.title_ar ?? "",
@@ -671,6 +673,7 @@ function SceneRow({
     payload: JSON.stringify(scene.payload ?? {}, null, 2),
     primary_media_id: scene.primary_media_id ?? "",
   });
+
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
