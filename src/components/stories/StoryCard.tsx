@@ -122,10 +122,12 @@ export function StoryCard({
 
 
 
+  const pct = Math.round(progressFraction(story) * 100);
   const widthClass =
     variant === "rail"
       ? "w-44 flex-none snap-start sm:w-52"
       : "w-full";
+
 
   return (
     <Link
