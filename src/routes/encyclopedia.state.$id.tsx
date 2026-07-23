@@ -22,6 +22,9 @@ import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { EntityNotFound } from "@/components/encyclopedia/EntityNotFound";
 import { EncyclopediaArticleBody } from "@/components/encyclopedia/EncyclopediaArticleBody";
 import { EncyclopediaHero } from "@/components/encyclopedia/EncyclopediaHero";
+import { Istazadtu } from "@/components/social/Istazadtu";
+import { StoryComments } from "@/components/social/StoryComments";
+import { PublicContributionsNotice } from "@/components/social/PublicContributionsNotice";
 import { parseEncyclopediaArticle } from "@/types/encyclopediaArticle";
 import {
   fetchEncyclopediaByIdLocalFirst,
