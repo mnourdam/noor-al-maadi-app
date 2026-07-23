@@ -251,8 +251,35 @@ function pruneOfflineRow(def: CollectionDef, row: any): any {
     } = row;
     return playerRow;
   }
+  if (def.key === "story_media") {
+    // Strip auditing UUIDs before persisting to the public offline snapshot.
+    const { verified_by: _v, ...rest } = row;
+    return rest;
+  }
   return row;
 }
+
+/**
+ * Collect cache URLs for verified story_media rows. Each URL is stamped
+ * with `?v=<processing_version>` so a version bump forces a fresh fetch
+ * without inventing a second image cache implementation.
+ */
+export function collectStoryMediaCacheUrls(mediaRows: any[]): Set<string> {
+  const out = new Set<string>();
+  if (!Array.isArray(mediaRows)) return out;
+  // Compute the storage public URL prefix lazily and only once, so the
+  // helper stays synchronous and importable from bootstrap paths.
+  const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL as string | undefined;
+  if (!supabaseUrl) return out;
+  for (const row of mediaRows) {
+    if (!row?.verified) continue;
+    const bucket = row.storage_bucket;
+    const path = row.storage_path;
+    const pv = Number.isFinite(row.processing_version) ? row.processing_version : 1;
+    if (!bucket || !path) continue;
+    out.add(`${supabaseUrl}/storage/v1/object/public/${bucket}/${path}?v=${pv}`);
+  }
+  return out;
 
 function pruneOfflineRows(def: CollectionDef, rows: any[]): any[] {
   return rows.map((row) => pruneOfflineRow(def, row));
