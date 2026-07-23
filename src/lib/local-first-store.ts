@@ -405,3 +405,26 @@ export function localSnapshotInfo() {
     content_counts: _snapshot.content_counts,
   };
 }
+
+// ---------- Stories (P5) ----------
+export function localStoriesAll(): Row[] { return storiesAll; }
+export function localStoryById(id: string): Row | null {
+  if (!id) return null;
+  return storiesById.get(id) ?? storiesBySlug.get(id) ?? null;
+}
+export function localStoryScenes(storyId: string): Row[] {
+  return scenesByStory.get(storyId) ?? [];
+}
+export function localStoryMediaById(id: string): Row | null {
+  if (!id) return null;
+  return mediaById.get(id) ?? null;
+}
+export function localStoryMediaForStory(storyId: string, referencedIds: Iterable<string> = []): Row[] {
+  const out = new Map<string, Row>();
+  for (const m of mediaByStory.get(storyId) ?? []) out.set(String(m.id), m);
+  for (const id of referencedIds) {
+    const m = mediaById.get(String(id));
+    if (m) out.set(String(m.id), m);
+  }
+  return Array.from(out.values());
+}
