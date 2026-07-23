@@ -18,7 +18,9 @@ import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
 import { SegmentedProgress } from "./SegmentedProgress";
-import { SceneStage } from "./sceneLayouts";
+import { SceneStage, resolveSceneTransition } from "./sceneLayouts";
+import { readReadingTimeMinutes } from "@/lib/stories/references";
+
 import { KenBurns } from "./KenBurns";
 import { RewardMoment } from "./RewardMoment";
 import { ContinueYourJourney } from "./ContinueYourJourney";
