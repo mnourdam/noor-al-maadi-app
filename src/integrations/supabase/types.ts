@@ -3236,6 +3236,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      _eval_unlock_node_v2: {
+        Args: { p_depth: number; p_node: Json; p_user_id: string }
+        Returns: boolean
+      }
       _feedback_main_admin_id: { Args: never; Returns: string }
       _feedback_notify_admin: {
         Args: {
@@ -3762,6 +3766,10 @@ export type Database = {
         Args: { p_spec: Json; p_user_id: string }
         Returns: boolean
       }
+      evaluate_unlock_spec_v2: {
+        Args: { p_spec: Json; p_user_id: string }
+        Returns: boolean
+      }
       gen_referral_code: { Args: never; Returns: string }
       get_feedback_issue_thread: { Args: { p_issue_id: string }; Returns: Json }
       get_gated_public_profile: { Args: { p_user_id: string }; Returns: Json }
@@ -4091,6 +4099,7 @@ export type Database = {
       my_pending_badges: { Args: never; Returns: Json }
       my_referral_stats: { Args: never; Returns: Json }
       my_unread_notification_count: { Args: never; Returns: number }
+      normalize_unlock_spec_v2: { Args: { p_input: Json }; Returns: Json }
       purchase_heart: { Args: never; Returns: Json }
       rate_feedback_issue: {
         Args: { p_issue_id: string; p_rating: number }
@@ -4197,6 +4206,7 @@ export type Database = {
         Returns: Json
       }
       unread_notification_count: { Args: never; Returns: number }
+      validate_unlock_spec_v2: { Args: { p_input: Json }; Returns: Json }
     }
     Enums: {
       app_role: "owner" | "admin" | "editor" | "player"
