@@ -458,9 +458,6 @@ function ProfilePage() {
             <OverviewTab
               profile={profile}
               views={achievementViews}
-              seasonPct={seasonPct}
-              seasonReady={seasonReady}
-              claimSeason={claimSeason}
               onSeeAllAchievements={() => setTab("achievements")}
             />
           )}
@@ -469,8 +466,9 @@ function ProfilePage() {
           {tab === "achievements" && (
             <AchievementsTab views={achievementViews} onOpen={(v) => setAchDetail(v)} />
           )}
-          {tab === "seasons" && <SeasonsTab seasonPct={seasonPct} seasonReady={seasonReady} claimSeason={claimSeason} seasonClaimed={profile.seasonClaimed} seasonPoints={profile.seasonPoints} />}
+          {/* seasons tab removed in Phase 3B */}
           {/* referrals tab removed in Phase 2 */}
+
           {tab === "settings" && (
             <SettingsTab
               profile={profile}
