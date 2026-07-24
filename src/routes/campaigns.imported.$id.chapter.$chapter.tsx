@@ -230,7 +230,7 @@ function ImportedChapterPlayer() {
     if (newlyChapter) {
       audioManager.playSfx("chapter-complete", { dedupeKey: `ch:${chapter!.id}` });
       // Qualifying streak activity: completing a campaign chapter.
-      touchStreak();
+      void recordStreakActivity("campaign_chapter", chapter!.id);
       const chDelta = claimChapterReward(campaign!, chapter!);
       if (chDelta.granted) {
         if (chDelta.xp > 0)    addPoints(chDelta.xp);
