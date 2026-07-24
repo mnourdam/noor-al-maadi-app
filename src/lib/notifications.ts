@@ -258,8 +258,9 @@ const REENGAGE_HOOKS: { title: string; body: string; href: string }[] = [
 export interface SchedulerContext {
   prefs: NotificationPrefs;
   today?: { title: string; teaser: string; href: string } | null;
-  season?: { name: string; tagline: string; ready: boolean } | null;
+  // `season` context removed in Phase 3B (Seasons demo deleted).
 }
+
 
 /**
  * Call on every app open. Emits at most one notification per category per
@@ -291,19 +292,8 @@ export function runDailyNotifications(ctx: SchedulerContext): InAppNotification[
     }
   }
 
-  // 3) Season — reward claimable
-  if (ctx.prefs.season && ctx.season?.ready) {
-    const key = `season:ready:${ctx.season.name}`;
-    if (shouldFireDailyish(key)) {
-      out.push(deliver({
-        category: "season",
-        title: "مكافأة الموسم جاهزة",
-        body: `${ctx.season.name} — استلمها الآن.`,
-        href: "/seasons",
-      }));
-      markFired(key);
-    }
-  }
+  // 3) Season notifications removed in Phase 3B (Seasons demo deleted).
+
 
   // Update last-opened *after* scheduling so the gap calc above is correct
   touchLastOpened();
@@ -324,16 +314,10 @@ export function notifyCampaignUnlocked(prefs: NotificationPrefs, campaign: { id:
   markFired(key);
 }
 
-/** Fire a season-change notification. */
-export function notifySeasonChanged(prefs: NotificationPrefs, season: { id: string; name: string }): void {
-  if (!prefs.master || !prefs.season) return;
-  const key = `season:start:${season.id}`;
-  if (!shouldFireDailyish(key)) return;
-  deliver({
-    category: "season",
-    title: "موسم جديد بدأ",
-    body: season.name,
-    href: "/seasons",
-  });
-  markFired(key);
+/**
+ * Season-change notification removed in Phase 3B — kept as a no-op wrapper
+ * for source compatibility with any lingering callers.
+ */
+export function notifySeasonChanged(_prefs: NotificationPrefs, _season: { id: string; name: string }): void {
+  return;
 }
