@@ -459,6 +459,8 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
     if (!alreadyDone) {
       const xp = Math.min(150, Math.max(0, totalReward.xp)); // economy cap
       completeInvestigation(inv.id, xp);
+      // Phase 3A — canonical qualifying-activity call (server-authoritative).
+      void recordStreakActivity("investigation", inv.id);
       const auto = Math.max(1, Math.floor(xp / 4));
       const cappedDinars = Math.min(50, Math.max(0, totalReward.dinars)); // coin cap
       const delta = Math.max(0, cappedDinars - auto);
