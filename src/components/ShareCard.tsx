@@ -343,6 +343,9 @@ interface CardData {
   cardNumber: string;
   title: string | null;
   level: number;
+  levelProgressPct: number;
+  levelToNext: number;
+  atMaxLevel: boolean;
   xp: number;
   dinars: number;
   streak: number;
@@ -354,10 +357,12 @@ interface CardData {
   topAchievements: IdentityCardAchievement[];
   bio: string;
   favoriteStateName: string;
-  generatedOn: string;
+  specializationLabel: string;
+  joinDateLabel: string | null;
   emblemImg: HTMLImageElement | null;
   logoImg: HTMLImageElement | null;
   rarity: AvatarRarity;
+
 }
 
 function drawCard(c: HTMLCanvasElement, s: CardData) {
