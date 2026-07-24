@@ -104,9 +104,64 @@ export const COLLECTIONS: CollectionDef[] = [
 const NO_UPDATED_AT: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollectionKey>([
   "today_in_history_events",
   "daily_facts",
+  // Story keys come from the visibility-enforced manifest RPC, which is
+  // not `updated_at`-filterable; snapshot builder full-fetches these each
+  // sync cycle.
+  "stories",
+  "story_scenes",
+  "story_media",
 ]);
 
-async function fetchCollection(def: CollectionDef): Promise<any[]> {
+/** Story collection keys that are served by the manifest RPC. */
+const STORY_MANIFEST_KEYS: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollectionKey>([
+  "stories", "story_scenes", "story_media",
+]);
+
+/**
+ * Per-invocation cache of the manifest RPC result. A snapshot generation
+ * pass calls the RPC exactly once, then routes each of the three story
+ * collection keys to the corresponding slice of the payload.
+ */
+interface StoryManifestPayload {
+  ok: boolean;
+  generated_at?: string;
+  stories?: any[];
+  story_scenes?: any[];
+  story_media?: any[];
+  story_collections?: any[];
+}
+let _manifestPromise: Promise<StoryManifestPayload> | null = null;
+async function fetchStoryManifest(): Promise<StoryManifestPayload> {
+  if (_manifestPromise) return _manifestPromise;
+  _manifestPromise = (async () => {
+    try {
+      const { data, error } = await supabase.rpc(
+        "stories_snapshot_manifest_v2" as never,
+        { p_include_on_demand: false } as never,
+      );
+      if (error) {
+        console.warn("[snapshot] stories_snapshot_manifest_v2 failed:", error.message);
+        return { ok: false };
+      }
+      const p = (data ?? {}) as StoryManifestPayload;
+      if (!p.ok) return { ok: false };
+      return p;
+    } catch (e) {
+      console.warn("[snapshot] stories_snapshot_manifest_v2 threw:", e);
+      return { ok: false };
+    }
+  })();
+  return _manifestPromise;
+}
+function resetStoryManifestCache() { _manifestPromise = null; }
+function pickManifestSlice(key: OfflineCollectionKey, m: StoryManifestPayload): any[] {
+  if (!m.ok) return [];
+  if (key === "stories") return Array.isArray(m.stories) ? m.stories : [];
+  if (key === "story_scenes") return Array.isArray(m.story_scenes) ? m.story_scenes : [];
+  if (key === "story_media") return Array.isArray(m.story_media) ? m.story_media : [];
+  return [];
+}
+
   // Smaller page size than the PostgREST default (1000) so heavy JSON
   // columns (encyclopedia body, campaign data) don't push a single page
   // past preview/CDN payload limits and hang.
