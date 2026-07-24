@@ -87,7 +87,7 @@ function ImportedChapterPlayer() {
   const [progressTick, setProgressTick] = useState(0);
   const bump = () => setProgressTick(t => t + 1);
 
-  const { profile, addPoints, addDinars, loseHeartOnce, touchStreak } = useProfile();
+  const { profile, addPoints, addDinars, loseHeartOnce, recordStreakActivity } = useProfile();
   // PR1: per-render lock to swallow rapid duplicate onResolve calls
   // (e.g. double-tap on the answer button before the next paint).
   const resolveLockRef = useRef(false);
