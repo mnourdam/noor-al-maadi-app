@@ -97,7 +97,12 @@ function StoryRoute() {
     );
   }
 
+  // Replay of a completed story ALWAYS restarts at scene 0 so the
+  // reader can re-experience the story rather than landing on the
+  // last (reflection) scene. First-run playback resumes from the
+  // furthest-viewed scene.
   const initial = (() => {
+    if (bundle.completed) return 0;
     const p = bundle.progress;
     if (!p) return 0;
     return Math.max(p.last_scene_index ?? 0, p.max_scene_index_reached ?? 0);
