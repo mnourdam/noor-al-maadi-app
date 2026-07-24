@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "generated_at": "2026-07-24T23:09:14.316Z",
+  "version": 3,
+  "generated_at": "2026-07-24T23:59:00Z",
   "format": "webp",
   "emblems": {
     "banner_abbasid": {
@@ -222,11 +222,593 @@
         "size": 91864,
         "sha256": "c7aa61379841940272e1f83f67033e0d1e2cdb6456415dc47b434d708663291b"
       }
+    },
+    "scroll": {
+      "128": {
+        "path": "/emblems/scroll_128.webp",
+        "size": 3882,
+        "sha256": "404df333c0a0f279ba2f005a3d6ae4e71297f194e2f8982d1fff8ba24a253ffe"
+      },
+      "256": {
+        "path": "/emblems/scroll_256.webp",
+        "size": 9368,
+        "sha256": "232831c3ee804db542a40ba85d5621ce9ae7bb276c83da5e26f38a9c643becc2"
+      },
+      "512": {
+        "path": "/emblems/scroll_512.webp",
+        "size": 26842,
+        "sha256": "c162277c5b12951c0c6290261f83aa94b7ebe4f36dafda37a001e013198e8a8b"
+      },
+      "1024": {
+        "path": "/emblems/scroll_1024.webp",
+        "size": 82164,
+        "sha256": "40e6c070882712e918ff5c9c02dfdc63aa0b7bf686e9836118649d901461dd08"
+      }
+    },
+    "ink_pot": {
+      "128": {
+        "path": "/emblems/ink_pot_128.webp",
+        "size": 5628,
+        "sha256": "967828319e6da7e890ebc3cc0e7aa964b3ab5188e0345e7790057b76ea31d773"
+      },
+      "256": {
+        "path": "/emblems/ink_pot_256.webp",
+        "size": 14714,
+        "sha256": "f34dbc5329e0cff8e650ee750bfcaf45bc6e004a3ba6787d02175c6cda482c35"
+      },
+      "512": {
+        "path": "/emblems/ink_pot_512.webp",
+        "size": 43908,
+        "sha256": "3254e2d532d0240d732a6a702a08283c456f509ca1b2498d9c53cbc79de67324"
+      },
+      "1024": {
+        "path": "/emblems/ink_pot_1024.webp",
+        "size": 114944,
+        "sha256": "d6dd0640e3db83cbb3ddc28994d20fa047502cef674f470904a4a2682750642e"
+      }
+    },
+    "reed_pen": {
+      "128": {
+        "path": "/emblems/reed_pen_128.webp",
+        "size": 3286,
+        "sha256": "12dee26adb18ce2d058349b6ccff25540c3f00cf95ce300b30bfad0f34f6f16a"
+      },
+      "256": {
+        "path": "/emblems/reed_pen_256.webp",
+        "size": 7426,
+        "sha256": "27f8ab1e9a3150a8f95e209d2a500dd22f67cdc3b8ede14a25c4e49604a0b221"
+      },
+      "512": {
+        "path": "/emblems/reed_pen_512.webp",
+        "size": 19044,
+        "sha256": "20bd64b53c40d91fed399bd4e7be488fa19e11957b16bcb6aa517f12403d3555"
+      },
+      "1024": {
+        "path": "/emblems/reed_pen_1024.webp",
+        "size": 46356,
+        "sha256": "54f2c035427246a450907a34bdf26bb5676fa533606679553c3d0033af4a7a67"
+      }
+    },
+    "parchment_stack": {
+      "128": {
+        "path": "/emblems/parchment_stack_128.webp",
+        "size": 4562,
+        "sha256": "51e6422d7ae4baee6a7c5097a6e634d60785aaba934d65740234c498d83a92b1"
+      },
+      "256": {
+        "path": "/emblems/parchment_stack_256.webp",
+        "size": 10860,
+        "sha256": "2e1506e755850dccde7a8fedd16ab02a0e5112156b7915f91dafe87d745f583c"
+      },
+      "512": {
+        "path": "/emblems/parchment_stack_512.webp",
+        "size": 28752,
+        "sha256": "dd18969b23e8c00f3821476ce19760ed14bfdab30704893db6c591e7280033fd"
+      },
+      "1024": {
+        "path": "/emblems/parchment_stack_1024.webp",
+        "size": 72728,
+        "sha256": "2a253142b24d86820b6cf87b085848c260d674b4802cfb548be997f48ac24891"
+      }
+    },
+    "wax_seal": {
+      "128": {
+        "path": "/emblems/wax_seal_128.webp",
+        "size": 3420,
+        "sha256": "95f8671b52adbce6d23700e5851d1d0be6a7b5aac3e542483091069f0f131653"
+      },
+      "256": {
+        "path": "/emblems/wax_seal_256.webp",
+        "size": 9196,
+        "sha256": "3b6364ba31112cdecc1e681accfc7bdc7b81ae34cdf25306d4d0c32f3cf7e37b"
+      },
+      "512": {
+        "path": "/emblems/wax_seal_512.webp",
+        "size": 28934,
+        "sha256": "1f03b8db2a47b6d33d627c9e2f8e671642fa37063ffe5b14cd930c5c91462367"
+      },
+      "1024": {
+        "path": "/emblems/wax_seal_1024.webp",
+        "size": 91826,
+        "sha256": "a1c458326dffe55a4b7339d9d429891ad2a44b0dd138b19538834f58e79b5e64"
+      }
+    },
+    "bound_folio": {
+      "128": {
+        "path": "/emblems/bound_folio_128.webp",
+        "size": 3870,
+        "sha256": "8c2794b3ad5bf495e08a7866baf54130541ae29838d244cb991df61f80bf4ade"
+      },
+      "256": {
+        "path": "/emblems/bound_folio_256.webp",
+        "size": 10094,
+        "sha256": "0ccceca8b5a0b2b264764d3722f2c61b886c63acedd4801bf6efb20fd947ca95"
+      },
+      "512": {
+        "path": "/emblems/bound_folio_512.webp",
+        "size": 36380,
+        "sha256": "6d16b2b45be5d62e6764b287639e66a361422c0e6d0796baf9aca69b84901745"
+      },
+      "1024": {
+        "path": "/emblems/bound_folio_1024.webp",
+        "size": 126604,
+        "sha256": "dfff8c96401a01aac2e7cb5c1d812596561c2b8c470d6a8e1f2e5215be92335d"
+      }
+    },
+    "illuminated_page": {
+      "128": {
+        "path": "/emblems/illuminated_page_128.webp",
+        "size": 6190,
+        "sha256": "97b74d35e873e4fae406a52243b9c398858c9d671f89f705c6b6f177fed9956b"
+      },
+      "256": {
+        "path": "/emblems/illuminated_page_256.webp",
+        "size": 17334,
+        "sha256": "eea1277008491eb43dc2e7e93c0cb5953aa4b91949c43ca9ae2f340575b9fbbe"
+      },
+      "512": {
+        "path": "/emblems/illuminated_page_512.webp",
+        "size": 61442,
+        "sha256": "4f6614a41a1fa2c06518b901576df1a39496db9185f1df3236518320cc20e8d4"
+      },
+      "1024": {
+        "path": "/emblems/illuminated_page_1024.webp",
+        "size": 218762,
+        "sha256": "802364303f16abe0a3338adb8fbbfcf7f1a578e217428d839f4d730e610975da"
+      }
+    },
+    "writing_desk_kit": {
+      "128": {
+        "path": "/emblems/writing_desk_kit_128.webp",
+        "size": 4214,
+        "sha256": "c506341229637e58f20100a78ca0984c810eabbe3a7aa11dcf338b249eebaf0f"
+      },
+      "256": {
+        "path": "/emblems/writing_desk_kit_256.webp",
+        "size": 10796,
+        "sha256": "4b76f3195baeda9719cf2a6eab30164687a3965fd2beda3f120db49dc347d257"
+      },
+      "512": {
+        "path": "/emblems/writing_desk_kit_512.webp",
+        "size": 34582,
+        "sha256": "b624e28e11236562d4e4b229d491359059cc2caf667b7c59130127652f06f8f6"
+      },
+      "1024": {
+        "path": "/emblems/writing_desk_kit_1024.webp",
+        "size": 125280,
+        "sha256": "e259dbb6d26ad9a3383ebc482e481bbadee485f6bdfd26bcd0577eabf650e455"
+      }
+    },
+    "paper_maker_screen": {
+      "128": {
+        "path": "/emblems/paper_maker_screen_128.webp",
+        "size": 5594,
+        "sha256": "080a79115dc33ae4dfd3ee923549f981bc000942e17abea12dfbd672cb87874f"
+      },
+      "256": {
+        "path": "/emblems/paper_maker_screen_256.webp",
+        "size": 15588,
+        "sha256": "a55b039118eca254039681ca6acb999b60b0c64c53e415d84b4cbbfb38810aaf"
+      },
+      "512": {
+        "path": "/emblems/paper_maker_screen_512.webp",
+        "size": 53856,
+        "sha256": "cd4fb6045fbea75a94223195777e52eca26b2f9939646fb9f28ad9e09003d61a"
+      },
+      "1024": {
+        "path": "/emblems/paper_maker_screen_1024.webp",
+        "size": 182440,
+        "sha256": "dfc6b84cf31927998eed9186902523fa9d7b1e47e823cc928f6ba864ba941c7c"
+      }
+    },
+    "book_stand": {
+      "128": {
+        "path": "/emblems/book_stand_128.webp",
+        "size": 5038,
+        "sha256": "4acb4748edfc6239fa8f9ff3a568b04b310a758e625871522f6e5c93f0467529"
+      },
+      "256": {
+        "path": "/emblems/book_stand_256.webp",
+        "size": 12792,
+        "sha256": "98121c400ec6b200c56f81310d9070051e86b0cc8ea9b5407be6e4fecf4c6bb4"
+      },
+      "512": {
+        "path": "/emblems/book_stand_512.webp",
+        "size": 35810,
+        "sha256": "b26e020b160deb513653f608eb55858fe1449a6f8429f88db57134f80048d730"
+      },
+      "1024": {
+        "path": "/emblems/book_stand_1024.webp",
+        "size": 95702,
+        "sha256": "a1c952665f448d59f0ccf3e95ecc6b82865c586589a1e4dae448ac32bbe2dada"
+      }
+    },
+    "library_ladder": {
+      "128": {
+        "path": "/emblems/library_ladder_128.webp",
+        "size": 7186,
+        "sha256": "8aa124e6e0da9f8c7fc54d3f8cfbcd03339f5efc33ad36d399dc19ff311e3175"
+      },
+      "256": {
+        "path": "/emblems/library_ladder_256.webp",
+        "size": 16976,
+        "sha256": "5a10f380e531abb3f0ae605e63e4fdf215897db82633f719070ca1ab9a5ceabd"
+      },
+      "512": {
+        "path": "/emblems/library_ladder_512.webp",
+        "size": 44432,
+        "sha256": "3272db57cb88410762809a0be37cbbc79b40f640e8fb5a4e768df94172ce0877"
+      },
+      "1024": {
+        "path": "/emblems/library_ladder_1024.webp",
+        "size": 106200,
+        "sha256": "6fce6a2595e36ee8ef9686d2b73c06db0d3ea865d0b252bf0fd29f8538683111"
+      }
+    },
+    "codex_chained": {
+      "128": {
+        "path": "/emblems/codex_chained_128.webp",
+        "size": 5358,
+        "sha256": "cce473fb92bed711bc51c5dfcd93df215d18c835b4df7de48e261b59269592da"
+      },
+      "256": {
+        "path": "/emblems/codex_chained_256.webp",
+        "size": 14546,
+        "sha256": "c9474e6f97f10f2045df44f57b9a2c1d4e692ac0eb6eb2cb0b95196868b9df2b"
+      },
+      "512": {
+        "path": "/emblems/codex_chained_512.webp",
+        "size": 45676,
+        "sha256": "4b42c15bac93b779de2d982ebc8ddb1eef8d3a70222320fcb9eab3bbdfac3aee"
+      },
+      "1024": {
+        "path": "/emblems/codex_chained_1024.webp",
+        "size": 141072,
+        "sha256": "65063a31e5b47850cc221868da8602534e02322b9a66ceb2a25d05820c5ec723"
+      }
+    },
+    "encyclopedia_stack": {
+      "128": {
+        "path": "/emblems/encyclopedia_stack_128.webp",
+        "size": 4596,
+        "sha256": "e97f2e6e2dfc22677a9fbfa1c943f7420ff46d9bd1c5b3b5b9940fc466da9a88"
+      },
+      "256": {
+        "path": "/emblems/encyclopedia_stack_256.webp",
+        "size": 11362,
+        "sha256": "5ad0e0a87c9d3aa2da097658493bfc2c6fa9beae5d9f5bc44339644c27920fad"
+      },
+      "512": {
+        "path": "/emblems/encyclopedia_stack_512.webp",
+        "size": 35816,
+        "sha256": "545e0369886ac71544d0c4686d8f0cbfb384551a4ee336a186a0536c67fbf20f"
+      },
+      "1024": {
+        "path": "/emblems/encyclopedia_stack_1024.webp",
+        "size": 123140,
+        "sha256": "97955989f459f53e0652d1bc7ee9d488ccd4a716e5196eae7b6c124d63dcb8f4"
+      }
+    },
+    "compass_dividers": {
+      "128": {
+        "path": "/emblems/compass_dividers_128.webp",
+        "size": 3964,
+        "sha256": "53954b820f91c4a68d5c0ca80ca06d117075b9e105bf204cb2e804104d630c34"
+      },
+      "256": {
+        "path": "/emblems/compass_dividers_256.webp",
+        "size": 8398,
+        "sha256": "8b88b80ad7494d6c036b016905b2c34a3d6d32112f623702cf2f26780cba03d9"
+      },
+      "512": {
+        "path": "/emblems/compass_dividers_512.webp",
+        "size": 20820,
+        "sha256": "75f652f7dc0dd1e9f2c2586465eadf2a3309a5f6fc4c344d7d861e72868e660c"
+      },
+      "1024": {
+        "path": "/emblems/compass_dividers_1024.webp",
+        "size": 49392,
+        "sha256": "f630fcb5e161f49a3ecc307b591055141295ee10c404d918e70f3bf5db907ecd"
+      }
+    },
+    "brass_astrolabe": {
+      "128": {
+        "path": "/emblems/brass_astrolabe_128.webp",
+        "size": 5592,
+        "sha256": "3fc9bd2225f34a401f17b9026854d04c766e3ecd555d77891a0318cb8c905c73"
+      },
+      "256": {
+        "path": "/emblems/brass_astrolabe_256.webp",
+        "size": 16820,
+        "sha256": "996402bf9ed361d36c2f9dc8596056adc9424c34ccb19d5bab83fdfef071da8c"
+      },
+      "512": {
+        "path": "/emblems/brass_astrolabe_512.webp",
+        "size": 59270,
+        "sha256": "338603e6157602d038b6e35efa73e44fefdd8435768a25b9e6c50b96643991d7"
+      },
+      "1024": {
+        "path": "/emblems/brass_astrolabe_1024.webp",
+        "size": 210872,
+        "sha256": "65e1ae32616e5b87b496c216b7dcd914535fbfa518bbf8e193cd3372ffdf5341"
+      }
+    },
+    "celestial_globe": {
+      "128": {
+        "path": "/emblems/celestial_globe_128.webp",
+        "size": 6776,
+        "sha256": "02273a3da4388acb6102a835fdbfa2b1823e8c1de851ee3d4414023178abd437"
+      },
+      "256": {
+        "path": "/emblems/celestial_globe_256.webp",
+        "size": 17342,
+        "sha256": "3565140152d42a93413a374cc2c4438f6b767377e4acc10d6749f9e272b0165d"
+      },
+      "512": {
+        "path": "/emblems/celestial_globe_512.webp",
+        "size": 45410,
+        "sha256": "de476826d1e697b5a190a8624f65b99afc91698017895a625b752410ad306f02"
+      },
+      "1024": {
+        "path": "/emblems/celestial_globe_1024.webp",
+        "size": 105070,
+        "sha256": "b91b950d82d28ebac2cc551eb39d1e7a997e676991153e1f197d50c70b150e19"
+      }
+    },
+    "water_clock": {
+      "128": {
+        "path": "/emblems/water_clock_128.webp",
+        "size": 5306,
+        "sha256": "315bd0fe99389a7058b70e2abc4dd21ae383ab0001ed2d4fea11154c9b89a134"
+      },
+      "256": {
+        "path": "/emblems/water_clock_256.webp",
+        "size": 12424,
+        "sha256": "aed7bf8aeab63a8d8be25069059329c2aa5a59ef6c32713f6f71d13ae26ca4fb"
+      },
+      "512": {
+        "path": "/emblems/water_clock_512.webp",
+        "size": 32434,
+        "sha256": "7d85d821f526a6b70514b1cbf590fdd76a9db22293c943fe48f2233b37053d3a"
+      },
+      "1024": {
+        "path": "/emblems/water_clock_1024.webp",
+        "size": 79816,
+        "sha256": "018c41a95f22b8f10a6a0370caac9360f4c61bfe152e99cbf51bcfd369b4f414"
+      }
+    },
+    "sundial_portable": {
+      "128": {
+        "path": "/emblems/sundial_portable_128.webp",
+        "size": 5592,
+        "sha256": "cab8288bd73d5486986d96de678d8e0fe397dd8931d457742cedf6df05bf1e10"
+      },
+      "256": {
+        "path": "/emblems/sundial_portable_256.webp",
+        "size": 14992,
+        "sha256": "c6b76f402b7d4620a41c01007810eb2e41b2c9b588a05f8157f097e55a79354a"
+      },
+      "512": {
+        "path": "/emblems/sundial_portable_512.webp",
+        "size": 45782,
+        "sha256": "fdd7566843af24f851cf257c8cc28774c30fd49a3648aaa40e2fb8e5c7a58c7d"
+      },
+      "1024": {
+        "path": "/emblems/sundial_portable_1024.webp",
+        "size": 135236,
+        "sha256": "4087a3fe2901c92be656d7e17708c30b746ca348b7f5b8097b3e922cb26dd038"
+      }
+    },
+    "balance_scale": {
+      "128": {
+        "path": "/emblems/balance_scale_128.webp",
+        "size": 8310,
+        "sha256": "5bd8b3fcf7cd3b1c6985c2abfb31fbfe28b9c6893ed2aee19227b2a4e1e39eaf"
+      },
+      "256": {
+        "path": "/emblems/balance_scale_256.webp",
+        "size": 20870,
+        "sha256": "a1136081cefbd705c47c1120386a0d43fcd42aa257356484cd23ad11178c048e"
+      },
+      "512": {
+        "path": "/emblems/balance_scale_512.webp",
+        "size": 56688,
+        "sha256": "509456cd0170f3462bf726170726dad403b68d832833f4e0fba4463c5fb2ce56"
+      },
+      "1024": {
+        "path": "/emblems/balance_scale_1024.webp",
+        "size": 132614,
+        "sha256": "cec73cfc0e8db75abeb92ca3d5de003f846a3bafe64153f6dc2493f2a19b3843"
+      }
+    },
+    "mortar_pestle": {
+      "128": {
+        "path": "/emblems/mortar_pestle_128.webp",
+        "size": 4478,
+        "sha256": "5c0c3fc6daa72e7aa232a3530e5d7baa2724b99df0d52dfbe17aa7dc53fcee31"
+      },
+      "256": {
+        "path": "/emblems/mortar_pestle_256.webp",
+        "size": 9772,
+        "sha256": "1bd9ac2dd524ff4ec85e326a5cc5667f8cbdd7810ad967a55bb3a3f0daec305d"
+      },
+      "512": {
+        "path": "/emblems/mortar_pestle_512.webp",
+        "size": 25088,
+        "sha256": "9feb4d3b824c2bebc1728d309be70bdfc4bdd37d8231f5205da17579ffedc8bf"
+      },
+      "1024": {
+        "path": "/emblems/mortar_pestle_1024.webp",
+        "size": 67554,
+        "sha256": "f311abeb73c17268cfe74a856eb5d1fef9b9beacc4f649bf31a8c8cacddcab43"
+      }
+    },
+    "alembic": {
+      "128": {
+        "path": "/emblems/alembic_128.webp",
+        "size": 5890,
+        "sha256": "e648aefe2a26bfce740e2b0fad818c550aa5100f7015b8e4ded2ba729cb82cd7"
+      },
+      "256": {
+        "path": "/emblems/alembic_256.webp",
+        "size": 13880,
+        "sha256": "a287e31665f5d1c63512a783e3f0f6296d971f63ee0d279f8fe9ce300489ac9d"
+      },
+      "512": {
+        "path": "/emblems/alembic_512.webp",
+        "size": 36188,
+        "sha256": "6e5ccb3df32b90853a347699d7b6748910d97791efae3a01e131514d15db104c"
+      },
+      "1024": {
+        "path": "/emblems/alembic_1024.webp",
+        "size": 91204,
+        "sha256": "b7629da76108aef20d1c91aa7c2aaf2bb2095a7c7b67f764cb9d9566fad2b4e1"
+      }
+    },
+    "glass_vial_set": {
+      "128": {
+        "path": "/emblems/glass_vial_set_128.webp",
+        "size": 5882,
+        "sha256": "290dc3b1ccebeb392aed7c73d2864dfe6c6f73788e4aa212a07b01479069f7e3"
+      },
+      "256": {
+        "path": "/emblems/glass_vial_set_256.webp",
+        "size": 14384,
+        "sha256": "ec2fbe9e1cad7adaf92a5970c31fd337e698ee4654a7839210ad0e803493c250"
+      },
+      "512": {
+        "path": "/emblems/glass_vial_set_512.webp",
+        "size": 40864,
+        "sha256": "cd463d94afdf8fe7208cb9d65219ef52007321c08511e8ce77365b86ba956694"
+      },
+      "1024": {
+        "path": "/emblems/glass_vial_set_1024.webp",
+        "size": 112592,
+        "sha256": "4d5453895a1c490aaabe8e1c4449f51856723f87fd62aa430ae50336109dea37"
+      }
+    },
+    "hourglass_bronze": {
+      "128": {
+        "path": "/emblems/hourglass_bronze_128.webp",
+        "size": 5964,
+        "sha256": "19ef5dd5935c774eb0c4821b71a809ec0c154c6eddedd2f432cacbaef495d6f4"
+      },
+      "256": {
+        "path": "/emblems/hourglass_bronze_256.webp",
+        "size": 14382,
+        "sha256": "fd03a81339122cf9b17eaa00f82856d1c099ceafc9adbabbfb9d668331e3c958"
+      },
+      "512": {
+        "path": "/emblems/hourglass_bronze_512.webp",
+        "size": 35630,
+        "sha256": "500b855afeda432b3b49e0178ba4037e45b72ed53156f2e8a52ad7e3c0269c23"
+      },
+      "1024": {
+        "path": "/emblems/hourglass_bronze_1024.webp",
+        "size": 80806,
+        "sha256": "8fcfcac2b59d5a153e7500f44bc1df1efd862005d7e881efa908c5bb3f18a14d"
+      }
+    },
+    "qibla_compass": {
+      "128": {
+        "path": "/emblems/qibla_compass_128.webp",
+        "size": 5106,
+        "sha256": "9954b7f14ed285f44ab54fe7d8f203ceaaaa6b425ce982677ea3b46925c2cebb"
+      },
+      "256": {
+        "path": "/emblems/qibla_compass_256.webp",
+        "size": 13674,
+        "sha256": "b89fd68c68e0a6d1f72f1eebef1b766fbcb105572006dd588a9b4417a04e0d7f"
+      },
+      "512": {
+        "path": "/emblems/qibla_compass_512.webp",
+        "size": 44372,
+        "sha256": "28d72a41988322903e16ffd969a86e1aef26981bdfe6f6be55ed3ec31b5d9f10"
+      },
+      "1024": {
+        "path": "/emblems/qibla_compass_1024.webp",
+        "size": 127080,
+        "sha256": "25cb4cd243eac531eafd3734c0d8f8468a6a0847b3ecbefd2a17268fefe51af9"
+      }
+    },
+    "surveyor_rod": {
+      "128": {
+        "path": "/emblems/surveyor_rod_128.webp",
+        "size": 2580,
+        "sha256": "7e49ab7cb954bcecfe743e4f007a83ac86801bcdc814e4b5d2910fa0d988c0a0"
+      },
+      "256": {
+        "path": "/emblems/surveyor_rod_256.webp",
+        "size": 5842,
+        "sha256": "949b861047b9bb64df77a6ea583f454328c5fc423a4433890f73998d7e88f96d"
+      },
+      "512": {
+        "path": "/emblems/surveyor_rod_512.webp",
+        "size": 14984,
+        "sha256": "2985363fb1aa9a97bd2e70cc1802fce7a86259960a930098c9289af8f1d59c6d"
+      },
+      "1024": {
+        "path": "/emblems/surveyor_rod_1024.webp",
+        "size": 35956,
+        "sha256": "dbaac6fc4b67bbe12966664ce2962eb11f8714d81efeeb058ba041e5396bcf07"
+      }
     }
   },
-  "total_bytes": 2267746,
-  "emblem_count": 10,
+  "total_bytes": 6428256,
+  "emblem_count": 35,
   "files": {
+    "alembic_1024.webp": {
+      "sha256": "b7629da76108aef20d1c91aa7c2aaf2bb2095a7c7b67f764cb9d9566fad2b4e1",
+      "size": 91204
+    },
+    "alembic_128.webp": {
+      "sha256": "e648aefe2a26bfce740e2b0fad818c550aa5100f7015b8e4ded2ba729cb82cd7",
+      "size": 5890
+    },
+    "alembic_256.webp": {
+      "sha256": "a287e31665f5d1c63512a783e3f0f6296d971f63ee0d279f8fe9ce300489ac9d",
+      "size": 13880
+    },
+    "alembic_512.webp": {
+      "sha256": "6e5ccb3df32b90853a347699d7b6748910d97791efae3a01e131514d15db104c",
+      "size": 36188
+    },
+    "balance_scale_1024.webp": {
+      "sha256": "cec73cfc0e8db75abeb92ca3d5de003f846a3bafe64153f6dc2493f2a19b3843",
+      "size": 132614
+    },
+    "balance_scale_128.webp": {
+      "sha256": "5bd8b3fcf7cd3b1c6985c2abfb31fbfe28b9c6893ed2aee19227b2a4e1e39eaf",
+      "size": 8310
+    },
+    "balance_scale_256.webp": {
+      "sha256": "a1136081cefbd705c47c1120386a0d43fcd42aa257356484cd23ad11178c048e",
+      "size": 20870
+    },
+    "balance_scale_512.webp": {
+      "sha256": "509456cd0170f3462bf726170726dad403b68d832833f4e0fba4463c5fb2ce56",
+      "size": 56688
+    },
     "banner_abbasid_1024.webp": {
       "sha256": "a01371d3fa8cfca5263cd3a7d76b8f4ede1db8b2412a44c418aedd1bd6a21d8a",
       "size": 210730
@@ -323,6 +905,278 @@
       "sha256": "7547df6d31a474f62efd0a85447f653a50f371985ef7a402451430fb0c6d0f82",
       "size": 43348
     },
+    "book_stand_1024.webp": {
+      "sha256": "a1c952665f448d59f0ccf3e95ecc6b82865c586589a1e4dae448ac32bbe2dada",
+      "size": 95702
+    },
+    "book_stand_128.webp": {
+      "sha256": "4acb4748edfc6239fa8f9ff3a568b04b310a758e625871522f6e5c93f0467529",
+      "size": 5038
+    },
+    "book_stand_256.webp": {
+      "sha256": "98121c400ec6b200c56f81310d9070051e86b0cc8ea9b5407be6e4fecf4c6bb4",
+      "size": 12792
+    },
+    "book_stand_512.webp": {
+      "sha256": "b26e020b160deb513653f608eb55858fe1449a6f8429f88db57134f80048d730",
+      "size": 35810
+    },
+    "bound_folio_1024.webp": {
+      "sha256": "dfff8c96401a01aac2e7cb5c1d812596561c2b8c470d6a8e1f2e5215be92335d",
+      "size": 126604
+    },
+    "bound_folio_128.webp": {
+      "sha256": "8c2794b3ad5bf495e08a7866baf54130541ae29838d244cb991df61f80bf4ade",
+      "size": 3870
+    },
+    "bound_folio_256.webp": {
+      "sha256": "0ccceca8b5a0b2b264764d3722f2c61b886c63acedd4801bf6efb20fd947ca95",
+      "size": 10094
+    },
+    "bound_folio_512.webp": {
+      "sha256": "6d16b2b45be5d62e6764b287639e66a361422c0e6d0796baf9aca69b84901745",
+      "size": 36380
+    },
+    "brass_astrolabe_1024.webp": {
+      "sha256": "65e1ae32616e5b87b496c216b7dcd914535fbfa518bbf8e193cd3372ffdf5341",
+      "size": 210872
+    },
+    "brass_astrolabe_128.webp": {
+      "sha256": "3fc9bd2225f34a401f17b9026854d04c766e3ecd555d77891a0318cb8c905c73",
+      "size": 5592
+    },
+    "brass_astrolabe_256.webp": {
+      "sha256": "996402bf9ed361d36c2f9dc8596056adc9424c34ccb19d5bab83fdfef071da8c",
+      "size": 16820
+    },
+    "brass_astrolabe_512.webp": {
+      "sha256": "338603e6157602d038b6e35efa73e44fefdd8435768a25b9e6c50b96643991d7",
+      "size": 59270
+    },
+    "celestial_globe_1024.webp": {
+      "sha256": "b91b950d82d28ebac2cc551eb39d1e7a997e676991153e1f197d50c70b150e19",
+      "size": 105070
+    },
+    "celestial_globe_128.webp": {
+      "sha256": "02273a3da4388acb6102a835fdbfa2b1823e8c1de851ee3d4414023178abd437",
+      "size": 6776
+    },
+    "celestial_globe_256.webp": {
+      "sha256": "3565140152d42a93413a374cc2c4438f6b767377e4acc10d6749f9e272b0165d",
+      "size": 17342
+    },
+    "celestial_globe_512.webp": {
+      "sha256": "de476826d1e697b5a190a8624f65b99afc91698017895a625b752410ad306f02",
+      "size": 45410
+    },
+    "codex_chained_1024.webp": {
+      "sha256": "65063a31e5b47850cc221868da8602534e02322b9a66ceb2a25d05820c5ec723",
+      "size": 141072
+    },
+    "codex_chained_128.webp": {
+      "sha256": "cce473fb92bed711bc51c5dfcd93df215d18c835b4df7de48e261b59269592da",
+      "size": 5358
+    },
+    "codex_chained_256.webp": {
+      "sha256": "c9474e6f97f10f2045df44f57b9a2c1d4e692ac0eb6eb2cb0b95196868b9df2b",
+      "size": 14546
+    },
+    "codex_chained_512.webp": {
+      "sha256": "4b42c15bac93b779de2d982ebc8ddb1eef8d3a70222320fcb9eab3bbdfac3aee",
+      "size": 45676
+    },
+    "compass_dividers_1024.webp": {
+      "sha256": "f630fcb5e161f49a3ecc307b591055141295ee10c404d918e70f3bf5db907ecd",
+      "size": 49392
+    },
+    "compass_dividers_128.webp": {
+      "sha256": "53954b820f91c4a68d5c0ca80ca06d117075b9e105bf204cb2e804104d630c34",
+      "size": 3964
+    },
+    "compass_dividers_256.webp": {
+      "sha256": "8b88b80ad7494d6c036b016905b2c34a3d6d32112f623702cf2f26780cba03d9",
+      "size": 8398
+    },
+    "compass_dividers_512.webp": {
+      "sha256": "75f652f7dc0dd1e9f2c2586465eadf2a3309a5f6fc4c344d7d861e72868e660c",
+      "size": 20820
+    },
+    "encyclopedia_stack_1024.webp": {
+      "sha256": "97955989f459f53e0652d1bc7ee9d488ccd4a716e5196eae7b6c124d63dcb8f4",
+      "size": 123140
+    },
+    "encyclopedia_stack_128.webp": {
+      "sha256": "e97f2e6e2dfc22677a9fbfa1c943f7420ff46d9bd1c5b3b5b9940fc466da9a88",
+      "size": 4596
+    },
+    "encyclopedia_stack_256.webp": {
+      "sha256": "5ad0e0a87c9d3aa2da097658493bfc2c6fa9beae5d9f5bc44339644c27920fad",
+      "size": 11362
+    },
+    "encyclopedia_stack_512.webp": {
+      "sha256": "545e0369886ac71544d0c4686d8f0cbfb384551a4ee336a186a0536c67fbf20f",
+      "size": 35816
+    },
+    "glass_vial_set_1024.webp": {
+      "sha256": "4d5453895a1c490aaabe8e1c4449f51856723f87fd62aa430ae50336109dea37",
+      "size": 112592
+    },
+    "glass_vial_set_128.webp": {
+      "sha256": "290dc3b1ccebeb392aed7c73d2864dfe6c6f73788e4aa212a07b01479069f7e3",
+      "size": 5882
+    },
+    "glass_vial_set_256.webp": {
+      "sha256": "ec2fbe9e1cad7adaf92a5970c31fd337e698ee4654a7839210ad0e803493c250",
+      "size": 14384
+    },
+    "glass_vial_set_512.webp": {
+      "sha256": "cd463d94afdf8fe7208cb9d65219ef52007321c08511e8ce77365b86ba956694",
+      "size": 40864
+    },
+    "hourglass_bronze_1024.webp": {
+      "sha256": "8fcfcac2b59d5a153e7500f44bc1df1efd862005d7e881efa908c5bb3f18a14d",
+      "size": 80806
+    },
+    "hourglass_bronze_128.webp": {
+      "sha256": "19ef5dd5935c774eb0c4821b71a809ec0c154c6eddedd2f432cacbaef495d6f4",
+      "size": 5964
+    },
+    "hourglass_bronze_256.webp": {
+      "sha256": "fd03a81339122cf9b17eaa00f82856d1c099ceafc9adbabbfb9d668331e3c958",
+      "size": 14382
+    },
+    "hourglass_bronze_512.webp": {
+      "sha256": "500b855afeda432b3b49e0178ba4037e45b72ed53156f2e8a52ad7e3c0269c23",
+      "size": 35630
+    },
+    "illuminated_page_1024.webp": {
+      "sha256": "802364303f16abe0a3338adb8fbbfcf7f1a578e217428d839f4d730e610975da",
+      "size": 218762
+    },
+    "illuminated_page_128.webp": {
+      "sha256": "97b74d35e873e4fae406a52243b9c398858c9d671f89f705c6b6f177fed9956b",
+      "size": 6190
+    },
+    "illuminated_page_256.webp": {
+      "sha256": "eea1277008491eb43dc2e7e93c0cb5953aa4b91949c43ca9ae2f340575b9fbbe",
+      "size": 17334
+    },
+    "illuminated_page_512.webp": {
+      "sha256": "4f6614a41a1fa2c06518b901576df1a39496db9185f1df3236518320cc20e8d4",
+      "size": 61442
+    },
+    "ink_pot_1024.webp": {
+      "sha256": "d6dd0640e3db83cbb3ddc28994d20fa047502cef674f470904a4a2682750642e",
+      "size": 114944
+    },
+    "ink_pot_128.webp": {
+      "sha256": "967828319e6da7e890ebc3cc0e7aa964b3ab5188e0345e7790057b76ea31d773",
+      "size": 5628
+    },
+    "ink_pot_256.webp": {
+      "sha256": "f34dbc5329e0cff8e650ee750bfcaf45bc6e004a3ba6787d02175c6cda482c35",
+      "size": 14714
+    },
+    "ink_pot_512.webp": {
+      "sha256": "3254e2d532d0240d732a6a702a08283c456f509ca1b2498d9c53cbc79de67324",
+      "size": 43908
+    },
+    "library_ladder_1024.webp": {
+      "sha256": "6fce6a2595e36ee8ef9686d2b73c06db0d3ea865d0b252bf0fd29f8538683111",
+      "size": 106200
+    },
+    "library_ladder_128.webp": {
+      "sha256": "8aa124e6e0da9f8c7fc54d3f8cfbcd03339f5efc33ad36d399dc19ff311e3175",
+      "size": 7186
+    },
+    "library_ladder_256.webp": {
+      "sha256": "5a10f380e531abb3f0ae605e63e4fdf215897db82633f719070ca1ab9a5ceabd",
+      "size": 16976
+    },
+    "library_ladder_512.webp": {
+      "sha256": "3272db57cb88410762809a0be37cbbc79b40f640e8fb5a4e768df94172ce0877",
+      "size": 44432
+    },
+    "mortar_pestle_1024.webp": {
+      "sha256": "f311abeb73c17268cfe74a856eb5d1fef9b9beacc4f649bf31a8c8cacddcab43",
+      "size": 67554
+    },
+    "mortar_pestle_128.webp": {
+      "sha256": "5c0c3fc6daa72e7aa232a3530e5d7baa2724b99df0d52dfbe17aa7dc53fcee31",
+      "size": 4478
+    },
+    "mortar_pestle_256.webp": {
+      "sha256": "1bd9ac2dd524ff4ec85e326a5cc5667f8cbdd7810ad967a55bb3a3f0daec305d",
+      "size": 9772
+    },
+    "mortar_pestle_512.webp": {
+      "sha256": "9feb4d3b824c2bebc1728d309be70bdfc4bdd37d8231f5205da17579ffedc8bf",
+      "size": 25088
+    },
+    "paper_maker_screen_1024.webp": {
+      "sha256": "dfc6b84cf31927998eed9186902523fa9d7b1e47e823cc928f6ba864ba941c7c",
+      "size": 182440
+    },
+    "paper_maker_screen_128.webp": {
+      "sha256": "080a79115dc33ae4dfd3ee923549f981bc000942e17abea12dfbd672cb87874f",
+      "size": 5594
+    },
+    "paper_maker_screen_256.webp": {
+      "sha256": "a55b039118eca254039681ca6acb999b60b0c64c53e415d84b4cbbfb38810aaf",
+      "size": 15588
+    },
+    "paper_maker_screen_512.webp": {
+      "sha256": "cd4fb6045fbea75a94223195777e52eca26b2f9939646fb9f28ad9e09003d61a",
+      "size": 53856
+    },
+    "parchment_stack_1024.webp": {
+      "sha256": "2a253142b24d86820b6cf87b085848c260d674b4802cfb548be997f48ac24891",
+      "size": 72728
+    },
+    "parchment_stack_128.webp": {
+      "sha256": "51e6422d7ae4baee6a7c5097a6e634d60785aaba934d65740234c498d83a92b1",
+      "size": 4562
+    },
+    "parchment_stack_256.webp": {
+      "sha256": "2e1506e755850dccde7a8fedd16ab02a0e5112156b7915f91dafe87d745f583c",
+      "size": 10860
+    },
+    "parchment_stack_512.webp": {
+      "sha256": "dd18969b23e8c00f3821476ce19760ed14bfdab30704893db6c591e7280033fd",
+      "size": 28752
+    },
+    "qibla_compass_1024.webp": {
+      "sha256": "25cb4cd243eac531eafd3734c0d8f8468a6a0847b3ecbefd2a17268fefe51af9",
+      "size": 127080
+    },
+    "qibla_compass_128.webp": {
+      "sha256": "9954b7f14ed285f44ab54fe7d8f203ceaaaa6b425ce982677ea3b46925c2cebb",
+      "size": 5106
+    },
+    "qibla_compass_256.webp": {
+      "sha256": "b89fd68c68e0a6d1f72f1eebef1b766fbcb105572006dd588a9b4417a04e0d7f",
+      "size": 13674
+    },
+    "qibla_compass_512.webp": {
+      "sha256": "28d72a41988322903e16ffd969a86e1aef26981bdfe6f6be55ed3ec31b5d9f10",
+      "size": 44372
+    },
+    "reed_pen_1024.webp": {
+      "sha256": "54f2c035427246a450907a34bdf26bb5676fa533606679553c3d0033af4a7a67",
+      "size": 46356
+    },
+    "reed_pen_128.webp": {
+      "sha256": "12dee26adb18ce2d058349b6ccff25540c3f00cf95ce300b30bfad0f34f6f16a",
+      "size": 3286
+    },
+    "reed_pen_256.webp": {
+      "sha256": "27f8ab1e9a3150a8f95e209d2a500dd22f67cdc3b8ede14a25c4e49604a0b221",
+      "size": 7426
+    },
+    "reed_pen_512.webp": {
+      "sha256": "20bd64b53c40d91fed399bd4e7be488fa19e11957b16bcb6aa517f12403d3555",
+      "size": 19044
+    },
     "scholar_1024.webp": {
       "sha256": "56ed256d8f7f6a63bce75748d053f15641521d9ad1f0ae35897a46507e404242",
       "size": 193326
@@ -338,6 +1192,22 @@
     "scholar_512.webp": {
       "sha256": "919a25def2d9cddbad823467b851a13178b9f62bde938d34d072a63e4b418da5",
       "size": 41866
+    },
+    "scroll_1024.webp": {
+      "sha256": "40e6c070882712e918ff5c9c02dfdc63aa0b7bf686e9836118649d901461dd08",
+      "size": 82164
+    },
+    "scroll_128.webp": {
+      "sha256": "404df333c0a0f279ba2f005a3d6ae4e71297f194e2f8982d1fff8ba24a253ffe",
+      "size": 3882
+    },
+    "scroll_256.webp": {
+      "sha256": "232831c3ee804db542a40ba85d5621ce9ae7bb276c83da5e26f38a9c643becc2",
+      "size": 9368
+    },
+    "scroll_512.webp": {
+      "sha256": "c162277c5b12951c0c6290261f83aa94b7ebe4f36dafda37a001e013198e8a8b",
+      "size": 26842
     },
     "shield_1024.webp": {
       "sha256": "1d6a70073df2c86d9ae67dd71b4711755d4038037e03961edc826b3971981444",
@@ -371,6 +1241,38 @@
       "sha256": "6ffd71cb9a5c1a45a85341db06ba86c4b5205dd944989efaca8925b20c8b7b55",
       "size": 65502
     },
+    "sundial_portable_1024.webp": {
+      "sha256": "4087a3fe2901c92be656d7e17708c30b746ca348b7f5b8097b3e922cb26dd038",
+      "size": 135236
+    },
+    "sundial_portable_128.webp": {
+      "sha256": "cab8288bd73d5486986d96de678d8e0fe397dd8931d457742cedf6df05bf1e10",
+      "size": 5592
+    },
+    "sundial_portable_256.webp": {
+      "sha256": "c6b76f402b7d4620a41c01007810eb2e41b2c9b588a05f8157f097e55a79354a",
+      "size": 14992
+    },
+    "sundial_portable_512.webp": {
+      "sha256": "fdd7566843af24f851cf257c8cc28774c30fd49a3648aaa40e2fb8e5c7a58c7d",
+      "size": 45782
+    },
+    "surveyor_rod_1024.webp": {
+      "sha256": "dbaac6fc4b67bbe12966664ce2962eb11f8714d81efeeb058ba041e5396bcf07",
+      "size": 35956
+    },
+    "surveyor_rod_128.webp": {
+      "sha256": "7e49ab7cb954bcecfe743e4f007a83ac86801bcdc814e4b5d2910fa0d988c0a0",
+      "size": 2580
+    },
+    "surveyor_rod_256.webp": {
+      "sha256": "949b861047b9bb64df77a6ea583f454328c5fc423a4433890f73998d7e88f96d",
+      "size": 5842
+    },
+    "surveyor_rod_512.webp": {
+      "sha256": "2985363fb1aa9a97bd2e70cc1802fce7a86259960a930098c9289af8f1d59c6d",
+      "size": 14984
+    },
     "sword_1024.webp": {
       "sha256": "a2f7e4ff1d8e806d3b4d98f7d8c670989d99cdaeaccf6ca5cc587e6586bb01ca",
       "size": 44824
@@ -386,6 +1288,54 @@
     "sword_512.webp": {
       "sha256": "474b151ee07aee1e19e74ed756b119e4a587018e026fab82dfefdb7aea219a02",
       "size": 17414
+    },
+    "water_clock_1024.webp": {
+      "sha256": "018c41a95f22b8f10a6a0370caac9360f4c61bfe152e99cbf51bcfd369b4f414",
+      "size": 79816
+    },
+    "water_clock_128.webp": {
+      "sha256": "315bd0fe99389a7058b70e2abc4dd21ae383ab0001ed2d4fea11154c9b89a134",
+      "size": 5306
+    },
+    "water_clock_256.webp": {
+      "sha256": "aed7bf8aeab63a8d8be25069059329c2aa5a59ef6c32713f6f71d13ae26ca4fb",
+      "size": 12424
+    },
+    "water_clock_512.webp": {
+      "sha256": "7d85d821f526a6b70514b1cbf590fdd76a9db22293c943fe48f2233b37053d3a",
+      "size": 32434
+    },
+    "wax_seal_1024.webp": {
+      "sha256": "a1c458326dffe55a4b7339d9d429891ad2a44b0dd138b19538834f58e79b5e64",
+      "size": 91826
+    },
+    "wax_seal_128.webp": {
+      "sha256": "95f8671b52adbce6d23700e5851d1d0be6a7b5aac3e542483091069f0f131653",
+      "size": 3420
+    },
+    "wax_seal_256.webp": {
+      "sha256": "3b6364ba31112cdecc1e681accfc7bdc7b81ae34cdf25306d4d0c32f3cf7e37b",
+      "size": 9196
+    },
+    "wax_seal_512.webp": {
+      "sha256": "1f03b8db2a47b6d33d627c9e2f8e671642fa37063ffe5b14cd930c5c91462367",
+      "size": 28934
+    },
+    "writing_desk_kit_1024.webp": {
+      "sha256": "e259dbb6d26ad9a3383ebc482e481bbadee485f6bdfd26bcd0577eabf650e455",
+      "size": 125280
+    },
+    "writing_desk_kit_128.webp": {
+      "sha256": "c506341229637e58f20100a78ca0984c810eabbe3a7aa11dcf338b249eebaf0f",
+      "size": 4214
+    },
+    "writing_desk_kit_256.webp": {
+      "sha256": "4b76f3195baeda9719cf2a6eab30164687a3965fd2beda3f120db49dc347d257",
+      "size": 10796
+    },
+    "writing_desk_kit_512.webp": {
+      "sha256": "b624e28e11236562d4e4b229d491359059cc2caf667b7c59130127652f06f8f6",
+      "size": 34582
     }
   },
   "asset_count": 40
