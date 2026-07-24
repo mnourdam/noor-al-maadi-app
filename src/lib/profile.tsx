@@ -759,7 +759,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         ...cloud,
         // Scalars: max so a stale cloud push never regresses local.
         points: numMax(p.points, cloud.points),
-        seasonPoints: numMax(p.seasonPoints, cloud.seasonPoints),
+        // seasonPoints removed in Phase 3B
         dinars: numMax(p.dinars, cloud.dinars, STARTING_DINARS),
         streak: nextStreak,
         hearts: heartsPatch.hearts,
