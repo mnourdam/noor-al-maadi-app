@@ -128,8 +128,8 @@ const initial: ProfileState = {
   charactersUnlocked: [],
   regionsUnlocked: ["hijaz"],
   dailyClaimed: { day: "", ids: [] },
-  seasonPoints: 0,
-  seasonClaimed: false,
+  // season fields removed in Phase 3B
+
   titlesEarned: [],
   settings: { ambienceEnabled: false, ambienceVolume: 0.4, reduceMotion: false, notifications: true, textSize: "sm" },
   bio: "",
@@ -174,7 +174,7 @@ interface Ctx {
   unlockCharacter: (id: string) => void;
   unlockRegion: (id: string, cost: number) => boolean;
   claimDaily: (id: string, reward: number) => boolean;
-  claimSeason: (reward: number, title?: string, dinars?: number, artifact?: string) => boolean;
+  // claimSeason removed in Phase 3B (Seasons demo deleted).
   updateSettings: (patch: Partial<AppSettings>) => void;
   todayDailyIds: () => string[];
   setBio: (bio: string) => void;
@@ -252,7 +252,7 @@ interface Ctx {
 const ProfileContext = createContext<Ctx | null>(null);
 
 function addPointsTo(p: ProfileState, n: number): ProfileState {
-  return { ...p, points: p.points + n, seasonPoints: p.seasonPoints + Math.max(0, n) };
+  return { ...p, points: p.points + n };
 }
 
 function addDinarsTo(p: ProfileState, n: number): ProfileState {
@@ -490,23 +490,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       });
       return ok;
     },
-    claimSeason: (reward, title, dinars, artifact) => {
-      let ok = false;
-      update((p) => {
-        if (p.seasonClaimed) return p;
-        ok = true;
-        let np: ProfileState = {
-          ...p,
-          seasonClaimed: true,
-          titlesEarned: title && !p.titlesEarned.includes(title) ? [...p.titlesEarned, title] : p.titlesEarned,
-          artifactsFound: artifact && !p.artifactsFound.includes(artifact) ? [...p.artifactsFound, artifact] : p.artifactsFound,
-        };
-        np = addPointsTo(np, reward);
-        if (dinars) np = addDinarsTo(np, dinars);
-        return np;
-      });
-      return ok;
-    },
+    // claimSeason removed in Phase 3B (Seasons demo deleted).
+
     updateSettings: (patch) => update((p) => ({ ...p, settings: { ...p.settings, ...patch } })),
     todayDailyIds: () => dailyMissionsForDate().map((m) => m.id),
     setBio: (bio) => update((p) => ({ ...p, bio })),
