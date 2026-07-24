@@ -185,7 +185,7 @@ export const PREMIUM_EMBLEM_ASSETS: Record<string, PremiumAssetMatrix> = {
       "webp": "/__l5e/assets-v1/6d03dc5e-e527-4865-b89a-4e0655a99acc/star_1024.webp",
       "avif": "/__l5e/assets-v1/c2480cbe-1b60-4329-9e11-b67574cc461f/star_1024.avif"
     }
-  }
+  },
 
   "scroll": {
     "128": { "webp": "/__l5e/assets-v1/86698e3b-5a0c-482c-89ac-1a03f561dd66/scroll_128.webp", "avif": "/__l5e/assets-v1/9dc95ca7-f34d-4e35-8733-353da42944cd/scroll_128.avif" },
