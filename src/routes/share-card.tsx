@@ -7,13 +7,16 @@ import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
 import { isEarned } from "@/lib/achievements/v2/presentation";
+import { useHomeSummary } from "@/lib/stats/homeSummary";
+import { ERAS } from "@/lib/app-constants";
 
 /**
- * Phase 2 (Referrals removal): `/share-card` is the internal renderer for
- * the Historical Identity Card. The route is kept for backward
- * compatibility (legacy APKs / bookmarks land here). All referral and QR
- * parameters have been removed — the card is a pure player-journey summary
- * with no invite semantics.
+ * `/share-card` — Historical Identity Card renderer.
+ *
+ * All data flows through canonical sources (Home summary, achievement
+ * views, profile). The route is the single seam that resolves the
+ * favorite-state Arabic name and the top-3 achievements, so the card
+ * component itself stays a pure renderer.
  */
 export const Route = createFileRoute("/share-card")({
   head: () => ({ meta: [{ title: "بطاقة الهوية التاريخية" }] }),
@@ -24,16 +27,27 @@ function ShareCardPage() {
   const { user, account, displayName } = useAccount();
   const { profile } = useProfile();
   const views = useAchievementViews();
+  const summary = useHomeSummary();
 
   const username = account?.username ?? "";
-  const achievements = useMemo(() => {
-    const earned = views.filter(isEarned);
-    const top: IdentityCardAchievement[] = earned
-      .slice(-3)
-      .reverse()
-      .map((v) => ({ id: v.id, label: v.displayTitle ?? v.id }));
-    return { total: earned.length, top };
-  }, [views]);
+
+  const achievements = useMemo<IdentityCardAchievement[]>(
+    () =>
+      views.filter(isEarned).map((v) => ({
+        id: v.id,
+        label: v.displayTitle ?? v.id,
+        rarity: v.rarity,
+        unlockedAt: v.unlockedAt,
+        sortOrder: v.sortOrder,
+      })),
+    [views],
+  );
+
+  const favoriteStateName = useMemo(() => {
+    const id = profile.favoriteStateId;
+    if (!id) return null;
+    return ERAS.find((e) => e.id === id)?.name ?? null;
+  }, [profile.favoriteStateId]);
 
   return (
     <AppShell>
@@ -46,14 +60,19 @@ function ShareCardPage() {
         <ShareCard
           profile={profile}
           username={username}
+          userId={user?.id ?? null}
           displayNameSources={{
             displayName,
             publicName: account?.display_name ?? null,
             username: account?.username ?? null,
             profileName: profile.name,
           }}
-          investigationsCompleted={profile.investigationsCompleted?.length ?? 0}
+          campaignsCompleted={summary.loading ? undefined : summary.campaignsCompleted}
+          investigationsCompleted={summary.loading ? undefined : summary.investigationsCompleted}
+          storiesCompleted={summary.loading ? undefined : summary.storiesCompleted}
+          museumCount={summary.loading ? undefined : summary.museumCount}
           achievements={achievements}
+          favoriteStateName={favoriteStateName}
         />
         {!user && (
           <p className="mt-4 text-center text-[11px] text-muted-foreground">
