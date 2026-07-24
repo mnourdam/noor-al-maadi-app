@@ -91,10 +91,18 @@ export interface StreakMilestone {
   label: string;
 }
 
+/**
+ * Canonical Irth calendar day timezone (Phase 3A).
+ * The server (`record_streak_activity`) is authoritative for whether the day
+ * has been counted for authenticated users. Guest mode may still fall back to
+ * device-local time because it grants no server economy rewards.
+ */
+export const IRTH_DAY_TIMEZONE = "Asia/Riyadh";
+
 export const STREAK_MILESTONES: StreakMilestone[] = [
-  { days: 3,   xp: 50,   dinars: 30,   label: "ثلاثة أيام متتالية" },
-  { days: 7,   xp: 150,  dinars: 60,   badge: "streak_week",          label: "أسبوع كامل" },
-  { days: 30,  xp: 500,  dinars: 200,  artifact: "streak_chronicle",  label: "شهر من الإصرار" },
-  { days: 100, xp: 1500, dinars: 500,  title: "حافظ التاريخ",         label: "مئة يوم في رحاب التاريخ" },
-  { days: 365, xp: 5000, dinars: 3650, badge: "streak_year_guardian", artifact: "streak_year_chronicle", title: "حارس الإرث لعامٍ كامل", label: "سنة كاملة في حضرة التاريخ" },
+  { days: 3,   xp: 50,    dinars: 30,   label: "ثلاثة أيام متتالية" },
+  { days: 7,   xp: 150,   dinars: 60,   badge: "streak_week",          label: "أسبوع كامل" },
+  { days: 30,  xp: 500,   dinars: 200,  artifact: "streak_chronicle",  label: "شهر من الإصرار" },
+  { days: 100, xp: 1500,  dinars: 500,  title: "حافظ التاريخ",         label: "مئة يوم في رحاب التاريخ" },
+  { days: 365, xp: 10000, dinars: 3650, badge: "streak_year_guardian", artifact: "streak_year_chronicle", title: "حارس الإرث لعامٍ كامل", label: "سنة كاملة في حضرة التاريخ" },
 ];
