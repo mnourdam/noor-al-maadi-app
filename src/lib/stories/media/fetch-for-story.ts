@@ -1,10 +1,14 @@
 // Fetches every media row referenced by a story: story-scoped media plus any
 // explicitly referenced cover_media_id or scene primary_media_id.
 // Player runtime uses this to build the media[] array for SceneRenderer.
+//
+// M7C: the legacy direct-table fallback (`.from("story_media")`) has been
+// removed. Online path uses only the M6 visibility-enforcing RPC
+// `get_story_media_urls_v2`; offline path hydrates from the M7-populated
+// local snapshot which is itself sourced from `stories_snapshot_manifest_v2`.
 
 import { supabase } from "@/integrations/supabase/client";
 import type { StoryMediaRow } from "./dao";
-import { listStoryMedia } from "./dao";
 import type { StoryRow, StorySceneRow } from "@/lib/stories/types";
 
 export async function fetchStoryMediaForRuntime(
@@ -18,7 +22,6 @@ export async function fetchStoryMediaForRuntime(
   }
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   if (online) {
-    // M6 Phase A: prefer the visibility-enforced RPC.
     try {
       const { data, error } = await supabase.rpc(
         "get_story_media_urls_v2" as never,
@@ -27,19 +30,7 @@ export async function fetchStoryMediaForRuntime(
       if (!error && data && (data as { ok?: boolean }).ok) {
         return ((data as { media?: StoryMediaRow[] }).media ?? []) as StoryMediaRow[];
       }
-    } catch { /* fall through to legacy path */ }
-    // Legacy fallback (Phase B will remove).
-    try {
-      const owned = await listStoryMedia(story.id);
-      const known = new Set(owned.map((m) => m.id));
-      const missing = [...referenced].filter((id) => !known.has(id));
-      if (missing.length === 0) return owned;
-      const { data, error } = await supabase
-        .from("story_media")
-        .select("*")
-        .in("id", missing);
-      if (!error) return [...owned, ...((data ?? []) as StoryMediaRow[])];
-    } catch { /* fall through to offline path */ }
+    } catch { /* fall through to offline snapshot */ }
   }
   // Offline / RPC failure — hydrate from the local snapshot.
   try {
@@ -51,3 +42,4 @@ export async function fetchStoryMediaForRuntime(
     return localStoryMediaForStory(String(story.id), referenced) as unknown as StoryMediaRow[];
   } catch { return []; }
 }
+

@@ -86,32 +86,99 @@ export const COLLECTIONS: CollectionDef[] = [
     required: false,
     label: "سجل المتحف (قديم/اختياري — المتحف يقرأ من الموسوعة)" },
 
-  // Stories (P5) — first-class snapshot content. Anon RLS restricts
-  // stories to status='published', scenes to scenes-of-published-stories,
-  // and media to verified=true, so no additional filter is needed here.
-  { key: "stories", table: "stories",
-    filter: (q) => q.eq("status", "published"), required: false,
-    label: "القصص المنشورة" },
-  { key: "story_scenes", table: "story_scenes",
-    required: false,
-    label: "مشاهد القصص" },
-  { key: "story_media", table: "story_media",
-    filter: (q) => q.eq("verified", true), required: false,
-    label: "وسائط القصص (مُتحقّقة فقط)" },
+  // Stories (P5) — fetched via the M7A RPC `stories_snapshot_manifest_v2`
+  // which enforces the M6 visibility contract (locked+hidden omitted,
+  // locked+mystery redacted, on_demand excluded from the default snapshot).
+  // The `table` field is a placeholder; `fetchCollection` short-circuits
+  // to the manifest for these three keys.
+  { key: "stories", table: "__rpc:stories_snapshot_manifest_v2__",
+    required: false, label: "القصص المنشورة (بواسطة RPC مع تطبيق الرؤية)" },
+  { key: "story_scenes", table: "__rpc:stories_snapshot_manifest_v2__",
+    required: false, label: "مشاهد القصص (للقصص المفتوحة فقط)" },
+  { key: "story_media", table: "__rpc:stories_snapshot_manifest_v2__",
+    required: false, label: "وسائط القصص (للقصص المفتوحة، مُتحقّقة فقط)" },
+
 ];
 
 /** Collections that DO NOT expose `updated_at` — sync must full-fetch these. */
 const NO_UPDATED_AT: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollectionKey>([
   "today_in_history_events",
   "daily_facts",
+  // Story keys come from the visibility-enforced manifest RPC, which is
+  // not `updated_at`-filterable; snapshot builder full-fetches these each
+  // sync cycle.
+  "stories",
+  "story_scenes",
+  "story_media",
 ]);
 
+/** Story collection keys that are served by the manifest RPC. */
+const STORY_MANIFEST_KEYS: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollectionKey>([
+  "stories", "story_scenes", "story_media",
+]);
+
+/**
+ * Per-invocation cache of the manifest RPC result. A snapshot generation
+ * pass calls the RPC exactly once, then routes each of the three story
+ * collection keys to the corresponding slice of the payload.
+ */
+interface StoryManifestPayload {
+  ok: boolean;
+  generated_at?: string;
+  stories?: any[];
+  story_scenes?: any[];
+  story_media?: any[];
+  story_collections?: any[];
+}
+let _manifestPromise: Promise<StoryManifestPayload> | null = null;
+async function fetchStoryManifest(): Promise<StoryManifestPayload> {
+  if (_manifestPromise) return _manifestPromise;
+  _manifestPromise = (async () => {
+    try {
+      const { data, error } = await supabase.rpc(
+        "stories_snapshot_manifest_v2" as never,
+        { p_include_on_demand: false } as never,
+      );
+      if (error) {
+        console.warn("[snapshot] stories_snapshot_manifest_v2 failed:", error.message);
+        return { ok: false };
+      }
+      const p = (data ?? {}) as StoryManifestPayload;
+      if (!p.ok) return { ok: false };
+      return p;
+    } catch (e) {
+      console.warn("[snapshot] stories_snapshot_manifest_v2 threw:", e);
+      return { ok: false };
+    }
+  })();
+  return _manifestPromise;
+}
+function resetStoryManifestCache() { _manifestPromise = null; }
+function pickManifestSlice(key: OfflineCollectionKey, m: StoryManifestPayload): any[] {
+  if (!m.ok) return [];
+  if (key === "stories") return Array.isArray(m.stories) ? m.stories : [];
+  if (key === "story_scenes") return Array.isArray(m.story_scenes) ? m.story_scenes : [];
+  if (key === "story_media") return Array.isArray(m.story_media) ? m.story_media : [];
+  return [];
+}
+
 async function fetchCollection(def: CollectionDef): Promise<any[]> {
+  // Story collections come from the M7A visibility-enforcing manifest RPC.
+  if (STORY_MANIFEST_KEYS.has(def.key)) {
+    const manifest = await fetchStoryManifest();
+    if (!manifest.ok) {
+      throw new Error(`[snapshot] stories_snapshot_manifest_v2 unavailable for ${def.key}`);
+    }
+    const rows = pickManifestSlice(def.key, manifest);
+    console.info(`[snapshot] ${def.key}: fetched ${rows.length} rows (manifest RPC)`);
+    return pruneOfflineRows(def, rows);
+  }
   // Smaller page size than the PostgREST default (1000) so heavy JSON
   // columns (encyclopedia body, campaign data) don't push a single page
   // past preview/CDN payload limits and hang.
   const PAGE = 100;
   const out: any[] = [];
+
   // Ask PostgREST for the exact count BEFORE reading any row data. The count
   // request is tiny and independent of heavy JSON payloads, so we can fail
   // closed if pagination later returns 923/1000 rows without an error.
@@ -206,11 +273,15 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
  * caches that trail behind the live source and trigger a true-up.
  */
 async function fetchCollectionExpectedCount(def: CollectionDef): Promise<number | null> {
+  // Story collections are served by the manifest RPC — there is no
+  // countable underlying table endpoint. Skip the true-up check.
+  if (STORY_MANIFEST_KEYS.has(def.key)) return null;
   let query: any = supabase
     .from(def.table as any)
     .select("id", { count: "exact", head: true });
   if (def.filter) query = def.filter(query);
   const { count, error } = await query;
+
   if (error) {
     console.warn(`[snapshot] count query failed for ${def.table}:`, error.message);
     return null;
@@ -311,7 +382,9 @@ function canonicalJSON(value: any): string {
 }
 
 export async function generateSnapshot(): Promise<OfflineSnapshot> {
+  resetStoryManifestCache();
   const results = await Promise.all(COLLECTIONS.map((def) => fetchCollection(def)));
+
   const collections: Record<string, any[]> = {};
   const content_counts: Record<string, number> = {};
   const collection_manifest = [] as { key: string; count: number; checksum?: string }[];
@@ -434,7 +507,9 @@ async function warmSnapshotImageCache(collections: Record<string, any[]>): Promi
  * that case.
  */
 export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
+  resetStoryManifestCache();
   const previous = await loadSnapshot();
+
   if (!previous?.collections) {
     throw new Error("No previous snapshot; run generateAndStoreSnapshot() first");
   }

@@ -34,49 +34,45 @@ import {
   formatDurationArabic,
   resolveStoryDurationMs,
 } from "@/lib/stories/duration";
-import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
 import { guestHasCompleted } from "@/lib/stories/guestCompletions";
 import { useEffect, useState } from "react";
 
+// M7C — direct reads from `stories` and `story_media` have been removed.
+// Cover URLs are resolved via the M6 RPC `get_story_media_urls_v2`, which
+// enforces the visibility contract server-side and never returns media for
+// stories the caller cannot access. Story metadata used for duration is
+// no longer refetched per card; duration falls back to the scene-count
+// estimate baked into `resolveStoryDurationMs` for the catalog view. When
+// the card is rendered on a story landing page (or after read), the
+// canonical value is supplied through `story.summary`/bundle upstream.
 
-interface CoverRow {
-  id: string;
-  storage_bucket: string;
-  storage_path: string;
-  processing_version: number;
+interface CoverRpcResult {
+  ok?: boolean;
+  media?: Array<{ id: string; url?: string | null }>;
 }
 
-function useCoverUrl(coverMediaId: string | null): string | null {
+function useCoverUrl(storyId: string, coverMediaId: string | null): string | null {
   const { data } = useQuery({
-    queryKey: ["story-cover-row", coverMediaId],
+    queryKey: ["story-cover-url", storyId, coverMediaId],
     enabled: !!coverMediaId,
     staleTime: 5 * 60_000,
-    queryFn: async () => {
+    queryFn: async (): Promise<string | null> => {
       if (!coverMediaId) return null;
-      const { data } = await supabase
-        .from("story_media")
-        .select("id, storage_bucket, storage_path, processing_version")
-        .eq("id", coverMediaId)
-        .maybeSingle();
-      return (data as CoverRow | null) ?? null;
-    },
-  });
-  return useStoryMediaUrl(data ?? null);
-}
-
-function useStoryMetadata(storyId: string) {
-  const { data } = useQuery({
-    queryKey: ["story-metadata-mini", storyId],
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("stories")
-        .select("metadata")
-        .eq("id", storyId)
-        .maybeSingle();
-      return (data?.metadata ?? null) as Record<string, unknown> | null;
+      try {
+        const { data, error } = await supabase.rpc(
+          "get_story_media_urls_v2" as never,
+          { p_story_id: storyId } as never,
+        );
+        if (error) return null;
+        const payload = (data ?? {}) as CoverRpcResult;
+        if (!payload.ok) return null;
+        const hit = (payload.media ?? []).find((m) => m.id === coverMediaId);
+        return hit?.url ?? null;
+      } catch {
+        return null;
+      }
     },
   });
   return data ?? null;
@@ -112,11 +108,11 @@ export function StoryCard({
   }, [isGuest, story.id]);
   const state = guestDone && serverState !== "locked" ? "completed" : serverState;
 
-  const metadata = useStoryMetadata(story.id);
   const durationLabel = formatDurationArabic(
-    resolveStoryDurationMs({ metadata, sceneCount: story.scene_count }),
+    resolveStoryDurationMs({ metadata: null, sceneCount: story.scene_count }),
   );
-  const cover = useCoverUrl(story.cover_media_id);
+  const cover = useCoverUrl(story.id, story.cover_media_id);
+
 
 
 

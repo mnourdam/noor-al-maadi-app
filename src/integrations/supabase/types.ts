@@ -4227,6 +4227,10 @@ export type Database = {
       }
       set_my_username: { Args: { p_username: string }; Returns: string }
       stable_delta_uuid: { Args: { p_key: string }; Returns: string }
+      stories_snapshot_manifest_v2: {
+        Args: { p_include_on_demand?: boolean }
+        Returns: Json
+      }
       story_media_reference_count: {
         Args: { p_media_id: string }
         Returns: number

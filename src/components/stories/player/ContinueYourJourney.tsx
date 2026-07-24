@@ -28,6 +28,10 @@ interface StoryMetaRow {
   era: string | null;
 }
 
+// M7C — replaced direct `stories` table read with the M6 visibility-safe
+// `get_story_bundle_v2` RPC. ContinueYourJourney is only rendered after
+// completion, so the caller is always authorized and the bundle returns
+// full metadata + era.
 function useStoryMeta(storyId: string | undefined) {
   return useQuery({
     queryKey: ["story-meta", storyId],
@@ -35,15 +39,23 @@ function useStoryMeta(storyId: string | undefined) {
     staleTime: 5 * 60_000,
     queryFn: async () => {
       if (!storyId) return null;
-      const { data } = await supabase
-        .from("stories")
-        .select("metadata, era")
-        .eq("id", storyId)
-        .maybeSingle();
-      return (data as StoryMetaRow | null) ?? null;
+      try {
+        const { data, error } = await supabase.rpc(
+          "get_story_bundle_v2" as never,
+          { p_story_id: storyId } as never,
+        );
+        if (error) return null;
+        const payload = (data ?? {}) as { ok?: boolean; story?: { metadata?: unknown; era?: string | null } };
+        if (!payload.ok || !payload.story) return null;
+        return {
+          metadata: (payload.story.metadata ?? null) as StoryMetaRow["metadata"],
+          era: payload.story.era ?? null,
+        } as StoryMetaRow;
+      } catch { return null; }
     },
   });
 }
+
 
 export function ContinueYourJourney({
   finished,
