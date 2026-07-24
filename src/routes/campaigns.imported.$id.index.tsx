@@ -323,13 +323,22 @@ function ImportedCampaignOverview() {
                 </div>
                 <p className="mt-3 text-[10px] tracking-[0.3em] text-gold/80">إنجاز مكتمل</p>
                 <p className="font-display mt-1 text-xl font-bold text-gold shimmer-text">أتممتَ هذه الحملة</p>
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px]">
-                  <RewardPill icon={<Zap className="size-3" />} label={`+${summary.earnedXp.toLocaleString("en-US")} خبرة`} />
-                  <RewardPill icon={<Coins className="size-3" />} label={`+${summary.earnedDinars.toLocaleString("en-US")} دينار`} />
-                  {summary.unlocks.length > 0 && (
-                    <RewardPill icon={<Package className="size-3" />} label={`${summary.unlocks.length} عنصر مكتشف`} />
-                  )}
-                </div>
+                {summary.hasCanonicalLedger ? (
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px]">
+                    <RewardPill icon={<Zap className="size-3" />} label={`+${summary.earnedXp.toLocaleString("en-US")} خبرة`} />
+                    <RewardPill icon={<Coins className="size-3" />} label={`+${summary.earnedDinars.toLocaleString("en-US")} دينار`} />
+                    {summary.unlocks.length > 0 && (
+                      <RewardPill icon={<Package className="size-3" />} label={`${summary.unlocks.length} عنصر مكتشف`} />
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4 mx-auto max-w-sm rounded-2xl border border-white/10 bg-black/30 p-4 text-center">
+                    <p className="text-sm font-bold text-gold">بيانات المكافآت غير متوفرة</p>
+                    <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+                      هذه الحملة أُنجزت قبل اعتماد نظام سجل المكافآت الحالي، لذلك لا يمكن عرض تفاصيل المكافآت المكتسبة بدقة.
+                    </p>
+                  </div>
+                )}
                 {/* Cross-module navigation */}
                 <div className="mt-5 grid grid-cols-3 gap-2">
                   <Link to="/collection" className="group flex flex-col items-center gap-1 rounded-2xl border border-gold/30 bg-black/30 p-3 transition hover:border-gold/60">
