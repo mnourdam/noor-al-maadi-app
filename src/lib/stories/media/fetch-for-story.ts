@@ -18,6 +18,17 @@ export async function fetchStoryMediaForRuntime(
   }
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   if (online) {
+    // M6 Phase A: prefer the visibility-enforced RPC.
+    try {
+      const { data, error } = await supabase.rpc(
+        "get_story_media_urls_v2" as never,
+        { p_story_id: story.id } as never,
+      );
+      if (!error && data && (data as { ok?: boolean }).ok) {
+        return ((data as { media?: StoryMediaRow[] }).media ?? []) as StoryMediaRow[];
+      }
+    } catch { /* fall through to legacy path */ }
+    // Legacy fallback (Phase B will remove).
     try {
       const owned = await listStoryMedia(story.id);
       const known = new Set(owned.map((m) => m.id));
