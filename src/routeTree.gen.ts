@@ -17,6 +17,7 @@ import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReflectionsRouteImport } from './routes/reflections'
+import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
@@ -180,6 +181,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const ReflectionsRoute = ReflectionsRouteImport.update({
   id: '/reflections',
   path: '/reflections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralsRoute = ReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -849,6 +855,7 @@ export interface FileRoutesByFullPath {
   '/on-this-day': typeof OnThisDayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/reflections': typeof ReflectionsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/seasons': typeof SeasonsRoute
@@ -981,6 +988,7 @@ export interface FileRoutesByTo {
   '/on-this-day': typeof OnThisDayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/reflections': typeof ReflectionsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/seasons': typeof SeasonsRoute
@@ -1113,6 +1121,7 @@ export interface FileRoutesById {
   '/on-this-day': typeof OnThisDayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/referrals': typeof ReferralsRoute
   '/reflections': typeof ReflectionsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/seasons': typeof SeasonsRoute
@@ -1249,6 +1258,7 @@ export interface FileRouteTypes {
     | '/on-this-day'
     | '/privacy'
     | '/profile'
+    | '/referrals'
     | '/reflections'
     | '/reset-password'
     | '/seasons'
@@ -1381,6 +1391,7 @@ export interface FileRouteTypes {
     | '/on-this-day'
     | '/privacy'
     | '/profile'
+    | '/referrals'
     | '/reflections'
     | '/reset-password'
     | '/seasons'
@@ -1512,6 +1523,7 @@ export interface FileRouteTypes {
     | '/on-this-day'
     | '/privacy'
     | '/profile'
+    | '/referrals'
     | '/reflections'
     | '/reset-password'
     | '/seasons'
@@ -1647,6 +1659,7 @@ export interface RootRouteChildren {
   OnThisDayRoute: typeof OnThisDayRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
+  ReferralsRoute: typeof ReferralsRoute
   ReflectionsRoute: typeof ReflectionsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SeasonsRoute: typeof SeasonsRoute
@@ -1797,6 +1810,13 @@ declare module '@tanstack/react-router' {
       path: '/reflections'
       fullPath: '/reflections'
       preLoaderRoute: typeof ReflectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referrals': {
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -2805,6 +2825,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnThisDayRoute: OnThisDayRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
+  ReferralsRoute: ReferralsRoute,
   ReflectionsRoute: ReflectionsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SeasonsRoute: SeasonsRoute,
