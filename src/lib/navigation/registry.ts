@@ -37,7 +37,7 @@ const PLAYER_ROUTES: RouteDeclaration[] = [
   { id: "/timeline", parentRoute: "/", kind: "player", label: "الخط الزمني" },
   { id: "/history-calendar", parentRoute: "/", kind: "player", label: "التقويم التاريخي" },
   { id: "/on-this-day", parentRoute: "/", kind: "player", label: "في مثل هذا اليوم" },
-  { id: "/seasons", parentRoute: "/", kind: "player", label: "المواسم" },
+  // `/seasons` retired in Phase 3B — redirects to `/profile`; no registry entry.
   // `/achievements` was retired — the canonical trophy hall is Profile → Achievements
   // (`/profile?tab=achievements`). The route file now issues a permanent redirect;
   // no registry entry needed since the destination (`/profile`) is already registered.
