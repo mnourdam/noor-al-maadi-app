@@ -43,8 +43,9 @@ function classifyAuthError(msg: string, mode: Mode): { title: string; body: stri
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "تسجيل الدخول" }] }),
-  validateSearch: (s: Record<string, unknown>): { ref?: string } =>
-    typeof s.ref === "string" ? { ref: s.ref } : {},
+  validateSearch: (_s: Record<string, unknown>): Record<string, never> => ({}),
+  // Phase 2 (Referrals removal): `?ref=CODE` was retired. Legacy links that
+  // still include it land on the sign-in view; the value is ignored.
   component: AuthPage,
 });
 
@@ -66,7 +67,7 @@ function AuthPage() {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
-  const referralRef = useRef<HTMLInputElement>(null);
+  // referralRef removed in Phase 2 (Referrals removal).
 
   const sync = useMemo(() => evaluatePassword(passwordValue), [passwordValue]);
   useEffect(() => {
@@ -173,7 +174,7 @@ function AuthPage() {
     const email = (emailRef.current?.value ?? "").trim();
     const password = passwordRef.current?.value ?? "";
     const username = (usernameRef.current?.value ?? "").trim();
-    const referral = (referralRef.current?.value ?? "").trim().toUpperCase();
+    // referral code capture removed in Phase 2
 
     try {
       if (typeof navigator !== "undefined" && navigator.onLine === false) {
@@ -236,7 +237,7 @@ function AuthPage() {
           });
           return;
         }
-        r = await signUp({ email, password, username, displayName: username, referralCode: referral || undefined });
+        r = await signUp({ email, password, username, displayName: username });
       } else {
         r = await signIn(email, password);
       }
@@ -348,7 +349,7 @@ function AuthPage() {
                   ref={usernameRef}
                   type="text"
                   name="username"
-                  defaultValue={search.ref ? "" : ""}
+                  defaultValue=""
                   required
                   minLength={3}
                   maxLength={30}
@@ -437,24 +438,8 @@ function AuthPage() {
                 )}
               </label>
             )}
-            {mode === "signup" && (
-              <label className="block">
-                <span className="mb-1 block text-[11px] text-muted-foreground">رمز الإحالة (اختياري)</span>
-                <input
-                  ref={referralRef}
-                  type="text"
-                  name="referral"
-                  defaultValue={search.ref ?? ""}
-                  maxLength={20}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="characters"
-                  spellCheck={false}
-                  style={inputStyle}
-                  placeholder="IRTH-XXXXXX"
-                />
-              </label>
-            )}
+            {/* Phase 2 (Referrals removal): the optional referral code
+                input was removed. No referral surface remains on signup. */}
 
             {error && <p className="text-xs text-rose-300">{error}</p>}
             {info && <p className="text-xs text-emerald-300">{info}</p>}

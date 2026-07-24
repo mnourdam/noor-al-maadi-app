@@ -30,7 +30,7 @@ interface AccountCtx {
   loadingSession: boolean;
   syncing: boolean;
   lastSyncAt: number | null;
-  signUp: (args: { email: string; password: string; username: string; displayName?: string; referralCode?: string }) => Promise<{ ok: boolean; error?: string }>;
+  signUp: (args: { email: string; password: string; username: string; displayName?: string }) => Promise<{ ok: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   syncNow: () => Promise<boolean>;
@@ -443,11 +443,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
 
 
-  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, displayName, referralCode }) => {
+  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, displayName }) => {
     const u = username.trim();
     if (u.length < 3) return { ok: false, error: "اسم المستخدم قصير جداً" };
     if (password.length < 8) return { ok: false, error: "كلمة المرور يجب أن تكون ٨ أحرف على الأقل" };
-    const { data, error } = await signUpWithEmail({ email, password, username: u, displayName, referralCode });
+    const { data, error } = await signUpWithEmail({ email, password, username: u, displayName });
     if (error) return { ok: false, error: error.message };
     // Client-side fallback: if a session was returned, upsert display_name immediately.
     if (data.session?.user) {

@@ -158,15 +158,13 @@ export async function pushSave(userId: string, profile: ProfileState): Promise<b
   return true;
 }
 
-export async function signUpWithEmail(args: { email: string; password: string; username: string; referralCode?: string; displayName?: string }) {
-  const { email, password, username, referralCode, displayName } = args;
+export async function signUpWithEmail(args: { email: string; password: string; username: string; displayName?: string }) {
+  const { email, password, username, displayName } = args;
   const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
   const name = (displayName ?? username).trim();
 
-  // Feature-flagged auth email pipeline.
-  // custom (default): server-side generateLink() + custom pgmq queue + Resend.
-  //                  User is created via Admin API; no session is returned.
-  // legacy:           supabase.auth.signUp → Send Email Hook → legacy queue.
+  // Phase 2 (Referrals removal): `referralCode` was removed from the signup
+  // contract. Auth email pipelines no longer propagate a referral code.
   const mode = ((import.meta.env.VITE_AUTH_EMAIL_MODE as string | undefined) ?? "custom").toLowerCase();
   if (mode === "custom") {
     const { requestSignupEmail } = await import("@/lib/auth-emails");
@@ -176,13 +174,11 @@ export async function signUpWithEmail(args: { email: string; password: string; u
         password,
         username: username.trim(),
         displayName: name,
-        referralCode: referralCode?.trim().toUpperCase(),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return { data: { user: null, session: null }, error: { message } as { message: string } };
     }
-    // No client session is created in custom mode — user must confirm via email.
     return { data: { user: null, session: null }, error: null };
   }
 
@@ -195,7 +191,6 @@ export async function signUpWithEmail(args: { email: string; password: string; u
         username: username.trim(),
         display_name: name,
         full_name: name,
-        ...(referralCode ? { referral_code: referralCode.trim().toUpperCase() } : {}),
       },
     },
   });
