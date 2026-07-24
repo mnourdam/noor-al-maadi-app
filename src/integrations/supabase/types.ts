@@ -3251,6 +3251,9 @@ export type Database = {
         Returns: undefined
       }
       _normalize_comment_body: { Args: { p: string }; Returns: string }
+      _story_canonicalize_incoming_v2: { Args: { p_in: Json }; Returns: Json }
+      _story_export_v2_one: { Args: { p_id: string }; Returns: Json }
+      _story_validate_v2_one: { Args: { p_in: Json }; Returns: Json }
       add_story_comment_v2: {
         Args: {
           p_anchor_id: string
@@ -3305,6 +3308,7 @@ export type Database = {
         Returns: boolean
       }
       admin_export_stories: { Args: { p_ids: string[] }; Returns: Json }
+      admin_export_stories_v2: { Args: { p_ids?: string[] }; Returns: Json }
       admin_feedback_stats: { Args: never; Returns: Json }
       admin_get_campaign_full: {
         Args: { p_id: string }
@@ -3345,6 +3349,14 @@ export type Database = {
         Returns: Json
       }
       admin_import_stories_preview: { Args: { p_payload: Json }; Returns: Json }
+      admin_import_stories_v2_apply: {
+        Args: { p_options?: Json; p_payload: Json }
+        Returns: Json
+      }
+      admin_import_stories_v2_preview: {
+        Args: { p_options?: Json; p_payload: Json }
+        Returns: Json
+      }
       admin_list_campaign_versions: {
         Args: { p_id: string }
         Returns: {
