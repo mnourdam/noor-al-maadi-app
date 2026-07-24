@@ -198,10 +198,25 @@ interface Ctx {
   spendDinars: (n: number) => boolean;
   buyHint: (scopeKey: string, hintIndex: number, cost: number) => boolean;
   hintsRevealed: (scopeKey: string) => number;
+  /**
+   * @deprecated Phase 3A — manual streak claim is gone. The server auto-grants
+   * milestones through `record_streak_activity`. This wrapper is a no-op kept
+   * only for source compatibility with in-flight code paths.
+   */
   claimStreakMilestone: (days: number) => Promise<boolean>;
   availableStreakMilestones: () => StreakMilestone[];
   /** Fetch already-claimed streak milestones from the server and merge locally. */
   hydrateClaimedStreakRewards: () => Promise<void>;
+  /**
+   * Phase 3A — canonical qualifying-activity call. Authenticated users hit
+   * `record_streak_activity` (server day = Asia/Riyadh) and mirror the
+   * returned totals into the local profile. Guests fall back to local
+   * `touchStreak` (no server economy grants).
+   */
+  recordStreakActivity: (
+    source: "campaign_chapter" | "game" | "investigation",
+    sourceId?: string | null,
+  ) => Promise<void>;
   // Cloud-save integration
   replaceProfile: (next: ProfileState) => void;
   /**
