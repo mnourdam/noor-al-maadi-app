@@ -118,6 +118,7 @@ import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.s
 import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
 import { Route as ApiPublicNativeAuthBounceRouteImport } from './routes/api/public/native-auth-bounce'
+import { Route as AdminStoriesImportV2RouteImport } from './routes/admin.stories.import-v2'
 import { Route as AdminImportHistoryIdRouteImport } from './routes/admin.import-history.$id'
 import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
@@ -697,6 +698,11 @@ const ApiPublicNativeAuthBounceRoute =
     path: '/api/public/native-auth-bounce',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminStoriesImportV2Route = AdminStoriesImportV2RouteImport.update({
+  id: '/admin/stories/import-v2',
+  path: '/admin/stories/import-v2',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminImportHistoryIdRoute = AdminImportHistoryIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -923,6 +929,7 @@ export interface FileRoutesByFullPath {
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
+  '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
@@ -1050,6 +1057,7 @@ export interface FileRoutesByTo {
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
+  '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
@@ -1183,6 +1191,7 @@ export interface FileRoutesById {
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
+  '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
@@ -1317,6 +1326,7 @@ export interface FileRouteTypes {
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
+    | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
@@ -1444,6 +1454,7 @@ export interface FileRouteTypes {
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
+    | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
@@ -1576,6 +1587,7 @@ export interface FileRouteTypes {
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
+    | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
@@ -1698,6 +1710,7 @@ export interface RootRouteChildren {
   GamesIndexRoute: typeof GamesIndexRoute
   StoriesIndexRoute: typeof StoriesIndexRoute
   WorldsIndexRoute: typeof WorldsIndexRoute
+  AdminStoriesImportV2Route: typeof AdminStoriesImportV2Route
   ApiPublicNativeAuthBounceRoute: typeof ApiPublicNativeAuthBounceRoute
   GamesModeSlugRoute: typeof GamesModeSlugRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
@@ -2480,6 +2493,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicNativeAuthBounceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/stories/import-v2': {
+      id: '/admin/stories/import-v2'
+      path: '/admin/stories/import-v2'
+      fullPath: '/admin/stories/import-v2'
+      preLoaderRoute: typeof AdminStoriesImportV2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/import-history/$id': {
       id: '/admin/import-history/$id'
       path: '/$id'
@@ -2840,6 +2860,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesIndexRoute: GamesIndexRoute,
   StoriesIndexRoute: StoriesIndexRoute,
   WorldsIndexRoute: WorldsIndexRoute,
+  AdminStoriesImportV2Route: AdminStoriesImportV2Route,
   ApiPublicNativeAuthBounceRoute: ApiPublicNativeAuthBounceRoute,
   GamesModeSlugRoute: GamesModeSlugRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
@@ -2860,3 +2881,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
