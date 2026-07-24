@@ -382,7 +382,9 @@ function canonicalJSON(value: any): string {
 }
 
 export async function generateSnapshot(): Promise<OfflineSnapshot> {
+  resetStoryManifestCache();
   const results = await Promise.all(COLLECTIONS.map((def) => fetchCollection(def)));
+
   const collections: Record<string, any[]> = {};
   const content_counts: Record<string, number> = {};
   const collection_manifest = [] as { key: string; count: number; checksum?: string }[];
