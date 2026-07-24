@@ -16,6 +16,7 @@
 // ============================================================
 
 import type { EmblemAssetSet, EmblemRecord } from "./types";
+import { PREMIUM_EMBLEM_ASSETS } from "./premium-assets";
 
 export type EmblemSize = 128 | 256 | 512 | 1024;
 export type EmblemFormat = "webp" | "avif";
@@ -25,7 +26,13 @@ export function pickAssetUrl(
   size: EmblemSize,
   format: EmblemFormat,
 ): string | null {
-  // Prefer size+format exact match; then convenience aliases; then null.
+  // 1) Premium production assets (Phase 9 — size × format matrix).
+  const matrix = PREMIUM_EMBLEM_ASSETS[record.id];
+  if (matrix) {
+    const url = matrix[size]?.[format];
+    if (typeof url === "string" && url.length > 0) return url;
+  }
+  // 2) Legacy inline fields (kept for authoring/CMS path).
   const bySize: Record<EmblemSize, keyof EmblemAssetSet> = {
     128: "asset_128_url",
     256: "asset_256_url",
