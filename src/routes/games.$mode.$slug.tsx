@@ -44,7 +44,7 @@ function GamePlayPage() {
   androidMark("render:GamePlay");
   const { mode, slug } = useParams({ from: "/games/$mode/$slug" });
   const navigate = useNavigate();
-  const { addPoints, addDinars, spendDinars, loseHeartOnce, hasHearts, touchStreak } = useProfile();
+  const { addPoints, addDinars, spendDinars, loseHeartOnce, hasHearts, recordStreakActivity } = useProfile();
 
   const [game, setGame] = useState<GameRow | null | "loading">("loading");
   const [stageIdx, setStageIdx] = useState(0);
