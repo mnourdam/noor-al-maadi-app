@@ -419,15 +419,8 @@ function ProfilePage() {
                   )}
                 </div>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-background/50 p-3">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1 text-[10px] tracking-[0.18em] text-gold/80"><ScrollText className="size-3" /> {CURRENT_SEASON.name}</span>
-                  <span className="text-[10px] text-muted-foreground">{seasonPct}%</span>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${seasonPct}%` }} />
-                </div>
-              </div>
+              {/* Season micro-card removed — Seasons demo deleted in Phase 3B. */}
+
             </div>
           </div>
         </section>
