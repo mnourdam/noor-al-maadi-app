@@ -69,7 +69,14 @@ export interface ShareCardProps {
 
   /** Human-readable favorite state (Arabic name). Hide section when empty. */
   favoriteStateName?: string | null;
+
+  /** ISO string — real account join date (e.g. `profiles.join_date`). Hide section when null/guest. */
+  joinDate?: string | null;
+
+  /** Optional pre-computed specialization (Arabic label + world slug). */
+  specialization?: { label_ar: string; key: string | null } | null;
 }
+
 
 // ─── Component ─────────────────────────────────────────────────────────
 
@@ -85,7 +92,10 @@ export function ShareCard(props: ShareCardProps) {
     museumCount,
     achievements,
     favoriteStateName,
+    joinDate,
+    specialization,
   } = props;
+
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ready, setReady] = useState(false);
@@ -125,13 +135,29 @@ export function ShareCard(props: ShareCardProps) {
   }, [achievements]);
   const achievementsTotal = achievements?.length ?? 0;
 
-  const generatedOn = useMemo(
-    () => new Date().toLocaleDateString("ar", { year: "numeric", month: "long", day: "numeric" }),
-    [],
-  );
+  // Join date formatted for display (Arabic month + year), or null when unknown/guest.
+  const joinDateLabel = useMemo(() => {
+    if (!joinDate) return null;
+    const d = new Date(joinDate);
+    if (Number.isNaN(d.getTime())) return null;
+    try {
+      const raw = d.toLocaleDateString("ar-EG", { year: "numeric", month: "long" });
+      // Force Western digits to match app-wide policy.
+      return raw.replace(/[\u0660-\u0669]/g, (ch) => String("٠١٢٣٤٥٦٧٨٩".indexOf(ch)));
+    } catch {
+      return d.toISOString().slice(0, 10);
+    }
+  }, [joinDate]);
 
   const bio = (profile.bio ?? "").trim();
   const favState = (favoriteStateName ?? "").trim();
+  const specLabel = (specialization?.label_ar ?? "").trim();
+  const specKey = specialization?.key ?? null;
+
+  // Level curve values — DIRECTLY from levelFor(); never recomputed.
+  const levelProgressPct = Math.max(0, Math.min(1, lvl.progress ?? 0));
+  const levelToNext = Math.max(0, Math.floor(lvl.toNext ?? 0));
+  const atMaxLevel = lvl.next === null;
 
   const drawKey = [
     displayName, username, cardNumber, activeTitle ?? "",
@@ -139,7 +165,9 @@ export function ShareCard(props: ShareCardProps) {
     campaignsCompleted ?? -1, museumCount ?? -1,
     investigationsCompleted ?? -1, storiesCompleted ?? -1,
     achievementsTotal, topAchievements.map((a) => a.id).join(","),
-    bio, favState, profile.avatarId ?? "", generatedOn,
+    bio, favState, specLabel, specKey ?? "",
+    profile.avatarId ?? "", joinDateLabel ?? "",
+    levelProgressPct.toFixed(3), levelToNext, atMaxLevel ? 1 : 0,
   ].join("|");
 
   useEffect(() => {
@@ -160,6 +188,9 @@ export function ShareCard(props: ShareCardProps) {
         cardNumber,
         title: activeTitle,
         level: lvl.level,
+        levelProgressPct,
+        levelToNext,
+        atMaxLevel,
         xp: profile.points,
         dinars: profile.dinars ?? 0,
         streak: profile.streak ?? 0,
@@ -171,7 +202,8 @@ export function ShareCard(props: ShareCardProps) {
         topAchievements,
         bio,
         favoriteStateName: favState,
-        generatedOn,
+        specializationLabel: specLabel,
+        joinDateLabel,
         emblemImg,
         logoImg,
         rarity: avatar.rarity,
@@ -181,6 +213,7 @@ export function ShareCard(props: ShareCardProps) {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawKey]);
+
 
   const filenameBase = `irth-identity-${sanitizeFilenameHandle(username || cardNumber)}`;
   const shareText =
@@ -310,6 +343,9 @@ interface CardData {
   cardNumber: string;
   title: string | null;
   level: number;
+  levelProgressPct: number;
+  levelToNext: number;
+  atMaxLevel: boolean;
   xp: number;
   dinars: number;
   streak: number;
@@ -321,10 +357,12 @@ interface CardData {
   topAchievements: IdentityCardAchievement[];
   bio: string;
   favoriteStateName: string;
-  generatedOn: string;
+  specializationLabel: string;
+  joinDateLabel: string | null;
   emblemImg: HTMLImageElement | null;
   logoImg: HTMLImageElement | null;
   rarity: AvatarRarity;
+
 }
 
 function drawCard(c: HTMLCanvasElement, s: CardData) {
@@ -341,11 +379,12 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Restrained cyan halo behind the identity area
+  // Restrained cyan halo behind the identity area (softened per Phase-8 UX)
   const vg = ctx.createRadialGradient(W / 2, 520, 30, W / 2, 520, 620);
-  vg.addColorStop(0, "rgba(125,211,252,0.10)");
+  vg.addColorStop(0, "rgba(125,211,252,0.06)");
   vg.addColorStop(1, "rgba(125,211,252,0)");
   ctx.fillStyle = vg;
+
   ctx.fillRect(0, 0, W, H);
 
   // Historical pattern strip (subtle geometric dots along the border)
@@ -484,18 +523,43 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   ctx.font = `bold 26px ${family}`;
   ctx.fillText(`المستوى ${s.level}`, cx, py + 38);
 
+  // Level progress bar — slim, matches levelFor() canonical curve
+  const barW = 340, barH = 10;
+  const bx = cx - barW / 2, by = py + pillH + 14;
+  roundRect(ctx, bx, by, barW, barH, barH / 2);
+  ctx.fillStyle = "rgba(255,255,255,0.08)";
+  ctx.fill();
+  const pct = s.atMaxLevel ? 1 : s.levelProgressPct;
+  const fillW = Math.max(0, Math.min(barW, barW * pct));
+  if (fillW > 0) {
+    roundRect(ctx, bx, by, fillW, barH, barH / 2);
+    const bg2 = ctx.createLinearGradient(bx, by, bx + barW, by);
+    bg2.addColorStop(0, "#d4af37");
+    bg2.addColorStop(1, "#f5d062");
+    ctx.fillStyle = bg2;
+    ctx.fill();
+  }
+  ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(255,255,255,0.72)";
+  ctx.font = `14px ${family}`;
+  const pctText = `${Math.round(pct * 100)}%`;
+  const tail = s.atMaxLevel
+    ? "أعلى مستوى حاليًا"
+    : `متبقي ${s.levelToNext.toLocaleString("en-US")} نقطة للمستوى التالي`;
+  ctx.fillText(`${pctText} · ${tail}`, cx, by + barH + 20);
+
   // ── Main statistics (2×2 grid of 4 primary counters) ────────────────
   const primary: [string, string][] = [
     ["نقاط الخبرة", s.xp.toLocaleString("en-US")],
     ["الدنانير", s.dinars.toLocaleString("en-US")],
     ["الحملات المكتملة", countOrDash(s.campaignsCompleted)],
-    ["مقتنيات المتحف", countOrDash(s.museumCount)],
+    ["المقتنيات التاريخية", s.museumCount !== undefined ? `${s.museumCount.toLocaleString("en-US")} قطعة` : "—"],
   ];
   const gx = 96;
   const gw = W - 192;
   const colW = (gw - 20) / 2;
   const rowH = 104;
-  const gy = ay + 472;
+  const gy = ay + 520;
   for (let i = 0; i < primary.length; i++) {
     const col = i % 2;
     const row = Math.floor(i / 2);
@@ -512,9 +576,10 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
     ctx.font = `18px ${family}`;
     ctx.fillText(primary[i][0], rxs + colW / 2, rys + 36);
     ctx.fillStyle = "#fff";
-    ctx.font = `bold 36px ${family}`;
+    ctx.font = `bold 32px ${family}`;
     ctx.fillText(truncate(ctx, primary[i][1], colW - 24), rxs + colW / 2, rys + 82);
   }
+
 
   // ── Secondary progress line ─────────────────────────────────────────
   const sy = gy + 2 * (rowH + 16) + 20;
@@ -570,6 +635,35 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
     cursor += 14;
   }
 
+  // ── Historical specialization (auto-derived) ────────────────────────
+  if (s.specializationLabel) {
+    cursor += 12;
+    const chipPadY = 12;
+    ctx.font = `600 15px ${family}`;
+    const labelW = ctx.measureText("تخصصك التاريخي").width;
+    ctx.font = `bold 20px ${family}`;
+    const valueText = truncate(ctx, s.specializationLabel, W - 260);
+    const valueW = ctx.measureText(valueText).width;
+    const chipInnerW = Math.max(labelW, valueW) + 56; // padding + compass glyph
+    const chipW = Math.min(W - 200, chipInnerW);
+    const chipH = 76;
+    const chipX = cx - chipW / 2, chipY = cursor;
+    roundRect(ctx, chipX, chipY, chipW, chipH, 22);
+    ctx.fillStyle = "rgba(212,175,55,0.10)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(212,175,55,0.45)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(212,175,55,0.85)";
+    ctx.font = `600 14px ${family}`;
+    ctx.fillText("🧭 تخصصك التاريخي", cx, chipY + chipPadY + 14);
+    ctx.fillStyle = "#f5d062";
+    ctx.font = `bold 20px ${family}`;
+    ctx.fillText(valueText, cx, chipY + chipH - 18);
+    cursor = chipY + chipH + 8;
+  }
+
   // ── Top achievements ────────────────────────────────────────────────
   cursor += 10;
   ctx.textAlign = "center";
@@ -616,10 +710,13 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.font = `bold 24px ${family}`;
   ctx.fillText("رحلة عبر التاريخ الإسلامي", cx, H - 96);
-  ctx.fillStyle = "rgba(212,175,55,0.75)";
-  ctx.font = `15px ${family}`;
-  ctx.fillText(`صدرت في ${s.generatedOn}`, cx, H - 68);
+  if (s.joinDateLabel) {
+    ctx.fillStyle = "rgba(212,175,55,0.75)";
+    ctx.font = `15px ${family}`;
+    ctx.fillText(`عضو في إرث منذ ${s.joinDateLabel}`, cx, H - 68);
+  }
 }
+
 
 // ─── Utilities ─────────────────────────────────────────────────────────
 
