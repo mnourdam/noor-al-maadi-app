@@ -2239,15 +2239,12 @@ export type Database = {
           display_order: number
           id: string
           metadata: Json
-          schema_version: number
           slug: string
           summary_ar: string | null
           summary_en: string | null
-          tags: string[]
           title_ar: string
           title_en: string | null
           updated_at: string
-          world_slug: string | null
         }
         Insert: {
           cover_media_id?: string | null
@@ -2255,15 +2252,12 @@ export type Database = {
           display_order?: number
           id: string
           metadata?: Json
-          schema_version?: number
           slug: string
           summary_ar?: string | null
           summary_en?: string | null
-          tags?: string[]
           title_ar: string
           title_en?: string | null
           updated_at?: string
-          world_slug?: string | null
         }
         Update: {
           cover_media_id?: string | null
@@ -2271,15 +2265,12 @@ export type Database = {
           display_order?: number
           id?: string
           metadata?: Json
-          schema_version?: number
           slug?: string
           summary_ar?: string | null
           summary_en?: string | null
-          tags?: string[]
           title_ar?: string
           title_en?: string | null
           updated_at?: string
-          world_slug?: string | null
         }
         Relationships: [
           {
@@ -2302,7 +2293,7 @@ export type Database = {
           kind: string
           metadata: Json
           mime_type: string
-          ownership: string
+          owner_scope: string
           preset: string
           processing_version: number
           storage_bucket: string
@@ -2324,7 +2315,7 @@ export type Database = {
           kind: string
           metadata?: Json
           mime_type?: string
-          ownership?: string
+          owner_scope?: string
           preset: string
           processing_version?: number
           storage_bucket: string
@@ -2346,7 +2337,7 @@ export type Database = {
           kind?: string
           metadata?: Json
           mime_type?: string
-          ownership?: string
+          owner_scope?: string
           preset?: string
           processing_version?: number
           storage_bucket?: string
@@ -2381,12 +2372,12 @@ export type Database = {
           display_order: number
           id: string
           metadata: Json
-          role: string
+          role: Database["public"]["Enums"]["story_relation_role"]
           schema_version: number
           story_id: string
           target_extra: Json
           target_id: string
-          target_type: string
+          target_type: Database["public"]["Enums"]["story_relation_target_type"]
           updated_at: string
         }
         Insert: {
@@ -2394,12 +2385,12 @@ export type Database = {
           display_order?: number
           id: string
           metadata?: Json
-          role: string
+          role: Database["public"]["Enums"]["story_relation_role"]
           schema_version?: number
           story_id: string
           target_extra?: Json
           target_id: string
-          target_type: string
+          target_type: Database["public"]["Enums"]["story_relation_target_type"]
           updated_at?: string
         }
         Update: {
@@ -2407,12 +2398,12 @@ export type Database = {
           display_order?: number
           id?: string
           metadata?: Json
-          role?: string
+          role?: Database["public"]["Enums"]["story_relation_role"]
           schema_version?: number
           story_id?: string
           target_extra?: Json
           target_id?: string
-          target_type?: string
+          target_type?: Database["public"]["Enums"]["story_relation_target_type"]
           updated_at?: string
         }
         Relationships: [
@@ -2484,46 +2475,52 @@ export type Database = {
       }
       story_sources: {
         Row: {
+          author: string | null
           citation: string
           created_at: string
           display_order: number
           id: string
-          kind: string
-          metadata: Json
-          reference_locator: string | null
-          schema_version: number
+          kind: Database["public"]["Enums"]["story_source_kind"]
+          notes: string | null
+          page: string | null
           source_key: string
           story_id: string
-          updated_at: string
+          title: string | null
           url: string | null
+          weight: number | null
+          year: string | null
         }
         Insert: {
+          author?: string | null
           citation: string
           created_at?: string
           display_order?: number
           id: string
-          kind: string
-          metadata?: Json
-          reference_locator?: string | null
-          schema_version?: number
+          kind: Database["public"]["Enums"]["story_source_kind"]
+          notes?: string | null
+          page?: string | null
           source_key: string
           story_id: string
-          updated_at?: string
+          title?: string | null
           url?: string | null
+          weight?: number | null
+          year?: string | null
         }
         Update: {
+          author?: string | null
           citation?: string
           created_at?: string
           display_order?: number
           id?: string
-          kind?: string
-          metadata?: Json
-          reference_locator?: string | null
-          schema_version?: number
+          kind?: Database["public"]["Enums"]["story_source_kind"]
+          notes?: string | null
+          page?: string | null
           source_key?: string
           story_id?: string
-          updated_at?: string
+          title?: string | null
           url?: string | null
+          weight?: number | null
+          year?: string | null
         }
         Relationships: [
           {
@@ -3473,7 +3470,7 @@ export type Database = {
           byte_size: number
           id: string
           kind: string
-          ownership: string
+          owner_scope: string
           preset: string
           storage_bucket: string
           storage_path: string
@@ -4273,7 +4270,38 @@ export type Database = {
         | "testing"
         | "completed"
       story_rarity: "standard" | "featured" | "rare" | "legendary"
+      story_relation_role:
+        | "depicts"
+        | "mentions"
+        | "context"
+        | "prerequisite"
+        | "sequel_of"
+        | "prequel_of"
+        | "related_reading"
+        | "part_of_collection"
+        | "answers_investigation"
+        | "unlocks"
+        | "source_context"
+      story_relation_target_type:
+        | "campaign"
+        | "campaign_chapter"
+        | "investigation"
+        | "encyclopedia_entity"
+        | "atlas_entity"
+        | "artifact"
+        | "achievement"
+        | "story"
+        | "collection"
+        | "today_in_history_event"
       story_snapshot_tier: "core" | "standard" | "on_demand"
+      story_source_kind:
+        | "primary"
+        | "secondary"
+        | "tertiary"
+        | "museum"
+        | "archive"
+        | "translation"
+        | "other"
       story_time_precision:
         | "day"
         | "month"
@@ -4485,7 +4513,41 @@ export const Constants = {
         "completed",
       ],
       story_rarity: ["standard", "featured", "rare", "legendary"],
+      story_relation_role: [
+        "depicts",
+        "mentions",
+        "context",
+        "prerequisite",
+        "sequel_of",
+        "prequel_of",
+        "related_reading",
+        "part_of_collection",
+        "answers_investigation",
+        "unlocks",
+        "source_context",
+      ],
+      story_relation_target_type: [
+        "campaign",
+        "campaign_chapter",
+        "investigation",
+        "encyclopedia_entity",
+        "atlas_entity",
+        "artifact",
+        "achievement",
+        "story",
+        "collection",
+        "today_in_history_event",
+      ],
       story_snapshot_tier: ["core", "standard", "on_demand"],
+      story_source_kind: [
+        "primary",
+        "secondary",
+        "tertiary",
+        "museum",
+        "archive",
+        "translation",
+        "other",
+      ],
       story_time_precision: [
         "day",
         "month",

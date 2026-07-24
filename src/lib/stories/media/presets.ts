@@ -13,7 +13,7 @@
 //   in place — old rows already carry the old id/version and the
 //   player will render them for years.
 //
-// Ownership (see `story_media.ownership`) is orthogonal to
+// Ownership (see `story_media.owner_scope`) is orthogonal to
 // preset selection: the same preset can produce story-owned or
 // shared bytes.
 // ============================================================
