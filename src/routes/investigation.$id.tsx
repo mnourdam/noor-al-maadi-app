@@ -59,7 +59,7 @@ function InvestigationPage() {
 function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
     profile, markInvestigationCompletedLocal, awardBadge,
-    recoverHeartFromActivity,
+    recoverHeartFromActivity, recordStreakActivity,
   } = useProfile();
   const stashOrigin = useStashCurrentAsOrigin();
 
