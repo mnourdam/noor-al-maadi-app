@@ -41,7 +41,7 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   if (online) {
     const { data, error } = await supabase.rpc(
-      "get_story_access" as any,
+      "get_story_bundle_v2" as any,
       { p_story_id: storyId },
     );
     if (!error) {

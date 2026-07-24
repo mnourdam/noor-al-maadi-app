@@ -3253,6 +3253,22 @@ export type Database = {
       _normalize_comment_body: { Args: { p: string }; Returns: string }
       _story_canonicalize_incoming_v2: { Args: { p_in: Json }; Returns: Json }
       _story_export_v2_one: { Args: { p_id: string }; Returns: Json }
+      _story_prereqs_v2: {
+        Args: { p_spec: Json; p_uid: string }
+        Returns: Json
+      }
+      _story_redact_summary_v2: {
+        Args: {
+          p_completed: boolean
+          p_is_editor: boolean
+          p_prereqs: Json
+          p_progress: Json
+          p_row: Database["public"]["Tables"]["stories"]["Row"]
+          p_scene_count: number
+          p_unlocked: boolean
+        }
+        Returns: Json
+      }
       _story_validate_v2_one: { Args: { p_in: Json }; Returns: Json }
       add_story_comment_v2: {
         Args: {
@@ -3845,6 +3861,12 @@ export type Database = {
         }[]
       }
       get_story_access: { Args: { p_story_id: string }; Returns: Json }
+      get_story_bundle_v2: { Args: { p_story_id: string }; Returns: Json }
+      get_story_collection_v2: {
+        Args: { p_collection_id: string }
+        Returns: Json
+      }
+      get_story_media_urls_v2: { Args: { p_story_id: string }; Returns: Json }
       get_tutorial_completion: {
         Args: { p_tutorial_id: string }
         Returns: Json
@@ -4054,6 +4076,11 @@ export type Database = {
         }[]
       }
       list_stories_v2: { Args: { p_world_slug?: string }; Returns: Json }
+      list_stories_v3: {
+        Args: { p_collection_id?: string; p_world_slug?: string }
+        Returns: Json
+      }
+      list_story_collections_v2: { Args: never; Returns: Json }
       log_admin_action: {
         Args: {
           p_action: string
