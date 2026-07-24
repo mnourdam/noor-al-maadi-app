@@ -12,12 +12,9 @@ import type { StoryMediaKind } from "./presets";
 
 /**
  * Ownership boundary for a media row (see migration).
- *   `story-owned` — bound to exactly one Story. Orphan cleanup may
- *                   remove the row + object once no story references it.
- *   `shared`      — reusable across Stories, Encyclopedia and future
- *                   systems. Never touched by automated orphan cleanup;
- *                   only removable by an explicit admin action while
- *                   reference count is zero.
+ *   `story`      — story-runtime media. It may be temporarily unbound
+ *                  during upload; orphan cleanup removes unreferenced rows.
+ *   `collection` — collection-level media bound to exactly one collection.
  */
 export type StoryMediaOwnerScope = "story" | "collection";
 

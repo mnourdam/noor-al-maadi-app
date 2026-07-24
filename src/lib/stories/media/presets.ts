@@ -14,8 +14,7 @@
 //   player will render them for years.
 //
 // Ownership (see `story_media.owner_scope`) is orthogonal to
-// preset selection: the same preset can produce story-owned or
-// shared bytes.
+// preset selection: the same preset can produce story or collection bytes.
 // ============================================================
 
 
