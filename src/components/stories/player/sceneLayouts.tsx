@@ -49,12 +49,18 @@ function pickLayout(scene: StorySceneRow): LayoutKey {
   if (tpl === "quote") return "F";
   if (tpl === "map") return "E";
   switch (scene.scene_type) {
-    case "reading": return "A";
-    case "perspective": return "B";
-    case "reveal": return "C";
-    case "document": return "D";
-    case "reflection": return "F";
-    default: return "A";
+    case "reading":
+      return "A";
+    case "perspective":
+      return "B";
+    case "reveal":
+      return "C";
+    case "document":
+      return "D";
+    case "reflection":
+      return "F";
+    default:
+      return "A";
   }
 }
 
@@ -75,9 +81,12 @@ export function resolveSceneTransition(scene: StorySceneRow): SceneTransition {
     return raw as SceneTransition;
   }
   switch (scene.scene_type) {
-    case "document":   return "paper";
-    case "reveal":     return "blur";
-    case "reflection": return "calm";
+    case "document":
+      return "paper";
+    case "reveal":
+      return "blur";
+    case "reflection":
+      return "calm";
     default: {
       const rotation: SceneTransition[] = ["dissolve", "calm", "dissolve", "blur"];
       return rotation[scene.scene_index % rotation.length];
@@ -161,9 +170,7 @@ function SceneReadingColumn({
   align?: "start" | "center";
 }) {
   const alignCls = align === "center" ? "mx-auto text-center" : "";
-  return (
-    <div className={`w-full max-w-[34rem] ${alignCls}`}>{children}</div>
-  );
+  return <div className={`w-full max-w-[34rem] ${alignCls}`}>{children}</div>;
 }
 
 // ------------------------------------------------------------------
@@ -175,13 +182,23 @@ function pickMedia(id: string | null, media: StoryMediaRow[]) {
   return media.find((m) => m.id === id) ?? null;
 }
 
-function str(v: unknown): string { return typeof v === "string" ? v : ""; }
+function str(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
 
 // ------------------------------------------------------------------
 // SceneStage
 // ------------------------------------------------------------------
 
-export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, reflectionReadOnly, reflectionInitialText }: StageProps) {
+export function SceneStage({
+  scene,
+  media,
+  epoch,
+  paused,
+  onReflectionSubmit,
+  reflectionReadOnly,
+  reflectionInitialText,
+}: StageProps) {
   const layout = pickLayout(scene);
   const primary = pickMedia(scene.primary_media_id, media);
   const primaryUrl = useStoryMediaUrl(primary ?? null);
@@ -189,9 +206,12 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, re
   const sentences = useMemo(() => {
     const p = scene.payload as Record<string, unknown> | null | undefined;
     const primaryText =
-      str(p?.["body_ar"]) || str(p?.["body"]) ||
-      str(p?.["quote_ar"]) || str(p?.["quote"]) ||
-      str(p?.["truth_ar"]) || str(p?.["truth"]);
+      str(p?.["body_ar"]) ||
+      str(p?.["body"]) ||
+      str(p?.["quote_ar"]) ||
+      str(p?.["quote"]) ||
+      str(p?.["truth_ar"]) ||
+      str(p?.["truth"]);
     if (Array.isArray(p?.["body_ar"])) {
       return (p!["body_ar"] as unknown[]).flatMap((x) =>
         typeof x === "string" ? splitSentences(x) : [],
@@ -201,7 +221,9 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, re
   }, [scene]);
 
   const title = scene.title_ar ?? "";
-  const caption = str((scene.payload as any)?.["caption_ar"] ?? (scene.payload as any)?.["caption"]);
+  const caption = str(
+    (scene.payload as any)?.["caption_ar"] ?? (scene.payload as any)?.["caption"],
+  );
 
   // Consistent bottom padding for phones with home indicators.
   const bottomPad = "pb-[calc(env(safe-area-inset-bottom)+88px)]";
@@ -229,10 +251,18 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, re
   }
 
   if (layout === "B") {
-    const speaker = str((scene.payload as any)?.["speaker_ar"] ?? (scene.payload as any)?.["speaker"]);
+    const speaker = str(
+      (scene.payload as any)?.["speaker_ar"] ?? (scene.payload as any)?.["speaker"],
+    );
     return (
       <LayoutFrame>
-        <KenBurns src={primaryUrl} alt={speaker || title} seed={scene.id} blur={8} overlay="vignette" />
+        <KenBurns
+          src={primaryUrl}
+          alt={speaker || title}
+          seed={scene.id}
+          blur={8}
+          overlay="vignette"
+        />
         <BottomScrim />
         <div
           className="absolute inset-0 z-10 flex flex-col items-stretch justify-end gap-5 px-6 pt-20 sm:flex-row sm:items-center sm:justify-center sm:gap-10 sm:px-10 sm:pb-24"
@@ -266,14 +296,22 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, re
         <KenBurns src={primaryUrl} alt={title} seed={scene.id} blur={16} overlay="vignette" />
         <div
           className="pointer-events-none absolute inset-0 z-[5]"
-          style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.85) 80%)" }}
+          style={{
+            background:
+              "radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.85) 80%)",
+          }}
           aria-hidden
         />
         <div className="absolute inset-0 z-10 grid place-items-center px-6 sm:px-10">
           <SceneReadingColumn align="center">
             <Sparkles className="mx-auto mb-5 size-6 text-gold/80" />
             <SceneTitle align="center">{title}</SceneTitle>
-            <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} className="text-center" />
+            <SentenceReveal
+              sentences={sentences}
+              epoch={epoch}
+              paused={paused}
+              className="text-center"
+            />
             <Caption text={caption} align="center" />
           </SceneReadingColumn>
         </div>
@@ -286,7 +324,9 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, re
     return (
       <LayoutFrame>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a1206_0%,_#000_75%)]" />
-        <div className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 px-6 pt-16 ${bottomPad} sm:px-10`}>
+        <div
+          className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 px-6 pt-16 ${bottomPad} sm:px-10`}
+        >
           {primaryUrl ? (
             <div
               className="max-h-[52vh] max-w-[92%] overflow-hidden rounded-md border border-gold/30 shadow-[0_20px_60px_rgba(0,0,0,0.7)]"
@@ -300,8 +340,15 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, re
             </div>
           )}
           <SceneReadingColumn align="center">
-            <SceneTitle align="center" tone="gold">{title}</SceneTitle>
-            <SentenceReveal sentences={sentences} epoch={epoch} paused={paused} className="text-center" />
+            <SceneTitle align="center" tone="gold">
+              {title}
+            </SceneTitle>
+            <SentenceReveal
+              sentences={sentences}
+              epoch={epoch}
+              paused={paused}
+              className="text-center"
+            />
             <Caption text={caption} align="center" />
           </SceneReadingColumn>
         </div>
@@ -337,9 +384,7 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, re
 
   // Layout F — manuscript-style quote / reflection composition
   const prompt = str((scene.payload as any)?.["prompt_ar"] ?? (scene.payload as any)?.["prompt"]);
-  const composed = sentences.length > 0
-    ? sentences
-    : (prompt ? [prompt] : (title ? [title] : []));
+  const composed = sentences.length > 0 ? sentences : prompt ? [prompt] : title ? [title] : [];
   const isReflection = scene.scene_type === "reflection";
   return (
     <LayoutFrame>
@@ -352,12 +397,12 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, re
           style={{ filter: "blur(20px)" }}
         />
       )}
-      <div className={`absolute inset-0 z-10 grid place-items-center px-8 pt-16 ${bottomPad} sm:px-12`}>
+      <div
+        className={`absolute inset-0 z-10 grid place-items-center px-8 pt-16 ${bottomPad} sm:px-12`}
+      >
         <div className="w-full max-w-[30rem] text-center">
           {title && !isReflection && (
-            <div
-              className="mb-4 text-[11px] font-medium uppercase tracking-[0.36em] text-gold/70"
-            >
+            <div className="mb-4 text-[11px] font-medium uppercase tracking-[0.36em] text-gold/70">
               {title}
             </div>
           )}
@@ -390,7 +435,6 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, re
   );
 }
 
-
 function LayoutFrame({ children }: { children: React.ReactNode }) {
   return <div className="absolute inset-0 overflow-hidden">{children}</div>;
 }
@@ -419,9 +463,14 @@ function ReflectionInline({
     // Optimistically mark saved so the user gets instant feedback even if
     // the network write is slow. Errors surface via the async catch below.
     setSaved(true);
-    try { await onSubmit(t); }
-    catch { setSaved(false); submittingRef.current = false; }
-    finally { setBusy(false); }
+    try {
+      await onSubmit(t);
+    } catch {
+      setSaved(false);
+      submittingRef.current = false;
+    } finally {
+      setBusy(false);
+    }
   };
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
@@ -469,7 +518,10 @@ function ReflectionInline({
       </label>
       <textarea
         value={text}
-        onChange={(e) => { setText(e.target.value); setSaved(false); }}
+        onChange={(e) => {
+          setText(e.target.value);
+          setSaved(false);
+        }}
         rows={5}
         placeholder="خُذ لحظة. اكتب ما شعرت به…"
         className="w-full resize-none rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-[15px] leading-[1.85] text-white placeholder:text-white/35 focus:border-gold/40 focus:outline-none"
@@ -493,8 +545,14 @@ function ReflectionInline({
             // Fire on pointerdown so a single tap always commits — mobile
             // Safari/Android WebViews often swallow the first click when
             // the textarea currently owns focus.
-            onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); void submit(text); }}
-            onClick={(e) => { e.stopPropagation(); }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              void submit(text);
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
             disabled={busy || !text.trim()}
             className="rounded-full bg-gold px-5 py-2 text-[13px] font-bold text-black shadow disabled:opacity-40"
           >
@@ -502,7 +560,6 @@ function ReflectionInline({
           </button>
         )}
       </div>
-
     </div>
   );
 }

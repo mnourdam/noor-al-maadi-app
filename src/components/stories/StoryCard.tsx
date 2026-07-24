@@ -25,15 +25,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  progressFraction,
-  storyState,
-  type StorySummary,
-} from "@/lib/stories/summary";
-import {
-  formatDurationArabic,
-  resolveStoryDurationMs,
-} from "@/lib/stories/duration";
+import { progressFraction, storyState, type StorySummary } from "@/lib/stories/summary";
+import { formatDurationArabic, resolveStoryDurationMs } from "@/lib/stories/duration";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
 import { guestHasCompleted } from "@/lib/stories/guestCompletions";
@@ -94,7 +87,10 @@ export function StoryCard({
   // in-flight completion updates open card grids without a reload.
   const [guestDone, setGuestDone] = useState<boolean>(() => isGuest && guestHasCompleted(story.id));
   useEffect(() => {
-    if (!isGuest) { setGuestDone(false); return; }
+    if (!isGuest) {
+      setGuestDone(false);
+      return;
+    }
     const check = () => setGuestDone(guestHasCompleted(story.id));
     check();
     if (typeof window === "undefined") return;
@@ -113,17 +109,8 @@ export function StoryCard({
   );
   const cover = useCoverUrl(story.id, story.cover_media_id);
 
-
-
-
-
-
   const pct = Math.round(progressFraction(story) * 100);
-  const widthClass =
-    variant === "rail"
-      ? "w-44 flex-none snap-start sm:w-52"
-      : "w-full";
-
+  const widthClass = variant === "rail" ? "w-44 flex-none snap-start sm:w-52" : "w-full";
 
   return (
     <Link
@@ -180,7 +167,9 @@ export function StoryCard({
             >
               <CheckCircle2 className="size-3" />
               <span>مكتملة</span>
-              <span aria-hidden className="text-[11px] leading-none">✓</span>
+              <span aria-hidden className="text-[11px] leading-none">
+                ✓
+              </span>
             </span>
           )}
           {state === "in_progress" && (
@@ -240,8 +229,7 @@ export function StoryCard({
               className="h-full"
               style={{
                 width: `${pct}%`,
-                background:
-                  "linear-gradient(270deg, hsl(45 90% 55%), hsl(45 100% 72%))",
+                background: "linear-gradient(270deg, hsl(45 90% 55%), hsl(45 100% 72%))",
                 boxShadow: "0 0 8px hsl(45 100% 65% / 0.55)",
               }}
             />

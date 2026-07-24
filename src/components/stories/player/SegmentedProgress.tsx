@@ -52,7 +52,9 @@ export function SegmentedProgress({ total, activeIndex, activeMs, paused, epoch 
       if (raw < 1) rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [paused, activeMs, epoch]);
 
   return (
