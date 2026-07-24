@@ -43,9 +43,8 @@ import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
-    preview: s.preview === "draft" ? "draft" : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>): { preview?: "draft" } =>
+    s.preview === "draft" ? { preview: "draft" } : {},
   component: ImportedChapterPlayer,
   notFoundComponent: () => (
     <AppShell>
