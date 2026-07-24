@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Heart, Coins, Star, Flame, Trophy, Sparkles } from "lucide-react";
+import { Heart, Coins, Star, Flame, Trophy, Sparkles, Search } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { deriveStreak, type ProfileState } from "@/lib/profile";
 import {
   HEART_MAX,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/hearts";
 import { HEART_COST_DINARS } from "@/lib/economy";
 import { useBuyHeart } from "@/hooks/useBuyHeart";
+import { useRecommendedInvestigation } from "@/lib/investigations/recommend";
 import { toast } from "sonner";
 import { levelFor } from "@/lib/progression";
 
