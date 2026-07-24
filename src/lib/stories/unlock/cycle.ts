@@ -43,7 +43,7 @@ export function detectUnlockCycles(
 ): UnlockCycle[] {
   const adj = new Map<string, string[]>();
   for (const [id, spec] of stories) adj.set(id, extractStoryDeps(spec).filter((d) => stories.has(d)));
-  void chapterKeyUnused;
+
 
 
   const WHITE = 0, GREY = 1, BLACK = 2;
