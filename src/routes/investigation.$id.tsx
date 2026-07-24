@@ -158,6 +158,8 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
     // Local optimistic marker — server reward reconciles via cloud_saves.
     markInvestigationCompletedLocal(row.slug);
+    // Phase 3A — canonical qualifying-activity call (server-authoritative).
+    void recordStreakActivity("investigation", row.id);
 
     if (reward.badge) awardBadge(reward.badge);
 
