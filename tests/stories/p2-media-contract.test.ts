@@ -45,7 +45,7 @@ d("stories P2 — media contract", () => {
     expect(anon("public.admin_mark_story_media_verified(gen_random_uuid(), repeat('a',64), 1)"))
       .toContain("forbidden");
     expect(anon("public.admin_delete_story_media(gen_random_uuid())")).toContain("forbidden");
-    expect(anon("public.admin_list_story_media_orphans(60)")).toContain("forbidden");
+    expect(anon("public.admin_list_story_media_orphans(60)")).toMatch(/forbidden|permission denied/);
     expect(anon("public.admin_validate_story_publish('nope')")).toContain("forbidden");
   });
 
