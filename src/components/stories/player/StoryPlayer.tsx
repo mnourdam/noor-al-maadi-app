@@ -468,4 +468,57 @@ function PauseHalo({ active }: { active: boolean }) {
   );
 }
 
+// ---------------------------------------------------------------
+// SimpleEnd — deliberate, minimal ending screen.
+// Replaces the retired "Continue Your Journey" post-story page.
+// Contains only: title, completion status, Close, Replay.
+// No comments, no reactions, no related content, no next story.
+// ---------------------------------------------------------------
+function SimpleEnd({
+  title,
+  onReplay,
+  onClose,
+}: {
+  title: string;
+  onReplay: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      dir="rtl"
+      className="pointer-events-auto absolute inset-0 z-[40] grid place-items-center bg-black/85 backdrop-blur-md"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="mx-6 w-full max-w-md rounded-3xl border border-gold/25 bg-gradient-to-b from-black/70 to-black/40 p-8 text-center shadow-[0_20px_80px_rgba(0,0,0,0.6)]">
+        <div className="mb-3 text-[11px] font-semibold tracking-[0.3em] text-gold/80">
+          اكتملت القصة
+        </div>
+        <h2 className="font-display text-2xl font-bold leading-tight text-white">
+          {title}
+        </h2>
+        <div className="mt-6 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onReplay}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-5 py-3 text-[14px] font-semibold text-gold"
+          >
+            <RotateCcw className="size-4" aria-hidden />
+            <span>إعادة المشاهدة</span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-white/5 px-5 py-3 text-[14px] font-semibold text-white/85 hover:bg-white/10"
+          >
+            إغلاق
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 
