@@ -85,9 +85,10 @@ const TAB_STORAGE_KEY = "irth.profile.tab";
 
 function ProfilePage() {
   const {
-    profile, login, logout, updateSettings, claimSeason, setBio, setFavorites,
+    profile, login, logout, updateSettings, setBio, setFavorites,
     claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs,
   } = useProfile();
+
   const { user, account, displayName: accountDisplayName, updateDisplayName, updateUsername, isUsernameAvailable, signOut } = useAccount();
   const displayName = user ? (accountDisplayName || "مستخدم إرث") : (profile.name || "ضيف");
   const androidNative = isAndroidNativeApp();
