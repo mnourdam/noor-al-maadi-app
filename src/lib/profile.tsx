@@ -67,6 +67,7 @@ export interface ProfileState {
   loggedIn: boolean;
   points: number;
   streak: number;
+  longestStreak: number;
   lastActiveDay: string | null;
   storiesOpened: string[];
   storiesRead: string[]; // FINISHED stories (after explicit confirm)
