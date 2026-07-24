@@ -73,27 +73,15 @@ function assertOk<T>(data: T | null, error: { message: string } | null, label: s
   return data;
 }
 
-/** Fetch a single media row by id (RLS enforces visibility). */
-export async function getStoryMediaById(id: string): Promise<StoryMediaRow | null> {
-  const { data, error } = await supabase
-    .from("story_media")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw new Error(`getStoryMediaById: ${error.message}`);
-  return (data as StoryMediaRow | null) ?? null;
-}
+// Removed 2026-07-24 (Production Readiness Pass): `getStoryMediaById` and
+// `listStoryMedia` had zero callers. Admin media workflows go through
+// `admin_list_story_media_orphans`, `admin_register_story_media`,
+// `admin_delete_story_media`, and `admin_mark_story_media_verified`.
+// Player workflows go through `get_story_media_urls_v2`. Direct table
+// reads are no longer needed and would break under the planned Phase B
+// RLS lockdown.
 
-/** All media currently attached to a story, ordered oldest → newest. */
-export async function listStoryMedia(storyId: string): Promise<StoryMediaRow[]> {
-  const { data, error } = await supabase
-    .from("story_media")
-    .select("*")
-    .eq("story_id", storyId)
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(`listStoryMedia: ${error.message}`);
-  return (data ?? []) as StoryMediaRow[];
-}
+
 
 /**
  * Register a media row after the object has been uploaded to storage.
