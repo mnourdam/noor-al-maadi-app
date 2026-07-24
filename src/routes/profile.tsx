@@ -1357,28 +1357,44 @@ function SettingsTab({
         </Link>
       </SettingsGroup>
 
-      {/* Streak milestones */}
+      {/* Streak milestones — Phase 3A: fully server-authoritative auto-grant.
+          Manual claim UI is retired; the server credits XP/Dinars on the
+          qualifying activity that advances the streak past the milestone. */}
       <SettingsGroup title="مكافآت السلسلة" icon={Flame}>
+        <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-background/40 p-2.5">
+          <div className="min-w-0">
+            <p className="font-display text-[12px] font-bold">حالة اليوم</p>
+            <p className="text-[10px] text-muted-foreground">
+              {profile.lastActiveDay === new Date().toISOString().slice(0, 10)
+                ? "تم احتساب اليوم ✓"
+                : "أكمل نشاطًا مؤهلاً اليوم لمتابعة السلسلة"}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-display text-sm font-bold text-gold">{profile.streak} يوم</p>
+            <p className="text-[10px] text-muted-foreground">أطول سلسلة: {profile.longestStreak || profile.streak}</p>
+          </div>
+        </div>
         <div className="space-y-2">
           {STREAK_MILESTONES.map((m) => {
             const claimed = (profile.streakMilestonesClaimed ?? []).includes(m.days);
-            const ready = profile.streak >= m.days && !claimed;
+            const reached = profile.streak >= m.days;
             return (
-              <div key={m.days} className={`flex items-center gap-3 rounded-xl border p-2.5 ${claimed ? "border-gold/30 bg-gold/5" : ready ? "border-gold/50 bg-gold/10" : "border-white/10 bg-background/40"}`}>
+              <div key={m.days} className={`flex items-center gap-3 rounded-xl border p-2.5 ${claimed ? "border-gold/30 bg-gold/5" : reached ? "border-gold/40 bg-gold/10" : "border-white/10 bg-background/40"}`}>
                 <div className="grid size-9 place-items-center rounded-lg bg-gold/15 text-gold"><Gift className="size-4" /></div>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-[12px] font-bold">{m.days} يوم · {m.label}</p>
                   <p className="text-[10px] text-muted-foreground">
                     {m.xp ? `+${m.xp} نقطة · ` : ""}{m.dinars ? `+${m.dinars} دينار` : ""}
-                    {m.badge ? " · شارة" : ""}{m.title ? " · لقب" : ""}
+                    {m.badge ? " · شارة" : ""}{m.title ? " · لقب" : ""}{m.artifact ? " · قطعة" : ""}
                   </p>
                 </div>
                 {claimed ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-gold"><Check className="size-3" /> مُستلَم</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-1 text-[10px] font-bold text-gold"><Check className="size-3" /> مُستلَم</span>
                 ) : (
-                  <button onClick={() => claimStreakMilestone(m.days)} disabled={!ready} className="rounded-full bg-gradient-gold px-3 py-1 text-[10px] font-bold text-primary-foreground disabled:opacity-40">
-                    {ready ? "استلم" : "مقفل"}
-                  </button>
+                  <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-muted-foreground">
+                    {reached ? "قيد الإيداع" : `متبقي ${m.days - profile.streak} يوم`}
+                  </span>
                 )}
               </div>
             );
