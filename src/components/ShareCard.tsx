@@ -69,7 +69,14 @@ export interface ShareCardProps {
 
   /** Human-readable favorite state (Arabic name). Hide section when empty. */
   favoriteStateName?: string | null;
+
+  /** ISO string — real account join date (e.g. `profiles.join_date`). Hide section when null/guest. */
+  joinDate?: string | null;
+
+  /** Optional pre-computed specialization (Arabic label + world slug). */
+  specialization?: { label_ar: string; key: string | null } | null;
 }
+
 
 // ─── Component ─────────────────────────────────────────────────────────
 
