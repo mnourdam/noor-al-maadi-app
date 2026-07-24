@@ -546,13 +546,10 @@ function ProfilePage() {
    OVERVIEW TAB
 ============================================================ */
 function OverviewTab({
-  profile, views, seasonPct, seasonReady, claimSeason, onSeeAllAchievements,
+  profile, views, onSeeAllAchievements,
 }: {
   profile: ReturnType<typeof useProfile>["profile"];
   views: AchievementView[];
-  seasonPct: number;
-  seasonReady: boolean;
-  claimSeason: ReturnType<typeof useProfile>["claimSeason"];
   onSeeAllAchievements: () => void;
 }) {
   void views;
@@ -578,32 +575,8 @@ function OverviewTab({
         <ChevronLeft className="size-5 text-gold transition-transform group-hover:-translate-x-1" />
       </Link>
 
-      {/* Current-season card hidden for LC1 — Seasons deferred post-beta. */}
-      {false && (
-        <div className="grid grid-cols-1 gap-3">
-          <div className="relative overflow-hidden rounded-2xl border border-gold/25 bg-surface p-4">
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.18em] text-gold/80">
-                <ScrollText className="size-3.5" /> الموسم الحالي
-              </span>
-            </div>
-            <p className="font-display mt-1 text-sm font-bold">{CURRENT_SEASON.name}</p>
-            <p className="line-clamp-2 mt-0.5 text-[11px] text-muted-foreground leading-5">{CURRENT_SEASON.tagline}</p>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${seasonPct}%` }} />
-            </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              {Math.min(profile.seasonPoints, CURRENT_SEASON.goalPoints)}/{CURRENT_SEASON.goalPoints}
-            </p>
-            {seasonReady && (
-              <button
-                onClick={() => claimSeason(CURRENT_SEASON.reward.points, CURRENT_SEASON.reward.title, CURRENT_SEASON.reward.dinars, CURRENT_SEASON.reward.artifact)}
-                className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-gold py-2 text-[11px] font-bold text-primary-foreground"
-              ><Sparkles className="size-3.5" /> استلم مكافأة الموسم</button>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Current-season card removed in Phase 3B — Seasons demo deleted. */}
+
 
       {/* Investigations — heart recovery loop */}
       <Link
