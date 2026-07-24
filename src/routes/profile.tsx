@@ -20,7 +20,7 @@ import profileHeaderArt from "@/assets/hero/22-scholar-journey.jpg?url";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import {
   levelFor,
-  CURRENT_SEASON, SEASONS, ERAS,
+  ERAS,
 } from "@/lib/app-constants";
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
 import type { AchievementView } from "@/lib/achievements/v2";
@@ -85,9 +85,10 @@ const TAB_STORAGE_KEY = "irth.profile.tab";
 
 function ProfilePage() {
   const {
-    profile, login, logout, updateSettings, claimSeason, setBio, setFavorites,
+    profile, login, logout, updateSettings, setBio, setFavorites,
     claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs,
   } = useProfile();
+
   const { user, account, displayName: accountDisplayName, updateDisplayName, updateUsername, isUsernameAvailable, signOut } = useAccount();
   const displayName = user ? (accountDisplayName || "مستخدم إرث") : (profile.name || "ضيف");
   const androidNative = isAndroidNativeApp();
@@ -194,8 +195,9 @@ function ProfilePage() {
   }, [search.achievement, achViewMap]);
 
 
-  const seasonPct = Math.min(100, Math.round((profile.seasonPoints / CURRENT_SEASON.goalPoints) * 100));
-  const seasonReady = profile.seasonPoints >= CURRENT_SEASON.goalPoints && !profile.seasonClaimed;
+  // Seasons removed — see Phase 3B cleanup. No season progress is computed.
+
+
 
   const now = Date.now();
   const effHearts = getEffectiveHearts(profile, now);
@@ -418,15 +420,8 @@ function ProfilePage() {
                   )}
                 </div>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-background/50 p-3">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1 text-[10px] tracking-[0.18em] text-gold/80"><ScrollText className="size-3" /> {CURRENT_SEASON.name}</span>
-                  <span className="text-[10px] text-muted-foreground">{seasonPct}%</span>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${seasonPct}%` }} />
-                </div>
-              </div>
+              {/* Season micro-card removed — Seasons demo deleted in Phase 3B. */}
+
             </div>
           </div>
         </section>
@@ -464,9 +459,6 @@ function ProfilePage() {
             <OverviewTab
               profile={profile}
               views={achievementViews}
-              seasonPct={seasonPct}
-              seasonReady={seasonReady}
-              claimSeason={claimSeason}
               onSeeAllAchievements={() => setTab("achievements")}
             />
           )}
@@ -475,8 +467,9 @@ function ProfilePage() {
           {tab === "achievements" && (
             <AchievementsTab views={achievementViews} onOpen={(v) => setAchDetail(v)} />
           )}
-          {tab === "seasons" && <SeasonsTab seasonPct={seasonPct} seasonReady={seasonReady} claimSeason={claimSeason} seasonClaimed={profile.seasonClaimed} seasonPoints={profile.seasonPoints} />}
+          {/* seasons tab removed in Phase 3B */}
           {/* referrals tab removed in Phase 2 */}
+
           {tab === "settings" && (
             <SettingsTab
               profile={profile}
@@ -554,13 +547,10 @@ function ProfilePage() {
    OVERVIEW TAB
 ============================================================ */
 function OverviewTab({
-  profile, views, seasonPct, seasonReady, claimSeason, onSeeAllAchievements,
+  profile, views, onSeeAllAchievements,
 }: {
   profile: ReturnType<typeof useProfile>["profile"];
   views: AchievementView[];
-  seasonPct: number;
-  seasonReady: boolean;
-  claimSeason: ReturnType<typeof useProfile>["claimSeason"];
   onSeeAllAchievements: () => void;
 }) {
   void views;
@@ -586,32 +576,8 @@ function OverviewTab({
         <ChevronLeft className="size-5 text-gold transition-transform group-hover:-translate-x-1" />
       </Link>
 
-      {/* Current-season card hidden for LC1 — Seasons deferred post-beta. */}
-      {false && (
-        <div className="grid grid-cols-1 gap-3">
-          <div className="relative overflow-hidden rounded-2xl border border-gold/25 bg-surface p-4">
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.18em] text-gold/80">
-                <ScrollText className="size-3.5" /> الموسم الحالي
-              </span>
-            </div>
-            <p className="font-display mt-1 text-sm font-bold">{CURRENT_SEASON.name}</p>
-            <p className="line-clamp-2 mt-0.5 text-[11px] text-muted-foreground leading-5">{CURRENT_SEASON.tagline}</p>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${seasonPct}%` }} />
-            </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              {Math.min(profile.seasonPoints, CURRENT_SEASON.goalPoints)}/{CURRENT_SEASON.goalPoints}
-            </p>
-            {seasonReady && (
-              <button
-                onClick={() => claimSeason(CURRENT_SEASON.reward.points, CURRENT_SEASON.reward.title, CURRENT_SEASON.reward.dinars, CURRENT_SEASON.reward.artifact)}
-                className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-gold py-2 text-[11px] font-bold text-primary-foreground"
-              ><Sparkles className="size-3.5" /> استلم مكافأة الموسم</button>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Current-season card removed in Phase 3B — Seasons demo deleted. */}
+
 
       {/* Investigations — heart recovery loop */}
       <Link
@@ -1131,106 +1097,13 @@ function AchievementDialog({
 }
 
 /* ============================================================
-   SEASONS TAB
+   SEASONS TAB — REMOVED in Phase 3B. The legacy Seasons demo
+   (12 hardcoded months, client-side reward grants) was deleted
+   entirely along with its supporting components (SeasonCard,
+   RewardChip).
 ============================================================ */
-function SeasonsTab({
-  seasonPct, seasonReady, claimSeason, seasonClaimed, seasonPoints,
-}: {
-  seasonPct: number; seasonReady: boolean; seasonClaimed: boolean; seasonPoints: number;
-  claimSeason: ReturnType<typeof useProfile>["claimSeason"];
-}) {
-  const currentMonth = new Date().getMonth() + 1;
-  const archive = SEASONS.filter((s) => (s.month ?? 0) < currentMonth);
-  const upcoming = SEASONS.filter((s) => (s.month ?? 0) > currentMonth);
 
-  return (
-    <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-3xl border border-gold/30 parchment-dark p-5 shadow-elegant">
-        <div className="arabesque-layer opacity-50" />
-        <div className="relative">
-          <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] text-gold">
-            <ScrollText className="size-3.5" /> الموسم الحالي
-          </div>
-          <h3 className="font-display mt-2 text-xl font-bold">{CURRENT_SEASON.name}</h3>
-          <p className="mt-1 text-[12px] leading-6 text-foreground/80">{CURRENT_SEASON.tagline}</p>
 
-          <div className="mt-4">
-            <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>{Math.min(seasonPoints, CURRENT_SEASON.goalPoints).toLocaleString("en-US")} / {CURRENT_SEASON.goalPoints.toLocaleString("en-US")}</span>
-              <span className="font-display text-gold">{seasonPct}%</span>
-            </div>
-            <div className="h-3 overflow-hidden rounded-full bg-black/40 ring-1 ring-gold/20">
-              <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${seasonPct}%` }} />
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            <RewardChip><Sparkles className="size-3" /> +{CURRENT_SEASON.reward.points} نقطة</RewardChip>
-            {CURRENT_SEASON.reward.dinars && <RewardChip><Coins className="size-3" /> +{CURRENT_SEASON.reward.dinars} دينار</RewardChip>}
-            {CURRENT_SEASON.reward.title && <RewardChip><Crown className="size-3" /> {CURRENT_SEASON.reward.title}</RewardChip>}
-            {CURRENT_SEASON.reward.artifact && <RewardChip><Landmark className="size-3" /> أثر نادر</RewardChip>}
-          </div>
-
-          {seasonReady && (
-            <button
-              onClick={() => claimSeason(CURRENT_SEASON.reward.points, CURRENT_SEASON.reward.title, CURRENT_SEASON.reward.dinars, CURRENT_SEASON.reward.artifact)}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-elegant"
-            ><Sparkles className="size-4" /> استلم مكافأة الموسم</button>
-          )}
-          {seasonClaimed && (
-            <p className="mt-3 inline-flex items-center gap-1 text-[11px] text-gold"><Check className="size-3" /> استلمتَ مكافأة الموسم</p>
-          )}
-        </div>
-      </section>
-
-      {archive.length > 0 && (
-        <section>
-          <h4 className="font-display mb-3 inline-flex items-center gap-2 text-sm font-bold">
-            <Hourglass className="size-4 text-gold" /> الأرشيف
-          </h4>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {archive.map((s) => <SeasonCard key={s.id} season={s} state="archived" />)}
-          </div>
-        </section>
-      )}
-
-      {upcoming.length > 0 && (
-        <section>
-          <h4 className="font-display mb-3 inline-flex items-center gap-2 text-sm font-bold">
-            <Calendar className="size-4 text-gold" /> القادم
-          </h4>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {upcoming.map((s) => <SeasonCard key={s.id} season={s} state="upcoming" />)}
-          </div>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function RewardChip({ children }: { children: React.ReactNode }) {
-  return <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-[11px] text-gold">{children}</span>;
-}
-
-function SeasonCard({ season, state }: { season: typeof SEASONS[number]; state: "archived" | "upcoming" }) {
-  return (
-    <div className={`relative overflow-hidden rounded-2xl border p-3.5 ${state === "archived" ? "border-gold/20 bg-surface" : "border-white/10 bg-surface/60"}`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1 text-[10px] text-gold/80">
-          {state === "archived" ? <Hourglass className="size-3" /> : <Lock className="size-3" />}
-          {state === "archived" ? "منتهٍ" : "قادم"}
-        </span>
-        <span className="text-[10px] text-muted-foreground">{season.endsAt}</span>
-      </div>
-      <p className="font-display mt-1 truncate text-sm font-bold">{season.name}</p>
-      <p className="line-clamp-2 mt-0.5 text-[11px] leading-5 text-muted-foreground">{season.tagline}</p>
-      <div className="mt-2 flex flex-wrap gap-1">
-        {season.reward.title && <span className="inline-flex items-center gap-1 rounded-full border border-gold/25 bg-gold/5 px-2 py-0.5 text-[10px] text-gold"><Crown className="size-2.5" /> {season.reward.title}</span>}
-        {season.reward.artifact && <span className="inline-flex items-center gap-1 rounded-full border border-gold/25 bg-gold/5 px-2 py-0.5 text-[10px] text-gold"><Landmark className="size-2.5" /> أثر</span>}
-      </div>
-    </div>
-  );
-}
 
 /* ============================================================
    REFERRALS TAB removed in Phase 2 (Referrals removal). The
