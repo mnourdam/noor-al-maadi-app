@@ -20,7 +20,7 @@ import profileHeaderArt from "@/assets/hero/22-scholar-journey.jpg?url";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import {
   levelFor,
-  CURRENT_SEASON, SEASONS, ERAS,
+  ERAS,
 } from "@/lib/app-constants";
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
 import type { AchievementView } from "@/lib/achievements/v2";
