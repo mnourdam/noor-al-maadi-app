@@ -96,6 +96,34 @@ export const AVATARS: HistoricalAvatar[] = [
   // ── Tools ────────────────────────────────────────────────
   { id: "compass",   name: "البوصلة",  category: "tool", rarity: "common",   unlock_method: "default", glyph: "🧭" },
   { id: "astrolabe", name: "الأسطرلاب", category: "tool", rarity: "uncommon", unlock_method: "default", glyph: "⚙" },
+
+  // ── Batch 1 · Knowledge (Premium Historical Emblems Style v1) ──
+  { id: "ink_pot",            name: "المحبرة",              category: "knowledge", rarity: "common",    unlock_method: "default",     glyph: "🖋" },
+  { id: "reed_pen",           name: "القلم القصبي",          category: "knowledge", rarity: "common",    unlock_method: "default",     glyph: "✒" },
+  { id: "parchment_stack",    name: "رقوق الرقّ",            category: "knowledge", rarity: "common",    unlock_method: "default",     glyph: "📜" },
+  { id: "wax_seal",           name: "الختم الشمعي",          category: "knowledge", rarity: "uncommon",  unlock_method: "default",     glyph: "🔏" },
+  { id: "bound_folio",        name: "المجلد المُجلَّد",      category: "knowledge", rarity: "uncommon",  unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملتك الأولى" }, glyph: "📕" },
+  { id: "illuminated_page",   name: "الصفحة المُذهَّبة",     category: "knowledge", rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: قارئ الحكمة" }, glyph: "✨" },
+  { id: "writing_desk_kit",   name: "طقم الكاتب",            category: "knowledge", rarity: "uncommon",  unlock_method: "default",     glyph: "🪶" },
+  { id: "paper_maker_screen", name: "منخل صانع الورق",        category: "knowledge", rarity: "uncommon",  unlock_method: "default",     glyph: "🧻" },
+  { id: "book_stand",         name: "الرحل",                 category: "knowledge", rarity: "common",    unlock_method: "default",     glyph: "📚" },
+  { id: "library_ladder",     name: "سُلَّم المكتبة",        category: "knowledge", rarity: "uncommon",  unlock_method: "museum",      unlock_requirement: { label: "اجمع ٢٥ قطعة في المتحف", threshold: 25 }, glyph: "🪜" },
+  { id: "codex_chained",      name: "المخطوط المُقيَّد",     category: "knowledge", rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: حارس المكتبة" }, glyph: "📗" },
+  { id: "encyclopedia_stack", name: "الموسوعة",              category: "knowledge", rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل ٥ حملات", threshold: 5 }, glyph: "📚" },
+
+  // ── Batch 1 · Tools & Instruments ──
+  { id: "compass_dividers",  name: "الفرجار",               category: "tool", rarity: "common",   unlock_method: "default",     glyph: "📐" },
+  { id: "brass_astrolabe",   name: "أسطرلاب نحاسي",          category: "tool", rarity: "rare",     unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الفلك" }, glyph: "🧭" },
+  { id: "celestial_globe",   name: "الكرة السماوية",         category: "tool", rarity: "epic",     unlock_method: "achievement", unlock_requirement: { label: "إنجاز: راصد النجوم" }, glyph: "🌐" },
+  { id: "water_clock",       name: "ساعة الماء",             category: "tool", rarity: "uncommon", unlock_method: "default",     glyph: "⌛" },
+  { id: "sundial_portable",  name: "المزوَلة",               category: "tool", rarity: "uncommon", unlock_method: "default",     glyph: "🕰" },
+  { id: "balance_scale",     name: "الميزان",                category: "tool", rarity: "common",   unlock_method: "default",     glyph: "⚖" },
+  { id: "mortar_pestle",     name: "الهاون",                 category: "tool", rarity: "common",   unlock_method: "default",     glyph: "🥣" },
+  { id: "alembic",           name: "الإنبيق",                category: "tool", rarity: "rare",     unlock_method: "achievement", unlock_requirement: { label: "إنجاز: الكيميائي" }, glyph: "⚗" },
+  { id: "glass_vial_set",    name: "قوارير المختبر",         category: "tool", rarity: "uncommon", unlock_method: "default",     glyph: "🧪" },
+  { id: "hourglass_bronze",  name: "الساعة الرملية",         category: "tool", rarity: "uncommon", unlock_method: "default",     glyph: "⏳" },
+  { id: "qibla_compass",     name: "بوصلة القبلة",           category: "tool", rarity: "rare",     unlock_method: "achievement", unlock_requirement: { label: "إنجاز: دليل القبلة" }, glyph: "🕋" },
+  { id: "surveyor_rod",      name: "قضيب المسّاح",           category: "tool", rarity: "uncommon", unlock_method: "default",     glyph: "📏" },
 ];
 
 export const DEFAULT_AVATAR_ID = "crescent_star";
