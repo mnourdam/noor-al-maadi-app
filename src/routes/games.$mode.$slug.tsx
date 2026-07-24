@@ -173,7 +173,8 @@ function GamePlayPage() {
         if (game.xp_reward > 0) addPoints(Math.min(game.xp_reward, 40));
         if (game.coin_reward > 0) addDinars(Math.min(game.coin_reward, 20));
         // Qualifying streak activity: completing a mini-game / daily challenge.
-        touchStreak();
+        // Phase 3A — server-authoritative for auth users; guest falls back locally.
+        void recordStreakActivity("game", game.id);
         // Museum unlocks — reuse the Campaign pipeline (user_collection).
         const unlockIds = extractMuseumUnlocks({
           metadata: (game.metadata as Record<string, unknown> | null) ?? undefined,
