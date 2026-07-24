@@ -20,7 +20,7 @@ import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
 import { getActivePosition } from "@/lib/campaignLedger";
-import { getCampaignGrantedTotals } from "@/lib/campaignRewardsGranted";
+import { computeCampaignRewardSummary } from "@/lib/campaigns/rewardSummary";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
