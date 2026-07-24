@@ -1,5 +1,5 @@
-// Fetches every media row referenced by a story: story-owned media plus any
-// shared media referenced via cover_media_id or scene primary_media_id.
+// Fetches every media row referenced by a story: story-scoped media plus any
+// explicitly referenced cover_media_id or scene primary_media_id.
 // Player runtime uses this to build the media[] array for SceneRenderer.
 
 import { supabase } from "@/integrations/supabase/client";

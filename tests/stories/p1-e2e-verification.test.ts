@@ -82,14 +82,14 @@ const scenesPub = [
 d("Stories P1 — E2E backend contract verification", () => {
   beforeAll(() => {
     sql(`INSERT INTO public.stories
-           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, unlock_spec)
+           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, unlock_spec, production_status)
          VALUES
            ('${publishedId}','${publishedId}','قصة تحقق','published',1,25,10,
-             '{"type":"always"}'::jsonb),
+              '{"type":"always"}'::jsonb,'completed'),
            ('${draftId}','${draftId}','مسودة تحقق','draft',1,0,0,
-             '{"type":"always"}'::jsonb),
+              '{"type":"always"}'::jsonb,'testing'),
            ('${otherStoryId}','${otherStoryId}','قصة أخرى','published',1,0,0,
-             '{"type":"always"}'::jsonb)`);
+              '{"type":"always"}'::jsonb,'completed')`);
     for (const s of scenesPub) {
       sql(`INSERT INTO public.story_scenes
              (id, story_id, scene_index, scene_type, title_ar, payload)
@@ -134,8 +134,8 @@ d("Stories P1 — E2E backend contract verification", () => {
 
   it("rejects duplicate story slug", () => {
     sqlFails(
-      `INSERT INTO public.stories (id, slug, title_ar, status)
-       VALUES ('p1e2e_extra_${runId}', '${publishedId}', 'x', 'draft')`,
+      `INSERT INTO public.stories (id, slug, title_ar, status, production_status)
+       VALUES ('p1e2e_extra_${runId}', '${publishedId}', 'x', 'draft', 'testing')`,
       "stories_slug_key",
     );
   });

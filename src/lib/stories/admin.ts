@@ -233,8 +233,8 @@ export interface StoryDeleteImpactItem {
   title_ar: string;
   status: StoryStatus;
   scenes: number;
-  owned_media: number;
-  shared_media: number;
+  story_media: number;
+  collection_media: number;
   progress_rows: number;
   completions: number;
   comments: number;
@@ -247,19 +247,63 @@ export interface StoryDeleteImpact {
   items: StoryDeleteImpactItem[];
   totals: {
     stories: number; published: number; draft: number; archived: number;
-    scenes: number; owned_media: number; shared_media: number;
+    scenes: number; story_media: number; collection_media: number;
     progress: number; completions: number;
     comments: number; visible_comments: number; hidden_comments: number; removed_comments: number;
     reactions: number;
   };
 }
+
+type LegacyStoryDeleteImpactItem = Omit<StoryDeleteImpactItem, "story_media" | "collection_media"> & {
+  owned_media?: number;
+  shared_media?: number;
+  story_media?: number;
+  collection_media?: number;
+};
+
+type LegacyStoryDeleteImpact = Omit<StoryDeleteImpact, "items" | "totals"> & {
+  items?: LegacyStoryDeleteImpactItem[];
+  totals?: Partial<StoryDeleteImpact["totals"]> & {
+    owned_media?: number;
+    shared_media?: number;
+  };
+};
+
+function normalizeStoryDeleteImpact(raw: LegacyStoryDeleteImpact | null): StoryDeleteImpact {
+  const items = (raw?.items ?? []).map((item) => ({
+    ...item,
+    story_media: item.story_media ?? item.owned_media ?? 0,
+    collection_media: item.collection_media ?? item.shared_media ?? 0,
+  }));
+  const totals = raw?.totals ?? {};
+  return {
+    items,
+    totals: {
+      stories: totals.stories ?? 0,
+      published: totals.published ?? 0,
+      draft: totals.draft ?? 0,
+      archived: totals.archived ?? 0,
+      scenes: totals.scenes ?? 0,
+      story_media: totals.story_media ?? totals.owned_media ?? 0,
+      collection_media: totals.collection_media ?? totals.shared_media ?? 0,
+      progress: totals.progress ?? 0,
+      completions: totals.completions ?? 0,
+      comments: totals.comments ?? 0,
+      visible_comments: totals.visible_comments ?? 0,
+      hidden_comments: totals.hidden_comments ?? 0,
+      removed_comments: totals.removed_comments ?? 0,
+      reactions: totals.reactions ?? 0,
+    },
+  };
+}
+
 export async function adminStoryDeleteImpact(ids: string[]): Promise<StoryDeleteImpact> {
   const { data, error } = await supabase.rpc(
     "admin_story_delete_impact" as never,
     { p_ids: ids } as never,
   );
   if (error) bad("adminStoryDeleteImpact", error);
-  return (data ?? { items: [], totals: {} }) as unknown as StoryDeleteImpact;
+  return normalizeStoryDeleteImpact(data as LegacyStoryDeleteImpact | null);
 }
 
 export type StoryDeleteMode = "archive" | "hard";

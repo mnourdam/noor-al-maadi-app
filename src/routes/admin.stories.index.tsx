@@ -732,8 +732,8 @@ function DeleteModal({
             </p>
             <div className="grid grid-cols-2 gap-2 rounded-md border p-3 text-xs">
               <div>مشاهد: <b>{impact.totals.scenes}</b></div>
-              <div>ملفات وسائط خاصة: <b>{impact.totals.owned_media}</b></div>
-              <div>ملفات وسائط مشتركة: <b>{impact.totals.shared_media}</b></div>
+              <div>وسائط القصة: <b>{impact.totals.story_media}</b></div>
+              <div>وسائط المجموعة: <b>{impact.totals.collection_media}</b></div>
               <div>سجلات تقدّم اللاعبين: <b>{impact.totals.progress}</b></div>
               <div>إتمامات اللاعبين: <b>{impact.totals.completions}</b></div>
               <div>تعليقات: <b>{impact.totals.comments}</b></div>
