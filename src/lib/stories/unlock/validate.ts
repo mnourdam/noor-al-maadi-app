@@ -1,12 +1,9 @@
 // ============================================================
-// Stories M3 — Unlock Spec v2 validator (shared)
+// Stories M3 — Unlock Spec v2 validator (FROZEN CONTRACT)
 // ------------------------------------------------------------
-// Fail-closed structural validator. Used by:
-//   * importer preview / apply
-//   * admin builder (before persist)
-//   * server evaluator (mirrored in SQL)
-//   * offline evaluator (client)
-// Determinism: same input → same errors, same order.
+// Fail-closed structural validator. Envelope: { version:2, expr }.
+// Logical vocabulary: all / any (children in "of"), not (child).
+// Leaves per spec.ts. Any deviation → error.
 // ============================================================
 
 import {
@@ -25,31 +22,40 @@ const LEAF_ID_FIELD: Partial<Record<UnlockNodeType, string>> = {
   story_complete: "story_id",
   campaign_complete: "campaign_id",
   investigation_complete: "investigation_id",
-  achievement_earned: "achievement_id",
+  entity_discovered: "entity_id",
+  artifact_owned: "artifact_id",
+  atlas_location_visited: "location_id",
+  achievement_unlocked: "achievement_id",
 };
 
 const ALLOWED_FIELDS: Record<UnlockNodeType, ReadonlySet<string>> = {
-  always: new Set(["type"]),
-  never: new Set(["type"]),
-  all_of: new Set(["type", "children"]),
-  any_of: new Set(["type", "children"]),
+  all: new Set(["type", "of"]),
+  any: new Set(["type", "of"]),
   not: new Set(["type", "child"]),
-  story_complete: new Set(["type", "story_id"]),
+  always: new Set(["type"]),
   campaign_complete: new Set(["type", "campaign_id"]),
+  campaign_chapter_complete: new Set(["type", "campaign_id", "chapter_id"]),
   investigation_complete: new Set(["type", "investigation_id"]),
-  achievement_earned: new Set(["type", "achievement_id"]),
+  entity_discovered: new Set(["type", "entity_id"]),
+  entities_discovered: new Set(["type", "ids", "min"]),
+  artifact_owned: new Set(["type", "artifact_id"]),
+  atlas_location_visited: new Set(["type", "location_id"]),
+  achievement_unlocked: new Set(["type", "achievement_id"]),
+  player_level: new Set(["type", "min"]),
+  story_complete: new Set(["type", "story_id"]),
+  date_window: new Set(["type", "start", "end"]),
 };
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-/**
- * Validate a candidate value as a well-formed Unlock Spec v2.
- * Always inspects the entire tree so the importer can report
- * every error in one pass. `ok` is true only when there are
- * zero errors AND every structural bound is respected.
- */
+function isIsoDateString(v: unknown): v is string {
+  if (typeof v !== "string" || v.length === 0) return false;
+  const t = Date.parse(v);
+  return Number.isFinite(t);
+}
+
 export function validateUnlockSpec(input: unknown): UnlockValidationResult {
   const errors: UnlockValidationError[] = [];
   let nodeCount = 0;
@@ -63,13 +69,33 @@ export function validateUnlockSpec(input: unknown): UnlockValidationResult {
     push("not_an_object", "$", "Unlock spec must be a JSON object.");
     return { ok: false, errors, nodeCount, depth: maxDepth };
   }
-  if (input.v !== 2) {
-    push("wrong_version", "$.v", `Unlock spec version must be 2 (got ${JSON.stringify(input.v)}).`);
+  if (input.version !== 2) {
+    push("wrong_version", "$.version", `Unlock spec version must be 2 (got ${JSON.stringify(input.version)}).`);
   }
-  if (!("rule" in input)) {
-    push("missing_rule", "$.rule", "Unlock spec is missing 'rule'.");
+  if (!("expr" in input)) {
+    push("missing_expr", "$.expr", "Unlock spec is missing 'expr'.");
     return { ok: false, errors, nodeCount, depth: maxDepth };
   }
+
+  const requireIdString = (
+    node: Record<string, unknown>,
+    field: string,
+    path: string,
+    type: UnlockNodeType,
+  ): void => {
+    if (!(field in node)) {
+      push("missing_id_field", `${path}.${field}`, `'${type}' requires '${field}'.`);
+      return;
+    }
+    const v = node[field];
+    if (typeof v !== "string") {
+      push("id_not_string", `${path}.${field}`, `'${field}' must be a string.`);
+      return;
+    }
+    if (v.trim().length === 0) {
+      push("id_empty", `${path}.${field}`, `'${field}' must not be empty.`);
+    }
+  };
 
   const walk = (node: unknown, path: string, depth: number): void => {
     if (depth > maxDepth) maxDepth = depth;
@@ -105,24 +131,23 @@ export function validateUnlockSpec(input: unknown): UnlockValidationResult {
 
     switch (type) {
       case "always":
-      case "never":
         return;
-      case "all_of":
-      case "any_of": {
-        if (!("children" in node)) {
-          push("missing_children", `${path}.children`, `'${type}' requires 'children'.`);
+      case "all":
+      case "any": {
+        if (!("of" in node)) {
+          push("missing_of", `${path}.of`, `'${type}' requires 'of'.`);
           return;
         }
-        const children = node.children;
-        if (!Array.isArray(children)) {
-          push("children_not_array", `${path}.children`, `'${type}.children' must be an array.`);
+        const kids = node.of;
+        if (!Array.isArray(kids)) {
+          push("of_not_array", `${path}.of`, `'${type}.of' must be an array.`);
           return;
         }
-        if (children.length === 0) {
-          push("empty_children_forbidden", `${path}.children`, `'${type}.children' must not be empty.`);
+        if (kids.length === 0) {
+          push("empty_of_forbidden", `${path}.of`, `'${type}.of' must not be empty.`);
           return;
         }
-        children.forEach((c, i) => walk(c, `${path}.children[${i}]`, depth + 1));
+        kids.forEach((c, i) => walk(c, `${path}.of[${i}]`, depth + 1));
         return;
       }
       case "not": {
@@ -133,30 +158,75 @@ export function validateUnlockSpec(input: unknown): UnlockValidationResult {
         walk(node.child, `${path}.child`, depth + 1);
         return;
       }
+      case "campaign_chapter_complete": {
+        requireIdString(node, "campaign_id", path, type);
+        requireIdString(node, "chapter_id", path, type);
+        return;
+      }
+      case "entities_discovered": {
+        if (!("ids" in node) || !Array.isArray(node.ids)) {
+          push("ids_not_array", `${path}.ids`, `'entities_discovered' requires 'ids' array.`);
+        } else {
+          const ids = node.ids as unknown[];
+          if (ids.length === 0) {
+            push("ids_empty", `${path}.ids`, `'ids' must not be empty.`);
+          }
+          ids.forEach((v, i) => {
+            if (typeof v !== "string" || v.trim().length === 0) {
+              push("ids_item_not_string", `${path}.ids[${i}]`, `'ids[${i}]' must be a non-empty string.`);
+            }
+          });
+        }
+        if (!("min" in node)) {
+          push("missing_id_field", `${path}.min`, `'entities_discovered' requires 'min'.`);
+        } else if (typeof node.min !== "number" || !Number.isInteger(node.min)) {
+          push("min_not_integer", `${path}.min`, `'min' must be an integer.`);
+        } else if (
+          node.min < 1 ||
+          (Array.isArray(node.ids) && node.min > (node.ids as unknown[]).length)
+        ) {
+          push("min_out_of_range", `${path}.min`, `'min' must be between 1 and ids.length.`);
+        }
+        return;
+      }
+      case "player_level": {
+        if (!("min" in node)) {
+          push("missing_id_field", `${path}.min`, `'player_level' requires 'min'.`);
+        } else if (typeof node.min !== "number" || !Number.isInteger(node.min)) {
+          push("min_not_integer", `${path}.min`, `'min' must be an integer.`);
+        } else if (node.min < 1) {
+          push("min_out_of_range", `${path}.min`, `'min' must be >= 1.`);
+        }
+        return;
+      }
+      case "date_window": {
+        const hasStart = "start" in node && node.start !== undefined;
+        const hasEnd = "end" in node && node.end !== undefined;
+        if (!hasStart && !hasEnd) {
+          push("date_window_empty", `${path}`, `'date_window' requires 'start' and/or 'end'.`);
+          return;
+        }
+        if (hasStart && !isIsoDateString(node.start)) {
+          push("date_not_string", `${path}.start`, `'start' must be an ISO date string.`);
+        }
+        if (hasEnd && !isIsoDateString(node.end)) {
+          push("date_not_string", `${path}.end`, `'end' must be an ISO date string.`);
+        }
+        return;
+      }
       default: {
-        const idField = LEAF_ID_FIELD[type]!;
-        if (!(idField in node)) {
-          push("missing_id_field", `${path}.${idField}`, `'${type}' requires '${idField}'.`);
-          return;
-        }
-        const v = (node as Record<string, unknown>)[idField];
-        if (typeof v !== "string") {
-          push("id_not_string", `${path}.${idField}`, `'${idField}' must be a string.`);
-          return;
-        }
-        if (v.trim().length === 0) {
-          push("id_empty", `${path}.${idField}`, `'${idField}' must not be empty.`);
-        }
+        const idField = LEAF_ID_FIELD[type];
+        if (!idField) return;
+        requireIdString(node, idField, path, type);
       }
     }
   };
 
-  walk((input as { rule: unknown }).rule, "$.rule", 1);
+  walk((input as { expr: unknown }).expr, "$.expr", 1);
 
   return { ok: errors.length === 0, errors, nodeCount, depth: maxDepth };
 }
 
-/** Narrowing helper: returns the typed spec, or throws with a joined error message. */
 export function parseUnlockSpec(input: unknown): UnlockSpecV2 {
   const r = validateUnlockSpec(input);
   if (!r.ok) {
@@ -169,11 +239,11 @@ export function parseUnlockSpec(input: unknown): UnlockSpecV2 {
 
 /** Depth-aware walk over an already-validated tree (leaves included). */
 export function walkUnlockNodes(spec: UnlockSpecV2, visit: (n: UnlockNode) => void): void {
-  const stack: UnlockNode[] = [spec.rule];
+  const stack: UnlockNode[] = [spec.expr];
   while (stack.length > 0) {
     const n = stack.pop()!;
     visit(n);
-    if (n.type === "all_of" || n.type === "any_of") stack.push(...n.children);
+    if (n.type === "all" || n.type === "any") stack.push(...n.of);
     else if (n.type === "not") stack.push(n.child);
   }
 }
