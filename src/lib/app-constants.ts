@@ -78,48 +78,14 @@ export type { LevelInfo, LevelLookup, LevelReward, LevelCosmetic, Rank, Cosmetic
 // is added by dropping a definition file under the v2 definitions folder.
 
 // ============================================================
-// SEASONS — 12 monthly seasons, rotated by Gregorian month.
-// Targets rebalanced so each season feels like a real month-long
-// accomplishment (5k early → 25k advanced). Rewards scale with
-// goal: points ≈ goalPoints / 5, plus title/badge always, and
-// artifact + dinars on heavier seasons.
+// SEASONS — REMOVED
+// ------------------------------------------------------------
+// The legacy Seasons demo (SEASONS/CURRENT_SEASON/currentSeason/
+// seasonStatus and the Season interface) was removed alongside all
+// UI/economy/notification surfaces. The client-side monthly rotation
+// was a demo with unsafe local reward grants and no server
+// authority. Do NOT re-introduce this model as hidden product
+// logic. A genuine server-authoritative Seasons v2 system will be
+// designed from scratch and must not inherit this shape.
 // ============================================================
-export interface Season {
-  id: string;
-  name: string;
-  tagline: string;
-  goalPoints: number;
-  endsAt: string;
-  reward: { points: number; dinars?: number; artifact?: string; title?: string };
-  month?: number;
-  theme?: string;
-  badge?: string;
-}
 
-export const SEASONS: Season[] = [
-  { id: "season_seerah",         month: 1,  name: "موسم السيرة النبوية",   tagline: "عش شهرًا في نور النبوّة وأخلاق صاحب الرسالة ﷺ.",                theme: "نور النبوّة",        goalPoints: 5000,  endsAt: "نهاية يناير",   reward: { points: 1000, dinars: 500,  title: "صاحب الرسالة" },         badge: "season_seerah" },
-  { id: "season_rashidun",       month: 2,  name: "موسم الراشدين",          tagline: "ارفع رايتك مع الخلفاء الأربعة من خلال مهمّات هذا الشهر.",     theme: "عدلٌ وفتوح",         goalPoints: 6000,  endsAt: "نهاية فبراير",  reward: { points: 1200, dinars: 600,  title: "ابن الفاروق" },           badge: "season_rashidun" },
-  { id: "season_andalus",        month: 3,  name: "موسم الأندلس",           tagline: "من جبل طارق إلى قرطبة، اجمع نقاطك في موسم الأندلس.",         theme: "زهرة الغرب",         goalPoints: 7500,  endsAt: "نهاية مارس",    reward: { points: 1500, dinars: 750,  title: "فارس قرطبة",  artifact: "season_andalus_relic" }, badge: "season_andalus" },
-  { id: "season_baghdad",        month: 4,  name: "موسم بغداد",             tagline: "ادخل بيت الحكمة وكن من علماء العصر الذهبي.",                  theme: "بيت الحكمة",         goalPoints: 8000,  endsAt: "نهاية أبريل",   reward: { points: 1600, dinars: 800,  title: "عالم العصر الذهبي" },     badge: "season_baghdad" },
-  { id: "season_constantinople", month: 5,  name: "موسم الفتح",             tagline: "قف على أسوار القسطنطينية مع محمد الفاتح.",                    theme: "أسوار القسطنطينية",  goalPoints: 10000, endsAt: "نهاية مايو",    reward: { points: 2000, dinars: 1000, title: "من جند الفاتح", artifact: "season_fath_relic" },     badge: "season_constantinople" },
-  { id: "season_seerah_late",    month: 6,  name: "موسم المدينة",           tagline: "اقتفِ أثر الأنصار في دار الهجرة.",                            theme: "دارُ الهجرة",        goalPoints: 9000,  endsAt: "نهاية يونيو",   reward: { points: 1800, dinars: 900,  title: "أنصاريٌّ صادق" },         badge: "season_madina" },
-  { id: "season_jerusalem",      month: 7,  name: "موسم القدس",             tagline: "كن من حُماة الأقصى في موسم القدس.",                            theme: "عودة الأذان",        goalPoints: 12000, endsAt: "نهاية يوليو",   reward: { points: 2400, dinars: 1200, title: "من حُماة الأقصى", artifact: "season_quds_relic" },     badge: "season_jerusalem" },
-  { id: "season_yarmouk",        month: 8,  name: "موسم اليرموك",           tagline: "كن من فرسان خالد في كسرة الروم.",                              theme: "كاسرو الروم",        goalPoints: 11000, endsAt: "نهاية أغسطس",   reward: { points: 2200, dinars: 1100, title: "من فرسان خالد" },          badge: "season_yarmouk" },
-  { id: "season_ain_jalut",      month: 9,  name: "موسم عين جالوت",         tagline: "احفظ مصر والشام مع قطز وبيبرس.",                              theme: "كاسرو المغول",       goalPoints: 15000, endsAt: "نهاية سبتمبر",  reward: { points: 3000, dinars: 1500, title: "من جند قطز",  artifact: "season_ain_jalut_relic" }, badge: "season_ain_jalut" },
-  { id: "season_andalus_fall",   month: 10, name: "موسم الأندلس الأخيرة",   tagline: "احفظ ذاكرة غرناطة قبل سقوط الراية.",                          theme: "ذاكرة لا تموت",      goalPoints: 18000, endsAt: "نهاية أكتوبر",  reward: { points: 3600, dinars: 1800, title: "حافظ الأندلس" },           badge: "season_andalus_fall" },
-  { id: "season_seljuk",         month: 11, name: "موسم السلاجقة",          tagline: "ادخل الأناضول من بوابة ملاذكرد.",                              theme: "بوابة الأناضول",     goalPoints: 20000, endsAt: "نهاية نوفمبر",  reward: { points: 4000, dinars: 2000, title: "من فرسان ألب أرسلان" },    badge: "season_seljuk" },
-  { id: "season_baghdad_fall",   month: 12, name: "موسم بغداد الحزينة",     tagline: "احمل قبسًا من ضوء بيت الحكمة قبل دجلة.",                       theme: "ذكرى السقوط",        goalPoints: 25000, endsAt: "نهاية ديسمبر",  reward: { points: 5000, dinars: 2500, title: "حافظ بيت الحكمة", artifact: "season_baghdad_relic" }, badge: "season_baghdad_fall" },
-];
-
-export function currentSeason(d: Date = new Date()): Season {
-  const m = d.getMonth() + 1;
-  return SEASONS.find((s) => s.month === m) ?? SEASONS[0];
-}
-
-export function seasonStatus(s: Season, d: Date = new Date()): "active" | "archived" | "locked" {
-  const m = d.getMonth() + 1;
-  if (!s.month || s.month === m) return "active";
-  return s.month < m ? "archived" : "locked";
-}
-
-export const CURRENT_SEASON: Season = currentSeason();
