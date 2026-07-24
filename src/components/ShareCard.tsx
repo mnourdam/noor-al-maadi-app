@@ -135,13 +135,29 @@ export function ShareCard(props: ShareCardProps) {
   }, [achievements]);
   const achievementsTotal = achievements?.length ?? 0;
 
-  const generatedOn = useMemo(
-    () => new Date().toLocaleDateString("ar", { year: "numeric", month: "long", day: "numeric" }),
-    [],
-  );
+  // Join date formatted for display (Arabic month + year), or null when unknown/guest.
+  const joinDateLabel = useMemo(() => {
+    if (!joinDate) return null;
+    const d = new Date(joinDate);
+    if (Number.isNaN(d.getTime())) return null;
+    try {
+      const raw = d.toLocaleDateString("ar-EG", { year: "numeric", month: "long" });
+      // Force Western digits to match app-wide policy.
+      return raw.replace(/[\u0660-\u0669]/g, (ch) => String("٠١٢٣٤٥٦٧٨٩".indexOf(ch)));
+    } catch {
+      return d.toISOString().slice(0, 10);
+    }
+  }, [joinDate]);
 
   const bio = (profile.bio ?? "").trim();
   const favState = (favoriteStateName ?? "").trim();
+  const specLabel = (specialization?.label_ar ?? "").trim();
+  const specKey = specialization?.key ?? null;
+
+  // Level curve values — DIRECTLY from levelFor(); never recomputed.
+  const levelProgressPct = Math.max(0, Math.min(1, lvl.progress ?? 0));
+  const levelToNext = Math.max(0, Math.floor(lvl.toNext ?? 0));
+  const atMaxLevel = lvl.next === null;
 
   const drawKey = [
     displayName, username, cardNumber, activeTitle ?? "",
@@ -149,7 +165,9 @@ export function ShareCard(props: ShareCardProps) {
     campaignsCompleted ?? -1, museumCount ?? -1,
     investigationsCompleted ?? -1, storiesCompleted ?? -1,
     achievementsTotal, topAchievements.map((a) => a.id).join(","),
-    bio, favState, profile.avatarId ?? "", generatedOn,
+    bio, favState, specLabel, specKey ?? "",
+    profile.avatarId ?? "", joinDateLabel ?? "",
+    levelProgressPct.toFixed(3), levelToNext, atMaxLevel ? 1 : 0,
   ].join("|");
 
   useEffect(() => {
@@ -170,6 +188,9 @@ export function ShareCard(props: ShareCardProps) {
         cardNumber,
         title: activeTitle,
         level: lvl.level,
+        levelProgressPct,
+        levelToNext,
+        atMaxLevel,
         xp: profile.points,
         dinars: profile.dinars ?? 0,
         streak: profile.streak ?? 0,
@@ -181,7 +202,8 @@ export function ShareCard(props: ShareCardProps) {
         topAchievements,
         bio,
         favoriteStateName: favState,
-        generatedOn,
+        specializationLabel: specLabel,
+        joinDateLabel,
         emblemImg,
         logoImg,
         rarity: avatar.rarity,
@@ -191,6 +213,7 @@ export function ShareCard(props: ShareCardProps) {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawKey]);
+
 
   const filenameBase = `irth-identity-${sanitizeFilenameHandle(username || cardNumber)}`;
   const shareText =
