@@ -17,7 +17,7 @@
 //     it invites writing rather than resembling a form field.
 // ============================================================
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
 import { useStoryMediaUrl } from "@/lib/stories/media/url";
