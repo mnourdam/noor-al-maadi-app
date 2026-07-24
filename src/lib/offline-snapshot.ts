@@ -86,18 +86,18 @@ export const COLLECTIONS: CollectionDef[] = [
     required: false,
     label: "سجل المتحف (قديم/اختياري — المتحف يقرأ من الموسوعة)" },
 
-  // Stories (P5) — first-class snapshot content. Anon RLS restricts
-  // stories to status='published', scenes to scenes-of-published-stories,
-  // and media to verified=true, so no additional filter is needed here.
-  { key: "stories", table: "stories",
-    filter: (q) => q.eq("status", "published"), required: false,
-    label: "القصص المنشورة" },
-  { key: "story_scenes", table: "story_scenes",
-    required: false,
-    label: "مشاهد القصص" },
-  { key: "story_media", table: "story_media",
-    filter: (q) => q.eq("verified", true), required: false,
-    label: "وسائط القصص (مُتحقّقة فقط)" },
+  // Stories (P5) — fetched via the M7A RPC `stories_snapshot_manifest_v2`
+  // which enforces the M6 visibility contract (locked+hidden omitted,
+  // locked+mystery redacted, on_demand excluded from the default snapshot).
+  // The `table` field is a placeholder; `fetchCollection` short-circuits
+  // to the manifest for these three keys.
+  { key: "stories", table: "__rpc:stories_snapshot_manifest_v2__",
+    required: false, label: "القصص المنشورة (بواسطة RPC مع تطبيق الرؤية)" },
+  { key: "story_scenes", table: "__rpc:stories_snapshot_manifest_v2__",
+    required: false, label: "مشاهد القصص (للقصص المفتوحة فقط)" },
+  { key: "story_media", table: "__rpc:stories_snapshot_manifest_v2__",
+    required: false, label: "وسائط القصص (للقصص المفتوحة، مُتحقّقة فقط)" },
+
 ];
 
 /** Collections that DO NOT expose `updated_at` — sync must full-fetch these. */
