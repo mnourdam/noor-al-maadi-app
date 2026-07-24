@@ -50,6 +50,7 @@ export function cacheKey(record: EmblemRecord): string {
 }
 
 export function hasAnyAsset(record: EmblemRecord): boolean {
+  if (PREMIUM_EMBLEM_ASSETS[record.id]) return true;
   return Boolean(
     record.asset_128_url ||
       record.asset_256_url ||
