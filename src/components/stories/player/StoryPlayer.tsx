@@ -130,11 +130,18 @@ export function StoryPlayer({
     if (isLast) {
       // Sticky one-shot completion. `completionFiredRef` guarantees at most
       // one grant per mount even if the user double-taps the ending pill
-      // or auto-advance and the tap collide. Guests take a local reward
-      // path (server RPC requires auth) so first-completion still awards
-      // XP + Dinars and replay is silent.
-      if (completionFiredRef.current) { setPhase("reward"); return; }
+      // or auto-advance and the tap collide.
+      if (completionFiredRef.current) { setPhase("journey"); return; }
       completionFiredRef.current = true;
+
+      // REPLAY PATH — story was already completed on a prior session.
+      // Skip the completion RPC entirely (no XP / Dinars / ledger / event)
+      // and skip the reward moment. Land on the SimpleEnd overlay.
+      if (alreadyCompleted) {
+        setPhase("journey");
+        return;
+      }
+
       setPhase("reward");
 
       const summaryXp = summary?.xp_reward ?? story.xp_reward ?? 0;
@@ -158,14 +165,11 @@ export function StoryPlayer({
         if (grantDin > 0) addDinars(grantDin);
       }
 
-      // Refresh catalog/rail status pills ("جديدة" → "اكتمل") without a
-      // hard reload. `list_stories_v2` is the source of truth for both
-      // auth (server-completed) and guest (overlay via guestCompletions).
       try { void queryClient.invalidateQueries({ queryKey: ["stories-summary"] }); } catch { /* ignore */ }
       return;
     }
     setIdx((n) => Math.min(n + 1, ordered.length - 1));
-  }, [isLast, ordered.length, scene, story.id, story.xp_reward, story.dinar_reward, summary, isGuest, addPoints, addDinars, queryClient]);
+  }, [isLast, ordered.length, scene, story.id, story.xp_reward, story.dinar_reward, summary, isGuest, alreadyCompleted, addPoints, addDinars, queryClient]);
 
 
   const goPrev = useCallback(() => {
