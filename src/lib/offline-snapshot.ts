@@ -162,11 +162,23 @@ function pickManifestSlice(key: OfflineCollectionKey, m: StoryManifestPayload): 
   return [];
 }
 
+async function fetchCollection(def: CollectionDef): Promise<any[]> {
+  // Story collections come from the M7A visibility-enforcing manifest RPC.
+  if (STORY_MANIFEST_KEYS.has(def.key)) {
+    const manifest = await fetchStoryManifest();
+    if (!manifest.ok) {
+      throw new Error(`[snapshot] stories_snapshot_manifest_v2 unavailable for ${def.key}`);
+    }
+    const rows = pickManifestSlice(def.key, manifest);
+    console.info(`[snapshot] ${def.key}: fetched ${rows.length} rows (manifest RPC)`);
+    return pruneOfflineRows(def, rows);
+  }
   // Smaller page size than the PostgREST default (1000) so heavy JSON
   // columns (encyclopedia body, campaign data) don't push a single page
   // past preview/CDN payload limits and hang.
   const PAGE = 100;
   const out: any[] = [];
+
   // Ask PostgREST for the exact count BEFORE reading any row data. The count
   // request is tiny and independent of heavy JSON payloads, so we can fail
   // closed if pagination later returns 923/1000 rows without an error.
