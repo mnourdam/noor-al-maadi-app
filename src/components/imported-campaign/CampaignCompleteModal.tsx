@@ -15,10 +15,13 @@ interface Props {
   coins: number;
   unlockIds: string[];
   campaignTitle: string;
+  /** When true, hide numeric rewards and show the legacy-unavailable notice. */
+  legacyRewardsUnavailable?: boolean;
 }
 
 export function CampaignCompleteModal({
   open, onClose, campaignId, xp, coins, unlockIds, campaignTitle,
+  legacyRewardsUnavailable = false,
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -34,14 +37,16 @@ export function CampaignCompleteModal({
           </div>
           <h3 className="font-display mt-3 text-xl font-bold shimmer-text">أتممتَ الحملة</h3>
           <p className="mt-1 text-sm text-gold/80">{campaignTitle}</p>
-          <Stagger className="mt-4 flex items-center justify-center gap-3 text-[13px]">
-            <span className="motion-reveal is-in inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-sky-200">
-              <Zap className="size-3.5" /> +<AnimatedNumber value={xp} /> XP
-            </span>
-            <span className="motion-reveal is-in inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-200">
-              <Coins className="size-3.5" /> +<AnimatedNumber value={coins} /> دينار
-            </span>
-          </Stagger>
+          {!legacyRewardsUnavailable && (
+            <Stagger className="mt-4 flex items-center justify-center gap-3 text-[13px]">
+              <span className="motion-reveal is-in inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-sky-200">
+                <Zap className="size-3.5" /> +<AnimatedNumber value={xp} /> XP
+              </span>
+              <span className="motion-reveal is-in inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-200">
+                <Coins className="size-3.5" /> +<AnimatedNumber value={coins} /> دينار
+              </span>
+            </Stagger>
+          )}
         </div>
 
         {/* Scrollable body */}
@@ -49,7 +54,14 @@ export function CampaignCompleteModal({
           className="min-h-0 flex-1 overflow-y-auto px-6 py-4 text-right"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          {unlockIds.length > 0 ? (
+          {legacyRewardsUnavailable ? (
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-center">
+              <p className="text-sm font-bold text-gold">بيانات المكافآت غير متوفرة</p>
+              <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+                هذه الحملة أُنجزت قبل اعتماد نظام سجل المكافآت الحالي، لذلك لا يمكن عرض تفاصيل المكافآت المكتسبة بدقة.
+              </p>
+            </div>
+          ) : unlockIds.length > 0 ? (
             <>
               <div className="mb-2 flex items-center gap-1 text-[11px] tracking-widest text-gold/80">
                 <Sparkles className="size-3.5" /> فُتح في موسوعتك ({unlockIds.length})

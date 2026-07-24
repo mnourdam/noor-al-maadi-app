@@ -504,6 +504,7 @@ function ImportedChapterPlayer() {
             xp={summary.earnedXp}
             coins={summary.earnedDinars}
             unlockIds={summary.unlocks}
+            legacyRewardsUnavailable={!summary.hasCanonicalLedger}
           />
         );
       })()}
