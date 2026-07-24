@@ -15,7 +15,7 @@ import {
   type AccountProfile,
 } from "./cloud-save";
 import { useProfile, type ProfileState } from "./profile";
-import { pushPublicStats, claimSignupReferral, REFERRAL_REWARDS } from "./social";
+import { pushPublicStats } from "./social";
 import { androidMark, androidMeasure, isAndroidUltraStableMode, recordAndroidAction } from "./androidFreezeDiagnostics";
 import { flushOutbox } from "./offline/flush";
 import { setReconciliationState } from "./boot/reconciliation";

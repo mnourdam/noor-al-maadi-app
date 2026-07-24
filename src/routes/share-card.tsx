@@ -31,7 +31,7 @@ function ShareCardPage() {
     const top: IdentityCardAchievement[] = earned
       .slice(-3)
       .reverse()
-      .map((v) => ({ id: v.id, label: v.definition.title }));
+      .map((v) => ({ id: v.id, label: v.displayTitle ?? v.id }));
     return { total: earned.length, top };
   }, [views]);
 
