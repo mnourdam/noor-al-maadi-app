@@ -863,16 +863,16 @@ function HomeFull() {
           <div className="parchment-dark relative overflow-hidden rounded-2xl border border-gold/20 px-3 py-3 shadow-elegant">
             <div className="arabesque-layer opacity-40" />
             <div className="relative -mx-1 flex items-stretch gap-1 overflow-x-auto no-scrollbar">
-              <Stat icon={<Heart className="size-3.5" />} label="القلوب" value={`${hearts}/${HEART_MAX}`} tone="rose" />
-              <Stat icon={<Coins className="size-3.5" />} label="دنانير" value={profile.dinars} tone="gold" />
-              <Stat icon={<Trophy className="size-3.5" />} label="مستوى" value={lvl.level} tone="gold" />
-              <Stat icon={<Package className="size-3.5" />} label="المتحف" value={stats.totalCollection} tone="emerald" />
-              <Stat icon={<BookOpen className="size-3.5" />} label="أحداث" value={stats.eventsDiscovered} tone="indigo" />
-              <Stat icon={<Swords className="size-3.5" />} label="معارك" value={stats.battlesCompleted} tone="ruby" />
+              <Stat icon={<Coins className="size-3.5" />} label="دنانير" value={homeSummary.dinars} tone="gold" />
+              <Stat icon={<Package className="size-3.5" />} label="المتحف" value={homeSummary.loading ? "—" : homeSummary.museumCount} tone="emerald" />
+              <Stat icon={<Trophy className="size-3.5" />} label="الحملات المكتملة" value={homeSummary.loading ? "—" : homeSummary.campaignsCompleted} tone="gold" />
+              <Stat icon={<Search className="size-3.5" />} label="التحقيقات المنجزة" value={homeSummary.loading ? "—" : homeSummary.investigationsCompleted} tone="indigo" />
+              <Stat icon={<BookOpen className="size-3.5" />} label="القصص المقروءة" value={homeSummary.loading ? "—" : homeSummary.storiesCompleted} tone="ruby" />
             </div>
           </div>
         </section>
       </Reveal>
+
 
       {/* ============ Secondary: Almost There ============ */}
       {almostThere.length > 0 && (
