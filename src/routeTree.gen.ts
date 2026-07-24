@@ -87,6 +87,7 @@ import { Route as AdminEncyclopediaReportRouteImport } from './routes/admin.ency
 import { Route as AdminEncyclopediaCleanupRouteImport } from './routes/admin.encyclopedia-cleanup'
 import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
+import { Route as AdminEmblemsRouteImport } from './routes/admin.emblems'
 import { Route as AdminCrossHubLinksRouteImport } from './routes/admin.cross-hub-links'
 import { Route as AdminContributionsRouteImport } from './routes/admin.contributions'
 import { Route as AdminContentInventoryRouteImport } from './routes/admin.content-inventory'
@@ -539,6 +540,11 @@ const AdminEncyclopediaRoute = AdminEncyclopediaRouteImport.update({
   path: '/admin/encyclopedia',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEmblemsRoute = AdminEmblemsRouteImport.update({
+  id: '/admin/emblems',
+  path: '/admin/emblems',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminCrossHubLinksRoute = AdminCrossHubLinksRouteImport.update({
   id: '/admin/cross-hub-links',
   path: '/admin/cross-hub-links',
@@ -883,6 +889,7 @@ export interface FileRoutesByFullPath {
   '/admin/content-inventory': typeof AdminContentInventoryRoute
   '/admin/contributions': typeof AdminContributionsRoute
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
+  '/admin/emblems': typeof AdminEmblemsRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupRouteWithChildren
@@ -1016,6 +1023,7 @@ export interface FileRoutesByTo {
   '/admin/content-inventory': typeof AdminContentInventoryRoute
   '/admin/contributions': typeof AdminContributionsRoute
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
+  '/admin/emblems': typeof AdminEmblemsRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/encyclopedia-report': typeof AdminEncyclopediaReportRoute
@@ -1149,6 +1157,7 @@ export interface FileRoutesById {
   '/admin/content-inventory': typeof AdminContentInventoryRoute
   '/admin/contributions': typeof AdminContributionsRoute
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
+  '/admin/emblems': typeof AdminEmblemsRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupRouteWithChildren
@@ -1286,6 +1295,7 @@ export interface FileRouteTypes {
     | '/admin/content-inventory'
     | '/admin/contributions'
     | '/admin/cross-hub-links'
+    | '/admin/emblems'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/encyclopedia-cleanup'
@@ -1419,6 +1429,7 @@ export interface FileRouteTypes {
     | '/admin/content-inventory'
     | '/admin/contributions'
     | '/admin/cross-hub-links'
+    | '/admin/emblems'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/encyclopedia-report'
@@ -1551,6 +1562,7 @@ export interface FileRouteTypes {
     | '/admin/content-inventory'
     | '/admin/contributions'
     | '/admin/cross-hub-links'
+    | '/admin/emblems'
     | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/encyclopedia-cleanup'
@@ -1687,6 +1699,7 @@ export interface RootRouteChildren {
   AdminContentInventoryRoute: typeof AdminContentInventoryRoute
   AdminContributionsRoute: typeof AdminContributionsRoute
   AdminCrossHubLinksRoute: typeof AdminCrossHubLinksRoute
+  AdminEmblemsRoute: typeof AdminEmblemsRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
   AdminEncyclopediaAuditRoute: typeof AdminEncyclopediaAuditRoute
   AdminEncyclopediaCleanupRoute: typeof AdminEncyclopediaCleanupRouteWithChildren
@@ -2302,6 +2315,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEncyclopediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/emblems': {
+      id: '/admin/emblems'
+      path: '/admin/emblems'
+      fullPath: '/admin/emblems'
+      preLoaderRoute: typeof AdminEmblemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/cross-hub-links': {
       id: '/admin/cross-hub-links'
       path: '/admin/cross-hub-links'
@@ -2853,6 +2873,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminContentInventoryRoute: AdminContentInventoryRoute,
   AdminContributionsRoute: AdminContributionsRoute,
   AdminCrossHubLinksRoute: AdminCrossHubLinksRoute,
+  AdminEmblemsRoute: AdminEmblemsRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,
   AdminEncyclopediaAuditRoute: AdminEncyclopediaAuditRoute,
   AdminEncyclopediaCleanupRoute: AdminEncyclopediaCleanupRouteWithChildren,
@@ -2923,13 +2944,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
