@@ -25,6 +25,7 @@ import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
 import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscoveries";
+import { useHomeSummary } from "@/lib/stats/homeSummary";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
