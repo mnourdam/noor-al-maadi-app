@@ -425,7 +425,7 @@ function StepCard({
 function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof getInvestigation>> }) {
   const {
     profile, completeInvestigation, awardBadge, findArtifact, unlockCharacter,
-    buyHint, hintsRevealed, addDinars,
+    buyHint, hintsRevealed, addDinars, recordStreakActivity,
   } = useProfile();
   const stashOrigin = useStashCurrentAsOrigin();
 
