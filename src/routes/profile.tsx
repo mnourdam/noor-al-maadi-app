@@ -45,15 +45,16 @@ import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 import { useAccount } from "@/lib/account";
 import { clearLocalPlayerProgress } from "@/lib/resetProgress";
 import { ModalPortal } from "@/components/ModalPortal";
-import { fetchMyReferralStats, buildReferralShareUrl, shareReferral, type MyReferralStats } from "@/lib/referrals";
+// Phase 2 (Referrals removal): `@/lib/referrals` was deleted. Referral
+// stats, share buttons, and the standalone `/referrals` route are gone.
 import { fetchMyNewsletterSubscription, setMyNewsletterSubscription } from "@/lib/newsletter";
 import { AndroidTextEntryInput, AndroidTextEntryTextarea, readAndroidTextEntryResult } from "@/components/AndroidTextEntry";
 import { ReadingScale } from "@/components/ReadingScale";
 
 
-type TabId = "overview" | "progress" | "achievements" | "seasons" | "referrals" | "settings";
+type TabId = "overview" | "progress" | "achievements" | "seasons" | "settings";
 
-const TAB_IDS = ["overview", "progress", "achievements", "seasons", "referrals", "settings"] as const;
+const TAB_IDS = ["overview", "progress", "achievements", "seasons", "settings"] as const;
 
 const profileSearchSchema = z.object({
   // `tab` accepts any known tab id (case-insensitive). Legacy `/achievements`
@@ -75,7 +76,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: "achievements", label: "الإنجازات", icon: Medal },
   // Seasons tab hidden for LC1 — feature deferred post-beta. Renderer kept intact.
   // { id: "seasons", label: "المواسم", icon: ScrollText },
-  { id: "referrals", label: "الإحالات", icon: Users2 },
+  // Referrals tab removed in Phase 2 (Referrals removal).
   { id: "settings", label: "الإعدادات", icon: SettingsIcon },
 ];
 
@@ -475,7 +476,7 @@ function ProfilePage() {
             <AchievementsTab views={achievementViews} onOpen={(v) => setAchDetail(v)} />
           )}
           {tab === "seasons" && <SeasonsTab seasonPct={seasonPct} seasonReady={seasonReady} claimSeason={claimSeason} seasonClaimed={profile.seasonClaimed} seasonPoints={profile.seasonPoints} />}
-          {tab === "referrals" && <ReferralsTab loggedIn={Boolean(user)} />}
+          {/* referrals tab removed in Phase 2 */}
           {tab === "settings" && (
             <SettingsTab
               profile={profile}
@@ -1232,100 +1233,11 @@ function SeasonCard({ season, state }: { season: typeof SEASONS[number]; state: 
 }
 
 /* ============================================================
-   REFERRALS TAB
+   REFERRALS TAB removed in Phase 2 (Referrals removal). The
+   entire ReferralsTab component and its MiniStat helper were
+   deleted alongside `@/lib/referrals`.
 ============================================================ */
-function ReferralsTab({ loggedIn }: { loggedIn: boolean }) {
-  const [stats, setStats] = useState<MyReferralStats | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    if (!loggedIn) return;
-    setLoading(true);
-    fetchMyReferralStats()
-      .then(setStats)
-      .catch(() => setStats(null))
-      .finally(() => setLoading(false));
-  }, [loggedIn]);
-
-  const url = stats?.code ? buildReferralShareUrl(stats.code) : "";
-
-  async function onCopy() {
-    if (!url) return;
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* ignore */ }
-  }
-  async function onShare() { if (stats?.code) await shareReferral(stats.code); }
-
-  if (!loggedIn) {
-    return (
-      <div className="rounded-2xl border border-gold/25 bg-surface p-6 text-center">
-        <div className="mx-auto grid size-12 place-items-center rounded-full bg-gold/15 text-gold">
-          <Users2 className="size-6" />
-        </div>
-        <p className="font-display mt-3 text-sm font-bold">سجّل الدخول لتفعيل الإحالات</p>
-        <p className="mt-1 text-[11px] text-muted-foreground">شارك إرث مع أصدقائك واربح دنانير لكلّ صديقٍ يلتحق.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <section className="relative overflow-hidden rounded-3xl border border-gold/30 parchment-dark p-5 shadow-elegant">
-        <div className="arabesque-layer opacity-50" />
-        <div className="relative">
-          <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] text-gold">
-            <Gift className="size-3.5" /> حَمَلة الإرث
-          </div>
-          <p className="font-display mt-2 text-lg font-bold">ادعُ صديقًا · رابحون معًا</p>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">احصل على دنانير حين ينضمّ صديقك ويصل للمستوى الخامس.</p>
-
-          {stats?.code ? (
-            <>
-              <div className="mt-4 flex items-center gap-2 rounded-2xl border border-gold/25 bg-background/60 p-2">
-                <code dir="ltr" className="min-w-0 flex-1 truncate font-mono text-[12px] text-gold">{url}</code>
-                <button onClick={onCopy} className="inline-flex items-center gap-1 rounded-full bg-gradient-gold px-3 py-1.5 text-[11px] font-bold text-primary-foreground">
-                  {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} {copied ? "نُسخ" : "نسخ"}
-                </button>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <button onClick={onShare} className="inline-flex items-center justify-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 py-2 text-[11px] font-bold text-gold hover:bg-gold/15">
-                  <Share2 className="size-3.5" /> مشاركة
-                </button>
-                <Link to="/share-card" className="inline-flex items-center justify-center gap-1.5 rounded-full border border-gold/30 py-2 text-[11px] text-gold hover:bg-gold/10">
-                  <QrCode className="size-3.5" /> بطاقة QR
-                </Link>
-              </div>
-            </>
-          ) : (
-            <p className="mt-3 text-[11px] text-muted-foreground">{loading ? "جارٍ تحميل رمز الإحالة…" : "لا يوجد رمز إحالة بعد."}</p>
-          )}
-        </div>
-      </section>
-
-      <div className="grid grid-cols-3 gap-2">
-        <MiniStat icon={<Users2 className="size-4" />} label="دعوات" value={stats?.invited ?? 0} />
-        <MiniStat icon={<Check className="size-4" />} label="انضمّوا" value={stats?.joined ?? 0} />
-        <MiniStat icon={<Coins className="size-4" />} label="دنانير" value={stats?.total_dinars ?? 0} />
-      </div>
-
-      <Link to="/referrals" className="flex items-center gap-3 rounded-2xl border border-gold/25 bg-surface p-3.5 hover:border-gold/50">
-        <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold"><ChevronRight className="size-4 -scale-x-100" /></div>
-        <div className="min-w-0 flex-1"><p className="font-display text-sm font-bold">تفاصيل الإحالات</p><p className="text-[11px] text-muted-foreground">سجلّ الدعوات والمكافآت</p></div>
-        <ChevronLeft className="size-4 text-muted-foreground" />
-      </Link>
-    </div>
-  );
-}
-
-function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-3 text-center">
-      <div className="mx-auto grid size-9 place-items-center rounded-xl bg-gold/15 text-gold">{icon}</div>
-      <p className="font-display mt-1.5 text-base font-bold">{value.toLocaleString("en-US")}</p>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
-    </div>
-  );
-}
 
 /* ============================================================
    SETTINGS TAB
@@ -1426,6 +1338,23 @@ function SettingsTab({
             </p>
           )}
         </div>
+
+        {/* Phase 2 entry point: the Historical Identity Card was moved out
+            of the retired Referrals tab and lives here as a shareable
+            player summary (no QR, no invite semantics). */}
+        <Link
+          to="/share-card"
+          className="mt-3 flex items-center gap-3 rounded-2xl border border-gold/30 bg-gradient-to-l from-gold/10 to-transparent p-3.5 hover:border-gold/60"
+        >
+          <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
+            <IdCard className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-sm font-bold">افتح بطاقة الهوية التاريخية</p>
+            <p className="text-[11px] text-muted-foreground">لقطة قابلة للمشاركة من رحلتك في إرث.</p>
+          </div>
+          <ChevronLeft className="size-4 text-muted-foreground" />
+        </Link>
       </SettingsGroup>
 
       {/* Streak milestones */}

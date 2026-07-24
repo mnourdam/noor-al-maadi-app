@@ -15,7 +15,7 @@ import {
   type AccountProfile,
 } from "./cloud-save";
 import { useProfile, type ProfileState } from "./profile";
-import { pushPublicStats, claimSignupReferral, REFERRAL_REWARDS } from "./social";
+import { pushPublicStats } from "./social";
 import { androidMark, androidMeasure, isAndroidUltraStableMode, recordAndroidAction } from "./androidFreezeDiagnostics";
 import { flushOutbox } from "./offline/flush";
 import { setReconciliationState } from "./boot/reconciliation";
@@ -30,7 +30,7 @@ interface AccountCtx {
   loadingSession: boolean;
   syncing: boolean;
   lastSyncAt: number | null;
-  signUp: (args: { email: string; password: string; username: string; displayName?: string; referralCode?: string }) => Promise<{ ok: boolean; error?: string }>;
+  signUp: (args: { email: string; password: string; username: string; displayName?: string }) => Promise<{ ok: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   syncNow: () => Promise<boolean>;
@@ -181,20 +181,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         setAccount(acc);
         if (!androidStable) void touchLastActive(user.id);
 
-        // One-time signup referral rewards (idempotent server-side).
-        if (!androidStable) {
-          try {
-            const claim = await claimSignupReferral();
-            if (claim.ok) {
-              const flagKey = `irth.refclaim.${user.id}`;
-              if (!localStorage.getItem(flagKey)) {
-                addDinars(REFERRAL_REWARDS.newPlayer.dinars);
-                awardBadge(REFERRAL_REWARDS.newPlayer.badge);
-                localStorage.setItem(flagKey, "1");
-              }
-            }
-          } catch { /* ignore */ }
-        }
+        // Phase 2 (Referrals removal): signup referral reward claim was
+        // deleted. New accounts get their +300 Dinar starting balance from
+        // profile seed defaults, not from referral RPCs.
+
 
         if (!save) {
           // No cloud save yet. If we just switched from another auth user,
@@ -453,11 +443,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
 
 
-  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, displayName, referralCode }) => {
+  const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, displayName }) => {
     const u = username.trim();
     if (u.length < 3) return { ok: false, error: "اسم المستخدم قصير جداً" };
     if (password.length < 8) return { ok: false, error: "كلمة المرور يجب أن تكون ٨ أحرف على الأقل" };
-    const { data, error } = await signUpWithEmail({ email, password, username: u, displayName, referralCode });
+    const { data, error } = await signUpWithEmail({ email, password, username: u, displayName });
     if (error) return { ok: false, error: error.message };
     // Client-side fallback: if a session was returned, upsert display_name immediately.
     if (data.session?.user) {

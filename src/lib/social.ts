@@ -2,6 +2,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ProfileState } from "./profile";
 import { levelFor } from "./app-constants";
 
+// Phase 2 (Referrals removal): all referral-facing exports (REFERRAL_REWARDS,
+// buildReferralLink, ReferralRow, listMyReferrals, fetchMyReferrer,
+// claimSignupReferral, advanceReferralStage, fetchMyReferralCode) were
+// deleted. Legacy RPCs remain callable but return a disabled response.
+// The `referral_code` field on PublicProfile is retained as inactive
+// legacy data — never populated for new users.
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: any = supabase;
 
@@ -74,13 +81,6 @@ export async function fetchGatedProfileByUsername(username: string): Promise<Pub
  * through the `get_my_profile` SECURITY DEFINER RPC because direct SELECT
  * on private profile columns is no longer permitted to authenticated.
  */
-export async function fetchMyReferralCode(_ownerId: string): Promise<string | null> {
-  const { data } = await db.rpc("get_my_profile");
-  return ((data as { referral_code: string | null } | null)?.referral_code) ?? null;
-}
-
-
-
 /**
  * Search players by username OR display_name (case-insensitive, Arabic-safe).
  * Excludes the current user server-side. Deduplicates and caps at 20 results.
@@ -309,70 +309,15 @@ export async function removeFriend(id: string): Promise<boolean> {
 
 }
 
-// =========== Referrals ===========
-export interface ReferralRow {
-  id: string;
-  referrer_id: string;
-  referred_id: string;
-  code: string;
-  stage: number;
-  stage1_at: string | null;
-  stage2_at: string | null;
-  stage3_at: string | null;
-  stage4_at: string | null;
-  created_at: string;
-}
+// =========== Referrals (Phase 2 removal) ===========
+// All referral APIs (ReferralRow, listMyReferrals, fetchMyReferrer,
+// claimSignupReferral, advanceReferralStage, REFERRAL_REWARDS,
+// buildReferralLink, fetchMyReferralCode) were removed in Phase 2. Legacy
+// RPCs (redeem_referral_code, my_referral_stats,
+// claim_signup_referral_rewards, advance_referral_stage,
+// grant_level5_reward) still exist server-side but return a disabled
+// response and perform no writes. Do not re-introduce clients here.
 
-export async function listMyReferrals(userId: string): Promise<{ row: ReferralRow; friend: PublicProfile | null }[]> {
-  const { data: rows } = await db
-    .from("referrals")
-    .select("*")
-    .eq("referrer_id", userId)
-    .order("created_at", { ascending: false });
-  const list = (rows as ReferralRow[]) ?? [];
-  if (!list.length) return [];
-  const ids = list.map((r) => r.referred_id);
-  const { data: profiles } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).in("id", ids);
-  const byId: Record<string, PublicProfile> = {};
-  for (const p of (profiles as PublicProfile[]) ?? []) byId[p.id] = p;
-  return list.map((r) => ({ row: r, friend: byId[r.referred_id] ?? null }));
-}
-
-export async function fetchMyReferrer(userId: string): Promise<ReferralRow | null> {
-  const { data } = await db.from("referrals").select("*").eq("referred_id", userId).maybeSingle();
-  return (data as ReferralRow) ?? null;
-}
-
-export async function claimSignupReferral(): Promise<{ ok: boolean; referrer_id?: string }> {
-  const { data, error } = await db.rpc("claim_signup_referral_rewards");
-  if (error || !data?.ok) return { ok: false };
-  return { ok: true, referrer_id: data.referrer_id };
-}
-
-export async function advanceReferralStage(stage: 2 | 3 | 4, p: ProfileState): Promise<{ ok: boolean }> {
-  // Sync server-side stats first so the RPC can verify eligibility against profiles.*
-  try { await pushPublicStats((await db.auth.getUser()).data.user?.id ?? "", p); } catch { /* ignore */ }
-  const { data } = await db.rpc("advance_referral_stage", { p_stage: stage });
-  return { ok: !!data?.ok };
-}
-
-// =========== Stage reward definitions (client applies to local profile) ===========
-export const REFERRAL_REWARDS = {
-  newPlayer: { dinars: 100, badge: "welcome_irth" },
-  stage1: { dinars: 50 }, // referrer when friend registers
-  stage2: { dinars: 100, artifact: "ref_artifact_lantern" }, // friend reaches L5
-  stage3: { badge: "ref_carrier", title: "حامل الإرث" }, // friend finishes first campaign
-  stage4: { title: "ناشر الإرث" }, // friend stays active 7 days
-} as const;
-
-export function buildReferralLink(code: string): string {
-  // Centralized public-origin resolver — never emits localhost / capacitor
-  // origins, even in the APK or preview builds.
-  // Lazy import avoids a cycle with modules that import from social.ts.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { buildReferralUrl, PUBLIC_ORIGIN } = require("./share/publicOrigin") as typeof import("./share/publicOrigin");
-  return buildReferralUrl(code) ?? `${PUBLIC_ORIGIN}/auth?ref=${encodeURIComponent(code)}`;
-}
 
 // =========== Global Leaderboard ===========
 export interface LeaderboardRow {

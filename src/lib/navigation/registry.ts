@@ -43,7 +43,8 @@ const PLAYER_ROUTES: RouteDeclaration[] = [
   // no registry entry needed since the destination (`/profile`) is already registered.
   { id: "/notifications", parentRoute: "/", kind: "player", label: "الإشعارات" },
   { id: "/friends", parentRoute: "/profile", kind: "player", label: "الأصدقاء" },
-  { id: "/referrals", parentRoute: "/profile", kind: "player", label: "الإحالات" },
+  // `/referrals` was retired in Phase 2 (Referrals removal). The route file
+  // now issues a permanent redirect to `/profile`; no registry entry needed.
   { id: "/security", parentRoute: "/profile", kind: "player", label: "الأمان" },
   { id: "/about", parentRoute: "/", kind: "player", label: "حول" },
   { id: "/privacy", parentRoute: "/", kind: "player", label: "الخصوصية" },
