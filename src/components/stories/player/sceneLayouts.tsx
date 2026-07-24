@@ -430,7 +430,18 @@ function ReflectionInline({
   // the same tap only advances/exits the story.
   if (readOnly) {
     const body = (initialText ?? "").trim();
-    if (!body) return null;
+    if (!body) {
+      // Player finished the story previously but never wrote a reflection.
+      // Show a calm, informative placeholder — no composer, no save.
+      return (
+        <div
+          dir="rtl"
+          className="rounded-2xl border border-white/10 bg-black/40 p-5 text-center text-[13px] text-white/60 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-md"
+        >
+          لم تضف تأملًا في هذه القصة.
+        </div>
+      );
+    }
     return (
       <div
         dir="rtl"
