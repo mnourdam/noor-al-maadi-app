@@ -2,6 +2,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ProfileState } from "./profile";
 import { levelFor } from "./app-constants";
 
+// Phase 2 (Referrals removal): all referral-facing exports (REFERRAL_REWARDS,
+// buildReferralLink, ReferralRow, listMyReferrals, fetchMyReferrer,
+// claimSignupReferral, advanceReferralStage, fetchMyReferralCode) were
+// deleted. Legacy RPCs remain callable but return a disabled response.
+// The `referral_code` field on PublicProfile is retained as inactive
+// legacy data — never populated for new users.
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: any = supabase;
 
@@ -74,13 +81,6 @@ export async function fetchGatedProfileByUsername(username: string): Promise<Pub
  * through the `get_my_profile` SECURITY DEFINER RPC because direct SELECT
  * on private profile columns is no longer permitted to authenticated.
  */
-export async function fetchMyReferralCode(_ownerId: string): Promise<string | null> {
-  const { data } = await db.rpc("get_my_profile");
-  return ((data as { referral_code: string | null } | null)?.referral_code) ?? null;
-}
-
-
-
 /**
  * Search players by username OR display_name (case-insensitive, Arabic-safe).
  * Excludes the current user server-side. Deduplicates and caps at 20 results.
