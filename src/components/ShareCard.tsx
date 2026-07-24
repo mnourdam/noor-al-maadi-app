@@ -177,9 +177,21 @@ export function ShareCard(props: ShareCardProps) {
     setReady(false);
     (async () => {
       try { await (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready; } catch { /* ignore */ }
+      // Prefer the bundled offline Premium raster (1024) — same origin,
+      // no CDN wait. Falls back to the legacy SVG only when the local
+      // pack has no entry for this emblem id.
+      const { resolveProfileEmblem, localEmblemPath } = await import("@/lib/emblems");
+      const resolved = resolveProfileEmblem(profile.avatarId);
+      const localUrl = localEmblemPath(resolved.record.id, 1024);
       const [logoImg, emblemImg] = await Promise.all([
         loadImage("/irth-icon.png").catch(() => null),
-        loadImage(svgDataUrl(renderToStaticMarkup(<AvatarArt id={avatar.id} />))).catch(() => null),
+        (localUrl
+          ? loadImage(localUrl).catch(() => null)
+          : Promise.resolve(null)
+        ).then((img) =>
+          img ??
+          loadImage(svgDataUrl(renderToStaticMarkup(<AvatarArt id={avatar.id} />))).catch(() => null),
+        ),
       ]);
       if (cancelled) return;
       drawCard(c, {

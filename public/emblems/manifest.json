@@ -1,0 +1,229 @@
+{
+  "version": 1,
+  "generated_at": "2026-07-24T23:09:14.316Z",
+  "format": "webp",
+  "emblems": {
+    "banner_abbasid": {
+      "128": {
+        "path": "/emblems/banner_abbasid_128.webp",
+        "size": 3652,
+        "sha256": "c8924723cf3c9b4f41af53886a64158f30852c356430718b203e7eb70f709eda"
+      },
+      "256": {
+        "path": "/emblems/banner_abbasid_256.webp",
+        "size": 9786,
+        "sha256": "21be6447ea54346458ae8cf6cbfa4a6e84fc6027dad3e7fbb4c1baa4c1c6040d"
+      },
+      "512": {
+        "path": "/emblems/banner_abbasid_512.webp",
+        "size": 36944,
+        "sha256": "969e8979d159a08830262c2cfaf7224cb0da833867b1db493006ca656740f536"
+      },
+      "1024": {
+        "path": "/emblems/banner_abbasid_1024.webp",
+        "size": 210730,
+        "sha256": "a01371d3fa8cfca5263cd3a7d76b8f4ede1db8b2412a44c418aedd1bd6a21d8a"
+      }
+    },
+    "banner_andalus": {
+      "128": {
+        "path": "/emblems/banner_andalus_128.webp",
+        "size": 5508,
+        "sha256": "8be443e32e45f3313ed4f13a58e350b90a1e12e2e56d4bcb73fd05569f38a47b"
+      },
+      "256": {
+        "path": "/emblems/banner_andalus_256.webp",
+        "size": 15746,
+        "sha256": "aacffba68f1455a70b9df95fd58a3e042da79738a1989897abe967aed01b94eb"
+      },
+      "512": {
+        "path": "/emblems/banner_andalus_512.webp",
+        "size": 49712,
+        "sha256": "3714a8135b7936a16579bfbb142ec45199c9ff37c0d0a8b455ea6f6449ea3d54"
+      },
+      "1024": {
+        "path": "/emblems/banner_andalus_1024.webp",
+        "size": 179596,
+        "sha256": "d260b6b0c2b0cb0c8d018312ff43d9b8a734299be54c52622395305cedf084a0"
+      }
+    },
+    "banner_ottoman": {
+      "128": {
+        "path": "/emblems/banner_ottoman_128.webp",
+        "size": 4462,
+        "sha256": "4519b04ba1915719c70b505136a075acec0ac9add4ed8b9879fa642b704840f7"
+      },
+      "256": {
+        "path": "/emblems/banner_ottoman_256.webp",
+        "size": 12138,
+        "sha256": "80d5e63f476b40f537e1ac9009181a48f274b75a41ec89588839cb1b1f95c1e8"
+      },
+      "512": {
+        "path": "/emblems/banner_ottoman_512.webp",
+        "size": 36568,
+        "sha256": "353406286095024b7f4c1c1e445f94ab9fe45abfb0153dd60013d6e55de51555"
+      },
+      "1024": {
+        "path": "/emblems/banner_ottoman_1024.webp",
+        "size": 124026,
+        "sha256": "a9f95c412572b34a121839db4386fffb3bdb2df348fd64d9691c375ad2e71dff"
+      }
+    },
+    "banner_rashidun": {
+      "128": {
+        "path": "/emblems/banner_rashidun_128.webp",
+        "size": 3666,
+        "sha256": "ec1b6ff8599486348be453b5b30e7bf388efdd2eae130cfbe7fc358121e36342"
+      },
+      "256": {
+        "path": "/emblems/banner_rashidun_256.webp",
+        "size": 8412,
+        "sha256": "c9acbae6c7e15157a2b3897e3880c6076b021829c290abd0390cb326bf8d8d67"
+      },
+      "512": {
+        "path": "/emblems/banner_rashidun_512.webp",
+        "size": 26522,
+        "sha256": "75534ece38e8292d6ace43780742fa2c6516184873577484d4b16c9fc3e71c2e"
+      },
+      "1024": {
+        "path": "/emblems/banner_rashidun_1024.webp",
+        "size": 139600,
+        "sha256": "dc21894948a74329181add35492b5ab6c0707694de4a4e09031fa59e4a7ce0fc"
+      }
+    },
+    "banner_umayyad": {
+      "128": {
+        "path": "/emblems/banner_umayyad_128.webp",
+        "size": 3328,
+        "sha256": "e4afee5d77092fe84510c2cda47a01d7bf684ed7530f80b7c0437eacb0a1aaac"
+      },
+      "256": {
+        "path": "/emblems/banner_umayyad_256.webp",
+        "size": 7690,
+        "sha256": "207a25df825dacab8de172ac609aaf776c494afbcfec1c89cb192c51d14f044a"
+      },
+      "512": {
+        "path": "/emblems/banner_umayyad_512.webp",
+        "size": 20034,
+        "sha256": "61a704df9bf6019b610b18579cc13a38a17e8b07c21e3004b57a8349899de3c5"
+      },
+      "1024": {
+        "path": "/emblems/banner_umayyad_1024.webp",
+        "size": 60384,
+        "sha256": "c4b82cafff7eb92ffbc12452a143a90d500c1c769bcdbe45df9a513442d53f1b"
+      }
+    },
+    "book": {
+      "128": {
+        "path": "/emblems/book_128.webp",
+        "size": 4438,
+        "sha256": "3f636c4394b8432706f39556b99d58a1b4a42de9b8b42d9b35578bc8fb4f86bc"
+      },
+      "256": {
+        "path": "/emblems/book_256.webp",
+        "size": 13260,
+        "sha256": "04058e0781d0264b8040d982da0937d2ea6d3939ee0d83a12fd2bd3a032447b6"
+      },
+      "512": {
+        "path": "/emblems/book_512.webp",
+        "size": 49942,
+        "sha256": "ebef4d7167befb255c38b7325a92c22ed2b521837f837a3449e762422a2dcf2d"
+      },
+      "1024": {
+        "path": "/emblems/book_1024.webp",
+        "size": 222294,
+        "sha256": "c0ac1caf6ba26daaeee8ecb1f9b3bcc6a79e6892c6fe23f38db5b616272e1fb2"
+      }
+    },
+    "scholar": {
+      "128": {
+        "path": "/emblems/scholar_128.webp",
+        "size": 4752,
+        "sha256": "47daef5523028b4f781572a63e1f853ea8c70df4f45092ac509151551da99f3f"
+      },
+      "256": {
+        "path": "/emblems/scholar_256.webp",
+        "size": 12720,
+        "sha256": "2510d8a2703ac4d7be6a6ce9545bfcfa9cf91e3f08040ac0b01fadb35e74967d"
+      },
+      "512": {
+        "path": "/emblems/scholar_512.webp",
+        "size": 41866,
+        "sha256": "919a25def2d9cddbad823467b851a13178b9f62bde938d34d072a63e4b418da5"
+      },
+      "1024": {
+        "path": "/emblems/scholar_1024.webp",
+        "size": 193326,
+        "sha256": "56ed256d8f7f6a63bce75748d053f15641521d9ad1f0ae35897a46507e404242"
+      }
+    },
+    "shield": {
+      "128": {
+        "path": "/emblems/shield_128.webp",
+        "size": 5522,
+        "sha256": "8b59bc688524ea2a7b22ec8915c34f1a488d2dd43f55466b37b9193e3ea82b97"
+      },
+      "256": {
+        "path": "/emblems/shield_256.webp",
+        "size": 18054,
+        "sha256": "71b0f6c027a3377d8f8aa4ad69104b2d0c20090ca000e44abd6c9250eaf12fc7"
+      },
+      "512": {
+        "path": "/emblems/shield_512.webp",
+        "size": 70914,
+        "sha256": "a4b5a903212a037960a6cc7639a3939ef3225820a9598b970c3613949e8048df"
+      },
+      "1024": {
+        "path": "/emblems/shield_1024.webp",
+        "size": 287114,
+        "sha256": "6b29d9a4b00e8761d661043d64855adbd9fb1ac9bfa2f396eb10bd499469fc59"
+      }
+    },
+    "star": {
+      "128": {
+        "path": "/emblems/star_128.webp",
+        "size": 6666,
+        "sha256": "cc0efcaf23d30d55ab26ce89e4089ee2d2756b794ccc3d36cc8b4911eb7f13ba"
+      },
+      "256": {
+        "path": "/emblems/star_256.webp",
+        "size": 19468,
+        "sha256": "abf52b4369389c22293339ef2a884443cf32c457505232ac88c3910b3eda7a0d"
+      },
+      "512": {
+        "path": "/emblems/star_512.webp",
+        "size": 65502,
+        "sha256": "6ffd71cb9a5c1a45a85341db06ba86c4b5205dd944989efaca8925b20c8b7b55"
+      },
+      "1024": {
+        "path": "/emblems/star_1024.webp",
+        "size": 257706,
+        "sha256": "8d62aba171cac39b796d4d97b167328be885de2fb75d2fdb42af2a4a0b34c43c"
+      }
+    },
+    "sword": {
+      "128": {
+        "path": "/emblems/sword_128.webp",
+        "size": 3792,
+        "sha256": "53c9bdbd6c84047c6c07b51fc4c89d475d56b768b9a0b04033ee5edabdde7e04"
+      },
+      "256": {
+        "path": "/emblems/sword_256.webp",
+        "size": 8620,
+        "sha256": "6d850efe6a07b09be17402422a084db32d2f9dd6f866f44785db1b05fe25e5db"
+      },
+      "512": {
+        "path": "/emblems/sword_512.webp",
+        "size": 24760,
+        "sha256": "6b19b8731e7c93799d71699360df4252c20c3b27efd09c61e17e3b2a14b3e435"
+      },
+      "1024": {
+        "path": "/emblems/sword_1024.webp",
+        "size": 91864,
+        "sha256": "c7aa61379841940272e1f83f67033e0d1e2cdb6456415dc47b434d708663291b"
+      }
+    }
+  },
+  "total_bytes": 2361084,
+  "emblem_count": 10
+}
