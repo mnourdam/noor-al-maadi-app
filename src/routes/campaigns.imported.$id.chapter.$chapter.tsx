@@ -38,7 +38,8 @@ import {
 } from "@/lib/campaignLedger";
 import { upsertChapterProgress } from "@/lib/progressSync";
 import { recordTrace } from "@/lib/diag-trace";
-import { recordCampaignGrant, getCampaignGrantedTotals, getChapterGrantedTotals } from "@/lib/campaignRewardsGranted";
+import { recordCampaignGrant, getChapterGrantedTotals } from "@/lib/campaignRewardsGranted";
+import { computeCampaignRewardSummary } from "@/lib/campaigns/rewardSummary";
 import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
@@ -493,21 +494,16 @@ function ImportedChapterPlayer() {
       <OutOfHeartsModal open={outOfHeartsOpen} onClose={() => setOutOfHeartsOpen(false)} />
 
       {camProgress && (() => {
-        const legacy = getCampaignProgress(campaign.id);
-        const totals = getCampaignGrantedTotals(campaign.id, {
-          totalXp: legacy.totalXp,
-          totalCoins: legacy.totalCoins,
-          unlockedRegistryIds: legacy.unlockedRegistryIds,
-        });
+        const summary = computeCampaignRewardSummary(campaign, { isCampaignCompleted: true });
         return (
           <CampaignCompleteModal
             open={completionOpen}
             onClose={() => setCompletionOpen(false)}
             campaignId={campaign.id}
             campaignTitle={campaign.title}
-            xp={totals.xp}
-            coins={totals.coins}
-            unlockIds={totals.unlocks}
+            xp={summary.earnedXp}
+            coins={summary.earnedDinars}
+            unlockIds={summary.unlocks}
           />
         );
       })()}

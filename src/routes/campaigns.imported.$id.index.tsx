@@ -20,7 +20,7 @@ import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
 import { getActivePosition } from "@/lib/campaignLedger";
-import { getCampaignGrantedTotals } from "@/lib/campaignRewardsGranted";
+import { computeCampaignRewardSummary } from "@/lib/campaigns/rewardSummary";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
 import { displayBadgeName, displayArtifactName } from "@/lib/display-names";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
@@ -313,11 +313,7 @@ function ImportedCampaignOverview() {
 
           {/* COMPLETION STATE — premium */}
           {chapters.length > 0 && progress?.completed && (() => {
-            const totals = getCampaignGrantedTotals(campaign.id, {
-              totalXp: progress.totalXp,
-              totalCoins: progress.totalCoins,
-              unlockedRegistryIds: progress.unlockedRegistryIds,
-            });
+            const summary = computeCampaignRewardSummary(campaign, { isCampaignCompleted: true });
             return (
             <div className="mt-10 relative overflow-hidden rounded-3xl border border-gold/50 bg-gradient-to-br from-amber-900/30 via-surface to-stone-900/40 p-6 shadow-elegant">
               <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/25 blur-3xl" />
@@ -328,10 +324,10 @@ function ImportedCampaignOverview() {
                 <p className="mt-3 text-[10px] tracking-[0.3em] text-gold/80">إنجاز مكتمل</p>
                 <p className="font-display mt-1 text-xl font-bold text-gold shimmer-text">أتممتَ هذه الحملة</p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px]">
-                  <RewardPill icon={<Zap className="size-3" />} label={`+${totals.xp.toLocaleString("en-US")} خبرة`} />
-                  <RewardPill icon={<Coins className="size-3" />} label={`+${totals.coins.toLocaleString("en-US")} دينار`} />
-                  {totals.unlocks.length > 0 && (
-                    <RewardPill icon={<Package className="size-3" />} label={`${totals.unlocks.length} عنصر مكتشف`} />
+                  <RewardPill icon={<Zap className="size-3" />} label={`+${summary.earnedXp.toLocaleString("en-US")} خبرة`} />
+                  <RewardPill icon={<Coins className="size-3" />} label={`+${summary.earnedDinars.toLocaleString("en-US")} دينار`} />
+                  {summary.unlocks.length > 0 && (
+                    <RewardPill icon={<Package className="size-3" />} label={`${summary.unlocks.length} عنصر مكتشف`} />
                   )}
                 </div>
                 {/* Cross-module navigation */}
