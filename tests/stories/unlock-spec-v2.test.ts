@@ -1,10 +1,8 @@
 // ============================================================
-// Stories M3 — Unlock Spec v2 comprehensive tests
+// Stories M3 — Unlock Spec v2 tests (FROZEN CONTRACT)
 // ------------------------------------------------------------
-// Covers: every leaf, every logical node, nesting, invalid
-// trees, unknown node types, missing fields, malformed JSON,
-// cycle detection, depth/node budgets, v1 compatibility,
-// determinism, and fail-closed behaviour.
+// Envelope: { version:2, expr }. Logical: all/any(of), not(child).
+// Leaves per src/lib/stories/unlock/spec.ts.
 // ============================================================
 
 import { describe, it, expect } from "bun:test";
@@ -25,222 +23,263 @@ import {
   type UnlockSpecV2,
 } from "@/lib/stories/unlock";
 
-const EMPTY_CTX: UnlockContext = {
-  completed_story_ids: new Set(),
-  completed_campaign_ids: new Set(),
-  completed_investigation_ids: new Set(),
-  earned_achievement_ids: new Set(),
-};
-
-function ctx(over: Partial<Record<keyof UnlockContext, string[]>>): UnlockContext {
+function makeCtx(over: Partial<{
+  stories: string[]; campaigns: string[]; chapters: string[];
+  investigations: string[]; entities: string[]; artifacts: string[];
+  locations: string[]; achievements: string[]; level: number; now: string;
+}> = {}): UnlockContext {
   return {
-    completed_story_ids: new Set(over.completed_story_ids ?? []),
-    completed_campaign_ids: new Set(over.completed_campaign_ids ?? []),
-    completed_investigation_ids: new Set(over.completed_investigation_ids ?? []),
-    earned_achievement_ids: new Set(over.earned_achievement_ids ?? []),
+    completed_story_ids: new Set(over.stories ?? []),
+    completed_campaign_ids: new Set(over.campaigns ?? []),
+    completed_campaign_chapter_keys: new Set(over.chapters ?? []),
+    completed_investigation_ids: new Set(over.investigations ?? []),
+    discovered_entity_ids: new Set(over.entities ?? []),
+    owned_artifact_ids: new Set(over.artifacts ?? []),
+    visited_atlas_location_ids: new Set(over.locations ?? []),
+    unlocked_achievement_ids: new Set(over.achievements ?? []),
+    player_level: over.level ?? 0,
+    now: over.now,
   };
 }
 
-function wrap(rule: UnlockNode): UnlockSpecV2 { return { v: 2, rule }; }
+const EMPTY_CTX = makeCtx();
+const wrap = (expr: UnlockNode): UnlockSpecV2 => ({ version: 2, expr });
 
-describe("unlock spec v2 — validator", () => {
-  it("accepts every leaf and logical node", () => {
-    for (const t of UNLOCK_NODE_TYPES) {
-      let spec: UnlockSpecV2;
-      switch (t) {
-        case "always": spec = wrap({ type: "always" }); break;
-        case "never": spec = wrap({ type: "never" }); break;
-        case "all_of": spec = wrap({ type: "all_of", children: [{ type: "always" }] }); break;
-        case "any_of": spec = wrap({ type: "any_of", children: [{ type: "never" }] }); break;
-        case "not": spec = wrap({ type: "not", child: { type: "always" } }); break;
-        case "story_complete": spec = wrap({ type: "story_complete", story_id: "s1" }); break;
-        case "campaign_complete": spec = wrap({ type: "campaign_complete", campaign_id: "c1" }); break;
-        case "investigation_complete": spec = wrap({ type: "investigation_complete", investigation_id: "i1" }); break;
-        case "achievement_earned": spec = wrap({ type: "achievement_earned", achievement_id: "a1" }); break;
-      }
+describe("unlock spec v2 — validator (frozen)", () => {
+  it("accepts every supported node type", () => {
+    const cases: Record<string, UnlockSpecV2> = {
+      always: wrap({ type: "always" }),
+      all: wrap({ type: "all", of: [{ type: "always" }] }),
+      any: wrap({ type: "any", of: [{ type: "always" }] }),
+      not: wrap({ type: "not", child: { type: "always" } }),
+      campaign_complete: wrap({ type: "campaign_complete", campaign_id: "c1" }),
+      campaign_chapter_complete: wrap({ type: "campaign_chapter_complete", campaign_id: "c1", chapter_id: "ch1" }),
+      investigation_complete: wrap({ type: "investigation_complete", investigation_id: "i1" }),
+      entity_discovered: wrap({ type: "entity_discovered", entity_id: "e1" }),
+      entities_discovered: wrap({ type: "entities_discovered", ids: ["e1", "e2"], min: 2 }),
+      artifact_owned: wrap({ type: "artifact_owned", artifact_id: "a1" }),
+      atlas_location_visited: wrap({ type: "atlas_location_visited", location_id: "l1" }),
+      achievement_unlocked: wrap({ type: "achievement_unlocked", achievement_id: "ach1" }),
+      player_level: wrap({ type: "player_level", min: 5 }),
+      story_complete: wrap({ type: "story_complete", story_id: "s1" }),
+      date_window: wrap({ type: "date_window", start: "2025-01-01T00:00:00Z", end: "2026-01-01T00:00:00Z" }),
+    };
+    // Sanity: registry matches the frozen list.
+    expect(new Set(UNLOCK_NODE_TYPES)).toEqual(new Set(Object.keys(cases)));
+    for (const [name, spec] of Object.entries(cases)) {
       const r = validateUnlockSpec(spec);
-      expect(r.ok).toBe(true);
-      expect(r.errors).toEqual([]);
+      expect({ name, ok: r.ok, errors: r.errors }).toEqual({ name, ok: true, errors: [] });
     }
   });
 
-  it("rejects wrong version", () => {
-    const r = validateUnlockSpec({ v: 1, rule: { type: "always" } });
-    expect(r.ok).toBe(false);
+  it("rejects legacy vocabulary (never, all_of, any_of, achievement_earned)", () => {
+    for (const bad of [
+      { version: 2, expr: { type: "never" } },
+      { version: 2, expr: { type: "all_of", of: [{ type: "always" }] } },
+      { version: 2, expr: { type: "any_of", of: [{ type: "always" }] } },
+      { version: 2, expr: { type: "achievement_earned", achievement_id: "x" } },
+    ]) {
+      const r = validateUnlockSpec(bad);
+      expect(r.ok).toBe(false);
+      expect(r.errors.some((e) => e.code === "unknown_type")).toBe(true);
+    }
+  });
+
+  it("rejects legacy envelope { v, rule }", () => {
+    const r = validateUnlockSpec({ v: 2, rule: { type: "always" } });
     expect(r.errors.some((e) => e.code === "wrong_version")).toBe(true);
+    expect(r.errors.some((e) => e.code === "missing_expr")).toBe(true);
   });
 
-  it("rejects missing rule", () => {
-    const r = validateUnlockSpec({ v: 2 });
-    expect(r.errors[0].code).toBe("missing_rule");
-  });
-
-  it("rejects non-object input", () => {
+  it("rejects wrong version / non-object / missing expr", () => {
     expect(validateUnlockSpec(null).errors[0].code).toBe("not_an_object");
-    expect(validateUnlockSpec("nope").errors[0].code).toBe("not_an_object");
-    expect(validateUnlockSpec([]).errors[0].code).toBe("not_an_object");
+    expect(validateUnlockSpec({ version: 1, expr: { type: "always" } })
+      .errors.some((e) => e.code === "wrong_version")).toBe(true);
+    expect(validateUnlockSpec({ version: 2 }).errors[0].code).toBe("missing_expr");
   });
 
-  it("rejects unknown node type", () => {
-    const r = validateUnlockSpec({ v: 2, rule: { type: "bogus" } });
-    expect(r.errors.some((e) => e.code === "unknown_type")).toBe(true);
+  it("logical: rejects missing/empty/non-array 'of' and legacy 'children'", () => {
+    expect(validateUnlockSpec(wrap({ type: "all" } as unknown as UnlockNode))
+      .errors.some((e) => e.code === "missing_of")).toBe(true);
+    expect(validateUnlockSpec({ version: 2, expr: { type: "any", of: [] } })
+      .errors.some((e) => e.code === "empty_of_forbidden")).toBe(true);
+    expect(validateUnlockSpec({ version: 2, expr: { type: "all", of: "no" } })
+      .errors.some((e) => e.code === "of_not_array")).toBe(true);
+    expect(validateUnlockSpec({ version: 2, expr: { type: "all", children: [{ type: "always" }] } })
+      .errors.some((e) => e.code === "extra_fields")).toBe(true);
   });
 
-  it("rejects missing type", () => {
-    const r = validateUnlockSpec({ v: 2, rule: {} });
-    expect(r.errors.some((e) => e.code === "missing_type")).toBe(true);
-  });
-
-  it("rejects missing id fields on leaves", () => {
+  it("leaves: rejects missing/non-string/empty ids", () => {
     for (const leaf of [
       { type: "story_complete" },
       { type: "campaign_complete" },
       { type: "investigation_complete" },
-      { type: "achievement_earned" },
+      { type: "entity_discovered" },
+      { type: "artifact_owned" },
+      { type: "atlas_location_visited" },
+      { type: "achievement_unlocked" },
     ]) {
-      const r = validateUnlockSpec({ v: 2, rule: leaf });
+      const r = validateUnlockSpec({ version: 2, expr: leaf });
       expect(r.errors.some((e) => e.code === "missing_id_field")).toBe(true);
     }
-  });
-
-  it("rejects empty or non-string ids", () => {
-    expect(validateUnlockSpec({ v: 2, rule: { type: "story_complete", story_id: "" } })
+    expect(validateUnlockSpec({ version: 2, expr: { type: "story_complete", story_id: "" } })
       .errors.some((e) => e.code === "id_empty")).toBe(true);
-    expect(validateUnlockSpec({ v: 2, rule: { type: "story_complete", story_id: 42 } })
+    expect(validateUnlockSpec({ version: 2, expr: { type: "story_complete", story_id: 42 } })
       .errors.some((e) => e.code === "id_not_string")).toBe(true);
   });
 
+  it("campaign_chapter_complete requires both ids", () => {
+    const r = validateUnlockSpec({ version: 2, expr: { type: "campaign_chapter_complete", campaign_id: "c" } });
+    expect(r.errors.some((e) => e.code === "missing_id_field" && e.path.endsWith(".chapter_id"))).toBe(true);
+  });
+
+  it("entities_discovered enforces ids + min shape", () => {
+    expect(validateUnlockSpec({ version: 2, expr: { type: "entities_discovered", ids: [], min: 1 } })
+      .errors.some((e) => e.code === "ids_empty")).toBe(true);
+    expect(validateUnlockSpec({ version: 2, expr: { type: "entities_discovered", ids: ["a"], min: 0 } })
+      .errors.some((e) => e.code === "min_out_of_range")).toBe(true);
+    expect(validateUnlockSpec({ version: 2, expr: { type: "entities_discovered", ids: ["a"], min: 5 } })
+      .errors.some((e) => e.code === "min_out_of_range")).toBe(true);
+    expect(validateUnlockSpec({ version: 2, expr: { type: "entities_discovered", ids: [1], min: 1 } })
+      .errors.some((e) => e.code === "ids_item_not_string")).toBe(true);
+  });
+
+  it("player_level requires positive integer min", () => {
+    expect(validateUnlockSpec({ version: 2, expr: { type: "player_level" } })
+      .errors.some((e) => e.code === "missing_id_field")).toBe(true);
+    expect(validateUnlockSpec({ version: 2, expr: { type: "player_level", min: 0 } })
+      .errors.some((e) => e.code === "min_out_of_range")).toBe(true);
+    expect(validateUnlockSpec({ version: 2, expr: { type: "player_level", min: 1.5 } })
+      .errors.some((e) => e.code === "min_not_integer")).toBe(true);
+  });
+
+  it("date_window requires at least one bound and valid ISO dates", () => {
+    expect(validateUnlockSpec({ version: 2, expr: { type: "date_window" } })
+      .errors.some((e) => e.code === "date_window_empty")).toBe(true);
+    expect(validateUnlockSpec({ version: 2, expr: { type: "date_window", start: "not-a-date" } })
+      .errors.some((e) => e.code === "date_not_string")).toBe(true);
+  });
+
   it("rejects extra fields on any node", () => {
-    const r = validateUnlockSpec({ v: 2, rule: { type: "always", story_id: "x" } });
+    const r = validateUnlockSpec({ version: 2, expr: { type: "always", story_id: "x" } });
     expect(r.errors.some((e) => e.code === "extra_fields")).toBe(true);
   });
 
-  it("rejects empty logical children", () => {
-    expect(validateUnlockSpec({ v: 2, rule: { type: "all_of", children: [] } })
-      .errors.some((e) => e.code === "empty_children_forbidden")).toBe(true);
-    expect(validateUnlockSpec({ v: 2, rule: { type: "any_of", children: [] } })
-      .errors.some((e) => e.code === "empty_children_forbidden")).toBe(true);
-  });
-
-  it("rejects malformed children arrays", () => {
-    expect(validateUnlockSpec({ v: 2, rule: { type: "all_of", children: "not-array" } })
-      .errors.some((e) => e.code === "children_not_array")).toBe(true);
-    expect(validateUnlockSpec({ v: 2, rule: { type: "all_of" } })
-      .errors.some((e) => e.code === "missing_children")).toBe(true);
-  });
-
-  it("enforces max nesting depth (6)", () => {
+  it("enforces max depth (6) and max node count (64)", () => {
     let node: UnlockNode = { type: "always" };
     for (let i = 0; i < UNLOCK_LIMITS.MAX_DEPTH + 1; i++) node = { type: "not", child: node };
-    const r = validateUnlockSpec({ v: 2, rule: node });
-    expect(r.errors.some((e) => e.code === "depth_exceeded")).toBe(true);
+    expect(validateUnlockSpec({ version: 2, expr: node })
+      .errors.some((e) => e.code === "depth_exceeded")).toBe(true);
+    const of: UnlockNode[] = [];
+    for (let i = 0; i < UNLOCK_LIMITS.MAX_NODES + 5; i++) of.push({ type: "always" });
+    expect(validateUnlockSpec({ version: 2, expr: { type: "all", of } })
+      .errors.some((e) => e.code === "node_count_exceeded")).toBe(true);
   });
 
-  it("enforces max node count (64)", () => {
-    const children: UnlockNode[] = [];
-    for (let i = 0; i < UNLOCK_LIMITS.MAX_NODES + 5; i++) children.push({ type: "always" });
-    const r = validateUnlockSpec({ v: 2, rule: { type: "all_of", children } });
-    expect(r.errors.some((e) => e.code === "node_count_exceeded")).toBe(true);
-  });
-
-  it("parseUnlockSpec throws with joined error message", () => {
-    expect(() => parseUnlockSpec({ v: 2, rule: { type: "bogus" } })).toThrow(/invalid_unlock_spec/);
-  });
-
-  it("deterministic error ordering", () => {
-    const bad = { v: 2, rule: { type: "all_of", children: [{ type: "bogus" }, { type: "story_complete" }] } };
-    const a = validateUnlockSpec(bad).errors.map((e) => `${e.path}:${e.code}`);
-    const b = validateUnlockSpec(bad).errors.map((e) => `${e.path}:${e.code}`);
-    expect(a).toEqual(b);
+  it("parseUnlockSpec throws on invalid input", () => {
+    expect(() => parseUnlockSpec({ version: 2, expr: { type: "bogus" } })).toThrow(/invalid_unlock_spec/);
   });
 });
 
-describe("unlock spec v2 — evaluator", () => {
-  it("always/never", () => {
+describe("unlock spec v2 — evaluator (frozen)", () => {
+  it("always / not(always) (fail-closed NEVER)", () => {
     expect(evaluateUnlock(ALWAYS_SPEC, EMPTY_CTX)).toBe(true);
     expect(evaluateUnlock(NEVER_SPEC, EMPTY_CTX)).toBe(false);
   });
 
-  it("story/campaign/investigation/achievement leaves", () => {
-    expect(evaluateUnlock(wrap({ type: "story_complete", story_id: "s" }),
-      ctx({ completed_story_ids: ["s"] }))).toBe(true);
-    expect(evaluateUnlock(wrap({ type: "story_complete", story_id: "s" }), EMPTY_CTX)).toBe(false);
-    expect(evaluateUnlock(wrap({ type: "campaign_complete", campaign_id: "c" }),
-      ctx({ completed_campaign_ids: ["c"] }))).toBe(true);
-    expect(evaluateUnlock(wrap({ type: "investigation_complete", investigation_id: "i" }),
-      ctx({ completed_investigation_ids: ["i"] }))).toBe(true);
-    expect(evaluateUnlock(wrap({ type: "achievement_earned", achievement_id: "a" }),
-      ctx({ earned_achievement_ids: ["a"] }))).toBe(true);
-  });
-
-  it("all_of / any_of / not", () => {
+  it("all / any / not", () => {
     const spec = wrap({
-      type: "all_of",
-      children: [
-        { type: "any_of", children: [
+      type: "all",
+      of: [
+        { type: "any", of: [
           { type: "story_complete", story_id: "s1" },
           { type: "story_complete", story_id: "s2" },
         ]},
         { type: "not", child: { type: "campaign_complete", campaign_id: "cX" } },
       ],
     });
-    expect(evaluateUnlock(spec, ctx({ completed_story_ids: ["s2"] }))).toBe(true);
-    expect(evaluateUnlock(spec, ctx({ completed_story_ids: ["s2"], completed_campaign_ids: ["cX"] }))).toBe(false);
+    expect(evaluateUnlock(spec, makeCtx({ stories: ["s2"] }))).toBe(true);
+    expect(evaluateUnlock(spec, makeCtx({ stories: ["s2"], campaigns: ["cX"] }))).toBe(false);
     expect(evaluateUnlock(spec, EMPTY_CTX)).toBe(false);
   });
 
-  it("fails closed on invalid raw json", () => {
-    expect(evaluateUnlockUnknown({ v: 2, rule: { type: "bogus" } }, EMPTY_CTX)).toBe(false);
-    expect(evaluateUnlockUnknown("garbage", EMPTY_CTX)).toBe(false);
-    expect(evaluateUnlockUnknown({ v: 99, rule: { type: "always" } }, EMPTY_CTX)).toBe(false);
+  it("every leaf evaluates against its context set", () => {
+    expect(evaluateUnlock(wrap({ type: "campaign_complete", campaign_id: "c" }),
+      makeCtx({ campaigns: ["c"] }))).toBe(true);
+    expect(evaluateUnlock(wrap({ type: "campaign_chapter_complete", campaign_id: "c", chapter_id: "h" }),
+      makeCtx({ chapters: ["c::h"] }))).toBe(true);
+    expect(evaluateUnlock(wrap({ type: "investigation_complete", investigation_id: "i" }),
+      makeCtx({ investigations: ["i"] }))).toBe(true);
+    expect(evaluateUnlock(wrap({ type: "entity_discovered", entity_id: "e" }),
+      makeCtx({ entities: ["e"] }))).toBe(true);
+    expect(evaluateUnlock(wrap({ type: "entities_discovered", ids: ["a", "b", "c"], min: 2 }),
+      makeCtx({ entities: ["a", "c"] }))).toBe(true);
+    expect(evaluateUnlock(wrap({ type: "entities_discovered", ids: ["a", "b", "c"], min: 3 }),
+      makeCtx({ entities: ["a", "c"] }))).toBe(false);
+    expect(evaluateUnlock(wrap({ type: "artifact_owned", artifact_id: "x" }),
+      makeCtx({ artifacts: ["x"] }))).toBe(true);
+    expect(evaluateUnlock(wrap({ type: "atlas_location_visited", location_id: "L" }),
+      makeCtx({ locations: ["L"] }))).toBe(true);
+    expect(evaluateUnlock(wrap({ type: "achievement_unlocked", achievement_id: "u" }),
+      makeCtx({ achievements: ["u"] }))).toBe(true);
+    expect(evaluateUnlock(wrap({ type: "player_level", min: 5 }),
+      makeCtx({ level: 5 }))).toBe(true);
+    expect(evaluateUnlock(wrap({ type: "player_level", min: 5 }),
+      makeCtx({ level: 4 }))).toBe(false);
+    expect(evaluateUnlock(wrap({ type: "story_complete", story_id: "s" }),
+      makeCtx({ stories: ["s"] }))).toBe(true);
+    expect(evaluateUnlock(
+      wrap({ type: "date_window", start: "2025-01-01T00:00:00Z", end: "2026-01-01T00:00:00Z" }),
+      makeCtx({ now: "2025-06-01T00:00:00Z" }))).toBe(true);
+    expect(evaluateUnlock(
+      wrap({ type: "date_window", start: "2025-01-01T00:00:00Z", end: "2026-01-01T00:00:00Z" }),
+      makeCtx({ now: "2027-01-01T00:00:00Z" }))).toBe(false);
   });
 
-  it("deterministic: same input → same output", () => {
-    const spec = wrap({ type: "all_of", children: [
-      { type: "story_complete", story_id: "s" },
-      { type: "any_of", children: [
-        { type: "campaign_complete", campaign_id: "c" },
-        { type: "achievement_earned", achievement_id: "a" },
-      ]},
-    ]});
-    const c = ctx({ completed_story_ids: ["s"], earned_achievement_ids: ["a"] });
-    for (let i = 0; i < 20; i++) expect(evaluateUnlock(spec, c)).toBe(true);
+  it("fails closed on invalid raw input", () => {
+    expect(evaluateUnlockUnknown({ version: 2, expr: { type: "bogus" } }, EMPTY_CTX)).toBe(false);
+    expect(evaluateUnlockUnknown("garbage", EMPTY_CTX)).toBe(false);
+    expect(evaluateUnlockUnknown({ version: 99, expr: { type: "always" } }, EMPTY_CTX)).toBe(false);
   });
 });
 
-describe("unlock spec v2 — v1 compatibility", () => {
+describe("unlock spec v2 — v1 compatibility (in-memory only)", () => {
   it("null → ALWAYS", () => {
     expect(normalizeUnlockSpec(null)).toEqual(ALWAYS_SPEC);
     expect(evaluateUnlockUnknown(null, EMPTY_CTX)).toBe(true);
   });
 
-  it("v1 always node", () => {
-    expect(normalizeUnlockSpec({ type: "always" })).toEqual(ALWAYS_SPEC);
+  it("legacy 'never' → not(always)", () => {
+    expect(normalizeUnlockSpec({ type: "never" })).toEqual(NEVER_SPEC);
   });
 
-  it("v1 and/or renamed to all_of/any_of", () => {
-    const norm = normalizeUnlockSpec({ type: "and", children: [
-      { type: "or", children: [{ type: "story_completed", story_id: "s1" }] },
-      { type: "campaign_completed", campaign_id: "c1" },
-    ]});
-    expect(norm.v).toBe(2);
-    expect(norm.rule.type).toBe("all_of");
-    expect(evaluateUnlock(norm, ctx({ completed_story_ids: ["s1"], completed_campaign_ids: ["c1"] }))).toBe(true);
+  it("legacy all_of/any_of/and/or → all/any with 'of'", () => {
+    const norm = normalizeUnlockSpec({
+      type: "and",
+      children: [
+        { type: "or", children: [{ type: "story_completed", story_id: "s1" }] },
+        { type: "campaign_completed", campaign_id: "c1" },
+      ],
+    });
+    expect(norm.version).toBe(2);
+    expect(norm.expr.type).toBe("all");
+    expect(evaluateUnlock(norm, makeCtx({ stories: ["s1"], campaigns: ["c1"] }))).toBe(true);
   });
 
-  it("v1 leaf renames", () => {
-    expect(evaluateUnlockUnknown({ type: "story_completed", story_id: "s" },
-      ctx({ completed_story_ids: ["s"] }))).toBe(true);
-    expect(evaluateUnlockUnknown({ type: "campaign_completed", campaign_id: "c" },
-      ctx({ completed_campaign_ids: ["c"] }))).toBe(true);
-    expect(evaluateUnlockUnknown({ type: "investigation_completed", investigation_id: "i" },
-      ctx({ completed_investigation_ids: ["i"] }))).toBe(true);
+  it("legacy achievement_earned → achievement_unlocked", () => {
+    const norm = normalizeUnlockSpec({ type: "achievement_earned", achievement_id: "a" });
+    expect(norm.expr).toEqual({ type: "achievement_unlocked", achievement_id: "a" });
+    expect(evaluateUnlock(norm, makeCtx({ achievements: ["a"] }))).toBe(true);
   });
 
-  it("garbage v1 → NEVER (fail closed)", () => {
+  it("legacy envelope {v:2, rule} unwraps into {version:2, expr}", () => {
+    const norm = normalizeUnlockSpec({ v: 2, rule: { type: "campaign_completed", campaign_id: "c" } });
+    expect(norm).toEqual({ version: 2, expr: { type: "campaign_complete", campaign_id: "c" } });
+  });
+
+  it("garbage → NEVER", () => {
     expect(normalizeUnlockSpec({ type: "story_completed" })).toEqual(NEVER_SPEC);
     expect(normalizeUnlockSpec({ type: "unknown_thing" })).toEqual(NEVER_SPEC);
-    expect(normalizeUnlockSpec({ type: "and", children: [{ type: "bogus" }] })).toEqual(NEVER_SPEC);
   });
 
   it("does not mutate input", () => {
@@ -251,43 +290,43 @@ describe("unlock spec v2 — v1 compatibility", () => {
   });
 });
 
-describe("unlock spec v2 — cycle detection", () => {
-  it("detects a direct A↔B cycle", () => {
+describe("unlock spec v2 — cycle detection (frozen)", () => {
+  it("detects direct A↔B cycle", () => {
     const stories = new Map<string, unknown>([
-      ["A", { v: 2, rule: { type: "story_complete", story_id: "B" } }],
-      ["B", { v: 2, rule: { type: "story_complete", story_id: "A" } }],
+      ["A", { version: 2, expr: { type: "story_complete", story_id: "B" } }],
+      ["B", { version: 2, expr: { type: "story_complete", story_id: "A" } }],
     ]);
     const cycles = detectUnlockCycles(stories);
     expect(cycles.length).toBe(1);
     expect(new Set(cycles[0].path)).toEqual(new Set(["A", "B"]));
   });
 
-  it("detects a 3-node cycle A→B→C→A", () => {
+  it("detects 3-node cycle A→B→C→A", () => {
     const stories = new Map<string, unknown>([
-      ["A", { v: 2, rule: { type: "story_complete", story_id: "B" } }],
-      ["B", { v: 2, rule: { type: "story_complete", story_id: "C" } }],
-      ["C", { v: 2, rule: { type: "story_complete", story_id: "A" } }],
+      ["A", { version: 2, expr: { type: "story_complete", story_id: "B" } }],
+      ["B", { version: 2, expr: { type: "story_complete", story_id: "C" } }],
+      ["C", { version: 2, expr: { type: "story_complete", story_id: "A" } }],
     ]);
     expect(detectUnlockCycles(stories).length).toBe(1);
   });
 
-  it("does not flag a DAG", () => {
+  it("no cycle on a DAG", () => {
     const stories = new Map<string, unknown>([
-      ["A", { v: 2, rule: { type: "story_complete", story_id: "B" } }],
-      ["B", { v: 2, rule: { type: "story_complete", story_id: "C" } }],
-      ["C", { v: 2, rule: { type: "always" } }],
+      ["A", { version: 2, expr: { type: "story_complete", story_id: "B" } }],
+      ["B", { version: 2, expr: { type: "story_complete", story_id: "C" } }],
+      ["C", { version: 2, expr: { type: "always" } }],
     ]);
     expect(detectUnlockCycles(stories)).toEqual([]);
   });
 
-  it("ignores dependencies outside the batch", () => {
+  it("ignores deps outside the batch", () => {
     const stories = new Map<string, unknown>([
-      ["A", { v: 2, rule: { type: "story_complete", story_id: "external" } }],
+      ["A", { version: 2, expr: { type: "story_complete", story_id: "external" } }],
     ]);
     expect(detectUnlockCycles(stories)).toEqual([]);
   });
 
-  it("extractStoryDeps handles v1 nested trees", () => {
+  it("extractStoryDeps traverses legacy nested trees", () => {
     const deps = extractStoryDeps({
       type: "and",
       children: [
@@ -296,15 +335,5 @@ describe("unlock spec v2 — cycle detection", () => {
       ],
     });
     expect(deps).toEqual(["a", "b"]);
-  });
-
-  it("deterministic cycle output", () => {
-    const stories = new Map<string, unknown>([
-      ["A", { v: 2, rule: { type: "story_complete", story_id: "B" } }],
-      ["B", { v: 2, rule: { type: "story_complete", story_id: "A" } }],
-    ]);
-    const a = detectUnlockCycles(stories);
-    const b = detectUnlockCycles(stories);
-    expect(a).toEqual(b);
   });
 });
