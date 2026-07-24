@@ -2372,39 +2372,36 @@ export type Database = {
           display_order: number
           id: string
           metadata: Json
+          notes: string | null
           role: Database["public"]["Enums"]["story_relation_role"]
-          schema_version: number
           story_id: string
           target_extra: Json
           target_id: string
           target_type: Database["public"]["Enums"]["story_relation_target_type"]
-          updated_at: string
         }
         Insert: {
           created_at?: string
           display_order?: number
           id: string
           metadata?: Json
+          notes?: string | null
           role: Database["public"]["Enums"]["story_relation_role"]
-          schema_version?: number
           story_id: string
           target_extra?: Json
           target_id: string
           target_type: Database["public"]["Enums"]["story_relation_target_type"]
-          updated_at?: string
         }
         Update: {
           created_at?: string
           display_order?: number
           id?: string
           metadata?: Json
+          notes?: string | null
           role?: Database["public"]["Enums"]["story_relation_role"]
-          schema_version?: number
           story_id?: string
           target_extra?: Json
           target_id?: string
           target_type?: Database["public"]["Enums"]["story_relation_target_type"]
-          updated_at?: string
         }
         Relationships: [
           {
@@ -4295,12 +4292,13 @@ export type Database = {
         | "today_in_history_event"
       story_snapshot_tier: "core" | "standard" | "on_demand"
       story_source_kind:
-        | "primary"
-        | "secondary"
-        | "tertiary"
-        | "museum"
+        | "book"
+        | "manuscript"
+        | "article"
+        | "quran"
+        | "hadith"
+        | "url"
         | "archive"
-        | "translation"
         | "other"
       story_time_precision:
         | "day"
@@ -4540,12 +4538,13 @@ export const Constants = {
       ],
       story_snapshot_tier: ["core", "standard", "on_demand"],
       story_source_kind: [
-        "primary",
-        "secondary",
-        "tertiary",
-        "museum",
+        "book",
+        "manuscript",
+        "article",
+        "quran",
+        "hadith",
+        "url",
         "archive",
-        "translation",
         "other",
       ],
       story_time_precision: [
