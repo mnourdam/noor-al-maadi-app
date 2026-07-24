@@ -14,7 +14,7 @@
 
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Pause, ArrowLeft } from "lucide-react";
+import { X, Pause, ArrowLeft, RotateCcw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
@@ -26,9 +26,10 @@ import { SegmentedProgress } from "./SegmentedProgress";
 import { SceneStage, resolveSceneTransition } from "./sceneLayouts";
 
 import { RewardMoment } from "./RewardMoment";
-import { ContinueYourJourney } from "./ContinueYourJourney";
 import { sceneDwellMs } from "./timing";
-import { guestHasCompleted, guestMarkCompleted } from "@/lib/stories/guestCompletions";
+import { guestMarkCompleted } from "@/lib/stories/guestCompletions";
+import { getReflection } from "@/lib/reflections";
+import { Istazadtu } from "@/components/social/Istazadtu";
 
 import { useNavigate } from "@tanstack/react-router";
 
