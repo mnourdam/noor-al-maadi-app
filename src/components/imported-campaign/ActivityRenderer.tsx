@@ -720,6 +720,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
   const choices = reflectionChoices(activity);
   const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const submitLockRef = useRef(false);
 
   // Load any previously saved auxiliary state so resume shows the player
   // their prior choice / note. Completion itself is owned by the parent.
@@ -727,51 +728,66 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
   const [choiceIdx, setChoiceIdx] = useState<number | null>(prior?.choiceIndex ?? null);
   const [text, setText] = useState<string>(prior?.text ?? "");
   const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const [saved, setSaved] = useState(false);
+  // Replay: activity is already completed and we're re-visiting. Show the
+  // saved reflection read-only; only enter edit mode via explicit action.
+  const [editing, setEditing] = useState(false);
+  const isReplay = (alreadyDone ?? false) && !!prior;
 
   const quote = (activity.quote ?? "").trim();
   const attribution = (activity.quoteAttribution ?? "").trim();
   const reflectionBody = (activity.feedbackCorrect ?? "").trim();
   const reflectionHint = (activity.hint ?? "").trim();
-  const allowFreeText = mode === "write" || (mode === "choose" && activity.allowFreeText === true);
 
-  const canContinue =
-    mode === "continue" ? true :
-    mode === "choose"   ? choiceIdx !== null || (allowFreeText && text.trim().length > 0) :
-    /* write */           text.trim().length > 0 || alreadyDone === true; // write allows empty on resume
+  // Phase 4: the personal-note textarea is universally available for every
+  // reflection prompt (continue / choose / write). Writing is always optional
+  // and never blocks chapter completion. `choose` mode still requires a
+  // choice tap to accept — that's the authored interaction, not the note.
+  const showTextarea = !isReplay || editing;
+  const requireChoice = mode === "choose" && choices.length > 0;
+  const currentText = () => (textareaRef.current?.value ?? text).trim();
+  const hasText = currentText().length > 0;
 
   const persist = () => {
-    if (mode === "continue") {
-      saveReflection(campaignId, activity.id, { mode });
-      return;
-    }
+    const noteText = currentText();
     if (mode === "choose") {
       const idx = choiceIdx;
       saveReflection(campaignId, activity.id, {
         mode,
         choiceIndex: idx ?? undefined,
         choiceValue: idx != null ? choices[idx] : undefined,
-        text: allowFreeText ? (textareaRef.current?.value ?? text).trim() || undefined : undefined,
+        text: noteText || undefined,
       });
       return;
     }
-    // write
-    const t = (textareaRef.current?.value ?? text).trim();
-    saveReflection(campaignId, activity.id, { mode, text: t || undefined });
+    // continue / write — same shape, both accept an optional note.
+    saveReflection(campaignId, activity.id, { mode, text: noteText || undefined });
   };
 
-  const continueJourney = () => {
-    if (resolved) return;
-    if (!canContinue) return;
-    setResolved(true);
+  const canSubmit = requireChoice ? choiceIdx !== null : true;
+
+  const submit = () => {
+    if (submitLockRef.current) return;
+    if (!canSubmit) return;
+    submitLockRef.current = true;
+    setTimeout(() => { submitLockRef.current = false; }, 400);
     persist();
+    setSaved(true);
+    if (resolved) {
+      // Replay edit — just persist, do not double-advance.
+      setEditing(false);
+      return;
+    }
+    setResolved(true);
     onResolve(true);
   };
+
+  const submitLabel = hasText ? "حفظ ومتابعة" : "تخطي والمتابعة";
 
   return (
     <div className="motion-page animate-fade-in" key={`reflect:${activity.id}`}>
       <ContextBlock text={activity.contextText} />
 
-      {/* Reflective card — always shown, replaces the Q&A chrome */}
       <div className="rounded-2xl border border-gold/25 bg-gradient-to-b from-amber-900/15 via-surface/50 to-stone-900/20 p-5">
         <p className="text-center font-display text-[13px] font-bold tracking-wide text-gold/90">
           💭 لحظة تأمل
@@ -806,7 +822,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
         )}
 
         {/* Choose mode — every choice is accepted, no correct answer */}
-        {mode === "choose" && choices.length > 0 && (
+        {requireChoice && (
           <ul className="mt-5 space-y-2" role="radiogroup" aria-label="اختيار التأمل">
             {choices.map((opt, i) => {
               const selected = choiceIdx === i;
@@ -816,7 +832,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
                     type="button"
                     role="radio"
                     aria-checked={selected}
-                    disabled={resolved}
+                    disabled={isReplay && !editing}
                     onClick={() => setChoiceIdx(i)}
                     className={`motion-tap w-full rounded-xl border px-3 py-2 text-right text-[13px] leading-relaxed transition-colors ${
                       selected
@@ -832,11 +848,23 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
           </ul>
         )}
 
-        {/* Write mode OR "choose" + allowFreeText — optional personal note */}
-        {allowFreeText && (
+        {/* Replay read-only: show saved note (if any) without the textarea. */}
+        {isReplay && !editing && (
+          <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.06] px-3 py-3 text-right text-[12px] leading-relaxed text-emerald-100/95">
+            <p className="mb-1 font-display text-[11px] font-bold text-emerald-200/90">تأمّلك المحفوظ</p>
+            {prior?.text ? (
+              <p className="whitespace-pre-wrap">{prior.text}</p>
+            ) : (
+              <p className="text-emerald-100/70">لم تكتب تأملاً في هذه اللحظة.</p>
+            )}
+          </div>
+        )}
+
+        {/* Universal optional personal note */}
+        {showTextarea && (
           <div className="mt-4">
             <label className="mb-1 block text-right text-[11px] text-muted-foreground">
-              {mode === "write" ? "تأمّلك الشخصي (اختياري)" : "أضف ملاحظة شخصية (اختياري)"}
+              تأمّلك الشخصي (اختياري)
             </label>
             {isAndroidNativeApp() ? (
               <textarea
@@ -847,8 +875,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
-                placeholder="اكتب ما دار في ذهنك…"
-                disabled={resolved}
+                placeholder="اكتب تأملك هنا..."
                 className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-right text-foreground outline-none focus:border-gold/60 disabled:opacity-70"
                 data-irth-ab-campaign-focus-disabled={disableCampaignFocusLogic ? "true" : undefined}
                 style={{ transform: "none", filter: "none", backdropFilter: "none", transition: "none", animation: "none" }}
@@ -863,33 +890,40 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
-                placeholder="اكتب ما دار في ذهنك…"
+                placeholder="اكتب تأملك هنا..."
                 modalTitle="تأمّلك الشخصي"
                 modalLabel="اكتب تأملك ثم اضغط حفظ"
                 androidEntryKey={`campaign.reflection.${activity.id}`}
-                disabled={resolved}
                 data-irth-ab-campaign-focus-disabled={disableCampaignFocusLogic ? "true" : undefined}
                 className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-right text-foreground outline-none focus:border-gold/60 disabled:opacity-70"
               />
             )}
             <p className="mt-1 text-right text-[10px] text-muted-foreground/70">
-              يُحفظ محليًا على جهازك فقط.
+              اختياري — لن يمنع إتمام الفصل.
             </p>
           </div>
         )}
       </div>
 
-      {!resolved && (
+      {/* Actions */}
+      {isReplay && !editing ? (
         <button
-          onClick={continueJourney}
-          disabled={!canContinue}
+          onClick={() => setEditing(true)}
+          className="motion-tap mt-5 w-full rounded-2xl border border-gold/40 py-3 text-sm font-bold text-gold"
+        >
+          تعديل التأمل
+        </button>
+      ) : (
+        <button
+          onClick={submit}
+          disabled={!canSubmit}
           className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-50"
         >
-          متابعة الرحلة ←
+          {submitLabel} ←
         </button>
       )}
-      {resolved && (
-        <p className="mt-4 text-center text-[11px] text-emerald-300/80">تم تسجيل تأمّلك.</p>
+      {saved && (
+        <p className="mt-3 text-center text-[11px] text-emerald-300/80">تم الحفظ ✓</p>
       )}
     </div>
   );
