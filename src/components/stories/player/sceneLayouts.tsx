@@ -181,7 +181,7 @@ function str(v: unknown): string { return typeof v === "string" ? v : ""; }
 // SceneStage
 // ------------------------------------------------------------------
 
-export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: StageProps) {
+export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, reflectionReadOnly, reflectionInitialText }: StageProps) {
   const layout = pickLayout(scene);
   const primary = pickMedia(scene.primary_media_id, media);
   const primaryUrl = useStoryMediaUrl(primary ?? null);
