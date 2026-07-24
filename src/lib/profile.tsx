@@ -85,8 +85,8 @@ export interface ProfileState {
   charactersUnlocked: string[];
   regionsUnlocked: string[];
   dailyClaimed: { day: string; ids: string[] };
-  seasonPoints: number;
-  seasonClaimed: boolean;
+  // seasonPoints / seasonClaimed removed in Phase 3B (Seasons demo deleted).
+
   titlesEarned: string[];
   settings: AppSettings;
   bio?: string;
