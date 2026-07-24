@@ -33,6 +33,12 @@ interface StageProps {
   epoch: string | number;
   paused?: boolean;
   onReflectionSubmit?: (text: string) => Promise<void> | void;
+  /** When true, a reflection scene shows the previously saved
+   *  text read-only instead of a composer. Used on story replay. */
+  reflectionReadOnly?: boolean;
+  /** Prior saved reflection text — seeds either the read-only view
+   *  or the composer. */
+  reflectionInitialText?: string;
 }
 
 type LayoutKey = "A" | "B" | "C" | "D" | "E" | "F";
