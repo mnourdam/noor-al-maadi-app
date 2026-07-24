@@ -37,7 +37,7 @@ export interface StoryMediaRow {
   verified: boolean;
   verified_at: string | null;
   verified_by: string | null;
-  ownership: StoryMediaOwnership;
+  owner_scope: StoryMediaOwnerScope;
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -52,7 +52,7 @@ export interface StoryMediaOrphan {
   kind: StoryMediaKind;
   preset: string;
   verified: boolean;
-  ownership: StoryMediaOwnership;
+  owner_scope: StoryMediaOwnerScope;
   age_minutes: number;
 }
 
