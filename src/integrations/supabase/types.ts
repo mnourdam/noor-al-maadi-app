@@ -1612,6 +1612,7 @@ export type Database = {
           investigations_completed: number
           join_date: string
           last_active: string
+          last_streak_day: string | null
           level: number
           locale: string
           longest_streak: number
@@ -1644,6 +1645,7 @@ export type Database = {
           investigations_completed?: number
           join_date?: string
           last_active?: string
+          last_streak_day?: string | null
           level?: number
           locale?: string
           longest_streak?: number
@@ -1676,6 +1678,7 @@ export type Database = {
           investigations_completed?: number
           join_date?: string
           last_active?: string
+          last_streak_day?: string | null
           level?: number
           locale?: string
           longest_streak?: number
@@ -3044,22 +3047,46 @@ export type Database = {
       }
       user_streak_reward_claims: {
         Row: {
+          artifact_id: string | null
+          badge_id: string | null
           claimed_at: string
+          dinars_granted: number
           id: string
           milestone_days: number
+          reward_key: string
+          reward_version: number
+          source: string | null
+          title_id: string | null
           user_id: string
+          xp_granted: number
         }
         Insert: {
+          artifact_id?: string | null
+          badge_id?: string | null
           claimed_at?: string
+          dinars_granted?: number
           id?: string
           milestone_days: number
+          reward_key: string
+          reward_version?: number
+          source?: string | null
+          title_id?: string | null
           user_id: string
+          xp_granted?: number
         }
         Update: {
+          artifact_id?: string | null
+          badge_id?: string | null
           claimed_at?: string
+          dinars_granted?: number
           id?: string
           milestone_days?: number
+          reward_key?: string
+          reward_version?: number
+          source?: string | null
+          title_id?: string | null
           user_id?: string
+          xp_granted?: number
         }
         Relationships: []
       }
@@ -3828,6 +3855,7 @@ export type Database = {
           investigations_completed: number
           join_date: string
           last_active: string
+          last_streak_day: string | null
           level: number
           locale: string
           longest_streak: number
@@ -4184,6 +4212,10 @@ export type Database = {
       }
       record_story_progress_v2: {
         Args: { p_scene_index: number; p_story_id: string }
+        Returns: Json
+      }
+      record_streak_activity: {
+        Args: { p_source?: string; p_source_id?: string }
         Returns: Json
       }
       record_tutorial_completion: {

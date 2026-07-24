@@ -59,7 +59,7 @@ function InvestigationPage() {
 function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
     profile, markInvestigationCompletedLocal, awardBadge,
-    recoverHeartFromActivity,
+    recoverHeartFromActivity, recordStreakActivity,
   } = useProfile();
   const stashOrigin = useStashCurrentAsOrigin();
 
@@ -158,6 +158,8 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
     // Local optimistic marker — server reward reconciles via cloud_saves.
     markInvestigationCompletedLocal(row.slug);
+    // Phase 3A — canonical qualifying-activity call (server-authoritative).
+    void recordStreakActivity("investigation", row.id);
 
     if (reward.badge) awardBadge(reward.badge);
 
@@ -425,7 +427,7 @@ function StepCard({
 function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof getInvestigation>> }) {
   const {
     profile, completeInvestigation, awardBadge, findArtifact, unlockCharacter,
-    buyHint, hintsRevealed, addDinars,
+    buyHint, hintsRevealed, addDinars, recordStreakActivity,
   } = useProfile();
   const stashOrigin = useStashCurrentAsOrigin();
 
@@ -459,6 +461,8 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
     if (!alreadyDone) {
       const xp = Math.min(150, Math.max(0, totalReward.xp)); // economy cap
       completeInvestigation(inv.id, xp);
+      // Phase 3A — canonical qualifying-activity call (server-authoritative).
+      void recordStreakActivity("investigation", inv.id);
       const auto = Math.max(1, Math.floor(xp / 4));
       const cappedDinars = Math.min(50, Math.max(0, totalReward.dinars)); // coin cap
       const delta = Math.max(0, cappedDinars - auto);

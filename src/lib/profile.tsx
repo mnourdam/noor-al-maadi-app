@@ -67,6 +67,7 @@ export interface ProfileState {
   loggedIn: boolean;
   points: number;
   streak: number;
+  longestStreak: number;
   lastActiveDay: string | null;
   storiesOpened: string[];
   storiesRead: string[]; // FINISHED stories (after explicit confirm)
@@ -109,6 +110,7 @@ const initial: ProfileState = {
   loggedIn: false,
   points: 0,
   streak: 0,
+  longestStreak: 0,
   lastActiveDay: null,
   storiesOpened: [],
   storiesRead: [],
@@ -196,10 +198,25 @@ interface Ctx {
   spendDinars: (n: number) => boolean;
   buyHint: (scopeKey: string, hintIndex: number, cost: number) => boolean;
   hintsRevealed: (scopeKey: string) => number;
+  /**
+   * @deprecated Phase 3A — manual streak claim is gone. The server auto-grants
+   * milestones through `record_streak_activity`. This wrapper is a no-op kept
+   * only for source compatibility with in-flight code paths.
+   */
   claimStreakMilestone: (days: number) => Promise<boolean>;
   availableStreakMilestones: () => StreakMilestone[];
   /** Fetch already-claimed streak milestones from the server and merge locally. */
   hydrateClaimedStreakRewards: () => Promise<void>;
+  /**
+   * Phase 3A — canonical qualifying-activity call. Authenticated users hit
+   * `record_streak_activity` (server day = Asia/Riyadh) and mirror the
+   * returned totals into the local profile. Guests fall back to local
+   * `touchStreak` (no server economy grants).
+   */
+  recordStreakActivity: (
+    source: "campaign_chapter" | "game" | "investigation",
+    sourceId?: string | null,
+  ) => Promise<void>;
   // Cloud-save integration
   replaceProfile: (next: ProfileState) => void;
   /**
@@ -609,49 +626,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       return ok;
     },
     hintsRevealed: (scopeKey) => profile.hintsPurchased?.[scopeKey] ?? 0,
-    claimStreakMilestone: async (days) => {
-      const m = STREAK_MILESTONES.find((x) => x.days === days);
-      if (!m) return false;
-      if (profile.streak < days) return false;
-      if ((profile.streakMilestonesClaimed ?? []).includes(days)) return false;
-      // Server-side gate — permanent one-time claim per (user, milestone).
-      try {
-        const { data, error } = await supabase.rpc("claim_streak_reward", { p_days: days });
-        if (error) {
-          console.error("[streak-reward] claim_streak_reward", error);
-          return false;
-        }
-        const payload = (data ?? {}) as { ok?: boolean; reason?: string };
-        if (!payload.ok) {
-          // Already claimed on another device/session — mirror locally so UI
-          // never offers it again, but do NOT re-grant the reward.
-          if (payload.reason === "already_claimed") {
-            update((p) => (
-              (p.streakMilestonesClaimed ?? []).includes(days)
-                ? p
-                : { ...p, streakMilestonesClaimed: [...(p.streakMilestonesClaimed ?? []), days] }
-            ));
-          }
-          return false;
-        }
-      } catch (e) {
-        console.error("[streak-reward] rpc failed", e);
-        return false;
-      }
-      update((p) => {
-        if ((p.streakMilestonesClaimed ?? []).includes(days)) return p;
-        let np: ProfileState = {
-          ...p,
-          streakMilestonesClaimed: [...(p.streakMilestonesClaimed ?? []), days],
-        };
-        if (m.xp) np = addPointsTo(np, m.xp);
-        if (m.dinars) np = addDinarsTo(np, m.dinars);
-        if (m.badge && !np.badges.includes(m.badge)) np = { ...np, badges: [...np.badges, m.badge] };
-        if (m.artifact && !np.artifactsFound.includes(m.artifact)) np = { ...np, artifactsFound: [...np.artifactsFound, m.artifact] };
-        if (m.title && !np.titlesEarned.includes(m.title)) np = { ...np, titlesEarned: [...np.titlesEarned, m.title] };
-        return np;
-      });
-      return true;
+    // Phase 3A — manual claim is retired. Server auto-grants milestones via
+    // record_streak_activity. This wrapper is a deprecated no-op that returns
+    // false; the legacy server RPC also refuses to grant new rewards.
+    claimStreakMilestone: async (_days) => {
+      void _days;
+      return false;
     },
     availableStreakMilestones: () =>
       STREAK_MILESTONES.filter((m) => profile.streak >= m.days && !(profile.streakMilestonesClaimed ?? []).includes(m.days)),
@@ -674,6 +654,61 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         console.error("[streak-reward] hydrate failed", e);
       }
+    },
+
+    // Phase 3A — canonical qualifying-activity call.
+    recordStreakActivity: async (source, sourceId) => {
+      // Local mirror first so the guest path stays instant.
+      const { recordStreakActivity: rpc } = await import("./streak-activity");
+      const outcome = await rpc(source, sourceId ?? null);
+      if (outcome.ok !== true) {
+        // Guest / offline / rpc error — fall back to local increment so UX
+        // still reflects the activity. Server sync will reconcile on reconnect.
+        update((p) => {
+          const today = todayKey();
+          if (p.lastActiveDay === today) return p;
+          const y = new Date(); y.setDate(y.getDate() - 1);
+          const yesterday = todayKey(y);
+          const streak = p.lastActiveDay === yesterday ? p.streak + 1 : 1;
+          const longestStreak = Math.max(p.longestStreak ?? 0, streak);
+          return { ...p, streak, longestStreak, lastActiveDay: today };
+        });
+        return;
+      }
+      // Server authoritative — mirror totals into local state.
+      update((p) => {
+        let np: ProfileState = {
+          ...p,
+          streak: outcome.current_streak,
+          longestStreak: Math.max(p.longestStreak ?? 0, outcome.longest_streak),
+          lastActiveDay: outcome.last_active_day || p.lastActiveDay,
+          points: outcome.xp_total,
+          dinars: outcome.dinar_balance,
+        };
+        // Reflect optional rewards + newly-recorded milestones locally so
+        // Profile shows the truthful state without re-fetching.
+        for (const g of outcome.grants) {
+          if (!(np.streakMilestonesClaimed ?? []).includes(g.milestone_days)) {
+            np = {
+              ...np,
+              streakMilestonesClaimed: [
+                ...(np.streakMilestonesClaimed ?? []),
+                g.milestone_days,
+              ].sort((a, b) => a - b),
+            };
+          }
+          if (g.badge_id && !np.badges.includes(g.badge_id)) {
+            np = { ...np, badges: [...np.badges, g.badge_id] };
+          }
+          if (g.title_id && !np.titlesEarned.includes(g.title_id)) {
+            np = { ...np, titlesEarned: [...np.titlesEarned, g.title_id] };
+          }
+          if (g.artifact_id && !np.artifactsFound.includes(g.artifact_id)) {
+            np = { ...np, artifactsFound: [...np.artifactsFound, g.artifact_id] };
+          }
+        }
+        return np;
+      });
     },
 
     // ============= Cloud Save bridge =============

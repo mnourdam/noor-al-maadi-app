@@ -44,7 +44,7 @@ function GamePlayPage() {
   androidMark("render:GamePlay");
   const { mode, slug } = useParams({ from: "/games/$mode/$slug" });
   const navigate = useNavigate();
-  const { addPoints, addDinars, spendDinars, loseHeartOnce, hasHearts, touchStreak } = useProfile();
+  const { addPoints, addDinars, spendDinars, loseHeartOnce, hasHearts, recordStreakActivity } = useProfile();
 
   const [game, setGame] = useState<GameRow | null | "loading">("loading");
   const [stageIdx, setStageIdx] = useState(0);
@@ -173,7 +173,8 @@ function GamePlayPage() {
         if (game.xp_reward > 0) addPoints(Math.min(game.xp_reward, 40));
         if (game.coin_reward > 0) addDinars(Math.min(game.coin_reward, 20));
         // Qualifying streak activity: completing a mini-game / daily challenge.
-        touchStreak();
+        // Phase 3A — server-authoritative for auth users; guest falls back locally.
+        void recordStreakActivity("game", game.id);
         // Museum unlocks — reuse the Campaign pipeline (user_collection).
         const unlockIds = extractMuseumUnlocks({
           metadata: (game.metadata as Record<string, unknown> | null) ?? undefined,
@@ -194,7 +195,7 @@ function GamePlayPage() {
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
-  }, [game, isLast, stageIdx, failed, stageDone, addPoints, addDinars, touchStreak]);
+  }, [game, isLast, stageIdx, failed, stageDone, addPoints, addDinars, recordStreakActivity]);
 
   // ── Time-Expired grace flow ──────────────────────────────────────────
   // When the countdown hits zero we DO NOT immediately fail. We open a

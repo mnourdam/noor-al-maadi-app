@@ -157,7 +157,7 @@ export function AchievementEngineBoot() {
         // No canonical lifetime ledger; use current as lower-bound.
         lifetimeEarned: profile.dinars ?? 0,
       },
-      streak: { current: profile.streak ?? 0, longest: profile.streak ?? 0 },
+      streak: { current: profile.streak ?? 0, longest: Math.max(profile.longestStreak ?? 0, profile.streak ?? 0) },
       titles: { earnedCount: (profile.titlesEarned ?? []).length },
     });
   }, [
@@ -165,6 +165,7 @@ export function AchievementEngineBoot() {
     profile.points,
     profile.dinars,
     profile.streak,
+    profile.longestStreak,
     profile.titlesEarned,
     canonicalInv.count,
     hydrated,
