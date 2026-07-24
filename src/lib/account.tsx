@@ -181,20 +181,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         setAccount(acc);
         if (!androidStable) void touchLastActive(user.id);
 
-        // One-time signup referral rewards (idempotent server-side).
-        if (!androidStable) {
-          try {
-            const claim = await claimSignupReferral();
-            if (claim.ok) {
-              const flagKey = `irth.refclaim.${user.id}`;
-              if (!localStorage.getItem(flagKey)) {
-                addDinars(REFERRAL_REWARDS.newPlayer.dinars);
-                awardBadge(REFERRAL_REWARDS.newPlayer.badge);
-                localStorage.setItem(flagKey, "1");
-              }
-            }
-          } catch { /* ignore */ }
-        }
+        // Phase 2 (Referrals removal): signup referral reward claim was
+        // deleted. New accounts get their +300 Dinar starting balance from
+        // profile seed defaults, not from referral RPCs.
+
 
         if (!save) {
           // No cloud save yet. If we just switched from another auth user,
