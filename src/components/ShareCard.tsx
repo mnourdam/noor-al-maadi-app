@@ -379,11 +379,12 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Restrained cyan halo behind the identity area
+  // Restrained cyan halo behind the identity area (softened per Phase-8 UX)
   const vg = ctx.createRadialGradient(W / 2, 520, 30, W / 2, 520, 620);
-  vg.addColorStop(0, "rgba(125,211,252,0.10)");
+  vg.addColorStop(0, "rgba(125,211,252,0.06)");
   vg.addColorStop(1, "rgba(125,211,252,0)");
   ctx.fillStyle = vg;
+
   ctx.fillRect(0, 0, W, H);
 
   // Historical pattern strip (subtle geometric dots along the border)
