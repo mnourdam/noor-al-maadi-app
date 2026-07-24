@@ -80,10 +80,15 @@ export function StoryPlayer({
 
 
   // --- Record scene view (monotonic) -----------------------------
+  // Replay is a read-only re-experience: no progress row updates,
+  // no last_scene_index / max_scene_index_reached bumps, and no
+  // completion timestamp touches. The server already holds the
+  // authoritative completion; we deliberately avoid any write.
   useEffect(() => {
     if (phase !== "playing" || !scene) return;
+    if (alreadyCompleted) return;
     void recordStoryProgress(story.id, scene.scene_index);
-  }, [phase, scene, story.id]);
+  }, [phase, scene, story.id, alreadyCompleted]);
 
   // --- Auto advance ----------------------------------------------
   useEffect(() => {
