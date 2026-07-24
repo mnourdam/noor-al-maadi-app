@@ -634,6 +634,35 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
     cursor += 14;
   }
 
+  // ── Historical specialization (auto-derived) ────────────────────────
+  if (s.specializationLabel) {
+    cursor += 12;
+    const chipPadY = 12;
+    ctx.font = `600 15px ${family}`;
+    const labelW = ctx.measureText("تخصصك التاريخي").width;
+    ctx.font = `bold 20px ${family}`;
+    const valueText = truncate(ctx, s.specializationLabel, W - 260);
+    const valueW = ctx.measureText(valueText).width;
+    const chipInnerW = Math.max(labelW, valueW) + 56; // padding + compass glyph
+    const chipW = Math.min(W - 200, chipInnerW);
+    const chipH = 76;
+    const chipX = cx - chipW / 2, chipY = cursor;
+    roundRect(ctx, chipX, chipY, chipW, chipH, 22);
+    ctx.fillStyle = "rgba(212,175,55,0.10)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(212,175,55,0.45)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(212,175,55,0.85)";
+    ctx.font = `600 14px ${family}`;
+    ctx.fillText("🧭 تخصصك التاريخي", cx, chipY + chipPadY + 14);
+    ctx.fillStyle = "#f5d062";
+    ctx.font = `bold 20px ${family}`;
+    ctx.fillText(valueText, cx, chipY + chipH - 18);
+    cursor = chipY + chipH + 8;
+  }
+
   // ── Top achievements ────────────────────────────────────────────────
   cursor += 10;
   ctx.textAlign = "center";
@@ -680,10 +709,13 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.font = `bold 24px ${family}`;
   ctx.fillText("رحلة عبر التاريخ الإسلامي", cx, H - 96);
-  ctx.fillStyle = "rgba(212,175,55,0.75)";
-  ctx.font = `15px ${family}`;
-  ctx.fillText(`صدرت في ${s.generatedOn}`, cx, H - 68);
+  if (s.joinDateLabel) {
+    ctx.fillStyle = "rgba(212,175,55,0.75)";
+    ctx.font = `15px ${family}`;
+    ctx.fillText(`عضو في إرث منذ ${s.joinDateLabel}`, cx, H - 68);
+  }
 }
+
 
 // ─── Utilities ─────────────────────────────────────────────────────────
 
