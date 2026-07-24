@@ -10,8 +10,9 @@ import { AppShell } from "@/components/AppShell";
 
 import { CachedImage } from "@/components/CachedImage";
 import {
-  levelFor, currentSeason,
+  levelFor,
 } from "@/lib/app-constants";
+
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
 import { useNearestAchievement, useLatestUnlockedAchievement } from "@/lib/achievements/v2/selectors";
 import { useProfile } from "@/lib/profile";
