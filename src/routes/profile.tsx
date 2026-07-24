@@ -194,8 +194,9 @@ function ProfilePage() {
   }, [search.achievement, achViewMap]);
 
 
-  const seasonPct = Math.min(100, Math.round((profile.seasonPoints / CURRENT_SEASON.goalPoints) * 100));
-  const seasonReady = profile.seasonPoints >= CURRENT_SEASON.goalPoints && !profile.seasonClaimed;
+  // Seasons removed — see Phase 3B cleanup. No season progress is computed.
+
+
 
   const now = Date.now();
   const effHearts = getEffectiveHearts(profile, now);
