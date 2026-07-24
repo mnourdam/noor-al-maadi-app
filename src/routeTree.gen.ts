@@ -119,6 +119,7 @@ import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.pa
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
 import { Route as ApiPublicNativeAuthBounceRouteImport } from './routes/api/public/native-auth-bounce'
 import { Route as AdminStoriesImportV2RouteImport } from './routes/admin.stories.import-v2'
+import { Route as AdminStoriesExportV2RouteImport } from './routes/admin.stories.export-v2'
 import { Route as AdminImportHistoryIdRouteImport } from './routes/admin.import-history.$id'
 import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
@@ -136,6 +137,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthCustomVerifyReauthRouteImport } from './routes/lovable/email/auth-custom/verify-reauth'
 import { Route as LovableEmailAuthCustomDispatchRouteImport } from './routes/lovable/email/auth-custom/dispatch'
 import { Route as ApiPublicWebhooksResendRouteImport } from './routes/api/public/webhooks/resend'
+import { Route as AdminStoriesV2IdRouteImport } from './routes/admin.stories.v2.$id'
 import { Route as AdminStoriesIdEditRouteImport } from './routes/admin.stories.$id.edit'
 import { Route as AdminInvestigationsIdEditRouteImport } from './routes/admin.investigations.$id.edit'
 import { Route as AdminCampaignsIdEditRouteImport } from './routes/admin.campaigns.$id.edit'
@@ -703,6 +705,11 @@ const AdminStoriesImportV2Route = AdminStoriesImportV2RouteImport.update({
   path: '/admin/stories/import-v2',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminStoriesExportV2Route = AdminStoriesExportV2RouteImport.update({
+  id: '/admin/stories/export-v2',
+  path: '/admin/stories/export-v2',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminImportHistoryIdRoute = AdminImportHistoryIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -798,6 +805,11 @@ const LovableEmailAuthCustomDispatchRoute =
 const ApiPublicWebhooksResendRoute = ApiPublicWebhooksResendRouteImport.update({
   id: '/api/public/webhooks/resend',
   path: '/api/public/webhooks/resend',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminStoriesV2IdRoute = AdminStoriesV2IdRouteImport.update({
+  id: '/admin/stories/v2/$id',
+  path: '/admin/stories/v2/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminStoriesIdEditRoute = AdminStoriesIdEditRouteImport.update({
@@ -929,6 +941,7 @@ export interface FileRoutesByFullPath {
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
+  '/admin/stories/export-v2': typeof AdminStoriesExportV2Route
   '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -945,6 +958,7 @@ export interface FileRoutesByFullPath {
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
   '/admin/stories/$id/edit': typeof AdminStoriesIdEditRoute
+  '/admin/stories/v2/$id': typeof AdminStoriesV2IdRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
   '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -1057,6 +1071,7 @@ export interface FileRoutesByTo {
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
+  '/admin/stories/export-v2': typeof AdminStoriesExportV2Route
   '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -1073,6 +1088,7 @@ export interface FileRoutesByTo {
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
   '/admin/stories/$id/edit': typeof AdminStoriesIdEditRoute
+  '/admin/stories/v2/$id': typeof AdminStoriesV2IdRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
   '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -1191,6 +1207,7 @@ export interface FileRoutesById {
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
+  '/admin/stories/export-v2': typeof AdminStoriesExportV2Route
   '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
@@ -1207,6 +1224,7 @@ export interface FileRoutesById {
   '/admin/campaigns/$id/edit': typeof AdminCampaignsIdEditRoute
   '/admin/investigations/$id/edit': typeof AdminInvestigationsIdEditRoute
   '/admin/stories/$id/edit': typeof AdminStoriesIdEditRoute
+  '/admin/stories/v2/$id': typeof AdminStoriesV2IdRoute
   '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/lovable/email/auth-custom/dispatch': typeof LovableEmailAuthCustomDispatchRoute
   '/lovable/email/auth-custom/verify-reauth': typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -1326,6 +1344,7 @@ export interface FileRouteTypes {
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
+    | '/admin/stories/export-v2'
     | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
@@ -1342,6 +1361,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns/$id/edit'
     | '/admin/investigations/$id/edit'
     | '/admin/stories/$id/edit'
+    | '/admin/stories/v2/$id'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
     | '/lovable/email/auth-custom/verify-reauth'
@@ -1454,6 +1474,7 @@ export interface FileRouteTypes {
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
+    | '/admin/stories/export-v2'
     | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
@@ -1470,6 +1491,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns/$id/edit'
     | '/admin/investigations/$id/edit'
     | '/admin/stories/$id/edit'
+    | '/admin/stories/v2/$id'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
     | '/lovable/email/auth-custom/verify-reauth'
@@ -1587,6 +1609,7 @@ export interface FileRouteTypes {
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
+    | '/admin/stories/export-v2'
     | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
     | '/encyclopedia/entity/$id'
@@ -1603,6 +1626,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns/$id/edit'
     | '/admin/investigations/$id/edit'
     | '/admin/stories/$id/edit'
+    | '/admin/stories/v2/$id'
     | '/api/public/webhooks/resend'
     | '/lovable/email/auth-custom/dispatch'
     | '/lovable/email/auth-custom/verify-reauth'
@@ -1710,6 +1734,7 @@ export interface RootRouteChildren {
   GamesIndexRoute: typeof GamesIndexRoute
   StoriesIndexRoute: typeof StoriesIndexRoute
   WorldsIndexRoute: typeof WorldsIndexRoute
+  AdminStoriesExportV2Route: typeof AdminStoriesExportV2Route
   AdminStoriesImportV2Route: typeof AdminStoriesImportV2Route
   ApiPublicNativeAuthBounceRoute: typeof ApiPublicNativeAuthBounceRoute
   GamesModeSlugRoute: typeof GamesModeSlugRoute
@@ -1718,6 +1743,7 @@ export interface RootRouteChildren {
   AdminStoriesIndexRoute: typeof AdminStoriesIndexRoute
   AdminCampaignsIdEditRoute: typeof AdminCampaignsIdEditRoute
   AdminStoriesIdEditRoute: typeof AdminStoriesIdEditRoute
+  AdminStoriesV2IdRoute: typeof AdminStoriesV2IdRoute
   ApiPublicWebhooksResendRoute: typeof ApiPublicWebhooksResendRoute
   LovableEmailAuthCustomDispatchRoute: typeof LovableEmailAuthCustomDispatchRoute
   LovableEmailAuthCustomVerifyReauthRoute: typeof LovableEmailAuthCustomVerifyReauthRoute
@@ -2500,6 +2526,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStoriesImportV2RouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/stories/export-v2': {
+      id: '/admin/stories/export-v2'
+      path: '/admin/stories/export-v2'
+      fullPath: '/admin/stories/export-v2'
+      preLoaderRoute: typeof AdminStoriesExportV2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/import-history/$id': {
       id: '/admin/import-history/$id'
       path: '/$id'
@@ -2617,6 +2650,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/webhooks/resend'
       fullPath: '/api/public/webhooks/resend'
       preLoaderRoute: typeof ApiPublicWebhooksResendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/stories/v2/$id': {
+      id: '/admin/stories/v2/$id'
+      path: '/admin/stories/v2/$id'
+      fullPath: '/admin/stories/v2/$id'
+      preLoaderRoute: typeof AdminStoriesV2IdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/stories/$id/edit': {
@@ -2860,6 +2900,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesIndexRoute: GamesIndexRoute,
   StoriesIndexRoute: StoriesIndexRoute,
   WorldsIndexRoute: WorldsIndexRoute,
+  AdminStoriesExportV2Route: AdminStoriesExportV2Route,
   AdminStoriesImportV2Route: AdminStoriesImportV2Route,
   ApiPublicNativeAuthBounceRoute: ApiPublicNativeAuthBounceRoute,
   GamesModeSlugRoute: GamesModeSlugRoute,
@@ -2868,6 +2909,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminStoriesIndexRoute: AdminStoriesIndexRoute,
   AdminCampaignsIdEditRoute: AdminCampaignsIdEditRoute,
   AdminStoriesIdEditRoute: AdminStoriesIdEditRoute,
+  AdminStoriesV2IdRoute: AdminStoriesV2IdRoute,
   ApiPublicWebhooksResendRoute: ApiPublicWebhooksResendRoute,
   LovableEmailAuthCustomDispatchRoute: LovableEmailAuthCustomDispatchRoute,
   LovableEmailAuthCustomVerifyReauthRoute:

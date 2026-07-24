@@ -201,6 +201,12 @@ function AdminStoriesPage() {
           <button onClick={() => void bulkExport(null)} className="btn-secondary">
             <Download className="h-4 w-4" /> تصدير الكل
           </button>
+          <Link to="/admin/stories/import-v2" className="btn-secondary">
+            <Upload className="h-4 w-4" /> استيراد v2
+          </Link>
+          <Link to="/admin/stories/export-v2" className="btn-secondary">
+            <Download className="h-4 w-4" /> تصدير v2
+          </Link>
           <button onClick={() => void refresh()} className="btn-secondary">
             <RefreshCw className="h-4 w-4" /> تحديث
           </button>
@@ -359,7 +365,15 @@ function AdminStoriesPage() {
                           params={{ id: r.id }}
                           className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-muted"
                         >
-                          <Pencil className="h-3.5 w-3.5" /> تحرير
+                          <Pencil className="h-3.5 w-3.5" /> P3
+                        </Link>
+                        <Link
+                          to="/admin/stories/v2/$id"
+                          params={{ id: r.id }}
+                          className="inline-flex items-center gap-1 rounded-md border border-primary/40 px-2 py-1 text-xs text-primary hover:bg-primary/10"
+                          title="محرر v2 (Contract v2 Core)"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> v2
                         </Link>
                         {r.status !== "published" ? (
                           <button
