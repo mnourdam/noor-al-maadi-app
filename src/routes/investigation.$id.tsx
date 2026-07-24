@@ -17,6 +17,7 @@ import { displayName } from "@/lib/display-names";
 import { resolveRelatedRefs } from "@/lib/encyclopedia-refs";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
+import { markInvestigationOpened, clearInvestigationOpened } from "@/lib/investigations/recommend";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 
 
@@ -85,6 +86,19 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   // <InvestigationLegacyBackfill /> at the app root. Nothing to trigger
   // from the player screen; the canonical hook already reflects any
   // pending backfill via the outbox.
+
+  // HUD "continue" pointer: remember the last investigation the player
+  // opened so the Hearts popover can route back to it. Cleared on
+  // completion below and by the recommendation reader when the slug is
+  // already completed.
+  useEffect(() => {
+    if (alreadyDone) {
+      clearInvestigationOpened(row.slug);
+    } else {
+      markInvestigationOpened(row.slug);
+    }
+  }, [row.slug, alreadyDone]);
+
 
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
@@ -158,6 +172,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
     // Local optimistic marker — server reward reconciles via cloud_saves.
     markInvestigationCompletedLocal(row.slug);
+    clearInvestigationOpened(row.slug);
     // Phase 3A — canonical qualifying-activity call (server-authoritative).
     void recordStreakActivity("investigation", row.id);
 

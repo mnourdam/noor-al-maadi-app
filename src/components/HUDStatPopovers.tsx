@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Heart, Coins, Star, Flame, Trophy, Sparkles } from "lucide-react";
+import { Heart, Coins, Star, Flame, Trophy, Sparkles, Search } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { deriveStreak, type ProfileState } from "@/lib/profile";
 import {
   HEART_MAX,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/hearts";
 import { HEART_COST_DINARS } from "@/lib/economy";
 import { useBuyHeart } from "@/hooks/useBuyHeart";
+import { useRecommendedInvestigation } from "@/lib/investigations/recommend";
 import { toast } from "sonner";
 import { levelFor } from "@/lib/progression";
 
@@ -66,6 +68,8 @@ export function HeartsPopover({ profile }: { profile: ProfileState }) {
   const dinars = profile.dinars ?? 0;
   const canAfford = dinars >= HEART_COST_DINARS;
   const { buy, inFlight } = useBuyHeart();
+  const navigate = useNavigate();
+  const recommendation = useRecommendedInvestigation();
 
   const onBuy = async () => {
     if (inFlight || full) return;
@@ -83,13 +87,21 @@ export function HeartsPopover({ profile }: { profile: ProfileState }) {
     }
   };
 
+  const onPlayInvestigation = () => {
+    if (!recommendation.slug) return;
+    navigate({ to: "/investigation/$id", params: { id: recommendation.slug } });
+  };
+
+  const investigationLabel =
+    recommendation.kind === "continue" ? "متابعة التحقيق" : "العب تحقيقًا";
+
   return (
     <PopShell icon={<Heart className="size-4" />} title={full ? "قلوبك مكتملة" : "استعادة قلب"}>
       {full ? (
         <p className="text-white/70">أنت مستعد لمواصلة رحلتك.</p>
       ) : (
         <p className="text-white/70">
-          يمكنك انتظار امتلاء القلب التالي، أو استعادة قلب الآن مقابل {HEART_COST_DINARS} دينارًا.
+          يمكنك انتظار امتلاء القلب التالي، أو استعادة قلب فورًا بشراء أو بحل تحقيق تاريخي.
         </p>
       )}
       <StatRow label="القلوب الحالية" value={`${hearts}/${HEART_MAX}`} />
@@ -98,21 +110,48 @@ export function HeartsPopover({ profile }: { profile: ProfileState }) {
       )}
       <StatRow label="رصيدك" value={`${dinars.toLocaleString("en-US")} د.`} />
       {!full && (
-        <div className="flex flex-col gap-1.5 pt-1">
-          <button
-            type="button"
-            onClick={onBuy}
-            disabled={inFlight || !canAfford}
-            aria-label={`شراء قلب مقابل ${HEART_COST_DINARS} دينارًا`}
-            className="motion-tap inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-gradient-to-l from-amber-500 to-yellow-600 px-3 py-2 text-[13px] font-bold text-navy shadow-sm transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Heart className="size-4" strokeWidth={2} />
-            {inFlight ? "جارٍ الشراء…" : `شراء قلب — ${HEART_COST_DINARS} دينارًا`}
-          </button>
+        <div className="pt-1">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onBuy}
+              disabled={inFlight || !canAfford}
+              aria-label={`شراء قلب مقابل ${HEART_COST_DINARS} دينارًا`}
+              className="motion-tap inline-flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg bg-gradient-to-l from-amber-500 to-yellow-600 px-2 py-2 text-[12.5px] font-bold text-navy shadow-sm transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <Heart className="size-4" strokeWidth={2} />
+                {inFlight ? "جارٍ الشراء…" : "شراء قلب"}
+              </span>
+              <span className="text-[10.5px] font-medium text-navy/80">
+                {HEART_COST_DINARS} دينارًا
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={onPlayInvestigation}
+              disabled={!recommendation.ready || !recommendation.slug}
+              aria-label={investigationLabel}
+              className="motion-tap inline-flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg border border-gold/40 bg-white/5 px-2 py-2 text-[12.5px] font-bold text-gold transition hover:bg-white/10 active:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <Search className="size-4" strokeWidth={2} />
+                {investigationLabel}
+              </span>
+              <span className="text-[10.5px] font-medium text-gold/70">
+                استعِد قلبًا بحلّه
+              </span>
+            </button>
+          </div>
           {!canAfford && (
-            <p className="text-[10.5px] text-red-300/80">رصيدك غير كافٍ لشراء قلب الآن.</p>
+            <p className="mt-1.5 text-[10.5px] text-red-300/80">رصيدك غير كافٍ لشراء قلب الآن.</p>
           )}
-          <p className="text-[10.5px] text-white/45">
+          {recommendation.ready && !recommendation.slug && (
+            <p className="mt-1.5 text-[10.5px] text-white/55">
+              لا توجد تحقيقات متاحة الآن — انتظر عودة القلب تلقائيًا.
+            </p>
+          )}
+          <p className="mt-1.5 text-[10.5px] text-white/45">
             كل قلب يعود تلقائيًا بعد فترة من الزمن.
           </p>
         </div>
