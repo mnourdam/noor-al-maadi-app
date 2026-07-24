@@ -54,9 +54,10 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const search = Route.useSearch();
+  Route.useSearch();
   const { signIn, signUp, user } = useAccount();
-  const [mode, setMode] = useState<Mode>(search.ref ? "signup" : "signin");
+  // Phase 2 (Referrals removal): default to signin; `?ref=` was retired.
+  const [mode, setMode] = useState<Mode>("signin");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
