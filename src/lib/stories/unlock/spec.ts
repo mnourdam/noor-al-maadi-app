@@ -1,11 +1,14 @@
 // ============================================================
-// Stories M3 — Unlock Spec v2 (FROZEN vocabulary)
+// Stories M3 — Unlock Spec v2 (FROZEN CONTRACT)
 // ------------------------------------------------------------
-// Single source of truth for the shape of unlock rules. The
-// importer, admin builder, server evaluator (SQL), and offline
-// evaluator MUST all speak this exact vocabulary. Extending it
-// requires bumping `UNLOCK_SPEC_VERSION` and updating every
-// call site plus the SQL evaluator in the same migration.
+// Frozen envelope:   { version: 2, expr: <Node> }
+// Frozen logical:    all / any (child field "of"), not (child field "child")
+// Frozen leaves:     always, campaign_complete, campaign_chapter_complete,
+//                    investigation_complete, entity_discovered,
+//                    entities_discovered, artifact_owned,
+//                    atlas_location_visited, achievement_unlocked,
+//                    player_level, story_complete, date_window
+// Any deviation → fail closed.
 // ============================================================
 
 export const UNLOCK_SPEC_VERSION = 2 as const;
@@ -18,84 +21,116 @@ export const UNLOCK_LIMITS = {
 
 /** Every legal node type. Anything else → fail closed. */
 export const UNLOCK_NODE_TYPES = [
-  "always",
-  "never",
-  "all_of",
-  "any_of",
+  // logical
+  "all",
+  "any",
   "not",
-  "story_complete",
+  // leaves
+  "always",
   "campaign_complete",
+  "campaign_chapter_complete",
   "investigation_complete",
-  "achievement_earned",
+  "entity_discovered",
+  "entities_discovered",
+  "artifact_owned",
+  "atlas_location_visited",
+  "achievement_unlocked",
+  "player_level",
+  "story_complete",
+  "date_window",
 ] as const;
 
 export type UnlockNodeType = (typeof UNLOCK_NODE_TYPES)[number];
 
-/**
- * A single evaluator node. Discriminated on `type`; fields are
- * strictly typed per branch so the validator can reject any
- * deviation without ad-hoc string checks.
- */
+/** Discriminated union of every legal node in the frozen contract. */
 export type UnlockNode =
-  | { type: "always" }
-  | { type: "never" }
-  | { type: "all_of"; children: UnlockNode[] }
-  | { type: "any_of"; children: UnlockNode[] }
+  // logical
+  | { type: "all"; of: UnlockNode[] }
+  | { type: "any"; of: UnlockNode[] }
   | { type: "not"; child: UnlockNode }
-  | { type: "story_complete"; story_id: string }
+  // leaves
+  | { type: "always" }
   | { type: "campaign_complete"; campaign_id: string }
+  | { type: "campaign_chapter_complete"; campaign_id: string; chapter_id: string }
   | { type: "investigation_complete"; investigation_id: string }
-  | { type: "achievement_earned"; achievement_id: string };
+  | { type: "entity_discovered"; entity_id: string }
+  | { type: "entities_discovered"; ids: string[]; min: number }
+  | { type: "artifact_owned"; artifact_id: string }
+  | { type: "atlas_location_visited"; location_id: string }
+  | { type: "achievement_unlocked"; achievement_id: string }
+  | { type: "player_level"; min: number }
+  | { type: "story_complete"; story_id: string }
+  | { type: "date_window"; start?: string; end?: string };
 
 export interface UnlockSpecV2 {
-  v: 2;
-  rule: UnlockNode;
+  version: 2;
+  expr: UnlockNode;
 }
 
 /** Evaluator inputs — every set is authoritative and pre-materialised. */
 export interface UnlockContext {
   completed_story_ids: ReadonlySet<string>;
   completed_campaign_ids: ReadonlySet<string>;
+  completed_campaign_chapter_keys: ReadonlySet<string>; // key = `${campaign_id}::${chapter_id}`
   completed_investigation_ids: ReadonlySet<string>;
-  earned_achievement_ids: ReadonlySet<string>;
+  discovered_entity_ids: ReadonlySet<string>;
+  owned_artifact_ids: ReadonlySet<string>;
+  visited_atlas_location_ids: ReadonlySet<string>;
+  unlocked_achievement_ids: ReadonlySet<string>;
+  player_level: number;
+  /** ISO timestamp (UTC) evaluated against date_window. Defaults to now. */
+  now?: string;
 }
 
 /** Validation error codes returned by `validateUnlockSpec`. */
 export type UnlockValidationCode =
   | "not_an_object"
   | "wrong_version"
-  | "missing_rule"
+  | "missing_expr"
   | "not_an_object_node"
   | "missing_type"
   | "unknown_type"
-  | "missing_children"
-  | "children_not_array"
-  | "empty_children_forbidden"
+  | "missing_of"
+  | "of_not_array"
+  | "empty_of_forbidden"
   | "missing_child"
   | "missing_id_field"
   | "id_not_string"
   | "id_empty"
+  | "ids_not_array"
+  | "ids_empty"
+  | "ids_item_not_string"
+  | "min_not_integer"
+  | "min_out_of_range"
+  | "date_window_empty"
+  | "date_not_string"
   | "depth_exceeded"
   | "node_count_exceeded"
   | "extra_fields";
 
 export interface UnlockValidationError {
   code: UnlockValidationCode;
-  path: string; // dotted path from root, e.g. "rule.children[1].story_id"
+  path: string; // dotted path from root, e.g. "$.expr.of[1].story_id"
   message: string;
 }
 
 export interface UnlockValidationResult {
   ok: boolean;
   errors: UnlockValidationError[];
-  /** Total node count (populated even on failure, for reporting). */
   nodeCount: number;
-  /** Maximum observed depth. */
   depth: number;
 }
 
 /** Deterministic "always" spec — used as the safe default. */
-export const ALWAYS_SPEC: UnlockSpecV2 = { v: 2, rule: { type: "always" } };
+export const ALWAYS_SPEC: UnlockSpecV2 = { version: 2, expr: { type: "always" } };
 
-/** Deterministic "never" spec — used to lock content unconditionally. */
-export const NEVER_SPEC: UnlockSpecV2 = { v: 2, rule: { type: "never" } };
+/**
+ * Fail-closed sentinel: not part of the frozen leaf vocabulary, so we
+ * express "never" as an empty disjunction, which evaluates to false and
+ * still validates structurally (any-of with one child that itself is
+ * false). We use `not(always)` — the frozen vocabulary supports this.
+ */
+export const NEVER_SPEC: UnlockSpecV2 = {
+  version: 2,
+  expr: { type: "not", child: { type: "always" } },
+};
