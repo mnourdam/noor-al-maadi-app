@@ -377,7 +377,11 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, re
           <Caption text={caption} align="center" />
           {isReflection && onReflectionSubmit && (
             <div className="mt-8">
-              <ReflectionInline onSubmit={onReflectionSubmit} />
+              <ReflectionInline
+                onSubmit={onReflectionSubmit}
+                readOnly={!!reflectionReadOnly}
+                initialText={reflectionInitialText ?? ""}
+              />
             </div>
           )}
         </div>
