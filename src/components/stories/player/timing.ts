@@ -18,7 +18,7 @@ export function splitSentences(text: string): string[] {
     .split(/(?<=[\.\!\?؟؛…])\s+/g)
     .map((s) => s.trim())
     .filter(Boolean);
-  return parts.length > 0 ? parts : (text.trim() ? [text.trim()] : []);
+  return parts.length > 0 ? parts : text.trim() ? [text.trim()] : [];
 }
 
 /** Extract all sentences from a scene's narrative payload. */
@@ -26,13 +26,21 @@ export function sceneSentences(scene: StorySceneRow): string[] {
   const p = scene.payload as Record<string, unknown> | null | undefined;
   if (!p) return [];
   const buckets: unknown[] = [];
-  const push = (v: unknown) => { if (v != null) buckets.push(v); };
-  push(p["body_ar"]); push(p["body"]);
-  push(p["quote_ar"]); push(p["quote"]);
-  push(p["truth_ar"]); push(p["truth"]);
-  push(p["claim_ar"]); push(p["claim"]);
-  push(p["caption_ar"]); push(p["caption"]);
-  push(p["transcript_ar"]); push(p["transcript"]);
+  const push = (v: unknown) => {
+    if (v != null) buckets.push(v);
+  };
+  push(p["body_ar"]);
+  push(p["body"]);
+  push(p["quote_ar"]);
+  push(p["quote"]);
+  push(p["truth_ar"]);
+  push(p["truth"]);
+  push(p["claim_ar"]);
+  push(p["claim"]);
+  push(p["caption_ar"]);
+  push(p["caption"]);
+  push(p["transcript_ar"]);
+  push(p["transcript"]);
   const flat: string[] = [];
   for (const b of buckets) {
     if (Array.isArray(b)) {
@@ -97,7 +105,6 @@ export function sceneDwellMs(scene: StorySceneRow): number {
   const raw = base + sents * SENTENCE_STAGGER_MS + SETTLE_MS;
   return Math.max(MIN_DWELL, Math.min(MAX_DWELL + sents * 200, raw));
 }
-
 
 /** Stable per-scene hash for varying Ken Burns direction. */
 export function sceneHash(id: string): number {

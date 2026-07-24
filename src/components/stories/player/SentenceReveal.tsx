@@ -21,7 +21,13 @@ interface Props {
   variant?: "body" | "quote";
 }
 
-export function SentenceReveal({ sentences: raw, className, epoch, paused, variant = "body" }: Props) {
+export function SentenceReveal({
+  sentences: raw,
+  className,
+  epoch,
+  paused,
+  variant = "body",
+}: Props) {
   // Bind trailing short words with NBSP so paragraphs never end with
   // an isolated widow like "واحدة" on its own line.
   const sentences = useMemo(() => protectWidows(raw), [raw]);
@@ -57,8 +63,7 @@ export function SentenceReveal({ sentences: raw, className, epoch, paused, varia
             transform: i < shown ? "translateY(0)" : "translateY(10px)",
             // Layered shadow: soft halo + tight drop keeps text legible
             // over both bright and dark artwork without dimming the image.
-            textShadow:
-              "0 1px 2px rgba(0,0,0,0.55), 0 6px 20px rgba(0,0,0,0.45)",
+            textShadow: "0 1px 2px rgba(0,0,0,0.55), 0 6px 20px rgba(0,0,0,0.45)",
           }}
         >
           {s}

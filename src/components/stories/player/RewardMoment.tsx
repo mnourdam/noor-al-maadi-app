@@ -39,7 +39,9 @@ export function RewardMoment({ xp, dinars, onDone, silent }: Props) {
     const t2 = window.setTimeout(() => setPhase("count"), HOLD_MS + BLOOM_MS);
     const t3 = window.setTimeout(() => setPhase("tail"), HOLD_MS + BLOOM_MS + COUNT_MS);
     const t4 = window.setTimeout(onDone, HOLD_MS + BLOOM_MS + COUNT_MS + TAIL_MS);
-    return () => { [t1, t2, t3, t4].forEach(clearTimeout); };
+    return () => {
+      [t1, t2, t3, t4].forEach(clearTimeout);
+    };
   }, [onDone]);
 
   // Play the chime once at bloom — never during count-up ticks.
@@ -47,8 +49,13 @@ export function RewardMoment({ xp, dinars, onDone, silent }: Props) {
     if (phase !== "bloom" || silent) return;
     try {
       const el = typeof Audio !== "undefined" ? new Audio("/sounds/reward.mp3") : null;
-      if (el) { el.volume = 0.32; void el.play().catch(() => {}); }
-    } catch { /* ignore */ }
+      if (el) {
+        el.volume = 0.32;
+        void el.play().catch(() => {});
+      }
+    } catch {
+      /* ignore */
+    }
   }, [phase, silent]);
 
   // Eased count-up.
@@ -82,31 +89,36 @@ export function RewardMoment({ xp, dinars, onDone, silent }: Props) {
           opacity: phase === "hold" ? 0 : phase === "tail" ? 0.12 : 1,
         }}
       />
-      {phase !== "hold" && particles.map((i) => {
-        const delay = (i * 22) % 260;
-        return (
-          <span
-            key={i}
-            className="absolute size-[6px] rounded-full"
-            style={{
-              background: i % 4 === 0 ? "#fff2c6" : "hsl(45 100% 68%)",
-              boxShadow: "0 0 10px hsl(45 100% 70% / 0.9)",
-              animation: `burst-${i} 1.8s ${delay}ms cubic-bezier(0.16, 0.9, 0.28, 1) forwards`,
-            }}
-          />
-        );
-      })}
-      <style>{particles.map((i) => {
-        const angle = (i / particles.length) * Math.PI * 2;
-        const dist = 130 + ((i * 41) % 100);
-        const dx = Math.round(Math.cos(angle) * dist);
-        const dy = Math.round(Math.sin(angle) * dist);
-        return `@keyframes burst-${i} {
+      {phase !== "hold" &&
+        particles.map((i) => {
+          const delay = (i * 22) % 260;
+          return (
+            <span
+              key={i}
+              className="absolute size-[6px] rounded-full"
+              style={{
+                background: i % 4 === 0 ? "#fff2c6" : "hsl(45 100% 68%)",
+                boxShadow: "0 0 10px hsl(45 100% 70% / 0.9)",
+                animation: `burst-${i} 1.8s ${delay}ms cubic-bezier(0.16, 0.9, 0.28, 1) forwards`,
+              }}
+            />
+          );
+        })}
+      <style>
+        {particles
+          .map((i) => {
+            const angle = (i / particles.length) * Math.PI * 2;
+            const dist = 130 + ((i * 41) % 100);
+            const dx = Math.round(Math.cos(angle) * dist);
+            const dy = Math.round(Math.sin(angle) * dist);
+            return `@keyframes burst-${i} {
           0%   { opacity: 0; transform: translate(0,0) scale(0.35); }
           14%  { opacity: 1; }
           100% { opacity: 0; transform: translate(${dx}px, ${dy}px) scale(1); }
         }`;
-      }).join("\n")}</style>
+          })
+          .join("\n")}
+      </style>
 
       {showNumbers && (
         <div
@@ -117,8 +129,10 @@ export function RewardMoment({ xp, dinars, onDone, silent }: Props) {
             opacity: phase === "hold" ? 0 : phase === "tail" ? 0.92 : 1,
           }}
         >
-          <p className="font-display text-[clamp(20px,5vw,26px)] font-bold tracking-[0.28em] text-gold"
-             style={{ textShadow: "0 2px 20px rgba(0,0,0,0.6)" }}>
+          <p
+            className="font-display text-[clamp(20px,5vw,26px)] font-bold tracking-[0.28em] text-gold"
+            style={{ textShadow: "0 2px 20px rgba(0,0,0,0.6)" }}
+          >
             أحسنت
           </p>
           <div className="flex items-center gap-4 rounded-full border border-gold/40 bg-black/55 px-6 py-3 backdrop-blur">

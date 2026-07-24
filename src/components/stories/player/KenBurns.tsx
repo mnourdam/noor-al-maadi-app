@@ -25,13 +25,7 @@ interface Props {
   blur?: number;
 }
 
-type Mode =
-  | "zoom-in"
-  | "zoom-out"
-  | "pan-left"
-  | "pan-right"
-  | "drift-nw"
-  | "drift-se";
+type Mode = "zoom-in" | "zoom-out" | "pan-left" | "pan-right" | "drift-nw" | "drift-se";
 
 const MODES: Mode[] = ["zoom-in", "zoom-out", "pan-left", "pan-right", "drift-nw", "drift-se"];
 
@@ -39,8 +33,8 @@ const MODES: Mode[] = ["zoom-in", "zoom-out", "pan-left", "pan-right", "drift-nw
 function trajectory(mode: Mode, h: number): { from: string; to: string } {
   // Micro-variation on the base amplitude so two scenes with the
   // same mode still don't feel identical.
-  const jitterZ = 1 + (((h >> 3) & 7) / 700);       // 1.000–1.010
-  const jitterP = 1 + (((h >> 6) & 7) / 900);       // 1.000–1.008
+  const jitterZ = 1 + ((h >> 3) & 7) / 700; // 1.000–1.010
+  const jitterP = 1 + ((h >> 6) & 7) / 900; // 1.000–1.008
   switch (mode) {
     case "zoom-in":
       return { from: `scale(${1.02 * jitterZ})`, to: `scale(${1.11 * jitterZ})` };
@@ -49,22 +43,22 @@ function trajectory(mode: Mode, h: number): { from: string; to: string } {
     case "pan-left":
       return {
         from: `scale(${1.06 * jitterP}) translate(3%, 0%)`,
-        to:   `scale(${1.06 * jitterP}) translate(-3%, 0%)`,
+        to: `scale(${1.06 * jitterP}) translate(-3%, 0%)`,
       };
     case "pan-right":
       return {
         from: `scale(${1.06 * jitterP}) translate(-3%, 0%)`,
-        to:   `scale(${1.06 * jitterP}) translate(3%, 0%)`,
+        to: `scale(${1.06 * jitterP}) translate(3%, 0%)`,
       };
     case "drift-nw":
       return {
         from: `scale(${1.05 * jitterP}) translate(2%, 2%)`,
-        to:   `scale(${1.09 * jitterP}) translate(-2%, -2%)`,
+        to: `scale(${1.09 * jitterP}) translate(-2%, -2%)`,
       };
     case "drift-se":
       return {
         from: `scale(${1.05 * jitterP}) translate(-2%, -2%)`,
-        to:   `scale(${1.09 * jitterP}) translate(2%, 2%)`,
+        to: `scale(${1.09 * jitterP}) translate(2%, 2%)`,
       };
   }
 }
@@ -95,8 +89,7 @@ export function KenBurns({ src, alt, seed, className, overlay = "bottom-fade", b
       <div
         className="absolute inset-0"
         style={{
-          background:
-            "radial-gradient(ellipse at 30% 40%, #1a1206 0%, #0a0603 55%, #000 100%)",
+          background: "radial-gradient(ellipse at 30% 40%, #1a1206 0%, #0a0603 55%, #000 100%)",
           opacity: loaded && src ? 0 : 1,
           transition: `opacity 600ms ${EASE_DRIFT}`,
         }}
@@ -122,9 +115,13 @@ export function KenBurns({ src, alt, seed, className, overlay = "bottom-fade", b
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/45" />
       )}
       {overlay === "vignette" && (
-        <div className="pointer-events-none absolute inset-0" style={{
-          background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.75) 100%)"
-        }} />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.75) 100%)",
+          }}
+        />
       )}
     </div>
   );

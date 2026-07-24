@@ -12,7 +12,6 @@
 // already introduce the story with the cover artwork.
 // ============================================================
 
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Pause, ArrowLeft, RotateCcw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,8 +32,6 @@ import { Istazadtu } from "@/components/social/Istazadtu";
 
 import { useNavigate } from "@tanstack/react-router";
 
-
-
 interface Props {
   story: StoryRow;
   scenes: StorySceneRow[];
@@ -47,10 +44,14 @@ interface Props {
 
 type Phase = "playing" | "reward" | "journey";
 
-
-
 export function StoryPlayer({
-  story, scenes, media, summary, initialSceneIndex, alreadyCompleted, onExit,
+  story,
+  scenes,
+  media,
+  summary,
+  initialSceneIndex,
+  alreadyCompleted,
+  onExit,
 }: Props) {
   const ordered = useMemo(
     () => [...scenes].sort((a, b) => a.scene_index - b.scene_index),
@@ -71,13 +72,14 @@ export function StoryPlayer({
   const queryClient = useQueryClient();
 
   const scene = ordered[idx] ?? null;
-  const dwellMs = useMemo(() => scene ? sceneDwellMs(scene) : 4000, [scene]);
+  const dwellMs = useMemo(() => (scene ? sceneDwellMs(scene) : 4000), [scene]);
   const autoAdvance = scene ? scene.scene_type !== "reflection" : false;
   const isReflectionScene = scene?.scene_type === "reflection";
 
   // Reference (silences unused-var lint) — media/summary still consumed downstream.
-  void media; void summary; void navigate;
-
+  void media;
+  void summary;
+  void navigate;
 
   // --- Record scene view (monotonic) -----------------------------
   // Replay is a read-only re-experience: no progress row updates,
@@ -93,39 +95,44 @@ export function StoryPlayer({
   // --- Auto advance ----------------------------------------------
   useEffect(() => {
     if (phase !== "playing" || !autoAdvance || paused) return;
-    const t = window.setTimeout(() => { void goNext(); }, dwellMs);
+    const t = window.setTimeout(() => {
+      void goNext();
+    }, dwellMs);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, idx, paused, dwellMs, autoAdvance]);
 
   // --- Sync long-press halo with pause state ---------------------
-  useEffect(() => { if (!paused) setLongPressPulse(false); }, [paused]);
-
-
+  useEffect(() => {
+    if (!paused) setLongPressPulse(false);
+  }, [paused]);
 
   // --- Reflection save contract (unchanged from P4 reader) -------
-  const saveReflection = useCallback(async (text: string) => {
-    const { data: sess } = await supabase.auth.getSession();
-    const uid = sess.session?.user?.id;
-    if (!uid || !scene) return;
-    const sceneRef = scene.id ?? `scene-${scene.scene_index}`;
-    await supabase.from("user_reflections").upsert(
-      {
-        user_id: uid,
-        campaign_id: story.id,
-        activity_id: sceneRef,
-        source_type: "story",
-        source_id: story.id,
-        context_id: sceneRef,
-        mode: "write",
-        note: text,
-      } as never,
-      { onConflict: "user_id,campaign_id,activity_id" } as never,
-    );
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("irth:reflections-changed"));
-    }
-  }, [scene, story.id]);
+  const saveReflection = useCallback(
+    async (text: string) => {
+      const { data: sess } = await supabase.auth.getSession();
+      const uid = sess.session?.user?.id;
+      if (!uid || !scene) return;
+      const sceneRef = scene.id ?? `scene-${scene.scene_index}`;
+      await supabase.from("user_reflections").upsert(
+        {
+          user_id: uid,
+          campaign_id: story.id,
+          activity_id: sceneRef,
+          source_type: "story",
+          source_id: story.id,
+          context_id: sceneRef,
+          mode: "write",
+          note: text,
+        } as never,
+        { onConflict: "user_id,campaign_id,activity_id" } as never,
+      );
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("irth:reflections-changed"));
+      }
+    },
+    [scene, story.id],
+  );
 
   // --- Navigation primitives -------------------------------------
   const isLast = idx === ordered.length - 1;
@@ -136,7 +143,10 @@ export function StoryPlayer({
       // Sticky one-shot completion. `completionFiredRef` guarantees at most
       // one grant per mount even if the user double-taps the ending pill
       // or auto-advance and the tap collide.
-      if (completionFiredRef.current) { setPhase("journey"); return; }
+      if (completionFiredRef.current) {
+        setPhase("journey");
+        return;
+      }
       completionFiredRef.current = true;
 
       // REPLAY PATH — story was already completed on a prior session.
@@ -170,12 +180,28 @@ export function StoryPlayer({
         if (grantDin > 0) addDinars(grantDin);
       }
 
-      try { void queryClient.invalidateQueries({ queryKey: ["stories-summary"] }); } catch { /* ignore */ }
+      try {
+        void queryClient.invalidateQueries({ queryKey: ["stories-summary"] });
+      } catch {
+        /* ignore */
+      }
       return;
     }
     setIdx((n) => Math.min(n + 1, ordered.length - 1));
-  }, [isLast, ordered.length, scene, story.id, story.xp_reward, story.dinar_reward, summary, isGuest, alreadyCompleted, addPoints, addDinars, queryClient]);
-
+  }, [
+    isLast,
+    ordered.length,
+    scene,
+    story.id,
+    story.xp_reward,
+    story.dinar_reward,
+    summary,
+    isGuest,
+    alreadyCompleted,
+    addPoints,
+    addDinars,
+    queryClient,
+  ]);
 
   const goPrev = useCallback(() => {
     setIdx((n) => Math.max(0, n - 1));
@@ -186,7 +212,12 @@ export function StoryPlayer({
   const longPressTimer = useRef<number | null>(null);
   // Ephemeral touch-feedback marker — a subtle radial flash placed
   // at the tap point acknowledging the interaction.
-  const [tapFlash, setTapFlash] = useState<{ x: number; y: number; kind: "next" | "prev" | "toggle"; key: number } | null>(null);
+  const [tapFlash, setTapFlash] = useState<{
+    x: number;
+    y: number;
+    kind: "next" | "prev" | "toggle";
+    key: number;
+  } | null>(null);
   const [longPressPulse, setLongPressPulse] = useState(false);
 
   const flashAt = (x: number, y: number, kind: "next" | "prev" | "toggle") => {
@@ -205,11 +236,18 @@ export function StoryPlayer({
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
-    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
     const start = touchRef.current;
     touchRef.current = null;
     if (isReflectionScene && phase === "playing") return; // ignore taps on reflection scene
-    if (paused) { setPaused(false); setLongPressPulse(false); return; }
+    if (paused) {
+      setPaused(false);
+      setLongPressPulse(false);
+      return;
+    }
 
     if (!start) return;
     const dx = e.clientX - start.x;
@@ -227,19 +265,34 @@ export function StoryPlayer({
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const zoneRight = e.clientX - rect.left;
     // RTL: left side = next; right side = previous.
-    if (zoneRight < w * 0.25) { flashAt(e.clientX - rect.left, e.clientY - rect.top, "next"); void goNext(); }
-    else if (zoneRight > w * 0.75) { flashAt(e.clientX - rect.left, e.clientY - rect.top, "prev"); goPrev(); }
-    else { flashAt(e.clientX - rect.left, e.clientY - rect.top, "toggle"); setPaused((p) => !p); }
+    if (zoneRight < w * 0.25) {
+      flashAt(e.clientX - rect.left, e.clientY - rect.top, "next");
+      void goNext();
+    } else if (zoneRight > w * 0.75) {
+      flashAt(e.clientX - rect.left, e.clientY - rect.top, "prev");
+      goPrev();
+    } else {
+      flashAt(e.clientX - rect.left, e.clientY - rect.top, "toggle");
+      setPaused((p) => !p);
+    }
   };
 
   // Keyboard support
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { onExit(); return; }
+      if (e.key === "Escape") {
+        onExit();
+        return;
+      }
       if (phase !== "playing") return;
-      if (e.key === "ArrowLeft") { void goNext(); }
-      else if (e.key === "ArrowRight") { goPrev(); }
-      else if (e.key === " ") { e.preventDefault(); setPaused((p) => !p); }
+      if (e.key === "ArrowLeft") {
+        void goNext();
+      } else if (e.key === "ArrowRight") {
+        goPrev();
+      } else if (e.key === " ") {
+        e.preventDefault();
+        setPaused((p) => !p);
+      }
     };
 
     window.addEventListener("keydown", onKey);
@@ -250,14 +303,15 @@ export function StoryPlayer({
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, []);
 
   const progressEpoch = `s${idx}`;
   // Suppress unused warnings — subtitle/era live on the intro layer that
   // was retired; kept as intentional void reference for future overlays.
   void story.era;
-
 
   return (
     <div
@@ -267,8 +321,10 @@ export function StoryPlayer({
       onPointerUp={onPointerUp}
     >
       {/* Top HUD */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20"
-           style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-20"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <SegmentedProgress
           total={ordered.length}
           activeIndex={idx}
@@ -286,7 +342,10 @@ export function StoryPlayer({
           <button
             type="button"
             className="pointer-events-auto grid size-9 place-items-center rounded-full bg-black/40 text-white/85 backdrop-blur"
-            onClick={(e) => { e.stopPropagation(); onExit(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onExit();
+            }}
             aria-label="إغلاق"
           >
             <X className="size-4" />
@@ -297,8 +356,6 @@ export function StoryPlayer({
       {/* Touch feedback — subtle radial flash at tap point + pause halo. */}
       <TapFeedback flash={tapFlash} />
       <PauseHalo active={longPressPulse && paused && phase === "playing"} />
-
-
 
       {(phase === "playing" || phase === "reward") && scene && (
         <TransitionShell scene={scene}>
@@ -338,19 +395,28 @@ export function StoryPlayer({
 
       {/* Reward moment — first completion only. Replay path skips
           this block entirely (goNext jumps straight to "journey"). */}
-      {phase === "reward" && !rewardShown && !alreadyCompleted && (() => {
-        const xp = grantedXp !== null ? grantedXp : (summary?.xp_reward ?? story.xp_reward ?? 0);
-        const din = grantedDinars !== null ? grantedDinars : (summary?.dinar_reward ?? story.dinar_reward ?? 0);
-        const silent = grantedXp === 0 && grantedDinars === 0;
-        return (
-          <RewardMoment
-            xp={xp}
-            dinars={din}
-            silent={silent}
-            onDone={() => { setRewardShown(true); setPhase("journey"); }}
-          />
-        );
-      })()}
+      {phase === "reward" &&
+        !rewardShown &&
+        !alreadyCompleted &&
+        (() => {
+          const xp = grantedXp !== null ? grantedXp : (summary?.xp_reward ?? story.xp_reward ?? 0);
+          const din =
+            grantedDinars !== null
+              ? grantedDinars
+              : (summary?.dinar_reward ?? story.dinar_reward ?? 0);
+          const silent = grantedXp === 0 && grantedDinars === 0;
+          return (
+            <RewardMoment
+              xp={xp}
+              dinars={din}
+              silent={silent}
+              onDone={() => {
+                setRewardShown(true);
+                setPhase("journey");
+              }}
+            />
+          );
+        })()}
 
       {/* Simple ending — replaces the old "Continue Your Journey" page.
           Title + status + close/replay only. No comments, no social,
@@ -374,11 +440,16 @@ export function StoryPlayer({
           reflection scenes disable auto-advance so the reader must
           tap to leave. The last scene gets an emotional "closing"
           treatment (خاتمة) instead of a generic نص button. */}
-      {phase === "playing" && scene?.scene_type === "reflection" && !paused && (
-        isLast ? (
+      {phase === "playing" &&
+        scene?.scene_type === "reflection" &&
+        !paused &&
+        (isLast ? (
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); void goNext(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              void goNext();
+            }}
             className="pointer-events-auto absolute inset-x-0 bottom-8 z-20 mx-auto flex w-max items-center gap-2 rounded-full border border-gold/60 bg-gradient-to-b from-black/70 to-black/40 px-6 py-3 text-[13px] font-semibold tracking-[0.24em] text-gold backdrop-blur"
             style={{
               boxShadow: "0 0 30px rgba(240,190,60,0.25), inset 0 0 0 1px rgba(240,190,60,0.15)",
@@ -392,15 +463,16 @@ export function StoryPlayer({
         ) : (
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); void goNext(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              void goNext();
+            }}
             className="pointer-events-auto absolute inset-x-0 bottom-6 z-20 mx-auto flex w-max items-center gap-1.5 rounded-full border border-gold/40 bg-black/60 px-4 py-2 text-[12px] text-gold backdrop-blur"
           >
             <span>متابعة</span>
             <ArrowLeft className="size-3.5" aria-hidden />
           </button>
-
-        )
-      )}
+        ))}
     </div>
   );
 }
@@ -433,13 +505,14 @@ function TransitionShell({ scene, children }: { scene: StorySceneRow; children: 
 // Touch feedback primitives — subtle, never flashy.
 // ---------------------------------------------------------------
 
-function TapFeedback({ flash }: { flash: { x: number; y: number; kind: "next" | "prev" | "toggle"; key: number } | null }) {
+function TapFeedback({
+  flash,
+}: {
+  flash: { x: number; y: number; kind: "next" | "prev" | "toggle"; key: number } | null;
+}) {
   if (!flash) return null;
   const size = flash.kind === "toggle" ? 140 : 200;
-  const tint =
-    flash.kind === "toggle"
-      ? "rgba(255,255,255,0.18)"
-      : "rgba(240,190,60,0.22)";
+  const tint = flash.kind === "toggle" ? "rgba(255,255,255,0.18)" : "rgba(240,190,60,0.22)";
   return (
     <span
       key={flash.key}
@@ -465,8 +538,7 @@ function PauseHalo({ active }: { active: boolean }) {
       className="pointer-events-none absolute inset-0 z-[24] transition-opacity duration-500 ease-out"
       style={{
         opacity: active ? 1 : 0,
-        background:
-          "radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.35) 100%)",
+        background: "radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.35) 100%)",
       }}
       aria-hidden
     />
@@ -500,9 +572,7 @@ function SimpleEnd({
         <div className="mb-3 text-[11px] font-semibold tracking-[0.3em] text-gold/80">
           اكتملت القصة
         </div>
-        <h2 className="font-display text-2xl font-bold leading-tight text-white">
-          {title}
-        </h2>
+        <h2 className="font-display text-2xl font-bold leading-tight text-white">{title}</h2>
         <div className="mt-6 flex flex-col gap-2">
           <button
             type="button"
@@ -524,6 +594,3 @@ function SimpleEnd({
     </div>
   );
 }
-
-
-

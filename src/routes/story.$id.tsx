@@ -116,28 +116,39 @@ function StoryRoute() {
       summary={summary}
       initialSceneIndex={initial}
       alreadyCompleted={!!bundle.completed}
-      onExit={() => { void navigate({ to: "/stories" }); }}
+      onExit={() => {
+        void navigate({ to: "/stories" });
+      }}
     />
   );
 }
 
 function LockedState({
-  reason, title, prereqs,
+  reason,
+  title,
+  prereqs,
 }: {
   reason: string;
   title?: string;
   prereqs?: { kind: string; ref: string; title: string | null; satisfied: boolean }[];
 }) {
   const label =
-    reason === "locked"        ? "هذه القصة مقفلة"
-    : reason === "not_published" ? "هذه القصة غير منشورة"
-                                 : "لم يتم العثور على القصة";
+    reason === "locked"
+      ? "هذه القصة مقفلة"
+      : reason === "not_published"
+        ? "هذه القصة غير منشورة"
+        : "لم يتم العثور على القصة";
   const hint =
-    reason === "locked"        ? "أنجز الحملات أو التحقيقات المطلوبة لفتحها."
-    : reason === "not_published" ? "عد لاحقًا بعد النشر."
-                                 : "قد تكون أُزيلت أو أن الرابط غير صحيح.";
+    reason === "locked"
+      ? "أنجز الحملات أو التحقيقات المطلوبة لفتحها."
+      : reason === "not_published"
+        ? "عد لاحقًا بعد النشر."
+        : "قد تكون أُزيلت أو أن الرابط غير صحيح.";
   return (
-    <div dir="rtl" className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
+    <div
+      dir="rtl"
+      className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center"
+    >
       {reason === "locked" ? (
         <Lock className="mx-auto mb-3 size-8 text-gold/70" />
       ) : (
