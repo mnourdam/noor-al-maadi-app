@@ -19,7 +19,7 @@ import type { StoryMediaKind } from "./presets";
  *                   only removable by an explicit admin action while
  *                   reference count is zero.
  */
-export type StoryMediaOwnership = "story-owned" | "shared";
+export type StoryMediaOwnerScope = "story" | "collection";
 
 export interface StoryMediaRow {
   id: string;
