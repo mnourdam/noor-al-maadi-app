@@ -2154,7 +2154,7 @@ export type Database = {
           metadata?: Json
           previous_draft?: Json | null
           previous_draft_at?: string | null
-          production_status: Database["public"]["Enums"]["story_production_status"]
+          production_status?: Database["public"]["Enums"]["story_production_status"]
           published_at?: string | null
           rarity?: Database["public"]["Enums"]["story_rarity"]
           reaction_count?: number
