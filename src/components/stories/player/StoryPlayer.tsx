@@ -303,22 +303,40 @@ export function StoryPlayer({
             epoch={scene.id}
             paused={paused || phase !== "playing"}
             onReflectionSubmit={saveReflection}
+            reflectionReadOnly={alreadyCompleted}
+            reflectionInitialText={
+              scene.scene_type === "reflection"
+                ? (getReflection(story.id, scene.id ?? `scene-${scene.scene_index}`)?.text ?? "")
+                : ""
+            }
           />
         </TransitionShell>
       )}
 
-      {/* Reward moment */}
-      {phase === "reward" && !rewardShown && (() => {
-        // Prefer authoritative granted values from the RPC when known.
-        // Fall back to summary while the network request is in-flight so
-        // the reward moment never blanks out on first-completion.
-        const xp = grantedXp !== null
-          ? grantedXp
-          : (alreadyCompleted ? 0 : (summary?.xp_reward ?? story.xp_reward ?? 0));
-        const din = grantedDinars !== null
-          ? grantedDinars
-          : (alreadyCompleted ? 0 : (summary?.dinar_reward ?? story.dinar_reward ?? 0));
-        const silent = alreadyCompleted || (grantedXp === 0 && grantedDinars === 0);
+      {/* Persistent heart (Istazadtu) — appears above every scene, out
+          of the tap-zone gestures. Signed-in only; offline/guest states
+          are handled inside the component. */}
+      {phase === "playing" && (
+        <div
+          className="pointer-events-auto absolute z-30"
+          style={{
+            bottom: "calc(env(safe-area-inset-bottom) + 20px)",
+            insetInlineStart: 16,
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Istazadtu anchorType="story" anchorId={story.id} size="sm" />
+        </div>
+      )}
+
+      {/* Reward moment — first completion only. Replay path skips
+          this block entirely (goNext jumps straight to "journey"). */}
+      {phase === "reward" && !rewardShown && !alreadyCompleted && (() => {
+        const xp = grantedXp !== null ? grantedXp : (summary?.xp_reward ?? story.xp_reward ?? 0);
+        const din = grantedDinars !== null ? grantedDinars : (summary?.dinar_reward ?? story.dinar_reward ?? 0);
+        const silent = grantedXp === 0 && grantedDinars === 0;
         return (
           <RewardMoment
             xp={xp}
@@ -329,11 +347,12 @@ export function StoryPlayer({
         );
       })()}
 
-
-      {/* Continue Your Journey */}
+      {/* Simple ending — replaces the old "Continue Your Journey" page.
+          Title + status + close/replay only. No comments, no social,
+          no related content, no auto-follow-on story. */}
       {phase === "journey" && (
-        <ContinueYourJourney
-          finished={summary}
+        <SimpleEnd
+          title={story.title_ar}
           onReplay={() => {
             setIdx(0);
             setRewardShown(false);
@@ -342,8 +361,6 @@ export function StoryPlayer({
             completionFiredRef.current = false;
             setPhase("playing");
           }}
-
-
           onClose={() => onExit()}
         />
       )}
