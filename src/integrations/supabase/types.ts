@@ -3297,6 +3297,7 @@ export type Database = {
         Returns: Json
       }
       _story_validate_v2_one: { Args: { p_in: Json }; Returns: Json }
+      _streak_test_harness: { Args: { _uid: string }; Returns: Json }
       add_story_comment_v2: {
         Args: {
           p_anchor_id: string
