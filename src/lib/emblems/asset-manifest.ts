@@ -17,6 +17,7 @@
 
 import type { EmblemAssetSet, EmblemRecord } from "./types";
 import { PREMIUM_EMBLEM_ASSETS } from "./premium-assets";
+import { localEmblemPath } from "./offline-pack";
 
 export type EmblemSize = 128 | 256 | 512 | 1024;
 export type EmblemFormat = "webp" | "avif";
@@ -26,7 +27,13 @@ export function pickAssetUrl(
   size: EmblemSize,
   format: EmblemFormat,
 ): string | null {
-  // 1) Premium production assets (Phase 9 — size × format matrix).
+  // 1) Offline bundled pack — served from app origin. WebP only;
+  //    AVIF requests fall through to the CDN matrix as an upgrade.
+  if (format === "webp") {
+    const local = localEmblemPath(record.id, size);
+    if (local) return local;
+  }
+  // 2) Premium production assets (Phase 9 — size × format matrix on CDN).
   const matrix = PREMIUM_EMBLEM_ASSETS[record.id];
   if (matrix) {
     const url = matrix[size]?.[format];
@@ -50,6 +57,7 @@ export function cacheKey(record: EmblemRecord): string {
 }
 
 export function hasAnyAsset(record: EmblemRecord): boolean {
+  if (localEmblemPath(record.id, 128)) return true;
   if (PREMIUM_EMBLEM_ASSETS[record.id]) return true;
   return Boolean(
     record.asset_128_url ||
