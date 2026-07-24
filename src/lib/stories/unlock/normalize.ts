@@ -94,7 +94,7 @@ export function normalizeUnlockSpec(input: unknown): UnlockSpecV2 {
 
   if (isObj(input) && input.v === 2 && "rule" in input) {
     const check = validateUnlockSpec(input);
-    return check.ok ? (input as UnlockSpecV2) : NEVER_SPEC;
+    return check.ok ? (input as unknown as UnlockSpecV2) : NEVER_SPEC;
   }
 
   // Bare v1 root node — the historical column stored the node directly.
