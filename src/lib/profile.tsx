@@ -110,6 +110,7 @@ const initial: ProfileState = {
   loggedIn: false,
   points: 0,
   streak: 0,
+  longestStreak: 0,
   lastActiveDay: null,
   storiesOpened: [],
   storiesRead: [],
