@@ -195,7 +195,7 @@ function GamePlayPage() {
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
-  }, [game, isLast, stageIdx, failed, stageDone, addPoints, addDinars, touchStreak]);
+  }, [game, isLast, stageIdx, failed, stageDone, addPoints, addDinars, recordStreakActivity]);
 
   // ── Time-Expired grace flow ──────────────────────────────────────────
   // When the countdown hits zero we DO NOT immediately fail. We open a
