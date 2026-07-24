@@ -165,6 +165,7 @@ export function AchievementEngineBoot() {
     profile.points,
     profile.dinars,
     profile.streak,
+    profile.longestStreak,
     profile.titlesEarned,
     canonicalInv.count,
     hydrated,
