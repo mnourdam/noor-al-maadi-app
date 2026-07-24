@@ -9,14 +9,16 @@ import { useAchievementViews } from "@/lib/achievements/v2/driver";
 import { isEarned } from "@/lib/achievements/v2/presentation";
 import { useHomeSummary } from "@/lib/stats/homeSummary";
 import { ERAS } from "@/lib/app-constants";
+import { useHistoricalSpecialization } from "@/lib/profile/historicalSpecialization";
 
 /**
  * `/share-card` — Historical Identity Card renderer.
  *
  * All data flows through canonical sources (Home summary, achievement
- * views, profile). The route is the single seam that resolves the
- * favorite-state Arabic name and the top-3 achievements, so the card
- * component itself stays a pure renderer.
+ * views, profile, historical specialization). The route is the single
+ * seam that resolves the favorite-state Arabic name, top-3 achievements,
+ * real join date, and derived specialization so the card component
+ * itself stays a pure renderer.
  */
 export const Route = createFileRoute("/share-card")({
   head: () => ({ meta: [{ title: "بطاقة الهوية التاريخية" }] }),
@@ -28,6 +30,7 @@ function ShareCardPage() {
   const { profile } = useProfile();
   const views = useAchievementViews();
   const summary = useHomeSummary();
+  const specialization = useHistoricalSpecialization();
 
   const username = account?.username ?? "";
 
@@ -48,6 +51,10 @@ function ShareCardPage() {
     if (!id) return null;
     return ERAS.find((e) => e.id === id)?.name ?? null;
   }, [profile.favoriteStateId]);
+
+  // Canonical join date — real account creation date. `null` for guests
+  // so the card omits the section instead of fabricating a date.
+  const joinDate = account?.join_date ?? null;
 
   return (
     <AppShell>
@@ -73,6 +80,8 @@ function ShareCardPage() {
           museumCount={summary.loading ? undefined : summary.museumCount}
           achievements={achievements}
           favoriteStateName={favoriteStateName}
+          joinDate={joinDate}
+          specialization={specialization.key ? { label_ar: specialization.label_ar, key: specialization.key } : null}
         />
         {!user && (
           <p className="mt-4 text-center text-[11px] text-muted-foreground">
@@ -83,3 +92,4 @@ function ShareCardPage() {
     </AppShell>
   );
 }
+
