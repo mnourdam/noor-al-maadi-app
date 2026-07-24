@@ -92,7 +92,10 @@ export function ShareCard(props: ShareCardProps) {
     museumCount,
     achievements,
     favoriteStateName,
+    joinDate,
+    specialization,
   } = props;
+
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ready, setReady] = useState(false);
