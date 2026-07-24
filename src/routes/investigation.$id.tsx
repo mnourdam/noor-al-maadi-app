@@ -87,6 +87,19 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   // from the player screen; the canonical hook already reflects any
   // pending backfill via the outbox.
 
+  // HUD "continue" pointer: remember the last investigation the player
+  // opened so the Hearts popover can route back to it. Cleared on
+  // completion below and by the recommendation reader when the slug is
+  // already completed.
+  useEffect(() => {
+    if (alreadyDone) {
+      clearInvestigationOpened(row.slug);
+    } else {
+      markInvestigationOpened(row.slug);
+    }
+  }, [row.slug, alreadyDone]);
+
+
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
   // Answer state machine per question-like step (see
