@@ -201,10 +201,15 @@ function AdminStoriesPage() {
           <button onClick={() => void bulkExport(null)} className="btn-secondary">
             <Download className="h-4 w-4" /> تصدير الكل
           </button>
+          <Link to="/admin/stories/import-v2" className="btn-secondary">
+            <Upload className="h-4 w-4" /> استيراد v2
+          </Link>
+          <Link to="/admin/stories/export-v2" className="btn-secondary">
+            <Download className="h-4 w-4" /> تصدير v2
+          </Link>
           <button onClick={() => void refresh()} className="btn-secondary">
             <RefreshCw className="h-4 w-4" /> تحديث
           </button>
-        </div>
       </header>
 
       <style>{`
