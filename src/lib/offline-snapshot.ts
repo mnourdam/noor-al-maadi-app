@@ -273,11 +273,15 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
  * caches that trail behind the live source and trigger a true-up.
  */
 async function fetchCollectionExpectedCount(def: CollectionDef): Promise<number | null> {
+  // Story collections are served by the manifest RPC — there is no
+  // countable underlying table endpoint. Skip the true-up check.
+  if (STORY_MANIFEST_KEYS.has(def.key)) return null;
   let query: any = supabase
     .from(def.table as any)
     .select("id", { count: "exact", head: true });
   if (def.filter) query = def.filter(query);
   const { count, error } = await query;
+
   if (error) {
     console.warn(`[snapshot] count query failed for ${def.table}:`, error.message);
     return null;
