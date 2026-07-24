@@ -210,6 +210,7 @@ function AdminStoriesPage() {
           <button onClick={() => void refresh()} className="btn-secondary">
             <RefreshCw className="h-4 w-4" /> تحديث
           </button>
+        </div>
       </header>
 
       <style>{`
