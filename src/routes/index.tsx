@@ -86,6 +86,7 @@ function HomeFull() {
     [todayEvent, todayOthers],
   );
   const stats = useRealCollectionStats();
+  const homeSummary = useHomeSummary();
   // Unified discovery feed — encyclopedia reads + museum acquisitions,
   // canonically deduplicated. Single source for Hero + Home carousel.
   const unifiedDiscoveries = useUnifiedDiscoveryFeed(8);
