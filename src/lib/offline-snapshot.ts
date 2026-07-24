@@ -507,7 +507,9 @@ async function warmSnapshotImageCache(collections: Record<string, any[]>): Promi
  * that case.
  */
 export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
+  resetStoryManifestCache();
   const previous = await loadSnapshot();
+
   if (!previous?.collections) {
     throw new Error("No previous snapshot; run generateAndStoreSnapshot() first");
   }
