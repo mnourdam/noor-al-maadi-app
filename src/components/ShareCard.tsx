@@ -522,18 +522,43 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   ctx.font = `bold 26px ${family}`;
   ctx.fillText(`المستوى ${s.level}`, cx, py + 38);
 
+  // Level progress bar — slim, matches levelFor() canonical curve
+  const barW = 340, barH = 10;
+  const bx = cx - barW / 2, by = py + pillH + 14;
+  roundRect(ctx, bx, by, barW, barH, barH / 2);
+  ctx.fillStyle = "rgba(255,255,255,0.08)";
+  ctx.fill();
+  const pct = s.atMaxLevel ? 1 : s.levelProgressPct;
+  const fillW = Math.max(0, Math.min(barW, barW * pct));
+  if (fillW > 0) {
+    roundRect(ctx, bx, by, fillW, barH, barH / 2);
+    const bg2 = ctx.createLinearGradient(bx, by, bx + barW, by);
+    bg2.addColorStop(0, "#d4af37");
+    bg2.addColorStop(1, "#f5d062");
+    ctx.fillStyle = bg2;
+    ctx.fill();
+  }
+  ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(255,255,255,0.72)";
+  ctx.font = `14px ${family}`;
+  const pctText = `${Math.round(pct * 100)}%`;
+  const tail = s.atMaxLevel
+    ? "أعلى مستوى حاليًا"
+    : `متبقي ${s.levelToNext.toLocaleString("en-US")} نقطة للمستوى التالي`;
+  ctx.fillText(`${pctText} · ${tail}`, cx, by + barH + 20);
+
   // ── Main statistics (2×2 grid of 4 primary counters) ────────────────
   const primary: [string, string][] = [
     ["نقاط الخبرة", s.xp.toLocaleString("en-US")],
     ["الدنانير", s.dinars.toLocaleString("en-US")],
     ["الحملات المكتملة", countOrDash(s.campaignsCompleted)],
-    ["مقتنيات المتحف", countOrDash(s.museumCount)],
+    ["المقتنيات التاريخية", s.museumCount !== undefined ? `${s.museumCount.toLocaleString("en-US")} قطعة` : "—"],
   ];
   const gx = 96;
   const gw = W - 192;
   const colW = (gw - 20) / 2;
   const rowH = 104;
-  const gy = ay + 472;
+  const gy = ay + 520;
   for (let i = 0; i < primary.length; i++) {
     const col = i % 2;
     const row = Math.floor(i / 2);
@@ -550,9 +575,10 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
     ctx.font = `18px ${family}`;
     ctx.fillText(primary[i][0], rxs + colW / 2, rys + 36);
     ctx.fillStyle = "#fff";
-    ctx.font = `bold 36px ${family}`;
+    ctx.font = `bold 32px ${family}`;
     ctx.fillText(truncate(ctx, primary[i][1], colW - 24), rxs + colW / 2, rys + 82);
   }
+
 
   // ── Secondary progress line ─────────────────────────────────────────
   const sy = gy + 2 * (rowH + 16) + 20;
