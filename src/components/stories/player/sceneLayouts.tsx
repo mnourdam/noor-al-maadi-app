@@ -17,7 +17,7 @@
 //     it invites writing rather than resembling a form field.
 // ============================================================
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
 import { useStoryMediaUrl } from "@/lib/stories/media/url";
@@ -33,6 +33,12 @@ interface StageProps {
   epoch: string | number;
   paused?: boolean;
   onReflectionSubmit?: (text: string) => Promise<void> | void;
+  /** When true, a reflection scene shows the previously saved
+   *  text read-only instead of a composer. Used on story replay. */
+  reflectionReadOnly?: boolean;
+  /** Prior saved reflection text — seeds either the read-only view
+   *  or the composer. */
+  reflectionInitialText?: string;
 }
 
 type LayoutKey = "A" | "B" | "C" | "D" | "E" | "F";
@@ -175,7 +181,7 @@ function str(v: unknown): string { return typeof v === "string" ? v : ""; }
 // SceneStage
 // ------------------------------------------------------------------
 
-export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: StageProps) {
+export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit, reflectionReadOnly, reflectionInitialText }: StageProps) {
   const layout = pickLayout(scene);
   const primary = pickMedia(scene.primary_media_id, media);
   const primaryUrl = useStoryMediaUrl(primary ?? null);
@@ -371,7 +377,11 @@ export function SceneStage({ scene, media, epoch, paused, onReflectionSubmit }: 
           <Caption text={caption} align="center" />
           {isReflection && onReflectionSubmit && (
             <div className="mt-8">
-              <ReflectionInline onSubmit={onReflectionSubmit} />
+              <ReflectionInline
+                onSubmit={onReflectionSubmit}
+                readOnly={!!reflectionReadOnly}
+                initialText={reflectionInitialText ?? ""}
+              />
             </div>
           )}
         </div>
@@ -388,22 +398,53 @@ function LayoutFrame({ children }: { children: React.ReactNode }) {
 // ------------------------------------------------------------------
 // Reflection composer — Phase 4: calmer, roomier, invites writing.
 // ------------------------------------------------------------------
-function ReflectionInline({ onSubmit }: { onSubmit: (t: string) => Promise<void> | void }) {
-  const [text, setText] = useState("");
+function ReflectionInline({
+  onSubmit,
+  readOnly = false,
+  initialText = "",
+}: {
+  onSubmit: (t: string) => Promise<void> | void;
+  readOnly?: boolean;
+  initialText?: string;
+}) {
+  const [text, setText] = useState(initialText);
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(!!initialText);
+  const submittingRef = useRef(false);
   const submit = async (value: string) => {
     const t = value.trim();
-    if (!t || busy) return;
+    if (!t || busy || submittingRef.current || saved) return;
+    submittingRef.current = true;
     setBusy(true);
     // Optimistically mark saved so the user gets instant feedback even if
     // the network write is slow. Errors surface via the async catch below.
     setSaved(true);
     try { await onSubmit(t); }
-    catch { setSaved(false); }
+    catch { setSaved(false); submittingRef.current = false; }
     finally { setBusy(false); }
   };
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+
+  // Replay: previous reflection is shown read-only. The composer,
+  // save button, and interactive affordances are all suppressed so
+  // the same tap only advances/exits the story.
+  if (readOnly) {
+    const body = (initialText ?? "").trim();
+    if (!body) return null;
+    return (
+      <div
+        dir="rtl"
+        className="rounded-2xl border border-gold/20 bg-black/45 p-5 text-start shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-md"
+      >
+        <div className="mb-2 block text-[12px] font-medium tracking-wide text-white/60">
+          تأمُّلك السابق
+        </div>
+        <p className="whitespace-pre-wrap text-[15px] leading-[1.85] text-white/90">{body}</p>
+        <div className="mt-3 text-[11px] text-gold">محفوظ ✓</div>
+      </div>
+    );
+  }
+
   return (
     <div
       dir="rtl"

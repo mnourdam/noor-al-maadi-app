@@ -175,7 +175,7 @@ export function StoryCard({
           )}
           {state === "completed" && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-medium text-white">
-              <CheckCircle2 className="size-3" /> اكتمل
+              <CheckCircle2 className="size-3" /> مكتملة
             </span>
           )}
           {state === "in_progress" && (

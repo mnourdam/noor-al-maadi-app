@@ -14,7 +14,7 @@
 
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Pause, ArrowLeft } from "lucide-react";
+import { X, Pause, ArrowLeft, RotateCcw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
@@ -26,9 +26,10 @@ import { SegmentedProgress } from "./SegmentedProgress";
 import { SceneStage, resolveSceneTransition } from "./sceneLayouts";
 
 import { RewardMoment } from "./RewardMoment";
-import { ContinueYourJourney } from "./ContinueYourJourney";
 import { sceneDwellMs } from "./timing";
-import { guestHasCompleted, guestMarkCompleted } from "@/lib/stories/guestCompletions";
+import { guestMarkCompleted } from "@/lib/stories/guestCompletions";
+import { getReflection } from "@/lib/reflections";
+import { Istazadtu } from "@/components/social/Istazadtu";
 
 import { useNavigate } from "@tanstack/react-router";
 
@@ -129,11 +130,18 @@ export function StoryPlayer({
     if (isLast) {
       // Sticky one-shot completion. `completionFiredRef` guarantees at most
       // one grant per mount even if the user double-taps the ending pill
-      // or auto-advance and the tap collide. Guests take a local reward
-      // path (server RPC requires auth) so first-completion still awards
-      // XP + Dinars and replay is silent.
-      if (completionFiredRef.current) { setPhase("reward"); return; }
+      // or auto-advance and the tap collide.
+      if (completionFiredRef.current) { setPhase("journey"); return; }
       completionFiredRef.current = true;
+
+      // REPLAY PATH — story was already completed on a prior session.
+      // Skip the completion RPC entirely (no XP / Dinars / ledger / event)
+      // and skip the reward moment. Land on the SimpleEnd overlay.
+      if (alreadyCompleted) {
+        setPhase("journey");
+        return;
+      }
+
       setPhase("reward");
 
       const summaryXp = summary?.xp_reward ?? story.xp_reward ?? 0;
@@ -157,14 +165,11 @@ export function StoryPlayer({
         if (grantDin > 0) addDinars(grantDin);
       }
 
-      // Refresh catalog/rail status pills ("جديدة" → "اكتمل") without a
-      // hard reload. `list_stories_v2` is the source of truth for both
-      // auth (server-completed) and guest (overlay via guestCompletions).
       try { void queryClient.invalidateQueries({ queryKey: ["stories-summary"] }); } catch { /* ignore */ }
       return;
     }
     setIdx((n) => Math.min(n + 1, ordered.length - 1));
-  }, [isLast, ordered.length, scene, story.id, story.xp_reward, story.dinar_reward, summary, isGuest, addPoints, addDinars, queryClient]);
+  }, [isLast, ordered.length, scene, story.id, story.xp_reward, story.dinar_reward, summary, isGuest, alreadyCompleted, addPoints, addDinars, queryClient]);
 
 
   const goPrev = useCallback(() => {
@@ -298,22 +303,40 @@ export function StoryPlayer({
             epoch={scene.id}
             paused={paused || phase !== "playing"}
             onReflectionSubmit={saveReflection}
+            reflectionReadOnly={alreadyCompleted}
+            reflectionInitialText={
+              scene.scene_type === "reflection"
+                ? (getReflection(story.id, scene.id ?? `scene-${scene.scene_index}`)?.text ?? "")
+                : ""
+            }
           />
         </TransitionShell>
       )}
 
-      {/* Reward moment */}
-      {phase === "reward" && !rewardShown && (() => {
-        // Prefer authoritative granted values from the RPC when known.
-        // Fall back to summary while the network request is in-flight so
-        // the reward moment never blanks out on first-completion.
-        const xp = grantedXp !== null
-          ? grantedXp
-          : (alreadyCompleted ? 0 : (summary?.xp_reward ?? story.xp_reward ?? 0));
-        const din = grantedDinars !== null
-          ? grantedDinars
-          : (alreadyCompleted ? 0 : (summary?.dinar_reward ?? story.dinar_reward ?? 0));
-        const silent = alreadyCompleted || (grantedXp === 0 && grantedDinars === 0);
+      {/* Persistent heart (Istazadtu) — appears above every scene, out
+          of the tap-zone gestures. Signed-in only; offline/guest states
+          are handled inside the component. */}
+      {phase === "playing" && (
+        <div
+          className="pointer-events-auto absolute z-30"
+          style={{
+            bottom: "calc(env(safe-area-inset-bottom) + 20px)",
+            insetInlineStart: 16,
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Istazadtu anchorType="story" anchorId={story.id} size="sm" />
+        </div>
+      )}
+
+      {/* Reward moment — first completion only. Replay path skips
+          this block entirely (goNext jumps straight to "journey"). */}
+      {phase === "reward" && !rewardShown && !alreadyCompleted && (() => {
+        const xp = grantedXp !== null ? grantedXp : (summary?.xp_reward ?? story.xp_reward ?? 0);
+        const din = grantedDinars !== null ? grantedDinars : (summary?.dinar_reward ?? story.dinar_reward ?? 0);
+        const silent = grantedXp === 0 && grantedDinars === 0;
         return (
           <RewardMoment
             xp={xp}
@@ -324,11 +347,12 @@ export function StoryPlayer({
         );
       })()}
 
-
-      {/* Continue Your Journey */}
+      {/* Simple ending — replaces the old "Continue Your Journey" page.
+          Title + status + close/replay only. No comments, no social,
+          no related content, no auto-follow-on story. */}
       {phase === "journey" && (
-        <ContinueYourJourney
-          finished={summary}
+        <SimpleEnd
+          title={story.title_ar}
           onReplay={() => {
             setIdx(0);
             setRewardShown(false);
@@ -337,8 +361,6 @@ export function StoryPlayer({
             completionFiredRef.current = false;
             setPhase("playing");
           }}
-
-
           onClose={() => onExit()}
         />
       )}
@@ -445,5 +467,58 @@ function PauseHalo({ active }: { active: boolean }) {
     />
   );
 }
+
+// ---------------------------------------------------------------
+// SimpleEnd — deliberate, minimal ending screen.
+// Replaces the retired "Continue Your Journey" post-story page.
+// Contains only: title, completion status, Close, Replay.
+// No comments, no reactions, no related content, no next story.
+// ---------------------------------------------------------------
+function SimpleEnd({
+  title,
+  onReplay,
+  onClose,
+}: {
+  title: string;
+  onReplay: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      dir="rtl"
+      className="pointer-events-auto absolute inset-0 z-[40] grid place-items-center bg-black/85 backdrop-blur-md"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="mx-6 w-full max-w-md rounded-3xl border border-gold/25 bg-gradient-to-b from-black/70 to-black/40 p-8 text-center shadow-[0_20px_80px_rgba(0,0,0,0.6)]">
+        <div className="mb-3 text-[11px] font-semibold tracking-[0.3em] text-gold/80">
+          اكتملت القصة
+        </div>
+        <h2 className="font-display text-2xl font-bold leading-tight text-white">
+          {title}
+        </h2>
+        <div className="mt-6 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onReplay}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-5 py-3 text-[14px] font-semibold text-gold"
+          >
+            <RotateCcw className="size-4" aria-hidden />
+            <span>إعادة المشاهدة</span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-white/5 px-5 py-3 text-[14px] font-semibold text-white/85 hover:bg-white/10"
+          >
+            إغلاق
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 
