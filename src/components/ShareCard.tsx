@@ -248,9 +248,8 @@ export function ShareCard(props: ShareCardProps) {
 
 
   const filenameBase = `irth-identity-${sanitizeFilenameHandle(username || cardNumber)}`;
-  const shareText =
-    `${displayName} — بطاقتي التاريخية في إرث\n` +
-    `المستوى ${lvl.level} · ${profile.points.toLocaleString("en-US")} XP`;
+
+
 
   const onDownload = useCallback(async () => {
     if (!ready || busy) return;
