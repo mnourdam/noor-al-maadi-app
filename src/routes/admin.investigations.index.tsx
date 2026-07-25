@@ -794,6 +794,13 @@ function Row({ view, selected, onSelect, onExport, onPreview, onToggle }: {
               صيغة قديمة
             </span>
           )}
+          {isGoldenTemplate(r) && (
+            <span title="التحقيق المرجعي الرسمي — لا يُنشر للاعبين"
+              className="rounded border border-amber-400/60 bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-200">
+              {GOLDEN_TEMPLATE_LABEL}
+            </span>
+          )}
+
         </div>
       </td>
       <td className="px-3 py-2 font-mono text-xs text-slate-400" dir="ltr">{r.slug}</td>
