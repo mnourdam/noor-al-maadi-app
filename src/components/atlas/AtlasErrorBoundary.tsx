@@ -19,9 +19,9 @@ import {
   releaseUiLocks,
   resetAtlasData,
 } from "@/lib/atlas/atlas-recovery";
-import { getQueryClientSafe } from "@/lib/atlas/atlas-query-client";
+import type { QueryClient } from "@tanstack/react-query";
 
-type Props = { children: ReactNode };
+type Props = { children: ReactNode; queryClient?: QueryClient };
 type State = { failed: boolean; retried: boolean; nonce: number };
 
 export class AtlasErrorBoundary extends Component<Props, State> {
@@ -46,8 +46,9 @@ export class AtlasErrorBoundary extends Component<Props, State> {
   private retry = () => {
     // Drop the failed query entry and remount the stage exactly once.
     try {
-      getQueryClientSafe()?.removeQueries({
-        predicate: (q) => String(q.queryKey?.[0] ?? "").startsWith("atlas-entities"),
+      this.props.queryClient?.removeQueries({
+        predicate: (q: { queryKey?: readonly unknown[] }) =>
+          String(q.queryKey?.[0] ?? "").startsWith("atlas-entities"),
       });
     } catch { /* ignore */ }
     releaseUiLocks();
@@ -56,7 +57,7 @@ export class AtlasErrorBoundary extends Component<Props, State> {
   };
 
   private resetData = () => {
-    void resetAtlasData(getQueryClientSafe() ?? undefined).then(() => {
+    void resetAtlasData(this.props.queryClient).then(() => {
       this.setState((s) => ({ failed: false, retried: false, nonce: s.nonce + 1 }));
     });
   };
