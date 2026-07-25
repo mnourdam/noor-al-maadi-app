@@ -129,7 +129,10 @@ function indexAtlas(rows: Row[]) {
 function indexCampaigns(rows: Row[]) {
   campaignsById.clear();
   campaignsBySlug.clear();
-  campaignsAll = rows.filter((r) => r && r.status === "published");
+  const published = rows.filter((r) => r && r.status === "published");
+  const split = partitionCampaignRows(published as RawCampaignRow[]);
+  campaignsAll = split.campaigns as Row[];
+  campaignDividerRows = published.filter((r) => isDividerRow(r as RawCampaignRow));
   for (const r of campaignsAll) {
     if (r.id) campaignsById.set(r.id, r);
     if (r.slug) campaignsBySlug.set(r.slug, r);
