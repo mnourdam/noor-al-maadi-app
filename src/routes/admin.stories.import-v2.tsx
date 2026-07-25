@@ -48,6 +48,7 @@ function ImportV2Page() {
   const [preview, setPreview] = useState<StoryImportPreviewReportV2 | null>(null);
   const [applyResult, setApplyResult] = useState<StoryImportApplyResultV2 | null>(null);
   const [allowDeletes, setAllowDeletes] = useState(false);
+  const [clearMedia, setClearMedia] = useState(false);
   const [busy, setBusy] = useState<null | "export" | "preview" | "apply">(null);
   const [toast, setToast] = useState<Toast | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -58,6 +59,11 @@ function ImportV2Page() {
   };
 
   const totals = useMemo(() => preview?.totals ?? null, [preview]);
+  const options = useMemo(
+    () => ({ allow_deletes: allowDeletes, clear_media: clearMedia }),
+    [allowDeletes, clearMedia],
+  );
+
 
   const onExport = async () => {
     setBusy("export");
@@ -99,7 +105,7 @@ function ImportV2Page() {
     if (!payload) { notify("err", "حمّل ملف JSON أولاً."); return; }
     setBusy("preview");
     try {
-      const rep = await adminImportStoriesV2Preview(payload, { allow_deletes: allowDeletes });
+      const rep = await adminImportStoriesV2Preview(payload, options);
       setPreview(rep);
       setApplyResult(null);
     } catch (e) {
@@ -114,7 +120,7 @@ function ImportV2Page() {
     if (!preview?.ok) { notify("err", "لا يمكن التطبيق قبل معاينة ناجحة."); return; }
     setBusy("apply");
     try {
-      const res = await adminImportStoriesV2Apply(payload, { allow_deletes: allowDeletes });
+      const res = await adminImportStoriesV2Apply(payload, options);
       setApplyResult(res);
       if (res.ok) {
         notify("ok",
@@ -134,12 +140,20 @@ function ImportV2Page() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-semibold">استيراد/تصدير القصص (v2)</h1>
+          <h1 className="text-xl font-semibold">استيراد Story كاملة v2</h1>
         </div>
         <Link to="/admin/stories" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline">
           <ArrowLeft className="h-4 w-4" /> رجوع للقصص
         </Link>
       </header>
+
+      <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs leading-6 text-muted-foreground">
+        ملف Envelope v2 وحده كافٍ لإنشاء القصة كاملة أو تحديثها بالكامل داخل معاملة واحدة:
+        المجموعات، الوسائط، الحقول الأساسية، المشاهد ومحتواها، المصادر، العلاقات، شرط الفتح،
+        النطاق الزمني، والتصنيف/الندرة/الحجم/الحالات. لا حاجة لاستيراد ملف المحتوى والمشاهد أولًا.
+        الاستيراد Upsert بالمعرّفات الثابتة، ولا يحذف أي بيانات زائدة إلا بتفعيل خيار الحذف الصريح،
+        ولا يفقد الوسائط الحالية إذا جاء الحقل فارغًا إلا بتفعيل خيار استبدال الوسائط.
+      </p>
 
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -160,10 +174,6 @@ function ImportV2Page() {
           className="hidden"
           onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
         />
-        <label className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <input type="checkbox" checked={allowDeletes} onChange={(e) => setAllowDeletes(e.target.checked)} />
-          السماح بحذف المشاهد/العلاقات/المصادر الزائدة
-        </label>
         <button
           onClick={onPreview}
           disabled={!payload || busy !== null}
@@ -174,9 +184,21 @@ function ImportV2Page() {
           onClick={onApply}
           disabled={!preview?.ok || busy !== null}
           className="inline-flex items-center gap-1 rounded-md bg-emerald-600 text-white px-3 py-1.5 text-sm disabled:opacity-50">
-          <PlayCircle className="h-4 w-4" /> تطبيق (Transactional)
+          <PlayCircle className="h-4 w-4" /> استيراد Story كاملة v2
         </button>
       </div>
+
+      <div className="flex flex-wrap items-center gap-4 rounded-md border p-2 text-xs text-muted-foreground">
+        <label className="inline-flex items-center gap-1">
+          <input type="checkbox" checked={allowDeletes} onChange={(e) => { setAllowDeletes(e.target.checked); setPreview(null); setApplyResult(null); }} />
+          السماح بحذف المشاهد/العلاقات/المصادر الزائدة
+        </label>
+        <label className="inline-flex items-center gap-1">
+          <input type="checkbox" checked={clearMedia} onChange={(e) => { setClearMedia(e.target.checked); setPreview(null); setApplyResult(null); }} />
+          استبدال الوسائط حتى لو كان الحقل القادم فارغًا (مسح الغلاف/وسائط المشاهد)
+        </label>
+      </div>
+
 
       {toast && (
         <div className={`rounded-md border p-2 text-sm ${

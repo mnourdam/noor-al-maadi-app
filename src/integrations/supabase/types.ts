@@ -3301,6 +3301,7 @@ export type Database = {
       _normalize_comment_body: { Args: { p: string }; Returns: string }
       _story_canonicalize_incoming_v2: { Args: { p_in: Json }; Returns: Json }
       _story_export_v2_one: { Args: { p_id: string }; Returns: Json }
+      _story_normalize_unlock_v2: { Args: { p_in: Json }; Returns: Json }
       _story_prereqs_v2: {
         Args: { p_spec: Json; p_uid: string }
         Returns: Json
