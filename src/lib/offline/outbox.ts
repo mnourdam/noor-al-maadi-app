@@ -26,7 +26,9 @@ export type OutboxKind =
   | "tutorial_completion"   // record_tutorial_completion RPC (durable onboarding mirror)
   | "story_progress"        // record_story_progress_v2 RPC (monotonic per-scene)
   | "story_completion"      // complete_story_v2 RPC (sticky, version-independent reward)
-  | "avatar_select";        // sync_my_public_stats RPC (durable Premium Emblem pick)
+  | "avatar_select"         // sync_my_public_stats RPC (durable Premium Emblem pick)
+  | "reflection_save"       // user_reflections upsert (durable Reflective Moment)
+  | "reflection_delete";    // user_reflections delete (durable, tombstoned)
 
 export interface OutboxItem {
   id: string;               // uuid, doubles as idempotency key
