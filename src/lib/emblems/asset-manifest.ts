@@ -27,12 +27,10 @@ export function pickAssetUrl(
   size: EmblemSize,
   format: EmblemFormat,
 ): string | null {
-  // 1) Offline bundled pack — served from app origin. WebP only;
-  //    AVIF requests fall through to the CDN matrix as an upgrade.
-  if (format === "webp") {
-    const local = localEmblemPath(record.id, size);
-    if (local) return local;
-  }
+  // 1) Offline bundled pack — served from app origin. AVIF and WebP both
+  //    exist locally, which is required for installed Android/offline use.
+  const local = localEmblemPath(record.id, size, format);
+  if (local) return local;
   // 2) Premium production assets (Phase 9 — size × format matrix on CDN).
   const matrix = PREMIUM_EMBLEM_ASSETS[record.id];
   if (matrix) {
