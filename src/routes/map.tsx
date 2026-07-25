@@ -64,6 +64,9 @@ export const Route = createFileRoute("/map")({
     ],
   }),
   component: WorldMapPage,
+  // Last-resort layer: a loader/search error must not reach the generic
+  // full-app error screen either.
+  errorComponent: () => <AtlasSafeMode reason="error" />,
 });
 
 function WorldMapPage() {
