@@ -40,6 +40,8 @@ import {
 import { onInvestigationPublished } from "@/lib/investigations/adminApi";
 import { InvestigationExportDialog } from "@/components/admin/InvestigationExportDialog";
 import { InvestigationImportDialog } from "@/components/admin/InvestigationImportDialog";
+import { GOLDEN_TEMPLATE_LABEL, isGoldenTemplate } from "@/lib/investigations/golden-template";
+
 
 
 
