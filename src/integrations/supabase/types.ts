@@ -3446,6 +3446,11 @@ export type Database = {
         Args: { p_options?: Json; p_payload: Json }
         Returns: Json
       }
+      admin_investigation_reward_audit: { Args: never; Returns: Json }
+      admin_investigation_reward_reconcile: {
+        Args: { p_dry_run?: boolean; p_user_ids?: string[] }
+        Returns: Json
+      }
       admin_list_campaign_versions: {
         Args: { p_id: string }
         Returns: {
