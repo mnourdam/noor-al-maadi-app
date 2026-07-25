@@ -625,15 +625,10 @@ function HomeFull() {
               />
             );
           })}
-          {/* Readability layer — adaptive, artwork-preserving (see KeyArtScrim). */}
-          <KeyArtScrim src={slide?.bg} variant="hero" />
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              backgroundImage:
-                "linear-gradient(90deg, color-mix(in oklab, var(--scrim) 42%, transparent) 0%, transparent 38%)",
-            }}
-          />
+          {/* The hero painting resolves into the app shell — the section
+              has no visible bottom edge, the copy sits in navy. */}
+          <KeyArtDissolve start={0.36} end={0.86} sides />
+
           {!perfLite && <div className="arabesque-layer" />}
           {!perfLite && Array.from({ length: 10 }).map((_, i) => (
             <span key={i} className="ember" style={{
