@@ -26,24 +26,35 @@ import {
   type FeedItem,
 } from "./campaignDividers";
 
-function toCampaigns(rawList: { id: string; slug: string; data: any; key_art_path?: string | null; key_art_square_path?: string | null; key_art_credit?: string | null }[]): Campaign[] {
+function toCampaigns(
+  rawList: { id: string; slug: string; data: any; key_art_path?: string | null; key_art_square_path?: string | null; key_art_credit?: string | null }[],
+  overlay: Record<string, KeyArtOverlayRow> = {},
+): Campaign[] {
   const all = rawList
     .map((r) => {
       const c = r.data as unknown as Campaign;
       if (!c) return c;
       // Merge Key Art fields (view columns) onto the Campaign object so
       // player surfaces resolve artwork through the single canonical
-      // resolver in `src/lib/campaignArtwork.ts`.
-      return {
+      // resolver in `src/lib/campaignArtwork.tsx`. Snapshot rows predate
+      // those columns — the overlay repairs them.
+      const merged = {
         ...c,
+        id: c.id ?? r.id,
+        slug: (c as any).slug ?? r.slug,
         key_art_path: r.key_art_path ?? c.key_art_path ?? null,
         key_art_square_path: r.key_art_square_path ?? c.key_art_square_path ?? null,
         key_art_credit: r.key_art_credit ?? c.key_art_credit ?? null,
       } as Campaign;
+      return applyKeyArtOverlay(
+        merged as Campaign & { id?: string; slug?: string },
+        overlay,
+      ) as Campaign;
     })
     .filter((c) => c && !isDividerData(c) && c.status === "published");
   return sortCampaignsChronological(withBackfilledChronologyAll(all));
 }
+
 
 function toDividers(rawList: { id: string; slug: string; data: any }[]): CampaignDivider[] {
   return rawList
