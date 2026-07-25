@@ -118,6 +118,21 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const [resolvedIndices, setResolvedIndices] = useState<Set<number>>(() => new Set());
   const [finished, setFinished] = useState(alreadyDone);
   const [heartGain, setHeartGain] = useState<number>(0);
+  // Truth-in-rewards: the result screen must show ONLY what the server
+  // actually granted. The published `reward` block is an *authoring*
+  // value; `complete_investigation_v2` caps it (XP ≤ 150, Dinars ≤ 50,
+  // Hearts ≤ 5) and grants nothing on a replay. Showing `reward.xp`
+  // directly (e.g. 1100) is a lie whenever the cap or a replay applies.
+  const [grant, setGrant] = useState<
+    | null
+    | {
+        status: "granted" | "already" | "queued" | "refused";
+        xp: number;
+        dinars: number;
+        hearts: number;
+      }
+  >(null);
+
   // Double-tap guard — a second synchronous click before React commits
   // the state transition must be dropped so Next never advances twice
   // and grantRewards never fires twice in the same tick.
@@ -193,6 +208,23 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       score: correctCount,
       correctCount,
     });
+
+    // Reward truth. `applied` is the server's own "this call granted the
+    // reward" flag; a replay (reinstall, cleared local marker) returns the
+    // historical snapshot with applied=false and grants nothing.
+    if (outcome.acknowledged) {
+      setGrant({
+        status: outcome.applied ? "granted" : "already",
+        xp: outcome.applied ? outcome.xpEarned : 0,
+        dinars: outcome.applied ? outcome.dinarsEarned : 0,
+        hearts: outcome.applied ? outcome.heartsEarned : 0,
+      });
+    } else if (outcome.queued) {
+      setGrant({ status: "queued", xp: 0, dinars: 0, hearts: 0 });
+    } else {
+      setGrant({ status: "refused", xp: 0, dinars: 0, hearts: 0 });
+    }
+
 
     // Phase 3A — canonical qualifying-activity call (server-authoritative).
     // Runs strictly AFTER the grant so its mirrored totals are post-grant.
@@ -360,14 +392,27 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
             <p className="font-display mt-2 text-lg font-bold text-gold">قضية محلولة!</p>
             <p className="mt-1 text-[12px] text-muted-foreground">
               {resolvedIndices.size}/{totalQuestionLike} إجابات صحيحة
-              {!alreadyDone && (
+              {grant?.status === "granted" && (
                 <>
-                  {reward.xp ? <> · <Star className="inline size-3" /> +{reward.xp}</> : null}
-                  {reward.coins ? <> · <Coins className="inline size-3" /> +{reward.coins}</> : null}
-                  {heartGain > 0 ? <> · <Heart className="inline size-3 text-rose-300" /> +{heartGain}</> : null}
+                  {grant.xp ? <> · <Star className="inline size-3" /> +{grant.xp}</> : null}
+                  {grant.dinars ? <> · <Coins className="inline size-3" /> +{grant.dinars}</> : null}
+                  {(grant.hearts || heartGain) ? (
+                    <> · <Heart className="inline size-3 text-rose-300" /> +{Math.max(grant.hearts, heartGain)}</>
+                  ) : null}
                 </>
               )}
             </p>
+            {grant?.status === "already" && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                سُجِّل هذا التحقيق سابقًا — لا مكافآت مكرّرة.
+              </p>
+            )}
+            {grant?.status === "queued" && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                تم حفظ الإنجاز — ستُضاف المكافأة عند عودة الاتصال.
+              </p>
+            )}
+
             <div className="mt-4 flex flex-col items-center gap-2">
               <Link to="/investigations" className="text-sm text-gold">قضية أخرى</Link>
               <Link to="/campaigns" className="text-xs text-muted-foreground">العودة للحملات</Link>
