@@ -33,7 +33,14 @@ export async function recordCollectionAdd(p: {
   sourceCampaignId?: string | null; sourceChapterId?: string | null;
 }): Promise<void> {
   await record("collection_add", p);
+  // Artifact ownership gates (`artifact_owned` unlock nodes) listen for this.
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new CustomEvent("irth:collection:changed", { detail: { itemId: p.itemId } }));
+    } catch { /* noop */ }
+  }
 }
+
 
 export async function recordGameComplete(p: {
   gameId: string; stageIndex: number; score: number;
