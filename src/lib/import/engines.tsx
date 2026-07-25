@@ -15,6 +15,7 @@
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { validateCampaign } from "@/lib/campaignStorage";
+import { isDividerPayload, selectCampaignRows } from "@/lib/campaigns/entities";
 import { withBackfilledChronology } from "@/lib/campaignChronologyBackfill";
 import {
   inferWorldFromMetadata,
