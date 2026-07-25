@@ -16,6 +16,8 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
+import { CampaignArtwork, hasCampaignKeyArt } from "@/lib/campaignArtwork";
+
 import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
 } from "@/lib/importedCampaignProgress";
@@ -109,8 +111,24 @@ function ImportedCampaignOverview() {
             <ArrowRight className="size-3.5" /> الحملات
           </Link>
           <div className="relative overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-tl from-amber-900/40 via-surface to-stone-900/60 p-6 shadow-elegant">
+            {/* Key Art cinematic header — canonical resolver only. Campaigns
+                without Key Art keep the exact gradient treatment below. */}
+            <CampaignArtwork
+              campaign={campaign}
+              surface="campaign-detail"
+              alt={campaign.title}
+              fallback={null}
+              className="absolute inset-0"
+              imgClassName="h-full w-full object-cover"
+              loading="eager"
+            />
+            {hasCampaignKeyArt(campaign) && (
+              <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--surface))] via-[hsl(var(--surface)/0.72)] to-[hsl(var(--surface)/0.28)]" />
+
+            )}
             <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
             <div className="relative">
+
               <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold">
                 <Crown className="size-3.5" />
                 {campaign.historicalPeriod ?? "حملة تاريخية"}

@@ -27,7 +27,7 @@
 //
 //   - Campaign List cards (`ImportedCampaignCard`) — gradient-only
 //     tile. Documented; no wiring needed until visual redesign.
-//   - Campaign Detail / Chapter routes — no header image today.
+//   - Campaign Detail header — WIRED (cinematic Key Art backdrop).
 //   - Notifications — text/icon only, no per-campaign image.
 //   - Share Card — renders emblem + stats, no campaign artwork.
 //   - Android APK — shares the same route tree; wiring here is

@@ -18,6 +18,13 @@ import {
   localPublishedCampaigns,
 } from "./local-first-store";
 import {
+  applyKeyArtOverlay,
+  getCampaignKeyArtOverlay,
+  
+  type KeyArtOverlayRow,
+} from "./campaignKeyArtOverlay";
+
+import {
   buildFeed,
   groupFeedIntoSections,
   isDividerData,
@@ -26,24 +33,35 @@ import {
   type FeedItem,
 } from "./campaignDividers";
 
-function toCampaigns(rawList: { id: string; slug: string; data: any; key_art_path?: string | null; key_art_square_path?: string | null; key_art_credit?: string | null }[]): Campaign[] {
+function toCampaigns(
+  rawList: { id: string; slug: string; data: any; key_art_path?: string | null; key_art_square_path?: string | null; key_art_credit?: string | null }[],
+  overlay: Record<string, KeyArtOverlayRow> = {},
+): Campaign[] {
   const all = rawList
     .map((r) => {
       const c = r.data as unknown as Campaign;
       if (!c) return c;
       // Merge Key Art fields (view columns) onto the Campaign object so
       // player surfaces resolve artwork through the single canonical
-      // resolver in `src/lib/campaignArtwork.ts`.
-      return {
+      // resolver in `src/lib/campaignArtwork.tsx`. Snapshot rows predate
+      // those columns — the overlay repairs them.
+      const merged = {
         ...c,
+        id: c.id ?? r.id,
+        slug: (c as any).slug ?? r.slug,
         key_art_path: r.key_art_path ?? c.key_art_path ?? null,
         key_art_square_path: r.key_art_square_path ?? c.key_art_square_path ?? null,
         key_art_credit: r.key_art_credit ?? c.key_art_credit ?? null,
       } as Campaign;
+      return applyKeyArtOverlay(
+        merged as Campaign & { id?: string; slug?: string },
+        overlay,
+      ) as Campaign;
     })
     .filter((c) => c && !isDividerData(c) && c.status === "published");
   return sortCampaignsChronological(withBackfilledChronologyAll(all));
 }
+
 
 function toDividers(rawList: { id: string; slug: string; data: any }[]): CampaignDivider[] {
   return rawList
@@ -75,7 +93,13 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
       });
   }
 
-  if (local.length > 0) return toCampaigns(local);
+  if (local.length > 0) {
+    // Snapshot rows carry no `key_art_*` columns — merge the artwork
+    // overlay so campaign-owned surfaces never fall back to a random
+    // hero image while showing that campaign's title / progress / CTA.
+    const overlay = await getCampaignKeyArtOverlay();
+    return toCampaigns(local, overlay);
+  }
 
   // Local empty (rare — e.g. snapshot still loading). Fall through to network.
   try {
@@ -83,6 +107,7 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
       .from("campaigns_public" as any)
       .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
     if (!error && data) return toCampaigns(data as any[]);
+
   } catch (err) {
     console.warn("[supabaseCampaigns] live list failed:", err);
   }
@@ -140,14 +165,19 @@ export async function fetchCampaignByIdOrSlug(
   if (hit && !isDividerData(hit.data)) {
     const c = (hit.data ?? null) as Campaign | null;
     if (c && c.status === "published") {
-      return {
+      const overlay = await getCampaignKeyArtOverlay();
+      const merged = {
         ...c,
+        id: c.id ?? (hit as any).id,
+        slug: (c as any).slug ?? (hit as any).slug,
         key_art_path: (hit as any).key_art_path ?? c.key_art_path ?? null,
         key_art_square_path: (hit as any).key_art_square_path ?? c.key_art_square_path ?? null,
         key_art_credit: (hit as any).key_art_credit ?? c.key_art_credit ?? null,
-      } as Campaign;
+      } as Campaign & { id?: string; slug?: string };
+      return applyKeyArtOverlay(merged, overlay) as Campaign;
     }
   }
+
 
   // Local miss — try network (may be a freshly published campaign).
   try {
