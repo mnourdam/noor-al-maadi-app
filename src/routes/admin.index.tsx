@@ -124,6 +124,9 @@ function AdminHub() {
 
           <AdminCard to="/admin/investigations" icon={<Search className="h-5 w-5" />} title="إدارة التحقيقات"
             desc="تحقيقات تاريخية قابلة للعب من Supabase." />
+          <AdminCard to="/admin/investigation-rewards" icon={<ShieldCheck className="h-5 w-5" />} title="مطابقة مكافآت التحقيقات"
+            desc="أداة صيانة آمنة: تمنح المكافآت المفقودة للتحقيقات المنجزة دون تكرار المنح." />
+
           <AdminCard to="/admin/stories" icon={<BookOpen className="h-5 w-5" />} title="إدارة القصص"
             desc="إنشاء وتحرير ونشر القصص التاريخية والمشاهد والوسائط." />
           <AdminCard to="/admin/map" icon={<MapPin className="h-5 w-5" />} title="إدارة الخريطة"
