@@ -570,6 +570,14 @@ function AdminInvestigationsPage() {
         />
       )}
 
+      {importOpen && (
+        <InvestigationImportDialog
+          onClose={() => setImportOpen(false)}
+          onImported={() => { refresh(); }}
+        />
+      )}
+
+
 
 
       {toast && (
