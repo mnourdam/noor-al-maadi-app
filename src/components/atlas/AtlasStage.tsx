@@ -57,9 +57,21 @@ export function AtlasStage({
       setWrapSize({ w: el.clientWidth || 1, h: el.clientHeight || 1 });
     update();
     if (androidStable) return;
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
+    // Old Android WebViews (< 64) have no ResizeObserver; constructing it
+    // throws and used to take the whole Atlas route down. Fall back to a
+    // window resize listener instead of crashing.
+    if (typeof ResizeObserver !== "function") {
+      window.addEventListener("resize", update);
+      return () => window.removeEventListener("resize", update);
+    }
+    try {
+      const ro = new ResizeObserver(update);
+      ro.observe(el);
+      return () => ro.disconnect();
+    } catch {
+      window.addEventListener("resize", update);
+      return () => window.removeEventListener("resize", update);
+    }
   }, [androidStable]);
 
   // Clamp in SVG USER UNITS (= viewBox units), since the <g> transform's

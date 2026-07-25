@@ -28,6 +28,7 @@ import {
 } from "@/lib/atlas/atlas-search";
 import { Route as MapRoute, type MapSearch } from "@/routes/map";
 import { androidMark, isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
+import { clearAtlasCrashMarker, releaseUiLocks } from "@/lib/atlas/atlas-recovery";
 
 export function AtlasShell() {
   androidMark("render:Atlas");
@@ -103,6 +104,17 @@ function AtlasShellInner() {
   // visibility override above keeps the selected result visible until the
   // user clears the search or closes its preview.
 
+
+  // A successful interactive render clears the one-session crash marker so
+  // the next launch opens the full Atlas again.
+  useEffect(() => {
+    const t = setTimeout(() => clearAtlasCrashMarker(), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // The Atlas is a full-screen fixed layer. Whatever happens to it, no scroll
+  // lock or pointer blocker may survive leaving the route.
+  useEffect(() => () => releaseUiLocks(), []);
 
   // ── Search navigation ────────────────────────────────────────────────
   const [suggestions, setSuggestions] = useState<AtlasSearchHit[]>([]);
