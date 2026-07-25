@@ -7,11 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { normalizeEntitySlug } from "@/lib/encyclopedia-source";
 import {
-import { selectCampaignRows } from "@/lib/campaigns/entities";
   EXPLORATION_PATHS,
   buildExplorationJourney,
   type ExplorationPathConfig,
 } from "@/lib/exploration-paths";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/exploration-path-repair")({
   head: () => ({
