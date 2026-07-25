@@ -82,12 +82,10 @@ function main() {
   if (existsSync(emblemManifest)) {
     try {
       const manifest = JSON.parse(readFileSync(emblemManifest, "utf8"));
-      const ids = Array.isArray(manifest)
-        ? manifest
-        : Array.isArray(manifest?.emblems)
-          ? manifest.emblems
-          : Object.keys(manifest?.assets ?? manifest ?? {});
-      expectedEmblems = ids.length * 3;
+      const assetCount = Number(manifest?.asset_count) || 0;
+      const emblemCount = Number(manifest?.emblem_count) || 0;
+      const formats = Array.isArray(manifest?.bundled_formats) ? manifest.bundled_formats.length : 1;
+      expectedEmblems = assetCount || emblemCount * 3 * formats;
     } catch {
       expectedEmblems = 0;
     }
