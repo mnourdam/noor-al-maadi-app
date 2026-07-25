@@ -123,7 +123,8 @@ function ImportedCampaignOverview() {
               loading="eager"
             />
             {hasCampaignKeyArt(campaign) && (
-              <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--surface))] via-[hsl(var(--surface)/0.82)] to-[hsl(var(--surface)/0.55)]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--surface))] via-[hsl(var(--surface)/0.72)] to-[hsl(var(--surface)/0.28)]" />
+
             )}
             <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
             <div className="relative">
