@@ -985,3 +985,8 @@ Storage convention: `campaign-key-art/<campaign_id>/key-art-v1.jpg`, persisted a
 | 35 | `baghdad-capital-of-the-world` | ✅ shipped (Batch 7) |
 | 36 | `harun-alrashid` | ✅ shipped (Batch 7 — regenerated to remove European longcase clock + Timurid courtyard) |
 | 37 | `almamun-translation-movement` | ✅ shipped (Batch 7 — regenerated to remove CG look + Ottoman skyline) |
+| 38 | `house-of-wisdom` | ✅ shipped (Batch 8) |
+| 39 | `samarra-and-turkish-guard` | ✅ shipped (Batch 8) |
+| 40 | `abbasid-between-power-and-weakness` | ✅ shipped (Batch 8 — regenerated: Timurid turquoise tilework replaced with correct plain Baghdad brick) |
+| 41 | `mongol-invasion-mashriq` | ✅ shipped (Batch 8) |
+| 42 | `mongols-and-fall-of-baghdad` | ✅ shipped (Batch 8 — regenerated: tiled portal + later-period skyline replaced with plain brick) |
