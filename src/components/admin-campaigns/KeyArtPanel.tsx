@@ -12,11 +12,11 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Trash2, UploadCloud, ImagePlus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import {
   uploadCampaignKeyArt,
   deleteCampaignKeyArt,
   updateCampaignKeyArtMeta,
+  fetchCampaignKeyArt,
   type CampaignKeyArtFields,
 } from "@/lib/campaign-key-art";
 import { CampaignKeyArt } from "@/components/CampaignKeyArt";
@@ -37,24 +37,22 @@ export function KeyArtPanel({ campaignId, title, onNotify }: Props) {
   const [source, setSource] = useState("");
   const [busy, setBusy] = useState<"idle" | "loading" | "uploading" | "deleting" | "saving">("loading");
 
+  // `admin_campaigns` grants no direct table access to `authenticated`;
+  // the admin RPC is the only read path that returns the stored paths.
   const refresh = async () => {
     setBusy("loading");
-    const { data, error } = await supabase
-      .from("admin_campaigns")
-      .select("key_art_path, key_art_square_path, key_art_credit, key_art_source")
-      .eq("id", campaignId)
-      .maybeSingle();
-    if (error) {
-      onNotify("err", `تعذر جلب بيانات صورة الحملة. (${error.message})`);
+    try {
+      const r = await fetchCampaignKeyArt(campaignId);
+      setRow(r);
+      setCredit(r.key_art_credit ?? "");
+      setSource(r.key_art_source ?? "");
+    } catch (err) {
+      onNotify("err", `تعذر جلب بيانات صورة الحملة. (${err instanceof Error ? err.message : "خطأ"})`);
+    } finally {
       setBusy("idle");
-      return;
     }
-    const r = (data ?? { key_art_path: null, key_art_square_path: null, key_art_credit: null, key_art_source: null }) as CampaignKeyArtFields;
-    setRow(r);
-    setCredit(r.key_art_credit ?? "");
-    setSource(r.key_art_source ?? "");
-    setBusy("idle");
   };
+
 
   useEffect(() => { void refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [campaignId]);
 
