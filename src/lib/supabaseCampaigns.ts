@@ -165,14 +165,19 @@ export async function fetchCampaignByIdOrSlug(
   if (hit && !isDividerData(hit.data)) {
     const c = (hit.data ?? null) as Campaign | null;
     if (c && c.status === "published") {
-      return {
+      const overlay = await getCampaignKeyArtOverlay();
+      const merged = {
         ...c,
+        id: c.id ?? (hit as any).id,
+        slug: (c as any).slug ?? (hit as any).slug,
         key_art_path: (hit as any).key_art_path ?? c.key_art_path ?? null,
         key_art_square_path: (hit as any).key_art_square_path ?? c.key_art_square_path ?? null,
         key_art_credit: (hit as any).key_art_credit ?? c.key_art_credit ?? null,
-      } as Campaign;
+      } as Campaign & { id?: string; slug?: string };
+      return applyKeyArtOverlay(merged, overlay) as Campaign;
     }
   }
+
 
   // Local miss — try network (may be a freshly published campaign).
   try {
