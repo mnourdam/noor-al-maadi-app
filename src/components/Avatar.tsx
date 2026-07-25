@@ -33,7 +33,7 @@ const RARITY_RING: Record<EmblemRarity, string> = {
 /**
  * Irth Identity Emblem badge. Renders the chosen Premium Historical Emblem
  * on a deep navy disc with a rarity ring, via the unified <EmblemArt />
- * pipeline (offline pack → CDN → legacy SVG fallback). Emblems are part
+ * pipeline (offline pack → CDN → Premium default fallback). Emblems are part
  * of the brand identity — never emoji, never user-uploaded.
  */
 export function Avatar({

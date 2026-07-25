@@ -3,8 +3,8 @@
 // ------------------------------------------------------------
 // Phase 9 / Phase 0 deliverable. Shows every emblem in the
 // canonical registry with its category, rarity, status, whether
-// a Premium asset has been uploaded, visual/asset versions, and
-// the legacy SVG fallback key. No CRUD, no upload pipeline yet.
+// a Premium asset has been uploaded, and visual/asset versions.
+// No CRUD, no upload pipeline yet.
 // ============================================================
 
 import { createFileRoute } from "@tanstack/react-router";
