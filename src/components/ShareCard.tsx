@@ -507,30 +507,53 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   // Divider under header
   drawHairline(ctx, 100, 210, W - 200, hexAlpha(gold, 0.28));
 
-  // ═══ EMBLEM PEDESTAL (hero, 240 – 900) ══════════════════════════════
+  // ═══ EMBLEM PEDESTAL (hero) ═════════════════════════════════════════
   const cx = W / 2;
-  const emCY = 620;
+  const emCY = 610;
   const emRadius = 210;
 
   // Pedestal — showcase plinth beneath the emblem
   const pedTopY = emCY + emRadius - 20;
   const pedBotY = emCY + emRadius + 110;
-  // Plinth shadow
+
+  // Subtle pedestal reflection — draw the emblem inverted, faded, clipped
+  // to a trapezoid mirroring the plinth top so it feels like polished stone.
+  if (s.emblemImg?.complete && s.emblemImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.beginPath();
+    trapezoid(ctx, cx - 240, pedTopY, 480, cx - 290, pedBotY, 580);
+    ctx.clip();
+    ctx.globalAlpha = 0.14;
+    ctx.translate(cx, pedTopY);
+    ctx.scale(1, -0.55);
+    const reflSize = 300;
+    ctx.drawImage(s.emblemImg, -reflSize / 2, -reflSize + 30, reflSize, reflSize);
+    ctx.restore();
+    // Fade mask over reflection
+    const fade = ctx.createLinearGradient(0, pedTopY, 0, pedBotY);
+    fade.addColorStop(0, "rgba(10,15,30,0.0)");
+    fade.addColorStop(0.55, "rgba(10,15,30,0.55)");
+    fade.addColorStop(1, "rgba(10,15,30,0.95)");
+    ctx.save();
+    ctx.beginPath();
+    trapezoid(ctx, cx - 240, pedTopY, 480, cx - 290, pedBotY, 580);
+    ctx.clip();
+    ctx.fillStyle = fade;
+    ctx.fillRect(cx - 300, pedTopY, 600, pedBotY - pedTopY);
+    ctx.restore();
+  }
+
+  // Plinth ground shadow
   const shadow = ctx.createRadialGradient(cx, pedBotY + 10, 10, cx, pedBotY + 10, 320);
   shadow.addColorStop(0, "rgba(0,0,0,0.55)");
   shadow.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = shadow;
   ctx.fillRect(cx - 340, pedBotY - 40, 680, 200);
 
-  // Pedestal body
-  const pedGrad = ctx.createLinearGradient(0, pedTopY, 0, pedBotY);
-  pedGrad.addColorStop(0, "#1a2340");
-  pedGrad.addColorStop(1, "#0a0f22");
-  ctx.fillStyle = pedGrad;
+  // Pedestal outline (subtle rim only — face is now transparent to show reflection)
+  ctx.strokeStyle = hexAlpha(gold, 0.35);
+  ctx.lineWidth = 1;
   trapezoid(ctx, cx - 240, pedTopY, 480, cx - 290, pedBotY, 580);
-  ctx.fill();
-  ctx.strokeStyle = hexAlpha(gold, 0.45);
-  ctx.lineWidth = 1.2;
   ctx.stroke();
   // Pedestal top gold rim
   ctx.fillStyle = hexAlpha(gold, 0.9);
@@ -571,42 +594,43 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   const rw = ctx.measureText(rarityText).width + 56;
   const ry = pedTopY + 34;
   roundRect(ctx, cx - rw / 2, ry, rw, 40, 20);
-  ctx.fillStyle = hexAlpha(accent, 0.15);
+  ctx.fillStyle = "rgba(10,15,30,0.7)";
   ctx.fill();
-  ctx.strokeStyle = hexAlpha(accent, 0.65);
+  ctx.fillStyle = hexAlpha(accent, 0.18);
+  ctx.fill();
+  ctx.strokeStyle = hexAlpha(accent, 0.7);
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.textAlign = "center";
   ctx.fillStyle = accent;
   ctx.fillText(rarityText, cx, ry + 28);
 
-  // ═══ PLAYER IDENTITY (960 – 1120) ═══════════════════════════════════
-  let cursor = 990;
+  // ═══ PLAYER IDENTITY ════════════════════════════════════════════════
+  let cursor = 1040;
   ctx.textAlign = "center";
   ctx.fillStyle = "#fff";
   fitText(ctx, s.displayName, cx, cursor, W - 260, 56, 36, "700", family);
-  cursor += 46;
+  cursor += 52;
 
   if (s.title) {
     ctx.fillStyle = goldSoft;
     ctx.font = `600 22px ${family}`;
     ctx.fillText(truncate(ctx, s.title, W - 280), cx, cursor);
-    cursor += 32;
+    cursor += 34;
   }
   if (s.username && s.username !== s.displayName) {
     ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.font = `400 20px ${family}`;
     ctx.fillText(truncate(ctx, `@${s.username}`, W - 280), cx, cursor);
-    cursor += 24;
+    cursor += 26;
   }
 
   // Divider
-  cursor += 20;
+  cursor += 34;
   drawHairline(ctx, 180, cursor, W - 360, hexAlpha(gold, 0.22));
-  cursor += 30;
+  cursor += 44;
 
   // ═══ LEVEL SECTION ═════════════════════════════════════════════════
-  // RTL: label right, value left. Progress bar full width.
   const lvlPadX = 130;
   const lvlW = W - 2 * lvlPadX;
 
@@ -619,10 +643,9 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   ctx.fillStyle = "#fff";
   ctx.font = `700 34px ${family}`;
   ctx.fillText(String(s.level), lvlPadX, cursor + 4);
-  cursor += 24;
+  cursor += 28;
 
-  // Progress bar
-  const barY = cursor + 14;
+  const barY = cursor + 16;
   const barH = 12;
   roundRect(ctx, lvlPadX, barY, lvlW, barH, barH / 2);
   ctx.fillStyle = "rgba(255,255,255,0.06)";
@@ -634,7 +657,6 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   const pct = s.atMaxLevel ? 1 : s.levelProgressPct;
   const fillW = Math.max(0, Math.min(lvlW, lvlW * pct));
   if (fillW > 0) {
-    // RTL fill: from the right edge
     roundRect(ctx, lvlPadX + lvlW - fillW, barY, fillW, barH, barH / 2);
     const bg2 = ctx.createLinearGradient(lvlPadX, barY, lvlPadX + lvlW, barY);
     bg2.addColorStop(0, "#a07c1c");
@@ -643,7 +665,7 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
     ctx.fill();
   }
 
-  cursor = barY + barH + 26;
+  cursor = barY + barH + 28;
   ctx.textAlign = "right";
   ctx.fillStyle = goldSoft;
   ctx.font = `600 18px ${family}`;
@@ -655,11 +677,11 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
     ? "بلغتَ أعلى المستويات"
     : `متبقّي ${s.levelToNext.toLocaleString("en-US")} نقطة للمستوى التالي`;
   ctx.fillText(tail, lvlPadX, cursor);
-  cursor += 30;
-  drawHairline(ctx, 180, cursor, W - 360, hexAlpha(gold, 0.18));
   cursor += 40;
+  drawHairline(ctx, 180, cursor, W - 360, hexAlpha(gold, 0.18));
+  cursor += 56;
 
-  // ═══ STATISTICS (icon-based, 2×3 grid) ══════════════════════════════
+  // ═══ STATISTICS (icon-based, 2×3 grid — enlarged icons) ═════════════
   const stats: Array<{ kind: StatIcon; label: string; value: string }> = [
     { kind: "dinars",   label: "الدنانير",     value: s.dinars.toLocaleString("en-US") },
     { kind: "museum",   label: "المقتنيات",   value: countOrDash(s.museumCount) },
@@ -668,36 +690,36 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
     { kind: "book",     label: "القصص",         value: countOrDash(s.storiesCompleted) },
     { kind: "trophy",   label: "الإنجازات",    value: s.achievementsTotal.toLocaleString("en-US") },
   ];
-  const gridPadX = 110;
+  const gridPadX = 100;
   const gridW = W - 2 * gridPadX;
   const cellW = gridW / 3;
-  const cellH = 150;
+  const cellH = 180;
   for (let i = 0; i < stats.length; i++) {
     const col = i % 3;
     const row = Math.floor(i / 3);
     const cxs = gridPadX + col * cellW + cellW / 2;
     const cys = cursor + row * cellH;
-    drawStatIcon(ctx, stats[i].kind, cxs, cys + 8, gold);
+    drawStatIcon(ctx, stats[i].kind, cxs, cys + 14, gold);
     ctx.textAlign = "center";
     ctx.fillStyle = "#fff";
-    ctx.font = `700 30px ${family}`;
-    ctx.fillText(truncate(ctx, stats[i].value, cellW - 20), cxs, cys + 90);
+    ctx.font = `700 32px ${family}`;
+    ctx.fillText(truncate(ctx, stats[i].value, cellW - 20), cxs, cys + 110);
     ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = `400 15px ${family}`;
-    ctx.fillText(stats[i].label, cxs, cys + 118);
+    ctx.font = `400 16px ${family}`;
+    ctx.fillText(stats[i].label, cxs, cys + 140);
   }
-  cursor += 2 * cellH + 10;
-  drawHairline(ctx, 180, cursor, W - 360, hexAlpha(gold, 0.18));
-  cursor += 34;
+  cursor += 2 * cellH + 20;
 
-  // ═══ SPECIALIZATION (premium gold chip) ═════════════════════════════
+  // ═══ BOTTOM: Specialization → divider → medals → branding ═══════════
+  // Nothing else lives here. Bio / favorite state / join date / quote
+  // are intentionally omitted to let the bottom breathe (Phase 10 spec).
+
   if (s.specializationLabel) {
     ctx.font = `700 26px ${family}`;
     const valueW = ctx.measureText(s.specializationLabel).width;
-    const chipW = Math.min(W - 220, Math.max(360, valueW + 100));
-    const chipH = 100;
+    const chipW = Math.min(W - 260, Math.max(380, valueW + 120));
+    const chipH = 104;
     const chipX = cx - chipW / 2, chipY = cursor;
-    // Gold gradient chip
     roundRect(ctx, chipX, chipY, chipW, chipH, 22);
     const cg = ctx.createLinearGradient(chipX, chipY, chipX + chipW, chipY + chipH);
     cg.addColorStop(0, "#4a3717");
@@ -708,7 +730,6 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
     ctx.strokeStyle = goldSoft;
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    // Inner gold hairline
     roundRect(ctx, chipX + 6, chipY + 6, chipW - 12, chipH - 12, 18);
     ctx.strokeStyle = hexAlpha(goldSoft, 0.5);
     ctx.lineWidth = 0.8;
@@ -717,92 +738,51 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,240,200,0.7)";
     ctx.font = `400 14px ${family}`;
-    ctx.fillText("العالم التاريخي الأكثر نشاطاً", cx, chipY + 30);
+    ctx.fillText("العالم التاريخي الأكثر نشاطاً", cx, chipY + 32);
     ctx.fillStyle = "#fff8e0";
     ctx.font = `700 28px ${family}`;
-    ctx.fillText(truncate(ctx, s.specializationLabel, chipW - 40), cx, chipY + 72);
-    cursor += chipH + 34;
+    ctx.fillText(truncate(ctx, s.specializationLabel, chipW - 40), cx, chipY + 74);
+    cursor += chipH + 44;
   }
 
-  // ═══ TOP ACHIEVEMENTS (3 medals) ════════════════════════════════════
-  if (s.topAchievements.length > 0) {
-    ctx.textAlign = "center";
-    ctx.fillStyle = hexAlpha(gold, 0.8);
-    ctx.font = `600 15px ${family}`;
-    ctx.fillText("أبرز الإنجازات", cx, cursor);
-    cursor += 24;
+  // Thin divider
+  drawHairline(ctx, 220, cursor, W - 440, hexAlpha(gold, 0.28));
+  cursor += 46;
 
-    const medalR = 42;
-    const medalGap = 40;
+  // Top 3 medals (museum medals with ornate rim, embossed star, ribbon)
+  if (s.topAchievements.length > 0) {
+    const medalR = 54;
+    const medalGap = 48;
     const medalCount = Math.min(3, s.topAchievements.length);
     const totalW = medalCount * (medalR * 2) + (medalCount - 1) * medalGap;
     const startX = cx - totalW / 2 + medalR;
     for (let i = 0; i < medalCount; i++) {
       const ac = s.topAchievements[i];
       const mx = startX + i * (medalR * 2 + medalGap);
-      const my = cursor + medalR + 4;
+      const my = cursor + medalR + 8;
       drawMedal(ctx, mx, my, medalR, accent, gold, i + 1);
-      // Label under medal
       ctx.textAlign = "center";
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
       ctx.font = `500 13px ${family}`;
-      const label = truncate(ctx, ac.label, medalR * 2 + medalGap - 8);
-      ctx.fillText(label, mx, my + medalR + 22);
+      const label = truncate(ctx, ac.label, medalR * 2 + medalGap - 4);
+      ctx.fillText(label, mx, my + medalR + 28);
     }
-    cursor += medalR * 2 + 56;
+    cursor += medalR * 2 + 70;
   }
 
-  // ═══ FAVORITE STATE + BIO ═══════════════════════════════════════════
-  if (s.favoriteStateName) {
-    ctx.textAlign = "center";
-    ctx.fillStyle = hexAlpha(gold, 0.7);
-    ctx.font = `400 13px ${family}`;
-    ctx.fillText("الدولة المفضلة", cx, cursor);
-    cursor += 22;
-    ctx.fillStyle = "#f4ecd6";
-    ctx.font = `600 22px ${family}`;
-    ctx.fillText(truncate(ctx, s.favoriteStateName, W - 260), cx, cursor);
-    cursor += 30;
+  // ═══ IRTH BRANDING (footer) ═════════════════════════════════════════
+  const brandY = H - 96;
+  if (s.logoImg?.complete && s.logoImg.naturalWidth > 0) {
+    const bs = 40;
+    ctx.drawImage(s.logoImg, cx - bs / 2, brandY - bs, bs, bs);
   }
-
-  if (s.bio) {
-    cursor += 8;
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255,255,255,0.78)";
-    ctx.font = `italic 18px ${family}`;
-    cursor = drawWrappedText(ctx, `« ${s.bio} »`, cx, cursor, W - 260, 26, 2);
-    cursor += 10;
-  }
-
-  // ═══ FOOTER (join date + quote) ═════════════════════════════════════
-  const footerBottom = H - 90;
-  const quote = s.specializationKey ? SPECIALIZATION_QUOTE[s.specializationKey] : null;
-
-  let fy = footerBottom;
-  if (quote) {
-    ctx.textAlign = "center";
-    ctx.fillStyle = hexAlpha(gold, 0.7);
-    ctx.font = `italic 18px ${family}`;
-    ctx.fillText(`« ${quote} »`, cx, fy);
-    fy -= 30;
-  }
-
-  if (s.joinDateHijri || s.joinDateGregorian) {
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.font = `400 13px ${family}`;
-    ctx.fillText("عضو في إرث منذ", cx, fy - 46);
-    if (s.joinDateHijri) {
-      ctx.fillStyle = goldSoft;
-      ctx.font = `600 20px ${family}`;
-      ctx.fillText(s.joinDateHijri, cx, fy - 22);
-    }
-    if (s.joinDateGregorian) {
-      ctx.fillStyle = "rgba(255,255,255,0.55)";
-      ctx.font = `400 15px ${family}`;
-      ctx.fillText(s.joinDateGregorian, cx, fy);
-    }
-  }
+  ctx.textAlign = "center";
+  ctx.fillStyle = goldSoft;
+  ctx.font = `700 26px ${family}`;
+  ctx.fillText("إرث", cx, brandY + 32);
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.font = `400 13px ${family}`;
+  ctx.fillText("Irth · Historical Identity", cx, brandY + 54);
 }
 
 // ─── Drawing helpers ─────────────────────────────────────────────────
