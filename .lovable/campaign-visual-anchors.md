@@ -1,11 +1,29 @@
-# Irth — Campaign Visual Anchor Ledger
+# Irth — Campaign Visual DNA Ledger
 
 **Status:** scaffold. To be filled during Phase 2 (Full Campaign Audit).
-**Rule:** No Key Art may be generated for a campaign until its anchor row here is filled and approved. The artwork must be built around this anchor — never around the title alone.
 
-Each anchor row is the source of truth for that campaign's visual identity. A campaign becomes instantly recognizable when its Key Art faithfully renders its Signature Landmark under its Dominant Atmosphere with its Symbolic Object present.
+**Rule (permanent, frozen):** Every campaign must receive a **Visual DNA** record — not just a Visual Anchor. The Visual Anchor (Signature Landmark + Signature Object + Emotional Tone + figure policy + forbidden list) is a **subset** of the Visual DNA. No artwork of any kind — Hero Key Art, Story cover, promotional artwork, future expansions — may be generated for a campaign until its Visual DNA row is filled and approved. Once approved, the Visual DNA is **frozen** and reused consistently across the entire Irth ecosystem so the campaign carries one permanent visual identity everywhere it appears.
 
-## Anchor schema (one row per campaign)
+Each Visual DNA row is the single source of truth for that campaign's visual identity. A campaign becomes instantly recognizable when every artwork made for it faithfully renders its Signature Landmark under its Lighting Style and Weather/Atmosphere, with its Signature Object present, framed in its Camera Language, expressing its Emotional Tone — while its Primary Color Palette holds the frame together and its Forbidden Elements are strictly excluded.
+
+## Visual DNA schema (one row per campaign)
+
+The Visual DNA has **two layers**: the eight frozen identity fields (Layer 1) and the supporting production guardrails (Layer 2). Both must be filled before approval.
+
+### Layer 1 — Visual DNA (frozen identity, 8 fields)
+
+| Field | Meaning |
+|---|---|
+| `primary_color_palette` | 3–5 disciplined hues that define the campaign's frame (e.g. warm gold, deep navy, granite grey, ember orange). Named + descriptive; hex not required at authoring time. |
+| `lighting_style` | The single dominant lighting condition (dawn, sunrise, high noon, golden hour, sunset, dusk, moonlight, lamp/torch light, storm, overcast). |
+| `weather_atmosphere` | Air, sky, particulate, temperature feel (still cold air, dust-hazed heat, humid coastal wind, rain squall, dry desert clarity). |
+| `signature_landmark` | The one place / structure / vista that visually IS this campaign (e.g. Cave of Hira ridge; the wells of Badr; the walls of Constantinople). |
+| `signature_object` | 1–3 anchoring props that must appear or be strongly implied (banner, scroll, oil lamp, sword hilt, water skin, astrolabe). |
+| `emotional_tone` | The single feeling the frame must transmit (contemplation, awe, resolve, sorrow, triumph, vigilance). |
+| `camera_language` | Framing intent: wide landscape, intimate close scene, architectural interior, aerial / bird's-eye, caravan silhouette, low-angle heroic, over-the-shoulder witness. |
+| `forbidden_elements` | Explicit exclusions (anachronistic elements, invented architecture, specific iconography, faces of Prophets/Companions, fantasy light rays, modern skylines). |
+
+### Layer 2 — Anchor context (production guardrails)
 
 | Field | Meaning |
 |---|---|
@@ -13,14 +31,12 @@ Each anchor row is the source of truth for that campaign's visual identity. A ca
 | `title_ar` | Arabic title as shown to players. |
 | `era` / `world` | Era key and world slug. |
 | `years` | Hijri and Gregorian range. |
-| `signature_landmark` | The one place / structure / vista that visually IS this campaign (e.g. Cave of Hira ridge at dawn; the wells of Badr; the walls of Constantinople). |
-| `dominant_atmosphere` | Time of day, weather, air quality. One line. |
-| `symbolic_object(s)` | 1–3 anchoring props that must appear or be strongly implied (banner, scroll, oil lamp, sword hilt, water skin). |
-| `emotional_tone` | The single feeling the frame must transmit (contemplation, awe, resolve, sorrow, triumph, vigilance). |
-| `composition_intent` | Wide vista / intimate close / architectural / caravan silhouette / interior scholarship, etc. |
 | `figure_policy` | Face rule per Style Guide v1: `none` (Prophet/Companions — silhouettes / back-turned / environmental only), `silhouette-only`, `crowd-distance`, `named-later-figures-ok`. |
-| `forbidden` | Explicit exclusions (anachronistic elements, invented architecture, specific iconography). |
 | `reference_notes` | Cited historical / architectural / textile references used to ground the render. |
+
+**Freeze rule:** once a Visual DNA row is approved, none of the eight Layer 1 fields may be silently changed. Any revision requires an explicit re-approval turn and must be reflected everywhere the campaign appears.
+
+**Phase 2 rule:** during the full campaign audit, every published campaign must receive **both** a Visual Anchor **and** a complete Visual DNA row before any artwork is generated. Artwork generation begins only after the full audit is finished and approved.
 
 ## Priority queue
 
@@ -72,7 +88,22 @@ Pilot must be filled first, then in chronological order.
 
 ## Pilot draft — `prophetic-mission` (Iqra / Cave of Hira)
 
-_This row is a draft to be reviewed alongside 2–3 Key Art directions. It sets the pattern every other row will follow._
+_This row is a draft to be reviewed alongside 2–3 Key Art directions. It sets the pattern every other Visual DNA row will follow._
+
+**Layer 1 — Visual DNA**
+
+| Field | Value |
+|---|---|
+| `primary_color_palette` | Cold pre-dawn indigo, deep navy, granite grey-brown of Jabal an-Nur, first warm gold along the ridge crest, single warm ember tone from the cave mouth. |
+| `lighting_style` | Pre-dawn — cold ambient sky light with the very first warm rim of sunrise catching the ridge; a single motivated warm point-source implied from within the cave. |
+| `weather_atmosphere` | Utterly still, cold, clear desert air; no wind, no dust, no cloud; high altitude clarity; hushed silence made visible. |
+| `signature_landmark` | Ridge of **Jabal an-Nur** with the mouth of the **Cave of Hira** visible in profile; Makkah's basin faintly readable far below. |
+| `signature_object` | (1) faint interior glow from the cave mouth (moment of revelation, never depicted literally); (2) worn footpath up the ridge; (3) distant silhouette of the Kaaba enclosure below, small and quiet. |
+| `emotional_tone` | Contemplation on the edge of transformation. Stillness, not drama. |
+| `camera_language` | Wide landscape vista; low horizon (bottom third); ridge as diagonal from lower-right to upper-left; generous negative sky for UI overlay. |
+| `forbidden_elements` | No depiction of the Prophet ﷺ or Jibrīl عليه السلام; no calligraphy inside the frame; no anachronistic Makkah skyline (modern towers, expansion works); no fantasy light rays radiating from the cave mouth; no crowds; no visible text. |
+
+**Layer 2 — Anchor context**
 
 | Field | Value |
 |---|---|
@@ -80,13 +111,7 @@ _This row is a draft to be reviewed alongside 2–3 Key Art directions. It sets 
 | `title_ar` | حملة البعثة النبوية |
 | `era` / `world` | Prophetic era / Meccan world |
 | `years` | 610م – 613م (before Hijrah) |
-| `signature_landmark` | Ridge of **Jabal an-Nur** with the mouth of the **Cave of Hira** visible in profile at pre-dawn; Makkah's basin faintly readable far below. |
-| `dominant_atmosphere` | Cold pre-dawn blue giving way to first warm gold along the ridge; utterly still air; no wind, no dust; a single point of warmth (implied from within the cave). |
-| `symbolic_object(s)` | (1) faint interior glow from the cave mouth (the moment of revelation, never depicted literally); (2) worn footpath up the ridge; (3) distant silhouette of the Kaaba enclosure below, small and quiet. |
-| `emotional_tone` | Contemplation on the edge of transformation. Stillness, not drama. |
-| `composition_intent` | Wide vista, low horizon (bottom third), ridge as diagonal from lower-right to upper-left, generous negative sky for UI overlay. |
 | `figure_policy` | `none` — no figures. The place carries the story. |
-| `forbidden` | No depiction of the Prophet ﷺ or Jibrīl عليه السلام; no calligraphy inside the frame; no anachronistic Makkah skyline (modern towers, expansion works); no fantasy light rays radiating from the cave mouth. |
 | `reference_notes` | Geological profile of Jabal an-Nur (granite, weathered); pre-Islamic Makkah basin scale references; historical distance ≈ 3.2 km NE of the Kaaba. |
 
 ---
