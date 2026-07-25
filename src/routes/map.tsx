@@ -1,6 +1,17 @@
 // عالم إرث — Phase 3: Cinematic World Atlas with deep-link URL state.
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AtlasShell } from "@/components/atlas/AtlasShell";
+import { AtlasErrorBoundary } from "@/components/atlas/AtlasErrorBoundary";
+import { AtlasSafeMode } from "@/components/atlas/AtlasSafeMode";
+import {
+  clearAtlasCrashMarker,
+  hasAtlasCrashMarker,
+  hasCanvas2d,
+  releaseUiLocks,
+  resetAtlasData,
+} from "@/lib/atlas/atlas-recovery";
 import type { AtlasEntityKind } from "@/lib/atlas-entities";
 import { androidMark } from "@/lib/androidFreezeDiagnostics";
 
