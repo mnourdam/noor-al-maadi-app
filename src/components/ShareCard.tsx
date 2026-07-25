@@ -133,19 +133,35 @@ export function ShareCard(props: ShareCardProps) {
   }, [achievements]);
   const achievementsTotal = achievements?.length ?? 0;
 
-  // Join date formatted for display (Arabic month + year), or null when unknown/guest.
-  const joinDateLabel = useMemo(() => {
+  // Join date — Hijri (Umm al-Qura) + Gregorian in Arabic. Western digits.
+  const joinDateHijri = useMemo(() => {
+    if (!joinDate) return null;
+    const d = new Date(joinDate);
+    if (Number.isNaN(d.getTime())) return null;
+    try {
+      const raw = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
+        day: "numeric", month: "long", year: "numeric",
+      }).format(d);
+      const western = raw.replace(/[\u0660-\u0669]/g, (ch) => String("٠١٢٣٤٥٦٧٨٩".indexOf(ch)));
+      // Strip AH marker variants and re-append a clean " هـ".
+      const cleaned = western.replace(/\s*(هـ\.?|هـ|AH)\s*$/u, "").trim();
+      return `${cleaned} هـ`;
+    } catch {
+      return null;
+    }
+  }, [joinDate]);
+  const joinDateGregorian = useMemo(() => {
     if (!joinDate) return null;
     const d = new Date(joinDate);
     if (Number.isNaN(d.getTime())) return null;
     try {
       const raw = d.toLocaleDateString("ar-EG", { year: "numeric", month: "long" });
-      // Force Western digits to match app-wide policy.
       return raw.replace(/[\u0660-\u0669]/g, (ch) => String("٠١٢٣٤٥٦٧٨٩".indexOf(ch)));
     } catch {
       return d.toISOString().slice(0, 10);
     }
   }, [joinDate]);
+  const joinDateLabel = joinDateGregorian; // kept for drawKey stability
 
   const bio = (profile.bio ?? "").trim();
   const favState = (favoriteStateName ?? "").trim();
