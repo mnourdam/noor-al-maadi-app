@@ -280,6 +280,7 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
       .eq("user_id", uid);
     if (error || !data) return;
     const local = readAll();
+    const tombstones = readTombstones();
     const merged: ReflectionStore = { ...local };
     const stale: Array<{ campaignId: string; activityId: string; rec: ReflectionRecord }> = [];
     const seen = new Set<string>();
@@ -289,6 +290,12 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
       if (!cid || !aid) continue;
       const k = keyOf(cid, aid);
       seen.add(k);
+      // A pending local delete must never be resurrected by hydration.
+      if (k in tombstones) {
+        delete merged[k];
+        void deleteReflection(cid, aid);
+        continue;
+      }
       const serverAt = String(row.updated_at ?? "") || new Date().toISOString();
       const kind = (row.source_type === "story" ? "story" : "campaign") as "story" | "campaign";
       const rec: ReflectionRecord = {
@@ -308,7 +315,7 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
       }
     }
     for (const [k, rec] of Object.entries(local)) {
-      if (seen.has(k)) continue;
+      if (seen.has(k) || k in tombstones) continue;
       const parsed = parseKey(k);
       if (parsed) stale.push({ campaignId: parsed.campaignId, activityId: parsed.activityId, rec });
     }
@@ -319,7 +326,13 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
   }
 }
 
-/** Delete a reflection locally and on the server. */
+/**
+ * Delete a reflection locally and on the server.
+ *
+ * Durable: a local tombstone plus an outbox entry keep the delete alive
+ * through offline, process death and reinstall, so hydration can never
+ * resurrect a reflection the player removed.
+ */
 export async function deleteReflection(campaignId: string, activityId: string): Promise<void> {
   const store = readAll();
   const k = keyOf(campaignId, activityId);
@@ -327,16 +340,29 @@ export async function deleteReflection(campaignId: string, activityId: string): 
     delete store[k];
     writeAll(store);
   }
+  const uid = await currentUid();
+  if (!uid) return;
+  addTombstone(k);
   try {
-    const { data: u } = await supabase.auth.getUser();
-    const uid = u.user?.id;
-    if (!uid) return;
-    await supabase
+    const { enqueueWithId } = await import("@/lib/offline/outbox");
+    await enqueueWithId(uid, `reflection:${campaignId}:${activityId}`, "reflection_delete", {
+      campaignId,
+      activityId,
+    });
+  } catch { /* direct attempt below */ }
+  try {
+    const { flushOutbox } = await import("@/lib/offline/flush");
+    await flushOutbox(uid);
+  } catch { /* ignore */ }
+  if (!(keyOf(campaignId, activityId) in readTombstones())) return;
+  try {
+    const { error } = await supabase
       .from("user_reflections")
       .delete()
       .eq("user_id", uid)
       .eq("campaign_id", campaignId)
       .eq("activity_id", activityId);
+    if (!error) clearReflectionTombstone(campaignId, activityId);
   } catch {
     /* silent */
   }
