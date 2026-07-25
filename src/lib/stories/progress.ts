@@ -46,6 +46,11 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
     );
     if (!error) {
       const payload = (data ?? { ok: false, reason: "empty" }) as StoryAccessBundle;
+      // Diagnostic only (opt-in via ?trace=unlock or irth.debug.unlock=1).
+      try {
+        const { unlockTraceEnabled, traceStoryUnlock } = await import("./unlock/trace");
+        if (unlockTraceEnabled()) await traceStoryUnlock(storyId, payload as any);
+      } catch { /* ignore */ }
       if (payload.ok) {
         // Refresh the signed unlock cache for this user so an offline
         // session immediately after this online read still treats the
