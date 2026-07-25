@@ -953,40 +953,107 @@ function drawMedal(
   rank: number,
 ) {
   ctx.save();
-  // Ribbon
-  ctx.fillStyle = hexAlpha(accent, 0.75);
+
+  // Drop shadow beneath the medal (museum lighting)
+  const sh = ctx.createRadialGradient(cx, cy + r * 0.9, 4, cx, cy + r * 0.9, r * 1.4);
+  sh.addColorStop(0, "rgba(0,0,0,0.55)");
+  sh.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = sh;
+  ctx.fillRect(cx - r * 1.6, cy, r * 3.2, r * 1.6);
+
+  // Fabric ribbon — trapezoid with folded shadow
+  const ribbonTop = cy - r - 26;
+  const ribbonBase = cy - r + 4;
   ctx.beginPath();
-  ctx.moveTo(cx - r * 0.55, cy - r - 2);
-  ctx.lineTo(cx - r * 0.2, cy - 4);
-  ctx.lineTo(cx + r * 0.2, cy - 4);
-  ctx.lineTo(cx + r * 0.55, cy - r - 2);
+  ctx.moveTo(cx - r * 0.7, ribbonTop);
+  ctx.lineTo(cx - r * 0.3, ribbonBase);
+  ctx.lineTo(cx + r * 0.3, ribbonBase);
+  ctx.lineTo(cx + r * 0.7, ribbonTop);
   ctx.closePath();
+  const ribbonG = ctx.createLinearGradient(cx - r, ribbonTop, cx + r, ribbonBase);
+  ribbonG.addColorStop(0, hexAlpha(accent, 0.55));
+  ribbonG.addColorStop(0.5, hexAlpha(accent, 0.95));
+  ribbonG.addColorStop(1, hexAlpha(accent, 0.55));
+  ctx.fillStyle = ribbonG;
+  ctx.fill();
+  // Center fold line
+  ctx.strokeStyle = "rgba(0,0,0,0.25)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx, ribbonTop);
+  ctx.lineTo(cx, ribbonBase);
+  ctx.stroke();
+
+  // Outer bezel (dark rim for depth)
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 3, 0, Math.PI * 2);
+  ctx.fillStyle = "#2a1c07";
   ctx.fill();
 
-  // Medal disc
-  const grad = ctx.createRadialGradient(cx - r / 3, cy - r / 3, 2, cx, cy, r);
-  grad.addColorStop(0, "#f5d062");
-  grad.addColorStop(0.6, "#c99a2d");
-  grad.addColorStop(1, "#6a4d12");
+  // Medal disc — brushed gold radial
+  const grad = ctx.createRadialGradient(cx - r / 2.5, cy - r / 2.5, 2, cx, cy, r);
+  grad.addColorStop(0, "#fbe38b");
+  grad.addColorStop(0.5, "#d4a63a");
+  grad.addColorStop(1, "#7a5714");
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fillStyle = grad;
   ctx.fill();
-  ctx.strokeStyle = hexAlpha(gold, 0.85);
+
+  // Outer engraved ring
+  ctx.strokeStyle = hexAlpha(gold, 0.95);
   ctx.lineWidth = 1.5;
   ctx.stroke();
+
+  // Rim dots (12 small studs — museum medal detail)
+  ctx.fillStyle = "#3a2809";
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+    const px = cx + Math.cos(a) * (r - 6);
+    const py = cy + Math.sin(a) * (r - 6);
+    ctx.beginPath();
+    ctx.arc(px, py, 1.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   // Inner ring
   ctx.beginPath();
-  ctx.arc(cx, cy, r - 8, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255,255,255,0.35)";
-  ctx.lineWidth = 0.8;
+  ctx.arc(cx, cy, r - 12, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(58,40,9,0.55)";
+  ctx.lineWidth = 1;
   ctx.stroke();
+
+  // Embossed 8-point star behind the numeral
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.strokeStyle = "rgba(58,40,9,0.35)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a) * (r - 16), Math.sin(a) * (r - 16));
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Highlight sheen
+  const sheen = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy);
+  sheen.addColorStop(0, "rgba(255,255,255,0.35)");
+  sheen.addColorStop(0.4, "rgba(255,255,255,0)");
+  ctx.fillStyle = sheen;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r - 2, Math.PI, Math.PI * 1.6);
+  ctx.lineTo(cx, cy);
+  ctx.closePath();
+  ctx.fill();
+
   // Rank numeral
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#3a2809";
-  ctx.font = `700 24px "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif`;
-  ctx.fillText(String(rank), cx, cy + 1);
+  ctx.fillStyle = "#2a1c07";
+  ctx.font = `700 ${Math.round(r * 0.7)}px "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif`;
+  ctx.fillText(String(rank), cx, cy + 2);
   ctx.textBaseline = "alphabetic";
   ctx.restore();
 }
