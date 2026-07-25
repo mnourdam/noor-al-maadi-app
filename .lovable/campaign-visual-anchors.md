@@ -937,3 +937,30 @@
 ---
 
 **Status:** all 71 published campaigns have complete Visual Anchor + Visual DNA rows. **No artwork has been generated.** Awaiting Phase 3 approval before producing the first production artwork (recommended pilot: `prophetic-mission` per Phase 1 approval).
+
+---
+
+## Production log — Campaign Key Art (Style v1)
+
+Autonomous production mode (no per-batch approval). Every artwork is compared against the Golden Template and the previously produced set before it is accepted; any piece that reads as a different artist is regenerated before moving on.
+
+| # | Campaign | Status |
+|---|---|---|
+| 1 | `prophetic-mission` | ✅ Golden Template v1 (pilot) |
+| 2 | `secret-dawah` | ✅ shipped |
+| 3 | `public-call-and-boycott` | ✅ shipped |
+| 4 | `migration-to-abyssinia` | ✅ shipped |
+| 5 | `year-of-sorrow-and-taif` | ✅ shipped |
+| 6 | `migration-to-madinah` | ✅ shipped |
+| 7 | `building-the-prophetic-state` | ✅ shipped |
+| 8 | `battle-of-badr-campaign` | ✅ shipped |
+| 9 | `battle-of-uhud-campaign` | ✅ shipped |
+| 10 | `battle-of-khandaq-campaign` | ✅ shipped (regenerated once — first pass read as digital render, not oil) |
+| 11 | `treaty-of-hudaybiyyah-campaign` | ✅ shipped |
+| 12 | `conquest-of-makkah-campaign` | ✅ shipped |
+| 13 | `hunayn-and-taif-campaign` | ✅ shipped |
+| 14 | `tabuk-campaign` | ✅ shipped |
+| 15 | `farewell-pilgrimage-and-prophet-death` | ✅ shipped |
+| 16 | `abu-bakr-caliphate` | ✅ shipped |
+
+Storage convention: `campaign-key-art/<campaign_id>/key-art-v1.jpg`, persisted as `admin_campaigns.key_art_path` (paths only, signed at runtime).
