@@ -16,15 +16,9 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
-import { CampaignArtwork, hasCampaignKeyArt, useCampaignArtworkUrl, type CampaignArtworkInput } from "@/lib/campaignArtwork";
-import { KeyArtScrim } from "@/components/KeyArtScrim";
+import { CampaignArtwork, hasCampaignKeyArt, type CampaignArtworkInput } from "@/lib/campaignArtwork";
+import { KeyArtDissolve } from "@/components/KeyArtDissolve";
 
-/** Readability layer for the detail header — adaptive to this
- *  campaign's own artwork, artwork itself untouched. */
-function CampaignDetailScrim({ campaign }: { campaign: CampaignArtworkInput }) {
-  const { url } = useCampaignArtworkUrl(campaign, "campaign-detail", "");
-  return <KeyArtScrim src={url || null} variant="detail" />;
-}
 
 
 import {
