@@ -105,7 +105,7 @@ function ImportV2Page() {
     if (!payload) { notify("err", "حمّل ملف JSON أولاً."); return; }
     setBusy("preview");
     try {
-      const rep = await adminImportStoriesV2Preview(payload, { allow_deletes: allowDeletes });
+      const rep = await adminImportStoriesV2Preview(payload, options);
       setPreview(rep);
       setApplyResult(null);
     } catch (e) {
