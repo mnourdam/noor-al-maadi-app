@@ -437,6 +437,13 @@ function AdminInvestigationsPage() {
               <option value="enabled">مفعّل فقط</option>
               <option value="disabled">معطّل فقط</option>
             </select>
+            <select value={templateFilter} onChange={(e) => setTemplateFilter(e.target.value as any)}
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm">
+              <option value="">القوالب والتحقيقات</option>
+              <option value="only">القوالب المرجعية فقط</option>
+              <option value="hide">إخفاء القوالب المرجعية</option>
+            </select>
+
           </div>
           {anyFilterActive && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
