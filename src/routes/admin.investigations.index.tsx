@@ -293,7 +293,7 @@ function AdminInvestigationsPage() {
       }
     });
     return out;
-  }, [enriched, search, difficulty, worldFilter, statusFilter, sortKey, sortDir]);
+  }, [enriched, search, difficulty, worldFilter, statusFilter, templateFilter, sortKey, sortDir]);
 
   // --- Stats (Phase B: only DB-provable numbers).
   const stats = useMemo(() => {
