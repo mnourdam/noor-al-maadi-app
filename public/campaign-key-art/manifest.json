@@ -1,0 +1,848 @@
+{
+ "version": 1,
+ "generated_at": "2026-07-25",
+ "count": 70,
+ "total_bytes": 7127726,
+ "assets": {
+  "abbasid-between-power-and-weakness": {
+   "hero": {
+    "path": "/campaign-key-art/abbasid-between-power-and-weakness/hero.webp",
+    "bytes": 49154,
+    "sha256": "444b6dc688b064a161976502dec985fca7f277b2222aed2b9b5d91a5a6da8954"
+   },
+   "square": {
+    "path": "/campaign-key-art/abbasid-between-power-and-weakness/square.webp",
+    "bytes": 25724,
+    "sha256": "007f725ba7e44e130284f773f8359731e55b9347443786017de92ef9a54d223d"
+   }
+  },
+  "abd-al-rahman-al-dakhil": {
+   "hero": {
+    "path": "/campaign-key-art/abd-al-rahman-al-dakhil/hero.webp",
+    "bytes": 55578,
+    "sha256": "8d3f351ba28d873582697e8f3d500c8e277fafe3e246e4cc1b6fa434071650b8"
+   },
+   "square": {
+    "path": "/campaign-key-art/abd-al-rahman-al-dakhil/square.webp",
+    "bytes": 24144,
+    "sha256": "7cff4f47c63cb387a9acf71a3a90db7c60d2ec32310068f6977af41c00a47357"
+   }
+  },
+  "abu-bakr-caliphate": {
+   "hero": {
+    "path": "/campaign-key-art/abu-bakr-caliphate/hero.webp",
+    "bytes": 38978,
+    "sha256": "67043ca585ddb41e51642b1626a0d75b90eb5308ebb52fefcf792386e4f4c324"
+   },
+   "square": {
+    "path": "/campaign-key-art/abu-bakr-caliphate/square.webp",
+    "bytes": 22612,
+    "sha256": "a3b20792f0fd3740a02739919fbde41407ddddbc24abc7de30fc2af50855e9c1"
+   }
+  },
+  "al-zahir-baybars-and-the-revival-of-islamic-power": {
+   "hero": {
+    "path": "/campaign-key-art/al-zahir-baybars-and-the-revival-of-islamic-power/hero.webp",
+    "bytes": 90308,
+    "sha256": "f91dac46416a9a52a2fee949d7ef5360bd6f88b9286e0a1272ef8c9a7fac6496"
+   },
+   "square": {
+    "path": "/campaign-key-art/al-zahir-baybars-and-the-revival-of-islamic-power/square.webp",
+    "bytes": 48312,
+    "sha256": "bf1971f3a6ee6a82943bc0a89bc4ada6fc8b5ec365295ff049d6c6e7d9f0e300"
+   }
+  },
+  "ali-and-the-great-fitnah": {
+   "hero": {
+    "path": "/campaign-key-art/ali-and-the-great-fitnah/hero.webp",
+    "bytes": 46754,
+    "sha256": "524f24ffee00f4c7f2479b6179e2cdc6b47cb872be2f85bdae886cec97de1516"
+   },
+   "square": {
+    "path": "/campaign-key-art/ali-and-the-great-fitnah/square.webp",
+    "bytes": 24250,
+    "sha256": "2a4ab400838c7a11d439f9922c35fb58e1a9a3645b14d1ea89497d148c8c7e83"
+   }
+  },
+  "almamun-translation-movement": {
+   "hero": {
+    "path": "/campaign-key-art/almamun-translation-movement/hero.webp",
+    "bytes": 58260,
+    "sha256": "92704768a531e65dd54e08749529a72e2e1d019acb74cd4e7d1119450e7c68bc"
+   },
+   "square": {
+    "path": "/campaign-key-art/almamun-translation-movement/square.webp",
+    "bytes": 27212,
+    "sha256": "3d344681a6fcdaec2b4e995d7aed027d430d8da3accaea6c920a680a19c21c4a"
+   }
+  },
+  "arabization-and-reforms-of-abd-almalik": {
+   "hero": {
+    "path": "/campaign-key-art/arabization-and-reforms-of-abd-almalik/hero.webp",
+    "bytes": 83022,
+    "sha256": "203c37bedcc681b6a854cd76a776e35b9c51682ae94b1b5d592b9e993b462b5c"
+   },
+   "square": {
+    "path": "/campaign-key-art/arabization-and-reforms-of-abd-almalik/square.webp",
+    "bytes": 51472,
+    "sha256": "accb012770ea782cb5a8972de11490c31e4d8f9be914d58d466217c140b9046c"
+   }
+  },
+  "ayyubid-dynasty": {
+   "hero": {
+    "path": "/campaign-key-art/ayyubid-dynasty/hero.webp",
+    "bytes": 103698,
+    "sha256": "48f5b857e6a80897136565177f073fd2a43e5d4a96752536c3d1a7c5407f9e93"
+   },
+   "square": {
+    "path": "/campaign-key-art/ayyubid-dynasty/square.webp",
+    "bytes": 55230,
+    "sha256": "72b50f65dd23cfb8f6346937c7629e013a304bb640dc17207b5a6c2fb55c471f"
+   }
+  },
+  "baghdad-capital-of-the-world": {
+   "hero": {
+    "path": "/campaign-key-art/baghdad-capital-of-the-world/hero.webp",
+    "bytes": 85344,
+    "sha256": "c75b72f9435024295f5401a53081448fa28b3927f98f0d19160399b219e551ba"
+   },
+   "square": {
+    "path": "/campaign-key-art/baghdad-capital-of-the-world/square.webp",
+    "bytes": 46400,
+    "sha256": "bddae063d9ba495a8646d2f7b32ec1fa57f4f7df99147259d25196afca6e8b2e"
+   }
+  },
+  "battle-of-ain-jalut": {
+   "hero": {
+    "path": "/campaign-key-art/battle-of-ain-jalut/hero.webp",
+    "bytes": 104604,
+    "sha256": "66c72d3b89f1532c8d4d4c56302fb6c3aaa508abe3ebe4c17205c28575d0a521"
+   },
+   "square": {
+    "path": "/campaign-key-art/battle-of-ain-jalut/square.webp",
+    "bytes": 48096,
+    "sha256": "b52cca41ddeb1a4a9375355a89ac4f4dc5bf8fa6426b40f9fb0b224ad59f049a"
+   }
+  },
+  "battle-of-ankara": {
+   "hero": {
+    "path": "/campaign-key-art/battle-of-ankara/hero.webp",
+    "bytes": 88484,
+    "sha256": "cb818e1794b00e0bef2e8a61c8642fa341a05f778ba5a5fc879fe1a48d65cacc"
+   },
+   "square": {
+    "path": "/campaign-key-art/battle-of-ankara/square.webp",
+    "bytes": 43190,
+    "sha256": "d0270d6ffe79f4312a9acdfaf136122135d039d7b368ec2cc27a8b9e451ea4d2"
+   }
+  },
+  "battle-of-badr-campaign": {
+   "hero": {
+    "path": "/campaign-key-art/battle-of-badr-campaign/hero.webp",
+    "bytes": 51456,
+    "sha256": "42de2b52543eebdacebe791e4cc9532673ae9cdc8e437bbe1a13d56a15ba39bc"
+   },
+   "square": {
+    "path": "/campaign-key-art/battle-of-badr-campaign/square.webp",
+    "bytes": 28068,
+    "sha256": "04539b6cd539afaf93f43332a446e52f57816c6290d8b515db7c8951d1acd49c"
+   }
+  },
+  "battle-of-khandaq-campaign": {
+   "hero": {
+    "path": "/campaign-key-art/battle-of-khandaq-campaign/hero.webp",
+    "bytes": 50866,
+    "sha256": "218b51862ff47435edab8f4cedeafbb6a78ec7aaf48d14f0513735d7542b4d13"
+   },
+   "square": {
+    "path": "/campaign-key-art/battle-of-khandaq-campaign/square.webp",
+    "bytes": 28068,
+    "sha256": "c741a063c0fa7fce99dae00b9108c225f25f8cd1b02dee9da239f7be4f52cdc8"
+   }
+  },
+  "battle-of-kosovo": {
+   "hero": {
+    "path": "/campaign-key-art/battle-of-kosovo/hero.webp",
+    "bytes": 60996,
+    "sha256": "928bd0b6d4cd7e5db1b7ca8239396833a025575a06714e0ebbadb04cf658cc4f"
+   },
+   "square": {
+    "path": "/campaign-key-art/battle-of-kosovo/square.webp",
+    "bytes": 30956,
+    "sha256": "c24bd4d803d4dc7fee65319afbd80d910a8f5a561a0051f4993126a7e2e1e9cc"
+   }
+  },
+  "battle-of-tours": {
+   "hero": {
+    "path": "/campaign-key-art/battle-of-tours/hero.webp",
+    "bytes": 46448,
+    "sha256": "3e7db208745dfb81d0e7dd2eaad5fcb8a100c0c3ad9e619ca9e7a75252679a58"
+   },
+   "square": {
+    "path": "/campaign-key-art/battle-of-tours/square.webp",
+    "bytes": 23816,
+    "sha256": "f4c1e64abe6ac136e88278a13ed95aeadb336a894831505cc09e514a20a4384e"
+   }
+  },
+  "battle-of-uhud-campaign": {
+   "hero": {
+    "path": "/campaign-key-art/battle-of-uhud-campaign/hero.webp",
+    "bytes": 44442,
+    "sha256": "dc07b444febb6c119419041252b7ea07058ade6b8bd9e47ba1f30d30ff5aac9c"
+   },
+   "square": {
+    "path": "/campaign-key-art/battle-of-uhud-campaign/square.webp",
+    "bytes": 24562,
+    "sha256": "674e4d9611f883f120693fa5acd58f88d0e115fa373f2ec7dbbba4065b1218b3"
+   }
+  },
+  "battle-of-zallaqa": {
+   "hero": {
+    "path": "/campaign-key-art/battle-of-zallaqa/hero.webp",
+    "bytes": 88024,
+    "sha256": "73c41bd55c61ae94c0339592cde3753e8342e0d8bfe991f28bfeace9ce791f81"
+   },
+   "square": {
+    "path": "/campaign-key-art/battle-of-zallaqa/square.webp",
+    "bytes": 41360,
+    "sha256": "cb041d38e8eb09acd93f837fd5f965554b287d4c9570a440b22c7554fd0f767a"
+   }
+  },
+  "beginning-of-ottoman-decline": {
+   "hero": {
+    "path": "/campaign-key-art/beginning-of-ottoman-decline/hero.webp",
+    "bytes": 49950,
+    "sha256": "b2745b4e5b4f35519b38771ca8dcc5c5fbc1f3f7d1d7bb6d6c537d1d2e5c1246"
+   },
+   "square": {
+    "path": "/campaign-key-art/beginning-of-ottoman-decline/square.webp",
+    "bytes": 21288,
+    "sha256": "5bde7b4f85a475a2a7659896d8180dc5e53c6644bb13e8a5dddc123a7559edf0"
+   }
+  },
+  "building-the-prophetic-state": {
+   "hero": {
+    "path": "/campaign-key-art/building-the-prophetic-state/hero.webp",
+    "bytes": 63416,
+    "sha256": "f952ad4a286ea29f73baebd828c265264a2924ed43638dd9216740e5f5aac9bb"
+   },
+   "square": {
+    "path": "/campaign-key-art/building-the-prophetic-state/square.webp",
+    "bytes": 33970,
+    "sha256": "4fddd9fdba9d3843a8af8f8a4fbee4fdc5f55ade31b3661cecc03152f35db56c"
+   }
+  },
+  "conquest-of-al-andalus": {
+   "hero": {
+    "path": "/campaign-key-art/conquest-of-al-andalus/hero.webp",
+    "bytes": 73656,
+    "sha256": "cb81f4eab271d7814ff6a7b1ec2f4554e57311bef99718e89d473736880cb0cf"
+   },
+   "square": {
+    "path": "/campaign-key-art/conquest-of-al-andalus/square.webp",
+    "bytes": 39728,
+    "sha256": "0d3491722c3ea04b5c86ed5464ee6fb8a69823ed5ff611825ce902a06de255c3"
+   }
+  },
+  "conquest-of-constantinople": {
+   "hero": {
+    "path": "/campaign-key-art/conquest-of-constantinople/hero.webp",
+    "bytes": 78076,
+    "sha256": "39aff589b84ab4a338473e08c1e474e9b1e0744d01f8411a987eb252b4ce74f5"
+   },
+   "square": {
+    "path": "/campaign-key-art/conquest-of-constantinople/square.webp",
+    "bytes": 40862,
+    "sha256": "4c9386840583ff86ad586396f811d882f8df69493c5a0fc55b1dd46a0b028d8f"
+   }
+  },
+  "conquest-of-egypt": {
+   "hero": {
+    "path": "/campaign-key-art/conquest-of-egypt/hero.webp",
+    "bytes": 53184,
+    "sha256": "fed7ce844f26dc013f78e272f7f1dc53334d4833ef0d17086e8cd7e3a85abbfc"
+   },
+   "square": {
+    "path": "/campaign-key-art/conquest-of-egypt/square.webp",
+    "bytes": 25728,
+    "sha256": "fbacffbb80e0512ef53024288f0943d40a35246795fe7666a500845ea213060d"
+   }
+  },
+  "conquest-of-makkah-campaign": {
+   "hero": {
+    "path": "/campaign-key-art/conquest-of-makkah-campaign/hero.webp",
+    "bytes": 60946,
+    "sha256": "06570dfc492c5f799905e99c98e49dde42928ce62155ed5a5b323dcec272f914"
+   },
+   "square": {
+    "path": "/campaign-key-art/conquest-of-makkah-campaign/square.webp",
+    "bytes": 30116,
+    "sha256": "17f5f33dce6b064e4d999ddc3c1d3d52fd5a28d9a3cf27b839661de11bc1dcf7"
+   }
+  },
+  "conquest-of-sindh-and-transoxiana": {
+   "hero": {
+    "path": "/campaign-key-art/conquest-of-sindh-and-transoxiana/hero.webp",
+    "bytes": 56438,
+    "sha256": "6f7e10e8ed695a19366d4947ad7c109f7ec1ea55f0ef51ab2e897c63d01db8f3"
+   },
+   "square": {
+    "path": "/campaign-key-art/conquest-of-sindh-and-transoxiana/square.webp",
+    "bytes": 25260,
+    "sha256": "4f59d1b331bdb565e5c02821043525e85ad19538efcacd35373bea68a114812e"
+   }
+  },
+  "cordoba-golden-age": {
+   "hero": {
+    "path": "/campaign-key-art/cordoba-golden-age/hero.webp",
+    "bytes": 80882,
+    "sha256": "0a72fe1e2e3b6eaeddefa7c0832cb2fec7f5898b8d9537a28fa20b1f9e7c3451"
+   },
+   "square": {
+    "path": "/campaign-key-art/cordoba-golden-age/square.webp",
+    "bytes": 36904,
+    "sha256": "41470ba78df6a720c07ebaab57fa992d8511185f2e91735c9b1c18b5e0939b63"
+   }
+  },
+  "crusades-beginning-danger": {
+   "hero": {
+    "path": "/campaign-key-art/crusades-beginning-danger/hero.webp",
+    "bytes": 99542,
+    "sha256": "400733c47711509b0f238bf079e91d0a3e5aa4a7b0bfd23cf772447a022571d4"
+   },
+   "square": {
+    "path": "/campaign-key-art/crusades-beginning-danger/square.webp",
+    "bytes": 48844,
+    "sha256": "5cf184882064fd88b299a083122d6b744af8d9041f7023fea8ae5d3140e4e2eb"
+   }
+  },
+  "fall-of-al-andalus": {
+   "hero": {
+    "path": "/campaign-key-art/fall-of-al-andalus/hero.webp",
+    "bytes": 98006,
+    "sha256": "c1cdee1657d658d6483f40caf8a3f272c80370e0e7eb8d47187f8d8ccc0edc3c"
+   },
+   "square": {
+    "path": "/campaign-key-art/fall-of-al-andalus/square.webp",
+    "bytes": 46054,
+    "sha256": "de834501bf4bd2f11afa2ef1dda0027baf6b70718f65a7b0e0b906a4ce76499f"
+   }
+  },
+  "fall-of-toledo": {
+   "hero": {
+    "path": "/campaign-key-art/fall-of-toledo/hero.webp",
+    "bytes": 68528,
+    "sha256": "0932d3a6b32d8101e24430ab01c68eb5e0e45b0d5929cc6ee37a60b1d819313e"
+   },
+   "square": {
+    "path": "/campaign-key-art/fall-of-toledo/square.webp",
+    "bytes": 34758,
+    "sha256": "a2fec9e3d59eea3860012c570e5190fdb0bf889e1aad416cf839e77e17305f54"
+   }
+  },
+  "fall-of-umayyads": {
+   "hero": {
+    "path": "/campaign-key-art/fall-of-umayyads/hero.webp",
+    "bytes": 60934,
+    "sha256": "9c53d39823f2301d76f5e7bc681c391e197c0d4467f228838ed96ca2c73010b1"
+   },
+   "square": {
+    "path": "/campaign-key-art/fall-of-umayyads/square.webp",
+    "bytes": 33304,
+    "sha256": "d89b10bfda8dccac3ec7d7117acbac3b96a4dc4cd48cb71e8d1beb6d2853479e"
+   }
+  },
+  "farewell-pilgrimage-and-prophet-death": {
+   "hero": {
+    "path": "/campaign-key-art/farewell-pilgrimage-and-prophet-death/hero.webp",
+    "bytes": 51124,
+    "sha256": "22639e93a52c3c35bc617ab630274eda2995a48ea9a769b11d25b009f1af8a57"
+   },
+   "square": {
+    "path": "/campaign-key-art/farewell-pilgrimage-and-prophet-death/square.webp",
+    "bytes": 26146,
+    "sha256": "8d0373e1b563cb996a36c854f4fa9fd03f63149c6bc262aec579fc0bf476b916"
+   }
+  },
+  "founding-of-abbasid-state": {
+   "hero": {
+    "path": "/campaign-key-art/founding-of-abbasid-state/hero.webp",
+    "bytes": 36886,
+    "sha256": "68dc197d7ac0a44c4a4756d4f5d8e65988435ca6a76cd7dde7eb8503f4bfb5b5"
+   },
+   "square": {
+    "path": "/campaign-key-art/founding-of-abbasid-state/square.webp",
+    "bytes": 19278,
+    "sha256": "f2d94557ee0278315ed034baa737fd51cc5ea5e9352c69e5ba9da7c30a08ba7b"
+   }
+  },
+  "futuh-al-sham": {
+   "hero": {
+    "path": "/campaign-key-art/futuh-al-sham/hero.webp",
+    "bytes": 159980,
+    "sha256": "4719ae9169842337ae53d15d21396be01921c516ace8236c8535de8c7439b9a9"
+   },
+   "square": {
+    "path": "/campaign-key-art/futuh-al-sham/square.webp",
+    "bytes": 72890,
+    "sha256": "2006b4c5d4afb65c3c4245a512755b1c5e65002213b9277eedf03c64b773a78b"
+   }
+  },
+  "futuh-iraq": {
+   "hero": {
+    "path": "/campaign-key-art/futuh-iraq/hero.webp",
+    "bytes": 69878,
+    "sha256": "7c1b211e561620b80ed5d3ed5611df1b5950e5a4d4d12f5e621e6d5d34aaaaf0"
+   },
+   "square": {
+    "path": "/campaign-key-art/futuh-iraq/square.webp",
+    "bytes": 34950,
+    "sha256": "2da6dfbefa5354d6c60faa3d758ff5c5310d7fe4ee24661e1f0b4e45a467c922"
+   }
+  },
+  "great-conquests-yarmouk-qadisiyyah": {
+   "hero": {
+    "path": "/campaign-key-art/great-conquests-yarmouk-qadisiyyah/hero.webp",
+    "bytes": 56056,
+    "sha256": "3386293464e2f08862639068c2d56fc3db2c65507e31b7871c069efe61654e58"
+   },
+   "square": {
+    "path": "/campaign-key-art/great-conquests-yarmouk-qadisiyyah/square.webp",
+    "bytes": 27202,
+    "sha256": "d0f3cbb4e1cfe4cc606845ac93be7d4ed3dfd20db9271b4ebec3e3d39be70b6d"
+   }
+  },
+  "harun-alrashid": {
+   "hero": {
+    "path": "/campaign-key-art/harun-alrashid/hero.webp",
+    "bytes": 54398,
+    "sha256": "336615763c001b7ea6e8d9a7f77774a7fa5fc849f8bab32ea4eaa157498ea191"
+   },
+   "square": {
+    "path": "/campaign-key-art/harun-alrashid/square.webp",
+    "bytes": 27548,
+    "sha256": "a3b4e765a93e6661f3c3e978b189a60dcde8d7100dfe4e2f479bb7f2d6f9664a"
+   }
+  },
+  "house-of-wisdom": {
+   "hero": {
+    "path": "/campaign-key-art/house-of-wisdom/hero.webp",
+    "bytes": 93540,
+    "sha256": "d8d03721e63ee3c9af49b11b8b28e6917cfa296493554dfd8eb9977c8498ca29"
+   },
+   "square": {
+    "path": "/campaign-key-art/house-of-wisdom/square.webp",
+    "bytes": 41164,
+    "sha256": "921d052ff82b598cac636eea3a0b9df77c7865e1d34c80483dd6354c80e2c29e"
+   }
+  },
+  "hunayn-and-taif-campaign": {
+   "hero": {
+    "path": "/campaign-key-art/hunayn-and-taif-campaign/hero.webp",
+    "bytes": 74116,
+    "sha256": "8b0b45230ae17f185a9ea6555b9a8e5926d276c0f201e70e07566884b0c0d7d4"
+   },
+   "square": {
+    "path": "/campaign-key-art/hunayn-and-taif-campaign/square.webp",
+    "bytes": 33936,
+    "sha256": "68272e143fee78a9b72e0e49ebab5a7f4a872bff3020f16c051c9cfba73d0aaa"
+   }
+  },
+  "imad-aldin-zengi": {
+   "hero": {
+    "path": "/campaign-key-art/imad-aldin-zengi/hero.webp",
+    "bytes": 38690,
+    "sha256": "9edccdf074af0d01e5c25fc34c96bb2ab75f21d28f25d590f9bf584e4ad14a67"
+   },
+   "square": {
+    "path": "/campaign-key-art/imad-aldin-zengi/square.webp",
+    "bytes": 19572,
+    "sha256": "7db0ea7ea96ea034399d10495dae23f76b990d7c1322768d2ac146b0d07fcbaf"
+   }
+  },
+  "madain-and-nihawand": {
+   "hero": {
+    "path": "/campaign-key-art/madain-and-nihawand/hero.webp",
+    "bytes": 50110,
+    "sha256": "ad5e34aa1761166fdce3fa4ea1b55b370850773ecba753e5a8a435922a80e96f"
+   },
+   "square": {
+    "path": "/campaign-key-art/madain-and-nihawand/square.webp",
+    "bytes": 25868,
+    "sha256": "ca69aa3629586d5c1f15ea175bb4b735a495a9029591015eab179ddf9cdb1b3e"
+   }
+  },
+  "mamluk-sultanate": {
+   "hero": {
+    "path": "/campaign-key-art/mamluk-sultanate/hero.webp",
+    "bytes": 85094,
+    "sha256": "f5cf1191c539dedc2bd8049edde43279eba5ab938abfc268f134c70a933347ae"
+   },
+   "square": {
+    "path": "/campaign-key-art/mamluk-sultanate/square.webp",
+    "bytes": 43138,
+    "sha256": "327e65c1b432aca288ea25629626eae7a7ca841249d7632f5f59abfbe1bdc541"
+   }
+  },
+  "martyrdom-of-umar-and-caliphate-of-uthman": {
+   "hero": {
+    "path": "/campaign-key-art/martyrdom-of-umar-and-caliphate-of-uthman/hero.webp",
+    "bytes": 37684,
+    "sha256": "a6b176595f72a53d643a346165ee22ff98b8aa72081a17589316c76c4954d3a3"
+   },
+   "square": {
+    "path": "/campaign-key-art/martyrdom-of-umar-and-caliphate-of-uthman/square.webp",
+    "bytes": 20084,
+    "sha256": "4c7927c3857724fbf06fc893f7535c6ba0dc8711b447f907e1fdfde92ff8beb9"
+   }
+  },
+  "migration-to-abyssinia": {
+   "hero": {
+    "path": "/campaign-key-art/migration-to-abyssinia/hero.webp",
+    "bytes": 45530,
+    "sha256": "1f797c127f8fd934dd2bbb6262e57daeb02ee2c1df687150422f2e7a8a4a097c"
+   },
+   "square": {
+    "path": "/campaign-key-art/migration-to-abyssinia/square.webp",
+    "bytes": 20110,
+    "sha256": "86cbfde4d7bc9c3719e3e5eea71468e1732e5cfd1b94486175a77a739009c054"
+   }
+  },
+  "migration-to-madinah": {
+   "hero": {
+    "path": "/campaign-key-art/migration-to-madinah/hero.webp",
+    "bytes": 27116,
+    "sha256": "563a8a47f2ae0cfbf1eaf82dfc10ecba2ced5f2baac83f36a45901f979d3b8a7"
+   },
+   "square": {
+    "path": "/campaign-key-art/migration-to-madinah/square.webp",
+    "bytes": 13194,
+    "sha256": "3668df30537b9a2bf46ace5af4ca4e302cda76137d08c4d59c5ed45dc34538c5"
+   }
+  },
+  "mongol-invasion-mashriq": {
+   "hero": {
+    "path": "/campaign-key-art/mongol-invasion-mashriq/hero.webp",
+    "bytes": 52666,
+    "sha256": "4a1491080379c9410206542a74f4f93c7dcb3ab2067997f7ea7acc2e22d28ca2"
+   },
+   "square": {
+    "path": "/campaign-key-art/mongol-invasion-mashriq/square.webp",
+    "bytes": 25490,
+    "sha256": "94832706f907842a2d97aea6d01c4058b641062806a237a66ff5a695f256abc5"
+   }
+  },
+  "mongols-and-fall-of-baghdad": {
+   "hero": {
+    "path": "/campaign-key-art/mongols-and-fall-of-baghdad/hero.webp",
+    "bytes": 57972,
+    "sha256": "5792ee126705c64e6dd506876999c4042b9a09a4408521e21afa094e5414efff"
+   },
+   "square": {
+    "path": "/campaign-key-art/mongols-and-fall-of-baghdad/square.webp",
+    "bytes": 31178,
+    "sha256": "9b00836a3430fe866f4fab6566c76afd1db277689fd6fb84f49b896a0c2a427a"
+   }
+  },
+  "muawiya-and-state-building": {
+   "hero": {
+    "path": "/campaign-key-art/muawiya-and-state-building/hero.webp",
+    "bytes": 48512,
+    "sha256": "621e6ee77f732ac04e132937ef35b1b34b2ac045cbcd1b51e93e90d17b159622"
+   },
+   "square": {
+    "path": "/campaign-key-art/muawiya-and-state-building/square.webp",
+    "bytes": 23750,
+    "sha256": "e284f8d6aef51da509a95c26d448a5cba7653d4765ffc0364a129f3132b049db"
+   }
+  },
+  "nur-aldin-mahmud": {
+   "hero": {
+    "path": "/campaign-key-art/nur-aldin-mahmud/hero.webp",
+    "bytes": 74870,
+    "sha256": "a875af1f9be67a88e1bb5ce00dde4893418df62be5e9c968ecdf3c3db7369cf1"
+   },
+   "square": {
+    "path": "/campaign-key-art/nur-aldin-mahmud/square.webp",
+    "bytes": 33994,
+    "sha256": "d60ed4535512cd4f3b437367d503f4bc664b4a7f3171e9950d5d1ee094c75103"
+   }
+  },
+  "ottoman-decline-and-reforms": {
+   "hero": {
+    "path": "/campaign-key-art/ottoman-decline-and-reforms/hero.webp",
+    "bytes": 46980,
+    "sha256": "cfdf0826ae913aef3fbd9f0f4a5936d23d947178bc04c172e06ba1bc9af6095f"
+   },
+   "square": {
+    "path": "/campaign-key-art/ottoman-decline-and-reforms/square.webp",
+    "bytes": 20064,
+    "sha256": "f9988c4afb29966dab8b3df075c10f6b7b999783f83f37e6b7ccca7c19b0b57d"
+   }
+  },
+  "ottoman-expansion-anatolia-balkans": {
+   "hero": {
+    "path": "/campaign-key-art/ottoman-expansion-anatolia-balkans/hero.webp",
+    "bytes": 86946,
+    "sha256": "dd8b12d3e6a495d15eec786f3637828622870eebcd0313823680368c50646f8b"
+   },
+   "square": {
+    "path": "/campaign-key-art/ottoman-expansion-anatolia-balkans/square.webp",
+    "bytes": 45778,
+    "sha256": "fdd412581f03d4136ad164d567817a29f1cbc2bbb18b4099b7d307cb05d0d407"
+   }
+  },
+  "ottoman-golden-age": {
+   "hero": {
+    "path": "/campaign-key-art/ottoman-golden-age/hero.webp",
+    "bytes": 69836,
+    "sha256": "11a042ee13abdf3dd742982ad728d1b75f5fa445aaea84b87b0ef6cb91a5efd5"
+   },
+   "square": {
+    "path": "/campaign-key-art/ottoman-golden-age/square.webp",
+    "bytes": 37424,
+    "sha256": "509d3f7cf1cdf48c563730529a5ba8ef7636115265610d5562bc060f6a750a1d"
+   }
+  },
+  "ottoman-reunification": {
+   "hero": {
+    "path": "/campaign-key-art/ottoman-reunification/hero.webp",
+    "bytes": 92492,
+    "sha256": "6a2c65390cef469bfa5d9dc4e6d0efe38bd0fc8f7b64efdf684d0ead42d44804"
+   },
+   "square": {
+    "path": "/campaign-key-art/ottoman-reunification/square.webp",
+    "bytes": 44166,
+    "sha256": "3cea97a21ebeb24d3d2b30061f150595a4a98068b60fa159a9cee112d8ba7d0b"
+   }
+  },
+  "peak-of-umayyad-power": {
+   "hero": {
+    "path": "/campaign-key-art/peak-of-umayyad-power/hero.webp",
+    "bytes": 90854,
+    "sha256": "8dd8ebb752be83e95bf7435f55fda9e8150a2aaa32fe342eb86125a321c2c8ac"
+   },
+   "square": {
+    "path": "/campaign-key-art/peak-of-umayyad-power/square.webp",
+    "bytes": 49376,
+    "sha256": "1d69a967f0af9fdd2068425d01e8ee0f5842b1ec6c798b33c5697dc8fca2c068"
+   }
+  },
+  "prophetic-mission": {
+   "hero": {
+    "path": "/campaign-key-art/prophetic-mission/hero.webp",
+    "bytes": 25024,
+    "sha256": "943301f9d600092d7fdbb8182e09278f33124c09676970502ae5b4ce76ee40ca"
+   },
+   "square": {
+    "path": "/campaign-key-art/prophetic-mission/square.webp",
+    "bytes": 14044,
+    "sha256": "e0df86168abed17594b89d1182f0cab51f121e0d6ffe816ba337bb59949763cf"
+   }
+  },
+  "public-call-and-boycott": {
+   "hero": {
+    "path": "/campaign-key-art/public-call-and-boycott/hero.webp",
+    "bytes": 59386,
+    "sha256": "01dc11a3c032e4aed3490a609780bb7748f0f49deed2cdee413c13f09621ad52"
+   },
+   "square": {
+    "path": "/campaign-key-art/public-call-and-boycott/square.webp",
+    "bytes": 31054,
+    "sha256": "603fcd597031d50f17c7e2c667e97c47abb3b54c2411d976d5fe8ea02751600d"
+   }
+  },
+  "ridda-wars-campaign": {
+   "hero": {
+    "path": "/campaign-key-art/ridda-wars-campaign/hero.webp",
+    "bytes": 46742,
+    "sha256": "0e6433d3d0096675b765480dde6bb4e9a5783c467eeb6c0067f92cf0263a3b67"
+   },
+   "square": {
+    "path": "/campaign-key-art/ridda-wars-campaign/square.webp",
+    "bytes": 22768,
+    "sha256": "716958d7a97361d766f6467ea2e6f7affe2fbe7e1e9e7b09bf11d4d4c83f34ed"
+   }
+  },
+  "rise-of-the-ottoman-state": {
+   "hero": {
+    "path": "/campaign-key-art/rise-of-the-ottoman-state/hero.webp",
+    "bytes": 60912,
+    "sha256": "528063775ade8094887dd16647126efc7b3d2aaf76280093cdc7d3e2a3cee2e2"
+   },
+   "square": {
+    "path": "/campaign-key-art/rise-of-the-ottoman-state/square.webp",
+    "bytes": 27524,
+    "sha256": "2b213c7d3860f74a0e4b479ff34916bbf20aaa8e4d9494412a1dbf9cc12ded58"
+   }
+  },
+  "rise-of-the-umayyad-state": {
+   "hero": {
+    "path": "/campaign-key-art/rise-of-the-umayyad-state/hero.webp",
+    "bytes": 101864,
+    "sha256": "658b09baac62ff94b57666d9907634bbb6e96b325214734017e91d014de549c4"
+   },
+   "square": {
+    "path": "/campaign-key-art/rise-of-the-umayyad-state/square.webp",
+    "bytes": 49718,
+    "sha256": "c915e8e297c674fbc227070549d683521c3a1128b34eda9a7d8977f4da758460"
+   }
+  },
+  "salah-al-din-and-liberation-of-jerusalem": {
+   "hero": {
+    "path": "/campaign-key-art/salah-al-din-and-liberation-of-jerusalem/hero.webp",
+    "bytes": 135146,
+    "sha256": "7fdb882a137c5bdeb911447d9022558c5712d66650054ddac9e67ce8225a0fe7"
+   },
+   "square": {
+    "path": "/campaign-key-art/salah-al-din-and-liberation-of-jerusalem/square.webp",
+    "bytes": 64942,
+    "sha256": "91db9b53d2414cc12e13c1dc46006d4ed62502fb358290c5b146bb8e17cc52b8"
+   }
+  },
+  "samarra-and-turkish-guard": {
+   "hero": {
+    "path": "/campaign-key-art/samarra-and-turkish-guard/hero.webp",
+    "bytes": 43476,
+    "sha256": "c282d23baee1c74a3036dbf915baa03a98c353458ac6ad75aa9820ccff4c8f1f"
+   },
+   "square": {
+    "path": "/campaign-key-art/samarra-and-turkish-guard/square.webp",
+    "bytes": 20226,
+    "sha256": "49c82e09b63679e95eadc8cd376c027776aadb2dae24d647e9c2f9f98dbed3f1"
+   }
+  },
+  "secret-dawah": {
+   "hero": {
+    "path": "/campaign-key-art/secret-dawah/hero.webp",
+    "bytes": 24568,
+    "sha256": "5148c4d9d95e5690202205b23c10f71878083f58def35f92cc76d024d2ed4ac7"
+   },
+   "square": {
+    "path": "/campaign-key-art/secret-dawah/square.webp",
+    "bytes": 13746,
+    "sha256": "3c9ce9d7214728b2792e2740a6cda627923f8a6eefd4b9173c3919e7437eb64b"
+   }
+  },
+  "selim-i-annexation-of-the-mashriq": {
+   "hero": {
+    "path": "/campaign-key-art/selim-i-annexation-of-the-mashriq/hero.webp",
+    "bytes": 92494,
+    "sha256": "dc86b7d50dcabdf736a30dbfdf1cd41a7e27e9bdbfcedbd877cfce517d1b897e"
+   },
+   "square": {
+    "path": "/campaign-key-art/selim-i-annexation-of-the-mashriq/square.webp",
+    "bytes": 43394,
+    "sha256": "e2b2cc9cec012ce0577b295e97489a195092506e69f543b68ffdcee60a354e1b"
+   }
+  },
+  "tabuk-campaign": {
+   "hero": {
+    "path": "/campaign-key-art/tabuk-campaign/hero.webp",
+    "bytes": 79306,
+    "sha256": "28deffb380d357d8030a01129d1030815ce280616bee56f2cb4bae046820fce6"
+   },
+   "square": {
+    "path": "/campaign-key-art/tabuk-campaign/square.webp",
+    "bytes": 40104,
+    "sha256": "f34317b6ede6198441149ebeb3756e9483bbd701a9a5fdda94b0b6a98315c84e"
+   }
+  },
+  "taifa-kings": {
+   "hero": {
+    "path": "/campaign-key-art/taifa-kings/hero.webp",
+    "bytes": 111482,
+    "sha256": "50856092f04ee2fd35bcf2330bd7e7e390c5e9022ba309132dff63a6e8371839"
+   },
+   "square": {
+    "path": "/campaign-key-art/taifa-kings/square.webp",
+    "bytes": 57962,
+    "sha256": "4f447ab7c49575ca6a519c735f000a110aeea1a2fd93385d62a89401203ddb14"
+   }
+  },
+  "treaty-of-hudaybiyyah-campaign": {
+   "hero": {
+    "path": "/campaign-key-art/treaty-of-hudaybiyyah-campaign/hero.webp",
+    "bytes": 73426,
+    "sha256": "e0e81a31b4f747e63161790670dd4ea2f83368f1a88da5193cdd0ae36c228bf7"
+   },
+   "square": {
+    "path": "/campaign-key-art/treaty-of-hudaybiyyah-campaign/square.webp",
+    "bytes": 42268,
+    "sha256": "83af276586549541b79b753bf53d034b513e0b0fd22c25a0bc7e773c5657bedb"
+   }
+  },
+  "umayyad-caliphate-in-al-andalus": {
+   "hero": {
+    "path": "/campaign-key-art/umayyad-caliphate-in-al-andalus/hero.webp",
+    "bytes": 88450,
+    "sha256": "db0c2b9f1f4f5ba10d3cb2e4a396ddc24a23cd2691ffe15dd79dc49eb9c2f5ff"
+   },
+   "square": {
+    "path": "/campaign-key-art/umayyad-caliphate-in-al-andalus/square.webp",
+    "bytes": 43344,
+    "sha256": "9205ec9128b3c4a8b032b115e25617a990b67ffe5312ba1a62ffde9452c4829b"
+   }
+  },
+  "umayyad-golden-age": {
+   "hero": {
+    "path": "/campaign-key-art/umayyad-golden-age/hero.webp",
+    "bytes": 96280,
+    "sha256": "e95efae5d0634ecaca1d39da98bf0a979b904387b2098d69f041abe709ebb10d"
+   },
+   "square": {
+    "path": "/campaign-key-art/umayyad-golden-age/square.webp",
+    "bytes": 50220,
+    "sha256": "79d149a9013fdfde11ccf093a0e94d19a7bba60568f16e8983f701c10c57370b"
+   }
+  },
+  "umayyad-siege-of-constantinople": {
+   "hero": {
+    "path": "/campaign-key-art/umayyad-siege-of-constantinople/hero.webp",
+    "bytes": 58258,
+    "sha256": "162d2a917b5c32f387ba2f78019785b9271b3b5f9bc2f74abe07484109efc664"
+   },
+   "square": {
+    "path": "/campaign-key-art/umayyad-siege-of-constantinople/square.webp",
+    "bytes": 29976,
+    "sha256": "098286c17e662f06f0382a2c180c90f35fd52c00f0e9f3828fa3935a9c6a46b0"
+   }
+  },
+  "uthman-and-quran-standardization": {
+   "hero": {
+    "path": "/campaign-key-art/uthman-and-quran-standardization/hero.webp",
+    "bytes": 31068,
+    "sha256": "b30b2d006172091b90ad4a9e978ba4f7a531fa4d1fca8cc02b6a51a67fa0c44e"
+   },
+   "square": {
+    "path": "/campaign-key-art/uthman-and-quran-standardization/square.webp",
+    "bytes": 18388,
+    "sha256": "4f0316f67959a7e93cb856b3fad23be5ae90a8d6e21491d5e63731be65ee3622"
+   }
+  },
+  "world-war-one-and-fall-of-caliphate": {
+   "hero": {
+    "path": "/campaign-key-art/world-war-one-and-fall-of-caliphate/hero.webp",
+    "bytes": 61966,
+    "sha256": "7faa1d1d1564eb42790a018d8d640d12128b119eb33c396de44b683e6b2e78ee"
+   },
+   "square": {
+    "path": "/campaign-key-art/world-war-one-and-fall-of-caliphate/square.webp",
+    "bytes": 29790,
+    "sha256": "2e4e7e6eb4b4532b265cdb5f0773405951b3483230938abbf0f800c7169c9dbb"
+   }
+  },
+  "year-of-sorrow-and-taif": {
+   "hero": {
+    "path": "/campaign-key-art/year-of-sorrow-and-taif/hero.webp",
+    "bytes": 63704,
+    "sha256": "664767c632091e00cdc91c49711453349942101b9be07283c56f527f9f9856e9"
+   },
+   "square": {
+    "path": "/campaign-key-art/year-of-sorrow-and-taif/square.webp",
+    "bytes": 36814,
+    "sha256": "582e220f3af8dcbccbbe049c1418ab822d0215d43ab19255613662faaf859825"
+   }
+  }
+ }
+}

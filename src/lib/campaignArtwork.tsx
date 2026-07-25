@@ -40,6 +40,7 @@ import type { Campaign } from "@/types/campaign";
 import {
   pickCampaignKeyArtPath,
   resolveCampaignKeyArtUrl,
+  resolveCampaignKeyArtUrlSync,
   type KeyArtAspect,
 } from "@/lib/campaign-key-art";
 import { CampaignKeyArt } from "@/components/CampaignKeyArt";
@@ -106,12 +107,14 @@ export function useCampaignArtworkUrl(
 ): { url: string; hasKeyArt: boolean } {
   const aspect = surfaceAspect(surface);
   const path = pickCampaignKeyArtPath(campaign ?? null, aspect);
-  const [signed, setSigned] = useState<string | null>(null);
+  // Local-first: bundled artwork is available synchronously (offline-safe).
+  const [signed, setSigned] = useState<string | null>(() => resolveCampaignKeyArtUrlSync(path));
 
   useEffect(() => {
     let alive = true;
-    setSigned(null);
-    if (!path) return;
+    const immediate = resolveCampaignKeyArtUrlSync(path);
+    setSigned(immediate);
+    if (!path || immediate) return;
     (async () => {
       try {
         const url = await resolveCampaignKeyArtUrl(path);

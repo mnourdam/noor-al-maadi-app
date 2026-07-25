@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import {
   pickCampaignKeyArtPath,
   resolveCampaignKeyArtUrl,
+  resolveCampaignKeyArtUrlSync,
   type KeyArtAspect,
 } from "@/lib/campaign-key-art";
 
@@ -53,14 +54,17 @@ export function CampaignKeyArt({
   sizes,
 }: Props) {
   const path = pickCampaignKeyArtPath(campaign, aspect);
-  const [url, setUrl] = useState<string | null>(null);
+  // Local-first: bundled artwork resolves synchronously on the very
+  // first render — no request, no await, no loading flash, offline-safe.
+  const [url, setUrl] = useState<string | null>(() => resolveCampaignKeyArtUrlSync(path));
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let alive = true;
     setFailed(false);
-    setUrl(null);
-    if (!path) return;
+    const immediate = resolveCampaignKeyArtUrlSync(path);
+    setUrl(immediate);
+    if (!path || immediate) return;
     (async () => {
       try {
         const resolved = await resolveCampaignKeyArtUrl(path);
