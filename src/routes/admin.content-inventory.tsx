@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/content-inventory")({
   head: () => ({
@@ -115,7 +116,7 @@ async function buildInventory(): Promise<Inventory> {
   }
 
   // Campaigns
-  const camps = await fetchAll<any>("admin_campaigns", "id,title,status,data,created_at");
+  const camps = selectCampaignRows(await fetchAll<any>("admin_campaigns", "id,title,status,data,created_at"));
   let chapters = 0;
   let activities = 0;
   let rewards = 0;

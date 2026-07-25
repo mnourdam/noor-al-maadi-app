@@ -5,6 +5,7 @@ import { Hammer, Save, ChevronDown, ChevronLeft } from "lucide-react";
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeEntitySlug } from "@/lib/encyclopedia-source";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/hub-builder")({
   head: () => ({
@@ -149,7 +150,7 @@ async function loadHub(slug: string): Promise<HubData | null> {
     .from("admin_campaigns")
     .select("data")
     .limit(1000);
-  for (const c of camps ?? []) {
+  for (const c of selectCampaignRows(camps ?? [])) {
     const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
     const cmeta = (cm.metadata && typeof cm.metadata === "object"
       ? (cm.metadata as Record<string, unknown>)

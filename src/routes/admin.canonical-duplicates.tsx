@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { entityRichness } from "@/lib/encyclopedia-source";
 import { normalizeArabicName, normalizeSlugKey } from "@/lib/arabic-normalize";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/canonical-duplicates")({
   head: () => ({
@@ -147,7 +148,7 @@ function Page() {
     if (e.error) setErr(e.error.message);
     else setRows((e.data as Row[]) ?? []);
     setAtlas((a.data as Atlas[]) ?? []);
-    setCampaigns((c.data as Campaign[]) ?? []);
+    setCampaigns(selectCampaignRows((c.data as Campaign[]) ?? []));
     setLoading(false);
   }
   useEffect(() => { load(); }, []);

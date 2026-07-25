@@ -28,6 +28,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { AdminGate } from "@/lib/admin-guard";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { supabase } from "@/integrations/supabase/client";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/unlock-integrity")({
   head: () => ({
@@ -125,7 +126,7 @@ function UnlockIntegrityPage() {
         supabase.from("admin_campaigns").select("id,title,data"),
         supabase.from("encyclopedia_entities").select("id,slug,entity_type,enabled,title,metadata"),
       ]);
-      const campaigns = (campaignsRes.data ?? []) as any[];
+      const campaigns = selectCampaignRows((campaignsRes.data ?? []) as any[]);
       const allRefs = collectRefs(campaigns);
       // Dedupe by raw + source for clarity, keep first source per raw for tally.
       setRefs(allRefs);

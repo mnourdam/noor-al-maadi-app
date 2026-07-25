@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/content-integrity-repair")({
   head: () => ({
@@ -178,7 +179,7 @@ async function buildReport(): Promise<Report> {
   const [encyclopedia, atlas, campaigns] = await Promise.all([
     fetchAll<EncEntity>("encyclopedia_entities", "id,entity_type,slug,title,enabled,metadata"),
     fetchAll<AtlasEntity>("atlas_entities", "id,slug,kind,encyclopedia_entity_id"),
-    fetchAll<Campaign>("admin_campaigns", "id,slug,title,status,data"),
+    fetchAll<Campaign>("admin_campaigns", "id,slug,title,status,data").then(selectCampaignRows),
   ]);
   const encByKey = new Map<string, EncEntity>();
   for (const e of encyclopedia) encByKey.set(`${e.entity_type}:${e.slug}`, e);

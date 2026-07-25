@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/museum-provenance")({
   head: () => ({
@@ -134,7 +135,7 @@ function MuseumProvenance() {
             "encyclopedia_entities",
             "id,entity_type,slug,title,enabled,metadata,created_at",
           ),
-          fetchAll<Campaign>("admin_campaigns", "id,slug,title,status,data"),
+          fetchAll<Campaign>("admin_campaigns", "id,slug,title,status,data").then(selectCampaignRows),
         ]);
         const artifacts = ents.filter((e) => e.entity_type === "artifact");
         const refMap = collectCampaignArtifactRefs(camps);
