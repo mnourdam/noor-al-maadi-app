@@ -117,15 +117,38 @@ export function StoryCard({
 
   const pct = Math.round(progressFraction(story) * 100);
   const widthClass = variant === "rail" ? "w-44 flex-none snap-start sm:w-52" : "w-full";
+  const [lockDialog, setLockDialog] = useState(false);
+
+  const shellClass = `group relative block overflow-hidden rounded-2xl border border-gold/25 bg-black/60 text-start shadow-[0_8px_28px_rgba(0,0,0,0.45)] ring-1 ring-inset ring-white/5 transition hover:border-gold/60 hover:shadow-[0_14px_36px_rgba(0,0,0,0.6)] ${widthClass}`;
+
+  // Locked stories never navigate: tapping explains what is still missing.
+  const Shell = ({ children }: { children: React.ReactNode }) =>
+    state === "locked" ? (
+      <button
+        type="button"
+        dir="rtl"
+        aria-label={`${story.title_ar} — مقفلة`}
+        onClick={() => setLockDialog(true)}
+        className={shellClass}
+      >
+        {children}
+      </button>
+    ) : (
+      <Link
+        dir="rtl"
+        to="/story/$id"
+        params={{ id: story.id }}
+        aria-label={story.title_ar}
+        className={shellClass}
+      >
+        {children}
+      </Link>
+    );
 
   return (
-    <Link
-      dir="rtl"
-      to="/story/$id"
-      params={{ id: story.id }}
-      aria-label={story.title_ar}
-      className={`group relative block overflow-hidden rounded-2xl border border-gold/25 bg-black/60 shadow-[0_8px_28px_rgba(0,0,0,0.45)] ring-1 ring-inset ring-white/5 transition hover:border-gold/60 hover:shadow-[0_14px_36px_rgba(0,0,0,0.6)] ${widthClass}`}
-    >
+    <>
+    <Shell>
+
       {/* Cover — tall cinematic 3:4 */}
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-neutral-900">
         {cover && !coverFailed ? (
