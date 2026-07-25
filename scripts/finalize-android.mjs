@@ -6,6 +6,8 @@
  *   1. `dist/android/index.html` exists.
  *   2. All asset URLs inside it are RELATIVE (`./assets/...`), so they load
  *      inside the Android WebView regardless of how Capacitor serves them.
+ *   3. The frozen Premium Emblem offline pack is present in the Android web
+ *      bundle, so installed apps never fall back to old SVG avatars.
  *
  * Strategy:
  *   - The Android build is a normal Vite SPA build. It must emit a root
@@ -67,6 +69,20 @@ function main() {
     console.error("[finalize-android] failed: dist/android/assets is missing.");
     process.exit(1);
   }
+
+  const emblemDir = join(OUT_DIR, "emblems");
+  const emblemManifest = join(emblemDir, "manifest.json");
+  const emblemFiles = existsSync(emblemDir)
+    ? readdirSync(emblemDir).filter((name) => /\.(webp|avif)$/i.test(name))
+    : [];
+  if (!existsSync(emblemManifest) || emblemFiles.length < 1088) {
+    console.error(
+      `[finalize-android] failed: Premium Emblem offline pack incomplete in dist/android/emblems ` +
+      `(manifest=${existsSync(emblemManifest)}, files=${emblemFiles.length}, expected>=1088).`,
+    );
+    process.exit(1);
+  }
+  console.log(`[finalize-android] verified Premium Emblem offline pack (${emblemFiles.length} assets)`);
 
   // Sanity check
   if (!existsSync(TARGET)) {

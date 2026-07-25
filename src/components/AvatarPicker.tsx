@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Check, X, Lock, Sparkles } from "lucide-react";
 import {
   AVATARS,
-  getAvatar,
   isAvatarUnlocked,
   CATEGORY_LABEL,
   RARITY_LABEL,
@@ -53,7 +52,6 @@ export function AvatarPicker({
     () => (cat === "all" ? AVATARS : AVATARS.filter((a) => a.category === cat)),
     [cat],
   );
-  const current = getAvatar(currentId);
   const resolvedCurrent = resolveProfileEmblem(currentId);
 
   return (
