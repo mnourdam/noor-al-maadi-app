@@ -11,6 +11,7 @@
  * player keeps seeing real content when offline.
  */
 import { getCollection } from "./offline-snapshot";
+import { selectCampaignRows } from "./campaigns/entities";
 import type { SupabaseEncyclopediaEntity } from "./encyclopedia-source";
 
 export async function cachedEncyclopediaList(): Promise<SupabaseEncyclopediaEntity[]> {
