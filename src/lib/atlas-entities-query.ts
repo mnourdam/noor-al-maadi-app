@@ -15,20 +15,26 @@ import {
   type AtlasEntityRow,
 } from "./atlas-entities";
 import { ensureLocalSnapshotLoaded, localAtlasEntities } from "./local-first-store";
+import { shouldForceRemoteAtlas } from "./atlas/atlas-recovery";
 
 export function usePublishedAtlasEntities() {
   return useQuery<AtlasEntityRow[]>({
     queryKey: ["atlas-entities", "published", "lc1"],
     staleTime: 60_000,
     initialData: () => {
+      if (shouldForceRemoteAtlas()) return undefined;
       const rows = localAtlasEntities() as AtlasEntityRow[];
       return rows.length > 0 ? filterLc1AtlasRows(rows) : undefined;
     },
     initialDataUpdatedAt: 0,
     queryFn: async () => {
-      await ensureLocalSnapshotLoaded();
-      const local = localAtlasEntities() as AtlasEntityRow[];
-      if (local.length > 0) return filterLc1AtlasRows(local);
+      // After "إعادة ضبط بيانات الأطلس" the local rows are treated as
+      // suspect for this session and the server is the source of truth.
+      if (!shouldForceRemoteAtlas()) {
+        await ensureLocalSnapshotLoaded();
+        const local = localAtlasEntities() as AtlasEntityRow[];
+        if (local.length > 0) return filterLc1AtlasRows(local);
+      }
       return filterLc1AtlasRows(await listPublishedAtlasEntities());
     },
   });

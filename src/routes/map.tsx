@@ -1,6 +1,17 @@
 // عالم إرث — Phase 3: Cinematic World Atlas with deep-link URL state.
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AtlasShell } from "@/components/atlas/AtlasShell";
+import { AtlasErrorBoundary } from "@/components/atlas/AtlasErrorBoundary";
+import { AtlasSafeMode } from "@/components/atlas/AtlasSafeMode";
+import {
+  clearAtlasCrashMarker,
+  hasAtlasCrashMarker,
+  hasCanvas2d,
+  releaseUiLocks,
+  resetAtlasData,
+} from "@/lib/atlas/atlas-recovery";
 import type { AtlasEntityKind } from "@/lib/atlas-entities";
 import { androidMark } from "@/lib/androidFreezeDiagnostics";
 
@@ -53,9 +64,43 @@ export const Route = createFileRoute("/map")({
     ],
   }),
   component: WorldMapPage,
+  // Last-resort layer: a loader/search error must not reach the generic
+  // full-app error screen either.
+  errorComponent: () => <AtlasSafeMode reason="error" />,
 });
 
 function WorldMapPage() {
   androidMark("render:AtlasRoute");
-  return <AtlasShell />;
+  const queryClient = useQueryClient();
+
+  // App-restart safety: if the previous session died on this route, do NOT
+  // remount the same renderer that killed it. Open safe mode instead, with an
+  // explicit one-tap way back into the interactive Atlas.
+  const [forceSafe, setForceSafe] = useState(() => hasAtlasCrashMarker());
+  // Device capability gate — no canvas at all means the raster stage cannot run.
+  const [deviceUnsupported] = useState(() => !hasCanvas2d());
+
+  useEffect(() => {
+    releaseUiLocks();
+  }, []);
+
+  if (deviceUnsupported) {
+    return <AtlasSafeMode reason="device" />;
+  }
+
+  if (forceSafe) {
+    return (
+      <AtlasSafeMode
+        reason="error"
+        onRetry={() => { clearAtlasCrashMarker(); releaseUiLocks(); setForceSafe(false); }}
+        onResetData={() => { void resetAtlasData(queryClient).then(() => setForceSafe(false)); }}
+      />
+    );
+  }
+
+  return (
+    <AtlasErrorBoundary queryClient={queryClient}>
+      <AtlasShell />
+    </AtlasErrorBoundary>
+  );
 }

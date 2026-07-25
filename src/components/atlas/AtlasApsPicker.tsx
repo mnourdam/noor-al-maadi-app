@@ -32,6 +32,7 @@ export function AtlasApsPicker({
     if (!el) return;
     const update = () => setWrapSize({ w: el.clientWidth || 1, h: el.clientHeight || 1 });
     update();
+    if (typeof ResizeObserver !== "function") return;
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
