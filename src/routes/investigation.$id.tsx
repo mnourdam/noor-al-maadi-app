@@ -209,6 +209,23 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       correctCount,
     });
 
+    // Reward truth. `applied` is the server's own "this call granted the
+    // reward" flag; a replay (reinstall, cleared local marker) returns the
+    // historical snapshot with applied=false and grants nothing.
+    if (outcome.acknowledged) {
+      setGrant({
+        status: outcome.applied ? "granted" : "already",
+        xp: outcome.applied ? outcome.xpEarned : 0,
+        dinars: outcome.applied ? outcome.dinarsEarned : 0,
+        hearts: outcome.applied ? outcome.heartsEarned : 0,
+      });
+    } else if (outcome.queued) {
+      setGrant({ status: "queued", xp: 0, dinars: 0, hearts: 0 });
+    } else {
+      setGrant({ status: "refused", xp: 0, dinars: 0, hearts: 0 });
+    }
+
+
     // Phase 3A — canonical qualifying-activity call (server-authoritative).
     // Runs strictly AFTER the grant so its mirrored totals are post-grant.
     await recordStreakActivity("investigation", row.id);
