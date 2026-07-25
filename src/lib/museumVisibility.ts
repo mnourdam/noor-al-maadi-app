@@ -16,6 +16,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { ensureLocalSnapshotLoaded, localPublishedCampaigns } from "@/lib/local-first-store";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export type ArtifactClassification = {
   adminImported: boolean;
