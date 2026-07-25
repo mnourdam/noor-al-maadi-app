@@ -26,9 +26,21 @@ import {
   type FeedItem,
 } from "./campaignDividers";
 
-function toCampaigns(rawList: { id: string; slug: string; data: any }[]): Campaign[] {
+function toCampaigns(rawList: { id: string; slug: string; data: any; key_art_path?: string | null; key_art_square_path?: string | null; key_art_credit?: string | null }[]): Campaign[] {
   const all = rawList
-    .map((r) => r.data as unknown as Campaign)
+    .map((r) => {
+      const c = r.data as unknown as Campaign;
+      if (!c) return c;
+      // Merge Key Art fields (view columns) onto the Campaign object so
+      // player surfaces resolve artwork through the single canonical
+      // resolver in `src/lib/campaignArtwork.ts`.
+      return {
+        ...c,
+        key_art_path: r.key_art_path ?? c.key_art_path ?? null,
+        key_art_square_path: r.key_art_square_path ?? c.key_art_square_path ?? null,
+        key_art_credit: r.key_art_credit ?? c.key_art_credit ?? null,
+      } as Campaign;
+    })
     .filter((c) => c && !isDividerData(c) && c.status === "published");
   return sortCampaignsChronological(withBackfilledChronologyAll(all));
 }
@@ -49,7 +61,7 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   if (typeof navigator === "undefined" || navigator.onLine !== false) {
     void supabase
       .from("campaigns_public" as any)
-      .select("id, slug, data")
+      .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit")
       .then(({ data, error }) => {
         if (error || !data) return;
         try {
@@ -69,7 +81,7 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   try {
     const { data, error } = await supabase
       .from("campaigns_public" as any)
-      .select("id, slug, data");
+      .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
     if (!error && data) return toCampaigns(data as any[]);
   } catch (err) {
     console.warn("[supabaseCampaigns] live list failed:", err);
@@ -127,26 +139,41 @@ export async function fetchCampaignByIdOrSlug(
   const hit = localCampaignByIdOrSlug(idOrSlug);
   if (hit && !isDividerData(hit.data)) {
     const c = (hit.data ?? null) as Campaign | null;
-    if (c && c.status === "published") return c;
+    if (c && c.status === "published") {
+      return {
+        ...c,
+        key_art_path: (hit as any).key_art_path ?? c.key_art_path ?? null,
+        key_art_square_path: (hit as any).key_art_square_path ?? c.key_art_square_path ?? null,
+        key_art_credit: (hit as any).key_art_credit ?? c.key_art_credit ?? null,
+      } as Campaign;
+    }
   }
 
   // Local miss — try network (may be a freshly published campaign).
   try {
     let row: any = await supabase
       .from("campaigns_public" as any)
-      .select("id, slug, data")
+      .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit")
       .eq("id", idOrSlug)
       .maybeSingle();
     if (!row?.data) {
       row = await supabase
         .from("campaigns_public" as any)
-        .select("id, slug, data")
+        .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit")
         .eq("slug", idOrSlug)
         .maybeSingle();
     }
     if (!row?.error) {
-      const c = (row?.data?.data ?? null) as Campaign | null;
-      if (c && c.status === "published") return c;
+      const r = row?.data;
+      const c = (r?.data ?? null) as Campaign | null;
+      if (c && c.status === "published") {
+        return {
+          ...c,
+          key_art_path: r?.key_art_path ?? c.key_art_path ?? null,
+          key_art_square_path: r?.key_art_square_path ?? c.key_art_square_path ?? null,
+          key_art_credit: r?.key_art_credit ?? c.key_art_credit ?? null,
+        } as Campaign;
+      }
     } else {
       console.warn("[supabaseCampaigns] resolve failed:", row.error.message);
     }
@@ -214,7 +241,7 @@ export async function fetchPublishedFeed(): Promise<{
     try {
       const { data, error } = await supabase
         .from("campaigns_public" as any)
-        .select("id, slug, data");
+        .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
       if (!error && data) local = data as any[];
     } catch { /* ignore */ }
 

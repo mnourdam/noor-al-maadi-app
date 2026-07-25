@@ -28,6 +28,7 @@ import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscove
 import { useHomeSummary } from "@/lib/stats/homeSummary";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
+import { useCampaignArtworkUrl, sanitizedCoverImage } from "@/lib/campaignArtwork";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
@@ -275,6 +276,16 @@ function HomeFull() {
     }, 1200);
     return () => { idle.cancel(); };
   }, []);
+  // ===== Campaign hero artwork (Single Source of Truth) =====
+  // The resolver picks Key Art when present, else the rotating hero
+  // pool. Never read `coverImage` here — all campaign artwork routes
+  // through `src/lib/campaignArtwork.tsx`.
+  const heroPoolFallback = heroBgs[0] ?? "";
+  const { url: campaignHeroBg } = useCampaignArtworkUrl(
+    campaignSel?.campaign ?? null,
+    "home-hero",
+    heroPoolFallback,
+  );
 
   // ===== Hero slides =====
   const slides = useMemo<HeroSlide[]>(() => {
@@ -284,9 +295,7 @@ function HomeFull() {
       const { campaign, hasStarted, isComplete, completedChapters, nextChapter } = campaignSel;
       const total = campaign.chapters.length;
       const ctaLabel = isComplete ? "استعرض الحملة" : hasStarted ? "أكمل رحلتك" : "ابدأ رحلتك";
-      const heroBg =
-        (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) ||
-        bgAt(0);
+      const heroBg = campaignHeroBg;
       const subtitle = nextChapter && !isComplete
         ? `الفصل ${nextChapter.order ?? completedChapters + 1} · ${nextChapter.title}`
         : (campaign.subtitle ?? campaign.description ?? "تابع رحلتك في هذه الحملة.");
@@ -339,7 +348,7 @@ function HomeFull() {
     }
     // LC1 scope cut: Timeline Journey hero slide hidden until content audit completes.
     return out;
-  }, [campaignSel, todayEvents, recentDiscoveries, heroBgs]);
+  }, [campaignSel, todayEvents, recentDiscoveries, heroBgs, campaignHeroBg]);
 
   // Carousel
   const [slideIdx, setSlideIdx] = useState(0);
@@ -1014,7 +1023,11 @@ function ContinueJourneyCard({ sel }: {
   const stashOrigin = useStashCurrentAsOrigin();
   const total = campaign.chapters.length;
   const pct = total > 0 ? Math.round((completedChapters / total) * 100) : 0;
-  const cover = (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) || heroFortress;
+  // Continue Journey — routes through the single artwork resolver.
+  // Legacy `coverImage` becomes the fallback when no Key Art exists;
+  // final safety net is the shipped `heroFortress` asset.
+  const fallbackCover = sanitizedCoverImage(campaign) ?? heroFortress;
+  const { url: cover } = useCampaignArtworkUrl(campaign, "continue-journey", fallbackCover);
   return (
     <section className="mt-12 px-5">
       <SectionHeader icon={<Crown className="size-3.5" />} eyebrow="حملتك النشطة" title="واصل رحلتك" />

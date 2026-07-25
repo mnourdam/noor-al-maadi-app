@@ -3131,6 +3131,9 @@ export type Database = {
           created_at: string | null
           data: Json | null
           id: string | null
+          key_art_credit: string | null
+          key_art_path: string | null
+          key_art_square_path: string | null
           published_at: string | null
           slug: string | null
           status: string | null
@@ -3142,6 +3145,9 @@ export type Database = {
           created_at?: string | null
           data?: Json | null
           id?: string | null
+          key_art_credit?: string | null
+          key_art_path?: string | null
+          key_art_square_path?: string | null
           published_at?: string | null
           slug?: string | null
           status?: string | null
@@ -3153,6 +3159,9 @@ export type Database = {
           created_at?: string | null
           data?: Json | null
           id?: string | null
+          key_art_credit?: string | null
+          key_art_path?: string | null
+          key_art_square_path?: string | null
           published_at?: string | null
           slug?: string | null
           status?: string | null
