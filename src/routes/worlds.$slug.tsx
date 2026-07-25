@@ -35,6 +35,7 @@ import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import { sortCampaignsChronological } from "@/lib/campaignChronology";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
 import { WorldStoriesSection } from "@/components/stories/WorldStoriesSection";
+import { CampaignArtwork } from "@/lib/campaignArtwork";
 
 export const Route = createFileRoute("/worlds/$slug")({
   head: ({ params }) => ({
