@@ -21,7 +21,7 @@
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Share2, Download, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ProfileState } from "@/lib/profile";
 import { levelFor } from "@/lib/app-constants";
@@ -32,7 +32,8 @@ import {
   sanitizeFilenameHandle,
   type DisplayNameSources,
 } from "@/lib/share/displayName";
-import { shareImage, downloadImage } from "@/lib/share/shareService";
+import { downloadImage } from "@/lib/share/shareService";
+
 
 // ─── Public types ──────────────────────────────────────────────────────
 
