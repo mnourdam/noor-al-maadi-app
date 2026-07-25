@@ -33,6 +33,7 @@ import { guestHasCompleted } from "@/lib/stories/guestCompletions";
 import { useEffect, useState } from "react";
 import { useStoryMediaUrl } from "@/lib/stories/media/url";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
+import { LockedStoryDialog } from "./LockedStoryDialog";
 
 // M7C — direct reads from `stories` and `story_media` have been removed.
 // Cover rows are resolved via the M6 RPC `get_story_media_urls_v2`, which
