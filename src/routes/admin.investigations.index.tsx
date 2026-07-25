@@ -40,6 +40,8 @@ import {
 import { onInvestigationPublished } from "@/lib/investigations/adminApi";
 import { InvestigationExportDialog } from "@/components/admin/InvestigationExportDialog";
 import { InvestigationImportDialog } from "@/components/admin/InvestigationImportDialog";
+import { GOLDEN_TEMPLATE_LABEL, isGoldenTemplate } from "@/lib/investigations/golden-template";
+
 
 
 
@@ -137,6 +139,8 @@ function AdminInvestigationsPage() {
   const [difficulty, setDifficulty] = useState<"" | typeof DIFFICULTIES[number]>("");
   const [worldFilter, setWorldFilter] = useState<string>(""); // "", "__none__", or a world slug
   const [statusFilter, setStatusFilter] = useState<"" | "enabled" | "disabled">("");
+  const [templateFilter, setTemplateFilter] = useState<"" | "only" | "hide">("");
+
 
   // Sort.
   const [sortKey, setSortKey] = useState<SortKey>("updated_at");
@@ -270,8 +274,12 @@ function AdminInvestigationsPage() {
       } else if (worldFilter) {
         if (v.worldSlug !== worldFilter) return false;
       }
+      const golden = isGoldenTemplate(r);
+      if (templateFilter === "only" && !golden) return false;
+      if (templateFilter === "hide" && golden) return false;
       return true;
     });
+
     const dir = sortDir === "asc" ? 1 : -1;
     out = [...out].sort((a, b) => {
       const ar = a.raw, br = b.raw;
@@ -285,7 +293,7 @@ function AdminInvestigationsPage() {
       }
     });
     return out;
-  }, [enriched, search, difficulty, worldFilter, statusFilter, sortKey, sortDir]);
+  }, [enriched, search, difficulty, worldFilter, statusFilter, templateFilter, sortKey, sortDir]);
 
   // --- Stats (Phase B: only DB-provable numbers).
   const stats = useMemo(() => {
@@ -335,9 +343,9 @@ function AdminInvestigationsPage() {
   };
 
   const clearFilters = () => {
-    setSearch(""); setDifficulty(""); setWorldFilter(""); setStatusFilter("");
+    setSearch(""); setDifficulty(""); setWorldFilter(""); setStatusFilter(""); setTemplateFilter("");
   };
-  const anyFilterActive = !!(search || difficulty || worldFilter || statusFilter);
+  const anyFilterActive = !!(search || difficulty || worldFilter || statusFilter || templateFilter);
 
   // --- Export selection helpers.
   const visibleIds = useMemo(() => visible.map((v) => v.raw?.id).filter(Boolean) as string[], [visible]);
@@ -403,7 +411,7 @@ function AdminInvestigationsPage() {
           <div className="mb-2 flex items-center gap-1.5 text-xs text-slate-400">
             <Filter className="h-3.5 w-3.5" /> مرشحات
           </div>
-          <div className="grid gap-2 md:grid-cols-4">
+          <div className="grid gap-2 md:grid-cols-5">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -429,6 +437,13 @@ function AdminInvestigationsPage() {
               <option value="enabled">مفعّل فقط</option>
               <option value="disabled">معطّل فقط</option>
             </select>
+            <select value={templateFilter} onChange={(e) => setTemplateFilter(e.target.value as any)}
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm">
+              <option value="">القوالب والتحقيقات</option>
+              <option value="only">القوالب المرجعية فقط</option>
+              <option value="hide">إخفاء القوالب المرجعية</option>
+            </select>
+
           </div>
           {anyFilterActive && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
@@ -438,6 +453,8 @@ function AdminInvestigationsPage() {
                 ? <Chip onRemove={() => setWorldFilter("")}>بدون عالم</Chip>
                 : worldFilter && <Chip onRemove={() => setWorldFilter("")}>عالم: {worldFilter}</Chip>}
               {statusFilter && <Chip onRemove={() => setStatusFilter("")}>{statusFilter === "enabled" ? "مفعّل" : "معطّل"}</Chip>}
+              {templateFilter && <Chip onRemove={() => setTemplateFilter("")}>{templateFilter === "only" ? "قوالب فقط" : "بدون قوالب"}</Chip>}
+
               <button onClick={clearFilters}
                 className="rounded-full border border-slate-700 px-2 py-0.5 text-slate-400 hover:border-amber-400/40 hover:text-amber-300">
                 مسح الكل
@@ -777,6 +794,13 @@ function Row({ view, selected, onSelect, onExport, onPreview, onToggle }: {
               صيغة قديمة
             </span>
           )}
+          {isGoldenTemplate(r) && (
+            <span title="التحقيق المرجعي الرسمي — لا يُنشر للاعبين"
+              className="rounded border border-amber-400/60 bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-200">
+              {GOLDEN_TEMPLATE_LABEL}
+            </span>
+          )}
+
         </div>
       </td>
       <td className="px-3 py-2 font-mono text-xs text-slate-400" dir="ltr">{r.slug}</td>
