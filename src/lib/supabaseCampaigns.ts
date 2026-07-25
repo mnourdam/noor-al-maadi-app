@@ -163,7 +163,7 @@ export async function fetchCampaignByIdOrSlug(
   await ensureLocalSnapshotLoaded();
 
   const hit = localCampaignByIdOrSlug(idOrSlug);
-  if (hit && !isDividerData(hit.data)) {
+  if (hit && !isDividerRow(hit as any)) {
     const c = (hit.data ?? null) as Campaign | null;
     if (c && c.status === "published") {
       const overlay = await getCampaignKeyArtOverlay();
