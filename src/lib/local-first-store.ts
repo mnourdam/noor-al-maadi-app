@@ -350,7 +350,10 @@ export function localEncyclopediaAll(): Row[] { return encyclopediaAll; }
 
 export function localAtlasEntities(): Row[] { return atlasPublished; }
 
+/** Playable campaigns only — section dividers are NEVER included. */
 export function localPublishedCampaigns(): Row[] { return campaignsAll; }
+/** Raw section-divider rows (organizational only). */
+export function localCampaignDividerRows(): Row[] { return campaignDividerRows; }
 export function localCampaignByIdOrSlug(idOrSlug: string): Row | null {
   if (!idOrSlug) return null;
   return campaignsById.get(idOrSlug) ?? campaignsBySlug.get(idOrSlug) ?? null;
