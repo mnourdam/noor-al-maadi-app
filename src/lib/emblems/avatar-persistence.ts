@@ -110,27 +110,61 @@ export async function fetchServerAvatarId(): Promise<string | null> {
 }
 
 /**
+ * Outcome of a durable emblem write.
+ *
+ * - `synced` — the server confirmed `profiles.avatar_id` within this call.
+ * - `queued` — safely in the durable outbox (offline / transient failure);
+ *              replayed automatically on reconnect and survives reinstall of
+ *              the process (not of the app).
+ * - `local`  — guest; there is no server row and the local mirror IS truth.
+ * - `failed` — neither the durable queue NOR the direct write succeeded.
+ *              The caller MUST revert the optimistic value.
+ */
+export type AvatarPersistResult = "synced" | "queued" | "local" | "failed";
+
+/**
+ * Single granted write path to `profiles.avatar_id` (a direct column UPDATE is
+ * revoked), mirrored from the outbox handler so a pick can still land when the
+ * queue itself is unavailable (storage quota / private mode).
+ */
+async function pushAvatarDirect(avatarId: string): Promise<boolean> {
+  try {
+    const [{ readPersistedProfileState }, { derivePublicStats }] = await Promise.all([
+      import("@/lib/profile"),
+      import("@/lib/social"),
+    ]);
+    const stats = { ...derivePublicStats(readPersistedProfileState()), avatar_id: avatarId };
+    const { error } = await supabase.rpc("sync_my_public_stats" as never, {
+      p_stats: stats as never,
+    } as never);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Durably persist an emblem selection.
  *
- * Returns `"synced"` when the server confirmed within this call,
- * `"queued"` when it is safely in the outbox (offline / transient failure),
- * and `"local"` for guests.
- *
- * Never throws — emblem selection must never surface an error dialog.
+ * Never throws — emblem selection must never surface an error dialog, but it
+ * MUST report honestly so the UI can revert instead of silently keeping an
+ * optimistic value the server never accepted.
  */
 export async function persistAvatarSelection(
   avatarId: string,
-): Promise<"synced" | "queued" | "local"> {
+): Promise<AvatarPersistResult> {
   const uid = await currentUid();
   if (!uid) return "local";
 
   // 1. Durable first: the queue entry outlives this process.
   writePendingAvatar(uid, avatarId);
+  let queued = false;
   try {
     const { enqueueWithId } = await import("@/lib/offline/outbox");
     // Stable id → repeated picks collapse to a single pending write, and a
     // replay can never produce duplicate rows.
     await enqueueWithId(uid, `avatar_select:${uid}`, "avatar_select", { avatarId });
+    queued = true;
   } catch {
     /* enqueue failed (quota) — the direct attempt below is the fallback */
   }
@@ -142,8 +176,27 @@ export async function persistAvatarSelection(
   } catch {
     /* ignore */
   }
+  if (readPendingAvatar(uid) === null) return "synced";
 
-  return readPendingAvatar(uid) === null ? "synced" : "queued";
+  // 3. Still pending — either the flush was skipped (offline / inflight) or it
+  //    failed. Try the RPC directly so an online player gets a synchronous
+  //    truth signal instead of an indefinite "maybe".
+  if (await pushAvatarDirect(avatarId)) {
+    clearPendingAvatar(uid);
+    try {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("irth:avatar:synced"));
+      }
+    } catch { /* ignore */ }
+    return "synced";
+  }
+
+  // 4. Durable queue holds it → still deterministic, just not yet uploaded.
+  if (queued) return "queued";
+
+  // 5. No durable record anywhere: report failure so the UI reverts.
+  clearPendingAvatar(uid);
+  return "failed";
 }
 
 /**

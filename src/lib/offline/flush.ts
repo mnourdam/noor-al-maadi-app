@@ -324,6 +324,57 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         return { ok: true };
       }
 
+      // Reflective Moments — durable mirror of `user_reflections`.
+      // Stable outbox id per (campaign, activity) means a burst of edits
+      // collapses to the last value; the unique key makes replays safe.
+      case "reflection_save": {
+        const p = item.payload as {
+          campaignId?: string;
+          activityId?: string;
+          rec?: Record<string, unknown>;
+        };
+        if (!p?.campaignId || !p?.activityId || !p?.rec) {
+          return { ok: false, error: "invalid_reflection_payload" };
+        }
+        const { reflectionUpsertRow } = await import("@/lib/reflections");
+        const { error } = await supabase
+          .from("user_reflections")
+          .upsert(reflectionUpsertRow(item.userId, p.campaignId, p.activityId, p.rec as any) as any, {
+            onConflict: "user_id,campaign_id,activity_id",
+          });
+        if (error) return { ok: false, error: error.message };
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:reflections-changed"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
+      // Reflection delete. Clears the local tombstone on success so a later
+      // hydration stops re-issuing the delete.
+      case "reflection_delete": {
+        const p = item.payload as { campaignId?: string; activityId?: string };
+        if (!p?.campaignId || !p?.activityId) {
+          return { ok: false, error: "invalid_reflection_payload" };
+        }
+        const { error } = await supabase
+          .from("user_reflections")
+          .delete()
+          .eq("user_id", item.userId)
+          .eq("campaign_id", p.campaignId)
+          .eq("activity_id", p.activityId);
+        if (error) return { ok: false, error: error.message };
+        try {
+          const { clearReflectionTombstone } = await import("@/lib/reflections");
+          clearReflectionTombstone(p.campaignId, p.activityId);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:reflections-changed"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
       default:
         return { ok: false, error: "unknown-kind" };
     }

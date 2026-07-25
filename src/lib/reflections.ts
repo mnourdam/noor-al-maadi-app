@@ -119,44 +119,122 @@ export function listAllReflections(): ReflectionEntry[] {
   return out;
 }
 
+// ------------------------------------------------------------
+// Durability layer (Stabilization P2)
+// ------------------------------------------------------------
+// Previously every server write here was fire-and-forget with a
+// swallowed error, so an offline save only reached the server on the
+// NEXT sign-in hydration, and an offline delete was silently resurrected
+// by that same hydration (the server row still existed and no local
+// entry claimed it). Both writes now go through the durable outbox with
+// a stable idempotency key per (campaign, activity), and deletes leave a
+// local tombstone until the server confirms.
+// ------------------------------------------------------------
+
+const TOMBSTONES_KEY = "irth.reflections.tombstones.v1";
+
+function readTombstones(): Record<string, number> {
+  if (!isBrowser()) return {};
+  try {
+    const raw = window.localStorage.getItem(TOMBSTONES_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : {};
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeTombstones(map: Record<string, number>): void {
+  if (!isBrowser()) return;
+  try {
+    window.localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(map));
+  } catch { /* ignore */ }
+}
+
+function addTombstone(k: string): void {
+  const map = readTombstones();
+  map[k] = Date.now();
+  writeTombstones(map);
+}
+
+/** Called by the outbox handler once the server confirmed the delete. */
+export function clearReflectionTombstone(campaignId: string, activityId: string): void {
+  const map = readTombstones();
+  const k = keyOf(campaignId, activityId);
+  if (!(k in map)) return;
+  delete map[k];
+  writeTombstones(map);
+}
+
+async function currentUid(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Server upsert payload — shared by the outbox handler and the direct path. */
+export function reflectionUpsertRow(
+  uid: string,
+  campaignId: string,
+  activityId: string,
+  rec: ReflectionRecord,
+) {
+  return {
+    user_id: uid,
+    campaign_id: campaignId,
+    activity_id: activityId,
+    // New canonical scope (Stories P1 staged migration). Legacy
+    // campaign_id/activity_id remain populated for compatibility.
+    source_type: rec.kind === "story" ? "story" : "campaign",
+    source_id: rec.sourceId ?? campaignId,
+    context_id: activityId,
+    mode: rec.mode,
+    choice_index: rec.choiceIndex ?? null,
+    choice_value: rec.choiceValue ?? null,
+    note: rec.text ?? null,
+  };
+}
+
 /**
- * Fire-and-forget server upsert. Natural unique key is
- * `(user_id, campaign_id, activity_id)` — editing updates the same row
- * rather than creating a duplicate. Silent on any failure (offline, RLS,
- * transient); the local store remains truthful and the next hydration
- * or save retries the sync.
+ * Durable server mirror. Enqueues under a stable id so repeated edits of the
+ * same reflection collapse to one pending write (never duplicate rows), then
+ * best-effort flushes so the online case lands within one round-trip.
+ * Guests are a no-op: the local store is their truth.
  */
 async function syncReflectionToServer(
   campaignId: string,
   activityId: string,
   rec: ReflectionRecord,
-): Promise<void> {
+): Promise<"synced" | "queued" | "local"> {
+  const uid = await currentUid();
+  if (!uid) return "local";
+  let queued = false;
   try {
-    const { data: u } = await supabase.auth.getUser();
-    const uid = u.user?.id;
-    if (!uid) return;
-    await supabase
+    const { enqueueWithId } = await import("@/lib/offline/outbox");
+    await enqueueWithId(uid, `reflection:${campaignId}:${activityId}`, "reflection_save", {
+      campaignId,
+      activityId,
+      rec,
+    });
+    queued = true;
+  } catch { /* fall through to the direct attempt */ }
+  try {
+    const { flushOutbox } = await import("@/lib/offline/flush");
+    await flushOutbox(uid);
+    if (queued) return "synced";
+  } catch { /* ignore */ }
+  try {
+    const { error } = await supabase
       .from("user_reflections")
-      .upsert(
-        {
-          user_id: uid,
-          campaign_id: campaignId,
-          activity_id: activityId,
-          // New canonical scope (Stories P1 staged migration). Legacy
-          // campaign_id/activity_id remain populated for compatibility.
-          source_type: "campaign",
-          source_id: campaignId,
-          context_id: activityId,
-          mode: rec.mode,
-          choice_index: rec.choiceIndex ?? null,
-          choice_value: rec.choiceValue ?? null,
-          note: rec.text ?? null,
-        },
-        { onConflict: "user_id,campaign_id,activity_id" },
-      );
-  } catch {
-    // Local write is the source of truth until the next hydration.
-  }
+      .upsert(reflectionUpsertRow(uid, campaignId, activityId, rec), {
+        onConflict: "user_id,campaign_id,activity_id",
+      });
+    if (!error) return "synced";
+  } catch { /* offline / transient */ }
+  return queued ? "queued" : "local";
 }
 
 export function saveReflection(
@@ -172,11 +250,15 @@ export function saveReflection(
     choiceIndex: patch.choiceIndex ?? prev?.choiceIndex,
     choiceValue: patch.choiceValue ?? prev?.choiceValue,
     text: patch.text ?? prev?.text,
+    kind: patch.kind ?? prev?.kind,
+    sourceId: patch.sourceId ?? prev?.sourceId,
     at: patch.at ?? new Date().toISOString(),
   };
   store[k] = next;
   writeAll(store);
-  // Non-blocking mirror; unique key + upsert make duplicate rows impossible.
+  // A re-save revives a previously deleted reflection.
+  clearReflectionTombstone(campaignId, activityId);
+  // Durable mirror; stable outbox key + upsert make duplicate rows impossible.
   void syncReflectionToServer(campaignId, activityId, next);
   return next;
 }
@@ -198,6 +280,7 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
       .eq("user_id", uid);
     if (error || !data) return;
     const local = readAll();
+    const tombstones = readTombstones();
     const merged: ReflectionStore = { ...local };
     const stale: Array<{ campaignId: string; activityId: string; rec: ReflectionRecord }> = [];
     const seen = new Set<string>();
@@ -207,6 +290,12 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
       if (!cid || !aid) continue;
       const k = keyOf(cid, aid);
       seen.add(k);
+      // A pending local delete must never be resurrected by hydration.
+      if (k in tombstones) {
+        delete merged[k];
+        void deleteReflection(cid, aid);
+        continue;
+      }
       const serverAt = String(row.updated_at ?? "") || new Date().toISOString();
       const kind = (row.source_type === "story" ? "story" : "campaign") as "story" | "campaign";
       const rec: ReflectionRecord = {
@@ -226,7 +315,7 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
       }
     }
     for (const [k, rec] of Object.entries(local)) {
-      if (seen.has(k)) continue;
+      if (seen.has(k) || k in tombstones) continue;
       const parsed = parseKey(k);
       if (parsed) stale.push({ campaignId: parsed.campaignId, activityId: parsed.activityId, rec });
     }
@@ -237,7 +326,13 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
   }
 }
 
-/** Delete a reflection locally and on the server. */
+/**
+ * Delete a reflection locally and on the server.
+ *
+ * Durable: a local tombstone plus an outbox entry keep the delete alive
+ * through offline, process death and reinstall, so hydration can never
+ * resurrect a reflection the player removed.
+ */
 export async function deleteReflection(campaignId: string, activityId: string): Promise<void> {
   const store = readAll();
   const k = keyOf(campaignId, activityId);
@@ -245,16 +340,29 @@ export async function deleteReflection(campaignId: string, activityId: string): 
     delete store[k];
     writeAll(store);
   }
+  const uid = await currentUid();
+  if (!uid) return;
+  addTombstone(k);
   try {
-    const { data: u } = await supabase.auth.getUser();
-    const uid = u.user?.id;
-    if (!uid) return;
-    await supabase
+    const { enqueueWithId } = await import("@/lib/offline/outbox");
+    await enqueueWithId(uid, `reflection:${campaignId}:${activityId}`, "reflection_delete", {
+      campaignId,
+      activityId,
+    });
+  } catch { /* direct attempt below */ }
+  try {
+    const { flushOutbox } = await import("@/lib/offline/flush");
+    await flushOutbox(uid);
+  } catch { /* ignore */ }
+  if (!(keyOf(campaignId, activityId) in readTombstones())) return;
+  try {
+    const { error } = await supabase
       .from("user_reflections")
       .delete()
       .eq("user_id", uid)
       .eq("campaign_id", campaignId)
       .eq("activity_id", activityId);
+    if (!error) clearReflectionTombstone(campaignId, activityId);
   } catch {
     /* silent */
   }

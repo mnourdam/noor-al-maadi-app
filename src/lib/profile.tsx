@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 function todayKey(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -181,6 +181,13 @@ interface Ctx {
   setFavorites: (patch: { favoriteStateId?: string; favoriteFigureId?: string }) => void;
   /** Player-initiated pick — updates local state AND durably persists it. */
   setAvatar: (id: string) => void;
+  /**
+   * Durable, revertible pick. Resolves ONLY after the write is durable:
+   * `synced` (server confirmed), `queued` (durable outbox, offline),
+   * `local` (guest) or `failed` — in which case the previous emblem has
+   * already been restored. UI must not report success on `failed`.
+   */
+  setAvatarDurable: (id: string) => Promise<"synced" | "queued" | "local" | "failed">;
   /**
    * Adopt an emblem that already came FROM the server (hydration/realtime).
    * Local-only: must not re-queue a write, or hydration would echo forever.
@@ -399,6 +406,42 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     update((p) => (p.badges.includes(id) ? p : { ...p, badges: [...p.badges, id] }));
   }, [update]);
 
+  // Latest committed profile, readable from async callbacks without stale
+  // closures (used by the emblem revert path below).
+  const latestProfileRef = useRef(profile);
+  latestProfileRef.current = profile;
+
+  // Premium Emblem — DURABLE, REVERTIBLE write.
+  // Local state flips instantly for responsiveness, but the promise resolves
+  // only once the pick is durable. On a hard failure the previous emblem is
+  // restored here, so the UI can never keep an optimistic value the server
+  // never accepted. See `@/lib/emblems/avatar-persistence`.
+  const ctxSetAvatarDurable = useCallback(async (id: string) => {
+    const previous = latestProfileRef.current.avatarId ?? null;
+    if (previous === id) {
+      // Re-picking the current emblem must still confirm durability (the
+      // previous attempt may have been queued or lost).
+      try {
+        const { persistAvatarSelection } = await import("@/lib/emblems/avatar-persistence");
+        return await persistAvatarSelection(id);
+      } catch {
+        return "failed" as const;
+      }
+    }
+    update((p) => ({ ...p, avatarId: id }));
+    let result: "synced" | "queued" | "local" | "failed" = "failed";
+    try {
+      const { persistAvatarSelection } = await import("@/lib/emblems/avatar-persistence");
+      result = await persistAvatarSelection(id);
+    } catch {
+      result = "failed";
+    }
+    if (result === "failed") {
+      update((p) => (p.avatarId === id ? { ...p, avatarId: previous ?? p.avatarId } : p));
+    }
+    return result;
+  }, [update]);
+
   const ctx = useMemo<Ctx>(() => ({
     profile,
     hydrated,
@@ -530,15 +573,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     // offline outbox (stable idempotency key) so it survives process death,
     // airplane mode and reinstall. See `@/lib/emblems/avatar-persistence`.
     adoptServerAvatar: (id) => update((p) => (p.avatarId === id ? p : { ...p, avatarId: id })),
-    setAvatar: (id) => {
-      update((p) => ({ ...p, avatarId: id }));
-      void (async () => {
-        try {
-          const { persistAvatarSelection } = await import("@/lib/emblems/avatar-persistence");
-          await persistAvatarSelection(id);
-        } catch { /* queued locally; retried on next flush */ }
-      })();
-    },
+    setAvatar: (id) => { void ctxSetAvatarDurable(id); },
+    setAvatarDurable: (id) => ctxSetAvatarDurable(id),
     setNotificationPrefs: (patch) => {
       update((p) => ({
         ...p,
