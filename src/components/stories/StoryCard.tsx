@@ -266,6 +266,14 @@ export function StoryCard({
           </div>
         )}
       </div>
-    </Link>
+    </Shell>
+    {lockDialog && (
+      <LockedStoryDialog
+        title={story.title_ar}
+        prereqs={story.prereqs}
+        onClose={() => setLockDialog(false)}
+      />
+    )}
+    </>
   );
 }
