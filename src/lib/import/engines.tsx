@@ -670,7 +670,7 @@ export function makeCampaignEngine(meta: {
         .from("admin_campaigns" as any)
         .select("id, data")
         .limit(2000);
-      const corpus = (((allRows as unknown) ?? []) as Array<{ id: string; data: any }>)
+      const corpus = selectCampaignRows(((allRows as unknown) ?? []) as Array<{ id: string; data: any }>)
         .map((r) => {
           const d = r.data ?? {};
           const order = typeof d.chronological_order === "number" ? d.chronological_order : null;
