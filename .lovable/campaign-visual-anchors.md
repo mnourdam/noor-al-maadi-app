@@ -990,3 +990,13 @@ Storage convention: `campaign-key-art/<campaign_id>/key-art-v1.jpg`, persisted a
 | 40 | `abbasid-between-power-and-weakness` | ✅ shipped (Batch 8 — regenerated: Timurid turquoise tilework replaced with correct plain Baghdad brick) |
 | 41 | `mongol-invasion-mashriq` | ✅ shipped (Batch 8) |
 | 42 | `mongols-and-fall-of-baghdad` | ✅ shipped (Batch 8 — regenerated: tiled portal + later-period skyline replaced with plain brick) |
+| 43 | `peak-of-umayyad-power` | ✅ shipped (Batch 9) |
+| 44 | `conquest-of-al-andalus` | ✅ shipped (Batch 9 — repaired in place: anachronistic modern ships removed from horizon) |
+| 45 | `abd-al-rahman-al-dakhil` | ✅ shipped (Batch 9 — regenerated: Gothic church replaced with Visigothic basilica) |
+| 46 | `umayyad-caliphate-in-al-andalus` | ✅ shipped (Batch 9) |
+| 47 | `cordoba-golden-age` | ✅ shipped (Batch 9 — regenerated: Renaissance/colonial buildings removed; corners cleaned) |
+| 48 | `taifa-kings` | ✅ shipped (Batch 10) |
+| 49 | `fall-of-toledo` | ✅ shipped (Batch 10 — regenerated: 16th-c. Alcázar block replaced with plain 11th-c. citadel) |
+| 50 | `battle-of-zallaqa` | ✅ shipped (Batch 10 — regenerated: war-drum brought to foreground for the 64px thumbnail test; corner cleaned) |
+| 51 | `fall-of-al-andalus` | ✅ shipped (Batch 10) |
+| 52 | `crusades-beginning-danger` | ✅ shipped (Batch 10 — regenerated: Ottoman-era blue tilework on the Dome of the Rock replaced with 11th-c. gold/green glass mosaic) |
