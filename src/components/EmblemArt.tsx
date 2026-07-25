@@ -43,10 +43,10 @@ export function EmblemArt({
   const resolved = resolveProfileEmblem(avatarId);
   const target = SIZE_TO_ASSET[size];
   const fallbackRecord = getEmblemRecord(DEFAULT_PREMIUM_EMBLEM_ID) ?? resolved.record;
+  const [failed, setFailed] = useState(false);
   const displayRecord = failed ? fallbackRecord : resolved.record;
   const avif = pickAssetUrl(displayRecord, target, "avif");
   const webp = pickAssetUrl(displayRecord, target, "webp");
-  const [failed, setFailed] = useState(false);
 
   // Reset failure state if the avatar changes.
   useEffect(() => {
