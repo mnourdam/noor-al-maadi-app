@@ -166,8 +166,6 @@ export const AVATARS: HistoricalAvatar[] = [
   { id: "oasis_palm",         name: "واحة النخيل",            category: "place",     rarity: "uncommon",  unlock_method: "default",     glyph: "🌴" },
   { id: "lighthouse_pharos",  name: "منارة الإسكندرية",       category: "place",     rarity: "epic",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الإسكندرية" }, glyph: "🗼" },
   { id: "horseshoe_arch",     name: "القوس الأندلسي",         category: "place",     rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الأندلس" }, glyph: "🕌" },
-  { id: "oud_instrument",     name: "العود",                  category: "symbol",    rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: نغم الأصالة" }, glyph: "🎼" },
-  { id: "tambourine_daf",     name: "الدف",                   category: "symbol",    rarity: "common",    unlock_method: "default",     glyph: "🥁" },
   { id: "geometric_panel",    name: "اللوحة الزخرفية",        category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "✶" },
   { id: "muqarnas_fragment",  name: "قطعة المقرنص",           category: "symbol",    rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: عمارة السماء" }, glyph: "✦" },
   { id: "incense_burner",     name: "المبخرة",                category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "🪔" },
@@ -206,6 +204,10 @@ export const AVATARS: HistoricalAvatar[] = [
   { id: "falcon_hood",            name: "برقع الصقر",              category: "role",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: صقّار الصحراء" }, glyph: "🦅" },
   { id: "desert_rose_crystal",    name: "وردة الصحراء",            category: "symbol",    rarity: "uncommon",  unlock_method: "museum",      unlock_requirement: { label: "اجمع ٣٠ قطعة في المتحف", threshold: 30 }, glyph: "✺" },
   { id: "camel_saddlebag",        name: "خرج القافلة",             category: "role",      rarity: "uncommon",  unlock_method: "default",     glyph: "🐪" },
+
+  // ── Batch 5 · Governance, Diplomacy & Statehood (additions) ──
+  { id: "water_clock_jazari",     name: "ساعة الجزري المائية",     category: "tool",      rarity: "epic",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: هندسة الجزري" }, glyph: "⏳" },
+  { id: "pigeon_letter_case",     name: "بريد الحمام",             category: "tool",      rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة البريد السلطاني" }, glyph: "🕊" },
 ];
 
 export const DEFAULT_AVATAR_ID = "crescent_star";
