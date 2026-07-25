@@ -254,6 +254,20 @@ export function ShareCard(props: ShareCardProps) {
   const onShare = useCallback(async () => {
     if (!ready || busy) return;
     setBusy("share");
+    // Hard watchdog: no matter what the share pipeline does, the UI must
+    // never stay stuck on "Preparing…". After 20s force a graceful reset.
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      setBusy(null);
+    };
+    const watchdog = setTimeout(() => {
+      if (!released) {
+        toast.error("تعذّرت المشاركة — حاول مجددًا");
+        release();
+      }
+    }, 20_000);
     try {
       const blob = await canvasToBlob(canvasRef.current);
       if (!blob) { toast.error("تعذر تجهيز البطاقة، حاول مجددًا"); return; }
@@ -267,8 +281,12 @@ export function ShareCard(props: ShareCardProps) {
       if (res.status === "downloaded") {
         toast.success("المشاركة المباشرة غير مدعومة، تم تنزيل الصورة بدلًا من ذلك");
       }
+    } catch (err) {
+      console.warn("[share-card] share failed", err);
+      toast.error("تعذّرت المشاركة — حاول مجددًا");
     } finally {
-      setBusy(null);
+      clearTimeout(watchdog);
+      release();
     }
   }, [ready, busy, cardNumber, filenameBase, shareText]);
 
