@@ -13,6 +13,7 @@ import {
   type InvestigationStep,
 } from "@/lib/investigations-source";
 import { useProfile } from "@/lib/profile";
+import { supabase } from "@/integrations/supabase/client";
 import { displayName } from "@/lib/display-names";
 import { resolveRelatedRefs } from "@/lib/encyclopedia-refs";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
@@ -60,7 +61,7 @@ function InvestigationPage() {
 function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
     profile, markInvestigationCompletedLocal, awardBadge,
-    recoverHeartFromActivity, recordStreakActivity,
+    recoverHeartFromActivity, recordStreakActivity, applyServerStats,
   } = useProfile();
   const stashOrigin = useStashCurrentAsOrigin();
 
@@ -231,7 +232,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       queueMicrotask(() => setAdvancing(false));
       return;
     }
-    if (!alreadyDone) grantRewards();
+    if (!alreadyDone) void grantRewards();
     setFinished(true);
   };
 
