@@ -39,6 +39,8 @@ import {
 } from "@/lib/investigations-normalize";
 import { onInvestigationPublished } from "@/lib/investigations/adminApi";
 import { InvestigationExportDialog } from "@/components/admin/InvestigationExportDialog";
+import { InvestigationImportDialog } from "@/components/admin/InvestigationImportDialog";
+
 
 
 export const Route = createFileRoute("/admin/investigations/")({
