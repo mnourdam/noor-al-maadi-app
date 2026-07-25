@@ -42,7 +42,9 @@ export async function pullCampaignsFromCloud(): Promise<Campaign[] | null> {
     console.warn("[cloudSync] pull campaigns failed:", error.message);
     return null;
   }
-  const rows = ((data as any[]) ?? []).map(r => r.data as unknown as Campaign);
+  // Dividers share this table but are a different entity type — drop them.
+  const rows = selectCampaignRows(((data as any[]) ?? []) as any[])
+    .map((r) => r.data as unknown as Campaign);
   suppressPush = true;
   try { saveCampaigns(rows); } finally { suppressPush = false; }
   return rows;
