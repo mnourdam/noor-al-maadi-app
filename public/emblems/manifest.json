@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "generated_at": "2026-07-24T23:59:00Z",
+  "generated_at": "2026-07-25T00:00:00Z",
   "format": "webp",
   "emblems": {
     "banner_abbasid": {
@@ -771,6 +771,556 @@
         "path": "/emblems/surveyor_rod_1024.webp",
         "size": 35956,
         "sha256": "dbaac6fc4b67bbe12966664ce2962eb11f8714d81efeeb058ba041e5396bcf07"
+      }
+    },
+    "scimitar": {
+      "128": {
+        "path": "/emblems/scimitar_128.webp",
+        "size": 4242,
+        "sha256": "1080e3b02c180e6631c5b3d36b8fd04d4e505f7beff8f974ff649b1ac8d3e547"
+      },
+      "256": {
+        "path": "/emblems/scimitar_256.webp",
+        "size": 10668,
+        "sha256": "f5839d1a86aa32819eae883d9896a3bd060370804131268c77d8b7b35bec1097"
+      },
+      "512": {
+        "path": "/emblems/scimitar_512.webp",
+        "size": 30362,
+        "sha256": "d8ce1e6e5ff034b700d92b6ae20fcdf9b1e2abd58183f429799b12398fad88ab"
+      },
+      "1024": {
+        "path": "/emblems/scimitar_1024.webp",
+        "size": 81798,
+        "sha256": "4a11429080881924f4f7a66c48ad18349ee07860c55ead48f7ebd0075e3de6ff"
+      }
+    },
+    "spear_lance": {
+      "128": {
+        "path": "/emblems/spear_lance_128.webp",
+        "size": 3258,
+        "sha256": "f713b4fc8ff80ac382a3d73e507fe3e6bfff9acfc6a103fc7505cbe2c8d3c878"
+      },
+      "256": {
+        "path": "/emblems/spear_lance_256.webp",
+        "size": 7202,
+        "sha256": "158df357b709a14ea7329f6a618f92cad0c5c7aa432147ad8661a065d0abd37b"
+      },
+      "512": {
+        "path": "/emblems/spear_lance_512.webp",
+        "size": 17538,
+        "sha256": "ff04db2940063a6035d043375f49d0da402f094ef855b084748de4436f10c4b1"
+      },
+      "1024": {
+        "path": "/emblems/spear_lance_1024.webp",
+        "size": 41060,
+        "sha256": "f7b5f0247c1a325b603a321e70c7cae88d53872ea800e7b21d54939c9a580033"
+      }
+    },
+    "war_bow": {
+      "128": {
+        "path": "/emblems/war_bow_128.webp",
+        "size": 6682,
+        "sha256": "bc7760490402a72d7c5ad7ebee140f54bdbbe85a65ae73f38305b59d0840c9f1"
+      },
+      "256": {
+        "path": "/emblems/war_bow_256.webp",
+        "size": 15528,
+        "sha256": "675c50e0d8181331a7cef84f08e39e2bd4304ad709b5045cd4f1cd0f5d562dc9"
+      },
+      "512": {
+        "path": "/emblems/war_bow_512.webp",
+        "size": 41924,
+        "sha256": "46b0879d837c1d207a96fdf8e547ef2b05670a64b5ceea43ac5834408cf4741d"
+      },
+      "1024": {
+        "path": "/emblems/war_bow_1024.webp",
+        "size": 106736,
+        "sha256": "368711bdf3500496721309834aa8823ec92ed96b08750abf23381ea16c424e74"
+      }
+    },
+    "arrow_quiver": {
+      "128": {
+        "path": "/emblems/arrow_quiver_128.webp",
+        "size": 3964,
+        "sha256": "9b99bca6dbf55af649c328a0f3f21a168be66355e1244fd34bf25fd8a072c893"
+      },
+      "256": {
+        "path": "/emblems/arrow_quiver_256.webp",
+        "size": 10322,
+        "sha256": "5b96b1dc2cad77424f6af22e8de9bfe439eab531b48f38dca80a7d72b10d06a8"
+      },
+      "512": {
+        "path": "/emblems/arrow_quiver_512.webp",
+        "size": 31024,
+        "sha256": "ec1bd9802183d6b55e0cb32ea5771c041007ac1ea1c92d5da6289feacae32df6"
+      },
+      "1024": {
+        "path": "/emblems/arrow_quiver_1024.webp",
+        "size": 79514,
+        "sha256": "70e32723c82c62f05b8be85d20614479433aac21c0f17761c91e2d820542d610"
+      }
+    },
+    "dagger_khanjar": {
+      "128": {
+        "path": "/emblems/dagger_khanjar_128.webp",
+        "size": 6326,
+        "sha256": "c131b33be5f7a5e7384d0967b753072671714d15511399ae59156e74e9b95d3e"
+      },
+      "256": {
+        "path": "/emblems/dagger_khanjar_256.webp",
+        "size": 15840,
+        "sha256": "8366e1f9494d4c7d9bb08c049eaa4d9539caf0b6f1b01bd4b351f8147bfb3f44"
+      },
+      "512": {
+        "path": "/emblems/dagger_khanjar_512.webp",
+        "size": 45638,
+        "sha256": "41eafa359ebd88363b2f9f7bc4f429c9f03fada8eeebe8d06414e6ae65f9225c"
+      },
+      "1024": {
+        "path": "/emblems/dagger_khanjar_1024.webp",
+        "size": 123864,
+        "sha256": "e6371c50555478a128a8c6a57bb24243cc98e7ca560f060da2dc56929d0234a5"
+      }
+    },
+    "battle_axe": {
+      "128": {
+        "path": "/emblems/battle_axe_128.webp",
+        "size": 3652,
+        "sha256": "ed82df5acc6cce87f9fc7f475b60c61d056c3792a08d4b0f840ce42b693d6699"
+      },
+      "256": {
+        "path": "/emblems/battle_axe_256.webp",
+        "size": 8410,
+        "sha256": "7d2bdfd9ce50ea0767b38dd4bba3fe0be2f10cb8991e1d9967f1554c4733af7b"
+      },
+      "512": {
+        "path": "/emblems/battle_axe_512.webp",
+        "size": 23216,
+        "sha256": "e4a67fea90834fdfd914ae645647f86a423cb0a43af94d3ce0bd046e669806ba"
+      },
+      "1024": {
+        "path": "/emblems/battle_axe_1024.webp",
+        "size": 60320,
+        "sha256": "b22c0ff4d4ecfcc34d9d99681ca044c3b3e6f3b4dabb92dee4cd51761e53265c"
+      }
+    },
+    "mace_flanged": {
+      "128": {
+        "path": "/emblems/mace_flanged_128.webp",
+        "size": 2460,
+        "sha256": "c710806a9fa49ea59426b0311d54a38b2e6cb6d038d5fad2204e93d8d0ee4b0a"
+      },
+      "256": {
+        "path": "/emblems/mace_flanged_256.webp",
+        "size": 6046,
+        "sha256": "00101a3cc9c7af288c1bcdab266f5f499ac581b39f25926f39658a4cdea41bcd"
+      },
+      "512": {
+        "path": "/emblems/mace_flanged_512.webp",
+        "size": 15836,
+        "sha256": "f628821ac509617f61ef92fff6a907fedab28748915bbf39fc95d9b4e3a1f0b5"
+      },
+      "1024": {
+        "path": "/emblems/mace_flanged_1024.webp",
+        "size": 43200,
+        "sha256": "b52d95007ec515697a8a07f1281253be85498bc1c58bd0e8c95c85ac8f9175fc"
+      }
+    },
+    "chain_mail": {
+      "128": {
+        "path": "/emblems/chain_mail_128.webp",
+        "size": 5566,
+        "sha256": "b7ae7d75c4a36fcc141610bc69a1b38645ea73460f3f820264025a1c4eeb0408"
+      },
+      "256": {
+        "path": "/emblems/chain_mail_256.webp",
+        "size": 19234,
+        "sha256": "c5b79728cb942297ac4b3ee006432b17bb44a8b56bec0ee639e3ba9b33c5752c"
+      },
+      "512": {
+        "path": "/emblems/chain_mail_512.webp",
+        "size": 74102,
+        "sha256": "c5c7bc10b96b866f9e4134fd9e61b179291e5c185f1cf4d7ceb89561137ed97a"
+      },
+      "1024": {
+        "path": "/emblems/chain_mail_1024.webp",
+        "size": 255616,
+        "sha256": "625391dbac3af9c3a2c3e482d56aaf8df68f0d88a99e4919f0fa1beb954a9fef"
+      }
+    },
+    "helm_conical": {
+      "128": {
+        "path": "/emblems/helm_conical_128.webp",
+        "size": 4390,
+        "sha256": "2b02f6b4faf0fc9660d4439196a2a853f0eb950f8b6c72d7e920f5a80cc800bb"
+      },
+      "256": {
+        "path": "/emblems/helm_conical_256.webp",
+        "size": 13312,
+        "sha256": "549576b4955e5765a46b46406c347b1ad445c53e8823e1fb50031fcf3aa6f8c8"
+      },
+      "512": {
+        "path": "/emblems/helm_conical_512.webp",
+        "size": 46388,
+        "sha256": "e90a6a5f80e8811987ac25c00875909e23c6cd0ac608f14e7df61518f39781b9"
+      },
+      "1024": {
+        "path": "/emblems/helm_conical_1024.webp",
+        "size": 152052,
+        "sha256": "8ab520bb59e43637beb173e36bc2651bef7b1bb48619284b25f4edbda95f7d49"
+      }
+    },
+    "round_shield_leather": {
+      "128": {
+        "path": "/emblems/round_shield_leather_128.webp",
+        "size": 5960,
+        "sha256": "a2f1578f101c67ed121b96aa2170f4def91832141396df27e34ea7eb27535af9"
+      },
+      "256": {
+        "path": "/emblems/round_shield_leather_256.webp",
+        "size": 19364,
+        "sha256": "b55025d8b903a74295d024c3af2a2213c86ca0fde5b954f52b1aa24fa59d9cce"
+      },
+      "512": {
+        "path": "/emblems/round_shield_leather_512.webp",
+        "size": 65726,
+        "sha256": "d52dfcf1dace3313e14ad261f59ac3445b02c23a815bab9c55c2eab9a2629eb8"
+      },
+      "1024": {
+        "path": "/emblems/round_shield_leather_1024.webp",
+        "size": 219948,
+        "sha256": "81f9483350047e4be307992c0dcc41972b80877df401f5f28e0728f7356fd9f1"
+      }
+    },
+    "saddle_ornate": {
+      "128": {
+        "path": "/emblems/saddle_ornate_128.webp",
+        "size": 7936,
+        "sha256": "96d3a511c0c657cbeca67725a1aa30ec1ae22520422e2ff68d2befcc6f11e114"
+      },
+      "256": {
+        "path": "/emblems/saddle_ornate_256.webp",
+        "size": 22894,
+        "sha256": "c1b09aec0e0bdcdae366f8315c0e1867587a773b94899d9dd6e2cd6e048b79e2"
+      },
+      "512": {
+        "path": "/emblems/saddle_ornate_512.webp",
+        "size": 74050,
+        "sha256": "57c87f12f109bc8ba55ea111b6295051dd2aac9fa4b61bad7e4f9f7265e52a52"
+      },
+      "1024": {
+        "path": "/emblems/saddle_ornate_1024.webp",
+        "size": 228872,
+        "sha256": "6855869ded72f8c4c138aa274b372a62b306135f0f4e99500cde5232597b0a7f"
+      }
+    },
+    "stirrup_pair": {
+      "128": {
+        "path": "/emblems/stirrup_pair_128.webp",
+        "size": 8970,
+        "sha256": "880958b0fe69d06873c0cd6eba37276ef0de6a5a8f28647ea61b4b75426a65f4"
+      },
+      "256": {
+        "path": "/emblems/stirrup_pair_256.webp",
+        "size": 23914,
+        "sha256": "e138724c634761823842a0fb272ab3e787c8bd84bc44dd4fa74cb02007260cc8"
+      },
+      "512": {
+        "path": "/emblems/stirrup_pair_512.webp",
+        "size": 66324,
+        "sha256": "19485774195e88a094f172b08818e855ecfe49b21d2b1c4c903870561e1bc287"
+      },
+      "1024": {
+        "path": "/emblems/stirrup_pair_1024.webp",
+        "size": 147944,
+        "sha256": "96b0db78be28820bab2a711f4d5a526e45c2844becc6a335605e794206019b47"
+      }
+    },
+    "scholar_robe": {
+      "128": {
+        "path": "/emblems/scholar_robe_128.webp",
+        "size": 6290,
+        "sha256": "ac8d860b1f383bb25da7810db3920887f8c59eb93b28afa2dd7ba8e311c08eb3"
+      },
+      "256": {
+        "path": "/emblems/scholar_robe_256.webp",
+        "size": 16310,
+        "sha256": "ade12164c80c426121052c3c97a533eed5440a4761cc2542c7d68ed92b7644ea"
+      },
+      "512": {
+        "path": "/emblems/scholar_robe_512.webp",
+        "size": 48316,
+        "sha256": "2a1477ccfda2fdbede7debf4c485536e0cc9beb6445a82e14f7b4cc5cd800dd2"
+      },
+      "1024": {
+        "path": "/emblems/scholar_robe_1024.webp",
+        "size": 157826,
+        "sha256": "5401b51ad5f6d64759eb4a45c54f58f97455f08f7fbfec22e25083e25ec31b96"
+      }
+    },
+    "explorer_kit": {
+      "128": {
+        "path": "/emblems/explorer_kit_128.webp",
+        "size": 7290,
+        "sha256": "69d76ace837f4b98ef8fdb9e4c40fa7877fc9be3c3cd691b12537d8c301b1c84"
+      },
+      "256": {
+        "path": "/emblems/explorer_kit_256.webp",
+        "size": 19208,
+        "sha256": "abfa1aacd5202dd4661b1062efecb420d87e8858073e6e06b326c15505763d7d"
+      },
+      "512": {
+        "path": "/emblems/explorer_kit_512.webp",
+        "size": 57594,
+        "sha256": "91b86b6c184364d0541944977fda1b08cc3dbb14e68cd8ab9e1efbd372859b8a"
+      },
+      "1024": {
+        "path": "/emblems/explorer_kit_1024.webp",
+        "size": 174556,
+        "sha256": "2dd7dd70e635a8be133ed4d57cf6bab1baf32d714cbda900842ab97f004993c8"
+      }
+    },
+    "cartographer_tools": {
+      "128": {
+        "path": "/emblems/cartographer_tools_128.webp",
+        "size": 5742,
+        "sha256": "f82145730f50412b2bca08f7e9086fdc015086fe1565519a83ed3e5c18eaf3f4"
+      },
+      "256": {
+        "path": "/emblems/cartographer_tools_256.webp",
+        "size": 15690,
+        "sha256": "51b3b7e26cd9be3e7aa1763c511870f1398134e28856fdf70f64181f32d01d19"
+      },
+      "512": {
+        "path": "/emblems/cartographer_tools_512.webp",
+        "size": 48300,
+        "sha256": "296884d4199919f8fa7bd6c5b5ff6d24334abe2190f20ee900836b8dd432e7bc"
+      },
+      "1024": {
+        "path": "/emblems/cartographer_tools_1024.webp",
+        "size": 153826,
+        "sha256": "4fd033f0f5573de4470506c55b59cfaa625782ad673975b244ced4665b3577c7"
+      }
+    },
+    "curator_gloves": {
+      "128": {
+        "path": "/emblems/curator_gloves_128.webp",
+        "size": 5480,
+        "sha256": "0c32533689b965c0f94280d7c3da23dd5b7e3394bf04d86d7ea8df7435c4e314"
+      },
+      "256": {
+        "path": "/emblems/curator_gloves_256.webp",
+        "size": 12832,
+        "sha256": "891bfac0e6b0d97ec5fc6e2aa2487015a3358667121822831d1d8ba18bc35275"
+      },
+      "512": {
+        "path": "/emblems/curator_gloves_512.webp",
+        "size": 33090,
+        "sha256": "10f5f238a837fc3bfdfaf308a615a6c0c7f5c3e9f99d8b10f295a20d5f5f604c"
+      },
+      "1024": {
+        "path": "/emblems/curator_gloves_1024.webp",
+        "size": 85012,
+        "sha256": "a2af6d96b09c3a6c5ee9310c9f5dcd57e5c497c01a6b258b855821607b38bf8d"
+      }
+    },
+    "historian_desk": {
+      "128": {
+        "path": "/emblems/historian_desk_128.webp",
+        "size": 5242,
+        "sha256": "bbde360cc16fc702dc2ca700007b849d7e5e3c6d512c09a5e2ddd2fdcbfef7b3"
+      },
+      "256": {
+        "path": "/emblems/historian_desk_256.webp",
+        "size": 14848,
+        "sha256": "5fbc8835e8279dfdbf8840b3183940195e025b26d20dfa8f9742f9fa049f584b"
+      },
+      "512": {
+        "path": "/emblems/historian_desk_512.webp",
+        "size": 45412,
+        "sha256": "097c17e911efe04faa8aefab1c93f6e865954b8a2dddd8f4f4a2cfcb2a8dac4b"
+      },
+      "1024": {
+        "path": "/emblems/historian_desk_1024.webp",
+        "size": 137774,
+        "sha256": "dfa7482ebeecee2a7501a00eebc36222b71f9ce3ecf0a22ce64e3216df58f804"
+      }
+    },
+    "horseman_bridle": {
+      "128": {
+        "path": "/emblems/horseman_bridle_128.webp",
+        "size": 7784,
+        "sha256": "9e74205409652eb9d3ba8b5251e3f5eab9b180e296d952988651c2849837c9b1"
+      },
+      "256": {
+        "path": "/emblems/horseman_bridle_256.webp",
+        "size": 19626,
+        "sha256": "7cf831c5e56ac9b26b79e416ff7e85235502988f34170d10bd5796c1e5b54edb"
+      },
+      "512": {
+        "path": "/emblems/horseman_bridle_512.webp",
+        "size": 54978,
+        "sha256": "3279d816ef902218cef417676df35fee253983bf0c29a4e72dde56dc755326d1"
+      },
+      "1024": {
+        "path": "/emblems/horseman_bridle_1024.webp",
+        "size": 132968,
+        "sha256": "92f70491820b1843f1104f3b6b7c9f77435a66aded1fc5b59679c90a612ed5ac"
+      }
+    },
+    "merchant_scales": {
+      "128": {
+        "path": "/emblems/merchant_scales_128.webp",
+        "size": 8122,
+        "sha256": "e2bc53f19041b86abc04f9a30f91e18572f5e9e3d87caf1892cb16503d9dac6e"
+      },
+      "256": {
+        "path": "/emblems/merchant_scales_256.webp",
+        "size": 23530,
+        "sha256": "e09bcde8dc732a196b7b3a8882a1dabc9014bbab7fab5878ad371bd60d33cbb5"
+      },
+      "512": {
+        "path": "/emblems/merchant_scales_512.webp",
+        "size": 70854,
+        "sha256": "b3ef8fc5e7d8546332bf5489da1ec83b4a924fc7ad4d92e049005292e3d3277e"
+      },
+      "1024": {
+        "path": "/emblems/merchant_scales_1024.webp",
+        "size": 210104,
+        "sha256": "033e888cb0c21d557d210d0a8787084e87b847761161090f3778b1ec6cbd8fad"
+      }
+    },
+    "poet_diwan": {
+      "128": {
+        "path": "/emblems/poet_diwan_128.webp",
+        "size": 6150,
+        "sha256": "15a50d412df2e643a65c10d2ffd5529d3eecad3f7b28bcc99dc62f8f83f7f079"
+      },
+      "256": {
+        "path": "/emblems/poet_diwan_256.webp",
+        "size": 15980,
+        "sha256": "3607fe78c689bfcec89e6f58b48fb0595001622697d94672787b9d4a1c801409"
+      },
+      "512": {
+        "path": "/emblems/poet_diwan_512.webp",
+        "size": 47478,
+        "sha256": "2db2c0759deb0a9eaa6a80e7e0886257f58e05edec7e8870434aa72c5d405398"
+      },
+      "1024": {
+        "path": "/emblems/poet_diwan_1024.webp",
+        "size": 140398,
+        "sha256": "d8bbc2a0980c6e5f69fdd6bc09096cf9ff898641a1ec41100c3fe83e27b39b20"
+      }
+    },
+    "physician_kit": {
+      "128": {
+        "path": "/emblems/physician_kit_128.webp",
+        "size": 6332,
+        "sha256": "759d8b9ddd4fc4629ffb418e81271116d5f2b162f828cd496e4578da9c70eeb7"
+      },
+      "256": {
+        "path": "/emblems/physician_kit_256.webp",
+        "size": 17350,
+        "sha256": "5bc19d07b483cc8e977965fd3bf484e514fdb01ccd55d25ef5e9cb6478c34532"
+      },
+      "512": {
+        "path": "/emblems/physician_kit_512.webp",
+        "size": 56064,
+        "sha256": "ee94f166e30ac72d8985975ff3ed3c623dabcdb8832a44254c4b5d7bf93f5be2"
+      },
+      "1024": {
+        "path": "/emblems/physician_kit_1024.webp",
+        "size": 186304,
+        "sha256": "907720eece71a9f6d1803633252df7c889320aa366b45b2a0dada7a4a1aab364"
+      }
+    },
+    "astronomer_kit": {
+      "128": {
+        "path": "/emblems/astronomer_kit_128.webp",
+        "size": 9582,
+        "sha256": "22e62aa2c2070a0f03c4bcdb7943c3ced4fc45d2dbe022fc60a9f382f320e3e8"
+      },
+      "256": {
+        "path": "/emblems/astronomer_kit_256.webp",
+        "size": 27474,
+        "sha256": "ac375690d0fa29237ab35c2a4a20273660cf19c83977139dc315ba8965fedee1"
+      },
+      "512": {
+        "path": "/emblems/astronomer_kit_512.webp",
+        "size": 83496,
+        "sha256": "3e5294c3f947af6b767587c38e1264226566ccddcfeb538220e03d5719cb5343"
+      },
+      "1024": {
+        "path": "/emblems/astronomer_kit_1024.webp",
+        "size": 250412,
+        "sha256": "4512515ef6c630266e0e60c4c707676d150c6d7ec99bca2938c07c6fe877977f"
+      }
+    },
+    "judge_seal": {
+      "128": {
+        "path": "/emblems/judge_seal_128.webp",
+        "size": 6288,
+        "sha256": "1b537989af197529baa42c52e8251a121db0e14d69d89d88f4b127144995fae4"
+      },
+      "256": {
+        "path": "/emblems/judge_seal_256.webp",
+        "size": 17754,
+        "sha256": "3032888c167a01d8edd721a087dda40dcd726b57ffae825c9862f935aa3096e0"
+      },
+      "512": {
+        "path": "/emblems/judge_seal_512.webp",
+        "size": 58380,
+        "sha256": "a2dd310d55848a25933159ab66f668d8aa86ee03b73e67c1da4490904a6234d6"
+      },
+      "1024": {
+        "path": "/emblems/judge_seal_1024.webp",
+        "size": 188582,
+        "sha256": "ad1934bae54491ab4ce09de610e6202f18e6ba47f879ff856fbfcf077c028053"
+      }
+    },
+    "preacher_pulpit": {
+      "128": {
+        "path": "/emblems/preacher_pulpit_128.webp",
+        "size": 6450,
+        "sha256": "1fafa13cbbe2ab393397081ee02ef669ccceafa94d04f96842a918a07ff4d9d3"
+      },
+      "256": {
+        "path": "/emblems/preacher_pulpit_256.webp",
+        "size": 18300,
+        "sha256": "089d89b568e7cbd12ea7fded149b6c0fef0f42e48269adf65047e8bb32f635e6"
+      },
+      "512": {
+        "path": "/emblems/preacher_pulpit_512.webp",
+        "size": 55942,
+        "sha256": "8379e80359aa96e86c4ad5631a3d32cc4e3f16241915401302f1bbdcc40eed57"
+      },
+      "1024": {
+        "path": "/emblems/preacher_pulpit_1024.webp",
+        "size": 153008,
+        "sha256": "55f55d766f3bf74364ef83a60d307ddf9bdafdc089a0bd44e5d2ddcc7a685c50"
+      }
+    },
+    "caravan_pack": {
+      "128": {
+        "path": "/emblems/caravan_pack_128.webp",
+        "size": 7420,
+        "sha256": "fb8de3709c9e7012622974c54309eccb25db93928611503cbeaeaa826c4354e0"
+      },
+      "256": {
+        "path": "/emblems/caravan_pack_256.webp",
+        "size": 20758,
+        "sha256": "3df12cfa606a1a14716efb5efc69e95b056f9e4ff936eb71f0ca8d75a50c68fe"
+      },
+      "512": {
+        "path": "/emblems/caravan_pack_512.webp",
+        "size": 66066,
+        "sha256": "7e5a10040d5ea758c08261c521be7fd4dbef966c8a95f8f00fd72c152f12a367"
+      },
+      "1024": {
+        "path": "/emblems/caravan_pack_1024.webp",
+        "size": 215050,
+        "sha256": "70cd3553a62a5411428ff856806aed3c7e8c446934353203218892477d642544"
       }
     }
   },

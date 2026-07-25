@@ -336,5 +336,156 @@ export const PREMIUM_EMBLEM_ASSETS: Record<string, PremiumAssetMatrix> = {
     "256": { "webp": "/__l5e/assets-v1/a5bb1632-c049-49af-926e-bfb05ed3a0cc/surveyor_rod_256.webp", "avif": "/__l5e/assets-v1/278de2ca-6f6b-4a91-ae57-2e8bf25975d1/surveyor_rod_256.avif" },
     "512": { "webp": "/__l5e/assets-v1/44d7a1a9-0cf2-49b8-a647-74c4fd525de0/surveyor_rod_512.webp", "avif": "/__l5e/assets-v1/cd755bb5-674d-48f0-8013-1e7f0c7c5d69/surveyor_rod_512.avif" },
     "1024": { "webp": "/__l5e/assets-v1/f5961938-8961-4742-9b18-7e39460e9980/surveyor_rod_1024.webp", "avif": "/__l5e/assets-v1/c8e28617-8d15-4b8b-84fb-aa4b69c23774/surveyor_rod_1024.avif" }
+  },,
+
+  "scimitar": {
+    "128": { "webp": "/__l5e/assets-v1/b252fe0f-31bb-43cf-b355-89ca80afdf0a/scimitar_128.webp", "avif": "/__l5e/assets-v1/d5f9f00b-2707-4220-8af1-b222bf2a1d7d/scimitar_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/b7bca0e1-ca4f-4a78-94cc-a4ac12fc91fa/scimitar_256.webp", "avif": "/__l5e/assets-v1/bfecbd33-692b-41ff-af41-745f7af3d788/scimitar_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/3b7e3faf-0427-42ff-8991-363ccbba374b/scimitar_512.webp", "avif": "/__l5e/assets-v1/940f0b36-6dde-4849-8de3-a1327544f652/scimitar_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/5b00f4aa-2cc2-47db-ace6-b4c7a1a0b3cb/scimitar_1024.webp", "avif": "/__l5e/assets-v1/96a329d6-1104-4ff0-a8e3-3ce743114fb0/scimitar_1024.avif" }
+  },
+  "spear_lance": {
+    "128": { "webp": "/__l5e/assets-v1/f42234af-66b9-4793-ba80-9eef2c2d94fb/spear_lance_128.webp", "avif": "/__l5e/assets-v1/355d09b4-24e1-4544-b5de-297f958bd7ac/spear_lance_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/1b540626-6f99-4f65-8875-b6c887daea95/spear_lance_256.webp", "avif": "/__l5e/assets-v1/d45024e9-dd56-445c-aa5d-049825e6a71d/spear_lance_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/ad1e926b-ff1f-4427-8c38-39b78300e193/spear_lance_512.webp", "avif": "/__l5e/assets-v1/1a2d5731-c45f-485f-84fc-2ea4e00f82fe/spear_lance_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/e2992ea5-f609-404f-92a3-7d42d95057cb/spear_lance_1024.webp", "avif": "/__l5e/assets-v1/e7aa09fb-7977-4f68-b77c-cfe476f50920/spear_lance_1024.avif" }
+  },
+  "war_bow": {
+    "128": { "webp": "/__l5e/assets-v1/81daf4c3-ab74-4600-a482-7786acf05e4e/war_bow_128.webp", "avif": "/__l5e/assets-v1/496a46db-92ce-43de-8719-725f8a050427/war_bow_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/b1a4f29c-4068-42dc-a9e8-40c64834092f/war_bow_256.webp", "avif": "/__l5e/assets-v1/ce6f9d25-9c74-402c-af4b-83a95b6420de/war_bow_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/d4505216-aa61-44af-8638-2f4ca97fe43f/war_bow_512.webp", "avif": "/__l5e/assets-v1/a8888f13-bfd0-4bfc-a9fc-37058d79e060/war_bow_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/0d5be220-553e-4d5a-8d9c-718f7a5af8ab/war_bow_1024.webp", "avif": "/__l5e/assets-v1/afaa56f9-d4de-4051-b304-dd4bcea14b9f/war_bow_1024.avif" }
+  },
+  "arrow_quiver": {
+    "128": { "webp": "/__l5e/assets-v1/94ad54fa-11f2-4bce-a35f-a25bbb124a07/arrow_quiver_128.webp", "avif": "/__l5e/assets-v1/5b2c694e-bac4-4710-823b-596ac493df09/arrow_quiver_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/ebbacf65-60a9-4869-8c03-628a54fc63f6/arrow_quiver_256.webp", "avif": "/__l5e/assets-v1/c41e6ba5-bdf6-4eb4-a886-7b567126d984/arrow_quiver_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/e6d853de-fc90-470e-8cc2-0ecaabc0acad/arrow_quiver_512.webp", "avif": "/__l5e/assets-v1/1e50042a-bd1c-4f24-a537-34045c4536e1/arrow_quiver_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/0d9f2117-dc6a-41f8-ba84-895e16277c22/arrow_quiver_1024.webp", "avif": "/__l5e/assets-v1/1088e56c-4335-46cf-aa28-d9497bac1c48/arrow_quiver_1024.avif" }
+  },
+  "dagger_khanjar": {
+    "128": { "webp": "/__l5e/assets-v1/e56dc954-017d-475f-bc85-2875196eaf47/dagger_khanjar_128.webp", "avif": "/__l5e/assets-v1/f6ba5c07-708c-423f-bb0c-09b4f9bab441/dagger_khanjar_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/25c4b7e8-84a7-4459-b906-06e8b8b90240/dagger_khanjar_256.webp", "avif": "/__l5e/assets-v1/3c1d800c-800d-4883-8570-ec6d90d87446/dagger_khanjar_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/7ca2a0a8-de1f-4f8c-83de-a081b20312a9/dagger_khanjar_512.webp", "avif": "/__l5e/assets-v1/bc5ea68a-4433-45f5-a499-976ee8f51125/dagger_khanjar_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/94ad00e0-0b83-4616-804e-4b24c5efb1d0/dagger_khanjar_1024.webp", "avif": "/__l5e/assets-v1/a943f8ac-5d1f-4b2c-adc5-dce65ff866a4/dagger_khanjar_1024.avif" }
+  },
+  "battle_axe": {
+    "128": { "webp": "/__l5e/assets-v1/d31454ba-8101-44ac-b1b9-a8098b42817f/battle_axe_128.webp", "avif": "/__l5e/assets-v1/6fdf7798-3fd8-4089-a07d-2817a8d86401/battle_axe_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/fbf06558-e324-4fbd-925e-036fd5fd4b58/battle_axe_256.webp", "avif": "/__l5e/assets-v1/9ceae5e8-2349-4164-a2ca-482d361c1d40/battle_axe_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/2214e94d-d038-4e53-beda-a9e55c8d3a0a/battle_axe_512.webp", "avif": "/__l5e/assets-v1/aeb78edb-a9e4-4ed5-9c4e-8edf6e6056c1/battle_axe_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/c5323dc6-00b0-41c3-ad2b-e7cfa127a4b6/battle_axe_1024.webp", "avif": "/__l5e/assets-v1/f5ac7806-7745-4970-8a75-980f2c20a5b6/battle_axe_1024.avif" }
+  },
+  "mace_flanged": {
+    "128": { "webp": "/__l5e/assets-v1/d71e075d-b657-47b5-b127-cbba30035d54/mace_flanged_128.webp", "avif": "/__l5e/assets-v1/bcf3f906-4365-4fd4-be5d-9b4eb564a3f4/mace_flanged_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/c3910701-c045-427c-bb09-b1f0447fa066/mace_flanged_256.webp", "avif": "/__l5e/assets-v1/0296f1d7-613b-471e-8932-aeb9c43891c0/mace_flanged_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/b2a2e5fb-fbda-4249-9666-5c5ea5279817/mace_flanged_512.webp", "avif": "/__l5e/assets-v1/c6393c96-0aff-4f16-a96d-32f4a85c6c35/mace_flanged_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/242eba66-2a86-4a30-ab9e-dcaa66d435ee/mace_flanged_1024.webp", "avif": "/__l5e/assets-v1/08d093b1-0168-4da2-930e-587260e85dae/mace_flanged_1024.avif" }
+  },
+  "chain_mail": {
+    "128": { "webp": "/__l5e/assets-v1/b32d34ff-fdf2-4bb7-95ee-28e21499a512/chain_mail_128.webp", "avif": "/__l5e/assets-v1/cf2480e4-9351-4449-8d92-2326f3a8ac68/chain_mail_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/0aa3be32-4305-486b-8151-2092d3c5699a/chain_mail_256.webp", "avif": "/__l5e/assets-v1/fa0a00ec-3d0c-46d1-a4a1-58843d7673ec/chain_mail_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/4f3e7c4e-9833-4430-839c-9636bfa9757d/chain_mail_512.webp", "avif": "/__l5e/assets-v1/2313074a-e8e1-4cb1-b242-35cc0b635848/chain_mail_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/54a2f385-fb07-4058-b11c-6b2d8eb527f9/chain_mail_1024.webp", "avif": "/__l5e/assets-v1/4b0fc8e0-92c9-49d5-a6b5-3bdcea6ef406/chain_mail_1024.avif" }
+  },
+  "helm_conical": {
+    "128": { "webp": "/__l5e/assets-v1/9a29b9e6-61c6-43d1-9daa-d1d9f2652e79/helm_conical_128.webp", "avif": "/__l5e/assets-v1/d02ba2d6-17bb-400b-8721-1661161575a8/helm_conical_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/0729efba-9a10-4866-8a47-20ba0a9ea165/helm_conical_256.webp", "avif": "/__l5e/assets-v1/3ce959ee-3eb5-499e-bd91-9532caedaca0/helm_conical_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/117a8a8a-f7d0-467c-8948-49904edf03a4/helm_conical_512.webp", "avif": "/__l5e/assets-v1/3ba94ab4-b503-4a71-acea-6cc80c4d94e9/helm_conical_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/8d6c5daf-a0f9-4fab-a5ad-f3658e1fec41/helm_conical_1024.webp", "avif": "/__l5e/assets-v1/63d36dc6-04c4-48d8-877d-e5352bd86803/helm_conical_1024.avif" }
+  },
+  "round_shield_leather": {
+    "128": { "webp": "/__l5e/assets-v1/0b7b8cf1-5115-44ea-ba44-325e5047e315/round_shield_leather_128.webp", "avif": "/__l5e/assets-v1/496bc9bc-4b8e-42b8-b230-e0275aad180c/round_shield_leather_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/e335f2e4-b14d-4c4e-901b-d97d0d2bfd65/round_shield_leather_256.webp", "avif": "/__l5e/assets-v1/1eb9089f-f6b3-4d1f-be9f-817dc6423839/round_shield_leather_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/3b74590e-dfdf-4455-8b3f-07b2f67ae0cb/round_shield_leather_512.webp", "avif": "/__l5e/assets-v1/e6fb5a51-1185-469c-871b-2bebfecd925a/round_shield_leather_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/3cea8d13-c52f-46e6-a233-869385e450f6/round_shield_leather_1024.webp", "avif": "/__l5e/assets-v1/01769e0d-da8a-4383-a691-c63c8d7ec841/round_shield_leather_1024.avif" }
+  },
+  "saddle_ornate": {
+    "128": { "webp": "/__l5e/assets-v1/b051c860-7e5a-458e-a81f-3b59feaf7521/saddle_ornate_128.webp", "avif": "/__l5e/assets-v1/0d66594f-b6f4-4276-b8f7-75c6baf3fc79/saddle_ornate_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/3d846c90-657d-417c-8e9f-1883ab525e66/saddle_ornate_256.webp", "avif": "/__l5e/assets-v1/aa6df959-99d8-407c-ba14-8a1b24fc8ca5/saddle_ornate_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/11d2bf79-767a-485b-9193-9177a858bd00/saddle_ornate_512.webp", "avif": "/__l5e/assets-v1/5b5f55c6-1a14-469c-bab5-a6df4860baa3/saddle_ornate_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/3a9da89a-63b4-4486-9dcf-0076c590846b/saddle_ornate_1024.webp", "avif": "/__l5e/assets-v1/1294273b-96f5-4384-9ee5-8d7239fea31a/saddle_ornate_1024.avif" }
+  },
+  "stirrup_pair": {
+    "128": { "webp": "/__l5e/assets-v1/65d8db79-ac75-4c68-b8c2-67e5982b1398/stirrup_pair_128.webp", "avif": "/__l5e/assets-v1/dac72da4-27bf-4dc0-bed4-5ff5733c129b/stirrup_pair_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/41ae007d-3505-4db8-a16e-e66a7ecd7fca/stirrup_pair_256.webp", "avif": "/__l5e/assets-v1/aa966311-1fad-4b56-9ea1-5e73d9ba4a9f/stirrup_pair_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/a2e2dd7f-8a5e-423e-b103-8e88a0df5003/stirrup_pair_512.webp", "avif": "/__l5e/assets-v1/a4f9e3fb-89e4-4fa6-bda0-9ab84c29eee1/stirrup_pair_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/0b84e867-fdf5-4adf-9f16-7e3d0c538179/stirrup_pair_1024.webp", "avif": "/__l5e/assets-v1/7df70ebe-dabd-4b2c-b5c8-1b28a5fa2a0e/stirrup_pair_1024.avif" }
+  },
+  "scholar_robe": {
+    "128": { "webp": "/__l5e/assets-v1/1141a066-37ff-4ff4-9dae-2a868315f980/scholar_robe_128.webp", "avif": "/__l5e/assets-v1/3c2ac446-c1e5-4e9c-98b7-7adb9efe7578/scholar_robe_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/043312a6-423d-4c9f-a0d0-c3d358ca479b/scholar_robe_256.webp", "avif": "/__l5e/assets-v1/952f15a4-0106-4bc3-98e0-28b9addddd48/scholar_robe_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/e4490f2c-93b3-4af8-ac68-98876959625b/scholar_robe_512.webp", "avif": "/__l5e/assets-v1/bf082f81-bbc9-4d9f-82df-172c3c0bbe37/scholar_robe_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/cb8af2ca-4e64-4966-be22-80fa5d1156aa/scholar_robe_1024.webp", "avif": "/__l5e/assets-v1/8d1d24be-1787-442b-9f96-c3856f4e333c/scholar_robe_1024.avif" }
+  },
+  "explorer_kit": {
+    "128": { "webp": "/__l5e/assets-v1/6a94a8f7-1c11-4fa6-83a4-efe381194aaf/explorer_kit_128.webp", "avif": "/__l5e/assets-v1/261b0c5b-cefc-4fdc-b34c-d6f0a7b058a6/explorer_kit_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/d9f3061d-40bd-4205-9b0a-b05afbac5ec7/explorer_kit_256.webp", "avif": "/__l5e/assets-v1/36c04cde-18c3-4326-88ef-6dd8b9058620/explorer_kit_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/093e023e-ba1a-4a8a-a410-51521ff19612/explorer_kit_512.webp", "avif": "/__l5e/assets-v1/4fdaad18-74b4-4c0f-98ac-f61f4ddc766e/explorer_kit_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/92f45731-67f9-423f-9f74-771e10a54391/explorer_kit_1024.webp", "avif": "/__l5e/assets-v1/8418bc0e-8a84-45c1-8f16-7ff3037dffab/explorer_kit_1024.avif" }
+  },
+  "cartographer_tools": {
+    "128": { "webp": "/__l5e/assets-v1/b3ac6000-d5bc-45c5-9a13-4cc552407675/cartographer_tools_128.webp", "avif": "/__l5e/assets-v1/8d5c5dc3-d87d-4b38-aadd-1868c5faf0f7/cartographer_tools_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/b1abed79-11a4-4ea5-8643-b9f88c4be7fc/cartographer_tools_256.webp", "avif": "/__l5e/assets-v1/4eeb75fb-e039-4db9-a45a-038ce63975b2/cartographer_tools_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/dbfb382d-c500-42a8-8c17-2ea0f089ebfb/cartographer_tools_512.webp", "avif": "/__l5e/assets-v1/42a89aad-0901-43cf-afc8-89827fdc292b/cartographer_tools_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/0c05ff91-d936-41d1-a77e-8f853f1ac614/cartographer_tools_1024.webp", "avif": "/__l5e/assets-v1/82d8918c-1397-4382-a07f-7738b4b93190/cartographer_tools_1024.avif" }
+  },
+  "curator_gloves": {
+    "128": { "webp": "/__l5e/assets-v1/a0cf08af-f48f-440b-a25d-b03565139fc5/curator_gloves_128.webp", "avif": "/__l5e/assets-v1/d1cdbab7-8731-4cf1-8858-0cc1f9ec6b6c/curator_gloves_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/6fcf4cc1-3dfc-43f9-86d8-e35c4f736144/curator_gloves_256.webp", "avif": "/__l5e/assets-v1/6bf77625-17b8-4101-ae54-ca7aa034320d/curator_gloves_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/45ff390c-0e5a-441a-99f7-94948fb62981/curator_gloves_512.webp", "avif": "/__l5e/assets-v1/63fc4d51-b648-40e2-af2f-357fb02251c8/curator_gloves_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/4234dae1-74d3-44af-9e9e-1b976404a1d0/curator_gloves_1024.webp", "avif": "/__l5e/assets-v1/9af5c786-7fc5-4779-a935-001285e7f913/curator_gloves_1024.avif" }
+  },
+  "historian_desk": {
+    "128": { "webp": "/__l5e/assets-v1/ced759de-e183-49c5-a276-f7668c3551d9/historian_desk_128.webp", "avif": "/__l5e/assets-v1/132305ea-abae-4143-84b7-17920e8b344a/historian_desk_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/78b8ba7a-7f41-4795-9d44-68a770da5f30/historian_desk_256.webp", "avif": "/__l5e/assets-v1/85b242fe-7e49-4af8-b1a9-3efd3948df56/historian_desk_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/ac2e2e77-462f-4cf7-b73e-a928f4434468/historian_desk_512.webp", "avif": "/__l5e/assets-v1/af2736b9-670f-4de7-a039-8711b409ddac/historian_desk_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/9303ac3e-16de-40a6-a4c0-043b956e023a/historian_desk_1024.webp", "avif": "/__l5e/assets-v1/6de5c970-42b1-4bfb-bdec-9f463eb91114/historian_desk_1024.avif" }
+  },
+  "horseman_bridle": {
+    "128": { "webp": "/__l5e/assets-v1/f5e20765-3bb8-493e-b05b-514d84b052d2/horseman_bridle_128.webp", "avif": "/__l5e/assets-v1/c5f9ddf8-b887-4bd2-a1df-a6096b0f05bb/horseman_bridle_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/05dab451-c447-4f57-aa97-aa51c66b2c9f/horseman_bridle_256.webp", "avif": "/__l5e/assets-v1/dd60e35a-80c1-4bad-8bec-466e96edcde4/horseman_bridle_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/df341c0d-fbe0-4e14-8bef-03e070d55809/horseman_bridle_512.webp", "avif": "/__l5e/assets-v1/dadf6cdb-c93e-4958-bda9-5484684ef345/horseman_bridle_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/14e4ff4b-56bf-43e6-91e5-1f370dc34d5c/horseman_bridle_1024.webp", "avif": "/__l5e/assets-v1/1010d17e-7697-43d1-9a36-4fb0e45d33e5/horseman_bridle_1024.avif" }
+  },
+  "merchant_scales": {
+    "128": { "webp": "/__l5e/assets-v1/9cfa81c5-080c-4a38-b4b7-b8b6b38cedc0/merchant_scales_128.webp", "avif": "/__l5e/assets-v1/8946e0b3-45f6-46e1-a7e2-7dd863a89c20/merchant_scales_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/11fadfed-36ae-4fb3-ab2b-3231d9a27959/merchant_scales_256.webp", "avif": "/__l5e/assets-v1/5d1b25c6-7e09-48b5-b62e-1504b9b67f41/merchant_scales_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/535491fc-9c15-4410-bd02-fa4fe2c85f64/merchant_scales_512.webp", "avif": "/__l5e/assets-v1/627c3a54-b724-40db-988a-db0066f121df/merchant_scales_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/cd8d3e5c-03dc-46c6-9ddb-51cc7466bd46/merchant_scales_1024.webp", "avif": "/__l5e/assets-v1/99f0b22e-f5b9-4b52-8ab5-a1a7be3ae820/merchant_scales_1024.avif" }
+  },
+  "poet_diwan": {
+    "128": { "webp": "/__l5e/assets-v1/af2db4e8-507e-46af-91bd-c8b5099ca9f2/poet_diwan_128.webp", "avif": "/__l5e/assets-v1/77ec4505-7ae3-42e6-9331-74d4fecf3d18/poet_diwan_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/816d873b-baef-4867-9a55-ac316b35a0b0/poet_diwan_256.webp", "avif": "/__l5e/assets-v1/ae0b5ad7-d9f4-4720-abb1-c6456b42cb82/poet_diwan_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/b353e6ae-3b09-4957-83ef-f228b22d9a7c/poet_diwan_512.webp", "avif": "/__l5e/assets-v1/69dc97a0-3d75-4163-98ab-c5ddbadd41d9/poet_diwan_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/dcef1662-7675-45dc-b899-548988b32305/poet_diwan_1024.webp", "avif": "/__l5e/assets-v1/c26f42ae-2eb1-461f-9768-b06d57a50d9e/poet_diwan_1024.avif" }
+  },
+  "physician_kit": {
+    "128": { "webp": "/__l5e/assets-v1/0ef10de3-32a4-4127-a8f3-510a22658f6c/physician_kit_128.webp", "avif": "/__l5e/assets-v1/0a6c32bc-245b-49c5-9503-4cc94f6ddfc5/physician_kit_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/4ae68686-3321-4047-8f0c-e9d8bf305a3d/physician_kit_256.webp", "avif": "/__l5e/assets-v1/894cfbc7-e16e-49d5-a2a9-65d2ded9b811/physician_kit_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/f0f65b0b-8b9b-4669-b85d-8dff07f306cd/physician_kit_512.webp", "avif": "/__l5e/assets-v1/381c721e-91ee-46ff-aa6d-54beab9ea3cc/physician_kit_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/cc712d15-a764-4141-8429-748554495203/physician_kit_1024.webp", "avif": "/__l5e/assets-v1/04b4eefe-0acf-4ac6-bc85-e94462f84779/physician_kit_1024.avif" }
+  },
+  "astronomer_kit": {
+    "128": { "webp": "/__l5e/assets-v1/bde91926-dd0e-4558-a465-5fb46e91c74a/astronomer_kit_128.webp", "avif": "/__l5e/assets-v1/6ce16f0a-c0e4-4d3d-a63f-f6402c621316/astronomer_kit_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/9ef06ac1-dce7-496c-9d6f-875120337084/astronomer_kit_256.webp", "avif": "/__l5e/assets-v1/b007fe31-5862-487b-96f0-db3f24a6e7db/astronomer_kit_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/3e20f3f1-bd38-44ee-8bdc-b35f58bd210a/astronomer_kit_512.webp", "avif": "/__l5e/assets-v1/43558264-c6dd-49cd-a38a-221a39c0ec81/astronomer_kit_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/a0f9e39d-f6e6-45fd-be07-eb6ccaef3b73/astronomer_kit_1024.webp", "avif": "/__l5e/assets-v1/8fd1a84a-e3b1-417c-83c1-c0e66f3ee2ba/astronomer_kit_1024.avif" }
+  },
+  "judge_seal": {
+    "128": { "webp": "/__l5e/assets-v1/c4804e24-1a67-47b6-a4c5-7a3fbb5556b0/judge_seal_128.webp", "avif": "/__l5e/assets-v1/ce9e66e9-01b1-4b58-9593-799218c06ccb/judge_seal_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/151f98e3-bf7a-403a-a0c1-11ca8780a06f/judge_seal_256.webp", "avif": "/__l5e/assets-v1/b2dc3f66-f2d0-4587-8571-36b943f9f12d/judge_seal_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/f51889f9-dba2-42c2-8126-90c7c37bb0ed/judge_seal_512.webp", "avif": "/__l5e/assets-v1/e7ce2177-ee07-46a4-8f13-94dbdd76d836/judge_seal_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/aea2fbc1-7ffc-43dc-a3e4-a0234733498a/judge_seal_1024.webp", "avif": "/__l5e/assets-v1/46788608-149d-402d-9fe1-3105471e6a0d/judge_seal_1024.avif" }
+  },
+  "preacher_pulpit": {
+    "128": { "webp": "/__l5e/assets-v1/b4a330e1-cdbf-48d9-9102-f6f2dc2998d7/preacher_pulpit_128.webp", "avif": "/__l5e/assets-v1/2446108a-5978-467d-bd67-9cd06e3f2f2f/preacher_pulpit_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/2cf2402f-1e68-4cb1-aea3-e8090e18de6d/preacher_pulpit_256.webp", "avif": "/__l5e/assets-v1/3922bcc3-906b-4926-90ba-0ea1f3a4234d/preacher_pulpit_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/bf9851a1-e1cb-4ee4-b6f7-d654764ff7ed/preacher_pulpit_512.webp", "avif": "/__l5e/assets-v1/3b379e6f-1b67-47b1-8f89-1cafeab15e6e/preacher_pulpit_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/3ffe11f5-e47b-4d8c-80ae-357449e0cdc2/preacher_pulpit_1024.webp", "avif": "/__l5e/assets-v1/3f121d94-e3e1-4ad0-bf2e-cb793fd06333/preacher_pulpit_1024.avif" }
+  },
+  "caravan_pack": {
+    "128": { "webp": "/__l5e/assets-v1/066cce9e-fd0b-46b5-aa93-10b1f9c891a8/caravan_pack_128.webp", "avif": "/__l5e/assets-v1/b7444246-7ab0-4417-b88d-1c8b5f9e016f/caravan_pack_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/09f6e61b-73fc-4cc3-9054-d7483a8970a4/caravan_pack_256.webp", "avif": "/__l5e/assets-v1/de231acd-d9d0-4fe5-b814-6b1d7f603fbc/caravan_pack_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/2faa33e8-45c5-4bed-8471-e02c418ee27a/caravan_pack_512.webp", "avif": "/__l5e/assets-v1/12bc38ec-4acd-40d9-81d4-7b61cf5b0fd1/caravan_pack_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/66ad0305-4c35-44b7-ae7f-e5ef7dcf9835/caravan_pack_1024.webp", "avif": "/__l5e/assets-v1/3fc16f23-5be3-4bc6-9fd1-4ce1b34dab95/caravan_pack_1024.avif" }
   },
 };
