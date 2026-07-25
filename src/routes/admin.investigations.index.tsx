@@ -792,6 +792,8 @@ function Row({ view, selected, onSelect, onExport, onPreview, onToggle }: {
       <td className="px-3 py-2">
         <div className="flex justify-end gap-1.5">
           <IconBtn onClick={onPreview} icon={Eye} label="معاينة" />
+          <IconBtn onClick={onExport} icon={Download} label="تصدير" title="تصدير هذا التحقيق (JSON + CSV + تقرير)" />
+
           <Link to="/admin/investigations/$id/edit" params={{ id: r.id }}
             title="تحرير في المحرّر المنظم"
             className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-700 text-slate-300 hover:border-amber-400 hover:text-amber-300">
