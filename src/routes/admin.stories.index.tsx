@@ -888,8 +888,14 @@ function ImportModal({
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
       <div dir="rtl" className="w-full max-w-3xl rounded-lg border bg-background p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold">استيراد قصص (JSON)</h2>
+          <h2 className="text-base font-semibold">استيراد المحتوى والمشاهد (قديم)</h2>
           <button onClick={onClose} className="opacity-60 hover:opacity-100"><X className="h-4 w-4" /></button>
+        </div>
+
+        <div className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs leading-6 text-amber-700">
+          هذا الاستيراد يحدّث المحتوى والمشاهد فقط، ولا يستورد حقول Stories v2 الكاملة
+          (المجموعة، النطاق الزمني، شرط الفتح، العلاقات، المصادر، التصنيف والندرة والحالات).
+          للاستيراد الكامل استخدم «استيراد Story كاملة v2».
         </div>
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -899,6 +905,7 @@ function ImportModal({
             الشكل: {"{ \"version\": 1, \"stories\": [ ... ] }"} أو مصفوفة قصص مباشرة.
           </span>
         </div>
+
 
         {preview && (
           <>
