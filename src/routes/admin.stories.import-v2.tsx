@@ -190,11 +190,11 @@ function ImportV2Page() {
 
       <div className="flex flex-wrap items-center gap-4 rounded-md border p-2 text-xs text-muted-foreground">
         <label className="inline-flex items-center gap-1">
-          <input type="checkbox" checked={allowDeletes} onChange={(e) => setAllowDeletes(e.target.checked)} />
+          <input type="checkbox" checked={allowDeletes} onChange={(e) => { setAllowDeletes(e.target.checked); setPreview(null); setApplyResult(null); }} />
           السماح بحذف المشاهد/العلاقات/المصادر الزائدة
         </label>
         <label className="inline-flex items-center gap-1">
-          <input type="checkbox" checked={clearMedia} onChange={(e) => setClearMedia(e.target.checked)} />
+          <input type="checkbox" checked={clearMedia} onChange={(e) => { setClearMedia(e.target.checked); setPreview(null); setApplyResult(null); }} />
           استبدال الوسائط حتى لو كان الحقل القادم فارغًا (مسح الغلاف/وسائط المشاهد)
         </label>
       </div>
