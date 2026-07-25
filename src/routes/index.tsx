@@ -275,6 +275,16 @@ function HomeFull() {
     }, 1200);
     return () => { idle.cancel(); };
   }, []);
+  // ===== Campaign hero artwork (Single Source of Truth) =====
+  // The resolver picks Key Art when present, else the rotating hero
+  // pool. Never read `coverImage` here — all campaign artwork routes
+  // through `src/lib/campaignArtwork.tsx`.
+  const heroPoolFallback = heroBgs[0] ?? "";
+  const { url: campaignHeroBg } = useCampaignArtworkUrl(
+    campaignSel?.campaign ?? null,
+    "home-hero",
+    heroPoolFallback,
+  );
 
   // ===== Hero slides =====
   const slides = useMemo<HeroSlide[]>(() => {
@@ -284,9 +294,7 @@ function HomeFull() {
       const { campaign, hasStarted, isComplete, completedChapters, nextChapter } = campaignSel;
       const total = campaign.chapters.length;
       const ctaLabel = isComplete ? "استعرض الحملة" : hasStarted ? "أكمل رحلتك" : "ابدأ رحلتك";
-      const heroBg =
-        (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) ||
-        bgAt(0);
+      const heroBg = campaignHeroBg;
       const subtitle = nextChapter && !isComplete
         ? `الفصل ${nextChapter.order ?? completedChapters + 1} · ${nextChapter.title}`
         : (campaign.subtitle ?? campaign.description ?? "تابع رحلتك في هذه الحملة.");
