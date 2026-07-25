@@ -274,8 +274,12 @@ function AdminInvestigationsPage() {
       } else if (worldFilter) {
         if (v.worldSlug !== worldFilter) return false;
       }
+      const golden = isGoldenTemplate(r);
+      if (templateFilter === "only" && !golden) return false;
+      if (templateFilter === "hide" && golden) return false;
       return true;
     });
+
     const dir = sortDir === "asc" ? 1 : -1;
     out = [...out].sort((a, b) => {
       const ar = a.raw, br = b.raw;
