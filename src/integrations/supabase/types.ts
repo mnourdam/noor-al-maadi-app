@@ -3402,6 +3402,18 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_get_campaign_key_art: {
+        Args: { p_id: string }
+        Returns: {
+          id: string
+          key_art_credit: string
+          key_art_path: string
+          key_art_source: string
+          key_art_square_path: string
+          slug: string
+          title: string
+        }[]
+      }
       admin_get_investigation_full: {
         Args: { p_id_or_slug: string }
         Returns: Json
@@ -3705,6 +3717,22 @@ export type Database = {
       admin_set_artifact_rarity: {
         Args: { _ids: string[]; _rarity: string }
         Returns: Json
+      }
+      admin_set_campaign_key_art: {
+        Args: {
+          p_credit: string
+          p_id: string
+          p_path: string
+          p_source: string
+          p_square_path: string
+        }
+        Returns: {
+          id: string
+          key_art_credit: string
+          key_art_path: string
+          key_art_source: string
+          key_art_square_path: string
+        }[]
       }
       admin_set_investigation_enabled: {
         Args: { p_enabled: boolean; p_id: string }
