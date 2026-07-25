@@ -799,10 +799,10 @@ function drawStatIcon(
   ctx.strokeStyle = gold;
   ctx.fillStyle = hexAlpha(gold, 0.12);
   ctx.lineWidth = 2;
-  const r = 28;
+  const r = 36;
   // Soft round backdrop
   ctx.beginPath();
-  ctx.arc(cx, cy + 6, r + 8, 0, Math.PI * 2);
+  ctx.arc(cx, cy + 8, r + 10, 0, Math.PI * 2);
   ctx.fillStyle = "rgba(255,255,255,0.03)";
   ctx.fill();
   ctx.strokeStyle = hexAlpha(gold, 0.35);
@@ -811,7 +811,7 @@ function drawStatIcon(
 
   ctx.strokeStyle = gold;
   ctx.fillStyle = gold;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
