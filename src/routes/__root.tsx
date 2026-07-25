@@ -270,7 +270,21 @@ function RootComponent() {
           .then((m) => m.reconcileLegacyCampaignProgress())
           .catch(() => {});
       });
-    import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
+    // The bundled snapshot is several megabytes: fetching + parsing + writing
+    // it to IndexedDB on the same tick as first paint stalls low-end Android
+    // WebViews. Defer to idle (with a hard timeout so it always runs) so the
+    // first screen paints first. Offline content availability is unchanged —
+    // routes already await `ensureLocalSnapshotLoaded()` when they need rows.
+    const startOfflineSync = () => {
+      import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
+    };
+    const idle = (window as unknown as {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+    }).requestIdleCallback;
+    const idleHandle = idle
+      ? idle(startOfflineSync, { timeout: 3000 })
+      : window.setTimeout(startOfflineSync, 1200);
+
 
     const onOnline = () => {
       // Reconcile when network returns: flush queued progress/rewards and
