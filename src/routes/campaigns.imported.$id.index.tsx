@@ -16,7 +16,16 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
-import { CampaignArtwork, hasCampaignKeyArt } from "@/lib/campaignArtwork";
+import { CampaignArtwork, hasCampaignKeyArt, useCampaignArtworkUrl, type CampaignArtworkInput } from "@/lib/campaignArtwork";
+import { KeyArtScrim } from "@/components/KeyArtScrim";
+
+/** Readability layer for the detail header — adaptive to this
+ *  campaign's own artwork, artwork itself untouched. */
+function CampaignDetailScrim({ campaign }: { campaign: CampaignArtworkInput }) {
+  const { url } = useCampaignArtworkUrl(campaign, "campaign-detail", "");
+  return <KeyArtScrim src={url || null} variant="detail" />;
+}
+
 
 import {
   getCampaignProgress, isChapterUnlocked, campaignCompletionPercent,
@@ -122,10 +131,7 @@ function ImportedCampaignOverview() {
               imgClassName="h-full w-full object-cover"
               loading="eager"
             />
-            {hasCampaignKeyArt(campaign) && (
-              <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--surface))] via-[hsl(var(--surface)/0.72)] to-[hsl(var(--surface)/0.28)]" />
-
-            )}
+            {hasCampaignKeyArt(campaign) && <CampaignDetailScrim campaign={campaign} />}
             <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
             <div className="relative">
 

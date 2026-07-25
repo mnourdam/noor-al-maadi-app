@@ -29,6 +29,7 @@ import { useHomeSummary } from "@/lib/stats/homeSummary";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { useCampaignArtworkUrl, sanitizedCoverImage } from "@/lib/campaignArtwork";
+import { KeyArtScrim } from "@/components/KeyArtScrim";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
@@ -624,7 +625,15 @@ function HomeFull() {
               />
             );
           })}
-          <div className="ink-overlay absolute inset-0" />
+          {/* Readability layer — adaptive, artwork-preserving (see KeyArtScrim). */}
+          <KeyArtScrim src={slide?.bg} variant="hero" />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg, color-mix(in oklab, var(--scrim) 42%, transparent) 0%, transparent 38%)",
+            }}
+          />
           {!perfLite && <div className="arabesque-layer" />}
           {!perfLite && Array.from({ length: 10 }).map((_, i) => (
             <span key={i} className="ember" style={{
@@ -1040,7 +1049,9 @@ function ContinueJourneyCard({ sel }: {
 
         <div className="relative h-48 w-full overflow-hidden">
           <CachedImage src={cover} alt="" loading="lazy" decoding="async" className="size-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-transparent" />
+          {/* Blend into the parchment panel + adaptive readability layer. */}
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background via-background/45 to-transparent" />
+          <KeyArtScrim src={cover} variant="card" />
           <div className="arabesque-layer opacity-40" />
           <div className="absolute -left-12 -top-12 size-40 rounded-full bg-gold/20 blur-3xl" />
         </div>

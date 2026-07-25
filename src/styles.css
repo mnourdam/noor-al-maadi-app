@@ -118,6 +118,10 @@
   --foreground: oklch(0.97 0.012 85);
   --surface: oklch(0.225 0.045 260);
   --surface-2: oklch(0.27 0.05 262);
+  /* Key Art readability scrim — neutral ink of the app's dark shell.
+     Never a pure black filter; matches the .ink-overlay palette so
+     artwork keeps its own colour temperature. */
+  --scrim: oklch(0.13 0.032 260);
 
   --card: oklch(0.225 0.045 260);
   --card-foreground: oklch(0.97 0.012 85);
