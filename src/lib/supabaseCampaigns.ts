@@ -18,6 +18,13 @@ import {
   localPublishedCampaigns,
 } from "./local-first-store";
 import {
+  applyKeyArtOverlay,
+  getCampaignKeyArtOverlay,
+  peekCampaignKeyArtOverlay,
+  type KeyArtOverlayRow,
+} from "./campaignKeyArtOverlay";
+
+import {
   buildFeed,
   groupFeedIntoSections,
   isDividerData,
