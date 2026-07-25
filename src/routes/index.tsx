@@ -1042,11 +1042,11 @@ function ContinueJourneyCard({ sel }: {
         className="group relative block overflow-hidden rounded-3xl border border-gold/35 shadow-elegant"
       >
 
-        <div className="relative h-48 w-full overflow-hidden">
+        <div className="relative h-56 w-full overflow-hidden">
           <CachedImage src={cover} alt="" loading="lazy" decoding="async" className="size-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]" />
-          {/* Blend into the parchment panel + adaptive readability layer. */}
-          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background via-background/45 to-transparent" />
-          <KeyArtScrim src={cover} variant="card" />
+          {/* Painting resolves into the panel below — no scrim, no edge. */}
+          <KeyArtDissolve start={0.42} end={0.9} />
+
           <div className="arabesque-layer opacity-40" />
           <div className="absolute -left-12 -top-12 size-40 rounded-full bg-gold/20 blur-3xl" />
         </div>
