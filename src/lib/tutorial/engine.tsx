@@ -557,19 +557,21 @@ export function TutorialProvider({
       return;
     }
     let cancelled = false;
-    const raf1 = requestAnimationFrame(() => {
+    // Both handles live in closure variables. Never attach properties to the
+    // numeric raf id — that throws `TypeError: Cannot create property` in
+    // strict-mode ESM and aborted the frame callback before it could schedule.
+    let secondHandle: number | null = null;
+    const firstHandle = requestAnimationFrame(() => {
       if (cancelled) return;
-      const raf2 = requestAnimationFrame(() => {
+      secondHandle = requestAnimationFrame(() => {
         if (cancelled) return;
         setHomeStableFrames(2);
       });
-      (raf1 as unknown as { _raf2?: number })._raf2 = raf2;
     });
     return () => {
       cancelled = true;
-      cancelAnimationFrame(raf1);
-      const raf2 = (raf1 as unknown as { _raf2?: number })._raf2;
-      if (typeof raf2 === "number") cancelAnimationFrame(raf2);
+      cancelAnimationFrame(firstHandle);
+      if (secondHandle != null) cancelAnimationFrame(secondHandle);
     };
   }, [pathname]);
 
