@@ -336,7 +336,7 @@ export const PREMIUM_EMBLEM_ASSETS: Record<string, PremiumAssetMatrix> = {
     "256": { "webp": "/__l5e/assets-v1/a5bb1632-c049-49af-926e-bfb05ed3a0cc/surveyor_rod_256.webp", "avif": "/__l5e/assets-v1/278de2ca-6f6b-4a91-ae57-2e8bf25975d1/surveyor_rod_256.avif" },
     "512": { "webp": "/__l5e/assets-v1/44d7a1a9-0cf2-49b8-a647-74c4fd525de0/surveyor_rod_512.webp", "avif": "/__l5e/assets-v1/cd755bb5-674d-48f0-8013-1e7f0c7c5d69/surveyor_rod_512.avif" },
     "1024": { "webp": "/__l5e/assets-v1/f5961938-8961-4742-9b18-7e39460e9980/surveyor_rod_1024.webp", "avif": "/__l5e/assets-v1/c8e28617-8d15-4b8b-84fb-aa4b69c23774/surveyor_rod_1024.avif" }
-  },,
+  },
 
   "scimitar": {
     "128": { "webp": "/__l5e/assets-v1/b252fe0f-31bb-43cf-b355-89ca80afdf0a/scimitar_128.webp", "avif": "/__l5e/assets-v1/d5f9f00b-2707-4220-8af1-b222bf2a1d7d/scimitar_128.avif" },
