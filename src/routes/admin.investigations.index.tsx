@@ -480,27 +480,77 @@ function AdminInvestigationsPage() {
         )}
 
         {visible.length > 0 && (
-          <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
-            <table className="w-full text-right text-sm">
-              <thead className="bg-slate-900/80 text-xs text-slate-400">
-                <tr>
-                  <SortHeader label="العنوان" k="title" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
-                  <th className="px-3 py-2">Slug</th>
-                  <SortHeader label="صعوبة" k="difficulty" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
-                  <th className="px-3 py-2">عالم / عصر</th>
-                  <th className="px-3 py-2">محتوى</th>
-                  <th className="px-3 py-2">مكافأة</th>
-                  <th className="px-3 py-2">الحالة</th>
-                  <SortHeader label="حُدّث" k="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {visible.map((v) => <SafeRow key={v.raw?.id ?? v.raw?.slug ?? Math.random()} view={v} onPreview={() => openPreview(v.raw.slug)} onToggle={() => toggleEnabled(v.raw)} />)}
-              </tbody>
-            </table>
-          </section>
+          <>
+            {/* Bulk selection toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex items-center gap-1.5 text-slate-300">
+                  <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible}
+                    className="h-3.5 w-3.5 accent-amber-400" />
+                  تحديد المعروض ({visibleIds.length})
+                </label>
+                <span className="text-slate-400">
+                  محدّد: <b className="text-amber-200">{selected.size}</b>
+                </span>
+                {selected.size > 0 && (
+                  <button onClick={() => setSelected(new Set())} className="text-slate-400 hover:text-amber-300">
+                    إلغاء التحديد
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  disabled={selected.size === 0}
+                  onClick={() => setExportScope({ ids: [...selected], label: `التحقيقات المحدّدة (${selected.size})` })}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-2.5 py-1 text-amber-200 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600">
+                  <Download className="h-3.5 w-3.5" /> تصدير المحدّد
+                </button>
+                <button
+                  disabled={visibleIds.length === 0}
+                  onClick={() => setExportScope({ ids: visibleIds, label: `النتائج المعروضة (${visibleIds.length})` })}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1 text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-50">
+                  <Download className="h-3.5 w-3.5" /> تصدير النتائج المعروضة
+                </button>
+              </div>
+            </div>
+
+            <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
+              <table className="w-full text-right text-sm">
+                <thead className="bg-slate-900/80 text-xs text-slate-400">
+                  <tr>
+                    <th className="px-3 py-2">
+                      <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible}
+                        aria-label="تحديد الكل" className="h-3.5 w-3.5 accent-amber-400" />
+                    </th>
+                    <SortHeader label="العنوان" k="title" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
+                    <th className="px-3 py-2">Slug</th>
+                    <SortHeader label="صعوبة" k="difficulty" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
+                    <th className="px-3 py-2">عالم / عصر</th>
+                    <th className="px-3 py-2">محتوى</th>
+                    <th className="px-3 py-2">مكافأة</th>
+                    <th className="px-3 py-2">الحالة</th>
+                    <SortHeader label="حُدّث" k="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
+                    <th className="px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {visible.map((v) => (
+                    <SafeRow
+                      key={v.raw?.id ?? v.raw?.slug ?? Math.random()}
+                      view={v}
+                      selected={!!v.raw?.id && selected.has(v.raw.id)}
+                      onSelect={() => v.raw?.id && toggleOne(v.raw.id)}
+                      onExport={() => v.raw?.id && setExportScope({ ids: [v.raw.id], label: v.raw.slug })}
+                      onPreview={() => openPreview(v.raw.slug)}
+                      onToggle={() => toggleEnabled(v.raw)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          </>
         )}
+
       </div>
 
       {preview && (
