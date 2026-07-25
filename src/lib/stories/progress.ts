@@ -61,6 +61,19 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
         } catch { /* ignore */ }
         return payload;
       }
+      // AUTHORITATIVE DENIAL. The server evaluated `unlock_spec` v2 and
+      // said no (locked / not_found / not_published). NEVER fall through
+      // to the permissive offline snapshot path — that is exactly how a
+      // locked story became readable via a direct URL.
+      try {
+        const uid = await currentUserId();
+        if (uid && (payload as { reason?: string }).reason === "locked") {
+          const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
+          const prev = await loadUnlockedIds(uid);
+          if (prev.delete(storyId)) await persistUnlockedIds(uid, prev);
+        }
+      } catch { /* ignore */ }
+      return payload;
     }
   }
   // Offline fallback — synthesize a permissive bundle from the local
@@ -75,7 +88,8 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
     await ensureLocalSnapshotLoaded();
     const story = localStoryById(storyId);
     if (!story) return { ok: false, reason: "offline_and_not_cached" };
-    const alwaysOn = ((story as any).unlock_spec?.type ?? "always") === "always";
+    const { isAlwaysUnlockSpec } = await import("./unlock/local");
+    const alwaysOn = isAlwaysUnlockSpec((story as any).unlock_spec);
     const uid = await currentUserId();
     let unlocked = alwaysOn;
     if (!unlocked && uid) {

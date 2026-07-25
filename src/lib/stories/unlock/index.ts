@@ -10,4 +10,10 @@ export * from "./spec";
 export { validateUnlockSpec, parseUnlockSpec, walkUnlockNodes } from "./validate";
 export { normalizeUnlockSpec } from "./normalize";
 export { evaluateUnlock, evaluateUnlockUnknown } from "./evaluate";
+export {
+  evaluateStoryUnlock,
+  isAlwaysUnlockSpec,
+  toUnlockSpecV2,
+  type PlayerUnlockState,
+} from "./local";
 export { detectUnlockCycles, extractStoryDeps, type UnlockCycle } from "./cycle";
