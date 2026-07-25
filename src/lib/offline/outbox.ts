@@ -25,7 +25,8 @@ export type OutboxKind =
   | "campaign_completion"   // record_campaign_completion RPC (sticky, versioned)
   | "tutorial_completion"   // record_tutorial_completion RPC (durable onboarding mirror)
   | "story_progress"        // record_story_progress_v2 RPC (monotonic per-scene)
-  | "story_completion";     // complete_story_v2 RPC (sticky, version-independent reward)
+  | "story_completion"      // complete_story_v2 RPC (sticky, version-independent reward)
+  | "avatar_select";        // sync_my_public_stats RPC (durable Premium Emblem pick)
 
 export interface OutboxItem {
   id: string;               // uuid, doubles as idempotency key

@@ -62,10 +62,41 @@ export const OFFLINE_EMBLEM_IDS: ReadonlySet<string> = new Set([
 ]);
 
 
-/** Local path (same origin as the app) for a bundled emblem asset. */
-export function localEmblemPath(id: string, size: EmblemSize, format: "webp" | "avif" = "webp"): string | null {
+/**
+ * Sizes/formats actually shipped inside the app bundle.
+ *
+ * APK size pass: the pack used to ship WebP *and* AVIF at 128/256/512/1024
+ * (44 MB, ~half the installed APK). AVIF bought nothing — every target
+ * WebView already decodes WebP — and 1024 was only ever used by the share
+ * card, which draws the emblem far below 512 CSS px. Bundling webp at
+ * 128/256/512 costs 9.4 MB and is visually identical on device.
+ *
+ * The larger/AVIF variants still exist on the CDN and remain reachable via
+ * `PREMIUM_EMBLEM_ASSETS`; they are simply not a local (offline) guarantee.
+ */
+export const BUNDLED_EMBLEM_SIZES: ReadonlySet<number> = new Set([128, 256, 512]);
+export const BUNDLED_EMBLEM_FORMAT = "webp" as const;
+
+/**
+ * Local path (same origin as the app) for a bundled emblem asset.
+ * Returns `null` for any size/format that is NOT in the bundle, so callers
+ * transparently fall through to the CDN matrix instead of requesting a
+ * file that would 404 on device.
+ */
+export function localEmblemPath(
+  id: string,
+  size: EmblemSize,
+  format: "webp" | "avif" = "webp",
+): string | null {
   if (!OFFLINE_EMBLEM_IDS.has(id)) return null;
+  if (format !== BUNDLED_EMBLEM_FORMAT) return null;
+  if (!BUNDLED_EMBLEM_SIZES.has(size)) return null;
   return `/emblems/${id}_${size}.${format}`;
+}
+
+/** Nearest bundled size at or below `size` (falls back to the largest). */
+export function nearestBundledEmblemSize(size: EmblemSize): EmblemSize {
+  return (BUNDLED_EMBLEM_SIZES.has(size) ? size : 512) as EmblemSize;
 }
 
 /** True when the app has a locally-served copy — no CDN needed. */

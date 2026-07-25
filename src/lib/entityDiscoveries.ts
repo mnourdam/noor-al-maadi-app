@@ -105,6 +105,101 @@ export function markEntityDiscovered(params: {
 }
 
 // ------------------------------------------------------------
+// Local ⇄ server reconciliation
+// ------------------------------------------------------------
+// Two ways the local mirror can legitimately hold a discovery the
+// server has never seen:
+//
+//   1. GUEST READS. Everything read before sign-in lands in the
+//      "guest" scope and used to stay there forever.
+//   2. LOST WRITES. A read that happened offline (or whose outbox
+//      entry was dropped — quota, dead-letter, reinstall of a
+//      device whose queue never drained).
+//
+// Both cases produced the same confusing bug: `useDiscoveredEntities`
+// merges local + server for DISPLAY, so the Encyclopedia showed the
+// entity as discovered, while `evaluate_unlock_spec_v2` — which reads
+// ONLY `user_entity_discoveries` — kept the gated Story locked. The
+// player had genuinely done the work and the app disagreed with itself.
+//
+// `syncLocalDiscoveriesToServer` closes the gap: it promotes the guest
+// scope into the signed-in scope, diffs the merged mirror against the
+// server, and re-enqueues anything missing. Idempotent (the outbox key
+// is `entity_discovery:<uid>:<entity_id>`), safe to run on every
+// hydrate, and it never deletes anything.
+
+/** Copy guest-scope discoveries into the signed-in user's scope. */
+export function promoteGuestDiscoveries(uid: string): number {
+  if (!uid || uid === "guest") return 0;
+  const guest = readLocal("guest");
+  const entries = Object.values(guest);
+  if (entries.length === 0) return 0;
+  const mine = readLocal(uid);
+  let added = 0;
+  for (const d of entries) {
+    if (!d?.id) continue;
+    const existing = mine[d.id];
+    if (!existing) added++;
+    mine[d.id] = {
+      ...d,
+      firstAt: existing?.firstAt ?? d.firstAt,
+      lastAt: existing?.lastAt && existing.lastAt > d.lastAt ? existing.lastAt : d.lastAt,
+    };
+  }
+  if (added > 0 || entries.length > 0) writeLocal(uid, mine);
+  return added;
+}
+
+/**
+ * Promote guest reads, then re-enqueue every locally-known discovery the
+ * server is missing. Returns the number of rows queued for repair.
+ * Never throws — this runs on the hydration path.
+ */
+export async function syncLocalDiscoveriesToServer(uid: string): Promise<number> {
+  if (!uid || uid === "guest") return 0;
+  try {
+    promoteGuestDiscoveries(uid);
+    const local = readLocal(uid);
+    const localList = Object.values(local).filter((d) => d?.id && d?.slug && d?.type);
+    if (localList.length === 0) return 0;
+
+    const { data, error } = await (supabase as any)
+      .from("user_entity_discoveries")
+      .select("entity_id")
+      .eq("user_id", uid);
+    // Offline / transient: do NOT guess. Re-enqueueing blind would be safe
+    // (idempotent) but would also mask a real outage, so we simply retry
+    // on the next hydrate.
+    if (error) return 0;
+
+    const serverIds = new Set(
+      ((data ?? []) as Array<{ entity_id: string }>).map((r) => r.entity_id),
+    );
+    const missing = localList.filter((d) => !serverIds.has(d.id));
+    for (const d of missing) {
+      await recordEntityDiscovery({
+        entityId: d.id,
+        entitySlug: d.slug,
+        entityType: d.type,
+        source: d.source ?? "backfill",
+      });
+    }
+    if (missing.length > 0) {
+      try {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
+        }
+      } catch { /* ignore */ }
+    }
+    return missing.length;
+  } catch {
+    return 0;
+  }
+}
+
+export { CHANGED_EVENT as ENTITY_DISCOVERY_CHANGED_EVENT };
+
+// ------------------------------------------------------------
 // React hook — merges server rows with the local mirror.
 // ------------------------------------------------------------
 

@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { useStoryUnlockInvalidation } from "@/lib/stories/unlock-invalidation";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -213,6 +214,14 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Story unlock state is server-computed and cached; drop it whenever a
+  // progression signal that can flip a lock fires. Without this, reading
+  // the gating Encyclopedia entity left the Story card "مقفلة" until the
+  // app was restarted.
+  useStoryUnlockInvalidation(queryClient);
+
+
 
   useEffect(() => {
     try { document.getElementById("irth-boot-splash")?.remove(); } catch { /* noop */ }

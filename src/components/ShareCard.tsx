@@ -192,17 +192,18 @@ export function ShareCard(props: ShareCardProps) {
     setReady(false);
     (async () => {
       try { await (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready; } catch { /* ignore */ }
-      // Prefer the bundled offline Premium raster (1024) — same origin,
-      // no CDN wait. If a specific legacy id has no raster, the resolver
-      // maps it to the closest frozen Premium emblem.
+      // Prefer the bundled offline Premium raster (512 — the largest size in
+      // the bundle; the card draws the emblem at ~300 px so 1024 was pure
+      // APK weight). Same origin, no CDN wait. If a specific legacy id has
+      // no raster, the resolver maps it to the closest frozen Premium emblem.
       const { DEFAULT_PREMIUM_EMBLEM_ID, resolveProfileEmblem, getEmblemRecord, localEmblemPath, pickAssetUrl } = await import("@/lib/emblems");
       const resolved = resolveProfileEmblem(profile.avatarId);
       const fallback = getEmblemRecord(DEFAULT_PREMIUM_EMBLEM_ID);
-      const localUrl = localEmblemPath(resolved.record.id, 1024);
+      const localUrl = localEmblemPath(resolved.record.id, 512);
       const premiumUrl =
         localUrl ??
         pickAssetUrl(resolved.record, 1024, "webp") ??
-        (fallback ? localEmblemPath(fallback.id, 1024) : null) ??
+        (fallback ? localEmblemPath(fallback.id, 512) : null) ??
         (fallback ? pickAssetUrl(fallback, 1024, "webp") : null);
       const [logoImg, emblemImg] = await Promise.all([
         loadImage("/irth-icon.png").catch(() => null),

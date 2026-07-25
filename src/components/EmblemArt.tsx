@@ -17,13 +17,16 @@ import { pickAssetUrl, type EmblemSize } from "@/lib/emblems/asset-manifest";
 
 export type EmblemVisualSize = "xs" | "sm" | "md" | "lg" | "xl" | "share";
 
+// 512 is the largest bundled raster (see `offline-pack.ts`). Even the share
+// surface draws well under 512 CSS px, so nothing requests 1024 anymore —
+// that variant is CDN-only and would 404 offline.
 const SIZE_TO_ASSET: Record<EmblemVisualSize, EmblemSize> = {
   xs: 128,
   sm: 128,
   md: 256,
   lg: 512,
   xl: 512,
-  share: 1024,
+  share: 512,
 };
 
 export interface EmblemArtProps {
