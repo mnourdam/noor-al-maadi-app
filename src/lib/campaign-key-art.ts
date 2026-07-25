@@ -23,6 +23,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { processImage, type ProcessedImage } from "./image-processor";
 import { invalidateCampaignKeyArtOverlay } from "./campaignKeyArtOverlay";
+import { localCampaignArtPathForStoragePath } from "./campaign-art/offline-pack";
 
 
 const BUCKET = "campaign-key-art";
