@@ -3372,6 +3372,10 @@ export type Database = {
         Args: { p_scene_id: string; p_story_id: string }
         Returns: boolean
       }
+      admin_export_investigations: {
+        Args: { p_ids?: string[]; p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
       admin_export_stories: { Args: { p_ids: string[] }; Returns: Json }
       admin_export_stories_v2: { Args: { p_ids?: string[] }; Returns: Json }
       admin_feedback_stats: { Args: never; Returns: Json }

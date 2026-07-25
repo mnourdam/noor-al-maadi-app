@@ -22,7 +22,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Search, Upload, RefreshCw, Eye, EyeOff, Copy, Trash2,
   CheckCircle2, AlertTriangle, PenSquare, X, ChevronDown, ChevronUp,
-  Info, Filter, ExternalLink,
+  Info, Filter, ExternalLink, Download,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
@@ -38,6 +38,8 @@ import {
   type InvestigationBoundaryWarning,
 } from "@/lib/investigations-normalize";
 import { onInvestigationPublished } from "@/lib/investigations/adminApi";
+import { InvestigationExportDialog } from "@/components/admin/InvestigationExportDialog";
+
 
 export const Route = createFileRoute("/admin/investigations/")({
   head: () => ({
@@ -141,6 +143,12 @@ function AdminInvestigationsPage() {
   const [preview, setPreview] = useState<string | null>(null); // slug for preview
   const [previewData, setPreviewData] = useState<unknown | null>(null);
   const [previewErr, setPreviewErr] = useState<string | null>(null);
+
+  // Export: selection set + active export scope (null ids = whole library).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exportScope, setExportScope] = useState<{ ids: string[] | null; label: string } | null>(null);
+
+
 
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
@@ -326,6 +334,24 @@ function AdminInvestigationsPage() {
   };
   const anyFilterActive = !!(search || difficulty || worldFilter || statusFilter);
 
+  // --- Export selection helpers.
+  const visibleIds = useMemo(() => visible.map((v) => v.raw?.id).filter(Boolean) as string[], [visible]);
+  const selectedVisible = visibleIds.filter((id) => selected.has(id));
+  const allVisibleSelected = visibleIds.length > 0 && selectedVisible.length === visibleIds.length;
+  const toggleOne = (id: string) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleAllVisible = () => setSelected((prev) => {
+    const next = new Set(prev);
+    if (allVisibleSelected) visibleIds.forEach((id) => next.delete(id));
+    else visibleIds.forEach((id) => next.add(id));
+    return next;
+  });
+
+
+
   return (
     <div dir="rtl" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-slate-100">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -345,12 +371,18 @@ function AdminInvestigationsPage() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-50">
               <RefreshCw className={`h-3.5 w-3.5 ${busy ? "animate-spin" : ""}`} /> تحديث
             </button>
+            <button
+              onClick={() => setExportScope({ ids: null, label: `المكتبة كاملة (${enriched.length})` })}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
+              <Download className="h-3.5 w-3.5" /> تصدير المكتبة
+            </button>
             <Link to="/admin/import" search={{ type: "investigations" } as any}
               className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
               <Upload className="h-3.5 w-3.5" /> استيراد JSON
             </Link>
           </div>
         </header>
+
 
         <StatsPanel stats={stats} />
 
@@ -448,27 +480,77 @@ function AdminInvestigationsPage() {
         )}
 
         {visible.length > 0 && (
-          <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
-            <table className="w-full text-right text-sm">
-              <thead className="bg-slate-900/80 text-xs text-slate-400">
-                <tr>
-                  <SortHeader label="العنوان" k="title" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
-                  <th className="px-3 py-2">Slug</th>
-                  <SortHeader label="صعوبة" k="difficulty" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
-                  <th className="px-3 py-2">عالم / عصر</th>
-                  <th className="px-3 py-2">محتوى</th>
-                  <th className="px-3 py-2">مكافأة</th>
-                  <th className="px-3 py-2">الحالة</th>
-                  <SortHeader label="حُدّث" k="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {visible.map((v) => <SafeRow key={v.raw?.id ?? v.raw?.slug ?? Math.random()} view={v} onPreview={() => openPreview(v.raw.slug)} onToggle={() => toggleEnabled(v.raw)} />)}
-              </tbody>
-            </table>
-          </section>
+          <>
+            {/* Bulk selection toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex items-center gap-1.5 text-slate-300">
+                  <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible}
+                    className="h-3.5 w-3.5 accent-amber-400" />
+                  تحديد المعروض ({visibleIds.length})
+                </label>
+                <span className="text-slate-400">
+                  محدّد: <b className="text-amber-200">{selected.size}</b>
+                </span>
+                {selected.size > 0 && (
+                  <button onClick={() => setSelected(new Set())} className="text-slate-400 hover:text-amber-300">
+                    إلغاء التحديد
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  disabled={selected.size === 0}
+                  onClick={() => setExportScope({ ids: [...selected], label: `التحقيقات المحدّدة (${selected.size})` })}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-2.5 py-1 text-amber-200 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600">
+                  <Download className="h-3.5 w-3.5" /> تصدير المحدّد
+                </button>
+                <button
+                  disabled={visibleIds.length === 0}
+                  onClick={() => setExportScope({ ids: visibleIds, label: `النتائج المعروضة (${visibleIds.length})` })}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1 text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-50">
+                  <Download className="h-3.5 w-3.5" /> تصدير النتائج المعروضة
+                </button>
+              </div>
+            </div>
+
+            <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
+              <table className="w-full text-right text-sm">
+                <thead className="bg-slate-900/80 text-xs text-slate-400">
+                  <tr>
+                    <th className="px-3 py-2">
+                      <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible}
+                        aria-label="تحديد الكل" className="h-3.5 w-3.5 accent-amber-400" />
+                    </th>
+                    <SortHeader label="العنوان" k="title" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
+                    <th className="px-3 py-2">Slug</th>
+                    <SortHeader label="صعوبة" k="difficulty" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
+                    <th className="px-3 py-2">عالم / عصر</th>
+                    <th className="px-3 py-2">محتوى</th>
+                    <th className="px-3 py-2">مكافأة</th>
+                    <th className="px-3 py-2">الحالة</th>
+                    <SortHeader label="حُدّث" k="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
+                    <th className="px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {visible.map((v) => (
+                    <SafeRow
+                      key={v.raw?.id ?? v.raw?.slug ?? Math.random()}
+                      view={v}
+                      selected={!!v.raw?.id && selected.has(v.raw.id)}
+                      onSelect={() => v.raw?.id && toggleOne(v.raw.id)}
+                      onExport={() => v.raw?.id && setExportScope({ ids: [v.raw.id], label: v.raw.slug })}
+                      onPreview={() => openPreview(v.raw.slug)}
+                      onToggle={() => toggleEnabled(v.raw)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          </>
         )}
+
       </div>
 
       {preview && (
@@ -479,6 +561,16 @@ function AdminInvestigationsPage() {
           onClose={() => { setPreview(null); setPreviewData(null); setPreviewErr(null); }}
         />
       )}
+
+      {exportScope && (
+        <InvestigationExportDialog
+          ids={exportScope.ids}
+          scopeLabel={exportScope.label}
+          onClose={() => setExportScope(null)}
+        />
+      )}
+
+
 
       {toast && (
         <div className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl border px-4 py-2 text-sm shadow-xl ${
@@ -566,7 +658,14 @@ function SortHeader({ label, k, sortKey, sortDir, onSort }: {
 // Per-row error boundary — guarantees one malformed row cannot black-hole
 // the whole administration dashboard.
 class SafeRow extends React.Component<
-  { view: RowView; onPreview: () => void; onToggle: () => void },
+  {
+    view: RowView;
+    selected: boolean;
+    onSelect: () => void;
+    onExport: () => void;
+    onPreview: () => void;
+    onToggle: () => void;
+  },
   { error: string | null }
 > {
   state = { error: null as string | null };
@@ -578,13 +677,13 @@ class SafeRow extends React.Component<
     console.error("[admin.investigations] row render failed", err, this.props.view?.raw);
   }
   render() {
-    const { view, onPreview, onToggle } = this.props;
+    const { view, selected, onSelect, onExport, onPreview, onToggle } = this.props;
     const combinedError = this.state.error ?? view.renderError;
     if (combinedError) {
       const r = view.raw ?? ({} as ListRow);
       return (
         <tr className="bg-red-950/20">
-          <td colSpan={9} className="px-3 py-2 text-xs text-red-200">
+          <td colSpan={10} className="px-3 py-2 text-xs text-red-200">
             <div className="flex flex-wrap items-center gap-2">
               <AlertTriangle className="h-3.5 w-3.5" />
               <span className="rounded border border-red-400/40 bg-red-500/10 px-1.5 py-0.5 font-mono text-[10px]">
@@ -592,6 +691,11 @@ class SafeRow extends React.Component<
               </span>
               <span className="font-mono text-[11px]">{r.slug ?? r.id ?? "—"}</span>
               <span className="text-red-100/80">تعذّر عرض هذا الصف — بقية الصفوف تعمل بشكل طبيعي.</span>
+              {r.id && (
+                <button onClick={onExport} className="rounded border border-red-400/40 px-1.5 py-0.5 text-[10px] text-red-100 hover:bg-red-500/10">
+                  تصدير للتشخيص
+                </button>
+              )}
             </div>
             {import.meta.env.DEV && (
               <pre dir="ltr" className="mt-1 overflow-auto whitespace-pre-wrap text-[10px] text-red-100/70">{combinedError}</pre>
@@ -600,9 +704,13 @@ class SafeRow extends React.Component<
         </tr>
       );
     }
-    return <Row view={view} onPreview={onPreview} onToggle={onToggle} />;
+    return (
+      <Row view={view} selected={selected} onSelect={onSelect}
+        onExport={onExport} onPreview={onPreview} onToggle={onToggle} />
+    );
   }
 }
+
 
 
 
@@ -618,12 +726,20 @@ function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () 
   );
 }
 
-function Row({ view, onPreview, onToggle }: { view: RowView; onPreview: () => void; onToggle: () => void }) {
+function Row({ view, selected, onSelect, onExport, onPreview, onToggle }: {
+  view: RowView; selected: boolean; onSelect: () => void; onExport: () => void;
+  onPreview: () => void; onToggle: () => void;
+}) {
   const r = view.raw;
   const rw = view.reward;
   return (
-    <tr className="hover:bg-slate-900/60">
+    <tr className={`hover:bg-slate-900/60 ${selected ? "bg-amber-500/5" : ""}`}>
       <td className="px-3 py-2">
+        <input type="checkbox" checked={selected} onChange={onSelect}
+          aria-label={`تحديد ${r.slug}`} className="h-3.5 w-3.5 accent-amber-400" />
+      </td>
+      <td className="px-3 py-2">
+
         <div className="flex items-center gap-2">
           <div>
             <div className="font-medium text-slate-100">{r.title}</div>
@@ -676,6 +792,8 @@ function Row({ view, onPreview, onToggle }: { view: RowView; onPreview: () => vo
       <td className="px-3 py-2">
         <div className="flex justify-end gap-1.5">
           <IconBtn onClick={onPreview} icon={Eye} label="معاينة" />
+          <IconBtn onClick={onExport} icon={Download} label="تصدير" title="تصدير هذا التحقيق (JSON + CSV + تقرير)" />
+
           <Link to="/admin/investigations/$id/edit" params={{ id: r.id }}
             title="تحرير في المحرّر المنظم"
             className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-700 text-slate-300 hover:border-amber-400 hover:text-amber-300">
