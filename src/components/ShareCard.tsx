@@ -301,7 +301,7 @@ export function ShareCard(props: ShareCardProps) {
         <canvas
           ref={canvasRef}
           width={1080}
-          height={1350}
+          height={1920}
           className="block w-full rounded-xl"
           aria-label="بطاقة الهوية التاريخية"
         />
