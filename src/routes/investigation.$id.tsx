@@ -13,6 +13,7 @@ import {
   type InvestigationStep,
 } from "@/lib/investigations-source";
 import { useProfile } from "@/lib/profile";
+import { supabase } from "@/integrations/supabase/client";
 import { displayName } from "@/lib/display-names";
 import { resolveRelatedRefs } from "@/lib/encyclopedia-refs";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
@@ -60,7 +61,7 @@ function InvestigationPage() {
 function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
     profile, markInvestigationCompletedLocal, awardBadge,
-    recoverHeartFromActivity, recordStreakActivity,
+    recoverHeartFromActivity, recordStreakActivity, applyServerStats,
   } = useProfile();
   const stashOrigin = useStashCurrentAsOrigin();
 
@@ -156,26 +157,23 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     setAnswerState("unanswered");
   };
 
-  const grantRewards = () => {
-    // Phase G — server-authoritative. Enqueue a durable, idempotent
-    // completion; the RPC reads the reward from the published row,
-    // enforces caps, and grants XP/dinars/hearts exactly once via the
-    // applied_profile_deltas ledger. Client values are advisory only.
+  const grantRewards = async () => {
+    // Phase G — server-authoritative. The RPC reads the reward from the
+    // published row, enforces caps, and grants XP/dinars/hearts exactly
+    // once via the applied_profile_deltas ledger.
+    //
+    // ORDER MATTERS: the completion RPC must be AWAITED before any other
+    // call that mirrors server economy totals into local state. The streak
+    // RPC returns `xp_total` / `dinar_balance` read from `profiles`; if it
+    // runs concurrently it observes pre-grant balances and the profile
+    // store then overwrites the freshly granted XP/Dinars — the exact
+    // "rewards shown but never added" symptom.
     const totalQuestionLike = steps.filter((s) => s.type === "question" || s.type === "decision").length;
     const correctCount = resolvedIndices.size;
-    void recordInvestigationCompletion({
-      investigationId: row.id,
-      investigationSlug: row.slug,
-      score: correctCount,
-      correctCount,
-    });
 
-    // Local optimistic marker — server reward reconciles via cloud_saves.
+    // Local optimistic marker (no economy) — safe to do immediately.
     markInvestigationCompletedLocal(row.slug);
     clearInvestigationOpened(row.slug);
-    // Phase 3A — canonical qualifying-activity call (server-authoritative).
-    void recordStreakActivity("investigation", row.id);
-
     if (reward.badge) awardBadge(reward.badge);
 
     // Heart restoration — respects cooldown so the same investigation
@@ -188,7 +186,39 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     }
     setHeartGain(gained);
     void totalQuestionLike;
+
+    const outcome = await recordInvestigationCompletion({
+      investigationId: row.id,
+      investigationSlug: row.slug,
+      score: correctCount,
+      correctCount,
+    });
+
+    // Phase 3A — canonical qualifying-activity call (server-authoritative).
+    // Runs strictly AFTER the grant so its mirrored totals are post-grant.
+    await recordStreakActivity("investigation", row.id);
+
+    // Final reconciliation against the authoritative profile row. Covers
+    // the case where the streak call was a no-op (already recorded today,
+    // guest, offline) and therefore mirrored nothing.
+    if (outcome.acknowledged) {
+      try {
+        const { data } = await supabase.rpc("get_my_profile");
+        const srv = (data ?? null) as
+          | { xp?: number; dinars?: number; hearts?: number; streak?: number }
+          | null;
+        if (srv) {
+          applyServerStats({
+            xp: srv.xp ?? null,
+            dinars: srv.dinars ?? null,
+            hearts: srv.hearts ?? null,
+            streak: srv.streak ?? null,
+          });
+        }
+      } catch { /* offline — outbox flush + cold-start sync reconcile later */ }
+    }
   };
+
 
   const onNext = () => {
     if (advancing) return;
@@ -202,7 +232,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       queueMicrotask(() => setAdvancing(false));
       return;
     }
-    if (!alreadyDone) grantRewards();
+    if (!alreadyDone) void grantRewards();
     setFinished(true);
   };
 
