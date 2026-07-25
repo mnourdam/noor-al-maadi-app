@@ -139,6 +139,8 @@ function AdminInvestigationsPage() {
   const [difficulty, setDifficulty] = useState<"" | typeof DIFFICULTIES[number]>("");
   const [worldFilter, setWorldFilter] = useState<string>(""); // "", "__none__", or a world slug
   const [statusFilter, setStatusFilter] = useState<"" | "enabled" | "disabled">("");
+  const [templateFilter, setTemplateFilter] = useState<"" | "only" | "hide">("");
+
 
   // Sort.
   const [sortKey, setSortKey] = useState<SortKey>("updated_at");
