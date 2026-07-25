@@ -936,150 +936,83 @@ function CreateSceneModal({
 }
 
 // ------------------------------------------------------------------
-// Unlock (visual builder + advanced JSON)
+// Unlock — READ ONLY mirror of the v2 source of truth.
 // ------------------------------------------------------------------
-type UnlockKind = UnlockSpec["type"];
-const UNLOCK_KIND_LABEL: Record<UnlockKind, string> = {
+// `unlock_spec` v2 is the ONLY source of truth for story unlocking.
+// This legacy content/scenes editor previously owned a second writer
+// that could stamp `{"type":"always"}` over a real v2 spec. That writer
+// is removed; editing happens exclusively in the v2 editor.
+// ------------------------------------------------------------------
+
+const UNLOCK_NODE_LABEL_AR: Record<string, string> = {
   always: "دائمًا مفتوح",
-  and: "شروط متعددة (كلها معًا)",
-  or: "شروط متعددة (أيّها)",
-  campaign_completed: "بعد إتمام حملة",
-  investigation_completed: "بعد إتمام تحقيق",
-  story_completed: "بعد إتمام قصة",
+  all: "كل الشروط التالية",
+  any: "أيّ شرط من التالية",
+  not: "عكس الشرط التالي",
+  campaign_complete: "بعد إتمام حملة",
+  campaign_chapter_complete: "بعد إتمام فصل من حملة",
+  investigation_complete: "بعد إتمام تحقيق",
+  entity_discovered: "بعد اكتشاف كيان في الموسوعة",
+  entities_discovered: "بعد اكتشاف عدد من الكيانات",
+  artifact_owned: "بعد امتلاك مقتنى",
+  atlas_location_visited: "بعد زيارة موقع في الأطلس",
+  achievement_unlocked: "بعد إحراز إنجاز",
+  player_level: "بعد بلوغ مستوى",
+  story_complete: "بعد إتمام قصة",
+  date_window: "ضمن نافذة زمنية",
 };
 
-function UnlockSection({
-  story, onNotify, onSaved,
-}: {
-  story: StoryRow;
-  onNotify: (k: "ok" | "err", m: string) => void;
-  onSaved: () => Promise<void>;
-}) {
-  const [spec, setSpec] = useState<UnlockSpec>(story.unlock_spec ?? { type: "always" });
-  const [saving, setSaving] = useState(false);
-  const [advancedText, setAdvancedText] = useState<string>(JSON.stringify(story.unlock_spec ?? { type: "always" }, null, 2));
+function UnlockNodeReadOnly({ node, depth = 0 }: { node: any; depth?: number }) {
+  const label = UNLOCK_NODE_LABEL_AR[node?.type] ?? node?.type ?? "غير معروف";
+  const refKeys = Object.keys(node ?? {}).filter((k) => k !== "type" && k !== "of" && k !== "child");
+  return (
+    <div className={depth > 0 ? "border-r-2 border-gold/30 pr-3" : undefined}>
+      <div className="flex flex-wrap items-center gap-2 py-1 text-xs">
+        <span className="rounded bg-muted px-2 py-0.5">{label}</span>
+        {refKeys.map((k) => (
+          <span key={k} dir="ltr" className="font-mono text-[11px] text-muted-foreground">
+            {k}={String((node as any)[k])}
+          </span>
+        ))}
+      </div>
+      {Array.isArray(node?.of) && node.of.map((c: any, i: number) => (
+        <UnlockNodeReadOnly key={i} node={c} depth={depth + 1} />
+      ))}
+      {node?.child && <UnlockNodeReadOnly node={node.child} depth={depth + 1} />}
+    </div>
+  );
+}
 
-  const persist = async (next: UnlockSpec) => {
-    setSaving(true);
-    try {
-      await adminUpsertStory({
-        id: story.id, slug: story.slug, title_ar: story.title_ar,
-        unlock_spec: next, metadata: story.metadata,
-      });
-      onNotify("ok", "تم حفظ شرط الفتح.");
-      setAdvancedText(JSON.stringify(next, null, 2));
-      await onSaved();
-    } catch (e) { onNotify("err", e instanceof Error ? e.message : String(e)); }
-    finally { setSaving(false); }
-  };
-
-  const saveAdvanced = async () => {
-    let parsed: UnlockSpec;
-    try { parsed = JSON.parse(advancedText || '{"type":"always"}'); }
-    catch { onNotify("err", "JSON غير صالح."); return; }
-    setSpec(parsed);
-    await persist(parsed);
-  };
-
+function UnlockSection({ story }: { story: StoryRow }) {
+  const spec = toUnlockSpecV2(story.unlock_spec);
   return (
     <section className="space-y-3 rounded-lg border p-4">
-      <h2 className="text-sm font-semibold text-muted-foreground">شرط الفتح</h2>
-      <UnlockNodeEditor
-        node={spec}
-        onChange={(next) => setSpec(next)}
-      />
-      <div className="flex items-center justify-end gap-2">
-        <button onClick={() => void persist(spec)} disabled={saving}
-          className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50">
-          <Save className="h-4 w-4" /> {saving ? "جاري..." : "حفظ"}
-        </button>
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-muted-foreground">شرط الفتح (v2 — للعرض فقط)</h2>
+        <Link
+          to="/admin/stories/v2/$id"
+          params={{ id: story.id }}
+          className="text-xs text-primary underline"
+        >
+          تحرير في محرر v2 ←
+        </Link>
       </div>
-
+      <p className="text-[11px] text-muted-foreground">
+        مصدر الحقيقة الوحيد لفتح القصة هو <code dir="ltr">unlock_spec</code> v2. هذا المحرر يعرضه ولا يحفظه.
+      </p>
+      <div className="rounded-md border bg-muted/20 p-2">
+        <UnlockNodeReadOnly node={spec.expr} />
+      </div>
       <details className="rounded-md border bg-muted/20">
-        <summary className="cursor-pointer px-2 py-1.5 text-xs text-muted-foreground">متقدم — JSON خام</summary>
-        <div className="space-y-2 p-2">
-          <textarea value={advancedText} onChange={(e) => setAdvancedText(e.target.value)}
-            rows={6} dir="ltr"
-            className="w-full rounded-md border bg-background px-2 py-1.5 font-mono text-xs" />
-          <div className="flex justify-end">
-            <button onClick={() => void saveAdvanced()} disabled={saving}
-              className="rounded-md border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50">
-              حفظ JSON
-            </button>
-          </div>
-        </div>
+        <summary className="cursor-pointer px-2 py-1.5 text-xs text-muted-foreground">JSON خام</summary>
+        <pre dir="ltr" className="overflow-x-auto p-2 font-mono text-[11px]">
+          {JSON.stringify(spec, null, 2)}
+        </pre>
       </details>
     </section>
   );
 }
 
-function UnlockNodeEditor({
-  node, onChange,
-}: {
-  node: UnlockSpec;
-  onChange: (next: UnlockSpec) => void;
-}) {
-  const isGroup = node.type === "and" || node.type === "or";
-  const isRef = node.type === "campaign_completed" || node.type === "investigation_completed" || node.type === "story_completed";
-  const refField: "campaign_id" | "investigation_id" | "story_id" | null =
-    node.type === "campaign_completed" ? "campaign_id" :
-    node.type === "investigation_completed" ? "investigation_id" :
-    node.type === "story_completed" ? "story_id" : null;
-  const refPlaceholder =
-    node.type === "campaign_completed" ? "معرف الحملة (campaign_id)" :
-    node.type === "investigation_completed" ? "معرف التحقيق (investigation_id)" :
-    node.type === "story_completed" ? "معرف القصة (story_id / slug)" : "";
-
-  return (
-    <div className="space-y-2 rounded-md border bg-muted/20 p-2">
-      <div className="flex items-center gap-2">
-        <select value={node.type}
-          onChange={(e) => {
-            const t = e.target.value as UnlockKind;
-            const next: UnlockSpec = { type: t };
-            if (t === "and" || t === "or") next.children = node.children ?? [];
-            onChange(next);
-          }}
-          className="rounded-md border bg-background px-2 py-1 text-xs">
-          {(Object.keys(UNLOCK_KIND_LABEL) as UnlockKind[]).map((k) =>
-            <option key={k} value={k}>{UNLOCK_KIND_LABEL[k]}</option>
-          )}
-        </select>
-        {isRef && refField && (
-          <input dir="ltr" placeholder={refPlaceholder}
-            value={(node as any)[refField] ?? ""}
-            onChange={(e) => onChange({ ...node, [refField]: e.target.value } as UnlockSpec)}
-            className="flex-1 rounded-md border bg-background px-2 py-1 font-mono text-xs" />
-        )}
-      </div>
-      {isGroup && (
-        <div className="space-y-2 border-r-2 border-gold/30 pr-3">
-          {(node.children ?? []).map((c, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <div className="flex-1">
-                <UnlockNodeEditor node={c} onChange={(next) => {
-                  const list = (node.children ?? []).slice();
-                  list[i] = next;
-                  onChange({ ...node, children: list });
-                }} />
-              </div>
-              <button onClick={() => {
-                const list = (node.children ?? []).filter((_, k) => k !== i);
-                onChange({ ...node, children: list });
-              }} className="rounded p-1 text-destructive hover:bg-destructive/10" title="إزالة">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-          <button onClick={() => onChange({ ...node, children: [...(node.children ?? []), { type: "always" }] })}
-            className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs hover:bg-muted">
-            <Plus className="h-3 w-3" /> إضافة شرط
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ------------------------------------------------------------------
 // Structured payload editor — hides raw JSON for common fields.
