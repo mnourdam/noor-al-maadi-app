@@ -217,12 +217,21 @@ export async function shareImage(input: ShareImageInput): Promise<ShareResult> {
     ) {
       try {
         if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
+          // Race the share promise against a watchdog. Some WebViews /
+          // sandboxed iframes never resolve `navigator.share`, which
+          // would leave the UI stuck on "Preparing…" forever.
+          const WATCHDOG_MS = 12_000;
+          const shareP = navigator.share({
             files: [file],
             title: input.title,
             text: input.text,
-          });
-          return { status: "shared" as const };
+          }).then(() => "shared" as const);
+          const timeoutP = new Promise<"timeout">((resolve) =>
+            setTimeout(() => resolve("timeout"), WATCHDOG_MS),
+          );
+          const outcome = await Promise.race([shareP, timeoutP]);
+          if (outcome === "shared") return { status: "shared" as const };
+          console.warn("[share] navigator.share timed out; falling back to download");
         }
       } catch (err) {
         if ((err as { name?: string } | null)?.name === "AbortError") {
