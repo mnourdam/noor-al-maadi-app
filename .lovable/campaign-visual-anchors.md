@@ -1005,3 +1005,8 @@ Storage convention: `campaign-key-art/<campaign_id>/key-art-v1.jpg`, persisted a
 | 55 | `ayyubid-dynasty` | ✅ shipped (Batch 11 — summit verified bare; no Muhammad Ali Mosque) |
 | 56 | `salah-al-din-and-liberation-of-jerusalem` | ✅ shipped (Batch 11 — Hattin frame; no gore, no figures) |
 | 57 | `battle-of-ain-jalut` | ✅ shipped (Batch 11) |
+| 58 | `al-zahir-baybars-and-the-revival-of-islamic-power` | ✅ shipped (Batch 12 — Zahiriyya façade with lion rank; Antioch companion dropped for single-frame clarity) |
+| 59 | `mamluk-sultanate` | ✅ shipped (Batch 12) |
+| 60 | `rise-of-the-ottoman-state` | ✅ shipped (Batch 12) |
+| 61 | `ottoman-expansion-anatolia-balkans` | ✅ shipped (Batch 12 — corner artifact repaired) |
+| 62 | `battle-of-kosovo` | ✅ shipped (Batch 12 — regenerated: foreground tug enlarged, contrast raised for the 64px thumbnail test) |
