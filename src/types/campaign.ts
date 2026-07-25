@@ -96,6 +96,15 @@ export interface Campaign {
   historicalPeriod?: string;
   description?: string;
   coverImage?: string;
+  // ---- Key Art (Irth Campaign Key Art System v1) ----
+  // Storage paths in the `campaign-key-art` bucket. Populated by the
+  // admin authoring flow. Signed URLs are minted at runtime by
+  // `resolveCampaignKeyArtUrl()` and never persisted. Player surfaces
+  // MUST route through `src/lib/campaignArtwork.ts` — never read these
+  // directly.
+  key_art_path?: string | null;
+  key_art_square_path?: string | null;
+  key_art_credit?: string | null;
   mapRegion?: string;
   category?: string;
   difficulty?: CampaignDifficulty;
