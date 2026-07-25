@@ -16,15 +16,9 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
-import { CampaignArtwork, hasCampaignKeyArt, useCampaignArtworkUrl, type CampaignArtworkInput } from "@/lib/campaignArtwork";
-import { KeyArtScrim } from "@/components/KeyArtScrim";
+import { CampaignArtwork, hasCampaignKeyArt, type CampaignArtworkInput } from "@/lib/campaignArtwork";
+import { KeyArtDissolve } from "@/components/KeyArtDissolve";
 
-/** Readability layer for the detail header — adaptive to this
- *  campaign's own artwork, artwork itself untouched. */
-function CampaignDetailScrim({ campaign }: { campaign: CampaignArtworkInput }) {
-  const { url } = useCampaignArtworkUrl(campaign, "campaign-detail", "");
-  return <KeyArtScrim src={url || null} variant="detail" />;
-}
 
 
 import {
@@ -114,24 +108,118 @@ function ImportedCampaignOverview() {
   return (
     <AppShell>
       <div className="animate-reveal pb-10">
-        {/* HERO */}
+        {/* ================= CINEMATIC CHAPTER HEADER =================
+            The Key Art is not a background for text — it is a painting
+            that occupies the upper frame and then *resolves* into the
+            app's navy shell (see <KeyArtDissolve/>). Typography lives
+            below, inside the calm zone, never on top of busy detail.
+            Campaigns without Key Art keep the classic gold panel.    */}
+        {hasCampaignKeyArt(campaign) ? (
+          <header className="relative">
+            <div className="relative h-[52vh] max-h-[520px] min-h-[340px] w-full overflow-hidden">
+              <CampaignArtwork
+                campaign={campaign}
+                surface="campaign-detail"
+                alt={campaign.title}
+                fallback={null}
+                className="absolute inset-0"
+                imgClassName="h-full w-full object-cover object-top"
+                loading="eager"
+              />
+              {/* The painting ends softly — no scrim, no filter, no black. */}
+              <KeyArtDissolve start={0.3} end={0.8} sides />
+            </div>
+            <Link
+              to="/campaigns"
+              className="absolute inset-x-0 top-0 z-10 flex items-center gap-1 px-5 pt-4 text-xs text-white/70 drop-shadow-[0_1px_6px_oklch(0_0_0/0.55)]"
+            >
+              <ArrowRight className="size-3.5" /> الحملات
+            </Link>
+
+            {/* Reading zone — begins exactly where the artwork has become
+                the background, so the two are one continuous surface. */}
+            <div className="relative -mt-24 px-6">
+              <div className="flex items-center gap-2 text-[10px] tracking-[0.22em] text-gold">
+                <Crown className="size-3.5 shrink-0" />
+                <span className="min-w-0 truncate">
+                  {campaign.historicalPeriod ?? "حملة تاريخية"}
+                  {campaign.difficulty && <> · {DIFFICULTY_LABEL[campaign.difficulty]}</>}
+                </span>
+              </div>
+              <h1 className="font-display mt-3 text-[28px] font-bold leading-[1.25] shimmer-text">
+                {campaign.title}
+              </h1>
+              {campaign.subtitle && (
+                <p className="mt-2 max-w-[34ch] text-[15px] leading-relaxed text-gold/85">
+                  {campaign.subtitle}
+                </p>
+              )}
+              {campaign.description && (
+                <p className="mt-4 max-w-[42ch] text-[13px] leading-[1.9] text-foreground/85">
+                  {campaign.description}
+                </p>
+              )}
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-muted-foreground">
+                {campaign.estimatedDuration && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock className="size-3 text-gold/70" /> {campaign.estimatedDuration}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5">
+                  <Scroll className="size-3 text-gold/70" /> {chapters.length.toLocaleString("en-US")} فصول
+                </span>
+                {campaign.tags?.slice(0, 3).map(t => (
+                  <span key={t} className="inline-flex items-center gap-1.5">
+                    <Tag className="size-3 text-gold/70" /> {t}
+                  </span>
+                ))}
+              </div>
+
+              {/* Progress */}
+              <div className="mt-7">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-[10px] tracking-[0.25em] text-gold/80">تقدّمك</p>
+                    <p className="font-display mt-1 text-sm font-bold text-white">
+                      <span className="text-gold">{completedCount.toLocaleString("en-US")}</span>
+                      <span className="text-white/50"> / {chapters.length.toLocaleString("en-US")} فصل</span>
+                    </p>
+                  </div>
+                  <p className="font-display text-2xl font-extrabold leading-none text-gold">
+                    <AnimatedNumber value={percent} /><span className="text-sm">٪</span>
+                  </p>
+                </div>
+                <div className="mt-2.5 h-[6px] overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full bg-gradient-gold transition-all duration-700" style={{ width: `${percent}%` }} />
+                </div>
+              </div>
+
+              {/* Resume / Start CTA — given real breathing room */}
+              {(() => {
+                const active = getActivePosition();
+                const resumeChId = active?.campaignId === campaign.id
+                  ? active.chapterId
+                  : currentChapterId;
+                if (!resumeChId || progress?.completed) return null;
+                return (
+                  <Link
+                    to="/campaigns/imported/$id/chapter/$chapter"
+                    params={{ id: campaign.id, chapter: resumeChId }}
+                    className="motion-tap mt-8 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-gold px-7 py-3.5 text-sm font-bold text-primary-foreground shadow-gold"
+                  >
+                    <Play className="size-4 fill-current" />
+                    {hasStarted ? "متابعة" : "ابدأ الرحلة"}
+                  </Link>
+                );
+              })()}
+            </div>
+          </header>
+        ) : (
         <div className="px-3 pt-3">
           <Link to="/campaigns" className="mb-3 flex items-center gap-1 px-2 text-xs text-muted-foreground">
             <ArrowRight className="size-3.5" /> الحملات
           </Link>
           <div className="relative overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-tl from-amber-900/40 via-surface to-stone-900/60 p-6 shadow-elegant">
-            {/* Key Art cinematic header — canonical resolver only. Campaigns
-                without Key Art keep the exact gradient treatment below. */}
-            <CampaignArtwork
-              campaign={campaign}
-              surface="campaign-detail"
-              alt={campaign.title}
-              fallback={null}
-              className="absolute inset-0"
-              imgClassName="h-full w-full object-cover"
-              loading="eager"
-            />
-            {hasCampaignKeyArt(campaign) && <CampaignDetailScrim campaign={campaign} />}
             <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
             <div className="relative">
 
@@ -203,6 +291,8 @@ function ImportedCampaignOverview() {
             </div>
           </div>
         </div>
+        )}
+
 
 
         <div className="px-5">

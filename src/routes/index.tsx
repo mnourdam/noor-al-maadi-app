@@ -29,7 +29,7 @@ import { useHomeSummary } from "@/lib/stats/homeSummary";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { useCampaignArtworkUrl, sanitizedCoverImage } from "@/lib/campaignArtwork";
-import { KeyArtScrim } from "@/components/KeyArtScrim";
+import { KeyArtDissolve } from "@/components/KeyArtDissolve";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
@@ -625,15 +625,10 @@ function HomeFull() {
               />
             );
           })}
-          {/* Readability layer — adaptive, artwork-preserving (see KeyArtScrim). */}
-          <KeyArtScrim src={slide?.bg} variant="hero" />
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              backgroundImage:
-                "linear-gradient(90deg, color-mix(in oklab, var(--scrim) 42%, transparent) 0%, transparent 38%)",
-            }}
-          />
+          {/* The hero painting resolves into the app shell — the section
+              has no visible bottom edge, the copy sits in navy. */}
+          <KeyArtDissolve start={0.36} end={0.86} sides />
+
           {!perfLite && <div className="arabesque-layer" />}
           {!perfLite && Array.from({ length: 10 }).map((_, i) => (
             <span key={i} className="ember" style={{
@@ -1047,15 +1042,15 @@ function ContinueJourneyCard({ sel }: {
         className="group relative block overflow-hidden rounded-3xl border border-gold/35 shadow-elegant"
       >
 
-        <div className="relative h-48 w-full overflow-hidden">
+        <div className="relative h-56 w-full overflow-hidden">
           <CachedImage src={cover} alt="" loading="lazy" decoding="async" className="size-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]" />
-          {/* Blend into the parchment panel + adaptive readability layer. */}
-          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background via-background/45 to-transparent" />
-          <KeyArtScrim src={cover} variant="card" />
+          {/* Painting resolves into the panel below — no scrim, no edge. */}
+          <KeyArtDissolve start={0.42} end={0.9} />
+
           <div className="arabesque-layer opacity-40" />
           <div className="absolute -left-12 -top-12 size-40 rounded-full bg-gold/20 blur-3xl" />
         </div>
-        <div className="parchment-dark relative -mt-14 px-5 pt-4 pb-5">
+        <div className="relative -mt-16 bg-background px-5 pt-2 pb-5">
           <p className="text-[10px] tracking-[0.25em] text-gold">
             {hasStarted ? "تابع من حيث توقفت" : "ابدأ حملتك الأولى"}
           </p>
