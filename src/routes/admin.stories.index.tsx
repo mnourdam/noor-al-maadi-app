@@ -195,18 +195,19 @@ function AdminStoriesPage() {
           <button onClick={() => setCreating(true)} className="btn-primary">
             <Plus className="h-4 w-4" /> قصة جديدة
           </button>
+          <Link to="/admin/stories/import-v2" className="btn-primary">
+            <Upload className="h-4 w-4" /> استيراد Story كاملة v2
+          </Link>
           <button onClick={() => setImportOpen(true)} className="btn-secondary">
-            <Upload className="h-4 w-4" /> استيراد JSON
+            <Upload className="h-4 w-4" /> استيراد المحتوى والمشاهد (قديم)
           </button>
           <button onClick={() => void bulkExport(null)} className="btn-secondary">
             <Download className="h-4 w-4" /> تصدير الكل
           </button>
-          <Link to="/admin/stories/import-v2" className="btn-secondary">
-            <Upload className="h-4 w-4" /> استيراد v2
-          </Link>
           <Link to="/admin/stories/export-v2" className="btn-secondary">
             <Download className="h-4 w-4" /> تصدير v2
           </Link>
+
           <button onClick={() => void refresh()} className="btn-secondary">
             <RefreshCw className="h-4 w-4" /> تحديث
           </button>
