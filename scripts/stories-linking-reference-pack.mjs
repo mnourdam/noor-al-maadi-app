@@ -109,7 +109,7 @@ write("stories-reference-encyclopedia.json", encyclopedia);
 
 // ── 2. Campaigns (+ chapters) ──────────────────────────────
 const rawCampaigns = q(`
-  select id, status, data, world_slug, era, chronological_order, key_art_path, key_art_square_path
+  select id, slug, title, status, data, key_art_path, key_art_square_path
   from public.admin_campaigns
 `);
 const campaignRows = rawCampaigns.filter((c) => {
@@ -129,13 +129,13 @@ const campaigns = {
       const d = meta(c.data);
       return {
         id: c.id,
-        slug: str(d.slug),
-        title: str(d.title),
+        slug: c.slug ?? str(d.slug),
+        title: c.title ?? str(d.title),
         subtitle: str(d.subtitle),
-        world: c.world_slug ?? str(d.worldSlug),
-        era: c.era ?? str(d.era),
+        world: str(d.worldSlug),
+        era: str(d.era),
         historical_period: str(d.historicalPeriod),
-        chronological_order: c.chronological_order ?? d.chronological_order ?? null,
+        chronological_order: typeof d.chronological_order === "number" ? d.chronological_order : null,
         difficulty: str(d.difficulty),
         has_key_art: Boolean(c.key_art_path),
         link_target_type: "campaign",
