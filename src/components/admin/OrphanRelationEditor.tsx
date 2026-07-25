@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { isDisplayableEntity, normalizeEntitySlug } from "@/lib/encyclopedia-source";
 import { normalizeArabicName } from "@/lib/arabic-normalize";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 type Row = SupabaseEncyclopediaEntity;
 
@@ -176,7 +177,7 @@ export function OrphanRelationEditor({
         if (cancelled || !data) return;
         const slugSet = new Set<string>();
         const re = /"(?:slug|entity_slug|entity|target|unlock_slug)"\s*:\s*"([a-z0-9][a-z0-9-]+)"/gi;
-        for (const c of data as unknown as Array<{ data: unknown }>) {
+        for (const c of selectCampaignRows(data as unknown as Array<{ data: unknown }>)) {
           const blob = JSON.stringify(c.data ?? {});
           if (!blob.includes(entity.slug)) continue;
           let m: RegExpExecArray | null;
