@@ -175,6 +175,8 @@ export async function recordInvestigationCompletion(
     void flushOutbox(uid);
     return { ...none, queued: true };
   }
+}
+
 
 
 // ------------------------------------------------------------
