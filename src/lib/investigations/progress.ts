@@ -74,27 +74,108 @@ async function currentUserId(): Promise<string | null> {
   } catch { return null; }
 }
 
+export interface InvestigationCompletionOutcome {
+  /** true when the server acknowledged the completion in this call. */
+  acknowledged: boolean;
+  /** true when this call (or a previous one) granted the reward. */
+  applied: boolean;
+  xpEarned: number;
+  dinarsEarned: number;
+  heartsEarned: number;
+  /** Queued for later flush (offline / signed-out / transient failure). */
+  queued: boolean;
+}
+
 /**
- * Enqueue a server-authoritative investigation completion. Safe to call
- * more than once — the outbox and the server RPC both dedupe. Signed-
- * out users are a no-op (legacy local profile array still records the
- * slug for local UX; the sign-in flow later triggers backfill).
+ * Record a server-authoritative investigation completion.
+ *
+ * Durable write contract: the outbox item is enqueued FIRST (so a crash
+ * or offline state can never lose the completion), then the RPC is
+ * AWAITED while online. Awaiting matters because the reward lands on
+ * `profiles.xp/dinars` server-side — callers must not mirror any local
+ * economy totals until this resolves, otherwise a concurrent read of
+ * the profile row (e.g. the streak RPC) returns pre-grant balances and
+ * overwrites the freshly granted XP/Dinars locally.
+ *
+ * Safe to call more than once — the outbox and the RPC both dedupe.
+ * Signed-out users are a no-op.
  */
 export async function recordInvestigationCompletion(
   input: InvestigationCompletionInput,
-): Promise<void> {
+): Promise<InvestigationCompletionOutcome> {
+  const none: InvestigationCompletionOutcome = {
+    acknowledged: false, applied: false,
+    xpEarned: 0, dinarsEarned: 0, heartsEarned: 0, queued: false,
+  };
   const uid = await currentUserId();
-  if (!uid) return;
+  if (!uid) return none;
   const investigationId = input.investigationId;
-  if (!investigationId) return;
+  if (!investigationId) return none;
   const deltaId = await stableDeltaId(uid, investigationId);
   await enqueueWithId(uid, deltaId, "investigation_complete", {
     investigationId,
     score: Math.max(0, input.score ?? 0),
     correctCount: Math.max(0, input.correctCount ?? 0),
   });
-  void flushOutbox(uid);
-}
+
+  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+  if (offline) return { ...none, queued: true };
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.rpc as any)("complete_investigation_v2", {
+      p_investigation_id: investigationId,
+      p_delta_id: deltaId,
+      p_score: Math.max(0, input.score ?? 0),
+      p_correct_count: Math.max(0, input.correctCount ?? 0),
+    });
+    if (error) {
+      console.warn("[investigation-complete] rpc-error", error.message);
+      void flushOutbox(uid);
+      return { ...none, queued: true };
+    }
+    const payload = (data ?? {}) as {
+      ok?: boolean; reason?: string; applied?: boolean;
+      xp_earned?: number; dinars_earned?: number; hearts_earned?: number;
+      reward_granted?: boolean;
+    };
+    if (payload.ok !== true) {
+      if (payload.reason === "investigation_not_found") {
+        // Permanent refusal — drop the queued copy so it can't jam the queue.
+        try {
+          const { remove } = await import("@/lib/offline/outbox");
+          await remove(deltaId);
+        } catch { /* flush will drop it */ }
+        return none;
+      }
+      void flushOutbox(uid);
+      return { ...none, queued: true };
+    }
+    // Acknowledged — drop the queued copy, then notify readers.
+    try {
+      const { remove } = await import("@/lib/offline/outbox");
+      await remove(deltaId);
+    } catch { /* flush will drop it */ }
+    try {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("irth:investigation-progress:changed"));
+      }
+    } catch { /* ignore */ }
+    void flushOutbox(uid);
+    return {
+      acknowledged: true,
+      applied: !!payload.applied || !!payload.reward_granted,
+      xpEarned: Number(payload.xp_earned ?? 0),
+      dinarsEarned: Number(payload.dinars_earned ?? 0),
+      heartsEarned: Number(payload.hearts_earned ?? 0),
+      queued: false,
+    };
+  } catch (e) {
+    console.warn("[investigation-complete] rpc-exception", e);
+    void flushOutbox(uid);
+    return { ...none, queued: true };
+  }
+
 
 // ------------------------------------------------------------
 // Legacy migration
