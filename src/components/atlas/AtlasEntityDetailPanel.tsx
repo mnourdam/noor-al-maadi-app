@@ -5,6 +5,7 @@
 // Layout: bottom sheet on mobile, floating popover at the bottom-right on
 // desktop. Safe-area padding so it never hides behind the home-bar.
 import { Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { BookOpen, Crosshair, Loader2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { KIND_LABEL_AR, type AtlasEntityRow } from "@/lib/atlas-entities";
@@ -14,6 +15,9 @@ import {
 } from "@/lib/encyclopedia-source";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
+import { useAccount } from "@/lib/account";
+import { ATLAS_VISIT_DWELL_MS, recordAtlasVisit } from "@/lib/atlas/visits";
+
 
 
 function useEncyclopediaEntity(id: string | null) {
