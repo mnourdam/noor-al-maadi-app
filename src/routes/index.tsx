@@ -1023,7 +1023,11 @@ function ContinueJourneyCard({ sel }: {
   const stashOrigin = useStashCurrentAsOrigin();
   const total = campaign.chapters.length;
   const pct = total > 0 ? Math.round((completedChapters / total) * 100) : 0;
-  const cover = (campaign.coverImage && /^(https?:|data:|\/)/i.test(campaign.coverImage) && campaign.coverImage) || heroFortress;
+  // Continue Journey — routes through the single artwork resolver.
+  // Legacy `coverImage` becomes the fallback when no Key Art exists;
+  // final safety net is the shipped `heroFortress` asset.
+  const fallbackCover = sanitizedCoverImage(campaign) ?? heroFortress;
+  const { url: cover } = useCampaignArtworkUrl(campaign, "continue-journey", fallbackCover);
   return (
     <section className="mt-12 px-5">
       <SectionHeader icon={<Crown className="size-3.5" />} eyebrow="حملتك النشطة" title="واصل رحلتك" />
