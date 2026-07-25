@@ -172,7 +172,14 @@ export interface StoryImportPreviewReportV2 {
 }
 
 export interface StoryImportApplyOptionsV2 {
+  /** Delete scenes/relations/sources that are absent from the payload. */
   allow_deletes?: boolean;
+  /**
+   * Replace media links even when the incoming value is null.
+   * Off by default: an omitted cover_media_id / primary_media_id keeps
+   * whatever the database already holds.
+   */
+  clear_media?: boolean;
 }
 
 export interface StoryImportApplyItemV2 {
