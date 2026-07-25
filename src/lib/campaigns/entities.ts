@@ -92,8 +92,8 @@ export function isCampaignRow(row: RawCampaignRow | null | undefined): boolean {
 // ---------------------------------------------------------------
 
 /** Playable campaign rows only. Dividers are dropped. */
-export function selectCampaignRows<T extends RawCampaignRow>(rows: readonly T[] | null | undefined): T[] {
-  return (rows ?? []).filter((r) => isCampaignRow(r));
+export function selectCampaignRows<T>(rows: readonly T[] | null | undefined): T[] {
+  return (rows ?? []).filter((r) => isCampaignRow(r as RawCampaignRow));
 }
 
 /** Divider rows only, normalized into the minimal divider model. */
@@ -102,13 +102,13 @@ export function selectDividers(rows: readonly RawCampaignRow[] | null | undefine
 }
 
 /** Split raw rows into the two entity families in a single pass. */
-export function partitionCampaignRows<T extends RawCampaignRow>(
+export function partitionCampaignRows<T>(
   rows: readonly T[] | null | undefined,
 ): { campaigns: T[]; dividers: CampaignSectionDivider[] } {
   const campaigns: T[] = [];
   const dividers: CampaignSectionDivider[] = [];
   for (const r of rows ?? []) {
-    if (isDividerRow(r)) dividers.push(toDivider(r));
+    if (isDividerRow(r as RawCampaignRow)) dividers.push(toDivider(r as RawCampaignRow));
     else campaigns.push(r);
   }
   return { campaigns, dividers };
