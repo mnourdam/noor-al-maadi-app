@@ -20,6 +20,7 @@ import { validateCampaign, uid } from "@/lib/campaignStorage";
 import { ChapterEditor } from "./ChapterEditor";
 import { JsonMode } from "./JsonMode";
 import { VersionHistory } from "./VersionHistory";
+import { KeyArtPanel } from "./KeyArtPanel";
 
 type Tab = "meta" | "chapters" | "json" | "history";
 type Toast = { kind: "ok" | "err"; msg: string };
@@ -381,6 +382,7 @@ export function CampaignEditor({ campaignId }: Props) {
                 value={draft.finalRewards?.coins ?? 0}
                 onChange={v => setField("finalRewards", { ...draft.finalRewards, coins: Number(v) || 0 })} />
             </div>
+            <KeyArtPanel campaignId={draft.id} title={draft.title} onNotify={notify} />
           </div>
         )}
 
