@@ -22,7 +22,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Search, Upload, RefreshCw, Eye, EyeOff, Copy, Trash2,
   CheckCircle2, AlertTriangle, PenSquare, X, ChevronDown, ChevronUp,
-  Info, Filter, ExternalLink,
+  Info, Filter, ExternalLink, Download,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
@@ -38,6 +38,8 @@ import {
   type InvestigationBoundaryWarning,
 } from "@/lib/investigations-normalize";
 import { onInvestigationPublished } from "@/lib/investigations/adminApi";
+import { InvestigationExportDialog } from "@/components/admin/InvestigationExportDialog";
+
 
 export const Route = createFileRoute("/admin/investigations/")({
   head: () => ({
