@@ -185,7 +185,7 @@ function StoryEditorRoute() {
         onNotify={notify} onRefresh={refresh}
       />
 
-      <UnlockSection story={bundle.story} onNotify={notify} onSaved={refresh} />
+      <UnlockSection story={bundle.story} />
 
       {previewOpen && (
         <LivePreviewModal
