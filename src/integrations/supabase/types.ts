@@ -130,6 +130,10 @@ export type Database = {
           draft_data: Json | null
           has_unpublished_changes: boolean
           id: string
+          key_art_credit: string | null
+          key_art_path: string | null
+          key_art_source: string | null
+          key_art_square_path: string | null
           last_editor_email: string | null
           published_at: string | null
           slug: string | null
@@ -145,6 +149,10 @@ export type Database = {
           draft_data?: Json | null
           has_unpublished_changes?: boolean
           id: string
+          key_art_credit?: string | null
+          key_art_path?: string | null
+          key_art_source?: string | null
+          key_art_square_path?: string | null
           last_editor_email?: string | null
           published_at?: string | null
           slug?: string | null
@@ -160,6 +168,10 @@ export type Database = {
           draft_data?: Json | null
           has_unpublished_changes?: boolean
           id?: string
+          key_art_credit?: string | null
+          key_art_path?: string | null
+          key_art_source?: string | null
+          key_art_square_path?: string | null
           last_editor_email?: string | null
           published_at?: string | null
           slug?: string | null
@@ -3362,6 +3374,10 @@ export type Database = {
           draft_data: Json | null
           has_unpublished_changes: boolean
           id: string
+          key_art_credit: string | null
+          key_art_path: string | null
+          key_art_source: string | null
+          key_art_square_path: string | null
           last_editor_email: string | null
           published_at: string | null
           slug: string | null
@@ -3419,6 +3435,10 @@ export type Database = {
           draft_data: Json | null
           has_unpublished_changes: boolean
           id: string
+          key_art_credit: string | null
+          key_art_path: string | null
+          key_art_source: string | null
+          key_art_square_path: string | null
           last_editor_email: string | null
           published_at: string | null
           slug: string | null
