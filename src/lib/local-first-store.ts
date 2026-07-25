@@ -19,6 +19,11 @@
 import { loadBundledSnapshot } from "./offline-snapshot";
 import { loadSnapshot, saveSnapshot, MIN_PUBLIC_ENCYCLOPEDIA_ROWS, type OfflineSnapshot } from "./offline-storage";
 import { normalizeArabicName } from "./arabic-normalize";
+import {
+  isDividerRow,
+  partitionCampaignRows,
+  type RawCampaignRow,
+} from "./campaigns/entities";
 
 type Row = Record<string, any>;
 
