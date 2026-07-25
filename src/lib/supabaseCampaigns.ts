@@ -157,8 +157,16 @@ export async function fetchCampaignByIdOrSlug(
         .maybeSingle();
     }
     if (!row?.error) {
-      const c = (row?.data?.data ?? null) as Campaign | null;
-      if (c && c.status === "published") return c;
+      const r = row?.data;
+      const c = (r?.data ?? null) as Campaign | null;
+      if (c && c.status === "published") {
+        return {
+          ...c,
+          key_art_path: r?.key_art_path ?? c.key_art_path ?? null,
+          key_art_square_path: r?.key_art_square_path ?? c.key_art_square_path ?? null,
+          key_art_credit: r?.key_art_credit ?? c.key_art_credit ?? null,
+        } as Campaign;
+      }
     } else {
       console.warn("[supabaseCampaigns] resolve failed:", row.error.message);
     }
