@@ -647,80 +647,95 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   }
   cursor += 2 * cellH + 20;
 
-  // ═══ BOTTOM: Specialization → divider → medals → branding ═══════════
-  // Nothing else lives here. Bio / favorite state / join date / quote
-  // are intentionally omitted to let the bottom breathe (Phase 10 spec).
+  // ═══ BOTTOM: Specialization → medals → divider → branding ══════════
+  // Footer zone is reserved at the absolute bottom of the canvas so the
+  // Irth branding is always pinned there, regardless of which optional
+  // sections (specialization, medals) render above it. Content is only
+  // drawn when it fits inside the available area between the current
+  // cursor and the footer zone — never overlapping into it.
+  const FOOTER_H = 200;                // reserved branding zone height
+  const FOOTER_TOP = H - FOOTER_H;     // 1720 on a 1920 canvas
+  const FOOTER_GAP = 48;               // clear space between content & footer
+  const contentMaxBottom = FOOTER_TOP - FOOTER_GAP; // 1672
 
+  // — Specialization chip (optional) —
   if (s.specializationLabel) {
     ctx.font = `700 26px ${family}`;
     const valueW = ctx.measureText(s.specializationLabel).width;
     const chipW = Math.min(W - 260, Math.max(380, valueW + 120));
     const chipH = 104;
-    const chipX = cx - chipW / 2, chipY = cursor;
-    roundRect(ctx, chipX, chipY, chipW, chipH, 22);
-    const cg = ctx.createLinearGradient(chipX, chipY, chipX + chipW, chipY + chipH);
-    cg.addColorStop(0, "#4a3717");
-    cg.addColorStop(0.5, "#8a6a24");
-    cg.addColorStop(1, "#4a3717");
-    ctx.fillStyle = cg;
-    ctx.fill();
-    ctx.strokeStyle = goldSoft;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    roundRect(ctx, chipX + 6, chipY + 6, chipW - 12, chipH - 12, 18);
-    ctx.strokeStyle = hexAlpha(goldSoft, 0.5);
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
+    if (cursor + chipH <= contentMaxBottom) {
+      const chipX = cx - chipW / 2, chipY = cursor;
+      roundRect(ctx, chipX, chipY, chipW, chipH, 22);
+      const cg = ctx.createLinearGradient(chipX, chipY, chipX + chipW, chipY + chipH);
+      cg.addColorStop(0, "#4a3717");
+      cg.addColorStop(0.5, "#8a6a24");
+      cg.addColorStop(1, "#4a3717");
+      ctx.fillStyle = cg;
+      ctx.fill();
+      ctx.strokeStyle = goldSoft;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      roundRect(ctx, chipX + 6, chipY + 6, chipW - 12, chipH - 12, 18);
+      ctx.strokeStyle = hexAlpha(goldSoft, 0.5);
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
 
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255,240,200,0.7)";
-    ctx.font = `400 14px ${family}`;
-    ctx.fillText("العالم التاريخي الأكثر نشاطاً", cx, chipY + 32);
-    ctx.fillStyle = "#fff8e0";
-    ctx.font = `700 28px ${family}`;
-    ctx.fillText(truncate(ctx, s.specializationLabel, chipW - 40), cx, chipY + 74);
-    cursor += chipH + 44;
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255,240,200,0.7)";
+      ctx.font = `400 14px ${family}`;
+      ctx.fillText("العالم التاريخي الأكثر نشاطاً", cx, chipY + 32);
+      ctx.fillStyle = "#fff8e0";
+      ctx.font = `700 28px ${family}`;
+      ctx.fillText(truncate(ctx, s.specializationLabel, chipW - 40), cx, chipY + 74);
+      cursor += chipH + 32;
+    }
   }
 
-  // Thin divider
-  drawHairline(ctx, 220, cursor, W - 440, hexAlpha(gold, 0.28));
-  cursor += 46;
-
-  // Top 3 medals (museum medals with ornate rim, embossed star, ribbon)
+  // — Top 3 medals (optional) —
   if (s.topAchievements.length > 0) {
     const medalR = 54;
     const medalGap = 48;
-    const medalCount = Math.min(3, s.topAchievements.length);
-    const totalW = medalCount * (medalR * 2) + (medalCount - 1) * medalGap;
-    const startX = cx - totalW / 2 + medalR;
-    for (let i = 0; i < medalCount; i++) {
-      const ac = s.topAchievements[i];
-      const mx = startX + i * (medalR * 2 + medalGap);
-      const my = cursor + medalR + 8;
-      drawMedal(ctx, mx, my, medalR, accent, gold, i + 1);
-      ctx.textAlign = "center";
-      ctx.fillStyle = "rgba(255,255,255,0.82)";
-      ctx.font = `500 13px ${family}`;
-      const label = truncate(ctx, ac.label, medalR * 2 + medalGap - 4);
-      ctx.fillText(label, mx, my + medalR + 28);
+    const medalBlockH = medalR * 2 + 44; // medal + label row
+    if (cursor + medalBlockH <= contentMaxBottom) {
+      const medalCount = Math.min(3, s.topAchievements.length);
+      const totalW = medalCount * (medalR * 2) + (medalCount - 1) * medalGap;
+      const startX = cx - totalW / 2 + medalR;
+      for (let i = 0; i < medalCount; i++) {
+        const ac = s.topAchievements[i];
+        const mx = startX + i * (medalR * 2 + medalGap);
+        const my = cursor + medalR + 8;
+        drawMedal(ctx, mx, my, medalR, accent, gold, i + 1);
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(255,255,255,0.82)";
+        ctx.font = `500 13px ${family}`;
+        const label = truncate(ctx, ac.label, medalR * 2 + medalGap - 4);
+        ctx.fillText(label, mx, my + medalR + 28);
+      }
+      cursor += medalBlockH;
     }
-    cursor += medalR * 2 + 70;
   }
 
-  // ═══ IRTH BRANDING (footer) ═════════════════════════════════════════
-  const brandY = H - 96;
+  // ═══ IRTH BRANDING (pinned footer zone) ═════════════════════════════
+  // Always rendered at the same absolute position — never collapses
+  // upward, never overlaps the specialization or medals above.
+  // Thin gold divider marks the top of the footer zone.
+  drawHairline(ctx, 260, FOOTER_TOP, W - 520, hexAlpha(gold, 0.32));
+
+  const brandLogoSize = 44;
+  const brandLogoTop = FOOTER_TOP + 28;
   if (s.logoImg?.complete && s.logoImg.naturalWidth > 0) {
-    const bs = 40;
-    ctx.drawImage(s.logoImg, cx - bs / 2, brandY - bs, bs, bs);
+    ctx.drawImage(s.logoImg, cx - brandLogoSize / 2, brandLogoTop, brandLogoSize, brandLogoSize);
   }
   ctx.textAlign = "center";
   ctx.fillStyle = goldSoft;
   ctx.font = `700 26px ${family}`;
-  ctx.fillText("إرث", cx, brandY + 32);
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.fillText("إرث", cx, brandLogoTop + brandLogoSize + 34);
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.font = `400 13px ${family}`;
-  ctx.fillText("Irth · Historical Identity", cx, brandY + 54);
+  ctx.fillText("Irth · Historical Identity", cx, brandLogoTop + brandLogoSize + 58);
 }
+
 
 // ─── Drawing helpers ─────────────────────────────────────────────────
 
