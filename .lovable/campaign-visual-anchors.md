@@ -1015,3 +1015,8 @@ Storage convention: `campaign-key-art/<campaign_id>/key-art-v1.jpg`, persisted a
 | 65 | `conquest-of-constantinople` | ✅ shipped (Batch 13 — Hagia Sophia rendered minaret-free per 1453 accuracy) |
 | 66 | `selim-i-annexation-of-the-mashriq` | ✅ shipped (Batch 13 — Ayyubid citadel silhouette, no Muhammad Ali Mosque) |
 | 67 | `ottoman-golden-age` | ✅ shipped (Batch 13) |
+| 68 | `beginning-of-ottoman-decline` | ✅ shipped (Batch 14) |
+| 69 | `ottoman-decline-and-reforms` | ✅ shipped (Batch 14 — corner artifact repaired) |
+| 70 | `world-war-one-and-fall-of-caliphate` | ✅ shipped (Batch 14 — corner artifact repaired; flag folded at rest, never trampled) |
+
+**LIBRARY COMPLETE — 70/70 campaigns have Key Art (hero + square) wired to `admin_campaigns`; verified 0 missing.**
