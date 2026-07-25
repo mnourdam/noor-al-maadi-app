@@ -31,27 +31,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
 import { guestHasCompleted } from "@/lib/stories/guestCompletions";
 import { useEffect, useState } from "react";
+import { useStoryMediaUrl } from "@/lib/stories/media/url";
+import type { StoryMediaRow } from "@/lib/stories/media/dao";
 
 // M7C — direct reads from `stories` and `story_media` have been removed.
-// Cover URLs are resolved via the M6 RPC `get_story_media_urls_v2`, which
-// enforces the visibility contract server-side and never returns media for
-// stories the caller cannot access. Story metadata used for duration is
-// no longer refetched per card; duration falls back to the scene-count
-// estimate baked into `resolveStoryDurationMs` for the catalog view. When
-// the card is rendered on a story landing page (or after read), the
-// canonical value is supplied through `story.summary`/bundle upstream.
+// Cover rows are resolved via the M6 RPC `get_story_media_urls_v2`, which
+// enforces the visibility contract server-side. The RPC returns full media
+// rows (bucket + storage_path + processing_version) but NO signed `url`
+// field; the `story-media` bucket is private, so we hand the row to the
+// canonical `useStoryMediaUrl` resolver which produces the signed URL.
 
 interface CoverRpcResult {
   ok?: boolean;
-  media?: Array<{ id: string; url?: string | null }>;
+  media?: StoryMediaRow[];
 }
 
-function useCoverUrl(storyId: string, coverMediaId: string | null): string | null {
+// Cache key bumped from "story-cover-url" → "story-cover-row:v2" so any
+// previously cached `null` from the old (broken) `url` field is invalidated
+// automatically without requiring app reinstall or manual cache clearing.
+function useCoverRow(storyId: string, coverMediaId: string | null): StoryMediaRow | null {
   const { data } = useQuery({
-    queryKey: ["story-cover-url", storyId, coverMediaId],
+    queryKey: ["story-cover-row:v2", storyId, coverMediaId],
     enabled: !!coverMediaId,
     staleTime: 5 * 60_000,
-    queryFn: async (): Promise<string | null> => {
+    queryFn: async (): Promise<StoryMediaRow | null> => {
       if (!coverMediaId) return null;
       try {
         const { data, error } = await supabase.rpc(
@@ -62,7 +65,7 @@ function useCoverUrl(storyId: string, coverMediaId: string | null): string | nul
         const payload = (data ?? {}) as CoverRpcResult;
         if (!payload.ok) return null;
         const hit = (payload.media ?? []).find((m) => m.id === coverMediaId);
-        return hit?.url ?? null;
+        return hit ?? null;
       } catch {
         return null;
       }
@@ -107,7 +110,10 @@ export function StoryCard({
   const durationLabel = formatDurationArabic(
     resolveStoryDurationMs({ metadata: null, sceneCount: story.scene_count }),
   );
-  const cover = useCoverUrl(story.id, story.cover_media_id);
+  const coverRow = useCoverRow(story.id, story.cover_media_id);
+  const cover = useStoryMediaUrl(coverRow);
+  const [coverFailed, setCoverFailed] = useState(false);
+  useEffect(() => { setCoverFailed(false); }, [cover]);
 
   const pct = Math.round(progressFraction(story) * 100);
   const widthClass = variant === "rail" ? "w-44 flex-none snap-start sm:w-52" : "w-full";
@@ -122,12 +128,13 @@ export function StoryCard({
     >
       {/* Cover — tall cinematic 3:4 */}
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-neutral-900">
-        {cover ? (
+        {cover && !coverFailed ? (
           <img
             src={cover}
             alt={story.title_ar}
             loading="lazy"
             decoding="async"
+            onError={() => setCoverFailed(true)}
             className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.04] ${
               !story.unlocked ? "opacity-40 blur-[2px]" : ""
             }`}
