@@ -61,7 +61,7 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   if (typeof navigator === "undefined" || navigator.onLine !== false) {
     void supabase
       .from("campaigns_public" as any)
-      .select("id, slug, data")
+      .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit")
       .then(({ data, error }) => {
         if (error || !data) return;
         try {
@@ -81,7 +81,7 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   try {
     const { data, error } = await supabase
       .from("campaigns_public" as any)
-      .select("id, slug, data");
+      .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
     if (!error && data) return toCampaigns(data as any[]);
   } catch (err) {
     console.warn("[supabaseCampaigns] live list failed:", err);
@@ -146,13 +146,13 @@ export async function fetchCampaignByIdOrSlug(
   try {
     let row: any = await supabase
       .from("campaigns_public" as any)
-      .select("id, slug, data")
+      .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit")
       .eq("id", idOrSlug)
       .maybeSingle();
     if (!row?.data) {
       row = await supabase
         .from("campaigns_public" as any)
-        .select("id, slug, data")
+        .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit")
         .eq("slug", idOrSlug)
         .maybeSingle();
     }
@@ -226,7 +226,7 @@ export async function fetchPublishedFeed(): Promise<{
     try {
       const { data, error } = await supabase
         .from("campaigns_public" as any)
-        .select("id, slug, data");
+        .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
       if (!error && data) local = data as any[];
     } catch { /* ignore */ }
 
