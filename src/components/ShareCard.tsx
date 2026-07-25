@@ -943,6 +943,7 @@ function drawStatIcon(
     }
   }
   ctx.restore();
+  ctx.restore();
 }
 
 function drawMedal(
