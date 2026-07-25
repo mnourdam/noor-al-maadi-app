@@ -75,10 +75,27 @@ function main() {
   const emblemFiles = existsSync(emblemDir)
     ? readdirSync(emblemDir).filter((name) => /\.(webp|avif)$/i.test(name))
     : [];
-  if (!existsSync(emblemManifest) || emblemFiles.length < 1088) {
+  // Derive the expectation from the manifest instead of a hard-coded count:
+  // the pack ships WebP at 128/256/512 (AVIF duplicates were dropped to keep
+  // the APK small), so a magic number goes stale on every pipeline change.
+  let expectedEmblems = 0;
+  if (existsSync(emblemManifest)) {
+    try {
+      const manifest = JSON.parse(readFileSync(emblemManifest, "utf8"));
+      const ids = Array.isArray(manifest)
+        ? manifest
+        : Array.isArray(manifest?.emblems)
+          ? manifest.emblems
+          : Object.keys(manifest?.assets ?? manifest ?? {});
+      expectedEmblems = ids.length * 3;
+    } catch {
+      expectedEmblems = 0;
+    }
+  }
+  if (!existsSync(emblemManifest) || expectedEmblems === 0 || emblemFiles.length < expectedEmblems) {
     console.error(
       `[finalize-android] failed: Premium Emblem offline pack incomplete in dist/android/emblems ` +
-      `(manifest=${existsSync(emblemManifest)}, files=${emblemFiles.length}, expected>=1088).`,
+      `(manifest=${existsSync(emblemManifest)}, files=${emblemFiles.length}, expected>=${expectedEmblems}).`,
     );
     process.exit(1);
   }
