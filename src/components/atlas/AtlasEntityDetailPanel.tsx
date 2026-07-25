@@ -44,8 +44,21 @@ export function AtlasEntityDetailPanel({
   const encId = entity.encyclopedia_entity_id ?? null;
   const { data: article, isLoading } = useEncyclopediaEntity(encId);
   const stashOrigin = useStashCurrentAsOrigin();
+  const { user } = useAccount();
+  const userKey = user?.id ?? "guest";
+
+  // Atlas visit ledger — a short dwell on the detail panel is the
+  // canonical signal behind `atlas_location_visited` unlock nodes.
+  useEffect(() => {
+    if (!entity?.id) return;
+    const t = window.setTimeout(() => {
+      recordAtlasVisit({ userKey, entityId: entity.id, entitySlug: entity.slug });
+    }, ATLAS_VISIT_DWELL_MS);
+    return () => window.clearTimeout(t);
+  }, [entity?.id, entity?.slug, userKey]);
 
   const hasCoords = entity.aps_x != null && entity.aps_y != null;
+
 
   // Live values from the encyclopedia (source of truth) win. The Atlas
   // row's own name/era are used only as a fallback while loading, or for
