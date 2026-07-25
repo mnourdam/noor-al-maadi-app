@@ -124,6 +124,34 @@ export const AVATARS: HistoricalAvatar[] = [
   { id: "hourglass_bronze",  name: "الساعة الرملية",         category: "tool", rarity: "uncommon", unlock_method: "default",     glyph: "⏳" },
   { id: "qibla_compass",     name: "بوصلة القبلة",           category: "tool", rarity: "rare",     unlock_method: "achievement", unlock_requirement: { label: "إنجاز: دليل القبلة" }, glyph: "🕋" },
   { id: "surveyor_rod",      name: "قضيب المسّاح",           category: "tool", rarity: "uncommon", unlock_method: "default",     glyph: "📏" },
+
+
+  // ── Batch 2 · Arms, Cavalry & Historical Roles ──
+  { id: "scimitar",             name: "السيف المقوّس",         category: "weapon",    rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الفرسان" }, glyph: "⚔" },
+  { id: "spear_lance",          name: "الرمح",                 category: "weapon",    rarity: "uncommon",  unlock_method: "default",     glyph: "🗡" },
+  { id: "war_bow",              name: "القوس الحربي",          category: "weapon",    rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الرماة" }, glyph: "🏹" },
+  { id: "arrow_quiver",         name: "الجعبة",                category: "weapon",    rarity: "uncommon",  unlock_method: "default",     glyph: "🏹" },
+  { id: "dagger_khanjar",       name: "الخنجر",                category: "weapon",    rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: حارس القافلة" }, glyph: "🗡" },
+  { id: "battle_axe",           name: "الفأس الحربي",          category: "weapon",    rarity: "uncommon",  unlock_method: "default",     glyph: "🪓" },
+  { id: "mace_flanged",         name: "الدبوس",                category: "weapon",    rarity: "uncommon",  unlock_method: "default",     glyph: "🔱" },
+  { id: "chain_mail",           name: "الدرع الزردي",          category: "weapon",    rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: درع الميدان" }, glyph: "🛡" },
+  { id: "helm_conical",         name: "الخوذة المخروطية",      category: "weapon",    rarity: "uncommon",  unlock_method: "default",     glyph: "⛑" },
+  { id: "round_shield_leather", name: "الترس الجلدي",          category: "weapon",    rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الحماة" }, glyph: "🛡" },
+  { id: "saddle_ornate",        name: "السرج المزيّن",         category: "weapon",    rarity: "epic",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل ٨ حملات", threshold: 8 }, glyph: "🐎" },
+  { id: "stirrup_pair",         name: "الرِّكاب",              category: "weapon",    rarity: "uncommon",  unlock_method: "default",     glyph: "🐎" },
+  { id: "scholar_robe",         name: "رداء العالِم",          category: "role",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: مجلس العلماء" }, glyph: "✦" },
+  { id: "explorer_kit",         name: "عدة الرحّالة",          category: "role",      rarity: "uncommon",  unlock_method: "default",     glyph: "🧭" },
+  { id: "cartographer_tools",   name: "أدوات رسّام الخرائط",   category: "role",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: طريق الخرائط" }, glyph: "🗺" },
+  { id: "curator_gloves",       name: "قفازات أمين المتحف",    category: "role",      rarity: "uncommon",  unlock_method: "museum",      unlock_requirement: { label: "اجمع ٤٠ قطعة في المتحف", threshold: 40 }, glyph: "🧤" },
+  { id: "historian_desk",       name: "مكتب المؤرّخ",          category: "role",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: شاهد العصور" }, glyph: "📚" },
+  { id: "horseman_bridle",      name: "لجام الفارس",           category: "role",      rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الفروسية" }, glyph: "🐎" },
+  { id: "merchant_scales",      name: "ميزان التاجر",          category: "role",      rarity: "uncommon",  unlock_method: "default",     glyph: "⚖" },
+  { id: "poet_diwan",           name: "ديوان الشاعر",          category: "role",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: حافظ القصيد" }, glyph: "📖" },
+  { id: "physician_kit",        name: "عدة الطبيب",            category: "role",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: حكيم البيمارستان" }, glyph: "⚕" },
+  { id: "astronomer_kit",       name: "عدة الفلكي",            category: "role",      rarity: "epic",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: منازل النجوم" }, glyph: "🌌" },
+  { id: "judge_seal",           name: "خاتم القاضي",           category: "role",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: ميزان العدل" }, glyph: "⚖" },
+  { id: "preacher_pulpit",      name: "منبر الخطيب",           category: "role",      rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الخطابة" }, glyph: "🕌" },
+  { id: "caravan_pack",         name: "متاع القافلة",          category: "role",      rarity: "uncommon",  unlock_method: "default",     glyph: "🎒" },
 ];
 
 export const DEFAULT_AVATAR_ID = "crescent_star";

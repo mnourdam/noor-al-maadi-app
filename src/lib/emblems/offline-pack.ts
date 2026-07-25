@@ -29,6 +29,8 @@ export const OFFLINE_EMBLEM_IDS: ReadonlySet<string> = new Set([
   "compass_dividers", "brass_astrolabe", "celestial_globe", "water_clock",
   "sundial_portable", "balance_scale", "mortar_pestle", "alembic",
   "glass_vial_set", "hourglass_bronze", "qibla_compass", "surveyor_rod",
+  // Batch 2 · Arms, Cavalry & Historical Roles (25 new)
+  "scimitar", "spear_lance", "war_bow", "arrow_quiver", "dagger_khanjar", "battle_axe", "mace_flanged", "chain_mail", "helm_conical", "round_shield_leather", "saddle_ornate", "stirrup_pair", "scholar_robe", "explorer_kit", "cartographer_tools", "curator_gloves", "historian_desk", "horseman_bridle", "merchant_scales", "poet_diwan", "physician_kit", "astronomer_kit", "judge_seal", "preacher_pulpit", "caravan_pack",
 ]);
 
 /** Local path (same origin as the app) for a bundled emblem asset. */
