@@ -10,10 +10,10 @@
 //   <EmblemRarityFrame /> so we can compose freely.
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getEmblemRecord } from "@/lib/emblems/registry";
 import { DEFAULT_PREMIUM_EMBLEM_ID, resolveProfileEmblem } from "@/lib/emblems/resolver";
-import { pickAssetUrl, type EmblemSize } from "@/lib/emblems/asset-manifest";
+import { emblemSourceCandidates, type EmblemSize } from "@/lib/emblems/asset-manifest";
 
 export type EmblemVisualSize = "xs" | "sm" | "md" | "lg" | "xl" | "share";
 
@@ -46,32 +46,39 @@ export function EmblemArt({
   const resolved = resolveProfileEmblem(avatarId);
   const target = SIZE_TO_ASSET[size];
   const fallbackRecord = getEmblemRecord(DEFAULT_PREMIUM_EMBLEM_ID) ?? resolved.record;
-  const [failed, setFailed] = useState(false);
-  const displayRecord = failed ? fallbackRecord : resolved.record;
-  const avif = pickAssetUrl(displayRecord, target, "avif");
-  const webp = pickAssetUrl(displayRecord, target, "webp");
 
-  // Reset failure state if the avatar changes.
+  // One ordered, local-first candidate list: bundled WebP → CDN → legacy, and
+  // finally the frozen Premium default. A single <img> walks the list on error,
+  // so a missing CDN file can never blank out an emblem that ships offline.
+  const sources = useMemo(() => {
+    const primary = emblemSourceCandidates(resolved.record, target);
+    const backup =
+      fallbackRecord.id === resolved.record.id
+        ? []
+        : emblemSourceCandidates(fallbackRecord, target);
+    return [...primary, ...backup.filter((u) => !primary.includes(u))];
+  }, [resolved.record, fallbackRecord, target]);
+
+  const [index, setIndex] = useState(0);
+
+  // Reset the walk when the emblem (or size) changes.
   useEffect(() => {
-    setFailed(false);
-  }, [resolved.record.id]);
+    setIndex(0);
+  }, [resolved.record.id, target]);
 
-  if (!resolved.hasPremiumAsset && displayRecord.id === resolved.record.id) return null;
-  if (!avif && !webp) return null;
+  const src = sources[Math.min(index, sources.length - 1)];
+  if (!src) return null;
 
   return (
-    <picture>
-      {avif && <source srcSet={avif} type="image/avif" />}
-      {webp && <source srcSet={webp} type="image/webp" />}
-      <img
-        src={webp ?? avif ?? ""}
-        alt={displayRecord.name_ar}
-        loading={eager ? "eager" : "lazy"}
-        decoding="async"
-        onError={() => setFailed(true)}
-        className={className}
-        style={{ objectFit: "contain" }}
-      />
-    </picture>
+    <img
+      src={src}
+      alt={resolved.record.name_ar}
+      loading={eager ? "eager" : "lazy"}
+      decoding="async"
+      onError={() => setIndex((i) => (i + 1 < sources.length ? i + 1 : i))}
+      className={className}
+      style={{ objectFit: "contain" }}
+    />
   );
 }
+
