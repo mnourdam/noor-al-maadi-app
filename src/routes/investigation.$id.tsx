@@ -118,6 +118,21 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const [resolvedIndices, setResolvedIndices] = useState<Set<number>>(() => new Set());
   const [finished, setFinished] = useState(alreadyDone);
   const [heartGain, setHeartGain] = useState<number>(0);
+  // Truth-in-rewards: the result screen must show ONLY what the server
+  // actually granted. The published `reward` block is an *authoring*
+  // value; `complete_investigation_v2` caps it (XP ≤ 150, Dinars ≤ 50,
+  // Hearts ≤ 5) and grants nothing on a replay. Showing `reward.xp`
+  // directly (e.g. 1100) is a lie whenever the cap or a replay applies.
+  const [grant, setGrant] = useState<
+    | null
+    | {
+        status: "granted" | "already" | "queued" | "refused";
+        xp: number;
+        dinars: number;
+        hearts: number;
+      }
+  >(null);
+
   // Double-tap guard — a second synchronous click before React commits
   // the state transition must be dropped so Next never advances twice
   // and grantRewards never fires twice in the same tick.
