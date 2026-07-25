@@ -1010,3 +1010,8 @@ Storage convention: `campaign-key-art/<campaign_id>/key-art-v1.jpg`, persisted a
 | 60 | `rise-of-the-ottoman-state` | ✅ shipped (Batch 12) |
 | 61 | `ottoman-expansion-anatolia-balkans` | ✅ shipped (Batch 12 — corner artifact repaired) |
 | 62 | `battle-of-kosovo` | ✅ shipped (Batch 12 — regenerated: foreground tug enlarged, contrast raised for the 64px thumbnail test) |
+| 63 | `battle-of-ankara` | ✅ shipped (Batch 13) |
+| 64 | `ottoman-reunification` | ✅ shipped (Batch 13 — early brick Eski Cami under scaffolding; no Sinan-era architecture) |
+| 65 | `conquest-of-constantinople` | ✅ shipped (Batch 13 — Hagia Sophia rendered minaret-free per 1453 accuracy) |
+| 66 | `selim-i-annexation-of-the-mashriq` | ✅ shipped (Batch 13 — Ayyubid citadel silhouette, no Muhammad Ali Mosque) |
+| 67 | `ottoman-golden-age` | ✅ shipped (Batch 13) |
