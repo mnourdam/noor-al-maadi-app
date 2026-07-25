@@ -1,63 +1,80 @@
 // ============================================================
-// Campaign Era Dividers
+// Campaign Era Dividers — grouping layer
 // ------------------------------------------------------------
-// Dividers are first-class timeline section objects stored as rows
-// in `admin_campaigns` with `data.kind === "divider"`. They share
-// the same `chronological_order` axis as campaigns, so admin drag
-// ordering, offline snapshot, and player display all reuse the
-// existing pipeline — no schema change required.
+// Dividers are a SEPARATE entity type from campaigns (see
+// `src/lib/campaigns/entities.ts`). This module only knows how to
+// interleave the two ordered collections into display sections.
 //
-// A divider's role is purely structural: it groups every campaign
-// that follows it (until the next divider) into one era section.
-// Designed as a reusable timeline section object so we can later
-// attach descriptions, artwork, progress, and unlock state.
+// It never mutates campaigns, never gives a divider campaign
+// behaviour, and defensively drops any divider that a caller
+// accidentally passes inside a campaign array.
 // ============================================================
 
 import type { Campaign } from "@/types/campaign";
 import { campaignSortKey } from "./campaignChronology";
 import { withBackfilledChronology } from "./campaignChronologyBackfill";
+import {
+  isDividerPayload,
+  isDividerRow,
+  selectDividers,
+  toDivider,
+  type CampaignSectionDivider,
+  type RawCampaignRow,
+} from "./campaigns/entities";
 
-export interface CampaignDivider {
-  kind: "divider";
-  id: string;
-  title: string;
-  subtitle?: string;
-  chronological_order?: number;
-  /** Reserved for future enrichment (era key, artwork, etc.). */
-  era?: string;
-  artwork?: string;
-  description?: string;
-  status?: "published" | "draft";
-}
+export type { CampaignSectionDivider } from "./campaigns/entities";
+export {
+  isDividerPayload,
+  isDividerRow,
+  isCampaignRow,
+  selectCampaignRows,
+  selectDividers,
+  partitionCampaignRows,
+  toDivider,
+  dividerPayload,
+  assertNotDivider,
+  DIVIDER_KIND,
+} from "./campaigns/entities";
+
+/** @deprecated legacy alias — use `CampaignSectionDivider`. */
+export type CampaignDivider = CampaignSectionDivider;
+
+/** @deprecated legacy alias — use `isDividerPayload`. */
+export const isDividerData = isDividerPayload;
 
 export type FeedItem =
-  | { type: "divider"; divider: CampaignDivider }
+  | { type: "divider"; divider: CampaignSectionDivider }
   | { type: "campaign"; campaign: Campaign };
 
 export interface EraSection {
-  divider: CampaignDivider | null; // null = uncategorized leading section
+  divider: CampaignSectionDivider | null; // null = uncategorized leading section
   campaigns: Campaign[];
 }
 
-export function isDividerData(d: any): d is CampaignDivider {
-  return !!d && typeof d === "object" && d.kind === "divider";
+/** Sort key for a divider — same axis as campaigns. */
+export function dividerSortKey(d: CampaignSectionDivider): number {
+  return typeof d.order === "number" && Number.isFinite(d.order)
+    ? d.order
+    : Number.POSITIVE_INFINITY;
 }
 
-/** Sort key for a divider — same axis as campaigns. */
-export function dividerSortKey(d: CampaignDivider): number {
-  if (typeof d.chronological_order === "number" && Number.isFinite(d.chronological_order)) {
-    return d.chronological_order;
-  }
-  return Number.POSITIVE_INFINITY;
+/** Build the divider list from raw storage rows. */
+export function dividersFromRows(rows: readonly RawCampaignRow[] | null | undefined) {
+  return selectDividers(rows);
 }
 
 /**
  * Merge campaigns + dividers into a single ordered feed using the shared
- * chronological_order axis. Stable, deterministic — never depends on
- * insertion order or timestamps.
+ * chronological_order axis. Any divider that sneaks into `campaigns` is
+ * dropped — campaign pipelines never carry dividers.
  */
-export function buildFeed(campaigns: Campaign[], dividers: CampaignDivider[]): FeedItem[] {
-  const cs = campaigns.map((c) => withBackfilledChronology(c));
+export function buildFeed(
+  campaigns: Campaign[],
+  dividers: CampaignSectionDivider[],
+): FeedItem[] {
+  const cs = campaigns
+    .filter((c) => !isDividerPayload(c))
+    .map((c) => withBackfilledChronology(c));
   const items: { key: number; tiebreak: string; item: FeedItem }[] = [];
   for (const c of cs) {
     items.push({ key: campaignSortKey(c), tiebreak: c.title ?? "", item: { type: "campaign", campaign: c } });
@@ -90,3 +107,6 @@ export function groupFeedIntoSections(feed: FeedItem[]): EraSection[] {
   // Drop empty leading uncategorized section
   return sections.filter((s) => s.divider || s.campaigns.length > 0);
 }
+
+// Re-exported for callers that need the raw-row predicate under the old name.
+export { isDividerRow as isDividerStorageRow, toDivider as normalizeDivider };
