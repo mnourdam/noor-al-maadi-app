@@ -241,7 +241,25 @@ function ImportV2Page() {
                       <td className="p-1 text-destructive">
                         {(it.scene_deletes.length + it.relation_deletes.length + it.source_deletes.length) || ""}
                       </td>
-                      <td className="p-1">{it.issues.map((i) => i.code).join(", ")}</td>
+                      <td className="p-1">
+                        {it.issues.length === 0 ? "" : (
+                          <ul className="space-y-1">
+                            {it.issues.map((i, idx) => {
+                              const extra = (i as Record<string, unknown>).message
+                                ?? (i as Record<string, unknown>).id
+                                ?? (i as Record<string, unknown>).value
+                                ?? (i as Record<string, unknown>).field;
+                              return (
+                                <li key={idx} className="font-mono text-[11px] leading-relaxed">
+                                  <span className="text-destructive">{i.code}</span>
+                                  {extra ? <span className="text-muted-foreground"> — {String(extra)}</span> : null}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </td>
+
                     </tr>
                   ))}
                 </tbody>
