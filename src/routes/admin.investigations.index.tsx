@@ -453,6 +453,8 @@ function AdminInvestigationsPage() {
                 ? <Chip onRemove={() => setWorldFilter("")}>بدون عالم</Chip>
                 : worldFilter && <Chip onRemove={() => setWorldFilter("")}>عالم: {worldFilter}</Chip>}
               {statusFilter && <Chip onRemove={() => setStatusFilter("")}>{statusFilter === "enabled" ? "مفعّل" : "معطّل"}</Chip>}
+              {templateFilter && <Chip onRemove={() => setTemplateFilter("")}>{templateFilter === "only" ? "قوالب فقط" : "بدون قوالب"}</Chip>}
+
               <button onClick={clearFilters}
                 className="rounded-full border border-slate-700 px-2 py-0.5 text-slate-400 hover:border-amber-400/40 hover:text-amber-300">
                 مسح الكل
