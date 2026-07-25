@@ -21,7 +21,7 @@
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Share2, Download, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ProfileState } from "@/lib/profile";
 import { levelFor } from "@/lib/app-constants";
@@ -32,7 +32,8 @@ import {
   sanitizeFilenameHandle,
   type DisplayNameSources,
 } from "@/lib/share/displayName";
-import { shareImage, downloadImage } from "@/lib/share/shareService";
+import { downloadImage } from "@/lib/share/shareService";
+
 
 // ─── Public types ──────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ export function ShareCard(props: ShareCardProps) {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ready, setReady] = useState(false);
-  const [busy, setBusy] = useState<"share" | "download" | null>(null);
+  const [busy, setBusy] = useState<"download" | null>(null);
 
   const lvl = levelFor(profile.points);
   const activeTitle =
@@ -247,48 +248,8 @@ export function ShareCard(props: ShareCardProps) {
 
 
   const filenameBase = `irth-identity-${sanitizeFilenameHandle(username || cardNumber)}`;
-  const shareText =
-    `${displayName} — بطاقتي التاريخية في إرث\n` +
-    `المستوى ${lvl.level} · ${profile.points.toLocaleString("en-US")} XP`;
 
-  const onShare = useCallback(async () => {
-    if (!ready || busy) return;
-    setBusy("share");
-    // Hard watchdog: no matter what the share pipeline does, the UI must
-    // never stay stuck on "Preparing…". After 20s force a graceful reset.
-    let released = false;
-    const release = () => {
-      if (released) return;
-      released = true;
-      setBusy(null);
-    };
-    const watchdog = setTimeout(() => {
-      if (!released) {
-        toast.error("تعذّرت المشاركة — حاول مجددًا");
-        release();
-      }
-    }, 20_000);
-    try {
-      const blob = await canvasToBlob(canvasRef.current);
-      if (!blob) { toast.error("تعذر تجهيز البطاقة، حاول مجددًا"); return; }
-      const res = await shareImage({
-        jobId: `identity-card-share-${cardNumber}`,
-        blob,
-        filename: `${filenameBase}.png`,
-        text: `هذه رحلتي عبر التاريخ الإسلامي في تطبيق إرث\n${shareText}`,
-        title: "بطاقة هويتي التاريخية في إرث",
-      });
-      if (res.status === "downloaded") {
-        toast.success("المشاركة المباشرة غير مدعومة، تم تنزيل الصورة بدلًا من ذلك");
-      }
-    } catch (err) {
-      console.warn("[share-card] share failed", err);
-      toast.error("تعذّرت المشاركة — حاول مجددًا");
-    } finally {
-      clearTimeout(watchdog);
-      release();
-    }
-  }, [ready, busy, cardNumber, filenameBase, shareText]);
+
 
   const onDownload = useCallback(async () => {
     if (!ready || busy) return;
@@ -324,35 +285,22 @@ export function ShareCard(props: ShareCardProps) {
           aria-label="بطاقة الهوية التاريخية"
         />
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={onShare}
-          disabled={disabled}
-          aria-busy={busy === "share"}
-          className="flex items-center justify-center gap-2 rounded-xl bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-50"
-        >
-          {busy === "share" ? (
-            <><Loader2 className="size-4 animate-spin" /> جاري تجهيز البطاقة…</>
-          ) : (
-            <><Share2 className="size-4" /> مشاركة كصورة</>
-          )}
-        </button>
-        <button
-          onClick={onDownload}
-          disabled={disabled}
-          aria-busy={busy === "download"}
-          className="flex items-center justify-center gap-2 rounded-xl border border-gold/30 bg-surface py-2.5 text-sm disabled:opacity-50"
-        >
-          {busy === "download" ? (
-            <><Loader2 className="size-4 animate-spin" /> جاري تجهيز البطاقة…</>
-          ) : (
-            <><Download className="size-4" /> تحميل كصورة</>
-          )}
-        </button>
-      </div>
+      <button
+        onClick={onDownload}
+        disabled={disabled}
+        aria-busy={busy === "download"}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-gold py-2.5 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-50"
+      >
+        {busy === "download" ? (
+          <><Loader2 className="size-4 animate-spin" /> جاري تجهيز البطاقة…</>
+        ) : (
+          <><Download className="size-4" /> تحميل كصورة</>
+        )}
+      </button>
     </div>
   );
 }
+
 
 // ─── Canvas drawing — 1080×1920, museum identity document (Phase 10) ──
 
