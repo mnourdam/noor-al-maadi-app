@@ -4,7 +4,7 @@
 // Contract for future CDN-hosted premium assets. Every asset URL
 // today is `null` — real files are rendered offline (Blender /
 // hand-painted) and uploaded later. The `<EmblemArt />` component
-// gracefully falls back to the legacy SVG until then.
+// gracefully falls back to the frozen Premium default alias until then.
 //
 // Convention (documented, NOT auto-generated):
 //   /emblems/<id>/<size>.<ext>
@@ -27,12 +27,10 @@ export function pickAssetUrl(
   size: EmblemSize,
   format: EmblemFormat,
 ): string | null {
-  // 1) Offline bundled pack — served from app origin. WebP only;
-  //    AVIF requests fall through to the CDN matrix as an upgrade.
-  if (format === "webp") {
-    const local = localEmblemPath(record.id, size);
-    if (local) return local;
-  }
+  // 1) Offline bundled pack — served from app origin. AVIF and WebP both
+  //    exist locally, which is required for installed Android/offline use.
+  const local = localEmblemPath(record.id, size, format);
+  if (local) return local;
   // 2) Premium production assets (Phase 9 — size × format matrix on CDN).
   const matrix = PREMIUM_EMBLEM_ASSETS[record.id];
   if (matrix) {
@@ -79,6 +77,4 @@ export const EMPTY_ASSETS: EmblemAssetSet = {
   asset_avif_url: null,
   transparent_background: true,
   dominant_color: null,
-  fallback_glyph: "★",
-  fallback_svg_key: "star",
 };

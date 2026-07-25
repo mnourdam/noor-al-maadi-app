@@ -63,9 +63,9 @@ export const OFFLINE_EMBLEM_IDS: ReadonlySet<string> = new Set([
 
 
 /** Local path (same origin as the app) for a bundled emblem asset. */
-export function localEmblemPath(id: string, size: EmblemSize): string | null {
+export function localEmblemPath(id: string, size: EmblemSize, format: "webp" | "avif" = "webp"): string | null {
   if (!OFFLINE_EMBLEM_IDS.has(id)) return null;
-  return `/emblems/${id}_${size}.webp`;
+  return `/emblems/${id}_${size}.${format}`;
 }
 
 /** True when the app has a locally-served copy — no CDN needed. */

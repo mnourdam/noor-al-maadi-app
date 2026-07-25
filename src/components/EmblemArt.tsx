@@ -4,15 +4,15 @@
 // - Uses the resolver so every surface (HUD, profile, picker,
 //   community, inbox, share card) shares one code path.
 // - Picks a raster size based on the requested display size.
-// - Falls back to the legacy <AvatarArt /> SVG when no Premium
-//   asset is authored yet, or when the raster fails to load.
+// - Falls back to the frozen Premium default when a specific raster
+//   fails to load. The legacy SVG renderer is not used here.
 // - Does NOT paint the rarity frame — that lives in
 //   <EmblemRarityFrame /> so we can compose freely.
 // ============================================================
 
 import { useEffect, useState } from "react";
-import { AvatarArt } from "./AvatarArt";
-import { resolveProfileEmblem } from "@/lib/emblems/resolver";
+import { getEmblemRecord } from "@/lib/emblems/registry";
+import { DEFAULT_PREMIUM_EMBLEM_ID, resolveProfileEmblem } from "@/lib/emblems/resolver";
 import { pickAssetUrl, type EmblemSize } from "@/lib/emblems/asset-manifest";
 
 export type EmblemVisualSize = "xs" | "sm" | "md" | "lg" | "xl" | "share";
@@ -42,18 +42,19 @@ export function EmblemArt({
 }: EmblemArtProps) {
   const resolved = resolveProfileEmblem(avatarId);
   const target = SIZE_TO_ASSET[size];
-  const avif = pickAssetUrl(resolved.record, target, "avif");
-  const webp = pickAssetUrl(resolved.record, target, "webp");
+  const fallbackRecord = getEmblemRecord(DEFAULT_PREMIUM_EMBLEM_ID) ?? resolved.record;
   const [failed, setFailed] = useState(false);
+  const displayRecord = failed ? fallbackRecord : resolved.record;
+  const avif = pickAssetUrl(displayRecord, target, "avif");
+  const webp = pickAssetUrl(displayRecord, target, "webp");
 
   // Reset failure state if the avatar changes.
   useEffect(() => {
     setFailed(false);
   }, [resolved.record.id]);
 
-  if (!resolved.hasPremiumAsset || failed || (!avif && !webp)) {
-    return <AvatarArt id={resolved.legacyKey} className={className} />;
-  }
+  if (!resolved.hasPremiumAsset && displayRecord.id === resolved.record.id) return null;
+  if (!avif && !webp) return null;
 
   return (
     <picture>
@@ -61,7 +62,7 @@ export function EmblemArt({
       {webp && <source srcSet={webp} type="image/webp" />}
       <img
         src={webp ?? avif ?? ""}
-        alt={resolved.record.name_ar}
+        alt={displayRecord.name_ar}
         loading={eager ? "eager" : "lazy"}
         decoding="async"
         onError={() => setFailed(true)}

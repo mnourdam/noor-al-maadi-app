@@ -3,8 +3,8 @@
 // ------------------------------------------------------------
 // Phase 9 / Phase 0 deliverable. Shows every emblem in the
 // canonical registry with its category, rarity, status, whether
-// a Premium asset has been uploaded, visual/asset versions, and
-// the legacy SVG fallback key. No CRUD, no upload pipeline yet.
+// a Premium asset has been uploaded, and visual/asset versions.
+// No CRUD, no upload pipeline yet.
 // ============================================================
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -84,7 +84,6 @@ function EmblemsAdminPage() {
               <th className="p-3 text-start">الحالة</th>
               <th className="p-3 text-start">Premium</th>
               <th className="p-3 text-start">v.asset / v.visual</th>
-              <th className="p-3 text-start">Legacy fallback</th>
               <th className="p-3 text-start">Signature</th>
             </tr>
           </thead>
@@ -111,7 +110,6 @@ function EmblemsAdminPage() {
                 <td className="p-3 font-mono text-xs">
                   v{r.asset_version} / v{r.visual_version}
                 </td>
-                <td className="p-3 font-mono text-xs">{r.fallback_svg_key}</td>
                 <td className="p-3">
                   {signatureIds.has(r.id) ? (
                     <span className="rounded-full bg-[#d4af37]/20 px-2 py-0.5 text-xs text-[#d4af37]">Signature</span>

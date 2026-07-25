@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Check, X, Lock, Sparkles } from "lucide-react";
 import {
   AVATARS,
-  getAvatar,
   isAvatarUnlocked,
   CATEGORY_LABEL,
   RARITY_LABEL,
@@ -13,6 +12,7 @@ import {
 import { Avatar } from "./Avatar";
 import { ModalPortal } from "@/components/ModalPortal";
 import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registration";
+import { resolveProfileEmblem } from "@/lib/emblems";
 
 const RARITY_BADGE: Record<AvatarRarity, string> = {
   common:    "bg-white/10 text-muted-foreground",
@@ -52,7 +52,7 @@ export function AvatarPicker({
     () => (cat === "all" ? AVATARS : AVATARS.filter((a) => a.category === cat)),
     [cat],
   );
-  const current = getAvatar(currentId);
+  const resolvedCurrent = resolveProfileEmblem(currentId);
 
   return (
     <ModalPortal>
@@ -75,11 +75,11 @@ export function AvatarPicker({
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-3">
-            <Avatar avatarId={current.id} size="md" />
+            <Avatar avatarId={currentId} size="md" />
             <div className="min-w-0">
               <p className="font-display text-sm font-bold">الشعارات الشخصية</p>
               <p className="truncate text-[10px] text-muted-foreground">
-                {current.name} · {RARITY_LABEL[current.rarity]}
+                {resolvedCurrent.record.name_ar} · {RARITY_LABEL[resolvedCurrent.record.rarity]}
               </p>
             </div>
           </div>
