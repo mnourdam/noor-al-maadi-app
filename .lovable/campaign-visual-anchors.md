@@ -964,3 +964,24 @@ Autonomous production mode (no per-batch approval). Every artwork is compared ag
 | 16 | `abu-bakr-caliphate` | ✅ shipped |
 
 Storage convention: `campaign-key-art/<campaign_id>/key-art-v1.jpg`, persisted as `admin_campaigns.key_art_path` (paths only, signed at runtime).
+| 17 | `ridda-wars-campaign` | ✅ shipped (Batch 4) |
+| 18 | `futuh-iraq` | ✅ shipped (Batch 4) |
+| 19 | `futuh-al-sham` | ✅ shipped (Batch 4) |
+| 20 | `great-conquests-yarmouk-qadisiyyah` | ✅ shipped (Batch 4) |
+| 21 | `madain-and-nihawand` | ✅ shipped (Batch 4 — corner artifact repaired) |
+| 22 | `conquest-of-egypt` | ✅ shipped (Batch 5) |
+| 23 | `martyrdom-of-umar-and-caliphate-of-uthman` | ✅ shipped (Batch 5 — corner artifact repaired) |
+| 24 | `uthman-and-quran-standardization` | ✅ shipped (Batch 5 — corner artifact repaired) |
+| 25 | `ali-and-the-great-fitnah` | ✅ shipped (Batch 5 — corner artifact repaired) |
+| 26 | `rise-of-the-umayyad-state` | ✅ shipped (Batch 5) |
+| 27 | `muawiya-and-state-building` | ✅ shipped (Batch 6 — regenerated for colour temperature) |
+| 28 | `umayyad-siege-of-constantinople` | ✅ shipped (Batch 6) |
+| 29 | `arabization-and-reforms-of-abd-almalik` | ✅ shipped (Batch 6 — regenerated to remove Ottoman-era tilework) |
+| 30 | `conquest-of-sindh-and-transoxiana` | ✅ shipped (Batch 6 — regenerated to remove Timurid forms) |
+| 31 | `umayyad-golden-age` | ✅ shipped (Batch 6 — regenerated for crop safety) |
+| 32 | `battle-of-tours` | ✅ shipped (Batch 7 — v3; corner cleaned, silhouette strengthened for 64px test) |
+| 33 | `fall-of-umayyads` | ✅ shipped (Batch 7) |
+| 34 | `founding-of-abbasid-state` | ✅ shipped (Batch 7) |
+| 35 | `baghdad-capital-of-the-world` | ✅ shipped (Batch 7) |
+| 36 | `harun-alrashid` | ✅ shipped (Batch 7 — regenerated to remove European longcase clock + Timurid courtyard) |
+| 37 | `almamun-translation-movement` | ✅ shipped (Batch 7 — regenerated to remove CG look + Ottoman skyline) |
