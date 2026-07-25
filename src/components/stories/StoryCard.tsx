@@ -112,6 +112,8 @@ export function StoryCard({
   );
   const coverRow = useCoverRow(story.id, story.cover_media_id);
   const cover = useStoryMediaUrl(coverRow);
+  const [coverFailed, setCoverFailed] = useState(false);
+  useEffect(() => { setCoverFailed(false); }, [cover]);
 
   const pct = Math.round(progressFraction(story) * 100);
   const widthClass = variant === "rail" ? "w-44 flex-none snap-start sm:w-52" : "w-full";
