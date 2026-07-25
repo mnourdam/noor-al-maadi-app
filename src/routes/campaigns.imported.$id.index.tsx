@@ -122,10 +122,7 @@ function ImportedCampaignOverview() {
               imgClassName="h-full w-full object-cover"
               loading="eager"
             />
-            {hasCampaignKeyArt(campaign) && (
-              <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--surface))] via-[hsl(var(--surface)/0.72)] to-[hsl(var(--surface)/0.28)]" />
-
-            )}
+            {hasCampaignKeyArt(campaign) && <CampaignDetailScrim campaign={campaign} />}
             <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
             <div className="relative">
 
