@@ -67,9 +67,18 @@ export function useStoryUnlockInvalidation(queryClient: QueryClient): void {
     };
 
     for (const evt of UNLOCK_SIGNALS) window.addEventListener(evt, schedule);
+
+    // Identity transitions change WHO the server evaluates the spec for:
+    // a guest-computed answer must never survive sign-in (or sign-out).
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") schedule();
+    });
+
     return () => {
       for (const evt of UNLOCK_SIGNALS) window.removeEventListener(evt, schedule);
+      try { sub.subscription.unsubscribe(); } catch { /* noop */ }
       if (timer != null) window.clearTimeout(timer);
     };
   }, [queryClient]);
+
 }
