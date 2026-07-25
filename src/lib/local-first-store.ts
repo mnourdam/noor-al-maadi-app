@@ -19,6 +19,11 @@
 import { loadBundledSnapshot } from "./offline-snapshot";
 import { loadSnapshot, saveSnapshot, MIN_PUBLIC_ENCYCLOPEDIA_ROWS, type OfflineSnapshot } from "./offline-storage";
 import { normalizeArabicName } from "./arabic-normalize";
+import {
+  isDividerRow,
+  partitionCampaignRows,
+  type RawCampaignRow,
+} from "./campaigns/entities";
 
 type Row = Record<string, any>;
 
@@ -52,9 +57,13 @@ let encyclopediaAll: Row[] = [];
 
 const atlasPublished: Row[] = [];
 
+// Campaigns and section dividers share the `admin_campaigns` collection but
+// are DIFFERENT entity types. They are indexed separately so no player
+// pipeline can ever receive a divider. See `src/lib/campaigns/entities.ts`.
 const campaignsById = new Map<string, Row>();
 const campaignsBySlug = new Map<string, Row>();
 let campaignsAll: Row[] = [];
+let campaignDividerRows: Row[] = [];
 
 const investigationsBySlug = new Map<string, Row>();
 let investigationsAll: Row[] = [];
@@ -125,7 +134,10 @@ function indexAtlas(rows: Row[]) {
 function indexCampaigns(rows: Row[]) {
   campaignsById.clear();
   campaignsBySlug.clear();
-  campaignsAll = rows.filter((r) => r && r.status === "published");
+  const published = rows.filter((r) => r && r.status === "published");
+  const split = partitionCampaignRows(published as RawCampaignRow[]);
+  campaignsAll = split.campaigns as Row[];
+  campaignDividerRows = published.filter((r) => isDividerRow(r as RawCampaignRow));
   for (const r of campaignsAll) {
     if (r.id) campaignsById.set(r.id, r);
     if (r.slug) campaignsBySlug.set(r.slug, r);
@@ -338,7 +350,10 @@ export function localEncyclopediaAll(): Row[] { return encyclopediaAll; }
 
 export function localAtlasEntities(): Row[] { return atlasPublished; }
 
+/** Playable campaigns only — section dividers are NEVER included. */
 export function localPublishedCampaigns(): Row[] { return campaignsAll; }
+/** Raw section-divider rows (organizational only). */
+export function localCampaignDividerRows(): Row[] { return campaignDividerRows; }
 export function localCampaignByIdOrSlug(idOrSlug: string): Row | null {
   if (!idOrSlug) return null;
   return campaignsById.get(idOrSlug) ?? campaignsBySlug.get(idOrSlug) ?? null;

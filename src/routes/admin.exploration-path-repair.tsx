@@ -11,6 +11,7 @@ import {
   buildExplorationJourney,
   type ExplorationPathConfig,
 } from "@/lib/exploration-paths";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/exploration-path-repair")({
   head: () => ({
@@ -93,7 +94,7 @@ async function gatherCandidates(
     .from("admin_campaigns")
     .select("data")
     .limit(500);
-  for (const c of camps ?? []) {
+  for (const c of selectCampaignRows(camps ?? [])) {
     const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
     const cmeta = (cm.metadata && typeof cm.metadata === "object"
       ? (cm.metadata as Record<string, unknown>)

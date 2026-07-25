@@ -40,6 +40,7 @@ import {
 } from "@/lib/arabic-normalize";
 import { scoreEntity, scoreColor } from "@/lib/encyclopedia-quality";
 import { findRicherDuplicate, richness } from "@/lib/encyclopedia-canonical";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/encyclopedia-cleanup/")({
   head: () => ({
@@ -447,7 +448,7 @@ function CleanupWorkshop() {
       try {
         const { data: c } = await supabase.from("admin_campaigns" as any).select("data");
         const cm = new Map<string, number>();
-        const blob = JSON.stringify((c ?? []) as unknown);
+        const blob = JSON.stringify(selectCampaignRows((c ?? []) as any[]));
         // Count slug occurrences cheaply.
         for (const row of (data ?? []) as unknown as EntityRow[]) {
           if (!row.slug) continue;
@@ -1289,7 +1290,7 @@ function CleanupWorkshop() {
         const { data: camps } = await supabase.from("admin_campaigns" as any).select("id,data");
         const safe = dup.slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const re = new RegExp(`(:|"|/)${safe}(?=[^a-z0-9-]|$)`, "g");
-        for (const c of (camps ?? []) as unknown as { id: string; data: any }[]) {
+        for (const c of selectCampaignRows((camps ?? []) as unknown as { id: string; data: any }[])) {
           const s = JSON.stringify(c.data);
           const next = s.replace(re, `$1${canonical.slug}`);
           if (next !== s) {

@@ -15,6 +15,7 @@
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { validateCampaign } from "@/lib/campaignStorage";
+import { isDividerPayload, selectCampaignRows } from "@/lib/campaigns/entities";
 import { withBackfilledChronology } from "@/lib/campaignChronologyBackfill";
 import {
   inferWorldFromMetadata,
@@ -514,6 +515,25 @@ export function makeCampaignEngine(meta: {
       const rows: PreviewRow[] = [];
       const seen = new Map<string, number>();
       list.forEach((item, i) => {
+        // Section dividers are a different entity type and are never
+        // importable through the campaign pipeline.
+        if (isDividerPayload(item)) {
+          rows.push({
+            index: i,
+            status: "blocked",
+            issues: [{
+              severity: "blocker" as Severity,
+              message: "فاصل عصر (divider) — لا يمكن استيراده كحملة.",
+              itemIndex: i,
+              code: "campaign.divider",
+            }],
+            title: `عنصر #${i + 1}`,
+            render: <div className="text-xs text-red-300">فاصل عصر وليس حملة.</div>,
+            data: item,
+            key: `__divider_${i}`,
+          });
+          return;
+        }
         const v = validateCampaign(item);
         const errs = v.issues.filter((x) => x.level === "error");
         const warns = v.issues.filter((x) => x.level === "warning");
@@ -650,7 +670,7 @@ export function makeCampaignEngine(meta: {
         .from("admin_campaigns" as any)
         .select("id, data")
         .limit(2000);
-      const corpus = (((allRows as unknown) ?? []) as Array<{ id: string; data: any }>)
+      const corpus = selectCampaignRows(((allRows as unknown) ?? []) as Array<{ id: string; data: any }>)
         .map((r) => {
           const d = r.data ?? {};
           const order = typeof d.chronological_order === "number" ? d.chronological_order : null;

@@ -8,6 +8,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { parseHistoricalPeriodYear } from "@/lib/campaignChronology";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/campaigns/")({
   head: () => ({
@@ -50,7 +51,7 @@ function AdminCampaignsPage() {
       .select("id, slug, title, status, data, created_at, updated_at")
       .order("updated_at", { ascending: false });
     if (error) { setErr(error.message); return; }
-    setRows((data ?? []) as unknown as AdminCampaign[]);
+    setRows(selectCampaignRows((data ?? []) as unknown as AdminCampaign[]));
     setErr(null);
   };
 

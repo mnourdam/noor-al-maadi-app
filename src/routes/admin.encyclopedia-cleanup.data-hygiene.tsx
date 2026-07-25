@@ -16,6 +16,7 @@ import { ERAS } from "@/lib/app-constants";
 import { WORLD_HUBS } from "@/lib/worlds";
 import { useTaxonomy } from "@/lib/taxonomy";
 import { BulkOrphanLinker } from "@/components/admin/BulkOrphanLinker";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/encyclopedia-cleanup/data-hygiene")({
   head: () => ({
@@ -1883,7 +1884,7 @@ function StatesCleanup({
       const { data } = await supabase.from("admin_campaigns").select("data").limit(1000);
       const map = new Map<string, number>();
       const bump = (k: string) => { if (k) map.set(k, (map.get(k) ?? 0) + 1); };
-      for (const c of (data ?? []) as { data: unknown }[]) {
+      for (const c of selectCampaignRows((data ?? []) as { data: unknown }[])) {
         const cm = (c.data && typeof c.data === "object" ? c.data : {}) as Record<string, unknown>;
         const cmeta = (cm.metadata && typeof cm.metadata === "object" ? (cm.metadata as Record<string, unknown>) : {});
         const slugs = new Set<string>();

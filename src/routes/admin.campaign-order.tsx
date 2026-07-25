@@ -27,7 +27,7 @@ import {
   useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove, SortableContext, sortableKeyboardCoordinates,
+  SortableContext, sortableKeyboardCoordinates,
   useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -233,14 +233,70 @@ function CampaignOrderPage() {
   };
 
   // ---- Reorder helpers ----
+  //
+  // Campaigns and section dividers are DIFFERENT entity types, so they move
+  // differently:
+  //   • a campaign moves as a single row (it may cross into another section,
+  //     which is an explicit re-sectioning by the admin);
+  //   • a divider moves as a whole SECTION BLOCK — the divider plus every
+  //     campaign that belongs to it, up to the next divider.
+
+  /** Rows [start, end) that form the section block owned by `idx` (a divider). */
+  const blockRange = (list: Row[], idx: number): [number, number] => {
+    let end = idx + 1;
+    while (end < list.length && !list[end].isDivider) end += 1;
+    return [idx, end];
+  };
+
+  /** Move a row (or its whole block, for dividers) so it starts at `insertAt`. */
+  const reorderRows = (prev: Row[], fromIdx: number, insertAt: number): Row[] => {
+    if (fromIdx < 0) return prev;
+    const src = prev[fromIdx];
+    const [s, e] = src.isDivider ? blockRange(prev, fromIdx) : [fromIdx, fromIdx + 1];
+    const block = prev.slice(s, e);
+    const without = [...prev.slice(0, s), ...prev.slice(e)];
+    const target = Math.max(0, Math.min(without.length, insertAt > s ? insertAt - block.length : insertAt));
+    return [...without.slice(0, target), ...block, ...without.slice(target)];
+  };
+
+  const applyReorder = (fromIdx: number, insertAt: number) => {
+    setRows((prev) => {
+      const next = reorderRows(prev, fromIdx, insertAt);
+      if (next === prev) return prev;
+      markDirty(next.map((r) => r.id));
+      return next;
+    });
+  };
 
   const moveBy = (id: string, delta: number) => {
     setRows((prev) => {
       const idx = prev.findIndex((r) => r.id === id);
       if (idx < 0) return prev;
-      const target = Math.max(0, Math.min(prev.length - 1, idx + delta));
-      if (target === idx) return prev;
-      const next = arrayMove(prev, idx, target);
+      const row = prev[idx];
+      let insertAt: number;
+      if (row.isDivider) {
+        const [s, e] = blockRange(prev, idx);
+        if (delta < 0) {
+          // Hop above the previous block (or previous row when uncategorized).
+          let p = s - 1;
+          while (p > 0 && !prev[p].isDivider) p -= 1;
+          insertAt = Math.max(0, p);
+        } else {
+          // Hop past the next whole block.
+          let n = e;
+          if (n < prev.length && prev[n].isDivider) {
+            const [, ne] = blockRange(prev, n);
+            n = ne;
+          } else {
+            n = Math.min(prev.length, e + 1);
+          }
+          insertAt = n;
+        }
+      } else {
+        insertAt = Math.max(0, Math.min(prev.length, idx + delta + (delta > 0 ? 1 : 0)));
+      }
+      const next = reorderRows(prev, idx, insertAt);
+      if (next === prev) return prev;
       markDirty(next.map((r) => r.id));
       return next;
     });
@@ -252,10 +308,14 @@ function CampaignOrderPage() {
       const from = prev.findIndex((r) => r.id === id);
       const aIdx = prev.findIndex((r) => r.id === anchorId);
       if (from < 0 || aIdx < 0) return prev;
-      const without = [...prev.slice(0, from), ...prev.slice(from + 1)];
-      const anchorIdx = without.findIndex((r) => r.id === anchorId);
-      const insertAt = position === "before" ? anchorIdx : anchorIdx + 1;
-      const next = [...without.slice(0, insertAt), prev[from], ...without.slice(insertAt)];
+      let insertAt = position === "before" ? aIdx : aIdx + 1;
+      // Anchor is a divider and we drop "after" it → the row joins that
+      // section (right below the divider), never the next section.
+      if (prev[aIdx].isDivider && position === "after" && !prev[from].isDivider) {
+        insertAt = aIdx + 1;
+      }
+      const next = reorderRows(prev, from, insertAt);
+      if (next === prev) return prev;
       markDirty(next.map((r) => r.id));
       return next;
     });
@@ -273,7 +333,13 @@ function CampaignOrderPage() {
       const oldIndex = prev.findIndex((r) => r.id === active.id);
       const newIndex = prev.findIndex((r) => r.id === over.id);
       if (oldIndex < 0 || newIndex < 0) return prev;
-      const next = arrayMove(prev, oldIndex, newIndex);
+      const dragged = prev[oldIndex];
+      let insertAt = newIndex > oldIndex ? newIndex + 1 : newIndex;
+      // Dropping a campaign onto a divider means "put me inside that
+      // section", i.e. directly below the divider.
+      if (!dragged.isDivider && prev[newIndex].isDivider) insertAt = newIndex + 1;
+      const next = reorderRows(prev, oldIndex, insertAt);
+      if (next === prev) return prev;
       markDirty(next.map((r) => r.id));
       return next;
     });

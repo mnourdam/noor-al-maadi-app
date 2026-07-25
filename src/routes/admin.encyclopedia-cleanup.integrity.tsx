@@ -13,6 +13,7 @@ import {
   RefreshCw, Shield, Swords,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 type Row = {
   id: string; entity_type: string; slug: string; title: string;
@@ -70,7 +71,7 @@ function IntegrityAudit() {
       if (e.error) throw e.error;
       setRows((e.data ?? []) as unknown as Row[]);
       setAtlas((a.data ?? []) as any);
-      setCampaigns((c.data ?? []) as any);
+      setCampaigns(selectCampaignRows((c.data ?? []) as any[]));
       setCollection((u.data ?? []) as any);
     } catch (ex: any) { setErr(ex?.message || String(ex)); }
     finally { setLoading(false); }

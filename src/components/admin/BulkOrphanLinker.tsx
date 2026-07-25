@@ -15,6 +15,7 @@ import {
   ShieldCheck, Filter, RefreshCw, Save,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 type Row = {
   id: string;
@@ -251,7 +252,7 @@ async function loadCampaignCoSlugs(): Promise<Map<string, Set<string>>> {
       .limit(1000);
     if (!data) return map;
     const re = /"(?:slug|entity_slug|entity|target|unlock_slug)"\s*:\s*"([a-z0-9][a-z0-9-]+)"/gi;
-    for (const c of data as unknown as Array<{ data: unknown }>) {
+    for (const c of selectCampaignRows(data as unknown as Array<{ data: unknown }>)) {
       const blob = JSON.stringify(c.data ?? {});
       const set = new Set<string>();
       let m: RegExpExecArray | null;

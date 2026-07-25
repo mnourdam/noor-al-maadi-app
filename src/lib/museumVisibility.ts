@@ -16,6 +16,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { ensureLocalSnapshotLoaded, localPublishedCampaigns } from "@/lib/local-first-store";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export type ArtifactClassification = {
   adminImported: boolean;
@@ -79,9 +80,7 @@ export async function fetchCampaignArtifactRefSet(): Promise<Set<string>> {
       .range(from, from + PAGE - 1);
     const { data, error } = res;
     if (error || !data) break;
-    for (const row of data as Array<{ data: any }>) {
-
-
+    for (const row of selectCampaignRows(data as Array<{ data: any }>)) {
       collectArtifactRefs(row?.data, refs);
     }
     if (data.length < PAGE) break;

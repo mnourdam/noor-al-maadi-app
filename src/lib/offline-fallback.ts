@@ -11,6 +11,7 @@
  * player keeps seeing real content when offline.
  */
 import { getCollection } from "./offline-snapshot";
+import { selectCampaignRows } from "./campaigns/entities";
 import type { SupabaseEncyclopediaEntity } from "./encyclopedia-source";
 
 export async function cachedEncyclopediaList(): Promise<SupabaseEncyclopediaEntity[]> {
@@ -77,8 +78,8 @@ export async function cachedAtlasEntities(): Promise<any[]> {
 export async function cachedPublishedCampaigns(): Promise<{ id: string; slug: string; data: any }[]> {
   try {
     const rows = await getCollection<any>("admin_campaigns");
-    return rows
-      .filter((r) => r?.status === "published")
+    // Section dividers live in the same collection but are NOT campaigns.
+    return selectCampaignRows(rows.filter((r) => r?.status === "published"))
       .map((r) => ({ id: r.id, slug: r.slug, data: r.data }));
   } catch {
     return [];

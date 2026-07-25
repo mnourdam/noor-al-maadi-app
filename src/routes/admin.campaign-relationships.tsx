@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export const Route = createFileRoute("/admin/campaign-relationships")({
   head: () => ({
@@ -200,7 +201,7 @@ function CampaignRelationships() {
     try {
       const [enc, camps] = await Promise.all([
         fetchAll<EncEntity>("encyclopedia_entities", "id,entity_type,slug,title"),
-        fetchAll<Campaign>("admin_campaigns", "id,slug,title,status,data"),
+        fetchAll<Campaign>("admin_campaigns", "id,slug,title,status,data").then(selectCampaignRows),
       ]);
       const keys = new Set(enc.map((e) => `${e.entity_type}:${e.slug}`));
       setEncKeys(keys);
