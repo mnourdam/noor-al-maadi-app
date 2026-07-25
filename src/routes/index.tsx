@@ -1050,7 +1050,7 @@ function ContinueJourneyCard({ sel }: {
           <div className="arabesque-layer opacity-40" />
           <div className="absolute -left-12 -top-12 size-40 rounded-full bg-gold/20 blur-3xl" />
         </div>
-        <div className="parchment-dark relative -mt-14 px-5 pt-4 pb-5">
+        <div className="relative -mt-16 bg-background px-5 pt-2 pb-5">
           <p className="text-[10px] tracking-[0.25em] text-gold">
             {hasStarted ? "تابع من حيث توقفت" : "ابدأ حملتك الأولى"}
           </p>
