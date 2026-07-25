@@ -88,7 +88,22 @@ Pilot must be filled first, then in chronological order.
 
 ## Pilot draft — `prophetic-mission` (Iqra / Cave of Hira)
 
-_This row is a draft to be reviewed alongside 2–3 Key Art directions. It sets the pattern every other row will follow._
+_This row is a draft to be reviewed alongside 2–3 Key Art directions. It sets the pattern every other Visual DNA row will follow._
+
+**Layer 1 — Visual DNA**
+
+| Field | Value |
+|---|---|
+| `primary_color_palette` | Cold pre-dawn indigo, deep navy, granite grey-brown of Jabal an-Nur, first warm gold along the ridge crest, single warm ember tone from the cave mouth. |
+| `lighting_style` | Pre-dawn — cold ambient sky light with the very first warm rim of sunrise catching the ridge; a single motivated warm point-source implied from within the cave. |
+| `weather_atmosphere` | Utterly still, cold, clear desert air; no wind, no dust, no cloud; high altitude clarity; hushed silence made visible. |
+| `signature_landmark` | Ridge of **Jabal an-Nur** with the mouth of the **Cave of Hira** visible in profile; Makkah's basin faintly readable far below. |
+| `signature_object` | (1) faint interior glow from the cave mouth (moment of revelation, never depicted literally); (2) worn footpath up the ridge; (3) distant silhouette of the Kaaba enclosure below, small and quiet. |
+| `emotional_tone` | Contemplation on the edge of transformation. Stillness, not drama. |
+| `camera_language` | Wide landscape vista; low horizon (bottom third); ridge as diagonal from lower-right to upper-left; generous negative sky for UI overlay. |
+| `forbidden_elements` | No depiction of the Prophet ﷺ or Jibrīl عليه السلام; no calligraphy inside the frame; no anachronistic Makkah skyline (modern towers, expansion works); no fantasy light rays radiating from the cave mouth; no crowds; no visible text. |
+
+**Layer 2 — Anchor context**
 
 | Field | Value |
 |---|---|
@@ -96,13 +111,7 @@ _This row is a draft to be reviewed alongside 2–3 Key Art directions. It sets 
 | `title_ar` | حملة البعثة النبوية |
 | `era` / `world` | Prophetic era / Meccan world |
 | `years` | 610م – 613م (before Hijrah) |
-| `signature_landmark` | Ridge of **Jabal an-Nur** with the mouth of the **Cave of Hira** visible in profile at pre-dawn; Makkah's basin faintly readable far below. |
-| `dominant_atmosphere` | Cold pre-dawn blue giving way to first warm gold along the ridge; utterly still air; no wind, no dust; a single point of warmth (implied from within the cave). |
-| `symbolic_object(s)` | (1) faint interior glow from the cave mouth (the moment of revelation, never depicted literally); (2) worn footpath up the ridge; (3) distant silhouette of the Kaaba enclosure below, small and quiet. |
-| `emotional_tone` | Contemplation on the edge of transformation. Stillness, not drama. |
-| `composition_intent` | Wide vista, low horizon (bottom third), ridge as diagonal from lower-right to upper-left, generous negative sky for UI overlay. |
 | `figure_policy` | `none` — no figures. The place carries the story. |
-| `forbidden` | No depiction of the Prophet ﷺ or Jibrīl عليه السلام; no calligraphy inside the frame; no anachronistic Makkah skyline (modern towers, expansion works); no fantasy light rays radiating from the cave mouth. |
 | `reference_notes` | Geological profile of Jabal an-Nur (granite, weathered); pre-Islamic Makkah basin scale references; historical distance ≈ 3.2 km NE of the Kaaba. |
 
 ---
