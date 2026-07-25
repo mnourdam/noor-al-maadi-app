@@ -20,7 +20,7 @@ import {
 import {
   applyKeyArtOverlay,
   getCampaignKeyArtOverlay,
-  peekCampaignKeyArtOverlay,
+  
   type KeyArtOverlayRow,
 } from "./campaignKeyArtOverlay";
 
