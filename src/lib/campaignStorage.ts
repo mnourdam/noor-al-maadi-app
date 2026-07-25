@@ -142,7 +142,14 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
     push("error", "صيغة JSON غير صالحة: المتوقع كائن حملة.");
     return { ok: false, issues };
   }
+  // A section divider is NOT a campaign. It can never enter campaign
+  // validation, import, or storage.
+  if (isDividerPayload(raw)) {
+    push("error", "هذا فاصل عصر (divider) وليس حملة — الفواصل تُدار من شاشة ترتيب الحملات فقط.");
+    return { ok: false, issues };
+  }
   const obj = raw as Record<string, any>;
+
 
   if (typeof obj.title !== "string" || !obj.title.trim()) {
     push("error", "حقل (title) العنوان مطلوب.");
