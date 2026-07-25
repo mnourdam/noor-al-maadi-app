@@ -19,6 +19,7 @@ import type {
 } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { sortCampaignsChronological } from "./campaignChronology";
+import { isDividerPayload, selectCampaignRows } from "./campaigns/entities";
 
 export const CAMPAIGNS_KEY = "irth_admin_campaigns";
 export const BACKUPS_KEY = "irth_admin_backups";
