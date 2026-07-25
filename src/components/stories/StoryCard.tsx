@@ -126,12 +126,13 @@ export function StoryCard({
     >
       {/* Cover — tall cinematic 3:4 */}
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-neutral-900">
-        {cover ? (
+        {cover && !coverFailed ? (
           <img
             src={cover}
             alt={story.title_ar}
             loading="lazy"
             decoding="async"
+            onError={() => setCoverFailed(true)}
             className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.04] ${
               !story.unlocked ? "opacity-40 blur-[2px]" : ""
             }`}
