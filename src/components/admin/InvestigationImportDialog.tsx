@@ -130,6 +130,10 @@ export function InvestigationImportDialog({ onClose, onImported }: Props) {
                 </span>
               )}
             </div>
+            <a href="/templates/irth-golden-investigation-template.json" download
+              className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-amber-300 underline decoration-dotted hover:text-amber-200">
+              <FileJson className="h-3 w-3" /> تنزيل القالب الذهبي المرجعي (بنية كاملة 100%)
+            </a>
             <textarea
               onChange={(e) => { if (e.target.value.trim()) loadText(e.target.value, "لصق يدوي"); }}
               placeholder="أو الصق محتوى JSON هنا…"
