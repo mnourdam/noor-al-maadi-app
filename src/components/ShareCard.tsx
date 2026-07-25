@@ -21,13 +21,12 @@
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { Share2, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ProfileState } from "@/lib/profile";
 import { levelFor } from "@/lib/app-constants";
-import { getAvatar, RARITY_LABEL, type AvatarRarity } from "@/lib/avatars";
-import { AvatarArt } from "./AvatarArt";
+import { RARITY_LABEL } from "@/lib/avatars";
+import type { EmblemRarity } from "@/lib/emblems";
 import {
   resolveDisplayName,
   sanitizeFilenameHandle,
@@ -101,7 +100,6 @@ export function ShareCard(props: ShareCardProps) {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState<"share" | "download" | null>(null);
 
-  const avatar = getAvatar(profile.avatarId);
   const lvl = levelFor(profile.points);
   const activeTitle =
     profile.titlesEarned?.[profile.titlesEarned.length - 1] ?? lvl.title ?? null;
@@ -178,19 +176,22 @@ export function ShareCard(props: ShareCardProps) {
     (async () => {
       try { await (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready; } catch { /* ignore */ }
       // Prefer the bundled offline Premium raster (1024) — same origin,
-      // no CDN wait. Falls back to the legacy SVG only when the local
-      // pack has no entry for this emblem id.
-      const { resolveProfileEmblem, localEmblemPath } = await import("@/lib/emblems");
+      // no CDN wait. If a specific legacy id has no raster, the resolver
+      // maps it to the closest frozen Premium emblem.
+      const { DEFAULT_PREMIUM_EMBLEM_ID, resolveProfileEmblem, getEmblemRecord, localEmblemPath, pickAssetUrl } = await import("@/lib/emblems");
       const resolved = resolveProfileEmblem(profile.avatarId);
+      const fallback = getEmblemRecord(DEFAULT_PREMIUM_EMBLEM_ID);
       const localUrl = localEmblemPath(resolved.record.id, 1024);
+      const premiumUrl =
+        localUrl ??
+        pickAssetUrl(resolved.record, 1024, "webp") ??
+        (fallback ? localEmblemPath(fallback.id, 1024) : null) ??
+        (fallback ? pickAssetUrl(fallback, 1024, "webp") : null);
       const [logoImg, emblemImg] = await Promise.all([
         loadImage("/irth-icon.png").catch(() => null),
-        (localUrl
-          ? loadImage(localUrl).catch(() => null)
+        (premiumUrl
+          ? loadImage(premiumUrl).catch(() => null)
           : Promise.resolve(null)
-        ).then((img) =>
-          img ??
-          loadImage(svgDataUrl(renderToStaticMarkup(<AvatarArt id={avatar.id} />))).catch(() => null),
         ),
       ]);
       if (cancelled) return;
@@ -218,7 +219,7 @@ export function ShareCard(props: ShareCardProps) {
         joinDateLabel,
         emblemImg,
         logoImg,
-        rarity: avatar.rarity,
+        rarity: resolved.record.rarity,
       });
       setReady(true);
     })().catch(() => { setReady(false); });
@@ -319,9 +320,8 @@ export function ShareCard(props: ShareCardProps) {
 
 // ─── Canvas drawing — 1080×1350, 4:5 portrait ──────────────────────────
 
-const RARITY_ACCENT: Record<AvatarRarity, string> = {
+const RARITY_ACCENT: Record<EmblemRarity, string> = {
   common:    "#d4af37",
-  uncommon:  "#c8a233",
   rare:      "#7dd3fc",
   epic:      "#a78bfa",
   legendary: "#f5d062",
@@ -373,7 +373,7 @@ interface CardData {
   joinDateLabel: string | null;
   emblemImg: HTMLImageElement | null;
   logoImg: HTMLImageElement | null;
-  rarity: AvatarRarity;
+  rarity: EmblemRarity;
 
 }
 
@@ -819,13 +819,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = reject;
     img.src = src;
   });
-}
-
-function svgDataUrl(svg: string): string {
-  const wrapped = svg.includes("xmlns")
-    ? svg
-    : svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
-  return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(wrapped)));
 }
 
 function hexAlpha(hex: string, alpha: number): string {

@@ -54,7 +54,7 @@ export function Avatar({
       title={a.name}
       className={`relative grid place-items-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#1b2a48_0%,#0a1426_70%)] overflow-hidden ${rarityRing} ${sz.box} ${className}`}
     >
-      <EmblemArt avatarId={a.id} size={sz.emblem} className={`${sz.art} text-gold`} />
+      <EmblemArt avatarId={avatarId ?? a.id} size={sz.emblem} className={`${sz.art} text-gold`} />
       {locked && (
         <span className="absolute inset-0 grid place-items-center rounded-full bg-black/60 text-gold">
           <Lock className="size-1/3" />
