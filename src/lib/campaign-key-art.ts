@@ -22,6 +22,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { processImage, type ProcessedImage } from "./image-processor";
+import { invalidateCampaignKeyArtOverlay } from "./campaignKeyArtOverlay";
+
 
 const BUCKET = "campaign-key-art";
 
