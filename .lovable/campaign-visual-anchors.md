@@ -1000,3 +1000,8 @@ Storage convention: `campaign-key-art/<campaign_id>/key-art-v1.jpg`, persisted a
 | 50 | `battle-of-zallaqa` | ✅ shipped (Batch 10 — regenerated: war-drum brought to foreground for the 64px thumbnail test; corner cleaned) |
 | 51 | `fall-of-al-andalus` | ✅ shipped (Batch 10) |
 | 52 | `crusades-beginning-danger` | ✅ shipped (Batch 10 — regenerated: Ottoman-era blue tilework on the Dome of the Rock replaced with 11th-c. gold/green glass mosaic) |
+| 53 | `imad-aldin-zengi` | ✅ shipped (Batch 11) |
+| 54 | `nur-aldin-mahmud` | ✅ shipped (Batch 11) |
+| 55 | `ayyubid-dynasty` | ✅ shipped (Batch 11 — summit verified bare; no Muhammad Ali Mosque) |
+| 56 | `salah-al-din-and-liberation-of-jerusalem` | ✅ shipped (Batch 11 — Hattin frame; no gore, no figures) |
+| 57 | `battle-of-ain-jalut` | ✅ shipped (Batch 11) |
