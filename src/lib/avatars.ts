@@ -152,6 +152,33 @@ export const AVATARS: HistoricalAvatar[] = [
   { id: "judge_seal",           name: "خاتم القاضي",           category: "role",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: ميزان العدل" }, glyph: "⚖" },
   { id: "preacher_pulpit",      name: "منبر الخطيب",           category: "role",      rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الخطابة" }, glyph: "🕌" },
   { id: "caravan_pack",         name: "متاع القافلة",          category: "role",      rarity: "uncommon",  unlock_method: "default",     glyph: "🎒" },
+
+  // ── Batch 3 · Places & Cultural Heritage ──
+  { id: "minaret_tower",      name: "المئذنة",                category: "place",     rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة العمارة" }, glyph: "🕌" },
+  { id: "mihrab_niche",       name: "المحراب",                category: "place",     rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: قبلة القلوب" }, glyph: "🕋" },
+  { id: "desert_fortress",    name: "الحصن الصحراوي",         category: "place",     rarity: "uncommon",  unlock_method: "default",     glyph: "🏰" },
+  { id: "caravanserai",       name: "الخان",                  category: "place",     rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة القوافل" }, glyph: "🏛" },
+  { id: "souk_gate",          name: "بوابة السوق",            category: "place",     rarity: "uncommon",  unlock_method: "default",     glyph: "🚪" },
+  { id: "madrasa",            name: "المدرسة",                category: "place",     rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة العلم" }, glyph: "🏫" },
+  { id: "observatory_dome",   name: "القبة الفلكية",          category: "place",     rarity: "epic",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: عالِم الفلك" }, glyph: "🔭" },
+  { id: "hammam",             name: "الحمّام",                category: "place",     rarity: "uncommon",  unlock_method: "default",     glyph: "🛁" },
+  { id: "sabil_fountain",     name: "السبيل",                 category: "place",     rarity: "common",    unlock_method: "default",     glyph: "⛲" },
+  { id: "oasis_palm",         name: "واحة النخيل",            category: "place",     rarity: "uncommon",  unlock_method: "default",     glyph: "🌴" },
+  { id: "lighthouse_pharos",  name: "منارة الإسكندرية",       category: "place",     rarity: "epic",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الإسكندرية" }, glyph: "🗼" },
+  { id: "horseshoe_arch",     name: "القوس الأندلسي",         category: "place",     rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الأندلس" }, glyph: "🕌" },
+  { id: "oud_instrument",     name: "العود",                  category: "symbol",    rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: نغم الأصالة" }, glyph: "🎼" },
+  { id: "tambourine_daf",     name: "الدف",                   category: "symbol",    rarity: "common",    unlock_method: "default",     glyph: "🥁" },
+  { id: "geometric_panel",    name: "اللوحة الزخرفية",        category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "✶" },
+  { id: "muqarnas_fragment",  name: "قطعة المقرنص",           category: "symbol",    rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: عمارة السماء" }, glyph: "✦" },
+  { id: "incense_burner",     name: "المبخرة",                category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "🪔" },
+  { id: "crescent_medallion", name: "ميدالية الهلال",         category: "symbol",    rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: حارس الهوية" }, glyph: "☪" },
+  { id: "eight_point_star",   name: "النجمة الثمانية",        category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "✴" },
+  { id: "royal_tughra",       name: "الطغراء الملكية",         category: "symbol",    rarity: "epic",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة السلطنة" }, glyph: "❦" },
+  { id: "signet_ring",        name: "الخاتم الملكي",          category: "symbol",    rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: ختم الأمير" }, glyph: "💍" },
+  { id: "persian_carpet",     name: "السجادة الفاخرة",        category: "symbol",    rarity: "rare",      unlock_method: "museum",      unlock_requirement: { label: "اجمع ٥٠ قطعة في المتحف", threshold: 50 }, glyph: "🧿" },
+  { id: "silk_bolt",          name: "لفة الحرير",             category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "🧵" },
+  { id: "ceramic_tile",       name: "البلاطة الزلجية",        category: "symbol",    rarity: "common",    unlock_method: "default",     glyph: "◆" },
+  { id: "brass_lantern",      name: "الفانوس النحاسي",        category: "tool",      rarity: "common",    unlock_method: "default",     glyph: "🏮" },
 ];
 
 export const DEFAULT_AVATAR_ID = "crescent_star";
