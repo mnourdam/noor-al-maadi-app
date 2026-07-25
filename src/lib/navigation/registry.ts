@@ -197,7 +197,9 @@ const ADMIN_SUBPAGES: RouteId[] = [
   "/admin/import-history/$id",
   "/admin/investigations",
   "/admin/investigations/$id/edit",
+  "/admin/investigation-rewards",
   "/admin/map",
+
   "/admin/migration",
   "/admin/museum-provenance",
   "/admin/native-auth-diagnostics",

@@ -75,6 +75,7 @@ import { Route as AdminModerationRouteImport } from './routes/admin.moderation'
 import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminMapRouteImport } from './routes/admin.map'
 import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
+import { Route as AdminInvestigationRewardsRouteImport } from './routes/admin.investigation-rewards'
 import { Route as AdminImportHistoryRouteImport } from './routes/admin.import-history'
 import { Route as AdminImportRouteImport } from './routes/admin.import'
 import { Route as AdminHubBuilderRouteImport } from './routes/admin.hub-builder'
@@ -477,6 +478,12 @@ const AdminInvestigationsRoute = AdminInvestigationsRouteImport.update({
   path: '/admin/investigations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminInvestigationRewardsRoute =
+  AdminInvestigationRewardsRouteImport.update({
+    id: '/admin/investigation-rewards',
+    path: '/admin/investigation-rewards',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminImportHistoryRoute = AdminImportHistoryRouteImport.update({
   id: '/admin/import-history',
   path: '/admin/import-history',
@@ -902,6 +909,7 @@ export interface FileRoutesByFullPath {
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
+  '/admin/investigation-rewards': typeof AdminInvestigationRewardsRoute
   '/admin/investigations': typeof AdminInvestigationsRouteWithChildren
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
@@ -1034,6 +1042,7 @@ export interface FileRoutesByTo {
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
+  '/admin/investigation-rewards': typeof AdminInvestigationRewardsRoute
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/moderation': typeof AdminModerationRoute
@@ -1170,6 +1179,7 @@ export interface FileRoutesById {
   '/admin/hub-builder': typeof AdminHubBuilderRoute
   '/admin/import': typeof AdminImportRoute
   '/admin/import-history': typeof AdminImportHistoryRouteWithChildren
+  '/admin/investigation-rewards': typeof AdminInvestigationRewardsRoute
   '/admin/investigations': typeof AdminInvestigationsRouteWithChildren
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
@@ -1308,6 +1318,7 @@ export interface FileRouteTypes {
     | '/admin/hub-builder'
     | '/admin/import'
     | '/admin/import-history'
+    | '/admin/investigation-rewards'
     | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
@@ -1440,6 +1451,7 @@ export interface FileRouteTypes {
     | '/admin/hub-builder'
     | '/admin/import'
     | '/admin/import-history'
+    | '/admin/investigation-rewards'
     | '/admin/map'
     | '/admin/migration'
     | '/admin/moderation'
@@ -1575,6 +1587,7 @@ export interface FileRouteTypes {
     | '/admin/hub-builder'
     | '/admin/import'
     | '/admin/import-history'
+    | '/admin/investigation-rewards'
     | '/admin/investigations'
     | '/admin/map'
     | '/admin/migration'
@@ -1712,6 +1725,7 @@ export interface RootRouteChildren {
   AdminHubBuilderRoute: typeof AdminHubBuilderRoute
   AdminImportRoute: typeof AdminImportRoute
   AdminImportHistoryRoute: typeof AdminImportHistoryRouteWithChildren
+  AdminInvestigationRewardsRoute: typeof AdminInvestigationRewardsRoute
   AdminInvestigationsRoute: typeof AdminInvestigationsRouteWithChildren
   AdminMapRoute: typeof AdminMapRoute
   AdminMigrationRoute: typeof AdminMigrationRoute
@@ -2229,6 +2243,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/investigations'
       fullPath: '/admin/investigations'
       preLoaderRoute: typeof AdminInvestigationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/investigation-rewards': {
+      id: '/admin/investigation-rewards'
+      path: '/admin/investigation-rewards'
+      fullPath: '/admin/investigation-rewards'
+      preLoaderRoute: typeof AdminInvestigationRewardsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/import-history': {
@@ -2886,6 +2907,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminHubBuilderRoute: AdminHubBuilderRoute,
   AdminImportRoute: AdminImportRoute,
   AdminImportHistoryRoute: AdminImportHistoryRouteWithChildren,
+  AdminInvestigationRewardsRoute: AdminInvestigationRewardsRoute,
   AdminInvestigationsRoute: AdminInvestigationsRouteWithChildren,
   AdminMapRoute: AdminMapRoute,
   AdminMigrationRoute: AdminMigrationRoute,
