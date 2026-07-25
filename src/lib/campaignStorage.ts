@@ -78,7 +78,11 @@ function slugify(s: string): string {
 
 export function listCampaigns(): Campaign[] {
   if (!isBrowser()) return [];
-  return safeParse<Campaign[]>(window.localStorage.getItem(CAMPAIGNS_KEY), []);
+  const stored = safeParse<Campaign[]>(window.localStorage.getItem(CAMPAIGNS_KEY), []);
+  // Legacy caches may still contain divider payloads — never surface them
+  // as campaigns.
+  return selectCampaignRows(stored.map((c) => ({ id: c?.id, data: c })) as any[])
+    .map((r: any) => r.data as Campaign);
 }
 
 export function listPublishedCampaigns(): Campaign[] {
