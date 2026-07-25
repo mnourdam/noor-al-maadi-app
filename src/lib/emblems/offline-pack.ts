@@ -38,6 +38,15 @@ export const OFFLINE_EMBLEM_IDS: ReadonlySet<string> = new Set([
   "geometric_panel", "muqarnas_fragment", "incense_burner", "crescent_medallion",
   "eight_point_star", "royal_tughra", "signet_ring", "persian_carpet",
   "silk_bolt", "ceramic_tile", "brass_lantern",
+  // Batch 4 · Trade, Seafaring & Scientific Heritage (25 new)
+  "gold_dinar_coin", "silver_dirham_coin", "trade_ledger", "merchant_seal_stamp",
+  "spice_chest", "saffron_pouch", "date_basket", "frankincense_resin",
+  "myrrh_bundle", "coffee_dallah", "dhow_ship", "anchor_stone",
+  "kamal_navigator", "mariners_astrolabe", "pearl_diver_basket",
+  "water_skin_qirba", "wind_rose_chart", "star_chart_manuscript",
+  "silk_road_map", "mathematics_treatise", "medical_herbarium",
+  "arabian_horse_portrait", "falcon_hood", "desert_rose_crystal",
+  "camel_saddlebag",
 ]);
 
 /** Local path (same origin as the app) for a bundled emblem asset. */

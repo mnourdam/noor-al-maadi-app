@@ -179,6 +179,33 @@ export const AVATARS: HistoricalAvatar[] = [
   { id: "silk_bolt",          name: "لفة الحرير",             category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "🧵" },
   { id: "ceramic_tile",       name: "البلاطة الزلجية",        category: "symbol",    rarity: "common",    unlock_method: "default",     glyph: "◆" },
   { id: "brass_lantern",      name: "الفانوس النحاسي",        category: "tool",      rarity: "common",    unlock_method: "default",     glyph: "🏮" },
+
+  // ── Batch 4 · Trade, Seafaring & Scientific Heritage ──
+  { id: "gold_dinar_coin",        name: "الدينار الذهبي",          category: "symbol",    rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: خزانة الأسواق" }, glyph: "🪙" },
+  { id: "silver_dirham_coin",     name: "الدرهم الفضي",            category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "🪙" },
+  { id: "trade_ledger",           name: "دفتر التجارة",            category: "knowledge", rarity: "uncommon",  unlock_method: "default",     glyph: "📒" },
+  { id: "merchant_seal_stamp",    name: "ختم التاجر",              category: "tool",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: موثّق العقود" }, glyph: "🔏" },
+  { id: "spice_chest",            name: "صندوق البهارات",          category: "symbol",    rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الأسواق" }, glyph: "🧰" },
+  { id: "saffron_pouch",          name: "كيس الزعفران",            category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "🧺" },
+  { id: "date_basket",            name: "سلة التمر",               category: "symbol",    rarity: "common",    unlock_method: "default",     glyph: "🧺" },
+  { id: "frankincense_resin",     name: "لبان بخور",               category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "💠" },
+  { id: "myrrh_bundle",           name: "حزمة المُرّ",              category: "symbol",    rarity: "uncommon",  unlock_method: "default",     glyph: "💠" },
+  { id: "coffee_dallah",          name: "دلة القهوة",              category: "tool",      rarity: "rare",      unlock_method: "museum",      unlock_requirement: { label: "اجمع ٦٠ قطعة في المتحف", threshold: 60 }, glyph: "☕" },
+  { id: "dhow_ship",              name: "سفينة الداو",             category: "place",     rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة البحّارة" }, glyph: "⛵" },
+  { id: "anchor_stone",           name: "مرساة حجرية",             category: "tool",      rarity: "uncommon",  unlock_method: "default",     glyph: "⚓" },
+  { id: "kamal_navigator",        name: "كمال الملاحة",            category: "tool",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: دليل البحار" }, glyph: "🧭" },
+  { id: "mariners_astrolabe",     name: "أسطرلاب بحري",            category: "tool",      rarity: "epic",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: نجم الملاحة" }, glyph: "🧭" },
+  { id: "pearl_diver_basket",     name: "سلة الغوّاص",             category: "role",      rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة اللؤلؤ" }, glyph: "🧺" },
+  { id: "water_skin_qirba",       name: "قِربة الماء",             category: "tool",      rarity: "common",    unlock_method: "default",     glyph: "🫙" },
+  { id: "wind_rose_chart",        name: "خريطة الرياح",            category: "knowledge", rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: حافظ الجهات" }, glyph: "🗺" },
+  { id: "star_chart_manuscript",  name: "مخطوط النجوم",            category: "knowledge", rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة السماء" }, glyph: "🌌" },
+  { id: "silk_road_map",          name: "خريطة طريق الحرير",       category: "knowledge", rarity: "epic",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل ١٠ حملات", threshold: 10 }, glyph: "🗺" },
+  { id: "mathematics_treatise",   name: "رسالة الرياضيات",         category: "knowledge", rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: برهان الهندسة" }, glyph: "📐" },
+  { id: "medical_herbarium",      name: "موسوعة الأعشاب",          category: "knowledge", rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: حكمة النبات" }, glyph: "🌿" },
+  { id: "arabian_horse_portrait", name: "جواد عربي أصيل",          category: "role",      rarity: "epic",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الفروسية الكبرى" }, glyph: "🐎" },
+  { id: "falcon_hood",            name: "برقع الصقر",              category: "role",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: صقّار الصحراء" }, glyph: "🦅" },
+  { id: "desert_rose_crystal",    name: "وردة الصحراء",            category: "symbol",    rarity: "uncommon",  unlock_method: "museum",      unlock_requirement: { label: "اجمع ٣٠ قطعة في المتحف", threshold: 30 }, glyph: "✺" },
+  { id: "camel_saddlebag",        name: "خرج القافلة",             category: "role",      rarity: "uncommon",  unlock_method: "default",     glyph: "🐪" },
 ];
 
 export const DEFAULT_AVATAR_ID = "crescent_star";

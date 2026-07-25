@@ -640,4 +640,6 @@ export const PREMIUM_EMBLEM_ASSETS: Record<string, PremiumAssetMatrix> = {
     "512": { "webp": "/__l5e/assets-v1/44d60d7f-9344-4289-b229-c7dc646ab1e8/brass_lantern_512.webp", "avif": "/__l5e/assets-v1/b0cccf06-cbaa-4de7-8352-b2116a190fe1/brass_lantern_512.avif" },
     "1024": { "webp": "/__l5e/assets-v1/e1abad71-7a70-4c6a-a9f9-fac6cb12877c/brass_lantern_1024.webp", "avif": "/__l5e/assets-v1/47cd5b35-3bc7-4ed1-80e7-a9804ae8a932/brass_lantern_1024.avif" },
   },
+  // ── Batch 4 · Trade, Seafaring & Scientific Heritage ──
+PLACEHOLDER_BATCH4
 };
