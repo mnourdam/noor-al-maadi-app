@@ -45,7 +45,7 @@ const PUSH_DEBOUNCE_MS = 1500;
 
 export function AccountProvider({ children }: { children: ReactNode }) {
   const androidStable = isAndroidUltraStableMode();
-  const { profile, mergeCloudSave, applyServerStats, addDinars, awardBadge, login, resetProfile, hydrateClaimedStreakRewards } = useProfile();
+  const { profile, mergeCloudSave, applyServerStats, addDinars, awardBadge, login, resetProfile, hydrateClaimedStreakRewards, adoptServerAvatar } = useProfile();
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<AccountProfile | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -115,6 +115,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         // user cannot inherit the previous user's unlocked-story set.
         void import("@/lib/stories/unlock-cache").then((m) => {
           try { m.clearUnlockCache(); } catch { /* ignore */ }
+        });
+        // Same reasoning for a pending emblem pick: it belongs to the
+        // signed-out user and must never be replayed onto the next account.
+        void import("@/lib/emblems/avatar-persistence").then((m) => {
+          try { m.clearPendingAvatar(); } catch { /* ignore */ }
         });
       }
     });
@@ -218,11 +223,31 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           setLastSyncAt(Date.now());
         }
 
+        // Premium Emblem — `cloud_saves` is a whole-profile blob that can be
+        // arbitrarily stale (it is pushed on a debounce), and `mergeCloudSave`
+        // spreads it over local state. `profiles.avatar_id` is the value every
+        // other player actually sees, so it wins here — unless THIS device
+        // still holds an un-flushed pick, which is newer than both.
+        try {
+          const { reconcileAvatarOnHydrate } = await import("@/lib/emblems/avatar-persistence");
+          const resolved = await reconcileAvatarOnHydrate(user.id, profileRef.current?.avatarId);
+          if (!cancelled && resolved) adoptServerAvatar(resolved);
+        } catch { /* keep the merged value — non-fatal */ }
+
         try {
           if (typeof localStorage !== "undefined") {
             localStorage.setItem(LAST_USER_KEY, user.id);
           }
         } catch { /* ignore */ }
+        // Encyclopedia discovery ledger — promote guest-scope reads into
+        // this account and repair any locally-known discovery the server
+        // never received. `evaluate_unlock_spec_v2` reads ONLY the server
+        // table, so a gap here shows up as "I read it but the Story is
+        // still locked". Fire-and-forget: never blocks first paint.
+        try {
+          const { syncLocalDiscoveriesToServer } = await import("@/lib/entityDiscoveries");
+          void syncLocalDiscoveriesToServer(user.id);
+        } catch { /* noop */ }
         // Merge server-side streak reward claims so they can never be
         // re-claimed after a fresh install / cloud restore.
         try { await hydrateClaimedStreakRewards(); } catch { /* noop */ }

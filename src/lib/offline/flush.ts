@@ -298,6 +298,32 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         return { ok: true };
       }
 
+      // Premium Emblem selection. `sync_my_public_stats` is the only granted
+      // write path to `profiles.avatar_id` (direct UPDATE on the column is
+      // revoked), so we re-derive the full public stats payload from current
+      // local state and stamp the queued avatar id onto it. Idempotent.
+      case "avatar_select": {
+        const p = item.payload as { avatarId?: string };
+        if (!p?.avatarId) return { ok: false, error: "invalid_avatar_id" };
+        const [{ readPersistedProfileState }, { derivePublicStats }] = await Promise.all([
+          import("@/lib/profile"),
+          import("@/lib/social"),
+        ]);
+        const stats = { ...derivePublicStats(readPersistedProfileState()), avatar_id: p.avatarId };
+        const { error } = await supabase.rpc("sync_my_public_stats" as any, {
+          p_stats: stats as any,
+        });
+        if (error) return { ok: false, error: error.message };
+        try {
+          const { clearPendingAvatar } = await import("@/lib/emblems/avatar-persistence");
+          clearPendingAvatar(item.userId);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:avatar:synced"));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
       default:
         return { ok: false, error: "unknown-kind" };
     }

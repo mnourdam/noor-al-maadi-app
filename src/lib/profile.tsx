@@ -179,7 +179,13 @@ interface Ctx {
   todayDailyIds: () => string[];
   setBio: (bio: string) => void;
   setFavorites: (patch: { favoriteStateId?: string; favoriteFigureId?: string }) => void;
+  /** Player-initiated pick — updates local state AND durably persists it. */
   setAvatar: (id: string) => void;
+  /**
+   * Adopt an emblem that already came FROM the server (hydration/realtime).
+   * Local-only: must not re-queue a write, or hydration would echo forever.
+   */
+  adoptServerAvatar: (id: string) => void;
   setNotificationPrefs: (patch: Partial<NotificationPrefs>) => void;
   // Engagement v1
   loseHeart: () => number;          // returns new effective hearts (raw — prefer loseHeartOnce)
@@ -263,6 +269,29 @@ function addDinarsTo(p: ProfileState, n: number): ProfileState {
 function dinarsForReward(xp: number): number {
   if (xp <= 0) return 0;
   return Math.max(1, Math.floor(xp / 4));
+}
+
+/**
+ * Read the persisted profile snapshot outside React.
+ *
+ * Needed by the offline outbox flusher, which replays queued writes from a
+ * background/reconnect context where no provider is mounted. Never throws;
+ * falls back to the seed profile.
+ */
+export function readPersistedProfileState(): ProfileState {
+  try {
+    if (typeof localStorage === "undefined") return initial;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return initial;
+    const parsed = JSON.parse(raw) as Partial<ProfileState>;
+    return {
+      ...initial,
+      ...parsed,
+      settings: { ...initial.settings, ...(parsed.settings ?? {}) },
+    };
+  } catch {
+    return initial;
+  }
 }
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
@@ -496,7 +525,20 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     todayDailyIds: () => dailyMissionsForDate().map((m) => m.id),
     setBio: (bio) => update((p) => ({ ...p, bio })),
     setFavorites: (patch) => update((p) => ({ ...p, ...patch })),
-    setAvatar: (id) => update((p) => ({ ...p, avatarId: id })),
+    // Emblem selection is a DURABLE write, not a debounced side effect.
+    // Local state flips instantly; the pick is simultaneously queued to the
+    // offline outbox (stable idempotency key) so it survives process death,
+    // airplane mode and reinstall. See `@/lib/emblems/avatar-persistence`.
+    adoptServerAvatar: (id) => update((p) => (p.avatarId === id ? p : { ...p, avatarId: id })),
+    setAvatar: (id) => {
+      update((p) => ({ ...p, avatarId: id }));
+      void (async () => {
+        try {
+          const { persistAvatarSelection } = await import("@/lib/emblems/avatar-persistence");
+          await persistAvatarSelection(id);
+        } catch { /* queued locally; retried on next flush */ }
+      })();
+    },
     setNotificationPrefs: (patch) => {
       update((p) => ({
         ...p,
