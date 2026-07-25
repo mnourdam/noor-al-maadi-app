@@ -379,6 +379,11 @@ function RootComponent() {
 
     return () => {
       unsub?.();
+      if (idle) {
+        (window as unknown as { cancelIdleCallback?: (h: number) => void }).cancelIdleCallback?.(idleHandle);
+      } else {
+        window.clearTimeout(idleHandle);
+      }
       window.removeEventListener("online", onOnline);
       window.removeEventListener("unhandledrejection", onRejection);
       window.removeEventListener("error", onWindowError);
