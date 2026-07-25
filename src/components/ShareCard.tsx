@@ -815,6 +815,11 @@ function drawStatIcon(
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
+  // Scale glyphs uniformly to match enlarged backdrop
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(1.28, 1.28);
+  ctx.translate(-cx, -cy);
   switch (kind) {
     case "dinars": {
       // Coin: outer ring + inner star mark
