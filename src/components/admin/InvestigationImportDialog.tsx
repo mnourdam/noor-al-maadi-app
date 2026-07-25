@@ -15,6 +15,8 @@ import {
   parseImportFile, previewInvestigationImport, commitInvestigationImport,
   FIELD_LABELS, type ImportRunResult, type ImportItemResult,
 } from "@/lib/investigations/import";
+import { downloadGoldenTemplate } from "@/lib/investigations/golden-template";
+
 
 interface Props {
   onClose: () => void;
