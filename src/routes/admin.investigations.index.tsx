@@ -726,12 +726,20 @@ function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () 
   );
 }
 
-function Row({ view, onPreview, onToggle }: { view: RowView; onPreview: () => void; onToggle: () => void }) {
+function Row({ view, selected, onSelect, onExport, onPreview, onToggle }: {
+  view: RowView; selected: boolean; onSelect: () => void; onExport: () => void;
+  onPreview: () => void; onToggle: () => void;
+}) {
   const r = view.raw;
   const rw = view.reward;
   return (
-    <tr className="hover:bg-slate-900/60">
+    <tr className={`hover:bg-slate-900/60 ${selected ? "bg-amber-500/5" : ""}`}>
       <td className="px-3 py-2">
+        <input type="checkbox" checked={selected} onChange={onSelect}
+          aria-label={`تحديد ${r.slug}`} className="h-3.5 w-3.5 accent-amber-400" />
+      </td>
+      <td className="px-3 py-2">
+
         <div className="flex items-center gap-2">
           <div>
             <div className="font-medium text-slate-100">{r.title}</div>
