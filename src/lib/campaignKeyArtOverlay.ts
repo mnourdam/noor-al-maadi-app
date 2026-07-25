@@ -18,6 +18,7 @@
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 
 export interface KeyArtOverlayRow {
   key_art_path: string | null;
