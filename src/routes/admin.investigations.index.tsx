@@ -371,12 +371,18 @@ function AdminInvestigationsPage() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-50">
               <RefreshCw className={`h-3.5 w-3.5 ${busy ? "animate-spin" : ""}`} /> تحديث
             </button>
+            <button
+              onClick={() => setExportScope({ ids: null, label: `المكتبة كاملة (${enriched.length})` })}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
+              <Download className="h-3.5 w-3.5" /> تصدير المكتبة
+            </button>
             <Link to="/admin/import" search={{ type: "investigations" } as any}
               className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
               <Upload className="h-3.5 w-3.5" /> استيراد JSON
             </Link>
           </div>
         </header>
+
 
         <StatsPanel stats={stats} />
 
