@@ -110,7 +110,8 @@ export function StoryCard({
   const durationLabel = formatDurationArabic(
     resolveStoryDurationMs({ metadata: null, sceneCount: story.scene_count }),
   );
-  const cover = useCoverUrl(story.id, story.cover_media_id);
+  const coverRow = useCoverRow(story.id, story.cover_media_id);
+  const cover = useStoryMediaUrl(coverRow);
 
   const pct = Math.round(progressFraction(story) * 100);
   const widthClass = variant === "rail" ? "w-44 flex-none snap-start sm:w-52" : "w-full";
