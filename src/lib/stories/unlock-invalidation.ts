@@ -20,21 +20,32 @@
 
 import { useEffect } from "react";
 import type { QueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Every client event that can change the result of
- * `evaluate_unlock_spec_v2` for the current player.
+ * `evaluate_unlock_spec_v2` for the current player. Each name below was
+ * verified against a real `dispatchEvent` call site — a signal nobody
+ * fires is a silent hole in the unlock matrix.
  */
 const UNLOCK_SIGNALS = [
-  "irth:entity-discovery:changed",   // encyclopedia read → user_entity_discoveries
-  "irth:outbox:flushed",             // queued writes actually landed server-side
-  "irth:story-completions:changed",  // story_complete prerequisites
+  "irth:entity-discovery:changed",     // encyclopedia read → user_entity_discoveries
+  "irth:atlas-visit:changed",          // atlas detail dwell → atlas_location_visited
+  "irth:outbox:flushed",               // queued writes actually landed server-side
+  "irth:story-completions:changed",    // story_complete prerequisites
   "irth:story-progress:changed",
+  "irth:guest-story-completed",
   "irth:campaign-completions:changed", // campaign_complete prerequisites
-  "irth:investigation-completed",      // investigation_complete prerequisites
-  "irth:achievements:changed",         // achievement-gated unlocks
+  "irth:campaign-progress:changed",    // campaign_chapter_complete prerequisites
+  "irth:investigation-progress:changed", // investigation_complete prerequisites
+  "irth:investigation-completed",
+  "irth:achievement-unlocked",         // achievement-gated unlocks
   "irth:collection:changed",           // artifact ownership gates
+  "irth:museum-unlock",
+  "irth:level-up",                     // player_level gates
+  "irth:reconciliation:changed",       // hydration repair of historical progress
 ] as const;
+
 
 const DEBOUNCE_MS = 400;
 
