@@ -31,14 +31,14 @@ export const OFFLINE_EMBLEM_IDS: ReadonlySet<string> = new Set([
   "glass_vial_set", "hourglass_bronze", "qibla_compass", "surveyor_rod",
   // Batch 2 · Arms, Cavalry & Historical Roles (25 new)
   "scimitar", "spear_lance", "war_bow", "arrow_quiver", "dagger_khanjar", "battle_axe", "mace_flanged", "chain_mail", "helm_conical", "round_shield_leather", "saddle_ornate", "stirrup_pair", "scholar_robe", "explorer_kit", "cartographer_tools", "curator_gloves", "historian_desk", "horseman_bridle", "merchant_scales", "poet_diwan", "physician_kit", "astronomer_kit", "judge_seal", "preacher_pulpit", "caravan_pack",
-  // Batch 3 · Places & Cultural Heritage (25 new)
+  // Batch 3 · Places & Cultural Heritage (25 — prohibited items removed)
   "minaret_tower", "mihrab_niche", "desert_fortress", "caravanserai", "souk_gate",
   "madrasa", "observatory_dome", "hammam", "sabil_fountain", "oasis_palm",
-  "lighthouse_pharos", "horseshoe_arch", "oud_instrument", "tambourine_daf",
+  "lighthouse_pharos", "horseshoe_arch",
   "geometric_panel", "muqarnas_fragment", "incense_burner", "crescent_medallion",
   "eight_point_star", "royal_tughra", "signet_ring", "persian_carpet",
   "silk_bolt", "ceramic_tile", "brass_lantern",
-  // Batch 4 · Trade, Seafaring & Scientific Heritage (25 new)
+  // Batch 4 · Trade, Seafaring & Scientific Heritage (25)
   "gold_dinar_coin", "silver_dirham_coin", "trade_ledger", "merchant_seal_stamp",
   "spice_chest", "saffron_pouch", "date_basket", "frankincense_resin",
   "myrrh_bundle", "coffee_dallah", "dhow_ship", "anchor_stone",
@@ -47,6 +47,8 @@ export const OFFLINE_EMBLEM_IDS: ReadonlySet<string> = new Set([
   "silk_road_map", "mathematics_treatise", "medical_herbarium",
   "arabian_horse_portrait", "falcon_hood", "desert_rose_crystal",
   "camel_saddlebag",
+  // Batch 5 additions · Governance / Documented Islamic artifacts
+  "banner_ayyubid", "water_clock_jazari", "pigeon_letter_case",
 ]);
 
 /** Local path (same origin as the app) for a bundled emblem asset. */

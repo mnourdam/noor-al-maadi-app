@@ -562,18 +562,6 @@ export const PREMIUM_EMBLEM_ASSETS: Record<string, PremiumAssetMatrix> = {
     "512": { "webp": "/__l5e/assets-v1/8e6ba64c-63db-4210-8e8d-189360837b2d/horseshoe_arch_512.webp", "avif": "/__l5e/assets-v1/9bf62caf-c7c3-4889-8dd6-f5d4e8a68513/horseshoe_arch_512.avif" },
     "1024": { "webp": "/__l5e/assets-v1/8ac61f54-81f1-45d1-b908-b94b5acc6656/horseshoe_arch_1024.webp", "avif": "/__l5e/assets-v1/ea383dc1-5db0-4173-9110-b961630ce074/horseshoe_arch_1024.avif" },
   },
-  "oud_instrument": {
-    "128": { "webp": "/__l5e/assets-v1/ce108cf2-96eb-435a-8aea-b6b5c13e250b/oud_instrument_128.webp", "avif": "/__l5e/assets-v1/6c5edae5-087d-48f4-9d57-64d9ed1e3168/oud_instrument_128.avif" },
-    "256": { "webp": "/__l5e/assets-v1/b98c18b6-0418-4b00-b063-3a638cda56bb/oud_instrument_256.webp", "avif": "/__l5e/assets-v1/d151faa7-d4d1-4557-aac0-3e4ad2f0237a/oud_instrument_256.avif" },
-    "512": { "webp": "/__l5e/assets-v1/bf057f8b-ee60-4bc4-ba01-4be083d0e73b/oud_instrument_512.webp", "avif": "/__l5e/assets-v1/ddcaccf3-7110-4a42-af68-02d628f587a1/oud_instrument_512.avif" },
-    "1024": { "webp": "/__l5e/assets-v1/d0f6f516-5772-4209-87b6-d2d787245b2a/oud_instrument_1024.webp", "avif": "/__l5e/assets-v1/e720c47f-ef24-4cbb-974a-737da2cb290d/oud_instrument_1024.avif" },
-  },
-  "tambourine_daf": {
-    "128": { "webp": "/__l5e/assets-v1/a935f805-2ded-4f85-9680-67cd768b0e2f/tambourine_daf_128.webp", "avif": "/__l5e/assets-v1/c9860a88-875b-471c-a0a8-f5dbcc75fd01/tambourine_daf_128.avif" },
-    "256": { "webp": "/__l5e/assets-v1/6bb7aef7-ed44-4eae-bc03-6c9163e46d8f/tambourine_daf_256.webp", "avif": "/__l5e/assets-v1/f89b0d94-47c6-49c1-a3f9-6ff7952895d4/tambourine_daf_256.avif" },
-    "512": { "webp": "/__l5e/assets-v1/a0db625d-b420-433a-a608-8bc864d9d9fb/tambourine_daf_512.webp", "avif": "/__l5e/assets-v1/b5290e1a-a63f-4999-91f5-0ac877d0d36e/tambourine_daf_512.avif" },
-    "1024": { "webp": "/__l5e/assets-v1/2023966c-fc17-4ea4-a5b6-bb695918e245/tambourine_daf_1024.webp", "avif": "/__l5e/assets-v1/de6655fb-6708-4377-919f-009228c27b49/tambourine_daf_1024.avif" },
-  },
   "geometric_panel": {
     "128": { "webp": "/__l5e/assets-v1/06c47c78-15b2-4e67-8ba7-6e594009931b/geometric_panel_128.webp", "avif": "/__l5e/assets-v1/78e7bd74-c4f8-4e77-b112-e08bb91118fe/geometric_panel_128.avif" },
     "256": { "webp": "/__l5e/assets-v1/f6539ee4-7b3f-45f7-9879-3aff266646fb/geometric_panel_256.webp", "avif": "/__l5e/assets-v1/7350fb53-8484-44ad-9539-548dc7f50750/geometric_panel_256.avif" },
@@ -790,5 +778,23 @@ export const PREMIUM_EMBLEM_ASSETS: Record<string, PremiumAssetMatrix> = {
     "256": { "webp": "/__l5e/assets-v1/b1dd3d8c-00f9-4293-94ed-d49538afe587/camel_saddlebag_256.webp", "avif": "/__l5e/assets-v1/ed64d67f-5354-478e-af3f-7fa47cae7eeb/camel_saddlebag_256.avif" },
     "512": { "webp": "/__l5e/assets-v1/0f31e964-cd25-405e-b79b-bb5bc9725811/camel_saddlebag_512.webp", "avif": "/__l5e/assets-v1/b6bc5868-64d3-4c33-9edc-96f4449ba9a4/camel_saddlebag_512.avif" },
     "1024": { "webp": "/__l5e/assets-v1/d4678ee3-ec33-416e-8950-fa64c55dcbc4/camel_saddlebag_1024.webp", "avif": "/__l5e/assets-v1/ecfc0c7d-0be2-4f84-ba6d-8652c3815dc0/camel_saddlebag_1024.avif" },
+  },
+  "banner_ayyubid": {
+    "128": { "webp": "/__l5e/assets-v1/43ec511d-3eb9-446c-ba3d-754b7df1b664/banner_ayyubid_128.webp", "avif": "/__l5e/assets-v1/89863c5d-441c-4b13-84a0-be1651a0d201/banner_ayyubid_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/c2b05dfa-0b5d-4f42-8359-9dd25e8e5cb4/banner_ayyubid_256.webp", "avif": "/__l5e/assets-v1/8f565330-2c3c-4e0f-a99d-29ecbf04b5b1/banner_ayyubid_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/e31dd134-f948-4511-9906-5d025dae592d/banner_ayyubid_512.webp", "avif": "/__l5e/assets-v1/9dab4e12-2cf1-4879-a47b-10da63c4b945/banner_ayyubid_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/ff270992-298e-490e-846c-2b9d71671826/banner_ayyubid_1024.webp", "avif": "/__l5e/assets-v1/3db254dd-bf92-46d6-ae8a-68b216639e54/banner_ayyubid_1024.avif" },
+  },
+  "water_clock_jazari": {
+    "128": { "webp": "/__l5e/assets-v1/7ddbff1a-c9a4-466a-9b95-24d929cb8725/water_clock_jazari_128.webp", "avif": "/__l5e/assets-v1/c1a2e629-b9ce-422a-a25c-0136d68628f1/water_clock_jazari_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/8b0d689e-acce-48ed-892d-ef9f27912d01/water_clock_jazari_256.webp", "avif": "/__l5e/assets-v1/a2c42a6c-6ebf-4741-bcee-bbb998a4777c/water_clock_jazari_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/141ff266-0657-4ec7-ac67-8b951d04d80a/water_clock_jazari_512.webp", "avif": "/__l5e/assets-v1/c2f146df-24ff-4673-885a-176d7deb85cc/water_clock_jazari_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/fc659dac-5b27-4b8b-b6be-91d3dc6ec8e3/water_clock_jazari_1024.webp", "avif": "/__l5e/assets-v1/f6f31328-2db0-4654-99e6-b5c0dbb9d835/water_clock_jazari_1024.avif" },
+  },
+  "pigeon_letter_case": {
+    "128": { "webp": "/__l5e/assets-v1/e565ddaa-1ec1-4cf4-9565-cf635c884aa4/pigeon_letter_case_128.webp", "avif": "/__l5e/assets-v1/05bd592f-7fea-4c60-95b2-365c6d92b4b2/pigeon_letter_case_128.avif" },
+    "256": { "webp": "/__l5e/assets-v1/e475ae1f-eda7-4e83-831b-acf0371bceb6/pigeon_letter_case_256.webp", "avif": "/__l5e/assets-v1/c0e98b79-080f-4326-9f85-46fe7da54dce/pigeon_letter_case_256.avif" },
+    "512": { "webp": "/__l5e/assets-v1/e1dc6d08-44a0-4854-ad30-37c0f7a32cac/pigeon_letter_case_512.webp", "avif": "/__l5e/assets-v1/9d7bbbd3-f952-4449-85a4-8ed6390ae1f1/pigeon_letter_case_512.avif" },
+    "1024": { "webp": "/__l5e/assets-v1/46cc2f03-6766-45b9-8f37-543a097ec7c2/pigeon_letter_case_1024.webp", "avif": "/__l5e/assets-v1/4b1548ee-e96f-4884-b2f3-2b8ba9c043a7/pigeon_letter_case_1024.avif" },
   },
 };
