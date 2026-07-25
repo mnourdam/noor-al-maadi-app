@@ -208,6 +208,39 @@ export const AVATARS: HistoricalAvatar[] = [
   // ── Batch 5 · Governance, Diplomacy & Statehood (additions) ──
   { id: "water_clock_jazari",     name: "ساعة الجزري المائية",     category: "tool",      rarity: "epic",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: هندسة الجزري" }, glyph: "⏳" },
   { id: "pigeon_letter_case",     name: "بريد الحمام",             category: "tool",      rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة البريد السلطاني" }, glyph: "🕊" },
+
+  // ── Batch 5 · Dynasty Banners & Heraldry ──
+  { id: "banner_prophetic",  name: "الراية النبوية",   category: "banner", rarity: "legendary", unlock_method: "achievement", unlock_requirement: { label: "إنجاز: راية النور" }, glyph: "▲" },
+  { id: "banner_seljuk",     name: "راية سلجوقية",    category: "banner", rarity: "epic",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة السلاجقة" }, glyph: "▲" },
+  { id: "banner_zengid",     name: "راية زنكية",      category: "banner", rarity: "epic",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة نور الدين" }, glyph: "▲" },
+  { id: "banner_mamluk",     name: "راية مملوكية",    category: "banner", rarity: "epic",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة المماليك" }, glyph: "▲" },
+  { id: "ayyubid_eagle",     name: "نسر القلعة الأيوبي", category: "symbol", rarity: "epic",   unlock_method: "achievement", unlock_requirement: { label: "إنجاز: قلعة صلاح الدين" }, glyph: "🦅" },
+  { id: "mamluk_blazon",     name: "شعار المماليك",   category: "symbol", rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: رنك السلطان" }, glyph: "✦" },
+  { id: "seljuk_star_tile",  name: "نجمة سلجوقية",    category: "symbol", rarity: "rare",      unlock_method: "museum",      unlock_requirement: { label: "اجمع ٧٠ قطعة في المتحف", threshold: 70 }, glyph: "✴" },
+
+  // ── Batch 5 · Governance & Chancery ──
+  { id: "caliph_throne",     name: "عرش الخلافة",     category: "place",     rarity: "legendary", unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة دار الخلافة" }, glyph: "👑" },
+  { id: "royal_firman",      name: "الفرمان السلطاني", category: "knowledge", rarity: "epic",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: مرسوم الديوان" }, glyph: "📜" },
+  { id: "diwan_register",    name: "سجل الديوان",     category: "knowledge", rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الدواوين" }, glyph: "📒" },
+  { id: "kharaj_scroll",     name: "طومار الخراج",    category: "knowledge", rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: عامل الخراج" }, glyph: "📜" },
+  { id: "waqf_deed",         name: "حجة الوقف",       category: "knowledge", rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: حافظ الأوقاف" }, glyph: "📜" },
+  { id: "mazalim_petition",  name: "عريضة المظالم",   category: "knowledge", rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: باب العدل" }, glyph: "📄" },
+  { id: "hisba_manual",      name: "كتاب الحسبة",     category: "knowledge", rarity: "uncommon",  unlock_method: "default",     glyph: "📖" },
+  { id: "muhtasib_staff",    name: "عصا المحتسب",     category: "role",      rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: أمين السوق" }, glyph: "🪄" },
+  { id: "bayt_al_mal_chest", name: "صندوق بيت المال", category: "symbol",    rarity: "epic",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: خازن الدولة" }, glyph: "🧰" },
+  { id: "province_map",      name: "خريطة الولاية",   category: "knowledge", rarity: "rare",      unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الأمصار" }, glyph: "🗺" },
+
+  // ── Batch 5 · Barid & Diplomacy ──
+  { id: "barid_horn",        name: "بوق البريد",      category: "tool",      rarity: "uncommon",  unlock_method: "default",     glyph: "📯" },
+  { id: "postal_satchel",    name: "جراب البريد",     category: "tool",      rarity: "uncommon",  unlock_method: "default",     glyph: "📮" },
+  { id: "vizier_khilaa",     name: "خِلعة الوزير",    category: "role",      rarity: "epic",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: مجلس الوزارة" }, glyph: "🧥" },
+  { id: "tiraz_textile",     name: "طراز الخلافة",    category: "symbol",    rarity: "rare",      unlock_method: "museum",      unlock_requirement: { label: "اجمع ٨٠ قطعة في المتحف", threshold: 80 }, glyph: "🧵" },
+
+  // ── Batch 5 · Sacred Institutions ──
+  { id: "hajj_mahmal",       name: "المحمل الشريف",   category: "symbol",    rarity: "legendary", unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملة الحج" }, glyph: "🕋" },
+  { id: "minbar_panel",      name: "لوحة المنبر",     category: "place",     rarity: "rare",      unlock_method: "museum",      unlock_requirement: { label: "اجمع ٩٠ قطعة في المتحف", threshold: 90 }, glyph: "🕌" },
+  { id: "mosque_lamp",       name: "قنديل المسجد",    category: "symbol",    rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: نور المحراب" }, glyph: "🪔" },
+  { id: "fresco_fragment",   name: "شظية الجدارية",   category: "symbol",    rarity: "rare",      unlock_method: "museum",      unlock_requirement: { label: "اجمع ١٠٠ قطعة في المتحف", threshold: 100 }, glyph: "🖼" },
 ];
 
 export const DEFAULT_AVATAR_ID = "crescent_star";

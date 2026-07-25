@@ -49,7 +49,18 @@ export const OFFLINE_EMBLEM_IDS: ReadonlySet<string> = new Set([
   "camel_saddlebag",
   // Batch 5 additions · Governance / Documented Islamic artifacts
   "banner_ayyubid", "water_clock_jazari", "pigeon_letter_case",
+  // Batch 5 · Governance, Diplomacy, Statehood & Dynastic Identity (25)
+  "banner_prophetic", "banner_seljuk", "banner_zengid", "banner_mamluk",
+  "ayyubid_eagle", "mamluk_blazon", "seljuk_star_tile",
+  "caliph_throne", "royal_firman", "diwan_register",
+  "kharaj_scroll", "waqf_deed", "mazalim_petition",
+  "hisba_manual", "muhtasib_staff",
+  "bayt_al_mal_chest", "province_map",
+  "barid_horn", "postal_satchel",
+  "vizier_khilaa", "tiraz_textile",
+  "hajj_mahmal", "minbar_panel", "mosque_lamp", "fresco_fragment",
 ]);
+
 
 /** Local path (same origin as the app) for a bundled emblem asset. */
 export function localEmblemPath(id: string, size: EmblemSize): string | null {
