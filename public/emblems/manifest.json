@@ -1,8 +1,8 @@
 {
-  "version": 3,
-  "generated_at": "2026-07-25T00:29:57Z",
-  "asset_count": 340,
-  "emblem_count": 85,
+  "version": 4,
+  "generated_at": "2026-07-25T00:49:11Z",
+  "asset_count": 440,
+  "emblem_count": 110,
   "assets": [
     {
       "id": "alembic",
@@ -31,6 +31,62 @@
       "file": "alembic_512.webp",
       "bytes": 36188,
       "sha256": "6e5ccb3df32b90853a347699d7b6748910d97791efae3a01e131514d15db104c"
+    },
+    {
+      "id": "anchor_stone",
+      "size": 1024,
+      "file": "anchor_stone_1024.webp",
+      "bytes": 183432,
+      "sha256": "ec08604e79952f60d656c5daa7d8adf35558d29ee633a772e573a43e6287886c"
+    },
+    {
+      "id": "anchor_stone",
+      "size": 128,
+      "file": "anchor_stone_128.webp",
+      "bytes": 5284,
+      "sha256": "ec73b9ae4a26674623fea073e8c146628aa2cc432dc7584ded52eca238f04020"
+    },
+    {
+      "id": "anchor_stone",
+      "size": 256,
+      "file": "anchor_stone_256.webp",
+      "bytes": 15104,
+      "sha256": "a8613365f4d3084bbb31fea8caa8f5142a81fb0d8ff4ee447ef74b6de7683077"
+    },
+    {
+      "id": "anchor_stone",
+      "size": 512,
+      "file": "anchor_stone_512.webp",
+      "bytes": 51326,
+      "sha256": "804dfe2aa586ca8765c67ed07a7248bf1dfb1a59d37e5e765691a4a7095034ea"
+    },
+    {
+      "id": "arabian_horse_portrait",
+      "size": 1024,
+      "file": "arabian_horse_portrait_1024.webp",
+      "bytes": 173772,
+      "sha256": "d07f28468aa272874e215873d42d19b49fccd136be47f7c180f59e2d68b7da56"
+    },
+    {
+      "id": "arabian_horse_portrait",
+      "size": 128,
+      "file": "arabian_horse_portrait_128.webp",
+      "bytes": 6096,
+      "sha256": "d3ff8878d2247b010857a887139f8ccc6f8c6f0173b42e3e02986a576709363e"
+    },
+    {
+      "id": "arabian_horse_portrait",
+      "size": 256,
+      "file": "arabian_horse_portrait_256.webp",
+      "bytes": 16968,
+      "sha256": "418969b9ec77b2e93eefcafc70989601be581339c6b17fa406fd50a94d16d1c0"
+    },
+    {
+      "id": "arabian_horse_portrait",
+      "size": 512,
+      "file": "arabian_horse_portrait_512.webp",
+      "bytes": 53048,
+      "sha256": "59ad99c5e24d5504c8cadcd944134256082990567177aa2b32018ee4fe418265"
     },
     {
       "id": "arrow_quiver",
@@ -425,6 +481,34 @@
       "sha256": "fc3219c7d128f7f099f67b3aca88e20749ada20aee652aca752b0797b3887656"
     },
     {
+      "id": "camel_saddlebag",
+      "size": 1024,
+      "file": "camel_saddlebag_1024.webp",
+      "bytes": 218894,
+      "sha256": "3c5baf8ce15d75a19aad158766b8ad9a751a70c8564587ea353fd668ebbc6c0c"
+    },
+    {
+      "id": "camel_saddlebag",
+      "size": 128,
+      "file": "camel_saddlebag_128.webp",
+      "bytes": 6956,
+      "sha256": "7b9114c341fedb3a9efb4afccaa33c2f816a3a988b572cd899604c60e1089142"
+    },
+    {
+      "id": "camel_saddlebag",
+      "size": 256,
+      "file": "camel_saddlebag_256.webp",
+      "bytes": 21654,
+      "sha256": "0a461e178476d134e584783afa351c4a241ccec237d97d572439ca5f9d71b717"
+    },
+    {
+      "id": "camel_saddlebag",
+      "size": 512,
+      "file": "camel_saddlebag_512.webp",
+      "bytes": 69918,
+      "sha256": "4be10c414a68303536888cbeff313116b4c5628de4828692ce96520b28738c2c"
+    },
+    {
       "id": "caravan_pack",
       "size": 1024,
       "file": "caravan_pack_1024.webp",
@@ -621,6 +705,34 @@
       "sha256": "4b42c15bac93b779de2d982ebc8ddb1eef8d3a70222320fcb9eab3bbdfac3aee"
     },
     {
+      "id": "coffee_dallah",
+      "size": 1024,
+      "file": "coffee_dallah_1024.webp",
+      "bytes": 115464,
+      "sha256": "4c6aaac06211a5e767010c627379ec36426972064103d72a349ae0d555e60828"
+    },
+    {
+      "id": "coffee_dallah",
+      "size": 128,
+      "file": "coffee_dallah_128.webp",
+      "bytes": 5148,
+      "sha256": "79e1ef8f17f8d53355a5cfa87bd716ca15d7d0451307e657b4f5a61f008e978a"
+    },
+    {
+      "id": "coffee_dallah",
+      "size": 256,
+      "file": "coffee_dallah_256.webp",
+      "bytes": 13354,
+      "sha256": "ac3b149f9a16576c51086ba57f33caadb0f81c6dc56936fb250613519acd0269"
+    },
+    {
+      "id": "coffee_dallah",
+      "size": 512,
+      "file": "coffee_dallah_512.webp",
+      "bytes": 38564,
+      "sha256": "75e7027e24c79d7832721d5faf16ce3d75a89e60beb9d27d7597fac10896f708"
+    },
+    {
       "id": "compass_dividers",
       "size": 1024,
       "file": "compass_dividers_1024.webp",
@@ -733,6 +845,34 @@
       "sha256": "41eafa359ebd88363b2f9f7bc4f429c9f03fada8eeebe8d06414e6ae65f9225c"
     },
     {
+      "id": "date_basket",
+      "size": 1024,
+      "file": "date_basket_1024.webp",
+      "bytes": 237932,
+      "sha256": "b6e77365642c29e4816ec37312975be03b0a30a11c493b20e04940a873dfb7c7"
+    },
+    {
+      "id": "date_basket",
+      "size": 128,
+      "file": "date_basket_128.webp",
+      "bytes": 6886,
+      "sha256": "cb98103fc4980f4beaaa84c5e09ae873a3a8072e8affef74d520522501903f0d"
+    },
+    {
+      "id": "date_basket",
+      "size": 256,
+      "file": "date_basket_256.webp",
+      "bytes": 21950,
+      "sha256": "4bff82ea78a75311bec8f30d371d8bbae9514239c0d81ec2fe9e2ed5219fbe6f"
+    },
+    {
+      "id": "date_basket",
+      "size": 512,
+      "file": "date_basket_512.webp",
+      "bytes": 74718,
+      "sha256": "124cb74931df49683dc7de51610f26b5228f3cf0f63379e70360a5e7aa8076f2"
+    },
+    {
       "id": "desert_fortress",
       "size": 1024,
       "file": "desert_fortress_1024.webp",
@@ -759,6 +899,62 @@
       "file": "desert_fortress_512.webp",
       "bytes": 15438,
       "sha256": "0a6c6050779b86b4bfd31df86defcb4a7f2cdd24cf269d269eeed82220e263f5"
+    },
+    {
+      "id": "desert_rose_crystal",
+      "size": 1024,
+      "file": "desert_rose_crystal_1024.webp",
+      "bytes": 179030,
+      "sha256": "2bdc034784fdd1c988df6138d9843b20ed1d944db2f9db855822cccb2a9c149a"
+    },
+    {
+      "id": "desert_rose_crystal",
+      "size": 128,
+      "file": "desert_rose_crystal_128.webp",
+      "bytes": 7560,
+      "sha256": "2f79427c23187dacfd7db43087052310aa8cdd31c65396822326eabf6b7facdf"
+    },
+    {
+      "id": "desert_rose_crystal",
+      "size": 256,
+      "file": "desert_rose_crystal_256.webp",
+      "bytes": 21980,
+      "sha256": "334ff552894af7612909766aa3070083aff282d96f5ba53ff457bbd36e350568"
+    },
+    {
+      "id": "desert_rose_crystal",
+      "size": 512,
+      "file": "desert_rose_crystal_512.webp",
+      "bytes": 65088,
+      "sha256": "5e7a954dd42f66fa1fc14b37a27e0c050bcda5aad7ff4a2a509f4246e870c386"
+    },
+    {
+      "id": "dhow_ship",
+      "size": 1024,
+      "file": "dhow_ship_1024.webp",
+      "bytes": 179498,
+      "sha256": "85bdc1ec1e13dca15730f84668a44a18518f4db0fef3b459a2a90e76833e5f9b"
+    },
+    {
+      "id": "dhow_ship",
+      "size": 128,
+      "file": "dhow_ship_128.webp",
+      "bytes": 6922,
+      "sha256": "fd447f10192de4315d35e83329d3fd5e650b6717545d0db859bba3d30a9a2c17"
+    },
+    {
+      "id": "dhow_ship",
+      "size": 256,
+      "file": "dhow_ship_256.webp",
+      "bytes": 20178,
+      "sha256": "0f7689be2f55b948c5b379a9fdf0a3e64a86df9cad2c511fc2895f05abee4d67"
+    },
+    {
+      "id": "dhow_ship",
+      "size": 512,
+      "file": "dhow_ship_512.webp",
+      "bytes": 59906,
+      "sha256": "c6c5470ad3bab650dea7ce9cd59c0d6bd267a78e34be59ff21630abddde07a3e"
     },
     {
       "id": "eight_point_star",
@@ -845,6 +1041,62 @@
       "sha256": "91b86b6c184364d0541944977fda1b08cc3dbb14e68cd8ab9e1efbd372859b8a"
     },
     {
+      "id": "falcon_hood",
+      "size": 1024,
+      "file": "falcon_hood_1024.webp",
+      "bytes": 122516,
+      "sha256": "deee89f954bd15d17ef13d38cfe2610efd4e7b2dc2fcb520d9e7b60b9ece5ae0"
+    },
+    {
+      "id": "falcon_hood",
+      "size": 128,
+      "file": "falcon_hood_128.webp",
+      "bytes": 5276,
+      "sha256": "5bd34173b7a439b7224e4104abbc88b6ed8092c6e9a1c406838fc2eee6a20366"
+    },
+    {
+      "id": "falcon_hood",
+      "size": 256,
+      "file": "falcon_hood_256.webp",
+      "bytes": 13812,
+      "sha256": "81235ccde74f5c15f7b4629ae4c87f86b0425f3c9e2e9834f660da0924f0f80a"
+    },
+    {
+      "id": "falcon_hood",
+      "size": 512,
+      "file": "falcon_hood_512.webp",
+      "bytes": 40528,
+      "sha256": "971b28de3e1dbbba3b9ed74e061b28074ef92dfc20299ab5b27af0dcac6b2619"
+    },
+    {
+      "id": "frankincense_resin",
+      "size": 1024,
+      "file": "frankincense_resin_1024.webp",
+      "bytes": 132558,
+      "sha256": "75652488a0141f762c28a1318091faca31bf79be146faec0b87137d3c7e2a49a"
+    },
+    {
+      "id": "frankincense_resin",
+      "size": 128,
+      "file": "frankincense_resin_128.webp",
+      "bytes": 5156,
+      "sha256": "6e250fd9cfc876b276efb90b7f15012157aed37b72a217f696d87eb948fe69a7"
+    },
+    {
+      "id": "frankincense_resin",
+      "size": 256,
+      "file": "frankincense_resin_256.webp",
+      "bytes": 14486,
+      "sha256": "f6970b141f2a7a9628523ed80bec78e49ee5b474530e304a33d792596ac470ce"
+    },
+    {
+      "id": "frankincense_resin",
+      "size": 512,
+      "file": "frankincense_resin_512.webp",
+      "bytes": 43652,
+      "sha256": "01d2f1fc322725b12403b40d1fb567d9f4bfaa91d46cb1be387d43c2e604d78f"
+    },
+    {
       "id": "geometric_panel",
       "size": 1024,
       "file": "geometric_panel_1024.webp",
@@ -899,6 +1151,34 @@
       "file": "glass_vial_set_512.webp",
       "bytes": 40864,
       "sha256": "cd463d94afdf8fe7208cb9d65219ef52007321c08511e8ce77365b86ba956694"
+    },
+    {
+      "id": "gold_dinar_coin",
+      "size": 1024,
+      "file": "gold_dinar_coin_1024.webp",
+      "bytes": 313730,
+      "sha256": "fb11663a9a0484d6021175081a2800c3913e44a4757be0121347f781ae6a7965"
+    },
+    {
+      "id": "gold_dinar_coin",
+      "size": 128,
+      "file": "gold_dinar_coin_128.webp",
+      "bytes": 8078,
+      "sha256": "70a674f61a36069d0955ea0cf2c16d6e73ba4c60d4b8750037fc4753d8d34d05"
+    },
+    {
+      "id": "gold_dinar_coin",
+      "size": 256,
+      "file": "gold_dinar_coin_256.webp",
+      "bytes": 26512,
+      "sha256": "3986080e18c0344cfaa377d46b115f0649efba97924f4df88b5d1bcf1336e895"
+    },
+    {
+      "id": "gold_dinar_coin",
+      "size": 512,
+      "file": "gold_dinar_coin_512.webp",
+      "bytes": 92232,
+      "sha256": "603ec59c31ba6ea3fe460e74d10d83be7ed5908b9dfc648b46df47e5a733220b"
     },
     {
       "id": "hammam",
@@ -1181,6 +1461,34 @@
       "sha256": "a2dd310d55848a25933159ab66f668d8aa86ee03b73e67c1da4490904a6234d6"
     },
     {
+      "id": "kamal_navigator",
+      "size": 1024,
+      "file": "kamal_navigator_1024.webp",
+      "bytes": 169644,
+      "sha256": "45adabd8be7c3ad0c70db4e9f9408c6784ceb4af2b9314c248892efc0f35b568"
+    },
+    {
+      "id": "kamal_navigator",
+      "size": 128,
+      "file": "kamal_navigator_128.webp",
+      "bytes": 4844,
+      "sha256": "0b62bee0a904f791816303b566e6eba19ff4ff36f4fe1c847af646a343286c56"
+    },
+    {
+      "id": "kamal_navigator",
+      "size": 256,
+      "file": "kamal_navigator_256.webp",
+      "bytes": 14480,
+      "sha256": "af72bcdd1a7c10127d16e5b0086d949e0c019aad04f0c14a72da8b305be98f8d"
+    },
+    {
+      "id": "kamal_navigator",
+      "size": 512,
+      "file": "kamal_navigator_512.webp",
+      "bytes": 48684,
+      "sha256": "fc5ee3267ead63570887efb3b46dd6bdcbd390b18abe7267f07e35179b3af90c"
+    },
+    {
       "id": "library_ladder",
       "size": 1024,
       "file": "library_ladder_1024.webp",
@@ -1293,6 +1601,90 @@
       "sha256": "bd95fef9d8e16061938bbda8deda1c618070f007835bc28a831b48e1dcdcc0ee"
     },
     {
+      "id": "mariners_astrolabe",
+      "size": 1024,
+      "file": "mariners_astrolabe_1024.webp",
+      "bytes": 256262,
+      "sha256": "de8c8eca07740d01b1478d20e51c19fa0d300dea583ec9e31d579809b09580af"
+    },
+    {
+      "id": "mariners_astrolabe",
+      "size": 128,
+      "file": "mariners_astrolabe_128.webp",
+      "bytes": 5894,
+      "sha256": "6bfdfa74de867ff07b183134745b56de381decaad61228c9779bba734bfe71be"
+    },
+    {
+      "id": "mariners_astrolabe",
+      "size": 256,
+      "file": "mariners_astrolabe_256.webp",
+      "bytes": 18148,
+      "sha256": "3831d6be214f3198614b08f243f5815c8dc5b88a68610eb3cbe78b102a365fe1"
+    },
+    {
+      "id": "mariners_astrolabe",
+      "size": 512,
+      "file": "mariners_astrolabe_512.webp",
+      "bytes": 68240,
+      "sha256": "1b176df792e9ef24a1ec61049bdcf6e4534f3f51687c7696f9e996d885218e42"
+    },
+    {
+      "id": "mathematics_treatise",
+      "size": 1024,
+      "file": "mathematics_treatise_1024.webp",
+      "bytes": 169038,
+      "sha256": "b46e5aa6141a4af8f04a2684db1f74bdfd308896a65c3f3840715853a13dc65b"
+    },
+    {
+      "id": "mathematics_treatise",
+      "size": 128,
+      "file": "mathematics_treatise_128.webp",
+      "bytes": 4838,
+      "sha256": "299e7b4955c93b69fc741184663ea3f48d38ee0889b23b3a44dd47cce7ea07d3"
+    },
+    {
+      "id": "mathematics_treatise",
+      "size": 256,
+      "file": "mathematics_treatise_256.webp",
+      "bytes": 14262,
+      "sha256": "d95c4b40029b1c8856ef70547cdcfad13781e709ea028034da33f08c694291c0"
+    },
+    {
+      "id": "mathematics_treatise",
+      "size": 512,
+      "file": "mathematics_treatise_512.webp",
+      "bytes": 47858,
+      "sha256": "2e0efe05a53fc2e2556d6be3a5da56c130599b1c2b9b50c1338c65695d052541"
+    },
+    {
+      "id": "medical_herbarium",
+      "size": 1024,
+      "file": "medical_herbarium_1024.webp",
+      "bytes": 225240,
+      "sha256": "6678ec3479627b3785fc88b1147e452040bea4b1a4dcc5620253c7f85baa9cf5"
+    },
+    {
+      "id": "medical_herbarium",
+      "size": 128,
+      "file": "medical_herbarium_128.webp",
+      "bytes": 4942,
+      "sha256": "05d6be3cae97285e879d8047a071fa118b6ad11dafbf51f0a642a3b8d0b28f72"
+    },
+    {
+      "id": "medical_herbarium",
+      "size": 256,
+      "file": "medical_herbarium_256.webp",
+      "bytes": 16746,
+      "sha256": "80f8903659f298b7b04239872fa1c93504cb6b9c3fd8ff5f718b71596ef18bfd"
+    },
+    {
+      "id": "medical_herbarium",
+      "size": 512,
+      "file": "medical_herbarium_512.webp",
+      "bytes": 59084,
+      "sha256": "4c6f4cd5709cd2804db19ffed569611fa258422bce5a11e44c188c10f5015b70"
+    },
+    {
       "id": "merchant_scales",
       "size": 1024,
       "file": "merchant_scales_1024.webp",
@@ -1319,6 +1711,34 @@
       "file": "merchant_scales_512.webp",
       "bytes": 70854,
       "sha256": "b3ef8fc5e7d8546332bf5489da1ec83b4a924fc7ad4d92e049005292e3d3277e"
+    },
+    {
+      "id": "merchant_seal_stamp",
+      "size": 1024,
+      "file": "merchant_seal_stamp_1024.webp",
+      "bytes": 203280,
+      "sha256": "49927514490b4f148e4bf010ea7a5f42e0d217ef12a9ebcf08b821c3c50563ac"
+    },
+    {
+      "id": "merchant_seal_stamp",
+      "size": 128,
+      "file": "merchant_seal_stamp_128.webp",
+      "bytes": 5710,
+      "sha256": "6d8fa3afe2f42bd678aea954978a6ff8e88d204b0865f4f267bc464ce2e07c83"
+    },
+    {
+      "id": "merchant_seal_stamp",
+      "size": 256,
+      "file": "merchant_seal_stamp_256.webp",
+      "bytes": 18404,
+      "sha256": "97af198dabdccb9d1cd576f261d995a6b615eb5dfb0516585f1600e0bbb6df66"
+    },
+    {
+      "id": "merchant_seal_stamp",
+      "size": 512,
+      "file": "merchant_seal_stamp_512.webp",
+      "bytes": 61448,
+      "sha256": "a9bd9e8270caba439921941e5a02bcc81fc25ac22f7db46c07879219ae5dbcbb"
     },
     {
       "id": "mihrab_niche",
@@ -1431,6 +1851,34 @@
       "file": "muqarnas_fragment_512.webp",
       "bytes": 23158,
       "sha256": "3cf9dfdfc6c27ecb21d4a85628bd18306715220a567ea90ffd71b04cb8e7c5a3"
+    },
+    {
+      "id": "myrrh_bundle",
+      "size": 1024,
+      "file": "myrrh_bundle_1024.webp",
+      "bytes": 209554,
+      "sha256": "34dcf067088bf13fdfcfeb37a1afc8424aadec9f11d268dfad83f3af7be65513"
+    },
+    {
+      "id": "myrrh_bundle",
+      "size": 128,
+      "file": "myrrh_bundle_128.webp",
+      "bytes": 6112,
+      "sha256": "28578b79dbe12b95ea2fc809e644d5be26b694635b7172093730ed7377725474"
+    },
+    {
+      "id": "myrrh_bundle",
+      "size": 256,
+      "file": "myrrh_bundle_256.webp",
+      "bytes": 18896,
+      "sha256": "1e0b74dd79001ada9b7bd9b5efa9dabde2da54cc05c395431800c72016c06fc9"
+    },
+    {
+      "id": "myrrh_bundle",
+      "size": 512,
+      "file": "myrrh_bundle_512.webp",
+      "bytes": 63764,
+      "sha256": "22921e4c3fb69bfb447b91597c99bc4d9966b1e129d347c4741ca52b18a442f6"
     },
     {
       "id": "oasis_palm",
@@ -1571,6 +2019,34 @@
       "file": "parchment_stack_512.webp",
       "bytes": 28752,
       "sha256": "dd18969b23e8c00f3821476ce19760ed14bfdab30704893db6c591e7280033fd"
+    },
+    {
+      "id": "pearl_diver_basket",
+      "size": 1024,
+      "file": "pearl_diver_basket_1024.webp",
+      "bytes": 205614,
+      "sha256": "ab0e7afa53aa616977e3919541d1303b73782ba061e98b2febbda21883a8ec99"
+    },
+    {
+      "id": "pearl_diver_basket",
+      "size": 128,
+      "file": "pearl_diver_basket_128.webp",
+      "bytes": 6796,
+      "sha256": "f20c7058338cb04b1bebe153e4cf12e585a2af48a5cf240d4f7b414d3aface2e"
+    },
+    {
+      "id": "pearl_diver_basket",
+      "size": 256,
+      "file": "pearl_diver_basket_256.webp",
+      "bytes": 20146,
+      "sha256": "0760aab7b1087c24a11f684bbace3ddcf8ab955ddcc27f5d8d5da81ba9f73712"
+    },
+    {
+      "id": "pearl_diver_basket",
+      "size": 512,
+      "file": "pearl_diver_basket_512.webp",
+      "bytes": 65530,
+      "sha256": "d5c1f6d23d05ef9f69e89a4d59fdfef353f5903f393ea266988e189a1f15632d"
     },
     {
       "id": "persian_carpet",
@@ -1853,6 +2329,34 @@
       "sha256": "57c87f12f109bc8ba55ea111b6295051dd2aac9fa4b61bad7e4f9f7265e52a52"
     },
     {
+      "id": "saffron_pouch",
+      "size": 1024,
+      "file": "saffron_pouch_1024.webp",
+      "bytes": 162266,
+      "sha256": "ee0bf4896b6f9287b4e44c13a8d0cd20106b6372756a5b69c97a73104b136c05"
+    },
+    {
+      "id": "saffron_pouch",
+      "size": 128,
+      "file": "saffron_pouch_128.webp",
+      "bytes": 5796,
+      "sha256": "9350e05d5036d1e677199e7acaee806c1679167a80969ac186bee0ed7a61a0d3"
+    },
+    {
+      "id": "saffron_pouch",
+      "size": 256,
+      "file": "saffron_pouch_256.webp",
+      "bytes": 17182,
+      "sha256": "103158631e72f227abd30697fa074216e99425ad4235523b381de80298344b88"
+    },
+    {
+      "id": "saffron_pouch",
+      "size": 512,
+      "file": "saffron_pouch_512.webp",
+      "bytes": 55838,
+      "sha256": "004da59b2a90fffb799155ea3d65ddfab91c64c69d078a8e5e117e09c717c9cb"
+    },
+    {
       "id": "scholar",
       "size": 1024,
       "file": "scholar_1024.webp",
@@ -2049,6 +2553,62 @@
       "sha256": "64b64762bef23dace9729fc1c1518faf20471a75e88dd1885fa54c17ce383408"
     },
     {
+      "id": "silk_road_map",
+      "size": 1024,
+      "file": "silk_road_map_1024.webp",
+      "bytes": 189772,
+      "sha256": "1d8d981c57f73e979f34e1f5986f644e2fb78879d061453a1a1343f3573f0c1f"
+    },
+    {
+      "id": "silk_road_map",
+      "size": 128,
+      "file": "silk_road_map_128.webp",
+      "bytes": 5280,
+      "sha256": "bab37c69e8e98f8714e1221f59c5185165d79e18979ff678d401666f3d694932"
+    },
+    {
+      "id": "silk_road_map",
+      "size": 256,
+      "file": "silk_road_map_256.webp",
+      "bytes": 15666,
+      "sha256": "43507ea45e93636e1f6af26df0378f4c97e480a42515362558d07af0abb08e23"
+    },
+    {
+      "id": "silk_road_map",
+      "size": 512,
+      "file": "silk_road_map_512.webp",
+      "bytes": 52914,
+      "sha256": "5a23c7c1960fc412e8c5f466e3a42fe782c65b4cbdaa2235a2c05deb480e8458"
+    },
+    {
+      "id": "silver_dirham_coin",
+      "size": 1024,
+      "file": "silver_dirham_coin_1024.webp",
+      "bytes": 294176,
+      "sha256": "a4a724d550bde93898c4f79ac3c6d38d6d0fd61fae1a6e3cc690ed09503353ed"
+    },
+    {
+      "id": "silver_dirham_coin",
+      "size": 128,
+      "file": "silver_dirham_coin_128.webp",
+      "bytes": 7302,
+      "sha256": "f0a7235a5a304456c105600586c73a892a023a2b2ecdfb6373b9f22028c6c06c"
+    },
+    {
+      "id": "silver_dirham_coin",
+      "size": 256,
+      "file": "silver_dirham_coin_256.webp",
+      "bytes": 23594,
+      "sha256": "a08a733e1bf37ea9e92b2d5b16df4984fbf52606e7164cd48e58dbdf1529a63a"
+    },
+    {
+      "id": "silver_dirham_coin",
+      "size": 512,
+      "file": "silver_dirham_coin_512.webp",
+      "bytes": 81464,
+      "sha256": "c62fdf14e0c8c43275377560067b09bda8c7c7fe79bd8434f2544c06c4148991"
+    },
+    {
       "id": "souk_gate",
       "size": 1024,
       "file": "souk_gate_1024.webp",
@@ -2105,6 +2665,34 @@
       "sha256": "ff04db2940063a6035d043375f49d0da402f094ef855b084748de4436f10c4b1"
     },
     {
+      "id": "spice_chest",
+      "size": 1024,
+      "file": "spice_chest_1024.webp",
+      "bytes": 181942,
+      "sha256": "3ae83995192c6c6dd5969fd8c786d45c0777916f42c530834b26ae71cc591855"
+    },
+    {
+      "id": "spice_chest",
+      "size": 128,
+      "file": "spice_chest_128.webp",
+      "bytes": 5698,
+      "sha256": "a01a0002f67e54bfdff87df4b9285fc019ef16359a949e564872f20941f8eaa3"
+    },
+    {
+      "id": "spice_chest",
+      "size": 256,
+      "file": "spice_chest_256.webp",
+      "bytes": 16948,
+      "sha256": "86269268db2f22df77f94c2d07b7e4695f039185f61a2a21e158a09cfe4bbf8c"
+    },
+    {
+      "id": "spice_chest",
+      "size": 512,
+      "file": "spice_chest_512.webp",
+      "bytes": 57370,
+      "sha256": "e9c83d8a654511ade260907b1dc3d26f7c8b248b98e8ba7cc2046e200f636225"
+    },
+    {
       "id": "star",
       "size": 1024,
       "file": "star_1024.webp",
@@ -2131,6 +2719,34 @@
       "file": "star_512.webp",
       "bytes": 65502,
       "sha256": "6ffd71cb9a5c1a45a85341db06ba86c4b5205dd944989efaca8925b20c8b7b55"
+    },
+    {
+      "id": "star_chart_manuscript",
+      "size": 1024,
+      "file": "star_chart_manuscript_1024.webp",
+      "bytes": 315004,
+      "sha256": "d8820c06c7f84054911400b9b033142a92a6d12a15f03098dcfb3a741028ba5f"
+    },
+    {
+      "id": "star_chart_manuscript",
+      "size": 128,
+      "file": "star_chart_manuscript_128.webp",
+      "bytes": 6762,
+      "sha256": "37091674b723caa5f114f11e7d135e8a80aed30474ded5763851ab215aa88a31"
+    },
+    {
+      "id": "star_chart_manuscript",
+      "size": 256,
+      "file": "star_chart_manuscript_256.webp",
+      "bytes": 23998,
+      "sha256": "d964171c15a81ed653290b692eeb281db7d7edf79f88a2926ccdcd23ea748a77"
+    },
+    {
+      "id": "star_chart_manuscript",
+      "size": 512,
+      "file": "star_chart_manuscript_512.webp",
+      "bytes": 89270,
+      "sha256": "aa0fadcd7795dd3cda0b29b290b19c70b988580f75d1a2cf5d901fde0b482b3f"
     },
     {
       "id": "stirrup_pair",
@@ -2273,6 +2889,34 @@
       "sha256": "ed0e103c8396b11a2f9b9a479a565ea47d06fd0594b5ba11705010613f15acd9"
     },
     {
+      "id": "trade_ledger",
+      "size": 1024,
+      "file": "trade_ledger_1024.webp",
+      "bytes": 237450,
+      "sha256": "8b82516e8d998fbe089bb5a49401e7a6cf1f0d29d4bd399cc2751b26845b82fc"
+    },
+    {
+      "id": "trade_ledger",
+      "size": 128,
+      "file": "trade_ledger_128.webp",
+      "bytes": 5158,
+      "sha256": "1900c5090d472155b2f8d81613e3b67746e1d21fff1364c3d93f1140417b6a9c"
+    },
+    {
+      "id": "trade_ledger",
+      "size": 256,
+      "file": "trade_ledger_256.webp",
+      "bytes": 16990,
+      "sha256": "fe73d31f063059d72fd407b7aa8d97c68d65e6fa89cd4a13a2992b2a1c257542"
+    },
+    {
+      "id": "trade_ledger",
+      "size": 512,
+      "file": "trade_ledger_512.webp",
+      "bytes": 64776,
+      "sha256": "c8149eb5c9823c1163a2e5e78f11aef77569aff4ddb2c1d121585f72be685d31"
+    },
+    {
       "id": "war_bow",
       "size": 1024,
       "file": "war_bow_1024.webp",
@@ -2329,6 +2973,34 @@
       "sha256": "7d85d821f526a6b70514b1cbf590fdd76a9db22293c943fe48f2233b37053d3a"
     },
     {
+      "id": "water_skin_qirba",
+      "size": 1024,
+      "file": "water_skin_qirba_1024.webp",
+      "bytes": 125698,
+      "sha256": "cb273329f2301a2a79ee6ca91a2d6dc79f54b1c630aea79f21f9b5678e9c8b55"
+    },
+    {
+      "id": "water_skin_qirba",
+      "size": 128,
+      "file": "water_skin_qirba_128.webp",
+      "bytes": 4938,
+      "sha256": "95875fc9595a067c4c8a16766a50ed0744dfa320e5acba5f037374ccc8fb09b0"
+    },
+    {
+      "id": "water_skin_qirba",
+      "size": 256,
+      "file": "water_skin_qirba_256.webp",
+      "bytes": 13176,
+      "sha256": "0c6b4bd520a5743c25b3c79dee6be267c7b0fd907de3091c56618e942c5a8192"
+    },
+    {
+      "id": "water_skin_qirba",
+      "size": 512,
+      "file": "water_skin_qirba_512.webp",
+      "bytes": 39088,
+      "sha256": "be61d0462f485d835f3c11da9a0cd70e7cc0c6170f035eeaaa763cb0d8e123f5"
+    },
+    {
       "id": "wax_seal",
       "size": 1024,
       "file": "wax_seal_1024.webp",
@@ -2355,6 +3027,34 @@
       "file": "wax_seal_512.webp",
       "bytes": 28934,
       "sha256": "1f03b8db2a47b6d33d627c9e2f8e671642fa37063ffe5b14cd930c5c91462367"
+    },
+    {
+      "id": "wind_rose_chart",
+      "size": 1024,
+      "file": "wind_rose_chart_1024.webp",
+      "bytes": 225046,
+      "sha256": "9d9f95727b1ebbfe013cdc1a6a8c06887af14f8e217af13c53c00f0745af129f"
+    },
+    {
+      "id": "wind_rose_chart",
+      "size": 128,
+      "file": "wind_rose_chart_128.webp",
+      "bytes": 5890,
+      "sha256": "dcff2f228117d7ee7cbb1963d6ef925f8e93eba098d06e98f783d43319794cb5"
+    },
+    {
+      "id": "wind_rose_chart",
+      "size": 256,
+      "file": "wind_rose_chart_256.webp",
+      "bytes": 17800,
+      "sha256": "e2785ff91b33747470627b28e74408c4e1180b547a08547e80769e2290e540e1"
+    },
+    {
+      "id": "wind_rose_chart",
+      "size": 512,
+      "file": "wind_rose_chart_512.webp",
+      "bytes": 60240,
+      "sha256": "cae23b0d1cdc9653ee9ac8abffce14f5b6bc6bffacba805f4077abc998f7fb25"
     },
     {
       "id": "writing_desk_kit",
