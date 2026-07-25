@@ -149,6 +149,9 @@ function AdminInvestigationsPage() {
   // Export: selection set + active export scope (null ids = whole library).
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [exportScope, setExportScope] = useState<{ ids: string[] | null; label: string } | null>(null);
+  // Editorial re-import (upsert by id/slug, partial-safe).
+  const [importOpen, setImportOpen] = useState(false);
+
 
 
 
