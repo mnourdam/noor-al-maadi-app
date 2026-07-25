@@ -120,7 +120,7 @@ function ImportV2Page() {
     if (!preview?.ok) { notify("err", "لا يمكن التطبيق قبل معاينة ناجحة."); return; }
     setBusy("apply");
     try {
-      const res = await adminImportStoriesV2Apply(payload, { allow_deletes: allowDeletes });
+      const res = await adminImportStoriesV2Apply(payload, options);
       setApplyResult(res);
       if (res.ok) {
         notify("ok",
