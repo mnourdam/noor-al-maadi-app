@@ -99,7 +99,7 @@ export function ShareCard(props: ShareCardProps) {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ready, setReady] = useState(false);
-  const [busy, setBusy] = useState<"share" | "download" | null>(null);
+  const [busy, setBusy] = useState<"download" | null>(null);
 
   const lvl = levelFor(profile.points);
   const activeTitle =
