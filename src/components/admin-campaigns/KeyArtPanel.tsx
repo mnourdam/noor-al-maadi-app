@@ -110,10 +110,16 @@ export function KeyArtPanel({ campaignId, title, onNotify }: Props) {
 
   return (
     <div className="md:col-span-2 rounded-lg border border-slate-700 bg-slate-900/60 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-bold text-amber-100">الصورة الفنية للحملة (Key Art)</h3>
-        <span className="text-[10px] text-slate-500">اختيارية — بدونها تظهر الحملة بتصميمها الحالي.</span>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-bold text-amber-100">
+          الصورة الفنية للحملة (Key Art)
+          <span className="ms-2 font-mono text-[10px] font-normal text-slate-500">{campaignId}</span>
+        </h3>
+        <span className="text-[10px] text-slate-500">
+          {busy === "loading" ? "جاري التحميل…" : "اختيارية — بدونها تظهر الحملة بتصميمها الحالي."}
+        </span>
       </div>
+
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <CampaignKeyArt
