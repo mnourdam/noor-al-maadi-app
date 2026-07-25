@@ -990,3 +990,33 @@ Storage convention: `campaign-key-art/<campaign_id>/key-art-v1.jpg`, persisted a
 | 40 | `abbasid-between-power-and-weakness` | ✅ shipped (Batch 8 — regenerated: Timurid turquoise tilework replaced with correct plain Baghdad brick) |
 | 41 | `mongol-invasion-mashriq` | ✅ shipped (Batch 8) |
 | 42 | `mongols-and-fall-of-baghdad` | ✅ shipped (Batch 8 — regenerated: tiled portal + later-period skyline replaced with plain brick) |
+| 43 | `peak-of-umayyad-power` | ✅ shipped (Batch 9) |
+| 44 | `conquest-of-al-andalus` | ✅ shipped (Batch 9 — repaired in place: anachronistic modern ships removed from horizon) |
+| 45 | `abd-al-rahman-al-dakhil` | ✅ shipped (Batch 9 — regenerated: Gothic church replaced with Visigothic basilica) |
+| 46 | `umayyad-caliphate-in-al-andalus` | ✅ shipped (Batch 9) |
+| 47 | `cordoba-golden-age` | ✅ shipped (Batch 9 — regenerated: Renaissance/colonial buildings removed; corners cleaned) |
+| 48 | `taifa-kings` | ✅ shipped (Batch 10) |
+| 49 | `fall-of-toledo` | ✅ shipped (Batch 10 — regenerated: 16th-c. Alcázar block replaced with plain 11th-c. citadel) |
+| 50 | `battle-of-zallaqa` | ✅ shipped (Batch 10 — regenerated: war-drum brought to foreground for the 64px thumbnail test; corner cleaned) |
+| 51 | `fall-of-al-andalus` | ✅ shipped (Batch 10) |
+| 52 | `crusades-beginning-danger` | ✅ shipped (Batch 10 — regenerated: Ottoman-era blue tilework on the Dome of the Rock replaced with 11th-c. gold/green glass mosaic) |
+| 53 | `imad-aldin-zengi` | ✅ shipped (Batch 11) |
+| 54 | `nur-aldin-mahmud` | ✅ shipped (Batch 11) |
+| 55 | `ayyubid-dynasty` | ✅ shipped (Batch 11 — summit verified bare; no Muhammad Ali Mosque) |
+| 56 | `salah-al-din-and-liberation-of-jerusalem` | ✅ shipped (Batch 11 — Hattin frame; no gore, no figures) |
+| 57 | `battle-of-ain-jalut` | ✅ shipped (Batch 11) |
+| 58 | `al-zahir-baybars-and-the-revival-of-islamic-power` | ✅ shipped (Batch 12 — Zahiriyya façade with lion rank; Antioch companion dropped for single-frame clarity) |
+| 59 | `mamluk-sultanate` | ✅ shipped (Batch 12) |
+| 60 | `rise-of-the-ottoman-state` | ✅ shipped (Batch 12) |
+| 61 | `ottoman-expansion-anatolia-balkans` | ✅ shipped (Batch 12 — corner artifact repaired) |
+| 62 | `battle-of-kosovo` | ✅ shipped (Batch 12 — regenerated: foreground tug enlarged, contrast raised for the 64px thumbnail test) |
+| 63 | `battle-of-ankara` | ✅ shipped (Batch 13) |
+| 64 | `ottoman-reunification` | ✅ shipped (Batch 13 — early brick Eski Cami under scaffolding; no Sinan-era architecture) |
+| 65 | `conquest-of-constantinople` | ✅ shipped (Batch 13 — Hagia Sophia rendered minaret-free per 1453 accuracy) |
+| 66 | `selim-i-annexation-of-the-mashriq` | ✅ shipped (Batch 13 — Ayyubid citadel silhouette, no Muhammad Ali Mosque) |
+| 67 | `ottoman-golden-age` | ✅ shipped (Batch 13) |
+| 68 | `beginning-of-ottoman-decline` | ✅ shipped (Batch 14) |
+| 69 | `ottoman-decline-and-reforms` | ✅ shipped (Batch 14 — corner artifact repaired) |
+| 70 | `world-war-one-and-fall-of-caliphate` | ✅ shipped (Batch 14 — corner artifact repaired; flag folded at rest, never trampled) |
+
+**LIBRARY COMPLETE — 70/70 campaigns have Key Art (hero + square) wired to `admin_campaigns`; verified 0 missing.**
