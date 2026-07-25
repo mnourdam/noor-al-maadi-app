@@ -133,19 +133,35 @@ export function ShareCard(props: ShareCardProps) {
   }, [achievements]);
   const achievementsTotal = achievements?.length ?? 0;
 
-  // Join date formatted for display (Arabic month + year), or null when unknown/guest.
-  const joinDateLabel = useMemo(() => {
+  // Join date — Hijri (Umm al-Qura) + Gregorian in Arabic. Western digits.
+  const joinDateHijri = useMemo(() => {
+    if (!joinDate) return null;
+    const d = new Date(joinDate);
+    if (Number.isNaN(d.getTime())) return null;
+    try {
+      const raw = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
+        day: "numeric", month: "long", year: "numeric",
+      }).format(d);
+      const western = raw.replace(/[\u0660-\u0669]/g, (ch) => String("٠١٢٣٤٥٦٧٨٩".indexOf(ch)));
+      // Strip AH marker variants and re-append a clean " هـ".
+      const cleaned = western.replace(/\s*(هـ\.?|هـ|AH)\s*$/u, "").trim();
+      return `${cleaned} هـ`;
+    } catch {
+      return null;
+    }
+  }, [joinDate]);
+  const joinDateGregorian = useMemo(() => {
     if (!joinDate) return null;
     const d = new Date(joinDate);
     if (Number.isNaN(d.getTime())) return null;
     try {
       const raw = d.toLocaleDateString("ar-EG", { year: "numeric", month: "long" });
-      // Force Western digits to match app-wide policy.
       return raw.replace(/[\u0660-\u0669]/g, (ch) => String("٠١٢٣٤٥٦٧٨٩".indexOf(ch)));
     } catch {
       return d.toISOString().slice(0, 10);
     }
   }, [joinDate]);
+  const joinDateLabel = joinDateGregorian; // kept for drawKey stability
 
   const bio = (profile.bio ?? "").trim();
   const favState = (favoriteStateName ?? "").trim();
@@ -216,7 +232,9 @@ export function ShareCard(props: ShareCardProps) {
         bio,
         favoriteStateName: favState,
         specializationLabel: specLabel,
-        joinDateLabel,
+        specializationKey: specKey,
+        joinDateHijri,
+        joinDateGregorian,
         emblemImg,
         logoImg,
         rarity: resolved.record.rarity,
@@ -283,7 +301,7 @@ export function ShareCard(props: ShareCardProps) {
         <canvas
           ref={canvasRef}
           width={1080}
-          height={1350}
+          height={1920}
           className="block w-full rounded-xl"
           aria-label="بطاقة الهوية التاريخية"
         />
@@ -318,7 +336,7 @@ export function ShareCard(props: ShareCardProps) {
   );
 }
 
-// ─── Canvas drawing — 1080×1350, 4:5 portrait ──────────────────────────
+// ─── Canvas drawing — 1080×1920, museum identity document (Phase 10) ──
 
 const RARITY_ACCENT: Record<EmblemRarity, string> = {
   common:    "#d4af37",
@@ -340,7 +358,6 @@ function rarityRank(r?: IdentityCardAchievement["rarity"]): number {
 
 /** Deterministic 6-char base36 code from a stable identifier. */
 function stableIdCode(seed: string): string {
-  // djb2 hash → base36, upper-cased, padded/truncated to 6.
   let h = 5381;
   for (let i = 0; i < seed.length; i++) {
     h = ((h << 5) + h + seed.charCodeAt(i)) >>> 0;
@@ -348,6 +365,20 @@ function stableIdCode(seed: string): string {
   const code = h.toString(36).toUpperCase();
   return (code + "000000").slice(0, 6);
 }
+
+/** Optional historical quote for the specialization footer. */
+const SPECIALIZATION_QUOTE: Record<string, string> = {
+  prophetic:          "من نور المدينة، ابتدأت الرسالة.",
+  rashidun:           "على عهد الخلفاء الراشدين، اتسعت الفتوح.",
+  umayyad:            "من دمشق، امتدّت الحضارة إلى الأندلس.",
+  andalus:            "حيث ازدهرت الحضارة قروناً.",
+  abbasid:            "من بغداد، أضاء العلمُ العالم.",
+  seljuk:             "فرسان السلاجقة حرسوا ثغور الإسلام.",
+  zengid:             "من الموصل ودمشق، وحّد نور الدين الأمة.",
+  "ayyubid-state":    "من صلاح الدين، عادت القدس إلى أهلها.",
+  "mamluk-sultanate": "من عين جالوت، صُدّ زحف المغول.",
+  ottoman:            "آخر الإمبراطوريات الإسلامية العظمى.",
+};
 
 interface CardData {
   displayName: string;
@@ -370,11 +401,12 @@ interface CardData {
   bio: string;
   favoriteStateName: string;
   specializationLabel: string;
-  joinDateLabel: string | null;
+  specializationKey: string | null;
+  joinDateHijri: string | null;
+  joinDateGregorian: string | null;
   emblemImg: HTMLImageElement | null;
   logoImg: HTMLImageElement | null;
   rarity: EmblemRarity;
-
 }
 
 function drawCard(c: HTMLCanvasElement, s: CardData) {
@@ -382,352 +414,605 @@ function drawCard(c: HTMLCanvasElement, s: CardData) {
   if (!ctx) return;
   const W = c.width, H = c.height;
   const accent = RARITY_ACCENT[s.rarity];
-  const family = 'system-ui, -apple-system, "Segoe UI", "Noto Naskh Arabic", Arial';
+  const gold = "#d4af37";
+  const goldSoft = "#f5d062";
+  const family = '"IBM Plex Sans Arabic", "Cairo", "Amiri", ui-sans-serif, system-ui, sans-serif';
 
-  // ── Background: deep navy vignette ───────────────────────────────────
+  // ── Museum background: deep navy with warm halo ─────────────────────
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, "#0b1228");
-  bg.addColorStop(1, "#050818");
+  bg.addColorStop(0, "#0a1226");
+  bg.addColorStop(0.55, "#070d1f");
+  bg.addColorStop(1, "#04081a");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Restrained cyan halo behind the identity area (softened per Phase-8 UX)
-  const vg = ctx.createRadialGradient(W / 2, 520, 30, W / 2, 520, 620);
-  vg.addColorStop(0, "rgba(125,211,252,0.06)");
-  vg.addColorStop(1, "rgba(125,211,252,0)");
-  ctx.fillStyle = vg;
-
+  // Warm marble halo behind the emblem
+  const halo = ctx.createRadialGradient(W / 2, 760, 40, W / 2, 760, 780);
+  halo.addColorStop(0, "rgba(212,175,55,0.10)");
+  halo.addColorStop(0.55, "rgba(212,175,55,0.03)");
+  halo.addColorStop(1, "rgba(212,175,55,0)");
+  ctx.fillStyle = halo;
   ctx.fillRect(0, 0, W, H);
 
-  // Historical pattern strip (subtle geometric dots along the border)
+  // Subtle marble grain
   ctx.save();
-  ctx.fillStyle = "rgba(212,175,55,0.06)";
-  for (let y = 90; y < H - 60; y += 24) {
-    for (let x = 90; x < W - 60; x += 24) {
-      const edge = x < 130 || x > W - 130 || y < 130 || y > H - 130;
-      if (!edge) continue;
-      ctx.beginPath();
-      ctx.arc(x, y, 1.6, 0, Math.PI * 2);
-      ctx.fill();
-    }
+  ctx.globalAlpha = 0.05;
+  for (let i = 0; i < 60; i++) {
+    const y = 120 + (i * (H - 240)) / 60;
+    ctx.strokeStyle = i % 2 === 0 ? "rgba(212,175,55,0.4)" : "rgba(180,190,220,0.25)";
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(60, y + (i % 3));
+    ctx.lineTo(W - 60, y - (i % 5));
+    ctx.stroke();
   }
   ctx.restore();
 
-  // Elegant double frame — outer accent, inner soft gold
-  ctx.strokeStyle = accent;
-  ctx.lineWidth = 5;
-  roundRect(ctx, 36, 36, W - 72, H - 72, 44);
+  // Elegant double frame
+  ctx.strokeStyle = hexAlpha(gold, 0.7);
+  ctx.lineWidth = 3;
+  roundRect(ctx, 40, 40, W - 80, H - 80, 40);
   ctx.stroke();
-  ctx.strokeStyle = "rgba(212,175,55,0.32)";
+  ctx.strokeStyle = hexAlpha(gold, 0.22);
   ctx.lineWidth = 1;
-  roundRect(ctx, 60, 60, W - 120, H - 120, 34);
+  roundRect(ctx, 64, 64, W - 128, H - 128, 32);
   ctx.stroke();
 
   ctx.direction = "rtl";
   ctx.textBaseline = "alphabetic";
 
-  // ── Header ──────────────────────────────────────────────────────────
-  const logoSize = 84;
-  const logoX = 96, logoY = 96;
+  // ═══ HEADER (0 – 220) ═══════════════════════════════════════════════
+  const headerY = 130;
+  const logoSize = 64;
+  const logoCX = W - 130;
   if (s.logoImg?.complete && s.logoImg.naturalWidth > 0) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 6, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(212,175,55,0.55)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.drawImage(s.logoImg, logoX, logoY, logoSize, logoSize);
-    ctx.restore();
+    ctx.drawImage(s.logoImg, logoCX - logoSize / 2, headerY - logoSize / 2, logoSize, logoSize);
   }
-  ctx.textAlign = "left";
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.font = `20px ${family}`;
-  ctx.fillText("بطاقة الهوية التاريخية", logoX + logoSize + 22, logoY + 40);
-  ctx.fillStyle = "rgba(212,175,55,0.9)";
-  ctx.font = `bold 22px ${family}`;
-  ctx.fillText("Irth · إرث", logoX + logoSize + 22, logoY + 72);
-
-  // Card number, top-right (RTL "opposite corner")
+  // Arabic title right-aligned next to logo
   ctx.textAlign = "right";
-  ctx.fillStyle = "rgba(212,175,55,0.75)";
-  ctx.font = `600 20px ${family}`;
-  ctx.fillText(s.cardNumber, W - 96, logoY + 44);
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
-  ctx.font = `14px ${family}`;
-  ctx.fillText("رقم البطاقة", W - 96, logoY + 68);
+  ctx.fillStyle = "#f4ecd6";
+  ctx.font = `600 26px ${family}`;
+  ctx.fillText("بطاقة الهوية التاريخية", logoCX - logoSize / 2 - 20, headerY - 4);
+  ctx.fillStyle = hexAlpha(gold, 0.72);
+  ctx.font = `400 18px ${family}`;
+  ctx.fillText("Historical Identity Card", logoCX - logoSize / 2 - 20, headerY + 26);
 
-  // ── Identity block ──────────────────────────────────────────────────
+  // Card number, left side
+  ctx.textAlign = "left";
+  ctx.fillStyle = hexAlpha(gold, 0.55);
+  ctx.font = `400 13px ${family}`;
+  ctx.fillText("رقم البطاقة", 100, headerY - 4);
+  ctx.fillStyle = goldSoft;
+  ctx.font = `600 22px "IBM Plex Mono", ui-monospace, monospace`;
+  ctx.fillText(s.cardNumber, 100, headerY + 24);
+
+  // Divider under header
+  drawHairline(ctx, 100, 210, W - 200, hexAlpha(gold, 0.28));
+
+  // ═══ EMBLEM PEDESTAL (hero, 240 – 900) ══════════════════════════════
   const cx = W / 2;
-  const ay = 380;
+  const emCY = 620;
+  const emRadius = 210;
 
-  // Emblem halo
-  const halo = ctx.createRadialGradient(cx, ay, 30, cx, ay, 260);
-  halo.addColorStop(0, hexAlpha(accent, 0.32));
-  halo.addColorStop(1, hexAlpha(accent, 0));
-  ctx.fillStyle = halo;
-  ctx.fillRect(cx - 280, ay - 280, 560, 560);
+  // Pedestal — showcase plinth beneath the emblem
+  const pedTopY = emCY + emRadius - 20;
+  const pedBotY = emCY + emRadius + 110;
+  // Plinth shadow
+  const shadow = ctx.createRadialGradient(cx, pedBotY + 10, 10, cx, pedBotY + 10, 320);
+  shadow.addColorStop(0, "rgba(0,0,0,0.55)");
+  shadow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = shadow;
+  ctx.fillRect(cx - 340, pedBotY - 40, 680, 200);
 
-  // Avatar disc
-  ctx.beginPath();
-  ctx.arc(cx, ay, 156, 0, Math.PI * 2);
-  const ag = ctx.createLinearGradient(cx - 150, ay - 150, cx + 150, ay + 150);
-  ag.addColorStop(0, "#1a223d");
-  ag.addColorStop(1, "#0b1228");
-  ctx.fillStyle = ag;
+  // Pedestal body
+  const pedGrad = ctx.createLinearGradient(0, pedTopY, 0, pedBotY);
+  pedGrad.addColorStop(0, "#1a2340");
+  pedGrad.addColorStop(1, "#0a0f22");
+  ctx.fillStyle = pedGrad;
+  trapezoid(ctx, cx - 240, pedTopY, 480, cx - 290, pedBotY, 580);
   ctx.fill();
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = accent;
+  ctx.strokeStyle = hexAlpha(gold, 0.45);
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Pedestal top gold rim
+  ctx.fillStyle = hexAlpha(gold, 0.9);
+  ctx.fillRect(cx - 250, pedTopY - 4, 500, 4);
+  ctx.fillStyle = hexAlpha(goldSoft, 0.4);
+  ctx.fillRect(cx - 250, pedTopY, 500, 1);
+
+  // Emblem disc backing
+  const disc = ctx.createRadialGradient(cx, emCY - 30, 20, cx, emCY, emRadius);
+  disc.addColorStop(0, "rgba(255,240,200,0.10)");
+  disc.addColorStop(1, "rgba(10,15,30,0)");
+  ctx.fillStyle = disc;
+  ctx.beginPath();
+  ctx.arc(cx, emCY, emRadius + 40, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Museum ring around emblem
+  ctx.beginPath();
+  ctx.arc(cx, emCY, emRadius, 0, Math.PI * 2);
+  ctx.strokeStyle = hexAlpha(accent, 0.9);
+  ctx.lineWidth = 2.5;
   ctx.stroke();
   ctx.beginPath();
-  ctx.arc(cx, ay, 142, 0, Math.PI * 2);
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = "rgba(212,175,55,0.5)";
+  ctx.arc(cx, emCY, emRadius - 12, 0, Math.PI * 2);
+  ctx.strokeStyle = hexAlpha(gold, 0.35);
+  ctx.lineWidth = 1;
   ctx.stroke();
 
+  // Emblem itself — hero, transparent PNG
   if (s.emblemImg?.complete && s.emblemImg.naturalWidth > 0) {
-    const emSize = 232;
-    ctx.drawImage(s.emblemImg, cx - emSize / 2, ay - emSize / 2, emSize, emSize);
+    const emSize = 340;
+    ctx.drawImage(s.emblemImg, cx - emSize / 2, emCY - emSize / 2, emSize, emSize);
   }
 
-  // Rarity ribbon (rank frame)
+  // Rarity ribbon on the pedestal front
   const rarityText = RARITY_LABEL[s.rarity];
-  ctx.font = `600 18px ${family}`;
-  const rw = ctx.measureText(rarityText).width + 44;
-  const rx = cx - rw / 2, ry = ay + 166;
-  roundRect(ctx, rx, ry, rw, 32, 16);
-  ctx.fillStyle = hexAlpha(accent, 0.18);
+  ctx.font = `600 20px ${family}`;
+  const rw = ctx.measureText(rarityText).width + 56;
+  const ry = pedTopY + 34;
+  roundRect(ctx, cx - rw / 2, ry, rw, 40, 20);
+  ctx.fillStyle = hexAlpha(accent, 0.15);
   ctx.fill();
-  ctx.strokeStyle = hexAlpha(accent, 0.7);
+  ctx.strokeStyle = hexAlpha(accent, 0.65);
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.textAlign = "center";
   ctx.fillStyle = accent;
-  ctx.fillText(rarityText, cx, ry + 22);
+  ctx.fillText(rarityText, cx, ry + 28);
 
-  // Display name
+  // ═══ PLAYER IDENTITY (960 – 1120) ═══════════════════════════════════
+  let cursor = 990;
+  ctx.textAlign = "center";
   ctx.fillStyle = "#fff";
-  fitText(ctx, s.displayName, cx, ay + 274, W - 220, 60, 36, "bold", family);
+  fitText(ctx, s.displayName, cx, cursor, W - 260, 56, 36, "700", family);
+  cursor += 46;
 
-  // Username (secondary)
-  if (s.username && s.username !== s.displayName) {
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = `22px ${family}`;
-    ctx.fillText(truncate(ctx, `@${s.username}`, W - 260), cx, ay + 310);
-  }
-
-  // Title (rank / role) — canonical active title
   if (s.title) {
-    ctx.fillStyle = "#d4af37";
+    ctx.fillStyle = goldSoft;
     ctx.font = `600 22px ${family}`;
-    ctx.fillText(truncate(ctx, s.title, W - 260), cx, ay + 342);
+    ctx.fillText(truncate(ctx, s.title, W - 280), cx, cursor);
+    cursor += 32;
+  }
+  if (s.username && s.username !== s.displayName) {
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.font = `400 20px ${family}`;
+    ctx.fillText(truncate(ctx, `@${s.username}`, W - 280), cx, cursor);
+    cursor += 24;
   }
 
-  // Level pill
-  const pillW = 260, pillH = 56;
-  const px = cx - pillW / 2, py = ay + 366;
-  roundRect(ctx, px, py, pillW, pillH, pillH / 2);
-  const lg = ctx.createLinearGradient(px, py, px + pillW, py);
-  lg.addColorStop(0, "#d4af37");
-  lg.addColorStop(1, "#a07c1c");
-  ctx.fillStyle = lg;
-  ctx.fill();
-  ctx.fillStyle = "#0b1228";
-  ctx.font = `bold 26px ${family}`;
-  ctx.fillText(`المستوى ${s.level}`, cx, py + 38);
+  // Divider
+  cursor += 20;
+  drawHairline(ctx, 180, cursor, W - 360, hexAlpha(gold, 0.22));
+  cursor += 30;
 
-  // Level progress bar — slim, matches levelFor() canonical curve
-  const barW = 340, barH = 10;
-  const bx = cx - barW / 2, by = py + pillH + 14;
-  roundRect(ctx, bx, by, barW, barH, barH / 2);
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
+  // ═══ LEVEL SECTION ═════════════════════════════════════════════════
+  // RTL: label right, value left. Progress bar full width.
+  const lvlPadX = 130;
+  const lvlW = W - 2 * lvlPadX;
+
+  ctx.textAlign = "right";
+  ctx.fillStyle = hexAlpha(gold, 0.7);
+  ctx.font = `600 16px ${family}`;
+  ctx.fillText("المستوى", W - lvlPadX, cursor);
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#fff";
+  ctx.font = `700 34px ${family}`;
+  ctx.fillText(String(s.level), lvlPadX, cursor + 4);
+  cursor += 24;
+
+  // Progress bar
+  const barY = cursor + 14;
+  const barH = 12;
+  roundRect(ctx, lvlPadX, barY, lvlW, barH, barH / 2);
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
   ctx.fill();
+  ctx.strokeStyle = hexAlpha(gold, 0.22);
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
   const pct = s.atMaxLevel ? 1 : s.levelProgressPct;
-  const fillW = Math.max(0, Math.min(barW, barW * pct));
+  const fillW = Math.max(0, Math.min(lvlW, lvlW * pct));
   if (fillW > 0) {
-    roundRect(ctx, bx, by, fillW, barH, barH / 2);
-    const bg2 = ctx.createLinearGradient(bx, by, bx + barW, by);
-    bg2.addColorStop(0, "#d4af37");
-    bg2.addColorStop(1, "#f5d062");
+    // RTL fill: from the right edge
+    roundRect(ctx, lvlPadX + lvlW - fillW, barY, fillW, barH, barH / 2);
+    const bg2 = ctx.createLinearGradient(lvlPadX, barY, lvlPadX + lvlW, barY);
+    bg2.addColorStop(0, "#a07c1c");
+    bg2.addColorStop(1, goldSoft);
     ctx.fillStyle = bg2;
     ctx.fill();
   }
-  ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(255,255,255,0.72)";
-  ctx.font = `14px ${family}`;
-  const pctText = `${Math.round(pct * 100)}%`;
+
+  cursor = barY + barH + 26;
+  ctx.textAlign = "right";
+  ctx.fillStyle = goldSoft;
+  ctx.font = `600 18px ${family}`;
+  ctx.fillText(`${Math.round(pct * 100)}%`, W - lvlPadX, cursor);
+  ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.font = `400 16px ${family}`;
   const tail = s.atMaxLevel
-    ? "أعلى مستوى حاليًا"
-    : `متبقي ${s.levelToNext.toLocaleString("en-US")} نقطة للمستوى التالي`;
-  ctx.fillText(`${pctText} · ${tail}`, cx, by + barH + 20);
+    ? "بلغتَ أعلى المستويات"
+    : `متبقّي ${s.levelToNext.toLocaleString("en-US")} نقطة للمستوى التالي`;
+  ctx.fillText(tail, lvlPadX, cursor);
+  cursor += 30;
+  drawHairline(ctx, 180, cursor, W - 360, hexAlpha(gold, 0.18));
+  cursor += 40;
 
-  // ── Main statistics (2×2 grid of 4 primary counters) ────────────────
-  const primary: [string, string][] = [
-    ["نقاط الخبرة", s.xp.toLocaleString("en-US")],
-    ["الدنانير", s.dinars.toLocaleString("en-US")],
-    ["الحملات المكتملة", countOrDash(s.campaignsCompleted)],
-    ["المقتنيات التاريخية", s.museumCount !== undefined ? `${s.museumCount.toLocaleString("en-US")} قطعة` : "—"],
+  // ═══ STATISTICS (icon-based, 2×3 grid) ══════════════════════════════
+  const stats: Array<{ kind: StatIcon; label: string; value: string }> = [
+    { kind: "dinars",   label: "الدنانير",     value: s.dinars.toLocaleString("en-US") },
+    { kind: "museum",   label: "المقتنيات",   value: countOrDash(s.museumCount) },
+    { kind: "campaign", label: "الحملات",      value: countOrDash(s.campaignsCompleted) },
+    { kind: "loupe",    label: "التحقيقات",    value: countOrDash(s.investigationsCompleted) },
+    { kind: "book",     label: "القصص",         value: countOrDash(s.storiesCompleted) },
+    { kind: "trophy",   label: "الإنجازات",    value: s.achievementsTotal.toLocaleString("en-US") },
   ];
-  const gx = 96;
-  const gw = W - 192;
-  const colW = (gw - 20) / 2;
-  const rowH = 104;
-  const gy = ay + 520;
-  for (let i = 0; i < primary.length; i++) {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const rxs = gx + col * (colW + 20);
-    const rys = gy + row * (rowH + 16);
-    roundRect(ctx, rxs, rys, colW, rowH, 22);
-    ctx.fillStyle = "rgba(255,255,255,0.04)";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(212,175,55,0.25)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
+  const gridPadX = 110;
+  const gridW = W - 2 * gridPadX;
+  const cellW = gridW / 3;
+  const cellH = 150;
+  for (let i = 0; i < stats.length; i++) {
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    const cxs = gridPadX + col * cellW + cellW / 2;
+    const cys = cursor + row * cellH;
+    drawStatIcon(ctx, stats[i].kind, cxs, cys + 8, gold);
     ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = `18px ${family}`;
-    ctx.fillText(primary[i][0], rxs + colW / 2, rys + 36);
     ctx.fillStyle = "#fff";
-    ctx.font = `bold 32px ${family}`;
-    ctx.fillText(truncate(ctx, primary[i][1], colW - 24), rxs + colW / 2, rys + 82);
-  }
-
-
-  // ── Secondary progress line ─────────────────────────────────────────
-  const sy = gy + 2 * (rowH + 16) + 20;
-  const secondary = [
-    ["التحقيقات المنجزة", countOrDash(s.investigationsCompleted)],
-    ["القصص المقروءة", countOrDash(s.storiesCompleted)],
-    ["الإنجازات", s.achievementsTotal.toLocaleString("en-US")],
-  ];
-  const scW = (gw - 24) / 3;
-  const scH = 66;
-  for (let i = 0; i < secondary.length; i++) {
-    const rxs = gx + i * (scW + 12);
-    roundRect(ctx, rxs, sy, scW, scH, 16);
-    ctx.fillStyle = "rgba(125,211,252,0.05)";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(125,211,252,0.20)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.textAlign = "center";
+    ctx.font = `700 30px ${family}`;
+    ctx.fillText(truncate(ctx, stats[i].value, cellW - 20), cxs, cys + 90);
     ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = `15px ${family}`;
-    ctx.fillText(secondary[i][0], rxs + scW / 2, sy + 26);
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold 22px ${family}`;
-    ctx.fillText(truncate(ctx, secondary[i][1], scW - 20), rxs + scW / 2, sy + 54);
+    ctx.font = `400 15px ${family}`;
+    ctx.fillText(stats[i].label, cxs, cys + 118);
+  }
+  cursor += 2 * cellH + 10;
+  drawHairline(ctx, 180, cursor, W - 360, hexAlpha(gold, 0.18));
+  cursor += 34;
+
+  // ═══ SPECIALIZATION (premium gold chip) ═════════════════════════════
+  if (s.specializationLabel) {
+    ctx.font = `700 26px ${family}`;
+    const valueW = ctx.measureText(s.specializationLabel).width;
+    const chipW = Math.min(W - 220, Math.max(360, valueW + 100));
+    const chipH = 100;
+    const chipX = cx - chipW / 2, chipY = cursor;
+    // Gold gradient chip
+    roundRect(ctx, chipX, chipY, chipW, chipH, 22);
+    const cg = ctx.createLinearGradient(chipX, chipY, chipX + chipW, chipY + chipH);
+    cg.addColorStop(0, "#4a3717");
+    cg.addColorStop(0.5, "#8a6a24");
+    cg.addColorStop(1, "#4a3717");
+    ctx.fillStyle = cg;
+    ctx.fill();
+    ctx.strokeStyle = goldSoft;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Inner gold hairline
+    roundRect(ctx, chipX + 6, chipY + 6, chipW - 12, chipH - 12, 18);
+    ctx.strokeStyle = hexAlpha(goldSoft, 0.5);
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,240,200,0.7)";
+    ctx.font = `400 14px ${family}`;
+    ctx.fillText("العالم التاريخي الأكثر نشاطاً", cx, chipY + 30);
+    ctx.fillStyle = "#fff8e0";
+    ctx.font = `700 28px ${family}`;
+    ctx.fillText(truncate(ctx, s.specializationLabel, chipW - 40), cx, chipY + 72);
+    cursor += chipH + 34;
   }
 
-  // ── Personal historical identity (bio + favorite state) ─────────────
-  let cursor = sy + scH + 28;
-  const hasBio = s.bio.length > 0;
-  const hasFav = s.favoriteStateName.length > 0;
-
-  if (hasBio) {
+  // ═══ TOP ACHIEVEMENTS (3 medals) ════════════════════════════════════
+  if (s.topAchievements.length > 0) {
     ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(212,175,55,0.85)";
-    ctx.font = `600 16px ${family}`;
-    ctx.fillText("نبذة", cx, cursor);
-    cursor += 22;
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.font = `18px ${family}`;
-    cursor = drawWrappedText(ctx, s.bio, cx, cursor, W - 240, 26, 3);
-    cursor += 10;
-  }
-  if (hasFav) {
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(212,175,55,0.85)";
+    ctx.fillStyle = hexAlpha(gold, 0.8);
     ctx.font = `600 15px ${family}`;
+    ctx.fillText("أبرز الإنجازات", cx, cursor);
+    cursor += 24;
+
+    const medalR = 42;
+    const medalGap = 40;
+    const medalCount = Math.min(3, s.topAchievements.length);
+    const totalW = medalCount * (medalR * 2) + (medalCount - 1) * medalGap;
+    const startX = cx - totalW / 2 + medalR;
+    for (let i = 0; i < medalCount; i++) {
+      const ac = s.topAchievements[i];
+      const mx = startX + i * (medalR * 2 + medalGap);
+      const my = cursor + medalR + 4;
+      drawMedal(ctx, mx, my, medalR, accent, gold, i + 1);
+      // Label under medal
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.font = `500 13px ${family}`;
+      const label = truncate(ctx, ac.label, medalR * 2 + medalGap - 8);
+      ctx.fillText(label, mx, my + medalR + 22);
+    }
+    cursor += medalR * 2 + 56;
+  }
+
+  // ═══ FAVORITE STATE + BIO ═══════════════════════════════════════════
+  if (s.favoriteStateName) {
+    ctx.textAlign = "center";
+    ctx.fillStyle = hexAlpha(gold, 0.7);
+    ctx.font = `400 13px ${family}`;
     ctx.fillText("الدولة المفضلة", cx, cursor);
     cursor += 22;
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold 20px ${family}`;
-    ctx.fillText(truncate(ctx, s.favoriteStateName, W - 240), cx, cursor);
-    cursor += 14;
+    ctx.fillStyle = "#f4ecd6";
+    ctx.font = `600 22px ${family}`;
+    ctx.fillText(truncate(ctx, s.favoriteStateName, W - 260), cx, cursor);
+    cursor += 30;
   }
 
-  // ── Historical specialization (auto-derived) ────────────────────────
-  if (s.specializationLabel) {
-    cursor += 12;
-    const chipPadY = 12;
-    ctx.font = `600 15px ${family}`;
-    const labelW = ctx.measureText("تخصصك التاريخي").width;
-    ctx.font = `bold 20px ${family}`;
-    const valueText = truncate(ctx, s.specializationLabel, W - 260);
-    const valueW = ctx.measureText(valueText).width;
-    const chipInnerW = Math.max(labelW, valueW) + 56; // padding + compass glyph
-    const chipW = Math.min(W - 200, chipInnerW);
-    const chipH = 76;
-    const chipX = cx - chipW / 2, chipY = cursor;
-    roundRect(ctx, chipX, chipY, chipW, chipH, 22);
-    ctx.fillStyle = "rgba(212,175,55,0.10)";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(212,175,55,0.45)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
+  if (s.bio) {
+    cursor += 8;
     ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(212,175,55,0.85)";
-    ctx.font = `600 14px ${family}`;
-    ctx.fillText("🧭 تخصصك التاريخي", cx, chipY + chipPadY + 14);
-    ctx.fillStyle = "#f5d062";
-    ctx.font = `bold 20px ${family}`;
-    ctx.fillText(valueText, cx, chipY + chipH - 18);
-    cursor = chipY + chipH + 8;
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.font = `italic 18px ${family}`;
+    cursor = drawWrappedText(ctx, `« ${s.bio} »`, cx, cursor, W - 260, 26, 2);
+    cursor += 10;
   }
 
-  // ── Top achievements ────────────────────────────────────────────────
-  cursor += 10;
-  ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(212,175,55,0.9)";
-  ctx.font = `bold 20px ${family}`;
-  ctx.fillText("أبرز الإنجازات", cx, cursor);
-  cursor += 18;
-  if (s.topAchievements.length === 0) {
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = `italic 17px ${family}`;
-    ctx.fillText("لم تبدأ رحلة الإنجازات بعد", cx, cursor + 22);
-    cursor += 44;
-  } else {
-    const aw = W - 192;
-    const cols = Math.min(3, s.topAchievements.length);
-    const acolW = (aw - (cols - 1) * 14) / cols;
-    const ah = 68;
-    const ayTop = cursor + 8;
-    for (let i = 0; i < s.topAchievements.length; i++) {
-      const ac = s.topAchievements[i];
-      const rxs = gx + i * (acolW + 14);
-      roundRect(ctx, rxs, ayTop, acolW, ah, 16);
-      ctx.fillStyle = "rgba(212,175,55,0.10)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(212,175,55,0.40)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle = "#fff";
-      ctx.font = `bold 18px ${family}`;
-      ctx.textAlign = "center";
-      ctx.fillText(truncate(ctx, ac.label, acolW - 20), rxs + acolW / 2, ayTop + 42);
+  // ═══ FOOTER (join date + quote) ═════════════════════════════════════
+  const footerBottom = H - 90;
+  const quote = s.specializationKey ? SPECIALIZATION_QUOTE[s.specializationKey] : null;
+
+  let fy = footerBottom;
+  if (quote) {
+    ctx.textAlign = "center";
+    ctx.fillStyle = hexAlpha(gold, 0.7);
+    ctx.font = `italic 18px ${family}`;
+    ctx.fillText(`« ${quote} »`, cx, fy);
+    fy -= 30;
+  }
+
+  if (s.joinDateHijri || s.joinDateGregorian) {
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.font = `400 13px ${family}`;
+    ctx.fillText("عضو في إرث منذ", cx, fy - 46);
+    if (s.joinDateHijri) {
+      ctx.fillStyle = goldSoft;
+      ctx.font = `600 20px ${family}`;
+      ctx.fillText(s.joinDateHijri, cx, fy - 22);
     }
-    cursor = ayTop + ah;
-  }
-
-  // ── Footer ──────────────────────────────────────────────────────────
-  ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.font = `18px ${family}`;
-  ctx.fillText(
-    `السلسلة اليومية · ${s.streak.toLocaleString("en-US")} يوم`,
-    cx, H - 132,
-  );
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.font = `bold 24px ${family}`;
-  ctx.fillText("رحلة عبر التاريخ الإسلامي", cx, H - 96);
-  if (s.joinDateLabel) {
-    ctx.fillStyle = "rgba(212,175,55,0.75)";
-    ctx.font = `15px ${family}`;
-    ctx.fillText(`عضو في إرث منذ ${s.joinDateLabel}`, cx, H - 68);
+    if (s.joinDateGregorian) {
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.font = `400 15px ${family}`;
+      ctx.fillText(s.joinDateGregorian, cx, fy);
+    }
   }
 }
+
+// ─── Drawing helpers ─────────────────────────────────────────────────
+
+type StatIcon = "dinars" | "museum" | "campaign" | "loupe" | "book" | "trophy";
+
+function drawStatIcon(
+  ctx: CanvasRenderingContext2D,
+  kind: StatIcon,
+  cx: number, cy: number,
+  gold: string,
+) {
+  ctx.save();
+  ctx.strokeStyle = gold;
+  ctx.fillStyle = hexAlpha(gold, 0.12);
+  ctx.lineWidth = 2;
+  const r = 28;
+  // Soft round backdrop
+  ctx.beginPath();
+  ctx.arc(cx, cy + 6, r + 8, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(255,255,255,0.03)";
+  ctx.fill();
+  ctx.strokeStyle = hexAlpha(gold, 0.35);
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.strokeStyle = gold;
+  ctx.fillStyle = gold;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  switch (kind) {
+    case "dinars": {
+      // Coin: outer ring + inner star mark
+      ctx.beginPath();
+      ctx.arc(cx, cy + 6, 20, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx, cy + 6, 14, 0, Math.PI * 2);
+      ctx.stroke();
+      // Central dot
+      ctx.beginPath();
+      ctx.arc(cx, cy + 6, 3, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case "museum": {
+      // Three columns with base
+      const bx = cx - 22, by = cy - 14, bw = 44, bh = 40;
+      ctx.beginPath();
+      ctx.moveTo(bx, by + 2);
+      ctx.lineTo(cx, by - 8);
+      ctx.lineTo(bx + bw, by + 2);
+      ctx.stroke();
+      // Columns
+      for (let i = 0; i < 3; i++) {
+        const x = bx + 6 + i * 16;
+        ctx.beginPath();
+        ctx.moveTo(x, by + 6);
+        ctx.lineTo(x, by + bh - 4);
+        ctx.stroke();
+      }
+      // Base
+      ctx.beginPath();
+      ctx.moveTo(bx - 2, by + bh);
+      ctx.lineTo(bx + bw + 2, by + bh);
+      ctx.stroke();
+      break;
+    }
+    case "campaign": {
+      // Scroll
+      const x = cx - 20, y = cy - 14;
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y);
+      ctx.lineTo(x + 34, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x + 4, y + 4, 4, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y + 8);
+      ctx.lineTo(x + 4, y + 32);
+      ctx.arc(x + 8, y + 36, 4, Math.PI, Math.PI * 1.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + 12, y + 8);
+      ctx.lineTo(x + 32, y + 8);
+      ctx.moveTo(x + 12, y + 18);
+      ctx.lineTo(x + 32, y + 18);
+      ctx.moveTo(x + 12, y + 28);
+      ctx.lineTo(x + 26, y + 28);
+      ctx.stroke();
+      break;
+    }
+    case "loupe": {
+      ctx.beginPath();
+      ctx.arc(cx - 4, cy + 2, 14, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + 6, cy + 12);
+      ctx.lineTo(cx + 18, cy + 24);
+      ctx.stroke();
+      break;
+    }
+    case "book": {
+      const x = cx - 22, y = cy - 14;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y + 40);
+      ctx.lineTo(x + 44, y + 40);
+      ctx.lineTo(x + 44, y);
+      ctx.moveTo(x + 22, y + 2);
+      ctx.lineTo(x + 22, y + 40);
+      ctx.stroke();
+      // Lines
+      for (let i = 0; i < 3; i++) {
+        const yy = y + 10 + i * 10;
+        ctx.beginPath();
+        ctx.moveTo(x + 4, yy);
+        ctx.lineTo(x + 18, yy);
+        ctx.moveTo(x + 26, yy);
+        ctx.lineTo(x + 40, yy);
+        ctx.stroke();
+      }
+      break;
+    }
+    case "trophy": {
+      const x = cx, y = cy - 14;
+      // Cup
+      ctx.beginPath();
+      ctx.moveTo(x - 14, y);
+      ctx.lineTo(x + 14, y);
+      ctx.lineTo(x + 12, y + 20);
+      ctx.quadraticCurveTo(x, y + 30, x - 12, y + 20);
+      ctx.closePath();
+      ctx.stroke();
+      // Handles
+      ctx.beginPath();
+      ctx.moveTo(x - 14, y + 4);
+      ctx.quadraticCurveTo(x - 24, y + 12, x - 14, y + 18);
+      ctx.moveTo(x + 14, y + 4);
+      ctx.quadraticCurveTo(x + 24, y + 12, x + 14, y + 18);
+      ctx.stroke();
+      // Stem + base
+      ctx.beginPath();
+      ctx.moveTo(x, y + 30);
+      ctx.lineTo(x, y + 38);
+      ctx.moveTo(x - 10, y + 42);
+      ctx.lineTo(x + 10, y + 42);
+      ctx.stroke();
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+function drawMedal(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, r: number,
+  accent: string, gold: string,
+  rank: number,
+) {
+  ctx.save();
+  // Ribbon
+  ctx.fillStyle = hexAlpha(accent, 0.75);
+  ctx.beginPath();
+  ctx.moveTo(cx - r * 0.55, cy - r - 2);
+  ctx.lineTo(cx - r * 0.2, cy - 4);
+  ctx.lineTo(cx + r * 0.2, cy - 4);
+  ctx.lineTo(cx + r * 0.55, cy - r - 2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Medal disc
+  const grad = ctx.createRadialGradient(cx - r / 3, cy - r / 3, 2, cx, cy, r);
+  grad.addColorStop(0, "#f5d062");
+  grad.addColorStop(0.6, "#c99a2d");
+  grad.addColorStop(1, "#6a4d12");
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = hexAlpha(gold, 0.85);
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // Inner ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r - 8, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // Rank numeral
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#3a2809";
+  ctx.font = `700 24px "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif`;
+  ctx.fillText(String(rank), cx, cy + 1);
+  ctx.textBaseline = "alphabetic";
+  ctx.restore();
+}
+
+function drawHairline(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number,
+  color: string,
+) {
+  const grad = ctx.createLinearGradient(x, y, x + w, y);
+  grad.addColorStop(0, "rgba(212,175,55,0)");
+  grad.addColorStop(0.5, color);
+  grad.addColorStop(1, "rgba(212,175,55,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(x, y, w, 1);
+}
+
+function trapezoid(
+  ctx: CanvasRenderingContext2D,
+  x1: number, y1: number, w1: number,
+  x2: number, y2: number, w2: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x1 + w1, y1);
+  ctx.lineTo(x2 + w2, y2);
+  ctx.lineTo(x2, y2);
+  ctx.closePath();
+}
+
 
 
 // ─── Utilities ─────────────────────────────────────────────────────────
