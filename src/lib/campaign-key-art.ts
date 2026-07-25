@@ -141,13 +141,12 @@ export async function uploadCampaignKeyArt(
     key_art_credit: args.credit?.trim() || null,
     key_art_source: args.source?.trim() || null,
   };
-  const upd = await supabase
-    .from("admin_campaigns")
-    .update(fields)
-    .eq("id", args.campaignId);
-  if (upd.error) {
+  // `admin_campaigns` has NO table grants for `authenticated` — every
+  // admin read/write goes through the security-definer RPC pair.
+  const upd = await writeKeyArtRow(args.campaignId, fields);
+  if (upd) {
     try { await supabase.storage.from(BUCKET).remove([paths.hero, paths.square]); } catch { /* ignore */ }
-    throw new Error(`تعذر حفظ بيانات صورة الحملة. (${upd.error.message})`);
+    throw new Error(`تعذر حفظ بيانات صورة الحملة. (${upd})`);
   }
 
   const expectedPrefix = `${safeSegment(args.campaignId)}/`;
@@ -161,8 +160,41 @@ export async function uploadCampaignKeyArt(
     try { await supabase.storage.from(BUCKET).remove(toRemove); } catch { /* ignore */ }
     for (const p of toRemove) urlCache.delete(p);
   }
+  invalidateCampaignKeyArtOverlay();
 
   return { fields, processed: hero };
+}
+
+/** Admin-only row read (no direct table grants exist). */
+export async function fetchCampaignKeyArt(
+  campaignId: string,
+): Promise<CampaignKeyArtFields> {
+  const { data, error } = await supabase.rpc("admin_get_campaign_key_art" as any, {
+    p_id: campaignId,
+  });
+  if (error) throw new Error(error.message);
+  const row = ((data as any[]) ?? [])[0] ?? null;
+  return {
+    key_art_path: row?.key_art_path ?? null,
+    key_art_square_path: row?.key_art_square_path ?? null,
+    key_art_credit: row?.key_art_credit ?? null,
+    key_art_source: row?.key_art_source ?? null,
+  };
+}
+
+/** Returns an error message, or null on success. */
+async function writeKeyArtRow(
+  campaignId: string,
+  fields: CampaignKeyArtFields,
+): Promise<string | null> {
+  const { error } = await supabase.rpc("admin_set_campaign_key_art" as any, {
+    p_id: campaignId,
+    p_path: fields.key_art_path,
+    p_square_path: fields.key_art_square_path,
+    p_credit: fields.key_art_credit,
+    p_source: fields.key_art_source,
+  });
+  return error ? error.message : null;
 }
 
 /** Clear the four columns and remove the underlying objects. */
@@ -171,21 +203,19 @@ export async function deleteCampaignKeyArt(
   currentPath: string | null,
   currentSquarePath: string | null,
 ): Promise<void> {
-  const { error } = await supabase
-    .from("admin_campaigns")
-    .update({
-      key_art_path: null,
-      key_art_square_path: null,
-      key_art_credit: null,
-      key_art_source: null,
-    })
-    .eq("id", campaignId);
-  if (error) throw new Error(`تعذر حذف صورة الحملة. (${error.message})`);
+  const err = await writeKeyArtRow(campaignId, {
+    key_art_path: null,
+    key_art_square_path: null,
+    key_art_credit: null,
+    key_art_source: null,
+  });
+  if (err) throw new Error(`تعذر حذف صورة الحملة. (${err})`);
   const paths = [currentPath, currentSquarePath].filter(Boolean) as string[];
   if (paths.length) {
     try { await supabase.storage.from(BUCKET).remove(paths); } catch { /* ignore */ }
     for (const p of paths) urlCache.delete(p);
   }
+  invalidateCampaignKeyArtOverlay();
 }
 
 /** Update credit / source without re-uploading. */
@@ -194,15 +224,16 @@ export async function updateCampaignKeyArtMeta(
   credit: string | null,
   source: string | null,
 ): Promise<void> {
-  const { error } = await supabase
-    .from("admin_campaigns")
-    .update({
-      key_art_credit: credit?.trim() || null,
-      key_art_source: source?.trim() || null,
-    })
-    .eq("id", campaignId);
-  if (error) throw new Error(`تعذر حفظ بيانات صورة الحملة. (${error.message})`);
+  const current = await fetchCampaignKeyArt(campaignId);
+  const err = await writeKeyArtRow(campaignId, {
+    ...current,
+    key_art_credit: credit?.trim() || null,
+    key_art_source: source?.trim() || null,
+  });
+  if (err) throw new Error(`تعذر حفظ بيانات صورة الحملة. (${err})`);
+  invalidateCampaignKeyArtOverlay();
 }
+
 
 // ------------------------------------------------------------
 // Runtime URL resolver (paths → signed URLs). NEVER persist the
