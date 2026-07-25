@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { countMyUnreadFeedback } from "@/lib/feedback/api";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info,
@@ -86,7 +87,7 @@ const TAB_STORAGE_KEY = "irth.profile.tab";
 function ProfilePage() {
   const {
     profile, login, logout, updateSettings, setBio, setFavorites,
-    claimStreakMilestone, spendDinarsForHeart, setAvatar, setNotificationPrefs,
+    claimStreakMilestone, spendDinarsForHeart, setAvatarDurable, setNotificationPrefs,
   } = useProfile();
 
   const { user, account, displayName: accountDisplayName, updateDisplayName, updateUsername, isUsernameAvailable, signOut } = useAccount();
@@ -535,7 +536,18 @@ function ProfilePage() {
       {pickingAvatar && (
         <AvatarPicker
           currentId={profile.avatarId ?? DEFAULT_AVATAR_ID}
-          onPick={(id) => setAvatar(id)}
+          onPick={async (id) => {
+            // Durable write contract: never report success before the pick is
+            // durable. On failure the store has already reverted the emblem.
+            const result = await setAvatarDurable(id);
+            if (result === "synced" || result === "local") {
+              toast.success("تم حفظ الشعار");
+            } else if (result === "queued") {
+              toast.success("تم اختيار الشعار — سيُحفظ عند عودة الاتصال");
+            } else {
+              toast.error("تعذّر حفظ الشعار. تمّت العودة إلى الشعار السابق.");
+            }
+          }}
           onClose={() => setPickingAvatar(false)}
         />
       )}
