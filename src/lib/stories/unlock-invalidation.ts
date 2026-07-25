@@ -20,21 +20,32 @@
 
 import { useEffect } from "react";
 import type { QueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Every client event that can change the result of
- * `evaluate_unlock_spec_v2` for the current player.
+ * `evaluate_unlock_spec_v2` for the current player. Each name below was
+ * verified against a real `dispatchEvent` call site — a signal nobody
+ * fires is a silent hole in the unlock matrix.
  */
 const UNLOCK_SIGNALS = [
-  "irth:entity-discovery:changed",   // encyclopedia read → user_entity_discoveries
-  "irth:outbox:flushed",             // queued writes actually landed server-side
-  "irth:story-completions:changed",  // story_complete prerequisites
+  "irth:entity-discovery:changed",     // encyclopedia read → user_entity_discoveries
+  "irth:atlas-visit:changed",          // atlas detail dwell → atlas_location_visited
+  "irth:outbox:flushed",               // queued writes actually landed server-side
+  "irth:story-completions:changed",    // story_complete prerequisites
   "irth:story-progress:changed",
+  "irth:guest-story-completed",
   "irth:campaign-completions:changed", // campaign_complete prerequisites
-  "irth:investigation-completed",      // investigation_complete prerequisites
-  "irth:achievements:changed",         // achievement-gated unlocks
+  "irth:campaign-progress:changed",    // campaign_chapter_complete prerequisites
+  "irth:investigation-progress:changed", // investigation_complete prerequisites
+  "irth:investigation-completed",
+  "irth:achievement-unlocked",         // achievement-gated unlocks
   "irth:collection:changed",           // artifact ownership gates
+  "irth:museum-unlock",
+  "irth:level-up",                     // player_level gates
+  "irth:reconciliation:changed",       // hydration repair of historical progress
 ] as const;
+
 
 const DEBOUNCE_MS = 400;
 
@@ -56,9 +67,18 @@ export function useStoryUnlockInvalidation(queryClient: QueryClient): void {
     };
 
     for (const evt of UNLOCK_SIGNALS) window.addEventListener(evt, schedule);
+
+    // Identity transitions change WHO the server evaluates the spec for:
+    // a guest-computed answer must never survive sign-in (or sign-out).
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") schedule();
+    });
+
     return () => {
       for (const evt of UNLOCK_SIGNALS) window.removeEventListener(evt, schedule);
+      try { sub.subscription.unsubscribe(); } catch { /* noop */ }
       if (timer != null) window.clearTimeout(timer);
     };
   }, [queryClient]);
+
 }

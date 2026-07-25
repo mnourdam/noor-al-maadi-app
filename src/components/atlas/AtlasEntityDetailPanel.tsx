@@ -5,6 +5,7 @@
 // Layout: bottom sheet on mobile, floating popover at the bottom-right on
 // desktop. Safe-area padding so it never hides behind the home-bar.
 import { Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { BookOpen, Crosshair, Loader2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { KIND_LABEL_AR, type AtlasEntityRow } from "@/lib/atlas-entities";
@@ -14,6 +15,9 @@ import {
 } from "@/lib/encyclopedia-source";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
+import { useAccount } from "@/lib/account";
+import { ATLAS_VISIT_DWELL_MS, recordAtlasVisit } from "@/lib/atlas/visits";
+
 
 
 function useEncyclopediaEntity(id: string | null) {
@@ -40,8 +44,21 @@ export function AtlasEntityDetailPanel({
   const encId = entity.encyclopedia_entity_id ?? null;
   const { data: article, isLoading } = useEncyclopediaEntity(encId);
   const stashOrigin = useStashCurrentAsOrigin();
+  const { user } = useAccount();
+  const userKey = user?.id ?? "guest";
+
+  // Atlas visit ledger — a short dwell on the detail panel is the
+  // canonical signal behind `atlas_location_visited` unlock nodes.
+  useEffect(() => {
+    if (!entity?.id) return;
+    const t = window.setTimeout(() => {
+      recordAtlasVisit({ userKey, entityId: entity.id, entitySlug: entity.slug });
+    }, ATLAS_VISIT_DWELL_MS);
+    return () => window.clearTimeout(t);
+  }, [entity?.id, entity?.slug, userKey]);
 
   const hasCoords = entity.aps_x != null && entity.aps_y != null;
+
 
   // Live values from the encyclopedia (source of truth) win. The Atlas
   // row's own name/era are used only as a fallback while loading, or for
