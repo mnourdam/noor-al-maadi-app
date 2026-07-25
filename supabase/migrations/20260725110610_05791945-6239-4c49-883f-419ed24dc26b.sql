@@ -1,0 +1,1 @@
+update public.admin_campaigns set key_art_path = id || '/key-art-v1.jpg', key_art_credit = 'Irth Studio — Campaign Key Art Style v1', key_art_source = 'Original artwork (Irth), Golden Template v1 benchmark' where id in ('building-the-prophetic-state','battle-of-badr-campaign','battle-of-uhud-campaign','battle-of-khandaq-campaign','treaty-of-hudaybiyyah-campaign');

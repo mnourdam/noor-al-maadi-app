@@ -1,0 +1,1 @@
+update public.admin_campaigns set key_art_path = id || '/key-art-v1.jpg', key_art_credit = 'Irth Studio — Campaign Key Art Style v1', key_art_source = 'Original artwork (Irth), Golden Template v1 benchmark' where id in ('secret-dawah','public-call-and-boycott','migration-to-abyssinia','year-of-sorrow-and-taif','migration-to-madinah');
