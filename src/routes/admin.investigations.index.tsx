@@ -343,9 +343,9 @@ function AdminInvestigationsPage() {
   };
 
   const clearFilters = () => {
-    setSearch(""); setDifficulty(""); setWorldFilter(""); setStatusFilter("");
+    setSearch(""); setDifficulty(""); setWorldFilter(""); setStatusFilter(""); setTemplateFilter("");
   };
-  const anyFilterActive = !!(search || difficulty || worldFilter || statusFilter);
+  const anyFilterActive = !!(search || difficulty || worldFilter || statusFilter || templateFilter);
 
   // --- Export selection helpers.
   const visibleIds = useMemo(() => visible.map((v) => v.raw?.id).filter(Boolean) as string[], [visible]);
