@@ -29,7 +29,7 @@ import { useHomeSummary } from "@/lib/stats/homeSummary";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { useCampaignArtworkUrl, sanitizedCoverImage } from "@/lib/campaignArtwork";
-import { KeyArtScrim } from "@/components/KeyArtScrim";
+import { KeyArtDissolve } from "@/components/KeyArtDissolve";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
