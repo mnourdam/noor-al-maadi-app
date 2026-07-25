@@ -60,7 +60,8 @@ async function fetchOverlay(): Promise<OverlayMap> {
     .select("id, slug, key_art_path, key_art_square_path, key_art_credit");
   if (error || !data) throw new Error(error?.message ?? "overlay_failed");
   const map: OverlayMap = {};
-  for (const r of data as any[]) {
+  // Section dividers never carry key art.
+  for (const r of selectCampaignRows(data as any[])) {
     const row: KeyArtOverlayRow = {
       key_art_path: r.key_art_path ?? null,
       key_art_square_path: r.key_art_square_path ?? null,
