@@ -334,6 +334,24 @@ function AdminInvestigationsPage() {
   };
   const anyFilterActive = !!(search || difficulty || worldFilter || statusFilter);
 
+  // --- Export selection helpers.
+  const visibleIds = useMemo(() => visible.map((v) => v.raw?.id).filter(Boolean) as string[], [visible]);
+  const selectedVisible = visibleIds.filter((id) => selected.has(id));
+  const allVisibleSelected = visibleIds.length > 0 && selectedVisible.length === visibleIds.length;
+  const toggleOne = (id: string) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleAllVisible = () => setSelected((prev) => {
+    const next = new Set(prev);
+    if (allVisibleSelected) visibleIds.forEach((id) => next.delete(id));
+    else visibleIds.forEach((id) => next.add(id));
+    return next;
+  });
+
+
+
   return (
     <div dir="rtl" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-slate-100">
       <div className="mx-auto max-w-6xl space-y-6">
