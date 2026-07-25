@@ -26,9 +26,21 @@ import {
   type FeedItem,
 } from "./campaignDividers";
 
-function toCampaigns(rawList: { id: string; slug: string; data: any }[]): Campaign[] {
+function toCampaigns(rawList: { id: string; slug: string; data: any; key_art_path?: string | null; key_art_square_path?: string | null; key_art_credit?: string | null }[]): Campaign[] {
   const all = rawList
-    .map((r) => r.data as unknown as Campaign)
+    .map((r) => {
+      const c = r.data as unknown as Campaign;
+      if (!c) return c;
+      // Merge Key Art fields (view columns) onto the Campaign object so
+      // player surfaces resolve artwork through the single canonical
+      // resolver in `src/lib/campaignArtwork.ts`.
+      return {
+        ...c,
+        key_art_path: r.key_art_path ?? c.key_art_path ?? null,
+        key_art_square_path: r.key_art_square_path ?? c.key_art_square_path ?? null,
+        key_art_credit: r.key_art_credit ?? c.key_art_credit ?? null,
+      } as Campaign;
+    })
     .filter((c) => c && !isDividerData(c) && c.status === "published");
   return sortCampaignsChronological(withBackfilledChronologyAll(all));
 }
