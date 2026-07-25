@@ -95,12 +95,10 @@ export async function traceStoryUnlock(
     const discovered = new Set<string>();
     let discoverySource = "none";
     try {
-      const { listDiscoveries } = await import("@/lib/entityDiscoveries");
-      const local = (await listDiscoveries()) as Array<{ id: string }>;
-      local.forEach((d) => d?.id && discovered.add(d.id));
-      discoverySource = uid
-        ? `localStorage(irth.entityDiscoveries.${uid}.v1)`
-        : "localStorage(irth.entityDiscoveries.guest.v1)";
+      const { getLocalDiscoveries } = await import("@/lib/entityDiscoveries");
+      const userKey = uid ?? "guest";
+      Object.values(getLocalDiscoveries(userKey)).forEach((d) => d?.id && discovered.add(d.id));
+      discoverySource = `localStorage(irth.entityDiscoveries.${userKey}.v1)`;
     } catch {
       discoverySource = "unavailable";
     }
