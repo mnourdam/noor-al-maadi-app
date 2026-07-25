@@ -6,6 +6,7 @@
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
+import { isAlwaysUnlockSpec } from "./unlock/local";
 
 export type StoryPrereqKind =
   | "campaign_completed"
@@ -101,7 +102,7 @@ export async function listStoriesSummary(
       .filter((s: any) => !worldSlug || s.world_slug === worldSlug)
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
     return all.map((s: any) => {
-      const alwaysOn = (s.unlock_spec?.type ?? "always") === "always";
+      const alwaysOn = isAlwaysUnlockSpec(s.unlock_spec);
       return ({
         id: s.id,
         slug: s.slug,
