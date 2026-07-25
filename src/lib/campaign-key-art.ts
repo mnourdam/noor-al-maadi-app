@@ -257,8 +257,26 @@ const SIGN_TTL_SECONDS = 60 * 60 * 24 * 30;
 /** In-memory cache TTL — refresh well before the signed URL expires. */
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 20;
 
+/**
+ * Local-first synchronous resolution. Returns a bundled same-origin
+ * asset URL when this campaign's artwork ships with the build —
+ * no signing, no request, no await, no loading flash. Returns null
+ * when only remote artwork exists (campaign approved after the APK).
+ */
+export function resolveCampaignKeyArtUrlSync(path: string | null | undefined): string | null {
+  if (!path) return null;
+  const local = localCampaignArtPathForStoragePath(path);
+  if (local) return local;
+  const hit = urlCache.get(path);
+  return hit && hit.expiresAt > Date.now() ? hit.url : null;
+}
+
 export async function resolveCampaignKeyArtUrl(path: string | null | undefined): Promise<string | null> {
   if (!path) return null;
+  // 1) Offline bundled pack — application asset, always wins.
+  const local = localCampaignArtPathForStoragePath(path);
+  if (local) return local;
+  // 2) Signed storage URL (artwork newer than this build).
   const now = Date.now();
   const hit = urlCache.get(path);
   if (hit && hit.expiresAt > now) return hit.url;
