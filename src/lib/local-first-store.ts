@@ -52,9 +52,13 @@ let encyclopediaAll: Row[] = [];
 
 const atlasPublished: Row[] = [];
 
+// Campaigns and section dividers share the `admin_campaigns` collection but
+// are DIFFERENT entity types. They are indexed separately so no player
+// pipeline can ever receive a divider. See `src/lib/campaigns/entities.ts`.
 const campaignsById = new Map<string, Row>();
 const campaignsBySlug = new Map<string, Row>();
 let campaignsAll: Row[] = [];
+let campaignDividerRows: Row[] = [];
 
 const investigationsBySlug = new Map<string, Row>();
 let investigationsAll: Row[] = [];
