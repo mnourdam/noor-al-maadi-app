@@ -263,22 +263,26 @@ export function onCampaignPublished(fn: PublishListener): () => void {
 export async function fetchPublishedFeed(): Promise<{
   items: FeedItem[];
   sections: EraSection[];
-  dividers: CampaignDivider[];
+  dividers: CampaignSectionDivider[];
   campaigns: Campaign[];
 }> {
   await ensureLocalSnapshotLoaded();
-  let local = localPublishedCampaigns() as { id: string; slug: string; data: any }[];
-  if (local.length === 0) {
+  let campaignRows = localPublishedCampaigns() as { id: string; slug: string; data: any }[];
+  let dividerRows = localCampaignDividerRows() as { id: string; slug: string; data: any }[];
+  if (campaignRows.length === 0) {
     try {
       const { data, error } = await supabase
         .from("campaigns_public" as any)
         .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
-      if (!error && data) local = data as any[];
+      if (!error && data) {
+        campaignRows = selectCampaignRows(data as any[]) as any[];
+        dividerRows = (data as any[]).filter((r) => isDividerRow(r));
+      }
     } catch { /* ignore */ }
 
   }
-  const campaigns = toCampaigns(local);
-  const dividers = toDividers(local);
+  const campaigns = toCampaigns(campaignRows);
+  const dividers = selectDividers(dividerRows);
   const items = buildFeed(campaigns, dividers);
   const sections = groupFeedIntoSections(items);
   return { items, sections, dividers, campaigns };
