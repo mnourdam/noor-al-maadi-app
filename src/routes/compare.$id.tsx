@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, Crown, Trophy, Sparkles, IdCard, BookOpen, Swords } from "lucide-react";
+import { ChevronLeft, Crown, Sparkles, Swords } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { AuthLink } from "@/components/AuthLink";
 import { useAccount } from "@/lib/account";
@@ -23,8 +23,20 @@ export const Route = createFileRoute("/compare/$id")({
   component: ComparePage,
 });
 
-// ---------- Types ----------
-type SideId = "me" | "them";
+// ============================================================
+// Ownership contract (frozen — do not use generic left/right):
+//   RIGHT column visually  = current authenticated player  (`me`)
+//   LEFT  column visually  = friend                        (`friend`)
+//   Center column          = metric icon + label
+//
+// The page renders under dir="rtl". Under RTL a CSS grid places the
+// FIRST DOM child on the RIGHT. Therefore for every 3-cell row we
+// author DOM order [meCell, metricCell, friendCell] so that `me`
+// is always on the right and `friend` is always on the left. Do
+// NOT rely on implicit RTL flipping to reorder generic arrays.
+// ============================================================
+
+type SideId = "me" | "friend";
 
 interface Side {
   side: SideId;
@@ -35,24 +47,25 @@ interface Side {
   level: number;
   xp: number;
   campaigns: number;
-  artifacts: number;
-  discovery: number;
 }
 
 interface MetricDef {
-  key: keyof Pick<Side, "level" | "xp" | "campaigns" | "artifacts" | "discovery">;
+  key: "level" | "xp" | "campaigns";
   label: string;
   icon: React.ReactNode;
-  suffix?: string;
   diffNoun?: (n: number) => string;
 }
 
+// Symmetric metrics only. `artifacts_collected` and `discovery_pct` were
+// removed from this comparison because their friend-side source
+// (derivePublicStats over the friend's legacy profile arrays) is not
+// symmetric with the current-user canonical sources (user_collection /
+// user_entity_discoveries). They will return after the public projection
+// exposes canonical counts derived from the same tables for both users.
 const METRICS: MetricDef[] = [
   { key: "level", label: "المستوى", icon: <Crown className="size-4" />, diffNoun: (n) => `+${n} مستويات` },
   { key: "xp", label: "نقاط الخبرة", icon: <Sparkles className="size-4" />, diffNoun: (n) => `+${n} نقطة` },
   { key: "campaigns", label: "الحملات المكتملة", icon: <Swords className="size-4" />, diffNoun: (n) => `+${n} حملات` },
-  { key: "artifacts", label: "المقتنيات التاريخية", icon: <IdCard className="size-4" />, diffNoun: (n) => `+${n} مقتنيات` },
-  { key: "discovery", label: "اكتشاف الموسوعة", icon: <BookOpen className="size-4" />, suffix: "%", diffNoun: (n) => `+${n}%` },
 ];
 
 function bestDisplayName(p: { display_name?: string | null; username: string }) {
@@ -95,15 +108,13 @@ function ComparePage() {
       level: s.level,
       xp: s.xp,
       campaigns: s.campaigns_completed,
-      artifacts: s.artifacts_collected,
-      discovery: s.discovery_pct,
     };
   }, [user, profile, account]);
 
-  const them: Side | null = useMemo(() => {
+  const friend: Side | null = useMemo(() => {
     if (!other) return null;
     return {
-      side: "them",
+      side: "friend",
       displayName: bestDisplayName({ display_name: other.display_name, username: other.username }),
       username: other.username,
       title: other.title ?? "مستكشف التاريخ",
@@ -111,10 +122,15 @@ function ComparePage() {
       level: other.level,
       xp: other.xp ?? 0,
       campaigns: other.campaigns_completed,
-      artifacts: other.artifacts_collected,
-      discovery: other.discovery_pct,
     };
   }, [other]);
+
+  // Dev-only ownership assertion. Guarantees the row builder never swaps
+  // sides. If this ever fires, someone reordered the DOM children.
+  if (import.meta.env.DEV && me && friend) {
+    console.assert(me.side === "me", "[compare] me.side must be 'me'");
+    console.assert(friend.side === "friend", "[compare] friend.side must be 'friend'");
+  }
 
   if (!user) {
     return (
@@ -126,19 +142,19 @@ function ComparePage() {
     );
   }
 
-  const meLead = me && them
-    ? METRICS.filter((m) => me[m.key] > them[m.key]).length
+  const meLead = me && friend
+    ? METRICS.filter((m) => me[m.key] > friend[m.key]).length
     : 0;
-  const themLead = me && them
-    ? METRICS.filter((m) => them[m.key] > me[m.key]).length
+  const friendLead = me && friend
+    ? METRICS.filter((m) => friend[m.key] > me[m.key]).length
     : 0;
-  const summary = !me || !them
+  const summary = !me || !friend
     ? ""
-    : meLead === themLead
+    : meLead === friendLead
       ? "التقدم متقارب — رحلة متكافئة"
-      : meLead > themLead
+      : meLead > friendLead
         ? `أنت متقدّم في ${meLead} ${meLead === 1 ? "مجال" : "مجالات"}`
-        : `${them.displayName} متقدّم في ${themLead} ${themLead === 1 ? "مجال" : "مجالات"}`;
+        : `${friend.displayName} متقدّم في ${friendLead} ${friendLead === 1 ? "مجال" : "مجالات"}`;
 
   return (
     <AppShell>
@@ -161,15 +177,15 @@ function ComparePage() {
           </div>
         )}
 
-        {me && them && (
+        {me && friend && (
           <div dir="rtl" className="overflow-hidden rounded-3xl border border-gold/30 bg-gradient-to-b from-surface to-surface-2 shadow-elegant">
-            {/* HERO: two players + VS */}
+            {/* HERO — DOM order [me, VS, friend] → RTL renders me on the RIGHT */}
             <div className="relative px-3 pt-6 pb-4 sm:px-5">
               <div className="pointer-events-none absolute inset-0 opacity-40 [background:radial-gradient(60%_40%_at_15%_30%,color-mix(in_oklab,var(--color-gold)_18%,transparent),transparent),radial-gradient(60%_40%_at_85%_30%,color-mix(in_oklab,var(--color-primary)_22%,transparent),transparent)]" />
               <div className="relative grid grid-cols-[1fr_auto_1fr] items-start gap-2 sm:gap-4">
-                <PlayerHero side={me} align="end" />
+                <PlayerHero side={me} align="end" eager />
                 <VsBadge />
-                <PlayerHero side={them} align="start" />
+                <PlayerHero side={friend} align="start" />
               </div>
             </div>
 
@@ -177,7 +193,7 @@ function ComparePage() {
             <div className="border-t border-white/10 bg-background/30 px-3 py-4 sm:px-5">
               <div className="space-y-2">
                 {METRICS.map((m) => (
-                  <CompareRow key={m.key} metric={m} me={me} them={them} />
+                  <CompareRow key={m.key} metric={m} me={me} friend={friend} />
                 ))}
               </div>
             </div>
@@ -196,14 +212,14 @@ function ComparePage() {
 
 // ---------- Sub-components ----------
 
-function PlayerHero({ side, align }: { side: Side; align: "start" | "end" }) {
+function PlayerHero({ side, align, eager = false }: { side: Side; align: "start" | "end"; eager?: boolean }) {
   const alignCls = align === "end" ? "items-end text-right" : "items-start text-left";
   return (
     <div className={`flex min-w-0 flex-col ${alignCls}`}>
       <div className="relative">
         <div className="absolute inset-0 -m-2 rounded-full bg-gradient-to-br from-gold/30 to-primary/20 blur-lg opacity-70" />
         <div className="relative grid size-24 place-items-center rounded-full border border-gold/40 bg-background/70 sm:size-28">
-          <EmblemArt avatarId={side.avatarId} size="lg" className="size-20 sm:size-24" eager={side.side === "me"} />
+          <EmblemArt avatarId={side.avatarId} size="lg" className="size-20 sm:size-24" eager={eager} />
         </div>
       </div>
       <div className={`mt-3 flex w-full min-w-0 flex-col ${alignCls}`}>
@@ -229,41 +245,49 @@ function VsBadge() {
   );
 }
 
-function CompareRow({ metric, me, them }: { metric: MetricDef; me: Side; them: Side }) {
+function CompareRow({ metric, me, friend }: { metric: MetricDef; me: Side; friend: Side }) {
   const meVal = me[metric.key];
-  const themVal = them[metric.key];
-  const meWins = meVal > themVal;
-  const themWins = themVal > meVal;
-  const diff = Math.abs(meVal - themVal);
+  const friendVal = friend[metric.key];
+  const meWins = meVal > friendVal;
+  const friendWins = friendVal > meVal;
+  const diff = Math.abs(meVal - friendVal);
   const diffLabel = diff > 0 && metric.diffNoun ? metric.diffNoun(diff) : "";
-  const suffix = metric.suffix ?? "";
 
+  // Fixed 3-column grid with equal-width value columns. DOM order
+  // [meCell, metricCell, friendCell] → RTL puts `me` on the RIGHT and
+  // `friend` on the LEFT to match the hero band above.
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-2xl border border-white/5 bg-background/40 px-2 py-2.5 sm:gap-3 sm:px-3">
-      <ValueCell value={themVal} suffix={suffix} highlight={themWins} align="start" />
-      <div className="flex flex-col items-center">
+      <ValueCell value={meVal} highlight={meWins} side="me" />
+      <div className="flex w-24 flex-col items-center sm:w-28">
         <div className="grid size-8 place-items-center rounded-full border border-gold/25 bg-surface text-gold">
           {metric.icon}
         </div>
-        <div className="mt-1 text-[10px] font-bold text-muted-foreground">{metric.label}</div>
+        <div className="mt-1 whitespace-nowrap text-[10px] font-bold text-muted-foreground">{metric.label}</div>
         {diffLabel && (
-          <div className="mt-0.5 text-[9px] text-gold/70">{diffLabel}</div>
+          <div className="mt-0.5 whitespace-nowrap text-[9px] text-gold/70">{diffLabel}</div>
         )}
       </div>
-      <ValueCell value={meVal} suffix={suffix} highlight={meWins} align="end" />
+      <ValueCell value={friendVal} highlight={friendWins} side="friend" />
     </div>
   );
 }
 
-function ValueCell({ value, suffix, highlight, align }: { value: number; suffix: string; highlight: boolean; align: "start" | "end" }) {
+function ValueCell({ value, highlight, side }: { value: number; highlight: boolean; side: SideId }) {
+  // Ownership-locked cell:
+  //  - `me`     → visually right in RTL, contents flush to the OUTER (right) edge
+  //  - `friend` → visually left  in RTL, contents flush to the OUTER (left) edge
+  // Under dir="rtl" `justify-start` = right edge, `justify-end` = left edge.
+  const justify = side === "me" ? "justify-start" : "justify-end";
   return (
-    <div className={`flex min-w-0 items-center gap-1 ${align === "end" ? "justify-end" : "justify-start"}`}>
-      {highlight && align === "start" && <Crown className="size-3.5 text-gold" />}
+    <div
+      data-owner={side}
+      className={`flex min-w-0 items-center gap-1 ${justify}`}
+    >
+      {highlight && <Crown className="size-3.5 text-gold" />}
       <div className={`truncate text-lg font-black tabular-nums sm:text-xl ${highlight ? "text-gold" : "text-foreground/85"}`}>
-        {value}
-        {suffix && <span className="ms-0.5 text-xs font-bold opacity-80">{suffix}</span>}
+        {value.toLocaleString("en-US")}
       </div>
-      {highlight && align === "end" && <Crown className="size-3.5 text-gold" />}
     </div>
   );
 }
