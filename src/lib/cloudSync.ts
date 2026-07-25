@@ -13,6 +13,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Campaign } from "@/types/campaign";
+import { selectCampaignRows } from "@/lib/campaigns/entities";
 import type { ContentRegistryItem } from "@/types/contentRegistry";
 import {
   listCampaigns,
