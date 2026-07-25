@@ -1,8 +1,8 @@
 /**
  * Irth Identity Emblems — collectible avatar system.
  *
- * Each avatar is a premium vector emblem rendered by `<AvatarArt>` on top of
- * a dark navy disc with parchment-gold detailing. Emblems are NOT emoji and
+ * Each avatar id is resolved to the frozen Premium Historical Emblem raster
+ * pipeline on top of a dark navy disc. Emblems are NOT emoji and
  * NOT generic icons — they are part of the Irth visual identity.
  *
  * The data model is future-proof: every avatar carries rarity + unlock
@@ -53,8 +53,7 @@ export interface HistoricalAvatar {
   unlock_method: AvatarUnlockMethod;
   unlock_requirement?: AvatarUnlockRequirement;
   /**
-   * Unicode fallback rune used by the share-card canvas exporter (which
-   * cannot render React SVGs). The in-app UI always uses `<AvatarArt>`.
+   * Legacy unlock/display marker kept for old metadata and admin exports.
    */
   glyph: string;
 }

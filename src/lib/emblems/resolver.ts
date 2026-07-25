@@ -86,7 +86,6 @@ function toResolved(record: NonNullable<ReturnType<typeof getEmblemRecord>>): Re
   return {
     record,
     hasPremiumAsset: hasAnyAsset(record),
-    legacyKey: record.fallback_svg_key,
   };
 }
 

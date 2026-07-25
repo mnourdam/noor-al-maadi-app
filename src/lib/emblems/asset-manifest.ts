@@ -4,7 +4,7 @@
 // Contract for future CDN-hosted premium assets. Every asset URL
 // today is `null` — real files are rendered offline (Blender /
 // hand-painted) and uploaded later. The `<EmblemArt />` component
-// gracefully falls back to the legacy SVG until then.
+// gracefully falls back to the frozen Premium default alias until then.
 //
 // Convention (documented, NOT auto-generated):
 //   /emblems/<id>/<size>.<ext>
@@ -79,6 +79,4 @@ export const EMPTY_ASSETS: EmblemAssetSet = {
   asset_avif_url: null,
   transparent_background: true,
   dominant_color: null,
-  fallback_glyph: "★",
-  fallback_svg_key: "star",
 };

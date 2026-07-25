@@ -6,9 +6,8 @@
 // Notes:
 //  - `id` mirrors the legacy `avatar_id` so no player is ever
 //    forced to re-pick their emblem.
-//  - Every asset URL field is nullable: real Premium AVIF/WebP
-//    files are produced offline and uploaded later. Until then,
-//    consumers render the Legacy SVG (`AvatarArt`) fallback.
+//  - Every rendered profile emblem resolves to the frozen Premium
+//    AVIF/WebP pack or the Premium default alias.
 //  - Rarity here is the NORMALIZED set (no `uncommon`). The
 //    resolver maps the legacy `uncommon` value to `rare`.
 // ============================================================
@@ -72,8 +71,6 @@ export interface EmblemAssetSet {
   asset_avif_url: string | null; // convenience alias for the "best avif"
   transparent_background: boolean;
   dominant_color: string | null; // hex, e.g. "#c9a24a"
-  fallback_glyph: string;        // single unicode rune for canvas fallback
-  fallback_svg_key: string;      // key into legacy <AvatarArt />
 }
 
 export interface EmblemRecord extends EmblemAssetSet {
@@ -102,6 +99,4 @@ export interface ResolvedEmblem {
   record: EmblemRecord;
   /** True when a Premium raster asset is available for at least one size. */
   hasPremiumAsset: boolean;
-  /** The legacy `AvatarArt` key to render when no premium asset exists. */
-  legacyKey: string;
 }

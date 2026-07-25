@@ -70,8 +70,6 @@ function toRecord(a: HistoricalAvatar, index: number): EmblemRecord {
     asset_version: 1,
     visual_version: 1,
     legacy_avatar_id: a.id,
-    fallback_glyph: a.glyph,
-    fallback_svg_key: a.id,
     metadata: isSignature
       ? {
           art_direction: SIGNATURE_NOTES[a.id].note,

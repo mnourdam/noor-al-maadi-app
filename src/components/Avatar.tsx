@@ -1,5 +1,5 @@
-import { getAvatar, type AvatarRarity } from "@/lib/avatars";
 import { EmblemArt } from "./EmblemArt";
+import { resolveProfileEmblem, type EmblemRarity } from "@/lib/emblems";
 import { Lock } from "lucide-react";
 
 interface AvatarProps {
@@ -23,9 +23,8 @@ const SIZE_MAP = {
  * Rarity → outer ring colour. Used as the collectible "tier" marker.
  * Tints chosen to read against the Irth dark-navy surface.
  */
-const RARITY_RING: Record<AvatarRarity, string> = {
+const RARITY_RING: Record<EmblemRarity, string> = {
   common:    "ring-1 ring-gold/30",
-  uncommon:  "ring-2 ring-emerald-400/60",
   rare:      "ring-2 ring-sky-400/60",
   epic:      "ring-2 ring-violet-400/70",
   legendary: "ring-2 ring-gold/90 shadow-[0_0_18px_rgba(212,175,55,0.45)]",
@@ -45,16 +44,16 @@ export function Avatar({
   locked = false,
   className = "",
 }: AvatarProps) {
-  const a = avatarId ? getAvatar(avatarId) : getAvatar(null);
+  const resolved = resolveProfileEmblem(avatarId);
   const sz = SIZE_MAP[size];
-  const rarityRing = ring ? RARITY_RING[a.rarity] : "";
+  const rarityRing = ring ? RARITY_RING[resolved.record.rarity] : "";
   return (
     <div
-      aria-label={a.name}
-      title={a.name}
+      aria-label={resolved.record.name_ar}
+      title={resolved.record.name_ar}
       className={`relative grid place-items-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#1b2a48_0%,#0a1426_70%)] overflow-hidden ${rarityRing} ${sz.box} ${className}`}
     >
-      <EmblemArt avatarId={avatarId ?? a.id} size={sz.emblem} className={`${sz.art} text-gold`} />
+      <EmblemArt avatarId={avatarId ?? resolved.record.id} size={sz.emblem} className={`${sz.art} text-gold`} />
       {locked && (
         <span className="absolute inset-0 grid place-items-center rounded-full bg-black/60 text-gold">
           <Lock className="size-1/3" />
