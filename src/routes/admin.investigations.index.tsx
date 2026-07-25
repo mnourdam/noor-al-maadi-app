@@ -411,7 +411,7 @@ function AdminInvestigationsPage() {
           <div className="mb-2 flex items-center gap-1.5 text-xs text-slate-400">
             <Filter className="h-3.5 w-3.5" /> مرشحات
           </div>
-          <div className="grid gap-2 md:grid-cols-4">
+          <div className="grid gap-2 md:grid-cols-5">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
