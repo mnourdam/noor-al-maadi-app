@@ -93,7 +93,13 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
       });
   }
 
-  if (local.length > 0) return toCampaigns(local);
+  if (local.length > 0) {
+    // Snapshot rows carry no `key_art_*` columns — merge the artwork
+    // overlay so campaign-owned surfaces never fall back to a random
+    // hero image while showing that campaign's title / progress / CTA.
+    const overlay = await getCampaignKeyArtOverlay();
+    return toCampaigns(local, overlay);
+  }
 
   // Local empty (rare — e.g. snapshot still loading). Fall through to network.
   try {
@@ -101,6 +107,7 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
       .from("campaigns_public" as any)
       .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
     if (!error && data) return toCampaigns(data as any[]);
+
   } catch (err) {
     console.warn("[supabaseCampaigns] live list failed:", err);
   }
