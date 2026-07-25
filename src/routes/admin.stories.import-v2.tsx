@@ -48,6 +48,7 @@ function ImportV2Page() {
   const [preview, setPreview] = useState<StoryImportPreviewReportV2 | null>(null);
   const [applyResult, setApplyResult] = useState<StoryImportApplyResultV2 | null>(null);
   const [allowDeletes, setAllowDeletes] = useState(false);
+  const [clearMedia, setClearMedia] = useState(false);
   const [busy, setBusy] = useState<null | "export" | "preview" | "apply">(null);
   const [toast, setToast] = useState<Toast | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -58,6 +59,11 @@ function ImportV2Page() {
   };
 
   const totals = useMemo(() => preview?.totals ?? null, [preview]);
+  const options = useMemo(
+    () => ({ allow_deletes: allowDeletes, clear_media: clearMedia }),
+    [allowDeletes, clearMedia],
+  );
+
 
   const onExport = async () => {
     setBusy("export");
