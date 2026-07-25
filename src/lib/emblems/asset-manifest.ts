@@ -51,6 +51,50 @@ export function pickAssetUrl(
   return typeof alias === "string" && alias.length > 0 ? alias : null;
 }
 
+/**
+ * Ordered, local-first source candidates for one emblem at one display size.
+ *
+ * This is the ONLY correct way to render an emblem. Asking `pickAssetUrl` for
+ * "avif" and "webp" separately and handing both to <picture> is wrong: AVIF is
+ * CDN-only (no AVIF ships in the offline pack), so the browser always prefers
+ * the remote `/__l5e/...` file over the bundled WebP — which 404s inside the
+ * APK and whenever the device is offline. Local always wins here; the CDN is
+ * an upgrade path, never the primary source.
+ */
+export function emblemSourceCandidates(
+  record: EmblemRecord,
+  size: EmblemSize,
+): string[] {
+  const out: string[] = [];
+  const push = (url: string | null | undefined) => {
+    if (typeof url === "string" && url.length > 0 && !out.includes(url)) out.push(url);
+  };
+
+  // 1) Bundled offline pack at the requested size, then any smaller bundled size.
+  const localSizes: EmblemSize[] = [size, 512, 256, 128];
+  for (const s of localSizes) push(localEmblemPath(record.id, s, "webp"));
+
+  // 2) CDN matrix (WebP first — universally decodable — then AVIF).
+  const matrix = PREMIUM_EMBLEM_ASSETS[record.id];
+  if (matrix) {
+    push(matrix[size]?.webp);
+    push(matrix[size]?.avif);
+  }
+
+  // 3) Legacy authoring fields.
+  const bySize: Record<EmblemSize, keyof EmblemAssetSet> = {
+    128: "asset_128_url",
+    256: "asset_256_url",
+    512: "asset_512_url",
+    1024: "asset_1024_url",
+  };
+  push(record[bySize[size]] as string | null);
+  push(record.asset_webp_url);
+  push(record.asset_avif_url);
+
+  return out;
+}
+
 export function cacheKey(record: EmblemRecord): string {
   return `${record.id}@v${record.asset_version}-${record.visual_version}`;
 }
