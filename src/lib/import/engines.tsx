@@ -514,6 +514,25 @@ export function makeCampaignEngine(meta: {
       const rows: PreviewRow[] = [];
       const seen = new Map<string, number>();
       list.forEach((item, i) => {
+        // Section dividers are a different entity type and are never
+        // importable through the campaign pipeline.
+        if (isDividerPayload(item)) {
+          rows.push({
+            index: i,
+            status: "blocked",
+            issues: [{
+              severity: "blocker" as Severity,
+              message: "فاصل عصر (divider) — لا يمكن استيراده كحملة.",
+              itemIndex: i,
+              code: "campaign.divider",
+            }],
+            title: `عنصر #${i + 1}`,
+            render: <div className="text-xs text-red-300">فاصل عصر وليس حملة.</div>,
+            data: item,
+            key: `__divider_${i}`,
+          });
+          return;
+        }
         const v = validateCampaign(item);
         const errs = v.issues.filter((x) => x.level === "error");
         const warns = v.issues.filter((x) => x.level === "warning");
