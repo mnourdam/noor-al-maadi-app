@@ -624,7 +624,15 @@ function HomeFull() {
               />
             );
           })}
-          <div className="ink-overlay absolute inset-0" />
+          {/* Readability layer — adaptive, artwork-preserving (see KeyArtScrim). */}
+          <KeyArtScrim src={slide?.bg} variant="hero" />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg, color-mix(in oklab, var(--scrim) 42%, transparent) 0%, transparent 38%)",
+            }}
+          />
           {!perfLite && <div className="arabesque-layer" />}
           {!perfLite && Array.from({ length: 10 }).map((_, i) => (
             <span key={i} className="ember" style={{
