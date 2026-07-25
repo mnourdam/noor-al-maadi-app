@@ -381,9 +381,16 @@ function AdminInvestigationsPage() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
               <Download className="h-3.5 w-3.5" /> تصدير المكتبة
             </button>
+            <button
+              onClick={() => setImportOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/10">
+              <Upload className="h-3.5 w-3.5" /> استيراد تحقيق (تحديث آمن)
+            </button>
             <Link to="/admin/import" search={{ type: "investigations" } as any}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
-              <Upload className="h-3.5 w-3.5" /> استيراد JSON
+              title="المسار القديم — إنشاء دفعات فقط"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:border-amber-400 hover:text-amber-300">
+              <Upload className="h-3.5 w-3.5" /> استيراد قديم
+
             </Link>
           </div>
         </header>
