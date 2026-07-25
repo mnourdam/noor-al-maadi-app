@@ -558,18 +558,18 @@ function CampaignsSection({ worldSlug, progress }: { worldSlug: string; progress
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  {r.c.coverImage ? (
-                    <img
-                      src={r.c.coverImage}
-                      alt=""
-                      loading="lazy"
-                      className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-white/10"
-                    />
-                  ) : (
-                    <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
-                      <Trophy className="size-6 text-gold/80" />
-                    </span>
-                  )}
+                  <CampaignArtwork
+                    campaign={r.c}
+                    surface="world-card"
+                    alt=""
+                    className="size-14 shrink-0 overflow-hidden rounded-xl ring-1 ring-white/10"
+                    imgClassName="size-full object-cover"
+                    fallback={
+                      <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-black/40 text-2xl ring-1 ring-white/10">
+                        <Trophy className="size-6 text-gold/80" />
+                      </span>
+                    }
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ${
