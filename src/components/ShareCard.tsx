@@ -384,19 +384,8 @@ function stableIdCode(seed: string): string {
   return (code + "000000").slice(0, 6);
 }
 
-/** Optional historical quote for the specialization footer. */
-const SPECIALIZATION_QUOTE: Record<string, string> = {
-  prophetic:          "من نور المدينة، ابتدأت الرسالة.",
-  rashidun:           "على عهد الخلفاء الراشدين، اتسعت الفتوح.",
-  umayyad:            "من دمشق، امتدّت الحضارة إلى الأندلس.",
-  andalus:            "حيث ازدهرت الحضارة قروناً.",
-  abbasid:            "من بغداد، أضاء العلمُ العالم.",
-  seljuk:             "فرسان السلاجقة حرسوا ثغور الإسلام.",
-  zengid:             "من الموصل ودمشق، وحّد نور الدين الأمة.",
-  "ayyubid-state":    "من صلاح الدين، عادت القدس إلى أهلها.",
-  "mamluk-sultanate": "من عين جالوت، صُدّ زحف المغول.",
-  ottoman:            "آخر الإمبراطوريات الإسلامية العظمى.",
-};
+// (Historical footer quotes intentionally removed in Phase 10.1 — the
+// bottom of the card is reserved for Specialization → medals → branding.)
 
 interface CardData {
   displayName: string;
