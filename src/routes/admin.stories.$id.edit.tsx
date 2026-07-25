@@ -37,8 +37,9 @@ import { SceneRenderer } from "@/components/stories/scenes/SceneRenderer";
 import { SceneStage } from "@/components/stories/player/sceneLayouts";
 import { StoryMediaImage } from "@/components/stories/StoryMediaImage";
 
+import { toUnlockSpecV2 } from "@/lib/stories/unlock";
 import type {
-  StoryRow, StorySceneRow, StorySceneType, StoryStatus, UnlockSpec,
+  StoryRow, StorySceneRow, StorySceneType, StoryStatus,
 } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
 
