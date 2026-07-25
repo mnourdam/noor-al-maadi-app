@@ -144,6 +144,12 @@ function AdminInvestigationsPage() {
   const [previewData, setPreviewData] = useState<unknown | null>(null);
   const [previewErr, setPreviewErr] = useState<string | null>(null);
 
+  // Export: selection set + active export scope (null ids = whole library).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exportScope, setExportScope] = useState<{ ids: string[] | null; label: string } | null>(null);
+
+
+
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
     setTimeout(() => setToast(null), 3200);
