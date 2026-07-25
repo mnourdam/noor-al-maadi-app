@@ -15,6 +15,7 @@ import {
   ensureLocalSnapshotLoaded,
   invalidateLocalCampaign,
   localCampaignByIdOrSlug,
+  localCampaignDividerRows,
   localPublishedCampaigns,
 } from "./local-first-store";
 import {
@@ -27,17 +28,23 @@ import {
 import {
   buildFeed,
   groupFeedIntoSections,
-  isDividerData,
-  type CampaignDivider,
+  type CampaignSectionDivider,
   type EraSection,
   type FeedItem,
 } from "./campaignDividers";
+import {
+  isDividerRow,
+  selectCampaignRows,
+  selectDividers,
+} from "./campaigns/entities";
 
 function toCampaigns(
   rawList: { id: string; slug: string; data: any; key_art_path?: string | null; key_art_square_path?: string | null; key_art_credit?: string | null }[],
   overlay: Record<string, KeyArtOverlayRow> = {},
 ): Campaign[] {
-  const all = rawList
+  // Section dividers are a different entity type — they can never enter the
+  // campaign pipeline (sorting, progress, artwork, counts).
+  const all = selectCampaignRows(rawList)
     .map((r) => {
       const c = r.data as unknown as Campaign;
       if (!c) return c;
@@ -58,16 +65,10 @@ function toCampaigns(
         overlay,
       ) as Campaign;
     })
-    .filter((c) => c && !isDividerData(c) && c.status === "published");
+    .filter((c) => c && c.status === "published");
   return sortCampaignsChronological(withBackfilledChronologyAll(all));
 }
 
-
-function toDividers(rawList: { id: string; slug: string; data: any }[]): CampaignDivider[] {
-  return rawList
-    .filter((r) => isDividerData(r?.data))
-    .map((r) => ({ ...(r.data as CampaignDivider), id: r.id }));
-}
 
 /** All published campaigns, ordered chronologically. Local-first. */
 export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
