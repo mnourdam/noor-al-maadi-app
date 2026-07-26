@@ -32,6 +32,7 @@ import { CANONICAL_ERA_LABEL, toCanonicalEra } from "@/lib/era-canonical";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 import { useProfile } from "@/lib/profile";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
+import { safeKey } from "@/lib/text/safe-text";
 
 // Fresh random seed per app load/session so the default order reshuffles
 // on reload. Any active filter switches to a deterministic title-sort
@@ -47,9 +48,16 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+// Search-param write contract: `world` is OPTIONAL and is never persisted as
+// an empty string. `?world=` must not survive in the URL — clearing the filter
+// removes the key entirely (`world: undefined`), so no downstream consumer ever
+// normalizes an empty/garbage world slug.
 const investigationsSearchSchema = z.object({
-  world: fallback(z.string(), "").default(""),
+  world: fallback(z.string().optional(), undefined).optional(),
 });
+
+/** Strips `?world=` from the URL rather than writing an empty value. */
+const CLEAR_WORLD = { world: undefined } as const;
 
 export const Route = createFileRoute("/investigations")({
   head: () => ({ meta: [{ title: "التحقيقات التاريخية" }] }),
@@ -84,8 +92,8 @@ function InvestigationsIndex() {
   const navigate = useNavigate({ from: "/investigations" });
   const stashOrigin = useStashCurrentAsOrigin();
 
-  const rawWorld = Route.useSearch().world;
-  const worldSlug = isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
+  const rawWorld = safeKey(Route.useSearch().world);
+  const worldSlug = rawWorld && isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
 
   const { data: worldsIndex } = useQuery({
     queryKey: ["worlds-index"],
@@ -238,7 +246,7 @@ function InvestigationsIndex() {
   ]);
 
   const clearAll = () => {
-    if (worldSlug) navigate({ search: { world: "" } });
+    if (worldSlug) navigate({ search: CLEAR_WORLD });
     setSearch(""); setEraKey(""); setDifficulty(""); setStatus("all");
   };
 
@@ -251,7 +259,7 @@ function InvestigationsIndex() {
           <div className="mb-4">
             <WorldFilterChip
               worldTitle={worldTitle}
-              onClear={() => navigate({ search: { world: "" } })}
+              onClear={() => navigate({ search: CLEAR_WORLD })}
             />
           </div>
         )}

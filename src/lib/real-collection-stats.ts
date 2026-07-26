@@ -20,6 +20,7 @@ import { listRegistry } from "./contentRegistryStorage";
 import { displayName } from "./display-names";
 import { supabase } from "@/integrations/supabase/client";
 import { isAndroidUltraStableMode } from "./androidFreezeDiagnostics";
+import { safeKey } from "@/lib/text/safe-text";
 
 /** Items whose Arabic title cannot be resolved are excluded from
  *  homepage rails. Their raw IDs are logged once so data owners can
@@ -71,8 +72,8 @@ const TYPE_TO_KIND: Record<string, UnifiedUnlock["kind"]> = {
   state: "دولة", dynasty: "دولة",
 };
 
-function kindFromType(t: string): UnifiedUnlock["kind"] {
-  return TYPE_TO_KIND[t.toLowerCase()] ?? "حدث";
+function kindFromType(t: unknown): UnifiedUnlock["kind"] {
+  return TYPE_TO_KIND[safeKey(t)] ?? "حدث";
 }
 
 function useSupabaseCollection() {
@@ -191,7 +192,14 @@ export function useRealCollectionStats() {
   }, []);
   const registryById = useMemo(() => {
     const m = new Map<string, ReturnType<typeof listRegistry>[number]>();
-    for (const i of registry) m.set(i.id.toLowerCase(), i);
+    // `registry` comes from localStorage (untrusted JSON): an item with a
+    // missing/non-string `id` used to throw here and, because the bad row
+    // survived force-close, produced a persistent crash loop on Home.
+    for (const i of registry) {
+      const key = safeKey((i as { id?: unknown } | null)?.id);
+      if (!key) continue;
+      m.set(key, i);
+    }
     return m;
   }, [registry]);
 
@@ -209,7 +217,8 @@ export function useRealCollectionStats() {
     // 1. Supabase user_collection — has reliable timestamps
     for (const r of supaRows) {
       const kind = kindFromType(r.type);
-      const slugLower = r.slug.toLowerCase();
+      const slugLower = safeKey(r.slug);
+      if (!slugLower) continue;
       const canonicalSlug = canonicalSlugFor.get(slugLower) ?? slugLower;
       // Route-resolvability guard: only surface rows whose slug exists in
       // the canonical content (pack registry OR Supabase encyclopedia_entities).
