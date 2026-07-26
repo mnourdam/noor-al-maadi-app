@@ -287,7 +287,12 @@ export async function fetchEncyclopediaLivePublicAll(): Promise<SupabaseEncyclop
 export async function fetchEncyclopediaLivePublicIds(): Promise<Set<string> | null> {
   if (!isOnline()) return null;
   try {
-    const PAGE = 2000;
+    // PostgREST caps a single response at 1000 rows regardless of the range
+    // header, so the page size MUST be 1000. With a larger PAGE the first
+    // batch comes back short of PAGE, the loop exits early, and every row
+    // past 1000 is treated as "no longer on the server" — which is exactly
+    // how the category counts collapsed (135 figures instead of 377).
+    const PAGE = 1000;
     const ids = new Set<string>();
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await supabase
@@ -300,6 +305,7 @@ export async function fetchEncyclopediaLivePublicIds(): Promise<Set<string> | nu
       for (const row of batch) if (row?.id) ids.add(row.id);
       if (batch.length < PAGE) break;
     }
+
     return ids.size > 0 ? ids : null;
   } catch {
     return null;
