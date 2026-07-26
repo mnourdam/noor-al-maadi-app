@@ -75,8 +75,8 @@ export function StoryCard({
   const durationLabel = formatDurationArabic(
     resolveStoryDurationMs({ metadata: null, sceneCount: story.scene_count }),
   );
-  const coverRow = useCoverRow(story.id, story.cover_media_id);
-  const cover = useStoryMediaUrl(coverRow);
+  const cover = useStoryCoverSrc(story);
+
   const [coverFailed, setCoverFailed] = useState(false);
   useEffect(() => { setCoverFailed(false); }, [cover]);
 
