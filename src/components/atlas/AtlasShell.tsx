@@ -29,6 +29,7 @@ import {
 import { Route as MapRoute, type MapSearch } from "@/routes/map";
 import { androidMark, isAndroidUltraStableMode, recordAndroidAction } from "@/lib/androidFreezeDiagnostics";
 import { clearAtlasCrashMarker, releaseUiLocks } from "@/lib/atlas/atlas-recovery";
+import { atlasTrace } from "@/lib/atlas/render-trace";
 
 export function AtlasShell() {
   androidMark("render:Atlas");
@@ -43,6 +44,7 @@ export function AtlasShell() {
 }
 
 function AtlasShellInner() {
+  atlasTrace("shell.mount");
   const { data: entities = [], isLoading } = usePublishedAtlasEntities();
   const { profile } = useProfile();
   const settingsDismissed = profile.settings.atlasIntroDismissed === true;
@@ -108,6 +110,7 @@ function AtlasShellInner() {
   // A successful interactive render clears the one-session crash marker so
   // the next launch opens the full Atlas again.
   useEffect(() => {
+    atlasTrace("interaction.ready");
     const t = setTimeout(() => clearAtlasCrashMarker(), 1500);
     return () => clearTimeout(t);
   }, []);

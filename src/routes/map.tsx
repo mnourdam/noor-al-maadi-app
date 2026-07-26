@@ -14,6 +14,7 @@ import {
 } from "@/lib/atlas/atlas-recovery";
 import type { AtlasEntityKind } from "@/lib/atlas-entities";
 import { androidMark } from "@/lib/androidFreezeDiagnostics";
+import { atlasTrace } from "@/lib/atlas/render-trace";
 
 const ATLAS_KINDS = new Set<AtlasEntityKind>([
   "place",
@@ -71,6 +72,7 @@ export const Route = createFileRoute("/map")({
 
 function WorldMapPage() {
   androidMark("render:AtlasRoute");
+  atlasTrace("route.mount");
   const queryClient = useQueryClient();
 
   // App-restart safety: if the previous session died on this route, do NOT

@@ -80,6 +80,11 @@ export function hasVisibleModalLayer(): boolean {
  * is not removed (React still owns it) — it is made click-through and
  * hidden so the error screen underneath is reachable.
  *
+ * ⚠️ Never call this on a success path. Some routes ARE a legitimate
+ * full-screen fixed surface (the Atlas is `fixed inset-0 z-40`), and this
+ * function cannot tell them apart from a stuck overlay — it would hide the
+ * route itself, producing a blank screen with no error.
+ *
  * Elements that opt out with `data-irth-recovery-layer` (the error screen
  * itself) are never touched.
  */
@@ -106,7 +111,37 @@ export function neutralizeBlockingOverlays(): void {
   }
 }
 
-/** Full release used by crash/recovery screens. */
+/**
+ * Undoes `neutralizeBlockingOverlays`. Must run whenever the app returns to a
+ * healthy interactive surface, otherwise a layer hidden during a previous
+ * crash stays invisible for the rest of the session.
+ */
+export function restoreNeutralizedOverlays(): void {
+  if (typeof document === "undefined") return;
+  try {
+    document
+      .querySelectorAll<HTMLElement>("[data-irth-neutralized]")
+      .forEach((el) => {
+        el.style.pointerEvents = "";
+        el.style.visibility = "";
+        el.removeAttribute("data-irth-neutralized");
+      });
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Success-path release. Undoes ownerless scroll/inert locks and restores any
+ * layer a previous crash hid — but never hides a mounted surface.
+ */
+export function releaseSurfaceLocks(): void {
+  releaseScrollLocks();
+  releaseInertBranches();
+  restoreNeutralizedOverlays();
+}
+
+/** Full release used by crash/recovery screens ONLY. */
 export function releaseAllUiLocks(): void {
   releaseScrollLocks();
   releaseInertBranches();
@@ -122,3 +157,4 @@ export function releaseStaleUiLocks(): void {
   releaseScrollLocks();
   releaseInertBranches();
 }
+
