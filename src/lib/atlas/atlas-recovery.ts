@@ -16,7 +16,7 @@
  */
 
 import type { QueryClient } from "@tanstack/react-query";
-import { releaseAllUiLocks } from "@/lib/ui/ui-locks";
+import { releaseAllUiLocks, releaseSurfaceLocks } from "@/lib/ui/ui-locks";
 
 
 /** Session-scoped crash marker. Expires when the WebView session ends. */
@@ -177,14 +177,22 @@ function setForceRemoteAtlas(on: boolean): void {
 // ── UI-lock release ───────────────────────────────────────────────────
 
 /**
- * Releases every scroll lock / pointer blocker a crashed overlay could have
- * left behind (ModalPortal's `position:fixed` body lock, dialog
- * `overflow:hidden`, stray inline `pointer-events`). Safe to call repeatedly.
+ * SUCCESS-PATH release. Undoes scroll locks, inert branches and any layer a
+ * previous crash neutralized.
+ *
+ * It deliberately does NOT call `neutralizeBlockingOverlays()`: the Atlas
+ * itself renders as `fixed inset-0` and would be hidden by its own cleanup,
+ * producing a fully blank Atlas with no error and no crash report.
  */
 export function releaseUiLocks(): void {
-  // Single implementation shared with the route-error recovery screens.
+  releaseSurfaceLocks();
+}
+
+/** CRASH-PATH release. Also hides any full-screen layer above the recovery UI. */
+export function hardReleaseUiLocks(): void {
   releaseAllUiLocks();
 }
+
 
 
 // ── Atlas-only data reset ─────────────────────────────────────────────

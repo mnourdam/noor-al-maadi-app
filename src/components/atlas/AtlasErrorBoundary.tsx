@@ -16,7 +16,7 @@ import {
   enrichAtlasDiagnostics,
   logAtlasFailure,
   markAtlasCrash,
-  releaseUiLocks,
+  hardReleaseUiLocks,
   resetAtlasData,
 } from "@/lib/atlas/atlas-recovery";
 import type { QueryClient } from "@tanstack/react-query";
@@ -33,7 +33,7 @@ export class AtlasErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // 1. Release anything that could block the whole app FIRST.
-    releaseUiLocks();
+    hardReleaseUiLocks();
     // 2. Capture and emit the real exception before any generic UI hides it.
     const diag = captureAtlasDiagnostics(error, { componentStack: info.componentStack ?? undefined });
     logAtlasFailure(error, diag);
@@ -51,7 +51,7 @@ export class AtlasErrorBoundary extends Component<Props, State> {
           String(q.queryKey?.[0] ?? "").startsWith("atlas-entities"),
       });
     } catch { /* ignore */ }
-    releaseUiLocks();
+    hardReleaseUiLocks();
     clearAtlasCrashMarker();
     this.setState((s) => ({ failed: false, retried: true, nonce: s.nonce + 1 }));
   };

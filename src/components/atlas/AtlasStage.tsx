@@ -12,6 +12,8 @@ import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import { ATLAS_VIEWBOX, ATLAS_ASPECT } from "@/lib/atlas/aps";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { atlasTrace, beginAtlasTrace } from "@/lib/atlas/render-trace";
+
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 50;
@@ -47,16 +49,26 @@ export function AtlasStage({
   const viewRef = useRef<View>(view);
   useEffect(() => { viewRef.current = view; }, [view]);
 
+  useEffect(() => {
+    beginAtlasTrace();
+    atlasTrace("stage.mount", { androidStable, raster: ATLAS_BASE_URL });
+  }, [androidStable]);
+
   const [wrapSize, setWrapSize] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
   const wrapSizeRef = useRef(wrapSize);
   useEffect(() => { wrapSizeRef.current = wrapSize; }, [wrapSize]);
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const update = () =>
-      setWrapSize({ w: el.clientWidth || 1, h: el.clientHeight || 1 });
+    const update = () => {
+      const w = el.clientWidth || 1;
+      const h = el.clientHeight || 1;
+      atlasTrace("stage.size", { w, h, dpr: window.devicePixelRatio });
+      setWrapSize({ w, h });
+    };
     update();
     if (androidStable) return;
+
     // Old Android WebViews (< 64) have no ResizeObserver; constructing it
     // throws and used to take the whole Atlas route down. Fall back to a
     // window resize listener instead of crashing.
@@ -118,14 +130,22 @@ export function AtlasStage({
   // rAF-coalesced view flush.
   const pendingView = useRef<View | null>(null);
   const flushRaf = useRef<number | null>(null);
+  // Focus tween (replaces the old CSS `transition: transform`, which required
+  // GPU-promoting the whole SVG subtree — see the camera note below).
+  const tweenRaf = useRef<number | null>(null);
 
   const cancelAnimations = useCallback(() => {
     if (flushRaf.current != null) {
       cancelAnimationFrame(flushRaf.current);
       flushRaf.current = null;
     }
+    if (tweenRaf.current != null) {
+      cancelAnimationFrame(tweenRaf.current);
+      tweenRaf.current = null;
+    }
     pendingView.current = null;
   }, []);
+
 
   const scheduleView = useCallback((next: View, opts?: { relax?: boolean }) => {
     pendingView.current = clamp(next, opts);
@@ -280,42 +300,91 @@ export function AtlasStage({
   useEffect(() => () => cancelAnimations(), [cancelAnimations]);
 
   // ── Imperative focus: pan/zoom to an APS point smoothly ───────────────
+  // Tweened on rAF instead of a CSS transform transition, because the camera
+  // is now expressed through the SVG viewBox (which is not CSS-animatable).
   useEffect(() => {
     if (!focusAps) return;
     cancelAnimations();
     const minS = focusAps.minScale ?? 4;
-    setView((v) => {
-      const s = Math.max(v.scale, minS);
-      const tx = s * (VB_W / 2 - focusAps.x);
-      const ty = s * (VB_H / 2 - focusAps.y);
-      return clamp({ scale: s, tx, ty });
+    const from = viewRef.current;
+    const s = Math.max(from.scale, minS);
+    const to = clamp({
+      scale: s,
+      tx: s * (VB_W / 2 - focusAps.x),
+      ty: s * (VB_H / 2 - focusAps.y),
     });
-  }, [focusAps, clamp, cancelAnimations]);
+    if (androidStable) { setView(to); return; }
+    const DURATION = 420;
+    const t0 = performance.now();
+    const step = () => {
+      const p = Math.min(1, (performance.now() - t0) / DURATION);
+      // easeOutCubic
+      const k = 1 - Math.pow(1 - p, 3);
+      setView({
+        scale: from.scale + (to.scale - from.scale) * k,
+        tx: from.tx + (to.tx - from.tx) * k,
+        ty: from.ty + (to.ty - from.ty) * k,
+      });
+      tweenRaf.current = p < 1 ? requestAnimationFrame(step) : null;
+    };
+    tweenRaf.current = requestAnimationFrame(step);
+    return () => {
+      if (tweenRaf.current != null) {
+        cancelAnimationFrame(tweenRaf.current);
+        tweenRaf.current = null;
+      }
+    };
+  }, [focusAps, clamp, cancelAnimations, androidStable]);
 
   const inv = 1 / view.scale;
   // Quantize zoom into 4 tiers so pins/labels don't re-mount every frame.
   const labelTier =
     view.scale >= 6 ? 3 : view.scale >= 3 ? 2 : view.scale >= 1.6 ? 1 : 0;
-  const isInteracting = drag.current != null || pinch.current != null;
-  const useTransition = !androidStable && !isInteracting;
 
-  // Visible world rect in viewBox units → used to cull offscreen markers.
+  // ── Camera ────────────────────────────────────────────────────────────
+  // The camera is the SVG viewBox, NOT a transform on a <g>.
+  //
+  // Why: a `transform` + `will-change: transform` on a <g> that contains the
+  // full 14192×7088 APS raster forces the compositor to promote that subtree
+  // into ONE hardware layer whose raster size is the whole atlas at the
+  // current zoom (up to MAX_SCALE=50). Blink does not tile composited SVG
+  // subtrees, so on Android WebView the layer instantly exceeds GL_MAX_TEXTURE_SIZE,
+  // allocation fails, and the WebView drops the entire frame — the whole
+  // screen paints black with no JS error. Desktop Chrome hides this because
+  // its texture budget and fallbacks are far larger.
+  //
+  // Moving pan/zoom into the viewBox keeps the rendered surface exactly one
+  // viewport in size at every zoom level, while all children stay in APS
+  // coordinates (identical geometry and hit-testing as before).
   const _upx = unitsPerPxFor(wrapSize.w, wrapSize.h);
   const _visW = (wrapSize.w / _upx) / view.scale;
   const _visH = (wrapSize.h / _upx) / view.scale;
   const _cx = VB_W / 2 - view.tx / view.scale;
   const _cy = VB_H / 2 - view.ty / view.scale;
+  const camera = {
+    x: _cx - _visW / 2,
+    y: _cy - _visH / 2,
+    w: _visW,
+    h: _visH,
+  };
   // Generous margin so pins entering view don't pop in late.
   const _mx = _visW * 0.15;
   const _my = _visH * 0.15;
   const cullBounds = {
-    minX: _cx - _visW / 2 - _mx,
-    maxX: _cx + _visW / 2 + _mx,
-    minY: _cy - _visH / 2 - _my,
-    maxY: _cy + _visH / 2 + _my,
+    minX: camera.x - _mx,
+    maxX: camera.x + _visW + _mx,
+    minY: camera.y - _my,
+    maxY: camera.y + _visH + _my,
   };
 
-
+  const framed = useRef(false);
+  useEffect(() => {
+    if (framed.current || wrapSize.w <= 1) return;
+    framed.current = true;
+    atlasTrace("camera.init", { scale: view.scale, ...camera });
+    requestAnimationFrame(() => atlasTrace("frame.first"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wrapSize.w, wrapSize.h]);
 
   return (
     <div
@@ -342,19 +411,15 @@ export function AtlasStage({
       )}
 
       <svg
-        viewBox={`0 0 ${VB_W} ${VB_H}`}
+        viewBox={`${camera.x} ${camera.y} ${camera.w} ${camera.h}`}
         preserveAspectRatio="xMidYMid slice"
         className="block size-full"
       >
-        <g style={{
-          transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`,
-          transformOrigin: "center",
-          transition: useTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
-          willChange: "transform",
-        }}>
-          {/* Image at native APS size; no aspect distortion. The outer
-              <svg preserveAspectRatio="xMidYMid slice"> letterboxes the
-              whole frame uniformly. Pins live in the same coord space. */}
+        {/* No transform / will-change here: the viewBox above IS the camera,
+            so the compositor only ever rasterizes one viewport-sized layer. */}
+        <g>
+          {/* Image at native APS size; no aspect distortion. Pins live in the
+              same coordinate space. */}
           <image
             href={ATLAS_BASE_URL}
             x={0}
@@ -362,9 +427,9 @@ export function AtlasStage({
             width={VB_W}
             height={VB_H}
             preserveAspectRatio="xMidYMid slice"
-            onLoad={() => setRasterLoaded(true)}
-            onError={() => setRasterLoaded(false)}
-            style={{ imageRendering: "auto", opacity: 1, transition: androidStable ? "none" : "opacity 200ms ease-out" }}
+            onLoad={() => { atlasTrace("raster.load"); setRasterLoaded(true); }}
+            onError={() => { atlasTrace("raster.error", { url: ATLAS_BASE_URL }); setRasterLoaded(false); }}
+            style={{ imageRendering: "auto", opacity: 1 }}
           />
 
           <AtlasEntityPinsLayer
@@ -380,6 +445,8 @@ export function AtlasStage({
 
         </g>
       </svg>
+
+
 
       {/* Zoom controls — lifted above the iOS home-bar / nav-bar. */}
       <div
