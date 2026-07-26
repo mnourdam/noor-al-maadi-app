@@ -22,6 +22,13 @@ export interface StoryPrereq {
   satisfied: boolean;
 }
 
+export type StoryCategory =
+  | "event" | "character" | "city" | "landmark" | "battle"
+  | "artifact" | "document" | "daily_life" | "analysis" | "alternate_history";
+
+export type StoryRarity = "standard" | "featured" | "rare" | "legendary";
+export type StoryLengthClass = "short" | "standard" | "epic";
+
 export interface StorySummary {
   id: string;
   slug: string;
@@ -38,6 +45,12 @@ export interface StorySummary {
   content_version: number;
   published_at: string | null;
   scene_count: number;
+  /** Editorial taxonomy — surfaced by `_story_redact_summary_v2`. */
+  category: StoryCategory | null;
+  rarity: StoryRarity | null;
+  length_class: StoryLengthClass | null;
+  historical_confidence: string | null;
+  tags: string[];
   prereqs: StoryPrereq[];
   /** Authored, player-facing reason a locked story is locked (visible locks). */
   lock_explanation: string | null;
@@ -48,6 +61,7 @@ export interface StorySummary {
     max_scene_index_reached: number;
   } | null;
 }
+
 
 export async function listStoriesSummary(
   worldSlug?: string | null,
