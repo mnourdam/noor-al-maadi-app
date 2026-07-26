@@ -33,7 +33,7 @@ import { exactTopMatchTarget, normalizeArabicSearch } from "@/lib/encyclopedia-s
 import { canonicalEraLabel } from "@/lib/era-canonical";
 import {
   browseEncyclopedia,
-  encyclopediaIndexQueryOptions,
+  primeEncyclopediaIndex,
   useEncyclopediaIndex,
 } from "@/lib/encyclopedia/index-store";
 import { ProgressiveEntityGrid } from "@/components/encyclopedia/ProgressiveEntityGrid";
@@ -53,7 +53,7 @@ export const Route = createFileRoute("/encyclopedia/")({
   }),
   loader: ({ context }) => {
     // Non-blocking: normally already warm from the boot prefetch.
-    void context.queryClient.prefetchQuery(encyclopediaIndexQueryOptions());
+    primeEncyclopediaIndex(context.queryClient);
   },
   component: EncyclopediaHub,
 

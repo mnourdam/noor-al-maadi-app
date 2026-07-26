@@ -7,7 +7,7 @@ import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { ProgressiveEntityGrid } from "@/components/encyclopedia/ProgressiveEntityGrid";
 import {
   browseEncyclopedia,
-  encyclopediaIndexQueryOptions,
+  primeEncyclopediaIndex,
   useEncyclopediaIndex,
   type EncyclopediaBrowseSort,
 } from "@/lib/encyclopedia/index-store";
@@ -60,7 +60,7 @@ export const Route = createFileRoute("/encyclopedia/type/$type")({
   // Prime the shared index. It is normally already warm from the boot
   // prefetch, in which case this is a no-op and the page paints instantly.
   loader: ({ context }) => {
-    void context.queryClient.prefetchQuery(encyclopediaIndexQueryOptions());
+    primeEncyclopediaIndex(context.queryClient);
   },
   component: TypeBrowsePage,
   errorComponent: () => (
