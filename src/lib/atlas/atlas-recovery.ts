@@ -16,6 +16,8 @@
  */
 
 import type { QueryClient } from "@tanstack/react-query";
+import { releaseAllUiLocks } from "@/lib/ui/ui-locks";
+
 
 /** Session-scoped crash marker. Expires when the WebView session ends. */
 const CRASH_KEY = "irth.atlas.crash.v1";
