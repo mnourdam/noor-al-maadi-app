@@ -160,10 +160,47 @@
         window.setTimeout(function () {
           var el = document.getElementById("irth-boot-splash");
           if (!el) return;
+          var root = document.getElementById("root");
+          var mounted = !!(root && root.childElementCount > 0);
+          if (!mounted) {
+            // React never mounted. Most common cause: the document was loaded
+            // from a nested path and the relative module scripts 404'd. Self-
+            // heal by reloading the app shell from the origin root exactly
+            // once; otherwise show a clickable recovery screen instead of an
+            // eternal, unresponsive splash.
+            var path = window.location.pathname || "/";
+            if (path !== "/" && !window.sessionStorage.getItem("irth.boot-root-recovered")) {
+              try { window.sessionStorage.setItem("irth.boot-root-recovered", path); } catch (_) {}
+              window.location.replace(window.location.origin + "/");
+              return;
+            }
+            try {
+              document.documentElement.classList.remove("irth-booting");
+              document.documentElement.style.overflow = "";
+              document.body.style.overflow = "";
+              document.body.style.pointerEvents = "";
+              document.body.removeAttribute("inert");
+              document.body.removeAttribute("aria-hidden");
+              el.style.pointerEvents = "auto";
+              el.innerHTML =
+                '<div dir="rtl" style="display:flex;flex-direction:column;align-items:center;gap:18px;padding:24px;text-align:center;font-family:system-ui,sans-serif;color:#e8e3d6">' +
+                '<div style="font-size:17px;line-height:1.7">تعذّر تشغيل التطبيق. أعد المحاولة.</div>' +
+                '<button id="irth-boot-retry" style="pointer-events:auto;padding:14px 28px;border-radius:999px;border:1px solid rgba(201,162,75,.6);background:rgba(201,162,75,.16);color:#f0d79a;font-size:16px">إعادة المحاولة</button>' +
+                "</div>";
+              var retry = document.getElementById("irth-boot-retry");
+              retry &&
+                retry.addEventListener("click", function () {
+                  try { window.sessionStorage.removeItem("irth.boot-root-recovered"); } catch (_) {}
+                  window.location.replace(window.location.origin + "/");
+                });
+            } catch (_) {}
+            return;
+          }
           el.classList.add("is-out");
           document.documentElement.classList.remove("irth-booting");
           window.setTimeout(function () { try { el.parentNode && el.parentNode.removeChild(el); } catch (_) {} }, 320);
         }, 8000);
+
         // Observe removal: as soon as React's SplashSequence removes the boot
         // overlay, also drop the booting class so #root becomes visible.
         var mo = new MutationObserver(function () {
