@@ -2,6 +2,35 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // ── Deep-path asset resolution guard (MUST stay the first script) ──
+      // The Android bundle references its assets RELATIVELY (`./assets/...`)
+      // so it loads from a non-root origin. When the WebView loads a nested
+      // URL directly (renderer restart / location.reload() / restored history
+      // on a route like /encyclopedia/entity/x), the local server SPA-falls
+      // back to index.html, and every `./assets/*.js` then resolves against
+      // /encyclopedia/entity/ → 404 → the server returns index.html → the
+      // module script fails with "Expected a JavaScript-or-Wasm module script
+      // but the server responded with MIME text/html". React never mounts and
+      // the boot splash (z-index 2147483647) stays on screen forever, which
+      // looks exactly like a frozen, unclickable app.
+      //
+      // Injecting <base href="/"> before any asset tag is parsed makes the
+      // relative URLs resolve against the origin root on ANY path. Skipped for
+      // file:// (no origin root) and for the root path (behaviour unchanged).
+      (function () {
+        try {
+          if (location.protocol === "file:") return;
+          var path = location.pathname || "/";
+          if (path === "/" || path === "") return;
+          var base = document.createElement("base");
+          base.setAttribute("href", "/");
+          document.head.insertBefore(base, document.head.firstChild);
+          window.__IRTH_DEEP_PATH_BOOT__ = path;
+        } catch (_) {}
+      })();
+    </script>
+
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="إرث هو عالم تاريخي تفاعلي يتيح استكشاف تاريخ المسلمين عبر الشخصيات والدول والمعارك والمدن والأحداث في تجربة معرفية غامرة." />
     <meta name="theme-color" content="#0b1424" />
