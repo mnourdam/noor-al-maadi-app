@@ -19,7 +19,7 @@ import {
   Gem,
   type LucideIcon,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
