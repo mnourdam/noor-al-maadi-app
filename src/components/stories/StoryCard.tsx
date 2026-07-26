@@ -24,56 +24,20 @@ import {
   PlayCircle,
   Sparkles,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { progressFraction, storyState, type StorySummary } from "@/lib/stories/summary";
 import { formatDurationArabic, resolveStoryDurationMs } from "@/lib/stories/duration";
-import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
 import { guestHasCompleted } from "@/lib/stories/guestCompletions";
 import { useEffect, useState } from "react";
-import { useStoryMediaUrl } from "@/lib/stories/media/url";
-import type { StoryMediaRow } from "@/lib/stories/media/dao";
+import { useStoryCoverSrc } from "@/lib/stories/covers";
 import { LockedStoryDialog } from "./LockedStoryDialog";
 
-// M7C — direct reads from `stories` and `story_media` have been removed.
-// Cover rows are resolved via the M6 RPC `get_story_media_urls_v2`, which
-// enforces the visibility contract server-side. The RPC returns full media
-// rows (bucket + storage_path + processing_version) but NO signed `url`
-// field; the `story-media` bucket is private, so we hand the row to the
-// canonical `useStoryMediaUrl` resolver which produces the signed URL.
+// Covers are an OFFLINE APPLICATION ASSET (see src/lib/stories/covers):
+// bundled covers resolve synchronously from /story-covers, so the card
+// paints on the first frame with no RPC, no signing and no network.
+// Only stories newer than the installed build fall through to the
+// delta-sync path inside `useStoryCoverSrc`.
 
-interface CoverRpcResult {
-  ok?: boolean;
-  media?: StoryMediaRow[];
-}
-
-// Cache key bumped from "story-cover-url" → "story-cover-row:v2" so any
-// previously cached `null` from the old (broken) `url` field is invalidated
-// automatically without requiring app reinstall or manual cache clearing.
-function useCoverRow(storyId: string, coverMediaId: string | null): StoryMediaRow | null {
-  const { data } = useQuery({
-    queryKey: ["story-cover-row:v2", storyId, coverMediaId],
-    enabled: !!coverMediaId,
-    staleTime: 5 * 60_000,
-    queryFn: async (): Promise<StoryMediaRow | null> => {
-      if (!coverMediaId) return null;
-      try {
-        const { data, error } = await supabase.rpc(
-          "get_story_media_urls_v2" as never,
-          { p_story_id: storyId } as never,
-        );
-        if (error) return null;
-        const payload = (data ?? {}) as CoverRpcResult;
-        if (!payload.ok) return null;
-        const hit = (payload.media ?? []).find((m) => m.id === coverMediaId);
-        return hit ?? null;
-      } catch {
-        return null;
-      }
-    },
-  });
-  return data ?? null;
-}
 
 export function StoryCard({
   story,
@@ -111,8 +75,8 @@ export function StoryCard({
   const durationLabel = formatDurationArabic(
     resolveStoryDurationMs({ metadata: null, sceneCount: story.scene_count }),
   );
-  const coverRow = useCoverRow(story.id, story.cover_media_id);
-  const cover = useStoryMediaUrl(coverRow);
+  const cover = useStoryCoverSrc(story);
+
   const [coverFailed, setCoverFailed] = useState(false);
   useEffect(() => { setCoverFailed(false); }, [cover]);
 

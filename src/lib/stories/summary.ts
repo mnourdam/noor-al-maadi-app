@@ -22,6 +22,13 @@ export interface StoryPrereq {
   satisfied: boolean;
 }
 
+export type StoryCategory =
+  | "event" | "character" | "city" | "landmark" | "battle"
+  | "artifact" | "document" | "daily_life" | "analysis" | "alternate_history";
+
+export type StoryRarity = "standard" | "featured" | "rare" | "legendary";
+export type StoryLengthClass = "short" | "standard" | "epic";
+
 export interface StorySummary {
   id: string;
   slug: string;
@@ -38,6 +45,12 @@ export interface StorySummary {
   content_version: number;
   published_at: string | null;
   scene_count: number;
+  /** Editorial taxonomy — surfaced by `_story_redact_summary_v2`. */
+  category: StoryCategory | null;
+  rarity: StoryRarity | null;
+  length_class: StoryLengthClass | null;
+  historical_confidence: string | null;
+  tags: string[];
   prereqs: StoryPrereq[];
   /** Authored, player-facing reason a locked story is locked (visible locks). */
   lock_explanation: string | null;
@@ -48,6 +61,7 @@ export interface StorySummary {
     max_scene_index_reached: number;
   } | null;
 }
+
 
 export async function listStoriesSummary(
   worldSlug?: string | null,
@@ -76,7 +90,17 @@ export async function listStoriesSummary(
       // Query treats it as a failure and callers show empty state.
       throw new Error(error.message);
     }
-    const rows = (data ?? []) as StorySummary[];
+    // Normalise the editorial taxonomy so filters never see undefined/null
+    // shapes coming from either the authoritative or the guest RPC.
+    const rows = ((data ?? []) as StorySummary[]).map((r) => ({
+      ...r,
+      category: r.category ?? null,
+      rarity: r.rarity ?? null,
+      length_class: r.length_class ?? null,
+      historical_confidence: r.historical_confidence ?? null,
+      tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
+    }));
+
     if (!worldSlug) {
       void (async () => {
         try {
@@ -141,7 +165,13 @@ export async function listStoriesSummary(
         content_version: s.content_version ?? 1,
         published_at: s.published_at ?? null,
         scene_count: localStoryScenes(String(s.id)).length,
+        category: s.category ?? null,
+        rarity: s.rarity ?? null,
+        length_class: s.length_class ?? null,
+        historical_confidence: s.historical_confidence ?? null,
+        tags: Array.isArray(s.tags) ? s.tags.filter((t: unknown) => typeof t === "string") : [],
         prereqs: [],
+
         lock_explanation: s.lock_explanation ?? null,
         // Signed in: previously unlocked (online) stays unlocked offline;
         // new unlocks never happen offline (server is the authority).

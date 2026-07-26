@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "width": 360,
+  "height": 480,
+  "total_bytes": 45634,
+  "assets": {
+    "story_at_the_gates_of_baghdad": {
+      "file": "story_at_the_gates_of_baghdad.webp",
+      "bytes": 15264,
+      "quality": 78,
+      "width": 360,
+      "height": 480,
+      "sha256": "3e81cc46afaab44388998d8dafe7bcf4553da74008b8a338acca50172dcae057",
+      "source_media_id": "18201296-a2dc-495a-862a-d3d1eddd7b59",
+      "source_checksum": "94fdddd3d71113da9d7094e8aebafd9cf9bff4b55c670ed33b2e5eb6f352c0dc",
+      "content_version": 1
+    },
+    "story-fall-of-baghdad-1258": {
+      "file": "story-fall-of-baghdad-1258.webp",
+      "bytes": 12932,
+      "quality": 78,
+      "width": 360,
+      "height": 480,
+      "sha256": "828e5d603e3e5b0478ea7a82daff3a519c2ca11b4176c260c240f268c2ad21fc",
+      "source_media_id": "c466e4f5-5812-41cd-9a5c-eaae1ac2b885",
+      "source_checksum": "9c035e6146316a2bec140f209f887b9e970c538be455357eb5dab41134c0ffbe",
+      "content_version": 1
+    },
+    "story_baghdad_before_the_storm": {
+      "file": "story_baghdad_before_the_storm.webp",
+      "bytes": 17438,
+      "quality": 72,
+      "width": 360,
+      "height": 480,
+      "sha256": "af60c0203ba926352cea227377dc1d4a5461cff7bcede98ddbfa98f78bc8a882",
+      "source_media_id": "08b682bd-d62c-4be5-8495-7eeb60ca148d",
+      "source_checksum": "7baa6471b40532659763f14f5a9ceda6bae0d03d9784bd241b56f36cda9d66ed",
+      "content_version": 1
+    }
+  }
+}
