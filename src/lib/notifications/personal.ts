@@ -51,6 +51,9 @@ export async function listMyNotifications(opts: { cursor?: string | null; limit?
   Promise<NotificationsPage | { ok: false; reason: string }>
 {
   try {
+    // Guests have no personal inbox — the RPC is signed-in only.
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) return { ok: true, items: [], next_cursor: null };
     const { data, error } = await supabase.rpc("list_my_notifications" as never, {
       p_cursor: opts.cursor ?? null,
       p_limit: opts.limit ?? 20,
@@ -61,6 +64,7 @@ export async function listMyNotifications(opts: { cursor?: string | null; limit?
     return { ok: false, reason: (e as Error).message };
   }
 }
+
 
 export async function unreadNotificationCount(): Promise<number> {
   try {
