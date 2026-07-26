@@ -105,6 +105,17 @@ export const getRouter = () => {
     defaultNotFoundComponent: DefaultRouteNotFound,
   });
 
+  // Every committed navigation drops ownerless scroll/pointer locks. A modal
+  // that is legitimately open is left untouched (see releaseStaleUiLocks), so
+  // this can never fight a real overlay — it only cleans up after one that was
+  // unmounted mid-transition (the "Home is unclickable" class of bug).
+  if (typeof window !== "undefined") {
+    try {
+      router.subscribe("onResolved", () => releaseStaleUiLocks());
+    } catch { /* subscription is a nicety, never fatal */ }
+  }
+
   return router;
 };
+
 
