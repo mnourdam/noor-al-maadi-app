@@ -90,6 +90,7 @@ import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyc
 import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
 import { Route as AdminEmblemsRouteImport } from './routes/admin.emblems'
 import { Route as AdminCrossHubLinksRouteImport } from './routes/admin.cross-hub-links'
+import { Route as AdminCrashDiagnosticsRouteImport } from './routes/admin.crash-diagnostics'
 import { Route as AdminContributionsRouteImport } from './routes/admin.contributions'
 import { Route as AdminContentInventoryRouteImport } from './routes/admin.content-inventory'
 import { Route as AdminContentIntegrityRepairRouteImport } from './routes/admin.content-integrity-repair'
@@ -557,6 +558,11 @@ const AdminCrossHubLinksRoute = AdminCrossHubLinksRouteImport.update({
   path: '/admin/cross-hub-links',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCrashDiagnosticsRoute = AdminCrashDiagnosticsRouteImport.update({
+  id: '/admin/crash-diagnostics',
+  path: '/admin/crash-diagnostics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminContributionsRoute = AdminContributionsRouteImport.update({
   id: '/admin/contributions',
   path: '/admin/contributions',
@@ -895,6 +901,7 @@ export interface FileRoutesByFullPath {
   '/admin/content-integrity-repair': typeof AdminContentIntegrityRepairRoute
   '/admin/content-inventory': typeof AdminContentInventoryRoute
   '/admin/contributions': typeof AdminContributionsRoute
+  '/admin/crash-diagnostics': typeof AdminCrashDiagnosticsRoute
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/emblems': typeof AdminEmblemsRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -1030,6 +1037,7 @@ export interface FileRoutesByTo {
   '/admin/content-integrity-repair': typeof AdminContentIntegrityRepairRoute
   '/admin/content-inventory': typeof AdminContentInventoryRoute
   '/admin/contributions': typeof AdminContributionsRoute
+  '/admin/crash-diagnostics': typeof AdminCrashDiagnosticsRoute
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/emblems': typeof AdminEmblemsRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -1165,6 +1173,7 @@ export interface FileRoutesById {
   '/admin/content-integrity-repair': typeof AdminContentIntegrityRepairRoute
   '/admin/content-inventory': typeof AdminContentInventoryRoute
   '/admin/contributions': typeof AdminContributionsRoute
+  '/admin/crash-diagnostics': typeof AdminCrashDiagnosticsRoute
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/emblems': typeof AdminEmblemsRoute
   '/admin/encyclopedia': typeof AdminEncyclopediaRoute
@@ -1304,6 +1313,7 @@ export interface FileRouteTypes {
     | '/admin/content-integrity-repair'
     | '/admin/content-inventory'
     | '/admin/contributions'
+    | '/admin/crash-diagnostics'
     | '/admin/cross-hub-links'
     | '/admin/emblems'
     | '/admin/encyclopedia'
@@ -1439,6 +1449,7 @@ export interface FileRouteTypes {
     | '/admin/content-integrity-repair'
     | '/admin/content-inventory'
     | '/admin/contributions'
+    | '/admin/crash-diagnostics'
     | '/admin/cross-hub-links'
     | '/admin/emblems'
     | '/admin/encyclopedia'
@@ -1573,6 +1584,7 @@ export interface FileRouteTypes {
     | '/admin/content-integrity-repair'
     | '/admin/content-inventory'
     | '/admin/contributions'
+    | '/admin/crash-diagnostics'
     | '/admin/cross-hub-links'
     | '/admin/emblems'
     | '/admin/encyclopedia'
@@ -1711,6 +1723,7 @@ export interface RootRouteChildren {
   AdminContentIntegrityRepairRoute: typeof AdminContentIntegrityRepairRoute
   AdminContentInventoryRoute: typeof AdminContentInventoryRoute
   AdminContributionsRoute: typeof AdminContributionsRoute
+  AdminCrashDiagnosticsRoute: typeof AdminCrashDiagnosticsRoute
   AdminCrossHubLinksRoute: typeof AdminCrossHubLinksRoute
   AdminEmblemsRoute: typeof AdminEmblemsRoute
   AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
@@ -2350,6 +2363,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCrossHubLinksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/crash-diagnostics': {
+      id: '/admin/crash-diagnostics'
+      path: '/admin/crash-diagnostics'
+      fullPath: '/admin/crash-diagnostics'
+      preLoaderRoute: typeof AdminCrashDiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/contributions': {
       id: '/admin/contributions'
       path: '/admin/contributions'
@@ -2893,6 +2913,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminContentIntegrityRepairRoute: AdminContentIntegrityRepairRoute,
   AdminContentInventoryRoute: AdminContentInventoryRoute,
   AdminContributionsRoute: AdminContributionsRoute,
+  AdminCrashDiagnosticsRoute: AdminCrashDiagnosticsRoute,
   AdminCrossHubLinksRoute: AdminCrossHubLinksRoute,
   AdminEmblemsRoute: AdminEmblemsRoute,
   AdminEncyclopediaRoute: AdminEncyclopediaRoute,

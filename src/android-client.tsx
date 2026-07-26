@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { assertProductionPublicOrigin, CONFIGURED_PUBLIC_ORIGIN } from "@/lib/share/publicOrigin";
+import { runSafeBootContract } from "@/lib/diagnostics/safe-boot";
 
 // Android release invariant: the shareable public origin must be configured.
 // If VITE_PUBLIC_APP_ORIGIN is missing/invalid the APK would silently ship a
@@ -38,6 +39,22 @@ try {
     window.history.replaceState(null, "", base + window.location.search + window.location.hash);
   }
 } catch { /* ignore */ }
+
+// ── Guaranteed clean-boot contract ──
+// If the previous session ended on the fatal recovery screen, consume the
+// one-launch marker, clear ONLY transient navigation/error/overlay state and
+// boot at `/`. Player data is never touched. Must run before the router reads
+// the location.
+try {
+  const boot = runSafeBootContract();
+  if (boot.recovered) {
+    // eslint-disable-next-line no-console
+    console.warn("[android:safe-boot]", JSON.stringify(boot));
+  }
+} catch (err) {
+  // eslint-disable-next-line no-console
+  console.error("[android:safe-boot] failed", err);
+}
 
 const rootElement = document.getElementById("root");
 

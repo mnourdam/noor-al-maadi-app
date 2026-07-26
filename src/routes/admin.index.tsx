@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail, Flag } from "lucide-react";
+import { AlertTriangle, Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail, Flag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -126,6 +126,9 @@ function AdminHub() {
             desc="تحقيقات تاريخية قابلة للعب من Supabase." />
           <AdminCard to="/admin/investigation-rewards" icon={<ShieldCheck className="h-5 w-5" />} title="مطابقة مكافآت التحقيقات"
             desc="أداة صيانة آمنة: تمنح المكافآت المفقودة للتحقيقات المنجزة دون تكرار المنح." />
+
+          <AdminCard to="/admin/crash-diagnostics" icon={<AlertTriangle className="h-5 w-5" />} title="تشخيص الأعطال"
+            desc="سجل محلي لآخر الأعطال الفادحة وحالة التنقل، مع إعادة ضبط آمنة." />
 
           <AdminCard to="/admin/stories" icon={<BookOpen className="h-5 w-5" />} title="إدارة القصص"
             desc="إنشاء وتحرير ونشر القصص التاريخية والمشاهد والوسائط." />

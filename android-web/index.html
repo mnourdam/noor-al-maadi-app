@@ -148,6 +148,76 @@
 
     <div id="root"></div>
     <script>
+      // ── Boot-level, React-free recovery layer ───────────────────────────
+      // Must work when React never mounts or the router is corrupted.
+      (function () {
+        var TRANSIENT_L = [/^irth\.crash\./, /^irth\.nav\./, /^irth\.route\./, /^irth\.overlay\./, /^irth\.boot/, /^tsr-scroll-restoration/i, /^tanstack\.router\./i, /^irth:navigation:/];
+        function clearTransient() {
+          try {
+            var keys = [], i;
+            for (i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+            keys.forEach(function (k) {
+              if (!k) return;
+              if (k === "irth.crash.reports") return; // keep diagnostics
+              for (var j = 0; j < TRANSIENT_L.length; j++) {
+                if (TRANSIENT_L[j].test(k)) { try { localStorage.removeItem(k); } catch (_) {} return; }
+              }
+            });
+          } catch (_) {}
+          try { sessionStorage.clear(); } catch (_) {}
+        }
+        function releaseLocks() {
+          try {
+            document.documentElement.classList.remove("irth-booting");
+            document.documentElement.style.overflow = "";
+            document.body.style.overflow = "";
+            document.body.style.pointerEvents = "";
+            document.body.style.position = "";
+            document.body.removeAttribute("inert");
+            document.body.removeAttribute("aria-hidden");
+          } catch (_) {}
+        }
+        function goHome() {
+          try { history.replaceState(null, "", "/"); } catch (_) {}
+          try { location.replace(location.origin + "/"); } catch (_) { location.reload(); }
+        }
+        function render(host, message) {
+          releaseLocks();
+          host.style.pointerEvents = "auto";
+          host.innerHTML =
+            '<div dir="rtl" style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px;text-align:center;font-family:system-ui,sans-serif;color:#e8e3d6;max-width:420px;margin:0 auto">' +
+            '<div style="font-size:17px;line-height:1.8">' + message + '</div>' +
+            '<button id="irth-boot-home" style="pointer-events:auto;min-height:48px;padding:12px 26px;border-radius:999px;border:1px solid rgba(201,162,75,.6);background:rgba(201,162,75,.18);color:#f0d79a;font-size:16px">العودة للرئيسية</button>' +
+            '<button id="irth-boot-reset" style="pointer-events:auto;min-height:48px;padding:12px 26px;border-radius:999px;border:1px solid rgba(232,227,214,.28);background:transparent;color:#e8e3d6;font-size:15px">إعادة ضبط حالة التنقل</button>' +
+            '<div style="font-size:12px;opacity:.65;line-height:1.7">لن يتم حذف حسابك أو تقدّمك أو المحتوى المحفوظ.</div>' +
+            '</div>';
+          var home = document.getElementById("irth-boot-home");
+          home && home.addEventListener("click", function () {
+            try { localStorage.removeItem("irth.crash.pending"); } catch (_) {}
+            try { localStorage.removeItem("irth.crash.staticRecovery"); } catch (_) {}
+            goHome();
+          });
+          var rst = document.getElementById("irth-boot-reset");
+          rst && rst.addEventListener("click", function () { clearTransient(); goHome(); });
+        }
+        window.__irthStaticRecovery = { render: render, clearTransient: clearTransient, goHome: goHome };
+
+        // Loop breaker: two consecutive failed boots hand over to this
+        // React-free screen instead of auto-reloading again.
+        try {
+          if (localStorage.getItem("irth.crash.staticRecovery") === "1") {
+            var host = document.getElementById("irth-boot-splash");
+            if (host) {
+              try { localStorage.removeItem("irth.crash.staticRecovery"); } catch (_) {}
+              clearTransient();
+              render(host, "تعذّر تشغيل التطبيق بشكل متكرر. اختر أحد الخيارات التالية.");
+              window.__irthStaticRecoveryActive = true;
+            }
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <script>
       // Safety net: never let the boot overlay stay forever if the JS splash
       // fails to mount. After 8s, fade it out and reveal #root.
       if (document.documentElement.classList.contains("android-input-test-boot")) {
@@ -158,6 +228,7 @@
         } catch (_) {}
       } else {
         window.setTimeout(function () {
+          if (window.__irthStaticRecoveryActive) return;
           var el = document.getElementById("irth-boot-splash");
           if (!el) return;
           var root = document.getElementById("root");
@@ -175,24 +246,11 @@
               return;
             }
             try {
-              document.documentElement.classList.remove("irth-booting");
-              document.documentElement.style.overflow = "";
-              document.body.style.overflow = "";
-              document.body.style.pointerEvents = "";
-              document.body.removeAttribute("inert");
-              document.body.removeAttribute("aria-hidden");
-              el.style.pointerEvents = "auto";
-              el.innerHTML =
-                '<div dir="rtl" style="display:flex;flex-direction:column;align-items:center;gap:18px;padding:24px;text-align:center;font-family:system-ui,sans-serif;color:#e8e3d6">' +
-                '<div style="font-size:17px;line-height:1.7">تعذّر تشغيل التطبيق. أعد المحاولة.</div>' +
-                '<button id="irth-boot-retry" style="pointer-events:auto;padding:14px 28px;border-radius:999px;border:1px solid rgba(201,162,75,.6);background:rgba(201,162,75,.16);color:#f0d79a;font-size:16px">إعادة المحاولة</button>' +
-                "</div>";
-              var retry = document.getElementById("irth-boot-retry");
-              retry &&
-                retry.addEventListener("click", function () {
-                  try { window.sessionStorage.removeItem("irth.boot-root-recovered"); } catch (_) {}
-                  window.location.replace(window.location.origin + "/");
-                });
+              // React never mounted after a self-heal attempt → static screen.
+              window.__irthStaticRecovery.render(
+                el,
+                "تعذّر تشغيل التطبيق. أعد المحاولة."
+              );
             } catch (_) {}
             return;
           }
