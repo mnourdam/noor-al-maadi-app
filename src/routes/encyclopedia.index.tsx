@@ -276,27 +276,35 @@ function EncyclopediaHubFull() {
               ادخل قاعة الذاكرة. تصفّح حر بين الشخصيات والدول والمدن والمعارك والآثار — كل ما تركه الزمن.
             </p>
 
-            {/* Live stats */}
+            {/* Live stats — never render a number before the index exists;
+                a placeholder is honest, "0" would be a wrong count. */}
             <div className="mt-4 grid grid-cols-4 gap-2 rounded-2xl border border-gold/20 bg-black/30 p-3 text-center">
               <div className="border-l border-gold/15 pl-2">
                 <p className="font-display text-lg font-bold text-gold leading-none">
-                  {total.toLocaleString("en-US")}
+                  {isLoading ? "—" : total.toLocaleString("en-US")}
                 </p>
                 <p className="mt-1 text-[9px] text-muted-foreground">إجمالي</p>
               </div>
               <div className="border-l border-gold/15 pl-2">
-                <p className="font-display text-lg font-bold text-foreground leading-none">{counts.figure ?? 0}</p>
+                <p className="font-display text-lg font-bold text-foreground leading-none">
+                  {isLoading ? "—" : (counts.figure ?? 0).toLocaleString("en-US")}
+                </p>
                 <p className="mt-1 text-[9px] text-muted-foreground">شخصيات</p>
               </div>
               <div className="border-l border-gold/15 pl-2">
-                <p className="font-display text-lg font-bold text-foreground leading-none">{counts.city ?? 0}</p>
+                <p className="font-display text-lg font-bold text-foreground leading-none">
+                  {isLoading ? "—" : (counts.city ?? 0).toLocaleString("en-US")}
+                </p>
                 <p className="mt-1 text-[9px] text-muted-foreground">مدن</p>
               </div>
               <div>
-                <p className="font-display text-lg font-bold text-foreground leading-none">{counts.battle ?? 0}</p>
+                <p className="font-display text-lg font-bold text-foreground leading-none">
+                  {isLoading ? "—" : (counts.battle ?? 0).toLocaleString("en-US")}
+                </p>
                 <p className="mt-1 text-[9px] text-muted-foreground">معارك</p>
               </div>
             </div>
+
 
             {/* Search */}
             <div className="relative mt-4">
