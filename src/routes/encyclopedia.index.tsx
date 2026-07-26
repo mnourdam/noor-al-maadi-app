@@ -51,7 +51,12 @@ export const Route = createFileRoute("/encyclopedia/")({
       { property: "og:description", content: "ادخل المكتبة التاريخية الكبرى. تصفّح حر، اكتشاف يومي، وعمق موسوعي." },
     ],
   }),
+  loader: ({ context }) => {
+    // Non-blocking: normally already warm from the boot prefetch.
+    void context.queryClient.prefetchQuery(encyclopediaIndexQueryOptions());
+  },
   component: EncyclopediaHub,
+
 });
 
 type CategoryDef = {
