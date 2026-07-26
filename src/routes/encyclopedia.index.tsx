@@ -28,18 +28,16 @@ import encyclopediaHeaderArt from "@/assets/hero/16-historical-library.jpg?url";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
+import { type SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
+import { exactTopMatchTarget, normalizeArabicSearch } from "@/lib/encyclopedia-search";
+import { canonicalEraLabel } from "@/lib/era-canonical";
 import {
-  fetchEncyclopediaAllLocalFirst,
-  fetchEncyclopediaLivePublicAll,
-  type SupabaseEncyclopediaEntity,
-} from "@/lib/encyclopedia-source";
-import {
-  buildCanonicalizedEncyclopediaSearch,
-  exactTopMatchTarget,
-  mergeEncyclopediaRowsById,
-  normalizeArabicSearch,
-} from "@/lib/encyclopedia-search";
-import { canonicalEraLabel, eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
+  browseEncyclopedia,
+  encyclopediaIndexQueryOptions,
+  EMPTY_ENCYCLOPEDIA_INDEX,
+} from "@/lib/encyclopedia/index-store";
+import { ProgressiveEntityGrid } from "@/components/encyclopedia/ProgressiveEntityGrid";
+
 import { iconForType } from "@/lib/encyclopedia-icons";
 import { HighlightedText } from "@/components/HighlightedText";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
@@ -53,7 +51,12 @@ export const Route = createFileRoute("/encyclopedia/")({
       { property: "og:description", content: "ادخل المكتبة التاريخية الكبرى. تصفّح حر، اكتشاف يومي، وعمق موسوعي." },
     ],
   }),
+  loader: ({ context }) => {
+    // Non-blocking: normally already warm from the boot prefetch.
+    void context.queryClient.prefetchQuery(encyclopediaIndexQueryOptions());
+  },
   component: EncyclopediaHub,
+
 });
 
 type CategoryDef = {
@@ -94,36 +97,8 @@ const SUGGEST_TYPE_LABELS: Record<string, string> = {
 };
 
 
-type EncyclopediaIndexData = {
-  rows: SupabaseEncyclopediaEntity[];
-  authoritativeIds: string[] | null;
-};
-
-function useAllEncyclopedia() {
-  return useQuery({
-    queryKey: ["encyclopedia", "all-search-canonical-v1"],
-    staleTime: 60_000,
-    queryFn: async (): Promise<EncyclopediaIndexData> => {
-      const [local, live] = await Promise.all([
-        fetchEncyclopediaAllLocalFirst(),
-        fetchEncyclopediaLivePublicAll(),
-      ]);
-      return {
-        rows: mergeEncyclopediaRowsById(local, live),
-        authoritativeIds: live ? live.map((row) => row.id) : null,
-      };
-    },
-  });
-}
 
 
-
-function metaEra(entity: SupabaseEncyclopediaEntity): string {
-  const m = entity.metadata && typeof entity.metadata === "object"
-    ? (entity.metadata as Record<string, unknown>)
-    : {};
-  return typeof m.era === "string" ? (m.era as string).trim() : "";
-}
 
 function seededPick<T>(arr: T[], seed: number, n: number): T[] {
   const a = arr.slice();
@@ -165,7 +140,7 @@ function EncyclopediaHubFull() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [era, setEra] = useState<string>("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  
   const [showAllEras, setShowAllEras] = useState(false);
   const [focused, setFocused] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
@@ -173,56 +148,16 @@ function EncyclopediaHubFull() {
 
   useEffect(() => { setRecent(readRecent(RECENT_KEY)); }, []);
 
-  const { data: encyclopediaData, isLoading } = useAllEncyclopedia();
-  const searchRows = encyclopediaData?.rows ?? [];
-  const authoritativeIds = useMemo(
-    () => encyclopediaData?.authoritativeIds ? new Set(encyclopediaData.authoritativeIds) : null,
-    [encyclopediaData?.authoritativeIds],
+  // One shared, pre-built index (see src/lib/encyclopedia/index-store.ts).
+  // Warm from the boot prefetch, so this renders from cache with no await.
+  const { data: index = EMPTY_ENCYCLOPEDIA_INDEX, isPending: isLoading } = useQuery(
+    encyclopediaIndexQueryOptions(),
   );
-  const all = useMemo(
-    () => buildCanonicalizedEncyclopediaSearch({
-      rows: searchRows,
-      query: "",
-      authoritativeIds,
-      includeUnscored: true,
-    }).map((x) => x.e),
-    [searchRows, authoritativeIds],
-  );
-
-
-  const counts = useMemo(() => {
-    const c: Record<string, number> = {};
-    for (const e of all) c[e.entity_type] = (c[e.entity_type] ?? 0) + 1;
-    return c;
-  }, [all]);
-
-  const eraCounts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const e of all) {
-      const er = metaEra(e);
-      if (!er) continue;
-      // Only surface eras that map to a known canonical era. Anything
-      // unknown or free-form is dropped so filters never show "غير محدد".
-      const canon = toCanonicalEra(er);
-      if (!canon) continue;
-      m.set(canon, (m.get(canon) ?? 0) + 1);
-    }
-    return Array.from(m.entries()).sort((a, b) => {
-      const ai = eraSortIndex(a[0]);
-      const bi = eraSortIndex(b[0]);
-      if (ai !== bi) return ai - bi;
-      return b[1] - a[1];
-    });
-  }, [all]);
-
-  const recentlyAdded = useMemo(
-    () => all.slice().sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? "")).slice(0, 6),
-    [all],
-  );
-  const recentlyUpdated = useMemo(
-    () => all.slice().sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? "")).slice(0, 6),
-    [all],
-  );
+  const all = index.rows;
+  const counts = index.counts;
+  const eraCounts = index.erasByType.all ?? [];
+  const recentlyAdded = useMemo(() => index.recentlyAdded.slice(0, 6), [index]);
+  const recentlyUpdated = useMemo(() => index.recentlyUpdated.slice(0, 6), [index]);
 
   // Today's discoveries — one per category, deterministic per day
   const todaysPicks = useMemo(() => {
@@ -230,56 +165,44 @@ function EncyclopediaHubFull() {
     const out: { type: string; label: string; entity: SupabaseEncyclopediaEntity }[] = [];
     for (const cat of CATEGORIES) {
       if (cat.key === "state") continue;
-      const pool = all.filter((e) => e.entity_type === cat.key);
+      const pool = index.byType[cat.key] ?? [];
       if (!pool.length) continue;
       const picked = seededPick(pool, day + cat.key.charCodeAt(0), 1)[0];
-      if (picked) out.push({ type: cat.key, label: cat.label, entity: picked });
+      if (picked) out.push({ type: cat.key, label: cat.label, entity: picked.e });
     }
     return out.slice(0, 6);
-  }, [all]);
+  }, [index]);
 
   const discovery = useMemo(() => {
-    const pool = all.filter((e) => DISCOVERY_TYPES.includes(e.entity_type));
+    const pool = index.indexed.filter((item) => DISCOVERY_TYPES.includes(item.e.entity_type));
     const seed = Math.floor(Date.now() / (1000 * 60 * 30));
-    return seededPick(pool, seed, 6);
-  }, [all]);
+    return seededPick(pool, seed, 6).map((item) => item.e);
+  }, [index]);
 
   // Recently viewed (client-side)
   const [viewedIds, setViewedIds] = useState<string[]>([]);
   useEffect(() => { setViewedIds(readRecent(RECENT_VIEW_KEY)); }, []);
   const recentlyViewed = useMemo(() => {
-    if (!viewedIds.length || !all.length) return [];
-    const map = new Map(all.map((e) => [e.slug, e] as const));
-    return viewedIds.map((s) => map.get(s)).filter(Boolean).slice(0, 6) as SupabaseEncyclopediaEntity[];
-  }, [viewedIds, all]);
+    if (!viewedIds.length || index.total === 0) return [];
+    return viewedIds
+      .map((slug) => index.bySlug.get(slug))
+      .filter(Boolean)
+      .slice(0, 6) as SupabaseEncyclopediaEntity[];
+  }, [viewedIds, index]);
 
   const q = query.trim();
 
-  const suggestions = useMemo(() => {
-    if (!q) return [];
-    return buildCanonicalizedEncyclopediaSearch({
-      rows: searchRows,
-      query: q,
-      authoritativeIds,
-      typeFilter,
-      max: 6,
-    }).map((x) => x.e);
-  }, [searchRows, authoritativeIds, q, typeFilter]);
+  const suggestions = useMemo(
+    () => (q ? browseEncyclopedia(index, { query: q, max: 6 }) : []),
+    [index, q],
+  );
 
+  // No artificial cap: the full result set is returned and revealed
+  // progressively by ProgressiveEntityGrid.
   const results = useMemo(() => {
-    if (!q && !era && typeFilter === "all") return [];
-    return buildCanonicalizedEncyclopediaSearch({
-      rows: searchRows,
-      query: q,
-      authoritativeIds,
-      typeFilter,
-      eraFilter: era,
-      getEra: (entity) => toCanonicalEra(metaEra(entity)),
-      includeUnscored: !q,
-      max: 60,
-    }).map((x) => x.e);
-
-  }, [searchRows, authoritativeIds, q, era, typeFilter]);
+    if (!q && !era) return [];
+    return browseEncyclopedia(index, { query: q, era, sort: q ? "relevance" : "alpha" });
+  }, [index, q, era]);
 
   const topMatch = useMemo(() => {
     if (!q || results.length === 0) return null;
@@ -300,7 +223,8 @@ function EncyclopediaHubFull() {
     return null;
   }, [results, q]);
 
-  const total = all.length;
+  const total = index.total;
+
   const submitRecent = (value: string) => {
     const v = value.trim();
     if (!v) return;
@@ -481,31 +405,27 @@ function EncyclopediaHubFull() {
               )}
             </div>
 
-            {/* Type filter chips */}
+            {/* Quick jump rail — goes straight to the full category browser
+                (which shares this exact cache, so it opens instantly) rather
+                than applying a truncated in-page type filter. */}
             <div className="relative z-10 -mx-5 mt-3 overflow-x-auto px-5 pb-1 scrollbar-thin" dir="rtl">
               <div className="flex items-center gap-1.5">
-                {[{ key: "all", label: "الكل" }, ...CATEGORIES.filter((c) => (counts[c.key] ?? 0) > 0).map((c) => ({ key: c.key, label: c.label }))].map((t) => {
-                  const active = typeFilter === t.key;
-                  const n = t.key === "all" ? total : (counts[t.key] ?? 0);
-                  return (
-                    <button
-                      key={t.key}
-                      onClick={() => setTypeFilter(t.key)}
-                      className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] transition ${
-                        active
-                          ? "border-gold/60 bg-gold/15 text-gold shadow-[0_0_0_1px_rgba(212,175,55,0.25)]"
-                          : "border-white/10 bg-black/30 text-muted-foreground hover:border-gold/40 hover:text-foreground"
-                      }`}
-                    >
-                      <span className="font-bold">{t.label}</span>
-                      <span className={`ms-1.5 text-[10px] ${active ? "text-gold/80" : "text-muted-foreground/70"}`}>
-                        {n}
-                      </span>
-                    </button>
-                  );
-                })}
+                {CATEGORIES.filter((c) => (counts[c.key] ?? 0) > 0).map((c) => (
+                  <Link
+                    key={c.key}
+                    to="/encyclopedia/type/$type"
+                    params={{ type: c.key }}
+                    className="shrink-0 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[11px] text-muted-foreground transition hover:border-gold/40 hover:text-foreground"
+                  >
+                    <span className="font-bold">{c.label}</span>
+                    <span className="ms-1.5 text-[10px] text-muted-foreground/70">
+                      {counts[c.key] ?? 0}
+                    </span>
+                  </Link>
+                ))}
               </div>
             </div>
+
           </div>
         </section>
 
@@ -516,7 +436,7 @@ function EncyclopediaHubFull() {
           <p className="mt-8 rounded-2xl border border-white/10 bg-surface/70 p-6 text-center text-xs text-muted-foreground">
             لا توجد عناصر في الموسوعة بعد.
           </p>
-        ) : (q || era || typeFilter !== "all") ? (
+        ) : (q || era) ? (
           <section className="mt-6 animate-fade-in">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -536,9 +456,12 @@ function EncyclopediaHubFull() {
                 لا توجد نتائج مطابقة.
               </p>
             ) : (
-              <div className="grid grid-cols-2 gap-2.5">
-                {results.map((e) => (
-                  <div key={e.id} className="relative">
+              <ProgressiveEntityGrid
+                entities={results}
+                highlight={q ? query : undefined}
+                resetKey={`${q}|${era}`}
+                renderCard={(e) => (
+                  <div className="relative">
                     {topMatch === e.id && (
                       <div className="pointer-events-none absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full border border-gold/50 bg-gradient-to-l from-gold/25 to-gold/10 px-2 py-0.5 text-[9px] font-bold tracking-[0.15em] text-gold shadow-[0_0_0_1px_rgba(212,175,55,0.15),0_4px_14px_-4px_rgba(212,175,55,0.45)] backdrop-blur-sm">
                         <Sparkles className="size-2.5" strokeWidth={2} />
@@ -547,9 +470,10 @@ function EncyclopediaHubFull() {
                     )}
                     <EncyclopediaCard entity={e} highlight={q ? query : undefined} />
                   </div>
-                ))}
-              </div>
+                )}
+              />
             )}
+
           </section>
         ) : (
           <>

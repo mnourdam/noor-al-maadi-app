@@ -268,11 +268,50 @@ export async function fetchEncyclopediaAllLocalFirst(): Promise<SupabaseEncyclop
  * Fetch the current public live index without replacing local-first behavior.
  * Public search uses this as an online authority so stale cached rows that were
  * later archived/merged/disabled cannot keep rendering as duplicate results.
+ *
+ * PERFORMANCE: prefer `fetchEncyclopediaLivePublicIds` when only the
+ * authoritative id set is needed. This variant downloads every `body`
+ * (~12 MB / 2 round trips) and must never gate a player-facing first paint.
  */
 export async function fetchEncyclopediaLivePublicAll(): Promise<SupabaseEncyclopediaEntity[] | null> {
   if (!isOnline()) return null;
   try { return await liveFetchAll(); } catch { return null; }
 }
+
+/**
+ * Authoritative id set only — 49 KB / one round trip instead of the 12 MB
+ * full-row download. This is all the public search pipeline actually needs
+ * from the network: proof that a locally cached row still exists and is
+ * still enabled. Row *content* comes from the local snapshot.
+ */
+export async function fetchEncyclopediaLivePublicIds(): Promise<Set<string> | null> {
+  if (!isOnline()) return null;
+  try {
+    // PostgREST caps a single response at 1000 rows regardless of the range
+    // header, so the page size MUST be 1000. With a larger PAGE the first
+    // batch comes back short of PAGE, the loop exits early, and every row
+    // past 1000 is treated as "no longer on the server" — which is exactly
+    // how the category counts collapsed (135 figures instead of 377).
+    const PAGE = 1000;
+    const ids = new Set<string>();
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from("encyclopedia_entities")
+        .select("id")
+        .eq("enabled", true)
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      const batch = (data ?? []) as { id: string }[];
+      for (const row of batch) if (row?.id) ids.add(row.id);
+      if (batch.length < PAGE) break;
+    }
+
+    return ids.size > 0 ? ids : null;
+  } catch {
+    return null;
+  }
+}
+
 
 export async function fetchEncyclopediaByTypeLocalFirst(entityType: string): Promise<SupabaseEncyclopediaEntity[]> {
   if (!isSupabaseEnabled(entityType)) return [];

@@ -277,7 +277,15 @@ function RootComponent() {
     // routes already await `ensureLocalSnapshotLoaded()` when they need rows.
     const startOfflineSync = () => {
       import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
+      // The Encyclopedia is the most-visited surface in the app. Build its
+      // shared index in the background now (it shares the same singleton
+      // snapshot load) so the first tap on "الموسوعة" renders from a warm
+      // cache instead of starting the work after the tap.
+      import("../lib/encyclopedia/index-store")
+        .then((m) => m.prefetchEncyclopediaIndex(queryClient))
+        .catch(() => {});
     };
+
     const idle = (window as unknown as {
       requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
     }).requestIdleCallback;
