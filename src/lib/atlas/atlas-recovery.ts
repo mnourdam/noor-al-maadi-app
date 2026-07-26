@@ -16,6 +16,8 @@
  */
 
 import type { QueryClient } from "@tanstack/react-query";
+import { releaseAllUiLocks } from "@/lib/ui/ui-locks";
+
 
 /** Session-scoped crash marker. Expires when the WebView session ends. */
 const CRASH_KEY = "irth.atlas.crash.v1";
@@ -180,24 +182,10 @@ function setForceRemoteAtlas(on: boolean): void {
  * `overflow:hidden`, stray inline `pointer-events`). Safe to call repeatedly.
  */
 export function releaseUiLocks(): void {
-  if (typeof document === "undefined") return;
-  try {
-    const body = document.body;
-    const html = document.documentElement;
-    const lockedTop = body.style.top;
-    body.style.position = "";
-    body.style.top = "";
-    body.style.width = "";
-    body.style.overflow = "";
-    body.style.pointerEvents = "";
-    html.style.overflow = "";
-    html.style.pointerEvents = "";
-    const y = Math.abs(parseInt(lockedTop || "0", 10));
-    if (Number.isFinite(y) && y > 0) window.scrollTo(0, y);
-  } catch {
-    /* ignore */
-  }
+  // Single implementation shared with the route-error recovery screens.
+  releaseAllUiLocks();
 }
+
 
 // ── Atlas-only data reset ─────────────────────────────────────────────
 

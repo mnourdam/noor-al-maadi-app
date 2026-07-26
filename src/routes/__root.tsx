@@ -9,6 +9,8 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { useStoryUnlockInvalidation } from "@/lib/stories/unlock-invalidation";
+import { releaseAllUiLocks } from "@/lib/ui/ui-locks";
+
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -70,7 +72,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    // A crash can leave a full-screen overlay / body lock behind, which makes
+    // this screen visible but unclickable. Release both, twice (the second
+    // pass catches a layer that mounted on the same tick).
+    releaseAllUiLocks();
+    const t = window.setTimeout(releaseAllUiLocks, 120);
+    return () => window.clearTimeout(t);
   }, [error]);
+
 
   const isCapacitor =
     typeof window !== "undefined" &&
@@ -111,8 +120,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div
       dir="rtl"
       data-irth-error-boundary
-      className="flex min-h-screen items-center justify-center bg-background px-4"
+      data-irth-recovery-layer
+      className="fixed inset-0 z-[2147483000] flex items-center justify-center overflow-auto bg-background px-4"
+      style={{ pointerEvents: "auto" }}
     >
+
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           تعذر تحميل هذه الصفحة
