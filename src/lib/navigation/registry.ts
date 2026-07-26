@@ -192,7 +192,6 @@ const ADMIN_SUBPAGES: RouteId[] = [
   "/admin/games/crossword-generator",
   "/admin/historical-hubs-audit",
   "/admin/hub-builder",
-  "/qa-fatal",
   "/admin/crash-diagnostics",
   "/admin/import",
   "/admin/import-history",
