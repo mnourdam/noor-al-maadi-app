@@ -19,7 +19,8 @@
 //   search haystacks — is built exactly once per data version.
 // ============================================================
 
-import { queryOptions, type QueryClient } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
+import { queryOptions, useQuery, type QueryClient } from "@tanstack/react-query";
 import {
   fetchEncyclopediaLivePublicAll,
   fetchEncyclopediaLivePublicIds,
