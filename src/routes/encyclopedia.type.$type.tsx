@@ -2,14 +2,13 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, X, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { useQuery } from "@tanstack/react-query";
 import { AppShell, Screen } from "@/components/AppShell";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { ProgressiveEntityGrid } from "@/components/encyclopedia/ProgressiveEntityGrid";
 import {
   browseEncyclopedia,
-  encyclopediaIndexQueryOptions,
-  EMPTY_ENCYCLOPEDIA_INDEX,
+  primeEncyclopediaIndex,
+  useEncyclopediaIndex,
   type EncyclopediaBrowseSort,
 } from "@/lib/encyclopedia/index-store";
 import { canonicalEraLabel } from "@/lib/era-canonical";
@@ -61,7 +60,7 @@ export const Route = createFileRoute("/encyclopedia/type/$type")({
   // Prime the shared index. It is normally already warm from the boot
   // prefetch, in which case this is a no-op and the page paints instantly.
   loader: ({ context }) => {
-    void context.queryClient.prefetchQuery(encyclopediaIndexQueryOptions());
+    primeEncyclopediaIndex(context.queryClient);
   },
   component: TypeBrowsePage,
   errorComponent: () => (
@@ -87,7 +86,7 @@ function TypeBrowsePage() {
   const [sort, setSort] = useState<EncyclopediaBrowseSort>("alpha");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const { data: index = EMPTY_ENCYCLOPEDIA_INDEX, isPending } = useQuery(encyclopediaIndexQueryOptions());
+  const { index, isPending } = useEncyclopediaIndex();
 
   const total = index.counts[type] ?? 0;
   const eras = index.erasByType[type] ?? [];
@@ -120,10 +119,13 @@ function TypeBrowsePage() {
           <div>
             <h1 className="font-display text-2xl font-bold">{SECTION_LABELS[type]}</h1>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {filtered.length === total
-                ? `${total.toLocaleString("en-US")} عنصر`
-                : `${filtered.length.toLocaleString("en-US")} من أصل ${total.toLocaleString("en-US")}`}
+              {isPending
+                ? "…"
+                : filtered.length === total
+                  ? `${total.toLocaleString("en-US")} عنصر`
+                  : `${filtered.length.toLocaleString("en-US")} من أصل ${total.toLocaleString("en-US")}`}
             </p>
+
           </div>
         </div>
         <div className="ornament-divider mt-3" />
@@ -221,7 +223,7 @@ function TypeBrowsePage() {
         )}
 
         <div className="mt-5 pb-4">
-          {isPending && total === 0 ? (
+          {isPending ? (
             <div className="grid grid-cols-2 gap-2.5">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-[104px] animate-pulse rounded-2xl border border-white/5 bg-surface/60" />

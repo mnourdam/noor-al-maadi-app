@@ -19,7 +19,7 @@ import {
   Gem,
   type LucideIcon,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
@@ -33,8 +33,8 @@ import { exactTopMatchTarget, normalizeArabicSearch } from "@/lib/encyclopedia-s
 import { canonicalEraLabel } from "@/lib/era-canonical";
 import {
   browseEncyclopedia,
-  encyclopediaIndexQueryOptions,
-  EMPTY_ENCYCLOPEDIA_INDEX,
+  primeEncyclopediaIndex,
+  useEncyclopediaIndex,
 } from "@/lib/encyclopedia/index-store";
 import { ProgressiveEntityGrid } from "@/components/encyclopedia/ProgressiveEntityGrid";
 
@@ -53,7 +53,7 @@ export const Route = createFileRoute("/encyclopedia/")({
   }),
   loader: ({ context }) => {
     // Non-blocking: normally already warm from the boot prefetch.
-    void context.queryClient.prefetchQuery(encyclopediaIndexQueryOptions());
+    primeEncyclopediaIndex(context.queryClient);
   },
   component: EncyclopediaHub,
 
@@ -149,10 +149,10 @@ function EncyclopediaHubFull() {
   useEffect(() => { setRecent(readRecent(RECENT_KEY)); }, []);
 
   // One shared, pre-built index (see src/lib/encyclopedia/index-store.ts).
-  // Warm from the boot prefetch, so this renders from cache with no await.
-  const { data: index = EMPTY_ENCYCLOPEDIA_INDEX, isPending: isLoading } = useQuery(
-    encyclopediaIndexQueryOptions(),
-  );
+  // Keyed by the offline-snapshot data version, so counts can never come from
+  // a partial snapshot and never linger in cache after a sync.
+  const { index, isPending: isLoading } = useEncyclopediaIndex();
+
   const all = index.rows;
   const counts = index.counts;
   const eraCounts = index.erasByType.all ?? [];
@@ -276,27 +276,35 @@ function EncyclopediaHubFull() {
               ادخل قاعة الذاكرة. تصفّح حر بين الشخصيات والدول والمدن والمعارك والآثار — كل ما تركه الزمن.
             </p>
 
-            {/* Live stats */}
+            {/* Live stats — never render a number before the index exists;
+                a placeholder is honest, "0" would be a wrong count. */}
             <div className="mt-4 grid grid-cols-4 gap-2 rounded-2xl border border-gold/20 bg-black/30 p-3 text-center">
               <div className="border-l border-gold/15 pl-2">
                 <p className="font-display text-lg font-bold text-gold leading-none">
-                  {total.toLocaleString("en-US")}
+                  {isLoading ? "—" : total.toLocaleString("en-US")}
                 </p>
                 <p className="mt-1 text-[9px] text-muted-foreground">إجمالي</p>
               </div>
               <div className="border-l border-gold/15 pl-2">
-                <p className="font-display text-lg font-bold text-foreground leading-none">{counts.figure ?? 0}</p>
+                <p className="font-display text-lg font-bold text-foreground leading-none">
+                  {isLoading ? "—" : (counts.figure ?? 0).toLocaleString("en-US")}
+                </p>
                 <p className="mt-1 text-[9px] text-muted-foreground">شخصيات</p>
               </div>
               <div className="border-l border-gold/15 pl-2">
-                <p className="font-display text-lg font-bold text-foreground leading-none">{counts.city ?? 0}</p>
+                <p className="font-display text-lg font-bold text-foreground leading-none">
+                  {isLoading ? "—" : (counts.city ?? 0).toLocaleString("en-US")}
+                </p>
                 <p className="mt-1 text-[9px] text-muted-foreground">مدن</p>
               </div>
               <div>
-                <p className="font-display text-lg font-bold text-foreground leading-none">{counts.battle ?? 0}</p>
+                <p className="font-display text-lg font-bold text-foreground leading-none">
+                  {isLoading ? "—" : (counts.battle ?? 0).toLocaleString("en-US")}
+                </p>
                 <p className="mt-1 text-[9px] text-muted-foreground">معارك</p>
               </div>
             </div>
+
 
             {/* Search */}
             <div className="relative mt-4">
