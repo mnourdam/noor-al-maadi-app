@@ -15,6 +15,8 @@
  * admin-only data, no PII (profiles, referrals, audit logs, emails).
  */
 import { supabase } from "@/integrations/supabase/client";
+import { ATLAS_PUBLIC_COLUMNS } from "./atlas-entities";
+
 import {
   loadSnapshot,
   saveSnapshot,
@@ -53,10 +55,16 @@ interface CollectionDef {
   table: string;
   /** Optional filter applied to the query. */
   filter?: (q: any) => any;
+  /**
+   * Explicit column list. Required for tables whose editorial columns are
+   * not granted to `anon`/`authenticated` (a `*` select would fail).
+   */
+  columns?: string;
   /** Whether this collection is required for first-run playability. */
   required?: boolean;
   label: string;
 }
+
 
 export const COLLECTIONS: CollectionDef[] = [
   { key: "encyclopedia_entities", table: "encyclopedia_entities",
@@ -77,7 +85,9 @@ export const COLLECTIONS: CollectionDef[] = [
     label: "الحقيقة اليومية" },
   { key: "atlas_entities", table: "atlas_entities",
     filter: (q) => q.eq("status", "published").eq("aps_verified", true), required: false,
+    columns: ATLAS_PUBLIC_COLUMNS,
     label: "خريطة الأطلس (موثّقة فقط)" },
+
   // Legacy: museum content lives inside encyclopedia_entities (types:
   // figure/artifact/landmark/city/battle/event). content_registry is kept
   // for backwards-compatibility only — it does NOT duplicate encyclopedia
@@ -200,7 +210,7 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
   for (let from = 0; ; from += PAGE) {
     let query: any = supabase
       .from(def.table as any)
-      .select("*")
+      .select(def.columns ?? "*")
       // Stable ordering is REQUIRED — PostgREST without an explicit
       // order can reshuffle rows between pages and silently drop or
       // duplicate records across .range() calls.
@@ -247,7 +257,7 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
   for (let from = 0; ; from += PAGE) {
     let query: any = supabase
       .from(def.table as any)
-      .select("*")
+      .select(def.columns ?? "*")
       .gt("updated_at", since)
       .order("updated_at", { ascending: true })
       .order("id", { ascending: true })

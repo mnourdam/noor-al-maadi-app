@@ -65,17 +65,29 @@ export const STATUS_LABEL_AR: Record<AtlasEntityStatus, string> = {
   retired: "متقاعد",
 };
 
+/**
+ * Explicit, non-editorial column list.
+ *
+ * SECURITY: `created_by`, `updated_by` and `aps_verified_by` are editorial
+ * identity columns and are NOT granted to `anon`/`authenticated` at the
+ * database level. Never re-add them to a client-side select.
+ */
+export const ATLAS_PUBLIC_COLUMNS =
+  "id,slug,kind,name_ar,name_en,aps_x,aps_y,aps_verified,aps_verified_at," +
+  "lon,lat,geo_source,atlas_version,era,year_start,year_end,status," +
+  "published_at,encyclopedia_entity_id,metadata,created_at,updated_at";
+
 /** Public read: only published + verified rows (RLS enforces this for anon/auth). */
 export async function listPublishedAtlasEntities(): Promise<AtlasEntityRow[]> {
   try {
     const { data, error } = await supabase
       .from("atlas_entities")
-      .select("*")
+      .select(ATLAS_PUBLIC_COLUMNS)
       .eq("status", "published")
       .eq("aps_verified", true)
       .limit(2000);
     if (error) throw error;
-    if (data && data.length > 0) return data;
+    if (data && data.length > 0) return data as unknown as AtlasEntityRow[];
   } catch (e) {
     if (typeof console !== "undefined") console.warn("[atlas-entities] live read failed, using snapshot:", e);
   }
@@ -92,21 +104,21 @@ export async function listPublishedAtlasEntities(): Promise<AtlasEntityRow[]> {
 export async function listAllAtlasEntities(): Promise<AtlasEntityRow[]> {
   const { data, error } = await supabase
     .from("atlas_entities")
-    .select("*")
+    .select(ATLAS_PUBLIC_COLUMNS)
     .order("updated_at", { ascending: false })
     .limit(2000);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown as AtlasEntityRow[];
 }
 
 export async function getAtlasEntity(id: string): Promise<AtlasEntityRow | null> {
   const { data, error } = await supabase
     .from("atlas_entities")
-    .select("*")
+    .select(ATLAS_PUBLIC_COLUMNS)
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
-  return data;
+  return (data as unknown as AtlasEntityRow) ?? null;
 }
 
 export async function createAtlasEntity(input: AtlasEntityInsert): Promise<AtlasEntityRow> {
@@ -122,10 +134,10 @@ export async function createAtlasEntity(input: AtlasEntityInsert): Promise<Atlas
   const { data, error } = await supabase
     .from("atlas_entities")
     .insert(sanitized)
-    .select("*")
+    .select(ATLAS_PUBLIC_COLUMNS)
     .single();
   if (error) throw error;
-  return data;
+  return data as unknown as AtlasEntityRow;
 }
 
 export async function updateAtlasEntity(
@@ -136,11 +148,12 @@ export async function updateAtlasEntity(
     .from("atlas_entities")
     .update(patch)
     .eq("id", id)
-    .select("*")
+    .select(ATLAS_PUBLIC_COLUMNS)
     .single();
   if (error) throw error;
-  return data;
+  return data as unknown as AtlasEntityRow;
 }
+
 
 /** Flip aps_verified=true and stamp reviewer. Trigger fills the timestamp. */
 export async function verifyAtlasEntity(id: string, reviewerId: string | null): Promise<AtlasEntityRow> {

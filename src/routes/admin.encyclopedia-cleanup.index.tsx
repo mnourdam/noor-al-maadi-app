@@ -296,16 +296,17 @@ const TYPE_LABEL: Record<string, string> = {
 
 async function logAudit(action: string, detail: Record<string, unknown>, reason?: string) {
   try {
-    const { data } = await supabase.auth.getUser();
-    await supabase.from("admin_audit_log" as any).insert({
-      actor_id: data.user?.id ?? null,
-      actor_email: data.user?.email ?? null,
-      action,
-      detail,
-      reason: reason ?? null,
+    // Audit rows are written through the SECURITY DEFINER RPC — direct
+    // INSERTs into admin_audit_log are not permitted for app roles.
+    await supabase.rpc("log_admin_action" as any, {
+      p_action: action,
+      p_target: null,
+      p_detail: detail as any,
+      p_reason: reason ?? "",
     });
   } catch { /* audit must never block the actual operation */ }
 }
+
 
 // ------------------------------------------------------------
 // Hard DB verification — re-fetch the row by id and confirm
