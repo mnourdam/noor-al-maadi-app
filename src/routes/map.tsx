@@ -78,9 +78,17 @@ function WorldMapPage() {
   // App-restart safety: if the previous session died on this route, do NOT
   // remount the same renderer that killed it. Open safe mode instead, with an
   // explicit one-tap way back into the interactive Atlas.
-  const [forceSafe, setForceSafe] = useState(() => hasAtlasCrashMarker());
-  // Device capability gate — no canvas at all means the raster stage cannot run.
-  const [deviceUnsupported] = useState(() => !hasCanvas2d());
+  // Both gates are probed AFTER mount. On the server neither `document` nor
+  // storage exists, so a render-time probe would server-render "safe mode" for
+  // every device and flash the simplified Atlas before hydration.
+  const [forceSafe, setForceSafe] = useState(false);
+  const [deviceUnsupported, setDeviceUnsupported] = useState(false);
+
+  useEffect(() => {
+    if (!hasCanvas2d()) setDeviceUnsupported(true);
+    else if (hasAtlasCrashMarker()) setForceSafe(true);
+  }, []);
+
 
   useEffect(() => {
     releaseUiLocks();
@@ -89,6 +97,7 @@ function WorldMapPage() {
   if (deviceUnsupported) {
     return <AtlasSafeMode reason="device" />;
   }
+
 
   if (forceSafe) {
     return (
