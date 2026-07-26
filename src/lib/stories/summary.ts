@@ -155,7 +155,13 @@ export async function listStoriesSummary(
         content_version: s.content_version ?? 1,
         published_at: s.published_at ?? null,
         scene_count: localStoryScenes(String(s.id)).length,
+        category: s.category ?? null,
+        rarity: s.rarity ?? null,
+        length_class: s.length_class ?? null,
+        historical_confidence: s.historical_confidence ?? null,
+        tags: Array.isArray(s.tags) ? s.tags.filter((t: unknown) => typeof t === "string") : [],
         prereqs: [],
+
         lock_explanation: s.lock_explanation ?? null,
         // Signed in: previously unlocked (online) stays unlocked offline;
         // new unlocks never happen offline (server is the authority).
