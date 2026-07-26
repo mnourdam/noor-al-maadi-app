@@ -119,10 +119,13 @@ function TypeBrowsePage() {
           <div>
             <h1 className="font-display text-2xl font-bold">{SECTION_LABELS[type]}</h1>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {filtered.length === total
-                ? `${total.toLocaleString("en-US")} عنصر`
-                : `${filtered.length.toLocaleString("en-US")} من أصل ${total.toLocaleString("en-US")}`}
+              {isPending
+                ? "…"
+                : filtered.length === total
+                  ? `${total.toLocaleString("en-US")} عنصر`
+                  : `${filtered.length.toLocaleString("en-US")} من أصل ${total.toLocaleString("en-US")}`}
             </p>
+
           </div>
         </div>
         <div className="ornament-divider mt-3" />
