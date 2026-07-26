@@ -113,7 +113,8 @@ function StoriesIndex() {
           <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <AndroidPlainTextInput
             value={filters.q}
-            onValueChange={(v) => patch({ q: v })}
+            onChange={(e) => patch({ q: e.target.value })}
+
             placeholder="ابحث في القصص…"
             aria-label="ابحث في القصص"
             className="w-full rounded-xl border border-gold/25 bg-black/40 px-4 py-3 pe-10 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-gold/60"
