@@ -205,6 +205,23 @@ function indexStoryMedia(rows: Row[]) {
   }
 }
 
+// ── Snapshot identity + change notification ──────────────────────────
+// Any derived index (e.g. the encyclopedia unified index) must be keyed by
+// this value. It changes whenever the in-memory rows change, so a derived
+// cache built from an older/partial snapshot can never keep serving wrong
+// counts after the real snapshot lands.
+let _dataVersion = 0;
+const _listeners = new Set<() => void>();
+
+/** Monotonic id of the currently applied snapshot content. 0 = not loaded. */
+export function localDataVersion(): number { return _dataVersion; }
+
+/** Subscribe to snapshot (re)application. Returns an unsubscribe fn. */
+export function onLocalSnapshotChange(cb: () => void): () => void {
+  _listeners.add(cb);
+  return () => { _listeners.delete(cb); };
+}
+
 /** Rebuild every index from a snapshot. Safe to call repeatedly. */
 export function applyLocalSnapshot(snap: OfflineSnapshot | null) {
   if (!snap?.collections) return;
@@ -219,7 +236,11 @@ export function applyLocalSnapshot(snap: OfflineSnapshot | null) {
   indexScenes(c.story_scenes ?? []);
   indexStoryMedia(c.story_media ?? []);
   _snapshot = snap;
+  _ready = true;
+  _dataVersion += 1;
+  for (const cb of Array.from(_listeners)) { try { cb(); } catch { /* ignore */ } }
 }
+
 
 /**
  * Ensure the in-memory store is populated. Reads IndexedDB first, then
