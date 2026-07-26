@@ -139,6 +139,11 @@ export async function uploadStoryMedia(args: UploadStoryMediaArgs): Promise<Uplo
   await uploadObject(path, processed.blob);
   onProgress("uploading", 1);
 
+  // Covers additionally emit the compact card derivative used by the
+  // offline Story Cover pack and by every story card in the app.
+  const cardCoverPath =
+    preset.kind === "cover" ? await uploadCardCoverDerivative(args.file) : null;
+
   let mediaId: string;
   try {
     onProgress("registering", 0);
@@ -157,9 +162,11 @@ export async function uploadStoryMedia(args: UploadStoryMediaArgs): Promise<Uplo
         source_bytes: args.file.size,
         quality: processed.quality,
         degraded: processed.degraded,
+        ...(cardCoverPath ? { card_cover_path: cardCoverPath } : {}),
         ...(args.metadata ?? {}),
       },
     });
+
     onProgress("registering", 1);
   } catch (err) {
     await removeObject(path);
