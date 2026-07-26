@@ -65,6 +65,9 @@ function emit() {
  */
 export async function fetchMyNotifications(limit = 100): Promise<ServerNotification[]> {
   try {
+    // Guests have no inbox — the RPC is signed-in only.
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) return readCache();
     const { data, error } = await supabase.rpc("list_my_notifications" as never, {
       p_limit: limit,
       p_before: null,
@@ -78,6 +81,7 @@ export async function fetchMyNotifications(limit = 100): Promise<ServerNotificat
     return readCache();
   }
 }
+
 
 export async function fetchMyUnreadCount(): Promise<number> {
   // Derive the badge from the SAME list the Notification Center renders,

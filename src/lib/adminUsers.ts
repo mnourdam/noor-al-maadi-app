@@ -162,11 +162,15 @@ export async function adminSetAccountStatus(userId: string, status: AccountStatu
 export async function touchMyLastActive() {
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   try {
+    // Signed-in only RPC — guests must not call it (it is not granted to anon).
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
     await supabase.rpc("touch_my_last_active" as any);
   } catch {
     /* silent */
   }
 }
+
 
 // Build CSV with western digits + UTF-8 BOM for Excel.
 export function buildUsersCsv(rows: AdminUserRow[]): string {
