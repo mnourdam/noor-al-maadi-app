@@ -232,20 +232,16 @@ export function useEncyclopediaIndex() {
 }
 
 let prefetchStarted = false;
+let versionWatcherAttached = false;
 
 /**
- * Warm the encyclopedia index in the background at app boot. The encyclopedia
- * is the most-visited surface, so by the time the player taps it the data is
- * already built and the route renders from cache with zero awaits.
- *
- * Also drops index entries from previous data versions so memory does not grow
- * and no stale entry can be re-read.
+ * Build (or reuse) the index for the CURRENT snapshot version, dropping every
+ * entry from older versions. Callers never trigger a duplicate build: when the
+ * snapshot is not applied yet we wait for it first, so the index is built once,
+ * under its final key.
  */
-export function prefetchEncyclopediaIndex(queryClient: QueryClient, force = false): void {
-  if (prefetchStarted && !force) return;
-  prefetchStarted = true;
-
-  const warm = () => {
+export function primeEncyclopediaIndex(queryClient: QueryClient): void {
+  const run = () => {
     const version = localDataVersion();
     queryClient.removeQueries({
       queryKey: ENCYCLOPEDIA_INDEX_QUERY_KEY,
@@ -254,10 +250,27 @@ export function prefetchEncyclopediaIndex(queryClient: QueryClient, force = fals
     void queryClient.prefetchQuery(encyclopediaIndexQueryOptions(version));
   };
 
-  warm();
-  // Rebuild once the background snapshot sync applies newer content.
-  onLocalSnapshotChange(warm);
+  if (localDataVersion() > 0) run();
+  else void ensureLocalSnapshotLoaded().then(run).catch(() => {});
+
+  if (!versionWatcherAttached) {
+    versionWatcherAttached = true;
+    // Rebuild once a background snapshot sync applies newer content.
+    onLocalSnapshotChange(run);
+  }
 }
+
+/**
+ * Warm the encyclopedia index in the background at app boot. The encyclopedia
+ * is the most-visited surface, so by the time the player taps it the data is
+ * already built and the route renders from cache with zero awaits.
+ */
+export function prefetchEncyclopediaIndex(queryClient: QueryClient, force = false): void {
+  if (prefetchStarted && !force) return;
+  prefetchStarted = true;
+  primeEncyclopediaIndex(queryClient);
+}
+
 
 
 // ─────────────────────────────────────────────────────────────
