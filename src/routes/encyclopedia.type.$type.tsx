@@ -2,14 +2,13 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, X, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { useQuery } from "@tanstack/react-query";
 import { AppShell, Screen } from "@/components/AppShell";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { ProgressiveEntityGrid } from "@/components/encyclopedia/ProgressiveEntityGrid";
 import {
   browseEncyclopedia,
   encyclopediaIndexQueryOptions,
-  EMPTY_ENCYCLOPEDIA_INDEX,
+  useEncyclopediaIndex,
   type EncyclopediaBrowseSort,
 } from "@/lib/encyclopedia/index-store";
 import { canonicalEraLabel } from "@/lib/era-canonical";
