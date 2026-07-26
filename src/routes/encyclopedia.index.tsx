@@ -431,7 +431,7 @@ function EncyclopediaHubFull() {
           <p className="mt-8 rounded-2xl border border-white/10 bg-surface/70 p-6 text-center text-xs text-muted-foreground">
             لا توجد عناصر في الموسوعة بعد.
           </p>
-        ) : (q || era || typeFilter !== "all") ? (
+        ) : (q || era) ? (
           <section className="mt-6 animate-fade-in">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
