@@ -61,11 +61,17 @@ async function fetchCoverRow(
     if (error) return null;
     const payload = (data ?? {}) as CoverRpcResult;
     if (!payload.ok) return null;
-    return (payload.media ?? []).find((m) => m.id === coverMediaId) ?? null;
+    const hit = (payload.media ?? []).find((m) => m.id === coverMediaId) ?? null;
+    if (!hit) return null;
+    // Prefer the compact card derivative (10–20KB) when the upload
+    // pipeline produced one; fall back to the full-size cover.
+    const card = (hit.metadata as Record<string, unknown> | null)?.card_cover_path;
+    return typeof card === "string" && card ? { ...hit, storage_path: card } : hit;
   } catch {
     return null;
   }
 }
+
 
 /**
  * Card cover source. Returns the bundled path immediately when the cover
