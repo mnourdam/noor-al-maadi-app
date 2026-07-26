@@ -149,10 +149,10 @@ function EncyclopediaHubFull() {
   useEffect(() => { setRecent(readRecent(RECENT_KEY)); }, []);
 
   // One shared, pre-built index (see src/lib/encyclopedia/index-store.ts).
-  // Warm from the boot prefetch, so this renders from cache with no await.
-  const { data: index = EMPTY_ENCYCLOPEDIA_INDEX, isPending: isLoading } = useQuery(
-    encyclopediaIndexQueryOptions(),
-  );
+  // Keyed by the offline-snapshot data version, so counts can never come from
+  // a partial snapshot and never linger in cache after a sync.
+  const { index, isPending: isLoading } = useEncyclopediaIndex();
+
   const all = index.rows;
   const counts = index.counts;
   const eraCounts = index.erasByType.all ?? [];
