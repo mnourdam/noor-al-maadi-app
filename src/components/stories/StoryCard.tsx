@@ -272,6 +272,7 @@ export function StoryCard({
       <LockedStoryDialog
         title={story.title_ar}
         prereqs={story.prereqs}
+        explanation={story.lock_explanation}
         onClose={() => setLockDialog(false)}
       />
     )}
