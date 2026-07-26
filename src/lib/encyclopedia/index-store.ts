@@ -158,38 +158,76 @@ export function buildEncyclopediaIndex(
 
 export const EMPTY_ENCYCLOPEDIA_INDEX: EncyclopediaIndex = buildEncyclopediaIndex([], null);
 
+/**
+ * Build the index ONLY from a fully applied offline snapshot.
+ *
+ * Hard rule: the index is never built from a partial/absent snapshot. If the
+ * snapshot is not ready we either fall back to one authoritative live read
+ * (web, first visit) or we throw — throwing means React Query stores nothing,
+ * so no wrong count can ever be cached or displayed.
+ */
 async function loadEncyclopediaIndex(): Promise<EncyclopediaIndex> {
-  // Local snapshot first — this is normally already resident in RAM, so the
-  // index resolves synchronously-fast and the player never waits on network.
-  const local = await fetchEncyclopediaAllLocalFirst();
+  await ensureLocalSnapshotLoaded();
+  const local = localEncyclopediaAll() as SupabaseEncyclopediaEntity[];
   if (local.length > 0) {
     // Network is consulted for the id authority only (49 KB). It never gates
-    // the first paint: the query resolves with local rows and the authority
-    // simply prunes rows that no longer exist server-side.
+    // the first paint: rows come from the snapshot and the authority simply
+    // prunes rows that no longer exist server-side.
     const ids = await fetchEncyclopediaLivePublicIds();
     return buildEncyclopediaIndex(local, ids, "local");
   }
-  // No offline snapshot yet (fresh web visit before the background sync
-  // finished) — fall back to a full live read exactly once.
+  // No usable snapshot yet (fresh web visit before the background sync
+  // finished) — one full live read, still keyed by the current data version.
   const live = await fetchEncyclopediaLivePublicAll();
-  if (!live || live.length === 0) return EMPTY_ENCYCLOPEDIA_INDEX;
-  return buildEncyclopediaIndex(live, new Set(live.map((r) => r.id)), "live");
+  if (live && live.length > 0) {
+    return buildEncyclopediaIndex(live, new Set(live.map((r) => r.id)), "live");
+  }
+  // Nothing authoritative available: refuse to produce an index rather than
+  // caching an empty/incorrect one.
+  throw new Error("encyclopedia-index: snapshot not ready");
 }
 
-export function encyclopediaIndexQueryOptions() {
+export function encyclopediaIndexQueryOptions(dataVersion = localDataVersion()) {
   return queryOptions({
-    queryKey: ENCYCLOPEDIA_INDEX_QUERY_KEY,
+    queryKey: [...ENCYCLOPEDIA_INDEX_QUERY_KEY, dataVersion] as const,
     queryFn: loadEncyclopediaIndex,
     // The encyclopedia is content, not state: it changes when the offline
     // snapshot syncs, not while the player browses. A long stale window is
     // what makes re-opening a category instant instead of "loading…".
-    staleTime: 10 * 60_000,
+    // The data version in the key is what guarantees freshness.
+    staleTime: Infinity,
     gcTime: 24 * 60 * 60_000,
-    retry: 1,
+    retry: 2,
+    retryDelay: 400,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+}
+
+/**
+ * Subscribe to the snapshot data version. Components read the index through
+ * this so a background snapshot refresh swaps them onto a freshly built index
+ * instead of leaving a stale one on screen.
+ */
+export function useEncyclopediaIndexQueryOptions() {
+  const version = useSyncExternalStore(
+    onLocalSnapshotChange,
+    localDataVersion,
+    () => 0,
+  );
+  return encyclopediaIndexQueryOptions(version);
+}
+
+export function useEncyclopediaIndex() {
+  const options = useEncyclopediaIndexQueryOptions();
+  const q = useQuery(options);
+  return {
+    index: q.data ?? EMPTY_ENCYCLOPEDIA_INDEX,
+    /** True until a snapshot-backed index exists. Never shows wrong counts. */
+    isPending: !q.data,
+    isError: q.isError,
+  };
 }
 
 let prefetchStarted = false;
@@ -198,14 +236,28 @@ let prefetchStarted = false;
  * Warm the encyclopedia index in the background at app boot. The encyclopedia
  * is the most-visited surface, so by the time the player taps it the data is
  * already built and the route renders from cache with zero awaits.
+ *
+ * Also drops index entries from previous data versions so memory does not grow
+ * and no stale entry can be re-read.
  */
 export function prefetchEncyclopediaIndex(queryClient: QueryClient, force = false): void {
   if (prefetchStarted && !force) return;
   prefetchStarted = true;
-  void queryClient.prefetchQuery(encyclopediaIndexQueryOptions()).catch(() => {
-    prefetchStarted = false;
-  });
+
+  const warm = () => {
+    const version = localDataVersion();
+    queryClient.removeQueries({
+      queryKey: ENCYCLOPEDIA_INDEX_QUERY_KEY,
+      predicate: (q) => q.queryKey[3] !== version,
+    });
+    void queryClient.prefetchQuery(encyclopediaIndexQueryOptions(version));
+  };
+
+  warm();
+  // Rebuild once the background snapshot sync applies newer content.
+  onLocalSnapshotChange(warm);
 }
+
 
 // ─────────────────────────────────────────────────────────────
 // Search / filter — operates on the prebuilt index, never on raw rows.
