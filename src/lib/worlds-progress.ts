@@ -30,6 +30,7 @@ import { WORLD_ERA, WORLD_HUBS, WORLD_SLUGS } from "@/lib/worlds-constants";
 import { useProfile } from "@/lib/profile";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
+import { safeCompare, safeKey } from "@/lib/text/safe-text";
 
 // ------------------------------------------------------------
 // Types
@@ -148,11 +149,13 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
     if (!e || e.enabled === false) continue;
     const ws = worldOf(e);
     if (!ws) continue;
-    const bucket = (e.entity_type ?? "").toLowerCase() as EntityBucket;
+    const bucket = safeKey(e.entity_type) as EntityBucket;
     const idx = byWorld.get(ws);
     if (!idx) continue;
+    const eSlug = safeKey(e.slug);
+    if (!eSlug) continue;
     idx.entities.push(e);
-    idx.bySlug.set(e.slug.toLowerCase(), e);
+    idx.bySlug.set(eSlug, e);
     if (bucket in idx.byBucket) idx.byBucket[bucket].push(e);
   }
 
@@ -343,10 +346,9 @@ export function useMuseumSlugs(): Set<string> {
           .eq("user_id", uid);
         if (cancelled) return;
         const out = new Set<string>();
-        for (const r of (data ?? []) as Array<{ item_id: string }>) {
-          if (typeof r.item_id === "string" && r.item_id) {
-            out.add(r.item_id.toLowerCase());
-          }
+        for (const r of (data ?? []) as Array<{ item_id?: unknown }>) {
+          const key = safeKey(r?.item_id);
+          if (key) out.add(key);
         }
         setSlugs(out);
       } catch { /* offline — keep last known */ }
@@ -576,13 +578,13 @@ export function computeWorldProgress(
   // Entities (discovery = read)
   const total = idx.entities.length;
   let discovered = 0;
-  for (const e of idx.entities) if (inputs.discovered.has(e.slug.toLowerCase())) discovered++;
+  for (const e of idx.entities) if (inputs.discovered.has(safeKey(e.slug))) discovered++;
 
   // Museum (artifact subset, ownership only — user_collection)
   const artifacts = idx.byBucket.artifact;
   const artifactTotal = artifacts.length;
   let artifactDiscovered = 0;
-  for (const e of artifacts) if (inputs.museum.has(e.slug.toLowerCase())) artifactDiscovered++;
+  for (const e of artifacts) if (inputs.museum.has(safeKey(e.slug))) artifactDiscovered++;
 
   // Campaigns
   const campTotal = idx.campaignIds.length;
@@ -729,7 +731,7 @@ export function pickContinueJourney(
       const rank = (d?: string) => d === "easy" ? 0 : d === "medium" ? 1 : d === "hard" ? 2 : 3;
       const da = rank(a.difficulty); const db = rank(b.difficulty);
       if (da !== db) return da - db;
-      return a.slug.localeCompare(b.slug);
+      return safeCompare(a.slug, b.slug);
     });
   for (const inv of invs) {
     if (!invDoneSet.has(inv.slug)) {
@@ -746,11 +748,11 @@ export function pickContinueJourney(
   for (const bucket of BUCKET_PRIORITY) {
     if (bucket === "artifact") continue;
     const pool = [...idx.byBucket[bucket]]
-      .filter((e) => !inputs.discovered.has(e.slug.toLowerCase()))
+      .filter((e) => !inputs.discovered.has(safeKey(e.slug)))
       .sort((a, b) => {
         const ka = entitySortKey(a); const kb = entitySortKey(b);
         if (ka !== kb) return ka - kb;
-        return a.slug.localeCompare(b.slug);
+        return safeCompare(a.slug, b.slug);
       });
     if (pool.length > 0) {
       const e = pool[0];
@@ -766,11 +768,11 @@ export function pickContinueJourney(
 
   // 5. Next artifact.
   const artifacts = [...idx.byBucket.artifact]
-    .filter((e) => !inputs.discovered.has(e.slug.toLowerCase()))
+    .filter((e) => !inputs.discovered.has(safeKey(e.slug)))
     .sort((a, b) => {
       const ka = entitySortKey(a); const kb = entitySortKey(b);
       if (ka !== kb) return ka - kb;
-      return a.slug.localeCompare(b.slug);
+      return safeCompare(a.slug, b.slug);
     });
   if (artifacts.length > 0) {
     const e = artifacts[0];

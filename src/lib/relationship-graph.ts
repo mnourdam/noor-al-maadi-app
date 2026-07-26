@@ -28,6 +28,7 @@ import {
   normalizeEntitySlug,
 } from "@/lib/encyclopedia-source";
 import { ensureLocalSnapshotLoaded, localEncyclopediaAll, localEncyclopediaBySlug } from "@/lib/local-first-store";
+import { safeKey } from "@/lib/text/safe-text";
 
 export type RelationReason = "explicit" | "biography" | "geography";
 
@@ -77,7 +78,7 @@ export async function resolveRelatedEntities(
 ): Promise<RelatedNode[]> {
   await ensureLocalSnapshotLoaded();
   const meta = metaObj(entity);
-  const selfSlug = entity.slug.toLowerCase();
+  const selfSlug = safeKey(entity.slug);
   const selfId = entity.id;
 
   const scores = new Map<string, ScoredRef>();
@@ -159,7 +160,7 @@ export async function resolveRelatedEntities(
   const { resolveCanonicalLocal } = await import("@/lib/encyclopedia-canonical");
   const byId = new Map<string, RelatedNode>();
   for (const raw of rawRows) {
-    const ref = scores.get(raw.slug.toLowerCase());
+    const ref = scores.get(safeKey(raw.slug));
     if (!ref) continue;
     const resolved = (resolveCanonicalLocal(raw) as SupabaseEncyclopediaEntity | null) ?? raw;
     if (!isDisplayableEntity(resolved)) continue;
