@@ -39,11 +39,18 @@ async function currentUserId(): Promise<string | null> {
  */
 export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBundle> {
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  const authUid = await currentUserId();
   if (online) {
-    const { data, error } = await supabase.rpc(
-      "get_story_bundle_v2" as any,
-      { p_story_id: storyId },
-    );
+    // GUEST: device evidence decides the unlock; the server only delivers
+    // the content. AUTHENTICATED: server remains the sole authority.
+    const { buildGuestEvidence } = await import("./unlock/guest-evidence");
+    const { data, error } = authUid
+      ? await supabase.rpc("get_story_bundle_v2" as any, { p_story_id: storyId })
+      : await supabase.rpc("get_story_bundle_guest_v2" as any, {
+          p_story_id: storyId,
+          p_evidence: buildGuestEvidence(),
+        });
+
     if (!error) {
       const payload = (data ?? { ok: false, reason: "empty" }) as StoryAccessBundle;
       // Diagnostic only (opt-in via ?trace=unlock or irth.debug.unlock=1).
@@ -93,9 +100,9 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
     await ensureLocalSnapshotLoaded();
     const story = localStoryById(storyId);
     if (!story) return { ok: false, reason: "offline_and_not_cached" };
-    const { isAlwaysUnlockSpec } = await import("./unlock/local");
+    const { isAlwaysUnlockSpec, evaluateStoryUnlock } = await import("./unlock/local");
     const alwaysOn = isAlwaysUnlockSpec((story as any).unlock_spec);
-    const uid = await currentUserId();
+    const uid = authUid;
     let unlocked = alwaysOn;
     if (!unlocked && uid) {
       try {
@@ -104,6 +111,14 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
         unlocked = ids.has(storyId);
       } catch { /* ignore */ }
     }
+    if (!unlocked && !uid) {
+      // Guest offline: same authority as guest online — local evidence.
+      try {
+        const { guestUnlockState } = await import("./unlock/guest-evidence");
+        unlocked = evaluateStoryUnlock({ unlock_spec: (story as any).unlock_spec }, guestUnlockState());
+      } catch { /* ignore */ }
+    }
+
     if (!unlocked) return { ok: false, reason: "locked" };
     const scenes = localStoryScenes(String((story as any).id));
     return {

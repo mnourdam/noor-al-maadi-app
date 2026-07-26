@@ -3287,6 +3287,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      _ev_has: {
+        Args: { p_ev: Json; p_key: string; p_val: string }
+        Returns: boolean
+      }
+      _eval_unlock_node_guest_v2: {
+        Args: { p_depth: number; p_ev: Json; p_node: Json }
+        Returns: boolean
+      }
       _eval_unlock_node_v2: {
         Args: { p_depth: number; p_node: Json; p_user_id: string }
         Returns: boolean
@@ -3895,6 +3903,10 @@ export type Database = {
         Args: { p_spec: Json; p_user_id: string }
         Returns: boolean
       }
+      evaluate_unlock_spec_guest_v2: {
+        Args: { p_ev: Json; p_spec: Json }
+        Returns: boolean
+      }
       evaluate_unlock_spec_v2: {
         Args: { p_spec: Json; p_user_id: string }
         Returns: boolean
@@ -3963,6 +3975,10 @@ export type Database = {
         }[]
       }
       get_story_access: { Args: { p_story_id: string }; Returns: Json }
+      get_story_bundle_guest_v2: {
+        Args: { p_evidence?: Json; p_story_id: string }
+        Returns: Json
+      }
       get_story_bundle_v2: { Args: { p_story_id: string }; Returns: Json }
       get_story_collection_v2: {
         Args: { p_collection_id: string }
@@ -4176,6 +4192,14 @@ export type Database = {
           world_slug: string
           xp_reward: number
         }[]
+      }
+      list_stories_guest_v3: {
+        Args: {
+          p_collection_id?: string
+          p_evidence?: Json
+          p_world_slug?: string
+        }
+        Returns: Json
       }
       list_stories_v2: { Args: { p_world_slug?: string }; Returns: Json }
       list_stories_v3: {
