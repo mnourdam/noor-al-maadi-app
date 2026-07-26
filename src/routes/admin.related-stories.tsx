@@ -44,16 +44,17 @@ export const Route = createFileRoute("/admin/related-stories")({
 function RelatedStoriesDiagnostics() {
   const [q, setQ] = useState("بغداد");
   const [selected, setSelected] = useState<SupabaseEncyclopediaEntity | null>(null);
-  const index = useEncyclopediaIndex();
+  const { index } = useEncyclopediaIndex();
 
   const matches = useMemo(() => {
-    const rows = index.data?.rows ?? [];
+    const rows = index.rows ?? [];
     const key = normalizeArabicSearch(q);
     if (!key) return [];
     return rows
       .filter((r) => normalizeArabicSearch(`${r.title} ${r.slug}`).includes(key))
       .slice(0, 12);
-  }, [index.data, q]);
+  }, [index, q]);
+
 
   const { all, context, index: relIndex, isLoading } = useRelatedStories(selected, 6);
 
