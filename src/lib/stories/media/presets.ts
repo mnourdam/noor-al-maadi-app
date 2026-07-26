@@ -110,3 +110,26 @@ export function presetToProcessingOptions(p: StoryMediaPreset): ProcessImageOpti
     minLongestSide: p.minLongestSide,
   };
 }
+
+// ------------------------------------------------------------
+// Card cover derivative (offline pack)
+// ------------------------------------------------------------
+// NOT part of the frozen `STORY_MEDIA_PRESETS` record: this preset
+// never produces a `story_media` row. It produces the tiny 3:4 card
+// image that ships in the offline Story Cover pack and is delta-synced
+// for stories newer than the installed build. Budget: 10–20KB.
+// Immutability rule applies: bump the id, never edit in place.
+export const STORY_CARD_COVER_PRESET: StoryMediaPreset = {
+  id: "story.cover.card.v1",
+  processingVersion: 1,
+  kind: "cover",
+  maxLongestSide: 480,
+  targetBytes: 18 * 1024,
+  minQuality: 0.42,
+  minLongestSide: 360,
+  bucket: "story-media",
+  contentType: "image/webp",
+};
+
+/** Storage prefix for card derivatives — kept out of preset-id space. */
+export const STORY_CARD_COVER_PREFIX = "story.cover.card/v1";
