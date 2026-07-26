@@ -34,7 +34,7 @@ import { canonicalEraLabel } from "@/lib/era-canonical";
 import {
   browseEncyclopedia,
   encyclopediaIndexQueryOptions,
-  EMPTY_ENCYCLOPEDIA_INDEX,
+  useEncyclopediaIndex,
 } from "@/lib/encyclopedia/index-store";
 import { ProgressiveEntityGrid } from "@/components/encyclopedia/ProgressiveEntityGrid";
 
