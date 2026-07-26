@@ -22,9 +22,10 @@ import type { Campaign as ImportedCampaign } from "@/types/campaign";
 import type { CampaignDivider } from "@/lib/campaignDividers";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { Reveal, Stagger } from "@/components/motion/MotionPrimitives";
+import { safeKey } from "@/lib/text/safe-text";
 
 const campaignsSearchSchema = z.object({
-  world: fallback(z.string(), "").default(""),
+  world: fallback(z.string().optional(), undefined).optional(),
 });
 
 export const Route = createFileRoute("/campaigns/")({
@@ -42,8 +43,8 @@ function CampaignsHub() {
 function CampaignsHubFull() {
   useProfile();
   const navigate = useNavigate({ from: "/campaigns" });
-  const rawWorld = Route.useSearch().world;
-  const worldSlug = isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
+  const rawWorld = safeKey(Route.useSearch().world);
+  const worldSlug = rawWorld && isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
 
   const { data, isLoading } = useQuery({
     queryKey: ["campaigns", "feed"],
@@ -93,7 +94,7 @@ function CampaignsHubFull() {
           <div className="mb-4">
             <WorldFilterChip
               worldTitle={worldTitle}
-              onClear={() => navigate({ search: { world: "" } })}
+              onClear={() => navigate({ search: { world: undefined } })}
             />
           </div>
         )}
