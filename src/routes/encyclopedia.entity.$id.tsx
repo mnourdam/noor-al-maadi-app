@@ -411,14 +411,15 @@ function EntityPage() {
           )}
 
 
-          {/* Related Stories (P4.1) — reader-safe: from landing only. */}
+          {/* Related Stories — canonical relation-first ranking. */}
           {entity && (
             <RelatedStoriesRail
-              worldSlug={(entity as { world_slug?: string | null }).world_slug ?? null}
+              entity={entity}
               limit={4}
               heading="قصص ذات صلة"
             />
           )}
+
 
           {entity && (
             <FeedbackCTA

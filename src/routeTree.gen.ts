@@ -64,6 +64,7 @@ import { Route as AdminWorldMembershipReviewRouteImport } from './routes/admin.w
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminUnlockIntegrityRouteImport } from './routes/admin.unlock-integrity'
 import { Route as AdminTaxonomyRouteImport } from './routes/admin.taxonomy'
+import { Route as AdminRelatedStoriesRouteImport } from './routes/admin.related-stories'
 import { Route as AdminPersistenceDiagnosticsRouteImport } from './routes/admin.persistence-diagnostics'
 import { Route as AdminOfflineDiagnosticsRouteImport } from './routes/admin.offline-diagnostics'
 import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
@@ -420,6 +421,11 @@ const AdminUnlockIntegrityRoute = AdminUnlockIntegrityRouteImport.update({
 const AdminTaxonomyRoute = AdminTaxonomyRouteImport.update({
   id: '/admin/taxonomy',
   path: '/admin/taxonomy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRelatedStoriesRoute = AdminRelatedStoriesRouteImport.update({
+  id: '/admin/related-stories',
+  path: '/admin/related-stories',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminPersistenceDiagnosticsRoute =
@@ -928,6 +934,7 @@ export interface FileRoutesByFullPath {
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
   '/admin/persistence-diagnostics': typeof AdminPersistenceDiagnosticsRoute
+  '/admin/related-stories': typeof AdminRelatedStoriesRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
@@ -1061,6 +1068,7 @@ export interface FileRoutesByTo {
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
   '/admin/persistence-diagnostics': typeof AdminPersistenceDiagnosticsRoute
+  '/admin/related-stories': typeof AdminRelatedStoriesRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
@@ -1200,6 +1208,7 @@ export interface FileRoutesById {
   '/admin/offline': typeof AdminOfflineRoute
   '/admin/offline-diagnostics': typeof AdminOfflineDiagnosticsRoute
   '/admin/persistence-diagnostics': typeof AdminPersistenceDiagnosticsRoute
+  '/admin/related-stories': typeof AdminRelatedStoriesRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/unlock-integrity': typeof AdminUnlockIntegrityRoute
   '/admin/users': typeof AdminUsersRoute
@@ -1340,6 +1349,7 @@ export interface FileRouteTypes {
     | '/admin/offline'
     | '/admin/offline-diagnostics'
     | '/admin/persistence-diagnostics'
+    | '/admin/related-stories'
     | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
@@ -1473,6 +1483,7 @@ export interface FileRouteTypes {
     | '/admin/offline'
     | '/admin/offline-diagnostics'
     | '/admin/persistence-diagnostics'
+    | '/admin/related-stories'
     | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
@@ -1611,6 +1622,7 @@ export interface FileRouteTypes {
     | '/admin/offline'
     | '/admin/offline-diagnostics'
     | '/admin/persistence-diagnostics'
+    | '/admin/related-stories'
     | '/admin/taxonomy'
     | '/admin/unlock-integrity'
     | '/admin/users'
@@ -1750,6 +1762,7 @@ export interface RootRouteChildren {
   AdminOfflineRoute: typeof AdminOfflineRoute
   AdminOfflineDiagnosticsRoute: typeof AdminOfflineDiagnosticsRoute
   AdminPersistenceDiagnosticsRoute: typeof AdminPersistenceDiagnosticsRoute
+  AdminRelatedStoriesRoute: typeof AdminRelatedStoriesRoute
   AdminTaxonomyRoute: typeof AdminTaxonomyRoute
   AdminUnlockIntegrityRoute: typeof AdminUnlockIntegrityRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -2179,6 +2192,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/taxonomy'
       fullPath: '/admin/taxonomy'
       preLoaderRoute: typeof AdminTaxonomyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/related-stories': {
+      id: '/admin/related-stories'
+      path: '/admin/related-stories'
+      fullPath: '/admin/related-stories'
+      preLoaderRoute: typeof AdminRelatedStoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/persistence-diagnostics': {
@@ -2940,6 +2960,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminOfflineRoute: AdminOfflineRoute,
   AdminOfflineDiagnosticsRoute: AdminOfflineDiagnosticsRoute,
   AdminPersistenceDiagnosticsRoute: AdminPersistenceDiagnosticsRoute,
+  AdminRelatedStoriesRoute: AdminRelatedStoriesRoute,
   AdminTaxonomyRoute: AdminTaxonomyRoute,
   AdminUnlockIntegrityRoute: AdminUnlockIntegrityRoute,
   AdminUsersRoute: AdminUsersRoute,
