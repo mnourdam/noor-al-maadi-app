@@ -120,8 +120,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div
       dir="rtl"
       data-irth-error-boundary
-      className="flex min-h-screen items-center justify-center bg-background px-4"
+      data-irth-recovery-layer
+      className="fixed inset-0 z-[2147483000] flex items-center justify-center overflow-auto bg-background px-4"
+      style={{ pointerEvents: "auto" }}
     >
+
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           تعذر تحميل هذه الصفحة
