@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { markBootHealthy } from "@/lib/diagnostics/safe-boot";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Search, Map as MapIcon, ChevronLeft, Crown, Lock, Compass, Play,
@@ -105,6 +106,9 @@ function HomeFull() {
 
   // Debug instrumentation — helps QA confirm Home cold-start on real devices.
   useEffect(() => {
+    // Clean-boot contract: Home rendering is the app's proof of health. This
+    // consumes the one-launch crash marker and resets the loop breaker.
+    markBootHealthy();
     perfMark("home mounted", { perfLite });
     // First paint marker — fires after React commits and the browser paints.
     requestAnimationFrame(() => requestAnimationFrame(() => perfMark("first paint")));

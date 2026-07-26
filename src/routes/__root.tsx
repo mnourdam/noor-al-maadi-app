@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { useStoryUnlockInvalidation } from "@/lib/stories/unlock-invalidation";
-import { releaseAllUiLocks } from "@/lib/ui/ui-locks";
+import { FatalRecoveryScreen } from "@/components/FatalRecoveryScreen";
 
 
 import appCss from "../styles.css?url";
@@ -66,91 +66,10 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  // Log technical detail for native/Logcat / dev tools only — never shown to player.
-  // eslint-disable-next-line no-console
-  console.error("[root errorComponent]", error?.message, error?.stack ?? error);
-  const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
-    // A crash can leave a full-screen overlay / body lock behind, which makes
-    // this screen visible but unclickable. Release both, twice (the second
-    // pass catches a layer that mounted on the same tick).
-    releaseAllUiLocks();
-    const t = window.setTimeout(releaseAllUiLocks, 120);
-    return () => window.clearTimeout(t);
   }, [error]);
-
-
-  const isCapacitor =
-    typeof window !== "undefined" &&
-    (Boolean((window as unknown as { Capacitor?: unknown }).Capacitor) ||
-      window.location.protocol === "capacitor:" ||
-      window.location.hostname === "localhost");
-
-  const goHome = () => {
-    try {
-      if (isCapacitor) {
-        window.location.replace("./index.html");
-        return;
-      }
-      void router.navigate({ to: "/" });
-    } catch {
-      window.location.reload();
-    }
-  };
-
-  const tryAgain = () => {
-    try {
-      reset();
-      void router.invalidate();
-    } catch {
-      window.location.reload();
-      return;
-    }
-    setTimeout(() => {
-      try {
-        if (document.querySelector("[data-irth-error-boundary]")) {
-          window.location.reload();
-        }
-      } catch { /* ignore */ }
-    }, 300);
-  };
-
-  return (
-    <div
-      dir="rtl"
-      data-irth-error-boundary
-      data-irth-recovery-layer
-      className="fixed inset-0 z-[2147483000] flex items-center justify-center overflow-auto bg-background px-4"
-      style={{ pointerEvents: "auto" }}
-    >
-
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          تعذر تحميل هذه الصفحة
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          حدث خطأ غير متوقع. يمكنك إعادة المحاولة أو العودة إلى الرئيسية.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
-            type="button"
-            onClick={tryAgain}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            إعادة المحاولة
-          </button>
-          <button
-            type="button"
-            onClick={goHome}
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            العودة للرئيسية
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return <FatalRecoveryScreen error={error} reset={reset} boundary="tanstack_root_error_component" />;
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
