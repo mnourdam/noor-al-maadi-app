@@ -86,7 +86,7 @@ function TypeBrowsePage() {
   const [sort, setSort] = useState<EncyclopediaBrowseSort>("alpha");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const { data: index = EMPTY_ENCYCLOPEDIA_INDEX, isPending } = useQuery(encyclopediaIndexQueryOptions());
+  const { index, isPending } = useEncyclopediaIndex();
 
   const total = index.counts[type] ?? 0;
   const eras = index.erasByType[type] ?? [];
