@@ -21,11 +21,16 @@
 
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import {
-  fetchEncyclopediaAllLocalFirst,
   fetchEncyclopediaLivePublicAll,
   fetchEncyclopediaLivePublicIds,
   type SupabaseEncyclopediaEntity,
 } from "@/lib/encyclopedia-source";
+import {
+  ensureLocalSnapshotLoaded,
+  localDataVersion,
+  localEncyclopediaAll,
+  onLocalSnapshotChange,
+} from "@/lib/local-first-store";
 import {
   buildCanonicalizedEncyclopediaSearch,
   buildEntityHaystack,
@@ -35,7 +40,13 @@ import {
 } from "@/lib/encyclopedia-search";
 import { eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
 
-export const ENCYCLOPEDIA_INDEX_QUERY_KEY = ["encyclopedia", "index", "v3"] as const;
+/**
+ * Query key root. The full key always carries the snapshot data version, so a
+ * cache entry built from an older snapshot is a *different* entry and can
+ * never be served after the real snapshot lands.
+ */
+export const ENCYCLOPEDIA_INDEX_QUERY_KEY = ["encyclopedia", "index", "v4"] as const;
+
 
 export type IndexedEntity = {
   e: SupabaseEncyclopediaEntity;
