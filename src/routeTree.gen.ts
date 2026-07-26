@@ -18,6 +18,7 @@ import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReflectionsRouteImport } from './routes/reflections'
 import { Route as ReferralsRouteImport } from './routes/referrals'
+import { Route as QaFatalRouteImport } from './routes/qa-fatal'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnThisDayRouteImport } from './routes/on-this-day'
@@ -189,6 +190,11 @@ const ReflectionsRoute = ReflectionsRouteImport.update({
 const ReferralsRoute = ReferralsRouteImport.update({
   id: '/referrals',
   path: '/referrals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QaFatalRoute = QaFatalRouteImport.update({
+  id: '/qa-fatal',
+  path: '/qa-fatal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -874,6 +880,7 @@ export interface FileRoutesByFullPath {
   '/on-this-day': typeof OnThisDayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/qa-fatal': typeof QaFatalRoute
   '/referrals': typeof ReferralsRoute
   '/reflections': typeof ReflectionsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -1010,6 +1017,7 @@ export interface FileRoutesByTo {
   '/on-this-day': typeof OnThisDayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/qa-fatal': typeof QaFatalRoute
   '/referrals': typeof ReferralsRoute
   '/reflections': typeof ReflectionsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -1146,6 +1154,7 @@ export interface FileRoutesById {
   '/on-this-day': typeof OnThisDayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
+  '/qa-fatal': typeof QaFatalRoute
   '/referrals': typeof ReferralsRoute
   '/reflections': typeof ReflectionsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -1286,6 +1295,7 @@ export interface FileRouteTypes {
     | '/on-this-day'
     | '/privacy'
     | '/profile'
+    | '/qa-fatal'
     | '/referrals'
     | '/reflections'
     | '/reset-password'
@@ -1422,6 +1432,7 @@ export interface FileRouteTypes {
     | '/on-this-day'
     | '/privacy'
     | '/profile'
+    | '/qa-fatal'
     | '/referrals'
     | '/reflections'
     | '/reset-password'
@@ -1557,6 +1568,7 @@ export interface FileRouteTypes {
     | '/on-this-day'
     | '/privacy'
     | '/profile'
+    | '/qa-fatal'
     | '/referrals'
     | '/reflections'
     | '/reset-password'
@@ -1696,6 +1708,7 @@ export interface RootRouteChildren {
   OnThisDayRoute: typeof OnThisDayRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
+  QaFatalRoute: typeof QaFatalRoute
   ReferralsRoute: typeof ReferralsRoute
   ReflectionsRoute: typeof ReflectionsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -1857,6 +1870,13 @@ declare module '@tanstack/react-router' {
       path: '/referrals'
       fullPath: '/referrals'
       preLoaderRoute: typeof ReferralsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qa-fatal': {
+      id: '/qa-fatal'
+      path: '/qa-fatal'
+      fullPath: '/qa-fatal'
+      preLoaderRoute: typeof QaFatalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -2886,6 +2906,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnThisDayRoute: OnThisDayRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
+  QaFatalRoute: QaFatalRoute,
   ReferralsRoute: ReferralsRoute,
   ReflectionsRoute: ReflectionsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
