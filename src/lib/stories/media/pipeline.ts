@@ -31,10 +31,32 @@ import {
 import {
   getPreset,
   presetToProcessingOptions,
+  STORY_CARD_COVER_PREFIX,
+  STORY_CARD_COVER_PRESET,
   type StoryMediaPresetKey,
 } from "./presets";
 
 const BUCKET = "story-media" as const;
+
+/**
+ * Covers get a second, tiny derivative (3:4, 10–20KB) uploaded next to
+ * the full-size image. That derivative is what the story CARD renders,
+ * what ships in the offline Story Cover pack, and what the delta sync
+ * downloads for stories added after a build was cut. Failure here is
+ * never fatal: the card simply falls back to the full-size cover.
+ */
+async function uploadCardCoverDerivative(file: File): Promise<string | null> {
+  try {
+    const processed = await processImage(file, presetToProcessingOptions(STORY_CARD_COVER_PRESET));
+    const checksum = await sha256Hex(processed.blob);
+    const path = `${STORY_CARD_COVER_PREFIX}/${checksum.slice(0, 2)}/${checksum}.webp`;
+    await uploadObject(path, processed.blob);
+    return path;
+  } catch {
+    return null;
+  }
+}
+
 
 export interface UploadStoryMediaArgs {
   storyId: string | null;
