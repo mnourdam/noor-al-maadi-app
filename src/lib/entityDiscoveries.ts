@@ -99,7 +99,19 @@ export function markEntityDiscovered(params: {
       entitySlug: params.entitySlug,
       entityType: params.entityType,
       source: params.source,
-    });
+    })
+      // The local mirror event above fires BEFORE the server row exists, so
+      // any unlock re-evaluation it triggers still reads the pre-discovery
+      // state. Re-emit once the durable write settles so story unlock caches
+      // are invalidated against the authoritative row, not a race.
+      .then(() => {
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent(CHANGED_EVENT));
+          }
+        } catch { /* ignore */ }
+      })
+      .catch(() => { /* outbox retries */ });
   }
   return { firstTime };
 }
