@@ -6,7 +6,8 @@
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
-import { isAlwaysUnlockSpec } from "./unlock/local";
+import { evaluateStoryUnlock, isAlwaysUnlockSpec } from "./unlock/local";
+import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
 
 export type StoryPrereqKind =
   | "campaign_completed"
@@ -54,9 +55,20 @@ export async function listStoriesSummary(
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   const uid = await currentUid();
   if (online) {
-    const { data, error } = await supabase.rpc("list_stories_v2" as never, {
-      p_world_slug: worldSlug ?? null,
-    } as never);
+    // GUEST: the device is the unlock authority. `list_stories_guest_v3`
+    // is the anon-only mirror of the authoritative RPC — the server still
+    // renders the catalog, but `unlocked` is decided from local evidence,
+    // so a signed-out player gets the exact same progression experience.
+    const { data, error } = uid
+      ? await supabase.rpc("list_stories_v2" as never, {
+          p_world_slug: worldSlug ?? null,
+        } as never)
+      : await supabase.rpc("list_stories_guest_v3" as never, {
+          p_world_slug: worldSlug ?? null,
+          p_collection_id: null,
+          p_evidence: buildGuestEvidence(),
+        } as never);
+
     if (error) {
       // Online but the authoritative RPC failed: DO NOT fall back to the
       // local snapshot. Falling back would re-surface stale/legacy story
@@ -101,11 +113,18 @@ export async function listStoriesSummary(
     await ensureLocalSnapshotLoaded();
     const { loadUnlockedIds } = await import("./unlock-cache");
     const unlockedIds = uid ? await loadUnlockedIds(uid) : new Set<string>();
+    // Guest: the device is the authority, so offline unlocks are evaluated
+    // locally against the same evidence the online guest RPC receives.
+    const guestState = uid ? null : guestUnlockState();
     const all = localStoriesAll()
       .filter((s: any) => !worldSlug || s.world_slug === worldSlug)
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
     return all.map((s: any) => {
       const alwaysOn = isAlwaysUnlockSpec(s.unlock_spec);
+      const guestUnlocked = guestState
+        ? evaluateStoryUnlock({ unlock_spec: s.unlock_spec }, guestState)
+        : false;
+
       return ({
         id: s.id,
         slug: s.slug,
@@ -124,10 +143,12 @@ export async function listStoriesSummary(
         scene_count: localStoryScenes(String(s.id)).length,
         prereqs: [],
         lock_explanation: s.lock_explanation ?? null,
-        // Previously unlocked (online) stays unlocked offline; new unlocks
-        // never happen offline. Always-on stories remain a floor.
-        unlocked: alwaysOn || unlockedIds.has(s.id),
-        completed: false,
+        // Signed in: previously unlocked (online) stays unlocked offline;
+        // new unlocks never happen offline (server is the authority).
+        // Guest: local evidence decides, online or offline.
+        unlocked: alwaysOn || guestUnlocked || unlockedIds.has(s.id),
+        completed: guestState ? guestState.completed_story_ids?.has(s.id) ?? false : false,
+
         progress: null,
       } as StorySummary);
     });

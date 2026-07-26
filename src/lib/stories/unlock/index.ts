@@ -17,3 +17,8 @@ export {
   type PlayerUnlockState,
 } from "./local";
 export { detectUnlockCycles, extractStoryDeps, type UnlockCycle } from "./cycle";
+export {
+  buildGuestEvidence,
+  guestUnlockState,
+  type GuestUnlockEvidence,
+} from "./guest-evidence";
