@@ -4207,6 +4207,16 @@ export type Database = {
         Returns: Json
       }
       list_story_collections_v2: { Args: never; Returns: Json }
+      list_story_relations_v1: {
+        Args: never
+        Returns: {
+          display_order: number
+          role: string
+          story_id: string
+          target_id: string
+          target_type: string
+        }[]
+      }
       log_admin_action: {
         Args: {
           p_action: string
