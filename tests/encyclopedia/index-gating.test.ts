@@ -50,9 +50,9 @@ describe("encyclopedia index gating", () => {
 
   it("derives every surface's numbers from one index", () => {
     const rows = [
-      { id: "1", entity_type: "figure", title: "صلاح الدين", slug: "saladin", enabled: true },
-      { id: "2", entity_type: "figure", title: "طارق بن زياد", slug: "tariq", enabled: true },
-      { id: "3", entity_type: "city", title: "قرطبة", slug: "cordoba", enabled: true },
+      { id: "1", entity_type: "figure", title: "صلاح الدين", slug: "saladin", enabled: true, summary: "قائد أيوبي استعاد بيت المقدس بعد معركة حطين الفاصلة." },
+      { id: "2", entity_type: "figure", title: "طارق بن زياد", slug: "tariq", enabled: true, summary: "قائد فتح الأندلس وعبر المضيق الذي يحمل اسمه اليوم." },
+      { id: "3", entity_type: "city", title: "قرطبة", slug: "cordoba", enabled: true, summary: "حاضرة الأندلس ومركز العلم في القرن الرابع الهجري." },
     ] as never[];
     const index = buildEncyclopediaIndex(rows, new Set(["1", "2", "3"]));
 
