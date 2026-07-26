@@ -63,4 +63,14 @@ describe("atlas full-screen surface / ui-locks", () => {
     expect(stage).not.toMatch(/willChange:\s*"transform"/);
     expect(stage).toContain("viewBox={`${camera.x} ${camera.y} ${camera.w} ${camera.h}`}");
   });
+
+  it("Atlas capability gates are probed after mount, never during render", () => {
+    const route = read("src/routes/map.tsx");
+    // A render-time probe evaluates on the server, where `document` and
+    // storage do not exist, so every device would server-render the simplified
+    // Atlas and flash it before hydration.
+    expect(route).not.toMatch(/useState\(\(\)\s*=>\s*!?hasCanvas2d\(\)\)/);
+    expect(route).not.toMatch(/useState\(\(\)\s*=>\s*hasAtlasCrashMarker\(\)\)/);
+    expect(route).toMatch(/useEffect\(\(\)\s*=>\s*\{[\s\S]*hasCanvas2d\(\)/);
+  });
 });
