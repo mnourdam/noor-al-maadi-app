@@ -451,9 +451,12 @@ function EncyclopediaHubFull() {
                 لا توجد نتائج مطابقة.
               </p>
             ) : (
-              <div className="grid grid-cols-2 gap-2.5">
-                {results.map((e) => (
-                  <div key={e.id} className="relative">
+              <ProgressiveEntityGrid
+                entities={results}
+                highlight={q ? query : undefined}
+                resetKey={`${q}|${era}`}
+                renderCard={(e) => (
+                  <div className="relative">
                     {topMatch === e.id && (
                       <div className="pointer-events-none absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full border border-gold/50 bg-gradient-to-l from-gold/25 to-gold/10 px-2 py-0.5 text-[9px] font-bold tracking-[0.15em] text-gold shadow-[0_0_0_1px_rgba(212,175,55,0.15),0_4px_14px_-4px_rgba(212,175,55,0.45)] backdrop-blur-sm">
                         <Sparkles className="size-2.5" strokeWidth={2} />
@@ -462,9 +465,10 @@ function EncyclopediaHubFull() {
                     )}
                     <EncyclopediaCard entity={e} highlight={q ? query : undefined} />
                   </div>
-                ))}
-              </div>
+                )}
+              />
             )}
+
           </section>
         ) : (
           <>
