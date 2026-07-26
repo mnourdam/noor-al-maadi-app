@@ -11,7 +11,8 @@ import { isAlwaysUnlockSpec } from "./unlock/local";
 export type StoryPrereqKind =
   | "campaign_completed"
   | "investigation_completed"
-  | "story_completed";
+  | "story_completed"
+  | "entity_discovered";
 
 export interface StoryPrereq {
   kind: StoryPrereqKind;
@@ -37,6 +38,8 @@ export interface StorySummary {
   published_at: string | null;
   scene_count: number;
   prereqs: StoryPrereq[];
+  /** Authored, player-facing reason a locked story is locked (visible locks). */
+  lock_explanation: string | null;
   unlocked: boolean;
   completed: boolean;
   progress: {
@@ -120,6 +123,7 @@ export async function listStoriesSummary(
         published_at: s.published_at ?? null,
         scene_count: localStoryScenes(String(s.id)).length,
         prereqs: [],
+        lock_explanation: s.lock_explanation ?? null,
         // Previously unlocked (online) stays unlocked offline; new unlocks
         // never happen offline. Always-on stories remain a floor.
         unlocked: alwaysOn || unlockedIds.has(s.id),
@@ -190,5 +194,6 @@ export function labelPrereqKind(k: StoryPrereqKind): string {
     case "campaign_completed":      return "إتمام حملة";
     case "investigation_completed": return "إتمام تحقيق";
     case "story_completed":         return "إتمام قصة";
+    case "entity_discovered":       return "اكتشاف في الموسوعة";
   }
 }

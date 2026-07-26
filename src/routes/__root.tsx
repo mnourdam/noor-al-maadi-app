@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { useStoryUnlockInvalidation } from "@/lib/stories/unlock-invalidation";
+import { StoryUnlockCelebration } from "@/components/stories/StoryUnlockCelebration";
 import { FatalRecoveryScreen } from "@/components/FatalRecoveryScreen";
 
 
@@ -349,6 +350,7 @@ function RootComponent() {
               <AchievementWatcher />
               <InvestigationLegacyBackfill />
               <LevelUpWatcher />
+              <StoryUnlockCelebration />
               <Toaster position="top-center" richColors closeButton />
               <SplashSequence />
               {/* Hardware Back + exit dialog now owned by <NavigationProvider>. */}

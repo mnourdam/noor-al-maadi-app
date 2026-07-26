@@ -2118,6 +2118,7 @@ export type Database = {
           historical_confidence: Database["public"]["Enums"]["story_historical_confidence"]
           id: string
           length_class: Database["public"]["Enums"]["story_length_class"]
+          lock_explanation: string | null
           lock_visibility: Database["public"]["Enums"]["story_lock_visibility"]
           metadata: Json
           previous_draft: Json | null
@@ -2162,6 +2163,7 @@ export type Database = {
           historical_confidence?: Database["public"]["Enums"]["story_historical_confidence"]
           id: string
           length_class?: Database["public"]["Enums"]["story_length_class"]
+          lock_explanation?: string | null
           lock_visibility?: Database["public"]["Enums"]["story_lock_visibility"]
           metadata?: Json
           previous_draft?: Json | null
@@ -2206,6 +2208,7 @@ export type Database = {
           historical_confidence?: Database["public"]["Enums"]["story_historical_confidence"]
           id?: string
           length_class?: Database["public"]["Enums"]["story_length_class"]
+          lock_explanation?: string | null
           lock_visibility?: Database["public"]["Enums"]["story_lock_visibility"]
           metadata?: Json
           previous_draft?: Json | null

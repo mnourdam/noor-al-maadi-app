@@ -266,7 +266,9 @@ export async function recordEntityDiscovery(p: {
     source: p.source ?? "encyclopedia",
     viewedAt: new Date().toISOString(),
   });
-  void flushOutbox(uid);
+  // Awaited: story unlocks gated on `entity_discovered` re-evaluate against
+  // the server row, so callers must be able to know when it actually landed.
+  try { await flushOutbox(uid); } catch { /* queued; retried later */ }
 }
 
 /**

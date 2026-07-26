@@ -33,13 +33,17 @@ const KIND_LABEL: Record<string, string> = {
 export function LockedStoryDialog({
   title,
   prereqs,
+  explanation,
   onClose,
 }: {
   title: string;
   prereqs?: StoryPrereq[];
+  /** Authored player-facing lock copy from admin (`stories.lock_explanation`). */
+  explanation?: string | null;
   onClose: () => void;
 }) {
   const items = prereqs ?? [];
+  const authored = (explanation ?? "").trim();
   const remaining = items.filter((p) => !p.satisfied);
 
   return (
@@ -80,9 +84,11 @@ export function LockedStoryDialog({
 
           <h2 className="mt-3 font-display text-base font-bold text-gold">{title}</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            {remaining.length > 0
-              ? "هذه القصة مقفلة. أكمل المتطلبات التالية لفتحها:"
-              : "هذه القصة مقفلة حاليًا. تابع رحلتك في إرث لفتحها."}
+            {authored
+              ? authored
+              : remaining.length > 0
+                ? "هذه القصة مقفلة. أكمل المتطلبات التالية لفتحها:"
+                : "هذه القصة مقفلة حاليًا. تابع رحلتك في إرث لفتحها."}
           </p>
 
           {items.length > 0 && (
