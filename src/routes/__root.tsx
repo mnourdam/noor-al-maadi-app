@@ -9,6 +9,8 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { useStoryUnlockInvalidation } from "@/lib/stories/unlock-invalidation";
+import { releaseAllUiLocks } from "@/lib/ui/ui-locks";
+
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
