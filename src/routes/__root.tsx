@@ -70,7 +70,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    // A crash can leave a full-screen overlay / body lock behind, which makes
+    // this screen visible but unclickable. Release both, twice (the second
+    // pass catches a layer that mounted on the same tick).
+    releaseAllUiLocks();
+    const t = window.setTimeout(releaseAllUiLocks, 120);
+    return () => window.clearTimeout(t);
   }, [error]);
+
 
   const isCapacitor =
     typeof window !== "undefined" &&
