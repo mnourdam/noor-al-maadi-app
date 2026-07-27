@@ -78,6 +78,8 @@ export function resolveRelatedRef(rawInput: string): ResolvedEncyclopediaRef {
     canonicalId: null,
     canonicalSlug: null,
     typeLabel: "",
+    entityType: "",
+
     label: "",
     resolved: false,
     linkId: raw,
