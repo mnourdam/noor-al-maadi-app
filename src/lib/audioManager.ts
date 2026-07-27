@@ -513,24 +513,8 @@ export const audioManager = {
     if (now - last < 220) return log("skipped", "already playing / throttled");
     recentSfx.set(dedupeKey, now);
 
-    const url = SFX_URLS.error;
-    try {
-      const a = new Audio(url);
-      a.volume = Math.max(0, Math.min(1, settings.masterVolume * settings.sfxVolume));
-      a.addEventListener("error", () => {
-        sfxFailed.add("error");
-        log("skipped", `playback error (asset unplayable: ${url})`);
-      });
-      const p = a.play();
-      if (p && typeof p.catch === "function") {
-        p.then(() => log("played")).catch((err) => log("skipped", `playback error: ${err?.message ?? err}`));
-      } else {
-        log("played");
-      }
-    } catch (err) {
-      sfxFailed.add("error");
-      log("skipped", `exception: ${(err as Error)?.message ?? err}`);
-    }
+    playCandidates("error", settings.masterVolume * settings.sfxVolume, log);
+
   },
 
   /**
