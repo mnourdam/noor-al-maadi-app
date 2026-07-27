@@ -482,22 +482,9 @@ export const audioManager = {
       recentSfx.set(opts.dedupeKey, now);
     }
 
-    const url = SFX_URLS[name];
     const scale = SFX_VOLUME_SCALE[name] ?? 1;
-    try {
-      const a = new Audio(url);
-      a.volume = Math.max(0, Math.min(1, settings.masterVolume * settings.sfxVolume * scale));
-      a.addEventListener("error", () => {
-        sfxFailed.add(name);
-        warnOnce(`sfx missing or unplayable: ${url}`);
-      });
-      const p = a.play();
-      if (p && typeof p.catch === "function") {
-        p.catch(() => { /* autoplay blocked; ignore */ });
-      }
-    } catch {
-      sfxFailed.add(name);
-    }
+    playCandidates(name, settings.masterVolume * settings.sfxVolume * scale);
+
   },
 
   /**
