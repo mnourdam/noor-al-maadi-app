@@ -166,11 +166,13 @@ function baseAmbienceVolume() {
   return Math.max(0, Math.min(1, settings.masterVolume * settings.ambienceVolume));
 }
 
-// Per-layer playback attenuation (linear gain). Campaign is ~-10 dB quieter
-// so it stays cinematic without overpowering UI/reading.
+// Per-layer playback attenuation (linear gain). Scoped layers are ~-10 dB
+// quieter so they stay cinematic without overpowering UI/reading.
+// Investigations sit slightly lower still: the case screens are read-heavy.
 const LAYER_ATTENUATION: Record<AmbienceLayer, number> = {
   global: 1,
   campaign: 0.32,
+  investigation: 0.26,
 };
 
 function applyTrackVolumes() {
