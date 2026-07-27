@@ -53,21 +53,72 @@ export const CAMPAIGN_AMBIENCE_SRC = "/audio/campaign-ambient.mp3";
  * activate it: no code change, and it is bundled like every other public
  * asset so it works offline inside the APK.
  */
-export const INVESTIGATION_AMBIENCE_SRC = "/audio/investigation-ambient.mp3";
-/** Alternate filename for the same layer (uploaded as `investigation_sfx.mp3`). */
-export const INVESTIGATION_SFX_SRC = "/audio/investigation_sfx.mp3";
+export const INVESTIGATION_AMBIENCE_SRC = "/audio/investigation_sfx.mp3";
+/** Alternate filename for the same layer (legacy naming). */
+export const INVESTIGATION_SFX_SRC = "/audio/investigation-ambient.mp3";
 
-const SFX_URLS: Record<SfxName, string> = {
-  "success":            "/audio/success-soft.mp3",
-  "chapter-complete":   "/audio/chapter-complete.mp3",
-  "campaign-complete":  "/audio/campaign-complete.mp3",
-  "unlock-reward":      "/audio/unlock-reward.mp3",
-  "error":              errorSfxAsset.url,
+/**
+ * Every SFX resolves through an ordered candidate list, local-first, exactly
+ * like the emblem pipeline: a bundled `/audio/*` file always wins, and the CDN
+ * copy is an upgrade-only fallback. This is what makes SFX work offline and
+ * inside the APK, where `/__l5e/...` URLs are not bundled.
+ */
+const SFX_SOURCES: Record<SfxName, string[]> = {
+  "success":            ["/audio/success-soft.mp3"],
+  "chapter-complete":   ["/audio/chapter-complete.mp3"],
+  "campaign-complete":  ["/audio/campaign-complete.mp3"],
+  "unlock-reward":      ["/audio/unlock-reward.mp3"],
+  "error":              ["/audio/error.mp3", errorSfxAsset.url],
 };
 
 // Per-SFX volume trim. Intentionally empty for "error" so the uploaded
 // asset plays bit-for-bit at the same level as other UI SFX.
 const SFX_VOLUME_SCALE: Partial<Record<SfxName, number>> = {};
+
+/**
+ * Play the first candidate that loads. A failing candidate advances the walk
+ * instead of permanently blacklisting the effect — a single transient/offline
+ * miss must never silence the cue for the rest of the session (that was the
+ * root cause of the error-SFX regression).
+ */
+function playCandidates(
+  name: SfxName,
+  volume: number,
+  log?: (status: "played" | "skipped", reason?: string) => void,
+): void {
+  const candidates = [...SFX_SOURCES[name]];
+  const attempt = () => {
+    const url = candidates.shift();
+    if (!url) {
+      sfxFailed.add(name);
+      log?.("skipped", "no playable source");
+      return;
+    }
+    try {
+      const a = new Audio(url);
+      a.preload = "auto";
+      a.volume = Math.max(0, Math.min(1, volume));
+      a.addEventListener("error", () => {
+        warnOnce(`sfx source failed (${name}): ${url}`);
+        attempt();
+      }, { once: true });
+      const p = a.play();
+      if (p && typeof p.catch === "function") {
+        p.then(() => log?.("played")).catch((err) => {
+          // Autoplay policy blocks are transient — do not blacklist.
+          log?.("skipped", `playback blocked: ${err?.message ?? err}`);
+        });
+      } else {
+        log?.("played");
+      }
+    } catch (err) {
+      warnOnce(`sfx construction failed (${name}): ${(err as Error)?.message ?? err}`);
+      attempt();
+    }
+  };
+  attempt();
+}
+
 
 
 // ---------- Settings persistence ----------
