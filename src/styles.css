@@ -706,6 +706,11 @@ html.perf-lite .map-parchment {
   box-shadow: none !important;
 }
 
+/* Page-turn is a lift + fade; on lite mode keep the fade only. */
+html.perf-lite .animate-page-turn {
+  animation: fade-in 0.2s ease-out both !important;
+}
+
 /* Trim hero ken-burns into a static frame */
 html.perf-lite .animate-ken-burns {
   transform: scale(1.04) !important;
