@@ -78,10 +78,11 @@ export function LockedStoryDialog({
 
   const go = (to: string) => {
     onClose();
-    router.navigate({ to }).catch(() => {
+    router.navigate({ to: to as never }).catch(() => {
       if (typeof window !== "undefined") window.location.assign(to);
     });
   };
+
 
 
 
