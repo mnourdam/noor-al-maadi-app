@@ -681,6 +681,10 @@ html.perf-lite .shadow-2xl {
 html.perf-lite .parchment,
 html.perf-lite .parchment-dark,
 html.perf-lite .parchment-rail,
+html.perf-lite .case-board,
+html.perf-lite .case-sheet,
+html.perf-lite .case-margin,
+html.perf-lite .case-thread,
 html.perf-lite .map-parchment {
   background-image: none !important;
   box-shadow: none !important;
