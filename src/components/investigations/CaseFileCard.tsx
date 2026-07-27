@@ -1,5 +1,34 @@
-import { Link } from "@tanstack/react-router";
-import { Check, ChevronLeft, Coins, FolderOpen, Heart, Star } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { useRef, useState } from "react";
+import {
+  BookOpen, Check, ChevronLeft, Coins, Folder, FolderOpen, GraduationCap, Gem,
+  Heart, Landmark, MapPin, ScrollText, Star, Swords, User,
+} from "lucide-react";
+
+/** Small entity preview shown as a chip on the folder face. */
+export interface CaseRefChip {
+  entityType: string;
+  label: string;
+}
+
+const CHIP_ICON: Record<string, typeof BookOpen> = {
+  figure: User,
+  scholar: GraduationCap,
+  state: Landmark,
+  battle: Swords,
+  city: MapPin,
+  event: ScrollText,
+  landmark: Landmark,
+  artifact: Gem,
+};
+
+/** Traffic-light dot per canonical difficulty — read before the word is. */
+const DIFFICULTY_DOT: Record<string, string> = {
+  easy: "bg-emerald-400",
+  medium: "bg-amber-400",
+  hard: "bg-rose-400",
+  very_hard: "bg-rose-500",
+};
 
 export interface CaseFileCardProps {
   /** Route param for /investigation/$id — slug for Supabase rows, id for legacy. */
@@ -10,20 +39,24 @@ export interface CaseFileCardProps {
   subtitle?: string | null;
   /** Already display-formatted difficulty label, or null when unknown. */
   difficultyLabel?: string | null;
+  /** Canonical difficulty key ("easy" | "medium" | "hard" | "very_hard"). */
+  difficultyKey?: string | null;
   stepCount?: number | null;
   questionCount?: number | null;
   xp?: number | null;
   dinars?: number | null;
   hearts?: number | null;
+  /** First 2–3 encyclopedia entities this case touches. */
+  refs?: CaseRefChip[];
   done: boolean;
   onNavigate?: () => void;
 }
 
 /**
  * A single investigation rendered as a filed case folder: a labelled tab, a
- * perforated pad margin, the case brief, and a rubber "تم الحل" stamp once the
- * player has solved it. Purely presentational — every value is supplied by the
- * caller so legacy and Supabase investigations render identically.
+ * perforated pad margin, the case brief, entity chips and a rubber "تم الحل"
+ * stamp once solved. Opening it plays a very short (~170ms) folder-open beat
+ * before the route changes, so the file feels lifted off the desk.
  */
 export function CaseFileCard({
   routeId,
@@ -31,27 +64,46 @@ export function CaseFileCard({
   title,
   subtitle,
   difficultyLabel,
+  difficultyKey,
   stepCount,
   questionCount,
   xp,
   dinars,
   hearts,
+  refs,
   done,
   onNavigate,
 }: CaseFileCardProps) {
+  const navigate = useNavigate();
+  const [opening, setOpening] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const meta: string[] = [];
-  if (difficultyLabel) meta.push(difficultyLabel);
   if (stepCount) meta.push(`${stepCount} خطوة`);
   if (questionCount) meta.push(`${questionCount} سؤال`);
   // Counters inside investigations are Western digits by contract — the
   // template literals above never localize, which is exactly what we want.
 
+  const go = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (opening) return;
+    setOpening(true);
+    onNavigate?.();
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      void navigate({ to: "/investigation/$id", params: { id: routeId } });
+    }, 170);
+  };
+
+  const chips = (refs ?? []).slice(0, 3);
+
   return (
-    <Link
-      to="/investigation/$id"
-      params={{ id: routeId }}
-      onClick={() => onNavigate?.()}
-      className={`group relative block overflow-hidden rounded-2xl border transition ${
+    <a
+      href={`/investigation/${routeId}`}
+      onClick={go}
+      className={`case-folder group relative block overflow-hidden rounded-2xl border transition ${
+        opening ? "case-folder-opening" : ""
+      } ${
         done
           ? "border-gold/45 shadow-[0_10px_30px_-22px_oklch(0.82_0.14_82/0.7)]"
           : "border-white/10 hover:border-gold/35"
@@ -59,9 +111,9 @@ export function CaseFileCard({
     >
       {/* Folder tab */}
       <div className="case-tab flex items-center gap-2 px-3 py-1.5">
-        <FolderOpen className="size-3 text-gold" />
-        <span className="font-display text-[10px] font-bold tracking-[0.18em] text-gold" dir="ltr">
-          ملف #{caseNumber}
+        {done ? <FolderOpen className="size-3 text-gold" /> : <Folder className="size-3 text-gold" />}
+        <span className="font-display text-[9px] font-bold tracking-[0.2em] text-gold/90" dir="ltr">
+          CASE FILE #{caseNumber}
         </span>
         {done && (
           <span className="case-stamp ms-auto rounded px-1.5 py-0.5 text-[9px] font-bold">
@@ -84,11 +136,18 @@ export function CaseFileCard({
             <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{subtitle}</p>
           )}
 
-          {meta.length > 0 && (
-            <p className="mt-1 truncate text-[10px] text-amber-300/90">
-              {meta.join(" · ")}
-            </p>
-          )}
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-amber-300/90">
+            {difficultyLabel && (
+              <span className="inline-flex items-center gap-1">
+                <span
+                  aria-hidden
+                  className={`size-2 rounded-full ${DIFFICULTY_DOT[String(difficultyKey ?? "")] ?? "bg-white/40"}`}
+                />
+                {difficultyLabel}
+              </span>
+            )}
+            {meta.length > 0 && <span className="truncate">{meta.join(" · ")}</span>}
+          </p>
 
           <p className="mt-1 inline-flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
             {hearts ? (
@@ -107,6 +166,23 @@ export function CaseFileCard({
               </span>
             ) : null}
           </p>
+
+          {chips.length > 0 && (
+            <p className="mt-2 flex flex-wrap items-center gap-1">
+              {chips.map((c, i) => {
+                const Icon = CHIP_ICON[String(c.entityType || "").toLowerCase()] ?? BookOpen;
+                return (
+                  <span
+                    key={`${c.label}:${i}`}
+                    className="inline-flex max-w-[45%] items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-foreground/75"
+                  >
+                    <Icon className="size-3 shrink-0 text-gold/80" />
+                    <span className="truncate">{c.label}</span>
+                  </span>
+                );
+              })}
+            </p>
+          )}
         </div>
 
         {done ? (
@@ -115,7 +191,6 @@ export function CaseFileCard({
           <ChevronLeft className="size-4 shrink-0 text-muted-foreground transition group-hover:text-gold" />
         )}
       </div>
-    </Link>
+    </a>
   );
 }
-
