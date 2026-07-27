@@ -123,6 +123,19 @@ function warnOnce(msg: string) {
 }
 
 // ---------- Ambience ----------
+/**
+ * Revert to the global ambience layer. Used whenever a scoped layer
+ * (campaign / investigation) cannot load or cannot play — the player never
+ * ends up in silence because of a missing or blocked scoped asset.
+ */
+function fallbackToGlobal() {
+  (Object.keys(tracks) as AmbienceLayer[]).forEach((l) => {
+    tracks[l].gain = l === "global" ? 1 : 0;
+  });
+  activeLayer = "global";
+  applyAmbienceState();
+}
+
 function ensureTrack(layer: AmbienceLayer) {
   const t = tracks[layer];
   if (t.el || t.failed || typeof window === "undefined") return;
