@@ -428,40 +428,58 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
           </section>
         )}
 
+        {!finished && <EvidenceBoard items={evidenceItems} />}
 
         {finished && (
-          <section className="mt-6 rounded-3xl border border-gold/30 bg-gradient-to-br from-gold/15 to-transparent p-5 text-center">
-            <Trophy className="mx-auto size-7 text-gold" />
-            <p className="font-display mt-2 text-lg font-bold text-gold">قضية محلولة!</p>
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              {resolvedIndices.size}/{totalQuestionLike} إجابات صحيحة
-              {grant?.status === "granted" && (
-                <>
-                  {grant.xp ? <> · <Star className="inline size-3" /> +{grant.xp}</> : null}
-                  {grant.dinars ? <> · <Coins className="inline size-3" /> +{grant.dinars}</> : null}
-                  {(grant.hearts || heartGain) ? (
-                    <> · <Heart className="inline size-3 text-rose-300" /> +{Math.max(grant.hearts, heartGain)}</>
-                  ) : null}
-                </>
-              )}
-            </p>
-            {grant?.status === "already" && (
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                سُجِّل هذا التحقيق سابقًا — لا مكافآت مكرّرة.
-              </p>
-            )}
-            {grant?.status === "queued" && (
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                تم حفظ الإنجاز — ستُضاف المكافأة عند عودة الاتصال.
-              </p>
-            )}
+          <section className="mt-6 overflow-hidden rounded-3xl border border-gold/30 shadow-elegant">
+            <div className="case-tab flex items-center gap-2 px-4 py-1.5">
+              <span className="font-display text-[10px] font-bold tracking-[0.2em] text-gold">
+                ملف قضية
+              </span>
+              <span className="case-stamp ms-auto rounded px-2 py-0.5 text-[10px] font-bold">
+                أُغلق الملف
+              </span>
+            </div>
 
-            <div className="mt-4 flex flex-col items-center gap-2">
-              <Link to="/investigations" className="text-sm text-gold">قضية أخرى</Link>
-              <Link to="/campaigns" className="text-xs text-muted-foreground">العودة للحملات</Link>
+            <div className="case-sheet p-5 text-center">
+              <Trophy className="mx-auto size-7 text-gold" />
+              <p className="font-display mt-2 text-lg font-bold text-gold">قضية محلولة!</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                {resolvedIndices.size}/{totalQuestionLike} إجابات صحيحة
+                {grant?.status === "granted" && (
+                  <>
+                    {grant.xp ? <> · <Star className="inline size-3" /> +{grant.xp}</> : null}
+                    {grant.dinars ? <> · <Coins className="inline size-3" /> +{grant.dinars}</> : null}
+                    {(grant.hearts || heartGain) ? (
+                      <> · <Heart className="inline size-3 text-rose-300" /> +{Math.max(grant.hearts, heartGain)}</>
+                    ) : null}
+                  </>
+                )}
+              </p>
+              {grant?.status === "already" && (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  سُجِّل هذا التحقيق سابقًا — لا مكافآت مكرّرة.
+                </p>
+              )}
+              {grant?.status === "queued" && (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  تم حفظ الإنجاز — ستُضاف المكافأة عند عودة الاتصال.
+                </p>
+              )}
+
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <Link to="/investigations" className="text-sm text-gold">قضية أخرى</Link>
+                <Link to="/campaigns" className="text-xs text-muted-foreground">العودة للحملات</Link>
+              </div>
+            </div>
+
+            {/* The full record stays available after the file is closed. */}
+            <div className="px-4 pb-4">
+              <EvidenceBoard items={evidenceItems} />
             </div>
           </section>
         )}
+
         <FeedbackCTA context={{ investigation_id: row.slug, title: row.title ?? "التحقيق" }} />
       </ReadingScale>
     </AppShell>
