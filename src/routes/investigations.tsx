@@ -270,10 +270,31 @@ function InvestigationsIndex() {
     setSearch(""); setEraKey(""); setDifficulty(""); setStatus("all");
   };
 
+  // Filters start collapsed: browsing the desk comes first, tuning second.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Case-desk statistics — computed from the full catalog, not the filtered
+  // view, so the numbers describe the section rather than the current query.
+  const stats = useMemo(() => {
+    const total = items.length;
+    let solved = 0;
+    for (const it of items) {
+      const slug = itemSlug(it);
+      const id = it.row.id;
+      if (canonicalProgress.matches(id) || canonicalProgress.matches(slug)) solved++;
+    }
+    const pct = total > 0 ? Math.round((solved / total) * 100) : 0;
+    return { total, solved, remaining: Math.max(0, total - solved), pct };
+  }, [items, canonicalProgress]);
+
   return (
     <AppShell>
       <ReadingScale>
-      <Screen title="التحقيقات التاريخية" subtitle="اكشف القرائن، استنتج الإجابة، واربح القلوب والدنانير">
+      <div className="case-desk-texture relative px-5 pt-6">
+        <InvestigationsHero
+          title="التحقيقات التاريخية"
+          subtitle="اكشف القرائن، استنتج الإجابة، واربح القلوب والدنانير"
+        />
 
         {worldSlug && (
           <div className="mb-4">
@@ -284,9 +305,38 @@ function InvestigationsIndex() {
           </div>
         )}
 
-        {/* Filters */}
-        <div className="mb-4 space-y-3">
+        {/* Desk statistics */}
+        <div className="mb-3 grid grid-cols-4 gap-2">
+          <StatCell icon={<FolderOpen className="size-3.5 text-gold" />} label="ملفات القضايا" value={String(stats.total)} />
+          <StatCell icon={<CheckCircle2 className="size-3.5 text-emerald-400" />} label="المحلولة" value={String(stats.solved)} />
+          <StatCell icon={<Lock className="size-3.5 text-muted-foreground" />} label="المتبقية" value={String(stats.remaining)} />
+          <StatCell icon={<Trophy className="size-3.5 text-gold" />} label="نسبة الإنجاز" value={`${stats.pct}%`} />
+        </div>
+
+        {/* Filters — one collapsible card, closed by default */}
+        <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-surface/70">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-start"
+          >
+            <SlidersHorizontal className="size-4 text-gold" />
+            <span className="text-[12.5px] font-bold">تصفية التحقيقات</span>
+            {anyFilter && (
+              <span className="rounded-full border border-gold/40 bg-gold/10 px-1.5 py-0.5 text-[9px] text-gold">
+                مُفعّلة
+              </span>
+            )}
+            <ChevronDown
+              className={`ms-auto size-4 text-muted-foreground transition ${filtersOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {filtersOpen && (
+        <div className="space-y-3 border-t border-white/10 p-3">
           <label className="flex items-center gap-2 rounded-2xl border border-white/10 bg-surface px-3 py-2">
+
             <Search className="size-4 text-muted-foreground" />
             <input
               type="text"
