@@ -42,6 +42,9 @@ export type ResolvedEncyclopediaRef = {
   canonicalSlug: string | null;
   /** Best-effort Arabic type label ("شخصية", "معركة", …) or empty. */
   typeLabel: string;
+  /** Canonical entity type slug ("figure", "battle", …) or empty. Drives icons. */
+  entityType: string;
+
   /** Full display label ("شخصية · محمد ﷺ" or the entity title). */
   label: string;
   /** Whether the reference was successfully resolved to a real entity. */
