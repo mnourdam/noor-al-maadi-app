@@ -54,6 +54,9 @@ export const CAMPAIGN_AMBIENCE_SRC = "/audio/campaign-ambient.mp3";
  * asset so it works offline inside the APK.
  */
 export const INVESTIGATION_AMBIENCE_SRC = "/audio/investigation-ambient.mp3";
+/** Alternate filename for the same layer (uploaded as `investigation_sfx.mp3`). */
+export const INVESTIGATION_SFX_SRC = "/audio/investigation_sfx.mp3";
+
 const SFX_URLS: Record<SfxName, string> = {
   "success":            "/audio/success-soft.mp3",
   "chapter-complete":   "/audio/chapter-complete.mp3",
