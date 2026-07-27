@@ -489,13 +489,19 @@ export const audioManager = {
 
   getDebugSnapshot() {
     const campaign = tracks.campaign;
+    const investigation = tracks.investigation;
     return {
       activeLayer,
       campaignSrc: CAMPAIGN_AMBIENCE_SRC,
       campaignReadyState: campaign.el?.readyState ?? 0,
       campaignPaused: campaign.el?.paused ?? true,
       campaignVolume: Number((campaign.el?.volume ?? 0).toFixed(3)),
-      lastPlayError: campaign.lastPlayError,
+      investigationSrc: INVESTIGATION_AMBIENCE_SRC,
+      investigationReadyState: investigation.el?.readyState ?? 0,
+      investigationPaused: investigation.el?.paused ?? true,
+      investigationVolume: Number((investigation.el?.volume ?? 0).toFixed(3)),
+      investigationMissing: investigation.failed,
+      lastPlayError: campaign.lastPlayError ?? investigation.lastPlayError,
     };
   },
 
@@ -507,9 +513,8 @@ export const audioManager = {
       const t = tracks[layer];
       if (t.el) { try { t.el.pause(); } catch {/*ignore*/} }
       t.el = null;
+      t.gain = layer === "global" ? 1 : 0;
     });
-    tracks.global.gain = 1;
-    tracks.campaign.gain = 0;
     activeLayer = "global";
   },
 };
