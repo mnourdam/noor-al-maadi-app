@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { displayName } from "@/lib/display-names";
 import { resolveRelatedRefs } from "@/lib/encyclopedia-refs";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
+import { CaseProgress } from "@/components/investigations/CaseProgress";
+import { EvidenceBoard } from "@/components/investigations/EvidenceBoard";
 import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { markInvestigationOpened, clearInvestigationOpened } from "@/lib/investigations/recommend";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
