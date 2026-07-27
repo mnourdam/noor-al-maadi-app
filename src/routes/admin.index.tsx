@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail, Flag } from "lucide-react";
+import { AlertTriangle, Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail, Flag, Gem } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
