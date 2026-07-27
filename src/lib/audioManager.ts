@@ -135,12 +135,12 @@ function ensureTrack(layer: AmbienceLayer) {
       t.failed = true;
       t.lastPlayError = `load error: ${t.url}`;
       warnOnce(`ambience file missing or unplayable (${layer}): ${t.url}`);
-      if (layer === "campaign" && activeLayer === "campaign") {
-        console.warn("[audio] campaign track failed — reverting to global ambience");
-        tracks.campaign.gain = 0;
-        tracks.global.gain = 1;
-        activeLayer = "global";
-        applyAmbienceState();
+      // Any scoped layer (campaign / investigation) degrades gracefully to
+      // the global ambience — including the expected case where the asset
+      // has not been produced yet.
+      if (layer !== "global" && activeLayer === layer) {
+        console.warn(`[audio] ${layer} track failed — reverting to global ambience`);
+        fallbackToGlobal();
       }
     });
     a.addEventListener("canplaythrough", () => {
