@@ -10,15 +10,18 @@
 // `evaluate_unlock_spec_v2` / `src/lib/stories/unlock`.
 // ============================================================
 
-import { Check, Lock, X } from "lucide-react";
+import { ArrowLeft, Check, Lock, X } from "lucide-react";
+import { useRouter } from "@tanstack/react-router";
 import { ModalPortal } from "@/components/ModalPortal";
 import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registration";
 import type { StoryPrereq } from "@/lib/stories/summary";
 
 /** Arabic phrasing per prerequisite family. */
 const KIND_LABEL: Record<string, string> = {
+  campaign_completed: "أكمل الحملة",
   campaign_complete: "أكمل الحملة",
   campaign_chapter_complete: "أكمل فصل الحملة",
+  investigation_completed: "أكمل التحقيق",
   investigation_complete: "أكمل التحقيق",
   entity_discovered: "اكتشف في الموسوعة",
   entities_discovered: "اكتشف عناصر الموسوعة",
@@ -26,9 +29,33 @@ const KIND_LABEL: Record<string, string> = {
   atlas_location_visited: "زر الموقع في الأطلس",
   achievement_unlocked: "افتح الإنجاز",
   player_level: "ابلغ المستوى",
+  story_completed: "أكمل القصة",
   story_complete: "أكمل القصة",
   date_window: "متاح في فترة محددة",
 };
+
+/**
+ * Deep-link target for a prerequisite, when it is directly actionable.
+ * Kinds without a canonical destination (or deliberately mysterious ones)
+ * return null and keep the teaser copy only — no dead-end buttons.
+ */
+function prereqTarget(p: StoryPrereq): { to: string; label: string } | null {
+  if (p.satisfied || !p.ref) return null;
+  const name = p.title ?? null;
+  switch (p.kind) {
+    case "entity_discovered":
+      return { to: `/encyclopedia/entity/${p.ref}`, label: name ? `📖 الانتقال إلى ${name}` : "📖 الانتقال إلى الموسوعة" };
+    case "campaign_completed":
+      return { to: `/campaigns/imported/${p.ref}`, label: name ? `🏛️ الانتقال إلى ${name}` : "🏛️ الانتقال إلى الحملة" };
+    case "investigation_completed":
+      return { to: `/investigation/${p.ref}`, label: name ? `🔍 الانتقال إلى ${name}` : "🔍 الانتقال إلى التحقيق" };
+    case "story_completed":
+      return { to: `/story/${p.ref}`, label: name ? `📜 الانتقال إلى ${name}` : "📜 الانتقال إلى القصة" };
+    default:
+      return null;
+  }
+}
+
 
 export function LockedStoryDialog({
   title,
