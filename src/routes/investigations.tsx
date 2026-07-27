@@ -9,7 +9,12 @@ import {
 import { AppShell, Screen } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 import { WorldFilterChip } from "@/components/WorldFilterChip";
-import { CaseFileCard, caseNumberFor } from "@/components/investigations/CaseFileCard";
+import { CaseFileCard } from "@/components/investigations/CaseFileCard";
+import {
+  caseNumberLabel,
+  ensureCaseNumbers,
+  registerInvestigationsForNumbering,
+} from "@/lib/investigations/case-number";
 
 import { INVESTIGATION_REGISTRY } from "@/lib/investigations";
 import {
@@ -92,6 +97,16 @@ function InvestigationsIndex() {
   const { rows } = useSupabaseInvestigations();
   const navigate = useNavigate({ from: "/investigations" });
   const stashOrigin = useStashCurrentAsOrigin();
+
+  // Case numbers are an identity, not a row index: register every loaded
+  // row so the number a case shows here is the same number it shows on its
+  // own page, on every load, forever.
+  const [, bumpNumbers] = useState(0);
+  useEffect(() => { void ensureCaseNumbers().then(() => bumpNumbers((n) => n + 1)); }, []);
+  useEffect(() => {
+    registerInvestigationsForNumbering(rows ?? []);
+    bumpNumbers((n) => n + 1);
+  }, [rows]);
 
   const rawWorld = safeKey(Route.useSearch().world);
   const worldSlug = rawWorld && isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
@@ -336,8 +351,8 @@ function InvestigationsIndex() {
         )}
 
         <div className="case-board space-y-3 rounded-3xl border border-white/10 p-3">
-          {filtered.map((item, index) => {
-            const caseNumber = caseNumberFor(index);
+          {filtered.map((item) => {
+            const caseNumber = caseNumberLabel(itemSlug(item));
             if (item.kind === "supabase") {
               const inv = item.row;
               const done =
