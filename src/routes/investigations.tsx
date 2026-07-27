@@ -4,12 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import {
-  Search, Loader2, Globe2, X as XIcon,
+  Search, Loader2, Globe2, X as XIcon, SlidersHorizontal, ChevronDown,
+  FolderOpen, CheckCircle2, Lock, Trophy,
 } from "lucide-react";
-import { AppShell, Screen } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 import { WorldFilterChip } from "@/components/WorldFilterChip";
-import { CaseFileCard } from "@/components/investigations/CaseFileCard";
+import { CaseFileCard, type CaseRefChip } from "@/components/investigations/CaseFileCard";
+import { InvestigationsHero } from "@/components/investigations/InvestigationsHero";
+import { resolveRelatedRefs } from "@/lib/encyclopedia-refs";
+
 import {
   caseNumberLabel,
   ensureCaseNumbers,
@@ -266,10 +270,31 @@ function InvestigationsIndex() {
     setSearch(""); setEraKey(""); setDifficulty(""); setStatus("all");
   };
 
+  // Filters start collapsed: browsing the desk comes first, tuning second.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Case-desk statistics — computed from the full catalog, not the filtered
+  // view, so the numbers describe the section rather than the current query.
+  const stats = useMemo(() => {
+    const total = items.length;
+    let solved = 0;
+    for (const it of items) {
+      const slug = itemSlug(it);
+      const id = it.row.id;
+      if (canonicalProgress.matches(id) || canonicalProgress.matches(slug)) solved++;
+    }
+    const pct = total > 0 ? Math.round((solved / total) * 100) : 0;
+    return { total, solved, remaining: Math.max(0, total - solved), pct };
+  }, [items, canonicalProgress]);
+
   return (
     <AppShell>
       <ReadingScale>
-      <Screen title="التحقيقات التاريخية" subtitle="اكشف القرائن، استنتج الإجابة، واربح القلوب والدنانير">
+      <div className="case-desk-texture relative px-5 pt-6">
+        <InvestigationsHero
+          title="التحقيقات التاريخية"
+          subtitle="اكشف القرائن، استنتج الإجابة، واربح القلوب والدنانير"
+        />
 
         {worldSlug && (
           <div className="mb-4">
@@ -280,9 +305,38 @@ function InvestigationsIndex() {
           </div>
         )}
 
-        {/* Filters */}
-        <div className="mb-4 space-y-3">
+        {/* Desk statistics */}
+        <div className="mb-3 grid grid-cols-4 gap-2">
+          <StatCell icon={<FolderOpen className="size-3.5 text-gold" />} label="ملفات القضايا" value={String(stats.total)} />
+          <StatCell icon={<CheckCircle2 className="size-3.5 text-emerald-400" />} label="المحلولة" value={String(stats.solved)} />
+          <StatCell icon={<Lock className="size-3.5 text-muted-foreground" />} label="المتبقية" value={String(stats.remaining)} />
+          <StatCell icon={<Trophy className="size-3.5 text-gold" />} label="نسبة الإنجاز" value={`${stats.pct}%`} />
+        </div>
+
+        {/* Filters — one collapsible card, closed by default */}
+        <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-surface/70">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-start"
+          >
+            <SlidersHorizontal className="size-4 text-gold" />
+            <span className="text-[12.5px] font-bold">تصفية التحقيقات</span>
+            {anyFilter && (
+              <span className="rounded-full border border-gold/40 bg-gold/10 px-1.5 py-0.5 text-[9px] text-gold">
+                مُفعّلة
+              </span>
+            )}
+            <ChevronDown
+              className={`ms-auto size-4 text-muted-foreground transition ${filtersOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {filtersOpen && (
+        <div className="space-y-3 border-t border-white/10 p-3">
           <label className="flex items-center gap-2 rounded-2xl border border-white/10 bg-surface px-3 py-2">
+
             <Search className="size-4 text-muted-foreground" />
             <input
               type="text"
@@ -343,6 +397,9 @@ function InvestigationsIndex() {
             </button>
           )}
         </div>
+          )}
+        </div>
+
 
         {rows === null && (
           <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
@@ -368,14 +425,17 @@ function InvestigationsIndex() {
                   title={inv.title}
                   subtitle={inv.subtitle}
                   difficultyLabel={displayDifficulty(inv.difficulty)}
+                  difficultyKey={canonicalDifficulty(inv.difficulty)}
                   stepCount={steps.length}
                   questionCount={countQuestions(steps)}
                   xp={reward.xp}
                   dinars={reward.coins}
                   hearts={reward.hearts}
+                  refs={refChipsFor(inv.related_entities)}
                   done={done}
                   onNavigate={() => stashOrigin(`/investigation/${inv.slug}`)}
                 />
+
               );
             }
             const inv = item.row;
@@ -411,7 +471,7 @@ function InvestigationsIndex() {
             </div>
           )}
         </div>
-      </Screen>
+      </div>
       </ReadingScale>
     </AppShell>
   );
@@ -442,4 +502,35 @@ function Chip({
       {children}
     </button>
   );
+}
+
+/** One tiny statistic on the case-desk strip. */
+function StatCell({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-surface/70 px-2 py-1.5 text-center">
+      <div className="flex items-center justify-center gap-1">{icon}</div>
+      <p className="font-display mt-0.5 text-[13px] font-bold leading-none" dir="ltr">{value}</p>
+      <p className="mt-0.5 truncate text-[9px] text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+/**
+ * First 3 encyclopedia entities of a case, as lightweight chips. Resolution
+ * is snapshot-local (no network) and unresolved refs are dropped so a card
+ * never shows a raw uuid.
+ */
+function refChipsFor(related: readonly string[] | null | undefined): CaseRefChip[] {
+  try {
+    return resolveRelatedRefs(related)
+      .filter((r) => r.resolved && r.label)
+      .slice(0, 3)
+      .map((r) => ({
+        entityType: r.entityType,
+        // Drop the "نوع · " prefix — the chip icon already carries the type.
+        label: r.label.includes(" · ") ? r.label.split(" · ").pop()! : r.label,
+      }));
+  } catch {
+    return [];
+  }
 }

@@ -54,6 +54,9 @@ export const CAMPAIGN_AMBIENCE_SRC = "/audio/campaign-ambient.mp3";
  * asset so it works offline inside the APK.
  */
 export const INVESTIGATION_AMBIENCE_SRC = "/audio/investigation-ambient.mp3";
+/** Alternate filename for the same layer (uploaded as `investigation_sfx.mp3`). */
+export const INVESTIGATION_SFX_SRC = "/audio/investigation_sfx.mp3";
+
 const SFX_URLS: Record<SfxName, string> = {
   "success":            "/audio/success-soft.mp3",
   "chapter-complete":   "/audio/chapter-complete.mp3",
@@ -97,16 +100,25 @@ const recentSfx = new Map<string, number>(); // dedupe key -> ts
 // Both elements exist simultaneously; we crossfade their volumes.
 interface AmbienceTrack {
   url: string;
+  /** Remaining fallback sources, tried in order when `url` fails to load. */
+  fallbacks: string[];
   el: HTMLAudioElement | null;
   failed: boolean;
   gain: number; // 0..1 layer gain (before master*ambience volume)
   lastPlayError: string | null;
 }
 const tracks: Record<AmbienceLayer, AmbienceTrack> = {
-  global:   { url: AMBIENCE_URL,         el: null, failed: false, gain: 1, lastPlayError: null },
-  campaign: { url: CAMPAIGN_AMBIENCE_SRC, el: null, failed: false, gain: 0, lastPlayError: null },
-  investigation: { url: INVESTIGATION_AMBIENCE_SRC, el: null, failed: false, gain: 0, lastPlayError: null },
+  global:   { url: AMBIENCE_URL,         fallbacks: [], el: null, failed: false, gain: 1, lastPlayError: null },
+  campaign: { url: CAMPAIGN_AMBIENCE_SRC, fallbacks: [], el: null, failed: false, gain: 0, lastPlayError: null },
+  investigation: {
+    url: INVESTIGATION_AMBIENCE_SRC,
+    // The uploaded asset may land under either name; both are bundled
+    // public assets, so the walk stays offline-safe.
+    fallbacks: [INVESTIGATION_SFX_SRC],
+    el: null, failed: false, gain: 0, lastPlayError: null,
+  },
 };
+
 let activeLayer: AmbienceLayer = "global";
 let fadeTimer: number | null = null;
 const FADE_MS = 1500;
@@ -145,6 +157,16 @@ function ensureTrack(layer: AmbienceLayer) {
     a.preload = "auto";
     a.volume = 0;
     a.addEventListener("error", () => {
+      // Walk any remaining candidate filenames before declaring the layer dead.
+      const next = t.fallbacks.shift();
+      if (next) {
+        warnOnce(`ambience source failed (${layer}: ${t.url}) — trying ${next}`);
+        t.url = next;
+        t.el = null;
+        ensureTrack(layer);
+        if (activeLayer === layer) applyAmbienceState();
+        return;
+      }
       t.failed = true;
       t.lastPlayError = `load error: ${t.url}`;
       warnOnce(`ambience file missing or unplayable (${layer}): ${t.url}`);
@@ -156,6 +178,7 @@ function ensureTrack(layer: AmbienceLayer) {
         fallbackToGlobal();
       }
     });
+
     a.addEventListener("canplaythrough", () => {
       console.log(`[audio] ${layer} canplaythrough (${t.url})`);
     }, { once: true });
