@@ -157,6 +157,16 @@ function ensureTrack(layer: AmbienceLayer) {
     a.preload = "auto";
     a.volume = 0;
     a.addEventListener("error", () => {
+      // Walk any remaining candidate filenames before declaring the layer dead.
+      const next = t.fallbacks.shift();
+      if (next) {
+        warnOnce(`ambience source failed (${layer}: ${t.url}) — trying ${next}`);
+        t.url = next;
+        t.el = null;
+        ensureTrack(layer);
+        if (activeLayer === layer) applyAmbienceState();
+        return;
+      }
       t.failed = true;
       t.lastPlayError = `load error: ${t.url}`;
       warnOnce(`ambience file missing or unplayable (${layer}): ${t.url}`);
@@ -168,6 +178,7 @@ function ensureTrack(layer: AmbienceLayer) {
         fallbackToGlobal();
       }
     });
+
     a.addEventListener("canplaythrough", () => {
       console.log(`[audio] ${layer} canplaythrough (${t.url})`);
     }, { once: true });
