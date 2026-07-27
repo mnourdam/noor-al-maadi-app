@@ -139,6 +139,8 @@ export function resolveRelatedRef(rawInput: string): ResolvedEncyclopediaRef {
     canonicalId: (canon.id as string | undefined) ?? null,
     canonicalSlug: (canon.slug as string | undefined) ?? null,
     typeLabel,
+    entityType: type,
+
     label,
     resolved: true,
     linkId: (canon.slug as string | undefined) || (canon.id as string | undefined) || raw,
