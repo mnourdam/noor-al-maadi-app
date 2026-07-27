@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { displayName } from "@/lib/display-names";
 import { resolveRelatedRefs } from "@/lib/encyclopedia-refs";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
+import { CaseProgress } from "@/components/investigations/CaseProgress";
+import { EvidenceBoard } from "@/components/investigations/EvidenceBoard";
 import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { markInvestigationOpened, clearInvestigationOpened } from "@/lib/investigations/recommend";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
@@ -289,6 +291,19 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
   const questionLikeIndex = steps.slice(0, idx + 1).filter((s) => s.type === "question" || s.type === "decision").length;
   const totalQuestionLike = steps.filter((s) => s.type === "question" || s.type === "decision").length;
+  const questionMarkers = steps.map((s) => s.type === "question" || s.type === "decision");
+
+  // Evidence already walked past in this case (strictly before the current
+  // step) — the board is a record, never a spoiler of what is still ahead.
+  const evidenceItems = steps
+    .slice(0, finished ? steps.length : idx)
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.type === "evidence")
+    .map(({ s, i }) => ({
+      key: `ev:${i}`,
+      label: (s as { title?: string }).title || `قرينة ${(i + 1).toLocaleString("ar-EG")}`,
+      text: (s as { text: string }).text,
+    }));
 
   return (
     <AppShell>
@@ -298,14 +313,24 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
           <ChevronRight className="size-4" /> كل التحقيقات
         </Link>
 
-        <div className="mt-4 rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold">
-            <Search className="size-3.5" /> تحقيق تاريخي · {displayDifficulty(row.difficulty)}
+        {/* Case file header */}
+        <div className="mt-4 overflow-hidden rounded-3xl border border-gold/25 shadow-elegant">
+          <div className="case-tab flex items-center gap-2 px-4 py-1.5">
+            <Search className="size-3 text-gold" />
+            <span className="font-display text-[10px] font-bold tracking-[0.2em] text-gold">
+              ملف قضية
+            </span>
+            <span className="ms-auto text-[10px] text-gold/75">
+              {displayDifficulty(row.difficulty)}
+            </span>
           </div>
-          <h1 className="font-display mt-2 text-lg font-bold leading-snug">{row.title}</h1>
-          {row.subtitle && <p className="mt-1 text-[12px] text-gold/90">{row.subtitle}</p>}
-          {row.description && <p className="mt-2 text-[12px] leading-7 text-foreground/90">{row.description}</p>}
+          <div className="case-sheet p-5">
+            <h1 className="font-display text-lg font-bold leading-snug">{row.title}</h1>
+            {row.subtitle && <p className="mt-1 text-[12px] text-gold/90">{row.subtitle}</p>}
+            {row.description && <p className="mt-2 text-[12px] leading-7 text-foreground/90">{row.description}</p>}
+          </div>
         </div>
+
 
         {relatedRefs.length > 0 && (
           <section className="mt-5">
@@ -336,14 +361,21 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
         {!finished && step && (
           <section className="mt-6">
-            <h2 className="font-display mb-2 text-sm font-bold">
-              خطوة {(idx + 1).toLocaleString("en-US")}/{steps.length.toLocaleString("en-US")}
-              {stepNeedsAnswer && (
-                <span className="ms-2 text-[11px] text-muted-foreground">
-                  سؤال {questionLikeIndex}/{totalQuestionLike}
-                </span>
-              )}
-            </h2>
+            <CaseProgress
+              total={steps.length}
+              current={idx}
+              answeredCount={resolvedIndices.size}
+              totalQuestions={totalQuestionLike}
+              markers={questionMarkers}
+            />
+
+            {stepNeedsAnswer && (
+              <p className="mb-2 mt-3 text-[11px] text-muted-foreground">
+                استنتاج {questionLikeIndex.toLocaleString("ar-EG")}/{totalQuestionLike.toLocaleString("ar-EG")}
+              </p>
+            )}
+            {!stepNeedsAnswer && <div className="mt-3" />}
+
 
             <StepCard
               step={step}
@@ -396,40 +428,58 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
           </section>
         )}
 
+        {!finished && <EvidenceBoard items={evidenceItems} />}
 
         {finished && (
-          <section className="mt-6 rounded-3xl border border-gold/30 bg-gradient-to-br from-gold/15 to-transparent p-5 text-center">
-            <Trophy className="mx-auto size-7 text-gold" />
-            <p className="font-display mt-2 text-lg font-bold text-gold">قضية محلولة!</p>
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              {resolvedIndices.size}/{totalQuestionLike} إجابات صحيحة
-              {grant?.status === "granted" && (
-                <>
-                  {grant.xp ? <> · <Star className="inline size-3" /> +{grant.xp}</> : null}
-                  {grant.dinars ? <> · <Coins className="inline size-3" /> +{grant.dinars}</> : null}
-                  {(grant.hearts || heartGain) ? (
-                    <> · <Heart className="inline size-3 text-rose-300" /> +{Math.max(grant.hearts, heartGain)}</>
-                  ) : null}
-                </>
-              )}
-            </p>
-            {grant?.status === "already" && (
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                سُجِّل هذا التحقيق سابقًا — لا مكافآت مكرّرة.
-              </p>
-            )}
-            {grant?.status === "queued" && (
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                تم حفظ الإنجاز — ستُضاف المكافأة عند عودة الاتصال.
-              </p>
-            )}
+          <section className="mt-6 overflow-hidden rounded-3xl border border-gold/30 shadow-elegant">
+            <div className="case-tab flex items-center gap-2 px-4 py-1.5">
+              <span className="font-display text-[10px] font-bold tracking-[0.2em] text-gold">
+                ملف قضية
+              </span>
+              <span className="case-stamp ms-auto rounded px-2 py-0.5 text-[10px] font-bold">
+                أُغلق الملف
+              </span>
+            </div>
 
-            <div className="mt-4 flex flex-col items-center gap-2">
-              <Link to="/investigations" className="text-sm text-gold">قضية أخرى</Link>
-              <Link to="/campaigns" className="text-xs text-muted-foreground">العودة للحملات</Link>
+            <div className="case-sheet p-5 text-center">
+              <Trophy className="mx-auto size-7 text-gold" />
+              <p className="font-display mt-2 text-lg font-bold text-gold">قضية محلولة!</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                {resolvedIndices.size}/{totalQuestionLike} إجابات صحيحة
+                {grant?.status === "granted" && (
+                  <>
+                    {grant.xp ? <> · <Star className="inline size-3" /> +{grant.xp}</> : null}
+                    {grant.dinars ? <> · <Coins className="inline size-3" /> +{grant.dinars}</> : null}
+                    {(grant.hearts || heartGain) ? (
+                      <> · <Heart className="inline size-3 text-rose-300" /> +{Math.max(grant.hearts, heartGain)}</>
+                    ) : null}
+                  </>
+                )}
+              </p>
+              {grant?.status === "already" && (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  سُجِّل هذا التحقيق سابقًا — لا مكافآت مكرّرة.
+                </p>
+              )}
+              {grant?.status === "queued" && (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  تم حفظ الإنجاز — ستُضاف المكافأة عند عودة الاتصال.
+                </p>
+              )}
+
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <Link to="/investigations" className="text-sm text-gold">قضية أخرى</Link>
+                <Link to="/campaigns" className="text-xs text-muted-foreground">العودة للحملات</Link>
+              </div>
+            </div>
+
+            {/* The full record stays available after the file is closed. */}
+            <div className="px-4 pb-4">
+              <EvidenceBoard items={evidenceItems} />
             </div>
           </section>
         )}
+
         <FeedbackCTA context={{ investigation_id: row.slug, title: row.title ?? "التحقيق" }} />
       </ReadingScale>
     </AppShell>
@@ -596,12 +646,17 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
           <ChevronRight className="size-4" /> كل التحقيقات
         </Link>
 
-        <div className="mt-4 rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold">
-            <Search className="size-3.5" /> تحقيق تاريخي
+        <div className="mt-4 overflow-hidden rounded-3xl border border-gold/25 shadow-elegant">
+          <div className="case-tab flex items-center gap-2 px-4 py-1.5">
+            <Search className="size-3 text-gold" />
+            <span className="font-display text-[10px] font-bold tracking-[0.2em] text-gold">
+              ملف قضية
+            </span>
           </div>
-          <h1 className="font-display mt-2 text-lg font-bold leading-snug">{inv.title}</h1>
-          <p className="mt-2 text-[12px] leading-7 text-foreground/90">{inv.intro}</p>
+          <div className="case-sheet p-5">
+            <h1 className="font-display text-lg font-bold leading-snug">{inv.title}</h1>
+            <p className="mt-2 text-[12px] leading-7 text-foreground/90">{inv.intro}</p>
+          </div>
         </div>
 
         {inv.encyclopediaRefs?.length ? (

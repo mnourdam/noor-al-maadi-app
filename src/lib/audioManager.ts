@@ -13,7 +13,7 @@ import { deviceAllowsAudio, initAndroidSilentMode } from "./androidSilentMode";
 
 import errorSfxAsset from "@/assets/audio-error.mp3.asset.json";
 
-export type AmbienceLayer = "global" | "campaign";
+export type AmbienceLayer = "global" | "campaign" | "investigation";
 
 export type SfxName =
   | "success"
@@ -44,6 +44,16 @@ const STORAGE_KEY = "irth_audio_settings";
 
 const AMBIENCE_URL = "/audio/irth-ambience.mp3";
 export const CAMPAIGN_AMBIENCE_SRC = "/audio/campaign-ambient.mp3";
+/**
+ * Investigation ambience. The asset is INTENTIONALLY not shipped yet — the
+ * system is prepared first. Until the file exists, `ensureTrack()` marks the
+ * layer as failed on the first load error and the engine transparently keeps
+ * the global ambience playing (see the non-global fallback in `ensureTrack`
+ * and `tryPlay`). Dropping the file at this path is the only step needed to
+ * activate it: no code change, and it is bundled like every other public
+ * asset so it works offline inside the APK.
+ */
+export const INVESTIGATION_AMBIENCE_SRC = "/audio/investigation-ambient.mp3";
 const SFX_URLS: Record<SfxName, string> = {
   "success":            "/audio/success-soft.mp3",
   "chapter-complete":   "/audio/chapter-complete.mp3",
@@ -95,6 +105,7 @@ interface AmbienceTrack {
 const tracks: Record<AmbienceLayer, AmbienceTrack> = {
   global:   { url: AMBIENCE_URL,         el: null, failed: false, gain: 1, lastPlayError: null },
   campaign: { url: CAMPAIGN_AMBIENCE_SRC, el: null, failed: false, gain: 0, lastPlayError: null },
+  investigation: { url: INVESTIGATION_AMBIENCE_SRC, el: null, failed: false, gain: 0, lastPlayError: null },
 };
 let activeLayer: AmbienceLayer = "global";
 let fadeTimer: number | null = null;
@@ -112,6 +123,19 @@ function warnOnce(msg: string) {
 }
 
 // ---------- Ambience ----------
+/**
+ * Revert to the global ambience layer. Used whenever a scoped layer
+ * (campaign / investigation) cannot load or cannot play — the player never
+ * ends up in silence because of a missing or blocked scoped asset.
+ */
+function fallbackToGlobal() {
+  (Object.keys(tracks) as AmbienceLayer[]).forEach((l) => {
+    tracks[l].gain = l === "global" ? 1 : 0;
+  });
+  activeLayer = "global";
+  applyAmbienceState();
+}
+
 function ensureTrack(layer: AmbienceLayer) {
   const t = tracks[layer];
   if (t.el || t.failed || typeof window === "undefined") return;
@@ -124,12 +148,12 @@ function ensureTrack(layer: AmbienceLayer) {
       t.failed = true;
       t.lastPlayError = `load error: ${t.url}`;
       warnOnce(`ambience file missing or unplayable (${layer}): ${t.url}`);
-      if (layer === "campaign" && activeLayer === "campaign") {
-        console.warn("[audio] campaign track failed — reverting to global ambience");
-        tracks.campaign.gain = 0;
-        tracks.global.gain = 1;
-        activeLayer = "global";
-        applyAmbienceState();
+      // Any scoped layer (campaign / investigation) degrades gracefully to
+      // the global ambience — including the expected case where the asset
+      // has not been produced yet.
+      if (layer !== "global" && activeLayer === layer) {
+        console.warn(`[audio] ${layer} track failed — reverting to global ambience`);
+        fallbackToGlobal();
       }
     });
     a.addEventListener("canplaythrough", () => {
@@ -155,11 +179,13 @@ function baseAmbienceVolume() {
   return Math.max(0, Math.min(1, settings.masterVolume * settings.ambienceVolume));
 }
 
-// Per-layer playback attenuation (linear gain). Campaign is ~-10 dB quieter
-// so it stays cinematic without overpowering UI/reading.
+// Per-layer playback attenuation (linear gain). Scoped layers are ~-10 dB
+// quieter so they stay cinematic without overpowering UI/reading.
+// Investigations sit slightly lower still: the case screens are read-heavy.
 const LAYER_ATTENUATION: Record<AmbienceLayer, number> = {
   global: 1,
   campaign: 0.32,
+  investigation: 0.26,
 };
 
 function applyTrackVolumes() {
@@ -184,12 +210,9 @@ function tryPlay(layer: AmbienceLayer) {
     }).catch((err) => {
       t.lastPlayError = err?.message ?? String(err);
       console.warn(`[audio] ${layer} play() failed:`, err?.message ?? err);
-      if (layer === "campaign" && activeLayer === "campaign") {
-        console.warn("[audio] campaign playback blocked — keeping global ambience as fallback");
-        tracks.campaign.gain = 0;
-        tracks.global.gain = 1;
-        activeLayer = "global";
-        applyAmbienceState();
+      if (layer !== "global" && activeLayer === layer) {
+        console.warn(`[audio] ${layer} playback blocked — keeping global ambience as fallback`);
+        fallbackToGlobal();
       }
     });
   }
@@ -223,9 +246,15 @@ function startCrossfade(target: AmbienceLayer) {
   // Nudge target above 0 so applyAmbienceState() will call .play() immediately.
   if (tracks[target].gain <= 0) tracks[target].gain = 0.0001;
 
-  const from = { global: tracks.global.gain, campaign: tracks.campaign.gain };
-  const to   = { global: target === "global"   ? 1 : 0,
-                 campaign: target === "campaign" ? 1 : 0 };
+  // Layer-generic ramp: every registered layer fades to its target gain,
+  // so adding a scope (investigation, …) needs no change here.
+  const layers = Object.keys(tracks) as AmbienceLayer[];
+  const from = {} as Record<AmbienceLayer, number>;
+  const to = {} as Record<AmbienceLayer, number>;
+  for (const l of layers) {
+    from[l] = tracks[l].gain;
+    to[l] = l === target ? 1 : 0;
+  }
   const start = performance.now();
 
   if (fadeTimer !== null) { window.clearInterval(fadeTimer); fadeTimer = null; }
@@ -233,12 +262,11 @@ function startCrossfade(target: AmbienceLayer) {
 
   fadeTimer = window.setInterval(() => {
     const t = Math.min(1, (performance.now() - start) / FADE_MS);
-    tracks.global.gain   = from.global   + (to.global   - from.global)   * t;
-    tracks.campaign.gain = from.campaign + (to.campaign - from.campaign) * t;
+    for (const l of layers) tracks[l].gain = from[l] + (to[l] - from[l]) * t;
     applyTrackVolumes();
     if (t >= 1) {
       if (fadeTimer !== null) { window.clearInterval(fadeTimer); fadeTimer = null; }
-      console.log(`[audio] crossfade complete → ${activeLayer}. global.vol=${tracks.global.el?.volume.toFixed(3)}, campaign.vol=${tracks.campaign.el?.volume.toFixed(3)}`);
+      console.log(`[audio] crossfade complete → ${activeLayer}. global.vol=${tracks.global.el?.volume.toFixed(3)}, scoped.vol=${tracks[activeLayer].el?.volume.toFixed(3)}`);
       applyAmbienceState();
     }
   }, FADE_STEP_MS);
@@ -461,13 +489,19 @@ export const audioManager = {
 
   getDebugSnapshot() {
     const campaign = tracks.campaign;
+    const investigation = tracks.investigation;
     return {
       activeLayer,
       campaignSrc: CAMPAIGN_AMBIENCE_SRC,
       campaignReadyState: campaign.el?.readyState ?? 0,
       campaignPaused: campaign.el?.paused ?? true,
       campaignVolume: Number((campaign.el?.volume ?? 0).toFixed(3)),
-      lastPlayError: campaign.lastPlayError,
+      investigationSrc: INVESTIGATION_AMBIENCE_SRC,
+      investigationReadyState: investigation.el?.readyState ?? 0,
+      investigationPaused: investigation.el?.paused ?? true,
+      investigationVolume: Number((investigation.el?.volume ?? 0).toFixed(3)),
+      investigationMissing: investigation.failed,
+      lastPlayError: campaign.lastPlayError ?? investigation.lastPlayError,
     };
   },
 
@@ -479,9 +513,8 @@ export const audioManager = {
       const t = tracks[layer];
       if (t.el) { try { t.el.pause(); } catch {/*ignore*/} }
       t.el = null;
+      t.gain = layer === "global" ? 1 : 0;
     });
-    tracks.global.gain = 1;
-    tracks.campaign.gain = 0;
     activeLayer = "global";
   },
 };

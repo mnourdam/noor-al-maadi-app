@@ -527,6 +527,73 @@
   .no-scrollbar::-webkit-scrollbar { display: none; }
 }
 
+@layer utilities {
+  /* ============================================================
+     === Investigations identity — "ملف قضية" (case file) ===
+     A dossier language shared by the catalog cards, the case
+     header, evidence sheets and the solved panel. Purely visual:
+     no gameplay, data or layout mechanics depend on these.
+     ============================================================ */
+
+  /* Dossier board: dark ink-board with faint grid + desk light. */
+  .case-board {
+    background-color: oklch(0.21 0.035 262);
+    background-image:
+      radial-gradient(ellipse at 12% 0%, oklch(0.45 0.09 62 / 0.24), transparent 58%),
+      radial-gradient(ellipse at 88% 100%, oklch(0.33 0.07 48 / 0.28), transparent 62%),
+      repeating-linear-gradient(90deg, oklch(0.82 0.14 82 / 0.035) 0 1px, transparent 1px 52px),
+      repeating-linear-gradient(0deg,  oklch(0.82 0.14 82 / 0.03) 0 1px, transparent 1px 52px);
+    box-shadow: inset 0 0 70px oklch(0 0 0 / 0.5);
+  }
+
+  /* A single filed document: kraft folder edge + ruled paper grain. */
+  .case-sheet {
+    background-color: oklch(0.245 0.03 262);
+    background-image:
+      linear-gradient(180deg, oklch(0.82 0.14 82 / 0.05), transparent 42%),
+      repeating-linear-gradient(0deg, oklch(0.82 0.14 82 / 0.035) 0 1px, transparent 1px 26px);
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.05),
+      0 10px 26px -18px oklch(0 0 0 / 0.8);
+  }
+
+  /* The folder tab that names the file. */
+  .case-tab {
+    border-start-start-radius: 0.75rem;
+    border-start-end-radius: 0.75rem;
+    background-image: linear-gradient(180deg, oklch(0.82 0.14 82 / 0.22), oklch(0.82 0.14 82 / 0.06));
+  }
+
+  /* Perforated left/right margin, like a sheet torn from a case pad. */
+  .case-margin {
+    background-image: repeating-linear-gradient(
+      180deg,
+      oklch(0.82 0.14 82 / 0.4) 0 6px,
+      transparent 6px 16px
+    );
+  }
+
+  /* Rubber-stamp label (تم الحل / محفوظ). */
+  .case-stamp {
+    border: 2px solid color-mix(in oklab, var(--color-gold) 55%, transparent);
+    color: color-mix(in oklab, var(--color-gold) 88%, white);
+    letter-spacing: 0.18em;
+    transform: rotate(-6deg);
+    box-shadow: inset 0 0 0 1px oklch(0.82 0.14 82 / 0.2);
+    opacity: 0.9;
+  }
+
+  /* Investigation thread connecting evidence markers. */
+  .case-thread {
+    background-image: repeating-linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-gold) 45%, transparent) 0 6px,
+      transparent 6px 12px
+    );
+  }
+}
+
+
 /* ============================================================
    Performance mode — Android WebView / small touch / reduced-motion
    Activated by `html.perf-lite` (set in src/lib/perf-mode.ts).
@@ -614,6 +681,10 @@ html.perf-lite .shadow-2xl {
 html.perf-lite .parchment,
 html.perf-lite .parchment-dark,
 html.perf-lite .parchment-rail,
+html.perf-lite .case-board,
+html.perf-lite .case-sheet,
+html.perf-lite .case-margin,
+html.perf-lite .case-thread,
 html.perf-lite .map-parchment {
   background-image: none !important;
   box-shadow: none !important;
