@@ -525,7 +525,11 @@ function refChipsFor(related: readonly string[] | null | undefined): CaseRefChip
     return resolveRelatedRefs(related)
       .filter((r) => r.resolved && r.label)
       .slice(0, 3)
-      .map((r) => ({ entityType: r.entityType, label: r.label }));
+      .map((r) => ({
+        entityType: r.entityType,
+        // Drop the "نوع · " prefix — the chip icon already carries the type.
+        label: r.label.includes(" · ") ? r.label.split(" · ").pop()! : r.label,
+      }));
   } catch {
     return [];
   }
