@@ -397,6 +397,9 @@ function InvestigationsIndex() {
             </button>
           )}
         </div>
+          )}
+        </div>
+
 
         {rows === null && (
           <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
