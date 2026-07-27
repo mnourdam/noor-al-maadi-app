@@ -738,10 +738,12 @@ html.perf-lite .case-board,
 html.perf-lite .case-sheet,
 html.perf-lite .case-margin,
 html.perf-lite .case-thread,
+html.perf-lite .case-desk-texture::before,
 html.perf-lite .map-parchment {
   background-image: none !important;
   box-shadow: none !important;
 }
+
 
 /* Page-turn is a lift + fade; on lite mode keep the fade only. */
 html.perf-lite .animate-page-turn {
