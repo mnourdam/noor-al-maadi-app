@@ -119,6 +119,8 @@ export function resolveRelatedRef(rawInput: string): ResolvedEncyclopediaRef {
     return {
       ...base,
       typeLabel: t,
+      entityType: typeHint ?? "",
+
       label: t ? `${t} · ${tail}` : tail || "مرجع تاريخي",
     };
   }
