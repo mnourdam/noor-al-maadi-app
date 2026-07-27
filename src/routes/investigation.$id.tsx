@@ -359,14 +359,21 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
         {!finished && step && (
           <section className="mt-6">
-            <h2 className="font-display mb-2 text-sm font-bold">
-              خطوة {(idx + 1).toLocaleString("en-US")}/{steps.length.toLocaleString("en-US")}
-              {stepNeedsAnswer && (
-                <span className="ms-2 text-[11px] text-muted-foreground">
-                  سؤال {questionLikeIndex}/{totalQuestionLike}
-                </span>
-              )}
-            </h2>
+            <CaseProgress
+              total={steps.length}
+              current={idx}
+              answeredCount={resolvedIndices.size}
+              totalQuestions={totalQuestionLike}
+              markers={questionMarkers}
+            />
+
+            {stepNeedsAnswer && (
+              <p className="mb-2 mt-3 text-[11px] text-muted-foreground">
+                استنتاج {questionLikeIndex.toLocaleString("ar-EG")}/{totalQuestionLike.toLocaleString("ar-EG")}
+              </p>
+            )}
+            {!stepNeedsAnswer && <div className="mt-3" />}
+
 
             <StepCard
               step={step}
