@@ -97,16 +97,25 @@ const recentSfx = new Map<string, number>(); // dedupe key -> ts
 // Both elements exist simultaneously; we crossfade their volumes.
 interface AmbienceTrack {
   url: string;
+  /** Remaining fallback sources, tried in order when `url` fails to load. */
+  fallbacks: string[];
   el: HTMLAudioElement | null;
   failed: boolean;
   gain: number; // 0..1 layer gain (before master*ambience volume)
   lastPlayError: string | null;
 }
 const tracks: Record<AmbienceLayer, AmbienceTrack> = {
-  global:   { url: AMBIENCE_URL,         el: null, failed: false, gain: 1, lastPlayError: null },
-  campaign: { url: CAMPAIGN_AMBIENCE_SRC, el: null, failed: false, gain: 0, lastPlayError: null },
-  investigation: { url: INVESTIGATION_AMBIENCE_SRC, el: null, failed: false, gain: 0, lastPlayError: null },
+  global:   { url: AMBIENCE_URL,         fallbacks: [], el: null, failed: false, gain: 1, lastPlayError: null },
+  campaign: { url: CAMPAIGN_AMBIENCE_SRC, fallbacks: [], el: null, failed: false, gain: 0, lastPlayError: null },
+  investigation: {
+    url: INVESTIGATION_AMBIENCE_SRC,
+    // The uploaded asset may land under either name; both are bundled
+    // public assets, so the walk stays offline-safe.
+    fallbacks: [INVESTIGATION_SFX_SRC],
+    el: null, failed: false, gain: 0, lastPlayError: null,
+  },
 };
+
 let activeLayer: AmbienceLayer = "global";
 let fadeTimer: number | null = null;
 const FADE_MS = 1500;
