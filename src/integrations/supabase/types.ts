@@ -3278,6 +3278,22 @@ export type Database = {
         }
         Relationships: []
       }
+      reflections_unified_v1: {
+        Row: {
+          anchor_id: string | null
+          anchor_type: string | null
+          author_id: string | null
+          body: string | null
+          created_at: string | null
+          id: string | null
+          likes: number | null
+          replies: number | null
+          source: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _emit_personal_notification: {
