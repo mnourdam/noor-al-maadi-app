@@ -1,14 +1,15 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import {
-  Search, ChevronLeft, Check, Coins, Star, Heart, Loader2, Globe2, X as XIcon,
+  Search, Loader2, Globe2, X as XIcon,
 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 import { WorldFilterChip } from "@/components/WorldFilterChip";
+import { CaseFileCard, caseNumberFor } from "@/components/investigations/CaseFileCard";
 
 import { INVESTIGATION_REGISTRY } from "@/lib/investigations";
 import {
