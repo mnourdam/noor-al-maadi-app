@@ -98,8 +98,15 @@ export async function fetchMyUnreadCount(): Promise<number> {
 
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
+  // NOTE: `mark_notification_read` belongs to the *personal* inbox
+  // (personal_notifications). The Notification Center is backed by
+  // notification_deliveries — it must use the delivery-scoped RPCs, or the
+  // write silently lands on the wrong table and the badge never clears.
   try {
-    await supabase.rpc("mark_notification_read" as never, { p_notification_id: notificationId } as never);
+    const { error } = await supabase.rpc("mark_my_notification_read" as never, {
+      p_notification_id: notificationId,
+    } as never);
+    if (error) throw error;
   } catch (err) {
     console.warn("[notifications] mark read failed", err);
   }
@@ -109,15 +116,21 @@ export async function markNotificationRead(notificationId: string): Promise<void
 }
 
 export async function markAllNotificationsRead(): Promise<void> {
+  const now = new Date().toISOString();
+  // Write cache first so the badge clears instantly, then persist.
+  writeCache(readCache().map((n) => ({ ...n, read_at: n.read_at ?? now })));
+  emit();
   try {
-    await supabase.rpc("mark_all_notifications_read" as never);
+    const { error } = await supabase.rpc("mark_all_my_notifications_read" as never);
+    if (error) throw error;
   } catch (err) {
     console.warn("[notifications] mark all read failed", err);
   }
-  const now = new Date().toISOString();
-  writeCache(readCache().map((n) => ({ ...n, read_at: n.read_at ?? now })));
+  // Re-sync from the server so the cache reflects the durable truth.
+  await fetchMyNotifications(200);
   emit();
 }
+
 
 export async function deleteMyNotification(notificationId: string): Promise<void> {
   try {
