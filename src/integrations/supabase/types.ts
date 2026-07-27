@@ -1620,6 +1620,8 @@ export type Database = {
           favorite_figure_id: string | null
           favorite_state_id: string | null
           hearts: number
+          hearts_at: string | null
+          hearts_full_notified_at: string | null
           id: string
           investigations_completed: number
           join_date: string
@@ -1653,6 +1655,8 @@ export type Database = {
           favorite_figure_id?: string | null
           favorite_state_id?: string | null
           hearts?: number
+          hearts_at?: string | null
+          hearts_full_notified_at?: string | null
           id: string
           investigations_completed?: number
           join_date?: string
@@ -1686,6 +1690,8 @@ export type Database = {
           favorite_figure_id?: string | null
           favorite_state_id?: string | null
           hearts?: number
+          hearts_at?: string | null
+          hearts_full_notified_at?: string | null
           id?: string
           investigations_completed?: number
           join_date?: string
@@ -3937,6 +3943,8 @@ export type Database = {
           favorite_figure_id: string | null
           favorite_state_id: string | null
           hearts: number
+          hearts_at: string | null
+          hearts_full_notified_at: string | null
           id: string
           investigations_completed: number
           join_date: string
@@ -4245,6 +4253,10 @@ export type Database = {
       }
       mark_feedback_issue_read: {
         Args: { p_issue_id: string }
+        Returns: undefined
+      }
+      mark_hearts_full_notified: {
+        Args: { _user_id: string }
         Returns: undefined
       }
       mark_notification_read: { Args: { p_id: string }; Returns: Json }
