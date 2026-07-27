@@ -211,7 +211,13 @@ function ArtifactsAdminPage() {
         _ids: ids,
         _rarity: rarity,
       });
-      if (err) { errors.push(`${rarity}: ${err.message}`); continue; }
+      if (err) {
+        errors.push(
+          `${rarity}: ${err.message} — رفض الطلب: RPC public.admin_set_artifact_rarity` +
+            (err.code ? ` (code ${err.code})` : ""),
+        );
+        continue;
+      }
       const out = (data ?? {}) as { updated?: number; skipped?: number };
       updated += out.updated ?? 0;
       skipped += out.skipped ?? 0;
