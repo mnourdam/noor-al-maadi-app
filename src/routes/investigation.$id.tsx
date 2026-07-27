@@ -296,7 +296,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   // Evidence already walked past in this case (strictly before the current
   // step) — the board is a record, never a spoiler of what is still ahead.
   const evidenceItems = steps
-    .slice(0, idx)
+    .slice(0, finished ? steps.length : idx)
     .map((s, i) => ({ s, i }))
     .filter(({ s }) => s.type === "evidence")
     .map(({ s, i }) => ({
