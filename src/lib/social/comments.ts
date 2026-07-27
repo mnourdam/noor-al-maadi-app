@@ -36,7 +36,10 @@ export interface SocialCommentRow {
   edit_deadline_at: string;
   edited_at: string | null;
   created_at: string;
+  /** Display name of the author (attribution only — never a profile link). */
+  author_name?: string | null;
   is_mine?: boolean;
+
 }
 
 export interface CommentsPage {
