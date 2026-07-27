@@ -210,12 +210,9 @@ function tryPlay(layer: AmbienceLayer) {
     }).catch((err) => {
       t.lastPlayError = err?.message ?? String(err);
       console.warn(`[audio] ${layer} play() failed:`, err?.message ?? err);
-      if (layer === "campaign" && activeLayer === "campaign") {
-        console.warn("[audio] campaign playback blocked — keeping global ambience as fallback");
-        tracks.campaign.gain = 0;
-        tracks.global.gain = 1;
-        activeLayer = "global";
-        applyAmbienceState();
+      if (layer !== "global" && activeLayer === layer) {
+        console.warn(`[audio] ${layer} playback blocked — keeping global ambience as fallback`);
+        fallbackToGlobal();
       }
     });
   }
@@ -249,9 +246,15 @@ function startCrossfade(target: AmbienceLayer) {
   // Nudge target above 0 so applyAmbienceState() will call .play() immediately.
   if (tracks[target].gain <= 0) tracks[target].gain = 0.0001;
 
-  const from = { global: tracks.global.gain, campaign: tracks.campaign.gain };
-  const to   = { global: target === "global"   ? 1 : 0,
-                 campaign: target === "campaign" ? 1 : 0 };
+  // Layer-generic ramp: every registered layer fades to its target gain,
+  // so adding a scope (investigation, …) needs no change here.
+  const layers = Object.keys(tracks) as AmbienceLayer[];
+  const from = {} as Record<AmbienceLayer, number>;
+  const to = {} as Record<AmbienceLayer, number>;
+  for (const l of layers) {
+    from[l] = tracks[l].gain;
+    to[l] = l === target ? 1 : 0;
+  }
   const start = performance.now();
 
   if (fadeTimer !== null) { window.clearInterval(fadeTimer); fadeTimer = null; }
@@ -259,12 +262,11 @@ function startCrossfade(target: AmbienceLayer) {
 
   fadeTimer = window.setInterval(() => {
     const t = Math.min(1, (performance.now() - start) / FADE_MS);
-    tracks.global.gain   = from.global   + (to.global   - from.global)   * t;
-    tracks.campaign.gain = from.campaign + (to.campaign - from.campaign) * t;
+    for (const l of layers) tracks[l].gain = from[l] + (to[l] - from[l]) * t;
     applyTrackVolumes();
     if (t >= 1) {
       if (fadeTimer !== null) { window.clearInterval(fadeTimer); fadeTimer = null; }
-      console.log(`[audio] crossfade complete → ${activeLayer}. global.vol=${tracks.global.el?.volume.toFixed(3)}, campaign.vol=${tracks.campaign.el?.volume.toFixed(3)}`);
+      console.log(`[audio] crossfade complete → ${activeLayer}. global.vol=${tracks.global.el?.volume.toFixed(3)}, scoped.vol=${tracks[activeLayer].el?.volume.toFixed(3)}`);
       applyAmbienceState();
     }
   }, FADE_STEP_MS);
