@@ -132,37 +132,69 @@ export function LockedStoryDialog({
 
           {items.length > 0 && (
             <ul className="mt-4 space-y-2">
-              {items.map((p) => (
-                <li
-                  key={`${p.kind}:${p.ref}`}
-                  className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-[12px] leading-relaxed ${
-                    p.satisfied
-                      ? "border-emerald-400/25 bg-emerald-400/5 text-emerald-300"
-                      : "border-white/10 bg-background/40 text-white/85"
-                  }`}
-                >
-                  <span className="mt-0.5 shrink-0">
-                    {p.satisfied ? <Check className="size-3.5" /> : <Lock className="size-3.5 text-gold/80" />}
-                  </span>
-                  <span>
-                    <span className="text-muted-foreground">
-                      {KIND_LABEL[p.kind] ?? "متطلب"}:{" "}
-                    </span>
-                    {p.title ?? p.ref}
-                  </span>
-                </li>
-              ))}
+              {items.map((p) => {
+                const target = prereqTarget(p);
+                return (
+                  <li
+                    key={`${p.kind}:${p.ref}`}
+                    className={`rounded-xl border px-3 py-2 text-[12px] leading-relaxed ${
+                      p.satisfied
+                        ? "border-emerald-400/25 bg-emerald-400/5 text-emerald-300"
+                        : "border-white/10 bg-background/40 text-white/85"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5 shrink-0">
+                        {p.satisfied ? <Check className="size-3.5" /> : <Lock className="size-3.5 text-gold/80" />}
+                      </span>
+                      <span>
+                        <span className="text-muted-foreground">
+                          {KIND_LABEL[p.kind] ?? "متطلب"}:{" "}
+                        </span>
+                        {p.title ?? p.ref}
+                      </span>
+                    </div>
+                    {target && (
+                      <button
+                        onClick={() => go(target.to)}
+                        className="mt-2 inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-3 py-1 text-[11px] font-medium text-gold transition hover:bg-gold/15"
+                      >
+                        {target.label}
+                        <ArrowLeft className="size-3" />
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
 
-          <button
-            onClick={onClose}
-            className="mt-5 w-full rounded-full border border-gold/40 bg-gold/10 px-4 py-2.5 text-sm font-medium text-gold transition hover:bg-gold/20"
-          >
-            حسنًا
-          </button>
+          {primary ? (
+            <div className="mt-5 space-y-2">
+              <button
+                onClick={() => go(primary.to)}
+                className="w-full rounded-full border border-gold/50 bg-gold/20 px-4 py-2.5 text-sm font-semibold text-gold transition hover:bg-gold/30"
+              >
+                اذهب الآن
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full rounded-full border border-white/10 px-4 py-2 text-xs text-muted-foreground transition hover:text-foreground"
+              >
+                لاحقًا
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onClose}
+              className="mt-5 w-full rounded-full border border-gold/40 bg-gold/10 px-4 py-2.5 text-sm font-medium text-gold transition hover:bg-gold/20"
+            >
+              حسنًا
+            </button>
+          )}
         </div>
       </div>
     </ModalPortal>
   );
 }
+
