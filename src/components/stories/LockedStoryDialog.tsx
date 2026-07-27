@@ -69,9 +69,21 @@ export function LockedStoryDialog({
   explanation?: string | null;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const items = prereqs ?? [];
   const authored = (explanation ?? "").trim();
   const remaining = items.filter((p) => !p.satisfied);
+  // First actionable requirement drives the primary CTA.
+  const primary = remaining.map(prereqTarget).find((t) => t !== null) ?? null;
+
+  const go = (to: string) => {
+    onClose();
+    router.navigate({ to }).catch(() => {
+      if (typeof window !== "undefined") window.location.assign(to);
+    });
+  };
+
+
 
   return (
     <ModalPortal>
