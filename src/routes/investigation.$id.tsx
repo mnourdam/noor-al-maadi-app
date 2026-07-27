@@ -20,6 +20,8 @@ import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { markInvestigationOpened, clearInvestigationOpened } from "@/lib/investigations/recommend";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
+import { audioManager } from "@/lib/audioManager";
+
 
 
 export const Route = createFileRoute("/investigation/$id")({
@@ -161,11 +163,15 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
           return next;
         });
         setAnswerState("correct");
+        // SFX parity with campaigns — reuse the existing library, no new assets.
+        audioManager.playSfx("success", { dedupeKey: `inv:correct:${idx}`, dedupeMs: 600 });
       } else {
         setAnswerState("incorrect");
+        audioManager.playError();
       }
     }
   };
+
 
   const onRetry = () => {
     setPicked(null);
@@ -264,8 +270,13 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       queueMicrotask(() => setAdvancing(false));
       return;
     }
-    if (!alreadyDone) void grantRewards();
+    if (!alreadyDone) {
+      // Completion fanfare — same asset the campaigns use.
+      audioManager.playSfx("campaign-complete", { dedupeKey: `inv:done:${row.slug}`, dedupeMs: 5000 });
+      void grantRewards();
+    }
     setFinished(true);
+
   };
 
   if (steps.length === 0) {
@@ -543,16 +554,20 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
     const correct = picked === q.correctIndex;
     if (correct) setCorrectCount((c) => c + 1);
     setReveals((r) => ({ ...r, [q.id]: true }));
+    if (correct) {
+      audioManager.playSfx("success", { dedupeKey: `inv:legacy:correct:${q.id}`, dedupeMs: 600 });
+    } else {
+      audioManager.playError();
+    }
   };
 
   const onNext = () => {
     setPicked(null);
     if (!isLastQuestion) { setQIndex((i) => i + 1); return; }
     if (!alreadyDone) {
+      audioManager.playSfx("campaign-complete", { dedupeKey: `inv:legacy:done:${inv.id}`, dedupeMs: 5000 });
       const xp = Math.min(150, Math.max(0, totalReward.xp)); // economy cap
       completeInvestigation(inv.id, xp);
-      // Phase 3A — canonical qualifying-activity call (server-authoritative).
-      void recordStreakActivity("investigation", inv.id);
       const auto = Math.max(1, Math.floor(xp / 4));
       const cappedDinars = Math.min(50, Math.max(0, totalReward.dinars)); // coin cap
       const delta = Math.max(0, cappedDinars - auto);
@@ -561,9 +576,17 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
       if (totalReward.badge) awardBadge(totalReward.badge);
       if (totalReward.artifact) findArtifact(totalReward.artifact);
       if (totalReward.character) unlockCharacter(totalReward.character);
+
+      // ORDER MATTERS (same invariant as the canonical player): the streak RPC
+      // mirrors server economy totals into the profile store. Running it
+      // concurrently with the grants above makes it observe pre-grant balances
+      // and overwrite the freshly added XP/Dinars — the "rewards shown but
+      // never added" symptom. Defer it until the grants have committed.
+      queueMicrotask(() => { void recordStreakActivity("investigation", inv.id); });
     }
     setFinished(true);
   };
+
 
   return (
     <AppShell>
