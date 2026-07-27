@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { audioManager } from "@/lib/audioManager";
+import { audioManager, type AmbienceLayer } from "@/lib/audioManager";
 import { bindSfxHooks } from "@/lib/sfxHooks";
 
 /** Routes that switch the ambience to the campaign layer. */
@@ -12,6 +12,29 @@ function isCampaignRoute(pathname: string): boolean {
     pathname.startsWith("/play/chapter")
   );
 }
+
+/**
+ * Routes that switch the ambience to the investigation layer — the case
+ * catalog, an open case file, and the in-play investigation screen.
+ * Leaving any of them crossfades straight back to the global ambience,
+ * which is also the transparent fallback while the investigation asset
+ * has not been produced yet.
+ */
+function isInvestigationRoute(pathname: string): boolean {
+  return (
+    pathname === "/investigations" ||
+    pathname.startsWith("/investigations/") ||
+    pathname.startsWith("/investigation/") ||
+    pathname.startsWith("/play/investigate")
+  );
+}
+
+function layerForRoute(pathname: string): AmbienceLayer {
+  if (isInvestigationRoute(pathname)) return "investigation";
+  if (isCampaignRoute(pathname)) return "campaign";
+  return "global";
+}
+
 
 /** Mount once at the app root so ambience can start after first interaction. */
 /**
