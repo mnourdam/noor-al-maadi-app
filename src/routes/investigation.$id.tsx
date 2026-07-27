@@ -270,8 +270,13 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       queueMicrotask(() => setAdvancing(false));
       return;
     }
-    if (!alreadyDone) void grantRewards();
+    if (!alreadyDone) {
+      // Completion fanfare — same asset the campaigns use.
+      audioManager.playSfx("campaign-complete", { dedupeKey: `inv:done:${row.slug}`, dedupeMs: 5000 });
+      void grantRewards();
+    }
     setFinished(true);
+
   };
 
   if (steps.length === 0) {
