@@ -646,12 +646,17 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
           <ChevronRight className="size-4" /> كل التحقيقات
         </Link>
 
-        <div className="mt-4 rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold">
-            <Search className="size-3.5" /> تحقيق تاريخي
+        <div className="mt-4 overflow-hidden rounded-3xl border border-gold/25 shadow-elegant">
+          <div className="case-tab flex items-center gap-2 px-4 py-1.5">
+            <Search className="size-3 text-gold" />
+            <span className="font-display text-[10px] font-bold tracking-[0.2em] text-gold">
+              ملف قضية
+            </span>
           </div>
-          <h1 className="font-display mt-2 text-lg font-bold leading-snug">{inv.title}</h1>
-          <p className="mt-2 text-[12px] leading-7 text-foreground/90">{inv.intro}</p>
+          <div className="case-sheet p-5">
+            <h1 className="font-display text-lg font-bold leading-snug">{inv.title}</h1>
+            <p className="mt-2 text-[12px] leading-7 text-foreground/90">{inv.intro}</p>
+          </div>
         </div>
 
         {inv.encyclopediaRefs?.length ? (
