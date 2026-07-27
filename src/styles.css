@@ -641,7 +641,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-page-turn { animation: fade-in 0.2s ease-out both; }
+  .case-folder-opening { animation: none; opacity: 0.8; }
 }
+
 
 
 
